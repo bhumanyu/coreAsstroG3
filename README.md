@@ -1,11 +1,21 @@
-<div align="center">
+# CoreAstroEngine
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+PR-001A Repository Foundation
 
-  <h1>Built with AI Studio</h2>
+## Architecture
+- React 18
+- TypeScript
+- Vite (development, build, and preview)
+- Vitest (test runner)
+- Tailwind CSS v4
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Getting Started
+- `npm run dev`: Start the development server
+- `npm test`: Run the test suite with Vitest
+- `npm run build`: Compile and build production assets
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
-
-</div>
+## Vimshottari Dasha Engine (PR-041)
+- **Year Length Convention**: 1 Vimshottari year = 365.25 days; this materially affects MD/AD/PD boundaries and must match the chosen reference software/source (`VIMSHOTTARI_YEAR_DAYS`).
+- **Date Arithmetic**: Fractional years added via deterministic date arithmetic (`addFractionalYears`).
+- **Tiling Guarantees**: Continuous MD → AD → PD tiling with zero cumulative drift or gap.
+- **Integration**: `getActiveDasha` state maps directly to PR-039 `DashaState` for transit correlation.

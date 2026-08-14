@@ -1,0 +1,6 @@
+{
+  "name": "CoreAstro Engine",
+  "description": "Vedic astronomy & astrology engine for planetary positions, divisional charts (D1, D3, D9, D10), Nakshatras, dignities, Shadbala planetary strengths (Sthana, Kala, Cheshta Bala), and Yogas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
