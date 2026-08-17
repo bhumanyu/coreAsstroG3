@@ -82,12 +82,12 @@ function buildPlanetFacts(horoscope: Horoscope): readonly PlanetFactSummary[] {
     }
     const sign: Sign = fact.sign;
     const house: number = fact.house;
-    const dignity: string = fact?.dignity?.status
+    const dignity: string | undefined = fact?.dignity?.status
       ? String(fact.dignity.status)
-      : 'NORMAL';
-    const state: string = fact?.state?.condition
+      : undefined;
+    const state: string | undefined = fact?.state?.condition
       ? String(fact.state.condition)
-      : 'NORMAL';
+      : undefined;
 
     const functionalRoles: readonly string[] = (
       horoscope.functionalRoles?.planets?.[planet]?.roles || []
@@ -123,8 +123,8 @@ function buildPlanetFacts(horoscope: Horoscope): readonly PlanetFactSummary[] {
       planet,
       sign,
       house,
-      dignity,
-      state,
+      ...(dignity ? { dignity } : {}),
+      ...(state ? { state } : {}),
       functionalRoles,
       ownedHouses,
       ...(strengthStatus ? { strengthStatus } : {}),
@@ -382,8 +382,7 @@ function normalizeEvidenceStrength(strength: unknown): AiEvidenceStrength {
   if (strength === 'STRONG') return 'STRONG';
   if (strength === 'WEAK') return 'WEAK';
   if (strength === 'MODERATE') return 'MODERATE';
-  // Fallback when source provides none
-  return 'MODERATE';
+  return 'UNKNOWN';
 }
 
 function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
@@ -417,7 +416,7 @@ function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
       return upper as AiEvidenceSource;
     }
   }
-  return 'LIFE_THEME';
+  return 'UNKNOWN';
 }
 
 function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {

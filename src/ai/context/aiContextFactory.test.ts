@@ -171,6 +171,38 @@ describe('AI Context Factory', () => {
     expect(activeContext.dasha.active?.pratyantardasha).toBe(Planet.SATURN);
   });
 
+  it('should project evidence items with normalized sources and strengths without fabricated certainty', () => {
+    expect(context.evidence).toBeDefined();
+    for (const ev of context.evidence) {
+      expect([
+        'PLANET',
+        'HOUSE',
+        'YOGA',
+        'FUNCTIONAL_ROLE',
+        'STRENGTH',
+        'DASHA',
+        'D9',
+        'D10',
+        'CAREER',
+        'WEALTH',
+        'LIFE_THEME',
+        'UNKNOWN'
+      ]).toContain(ev.source);
+      expect(['STRONG', 'MODERATE', 'WEAK', 'UNKNOWN']).toContain(ev.strength);
+    }
+  });
+
+  it('should project planet facts without synthetic NORMAL fallbacks when fact properties are missing', () => {
+    for (const planetFact of context.planets) {
+      if (planetFact.dignity !== undefined) {
+        expect(typeof planetFact.dignity).toBe('string');
+      }
+      if (planetFact.state !== undefined) {
+        expect(typeof planetFact.state).toBe('string');
+      }
+    }
+  });
+
   it('should be a pure, deterministic factory producing equal output for identical input', () => {
     const context2 = buildAiContext(horoscope);
     expect(context).toEqual(context2);

@@ -31,9 +31,10 @@ export type AiEvidenceSource =
   | 'D10'
   | 'CAREER'
   | 'WEALTH'
-  | 'LIFE_THEME';
+  | 'LIFE_THEME'
+  | 'UNKNOWN';
 
-export type AiEvidenceStrength = 'STRONG' | 'MODERATE' | 'WEAK';
+export type AiEvidenceStrength = 'STRONG' | 'MODERATE' | 'WEAK' | 'UNKNOWN';
 
 export interface AscendantFact {
   readonly sign: Sign;
@@ -46,8 +47,8 @@ export interface PlanetFactSummary {
   readonly planet: Planet;
   readonly sign: Sign;
   readonly house: number;
-  readonly dignity: string;
-  readonly state: string;
+  readonly dignity?: string;
+  readonly state?: string;
   readonly functionalRoles: readonly string[];
   readonly ownedHouses: readonly number[];
   readonly strengthStatus?: string;
