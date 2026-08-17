@@ -6,6 +6,35 @@ import {
   AiEvidenceEffect
 } from './aiTypes';
 
+export type CareerNatalPromise =
+  | 'STRONG'
+  | 'SUPPORTED'
+  | 'MIXED'
+  | 'ADVERSE'
+  | 'UNAVAILABLE';
+
+export type CareerD10Relationship =
+  | 'CONFIRMS'
+  | 'PARTIALLY_CONFIRMS'
+  | 'MODIFIES'
+  | 'CONFLICTS'
+  | 'UNAVAILABLE';
+
+export type AiEvidenceSource =
+  | 'PLANET'
+  | 'HOUSE'
+  | 'YOGA'
+  | 'FUNCTIONAL_ROLE'
+  | 'STRENGTH'
+  | 'DASHA'
+  | 'D9'
+  | 'D10'
+  | 'CAREER'
+  | 'WEALTH'
+  | 'LIFE_THEME';
+
+export type AiEvidenceStrength = 'STRONG' | 'MODERATE' | 'WEAK';
+
 export interface AscendantFact {
   readonly sign: Sign;
   readonly lord: Planet;
@@ -45,7 +74,7 @@ export interface YogaFactSummary {
 
 export interface DashaPeriodFact {
   readonly planet: Planet;
-  readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | string;
+  readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly start: string;
   readonly end: string;
 }
@@ -57,13 +86,13 @@ export interface ActiveDashaFact {
 }
 
 export interface DashaFacts {
-  readonly system: 'VIMSHOTTARI' | string;
+  readonly system: 'VIMSHOTTARI';
   readonly periods: readonly DashaPeriodFact[];
   readonly active?: ActiveDashaFact;
 }
 
 export interface DivisionalFact {
-  readonly varga: 'D2' | 'D9' | 'D10' | string;
+  readonly varga: 'D9' | 'D10' | 'D2';
   readonly status: AiAvailability;
   readonly ascendantSign?: Sign;
   readonly confidence?: AiConfidence;
@@ -76,10 +105,15 @@ export interface DivisionalFacts {
 }
 
 export interface CareerFact {
-  readonly status: 'STRONGLY_SUPPORTED' | 'SUPPORTED' | 'MIXED' | 'CHALLENGED' | 'LIMITED_EVIDENCE' | string;
+  readonly status:
+    | 'STRONGLY_SUPPORTED'
+    | 'SUPPORTED'
+    | 'MIXED'
+    | 'CHALLENGED'
+    | 'LIMITED_EVIDENCE';
   readonly confidence: AiConfidence;
-  readonly natalPromise?: string;
-  readonly d10Relationship?: string;
+  readonly natalPromise: CareerNatalPromise;
+  readonly d10Relationship: CareerD10Relationship;
   readonly supportingFactors: readonly string[];
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
@@ -88,7 +122,12 @@ export interface CareerFact {
 export interface WealthSubthemeFact {
   readonly subtheme: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
   readonly house: number;
-  readonly status: 'STRONGLY_SUPPORTED' | 'SUPPORTED' | 'MIXED' | 'CHALLENGED' | 'LIMITED_EVIDENCE' | string;
+  readonly status:
+    | 'STRONGLY_SUPPORTED'
+    | 'SUPPORTED'
+    | 'MIXED'
+    | 'CHALLENGED'
+    | 'LIMITED_EVIDENCE';
   readonly primaryFamily: string;
   readonly supportingCount: number;
   readonly challengingCount: number;
@@ -96,7 +135,12 @@ export interface WealthSubthemeFact {
 }
 
 export interface WealthFact {
-  readonly status: 'STRONGLY_SUPPORTED' | 'SUPPORTED' | 'MIXED' | 'CHALLENGED' | 'LIMITED_EVIDENCE' | string;
+  readonly status:
+    | 'STRONGLY_SUPPORTED'
+    | 'SUPPORTED'
+    | 'MIXED'
+    | 'CHALLENGED'
+    | 'LIMITED_EVIDENCE';
   readonly confidence: AiConfidence;
   readonly subthemes?: readonly WealthSubthemeFact[];
   readonly supportingFactors: readonly string[];
@@ -113,9 +157,9 @@ export interface LifeThemeFact {
 
 export interface AiEvidence {
   readonly id: string;
-  readonly source: string;
+  readonly source: AiEvidenceSource;
   readonly effect: AiEvidenceEffect;
-  readonly strength?: 'STRONG' | 'MODERATE' | 'WEAK' | string;
+  readonly strength: AiEvidenceStrength;
   readonly statement: string;
   readonly planets?: readonly Planet[];
   readonly houses?: readonly number[];

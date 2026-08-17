@@ -81,8 +81,12 @@ describe('AI Context Factory', () => {
     expect(['HIGH', 'MEDIUM', 'LOW']).toContain(context.career?.confidence);
     expect(Array.isArray(context.career?.supportingFactors)).toBe(true);
     expect(Array.isArray(context.career?.challengingFactors)).toBe(true);
-    expect(context.career?.natalPromise).toBe('UNAVAILABLE');
-    expect(context.career?.d10Relationship).toBe('UNAVAILABLE');
+    expect(['STRONG', 'SUPPORTED', 'MIXED', 'ADVERSE', 'UNAVAILABLE']).toContain(
+      context.career?.natalPromise
+    );
+    expect(['CONFIRMS', 'PARTIALLY_CONFIRMS', 'MODIFIES', 'CONFLICTS', 'UNAVAILABLE']).toContain(
+      context.career?.d10Relationship
+    );
 
     expect(context.wealth).toBeDefined();
     expect(context.wealth?.status).toBeDefined();
@@ -92,7 +96,21 @@ describe('AI Context Factory', () => {
     expect(['HIGH', 'MEDIUM', 'LOW']).toContain(context.wealth?.confidence);
     expect(Array.isArray(context.wealth?.supportingFactors)).toBe(true);
     expect(Array.isArray(context.wealth?.challengingFactors)).toBe(true);
-    expect(context.wealth?.subthemes).toEqual([]);
+    expect(context.wealth?.subthemes).toBeDefined();
+    expect(context.wealth?.subthemes).toHaveLength(4);
+    const subthemeNames = context.wealth?.subthemes?.map((st) => st.subtheme);
+    expect(subthemeNames).toEqual(['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION']);
+    for (const subtheme of context.wealth?.subthemes || []) {
+      expect(['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION']).toContain(subtheme.subtheme);
+      expect(typeof subtheme.house).toBe('number');
+      expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
+        subtheme.status
+      );
+      expect(typeof subtheme.primaryFamily).toBe('string');
+      expect(typeof subtheme.supportingCount).toBe('number');
+      expect(typeof subtheme.challengingCount).toBe('number');
+      expect(typeof subtheme.summary).toBe('string');
+    }
   });
 
   it('should project divisional facts for D9 and D10', () => {
@@ -103,10 +121,12 @@ describe('AI Context Factory', () => {
     expect(context.divisional.d2).toBeUndefined();
   });
 
-  it('should project vimshottari dasha facts with periods and no active period in v1', () => {
+  it('should project vimshottari dasha facts with periods', () => {
     expect(context.dasha.system).toBe('VIMSHOTTARI');
     expect(context.dasha.periods.length).toBeGreaterThan(0);
-    expect(context.dasha.active).toBeUndefined();
+    if (context.dasha.active) {
+      expect(context.dasha.active.mahadasha).toBeDefined();
+    }
   });
 
   it('should be a pure, deterministic factory producing equal output for identical input', () => {

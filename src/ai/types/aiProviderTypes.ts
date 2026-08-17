@@ -6,7 +6,11 @@ export type AiCapability =
   | 'STREAMING'
   | 'LOCAL_FALLBACK'
   | 'OFFLINE'
-  | (string & {});
+  | 'CAREER'
+  | 'WEALTH'
+  | 'DASHA'
+  | 'LIFE_THEMES'
+  | 'CHART_SYNTHESIS';
 
 export type AiProviderAvailability = 'AVAILABLE' | 'DEGRADED' | 'UNAVAILABLE';
 
@@ -15,7 +19,7 @@ export interface AiProviderStatus {
   readonly message?: string;
 }
 
-export type AiProviderKind = 'LOCAL' | 'REMOTE' | 'CUSTOM';
+export type AiProviderKind = 'LOCAL_RULES' | 'REMOTE_LLM' | 'CUSTOM';
 
 export interface AiProviderIdentity {
   readonly id: string;

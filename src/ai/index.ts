@@ -7,6 +7,10 @@ export type {
 } from './types/aiTypes';
 
 export type {
+  CareerNatalPromise,
+  CareerD10Relationship,
+  AiEvidenceSource,
+  AiEvidenceStrength,
   AscendantFact,
   PlanetFactSummary,
   HouseFactSummary,

@@ -115,6 +115,12 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
     if (context.wealth) {
       expect(Object.isFrozen(context.wealth)).toBe(true);
       expect(Object.isFrozen(context.wealth.supportingFactors)).toBe(true);
+      if (context.wealth.subthemes) {
+        expect(Object.isFrozen(context.wealth.subthemes)).toBe(true);
+        for (const st of context.wealth.subthemes) {
+          expect(Object.isFrozen(st)).toBe(true);
+        }
+      }
     }
   });
 });

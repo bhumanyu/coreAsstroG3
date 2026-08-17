@@ -7,8 +7,7 @@ export type AiTask =
   | 'DASHA_ANALYSIS'
   | 'TRANSIT_ANALYSIS'
   | 'LIFE_THEME_ANALYSIS'
-  | 'GENERAL_QUERY'
-  | (string & {});
+  | 'GENERAL_QUERY';
 
 export interface AiRequest {
   readonly requestId: string;

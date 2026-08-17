@@ -12,7 +12,9 @@ export interface AiResponseMetadata {
 
 export interface AiResponse {
   readonly requestId: string;
-  readonly content: string;
+  readonly content?: string;
+  readonly structuredOutput?: unknown;
   readonly format: 'STRUCTURED' | 'NARRATIVE';
+  readonly warnings: readonly string[];
   readonly metadata?: AiResponseMetadata;
 }

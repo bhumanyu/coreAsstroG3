@@ -12,6 +12,8 @@ import {
   AiContextMethodology,
   AiContextSource,
   AiEvidence,
+  AiEvidenceSource,
+  AiEvidenceStrength,
   AscendantFact,
   CareerFact,
   DashaFacts,
@@ -22,8 +24,10 @@ import {
   LifeThemeFact,
   PlanetFactSummary,
   WealthFact,
+  WealthSubthemeFact,
   YogaFactSummary
 } from '../types/aiContextTypes';
+import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import { deepFreeze } from './deepFreeze';
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -215,6 +219,7 @@ function buildYogaFacts(horoscope: Horoscope): readonly YogaFactSummary[] {
 
 function buildDashaFacts(horoscope: Horoscope): DashaFacts {
   const mahadashas = horoscope.vimshottari?.mahadashas || [];
+  // v1: only Mahadasha projection is supported currently
   const periods: DashaPeriodFact[] = mahadashas.map((m: any) => ({
     planet: m.planet,
     level: 'MAHADASHA',
@@ -222,10 +227,24 @@ function buildDashaFacts(horoscope: Horoscope): DashaFacts {
     end: m.end
   }));
 
+  let active: ActiveDashaFact | undefined;
+  const current =
+    horoscope.dashaInterpretation?.current ||
+    horoscope.dashaInterpretation?.activePeriods ||
+    horoscope.fullNatalAnalysis?.currentDasha?.current;
+
+  if (current?.mahadasha?.planet) {
+    active = {
+      mahadasha: current.mahadasha.planet,
+      ...(current.antardasha?.planet ? { antardasha: current.antardasha.planet } : {}),
+      ...(current.pratyantardasha?.planet ? { pratyantardasha: current.pratyantardasha.planet } : {})
+    };
+  }
+
   return {
     system: 'VIMSHOTTARI',
     periods,
-    active: undefined
+    active
   };
 }
 
@@ -279,61 +298,60 @@ function mapThemeEffectToStatus(effect: string | undefined): 'STRONGLY_SUPPORTED
 }
 
 function buildCareerFact(horoscope: Horoscope): CareerFact | undefined {
-  const themes = horoscope.lifeThemes?.themes || [];
-  const careerTheme = themes.find(
-    (t: any) => t.theme === 'CAREER_STATUS' || t.theme === 'CAREER'
-  );
-
-  if (!careerTheme) {
+  const career = horoscope.themeInterpretationV2?.career;
+  if (!career) {
     return undefined;
   }
 
-  const status = mapThemeEffectToStatus(careerTheme.effect);
-  const confidence = (careerTheme.confidence || 'MEDIUM') as AiConfidence;
-  const supportingFactors = (careerTheme.evidence || [])
-    .filter((e: any) => e.effect === 'SUPPORT')
-    .map((e: any) => String(e.statement));
-  const challengingFactors = (careerTheme.evidence || [])
-    .filter((e: any) => e.effect === 'CHALLENGE')
-    .map((e: any) => String(e.statement));
-
   return {
-    status,
-    confidence,
-    natalPromise: 'UNAVAILABLE',
-    d10Relationship: 'UNAVAILABLE',
-    supportingFactors,
-    challengingFactors,
-    conditionalFactors: []
+    status: career.conclusion.status,
+    confidence: career.conclusion.confidence as AiConfidence,
+    natalPromise: career.careerNatalPromise.status,
+    d10Relationship: career.metadata.vargaConfirmationStatus,
+    supportingFactors: [...career.conclusion.keySupportingFactors],
+    challengingFactors: [...career.conclusion.keyChallengingFactors],
+    conditionalFactors: [...career.conclusion.keyConditionalFactors]
   };
 }
 
 function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
-  const themes = horoscope.lifeThemes?.themes || [];
-  const wealthTheme = themes.find(
-    (t: any) => t.theme === 'WEALTH_FINANCE' || t.theme === 'WEALTH'
-  );
-
-  if (!wealthTheme) {
+  const wealth = horoscope.themeInterpretationV2?.wealth;
+  if (!wealth) {
     return undefined;
   }
 
-  const status = mapThemeEffectToStatus(wealthTheme.effect);
-  const confidence = (wealthTheme.confidence || 'MEDIUM') as AiConfidence;
-  const supportingFactors = (wealthTheme.evidence || [])
-    .filter((e: any) => e.effect === 'SUPPORT')
-    .map((e: any) => String(e.statement));
-  const challengingFactors = (wealthTheme.evidence || [])
-    .filter((e: any) => e.effect === 'CHALLENGE')
-    .map((e: any) => String(e.statement));
+  const subthemeKeys: readonly WealthSubthemeKey[] = [
+    'ACCUMULATION',
+    'GAINS',
+    'FORTUNE',
+    'SPECULATION'
+  ];
+  const subthemes: WealthSubthemeFact[] = [];
+
+  if (wealth.subthemes) {
+    for (const key of subthemeKeys) {
+      const summary = wealth.subthemes[key];
+      if (summary) {
+        subthemes.push({
+          subtheme: summary.key || key,
+          house: summary.houseNumber,
+          status: mapThemeEffectToStatus(summary.status),
+          primaryFamily: String(summary.primaryFamily),
+          supportingCount: summary.supportingEvidenceCount,
+          challengingCount: summary.challengingEvidenceCount,
+          summary: summary.summaryStatement
+        });
+      }
+    }
+  }
 
   return {
-    status,
-    confidence,
-    subthemes: [],
-    supportingFactors,
-    challengingFactors,
-    conditionalFactors: []
+    status: wealth.conclusion.status,
+    confidence: wealth.conclusion.confidence as AiConfidence,
+    subthemes,
+    supportingFactors: [...wealth.conclusion.keySupportingFactors],
+    challengingFactors: [...wealth.conclusion.keyChallengingFactors],
+    conditionalFactors: [...wealth.conclusion.keyConditionalFactors]
   };
 }
 
@@ -347,23 +365,72 @@ function buildLifeThemeFacts(horoscope: Horoscope): readonly LifeThemeFact[] {
   }));
 }
 
+function normalizeEvidenceStrength(strength: unknown): AiEvidenceStrength {
+  if (strength === 'STRONG') return 'STRONG';
+  if (strength === 'WEAK') return 'WEAK';
+  if (strength === 'MODERATE') return 'MODERATE';
+  // Fallback when source provides none
+  return 'MODERATE';
+}
+
+function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
+  if (typeof source === 'string') {
+    const upper = source.trim().toUpperCase();
+    if (upper === 'PLANET' || upper === 'GRAHA') return 'PLANET';
+    if (upper === 'HOUSE' || upper === 'BHAVA') return 'HOUSE';
+    if (upper === 'YOGA') return 'YOGA';
+    if (upper === 'FUNCTIONAL_ROLE' || upper === 'FUNCTIONAL') return 'FUNCTIONAL_ROLE';
+    if (upper === 'STRENGTH' || upper === 'SHADBALA' || upper === 'PLANETARY_STRENGTH') return 'STRENGTH';
+    if (upper === 'DASHA' || upper === 'VIMSHOTTARI') return 'DASHA';
+    if (upper === 'D9' || upper === 'NAVAMSA') return 'D9';
+    if (upper === 'D10' || upper === 'DASAMSA') return 'D10';
+    if (upper === 'CAREER') return 'CAREER';
+    if (upper === 'WEALTH') return 'WEALTH';
+    if (upper === 'LIFE_THEME' || upper === 'THEME') return 'LIFE_THEME';
+    const validSources: readonly AiEvidenceSource[] = [
+      'PLANET',
+      'HOUSE',
+      'YOGA',
+      'FUNCTIONAL_ROLE',
+      'STRENGTH',
+      'DASHA',
+      'D9',
+      'D10',
+      'CAREER',
+      'WEALTH',
+      'LIFE_THEME'
+    ];
+    if (validSources.includes(upper as AiEvidenceSource)) {
+      return upper as AiEvidenceSource;
+    }
+  }
+  return 'LIFE_THEME';
+}
+
 function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
   const themes = horoscope.lifeThemes?.themes || [];
   const evidenceMap = new Map<string, AiEvidence>();
 
   for (const t of themes) {
     for (const e of t.evidence || []) {
-      const ruleId = e.ruleId || `ev-${evidenceMap.size + 1}`;
-      if (!evidenceMap.has(ruleId)) {
-        evidenceMap.set(ruleId, {
-          id: ruleId,
-          source: String(e.source || 'GENERAL'),
+      const source = mapToAiEvidenceSource(e.source);
+      const strength = normalizeEvidenceStrength(e.strength);
+      const statement = String(e.statement || '');
+      const planetsStr = (e.planets || []).join(',');
+      const housesStr = (e.houses || []).join(',');
+      const ruleId = e.ruleId ? String(e.ruleId) : undefined;
+      const id = ruleId || `${source}|${statement}|${planetsStr}|${housesStr}`;
+
+      if (!evidenceMap.has(id)) {
+        evidenceMap.set(id, {
+          id,
+          source,
           effect: (e.effect || 'NEUTRAL') as AiEvidenceEffect,
-          strength: 'MODERATE',
-          statement: String(e.statement || ''),
+          strength,
+          statement,
           ...(e.planets && e.planets.length > 0 ? { planets: [...e.planets] } : {}),
           ...(e.houses && e.houses.length > 0 ? { houses: [...e.houses] } : {}),
-          ...(e.ruleId ? { ruleId: String(e.ruleId) } : {})
+          ...(ruleId ? { ruleId } : {})
         });
       }
     }
