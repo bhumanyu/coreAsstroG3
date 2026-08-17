@@ -87,6 +87,12 @@ describe('AI Context Factory', () => {
     expect(['CONFIRMS', 'PARTIALLY_CONFIRMS', 'MODIFIES', 'CONFLICTS', 'UNAVAILABLE']).toContain(
       context.career?.d10Relationship
     );
+    expect(context.career?.natalPromise).toBe(
+      horoscope.themeInterpretationV2?.career?.careerNatalPromise.status
+    );
+    expect(context.career?.d10Relationship).toBe(
+      horoscope.themeInterpretationV2?.career?.metadata.vargaConfirmationStatus
+    );
 
     expect(context.wealth).toBeDefined();
     expect(context.wealth?.status).toBeDefined();
@@ -96,6 +102,9 @@ describe('AI Context Factory', () => {
     expect(['HIGH', 'MEDIUM', 'LOW']).toContain(context.wealth?.confidence);
     expect(Array.isArray(context.wealth?.supportingFactors)).toBe(true);
     expect(Array.isArray(context.wealth?.challengingFactors)).toBe(true);
+    expect(context.wealth?.status).toBe(
+      horoscope.themeInterpretationV2?.wealth?.conclusion.status
+    );
     expect(context.wealth?.subthemes).toBeDefined();
     expect(context.wealth?.subthemes).toHaveLength(4);
     const subthemeNames = context.wealth?.subthemes?.map((st) => st.subtheme);
@@ -111,6 +120,23 @@ describe('AI Context Factory', () => {
       expect(typeof subtheme.challengingCount).toBe('number');
       expect(typeof subtheme.summary).toBe('string');
     }
+
+    const accumSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'ACCUMULATION');
+    expect(accumSubtheme?.house).toBe(
+      horoscope.themeInterpretationV2?.wealth?.subthemes?.ACCUMULATION?.houseNumber
+    );
+    const gainsSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'GAINS');
+    expect(gainsSubtheme?.house).toBe(
+      horoscope.themeInterpretationV2?.wealth?.subthemes?.GAINS?.houseNumber
+    );
+    const fortuneSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'FORTUNE');
+    expect(fortuneSubtheme?.house).toBe(
+      horoscope.themeInterpretationV2?.wealth?.subthemes?.FORTUNE?.houseNumber
+    );
+    const specSubtheme = context.wealth?.subthemes?.find((st) => st.subtheme === 'SPECULATION');
+    expect(specSubtheme?.house).toBe(
+      horoscope.themeInterpretationV2?.wealth?.subthemes?.SPECULATION?.houseNumber
+    );
   });
 
   it('should project divisional facts for D9 and D10', () => {
@@ -124,9 +150,25 @@ describe('AI Context Factory', () => {
   it('should project vimshottari dasha facts with periods', () => {
     expect(context.dasha.system).toBe('VIMSHOTTARI');
     expect(context.dasha.periods.length).toBeGreaterThan(0);
-    if (context.dasha.active) {
-      expect(context.dasha.active.mahadasha).toBeDefined();
-    }
+  });
+
+  it('should project active dasha periods when available from engine', () => {
+    const horoscopeWithActive = {
+      ...horoscope,
+      dashaInterpretation: {
+        ...horoscope.dashaInterpretation,
+        current: {
+          mahadasha: { planet: Planet.MARS },
+          antardasha: { planet: Planet.JUPITER },
+          pratyantardasha: { planet: Planet.SATURN }
+        }
+      }
+    } as any;
+    const activeContext = buildAiContext(horoscopeWithActive);
+    expect(activeContext.dasha.active).toBeDefined();
+    expect(activeContext.dasha.active?.mahadasha).toBe(Planet.MARS);
+    expect(activeContext.dasha.active?.antardasha).toBe(Planet.JUPITER);
+    expect(activeContext.dasha.active?.pratyantardasha).toBe(Planet.SATURN);
   });
 
   it('should be a pure, deterministic factory producing equal output for identical input', () => {

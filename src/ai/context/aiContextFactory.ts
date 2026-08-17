@@ -1,5 +1,4 @@
 import { Horoscope, Planet, Sign } from '../../types';
-import { SIGNS_METADATA, SIGNS_ORDER } from '../../data/astroData';
 import {
   AI_CONTEXT_SCHEMA_VERSION,
   AiAvailability,
@@ -43,15 +42,20 @@ const PLANET_ORDER: readonly Planet[] = Object.freeze([
 ]);
 
 function buildAscendantFact(horoscope: Horoscope): AscendantFact {
-  const sign: Sign =
+  const sign: Sign | undefined =
     horoscope.rasiChart?.ascendantSign ||
-    horoscope.ascendant?.sign ||
-    Sign.ARIES;
+    horoscope.ascendant?.sign;
 
-  const lord: Planet =
-    horoscope.houseLordship?.houseLords?.[1] ||
-    SIGNS_METADATA[sign]?.ruler ||
-    Planet.MARS;
+  if (!sign) {
+    throw new Error('Cannot build AiContext: missing ascendant sign');
+  }
+
+  const lord: Planet | undefined =
+    horoscope.houseLordship?.houseLords?.[1];
+
+  if (!lord) {
+    throw new Error('Cannot build AiContext: missing ascendant lord');
+  }
 
   const lordPlanetFact = horoscope.planetFacts?.[lord];
   const lordHouse = lordPlanetFact?.house;
@@ -70,8 +74,14 @@ function buildPlanetFacts(horoscope: Horoscope): readonly PlanetFactSummary[] {
 
   for (const planet of PLANET_ORDER) {
     const fact = horoscope.planetFacts?.[planet];
-    const sign: Sign = fact?.sign || Sign.ARIES;
-    const house: number = fact?.house ?? 1;
+    if (!fact?.sign) {
+      throw new Error('Cannot build AiContext: missing sign for ' + planet);
+    }
+    if (typeof fact?.house !== 'number') {
+      throw new Error('Cannot build AiContext: missing house for ' + planet);
+    }
+    const sign: Sign = fact.sign;
+    const house: number = fact.house;
     const dignity: string = fact?.dignity?.status
       ? String(fact.dignity.status)
       : 'NORMAL';
@@ -128,24 +138,26 @@ function buildPlanetFacts(horoscope: Horoscope): readonly PlanetFactSummary[] {
 
 function buildHouseFacts(horoscope: Horoscope): readonly HouseFactSummary[] {
   const houses: HouseFactSummary[] = [];
-  const ascSign: Sign =
-    (horoscope.rasiChart?.ascendantSign ||
-      horoscope.ascendant?.sign ||
-      Sign.ARIES) as Sign;
-  const ascNumber = SIGNS_METADATA[ascSign]?.number ?? 1;
 
   for (let h = 1; h <= 12; h++) {
     const houseInterp = horoscope.houseInterpretation?.houses?.[h];
     const houseAnalysis = horoscope.houseAnalysis?.houses?.[h];
-    const fallbackSign = SIGNS_ORDER[(ascNumber - 1 + h - 1) % 12];
-    const sign: Sign =
-      (houseInterp?.placement?.sign || houseAnalysis?.sign || fallbackSign) as Sign;
-    const lord: Planet =
+
+    const sign: Sign | undefined =
+      (houseInterp?.placement?.sign || houseAnalysis?.sign) as Sign | undefined;
+
+    if (!sign) {
+      throw new Error('Cannot build AiContext: missing sign for house ' + h);
+    }
+
+    const lord: Planet | undefined =
       houseInterp?.lord?.planet ||
       houseAnalysis?.lord ||
-      horoscope.houseLordship?.houseLords?.[h] ||
-      SIGNS_METADATA[sign]?.ruler ||
-      Planet.SUN;
+      horoscope.houseLordship?.houseLords?.[h];
+
+    if (!lord) {
+      throw new Error('Cannot build AiContext: missing lord for house ' + h);
+    }
 
     const occupants: readonly Planet[] = [
       ...(houseInterp?.occupants?.planets || houseAnalysis?.occupants || [])
@@ -279,6 +291,7 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
   return {
     d9,
     d10,
+    // D2 is intentionally absent because Wealth D2 interpretation is not implemented
     d2: undefined
   };
 }
