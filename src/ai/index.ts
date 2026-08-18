@@ -56,3 +56,12 @@ export type { ForbiddenAiContextKey } from './context/aiContextPrivacy';
 
 export { buildAiContext } from './context/aiContextFactory';
 export { createAiRequest } from './api/createAiRequest';
+
+export { LocalVedicRulesProvider, reasonWithLocalRules } from './providers/local';
+export type {
+  LocalRuleDefinition,
+  LocalRuleEvaluation,
+  LocalRuleEffect,
+  LocalRuleDomain,
+  LocalReasoningOutput
+} from './providers/local';

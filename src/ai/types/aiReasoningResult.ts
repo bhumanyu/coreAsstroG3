@@ -15,5 +15,6 @@ export interface AiReasoningResult {
   readonly challengingEvidenceIds: readonly string[];
   readonly unresolvedQuestions: readonly string[];
   readonly warnings: readonly string[];
+  readonly triggeredRuleIds: readonly string[];
   readonly error?: string;
 }
