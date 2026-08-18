@@ -445,4 +445,69 @@ describe('AI Context Factory', () => {
     expect(request.responseFormat).toBe('STRUCTURED');
     expect(Object.isFrozen(request)).toBe(true);
   });
+
+  it('should fail fast when a mandatory planet fact is unavailable', () => {
+    const brokenHoroscope = {
+      ...horoscope,
+      planetFacts: {
+        ...horoscope.planetFacts,
+        [Planet.MARS]: {
+          ...horoscope.planetFacts?.[Planet.MARS],
+          sign: undefined
+        }
+      }
+    } as any;
+    expect(() => buildAiContext(brokenHoroscope)).toThrow(/missing sign for/);
+  });
+
+  it('should fail fast when a mandatory planet house is unavailable', () => {
+    const brokenHoroscope = {
+      ...horoscope,
+      planetFacts: {
+        ...horoscope.planetFacts,
+        [Planet.MARS]: {
+          ...horoscope.planetFacts?.[Planet.MARS],
+          house: undefined
+        }
+      }
+    } as any;
+    expect(() => buildAiContext(brokenHoroscope)).toThrow(/missing house for/);
+  });
+
+  it('should fail fast when a mandatory house lord is unavailable', () => {
+    const brokenHoroscope = {
+      ...horoscope,
+      houseInterpretation: {
+        ...horoscope.houseInterpretation,
+        houses: {
+          ...horoscope.houseInterpretation?.houses,
+          2: {
+            ...horoscope.houseInterpretation?.houses?.[2],
+            lord: {
+              ...horoscope.houseInterpretation?.houses?.[2]?.lord,
+              planet: undefined
+            }
+          }
+        }
+      },
+      houseAnalysis: {
+        ...horoscope.houseAnalysis,
+        houses: {
+          ...horoscope.houseAnalysis?.houses,
+          2: {
+            ...horoscope.houseAnalysis?.houses?.[2],
+            lord: undefined
+          }
+        }
+      },
+      houseLordship: {
+        ...horoscope.houseLordship,
+        houseLords: {
+          ...horoscope.houseLordship?.houseLords,
+          2: undefined
+        }
+      }
+    } as any;
+    expect(() => buildAiContext(brokenHoroscope)).toThrow(/missing lord for house/);
+  });
 });
