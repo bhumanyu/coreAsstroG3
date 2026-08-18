@@ -2,6 +2,7 @@ import type { AiContext } from '../../types/aiContextTypes';
 import type { AiTask } from '../../types/aiRequestTypes';
 import type { AiReasoningResult, AiReasoningStatus } from '../../types/aiReasoningResult';
 import type { LocalRuleDefinition, LocalRuleDomain } from './localVedicRulesTypes';
+import { rankEvidence } from './utils/evidenceScorer';
 import { LOCAL_VEDIC_RULES } from './rules';
 
 export const TASK_DOMAIN: Record<AiTask, LocalRuleDomain> = Object.freeze({
@@ -75,7 +76,7 @@ export function reasonWithLocalRules(
     return a.id.localeCompare(b.id);
   });
 
-  const validEvidenceIdSet = new Set(context.evidence.map((e) => e.id));
+  const validEvidenceMap = new Map(context.evidence.map((e) => [e.id, e]));
   const supportingSet = new Set<string>();
   const challengingSet = new Set<string>();
   const triggeredRuleSet = new Set<string>();
@@ -93,7 +94,7 @@ export function reasonWithLocalRules(
 
         if (evaluation.supportingEvidenceIds) {
           for (const id of evaluation.supportingEvidenceIds) {
-            if (validEvidenceIdSet.has(id)) {
+            if (validEvidenceMap.has(id)) {
               supportingSet.add(id);
             }
           }
@@ -101,7 +102,7 @@ export function reasonWithLocalRules(
 
         if (evaluation.challengingEvidenceIds) {
           for (const id of evaluation.challengingEvidenceIds) {
-            if (validEvidenceIdSet.has(id)) {
+            if (validEvidenceMap.has(id)) {
               challengingSet.add(id);
             }
           }
@@ -127,11 +128,24 @@ export function reasonWithLocalRules(
 
   const conclusion = buildConclusion(task, context);
 
+  // Rank supporting and challenging evidence deterministically by priority score
+  const rankedSupporting = rankEvidence(
+    Array.from(supportingSet)
+      .map((id) => validEvidenceMap.get(id))
+      .filter((e): e is NonNullable<typeof e> => e != null)
+  ).map((e) => e.id);
+
+  const rankedChallenging = rankEvidence(
+    Array.from(challengingSet)
+      .map((id) => validEvidenceMap.get(id))
+      .filter((e): e is NonNullable<typeof e> => e != null)
+  ).map((e) => e.id);
+
   return Object.freeze({
     status,
     conclusion,
-    supportingEvidenceIds: Object.freeze(Array.from(supportingSet).sort()),
-    challengingEvidenceIds: Object.freeze(Array.from(challengingSet).sort()),
+    supportingEvidenceIds: Object.freeze(rankedSupporting),
+    challengingEvidenceIds: Object.freeze(rankedChallenging),
     unresolvedQuestions: Object.freeze([]),
     warnings: Object.freeze(warnings),
     triggeredRuleIds: Object.freeze(Array.from(triggeredRuleSet).sort())

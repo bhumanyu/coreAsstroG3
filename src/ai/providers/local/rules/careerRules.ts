@@ -1,5 +1,6 @@
 import type { AiContext } from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
+import { rankEvidence } from '../utils/evidenceScorer';
 import { notTriggered, triggered } from '../utils/ruleResult';
 
 export const CAREER_RULES: readonly LocalRuleDefinition[] = Object.freeze([
@@ -12,8 +13,19 @@ export const CAREER_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         return notTriggered();
       }
 
-      const relevantEvidence = context.evidence.filter((e) =>
-        e.source === 'CAREER' || e.source === 'D10' || e.source === 'DASHA'
+      const relevantEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) =>
+            e.source === 'CAREER' ||
+            e.source === 'D10' ||
+            (e.source === 'DASHA' &&
+              (e.dimension === 'CONFIRMATION' ||
+                e.dimension === 'TIMING' ||
+                e.statement.toLowerCase().includes('career') ||
+                e.statement.toLowerCase().includes('profession') ||
+                e.statement.toLowerCase().includes('d10') ||
+                e.statement.toLowerCase().includes('10th')))
+        )
       );
 
       const supportingIds = relevantEvidence
@@ -50,8 +62,8 @@ export const CAREER_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         return notTriggered();
       }
 
-      const conflictingEvidence = context.evidence.filter(
-        (e) => e.source === 'D10' || e.vargaRelationship === 'CONFLICTS'
+      const conflictingEvidence = rankEvidence(
+        context.evidence.filter((e) => e.vargaRelationship === 'CONFLICTS')
       );
       const challengingIds = conflictingEvidence.map((e) => e.id);
 

@@ -1,5 +1,6 @@
 import type { AiContext } from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
+import { rankEvidence } from '../utils/evidenceScorer';
 import { notTriggered, triggered } from '../utils/ruleResult';
 
 export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
@@ -13,8 +14,10 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
       }
 
       const active = context.dasha.active;
-      const dashaEvidence = context.evidence.filter(
-        (e) => e.source === 'DASHA' || e.dashaLevel != null || e.timingReason != null
+      const dashaEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) => e.source === 'DASHA' || e.dashaLevel != null || e.timingReason != null
+        )
       );
 
       const supportingIds = dashaEvidence
@@ -24,8 +27,10 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         .filter((e) => e.effect === 'CHALLENGE')
         .map((e) => e.id);
 
-      let effect: LocalRuleEffect = 'SUPPORT';
-      if (challengingIds.length > supportingIds.length) {
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (supportingIds.length > challengingIds.length) {
+        effect = 'SUPPORT';
+      } else if (challengingIds.length > supportingIds.length) {
         effect = 'CHALLENGE';
       } else if (supportingIds.length > 0 && challengingIds.length > 0) {
         effect = 'MIXED';
@@ -45,12 +50,14 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
     domain: 'DASHA',
     priority: 75,
     evaluate(context: AiContext) {
-      const timingEvidence = context.evidence.filter(
-        (e) =>
-          e.dimension === 'TIMING' ||
-          e.priority === 'TIMING' ||
-          e.timingReason != null ||
-          e.source === 'DASHA'
+      const timingEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) =>
+            e.dimension === 'TIMING' ||
+            e.priority === 'TIMING' ||
+            e.timingReason != null ||
+            e.source === 'DASHA'
+        )
       );
 
       if (timingEvidence.length === 0 && context.dasha.periods.length === 0) {
@@ -64,8 +71,14 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         .filter((e) => e.effect === 'CHALLENGE')
         .map((e) => e.id);
 
-      const effect: LocalRuleEffect =
-        challengingIds.length > supportingIds.length ? 'CHALLENGE' : 'SUPPORT';
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (supportingIds.length > challengingIds.length) {
+        effect = 'SUPPORT';
+      } else if (challengingIds.length > supportingIds.length) {
+        effect = 'CHALLENGE';
+      } else if (supportingIds.length > 0 && challengingIds.length > 0) {
+        effect = 'MIXED';
+      }
 
       const statement = `Planetary period timing aligns with active lifecycle activation.`;
       return triggered(effect, statement, supportingIds, challengingIds);

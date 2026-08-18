@@ -1,5 +1,6 @@
 import type { AiContext } from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
+import { rankEvidence } from '../utils/evidenceScorer';
 import { notTriggered, triggered } from '../utils/ruleResult';
 
 export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
@@ -12,7 +13,9 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         return notTriggered();
       }
 
-      const relevantEvidence = context.evidence.filter((e) => e.source === 'WEALTH');
+      const relevantEvidence = rankEvidence(
+        context.evidence.filter((e) => e.source === 'WEALTH')
+      );
       const supportingIds = relevantEvidence
         .filter((e) => e.effect === 'SUPPORT')
         .map((e) => e.id);
@@ -62,8 +65,10 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         effect = 'MIXED';
       }
 
-      const relevantEvidence = context.evidence.filter(
-        (e) => e.source === 'WEALTH' || e.source === 'HOUSE'
+      const relevantEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) => e.source === 'WEALTH' || e.source === 'HOUSE'
+        )
       );
       const supportingIds = relevantEvidence
         .filter((e) => e.effect === 'SUPPORT')
@@ -92,19 +97,40 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         return notTriggered();
       }
 
-      const activeDhanaYogas = dhanaYogas.filter((y) => y.status !== 'CANCELLED');
-      const effect: LocalRuleEffect = activeDhanaYogas.length > 0 ? 'SUPPORT' : 'NEUTRAL';
+      const supportingYogas = dhanaYogas.filter(
+        (y) => y.status === 'PRESENT' || y.status === 'STRONG'
+      );
+      const challengedYogas = dhanaYogas.filter(
+        (y) => y.status === 'WEAKENED'
+      );
+      const cancelledYogas = dhanaYogas.filter(
+        (y) => y.status === 'CANCELLED'
+      );
 
-      const yogaEvidence = context.evidence.filter(
-        (e) =>
-          e.source === 'YOGA' &&
-          (e.statement.toUpperCase().includes('DHANA') ||
-            e.statement.toUpperCase().includes('LAKSHMI') ||
-            e.effect === 'SUPPORT')
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (supportingYogas.length > challengedYogas.length + cancelledYogas.length) {
+        effect = 'SUPPORT';
+      } else if (challengedYogas.length + cancelledYogas.length > supportingYogas.length) {
+        effect = 'CHALLENGE';
+      } else if (
+        supportingYogas.length > 0 &&
+        (challengedYogas.length > 0 || cancelledYogas.length > 0)
+      ) {
+        effect = 'MIXED';
+      }
+
+      const yogaEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) =>
+            e.source === 'YOGA' &&
+            (e.statement.toUpperCase().includes('DHANA') ||
+              e.statement.toUpperCase().includes('LAKSHMI') ||
+              e.effect === 'SUPPORT')
+        )
       );
       const supportingIds = yogaEvidence.map((e) => e.id);
 
-      const statement = `Dhana and prosperity yoga patterns reinforce financial potential in the chart.`;
+      const statement = `Dhana and prosperity yoga patterns evaluated in the chart (${supportingYogas.length} positive indications).`;
       return triggered(effect, statement, supportingIds);
     }
   }

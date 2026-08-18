@@ -1,5 +1,6 @@
 import type { AiContext } from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
+import { rankEvidence } from '../utils/evidenceScorer';
 import { notTriggered, triggered } from '../utils/ruleResult';
 
 export const LIFE_THEME_RULES: readonly LocalRuleDefinition[] = Object.freeze([
@@ -24,7 +25,9 @@ export const LIFE_THEME_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         effect = 'MIXED';
       }
 
-      const themeEvidence = context.evidence.filter((e) => e.source === 'LIFE_THEME');
+      const themeEvidence = rankEvidence(
+        context.evidence.filter((e) => e.source === 'LIFE_THEME')
+      );
       const supportingIds = themeEvidence
         .filter((e) => e.effect === 'SUPPORT')
         .map((e) => e.id);

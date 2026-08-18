@@ -1,5 +1,6 @@
 import type { AiContext } from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
+import { rankEvidence } from '../utils/evidenceScorer';
 import { notTriggered, triggered } from '../utils/ruleResult';
 
 export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.freeze([
@@ -8,10 +9,11 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
     domain: 'CHART',
     priority: 95,
     evaluate(context: AiContext) {
-      const supportingIds = context.evidence
+      const ranked = rankEvidence(context.evidence);
+      const supportingIds = ranked
         .filter((e) => e.effect === 'SUPPORT')
         .map((e) => e.id);
-      const challengingIds = context.evidence
+      const challengingIds = ranked
         .filter((e) => e.effect === 'CHALLENGE')
         .map((e) => e.id);
 
@@ -39,12 +41,14 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
 
       const asc = context.ascendant;
       const ascLordFacts = context.planets.find((p) => p.planet === asc.lord);
-      const ascEvidence = context.evidence.filter(
-        (e) =>
-          e.planets?.includes(asc.lord) ||
-          e.houses?.includes(1) ||
-          e.source === 'HOUSE' ||
-          e.source === 'PLANET'
+      const ascEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) =>
+            e.planets?.includes(asc.lord) ||
+            e.houses?.includes(1) ||
+            e.source === 'HOUSE' ||
+            e.source === 'PLANET'
+        )
       );
 
       const supportingIds = ascEvidence
@@ -54,10 +58,19 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
         .filter((e) => e.effect === 'CHALLENGE')
         .map((e) => e.id);
 
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (supportingIds.length > challengingIds.length) {
+        effect = 'SUPPORT';
+      } else if (challengingIds.length > supportingIds.length) {
+        effect = 'CHALLENGE';
+      } else if (supportingIds.length > 0 && challengingIds.length > 0) {
+        effect = 'MIXED';
+      }
+
       const strengthInfo = ascLordFacts?.strengthStatus ? ` (${ascLordFacts.strengthStatus})` : '';
       const statement = `Ascendant in ${asc.sign} ruled by ${asc.lord}${strengthInfo}.`;
 
-      return triggered('SUPPORT', statement, supportingIds, challengingIds);
+      return triggered(effect, statement, supportingIds, challengingIds);
     }
   },
   {
@@ -65,8 +78,10 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
     domain: 'CHART',
     priority: 80,
     evaluate(context: AiContext) {
-      const vargaEvidence = context.evidence.filter(
-        (e) => e.vargaRelationship != null || e.source === 'D9' || e.source === 'D10'
+      const vargaEvidence = rankEvidence(
+        context.evidence.filter(
+          (e) => e.vargaRelationship != null || e.source === 'D9' || e.source === 'D10'
+        )
       );
 
       if (vargaEvidence.length === 0) {
