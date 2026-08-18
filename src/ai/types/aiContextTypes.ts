@@ -44,6 +44,9 @@ export type AiEvidenceSource =
   | 'CAREER'
   | 'WEALTH'
   | 'LIFE_THEME'
+  | 'ASPECT'
+  | 'D2'
+  | 'TRANSIT'
   | 'UNKNOWN';
 
 export type AiEvidenceStrength = 'STRONG' | 'MODERATE' | 'WEAK' | 'UNKNOWN';
@@ -121,6 +124,7 @@ export interface CareerFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
     | 'SUPPORTED'
+    | 'NEUTRAL'
     | 'MIXED'
     | 'CHALLENGED'
     | 'LIMITED_EVIDENCE';
@@ -138,6 +142,7 @@ export interface WealthSubthemeFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
     | 'SUPPORTED'
+    | 'NEUTRAL'
     | 'MIXED'
     | 'CHALLENGED'
     | 'LIMITED_EVIDENCE';
@@ -151,6 +156,7 @@ export interface WealthFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
     | 'SUPPORTED'
+    | 'NEUTRAL'
     | 'MIXED'
     | 'CHALLENGED'
     | 'LIMITED_EVIDENCE';
@@ -182,6 +188,7 @@ export interface AiEvidence {
   readonly conditional?: boolean;
   readonly varga?: 'D9' | 'D10';
   readonly dashaLevel?: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
+  readonly timingPlanet?: Planet;
 }
 
 export interface AiContextSource {

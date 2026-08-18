@@ -66,7 +66,7 @@ describe('AI Context Factory', () => {
     expect(context.lifeThemes).toHaveLength(12);
     for (const theme of context.lifeThemes) {
       expect(typeof theme.theme).toBe('string');
-      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL', 'MIXED']).toContain(theme.effect);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL', 'MIXED', 'UNKNOWN']).toContain(theme.effect);
       expect(['HIGH', 'MEDIUM', 'LOW']).toContain(theme.confidence);
       expect(typeof theme.evidenceCount).toBe('number');
     }
@@ -75,7 +75,7 @@ describe('AI Context Factory', () => {
   it('should project career and wealth facts with valid status and factors', () => {
     expect(context.career).toBeDefined();
     expect(context.career?.status).toBeDefined();
-    expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
+    expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'NEUTRAL', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
       context.career?.status
     );
     expect(['HIGH', 'MEDIUM', 'LOW']).toContain(context.career?.confidence);
@@ -96,7 +96,7 @@ describe('AI Context Factory', () => {
 
     expect(context.wealth).toBeDefined();
     expect(context.wealth?.status).toBeDefined();
-    expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
+    expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'NEUTRAL', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
       context.wealth?.status
     );
     expect(['HIGH', 'MEDIUM', 'LOW']).toContain(context.wealth?.confidence);
@@ -112,7 +112,7 @@ describe('AI Context Factory', () => {
     for (const subtheme of context.wealth?.subthemes || []) {
       expect(['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION']).toContain(subtheme.subtheme);
       expect(typeof subtheme.house).toBe('number');
-      expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
+      expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'NEUTRAL', 'MIXED', 'CHALLENGED', 'LIMITED_EVIDENCE']).toContain(
         subtheme.status
       );
       expect(typeof subtheme.primaryFamily).toBe('string');
@@ -271,7 +271,7 @@ describe('AI Context Factory', () => {
     expect(matches).toHaveLength(1);
   });
 
-  it('should project evidence items with normalized sources and strengths without fabricated certainty', () => {
+  it('should project evidence items with normalized sources, effects, and strengths without fabricated certainty', () => {
     expect(context.evidence).toBeDefined();
     for (const ev of context.evidence) {
       expect([
@@ -286,10 +286,58 @@ describe('AI Context Factory', () => {
         'CAREER',
         'WEALTH',
         'LIFE_THEME',
+        'ASPECT',
+        'D2',
+        'TRANSIT',
         'UNKNOWN'
       ]).toContain(ev.source);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL', 'MIXED', 'UNKNOWN']).toContain(ev.effect);
       expect(['STRONG', 'MODERATE', 'WEAK', 'UNKNOWN']).toContain(ev.strength);
     }
+  });
+
+  it('should project timing evidence with dashaLevel and timingPlanet', () => {
+    const careerEvidence = horoscope.themeInterpretationV2?.career?.evidence || [];
+    const dashaEvidence = careerEvidence.find((e) => e.timingEvidence);
+    if (dashaEvidence && dashaEvidence.timingEvidence) {
+      const projected = context.evidence.find((e) => e.id === dashaEvidence.id);
+      expect(projected).toBeDefined();
+      expect(projected?.dashaLevel).toBe(dashaEvidence.timingEvidence.dashaLevel);
+      expect(projected?.timingPlanet).toBe(dashaEvidence.timingEvidence.planet);
+    }
+
+    // Also test explicitly with simulated timing evidence
+    const simulatedTimingHoroscope = {
+      ...horoscope,
+      themeInterpretationV2: {
+        ...horoscope.themeInterpretationV2,
+        career: {
+          ...horoscope.themeInterpretationV2?.career,
+          evidence: [
+            {
+              id: 'test-timing-id',
+              ruleId: 'RULE_TIMING_TEST',
+              evidenceFamily: 'DASHA',
+              priority: 'TIMING',
+              strength: 'STRONG',
+              effect: 'SUPPORT',
+              statement: 'Timing test statement',
+              timingEvidence: {
+                dashaLevel: 'MAHADASHA',
+                planet: Planet.JUPITER,
+                relevanceReason: 'Career timing lord',
+                houses: [10]
+              }
+            }
+          ]
+        }
+      }
+    } as any;
+    const simContext = buildAiContext(simulatedTimingHoroscope);
+    const simProjected = simContext.evidence.find((e) => e.id === 'test-timing-id');
+    expect(simProjected).toBeDefined();
+    expect(simProjected?.dashaLevel).toBe('MAHADASHA');
+    expect(simProjected?.timingPlanet).toBe(Planet.JUPITER);
   });
 
   it('should project planet facts without synthetic NORMAL fallbacks when fact properties are missing', () => {

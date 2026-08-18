@@ -298,7 +298,15 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
   };
 }
 
-function mapThemeEffectToStatus(effect: string | undefined): 'STRONGLY_SUPPORTED' | 'SUPPORTED' | 'MIXED' | 'CHALLENGED' | 'LIMITED_EVIDENCE' {
+function mapThemeEffectToStatus(
+  effect: string | undefined
+):
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'NEUTRAL'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'LIMITED_EVIDENCE' {
   switch (effect) {
     case 'SUPPORT':
       return 'SUPPORTED';
@@ -307,6 +315,7 @@ function mapThemeEffectToStatus(effect: string | undefined): 'STRONGLY_SUPPORTED
     case 'MIXED':
       return 'MIXED';
     case 'NEUTRAL':
+      return 'NEUTRAL';
     default:
       return 'LIMITED_EVIDENCE';
   }
@@ -370,11 +379,24 @@ function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
   };
 }
 
+function normalizeEvidenceEffect(effect: unknown): AiEvidenceEffect {
+  if (
+    effect === 'SUPPORT' ||
+    effect === 'CHALLENGE' ||
+    effect === 'NEUTRAL' ||
+    effect === 'MIXED' ||
+    effect === 'UNKNOWN'
+  ) {
+    return effect;
+  }
+  return 'UNKNOWN';
+}
+
 function buildLifeThemeFacts(horoscope: Horoscope): readonly LifeThemeFact[] {
   const themes = horoscope.lifeThemes?.themes || [];
   return themes.map((t: any) => ({
     theme: String(t.theme),
-    effect: (t.effect || 'NEUTRAL') as AiEvidenceEffect,
+    effect: normalizeEvidenceEffect(t.effect),
     confidence: (t.confidence || 'MEDIUM') as AiConfidence,
     evidenceCount: t.evidenceCount ?? (t.evidence?.length || 0)
   }));
@@ -393,7 +415,6 @@ function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
     if (
       upper === 'PLANET' ||
       upper === 'GRAHA' ||
-      upper === 'ASPECT' ||
       upper === 'SUN' ||
       upper === 'MOON' ||
       upper === 'MARS' ||
@@ -414,14 +435,17 @@ function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
     ) {
       return 'HOUSE';
     }
+    if (upper === 'ASPECT') return 'ASPECT';
     if (upper === 'YOGA') return 'YOGA';
     if (upper === 'FUNCTIONAL_ROLE' || upper === 'FUNCTIONAL') return 'FUNCTIONAL_ROLE';
     if (upper === 'STRENGTH' || upper === 'SHADBALA' || upper === 'PLANETARY_STRENGTH') return 'STRENGTH';
     if (upper === 'DASHA' || upper === 'VIMSHOTTARI') return 'DASHA';
     if (upper === 'D9' || upper === 'NAVAMSA') return 'D9';
     if (upper === 'D10' || upper === 'DASAMSA') return 'D10';
-    if (upper === 'D2' || upper === 'HORA' || upper === 'WEALTH') return 'WEALTH';
+    if (upper === 'D2' || upper === 'HORA') return 'D2';
+    if (upper === 'WEALTH') return 'WEALTH';
     if (upper === 'CAREER') return 'CAREER';
+    if (upper === 'TRANSIT' || upper === 'GOCHARA') return 'TRANSIT';
     if (upper === 'LIFE_THEME' || upper === 'THEME') return 'LIFE_THEME';
     const validSources: readonly AiEvidenceSource[] = [
       'PLANET',
@@ -434,7 +458,10 @@ function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
       'D10',
       'CAREER',
       'WEALTH',
-      'LIFE_THEME'
+      'LIFE_THEME',
+      'ASPECT',
+      'D2',
+      'TRANSIT'
     ];
     if (validSources.includes(upper as AiEvidenceSource)) {
       return upper as AiEvidenceSource;
@@ -455,7 +482,8 @@ function isEvidenceEqual(a: AiEvidence, b: AiEvidence): boolean {
     a.dimension !== b.dimension ||
     a.conditional !== b.conditional ||
     a.varga !== b.varga ||
-    a.dashaLevel !== b.dashaLevel
+    a.dashaLevel !== b.dashaLevel ||
+    a.timingPlanet !== b.timingPlanet
   ) {
     return false;
   }
@@ -496,7 +524,7 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
   for (const e of careerEvidence) {
     const source = mapToAiEvidenceSource(e.evidenceFamily || (e as any).source);
     const strength = normalizeEvidenceStrength(e.strength);
-    const effect = (e.effect || 'NEUTRAL') as AiEvidenceEffect;
+    const effect = normalizeEvidenceEffect(e.effect);
     const statement = String(e.statement || '');
     const ruleId = e.ruleId ? String(e.ruleId) : undefined;
     const priority = (e.priority as AiEvidencePriority) || undefined;
@@ -519,6 +547,12 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
       dashaLevel = dashaVal;
     }
 
+    let timingPlanet: Planet | undefined = undefined;
+    const tPlanet = e.timingEvidence?.planet || (e as any).timingPlanet;
+    if (tPlanet) {
+      timingPlanet = tPlanet;
+    }
+
     insertEvidence({
       id: String(e.id),
       source,
@@ -532,7 +566,8 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
       ...(dimension ? { dimension } : {}),
       ...(conditional !== undefined ? { conditional } : {}),
       ...(varga ? { varga } : {}),
-      ...(dashaLevel ? { dashaLevel } : {})
+      ...(dashaLevel ? { dashaLevel } : {}),
+      ...(timingPlanet ? { timingPlanet } : {})
     });
   }
 
@@ -541,7 +576,7 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
   for (const e of wealthEvidence) {
     const source = mapToAiEvidenceSource(e.evidenceFamily || (e as any).source);
     const strength = normalizeEvidenceStrength(e.strength);
-    const effect = (e.effect || 'NEUTRAL') as AiEvidenceEffect;
+    const effect = normalizeEvidenceEffect(e.effect);
     const statement = String(e.statement || '');
     const ruleId = e.ruleId ? String(e.ruleId) : undefined;
     const priority = (e.priority as AiEvidencePriority) || undefined;
@@ -564,6 +599,12 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
       dashaLevel = dashaVal;
     }
 
+    let timingPlanet: Planet | undefined = undefined;
+    const tPlanet = e.timingEvidence?.planet || (e as any).timingPlanet;
+    if (tPlanet) {
+      timingPlanet = tPlanet;
+    }
+
     insertEvidence({
       id: String(e.id),
       source,
@@ -577,7 +618,8 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
       ...(dimension ? { dimension } : {}),
       ...(conditional !== undefined ? { conditional } : {}),
       ...(varga ? { varga } : {}),
-      ...(dashaLevel ? { dashaLevel } : {})
+      ...(dashaLevel ? { dashaLevel } : {}),
+      ...(timingPlanet ? { timingPlanet } : {})
     });
   }
 
@@ -588,7 +630,7 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
     for (const e of t.evidence || []) {
       const source = mapToAiEvidenceSource(e.source);
       const strength = normalizeEvidenceStrength(e.strength);
-      const effect = (e.effect || 'NEUTRAL') as AiEvidenceEffect;
+      const effect = normalizeEvidenceEffect(e.effect);
       const statement = String(e.statement || '');
       const planetsStr = (e.planets || []).join(',');
       const housesStr = (e.houses || []).join(',');
