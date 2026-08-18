@@ -84,6 +84,37 @@ function validateConfig(config: RemoteAiProviderConfig): void {
   }
 }
 
+function validateRequestUrl(url: string): void {
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      'Remote AI request URL must be a valid URL.'
+    );
+  }
+
+  const isLocal =
+    parsedUrl.hostname === 'localhost' ||
+    parsedUrl.hostname === '127.0.0.1';
+
+  if (parsedUrl.protocol !== 'https:' && !isLocal) {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      'Remote AI request URL must use HTTPS.'
+    );
+  }
+
+  if (parsedUrl.username || parsedUrl.password) {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      'Remote AI request URL must not contain credentials.'
+    );
+  }
+}
+
 export class RemoteAiProvider implements AiProvider {
   readonly identity: AiProviderIdentity;
   readonly capabilities: RemoteAiProviderConfig['capabilities'];
@@ -137,7 +168,15 @@ export class RemoteAiProvider implements AiProvider {
 
     try {
       httpRequest = this.requestMapper.map(request, this.config);
-    } catch {
+      validateRequestUrl(httpRequest.url);
+    } catch (error) {
+      if (
+        error instanceof RemoteAiError &&
+        error.code === 'INVALID_ENDPOINT'
+      ) {
+        throw error;
+      }
+
       throw new RemoteAiError(
         'MAPPING_ERROR',
         'Failed to map AiRequest to remote provider request.',

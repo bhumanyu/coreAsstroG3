@@ -43,6 +43,16 @@ export class FetchRemoteAiTransport implements RemoteAiTransport {
         headers[key] = value;
       });
 
+      if (response.status < 200 || response.status >= 300) {
+        return Object.freeze({
+          status: response.status,
+          headers: Object.freeze({
+            ...headers
+          }),
+          body: undefined
+        });
+      }
+
       let body: unknown;
       const contentType = response.headers.get('content-type') ?? '';
 

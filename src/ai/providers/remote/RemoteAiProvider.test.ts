@@ -414,6 +414,78 @@ describe('RemoteAiProvider', () => {
     ).not.toThrow();
   });
 
+  it('rejects mapped request URL with non-HTTPS insecure endpoint', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {},
+      body: 'ok'
+    });
+
+    const insecureMapper = {
+      map: () => ({
+        url: 'http://insecure-external-server.com/ai',
+        method: 'POST' as const,
+        headers: {},
+        body: {}
+      })
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test Provider',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      insecureMapper,
+      new FakeRemoteAiResponseMapper(),
+      transport
+    );
+
+    await expect(provider.generate(createRequest())).rejects.toMatchObject({
+      code: 'INVALID_ENDPOINT'
+    });
+  });
+
+  it('rejects mapped request URL containing embedded credentials', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {},
+      body: 'ok'
+    });
+
+    const credentialMapper = {
+      map: () => ({
+        url: 'https://user:password@example.com/ai',
+        method: 'POST' as const,
+        headers: {},
+        body: {}
+      })
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test Provider',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      credentialMapper,
+      new FakeRemoteAiResponseMapper(),
+      transport
+    );
+
+    await expect(provider.generate(createRequest())).rejects.toMatchObject({
+      code: 'INVALID_ENDPOINT'
+    });
+  });
+
   it('rejects timeout <= 0', () => {
     expect(
       () =>

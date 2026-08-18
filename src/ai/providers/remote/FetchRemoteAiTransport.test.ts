@@ -66,6 +66,32 @@ describe('FetchRemoteAiTransport', () => {
     expect(response.body).toBe('plain text');
   });
 
+  it('preserves non-2xx status even when the error body is invalid JSON', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('{invalid-json', {
+        status: 500,
+        headers: {
+          'content-type': 'application/json'
+        }
+      })
+    );
+
+    const transport = new FetchRemoteAiTransport();
+
+    const response = await transport.send(
+      {
+        url: 'https://example.com',
+        method: 'POST',
+        headers: {},
+        body: {}
+      },
+      5000
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toBeUndefined();
+  });
+
   it('throws INVALID_RESPONSE when JSON is malformed', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('not-json-content', {
