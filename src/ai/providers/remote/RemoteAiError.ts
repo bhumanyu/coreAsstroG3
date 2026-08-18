@@ -4,6 +4,7 @@ export class RemoteAiError extends Error {
   readonly code: RemoteAiErrorCode;
   readonly statusCode?: number;
   readonly requestId?: string;
+  override readonly cause?: unknown;
 
   constructor(
     code: RemoteAiErrorCode,
@@ -20,10 +21,7 @@ export class RemoteAiError extends Error {
     this.code = code;
     this.statusCode = options.statusCode;
     this.requestId = options.requestId;
-
-    if (options.cause !== undefined) {
-      this.cause = options.cause;
-    }
+    this.cause = options.cause;
 
     Object.setPrototypeOf(this, new.target.prototype);
   }

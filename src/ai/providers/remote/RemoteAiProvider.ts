@@ -75,13 +75,10 @@ function validateConfig(config: RemoteAiProviderConfig): void {
   let parsedUrl: URL;
   try {
     parsedUrl = new URL(config.endpoint);
-  } catch (error) {
+  } catch {
     throw new RemoteAiError(
       'INVALID_ENDPOINT',
-      'Remote AI provider endpoint must be a valid URL.',
-      {
-        cause: error
-      }
+      'Remote AI provider endpoint must be a valid URL.'
     );
   }
 
@@ -93,6 +90,13 @@ function validateConfig(config: RemoteAiProviderConfig): void {
     throw new RemoteAiError(
       'INVALID_ENDPOINT',
       'Remote AI provider endpoint must use HTTPS.'
+    );
+  }
+
+  if (parsedUrl.username || parsedUrl.password) {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      'Remote AI provider endpoint must not contain credentials.'
     );
   }
 
@@ -153,19 +157,27 @@ export class RemoteAiProvider implements AiProvider {
   ) {
     validateConfig(config);
 
-    this.config = Object.freeze({
-      ...config,
-      capabilities: Object.freeze([...config.capabilities]),
-      defaultHeaders: Object.freeze({
-        ...(config.defaultHeaders ?? {})
-      })
-    });
-
-    this.identity = Object.freeze({
+    const frozenIdentity = Object.freeze({
       ...config.identity
     });
 
-    this.capabilities = Object.freeze([...config.capabilities]);
+    const frozenCapabilities = Object.freeze([
+      ...config.capabilities
+    ]);
+
+    const frozenHeaders = Object.freeze({
+      ...(config.defaultHeaders ?? {})
+    });
+
+    this.config = Object.freeze({
+      ...config,
+      identity: frozenIdentity,
+      capabilities: frozenCapabilities,
+      defaultHeaders: frozenHeaders
+    });
+
+    this.identity = frozenIdentity;
+    this.capabilities = frozenCapabilities;
 
     this.requestMapper = requestMapper;
     this.responseMapper = responseMapper;
@@ -188,18 +200,28 @@ export class RemoteAiProvider implements AiProvider {
 
     try {
       httpRequest = this.requestMapper.map(request, this.config);
-      validateRequestUrl(httpRequest.url);
-    } catch (error) {
-      if (
-        error instanceof RemoteAiError &&
-        error.code === 'INVALID_ENDPOINT'
-      ) {
-        throw error;
-      }
-
+    } catch {
       throw new RemoteAiError(
         'MAPPING_ERROR',
         'Failed to map AiRequest to remote provider request.',
+        {
+          requestId: request.requestId
+        }
+      );
+    }
+
+    try {
+      validateRequestUrl(httpRequest.url);
+    } catch (error) {
+      if (error instanceof RemoteAiError) {
+        throw new RemoteAiError(error.code, error.message, {
+          requestId: request.requestId
+        });
+      }
+
+      throw new RemoteAiError(
+        'INVALID_ENDPOINT',
+        'Remote AI request URL is invalid.',
         {
           requestId: request.requestId
         }

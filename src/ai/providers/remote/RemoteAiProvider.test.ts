@@ -220,6 +220,43 @@ describe('RemoteAiProvider', () => {
     });
   });
 
+  it('normalizes mapper-thrown INVALID_ENDPOINT to MAPPING_ERROR', async () => {
+    const mapper = {
+      map() {
+        throw new RemoteAiError(
+          'INVALID_ENDPOINT',
+          'mapper-originated endpoint error'
+        );
+      }
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      mapper,
+      new FakeRemoteAiResponseMapper(),
+      new FakeRemoteAiTransport({
+        status: 200,
+        headers: {},
+        body: 'ok'
+      })
+    );
+
+    await expect(
+      provider.generate(createRequest())
+    ).rejects.toMatchObject({
+      code: 'MAPPING_ERROR',
+      requestId: 'remote-test-1'
+    });
+  });
+
   it('normalizes any response mapper failure to MAPPING_ERROR', async () => {
     const transport = new FakeRemoteAiTransport({
       status: 200,
@@ -522,6 +559,68 @@ describe('RemoteAiProvider', () => {
     await expect(provider.generate(createRequest())).rejects.toMatchObject({
       code: 'INVALID_ENDPOINT'
     });
+  });
+
+  it('passes deeply frozen configuration to the request mapper', async () => {
+    let receivedConfig: RemoteAiProviderConfig | undefined;
+
+    const mapper = {
+      map(_request: AiRequest, config: RemoteAiProviderConfig) {
+        receivedConfig = config;
+
+        return {
+          url: config.endpoint,
+          method: 'POST' as const,
+          headers: {},
+          body: {}
+        };
+      }
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      mapper,
+      new FakeRemoteAiResponseMapper(),
+      new FakeRemoteAiTransport({
+        status: 200,
+        headers: {},
+        body: 'ok'
+      })
+    );
+
+    await provider.generate(createRequest());
+
+    expect(Object.isFrozen(receivedConfig)).toBe(true);
+    expect(Object.isFrozen(receivedConfig?.identity)).toBe(true);
+    expect(Object.isFrozen(receivedConfig?.capabilities)).toBe(true);
+    expect(Object.isFrozen(receivedConfig?.defaultHeaders)).toBe(true);
+  });
+
+  it('rejects configured endpoint containing embedded credentials', () => {
+    expect(
+      () =>
+        new RemoteAiProvider(
+          {
+            identity: {
+              id: 'remote',
+              name: 'Remote',
+              kind: 'REMOTE_LLM'
+            },
+            capabilities: [],
+            endpoint: 'https://user:password@example.com/v1'
+          },
+          new FakeRemoteAiRequestMapper(),
+          new FakeRemoteAiResponseMapper()
+        )
+    ).toThrow(/credentials/);
   });
 
   it('rejects timeout <= 0', () => {
