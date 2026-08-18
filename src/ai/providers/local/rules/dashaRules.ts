@@ -50,17 +50,23 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
     domain: 'DASHA',
     priority: 75,
     evaluate(context: AiContext) {
+      if (!context.dasha.active) {
+        return triggered(
+          'NEUTRAL',
+          'No active Vimshottari Dasha period is available for timing interpretation.'
+        );
+      }
+
       const timingEvidence = rankEvidence(
         context.evidence.filter(
           (e) =>
             e.dimension === 'TIMING' ||
             e.priority === 'TIMING' ||
-            e.timingReason != null ||
-            e.source === 'DASHA'
+            e.timingReason != null
         )
       );
 
-      if (timingEvidence.length === 0 && context.dasha.periods.length === 0) {
+      if (timingEvidence.length === 0) {
         return notTriggered();
       }
 

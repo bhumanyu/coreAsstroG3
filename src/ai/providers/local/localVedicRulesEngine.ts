@@ -59,12 +59,13 @@ function buildConclusion(task: AiTask, context: AiContext): string {
  */
 export function reasonWithLocalRules(
   task: AiTask,
-  context: AiContext
+  context: AiContext,
+  rulesOverride?: readonly LocalRuleDefinition[]
 ): AiReasoningResult {
   const targetDomain = TASK_DOMAIN[task] ?? 'GENERAL';
 
   // Filter rules strictly by task domain
-  const candidateRules = LOCAL_VEDIC_RULES.filter(
+  const candidateRules = (rulesOverride ?? LOCAL_VEDIC_RULES).filter(
     (rule) => rule.domain === targetDomain
   );
 

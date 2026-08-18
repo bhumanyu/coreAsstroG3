@@ -12,6 +12,7 @@ import {
 } from './rules';
 import type { AiTask } from '../../types/aiRequestTypes';
 import type { AiContext, AiEvidence } from '../../types/aiContextTypes';
+import type { LocalRuleDefinition } from './localVedicRulesTypes';
 
 describe('localVedicRulesEngine', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -341,14 +342,64 @@ describe('localVedicRulesEngine', () => {
   });
 
   it('should emit warnings and not crash when a rule references unknown evidence IDs', () => {
-    // Inject a synthetic context with a rule evaluation or test engine directly with an evidence ID not present in context.evidence
-    const contextWithEmptyEvidence: AiContext = {
-      ...context,
-      evidence: Object.freeze([])
+    const syntheticRule: LocalRuleDefinition = {
+      id: 'LOCAL-SYNTHETIC-UNKNOWN',
+      domain: 'CAREER',
+      priority: 100,
+      evaluate: () => ({
+        triggered: true,
+        effect: 'SUPPORT',
+        statement: 'Synthetic rule with unknown IDs',
+        supportingEvidenceIds: ['fake-supporting-id-999'],
+        challengingEvidenceIds: ['fake-challenging-id-888']
+      })
     };
-    const result = reasonWithLocalRules('CAREER_ANALYSIS', contextWithEmptyEvidence);
-    // Career rules fire based on context.career, but return IDs from empty evidence or fixed checks
-    expect(result.warnings).toBeDefined();
+
+    const result = reasonWithLocalRules('CAREER_ANALYSIS', context, [syntheticRule]);
+    expect(result.warnings).toContain(
+      'Rule LOCAL-SYNTHETIC-UNKNOWN referenced unknown supporting evidence ID: fake-supporting-id-999'
+    );
+    expect(result.warnings).toContain(
+      'Rule LOCAL-SYNTHETIC-UNKNOWN referenced unknown challenging evidence ID: fake-challenging-id-888'
+    );
+    expect(result.supportingEvidenceIds).not.toContain('fake-supporting-id-999');
+    expect(result.challengingEvidenceIds).not.toContain('fake-challenging-id-888');
+  });
+
+  it('should set status to PARTIAL and record warning when a rule throws during evaluation', () => {
+    const throwingRule: LocalRuleDefinition = {
+      id: 'LOCAL-SYNTHETIC-THROW',
+      domain: 'CAREER',
+      priority: 100,
+      evaluate: () => {
+        throw new Error('Test rule evaluation crashed');
+      }
+    };
+
+    const result = reasonWithLocalRules('CAREER_ANALYSIS', context, [throwingRule]);
+    expect(result.status).toBe('PARTIAL');
+    expect(result.warnings).toContain(
+      'Rule LOCAL-SYNTHETIC-THROW evaluation failed: Test rule evaluation crashed'
+    );
+  });
+
+  it('should return NEUTRAL in LOCAL-DASHA-002 when no active dasha is present', () => {
+    const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002');
+    expect(dashaRule002).toBeDefined();
+
+    const mockContext: AiContext = {
+      ...context,
+      dasha: {
+        system: 'VIMSHOTTARI',
+        active: undefined,
+        periods: Object.freeze([])
+      }
+    };
+
+    const evalResult = dashaRule002!.evaluate(mockContext);
+    expect(evalResult.triggered).toBe(true);
+    expect(evalResult.effect).toBe('NEUTRAL');
+    expect(evalResult.statement).toContain('No active Vimshottari Dasha period is available');
   });
 
   it('should produce "partially confirm" in LOCAL-CHART-003 when only PARTIALLY_CONFIRMS exists', () => {
