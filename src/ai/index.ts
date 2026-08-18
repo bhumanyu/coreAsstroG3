@@ -65,3 +65,28 @@ export type {
   LocalRuleDomain,
   LocalReasoningOutput
 } from './providers/local';
+
+export {
+  AiProviderRegistry,
+  AiProviderSelector,
+  AiRouter,
+  AiRoutingError,
+  createDefaultAiRouter,
+  decorateAiResponse,
+  TASK_REQUIRED_CAPABILITIES,
+  requiredCapabilitiesForTask,
+  requiredCapabilitiesForRequest
+} from './routing';
+
+export type {
+  AiRoutingMode,
+  AiRoutingFallbackPolicy,
+  AiRoutingOptions,
+  AiProviderSelectionReason,
+  AiProviderSelectionCandidate,
+  AiProviderSelection,
+  AiRoutingResult,
+  AiRoutingContext,
+  AiRoutingErrorCode
+} from './routing';
+
