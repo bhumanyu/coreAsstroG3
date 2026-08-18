@@ -11,6 +11,8 @@ export type {
   CareerD10Relationship,
   AiEvidenceSource,
   AiEvidenceStrength,
+  AiEvidencePriority,
+  AiEvidenceDimension,
   AscendantFact,
   PlanetFactSummary,
   HouseFactSummary,

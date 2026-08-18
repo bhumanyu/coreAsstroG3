@@ -397,7 +397,7 @@ function buildLifeThemeFacts(horoscope: Horoscope): readonly LifeThemeFact[] {
   return themes.map((t: any) => ({
     theme: String(t.theme),
     effect: normalizeEvidenceEffect(t.effect),
-    confidence: (t.confidence || 'MEDIUM') as AiConfidence,
+    confidence: t.confidence as AiConfidence,
     evidenceCount: t.evidenceCount ?? (t.evidence?.length || 0)
   }));
 }
@@ -483,7 +483,10 @@ function isEvidenceEqual(a: AiEvidence, b: AiEvidence): boolean {
     a.conditional !== b.conditional ||
     a.varga !== b.varga ||
     a.dashaLevel !== b.dashaLevel ||
-    a.timingPlanet !== b.timingPlanet
+    a.timingPlanet !== b.timingPlanet ||
+    a.vargaRelationship !== b.vargaRelationship ||
+    a.timingReason !== b.timingReason ||
+    a.timingRelevanceType !== b.timingRelevanceType
   ) {
     return false;
   }
@@ -502,7 +505,74 @@ function isEvidenceEqual(a: AiEvidence, b: AiEvidence): boolean {
     if (aHouses[i] !== bHouses[i]) return false;
   }
 
+  const aTimingHouses = a.timingHouses || [];
+  const bTimingHouses = b.timingHouses || [];
+  if (aTimingHouses.length !== bTimingHouses.length) return false;
+  for (let i = 0; i < aTimingHouses.length; i++) {
+    if (aTimingHouses[i] !== bTimingHouses[i]) return false;
+  }
+
   return true;
+}
+
+function projectV2Evidence(e: any): AiEvidence {
+  const source = mapToAiEvidenceSource(e.evidenceFamily || e.source);
+  const strength = normalizeEvidenceStrength(e.strength);
+  const effect = normalizeEvidenceEffect(e.effect);
+  const statement = String(e.statement || '');
+  const ruleId = e.ruleId ? String(e.ruleId) : undefined;
+  const priority = (e.priority as AiEvidencePriority) || undefined;
+  const dimension = (e.dimension as AiEvidenceDimension) || undefined;
+  const conditional = typeof e.conditional === 'boolean' ? e.conditional : undefined;
+
+  let varga: 'D9' | 'D10' | undefined = undefined;
+  const vargaVal = e.vargaEvidence?.varga || e.varga;
+  if (vargaVal === 'D10' || vargaVal === 'D9') {
+    varga = vargaVal;
+  }
+
+  const vargaRelationship = e.vargaEvidence?.relationship;
+
+  let dashaLevel: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | undefined = undefined;
+  const dashaVal = e.timingEvidence?.dashaLevel || e.dashaLevel;
+  if (
+    dashaVal === 'MAHADASHA' ||
+    dashaVal === 'ANTARDASHA' ||
+    dashaVal === 'PRATYANTARDASHA'
+  ) {
+    dashaLevel = dashaVal;
+  }
+
+  let timingPlanet: Planet | undefined = undefined;
+  const tPlanet = e.timingEvidence?.planet || e.timingPlanet;
+  if (tPlanet) {
+    timingPlanet = tPlanet;
+  }
+
+  const timingHouses = e.timingEvidence?.houses?.length ? [...e.timingEvidence.houses] : undefined;
+  const timingReason = e.timingEvidence?.relevanceReason || undefined;
+  const timingRelevanceType = e.timingEvidence?.relevanceType || undefined;
+
+  return {
+    id: String(e.id),
+    source,
+    effect,
+    strength,
+    statement,
+    ...(e.planets && e.planets.length > 0 ? { planets: [...e.planets] } : {}),
+    ...(e.houses && e.houses.length > 0 ? { houses: [...e.houses] } : {}),
+    ...(ruleId ? { ruleId } : {}),
+    ...(priority ? { priority } : {}),
+    ...(dimension ? { dimension } : {}),
+    ...(conditional !== undefined ? { conditional } : {}),
+    ...(varga ? { varga } : {}),
+    ...(vargaRelationship ? { vargaRelationship } : {}),
+    ...(dashaLevel ? { dashaLevel } : {}),
+    ...(timingPlanet ? { timingPlanet } : {}),
+    ...(timingHouses ? { timingHouses } : {}),
+    ...(timingReason ? { timingReason } : {}),
+    ...(timingRelevanceType ? { timingRelevanceType } : {})
+  };
 }
 
 function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
@@ -522,105 +592,13 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
   // 1. Career Evidence from themeInterpretationV2
   const careerEvidence = horoscope.themeInterpretationV2?.career?.evidence || [];
   for (const e of careerEvidence) {
-    const source = mapToAiEvidenceSource(e.evidenceFamily || (e as any).source);
-    const strength = normalizeEvidenceStrength(e.strength);
-    const effect = normalizeEvidenceEffect(e.effect);
-    const statement = String(e.statement || '');
-    const ruleId = e.ruleId ? String(e.ruleId) : undefined;
-    const priority = (e.priority as AiEvidencePriority) || undefined;
-    const dimension = (e.dimension as AiEvidenceDimension) || undefined;
-    const conditional = typeof e.conditional === 'boolean' ? e.conditional : undefined;
-
-    let varga: 'D9' | 'D10' | undefined = undefined;
-    const vargaVal = e.vargaEvidence?.varga || (e as any).varga;
-    if (vargaVal === 'D10' || vargaVal === 'D9') {
-      varga = vargaVal;
-    }
-
-    let dashaLevel: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | undefined = undefined;
-    const dashaVal = e.timingEvidence?.dashaLevel || (e as any).dashaLevel;
-    if (
-      dashaVal === 'MAHADASHA' ||
-      dashaVal === 'ANTARDASHA' ||
-      dashaVal === 'PRATYANTARDASHA'
-    ) {
-      dashaLevel = dashaVal;
-    }
-
-    let timingPlanet: Planet | undefined = undefined;
-    const tPlanet = e.timingEvidence?.planet || (e as any).timingPlanet;
-    if (tPlanet) {
-      timingPlanet = tPlanet;
-    }
-
-    insertEvidence({
-      id: String(e.id),
-      source,
-      effect,
-      strength,
-      statement,
-      ...(e.planets && e.planets.length > 0 ? { planets: [...e.planets] } : {}),
-      ...(e.houses && e.houses.length > 0 ? { houses: [...e.houses] } : {}),
-      ...(ruleId ? { ruleId } : {}),
-      ...(priority ? { priority } : {}),
-      ...(dimension ? { dimension } : {}),
-      ...(conditional !== undefined ? { conditional } : {}),
-      ...(varga ? { varga } : {}),
-      ...(dashaLevel ? { dashaLevel } : {}),
-      ...(timingPlanet ? { timingPlanet } : {})
-    });
+    insertEvidence(projectV2Evidence(e));
   }
 
   // 2. Wealth Evidence from themeInterpretationV2
   const wealthEvidence = horoscope.themeInterpretationV2?.wealth?.evidence || [];
   for (const e of wealthEvidence) {
-    const source = mapToAiEvidenceSource(e.evidenceFamily || (e as any).source);
-    const strength = normalizeEvidenceStrength(e.strength);
-    const effect = normalizeEvidenceEffect(e.effect);
-    const statement = String(e.statement || '');
-    const ruleId = e.ruleId ? String(e.ruleId) : undefined;
-    const priority = (e.priority as AiEvidencePriority) || undefined;
-    const dimension = (e.dimension as AiEvidenceDimension) || undefined;
-    const conditional = typeof e.conditional === 'boolean' ? e.conditional : undefined;
-
-    let varga: 'D9' | 'D10' | undefined = undefined;
-    const vargaVal = e.vargaEvidence?.varga || (e as any).varga;
-    if (vargaVal === 'D10' || vargaVal === 'D9') {
-      varga = vargaVal;
-    }
-
-    let dashaLevel: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | undefined = undefined;
-    const dashaVal = e.timingEvidence?.dashaLevel || (e as any).dashaLevel;
-    if (
-      dashaVal === 'MAHADASHA' ||
-      dashaVal === 'ANTARDASHA' ||
-      dashaVal === 'PRATYANTARDASHA'
-    ) {
-      dashaLevel = dashaVal;
-    }
-
-    let timingPlanet: Planet | undefined = undefined;
-    const tPlanet = e.timingEvidence?.planet || (e as any).timingPlanet;
-    if (tPlanet) {
-      timingPlanet = tPlanet;
-    }
-
-    insertEvidence({
-      id: String(e.id),
-      source,
-      effect,
-      strength,
-      statement,
-      ...(e.planets && e.planets.length > 0 ? { planets: [...e.planets] } : {}),
-      ...(e.houses && e.houses.length > 0 ? { houses: [...e.houses] } : {}),
-      ...(ruleId ? { ruleId } : {}),
-      ...(priority ? { priority } : {}),
-      ...(dimension ? { dimension } : {}),
-      ...(conditional !== undefined ? { conditional } : {}),
-      ...(varga ? { varga } : {}),
-      ...(dashaLevel ? { dashaLevel } : {}),
-      ...(timingPlanet ? { timingPlanet } : {})
-    });
+    insertEvidence(projectV2Evidence(e));
   }
 
   // 3. Life-theme Evidence with deterministic namespaced ID

@@ -189,6 +189,15 @@ export interface AiEvidence {
   readonly varga?: 'D9' | 'D10';
   readonly dashaLevel?: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly timingPlanet?: Planet;
+  readonly vargaRelationship?:
+    | 'CONFIRMS'
+    | 'PARTIALLY_CONFIRMS'
+    | 'MODIFIES'
+    | 'CONFLICTS'
+    | 'UNAVAILABLE';
+  readonly timingHouses?: readonly number[];
+  readonly timingReason?: string;
+  readonly timingRelevanceType?: string;
 }
 
 export interface AiContextSource {

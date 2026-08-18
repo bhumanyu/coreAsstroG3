@@ -296,14 +296,65 @@ describe('AI Context Factory', () => {
     }
   });
 
-  it('should project timing evidence with dashaLevel and timingPlanet', () => {
-    const careerEvidence = horoscope.themeInterpretationV2?.career?.evidence || [];
-    const dashaEvidence = careerEvidence.find((e) => e.timingEvidence);
-    if (dashaEvidence && dashaEvidence.timingEvidence) {
-      const projected = context.evidence.find((e) => e.id === dashaEvidence.id);
+  it('should project vargaEvidence relationship accurately from engine evidence', () => {
+    const allEvidence = [
+      ...(horoscope.themeInterpretationV2?.career?.evidence || []),
+      ...(horoscope.themeInterpretationV2?.wealth?.evidence || [])
+    ];
+    const sourceVargaEvidence = allEvidence.find((e) => e.vargaEvidence);
+    if (sourceVargaEvidence && sourceVargaEvidence.vargaEvidence) {
+      const projected = context.evidence.find((e) => e.id === sourceVargaEvidence.id);
       expect(projected).toBeDefined();
-      expect(projected?.dashaLevel).toBe(dashaEvidence.timingEvidence.dashaLevel);
-      expect(projected?.timingPlanet).toBe(dashaEvidence.timingEvidence.planet);
+      expect(projected?.vargaRelationship).toBe(sourceVargaEvidence.vargaEvidence.relationship);
+    }
+
+    // Explicit test with simulated varga evidence
+    const simulatedVargaHoroscope = {
+      ...horoscope,
+      themeInterpretationV2: {
+        ...horoscope.themeInterpretationV2,
+        career: {
+          ...horoscope.themeInterpretationV2?.career,
+          evidence: [
+            {
+              id: 'test-varga-id',
+              ruleId: 'RULE_VARGA_TEST',
+              evidenceFamily: 'D10',
+              priority: 'CONFIRMATORY',
+              strength: 'STRONG',
+              effect: 'SUPPORT',
+              statement: 'D10 confirmation statement',
+              vargaEvidence: {
+                varga: 'D10',
+                relationship: 'CONFIRMS',
+                statement: 'D10 confirms career strength'
+              }
+            }
+          ]
+        }
+      }
+    } as any;
+    const simContext = buildAiContext(simulatedVargaHoroscope);
+    const simProjected = simContext.evidence.find((e) => e.id === 'test-varga-id');
+    expect(simProjected).toBeDefined();
+    expect(simProjected?.varga).toBe('D10');
+    expect(simProjected?.vargaRelationship).toBe('CONFIRMS');
+  });
+
+  it('should project timing evidence with all timing fields accurately from engine evidence', () => {
+    const allEvidence = [
+      ...(horoscope.themeInterpretationV2?.career?.evidence || []),
+      ...(horoscope.themeInterpretationV2?.wealth?.evidence || [])
+    ];
+    const sourceTimingEvidence = allEvidence.find((e) => e.timingEvidence);
+    if (sourceTimingEvidence && sourceTimingEvidence.timingEvidence) {
+      const projected = context.evidence.find((e) => e.id === sourceTimingEvidence.id);
+      expect(projected).toBeDefined();
+      expect(projected?.dashaLevel).toBe(sourceTimingEvidence.timingEvidence.dashaLevel);
+      expect(projected?.timingPlanet).toBe(sourceTimingEvidence.timingEvidence.planet);
+      expect(projected?.timingReason).toBe(sourceTimingEvidence.timingEvidence.relevanceReason);
+      expect(projected?.timingRelevanceType).toBe(sourceTimingEvidence.timingEvidence.relevanceType);
+      expect(projected?.timingHouses).toEqual(sourceTimingEvidence.timingEvidence.houses);
     }
 
     // Also test explicitly with simulated timing evidence
@@ -326,7 +377,8 @@ describe('AI Context Factory', () => {
                 dashaLevel: 'MAHADASHA',
                 planet: Planet.JUPITER,
                 relevanceReason: 'Career timing lord',
-                houses: [10]
+                relevanceType: 'CAREER_LORD',
+                houses: [10, 11]
               }
             }
           ]
@@ -338,6 +390,9 @@ describe('AI Context Factory', () => {
     expect(simProjected).toBeDefined();
     expect(simProjected?.dashaLevel).toBe('MAHADASHA');
     expect(simProjected?.timingPlanet).toBe(Planet.JUPITER);
+    expect(simProjected?.timingReason).toBe('Career timing lord');
+    expect(simProjected?.timingRelevanceType).toBe('CAREER_LORD');
+    expect(simProjected?.timingHouses).toEqual([10, 11]);
   });
 
   it('should project planet facts without synthetic NORMAL fallbacks when fact properties are missing', () => {
