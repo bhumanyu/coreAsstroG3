@@ -134,7 +134,11 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         .filter((e) => e.effect === 'CHALLENGE')
         .map((e) => e.id);
 
-      const statement = `Dhana and prosperity yoga patterns evaluated in the chart (${supportingYogas.length} positive indications).`;
+      const statement =
+        `Dhana and prosperity yoga patterns evaluated: ` +
+        `${supportingYogas.length} positive, ` +
+        `${challengedYogas.length} weakened, ` +
+        `${cancelledYogas.length} cancelled.`;
       return triggered(effect, statement, supportingIds, challengingIds);
     }
   }

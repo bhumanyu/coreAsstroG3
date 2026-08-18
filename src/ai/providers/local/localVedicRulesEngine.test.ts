@@ -402,6 +402,63 @@ describe('localVedicRulesEngine', () => {
     expect(evalResult.statement).toContain('No active Vimshottari Dasha period is available');
   });
 
+  it('should generate appropriate statements in LOCAL-DASHA-002 for SUPPORT and CHALLENGE effects', () => {
+    const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002');
+    expect(dashaRule002).toBeDefined();
+
+    const supportContext: AiContext = {
+      ...context,
+      dasha: {
+        system: 'VIMSHOTTARI',
+        active: {
+          mahadasha: Planet.JUPITER,
+          antardasha: Planet.SATURN
+        },
+        periods: Object.freeze([])
+      },
+      evidence: Object.freeze([
+        {
+          id: 'ev-timing-support',
+          source: 'DASHA',
+          dimension: 'TIMING',
+          statement: 'Favorable dasha timing',
+          effect: 'SUPPORT',
+          strength: 'STRONG',
+          priority: 'TIMING'
+        } as AiEvidence
+      ])
+    };
+
+    const supportEval = dashaRule002!.evaluate(supportContext);
+    expect(supportEval.triggered).toBe(true);
+    expect(supportEval.effect).toBe('SUPPORT');
+    expect(supportEval.statement).toBe(
+      'The active Vimshottari period has supporting deterministic timing evidence.'
+    );
+
+    const challengeContext: AiContext = {
+      ...supportContext,
+      evidence: Object.freeze([
+        {
+          id: 'ev-timing-challenge',
+          source: 'DASHA',
+          dimension: 'TIMING',
+          statement: 'Challenging dasha timing',
+          effect: 'CHALLENGE',
+          strength: 'STRONG',
+          priority: 'TIMING'
+        } as AiEvidence
+      ])
+    };
+
+    const challengeEval = dashaRule002!.evaluate(challengeContext);
+    expect(challengeEval.triggered).toBe(true);
+    expect(challengeEval.effect).toBe('CHALLENGE');
+    expect(challengeEval.statement).toBe(
+      'The active Vimshottari period has challenging deterministic timing evidence.'
+    );
+  });
+
   it('should produce "partially confirm" in LOCAL-CHART-003 when only PARTIALLY_CONFIRMS exists', () => {
     const chartRule003 = CHART_SYNTHESIS_RULES.find((r) => r.id === 'LOCAL-CHART-003');
     expect(chartRule003).toBeDefined();
@@ -467,5 +524,45 @@ describe('localVedicRulesEngine', () => {
     expect(evalResult.triggered).toBe(true);
     expect(evalResult.supportingEvidenceIds).toContain('ev-mars');
     expect(evalResult.supportingEvidenceIds).not.toContain('ev-house7-venus');
+  });
+
+  it('should format LOCAL-WEALTH-003 statement with positive, weakened, and cancelled breakdowns', () => {
+    const wealthRule003 = WEALTH_RULES.find((r) => r.id === 'LOCAL-WEALTH-003');
+    expect(wealthRule003).toBeDefined();
+
+    const mockContext: AiContext = {
+      ...context,
+      yogas: Object.freeze([
+        {
+          type: 'DHANA_YOGA',
+          category: 'DHANA',
+          status: 'PRESENT',
+          planets: Object.freeze([Planet.JUPITER]),
+          houses: Object.freeze([2])
+        },
+        {
+          type: 'LAKSHMI_YOGA',
+          category: 'DHANA',
+          status: 'WEAKENED',
+          planets: Object.freeze([Planet.VENUS]),
+          houses: Object.freeze([9])
+        },
+        {
+          type: 'DHANA_YOGA',
+          category: 'DHANA',
+          status: 'CANCELLED',
+          planets: Object.freeze([Planet.MERCURY]),
+          houses: Object.freeze([11])
+        }
+      ]),
+      evidence: Object.freeze([])
+    };
+
+    const evalResult = wealthRule003!.evaluate(mockContext);
+    expect(evalResult.triggered).toBe(true);
+    expect(evalResult.effect).toBe('CHALLENGE');
+    expect(evalResult.statement).toBe(
+      'Dhana and prosperity yoga patterns evaluated: 1 positive, 1 weakened, 1 cancelled.'
+    );
   });
 });

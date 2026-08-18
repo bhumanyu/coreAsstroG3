@@ -86,7 +86,20 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         effect = 'MIXED';
       }
 
-      const statement = `Planetary period timing aligns with active lifecycle activation.`;
+      let statement =
+        'No directional timing evidence is available for the active Vimshottari period.';
+
+      if (effect === 'SUPPORT') {
+        statement =
+          'The active Vimshottari period has supporting deterministic timing evidence.';
+      } else if (effect === 'CHALLENGE') {
+        statement =
+          'The active Vimshottari period has challenging deterministic timing evidence.';
+      } else if (effect === 'MIXED') {
+        statement =
+          'The active Vimshottari period has both supporting and challenging deterministic timing evidence.';
+      }
+
       return triggered(effect, statement, supportingIds, challengingIds);
     }
   }
