@@ -109,4 +109,21 @@ export type {
   RemoteAiProviderStatus
 } from './providers/remote';
 
+export {
+  OpenAiProvider,
+  createOpenAiProvider,
+  OpenAiRequestMapper,
+  OpenAiResponseMapper,
+  OPENAI_REASONING_SCHEMA
+} from './providers/openai';
+
+export type {
+  OpenAiProviderOptions,
+  OpenAiResponseEnvelope,
+  OpenAiResponseUsage,
+  OpenAiStructuredReasoning,
+  OpenAiProviderMetadata
+} from './providers/openai';
+
+
 
