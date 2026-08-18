@@ -213,8 +213,8 @@ function buildHouseFacts(horoscope: Horoscope): readonly HouseFactSummary[] {
 function buildYogaFacts(horoscope: Horoscope): readonly YogaFactSummary[] {
   const yogas = horoscope.yogas?.yogas || [];
   return yogas.map((y: any) => {
-    const rawStatus = y.assessment?.finalStatus || y.finalStatus || 'PRESENT';
-    const rawStrength = y.assessment?.strength || y.strength;
+    const rawStatus = y.assessment?.finalStatus || y.finalStatus || 'UNKNOWN';
+    const rawStrength = y.assessment?.strength;
     const planets: readonly Planet[] = [...(y.planets || [])];
     const houses: readonly number[] = (y.houses || []).filter(
       (h: unknown): h is number => typeof h === 'number'
@@ -223,7 +223,12 @@ function buildYogaFacts(horoscope: Horoscope): readonly YogaFactSummary[] {
     return {
       type: String(y.type),
       category: String(y.category),
-      status: String(rawStatus),
+      status: rawStatus as
+        | 'PRESENT'
+        | 'WEAKENED'
+        | 'STRONG'
+        | 'CANCELLED'
+        | 'UNKNOWN',
       ...(rawStrength ? { strength: String(rawStrength) } : {}),
       planets,
       houses
@@ -271,7 +276,7 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
         varga: 'D9',
         status: 'AVAILABLE' as AiAvailability,
         ...(d9Interp.ascendant?.sign ? { ascendantSign: d9Interp.ascendant.sign } : {}),
-        confidence: (d9Interp.confidence || 'HIGH') as AiConfidence
+        confidence: d9Interp.confidence as AiConfidence
       }
     : {
         varga: 'D9',
@@ -283,7 +288,7 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
         varga: 'D10',
         status: 'AVAILABLE' as AiAvailability,
         ...(d10Interp.ascendant?.sign ? { ascendantSign: d10Interp.ascendant.sign } : {}),
-        confidence: (d10Interp.confidence || 'HIGH') as AiConfidence
+        confidence: d10Interp.confidence as AiConfidence
       }
     : {
         varga: 'D10',

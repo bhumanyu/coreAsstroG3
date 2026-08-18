@@ -62,6 +62,29 @@ describe('AI Context Factory', () => {
     }
   });
 
+  it('should project yoga assessment status and strength from engine output', () => {
+    for (const yoga of horoscope.yogas?.yogas || []) {
+      const projected = context.yogas.find(
+        (y) => y.type === String(yoga.type)
+      );
+
+      expect(projected).toBeDefined();
+
+      const expectedStatus =
+        yoga.assessment?.finalStatus ||
+        yoga.finalStatus ||
+        'UNKNOWN';
+
+      expect(projected?.status).toBe(expectedStatus);
+
+      if (yoga.assessment?.strength) {
+        expect(projected?.strength).toBe(
+          yoga.assessment.strength
+        );
+      }
+    }
+  });
+
   it('should project exactly 12 life theme facts', () => {
     expect(context.lifeThemes).toHaveLength(12);
     for (const theme of context.lifeThemes) {

@@ -82,7 +82,12 @@ export interface HouseFactSummary {
 export interface YogaFactSummary {
   readonly type: string;
   readonly category: string;
-  readonly status: string;
+  readonly status:
+    | 'PRESENT'
+    | 'WEAKENED'
+    | 'STRONG'
+    | 'CANCELLED'
+    | 'UNKNOWN';
   readonly strength?: string;
   readonly planets: readonly Planet[];
   readonly houses: readonly number[];
