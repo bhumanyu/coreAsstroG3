@@ -63,9 +63,9 @@ export function reasonWithLocalRules(
 ): AiReasoningResult {
   const targetDomain = TASK_DOMAIN[task] ?? 'GENERAL';
 
-  // Filter rules by task domain + GENERAL domain
+  // Filter rules strictly by task domain
   const candidateRules = LOCAL_VEDIC_RULES.filter(
-    (rule) => rule.domain === targetDomain || rule.domain === 'GENERAL'
+    (rule) => rule.domain === targetDomain
   );
 
   // Sort rules deterministically by priority (descending), then id (ascending)
@@ -80,7 +80,51 @@ export function reasonWithLocalRules(
   const supportingSet = new Set<string>();
   const challengingSet = new Set<string>();
   const triggeredRuleSet = new Set<string>();
+  const unresolvedQuestionsSet = new Set<string>();
   const warnings: string[] = [];
+
+  // Check for missing task-level context and record unresolved questions
+  switch (task) {
+    case 'CAREER_ANALYSIS': {
+      if (!context.career) {
+        unresolvedQuestionsSet.add('Career context is unavailable in the provided chart projection.');
+      }
+      break;
+    }
+    case 'WEALTH_ANALYSIS': {
+      if (!context.wealth) {
+        unresolvedQuestionsSet.add('Wealth context is unavailable in the provided chart projection.');
+      }
+      break;
+    }
+    case 'DASHA_ANALYSIS': {
+      if (!context.dasha.active) {
+        unresolvedQuestionsSet.add('No active Vimshottari Dasha period is available.');
+      }
+      break;
+    }
+    case 'LIFE_THEME_ANALYSIS': {
+      if (context.lifeThemes.length === 0) {
+        unresolvedQuestionsSet.add('No life theme facts are available in the provided context.');
+      }
+      break;
+    }
+    case 'CHART_SYNTHESIS': {
+      if (context.planets.length === 0) {
+        unresolvedQuestionsSet.add('Planetary facts are unavailable in the provided context.');
+      }
+      if (context.houses.length === 0) {
+        unresolvedQuestionsSet.add('House facts are unavailable in the provided context.');
+      }
+      break;
+    }
+    case 'GENERAL_QUERY': {
+      if (context.evidence.length === 0) {
+        unresolvedQuestionsSet.add('No evidence items are available in the provided context.');
+      }
+      break;
+    }
+  }
 
   for (const rule of sortedRules) {
     try {
@@ -90,6 +134,12 @@ export function reasonWithLocalRules(
 
         if (evaluation.warnings) {
           warnings.push(...evaluation.warnings);
+        }
+
+        if (evaluation.unresolvedQuestions) {
+          for (const q of evaluation.unresolvedQuestions) {
+            unresolvedQuestionsSet.add(q);
+          }
         }
 
         if (evaluation.supportingEvidenceIds) {
@@ -146,7 +196,7 @@ export function reasonWithLocalRules(
     conclusion,
     supportingEvidenceIds: Object.freeze(rankedSupporting),
     challengingEvidenceIds: Object.freeze(rankedChallenging),
-    unresolvedQuestions: Object.freeze([]),
+    unresolvedQuestions: Object.freeze(Array.from(unresolvedQuestionsSet).sort()),
     warnings: Object.freeze(warnings),
     triggeredRuleIds: Object.freeze(Array.from(triggeredRuleSet).sort())
   });

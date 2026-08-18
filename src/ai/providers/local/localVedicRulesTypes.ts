@@ -17,6 +17,7 @@ export interface LocalRuleEvaluation {
   readonly statement: string;
   readonly supportingEvidenceIds?: readonly string[];
   readonly challengingEvidenceIds?: readonly string[];
+  readonly unresolvedQuestions?: readonly string[];
   readonly warnings?: readonly string[];
 }
 

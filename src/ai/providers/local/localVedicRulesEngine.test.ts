@@ -105,6 +105,19 @@ describe('localVedicRulesEngine', () => {
     expect(result.triggeredRuleIds.some((id) => id.startsWith('LOCAL-THEME'))).toBe(true);
   });
 
+  it('should strictly isolate domain rules and not trigger GENERAL rules for domain tasks', () => {
+    const careerResult = reasonWithLocalRules('CAREER_ANALYSIS', context);
+    expect(careerResult.triggeredRuleIds.some((id) => id.startsWith('LOCAL-GEN'))).toBe(false);
+    expect(careerResult.triggeredRuleIds.every((id) => id.startsWith('LOCAL-CAREER'))).toBe(true);
+
+    const wealthResult = reasonWithLocalRules('WEALTH_ANALYSIS', context);
+    expect(wealthResult.triggeredRuleIds.some((id) => id.startsWith('LOCAL-GEN'))).toBe(false);
+    expect(wealthResult.triggeredRuleIds.every((id) => id.startsWith('LOCAL-WEALTH'))).toBe(true);
+
+    const generalResult = reasonWithLocalRules('GENERAL_QUERY', context);
+    expect(generalResult.triggeredRuleIds.every((id) => id.startsWith('LOCAL-GEN'))).toBe(true);
+  });
+
   it('should produce ranked, frozen results with triggeredRuleIds', () => {
     const result = reasonWithLocalRules('GENERAL_QUERY', context);
 
@@ -239,5 +252,91 @@ describe('localVedicRulesEngine', () => {
     expect(evalResult.triggered).toBe(true);
     expect(evalResult.challengingEvidenceIds).toContain('ev-d10-conflict');
     expect(evalResult.challengingEvidenceIds).not.toContain('ev-d10-confirm');
+  });
+
+  it('should not fabricate SUPPORT in LOCAL-CHART-003 when varga evidence has undefined relationship (0 confirms, 0 conflicts)', () => {
+    const chartRule003 = CHART_SYNTHESIS_RULES.find((r) => r.id === 'LOCAL-CHART-003');
+    expect(chartRule003).toBeDefined();
+
+    const mockContext: AiContext = {
+      ...context,
+      evidence: Object.freeze([
+        {
+          id: 'ev-d9-unspecified',
+          source: 'D9',
+          dimension: 'CONFIRMATION',
+          statement: 'D9 placement observed without relationship classification',
+          effect: 'NEUTRAL',
+          strength: 'MODERATE',
+          priority: 'CONFIRMATORY'
+        } as AiEvidence
+      ])
+    };
+
+    const evalResult = chartRule003!.evaluate(mockContext);
+    expect(evalResult.triggered).toBe(true);
+    expect(evalResult.effect).toBe('NEUTRAL');
+  });
+
+  it('should map challenging yoga evidence to challengingEvidenceIds in LOCAL-WEALTH-003', () => {
+    const wealthRule003 = WEALTH_RULES.find((r) => r.id === 'LOCAL-WEALTH-003');
+    expect(wealthRule003).toBeDefined();
+
+    const mockContext: AiContext = {
+      ...context,
+      yogas: Object.freeze([
+        {
+          type: 'DHANA_YOGA',
+          category: 'DHANA',
+          status: 'WEAKENED',
+          planets: Object.freeze([Planet.JUPITER]),
+          houses: Object.freeze([2, 11])
+        }
+      ]),
+      evidence: Object.freeze([
+        {
+          id: 'ev-dhana-challenge',
+          source: 'YOGA',
+          dimension: 'NATAL_STRUCTURE',
+          statement: 'Dhana yoga combust and weakened by malefic aspect',
+          effect: 'CHALLENGE',
+          strength: 'STRONG',
+          priority: 'PRIMARY'
+        } as AiEvidence
+      ])
+    };
+
+    const evalResult = wealthRule003!.evaluate(mockContext);
+    expect(evalResult.triggered).toBe(true);
+    expect(evalResult.challengingEvidenceIds).toContain('ev-dhana-challenge');
+    expect(evalResult.supportingEvidenceIds).not.toContain('ev-dhana-challenge');
+    expect(evalResult.effect).toBe('CHALLENGE');
+  });
+
+  it('should populate unresolvedQuestions when essential task context is missing', () => {
+    const contextWithoutCareer: AiContext = {
+      ...context,
+      career: undefined
+    };
+    const careerResult = reasonWithLocalRules('CAREER_ANALYSIS', contextWithoutCareer);
+    expect(careerResult.unresolvedQuestions).toContain('Career context is unavailable in the provided chart projection.');
+
+    const contextWithoutWealth: AiContext = {
+      ...context,
+      wealth: undefined
+    };
+    const wealthResult = reasonWithLocalRules('WEALTH_ANALYSIS', contextWithoutWealth);
+    expect(wealthResult.unresolvedQuestions).toContain('Wealth context is unavailable in the provided chart projection.');
+
+    const contextWithoutDasha: AiContext = {
+      ...context,
+      dasha: {
+        system: 'VIMSHOTTARI',
+        active: undefined,
+        periods: Object.freeze([])
+      }
+    };
+    const dashaResult = reasonWithLocalRules('DASHA_ANALYSIS', contextWithoutDasha);
+    expect(dashaResult.unresolvedQuestions).toContain('No active Vimshottari Dasha period is available.');
   });
 });

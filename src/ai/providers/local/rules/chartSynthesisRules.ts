@@ -96,12 +96,18 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
       const challengingIds = conflicts.map((e) => e.id);
       const supportingIds = confirms.map((e) => e.id);
 
-      let effect: LocalRuleEffect = 'SUPPORT';
-      let statement = 'Divisional harmonic charts confirm core natal alignments.';
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      let statement = 'Divisional harmonic charts evaluated across natal alignments.';
 
-      if (conflicts.length > 0) {
-        effect = confirms.length > 0 ? 'MIXED' : 'CHALLENGE';
+      if (confirms.length > conflicts.length) {
+        effect = 'SUPPORT';
+        statement = 'Divisional harmonic charts confirm core natal alignments.';
+      } else if (conflicts.length > confirms.length) {
+        effect = 'CHALLENGE';
         statement = `Varga relationships indicate structural modifications or conflicts across divisional charts (${conflicts.length} conflicting factors detected).`;
+      } else if (confirms.length > 0 && conflicts.length > 0) {
+        effect = 'MIXED';
+        statement = `Varga relationships present mixed confirmations and modifications across divisional charts (${confirms.length} confirming, ${conflicts.length} conflicting).`;
       }
 
       return triggered(effect, statement, supportingIds, challengingIds);

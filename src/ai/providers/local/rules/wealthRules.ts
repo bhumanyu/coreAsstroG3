@@ -124,14 +124,18 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
           (e) =>
             e.source === 'YOGA' &&
             (e.statement.toUpperCase().includes('DHANA') ||
-              e.statement.toUpperCase().includes('LAKSHMI') ||
-              e.effect === 'SUPPORT')
+              e.statement.toUpperCase().includes('LAKSHMI'))
         )
       );
-      const supportingIds = yogaEvidence.map((e) => e.id);
+      const supportingIds = yogaEvidence
+        .filter((e) => e.effect === 'SUPPORT')
+        .map((e) => e.id);
+      const challengingIds = yogaEvidence
+        .filter((e) => e.effect === 'CHALLENGE')
+        .map((e) => e.id);
 
       const statement = `Dhana and prosperity yoga patterns evaluated in the chart (${supportingYogas.length} positive indications).`;
-      return triggered(effect, statement, supportingIds);
+      return triggered(effect, statement, supportingIds, challengingIds);
     }
   }
 ]);
