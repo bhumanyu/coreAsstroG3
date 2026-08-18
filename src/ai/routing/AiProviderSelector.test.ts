@@ -152,6 +152,30 @@ describe('AiProviderSelector', () => {
     ).toThrowError(/Preferred AI provider "openai-preferred" is UNAVAILABLE/);
   });
 
+  it('should not throw PREFERRED_PROVIDER_UNAVAILABLE when unavailable preferred provider was explicitly excluded', () => {
+    const unavailablePreferred = createMockProvider({
+      id: 'openai-preferred',
+      availability: 'UNAVAILABLE',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+    const fallbackLocal = createMockProvider({
+      id: 'local-available',
+      availability: 'AVAILABLE',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+
+    const selection = selector.select([unavailablePreferred, fallbackLocal], careerRequest, {
+      preferredProviderId: 'openai-preferred',
+      excludedProviderIds: ['openai-preferred'],
+      fallbackPolicy: 'NO_FALLBACK'
+    });
+
+    expect(selection.provider.identity.id).toBe('local-available');
+    expect(selection.candidates.find((c) => c.providerId === 'openai-preferred')?.rejectedReason).toContain(
+      'is excluded in routing options'
+    );
+  });
+
   it('should return orderedCandidates containing only eligible providers in execution rank order', () => {
     const provider1 = createMockProvider({
       id: 'provider-1',

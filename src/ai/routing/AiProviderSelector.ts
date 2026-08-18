@@ -120,7 +120,11 @@ export class AiProviderSelector {
       const preferredCandidate = candidateList.find(
         (c) => c.providerId === preferredProviderId
       );
-      if (preferredCandidate && preferredCandidate.availability === 'UNAVAILABLE') {
+      if (
+        preferredCandidate &&
+        preferredCandidate.availability === 'UNAVAILABLE' &&
+        preferredCandidate.rejectedReason?.startsWith('Provider availability is UNAVAILABLE')
+      ) {
         throw new AiRoutingError(
           'PREFERRED_PROVIDER_UNAVAILABLE',
           `Preferred AI provider "${preferredProviderId}" is UNAVAILABLE`,
