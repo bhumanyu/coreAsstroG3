@@ -17,14 +17,73 @@ function asOpenAiResponse(body: unknown): OpenAiResponseEnvelope {
   if (!isRecord(body)) {
     throw new Error('OpenAI response body must be an object.');
   }
-  return body as OpenAiResponseEnvelope;
+  return body as unknown as OpenAiResponseEnvelope;
 }
 
-function requireOutputText(response: OpenAiResponseEnvelope): string {
-  if (typeof response.output_text !== 'string') {
-    throw new Error('OpenAI response did not contain output_text.');
+function extractOutputText(response: OpenAiResponseEnvelope): string {
+  if (!Array.isArray(response.output)) {
+    throw new Error('OpenAI response output must be an array.');
   }
-  return response.output_text;
+
+  const textParts: string[] = [];
+
+  for (const item of response.output) {
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    if (item.type !== 'message') {
+      continue;
+    }
+
+    const content = item.content;
+
+    if (!Array.isArray(content)) {
+      continue;
+    }
+
+    for (const part of content) {
+      if (!isRecord(part)) {
+        continue;
+      }
+
+      if (part.type === 'output_text' && typeof part.text === 'string') {
+        textParts.push(part.text);
+      }
+
+      if (part.type === 'refusal') {
+        throw new Error(
+          'OpenAI model refused to produce the requested response.'
+        );
+      }
+    }
+  }
+
+  if (textParts.length === 0) {
+    throw new Error('OpenAI response did not contain output text.');
+  }
+
+  return textParts.join('');
+}
+
+function isReasoningStatus(
+  value: unknown
+): value is OpenAiStructuredReasoning['status'] {
+  return value === 'SUCCESS' || value === 'PARTIAL' || value === 'ERROR';
+}
+
+function requireStringArray(
+  value: unknown,
+  fieldName: string
+): readonly string[] {
+  if (
+    !Array.isArray(value) ||
+    !value.every((item) => typeof item === 'string')
+  ) {
+    throw new Error(`OpenAI structured output has invalid ${fieldName}.`);
+  }
+
+  return Object.freeze([...value]);
 }
 
 function parseStructuredOutput(text: string): OpenAiStructuredReasoning {
@@ -40,52 +99,32 @@ function parseStructuredOutput(text: string): OpenAiStructuredReasoning {
     throw new Error('OpenAI structured output must be an object.');
   }
 
-  if (typeof parsed.status !== 'string') {
-    throw new Error('OpenAI structured output is missing status.');
+  if (!isReasoningStatus(parsed.status)) {
+    throw new Error('OpenAI structured output has invalid status.');
   }
 
   if (typeof parsed.conclusion !== 'string') {
     throw new Error('OpenAI structured output is missing conclusion.');
   }
 
-  if (!Array.isArray(parsed.supportingEvidenceIds)) {
-    throw new Error('OpenAI structured output has invalid supportingEvidenceIds.');
-  }
-
-  if (!Array.isArray(parsed.challengingEvidenceIds)) {
-    throw new Error('OpenAI structured output has invalid challengingEvidenceIds.');
-  }
-
-  if (!Array.isArray(parsed.unresolvedQuestions)) {
-    throw new Error('OpenAI structured output has invalid unresolvedQuestions.');
-  }
-
-  if (!Array.isArray(parsed.warnings)) {
-    throw new Error('OpenAI structured output has invalid warnings.');
-  }
-
   return Object.freeze({
-    status: parsed.status as OpenAiStructuredReasoning['status'],
+    status: parsed.status,
     conclusion: parsed.conclusion,
-    supportingEvidenceIds: Object.freeze(
-      parsed.supportingEvidenceIds.filter(
-        (value): value is string => typeof value === 'string'
-      )
+    supportingEvidenceIds: requireStringArray(
+      parsed.supportingEvidenceIds,
+      'supportingEvidenceIds'
     ),
-    challengingEvidenceIds: Object.freeze(
-      parsed.challengingEvidenceIds.filter(
-        (value): value is string => typeof value === 'string'
-      )
+    challengingEvidenceIds: requireStringArray(
+      parsed.challengingEvidenceIds,
+      'challengingEvidenceIds'
     ),
-    unresolvedQuestions: Object.freeze(
-      parsed.unresolvedQuestions.filter(
-        (value): value is string => typeof value === 'string'
-      )
+    unresolvedQuestions: requireStringArray(
+      parsed.unresolvedQuestions,
+      'unresolvedQuestions'
     ),
-    warnings: Object.freeze(
-      parsed.warnings.filter(
-        (value): value is string => typeof value === 'string'
-      )
+    warnings: requireStringArray(
+      parsed.warnings,
+      'warnings'
     )
   });
 }
@@ -122,7 +161,7 @@ export class OpenAiResponseMapper implements RemoteAiResponseMapper {
       throw new Error('OpenAI response generation was incomplete.');
     }
 
-    const text = requireOutputText(openAiResponse);
+    const text = extractOutputText(openAiResponse);
     const usage = openAiResponse.usage;
 
     const metadata = {

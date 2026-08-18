@@ -62,14 +62,27 @@ describe('OpenAiProvider', () => {
         id: 'resp-test',
         model: 'gpt-5.6',
         status: 'completed',
-        output_text: JSON.stringify({
-          status: 'SUCCESS',
-          conclusion: 'Career supported.',
-          supportingEvidenceIds: ['E001'],
-          challengingEvidenceIds: [],
-          unresolvedQuestions: [],
-          warnings: []
-        })
+        output: [
+          {
+            id: 'msg-test',
+            type: 'message',
+            role: 'assistant',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  status: 'SUCCESS',
+                  conclusion: 'Career supported.',
+                  supportingEvidenceIds: ['E001'],
+                  challengingEvidenceIds: [],
+                  unresolvedQuestions: [],
+                  warnings: []
+                }),
+                annotations: []
+              }
+            ]
+          }
+        ]
       }
     });
 
@@ -101,7 +114,20 @@ describe('OpenAiProvider', () => {
         id: 'resp-secret-test',
         model: 'gpt-5.6',
         status: 'completed',
-        output_text: 'Safe response'
+        output: [
+          {
+            id: 'msg-1',
+            type: 'message',
+            role: 'assistant',
+            content: [
+              {
+                type: 'output_text',
+                text: 'Safe response',
+                annotations: []
+              }
+            ]
+          }
+        ]
       }
     });
 

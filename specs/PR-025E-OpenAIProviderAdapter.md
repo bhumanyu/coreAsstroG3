@@ -156,7 +156,7 @@ OpenAI MUST NOT create new evidence IDs.
 
 For NARRATIVE requests:
 
-OpenAI output_text maps directly to:
+The adapter extracts text parts from the raw `output` array messages and maps directly to:
 
 AiResponse.content
 
@@ -168,17 +168,17 @@ No structured JSON parsing is performed.
 
 For STRUCTURED requests:
 
-OpenAI output_text is parsed as JSON.
+The extracted text is parsed as JSON.
 
 The adapter validates:
 
 - object shape
-- status
+- status ('SUCCESS' | 'PARTIAL' | 'ERROR')
 - conclusion
-- supportingEvidenceIds
-- challengingEvidenceIds
-- unresolvedQuestions
-- warnings
+- supportingEvidenceIds (array of strings)
+- challengingEvidenceIds (array of strings)
+- unresolvedQuestions (array of strings)
+- warnings (array of strings)
 - evidence references
 
 ---
