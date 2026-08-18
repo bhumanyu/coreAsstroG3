@@ -67,7 +67,13 @@ Validation rules enforced at construction:
 Remote endpoints MUST use HTTPS for remote network traffic.
 Insecure HTTP is permitted exclusively for `localhost` and `127.0.0.1` to enable local mock servers and development runners.
 
-Additionally, upon request mapping, `RemoteAiProvider` validates that the mapped `httpRequest.url` is a valid URL, uses HTTPS (or local dev hostnames), and contains no embedded credentials in the URL authority (throwing `INVALID_ENDPOINT` if violated).
+Both configured endpoints (`config.endpoint`) and mapped request URLs (`httpRequest.url`) must satisfy unified URL security validation (`validateUrlSecurity`):
+- Must be a valid URL
+- Must use HTTPS (or `localhost` / `127.0.0.1`)
+- Must not contain embedded credentials in URL authority (`username` / `password`)
+- Must not contain credential query parameters (e.g. `api_key`, `apikey`, `access_token`, `auth_token`, `authorization`, `bearer_token`, `secret`, `token`, `password`, `key`)
+
+Violations throw `RemoteAiError('INVALID_ENDPOINT', ...)` with `requestId` preserved on mapped requests.
 
 ---
 

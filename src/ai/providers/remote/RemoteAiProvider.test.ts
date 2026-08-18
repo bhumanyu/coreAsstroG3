@@ -623,6 +623,82 @@ describe('RemoteAiProvider', () => {
     ).toThrow(/credentials/);
   });
 
+  it('rejects configured endpoint containing API key query parameter', () => {
+    expect(
+      () =>
+        new RemoteAiProvider(
+          {
+            identity: {
+              id: 'remote',
+              name: 'Remote',
+              kind: 'REMOTE_LLM'
+            },
+            capabilities: [],
+            endpoint: 'https://example.com/v1?api_key=secret'
+          },
+          new FakeRemoteAiRequestMapper(),
+          new FakeRemoteAiResponseMapper()
+        )
+    ).toThrow(/credential query parameters/);
+  });
+
+  it('rejects configured endpoint containing access token query parameter', () => {
+    expect(
+      () =>
+        new RemoteAiProvider(
+          {
+            identity: {
+              id: 'remote',
+              name: 'Remote',
+              kind: 'REMOTE_LLM'
+            },
+            capabilities: [],
+            endpoint: 'https://example.com/v1?access_token=secret'
+          },
+          new FakeRemoteAiRequestMapper(),
+          new FakeRemoteAiResponseMapper()
+        )
+    ).toThrow(/credential query parameters/);
+  });
+
+  it('rejects mapped request URL containing credential query parameter', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {},
+      body: 'ok'
+    });
+
+    const mapper = {
+      map: () => ({
+        url: 'https://example.com/ai?api_key=secret',
+        method: 'POST' as const,
+        headers: {},
+        body: {}
+      })
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test Provider',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      mapper,
+      new FakeRemoteAiResponseMapper(),
+      transport
+    );
+
+    await expect(
+      provider.generate(createRequest())
+    ).rejects.toMatchObject({
+      code: 'INVALID_ENDPOINT'
+    });
+  });
+
   it('rejects timeout <= 0', () => {
     expect(
       () =>

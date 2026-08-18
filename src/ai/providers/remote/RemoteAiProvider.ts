@@ -50,6 +50,63 @@ function safeTransportErrorMessage(code: RemoteAiErrorCode): string {
   }
 }
 
+function validateUrlSecurity(url: string, label: string): void {
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      `${label} must be a valid URL.`
+    );
+  }
+
+  const isLocal =
+    parsedUrl.hostname === 'localhost' ||
+    parsedUrl.hostname === '127.0.0.1';
+
+  if (parsedUrl.protocol !== 'https:' && !isLocal) {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      `${label} must use HTTPS.`
+    );
+  }
+
+  if (parsedUrl.username || parsedUrl.password) {
+    throw new RemoteAiError(
+      'INVALID_ENDPOINT',
+      `${label} must not contain credentials.`
+    );
+  }
+
+  const sensitiveQueryKeys = new Set([
+    'api_key',
+    'apikey',
+    'api-key',
+    'access_token',
+    'access-token',
+    'auth_token',
+    'auth-token',
+    'authorization',
+    'bearer_token',
+    'bearer-token',
+    'password',
+    'secret',
+    'token',
+    'key'
+  ]);
+
+  for (const key of parsedUrl.searchParams.keys()) {
+    if (sensitiveQueryKeys.has(key.toLowerCase())) {
+      throw new RemoteAiError(
+        'INVALID_ENDPOINT',
+        `${label} must not contain credential query parameters.`
+      );
+    }
+  }
+}
+
 function validateConfig(config: RemoteAiProviderConfig): void {
   if (!config.identity.id || config.identity.id.trim().length === 0) {
     throw new RemoteAiError(
@@ -72,33 +129,7 @@ function validateConfig(config: RemoteAiProviderConfig): void {
     );
   }
 
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(config.endpoint);
-  } catch {
-    throw new RemoteAiError(
-      'INVALID_ENDPOINT',
-      'Remote AI provider endpoint must be a valid URL.'
-    );
-  }
-
-  if (
-    parsedUrl.protocol !== 'https:' &&
-    parsedUrl.hostname !== 'localhost' &&
-    parsedUrl.hostname !== '127.0.0.1'
-  ) {
-    throw new RemoteAiError(
-      'INVALID_ENDPOINT',
-      'Remote AI provider endpoint must use HTTPS.'
-    );
-  }
-
-  if (parsedUrl.username || parsedUrl.password) {
-    throw new RemoteAiError(
-      'INVALID_ENDPOINT',
-      'Remote AI provider endpoint must not contain credentials.'
-    );
-  }
+  validateUrlSecurity(config.endpoint, 'Remote AI provider endpoint');
 
   if (config.timeoutMs !== undefined && config.timeoutMs <= 0) {
     throw new RemoteAiError(
@@ -109,34 +140,7 @@ function validateConfig(config: RemoteAiProviderConfig): void {
 }
 
 function validateRequestUrl(url: string): void {
-  let parsedUrl: URL;
-
-  try {
-    parsedUrl = new URL(url);
-  } catch {
-    throw new RemoteAiError(
-      'INVALID_ENDPOINT',
-      'Remote AI request URL must be a valid URL.'
-    );
-  }
-
-  const isLocal =
-    parsedUrl.hostname === 'localhost' ||
-    parsedUrl.hostname === '127.0.0.1';
-
-  if (parsedUrl.protocol !== 'https:' && !isLocal) {
-    throw new RemoteAiError(
-      'INVALID_ENDPOINT',
-      'Remote AI request URL must use HTTPS.'
-    );
-  }
-
-  if (parsedUrl.username || parsedUrl.password) {
-    throw new RemoteAiError(
-      'INVALID_ENDPOINT',
-      'Remote AI request URL must not contain credentials.'
-    );
-  }
+  validateUrlSecurity(url, 'Remote AI request URL');
 }
 
 export class RemoteAiProvider implements AiProvider {
