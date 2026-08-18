@@ -71,10 +71,40 @@ describe('AiRouter', () => {
 
     expect(result.providerId).toBe('local-fallback');
     expect(result.fallbackUsed).toBe(true);
-    expect(result.selectionReason).toBe('LOCAL_FALLBACK');
+    expect(result.selectionReason).toBe('PREFERRED_PROVIDER');
     expect(result.response.metadata?.routing).toMatchObject({
       fallbackUsed: true,
-      selectionReason: 'LOCAL_FALLBACK'
+      selectionReason: 'PREFERRED_PROVIDER'
+    });
+  });
+
+  it('should support remote-to-remote fallback without mislabeling as LOCAL_FALLBACK', async () => {
+    const primary = createMockProvider({
+      id: 'openai-primary',
+      kind: 'REMOTE_LLM',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT'],
+      fail: true
+    });
+    const secondaryRemote = createMockProvider({
+      id: 'claude-secondary',
+      kind: 'REMOTE_LLM',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+
+    const registry = new AiProviderRegistry([primary, secondaryRemote]);
+    const router = new AiRouter(registry);
+
+    const result = await router.route(testRequest, {
+      preferredProviderId: 'openai-primary',
+      fallbackPolicy: 'ALLOW_FALLBACK'
+    });
+
+    expect(result.providerId).toBe('claude-secondary');
+    expect(result.fallbackUsed).toBe(true);
+    expect(result.selectionReason).toBe('PREFERRED_PROVIDER');
+    expect(result.response.metadata?.routing).toMatchObject({
+      fallbackUsed: true,
+      selectionReason: 'PREFERRED_PROVIDER'
     });
   });
 
@@ -123,7 +153,7 @@ describe('AiRouter', () => {
     });
 
     expect(result.providerId).toBe('local-rules-2');
-    expect(result.selectionReason).toBe('LOCAL_FALLBACK');
+    expect(result.selectionReason).toBe('ONLY_ELIGIBLE_PROVIDER');
   });
 
   it('should throw ALL_PROVIDERS_FAILED when all eligible providers fail', async () => {

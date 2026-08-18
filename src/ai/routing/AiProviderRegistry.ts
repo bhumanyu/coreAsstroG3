@@ -22,15 +22,22 @@ export class AiProviderRegistry {
       );
     }
 
-    const id = provider.identity.id.trim();
-    if (this.providers.has(id)) {
+    const rawId = provider.identity.id;
+    if (rawId !== rawId.trim()) {
       throw new AiRoutingError(
         'INVALID_PROVIDER',
-        `Provider with ID "${id}" is already registered`
+        'Provider ID must not contain leading or trailing whitespace'
       );
     }
 
-    this.providers.set(id, provider);
+    if (this.providers.has(rawId)) {
+      throw new AiRoutingError(
+        'INVALID_PROVIDER',
+        `Provider with ID "${rawId}" is already registered`
+      );
+    }
+
+    this.providers.set(rawId, provider);
   }
 
   /**
@@ -47,21 +54,21 @@ export class AiProviderRegistry {
    * Returns true if a provider was removed, false otherwise.
    */
   unregister(id: string): boolean {
-    return this.providers.delete(id);
+    return this.providers.delete(id.trim());
   }
 
   /**
    * Retrieves a registered provider by its identifier.
    */
   get(id: string): AiProvider | undefined {
-    return this.providers.get(id);
+    return this.providers.get(id.trim());
   }
 
   /**
    * Checks if a provider with the given identifier is registered.
    */
   has(id: string): boolean {
-    return this.providers.has(id);
+    return this.providers.has(id.trim());
   }
 
   /**

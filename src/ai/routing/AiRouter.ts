@@ -37,19 +37,10 @@ export class AiRouter {
     const mode: AiRoutingMode = options.mode ?? 'AUTO';
     const allowFallback = options.fallbackPolicy !== 'NO_FALLBACK';
 
-    const orderedEligibleCandidates = selection.candidates
-      .filter((c) => c.eligible)
-      .sort((a, b) => {
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        return a.providerId.localeCompare(b.providerId);
-      });
-
     const executionErrors: { providerId: string; error: unknown }[] = [];
 
-    for (let index = 0; index < orderedEligibleCandidates.length; index++) {
-      const candidate = orderedEligibleCandidates[index];
+    for (let index = 0; index < selection.orderedCandidates.length; index++) {
+      const candidate = selection.orderedCandidates[index];
       const provider = this.registry.get(candidate.providerId);
 
       if (!provider) {
@@ -57,9 +48,7 @@ export class AiRouter {
       }
 
       const fallbackUsed = index > 0;
-      const selectionReason: AiProviderSelectionReason = fallbackUsed
-        ? 'LOCAL_FALLBACK'
-        : selection.reason;
+      const selectionReason: AiProviderSelectionReason = selection.reason;
 
       try {
         const rawResponse = await provider.generate(request);

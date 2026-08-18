@@ -131,4 +131,51 @@ describe('AiProviderSelector', () => {
     const selection = selector.select([providerZ, providerA], careerRequest);
     expect(selection.provider.identity.id).toBe('provider-a');
   });
+
+  it('should throw PREFERRED_PROVIDER_UNAVAILABLE when preferred provider is UNAVAILABLE and fallbackPolicy is NO_FALLBACK', () => {
+    const unavailablePreferred = createMockProvider({
+      id: 'openai-preferred',
+      availability: 'UNAVAILABLE',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+    const fallbackLocal = createMockProvider({
+      id: 'local-available',
+      availability: 'AVAILABLE',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+
+    expect(() =>
+      selector.select([unavailablePreferred, fallbackLocal], careerRequest, {
+        preferredProviderId: 'openai-preferred',
+        fallbackPolicy: 'NO_FALLBACK'
+      })
+    ).toThrowError(/Preferred AI provider "openai-preferred" is UNAVAILABLE/);
+  });
+
+  it('should return orderedCandidates containing only eligible providers in execution rank order', () => {
+    const provider1 = createMockProvider({
+      id: 'provider-1',
+      kind: 'LOCAL_RULES',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+    const provider2 = createMockProvider({
+      id: 'provider-2',
+      kind: 'LOCAL_RULES',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+    const unavail = createMockProvider({
+      id: 'provider-unavail',
+      availability: 'UNAVAILABLE',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+
+    const selection = selector.select([provider1, unavail, provider2], careerRequest, {
+      preferredProviderId: 'provider-2'
+    });
+
+    expect(selection.orderedCandidates.length).toBe(2);
+    expect(selection.orderedCandidates[0].providerId).toBe('provider-2');
+    expect(selection.orderedCandidates[1].providerId).toBe('provider-1');
+    expect(selection.reason).toBe('PREFERRED_PROVIDER');
+  });
 });

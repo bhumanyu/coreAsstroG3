@@ -82,6 +82,7 @@ export type {
   AiRoutingMode,
   AiRoutingFallbackPolicy,
   AiRoutingOptions,
+  AiCandidateScoringFactor,
   AiProviderSelectionReason,
   AiProviderSelectionCandidate,
   AiProviderSelection,

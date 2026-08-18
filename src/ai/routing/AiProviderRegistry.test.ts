@@ -44,6 +44,25 @@ describe('AiProviderRegistry', () => {
     expect(list[0].identity.id).toBe('provider-1');
   });
 
+  it('should reject provider IDs with leading or trailing whitespace', () => {
+    const registry = new AiProviderRegistry();
+    const mockWhitespace = createMockProvider({ id: '  openai  ' });
+    expect(() => registry.register(mockWhitespace)).toThrow(
+      /leading or trailing whitespace/
+    );
+  });
+
+  it('should normalize trimmed IDs during lookup and unregister', () => {
+    const registry = new AiProviderRegistry();
+    const mock = createMockProvider({ id: 'openai' });
+    registry.register(mock);
+
+    expect(registry.has('  openai  ')).toBe(true);
+    expect(registry.get('  openai  ')).toBe(mock);
+    expect(registry.unregister('  openai  ')).toBe(true);
+    expect(registry.has('openai')).toBe(false);
+  });
+
   it('should unregister providers and clear registry', () => {
     const mock1 = createMockProvider({ id: 'provider-1' });
     const mock2 = createMockProvider({ id: 'provider-2' });

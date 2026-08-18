@@ -30,19 +30,22 @@ The AI Provider Routing Layer establishes a deterministic, provider-agnostic fra
 - Filters candidate providers by eligibility:
   1. Exclusion check (`options.excludedProviderIds`).
   2. Routing mode compatibility (`LOCAL_ONLY` accepts only `LOCAL_RULES`, `REMOTE_ONLY` accepts only `REMOTE_LLM`).
-  3. Status availability (rejects `UNAVAILABLE`).
+  3. Status availability (rejects `UNAVAILABLE`). Throws `PREFERRED_PROVIDER_UNAVAILABLE` when a preferred provider is unavailable under `NO_FALLBACK`.
   4. Capability completeness (must possess all required task and format capabilities).
-- Scores eligible candidates:
+- Scores eligible candidates using discrete `AiCandidateScoringFactor` values:
   - `AVAILABLE`: +100
   - `DEGRADED`: +25
   - `PREFERRED_PROVIDER`: +1000
   - `LOCAL_RULES` Priority: +10
   - Base Capability Match: +10
 - Deterministic Tie-Breaking: When scores are identical, candidates are sorted alphabetically by `providerId`.
+- Returns `orderedCandidates`: an immutable array of eligible candidates pre-sorted in ranked execution order.
+- Derives high-level `selectionReason` (`PREFERRED_PROVIDER`, `ONLY_ELIGIBLE_PROVIDER`, `PRIORITY`).
 
 ### 3.4 `AiRouter`
-- Executes request dispatching against registered providers.
+- Executes request dispatching directly across `selection.orderedCandidates` without redundant re-sorting.
 - Supports fallback execution when `fallbackPolicy !== 'NO_FALLBACK'`.
+- Accurately tracks `fallbackUsed` (true if secondary candidates executed) without overwriting `selectionReason`.
 - Decorates the successful `AiResponse` with routing provenance via `decorateAiResponse`.
 - Surfaces clear domain errors (`AiRoutingError`) without corrupting astrological diagnostics.
 

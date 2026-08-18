@@ -1,6 +1,7 @@
 import type { AiProvider } from '../types/aiProviderTypes';
 import type { AiRequest } from '../types/aiRequestTypes';
 import type {
+  AiCandidateScoringFactor,
   AiProviderSelection,
   AiProviderSelectionCandidate,
   AiProviderSelectionReason,
@@ -67,7 +68,7 @@ export class AiProviderSelector {
         );
       } else {
         let score = 0;
-        const reasons: AiProviderSelectionReason[] = [];
+        const reasons: AiCandidateScoringFactor[] = [];
 
         // Availability score
         if (status.availability === 'AVAILABLE') {
@@ -109,6 +110,19 @@ export class AiProviderSelector {
       }
     }
 
+    if (options.preferredProviderId && options.fallbackPolicy === 'NO_FALLBACK') {
+      const preferredCandidate = candidateList.find(
+        (c) => c.providerId === options.preferredProviderId
+      );
+      if (preferredCandidate && preferredCandidate.availability === 'UNAVAILABLE') {
+        throw new AiRoutingError(
+          'PREFERRED_PROVIDER_UNAVAILABLE',
+          `Preferred AI provider "${options.preferredProviderId}" is UNAVAILABLE`,
+          request.requestId
+        );
+      }
+    }
+
     if (eligibleList.length === 0) {
       throw new AiRoutingError(
         'NO_ELIGIBLE_PROVIDER',
@@ -126,17 +140,12 @@ export class AiProviderSelector {
     });
 
     const winner = eligibleList[0];
+    const orderedCandidates = Object.freeze(eligibleList.map((e) => e.candidate));
 
     // Derive selection reason
     let selectionReason: AiProviderSelectionReason;
     if (winner.candidate.reasons.includes('PREFERRED_PROVIDER')) {
       selectionReason = 'PREFERRED_PROVIDER';
-    } else if (
-      options.preferredProviderId &&
-      options.preferredProviderId !== winner.provider.identity.id &&
-      winner.provider.identity.kind === 'LOCAL_RULES'
-    ) {
-      selectionReason = 'LOCAL_FALLBACK';
     } else if (eligibleList.length === 1) {
       selectionReason = 'ONLY_ELIGIBLE_PROVIDER';
     } else {
@@ -146,6 +155,7 @@ export class AiProviderSelector {
     return Object.freeze({
       provider: winner.provider,
       candidates: Object.freeze(candidateList),
+      orderedCandidates,
       reason: selectionReason,
       score: winner.candidate.score
     });

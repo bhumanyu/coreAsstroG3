@@ -11,13 +11,17 @@ export type AiRoutingMode = 'AUTO' | 'LOCAL_ONLY' | 'REMOTE_ONLY';
 
 export type AiRoutingFallbackPolicy = 'ALLOW_FALLBACK' | 'NO_FALLBACK';
 
-export type AiProviderSelectionReason =
+export type AiCandidateScoringFactor =
   | 'PREFERRED_PROVIDER'
   | 'CAPABILITY_MATCH'
-  | 'LOCAL_FALLBACK'
   | 'AVAILABILITY'
+  | 'PRIORITY';
+
+export type AiProviderSelectionReason =
+  | 'PREFERRED_PROVIDER'
   | 'PRIORITY'
-  | 'ONLY_ELIGIBLE_PROVIDER';
+  | 'ONLY_ELIGIBLE_PROVIDER'
+  | 'LOCAL_FALLBACK';
 
 export type AiRoutingErrorCode =
   | 'NO_PROVIDERS_REGISTERED'
@@ -40,13 +44,14 @@ export interface AiProviderSelectionCandidate {
   readonly availability: AiProviderAvailability;
   readonly score: number;
   readonly eligible: boolean;
-  readonly reasons: readonly AiProviderSelectionReason[];
+  readonly reasons: readonly AiCandidateScoringFactor[];
   readonly rejectedReason?: string;
 }
 
 export interface AiProviderSelection {
   readonly provider: AiProvider;
   readonly candidates: readonly AiProviderSelectionCandidate[];
+  readonly orderedCandidates: readonly AiProviderSelectionCandidate[];
   readonly reason: AiProviderSelectionReason;
   readonly score: number;
 }

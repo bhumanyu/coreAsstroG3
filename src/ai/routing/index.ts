@@ -15,6 +15,7 @@ export type { DecorateAiResponseOptions } from './decorateAiResponse';
 export type {
   AiRoutingMode,
   AiRoutingFallbackPolicy,
+  AiCandidateScoringFactor,
   AiProviderSelectionReason,
   AiRoutingErrorCode,
   AiRoutingOptions,
@@ -24,5 +25,3 @@ export type {
   AiRoutingContext
 } from './aiRoutingTypes';
 
-export { createMockProvider } from './testFixtures';
-export type { MockProviderConfig } from './testFixtures';
