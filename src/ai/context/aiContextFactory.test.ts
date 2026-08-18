@@ -325,6 +325,8 @@ describe('AI Context Factory', () => {
       ...(horoscope.themeInterpretationV2?.wealth?.evidence || [])
     ];
     const sourceVargaEvidence = allEvidence.find((e) => e.vargaEvidence);
+    expect(sourceVargaEvidence).toBeDefined();
+    expect(sourceVargaEvidence?.vargaEvidence).toBeDefined();
     if (sourceVargaEvidence && sourceVargaEvidence.vargaEvidence) {
       const projected = context.evidence.find((e) => e.id === sourceVargaEvidence.id);
       expect(projected).toBeDefined();

@@ -29,6 +29,7 @@ import {
   YogaFactSummary
 } from '../types/aiContextTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
+import type { YogaResult } from '../../engine/yoga/yogaTypes';
 import { deepFreeze } from './deepFreeze';
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -211,13 +212,13 @@ function buildHouseFacts(horoscope: Horoscope): readonly HouseFactSummary[] {
 }
 
 function buildYogaFacts(horoscope: Horoscope): readonly YogaFactSummary[] {
-  const yogas = horoscope.yogas?.yogas || [];
-  return yogas.map((y: any) => {
+  const yogas: readonly YogaResult[] = horoscope.yogas?.yogas || [];
+  return yogas.map((y) => {
     const rawStatus = y.assessment?.finalStatus || y.finalStatus || 'UNKNOWN';
     const rawStrength = y.assessment?.strength;
     const planets: readonly Planet[] = [...(y.planets || [])];
     const houses: readonly number[] = (y.houses || []).filter(
-      (h: unknown): h is number => typeof h === 'number'
+      (h): h is number => typeof h === 'number'
     );
 
     return {
@@ -452,25 +453,6 @@ function mapToAiEvidenceSource(source: unknown): AiEvidenceSource {
     if (upper === 'CAREER') return 'CAREER';
     if (upper === 'TRANSIT' || upper === 'GOCHARA') return 'TRANSIT';
     if (upper === 'LIFE_THEME' || upper === 'THEME') return 'LIFE_THEME';
-    const validSources: readonly AiEvidenceSource[] = [
-      'PLANET',
-      'HOUSE',
-      'YOGA',
-      'FUNCTIONAL_ROLE',
-      'STRENGTH',
-      'DASHA',
-      'D9',
-      'D10',
-      'CAREER',
-      'WEALTH',
-      'LIFE_THEME',
-      'ASPECT',
-      'D2',
-      'TRANSIT'
-    ];
-    if (validSources.includes(upper as AiEvidenceSource)) {
-      return upper as AiEvidenceSource;
-    }
   }
   return 'UNKNOWN';
 }

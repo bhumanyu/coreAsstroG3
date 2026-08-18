@@ -902,6 +902,7 @@ import type {
 } from './engine/fullNatalAnalysis/fullNatalAnalysisTypes';
 import type { CareerThemeInterpretation } from './engine/themeInterpretation/themeInterpretationTypes';
 import type { WealthThemeInterpretation } from './engine/themeInterpretation/wealthThemeInterpretationTypes';
+import type { YogaAnalysisReport, YogaResult } from './engine/yoga/yogaTypes';
 import { LifeTheme } from './engine/lifeThemes/lifeThemeTypes';
 
 export { LifeTheme };
@@ -942,6 +943,8 @@ export interface Horoscope {
 export type Chart = Horoscope;
 
 export type {
+  YogaAnalysisReport,
+  YogaResult,
   InterpretationConfidence,
   FunctionalRole,
   PlanetInterpretationReport,
