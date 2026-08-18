@@ -143,6 +143,129 @@ describe('RemoteAiProvider', () => {
     });
   });
 
+  it('normalizes any request mapper failure to MAPPING_ERROR', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {},
+      body: 'ok'
+    });
+
+    const mapper = {
+      map() {
+        throw new RemoteAiError(
+          'NETWORK_ERROR',
+          'incorrect mapper classification'
+        );
+      }
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test Provider',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      mapper,
+      new FakeRemoteAiResponseMapper(),
+      transport
+    );
+
+    await expect(
+      provider.generate(createRequest())
+    ).rejects.toMatchObject({
+      code: 'MAPPING_ERROR',
+      requestId: 'remote-test-1'
+    });
+  });
+
+  it('normalizes any response mapper failure to MAPPING_ERROR', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {},
+      body: 'ok'
+    });
+
+    const mapper = {
+      map() {
+        throw new RemoteAiError(
+          'NETWORK_ERROR',
+          'incorrect response mapper classification'
+        );
+      }
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test Provider',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai'
+      },
+      new FakeRemoteAiRequestMapper(),
+      mapper,
+      transport
+    );
+
+    await expect(
+      provider.generate(createRequest())
+    ).rejects.toMatchObject({
+      code: 'MAPPING_ERROR',
+      requestId: 'remote-test-1'
+    });
+  });
+
+  it('prevents API key leakage when mapper throws an Error containing secret', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {},
+      body: 'ok'
+    });
+
+    const throwingRequestMapper = {
+      map: () => {
+        throw new Error('Authorization failed for secret-test-api-key-12345');
+      }
+    };
+
+    const provider = new RemoteAiProvider(
+      {
+        identity: {
+          id: 'remote-test',
+          name: 'Remote Test Provider',
+          kind: 'REMOTE_LLM'
+        },
+        capabilities: ['CAREER'],
+        endpoint: 'https://example.com/ai',
+        apiKey: 'secret-test-api-key-12345'
+      },
+      throwingRequestMapper,
+      new FakeRemoteAiResponseMapper(),
+      transport
+    );
+
+    let caughtError: unknown;
+    try {
+      await provider.generate(createRequest());
+    } catch (err) {
+      caughtError = err;
+    }
+
+    expect(caughtError).toBeInstanceOf(RemoteAiError);
+    const remoteError = caughtError as RemoteAiError;
+    expect(remoteError.code).toBe('MAPPING_ERROR');
+    expect(remoteError.requestId).toBe('remote-test-1');
+    expect(remoteError.cause).toBeUndefined();
+    expect(remoteError.message).not.toContain('secret-test-api-key-12345');
+    expect(JSON.stringify(remoteError)).not.toContain('secret-test-api-key-12345');
+  });
+
   it('reports configured remote status without performing network IO', () => {
     const transport = new FakeRemoteAiTransport({
       status: 200,

@@ -92,6 +92,26 @@ describe('FetchRemoteAiTransport', () => {
     });
   });
 
+  it('throws MAPPING_ERROR when request body cannot be JSON serialized', async () => {
+    const transport = new FetchRemoteAiTransport();
+    const circularBody: Record<string, unknown> = {};
+    circularBody.self = circularBody;
+
+    await expect(
+      transport.send(
+        {
+          url: 'https://example.com',
+          method: 'POST',
+          headers: {},
+          body: circularBody
+        },
+        5000
+      )
+    ).rejects.toMatchObject({
+      code: 'MAPPING_ERROR'
+    });
+  });
+
   it('normalizes network failures to NETWORK_ERROR', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
 

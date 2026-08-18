@@ -73,7 +73,9 @@ Insecure HTTP is permitted exclusively for `localhost` and `127.0.0.1` to enable
 
 `RemoteAiProvider` does not serialize requests directly.
 Request construction is delegated to `RemoteAiRequestMapper.map(request, config)`.
-Any mapper failure is caught and wrapped in `RemoteAiError('MAPPING_ERROR', ...)`.
+Any mapper failure (regardless of what the mapper throws) is caught and wrapped in `RemoteAiError('MAPPING_ERROR', 'Failed to map AiRequest to remote provider request.', { requestId: request.requestId })`.
+
+**Credential Safety Invariant**: A request mapper may use `config.apiKey` only to construct authentication headers and MUST NOT place credentials in the URL, request body, response metadata, or error messages.
 
 ---
 
@@ -88,7 +90,7 @@ metadata: {
   remote: true
 }
 ```
-Any mapper failure is caught and wrapped in `RemoteAiError('MAPPING_ERROR', ...)`.
+Any mapper failure (regardless of what the mapper throws) is caught and wrapped in `RemoteAiError('MAPPING_ERROR', 'Failed to map remote provider response to AiResponse.', { requestId: request.requestId })`. To guarantee credential non-leakage, mapper-thrown error instances are not exposed as public `cause` objects.
 
 ---
 
@@ -105,7 +107,7 @@ export interface RemoteAiTransport {
 ```
 
 `FetchRemoteAiTransport` implements `RemoteAiTransport` using standard `fetch`:
-- Encodes body via `JSON.stringify(request.body)`
+- Pre-serializes body via `JSON.stringify(request.body)` (throws `RemoteAiError('MAPPING_ERROR', ...)` if serialization fails)
 - Enforces timeout via `AbortController` and `setTimeout`
 - Clears timeout in `finally` block
 - Automatically parses `application/json` responses (throws `INVALID_RESPONSE` on JSON syntax error)

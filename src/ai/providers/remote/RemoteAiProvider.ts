@@ -137,17 +137,12 @@ export class RemoteAiProvider implements AiProvider {
 
     try {
       httpRequest = this.requestMapper.map(request, this.config);
-    } catch (error) {
-      if (error instanceof RemoteAiError) {
-        throw error;
-      }
-
+    } catch {
       throw new RemoteAiError(
         'MAPPING_ERROR',
         'Failed to map AiRequest to remote provider request.',
         {
-          requestId: request.requestId,
-          cause: error
+          requestId: request.requestId
         }
       );
     }
@@ -197,17 +192,12 @@ export class RemoteAiProvider implements AiProvider {
           remote: true
         })
       });
-    } catch (error) {
-      if (error instanceof RemoteAiError) {
-        throw error;
-      }
-
+    } catch {
       throw new RemoteAiError(
         'MAPPING_ERROR',
         'Failed to map remote provider response to AiResponse.',
         {
-          requestId: request.requestId,
-          cause: error
+          requestId: request.requestId
         }
       );
     }

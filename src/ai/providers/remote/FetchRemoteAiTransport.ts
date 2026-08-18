@@ -17,6 +17,16 @@ export class FetchRemoteAiTransport implements RemoteAiTransport {
       );
     }
 
+    let serializedBody: string;
+    try {
+      serializedBody = JSON.stringify(request.body);
+    } catch {
+      throw new RemoteAiError(
+        'MAPPING_ERROR',
+        'Remote AI request body could not be serialized.'
+      );
+    }
+
     const controller = new AbortController();
     const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -24,7 +34,7 @@ export class FetchRemoteAiTransport implements RemoteAiTransport {
       const response = await fetch(request.url, {
         method: request.method,
         headers: request.headers,
-        body: JSON.stringify(request.body),
+        body: serializedBody,
         signal: controller.signal
       });
 
