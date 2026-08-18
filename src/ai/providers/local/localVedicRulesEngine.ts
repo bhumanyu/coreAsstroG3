@@ -82,6 +82,7 @@ export function reasonWithLocalRules(
   const triggeredRuleSet = new Set<string>();
   const unresolvedQuestionsSet = new Set<string>();
   const warnings: string[] = [];
+  let ruleFailureCount = 0;
 
   // Check for missing task-level context and record unresolved questions
   switch (task) {
@@ -146,6 +147,10 @@ export function reasonWithLocalRules(
           for (const id of evaluation.supportingEvidenceIds) {
             if (validEvidenceMap.has(id)) {
               supportingSet.add(id);
+            } else {
+              warnings.push(
+                `Rule ${rule.id} referenced unknown supporting evidence ID: ${id}`
+              );
             }
           }
         }
@@ -154,11 +159,16 @@ export function reasonWithLocalRules(
           for (const id of evaluation.challengingEvidenceIds) {
             if (validEvidenceMap.has(id)) {
               challengingSet.add(id);
+            } else {
+              warnings.push(
+                `Rule ${rule.id} referenced unknown challenging evidence ID: ${id}`
+              );
             }
           }
         }
       }
     } catch (error) {
+      ruleFailureCount++;
       warnings.push(
         `Rule ${rule.id} evaluation failed: ${
           error instanceof Error ? error.message : String(error)
@@ -168,7 +178,9 @@ export function reasonWithLocalRules(
   }
 
   let status: AiReasoningStatus = 'PARTIAL';
-  if (supportingSet.size > 0 && challengingSet.size > 0) {
+  if (ruleFailureCount > 0) {
+    status = 'PARTIAL';
+  } else if (supportingSet.size > 0 && challengingSet.size > 0) {
     status = 'PARTIAL';
   } else if (supportingSet.size > 0 || challengingSet.size > 0) {
     status = 'SUCCESS';

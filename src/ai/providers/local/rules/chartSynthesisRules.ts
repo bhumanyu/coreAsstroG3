@@ -45,9 +45,7 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
         context.evidence.filter(
           (e) =>
             e.planets?.includes(asc.lord) ||
-            e.houses?.includes(1) ||
-            e.source === 'HOUSE' ||
-            e.source === 'PLANET'
+            e.houses?.includes(1)
         )
       );
 
@@ -99,9 +97,13 @@ export const CHART_SYNTHESIS_RULES: readonly LocalRuleDefinition[] = Object.free
       let effect: LocalRuleEffect = 'NEUTRAL';
       let statement = 'Divisional harmonic charts evaluated across natal alignments.';
 
+      const hasFullConfirms = confirms.some((e) => e.vargaRelationship === 'CONFIRMS');
+
       if (confirms.length > conflicts.length) {
         effect = 'SUPPORT';
-        statement = 'Divisional harmonic charts confirm core natal alignments.';
+        statement = hasFullConfirms
+          ? 'Divisional harmonic charts confirm core natal alignments.'
+          : 'Divisional harmonic charts partially confirm core natal alignments.';
       } else if (conflicts.length > confirms.length) {
         effect = 'CHALLENGE';
         statement = `Varga relationships indicate structural modifications or conflicts across divisional charts (${conflicts.length} conflicting factors detected).`;

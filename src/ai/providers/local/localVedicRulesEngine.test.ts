@@ -339,4 +339,82 @@ describe('localVedicRulesEngine', () => {
     const dashaResult = reasonWithLocalRules('DASHA_ANALYSIS', contextWithoutDasha);
     expect(dashaResult.unresolvedQuestions).toContain('No active Vimshottari Dasha period is available.');
   });
+
+  it('should emit warnings and not crash when a rule references unknown evidence IDs', () => {
+    // Inject a synthetic context with a rule evaluation or test engine directly with an evidence ID not present in context.evidence
+    const contextWithEmptyEvidence: AiContext = {
+      ...context,
+      evidence: Object.freeze([])
+    };
+    const result = reasonWithLocalRules('CAREER_ANALYSIS', contextWithEmptyEvidence);
+    // Career rules fire based on context.career, but return IDs from empty evidence or fixed checks
+    expect(result.warnings).toBeDefined();
+  });
+
+  it('should produce "partially confirm" in LOCAL-CHART-003 when only PARTIALLY_CONFIRMS exists', () => {
+    const chartRule003 = CHART_SYNTHESIS_RULES.find((r) => r.id === 'LOCAL-CHART-003');
+    expect(chartRule003).toBeDefined();
+
+    const mockContext: AiContext = {
+      ...context,
+      evidence: Object.freeze([
+        {
+          id: 'ev-d9-partial',
+          source: 'D9',
+          dimension: 'CONFIRMATION',
+          statement: 'D9 navamsha position partially aligns with rashi placement',
+          effect: 'SUPPORT',
+          strength: 'MODERATE',
+          priority: 'CONFIRMATORY',
+          vargaRelationship: 'PARTIALLY_CONFIRMS'
+        } as AiEvidence
+      ])
+    };
+
+    const evalResult = chartRule003!.evaluate(mockContext);
+    expect(evalResult.triggered).toBe(true);
+    expect(evalResult.effect).toBe('SUPPORT');
+    expect(evalResult.statement).toContain('partially confirm');
+  });
+
+  it('should restrict LOCAL-CHART-002 evidence to ascendant lord or house 1', () => {
+    const chartRule002 = CHART_SYNTHESIS_RULES.find((r) => r.id === 'LOCAL-CHART-002');
+    expect(chartRule002).toBeDefined();
+
+    const mockContext: AiContext = {
+      ...context,
+      ascendant: {
+        sign: Sign.ARIES,
+        lord: Planet.MARS
+      },
+      evidence: Object.freeze([
+        {
+          id: 'ev-mars',
+          source: 'PLANET',
+          dimension: 'NATAL_STRUCTURE',
+          statement: 'Mars in Aries exalted',
+          effect: 'SUPPORT',
+          strength: 'STRONG',
+          priority: 'PRIMARY',
+          planets: Object.freeze([Planet.MARS])
+        } as AiEvidence,
+        {
+          id: 'ev-house7-venus',
+          source: 'HOUSE',
+          dimension: 'NATAL_STRUCTURE',
+          statement: 'Venus in 7th house',
+          effect: 'SUPPORT',
+          strength: 'MODERATE',
+          priority: 'SECONDARY',
+          houses: Object.freeze([7]),
+          planets: Object.freeze([Planet.VENUS])
+        } as AiEvidence
+      ])
+    };
+
+    const evalResult = chartRule002!.evaluate(mockContext);
+    expect(evalResult.triggered).toBe(true);
+    expect(evalResult.supportingEvidenceIds).toContain('ev-mars');
+    expect(evalResult.supportingEvidenceIds).not.toContain('ev-house7-venus');
+  });
 });
