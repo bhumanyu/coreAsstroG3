@@ -9,7 +9,10 @@ export interface DecorateAiResponseOptions {
   readonly mode: AiRoutingMode;
   readonly fallbackUsed: boolean;
   readonly selectionReason: AiProviderSelectionReason;
+  /** Total number of registered providers evaluated (including rejected candidates for auditability). */
   readonly candidateCount: number;
+  /** Number of candidates matching task capabilities and eligibility criteria. */
+  readonly eligibleCandidateCount?: number;
 }
 
 /**
@@ -25,7 +28,8 @@ export function decorateAiResponse(
     mode: options.mode,
     fallbackUsed: options.fallbackUsed,
     selectionReason: options.selectionReason,
-    candidateCount: options.candidateCount
+    candidateCount: options.candidateCount,
+    eligibleCandidateCount: options.eligibleCandidateCount ?? options.candidateCount
   });
 
   const mergedMetadata = Object.freeze({

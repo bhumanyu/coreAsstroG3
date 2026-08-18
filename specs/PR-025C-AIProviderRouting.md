@@ -7,7 +7,7 @@ The AI Provider Routing Layer establishes a deterministic, provider-agnostic fra
 - **Agnostic Dispatching**: The routing layer operates exclusively on normalized `AiRequest` and `AiResponse` objects.
 - **Astrological Independence**: The routing layer MUST NOT calculate or interpret astrology, modify `AiContext`, access raw `Horoscope` or birth details, construct prompts, or communicate with external LLM APIs.
 - **Zero Privacy Leakage**: No birth coordinates, timestamps, or raw astronomical positions are inspected or stored within routing structures.
-- **Auditable Provenance**: All routing decisions append immutable routing metadata (`mode`, `fallbackUsed`, `selectionReason`, `candidateCount`) onto `AiResponse.metadata.routing`.
+- **Auditable Provenance**: All routing decisions append immutable routing metadata (`mode`, `fallbackUsed`, `selectionReason`, `candidateCount` [total evaluated], `eligibleCandidateCount` [eligible matching]) onto `AiResponse.metadata.routing`.
 
 ## 3. Core Components
 

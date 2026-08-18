@@ -58,7 +58,8 @@ export class AiRouter {
           mode,
           fallbackUsed,
           selectionReason,
-          candidateCount: selection.candidates.length
+          candidateCount: selection.candidates.length,
+          eligibleCandidateCount: selection.orderedCandidates.length
         });
 
         return Object.freeze({

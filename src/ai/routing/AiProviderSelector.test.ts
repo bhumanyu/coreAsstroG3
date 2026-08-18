@@ -178,4 +178,26 @@ describe('AiProviderSelector', () => {
     expect(selection.orderedCandidates[1].providerId).toBe('provider-1');
     expect(selection.reason).toBe('PREFERRED_PROVIDER');
   });
+
+  it('should normalize leading/trailing whitespace in preferredProviderId and excludedProviderIds', () => {
+    const provider1 = createMockProvider({
+      id: 'provider-1',
+      kind: 'LOCAL_RULES',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+    const provider2 = createMockProvider({
+      id: 'provider-2',
+      kind: 'LOCAL_RULES',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+
+    const selection = selector.select([provider1, provider2], careerRequest, {
+      preferredProviderId: '  provider-2  ',
+      excludedProviderIds: ['  provider-1  ']
+    });
+
+    expect(selection.provider.identity.id).toBe('provider-2');
+    expect(selection.orderedCandidates.length).toBe(1);
+    expect(selection.candidates.find((c) => c.providerId === 'provider-1')?.eligible).toBe(false);
+  });
 });

@@ -22,6 +22,8 @@ export class AiProviderSelector {
     options: AiRoutingOptions = {}
   ): AiProviderSelection {
     const mode: AiRoutingMode = options.mode ?? 'AUTO';
+    const preferredProviderId = options.preferredProviderId?.trim();
+    const excludedProviderIds = options.excludedProviderIds?.map((id) => id.trim());
     const requiredCaps = requiredCapabilitiesForRequest(request);
     const candidateList: AiProviderSelectionCandidate[] = [];
     const eligibleList: { provider: AiProvider; candidate: AiProviderSelectionCandidate }[] = [];
@@ -32,7 +34,7 @@ export class AiProviderSelector {
       let rejectedReason: string | undefined;
 
       // 1. Exclusion check
-      if (options.excludedProviderIds && options.excludedProviderIds.includes(id)) {
+      if (excludedProviderIds && excludedProviderIds.includes(id)) {
         rejectedReason = `Provider "${id}" is excluded in routing options`;
       }
       // 2. Routing mode check
@@ -80,7 +82,7 @@ export class AiProviderSelector {
         }
 
         // Preferred provider match
-        if (options.preferredProviderId && id === options.preferredProviderId) {
+        if (preferredProviderId && id === preferredProviderId) {
           score += 1000;
           reasons.push('PREFERRED_PROVIDER');
         }
@@ -110,14 +112,14 @@ export class AiProviderSelector {
       }
     }
 
-    if (options.preferredProviderId && options.fallbackPolicy === 'NO_FALLBACK') {
+    if (preferredProviderId && options.fallbackPolicy === 'NO_FALLBACK') {
       const preferredCandidate = candidateList.find(
-        (c) => c.providerId === options.preferredProviderId
+        (c) => c.providerId === preferredProviderId
       );
       if (preferredCandidate && preferredCandidate.availability === 'UNAVAILABLE') {
         throw new AiRoutingError(
           'PREFERRED_PROVIDER_UNAVAILABLE',
-          `Preferred AI provider "${options.preferredProviderId}" is UNAVAILABLE`,
+          `Preferred AI provider "${preferredProviderId}" is UNAVAILABLE`,
           request.requestId
         );
       }

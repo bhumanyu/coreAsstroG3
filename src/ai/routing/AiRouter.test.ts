@@ -44,7 +44,8 @@ describe('AiRouter', () => {
       mode: 'AUTO',
       fallbackUsed: false,
       selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
-      candidateCount: 1
+      candidateCount: 1,
+      eligibleCandidateCount: 1
     });
   });
 
