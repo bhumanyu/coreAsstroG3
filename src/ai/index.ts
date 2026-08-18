@@ -91,3 +91,22 @@ export type {
   AiRoutingErrorCode
 } from './routing';
 
+export {
+  RemoteAiProvider,
+  FetchRemoteAiTransport,
+  RemoteAiError,
+  createRemoteAiProvider
+} from './providers/remote';
+
+export type {
+  RemoteAiProviderConfig,
+  RemoteAiHttpRequest,
+  RemoteAiHttpResponse,
+  RemoteAiRequestMapper,
+  RemoteAiResponseMapper,
+  RemoteAiTransport,
+  RemoteAiErrorCode,
+  RemoteAiProviderStatus
+} from './providers/remote';
+
+
