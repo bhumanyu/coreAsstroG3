@@ -132,6 +132,7 @@ Error codes (`RemoteAiErrorCode`):
 
 `RemoteAiError` preserves `statusCode` and `requestId` where applicable.
 Error messages MUST NOT embed credentials or full raw payloads.
+To guarantee credential and transport safety across pluggable transport implementations, `RemoteAiProvider` sanitizes all transport-level errors using standardized, deterministic error messages without propagating untrusted messages or raw `cause` objects.
 
 ---
 

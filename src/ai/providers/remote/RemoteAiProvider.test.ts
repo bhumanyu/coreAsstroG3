@@ -139,8 +139,46 @@ describe('RemoteAiProvider', () => {
 
     await expect(provider.generate(createRequest())).rejects.toMatchObject({
       code: 'TIMEOUT',
-      requestId: 'remote-test-1'
+      requestId: 'remote-test-1',
+      message: 'Remote AI request timed out.'
     });
+  });
+
+  it('sanitizes untrusted transport errors and prevents leaking message or cause', async () => {
+    const untrustedError = new RemoteAiError(
+      'NETWORK_ERROR',
+      'Authorization failed with secret-transport-key-999',
+      {
+        cause: new Error('nested secret-transport-key-999')
+      }
+    );
+
+    const transport = new FakeRemoteAiTransport(
+      {
+        status: 200,
+        headers: {},
+        body: 'unused'
+      },
+      untrustedError
+    );
+
+    const provider = createProvider(transport);
+
+    let caughtError: unknown;
+    try {
+      await provider.generate(createRequest());
+    } catch (err) {
+      caughtError = err;
+    }
+
+    expect(caughtError).toBeInstanceOf(RemoteAiError);
+    const remoteError = caughtError as RemoteAiError;
+    expect(remoteError.code).toBe('NETWORK_ERROR');
+    expect(remoteError.requestId).toBe('remote-test-1');
+    expect(remoteError.cause).toBeUndefined();
+    expect(remoteError.message).toBe('Remote AI provider network request failed.');
+    expect(remoteError.message).not.toContain('secret-transport-key-999');
+    expect(JSON.stringify(remoteError)).not.toContain('secret-transport-key-999');
   });
 
   it('normalizes any request mapper failure to MAPPING_ERROR', async () => {

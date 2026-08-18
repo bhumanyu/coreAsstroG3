@@ -21,6 +21,7 @@ import {
 } from './FetchRemoteAiTransport';
 
 import type {
+  RemoteAiErrorCode,
   RemoteAiProviderConfig,
   RemoteAiProviderStatus,
   RemoteAiRequestMapper,
@@ -29,6 +30,25 @@ import type {
 } from './remoteAiTypes';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+function safeTransportErrorMessage(code: RemoteAiErrorCode): string {
+  switch (code) {
+    case 'TIMEOUT':
+      return 'Remote AI request timed out.';
+    case 'NETWORK_ERROR':
+      return 'Remote AI provider network request failed.';
+    case 'HTTP_ERROR':
+      return 'Remote AI provider returned an HTTP error.';
+    case 'INVALID_RESPONSE':
+      return 'Remote AI provider returned an invalid response.';
+    case 'MAPPING_ERROR':
+      return 'Remote AI provider mapping failed.';
+    case 'INVALID_ENDPOINT':
+      return 'Remote AI provider endpoint is invalid.';
+    case 'INVALID_CONFIGURATION':
+      return 'Remote AI provider configuration is invalid.';
+  }
+}
 
 function validateConfig(config: RemoteAiProviderConfig): void {
   if (!config.identity.id || config.identity.id.trim().length === 0) {
@@ -192,19 +212,21 @@ export class RemoteAiProvider implements AiProvider {
       httpResponse = await this.transport.send(httpRequest, this.timeoutMs);
     } catch (error) {
       if (error instanceof RemoteAiError) {
-        throw new RemoteAiError(error.code, error.message, {
-          requestId: request.requestId,
-          statusCode: error.statusCode,
-          cause: error
-        });
+        throw new RemoteAiError(
+          error.code,
+          safeTransportErrorMessage(error.code),
+          {
+            requestId: request.requestId,
+            statusCode: error.statusCode
+          }
+        );
       }
 
       throw new RemoteAiError(
         'NETWORK_ERROR',
-        'Remote AI transport failed.',
+        safeTransportErrorMessage('NETWORK_ERROR'),
         {
-          requestId: request.requestId,
-          cause: error
+          requestId: request.requestId
         }
       );
     }
