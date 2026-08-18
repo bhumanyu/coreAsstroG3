@@ -171,6 +171,106 @@ describe('AI Context Factory', () => {
     expect(activeContext.dasha.active?.pratyantardasha).toBe(Planet.SATURN);
   });
 
+  it('should project career and wealth evidence items with matching engine IDs and enriched metadata', () => {
+    const careerEvidence = horoscope.themeInterpretationV2?.career?.evidence || [];
+    const wealthEvidence = horoscope.themeInterpretationV2?.wealth?.evidence || [];
+
+    expect(careerEvidence.length).toBeGreaterThan(0);
+    expect(wealthEvidence.length).toBeGreaterThan(0);
+
+    const contextEvidenceIds = new Set(context.evidence.map((e) => e.id));
+
+    // Verify all career engine evidence IDs appear in context.evidence
+    for (const cEv of careerEvidence) {
+      expect(contextEvidenceIds.has(cEv.id)).toBe(true);
+      const projected = context.evidence.find((e) => e.id === cEv.id);
+      expect(projected).toBeDefined();
+      expect(projected?.statement).toBe(cEv.statement);
+      if (projected?.priority !== undefined) {
+        expect(['PRIMARY', 'SECONDARY', 'CONFIRMATORY', 'TIMING']).toContain(projected.priority);
+      }
+      if (projected?.dimension !== undefined) {
+        expect(['NATAL_STRUCTURE', 'MODIFIER', 'CONFIRMATION', 'TIMING']).toContain(projected.dimension);
+      }
+      if (projected?.varga !== undefined) {
+        expect(['D9', 'D10']).toContain(projected.varga);
+      }
+      if (projected?.dashaLevel !== undefined) {
+        expect(['MAHADASHA', 'ANTARDASHA', 'PRATYANTARDASHA']).toContain(projected.dashaLevel);
+      }
+    }
+
+    // Verify all wealth engine evidence IDs appear in context.evidence
+    for (const wEv of wealthEvidence) {
+      expect(contextEvidenceIds.has(wEv.id)).toBe(true);
+      const projected = context.evidence.find((e) => e.id === wEv.id);
+      expect(projected).toBeDefined();
+      expect(projected?.statement).toBe(wEv.statement);
+    }
+  });
+
+  it('should throw an error on conflicting evidence ID with different payload', () => {
+    const horoscopeWithConflict = {
+      ...horoscope,
+      themeInterpretationV2: {
+        ...horoscope.themeInterpretationV2,
+        career: {
+          ...horoscope.themeInterpretationV2?.career,
+          evidence: [
+            {
+              id: 'test-conflict-id',
+              ruleId: 'RULE_A',
+              evidenceFamily: 'TENTH_HOUSE',
+              priority: 'PRIMARY',
+              strength: 'STRONG',
+              effect: 'SUPPORT',
+              statement: 'Statement A'
+            },
+            {
+              id: 'test-conflict-id',
+              ruleId: 'RULE_B',
+              evidenceFamily: 'SIXTH_HOUSE',
+              priority: 'SECONDARY',
+              strength: 'WEAK',
+              effect: 'CHALLENGE',
+              statement: 'Statement B (Conflicting)'
+            }
+          ]
+        }
+      }
+    } as any;
+
+    expect(() => buildAiContext(horoscopeWithConflict)).toThrowError(
+      /Cannot build AiContext: conflicting evidence id test-conflict-id/
+    );
+  });
+
+  it('should deduplicate identical evidence items silently', () => {
+    const identicalItem = {
+      id: 'test-identical-id',
+      ruleId: 'RULE_A',
+      evidenceFamily: 'TENTH_HOUSE',
+      priority: 'PRIMARY',
+      strength: 'STRONG',
+      effect: 'SUPPORT',
+      statement: 'Statement A'
+    };
+    const horoscopeWithDuplicates = {
+      ...horoscope,
+      themeInterpretationV2: {
+        ...horoscope.themeInterpretationV2,
+        career: {
+          ...horoscope.themeInterpretationV2?.career,
+          evidence: [identicalItem, identicalItem]
+        }
+      }
+    } as any;
+
+    const ctx = buildAiContext(horoscopeWithDuplicates);
+    const matches = ctx.evidence.filter((e) => e.id === 'test-identical-id');
+    expect(matches).toHaveLength(1);
+  });
+
   it('should project evidence items with normalized sources and strengths without fabricated certainty', () => {
     expect(context.evidence).toBeDefined();
     for (const ev of context.evidence) {

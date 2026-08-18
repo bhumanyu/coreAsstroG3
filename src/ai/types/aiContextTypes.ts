@@ -20,6 +20,18 @@ export type CareerD10Relationship =
   | 'CONFLICTS'
   | 'UNAVAILABLE';
 
+export type AiEvidencePriority =
+  | 'PRIMARY'
+  | 'SECONDARY'
+  | 'CONFIRMATORY'
+  | 'TIMING';
+
+export type AiEvidenceDimension =
+  | 'NATAL_STRUCTURE'
+  | 'MODIFIER'
+  | 'CONFIRMATION'
+  | 'TIMING';
+
 export type AiEvidenceSource =
   | 'PLANET'
   | 'HOUSE'
@@ -165,6 +177,11 @@ export interface AiEvidence {
   readonly planets?: readonly Planet[];
   readonly houses?: readonly number[];
   readonly ruleId?: string;
+  readonly priority?: AiEvidencePriority;
+  readonly dimension?: AiEvidenceDimension;
+  readonly conditional?: boolean;
+  readonly varga?: 'D9' | 'D10';
+  readonly dashaLevel?: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
 }
 
 export interface AiContextSource {
