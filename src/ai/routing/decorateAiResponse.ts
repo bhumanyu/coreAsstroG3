@@ -14,6 +14,10 @@ export interface DecorateAiResponseOptions {
    * including rejected candidates.
    */
   readonly candidateCount: number;
+  /**
+   * Number of eligible candidates matching requirements.
+   */
+  readonly eligibleCandidateCount: number;
 }
 
 export function decorateAiResponse(
@@ -29,7 +33,8 @@ export function decorateAiResponse(
         mode: options.mode,
         fallbackUsed: options.fallbackUsed,
         selectionReason: options.selectionReason,
-        candidateCount: options.candidateCount
+        candidateCount: options.candidateCount,
+        eligibleCandidateCount: options.eligibleCandidateCount
       })
     })
   });

@@ -44,6 +44,17 @@ export class AiRouter {
       const provider = this.registry.get(candidate.providerId);
 
       if (!provider) {
+        executionErrors.push({
+          providerId: candidate.providerId,
+          error: new Error(
+            `Provider "${candidate.providerId}" is no longer registered`
+          )
+        });
+
+        if (!allowFallback) {
+          throw executionErrors[executionErrors.length - 1].error;
+        }
+
         continue;
       }
 
@@ -58,7 +69,8 @@ export class AiRouter {
           mode,
           fallbackUsed,
           selectionReason,
-          candidateCount: selection.candidates.length
+          candidateCount: selection.candidates.length,
+          eligibleCandidateCount: selection.orderedCandidates.length
         });
 
         return Object.freeze({

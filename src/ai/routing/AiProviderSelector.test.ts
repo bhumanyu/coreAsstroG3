@@ -200,4 +200,20 @@ describe('AiProviderSelector', () => {
     expect(selection.orderedCandidates.length).toBe(1);
     expect(selection.candidates.find((c) => c.providerId === 'provider-1')?.eligible).toBe(false);
   });
+
+  it('should ignore whitespace-only strings in excludedProviderIds', () => {
+    const provider1 = createMockProvider({
+      id: 'provider-1',
+      kind: 'LOCAL_RULES',
+      capabilities: ['CAREER', 'STRUCTURED_OUTPUT']
+    });
+
+    const selection = selector.select([provider1], careerRequest, {
+      excludedProviderIds: ['   ', '']
+    });
+
+    expect(selection.provider.identity.id).toBe('provider-1');
+    expect(selection.orderedCandidates.length).toBe(1);
+    expect(selection.candidates[0].eligible).toBe(true);
+  });
 });

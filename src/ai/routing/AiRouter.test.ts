@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AiProviderRegistry } from './AiProviderRegistry';
+import { AiProviderSelector } from './AiProviderSelector';
 import { AiRouter } from './AiRouter';
 import { createMockProvider } from './testFixtures';
 import type { AiRequest } from '../types/aiRequestTypes';
@@ -44,7 +45,8 @@ describe('AiRouter', () => {
       mode: 'AUTO',
       fallbackUsed: false,
       selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
-      candidateCount: 1
+      candidateCount: 1,
+      eligibleCandidateCount: 1
     });
   });
 
@@ -175,6 +177,89 @@ describe('AiRouter', () => {
 
     await expect(router.route(testRequest)).rejects.toThrow(
       /All eligible AI providers failed/
+    );
+  });
+
+  it('should accurately report candidateCount (total) and eligibleCandidateCount (matching) in metadata', async () => {
+    const capable1 = createMockProvider({
+      id: 'openai-1',
+      kind: 'REMOTE_LLM',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+    const capable2 = createMockProvider({
+      id: 'local-1',
+      kind: 'LOCAL_RULES',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+    const unavail = createMockProvider({
+      id: 'down-1',
+      availability: 'UNAVAILABLE',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+    const missingCap = createMockProvider({
+      id: 'wealth-only-1',
+      capabilities: ['WEALTH', 'STRUCTURED_OUTPUT']
+    });
+
+    const registry = new AiProviderRegistry([capable1, capable2, unavail, missingCap]);
+    const router = new AiRouter(registry);
+
+    const result = await router.route(testRequest);
+
+    expect(result.response.metadata?.routing).toMatchObject({
+      candidateCount: 4,
+      eligibleCandidateCount: 2
+    });
+  });
+
+  it('should gracefully handle provider unregistered between selection and execution', async () => {
+    const primary = createMockProvider({
+      id: 'primary-unregistered',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+    const secondary = createMockProvider({
+      id: 'secondary-backup',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+
+    const registry = new AiProviderRegistry([primary, secondary]);
+    const mockSelector = {
+      select: (providers: any, req: any, opts: any) => {
+        const baseSelector = new AiProviderSelector();
+        const selection = baseSelector.select(providers, req, opts);
+        // Mutate registry between selection and execution
+        registry.unregister('primary-unregistered');
+        return selection;
+      }
+    };
+    const router = new AiRouter(registry, mockSelector as any);
+
+    const result = await router.route(testRequest, {
+      preferredProviderId: 'primary-unregistered'
+    });
+    expect(result.providerId).toBe('secondary-backup');
+    expect(result.fallbackUsed).toBe(true);
+  });
+
+  it('should throw ALL_PROVIDERS_FAILED with descriptive message if all candidates unregistered before execution', async () => {
+    const primary = createMockProvider({
+      id: 'primary-only',
+      capabilities: ['CHART_SYNTHESIS', 'STRUCTURED_OUTPUT']
+    });
+
+    const registry = new AiProviderRegistry([primary]);
+    const mockSelector = {
+      select: (providers: any, req: any, opts: any) => {
+        const baseSelector = new AiProviderSelector();
+        const selection = baseSelector.select(providers, req, opts);
+        registry.clear();
+        return selection;
+      }
+    };
+    const router = new AiRouter(registry, mockSelector as any);
+
+    await expect(router.route(testRequest)).rejects.toThrow(
+      /is no longer registered/
     );
   });
 });

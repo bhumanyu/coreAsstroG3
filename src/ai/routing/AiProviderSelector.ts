@@ -23,7 +23,11 @@ export class AiProviderSelector {
   ): AiProviderSelection {
     const mode: AiRoutingMode = options.mode ?? 'AUTO';
     const preferredProviderId = options.preferredProviderId?.trim();
-    const excludedProviderIds = options.excludedProviderIds?.map((id) => id.trim());
+    const excludedProviderIds = new Set(
+      (options.excludedProviderIds ?? [])
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0)
+    );
     const requiredCaps = requiredCapabilitiesForRequest(request);
     const candidateList: AiProviderSelectionCandidate[] = [];
     const eligibleList: { provider: AiProvider; candidate: AiProviderSelectionCandidate }[] = [];
@@ -34,7 +38,7 @@ export class AiProviderSelector {
       let rejectedReason: string | undefined;
 
       // 1. Exclusion check
-      if (excludedProviderIds && excludedProviderIds.includes(id)) {
+      if (excludedProviderIds.has(id)) {
         rejectedReason = `Provider "${id}" is excluded in routing options`;
       }
       // 2. Routing mode check
