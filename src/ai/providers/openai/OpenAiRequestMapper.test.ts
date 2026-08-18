@@ -4,16 +4,15 @@ import type { AiRequest } from '../../types/aiRequestTypes';
 import type { AiContext } from '../../types/aiContextTypes';
 import type { RemoteAiProviderConfig } from '../remote';
 
-function createRequest(responseFormat: 'STRUCTURED' | 'NARRATIVE'): AiRequest {
+function createRequest(
+  responseFormat: 'STRUCTURED' | 'NARRATIVE',
+  context: Partial<AiContext> = {}
+): AiRequest {
   return {
     requestId: 'openai-request-1',
     schemaVersion: '1.0.0',
     task: 'CAREER_ANALYSIS',
-    context: {
-      schemaVersion: '1.0.0',
-      source: 'TEST',
-      methodology: 'PARASHARA'
-    } as AiContext,
+    context: context as AiContext,
     instructions: Object.freeze(['Analyze the career evidence.']),
     responseFormat
   };
@@ -108,7 +107,15 @@ describe('OpenAiRequestMapper', () => {
     });
 
     const request = mapper.map(
-      createRequest('NARRATIVE'),
+      createRequest('NARRATIVE', {
+        methodology: {
+          zodiac: 'SIDEREAL',
+          ayanamsa: 'LAHIRI',
+          houseSystem: 'WHOLE_SIGN',
+          dashaSystem: 'VIMSHOTTARI',
+          aspectSystem: 'PARASHARI'
+        }
+      }),
       createConfig()
     );
 
