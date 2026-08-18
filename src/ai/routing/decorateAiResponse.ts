@@ -9,37 +9,28 @@ export interface DecorateAiResponseOptions {
   readonly mode: AiRoutingMode;
   readonly fallbackUsed: boolean;
   readonly selectionReason: AiProviderSelectionReason;
-  /** Total number of registered providers evaluated (including rejected candidates for auditability). */
+  /**
+   * Number of providers evaluated by the selector,
+   * including rejected candidates.
+   */
   readonly candidateCount: number;
-  /** Number of candidates matching task capabilities and eligibility criteria. */
-  readonly eligibleCandidateCount?: number;
 }
 
-/**
- * Decorates an AiResponse with immutable routing and provider provenance metadata.
- */
 export function decorateAiResponse(
   response: AiResponse,
   options: DecorateAiResponseOptions
 ): AiResponse {
-  const existingMetadata = response.metadata ?? {};
-
-  const routingMetadata = Object.freeze({
-    mode: options.mode,
-    fallbackUsed: options.fallbackUsed,
-    selectionReason: options.selectionReason,
-    candidateCount: options.candidateCount,
-    eligibleCandidateCount: options.eligibleCandidateCount ?? options.candidateCount
-  });
-
-  const mergedMetadata = Object.freeze({
-    ...existingMetadata,
-    provider: options.providerId,
-    routing: routingMetadata
-  });
-
   return Object.freeze({
     ...response,
-    metadata: mergedMetadata
+    metadata: Object.freeze({
+      ...(response.metadata ?? {}),
+      provider: response.metadata?.provider ?? options.providerId,
+      routing: Object.freeze({
+        mode: options.mode,
+        fallbackUsed: options.fallbackUsed,
+        selectionReason: options.selectionReason,
+        candidateCount: options.candidateCount
+      })
+    })
   });
 }

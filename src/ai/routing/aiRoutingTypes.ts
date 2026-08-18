@@ -20,8 +20,7 @@ export type AiCandidateScoringFactor =
 export type AiProviderSelectionReason =
   | 'PREFERRED_PROVIDER'
   | 'PRIORITY'
-  | 'ONLY_ELIGIBLE_PROVIDER'
-  | 'LOCAL_FALLBACK';
+  | 'ONLY_ELIGIBLE_PROVIDER';
 
 export type AiRoutingErrorCode =
   | 'NO_PROVIDERS_REGISTERED'
