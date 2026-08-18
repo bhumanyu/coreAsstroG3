@@ -34,7 +34,7 @@ export class OpenAiProvider extends RemoteAiProvider {
         timeoutMs: options.timeoutMs
       },
       new OpenAiRequestMapper(options),
-      new OpenAiResponseMapper(),
+      new OpenAiResponseMapper(model),
       transport
     );
   }

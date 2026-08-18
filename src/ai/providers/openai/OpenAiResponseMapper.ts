@@ -32,29 +32,25 @@ function extractOutputText(response: OpenAiResponseEnvelope): string {
       continue;
     }
 
-    if (item.type !== 'message') {
-      continue;
-    }
-
-    const content = item.content;
-
-    if (!Array.isArray(content)) {
-      continue;
-    }
-
-    for (const part of content) {
-      if (!isRecord(part)) {
-        continue;
+    if (item.type === 'message') {
+      if (!Array.isArray(item.content)) {
+        throw new Error('OpenAI message output content must be an array.');
       }
 
-      if (part.type === 'output_text' && typeof part.text === 'string') {
-        textParts.push(part.text);
-      }
+      for (const part of item.content) {
+        if (!isRecord(part)) {
+          continue;
+        }
 
-      if (part.type === 'refusal') {
-        throw new Error(
-          'OpenAI model refused to produce the requested response.'
-        );
+        if (part.type === 'output_text' && typeof part.text === 'string') {
+          textParts.push(part.text);
+        }
+
+        if (part.type === 'refusal') {
+          throw new Error(
+            'OpenAI model refused to produce the requested response.'
+          );
+        }
       }
     }
   }
@@ -150,6 +146,8 @@ function validateEvidenceIds(
 }
 
 export class OpenAiResponseMapper implements RemoteAiResponseMapper {
+  constructor(private readonly configuredModel?: string) {}
+
   map(request: AiRequest, response: RemoteAiHttpResponse): AiResponse {
     const openAiResponse = asOpenAiResponse(response.body);
 
@@ -166,7 +164,7 @@ export class OpenAiResponseMapper implements RemoteAiResponseMapper {
 
     const metadata = {
       provider: 'openai' as const,
-      model: openAiResponse.model ?? 'openai',
+      model: openAiResponse.model ?? this.configuredModel,
       responseId: openAiResponse.id,
       tokensUsed: usage
         ? {

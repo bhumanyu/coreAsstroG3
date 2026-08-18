@@ -127,6 +127,40 @@ describe('OpenAiRequestMapper', () => {
     expect(input).not.toContain('"apiKey"');
   });
 
+  it('uses a configured custom model', () => {
+    const mapper = new OpenAiRequestMapper({
+      apiKey: 'secret',
+      model: 'custom-test-model'
+    });
+
+    const request = mapper.map(
+      createRequest('NARRATIVE'),
+      createConfig()
+    );
+
+    expect(
+      (request.body as Record<string, unknown>).model
+    ).toBe('custom-test-model');
+  });
+
+  it('never places the API key in the request body', () => {
+    const mapper = new OpenAiRequestMapper({
+      apiKey: 'super-secret-openai-key'
+    });
+
+    const request = mapper.map(
+      createRequest('NARRATIVE'),
+      {
+        ...createConfig(),
+        apiKey: 'super-secret-openai-key'
+      }
+    );
+
+    expect(JSON.stringify(request.body)).not.toContain(
+      'super-secret-openai-key'
+    );
+  });
+
   it('rejects missing API key', () => {
     const mapper = new OpenAiRequestMapper({
       apiKey: ''
