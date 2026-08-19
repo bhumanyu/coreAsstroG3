@@ -2,13 +2,14 @@ import type {
   ConfidenceLevel,
   DomainId,
   DomainStrength,
-  EvidenceSource
+  EvidenceSource,
+  VargaRelationship
 } from './DomainInterpretationTypes';
 
 export interface VargaConfirmation {
   readonly domain: DomainId;
   readonly varga: EvidenceSource;
-  readonly confirmed: boolean;
+  readonly relationship: VargaRelationship;
   readonly strength: DomainStrength;
   readonly confidence: ConfidenceLevel;
   readonly statement: string;

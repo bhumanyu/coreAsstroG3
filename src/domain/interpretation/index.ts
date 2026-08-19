@@ -91,11 +91,20 @@ export {
 } from './EvidenceConfidence';
 
 export type {
+  ConfidenceEvaluationOptions
+} from './EvidenceConfidence';
+
+export type {
   DomainId,
   DomainStrength,
   EvidenceStrength,
   EvidencePolarity,
+  EvidenceRole,
   EvidencePhase,
+  VargaRelationship,
+  TimingActivationEffect,
+  TransitTriggerEffect,
+  ConflictTier,
   EvidenceSource,
   ManifestationMode,
   ConfidenceLevel

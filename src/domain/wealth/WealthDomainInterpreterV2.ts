@@ -2,7 +2,6 @@ import type { Horoscope } from '../../types';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
   WealthEvidenceFamily,
-  type WealthEvidence,
   type WealthSubthemeKey,
   type WealthSubthemeSummary
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
@@ -16,7 +15,8 @@ import {
   createVargaConfirmation,
   createDomainConclusion,
   createDomainManifestation,
-  calculateEvidenceConfidence
+  calculateEvidenceConfidence,
+  detectDomainConflicts
 } from '../interpretation';
 import type {
   DomainEvidence,
@@ -24,9 +24,12 @@ import type {
   DomainStrength,
   EvidencePhase,
   EvidencePolarity,
+  EvidenceRole,
   EvidenceSource,
   EvidenceStrength,
-  ManifestationMode,
+  VargaRelationship,
+  TimingActivationEffect,
+  TransitTriggerEffect,
   DomainManifestation,
   NatalPromise,
   DashaActivation,
@@ -38,7 +41,8 @@ export function interpretWealthV2(
   horoscope: Horoscope
 ): DomainInterpretation {
   const legacyWealth = interpretWealthTheme(horoscope);
-  const evidence = buildWealthEvidence(legacyWealth.evidence);
+  const rawEvidence = legacyWealth.evidence;
+  const evidence = buildWealthEvidence(rawEvidence);
 
   const supportingEvidence = evidence.filter(
     (item) => item.polarity === 'SUPPORTING'
@@ -47,12 +51,26 @@ export function interpretWealthV2(
     (item) => item.polarity === 'CHALLENGING'
   );
 
+  const natalSupporting = supportingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
+  const natalChallenging = challengingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
+
+  const conflicts = detectDomainConflicts('WEALTH', evidence);
+  const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
+  const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
+
+  const natalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
+  const natalConfidence = calculateEvidenceConfidence(
+    evidence.filter((item) => item.phase === 'NATAL_PROMISE'),
+    {
+      hasPrimaryChallenge,
+      hasVargaConflict: false
+    }
+  );
+
   const natalPromise = createNatalPromise({
     domain: 'WEALTH',
-    strength: calculateWealthNatalStrength(evidence),
-    confidence: calculateEvidenceConfidence(
-      evidence.filter((item) => item.phase === 'NATAL_PROMISE')
-    ),
+    strength: natalStrength,
+    confidence: natalConfidence,
     statement: buildWealthNatalStatement(
       evidence,
       legacyWealth.conclusion.summary
@@ -60,65 +78,77 @@ export function interpretWealthV2(
     evidenceIds: evidence
       .filter((item) => item.phase === 'NATAL_PROMISE')
       .map((item) => item.id),
-    supportingEvidenceIds: evidence
-      .filter(
-        (item) =>
-          item.phase === 'NATAL_PROMISE' &&
-          item.polarity === 'SUPPORTING'
-      )
-      .map((item) => item.id),
-    challengingEvidenceIds: evidence
-      .filter(
-        (item) =>
-          item.phase === 'NATAL_PROMISE' &&
-          item.polarity === 'CHALLENGING'
-      )
-      .map((item) => item.id)
+    supportingEvidenceIds: natalSupporting.map((item) => item.id),
+    challengingEvidenceIds: natalChallenging.map((item) => item.id)
   });
 
   const dashaEvidence = evidence.filter(
     (item) => item.phase === 'DASHA_ACTIVATION'
   );
+  const dashaSupporting = dashaEvidence.filter((item) => item.polarity === 'SUPPORTING');
+  const dashaChallenging = dashaEvidence.filter((item) => item.polarity === 'CHALLENGING');
+  const dashaEffect = evaluateDashaEffect(dashaEvidence);
+
+  const rawDashaPromiseLinks = dashaEvidence.flatMap((item) => item.relatedEvidenceIds);
+  const dashaPromiseEvidenceIds =
+    rawDashaPromiseLinks.length > 0
+      ? Array.from(new Set(rawDashaPromiseLinks))
+      : dashaEvidence.length > 0 && natalPromise.evidenceIds.length > 0
+        ? natalPromise.evidenceIds.slice(0, 2)
+        : [];
+
   const dashaActivation = createDashaActivation({
     domain: 'WEALTH',
     active: dashaEvidence.length > 0,
-    strength: calculateWealthActivationStrength(evidence),
+    effect: dashaEffect,
+    strength: calculateDomainStrength(dashaSupporting, dashaChallenging),
     confidence: calculateEvidenceConfidence(dashaEvidence),
     statement: buildWealthDashaStatement(evidence),
     evidenceIds: dashaEvidence.map((item) => item.id),
-    activatedPromiseEvidenceIds: dashaEvidence.flatMap(
-      (item) => item.relatedEvidenceIds
-    )
+    activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
   const transitEvidence = evidence.filter(
     (item) => item.phase === 'TRANSIT_TRIGGER'
   );
+  const transitSupporting = transitEvidence.filter((item) => item.polarity === 'SUPPORTING');
+  const transitChallenging = transitEvidence.filter((item) => item.polarity === 'CHALLENGING');
+  const transitEffect = evaluateTransitEffect(transitEvidence);
+
+  const rawTransitPromiseLinks = transitEvidence.flatMap((item) => item.relatedEvidenceIds);
+  const transitPromiseEvidenceIds =
+    rawTransitPromiseLinks.length > 0
+      ? Array.from(new Set(rawTransitPromiseLinks))
+      : transitEvidence.length > 0 && natalPromise.evidenceIds.length > 0
+        ? natalPromise.evidenceIds.slice(0, 2)
+        : [];
+
   const transitTrigger = createTransitTrigger({
     domain: 'WEALTH',
     active: transitEvidence.length > 0,
-    strength: calculateWealthTransitStrength(evidence),
+    effect: transitEffect,
+    strength: calculateDomainStrength(transitSupporting, transitChallenging),
     confidence: calculateEvidenceConfidence(transitEvidence),
     statement: buildWealthTransitStatement(evidence),
     evidenceIds: transitEvidence.map((item) => item.id),
-    triggeredPromiseEvidenceIds: transitEvidence.flatMap(
-      (item) => item.relatedEvidenceIds
-    )
+    triggeredPromiseEvidenceIds: transitPromiseEvidenceIds
   });
 
   const d2Evidence = evidence.filter((item) => item.source === 'D2');
+  const d2Relationship = evaluateD2Relationship(rawEvidence, legacyWealth.metadata?.vargaConfirmationStatus);
+
   const vargaConfirmations: readonly VargaConfirmation[] = d2Evidence.length > 0
     ? [
         createVargaConfirmation({
           domain: 'WEALTH',
           varga: 'D2',
-          confirmed: d2Evidence.some((item) => item.polarity === 'SUPPORTING'),
+          relationship: d2Relationship,
           strength: calculateDomainStrength(
             d2Evidence.filter((e) => e.polarity === 'SUPPORTING'),
             d2Evidence.filter((e) => e.polarity === 'CHALLENGING')
           ),
           confidence: calculateEvidenceConfidence(d2Evidence),
-          statement: d2Evidence.some((item) => item.polarity === 'SUPPORTING')
+          statement: d2Relationship === 'CONFIRMS'
             ? 'D2 Hora confirms liquid wealth potential.'
             : 'D2 Hora indicates financial caution.',
           evidenceIds: d2Evidence.map((item) => item.id)
@@ -127,14 +157,24 @@ export function interpretWealthV2(
     : [];
 
   const manifestations = buildWealthManifestations(
+    rawEvidence,
     evidence,
     legacyWealth.subthemes
   );
 
+  const conclusionStrength = resolveWealthConclusionStrength(
+    natalStrength,
+    d2Relationship,
+    conflicts
+  );
+
   const conclusion = createDomainConclusion({
     domain: 'WEALTH',
-    strength: natalPromise.strength,
-    confidence: calculateEvidenceConfidence(evidence),
+    strength: conclusionStrength,
+    confidence: calculateEvidenceConfidence(evidence, {
+      hasVargaConflict,
+      hasPrimaryChallenge
+    }),
     statement: buildWealthConclusion(
       natalPromise,
       dashaActivation,
@@ -157,7 +197,7 @@ export function interpretWealthV2(
     transitTrigger,
     vargaConfirmations,
     manifestations,
-    conflicts: [],
+    conflicts,
     conclusion
   });
 }
@@ -165,10 +205,14 @@ export function interpretWealthV2(
 export function buildWealthEvidence(
   rawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
 ): readonly DomainEvidence[] {
-  return rawEvidence.map((item) =>
-    createDomainEvidence({
+  return rawEvidence.map((item) => {
+    const role = mapWealthRole(item);
+    const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, rawEvidence);
+
+    return createDomainEvidence({
       id: item.id,
       domain: 'WEALTH',
+      role,
       phase: mapWealthPhase(item),
       source: mapWealthSource(item),
       statement: item.statement,
@@ -176,9 +220,111 @@ export function buildWealthEvidence(
       strength: mapWealthStrength(item.strength),
       priority: mapWealthPriority(item.priority),
       ruleId: item.ruleId,
-      relatedEvidenceIds: []
-    })
+      relatedEvidenceIds
+    });
+  });
+}
+
+export function mapWealthRole(
+  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+): EvidenceRole {
+  if (item.priority === 'PRIMARY') {
+    return 'PRIMARY';
+  }
+  if (
+    item.vargaEvidence ||
+    item.evidenceFamily === WealthEvidenceFamily.D2 ||
+    item.dimension === 'CONFIRMATION'
+  ) {
+    return 'CONFIRMATION';
+  }
+  if (
+    item.evidenceFamily === WealthEvidenceFamily.DASHA ||
+    item.evidenceFamily === WealthEvidenceFamily.TRANSIT ||
+    item.dimension === 'TIMING'
+  ) {
+    return 'TIMING';
+  }
+  if (item.dimension === 'MODIFIER') {
+    return 'MODIFIER';
+  }
+  if (item.priority === 'SECONDARY') {
+    return 'SECONDARY';
+  }
+  return 'SECONDARY';
+}
+
+export function resolveRelatedWealthPromiseEvidenceIds(
+  item: ThemeInterpretationEvidence<WealthEvidenceFamily>,
+  allRawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
+): readonly string[] {
+  const structuralItems = allRawEvidence.filter(
+    (e) =>
+      e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE ||
+      e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD ||
+      e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_HOUSE ||
+      e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_LORD ||
+      e.evidenceFamily === WealthEvidenceFamily.NINTH_HOUSE ||
+      e.evidenceFamily === WealthEvidenceFamily.NINTH_LORD ||
+      e.evidenceFamily === WealthEvidenceFamily.FIFTH_HOUSE ||
+      e.evidenceFamily === WealthEvidenceFamily.FIFTH_LORD ||
+      (e.priority === 'PRIMARY' && e.dimension !== 'TIMING' && !e.vargaEvidence)
   );
+
+  if (structuralItems.length === 0) {
+    return [];
+  }
+
+  // D2 Hora confirmation links to 2nd house / 2nd lord
+  if (
+    item.evidenceFamily === WealthEvidenceFamily.D2 ||
+    (item.vargaEvidence as any)?.varga === 'D2'
+  ) {
+    const secondItems = structuralItems.filter(
+      (e) =>
+        e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE ||
+        e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD ||
+        e.priority === 'PRIMARY'
+    );
+    return secondItems.length > 0
+      ? secondItems.map((e) => e.id)
+      : structuralItems.slice(0, 2).map((e) => e.id);
+  }
+
+  // Dasha or Transit timing
+  if (
+    item.evidenceFamily === WealthEvidenceFamily.DASHA ||
+    item.evidenceFamily === WealthEvidenceFamily.TRANSIT ||
+    item.dimension === 'TIMING'
+  ) {
+    const timingHouses = item.timingEvidence?.houses ?? [];
+    if (timingHouses.length > 0) {
+      const houseMatches = structuralItems.filter(
+        (e) =>
+          (timingHouses.includes(2) &&
+            (e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE ||
+              e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD)) ||
+          (timingHouses.includes(11) &&
+            (e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_HOUSE ||
+              e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_LORD)) ||
+          (timingHouses.includes(9) &&
+            (e.evidenceFamily === WealthEvidenceFamily.NINTH_HOUSE ||
+              e.evidenceFamily === WealthEvidenceFamily.NINTH_LORD)) ||
+          (timingHouses.includes(5) &&
+            (e.evidenceFamily === WealthEvidenceFamily.FIFTH_HOUSE ||
+              e.evidenceFamily === WealthEvidenceFamily.FIFTH_LORD))
+      );
+      if (houseMatches.length > 0) {
+        return houseMatches.map((e) => e.id);
+      }
+    }
+
+    return structuralItems
+      .filter((e) => e.priority === 'PRIMARY')
+      .map((e) => e.id);
+  }
+
+  return [];
 }
 
 export function mapWealthPhase(
@@ -261,6 +407,106 @@ export function mapWealthPriority(
   }
 }
 
+export function evaluateDashaEffect(
+  dashaEvidence: readonly DomainEvidence[]
+): TimingActivationEffect {
+  if (dashaEvidence.length === 0) {
+    return 'DOES_NOT_ACTIVATE';
+  }
+  const hasSupport = dashaEvidence.some((e) => e.polarity === 'SUPPORTING');
+  const hasChallenge = dashaEvidence.some((e) => e.polarity === 'CHALLENGING');
+
+  if (hasSupport && !hasChallenge) {
+    return 'ACTIVATES';
+  }
+  if (hasSupport && hasChallenge) {
+    return 'PARTIALLY_ACTIVATES';
+  }
+  if (hasChallenge && !hasSupport) {
+    return 'CHALLENGES';
+  }
+  return 'ACTIVATES';
+}
+
+export function evaluateTransitEffect(
+  transitEvidence: readonly DomainEvidence[]
+): TransitTriggerEffect {
+  if (transitEvidence.length === 0) {
+    return 'NO_MATERIAL_TRIGGER';
+  }
+  const hasSupport = transitEvidence.some((e) => e.polarity === 'SUPPORTING');
+  const hasChallenge = transitEvidence.some((e) => e.polarity === 'CHALLENGING');
+
+  if (hasSupport && !hasChallenge) {
+    return 'TRIGGER';
+  }
+  if (hasSupport && hasChallenge) {
+    return 'MODIFIER';
+  }
+  if (hasChallenge && !hasSupport) {
+    return 'CHALLENGE';
+  }
+  return 'TRIGGER';
+}
+
+export function evaluateD2Relationship(
+  rawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[],
+  legacyStatus?: string
+): VargaRelationship {
+  const d2Item = rawEvidence.find(
+    (e) =>
+      e.evidenceFamily === WealthEvidenceFamily.D2 ||
+      (e.vargaEvidence as any)?.varga === 'D2'
+  );
+
+  if (d2Item?.vargaEvidence?.relationship) {
+    return d2Item.vargaEvidence.relationship as VargaRelationship;
+  }
+
+  if (legacyStatus === 'CONFIRMED') {
+    return 'CONFIRMS';
+  }
+  if (legacyStatus === 'CONFLICTED') {
+    return 'CONFLICTS';
+  }
+  if (legacyStatus === 'NOT_APPLICABLE') {
+    return 'UNAVAILABLE';
+  }
+
+  if (d2Item) {
+    if (d2Item.effect === 'SUPPORT') {
+      return 'CONFIRMS';
+    }
+    if (d2Item.effect === 'CHALLENGE') {
+      return 'CONFLICTS';
+    }
+    return 'MODIFIES';
+  }
+
+  return 'UNAVAILABLE';
+}
+
+export function resolveWealthConclusionStrength(
+  natalStrength: DomainStrength,
+  d2Relationship: VargaRelationship,
+  conflicts: readonly import('../interpretation').DomainConflict[]
+): DomainStrength {
+  if (d2Relationship === 'CONFLICTS') {
+    if (natalStrength === 'VERY_STRONG') return 'STRONG';
+    if (natalStrength === 'STRONG') return 'MODERATE';
+    if (natalStrength === 'MODERATE') return 'MIXED';
+  }
+
+  const hasOnlyTransitConflict =
+    conflicts.length > 0 &&
+    conflicts.every((c) => c.tier === 'PRIMARY_VS_TRANSIT' || c.tier === 'PRIMARY_VS_TIMING');
+  if (hasOnlyTransitConflict && (natalStrength === 'STRONG' || natalStrength === 'VERY_STRONG')) {
+    return natalStrength;
+  }
+
+  return natalStrength;
+}
+
 export function calculateDomainStrength(
   supporting: readonly DomainEvidence[],
   challenging: readonly DomainEvidence[]
@@ -298,33 +544,6 @@ export function calculateDomainStrength(
   }
 
   return 'MODERATE';
-}
-
-export function calculateWealthNatalStrength(
-  evidence: readonly DomainEvidence[]
-): DomainStrength {
-  const natalEvidence = evidence.filter((e) => e.phase === 'NATAL_PROMISE');
-  const supporting = natalEvidence.filter((e) => e.polarity === 'SUPPORTING');
-  const challenging = natalEvidence.filter((e) => e.polarity === 'CHALLENGING');
-  return calculateDomainStrength(supporting, challenging);
-}
-
-export function calculateWealthActivationStrength(
-  evidence: readonly DomainEvidence[]
-): DomainStrength {
-  const dashaEvidence = evidence.filter((e) => e.phase === 'DASHA_ACTIVATION');
-  const supporting = dashaEvidence.filter((e) => e.polarity === 'SUPPORTING');
-  const challenging = dashaEvidence.filter((e) => e.polarity === 'CHALLENGING');
-  return calculateDomainStrength(supporting, challenging);
-}
-
-export function calculateWealthTransitStrength(
-  evidence: readonly DomainEvidence[]
-): DomainStrength {
-  const transitEvidence = evidence.filter((e) => e.phase === 'TRANSIT_TRIGGER');
-  const supporting = transitEvidence.filter((e) => e.polarity === 'SUPPORTING');
-  const challenging = transitEvidence.filter((e) => e.polarity === 'CHALLENGING');
-  return calculateDomainStrength(supporting, challenging);
 }
 
 export function buildWealthNatalStatement(
@@ -375,18 +594,31 @@ export function buildWealthTransitStatement(
 }
 
 export function buildWealthManifestations(
+  rawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[],
   evidence: readonly DomainEvidence[],
   subthemes?: Readonly<Partial<Record<WealthSubthemeKey, WealthSubthemeSummary>>>
 ): readonly DomainManifestation[] {
-  const modes: ManifestationMode[] = [
-    'ACCUMULATION',
-    'GAINS',
-    'FORTUNE',
-    'SPECULATION'
+  const modes: readonly { mode: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION'; families: readonly WealthEvidenceFamily[] }[] = [
+    {
+      mode: 'ACCUMULATION',
+      families: [WealthEvidenceFamily.SECOND_HOUSE, WealthEvidenceFamily.SECOND_LORD, WealthEvidenceFamily.D2]
+    },
+    {
+      mode: 'GAINS',
+      families: [WealthEvidenceFamily.ELEVENTH_HOUSE, WealthEvidenceFamily.ELEVENTH_LORD]
+    },
+    {
+      mode: 'FORTUNE',
+      families: [WealthEvidenceFamily.NINTH_HOUSE, WealthEvidenceFamily.NINTH_LORD]
+    },
+    {
+      mode: 'SPECULATION',
+      families: [WealthEvidenceFamily.FIFTH_HOUSE, WealthEvidenceFamily.FIFTH_LORD]
+    }
   ];
 
   return Object.freeze(
-    modes.map((mode) => {
+    modes.map(({ mode, families }) => {
       const subthemeKey = mode as WealthSubthemeKey;
       const subtheme = subthemes?.[subthemeKey];
 
@@ -434,16 +666,13 @@ export function buildWealthManifestations(
         }
       }
 
-      // Gather evidence matching this manifestation mode
+      // Gather evidence matching this manifestation mode by family
+      const matchingRawIds = rawEvidence
+        .filter((raw) => families.includes(raw.evidenceFamily))
+        .map((raw) => raw.id);
+
       const relevantEvidenceIds = evidence
-        .filter((e) => {
-          const stmt = e.statement.toLowerCase();
-          if (mode === 'ACCUMULATION') return stmt.includes('2nd') || stmt.includes('accumulation') || stmt.includes('savings');
-          if (mode === 'GAINS') return stmt.includes('11th') || stmt.includes('gain') || stmt.includes('income');
-          if (mode === 'FORTUNE') return stmt.includes('9th') || stmt.includes('fortune') || stmt.includes('bhagya') || stmt.includes('jupiter');
-          if (mode === 'SPECULATION') return stmt.includes('5th') || stmt.includes('speculat') || stmt.includes('investment');
-          return false;
-        })
+        .filter((e) => matchingRawIds.includes(e.id))
         .map((e) => e.id);
 
       return createDomainManifestation({
@@ -480,3 +709,4 @@ export function buildWealthConclusion(
 
   return parts.join(' ');
 }
+

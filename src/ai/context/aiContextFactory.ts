@@ -30,6 +30,11 @@ import {
 } from '../types/aiContextTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
+import {
+  createDefaultDomainInterpreterRegistry,
+  projectDomainInterpretationForAi,
+  type DomainInterpretationAiProjection
+} from '../../domain/interpretation';
 import { deepFreeze } from './deepFreeze';
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -644,6 +649,15 @@ export function buildAiContext(horoscope: Horoscope): AiContext {
   const lifeThemes = buildLifeThemeFacts(horoscope);
   const evidence = buildEvidence(horoscope);
 
+  const registry = createDefaultDomainInterpreterRegistry();
+  const careerInterp = registry.get('CAREER').interpret(horoscope);
+  const wealthInterp = registry.get('WEALTH').interpret(horoscope);
+
+  const domainInterpretations: readonly DomainInterpretationAiProjection[] = [
+    projectDomainInterpretationForAi(careerInterp),
+    projectDomainInterpretationForAi(wealthInterp)
+  ];
+
   const context: AiContext = {
     schemaVersion: AI_CONTEXT_SCHEMA_VERSION,
     source,
@@ -657,7 +671,8 @@ export function buildAiContext(horoscope: Horoscope): AiContext {
     ...(wealth ? { wealth } : {}),
     lifeThemes,
     evidence,
-    methodology
+    methodology,
+    domainInterpretations
   };
 
   return deepFreeze(context);

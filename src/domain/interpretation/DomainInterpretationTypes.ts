@@ -27,12 +27,49 @@ export type EvidencePolarity =
   | 'CHALLENGING'
   | 'NEUTRAL';
 
+export type EvidenceRole =
+  | 'PRIMARY'
+  | 'SECONDARY'
+  | 'MODIFIER'
+  | 'CONFIRMATION'
+  | 'TIMING';
+
 export type EvidencePhase =
   | 'NATAL_PROMISE'
   | 'DASHA_ACTIVATION'
   | 'TRANSIT_TRIGGER'
   | 'VARGA_CONFIRMATION'
   | 'MODIFIER';
+
+export type VargaRelationship =
+  | 'CONFIRMS'
+  | 'PARTIALLY_CONFIRMS'
+  | 'MODIFIES'
+  | 'CONFLICTS'
+  | 'UNAVAILABLE';
+
+export type TimingActivationEffect =
+  | 'ACTIVATES'
+  | 'PARTIALLY_ACTIVATES'
+  | 'DOES_NOT_ACTIVATE'
+  | 'CHALLENGES'
+  | 'UNKNOWN';
+
+export type TransitTriggerEffect =
+  | 'TRIGGER'
+  | 'MODIFIER'
+  | 'CHALLENGE'
+  | 'NO_MATERIAL_TRIGGER'
+  | 'UNKNOWN';
+
+export type ConflictTier =
+  | 'PRIMARY_VS_PRIMARY'
+  | 'PRIMARY_VS_MODIFIER'
+  | 'PRIMARY_VS_VARGA'
+  | 'PRIMARY_VS_TIMING'
+  | 'PRIMARY_VS_TRANSIT'
+  | 'SECONDARY_CONFLICT'
+  | 'TIMING_CONFLICT';
 
 export type EvidenceSource =
   | 'D1'

@@ -1,12 +1,14 @@
 import type {
   ConfidenceLevel,
   DomainId,
-  DomainStrength
+  DomainStrength,
+  TimingActivationEffect
 } from './DomainInterpretationTypes';
 
 export interface DashaActivation {
   readonly domain: DomainId;
   readonly active: boolean;
+  readonly effect: TimingActivationEffect;
   readonly strength: DomainStrength;
   readonly confidence: ConfidenceLevel;
   readonly statement: string;

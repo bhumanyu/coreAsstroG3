@@ -18,6 +18,7 @@ describe('DomainInterpretationBuilder', () => {
         {
           id: 'CAREER-001',
           domain: 'CAREER',
+          role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
           source: 'D1',
           statement: '10th lord strong in own house.',
@@ -39,6 +40,7 @@ describe('DomainInterpretationBuilder', () => {
       dashaActivation: {
         domain: 'CAREER',
         active: false,
+        effect: 'DOES_NOT_ACTIVATE',
         strength: 'UNDETERMINED',
         confidence: 'UNDETERMINED',
         statement: 'No active dasha.',
@@ -48,6 +50,7 @@ describe('DomainInterpretationBuilder', () => {
       transitTrigger: {
         domain: 'CAREER',
         active: false,
+        effect: 'NO_MATERIAL_TRIGGER',
         strength: 'UNDETERMINED',
         confidence: 'UNDETERMINED',
         statement: 'No active transit.',
@@ -58,7 +61,7 @@ describe('DomainInterpretationBuilder', () => {
         {
           domain: 'CAREER',
           varga: 'D10',
-          confirmed: true,
+          relationship: 'CONFIRMS',
           strength: 'STRONG',
           confidence: 'HIGH',
           statement: 'D10 confirms career status.',
@@ -108,6 +111,7 @@ describe('DomainInterpretationBuilder', () => {
         dashaActivation: {
           domain: 'CAREER',
           active: false,
+          effect: 'DOES_NOT_ACTIVATE',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -117,6 +121,7 @@ describe('DomainInterpretationBuilder', () => {
         transitTrigger: {
           domain: 'CAREER',
           active: false,
+          effect: 'NO_MATERIAL_TRIGGER',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -157,6 +162,7 @@ describe('DomainInterpretationBuilder', () => {
         dashaActivation: {
           domain: 'WEALTH',
           active: false,
+          effect: 'DOES_NOT_ACTIVATE',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -166,6 +172,7 @@ describe('DomainInterpretationBuilder', () => {
         transitTrigger: {
           domain: 'CAREER',
           active: false,
+          effect: 'NO_MATERIAL_TRIGGER',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -206,6 +213,7 @@ describe('DomainInterpretationBuilder', () => {
         dashaActivation: {
           domain: 'CAREER',
           active: false,
+          effect: 'DOES_NOT_ACTIVATE',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -215,6 +223,7 @@ describe('DomainInterpretationBuilder', () => {
         transitTrigger: {
           domain: 'CAREER',
           active: false,
+          effect: 'NO_MATERIAL_TRIGGER',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -225,7 +234,7 @@ describe('DomainInterpretationBuilder', () => {
           {
             domain: 'WEALTH',
             varga: 'D10',
-            confirmed: true,
+            relationship: 'CONFIRMS',
             strength: 'STRONG',
             confidence: 'HIGH',
             statement: '...',
@@ -265,6 +274,7 @@ describe('DomainInterpretationBuilder', () => {
         dashaActivation: {
           domain: 'CAREER',
           active: false,
+          effect: 'DOES_NOT_ACTIVATE',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -274,6 +284,7 @@ describe('DomainInterpretationBuilder', () => {
         transitTrigger: {
           domain: 'CAREER',
           active: false,
+          effect: 'NO_MATERIAL_TRIGGER',
           strength: 'UNDETERMINED',
           confidence: 'UNDETERMINED',
           statement: '...',
@@ -311,6 +322,7 @@ describe('detectDomainConflicts', () => {
       {
         id: 'CAREER-001',
         domain: 'CAREER',
+        role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
         statement: 'Strong career lord support.',
@@ -322,6 +334,7 @@ describe('detectDomainConflicts', () => {
       {
         id: 'CAREER-002',
         domain: 'CAREER',
+        role: 'CONFIRMATION',
         phase: 'VARGA_CONFIRMATION',
         source: 'D10',
         statement: 'D10 shows significant affliction.',
@@ -343,6 +356,7 @@ describe('detectDomainConflicts', () => {
       {
         id: 'CAREER-001',
         domain: 'CAREER',
+        role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
         statement: 'Strong career lord support.',
@@ -363,6 +377,7 @@ describe('sortDomainEvidence', () => {
       {
         id: 'E1',
         domain: 'CAREER',
+        role: 'SECONDARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
         statement: 'Moderate priority 50',
@@ -374,6 +389,7 @@ describe('sortDomainEvidence', () => {
       {
         id: 'E2',
         domain: 'CAREER',
+        role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
         statement: 'Primary priority 90 weak',
@@ -385,6 +401,7 @@ describe('sortDomainEvidence', () => {
       {
         id: 'E3',
         domain: 'CAREER',
+        role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
         statement: 'Primary priority 90 strong',
@@ -412,6 +429,7 @@ describe('calculateEvidenceConfidence', () => {
         {
           id: 'E1',
           domain: 'CAREER',
+          role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
           source: 'D1',
           statement: 'Strong 1',
@@ -442,6 +460,7 @@ describe('projectDomainInterpretationForAi', () => {
       dashaActivation: {
         domain: 'CAREER',
         active: true,
+        effect: 'ACTIVATES',
         strength: 'MODERATE',
         confidence: 'MODERATE',
         statement: 'Dasha active.',
@@ -451,6 +470,7 @@ describe('projectDomainInterpretationForAi', () => {
       transitTrigger: {
         domain: 'CAREER',
         active: false,
+        effect: 'NO_MATERIAL_TRIGGER',
         strength: 'UNDETERMINED',
         confidence: 'UNDETERMINED',
         statement: 'No transit.',

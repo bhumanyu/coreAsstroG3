@@ -19,6 +19,7 @@ describe('DomainInterpretation', () => {
       dashaActivation: {
         domain: 'CAREER',
         active: true,
+        effect: 'ACTIVATES',
         strength: 'MODERATE',
         confidence: 'MODERATE',
         statement: 'Current Dasha activates career themes.',
@@ -28,6 +29,7 @@ describe('DomainInterpretation', () => {
       transitTrigger: {
         domain: 'CAREER',
         active: false,
+        effect: 'NO_MATERIAL_TRIGGER',
         strength: 'UNDETERMINED',
         confidence: 'UNDETERMINED',
         statement: 'No material transit trigger identified.',

@@ -2,6 +2,7 @@ import type {
   DomainId,
   EvidencePhase,
   EvidencePolarity,
+  EvidenceRole,
   EvidenceSource,
   EvidenceStrength
 } from './DomainInterpretationTypes';
@@ -9,6 +10,7 @@ import type {
 export interface DomainEvidence {
   readonly id: string;
   readonly domain: DomainId;
+  readonly role: EvidenceRole;
   readonly phase: EvidencePhase;
   readonly source: EvidenceSource;
   readonly statement: string;

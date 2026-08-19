@@ -1,4 +1,5 @@
 import type {
+  ConflictTier,
   DomainId,
   EvidencePhase,
   EvidenceStrength
@@ -13,6 +14,7 @@ export interface DomainConflict {
   readonly primaryPhase: EvidencePhase;
   readonly severity: EvidenceStrength;
   readonly resolution: string;
+  readonly tier?: ConflictTier;
 }
 
 export function createDomainConflict(

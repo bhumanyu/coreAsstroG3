@@ -1,12 +1,14 @@
 import type {
   ConfidenceLevel,
   DomainId,
-  DomainStrength
+  DomainStrength,
+  TransitTriggerEffect
 } from './DomainInterpretationTypes';
 
 export interface TransitTrigger {
   readonly domain: DomainId;
   readonly active: boolean;
+  readonly effect: TransitTriggerEffect;
   readonly strength: DomainStrength;
   readonly confidence: ConfidenceLevel;
   readonly statement: string;

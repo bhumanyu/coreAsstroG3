@@ -21,10 +21,17 @@ export interface DomainInterpretationParts {
   readonly conclusion: DomainConclusion;
 }
 
+export interface BuildDomainInterpretationOptions {
+  readonly clock?: () => string;
+}
+
 export function buildDomainInterpretation(
-  parts: DomainInterpretationParts
+  parts: DomainInterpretationParts,
+  options?: BuildDomainInterpretationOptions
 ): DomainInterpretation {
   validateDomainInterpretationParts(parts);
+
+  const timestamp = options?.clock ? options.clock() : new Date().toISOString();
 
   return Object.freeze({
     domain: parts.domain,
@@ -45,7 +52,7 @@ export function buildDomainInterpretation(
       ...parts.conflicts
     ]),
     conclusion: parts.conclusion,
-    generatedAt: new Date().toISOString()
+    generatedAt: timestamp
   });
 }
 
