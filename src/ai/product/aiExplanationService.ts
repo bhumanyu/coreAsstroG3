@@ -77,72 +77,50 @@ function mapRoutingResultToViewModel(
     result.response.structuredOutput
   );
 
-  const rawStructured =
-    typeof result.response.structuredOutput === 'object' &&
-    result.response.structuredOutput !== null
-      ? (result.response.structuredOutput as Record<string, unknown>)
-      : undefined;
+  if (structured) {
+    const status: 'SUCCESS' | 'PARTIAL' =
+      structured.status === 'PARTIAL' ? 'PARTIAL' : 'SUCCESS';
 
-  const conclusion =
-    structured?.conclusion ??
-    (typeof rawStructured?.conclusion === 'string'
-      ? rawStructured.conclusion
-      : (result.response.content || 'No explanation was produced.'));
-
-  const supportingIds: readonly string[] =
-    structured?.supportingEvidenceIds ??
-    (Array.isArray(rawStructured?.supportingEvidenceIds)
-      ? (rawStructured.supportingEvidenceIds as string[])
-      : []);
-
-  const challengingIds: readonly string[] =
-    structured?.challengingEvidenceIds ??
-    (Array.isArray(rawStructured?.challengingEvidenceIds)
-      ? (rawStructured.challengingEvidenceIds as string[])
-      : []);
-
-  const unresolvedQuestions: readonly string[] =
-    structured?.unresolvedQuestions ??
-    (Array.isArray(rawStructured?.unresolvedQuestions)
-      ? (rawStructured.unresolvedQuestions as string[])
-      : []);
-
-  const warnings: readonly string[] =
-    structured?.warnings ??
-    (Array.isArray(rawStructured?.warnings)
-      ? (rawStructured.warnings as string[])
-      : (result.response.warnings ?? []));
-
-  const triggeredRuleIds: readonly string[] =
-    structured?.triggeredRuleIds ??
-    (Array.isArray(rawStructured?.triggeredRuleIds)
-      ? (rawStructured.triggeredRuleIds as string[])
-      : []);
-
-  const status: 'SUCCESS' | 'PARTIAL' =
-    (structured?.status === 'PARTIAL' || rawStructured?.status === 'PARTIAL')
-      ? 'PARTIAL'
-      : 'SUCCESS';
+    return Object.freeze({
+      kind: 'SUCCESS',
+      requestId: result.requestId,
+      task,
+      status,
+      conclusion: structured.conclusion,
+      supportingEvidence: resolveEvidence(
+        structured.supportingEvidenceIds,
+        evidence,
+        'SUPPORTING'
+      ),
+      challengingEvidence: resolveEvidence(
+        structured.challengingEvidenceIds,
+        evidence,
+        'CHALLENGING'
+      ),
+      unresolvedQuestions: Object.freeze([...structured.unresolvedQuestions]),
+      warnings: Object.freeze([...structured.warnings]),
+      triggeredRuleIds: Object.freeze([...(structured.triggeredRuleIds ?? [])]),
+      providerId: result.providerId,
+      providerName: result.providerName,
+      providerKind: result.providerKind,
+      routingMode: result.routingMode,
+      fallbackUsed: result.fallbackUsed,
+      selectionReason: result.selectionReason,
+      generatedAt: new Date().toISOString()
+    });
+  }
 
   return Object.freeze({
     kind: 'SUCCESS',
     requestId: result.requestId,
     task,
-    status,
-    conclusion,
-    supportingEvidence: resolveEvidence(
-      supportingIds,
-      evidence,
-      'SUPPORTING'
-    ),
-    challengingEvidence: resolveEvidence(
-      challengingIds,
-      evidence,
-      'CHALLENGING'
-    ),
-    unresolvedQuestions: Object.freeze([...unresolvedQuestions]),
-    warnings: Object.freeze([...warnings]),
-    triggeredRuleIds: Object.freeze([...triggeredRuleIds]),
+    status: 'PARTIAL',
+    conclusion: result.response.content || 'No explanation was produced.',
+    supportingEvidence: Object.freeze([]),
+    challengingEvidence: Object.freeze([]),
+    unresolvedQuestions: Object.freeze([]),
+    warnings: Object.freeze([...(result.response.warnings ?? [])]),
+    triggeredRuleIds: Object.freeze([]),
     providerId: result.providerId,
     providerName: result.providerName,
     providerKind: result.providerKind,
