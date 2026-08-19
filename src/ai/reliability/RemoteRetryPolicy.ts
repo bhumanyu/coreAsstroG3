@@ -72,6 +72,16 @@ export const DEFAULT_REMOTE_RETRY_POLICY: Readonly<RemoteRetryPolicy> =
     ] as const)
   });
 
+function isValidRetryableErrorCode(
+  value: unknown
+): value is RemoteRetryPolicy['retryableErrorCodes'][number] {
+  return (
+    value === 'TIMEOUT' ||
+    value === 'NETWORK_ERROR' ||
+    value === 'HTTP_ERROR'
+  );
+}
+
 export function validateRemoteRetryPolicy(policy: RemoteRetryPolicy): void {
   if (
     !Number.isInteger(policy.maxAttempts) ||
@@ -112,7 +122,42 @@ export function validateRemoteRetryPolicy(policy: RemoteRetryPolicy): void {
     throw new Error('retryableStatusCodes must be an array.');
   }
 
+  if (
+    !policy.retryableStatusCodes.every(
+      (status) =>
+        Number.isInteger(status) &&
+        status >= 100 &&
+        status <= 599
+    )
+  ) {
+    throw new Error(
+      'retryableStatusCodes must contain valid HTTP status codes.'
+    );
+  }
+
+  if (
+    new Set(policy.retryableStatusCodes).size !==
+    policy.retryableStatusCodes.length
+  ) {
+    throw new Error('retryableStatusCodes must not contain duplicates.');
+  }
+
   if (!Array.isArray(policy.retryableErrorCodes)) {
     throw new Error('retryableErrorCodes must be an array.');
+  }
+
+  if (
+    !policy.retryableErrorCodes.every(isValidRetryableErrorCode)
+  ) {
+    throw new Error(
+      'retryableErrorCodes contains an unsupported error code.'
+    );
+  }
+
+  if (
+    new Set(policy.retryableErrorCodes).size !==
+    policy.retryableErrorCodes.length
+  ) {
+    throw new Error('retryableErrorCodes must not contain duplicates.');
   }
 }

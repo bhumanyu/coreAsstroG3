@@ -20,12 +20,17 @@ const DEFAULT_POLICY = {
   ] as const
 };
 
-const dummyRequest = {
-  requestId: 'req-reliable-test',
-  schemaVersion: '1.0.0',
-  task: 'CAREER_ANALYSIS',
-  responseFormat: 'NARRATIVE'
-} as AiRequest;
+function createDummyRequest(): AiRequest {
+  return {
+    requestId: 'req-reliable-test',
+    schemaVersion: '1.0.0',
+    task: 'CAREER_ANALYSIS',
+    context: {} as any,
+    responseFormat: 'NARRATIVE'
+  };
+}
+
+const dummyRequest = createDummyRequest();
 
 function createProvider(generate: AiProvider['generate']): AiProvider {
   return {
@@ -207,5 +212,41 @@ describe('ReliableAiProvider', () => {
     const response = await reliable.generate(dummyRequest);
     expect(response.content).toBe('factory ok');
     expect(reliable.identity.id).toBe('openai');
+  });
+
+  it('delays execution across retry attempts when baseDelayMs is positive', async () => {
+    vi.useFakeTimers();
+    try {
+      const generate = vi
+        .fn<AiProvider['generate']>()
+        .mockRejectedValueOnce(
+          new RemoteAiError('NETWORK_ERROR', 'network drop')
+        )
+        .mockResolvedValueOnce({
+          requestId: 'req-delay-test',
+          content: 'delayed ok',
+          format: 'NARRATIVE',
+          warnings: []
+        });
+
+      const provider = createProvider(generate);
+      const reliable = new ReliableAiProvider(provider, {
+        ...DEFAULT_POLICY,
+        baseDelayMs: 50,
+        maxDelayMs: 50
+      });
+
+      const promise = reliable.generate(dummyRequest);
+
+      expect(generate).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      const response = await promise;
+      expect(response.content).toBe('delayed ok');
+      expect(generate).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

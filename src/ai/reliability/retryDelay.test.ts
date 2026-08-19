@@ -52,4 +52,15 @@ describe('calculateRetryDelayMs', () => {
     // random() = 0 -> boundedRandom * 2 - 1 = -1 -> 100 - 50 = 50
     expect(calculateRetryDelayMs(1, jitterPolicy, () => 0)).toBe(50);
   });
+
+  it('never exceeds maxDelayMs after positive jitter', () => {
+    const jitterPolicy = {
+      ...policy,
+      baseDelayMs: 1000,
+      maxDelayMs: 1000,
+      jitterRatio: 1
+    };
+
+    expect(calculateRetryDelayMs(10, jitterPolicy, () => 1)).toBe(1000);
+  });
 });

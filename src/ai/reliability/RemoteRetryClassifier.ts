@@ -1,4 +1,3 @@
-import type { AiRequest } from '../types/aiRequestTypes';
 import { RemoteAiError } from '../providers/remote/RemoteAiError';
 import type { RemoteRetryPolicy } from './RemoteRetryPolicy';
 
@@ -15,7 +14,6 @@ export interface RetryDecision {
 
 export function classifyRemoteRetry(
   error: unknown,
-  request: AiRequest,
   attempt: number,
   policy: RemoteRetryPolicy
 ): RetryDecision {

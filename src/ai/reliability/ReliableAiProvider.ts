@@ -65,7 +65,6 @@ export class ReliableAiProvider implements AiProvider {
       } catch (error) {
         const decision = classifyRemoteRetry(
           error,
-          request,
           attempt,
           this.policy
         );

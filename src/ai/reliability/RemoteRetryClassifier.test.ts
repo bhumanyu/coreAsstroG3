@@ -2,20 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { classifyRemoteRetry } from './RemoteRetryClassifier';
 import { DEFAULT_REMOTE_RETRY_POLICY } from './RemoteRetryPolicy';
 import { RemoteAiError } from '../providers/remote/RemoteAiError';
-import type { AiRequest } from '../types/aiRequestTypes';
-
-const request = {
-  requestId: 'req-classifier-test',
-  schemaVersion: '1.0.0',
-  task: 'CAREER_ANALYSIS',
-  responseFormat: 'STRUCTURED'
-} as AiRequest;
 
 describe('classifyRemoteRetry', () => {
   it('does not retry POST by default', () => {
     const decision = classifyRemoteRetry(
       new RemoteAiError('NETWORK_ERROR', 'network failed'),
-      request,
       1,
       DEFAULT_REMOTE_RETRY_POLICY
     );
@@ -33,7 +24,6 @@ describe('classifyRemoteRetry', () => {
 
     const decision = classifyRemoteRetry(
       new RemoteAiError('NETWORK_ERROR', 'network failed'),
-      request,
       1,
       policy
     );
@@ -51,7 +41,6 @@ describe('classifyRemoteRetry', () => {
 
     const decision = classifyRemoteRetry(
       new RemoteAiError('TIMEOUT', 'request timed out'),
-      request,
       1,
       policy
     );
@@ -61,16 +50,15 @@ describe('classifyRemoteRetry', () => {
     expect(decision.delayEligible).toBe(true);
   });
 
-  it('retries HTTP 429, 500, and 503', () => {
+  it('retries all default retryable HTTP statuses (408, 425, 429, 500, 502, 503, 504)', () => {
     const policy = {
       ...DEFAULT_REMOTE_RETRY_POLICY,
       allowPostRetry: true
     };
 
-    for (const statusCode of [429, 500, 503]) {
+    for (const statusCode of [408, 425, 429, 500, 502, 503, 504]) {
       const decision = classifyRemoteRetry(
         new RemoteAiError('HTTP_ERROR', `HTTP ${statusCode}`, { statusCode }),
-        request,
         1,
         policy
       );
@@ -90,7 +78,6 @@ describe('classifyRemoteRetry', () => {
     for (const statusCode of [400, 401, 403, 404]) {
       const decision = classifyRemoteRetry(
         new RemoteAiError('HTTP_ERROR', `HTTP ${statusCode}`, { statusCode }),
-        request,
         1,
         policy
       );
@@ -109,7 +96,6 @@ describe('classifyRemoteRetry', () => {
 
     const decision = classifyRemoteRetry(
       new RemoteAiError('HTTP_ERROR', 'unknown HTTP error'),
-      request,
       1,
       policy
     );
@@ -126,7 +112,6 @@ describe('classifyRemoteRetry', () => {
 
     const decision = classifyRemoteRetry(
       new TypeError('Something crashed'),
-      request,
       1,
       policy
     );
@@ -151,7 +136,6 @@ describe('classifyRemoteRetry', () => {
     for (const code of nonRetryableCodes) {
       const decision = classifyRemoteRetry(
         new RemoteAiError(code, `${code} occurred`),
-        request,
         1,
         policy
       );
@@ -170,7 +154,6 @@ describe('classifyRemoteRetry', () => {
 
     const decision = classifyRemoteRetry(
       new RemoteAiError('NETWORK_ERROR', 'network failed'),
-      request,
       3,
       policy
     );

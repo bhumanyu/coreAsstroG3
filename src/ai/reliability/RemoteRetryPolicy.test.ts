@@ -115,4 +115,61 @@ describe('RemoteRetryPolicy', () => {
       })
     ).toThrow(/retryableErrorCodes must be an array/);
   });
+
+  it('rejects invalid or out-of-range HTTP status codes', () => {
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableStatusCodes: [429, 'banana' as any]
+      })
+    ).toThrow(/retryableStatusCodes must contain valid HTTP status codes/);
+
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableStatusCodes: [429, 99]
+      })
+    ).toThrow(/retryableStatusCodes must contain valid HTTP status codes/);
+
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableStatusCodes: [429, 600]
+      })
+    ).toThrow(/retryableStatusCodes must contain valid HTTP status codes/);
+
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableStatusCodes: [429.5]
+      })
+    ).toThrow(/retryableStatusCodes must contain valid HTTP status codes/);
+  });
+
+  it('rejects duplicate HTTP status codes', () => {
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableStatusCodes: [429, 503, 429]
+      })
+    ).toThrow(/retryableStatusCodes must not contain duplicates/);
+  });
+
+  it('rejects invalid or unsupported error codes', () => {
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableErrorCodes: ['NETWORK_ERROR', 'SOMETHING_RANDOM' as any]
+      })
+    ).toThrow(/retryableErrorCodes contains an unsupported error code/);
+  });
+
+  it('rejects duplicate error codes', () => {
+    expect(() =>
+      validateRemoteRetryPolicy({
+        ...DEFAULT_REMOTE_RETRY_POLICY,
+        retryableErrorCodes: ['NETWORK_ERROR', 'TIMEOUT', 'NETWORK_ERROR']
+      })
+    ).toThrow(/retryableErrorCodes must not contain duplicates/);
+  });
 });
