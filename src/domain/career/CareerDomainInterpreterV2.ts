@@ -86,15 +86,10 @@ export function interpretCareerV2(
   );
   const dashaSupporting = dashaEvidence.filter((item) => item.polarity === 'SUPPORTING');
   const dashaChallenging = dashaEvidence.filter((item) => item.polarity === 'CHALLENGING');
-  const dashaEffect = evaluateDashaEffect(dashaEvidence);
 
   const rawDashaPromiseLinks = dashaEvidence.flatMap((item) => item.relatedEvidenceIds);
-  const dashaPromiseEvidenceIds =
-    rawDashaPromiseLinks.length > 0
-      ? Array.from(new Set(rawDashaPromiseLinks))
-      : dashaEvidence.length > 0 && natalPromise.evidenceIds.length > 0
-        ? natalPromise.evidenceIds.slice(0, 2)
-        : [];
+  const dashaPromiseEvidenceIds = Array.from(new Set(rawDashaPromiseLinks));
+  const dashaEffect = evaluateDashaEffect(dashaEvidence, dashaPromiseEvidenceIds);
 
   const dashaActivation = createDashaActivation({
     domain: 'CAREER',
@@ -112,15 +107,10 @@ export function interpretCareerV2(
   );
   const transitSupporting = transitEvidence.filter((item) => item.polarity === 'SUPPORTING');
   const transitChallenging = transitEvidence.filter((item) => item.polarity === 'CHALLENGING');
-  const transitEffect = evaluateTransitEffect(transitEvidence);
 
   const rawTransitPromiseLinks = transitEvidence.flatMap((item) => item.relatedEvidenceIds);
-  const transitPromiseEvidenceIds =
-    rawTransitPromiseLinks.length > 0
-      ? Array.from(new Set(rawTransitPromiseLinks))
-      : transitEvidence.length > 0 && natalPromise.evidenceIds.length > 0
-        ? natalPromise.evidenceIds.slice(0, 2)
-        : [];
+  const transitPromiseEvidenceIds = Array.from(new Set(rawTransitPromiseLinks));
+  const transitEffect = evaluateTransitEffect(transitEvidence, transitPromiseEvidenceIds);
 
   const transitTrigger = createTransitTrigger({
     domain: 'CAREER',
@@ -396,11 +386,20 @@ export function mapCareerPriority(
 }
 
 export function evaluateDashaEffect(
-  dashaEvidence: readonly DomainEvidence[]
+  dashaEvidence: readonly DomainEvidence[],
+  activatedPromiseEvidenceIds?: readonly string[]
 ): TimingActivationEffect {
   if (dashaEvidence.length === 0) {
     return 'DOES_NOT_ACTIVATE';
   }
+  const linkedPromiseIds = activatedPromiseEvidenceIds
+    ? new Set(activatedPromiseEvidenceIds)
+    : new Set(dashaEvidence.flatMap((e) => e.relatedEvidenceIds));
+
+  if (linkedPromiseIds.size === 0) {
+    return 'UNKNOWN';
+  }
+
   const hasSupport = dashaEvidence.some((e) => e.polarity === 'SUPPORTING');
   const hasChallenge = dashaEvidence.some((e) => e.polarity === 'CHALLENGING');
 
@@ -417,11 +416,20 @@ export function evaluateDashaEffect(
 }
 
 export function evaluateTransitEffect(
-  transitEvidence: readonly DomainEvidence[]
+  transitEvidence: readonly DomainEvidence[],
+  triggeredPromiseEvidenceIds?: readonly string[]
 ): TransitTriggerEffect {
   if (transitEvidence.length === 0) {
     return 'NO_MATERIAL_TRIGGER';
   }
+  const linkedPromiseIds = triggeredPromiseEvidenceIds
+    ? new Set(triggeredPromiseEvidenceIds)
+    : new Set(transitEvidence.flatMap((e) => e.relatedEvidenceIds));
+
+  if (linkedPromiseIds.size === 0) {
+    return 'UNKNOWN';
+  }
+
   const hasSupport = transitEvidence.some((e) => e.polarity === 'SUPPORTING');
   const hasChallenge = transitEvidence.some((e) => e.polarity === 'CHALLENGING');
 

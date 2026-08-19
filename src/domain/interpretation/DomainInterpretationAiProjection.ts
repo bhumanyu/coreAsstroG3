@@ -1,4 +1,11 @@
 import type { DomainInterpretation } from './DomainInterpretation';
+import type {
+  ConfidenceLevel,
+  ConflictTier,
+  EvidenceSource,
+  ManifestationMode,
+  VargaRelationship
+} from './DomainInterpretationTypes';
 
 export interface DomainInterpretationAiProjection {
   readonly domain: DomainInterpretation['domain'];
@@ -23,6 +30,24 @@ export interface DomainInterpretationAiProjection {
     readonly confidence: DomainInterpretation['conclusion']['confidence'];
     readonly statement: string;
   };
+
+  readonly vargaConfirmations: readonly {
+    readonly varga: EvidenceSource;
+    readonly relationship: VargaRelationship;
+    readonly statement: string;
+  }[];
+
+  readonly conflicts: readonly {
+    readonly tier: ConflictTier;
+    readonly description: string;
+    readonly resolution: string;
+  }[];
+
+  readonly manifestations: readonly {
+    readonly mode: ManifestationMode;
+    readonly confidence: ConfidenceLevel;
+    readonly statement: string;
+  }[];
 
   readonly evidenceIds: readonly string[];
 }
@@ -53,6 +78,36 @@ export function projectDomainInterpretationForAi(
       confidence: interpretation.conclusion.confidence,
       statement: interpretation.conclusion.statement
     }),
+
+    vargaConfirmations: Object.freeze(
+      interpretation.vargaConfirmations.map((v) =>
+        Object.freeze({
+          varga: v.varga,
+          relationship: v.relationship,
+          statement: v.statement
+        })
+      )
+    ),
+
+    conflicts: Object.freeze(
+      interpretation.conflicts.map((c) =>
+        Object.freeze({
+          tier: c.tier ?? 'SECONDARY_CONFLICT',
+          description: c.description,
+          resolution: c.resolution
+        })
+      )
+    ),
+
+    manifestations: Object.freeze(
+      interpretation.manifestations.map((m) =>
+        Object.freeze({
+          mode: m.mode,
+          confidence: m.confidence,
+          statement: m.statement
+        })
+      )
+    ),
 
     evidenceIds: Object.freeze([
       ...interpretation.conclusion.primaryEvidenceIds

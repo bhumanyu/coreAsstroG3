@@ -512,4 +512,25 @@ describe('AI Context Factory', () => {
     } as any;
     expect(() => buildAiContext(brokenHoroscope)).toThrow(/missing lord for house/);
   });
+
+  it('should project enriched domain interpretations for AI including vargas, conflicts, and manifestations', () => {
+    const aiContext = buildAiContext(horoscope);
+    expect(aiContext.domainInterpretations).toBeDefined();
+    expect(aiContext.domainInterpretations?.length).toBeGreaterThanOrEqual(2);
+
+    const careerDomain = aiContext.domainInterpretations?.find((d) => d.domain === 'CAREER');
+    expect(careerDomain).toBeDefined();
+    expect(careerDomain?.natalPromise).toBeDefined();
+    expect(careerDomain?.dashaActivation).toBeDefined();
+    expect(careerDomain?.transitTrigger).toBeDefined();
+    expect(careerDomain?.conclusion).toBeDefined();
+    expect(careerDomain?.vargaConfirmations).toBeDefined();
+    expect(careerDomain?.conflicts).toBeDefined();
+    expect(careerDomain?.manifestations).toBeDefined();
+    expect(careerDomain?.manifestations.length).toBeGreaterThan(0);
+
+    const wealthDomain = aiContext.domainInterpretations?.find((d) => d.domain === 'WEALTH');
+    expect(wealthDomain).toBeDefined();
+    expect(wealthDomain?.manifestations.length).toBeGreaterThan(0);
+  });
 });

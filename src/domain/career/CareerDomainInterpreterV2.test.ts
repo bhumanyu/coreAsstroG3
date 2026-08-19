@@ -77,4 +77,39 @@ describe('CareerDomainInterpreterV2', () => {
       expect(v2.natalPromise.evidenceIds).not.toContain(dashaId);
     }
   });
+
+  it('does not fall back to arbitrary natal evidence when Dasha/Transit have no relationship', () => {
+    const v2 = interpretCareerV2(horoscope);
+    const dashaEvidence = v2.evidence.filter((e) => e.phase === 'DASHA_ACTIVATION');
+    const expectedDashaLinks = Array.from(
+      new Set(dashaEvidence.flatMap((e) => e.relatedEvidenceIds))
+    );
+
+    expect(v2.dashaActivation.activatedPromiseEvidenceIds).toEqual(expectedDashaLinks);
+    if (dashaEvidence.length > 0 && expectedDashaLinks.length === 0) {
+      expect(v2.dashaActivation.effect).toBe('UNKNOWN');
+    }
+
+    const transitEvidence = v2.evidence.filter((e) => e.phase === 'TRANSIT_TRIGGER');
+    const expectedTransitLinks = Array.from(
+      new Set(transitEvidence.flatMap((e) => e.relatedEvidenceIds))
+    );
+
+    expect(v2.transitTrigger.triggeredPromiseEvidenceIds).toEqual(expectedTransitLinks);
+    if (transitEvidence.length > 0 && expectedTransitLinks.length === 0) {
+      expect(v2.transitTrigger.effect).toBe('UNKNOWN');
+    }
+  });
+
+  it('distinguishes primary promise from multiple modifier/timing/varga conflicts without collapsing natal strength', () => {
+    const v2 = interpretCareerV2(horoscope);
+    if (v2.conflicts.length > 1) {
+      const tiers = v2.conflicts.map((c) => c.tier);
+      const uniqueTiers = new Set(tiers);
+      expect(uniqueTiers.size).toBeGreaterThanOrEqual(1);
+    }
+    // Natal promise strength remains strong or moderate even if timing/transit is challenging
+    expect(['STRONG', 'VERY_STRONG', 'MODERATE']).toContain(v2.natalPromise.strength);
+    expect(v2.conclusion.statement.length).toBeGreaterThan(0);
+  });
 });

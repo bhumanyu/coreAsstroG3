@@ -60,7 +60,24 @@ export interface D10EvaluationDiagnostics {
 }
 
 export interface VargaThemeEvidence {
-  readonly varga: 'D10';
+  readonly varga:
+    | 'D1'
+    | 'D2'
+    | 'D3'
+    | 'D4'
+    | 'D7'
+    | 'D9'
+    | 'D10'
+    | 'D12'
+    | 'D16'
+    | 'D20'
+    | 'D24'
+    | 'D27'
+    | 'D30'
+    | 'D40'
+    | 'D45'
+    | 'D60'
+    | string;
   readonly relationship: VargaRelationship;
   readonly statement: string;
   readonly effect: ThemeEvidenceEffect;
