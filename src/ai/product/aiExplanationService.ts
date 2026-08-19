@@ -72,12 +72,27 @@ function mapRoutingResultToViewModel(
   result: AiRoutingResult,
   evidence: readonly AiEvidence[],
   task: AiTask
-): AiExplanationViewModel {
+): AiExplanationResult {
   const structured = extractStructuredOutput(
     result.response.structuredOutput
   );
 
   if (structured) {
+    if (structured.status === 'ERROR') {
+      return Object.freeze({
+        kind: 'ERROR',
+        requestId: result.requestId,
+        task,
+        status: 'ERROR',
+        message:
+          structured.conclusion ||
+          'AI explanation could not be generated.',
+        warnings: Object.freeze([
+          ...(structured.warnings ?? [])
+        ])
+      });
+    }
+
     const status: 'SUCCESS' | 'PARTIAL' =
       structured.status === 'PARTIAL' ? 'PARTIAL' : 'SUCCESS';
 
