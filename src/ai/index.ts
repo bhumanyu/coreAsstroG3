@@ -125,5 +125,19 @@ export type {
   OpenAiProviderMetadata
 } from './providers/openai';
 
+export {
+  ReliableAiProvider,
+  DEFAULT_REMOTE_RETRY_POLICY,
+  validateRemoteRetryPolicy,
+  classifyRemoteRetry,
+  calculateRetryDelayMs,
+  withRemoteReliability
+} from './reliability';
+
+export type {
+  RemoteRetryPolicy,
+  RetryDecision
+} from './reliability';
+
 
 
