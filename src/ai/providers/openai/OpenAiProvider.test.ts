@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { OpenAiProvider } from './OpenAiProvider';
 import { FakeRemoteAiTransport } from '../remote/testFixtures';
+import { AiProviderRegistry } from '../../routing/AiProviderRegistry';
+import { AiRouter } from '../../routing/AiRouter';
 import type { AiRequest } from '../../types/aiRequestTypes';
 import type { AiContext } from '../../types/aiContextTypes';
 
@@ -144,5 +146,69 @@ describe('OpenAiProvider', () => {
     });
 
     expect(JSON.stringify(response)).not.toContain('secret-openai-key');
+  });
+
+  it('integrates with AiRouter and selects OpenAI in REMOTE_ONLY mode for CAREER_ANALYSIS', async () => {
+    const transport = new FakeRemoteAiTransport({
+      status: 200,
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: {
+        id: 'resp-router-test',
+        model: 'gpt-5.6',
+        status: 'completed',
+        output: [
+          {
+            id: 'msg-test-route',
+            type: 'message',
+            role: 'assistant',
+            content: [
+              {
+                type: 'output_text',
+                text: JSON.stringify({
+                  status: 'SUCCESS',
+                  conclusion: 'Career trajectory is highly supported.',
+                  supportingEvidenceIds: ['E001'],
+                  challengingEvidenceIds: [],
+                  unresolvedQuestions: [],
+                  warnings: []
+                }),
+                annotations: []
+              }
+            ]
+          }
+        ]
+      }
+    });
+
+    const registry = new AiProviderRegistry();
+    const openAiProvider = new OpenAiProvider(
+      {
+        apiKey: 'test-api-key',
+        model: 'gpt-5.6'
+      },
+      transport
+    );
+
+    registry.register(openAiProvider);
+
+    const router = new AiRouter(registry);
+    const request = createRequest();
+
+    const result = await router.route(request, {
+      mode: 'REMOTE_ONLY'
+    });
+
+    expect(result.providerId).toBe('openai');
+    expect(result.providerKind).toBe('REMOTE_LLM');
+    expect(result.routingMode).toBe('REMOTE_ONLY');
+    expect(result.fallbackUsed).toBe(false);
+    expect(result.response.content).toBe('Career trajectory is highly supported.');
+    expect(result.response.structuredOutput).toMatchObject({
+      status: 'SUCCESS',
+      conclusion: 'Career trajectory is highly supported.'
+    });
+    expect(result.response.metadata?.provider).toBe('openai');
   });
 });

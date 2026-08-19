@@ -70,7 +70,7 @@ export interface OpenAiStructuredReasoning {
 
 export interface OpenAiProviderMetadata {
   readonly provider: 'openai';
-  readonly model: string;
+  readonly model?: string;
   readonly responseId?: string;
   readonly inputTokens?: number;
   readonly outputTokens?: number;
