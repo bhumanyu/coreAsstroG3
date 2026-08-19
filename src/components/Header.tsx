@@ -19,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const tabs = [
     { id: 'report', label: 'Full Natal Analysis' },
+    { id: 'ai-explanation', label: 'AI Explanation' },
     { id: 'horoscope', label: 'Horoscope & Charts' },
     { id: 'planets', label: 'Planetary Facts & Dignity' },
     { id: 'transit', label: 'Gochara Transits (PR-037)' },

@@ -139,5 +139,21 @@ export type {
   RetryDecision
 } from './reliability';
 
+export {
+  runAiExplanation,
+  AI_EXPLANATION_TASKS,
+  getAiExplanationTaskOption,
+  isAiExplanationStructuredOutput
+} from './product';
+
+export type {
+  AiExplanationTaskOption,
+  AiExplanationEvidence,
+  AiExplanationViewModel,
+  AiExplanationErrorViewModel,
+  AiExplanationResult,
+  AiExplanationStructuredOutput
+} from './product';
+
 
 

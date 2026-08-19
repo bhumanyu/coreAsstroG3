@@ -9,6 +9,7 @@ import { RelationshipMatrix } from './components/RelationshipMatrix';
 import { EngineValidator } from './components/EngineValidator';
 import { GocharaTransitView } from './components/GocharaTransitView';
 import { FullNatalReportView } from './components/fullNatalReport/FullNatalReportView';
+import { AiExplanationPanel } from './components/ai/AiExplanationPanel';
 import { calculateHoroscope } from './engine/astroEngine';
 import { BirthDetails, Planet, DignityStatus, ChartType } from './types';
 import { PLANETS_METADATA } from './data/astroData';
@@ -52,6 +53,13 @@ export const App: React.FC = () => {
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'report' && (
           <FullNatalReportView report={horoscope.fullNatalAnalysis} />
+        )}
+
+        {activeTab === 'ai-explanation' && (
+          <AiExplanationPanel
+            horoscope={horoscope}
+            birthDetails={birthDetails}
+          />
         )}
 
         {activeTab === 'horoscope' && (
