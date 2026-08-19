@@ -331,4 +331,81 @@ describe('AiExplanationPanel', () => {
       expect(screen.queryByText('Chart A explanation')).not.toBeInTheDocument();
     });
   });
+
+  it('prevents stale in-flight async results from overwriting a newly selected chart', async () => {
+    let resolveFirstRequest!: (value: AiExplanationViewModel) => void;
+    const firstRequestPromise = new Promise<AiExplanationViewModel>((resolve) => {
+      resolveFirstRequest = resolve;
+    });
+
+    vi.mocked(aiModule.runAiExplanation).mockImplementationOnce(
+      () => firstRequestPromise
+    );
+
+    const { rerender } = render(
+      <AiExplanationPanel
+        horoscope={horoscope}
+        birthDetails={birthDetails}
+      />
+    );
+
+    const generateBtn = screen.getByRole('button', {
+      name: /generate explanation/i
+    });
+    fireEvent.click(generateBtn);
+
+    // Request is in-flight (loading state active)
+    expect(
+      screen.getByRole('button', { name: /generating explanation/i })
+    ).toBeInTheDocument();
+
+    // User switches to Chart B before Request A resolves
+    const chartBDetails: BirthDetails = {
+      ...birthDetails,
+      dateTimeStr: '2021-08-20T10:30:00Z'
+    };
+    const chartBHoroscope = calculateHoroscope(chartBDetails);
+
+    rerender(
+      <AiExplanationPanel
+        horoscope={chartBHoroscope}
+        birthDetails={chartBDetails}
+      />
+    );
+
+    // Loading should be cleared and button back to Generate Explanation
+    expect(
+      screen.queryByRole('button', { name: /generating explanation/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /generate explanation/i })
+    ).toBeInTheDocument();
+
+    // Now first request finishes
+    resolveFirstRequest({
+      kind: 'SUCCESS',
+      requestId: 'stale-req-chart-a',
+      task: 'CHART_SYNTHESIS',
+      status: 'SUCCESS',
+      conclusion: 'Stale Chart A explanation that should be ignored',
+      supportingEvidence: [],
+      challengingEvidence: [],
+      unresolvedQuestions: [],
+      warnings: [],
+      triggeredRuleIds: [],
+      providerId: 'local-vedic-rules',
+      providerName: 'Local Vedic Rules Provider',
+      providerKind: 'LOCAL_RULES',
+      routingMode: 'LOCAL_ONLY',
+      fallbackUsed: false,
+      selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
+      generatedAt: '2026-01-01T00:00:00.000Z'
+    });
+
+    // Wait a tick and verify Chart A's stale result did NOT get rendered onto Chart B
+    await new Promise((r) => setTimeout(r, 50));
+    expect(
+      screen.queryByText('Stale Chart A explanation that should be ignored')
+    ).not.toBeInTheDocument();
+  });
 });

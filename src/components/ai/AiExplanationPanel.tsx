@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Brain,
@@ -35,6 +35,8 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
 
+  const requestIdRef = useRef(0);
+
   const chartKey = useMemo(
     () =>
       `${birthDetails.dateTimeStr}|${birthDetails.timeZone}|${birthDetails.ayanamsa}`,
@@ -46,11 +48,16 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
   );
 
   useEffect(() => {
+    requestIdRef.current += 1;
     setResult(null);
     setHasGenerated(false);
+    setIsLoading(false);
   }, [chartKey]);
 
   const handleGenerate = async () => {
+    const currentRequestId = ++requestIdRef.current;
+    const requestChartKey = chartKey;
+
     setIsLoading(true);
     setResult(null);
 
@@ -60,10 +67,23 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
         task: selectedTask
       });
 
+      // Guard against chart change or newer request initiated during in-flight async call
+      if (
+        requestIdRef.current !== currentRequestId ||
+        chartKey !== requestChartKey
+      ) {
+        return;
+      }
+
       setResult(nextResult);
       setHasGenerated(true);
     } finally {
-      setIsLoading(false);
+      if (
+        requestIdRef.current === currentRequestId &&
+        chartKey === requestChartKey
+      ) {
+        setIsLoading(false);
+      }
     }
   };
 
