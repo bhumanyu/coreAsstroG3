@@ -129,6 +129,10 @@ describe('AiExplanationPanel', () => {
     expect(screen.getByText(/generating explanation…/i)).toBeInTheDocument();
     expect(generateBtn).toBeDisabled();
 
+    // Verify task option buttons are also disabled while request is in-flight
+    const careerBtn = screen.getByText('Career').closest('button');
+    expect(careerBtn).toBeDisabled();
+
     resolvePromise!({
       kind: 'SUCCESS',
       requestId: 'req-1',
@@ -329,6 +333,65 @@ describe('AiExplanationPanel', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Chart A explanation')).not.toBeInTheDocument();
+    });
+  });
+
+  it('resets result when latitude/longitude location coordinates change', async () => {
+    const mockViewModel: AiExplanationViewModel = {
+      kind: 'SUCCESS',
+      requestId: 'test-req-loc-reset',
+      task: 'CHART_SYNTHESIS',
+      status: 'SUCCESS',
+      conclusion: 'Bangalore explanation',
+      supportingEvidence: [],
+      challengingEvidence: [],
+      unresolvedQuestions: [],
+      warnings: [],
+      triggeredRuleIds: [],
+      providerId: 'local-vedic-rules',
+      providerName: 'Local Vedic Rules Provider',
+      providerKind: 'LOCAL_RULES',
+      routingMode: 'LOCAL_ONLY',
+      fallbackUsed: false,
+      selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
+      generatedAt: '2026-01-01T00:00:00.000Z'
+    };
+
+    vi.mocked(aiModule.runAiExplanation).mockResolvedValueOnce(mockViewModel);
+
+    const { rerender } = render(
+      <AiExplanationPanel
+        horoscope={horoscope}
+        birthDetails={birthDetails}
+      />
+    );
+
+    const generateBtn = screen.getByRole('button', {
+      name: /generate explanation/i
+    });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Bangalore explanation')).toBeInTheDocument();
+    });
+
+    // Change location coordinates (e.g. Bangalore -> Delhi)
+    const newLocationDetails: BirthDetails = {
+      ...birthDetails,
+      latitude: 28.6139,
+      longitude: 77.209
+    };
+    const newLocationHoroscope = calculateHoroscope(newLocationDetails);
+
+    rerender(
+      <AiExplanationPanel
+        horoscope={newLocationHoroscope}
+        birthDetails={newLocationDetails}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Bangalore explanation')).not.toBeInTheDocument();
     });
   });
 

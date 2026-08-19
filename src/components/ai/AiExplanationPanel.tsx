@@ -39,11 +39,19 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
 
   const chartKey = useMemo(
     () =>
-      `${birthDetails.dateTimeStr}|${birthDetails.timeZone}|${birthDetails.ayanamsa}`,
+      [
+        birthDetails.dateTimeStr,
+        birthDetails.timeZone,
+        birthDetails.ayanamsa,
+        birthDetails.latitude,
+        birthDetails.longitude
+      ].join('|'),
     [
       birthDetails.dateTimeStr,
       birthDetails.timeZone,
-      birthDetails.ayanamsa
+      birthDetails.ayanamsa,
+      birthDetails.latitude,
+      birthDetails.longitude
     ]
   );
 
@@ -125,9 +133,13 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
               <button
                 key={option.task}
                 type="button"
+                disabled={isLoading}
                 onClick={() => setSelectedTask(option.task)}
                 className={[
-                  'text-left rounded-xl border p-3 transition-all cursor-pointer',
+                  'text-left rounded-xl border p-3 transition-all',
+                  isLoading
+                    ? 'opacity-60 cursor-not-allowed'
+                    : 'cursor-pointer',
                   active
                     ? 'border-indigo-500/60 bg-indigo-500/10 text-indigo-200'
                     : 'border-slate-800 bg-slate-950/50 text-slate-400 hover:border-slate-700 hover:text-slate-200'

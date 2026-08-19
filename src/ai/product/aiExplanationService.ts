@@ -59,10 +59,7 @@ export async function runAiExplanation(
       requestId,
       task: options.task,
       status: 'ERROR',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'AI explanation could not be generated.',
+      message: getSafeAiExplanationErrorMessage(error),
       warnings: Object.freeze([])
     });
   }
@@ -73,11 +70,17 @@ function mapRoutingResultToViewModel(
   evidence: readonly AiEvidence[],
   task: AiTask
 ): AiExplanationResult {
-  const structured = extractStructuredOutput(
-    result.response.structuredOutput
-  );
+  const rawStructured = result.response.structuredOutput;
+  const structured = extractStructuredOutput(rawStructured);
+  const structuredOutputWasProvided =
+    rawStructured !== undefined && rawStructured !== null;
 
   if (structured) {
+    const mergedWarnings = mergeWarnings(
+      structured.warnings,
+      result.response.warnings
+    );
+
     if (structured.status === 'ERROR') {
       return Object.freeze({
         kind: 'ERROR',
@@ -87,9 +90,7 @@ function mapRoutingResultToViewModel(
         message:
           structured.conclusion ||
           'AI explanation could not be generated.',
-        warnings: Object.freeze([
-          ...(structured.warnings ?? [])
-        ])
+        warnings: mergedWarnings
       });
     }
 
@@ -113,7 +114,7 @@ function mapRoutingResultToViewModel(
         'CHALLENGING'
       ),
       unresolvedQuestions: Object.freeze([...structured.unresolvedQuestions]),
-      warnings: Object.freeze([...structured.warnings]),
+      warnings: mergedWarnings,
       triggeredRuleIds: Object.freeze([...(structured.triggeredRuleIds ?? [])]),
       providerId: result.providerId,
       providerName: result.providerName,
@@ -125,16 +126,40 @@ function mapRoutingResultToViewModel(
     });
   }
 
+  const fallbackWarnings = structuredOutputWasProvided
+    ? [
+        'Structured AI explanation was unavailable; displaying the available textual explanation.'
+      ]
+    : [];
+
+  const content = result.response.content?.trim() ?? '';
+
+  if (!content) {
+    return Object.freeze({
+      kind: 'ERROR',
+      requestId: result.requestId,
+      task,
+      status: 'ERROR',
+      message: structuredOutputWasProvided
+        ? 'AI explanation returned an invalid structured response.'
+        : 'AI explanation returned no usable content.',
+      warnings: mergeWarnings(
+        fallbackWarnings,
+        result.response.warnings
+      )
+    });
+  }
+
   return Object.freeze({
     kind: 'SUCCESS',
     requestId: result.requestId,
     task,
     status: 'PARTIAL',
-    conclusion: result.response.content || 'No explanation was produced.',
+    conclusion: content,
     supportingEvidence: Object.freeze([]),
     challengingEvidence: Object.freeze([]),
     unresolvedQuestions: Object.freeze([]),
-    warnings: Object.freeze([...(result.response.warnings ?? [])]),
+    warnings: mergeWarnings(fallbackWarnings, result.response.warnings),
     triggeredRuleIds: Object.freeze([]),
     providerId: result.providerId,
     providerName: result.providerName,
@@ -144,6 +169,29 @@ function mapRoutingResultToViewModel(
     selectionReason: result.selectionReason,
     generatedAt: new Date().toISOString()
   });
+}
+
+function mergeWarnings(
+  structuredWarnings: readonly string[],
+  responseWarnings: readonly string[] | undefined
+): readonly string[] {
+  return Object.freeze([
+    ...new Set([
+      ...structuredWarnings,
+      ...(responseWarnings ?? [])
+    ])
+  ]);
+}
+
+function getSafeAiExplanationErrorMessage(error: unknown): string {
+  if (
+    error instanceof Error &&
+    error.name === 'ValidationError'
+  ) {
+    return 'The AI explanation request was invalid.';
+  }
+
+  return 'AI explanation could not be generated.';
 }
 
 function extractStructuredOutput(

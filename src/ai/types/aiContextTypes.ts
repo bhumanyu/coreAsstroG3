@@ -219,6 +219,16 @@ export interface AiContextMethodology {
   readonly aspectSystem: 'PARASHARI';
 }
 
+export interface AiDomainInterpretation {
+  readonly domain: string;
+  readonly conclusion: string;
+  readonly natalPromise: string;
+  readonly dashaActivation: string;
+  readonly transitTrigger: string;
+  readonly confidence: string;
+  readonly evidenceIds: readonly string[];
+}
+
 export interface AiContext {
   readonly schemaVersion: AiContextSchemaVersion;
   readonly source: AiContextSource;
@@ -233,4 +243,5 @@ export interface AiContext {
   readonly lifeThemes: readonly LifeThemeFact[];
   readonly evidence: readonly AiEvidence[];
   readonly methodology: AiContextMethodology;
+  readonly domainInterpretations?: readonly (AiDomainInterpretation | import('../../domain/interpretation').DomainInterpretationAiProjection)[];
 }
