@@ -57,10 +57,57 @@ describe('Stage-1 AI Projection Integration', () => {
 
     expect(projectedWealth.dashaActivation).toBeDefined();
     expect(projectedWealth.dashaActivation.active).toBe(true);
+    expect(projectedWealth.dashaActivation.effect).toBeDefined();
 
     // Dimension-specific Dasha effects are preserved distinctly
     expect(conclusionData?.accumulationDashaEffect).toBe('ACTIVATES');
     expect(conclusionData?.gainsDashaEffect).toBe('DOES_NOT_ACTIVATE');
+  });
+
+  it('guarantees deterministic Dasha=ACTIVATES and Transit=CHALLENGE effects survive AI projection', () => {
+    // High-pressure career scenario: Dasha ACTIVATES executive authority, but Saturn transit CHALLENGES (effect: CHALLENGE) 10H
+    const highPressure = buildHighPressureCareerInterpretation();
+
+    // 1. Validate raw domain interpretation effects
+    expect(highPressure.dashaActivation.effect).toBe('ACTIVATES');
+    expect(highPressure.transitTrigger.effect).toBe('CHALLENGE');
+
+    // 2. Perform AI projection
+    const projectedCareer = projectDomainInterpretationForAi(highPressure);
+
+    // 3. Assert exact deterministic preservation of effects across projection boundary
+    expect(projectedCareer.dashaActivation.effect).toBe('ACTIVATES');
+    expect(projectedCareer.transitTrigger.effect).toBe('CHALLENGE');
+    expect(projectedCareer.dashaActivation.active).toBe(true);
+    expect(projectedCareer.transitTrigger.active).toBe(true);
+  });
+
+  it('preserves golden horoscope Dasha and Transit effects through AI projection', async () => {
+    const result = await runStage1Integration(STAGE1_GOLDEN_INPUT);
+
+    const projectedCareer = result.aiContext.domainInterpretations?.find(
+      (d) => d.domain === 'CAREER'
+    );
+    const projectedWealth = result.aiContext.domainInterpretations?.find(
+      (d) => d.domain === 'WEALTH'
+    );
+
+    expect(projectedCareer).toBeDefined();
+    expect(projectedWealth).toBeDefined();
+
+    expect(projectedCareer?.dashaActivation.effect).toBe(
+      STAGE1_GOLDEN_EXPECTATION.career.dashaEffect
+    );
+    expect(projectedCareer?.transitTrigger.effect).toBe(
+      STAGE1_GOLDEN_EXPECTATION.career.transitEffect
+    );
+
+    expect(projectedWealth?.dashaActivation.effect).toBe(
+      STAGE1_GOLDEN_EXPECTATION.wealth.dashaEffect
+    );
+    expect(projectedWealth?.transitTrigger.effect).toBe(
+      STAGE1_GOLDEN_EXPECTATION.wealth.transitEffect
+    );
   });
 
   it('preserves UNAVAILABLE and INSUFFICIENT_DATA states without inventing confirmations', () => {

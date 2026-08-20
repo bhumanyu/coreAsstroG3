@@ -22,6 +22,12 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
       expect(result.career.natalPromise.strength).toBe(
         STAGE1_GOLDEN_EXPECTATION.career.natalStatus
       );
+      expect(result.career.dashaActivation.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.career.dashaEffect
+      );
+      expect(result.career.transitTrigger.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.career.transitEffect
+      );
       const d10Confirmation = result.career.vargaConfirmations.find(
         (v) => v.varga === 'D10'
       );
@@ -29,6 +35,12 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
         STAGE1_GOLDEN_EXPECTATION.career.d10Relationship
       );
 
+      expect(result.wealth.dashaActivation.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.wealth.dashaEffect
+      );
+      expect(result.wealth.transitTrigger.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.wealth.transitEffect
+      );
       const d2Confirmation = result.wealth.vargaConfirmations.find(
         (v) => v.varga === 'D2'
       );
@@ -46,6 +58,19 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
       );
       expect(projectedCareer).toBeDefined();
       expect(projectedWealth).toBeDefined();
+
+      expect(projectedCareer?.dashaActivation.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.career.dashaEffect
+      );
+      expect(projectedCareer?.transitTrigger.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.career.transitEffect
+      );
+      expect(projectedWealth?.dashaActivation.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.wealth.dashaEffect
+      );
+      expect(projectedWealth?.transitTrigger.effect).toBe(
+        STAGE1_GOLDEN_EXPECTATION.wealth.transitEffect
+      );
 
       // 3. Traceability Validation
       assertStage1Traceability(result);

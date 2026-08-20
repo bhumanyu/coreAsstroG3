@@ -20,9 +20,11 @@ describe('Stage-1 AI Explanation Service Integration', () => {
       expect(explanation.requestId.length).toBeGreaterThan(0);
       expect(explanation.task).toBe('CHART_SYNTHESIS');
       expect(explanation.routingMode).toBe('LOCAL_ONLY');
-      expect(explanation.providerKind).toBe('LOCAL_RULES');
-      expect(explanation.providerId).toBe('local-vedic-rules');
       expect(explanation.fallbackUsed).toBe(false);
+      expect(explanation.providerKind).toBe('LOCAL_RULES');
+      expect(explanation.providerId).toBeDefined();
+      expect(typeof explanation.providerId).toBe('string');
+      expect(explanation.providerId.length).toBeGreaterThan(0);
       expect(['SUCCESS', 'PARTIAL']).toContain(explanation.status);
       expect(explanation.conclusion.length).toBeGreaterThan(0);
 

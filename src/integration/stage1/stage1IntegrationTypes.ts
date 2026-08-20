@@ -30,6 +30,8 @@ export interface Stage1IntegrationResult {
 export interface Stage1GoldenExpectation {
   readonly career: {
     readonly natalStatus: string;
+    readonly dashaEffect?: string;
+    readonly transitEffect?: string;
     readonly d10Relationship: string;
     readonly supportingEvidenceRequired: boolean;
   };
@@ -39,6 +41,8 @@ export interface Stage1GoldenExpectation {
     readonly gainsStatus: string;
     readonly fortuneStatus: string;
     readonly speculationStatus: string;
+    readonly dashaEffect?: string;
+    readonly transitEffect?: string;
     readonly d2Relationship: string;
   };
 }

@@ -32,8 +32,10 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
     expect(projectedCareer?.natalPromise.statement.length).toBeGreaterThan(0);
     expect(projectedCareer?.dashaActivation).toBeDefined();
     expect(typeof projectedCareer?.dashaActivation.active).toBe('boolean');
+    expect(projectedCareer?.dashaActivation.effect).toBeDefined();
     expect(projectedCareer?.transitTrigger).toBeDefined();
     expect(typeof projectedCareer?.transitTrigger.active).toBe('boolean');
+    expect(projectedCareer?.transitTrigger.effect).toBeDefined();
     expect(projectedCareer?.conclusion).toBeDefined();
     expect(projectedCareer?.conclusion.strength).toBeDefined();
     expect(projectedCareer?.conclusion.confidence).toBeDefined();
@@ -50,8 +52,10 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
     expect(projectedWealth?.natalPromise.statement.length).toBeGreaterThan(0);
     expect(projectedWealth?.dashaActivation).toBeDefined();
     expect(typeof projectedWealth?.dashaActivation.active).toBe('boolean');
+    expect(projectedWealth?.dashaActivation.effect).toBeDefined();
     expect(projectedWealth?.transitTrigger).toBeDefined();
     expect(typeof projectedWealth?.transitTrigger.active).toBe('boolean');
+    expect(projectedWealth?.transitTrigger.effect).toBeDefined();
     expect(projectedWealth?.conclusion).toBeDefined();
     expect(projectedWealth?.conclusion.strength).toBeDefined();
     expect(projectedWealth?.conclusion.confidence).toBeDefined();

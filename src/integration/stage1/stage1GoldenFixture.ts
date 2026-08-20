@@ -78,6 +78,8 @@ export const STAGE1_GOLDEN_INPUT: Stage1IntegrationInput = Object.freeze({
 export const STAGE1_GOLDEN_EXPECTATION: Stage1GoldenExpectation = Object.freeze({
   career: Object.freeze({
     natalStatus: STAGE1_GOLDEN_CAREER.natalPromise.strength,
+    dashaEffect: STAGE1_GOLDEN_CAREER.dashaActivation.effect,
+    transitEffect: STAGE1_GOLDEN_CAREER.transitTrigger.effect,
     d10Relationship:
       STAGE1_GOLDEN_CAREER.vargaConfirmations.find((v) => v.varga === 'D10')
         ?.relationship ?? 'UNAVAILABLE',
@@ -98,6 +100,8 @@ export const STAGE1_GOLDEN_EXPECTATION: Stage1GoldenExpectation = Object.freeze(
     speculationStatus:
       STAGE1_GOLDEN_WEALTH.conclusionData?.speculationStatus ??
       'UNAVAILABLE',
+    dashaEffect: STAGE1_GOLDEN_WEALTH.dashaActivation.effect,
+    transitEffect: STAGE1_GOLDEN_WEALTH.transitTrigger.effect,
     d2Relationship:
       STAGE1_GOLDEN_WEALTH.vargaConfirmations.find((v) => v.varga === 'D2')
         ?.relationship ?? 'UNAVAILABLE'
