@@ -276,9 +276,7 @@ export function resolveRelatedWealthPromiseEvidenceIds(
         e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD ||
         e.priority === 'PRIMARY'
     );
-    return secondItems.length > 0
-      ? secondItems.map((e) => e.id)
-      : structuralItems.slice(0, 2).map((e) => e.id);
+    return secondItems.map((e) => e.id);
   }
 
   // Dasha or Transit timing

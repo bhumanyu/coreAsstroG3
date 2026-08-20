@@ -18,7 +18,12 @@ import {
   evaluateCareerTimingActivation,
   evaluateDashaEffect,
   evaluateTransitEffect,
+  evaluateD10Relationship,
   resolveCareerConclusionStrength,
+  resolveCurrentActivation,
+  resolveCurrentPressure,
+  buildCareerHeadline,
+  buildCareerConclusionData,
   calculateDomainStrength,
   calculateVargaStrength,
   buildCareerNatalStatement,
@@ -119,7 +124,8 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
     strength: 'STRONG',
     priority: 30,
     ruleId: 'CAREER_DASHA_TIMING_001:MAHADASHA:SUN',
-    relatedEvidenceIds: ['GOLDEN_CAREER_10H_STRONG', 'GOLDEN_CAREER_10L_STRONG']
+    relatedEvidenceIds: ['GOLDEN_CAREER_10H_STRONG', 'GOLDEN_CAREER_10L_STRONG'],
+    timing: { period: 'MD' }
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_DASHA_AD_SUPPORT',
@@ -132,7 +138,8 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
     strength: 'MODERATE',
     priority: 30,
     ruleId: 'CAREER_DASHA_TIMING_001:ANTARDASHA:MARS',
-    relatedEvidenceIds: ['GOLDEN_CAREER_10H_STRONG']
+    relatedEvidenceIds: ['GOLDEN_CAREER_10H_STRONG'],
+    timing: { period: 'AD' }
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_DASHA_AD_CHALLENGE',
@@ -145,7 +152,8 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
     strength: 'MODERATE',
     priority: 30,
     ruleId: 'CAREER_DASHA_TIMING_001:ANTARDASHA:RAHU',
-    relatedEvidenceIds: ['GOLDEN_CAREER_10H_STRONG']
+    relatedEvidenceIds: ['GOLDEN_CAREER_10H_STRONG'],
+    timing: { period: 'AD' }
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_TRANSIT_CHALLENGE',
@@ -206,13 +214,14 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
     )
   );
 
+  const dashaEffect = evaluateDashaEffect(dashaEvidence, dashaPromiseLinks);
   const dashaActivation = createDashaActivation({
     domain: 'CAREER',
     active: dashaEvidence.length > 0,
-    effect: evaluateDashaEffect(dashaEvidence, dashaPromiseLinks),
+    effect: dashaEffect,
     strength: calculateDomainStrength(dashaSupporting, dashaChallenging),
     confidence: calculateEvidenceConfidence(dashaEvidence),
-    statement: buildCareerDashaStatement(dashaEvidence),
+    statement: buildCareerDashaStatement(dashaEvidence, dashaEffect),
     evidenceIds: dashaEvidence.map((e) => e.id),
     activatedPromiseEvidenceIds: dashaPromiseLinks
   });
@@ -220,6 +229,7 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
   const mdActivation = evaluateCareerTimingActivation('MD', dashaEvidence, natalPromiseEvidenceIds);
   const adActivation = evaluateCareerTimingActivation('AD', dashaEvidence, natalPromiseEvidenceIds);
   const pdActivation = evaluateCareerTimingActivation('PD', dashaEvidence, natalPromiseEvidenceIds);
+  const timingActivations = [mdActivation, adActivation, pdActivation];
 
   const transitEvidence = evidence.filter(
     (e) => e.phase === 'TRANSIT_TRIGGER' || e.source === 'TRANSIT'
@@ -232,22 +242,23 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
     )
   );
 
+  const transitEffect = evaluateTransitEffect(transitEvidence, transitPromiseLinks);
   const transitTrigger = createTransitTrigger({
     domain: 'CAREER',
     active: transitEvidence.length > 0,
-    effect: evaluateTransitEffect(transitEvidence, transitPromiseLinks),
+    effect: transitEffect,
     strength: calculateDomainStrength(
       transitEvidence.filter((e) => e.polarity === 'SUPPORTING'),
       transitEvidence.filter((e) => e.polarity === 'CHALLENGING')
     ),
     confidence: calculateEvidenceConfidence(transitEvidence),
-    statement: buildCareerTransitStatement(transitEvidence),
+    statement: buildCareerTransitStatement(transitEvidence, transitEffect),
     evidenceIds: transitEvidence.map((e) => e.id),
     triggeredPromiseEvidenceIds: transitPromiseLinks
   });
 
   const d10Evidence = evidence.filter((e) => e.source === 'D10');
-  const d10Relationship = 'CONFIRMS';
+  const d10Relationship = evaluateD10Relationship([], undefined, d10Evidence, natalPromiseEvidenceIds);
   const vargaConfirmations = [
     createVargaConfirmation({
       domain: 'CAREER',
@@ -267,6 +278,20 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
     conflicts
   );
 
+  const supportingEvidence = evidence.filter((e) => e.polarity === 'SUPPORTING');
+  const challengingEvidence = evidence.filter((e) => e.polarity === 'CHALLENGING');
+
+  const conclusionData = buildCareerConclusionData(
+    natalStrength,
+    d10Relationship,
+    timingActivations,
+    transitTrigger,
+    conflicts,
+    manifestations,
+    supportingEvidence.map((e) => e.id),
+    challengingEvidence.map((e) => e.id)
+  );
+
   const conclusion = createDomainConclusion({
     domain: 'CAREER',
     strength: conclusionStrength,
@@ -281,17 +306,19 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
       transitTrigger,
       vargaConfirmations,
       'Strong natal career promise with current period activation.',
-      d10Relationship
+      d10Relationship,
+      {
+        timingActivations,
+        conflicts,
+        manifestations,
+        conclusionData
+      }
     ),
     primaryEvidenceIds: evidence
       .filter((e) => e.role === 'PRIMARY')
       .map((e) => e.id),
-    supportingEvidenceIds: evidence
-      .filter((e) => e.polarity === 'SUPPORTING')
-      .map((e) => e.id),
-    challengingEvidenceIds: evidence
-      .filter((e) => e.polarity === 'CHALLENGING')
-      .map((e) => e.id),
+    supportingEvidenceIds: supportingEvidence.map((e) => e.id),
+    challengingEvidenceIds: challengingEvidence.map((e) => e.id),
     unresolvedQuestions: []
   });
 
@@ -305,7 +332,8 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
     manifestations,
     conflicts,
     conclusion,
-    timingActivations: [mdActivation, adActivation, pdActivation],
-    dataCompleteness
+    timingActivations,
+    dataCompleteness,
+    conclusionData
   });
 }

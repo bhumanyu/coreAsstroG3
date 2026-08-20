@@ -21,6 +21,7 @@ export interface DomainInterpretationParts {
   readonly conclusion: DomainConclusion;
   readonly timingActivations?: readonly any[];
   readonly dataCompleteness?: any;
+  readonly conclusionData?: any;
 }
 
 export interface BuildDomainInterpretationOptions {
@@ -56,6 +57,7 @@ export function buildDomainInterpretation(
     conclusion: parts.conclusion,
     ...(parts.timingActivations ? { timingActivations: Object.freeze([...parts.timingActivations]) } : {}),
     ...(parts.dataCompleteness !== undefined ? { dataCompleteness: parts.dataCompleteness } : {}),
+    ...(parts.conclusionData !== undefined ? { conclusionData: Object.freeze({ ...parts.conclusionData }) } : {}),
     generatedAt: timestamp
   });
 }

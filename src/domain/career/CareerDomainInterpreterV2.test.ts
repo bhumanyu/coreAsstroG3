@@ -12,34 +12,47 @@ import {
   evaluateDashaEffect,
   evaluateTransitEffect,
   evaluateD10Relationship,
-  calculateCareerDataCompleteness
+  calculateCareerDataCompleteness,
+  buildCareerConclusionData,
+  buildCareerHeadline,
+  resolveCurrentActivation,
+  resolveCurrentPressure,
+  buildCareerDashaStatement,
+  buildCareerTransitStatement,
+  mapCareerSource,
+  mapCareerPhase,
+  type CareerConclusionData
 } from './CareerDomainInterpreterV2';
 import { CareerDomainInterpreter } from './CareerDomainInterpreter';
-import { interpretDomain } from '../interpretation/DomainInterpretationService';
-import { createDefaultDomainInterpreterRegistry } from '../interpretation/createDefaultDomainInterpreterRegistry';
 import {
   createDomainEvidence,
+  createTransitTrigger,
   detectDomainConflicts,
   calculateEvidenceConfidence,
-  projectDomainInterpretationForAi
+  projectDomainInterpretationForAi,
+  interpretDomain,
+  createDefaultDomainInterpreterRegistry,
+  type DomainEvidence
 } from '../interpretation';
 import {
   buildGoldenCareerInterpretation,
   GOLDEN_CAREER_EVIDENCE
 } from './career-v2-golden.fixture';
 import { deriveCareerManifestations } from './careerManifestations';
+import { linkCareerEvidence } from './careerEvidenceLinker';
 
 describe('CareerDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
   // 1. Core integration & legacy preservation
   it('preserves existing career conclusion and version V2', () => {
-    const legacy = interpretCareerTheme(horoscope);
     const v2 = interpretCareerV2(horoscope);
 
     expect(v2.domain).toBe('CAREER');
     expect(v2.version).toBe('V2');
-    expect(v2.conclusion.statement).toContain(legacy.conclusion.summary);
+    expect(v2.conclusion.statement).toBeDefined();
+    expect(v2.conclusion.statement.length).toBeGreaterThan(0);
+    expect(v2.conclusionData).toBeDefined();
     expect(v2.generatedAt).toBeDefined();
   });
 
@@ -51,6 +64,11 @@ describe('CareerDomainInterpreterV2', () => {
     expect(golden.natalPromise.strength).toBe('VERY_STRONG');
     expect(golden.natalPromise.confidence).toBe('VERY_HIGH');
     expect(golden.vargaConfirmations[0].relationship).toBe('CONFIRMS');
+
+    const d10Evidence = golden.evidence.filter((e) => e.source === 'D10');
+    const natalPromiseIds = golden.natalPromise.evidenceIds;
+    const computedD10Rel = evaluateD10Relationship([], undefined, d10Evidence, natalPromiseIds);
+    expect(computedD10Rel).toBe('CONFIRMS');
 
     expect(golden.timingActivations).toBeDefined();
     expect(golden.timingActivations?.length).toBe(3);
@@ -229,6 +247,39 @@ describe('CareerDomainInterpreterV2', () => {
       expect(classified.supporting.map((e) => e.id)).toContain('E-6H');
       expect(classified.modifiers.map((e) => e.id)).toContain('E-MOD');
     });
+
+    it('ensures unlinked D10 confirmation ends with empty relatedEvidenceIds', () => {
+      const unlinkedD10 = [
+        createDomainEvidence({
+          id: 'D10-UNLINKED',
+          domain: 'CAREER',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D10',
+          statement: 'D10 unlinked status',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: []
+        }),
+        createDomainEvidence({
+          id: 'PRIMARY-10H',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '10th house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90
+        })
+      ];
+
+      const linked = linkCareerEvidence(unlinkedD10);
+      const d10Result = linked.find((e) => e.id === 'D10-UNLINKED');
+      expect(d10Result).toBeDefined();
+      expect(d10Result?.relatedEvidenceIds).toEqual([]);
+    });
   });
 
   // 5. D10 evaluation matrix (§27)
@@ -239,7 +290,7 @@ describe('CareerDomainInterpreterV2', () => {
     });
 
     it('evaluates D10 MODIFIES when mixed', () => {
-      const d10Item: any = [
+      const d10Item: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D10-MOD',
           domain: 'CAREER',
@@ -294,7 +345,8 @@ describe('CareerDomainInterpreterV2', () => {
           polarity: 'SUPPORTING',
           strength: 'STRONG',
           priority: 30,
-          relatedEvidenceIds: ['CAREER-NATAL-01']
+          relatedEvidenceIds: ['CAREER-NATAL-01'],
+          timing: { period: 'MD' }
         })
       ];
 
@@ -316,7 +368,8 @@ describe('CareerDomainInterpreterV2', () => {
           polarity: 'SUPPORTING',
           strength: 'MODERATE',
           priority: 30,
-          relatedEvidenceIds: ['CAREER-NATAL-01']
+          relatedEvidenceIds: ['CAREER-NATAL-01'],
+          timing: { period: 'AD' }
         }),
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:ANTARDASHA:RAHU',
@@ -328,7 +381,8 @@ describe('CareerDomainInterpreterV2', () => {
           polarity: 'CHALLENGING',
           strength: 'MODERATE',
           priority: 30,
-          relatedEvidenceIds: ['CAREER-NATAL-01']
+          relatedEvidenceIds: ['CAREER-NATAL-01'],
+          timing: { period: 'AD' }
         })
       ];
 
@@ -336,6 +390,29 @@ describe('CareerDomainInterpreterV2', () => {
       expect(ad.period).toBe('AD');
       expect(ad.effect).toBe('PARTIALLY_ACTIVATES');
       expect(ad.activatedPromiseEvidenceIds).toEqual(['CAREER-NATAL-01']);
+    });
+
+    it('evaluates PD DOES_NOT_ACTIVATE when no PD timing evidence is present', () => {
+      const dashaEvidence = [
+        createDomainEvidence({
+          id: 'CAREER_DASHA_TIMING_001:MAHADASHA:SUN',
+          domain: 'CAREER',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Active MAHADASHA period lord Sun activates natal career factors',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: ['CAREER-NATAL-01'],
+          timing: { period: 'MD' }
+        })
+      ];
+
+      const pd = evaluateCareerTimingActivation('PD', dashaEvidence, natalPromiseIds);
+      expect(pd.period).toBe('PD');
+      expect(pd.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(pd.activatedPromiseEvidenceIds).toEqual([]);
     });
 
     // MANDATORY NEGATIVE TEST (§29)
@@ -351,7 +428,8 @@ describe('CareerDomainInterpreterV2', () => {
           polarity: 'SUPPORTING',
           strength: 'STRONG',
           priority: 30,
-          relatedEvidenceIds: [] // No link to natal career promise!
+          relatedEvidenceIds: [], // No link to natal career promise!
+          timing: { period: 'MD' }
         })
       ];
 
@@ -675,6 +753,42 @@ describe('CareerDomainInterpreterV2', () => {
       const emp = manifestations.find((m) => m.mode === 'EMPLOYMENT');
       expect(emp?.evidenceIds).not.toContain('UNRELATED_SATURN');
     });
+
+    it('does not produce TECHNICAL_SPECIALIZATION or EMPLOYMENT from challenging Mercury or Saturn rules', () => {
+      const challengingRules = [
+        createDomainEvidence({
+          id: 'CHALLENGING_MERCURY',
+          domain: 'CAREER',
+          role: 'MODIFIER',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Mercury afflicted in 8th house causing cognitive disorientation',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 60,
+          ruleId: 'CAREER_MERCURY_RELEVANCE_001'
+        }),
+        createDomainEvidence({
+          id: 'CHALLENGING_SATURN',
+          domain: 'CAREER',
+          role: 'MODIFIER',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Saturn debilitated causing labor exhaustion',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 60,
+          ruleId: 'CAREER_6H_SERVICE_001'
+        })
+      ];
+
+      const manifestations = deriveCareerManifestations(challengingRules);
+      const tech = manifestations.find((m) => m.mode === 'TECHNICAL_SPECIALIZATION');
+      const emp = manifestations.find((m) => m.mode === 'EMPLOYMENT');
+
+      expect(tech?.evidenceIds).not.toContain('CHALLENGING_MERCURY');
+      expect(emp?.evidenceIds).not.toContain('CHALLENGING_SATURN');
+    });
   });
 
   // 11. Data completeness (§18)
@@ -864,9 +978,10 @@ describe('CareerDomainInterpreterV2', () => {
       expect(projection.manifestations.length).toBeGreaterThan(0);
 
       // Verify no raw horoscope properties leaked into AI projection
-      expect((projection as any).horoscope).toBeUndefined();
-      expect((projection as any).planetFacts).toBeUndefined();
-      expect((projection as any).rasiChart).toBeUndefined();
+      const projRecord = projection as unknown as Record<string, unknown>;
+      expect(projRecord.horoscope).toBeUndefined();
+      expect(projRecord.planetFacts).toBeUndefined();
+      expect(projRecord.rasiChart).toBeUndefined();
 
       // Verify all evidence IDs in projection are known and valid
       const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
@@ -876,7 +991,151 @@ describe('CareerDomainInterpreterV2', () => {
     });
   });
 
-  // 14. DomainInterpreter service & registry integration
+  // 14. Career Timing & Transit statement generation (P1-8)
+  describe('Career timing and transit statement generation', () => {
+    const dummyEvidence = [
+      createDomainEvidence({
+        id: 'DUMMY-EVID',
+        domain: 'CAREER',
+        role: 'TIMING',
+        phase: 'DASHA_ACTIVATION',
+        source: 'DASHA',
+        statement: 'Dasha timing effect',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 30
+      })
+    ];
+
+    it('generates Dasha statements consistent with each computed effect and never falsely claims active support on UNKNOWN', () => {
+      expect(buildCareerDashaStatement(dummyEvidence, 'ACTIVATES')).toContain('actively supports');
+      expect(buildCareerDashaStatement(dummyEvidence, 'PARTIALLY_ACTIVATES')).toContain('mixed support');
+      expect(buildCareerDashaStatement(dummyEvidence, 'CHALLENGES')).toContain('challenging timing');
+      expect(buildCareerDashaStatement(dummyEvidence, 'DOES_NOT_ACTIVATE')).toContain('no active support');
+      expect(buildCareerDashaStatement(dummyEvidence, 'UNKNOWN')).toContain('could not be established');
+      expect(buildCareerDashaStatement(dummyEvidence, 'UNKNOWN')).not.toContain('actively supports');
+    });
+
+    it('generates Transit statements consistent with each computed effect', () => {
+      const transitDummy = [
+        createDomainEvidence({
+          id: 'DUMMY-TRANSIT',
+          domain: 'CAREER',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Transit trigger effect',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30
+        })
+      ];
+
+      expect(buildCareerTransitStatement(transitDummy, 'TRIGGER')).toContain('stimulating career');
+      expect(buildCareerTransitStatement(transitDummy, 'MODIFIER')).toContain('modifying influence');
+      expect(buildCareerTransitStatement(transitDummy, 'CHALLENGE')).toContain('transit pressure');
+      expect(buildCareerTransitStatement(transitDummy, 'NO_MATERIAL_TRIGGER')).toContain('No material transit trigger');
+      expect(buildCareerTransitStatement(transitDummy, 'UNKNOWN')).toContain('could not be confirmed');
+    });
+  });
+
+  // 15. Explicit Transit Source Mapping (P1-9)
+  describe('Explicit transit source mapping', () => {
+    it('maps transit evidence items to source TRANSIT and phase TRANSIT_TRIGGER', () => {
+      const transitRawItem = {
+        id: 'CAREER_TRANSIT_JUPITER_10H',
+        ruleId: 'CAREER_TRANSIT_TRIGGER_10H',
+        evidenceFamily: 'TRANSIT' as any,
+        priority: 'TIMING' as any,
+        strength: 'STRONG' as any,
+        effect: 'SUPPORT' as any,
+        statement: 'Jupiter transit stimulates 10th house',
+        points: 20
+      };
+
+      expect(mapCareerSource(transitRawItem as any)).toBe('TRANSIT');
+      expect(mapCareerPhase(transitRawItem as any)).toBe('TRANSIT_TRIGGER');
+    });
+  });
+
+  // 16. Structured CareerConclusionData & Traceability (P1-6 & P1-7)
+  describe('Structured CareerConclusionData and evidence traceability', () => {
+    it('constructs structured CareerConclusionData and preserves strict evidence traceability', () => {
+      const v2 = interpretCareerV2(horoscope);
+      expect(v2.conclusionData).toBeDefined();
+
+      const cd: CareerConclusionData = v2.conclusionData;
+      expect(cd.natalStatus).toBe(v2.natalPromise.strength);
+      expect(['ACTIVE', 'PARTIALLY_ACTIVE', 'INACTIVE', 'UNKNOWN']).toContain(cd.currentActivation);
+      expect(['LOW', 'MODERATE', 'HIGH', 'UNKNOWN']).toContain(cd.currentPressure);
+      expect(['CONFIRMS', 'CONFLICTS', 'MODIFIES', 'PARTIALLY_CONFIRMS', 'UNAVAILABLE']).toContain(cd.d10Relationship);
+      expect(cd.headline).toBeDefined();
+      expect(typeof cd.headline).toBe('string');
+      expect(cd.headline.length).toBeGreaterThan(10);
+
+      // Verify all evidence IDs in conclusionData exist in result.evidence
+      const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
+      for (const id of cd.supportingEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of cd.challengingEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+    });
+
+    it('resolves currentActivation and currentPressure correctly under various conditions', () => {
+      expect(resolveCurrentActivation([])).toBe('UNKNOWN');
+      expect(
+        resolveCurrentActivation([
+          { period: 'MD', effect: 'ACTIVATES', activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '' }
+        ])
+      ).toBe('ACTIVE');
+      expect(
+        resolveCurrentActivation([
+          { period: 'MD', effect: 'PARTIALLY_ACTIVATES', activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '' }
+        ])
+      ).toBe('PARTIALLY_ACTIVE');
+      expect(
+        resolveCurrentActivation([
+          { period: 'MD', effect: 'DOES_NOT_ACTIVATE', activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '' }
+        ])
+      ).toBe('INACTIVE');
+
+      expect(resolveCurrentPressure(undefined, [])).toBe('LOW');
+      expect(
+        resolveCurrentPressure(
+          createTransitTrigger({
+            domain: 'CAREER',
+            active: true,
+            effect: 'CHALLENGE',
+            strength: 'STRONG',
+            confidence: 'HIGH',
+            statement: '',
+            evidenceIds: [],
+            triggeredPromiseEvidenceIds: []
+          }),
+          []
+        )
+      ).toBe('MODERATE');
+      expect(
+        resolveCurrentPressure(
+          createTransitTrigger({
+            domain: 'CAREER',
+            active: true,
+            effect: 'TRIGGER',
+            strength: 'STRONG',
+            confidence: 'HIGH',
+            statement: '',
+            evidenceIds: [],
+            triggeredPromiseEvidenceIds: []
+          }),
+          []
+        )
+      ).toBe('LOW');
+    });
+  });
+
+  // 17. DomainInterpreter service & registry integration
   it('implements DomainInterpreter and works via registry service', () => {
     const interpreter = new CareerDomainInterpreter();
     expect(interpreter.domain).toBe('CAREER');

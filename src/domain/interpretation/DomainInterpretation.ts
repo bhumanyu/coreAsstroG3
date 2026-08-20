@@ -21,6 +21,7 @@ export interface DomainInterpretation {
   readonly conclusion: DomainConclusion;
   readonly timingActivations?: readonly any[];
   readonly dataCompleteness?: any;
+  readonly conclusionData?: any;
   readonly generatedAt: string;
 }
 
@@ -43,6 +44,9 @@ export function createDomainInterpretation(
     ]),
     ...(interpretation.timingActivations
       ? { timingActivations: Object.freeze([...interpretation.timingActivations]) }
+      : {}),
+    ...(interpretation.conclusionData
+      ? { conclusionData: Object.freeze({ ...interpretation.conclusionData }) }
       : {})
   });
 }

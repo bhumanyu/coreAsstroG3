@@ -29,6 +29,7 @@ export interface DomainInterpretationAiProjection {
     readonly strength: DomainInterpretation['conclusion']['strength'];
     readonly confidence: DomainInterpretation['conclusion']['confidence'];
     readonly statement: string;
+    readonly conclusionData?: any;
   };
 
   readonly vargaConfirmations: readonly {
@@ -76,7 +77,10 @@ export function projectDomainInterpretationForAi(
     conclusion: Object.freeze({
       strength: interpretation.conclusion.strength,
       confidence: interpretation.conclusion.confidence,
-      statement: interpretation.conclusion.statement
+      statement: interpretation.conclusion.statement,
+      ...(interpretation.conclusionData
+        ? { conclusionData: Object.freeze({ ...interpretation.conclusionData }) }
+        : {})
     }),
 
     vargaConfirmations: Object.freeze(

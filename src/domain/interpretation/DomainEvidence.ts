@@ -20,6 +20,7 @@ export interface DomainEvidence {
   readonly ruleId?: string;
   readonly relatedEvidenceIds: readonly string[];
   readonly notes?: string;
+  readonly timing?: { readonly period: 'MD' | 'AD' | 'PD' };
 }
 
 export function createDomainEvidence(
@@ -31,6 +32,7 @@ export function createDomainEvidence(
     ...evidence,
     relatedEvidenceIds: Object.freeze([
       ...(evidence.relatedEvidenceIds ?? [])
-    ])
+    ]),
+    ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {})
   });
 }

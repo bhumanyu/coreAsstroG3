@@ -87,10 +87,6 @@ export function resolveRelatedCareerPromiseEvidenceIds(
 export function linkCareerEvidence(
   evidence: readonly DomainEvidence[]
 ): readonly DomainEvidence[] {
-  const primaryPromiseIds = evidence
-    .filter((e) => e.role === 'PRIMARY' && e.phase === 'NATAL_PROMISE')
-    .map((e) => e.id);
-
   return Object.freeze(
     evidence.map((item) => {
       // If already linked, ensure unique and valid links
@@ -102,15 +98,6 @@ export function linkCareerEvidence(
         return Object.freeze({
           ...item,
           relatedEvidenceIds: Object.freeze(Array.from(new Set(validLinks)))
-        });
-      }
-
-      // If D10 and no links yet, check if primary promise exists
-      if (item.source === 'D10' || item.role === 'CONFIRMATION') {
-        const related = primaryPromiseIds.length > 0 ? primaryPromiseIds : [];
-        return Object.freeze({
-          ...item,
-          relatedEvidenceIds: Object.freeze(Array.from(new Set(related)))
         });
       }
 

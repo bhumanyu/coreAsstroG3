@@ -14,6 +14,16 @@ import type {
 import type { CareerEvidenceClassification } from './careerTypes';
 import { resolveRelatedCareerPromiseEvidenceIds } from './careerEvidenceLinker';
 
+export function mapCareerDashaPeriod(
+  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
+): 'MD' | 'AD' | 'PD' | undefined {
+  const level = item.timingEvidence?.dashaLevel;
+  if (level === 'MAHADASHA') return 'MD';
+  if (level === 'ANTARDASHA') return 'AD';
+  if (level === 'PRATYANTARDASHA') return 'PD';
+  return undefined;
+}
+
 export function buildCareerEvidence(
   rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[]
 ): readonly DomainEvidence[] {
@@ -21,6 +31,8 @@ export function buildCareerEvidence(
     rawEvidence.map((item) => {
       const role = mapCareerRole(item);
       const relatedEvidenceIds = resolveRelatedCareerPromiseEvidenceIds(item, rawEvidence);
+      const period = mapCareerDashaPeriod(item);
+      const timing = period ? { period } : undefined;
 
       return createDomainEvidence({
         id: item.id,
@@ -33,7 +45,8 @@ export function buildCareerEvidence(
         strength: mapCareerStrength(item.strength),
         priority: mapCareerPriority(item.priority),
         ruleId: item.ruleId,
-        relatedEvidenceIds
+        relatedEvidenceIds,
+        timing
       });
     })
   );
@@ -81,9 +94,24 @@ export function mapCareerRole(
   return 'SECONDARY';
 }
 
+export function isCareerTransitEvidence(
+  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
+): boolean {
+  return (
+    item.ruleId.startsWith('CAREER_TRANSIT_') ||
+    item.ruleId.includes('TRANSIT') ||
+    item.id.includes('TRANSIT') ||
+    Boolean((item as any).transitEvidence) ||
+    (item.evidenceFamily as string) === 'TRANSIT'
+  );
+}
+
 export function mapCareerPhase(
   item: ThemeInterpretationEvidence<CareerEvidenceFamily>
 ): EvidencePhase {
+  if (isCareerTransitEvidence(item)) {
+    return 'TRANSIT_TRIGGER';
+  }
   if (
     item.vargaEvidence ||
     item.evidenceFamily === CareerEvidenceFamily.D10 ||
@@ -113,8 +141,11 @@ export function mapCareerSource(
   ) {
     return 'D10';
   }
-  if (item.evidenceFamily === CareerEvidenceFamily.DASHA) {
+  if (item.evidenceFamily === CareerEvidenceFamily.DASHA || Boolean(item.timingEvidence)) {
     return 'DASHA';
+  }
+  if (isCareerTransitEvidence(item)) {
+    return 'TRANSIT';
   }
   return 'D1';
 }

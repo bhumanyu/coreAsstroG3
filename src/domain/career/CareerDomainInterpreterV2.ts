@@ -60,7 +60,11 @@ import {
 } from './careerManifestations';
 import {
   buildCareerConclusion,
+  buildCareerConclusionData,
   resolveCareerConclusionStrength,
+  resolveCurrentActivation,
+  resolveCurrentPressure,
+  buildCareerHeadline,
   calculateDomainStrength,
   calculateVargaStrength,
   buildCareerNatalStatement,
@@ -113,7 +117,7 @@ export function interpretCareerV2(
     statement: buildCareerNatalStatement(
       supportingEvidence,
       challengingEvidence,
-      legacyCareer.conclusion.summary
+      legacyCareer.conclusion?.summary
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
@@ -139,7 +143,7 @@ export function interpretCareerV2(
     effect: dashaEffect,
     strength: calculateDomainStrength(dashaSupporting, dashaChallenging),
     confidence: calculateEvidenceConfidence(dashaEvidence),
-    statement: buildCareerDashaStatement(dashaEvidence),
+    statement: buildCareerDashaStatement(dashaEvidence, dashaEffect),
     evidenceIds: dashaEvidence.map((item) => item.id),
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
@@ -172,7 +176,7 @@ export function interpretCareerV2(
     effect: transitEffect,
     strength: calculateDomainStrength(transitSupporting, transitChallenging),
     confidence: calculateEvidenceConfidence(transitEvidence),
-    statement: buildCareerTransitStatement(transitEvidence),
+    statement: buildCareerTransitStatement(transitEvidence, transitEffect),
     evidenceIds: transitEvidence.map((item) => item.id),
     triggeredPromiseEvidenceIds: transitPromiseEvidenceIds
   });
@@ -207,6 +211,17 @@ export function interpretCareerV2(
     conflicts
   );
 
+  const conclusionData = buildCareerConclusionData(
+    natalStrength,
+    d10Relationship,
+    timingActivations,
+    transitTrigger,
+    conflicts,
+    manifestations,
+    supportingEvidence.map((item) => item.id),
+    challengingEvidence.map((item) => item.id)
+  );
+
   const conclusion = createDomainConclusion({
     domain: 'CAREER',
     strength: conclusionStrength,
@@ -220,12 +235,13 @@ export function interpretCareerV2(
       dashaActivation,
       transitTrigger,
       vargaConfirmations,
-      legacyCareer.conclusion.summary,
+      legacyCareer.conclusion?.summary,
       d10Relationship,
       {
         timingActivations,
         conflicts,
-        manifestations
+        manifestations,
+        conclusionData
       }
     ),
     primaryEvidenceIds: evidence
@@ -247,7 +263,8 @@ export function interpretCareerV2(
     conflicts,
     conclusion,
     timingActivations,
-    dataCompleteness
+    dataCompleteness,
+    conclusionData
   });
 }
 
@@ -275,23 +292,9 @@ export function evaluateCareerTimingActivation(
   timingEvidence: readonly DomainEvidence[],
   natalPromiseEvidenceIds: readonly string[]
 ): CareerTimingActivation {
-  const periodEvidence = timingEvidence.filter((item) => {
-    const text = `${item.id} ${item.ruleId} ${item.statement}`.toUpperCase();
-    if (period === 'MD') {
-      return text.includes('MAHADASHA') || text.includes(':MD:') || text.includes('MD_') || (!text.includes('ANTARDASHA') && !text.includes('PRATYANTARDASHA'));
-    }
-    if (period === 'AD') {
-      return text.includes('ANTARDASHA') || text.includes(':AD:') || text.includes('AD_');
-    }
-    if (period === 'PD') {
-      return text.includes('PRATYANTARDASHA') || text.includes(':PD:') || text.includes('PD_');
-    }
-    return false;
-  });
+  const periodEvidence = timingEvidence.filter((e) => e.timing?.period === period);
 
-  const evidenceToEval = periodEvidence.length > 0 ? periodEvidence : (timingEvidence.length > 0 && period === 'MD' ? timingEvidence : []);
-
-  if (evidenceToEval.length === 0) {
+  if (periodEvidence.length === 0) {
     return Object.freeze({
       period,
       effect: 'DOES_NOT_ACTIVATE',
@@ -301,7 +304,7 @@ export function evaluateCareerTimingActivation(
     });
   }
 
-  const linkedEvidence = evidenceToEval.filter((item) =>
+  const linkedEvidence = periodEvidence.filter((item) =>
     item.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
   );
 
@@ -310,7 +313,7 @@ export function evaluateCareerTimingActivation(
       period,
       effect: 'UNKNOWN',
       activatedPromiseEvidenceIds: Object.freeze([]),
-      evidenceIds: Object.freeze(evidenceToEval.map((item) => item.id)),
+      evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
       statement: `${period} activation could not be established from linked natal career evidence.`
     });
   }
@@ -337,7 +340,7 @@ export function evaluateCareerTimingActivation(
     period,
     effect,
     activatedPromiseEvidenceIds: Object.freeze(activatedPromiseEvidenceIds),
-    evidenceIds: Object.freeze(evidenceToEval.map((item) => item.id)),
+    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
     statement: buildCareerTimingStatement(period, effect)
   });
 }
@@ -403,7 +406,7 @@ export function evaluateTransitEffect(
 }
 
 export function evaluateD10Relationship(
-  rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[],
+  rawEvidence?: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[],
   legacyStatus?: string,
   d10Evidence?: readonly DomainEvidence[],
   natalPromiseEvidenceIds?: readonly string[]
@@ -412,6 +415,23 @@ export function evaluateD10Relationship(
     return 'UNAVAILABLE';
   }
 
+  // DomainEvidence-based path (primary)
+  if (d10Evidence && d10Evidence.length > 0) {
+    const linkedD10 = natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
+      ? d10Evidence.filter((e) =>
+          e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
+        )
+      : d10Evidence;
+
+    const evalTarget = linkedD10.length > 0 ? linkedD10 : d10Evidence;
+    const hasSupport = evalTarget.some((e) => e.polarity === 'SUPPORTING');
+    const hasChallenge = evalTarget.some((e) => e.polarity === 'CHALLENGING');
+    if (hasSupport && !hasChallenge) return 'CONFIRMS';
+    if (hasSupport && hasChallenge) return 'MODIFIES';
+    if (hasChallenge && !hasSupport) return 'CONFLICTS';
+  }
+
+  // Fallback hints from raw evidence or legacy status
   const d10Item = rawEvidence?.find(
     (e) =>
       e.evidenceFamily === CareerEvidenceFamily.D10 ||
@@ -442,14 +462,6 @@ export function evaluateD10Relationship(
     return 'MODIFIES';
   }
 
-  if (d10Evidence && d10Evidence.length > 0) {
-    const hasSupport = d10Evidence.some((e) => e.polarity === 'SUPPORTING');
-    const hasChallenge = d10Evidence.some((e) => e.polarity === 'CHALLENGING');
-    if (hasSupport && !hasChallenge) return 'CONFIRMS';
-    if (hasSupport && hasChallenge) return 'MODIFIES';
-    if (hasChallenge) return 'CONFLICTS';
-  }
-
   return 'UNAVAILABLE';
 }
 
@@ -478,7 +490,11 @@ export {
 
 export {
   buildCareerConclusion,
+  buildCareerConclusionData,
   resolveCareerConclusionStrength,
+  resolveCurrentActivation,
+  resolveCurrentPressure,
+  buildCareerHeadline,
   calculateDomainStrength,
   calculateVargaStrength,
   buildCareerNatalStatement,
