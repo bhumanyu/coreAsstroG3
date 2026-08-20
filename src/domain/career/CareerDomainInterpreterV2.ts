@@ -6,13 +6,11 @@ import {
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import {
   buildDomainInterpretation,
-  createDomainEvidence,
   createNatalPromise,
   createDashaActivation,
   createTransitTrigger,
   createVargaConfirmation,
   createDomainConclusion,
-  createDomainManifestation,
   calculateEvidenceConfidence,
   detectDomainConflicts
 } from '../interpretation';
@@ -34,13 +32,51 @@ import type {
   TransitTrigger,
   VargaConfirmation
 } from '../interpretation';
+import type {
+  CareerManifestationMode,
+  CareerManifestation,
+  CareerTimingActivation,
+  CareerDataCompleteness,
+  CareerEvidenceClassification
+} from './careerTypes';
+import {
+  buildCareerEvidence,
+  classifyCareerEvidence,
+  mapCareerRole,
+  mapCareerPhase,
+  mapCareerSource,
+  mapCareerPolarity,
+  mapCareerStrength,
+  mapCareerPriority
+} from './careerEvidenceMapper';
+import {
+  linkCareerEvidence,
+  resolveRelatedCareerPromiseEvidenceIds
+} from './careerEvidenceLinker';
+import {
+  deriveCareerManifestations,
+  buildCareerManifestations,
+  calculateManifestationConfidence
+} from './careerManifestations';
+import {
+  buildCareerConclusion,
+  resolveCareerConclusionStrength,
+  calculateDomainStrength,
+  calculateVargaStrength,
+  buildCareerNatalStatement,
+  buildCareerDashaStatement,
+  buildCareerTransitStatement,
+  buildD10Statement
+} from './careerConclusion';
+import { calculateCareerDataCompleteness } from './careerDataCompleteness';
 
 export function interpretCareerV2(
   horoscope: Horoscope
 ): DomainInterpretation {
   const legacyCareer = interpretCareerTheme(horoscope);
   const rawEvidence = legacyCareer.evidence;
-  const evidence = buildCareerEvidence(rawEvidence);
+  const rawMappedEvidence = buildCareerEvidence(rawEvidence);
+  const evidence = linkCareerEvidence(rawMappedEvidence);
 
   const supportingEvidence = evidence.filter(
     (item) => item.polarity === 'SUPPORTING'
@@ -51,15 +87,20 @@ export function interpretCareerV2(
 
   const natalSupporting = supportingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
   const natalChallenging = challengingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
+  const natalPromiseEvidence = evidence.filter((item) => item.phase === 'NATAL_PROMISE');
+  const natalPromiseEvidenceIds = natalPromiseEvidence.map((item) => item.id);
 
   const conflicts = detectDomainConflicts('CAREER', evidence);
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
   const natalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
+  const dataCompleteness = calculateCareerDataCompleteness(evidence, rawEvidence);
+
   const natalConfidence = calculateEvidenceConfidence(
-    evidence.filter((item) => item.phase === 'NATAL_PROMISE'),
+    natalPromiseEvidence,
     {
+      dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
       hasPrimaryChallenge,
       hasVargaConflict: false
     }
@@ -74,20 +115,21 @@ export function interpretCareerV2(
       challengingEvidence,
       legacyCareer.conclusion.summary
     ),
-    evidenceIds: evidence
-      .filter((item) => item.phase === 'NATAL_PROMISE')
-      .map((item) => item.id),
+    evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
     challengingEvidenceIds: natalChallenging.map((item) => item.id)
   });
 
+  // Dasha Timing & Multi-period evaluation (MD / AD / PD)
   const dashaEvidence = evidence.filter(
-    (item) => item.phase === 'DASHA_ACTIVATION'
+    (item) => item.phase === 'DASHA_ACTIVATION' || item.source === 'DASHA'
   );
   const dashaSupporting = dashaEvidence.filter((item) => item.polarity === 'SUPPORTING');
   const dashaChallenging = dashaEvidence.filter((item) => item.polarity === 'CHALLENGING');
 
-  const rawDashaPromiseLinks = dashaEvidence.flatMap((item) => item.relatedEvidenceIds);
+  const rawDashaPromiseLinks = dashaEvidence.flatMap((item) =>
+    item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
+  );
   const dashaPromiseEvidenceIds = Array.from(new Set(rawDashaPromiseLinks));
   const dashaEffect = evaluateDashaEffect(dashaEvidence, dashaPromiseEvidenceIds);
 
@@ -102,13 +144,25 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
+  const mdActivation = evaluateCareerTimingActivation('MD', dashaEvidence, natalPromiseEvidenceIds);
+  const adActivation = evaluateCareerTimingActivation('AD', dashaEvidence, natalPromiseEvidenceIds);
+  const pdActivation = evaluateCareerTimingActivation('PD', dashaEvidence, natalPromiseEvidenceIds);
+  const timingActivations: readonly CareerTimingActivation[] = Object.freeze([
+    mdActivation,
+    adActivation,
+    pdActivation
+  ]);
+
+  // Transit Trigger evaluation
   const transitEvidence = evidence.filter(
-    (item) => item.phase === 'TRANSIT_TRIGGER'
+    (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
   );
   const transitSupporting = transitEvidence.filter((item) => item.polarity === 'SUPPORTING');
   const transitChallenging = transitEvidence.filter((item) => item.polarity === 'CHALLENGING');
 
-  const rawTransitPromiseLinks = transitEvidence.flatMap((item) => item.relatedEvidenceIds);
+  const rawTransitPromiseLinks = transitEvidence.flatMap((item) =>
+    item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
+  );
   const transitPromiseEvidenceIds = Array.from(new Set(rawTransitPromiseLinks));
   const transitEffect = evaluateTransitEffect(transitEvidence, transitPromiseEvidenceIds);
 
@@ -123,8 +177,14 @@ export function interpretCareerV2(
     triggeredPromiseEvidenceIds: transitPromiseEvidenceIds
   });
 
+  // D10 Varga Confirmation
   const d10Evidence = evidence.filter((item) => item.source === 'D10');
-  const d10Relationship = evaluateD10Relationship(rawEvidence, legacyCareer.metadata?.vargaConfirmationStatus);
+  const d10Relationship = evaluateD10Relationship(
+    rawEvidence,
+    legacyCareer.metadata?.vargaConfirmationStatus,
+    d10Evidence,
+    natalPromiseEvidenceIds
+  );
 
   const vargaConfirmations: readonly VargaConfirmation[] = [
     createVargaConfirmation({
@@ -138,7 +198,7 @@ export function interpretCareerV2(
     })
   ];
 
-  const manifestations = buildCareerManifestations(rawEvidence, evidence);
+  const manifestations = deriveCareerManifestations(evidence, rawEvidence);
 
   // Conclusion strength logic with D10 downgrade handling and hierarchy preservation
   const conclusionStrength = resolveCareerConclusionStrength(
@@ -151,6 +211,7 @@ export function interpretCareerV2(
     domain: 'CAREER',
     strength: conclusionStrength,
     confidence: calculateEvidenceConfidence(evidence, {
+      dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
       hasVargaConflict,
       hasPrimaryChallenge
     }),
@@ -160,10 +221,15 @@ export function interpretCareerV2(
       transitTrigger,
       vargaConfirmations,
       legacyCareer.conclusion.summary,
-      d10Relationship
+      d10Relationship,
+      {
+        timingActivations,
+        conflicts,
+        manifestations
+      }
     ),
     primaryEvidenceIds: evidence
-      .filter((item) => item.priority >= 90)
+      .filter((item) => item.priority >= 90 || item.role === 'PRIMARY')
       .map((item) => item.id),
     supportingEvidenceIds: supportingEvidence.map((item) => item.id),
     challengingEvidenceIds: challengingEvidence.map((item) => item.id),
@@ -179,210 +245,101 @@ export function interpretCareerV2(
     vargaConfirmations,
     manifestations,
     conflicts,
-    conclusion
+    conclusion,
+    timingActivations,
+    dataCompleteness
   });
 }
 
-export function buildCareerEvidence(
-  rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[]
-): readonly DomainEvidence[] {
-  return rawEvidence.map((item) => {
-    const role = mapCareerRole(item);
-    const relatedEvidenceIds = resolveRelatedCareerPromiseEvidenceIds(item, rawEvidence);
+export function buildCareerTimingStatement(
+  period: 'MD' | 'AD' | 'PD',
+  effect: TimingActivationEffect
+): string {
+  switch (effect) {
+    case 'ACTIVATES':
+      return `${period} period lord actively supports and activates natal career promise.`;
+    case 'PARTIALLY_ACTIVATES':
+      return `${period} period lord partially activates career potential alongside concurrent adjustments.`;
+    case 'CHALLENGES':
+      return `${period} period lord introduces timing friction or challenges to career initiatives.`;
+    case 'DOES_NOT_ACTIVATE':
+      return `${period} period lord does not directly activate natal career promise.`;
+    case 'UNKNOWN':
+    default:
+      return `${period} activation could not be established from linked natal career evidence.`;
+  }
+}
 
-    return createDomainEvidence({
-      id: item.id,
-      domain: 'CAREER',
-      role,
-      phase: mapCareerPhase(item),
-      source: mapCareerSource(item),
-      statement: item.statement,
-      polarity: mapCareerPolarity(item.effect),
-      strength: mapCareerStrength(item.strength),
-      priority: mapCareerPriority(item.priority),
-      ruleId: item.ruleId,
-      relatedEvidenceIds
+export function evaluateCareerTimingActivation(
+  period: 'MD' | 'AD' | 'PD',
+  timingEvidence: readonly DomainEvidence[],
+  natalPromiseEvidenceIds: readonly string[]
+): CareerTimingActivation {
+  const periodEvidence = timingEvidence.filter((item) => {
+    const text = `${item.id} ${item.ruleId} ${item.statement}`.toUpperCase();
+    if (period === 'MD') {
+      return text.includes('MAHADASHA') || text.includes(':MD:') || text.includes('MD_') || (!text.includes('ANTARDASHA') && !text.includes('PRATYANTARDASHA'));
+    }
+    if (period === 'AD') {
+      return text.includes('ANTARDASHA') || text.includes(':AD:') || text.includes('AD_');
+    }
+    if (period === 'PD') {
+      return text.includes('PRATYANTARDASHA') || text.includes(':PD:') || text.includes('PD_');
+    }
+    return false;
+  });
+
+  const evidenceToEval = periodEvidence.length > 0 ? periodEvidence : (timingEvidence.length > 0 && period === 'MD' ? timingEvidence : []);
+
+  if (evidenceToEval.length === 0) {
+    return Object.freeze({
+      period,
+      effect: 'DOES_NOT_ACTIVATE',
+      activatedPromiseEvidenceIds: Object.freeze([]),
+      evidenceIds: Object.freeze([]),
+      statement: `${period} period lord does not directly activate natal career promise.`
     });
-  });
-}
+  }
 
-export function mapCareerRole(
-  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
-): EvidenceRole {
-  if (item.priority === 'PRIMARY') {
-    return 'PRIMARY';
-  }
-  if (
-    item.vargaEvidence ||
-    item.evidenceFamily === CareerEvidenceFamily.D10 ||
-    item.dimension === 'CONFIRMATION'
-  ) {
-    return 'CONFIRMATION';
-  }
-  if (
-    item.evidenceFamily === CareerEvidenceFamily.DASHA ||
-    item.dimension === 'TIMING'
-  ) {
-    return 'TIMING';
-  }
-  if (item.dimension === 'MODIFIER') {
-    return 'MODIFIER';
-  }
-  if (item.priority === 'SECONDARY') {
-    return 'SECONDARY';
-  }
-  return 'SECONDARY';
-}
-
-export function resolveRelatedCareerPromiseEvidenceIds(
-  item: ThemeInterpretationEvidence<CareerEvidenceFamily>,
-  allRawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[]
-): readonly string[] {
-  const structuralItems = allRawEvidence.filter(
-    (e) =>
-      e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE ||
-      e.evidenceFamily === CareerEvidenceFamily.TENTH_LORD ||
-      e.evidenceFamily === CareerEvidenceFamily.SIXTH_HOUSE ||
-      e.evidenceFamily === CareerEvidenceFamily.SIXTH_LORD ||
-      e.evidenceFamily === CareerEvidenceFamily.SECOND_HOUSE ||
-      e.evidenceFamily === CareerEvidenceFamily.SECOND_LORD ||
-      e.evidenceFamily === CareerEvidenceFamily.ELEVENTH_HOUSE ||
-      e.evidenceFamily === CareerEvidenceFamily.ELEVENTH_LORD ||
-      (e.priority === 'PRIMARY' && e.dimension !== 'TIMING' && !e.vargaEvidence)
+  const linkedEvidence = evidenceToEval.filter((item) =>
+    item.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
   );
 
-  if (structuralItems.length === 0) {
-    return [];
+  if (linkedEvidence.length === 0) {
+    return Object.freeze({
+      period,
+      effect: 'UNKNOWN',
+      activatedPromiseEvidenceIds: Object.freeze([]),
+      evidenceIds: Object.freeze(evidenceToEval.map((item) => item.id)),
+      statement: `${period} activation could not be established from linked natal career evidence.`
+    });
   }
 
-  // If item is D10 varga confirmation, link to 10th house / 10th lord structural items
-  if (
-    item.evidenceFamily === CareerEvidenceFamily.D10 ||
-    item.vargaEvidence?.varga === 'D10'
-  ) {
-    const tenthItems = structuralItems.filter(
-      (e) =>
-        e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE ||
-        e.evidenceFamily === CareerEvidenceFamily.TENTH_LORD ||
-        e.priority === 'PRIMARY'
-    );
-    return tenthItems.length > 0
-      ? tenthItems.map((e) => e.id)
-      : structuralItems.slice(0, 2).map((e) => e.id);
+  const support = linkedEvidence.some((item) => item.polarity === 'SUPPORTING');
+  const challenge = linkedEvidence.some((item) => item.polarity === 'CHALLENGING');
+
+  let effect: TimingActivationEffect;
+  if (support && challenge) {
+    effect = 'PARTIALLY_ACTIVATES';
+  } else if (support) {
+    effect = 'ACTIVATES';
+  } else if (challenge) {
+    effect = 'CHALLENGES';
+  } else {
+    effect = 'DOES_NOT_ACTIVATE';
   }
 
-  // If item is Dasha timing, link to participating houses/planets
-  if (
-    item.evidenceFamily === CareerEvidenceFamily.DASHA ||
-    item.dimension === 'TIMING'
-  ) {
-    const timingHouses = item.timingEvidence?.houses ?? [];
-    if (timingHouses.length > 0) {
-      const houseMatches = structuralItems.filter(
-        (e) =>
-          (timingHouses.includes(10) &&
-            (e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE ||
-              e.evidenceFamily === CareerEvidenceFamily.TENTH_LORD)) ||
-          (timingHouses.includes(6) &&
-            (e.evidenceFamily === CareerEvidenceFamily.SIXTH_HOUSE ||
-              e.evidenceFamily === CareerEvidenceFamily.SIXTH_LORD)) ||
-          (timingHouses.includes(2) &&
-            (e.evidenceFamily === CareerEvidenceFamily.SECOND_HOUSE ||
-              e.evidenceFamily === CareerEvidenceFamily.SECOND_LORD)) ||
-          (timingHouses.includes(11) &&
-            (e.evidenceFamily === CareerEvidenceFamily.ELEVENTH_HOUSE ||
-              e.evidenceFamily === CareerEvidenceFamily.ELEVENTH_LORD))
-      );
-      if (houseMatches.length > 0) {
-        return houseMatches.map((e) => e.id);
-      }
-    }
+  const activatedPromiseEvidenceIds = Array.from(
+    new Set(linkedEvidence.flatMap((item) => item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))))
+  );
 
-    // Default dasha link to primary structural factors
-    return structuralItems
-      .filter((e) => e.priority === 'PRIMARY')
-      .map((e) => e.id);
-  }
-
-  return [];
-}
-
-export function mapCareerPhase(
-  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
-): EvidencePhase {
-  if (
-    item.vargaEvidence ||
-    item.evidenceFamily === CareerEvidenceFamily.D10 ||
-    item.dimension === 'CONFIRMATION'
-  ) {
-    return 'VARGA_CONFIRMATION';
-  }
-  if (
-    item.evidenceFamily === CareerEvidenceFamily.DASHA ||
-    item.dimension === 'TIMING'
-  ) {
-    return 'DASHA_ACTIVATION';
-  }
-  if (item.dimension === 'MODIFIER') {
-    return 'MODIFIER';
-  }
-  return 'NATAL_PROMISE';
-}
-
-export function mapCareerSource(
-  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
-): EvidenceSource {
-  if (
-    item.vargaEvidence?.varga === 'D10' ||
-    item.evidenceFamily === CareerEvidenceFamily.D10
-  ) {
-    return 'D10';
-  }
-  if (item.evidenceFamily === CareerEvidenceFamily.DASHA) {
-    return 'DASHA';
-  }
-  return 'D1';
-}
-
-export function mapCareerPolarity(
-  effect: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL'
-): EvidencePolarity {
-  switch (effect) {
-    case 'SUPPORT':
-      return 'SUPPORTING';
-    case 'CHALLENGE':
-      return 'CHALLENGING';
-    case 'NEUTRAL':
-      return 'NEUTRAL';
-  }
-}
-
-export function mapCareerStrength(
-  strength: 'WEAK' | 'MODERATE' | 'STRONG'
-): EvidenceStrength {
-  switch (strength) {
-    case 'STRONG':
-      return 'STRONG';
-    case 'MODERATE':
-      return 'MODERATE';
-    case 'WEAK':
-      return 'WEAK';
-  }
-}
-
-export function mapCareerPriority(
-  priority: 'PRIMARY' | 'SECONDARY' | 'CONFIRMATORY' | 'TIMING'
-): number {
-  switch (priority) {
-    case 'PRIMARY':
-      return 90;
-    case 'SECONDARY':
-      return 70;
-    case 'CONFIRMATORY':
-      return 50;
-    case 'TIMING':
-      return 30;
-  }
+  return Object.freeze({
+    period,
+    effect,
+    activatedPromiseEvidenceIds: Object.freeze(activatedPromiseEvidenceIds),
+    evidenceIds: Object.freeze(evidenceToEval.map((item) => item.id)),
+    statement: buildCareerTimingStatement(period, effect)
+  });
 }
 
 export function evaluateDashaEffect(
@@ -447,9 +404,15 @@ export function evaluateTransitEffect(
 
 export function evaluateD10Relationship(
   rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[],
-  legacyStatus?: string
+  legacyStatus?: string,
+  d10Evidence?: readonly DomainEvidence[],
+  natalPromiseEvidenceIds?: readonly string[]
 ): VargaRelationship {
-  const d10Item = rawEvidence.find(
+  if (d10Evidence && d10Evidence.length === 0 && (!rawEvidence || rawEvidence.length === 0)) {
+    return 'UNAVAILABLE';
+  }
+
+  const d10Item = rawEvidence?.find(
     (e) =>
       e.evidenceFamily === CareerEvidenceFamily.D10 ||
       e.vargaEvidence?.varga === 'D10'
@@ -459,13 +422,13 @@ export function evaluateD10Relationship(
     return d10Item.vargaEvidence.relationship as VargaRelationship;
   }
 
-  if (legacyStatus === 'CONFIRMED') {
+  if (legacyStatus === 'CONFIRMED' || legacyStatus === 'CONFIRMS') {
     return 'CONFIRMS';
   }
-  if (legacyStatus === 'CONFLICTED') {
+  if (legacyStatus === 'CONFLICTED' || legacyStatus === 'CONFLICTS') {
     return 'CONFLICTS';
   }
-  if (legacyStatus === 'NOT_APPLICABLE') {
+  if (legacyStatus === 'NOT_APPLICABLE' || legacyStatus === 'UNAVAILABLE') {
     return 'UNAVAILABLE';
   }
 
@@ -479,278 +442,50 @@ export function evaluateD10Relationship(
     return 'MODIFIES';
   }
 
+  if (d10Evidence && d10Evidence.length > 0) {
+    const hasSupport = d10Evidence.some((e) => e.polarity === 'SUPPORTING');
+    const hasChallenge = d10Evidence.some((e) => e.polarity === 'CHALLENGING');
+    if (hasSupport && !hasChallenge) return 'CONFIRMS';
+    if (hasSupport && hasChallenge) return 'MODIFIES';
+    if (hasChallenge) return 'CONFLICTS';
+  }
+
   return 'UNAVAILABLE';
 }
 
-export function resolveCareerConclusionStrength(
-  natalStrength: DomainStrength,
-  d10Relationship: VargaRelationship,
-  conflicts: readonly import('../interpretation').DomainConflict[]
-): DomainStrength {
-  // If D10 conflicts, apply downgrade
-  if (d10Relationship === 'CONFLICTS') {
-    if (natalStrength === 'VERY_STRONG') {
-      return 'STRONG';
-    }
-    if (natalStrength === 'STRONG') {
-      return 'MODERATE';
-    }
-    if (natalStrength === 'MODERATE') {
-      return 'MIXED';
-    }
-  }
+// Re-exports from modular files for full backward compatibility
+export {
+  buildCareerEvidence,
+  classifyCareerEvidence,
+  mapCareerRole,
+  mapCareerPhase,
+  mapCareerSource,
+  mapCareerPolarity,
+  mapCareerStrength,
+  mapCareerPriority
+} from './careerEvidenceMapper';
 
-  // Hierarchy rule: If only transit conflict exists and natal promise is strong, do NOT collapse to generic MIXED
-  const hasOnlyTransitConflict =
-    conflicts.length > 0 &&
-    conflicts.every((c) => c.tier === 'PRIMARY_VS_TRANSIT' || c.tier === 'PRIMARY_VS_TIMING');
-  if (hasOnlyTransitConflict && (natalStrength === 'STRONG' || natalStrength === 'VERY_STRONG')) {
-    return natalStrength;
-  }
+export {
+  linkCareerEvidence,
+  resolveRelatedCareerPromiseEvidenceIds
+} from './careerEvidenceLinker';
 
-  return natalStrength;
-}
+export {
+  deriveCareerManifestations,
+  buildCareerManifestations,
+  calculateManifestationConfidence
+} from './careerManifestations';
 
-export function calculateDomainStrength(
-  supporting: readonly DomainEvidence[],
-  challenging: readonly DomainEvidence[]
-): DomainStrength {
-  if (supporting.length === 0 && challenging.length === 0) {
-    return 'UNDETERMINED';
-  }
+export {
+  buildCareerConclusion,
+  resolveCareerConclusionStrength,
+  calculateDomainStrength,
+  calculateVargaStrength,
+  buildCareerNatalStatement,
+  buildCareerDashaStatement,
+  buildCareerTransitStatement,
+  buildD10Statement
+} from './careerConclusion';
 
-  const hasStrongSupport = supporting.some(
-    (e) => e.strength === 'STRONG' || e.strength === 'VERY_STRONG'
-  );
-  const hasStrongChallenge = challenging.some(
-    (e) => e.strength === 'STRONG' || e.strength === 'VERY_STRONG'
-  );
-
-  if (supporting.length > 0 && challenging.length > 0) {
-    if (hasStrongSupport && !hasStrongChallenge && supporting.length >= 3) {
-      return 'STRONG';
-    }
-    return 'MIXED';
-  }
-
-  if (supporting.length > 0 && challenging.length === 0) {
-    if (hasStrongSupport && supporting.length >= 2) {
-      return 'VERY_STRONG';
-    }
-    return 'STRONG';
-  }
-
-  if (challenging.length > 0 && supporting.length === 0) {
-    if (hasStrongChallenge) {
-      return 'VERY_WEAK';
-    }
-    return 'WEAK';
-  }
-
-  return 'MODERATE';
-}
-
-export function calculateVargaStrength(
-  evidence: readonly DomainEvidence[],
-  varga: EvidenceSource
-): DomainStrength {
-  const vargaEvidence = evidence.filter((e) => e.source === varga);
-  const supporting = vargaEvidence.filter((e) => e.polarity === 'SUPPORTING');
-  const challenging = vargaEvidence.filter((e) => e.polarity === 'CHALLENGING');
-
-  return calculateDomainStrength(supporting, challenging);
-}
-
-export function buildCareerNatalStatement(
-  supporting: readonly DomainEvidence[],
-  challenging: readonly DomainEvidence[],
-  legacySummary?: string
-): string {
-  const natalSupporting = supporting.filter((e) => e.phase === 'NATAL_PROMISE');
-  const natalChallenging = challenging.filter((e) => e.phase === 'NATAL_PROMISE');
-
-  if (natalSupporting.length > 0 && natalChallenging.length === 0) {
-    return `Natal career promise is strongly indicated with ${natalSupporting.length} supporting structural factors.`;
-  }
-  if (natalSupporting.length > 0 && natalChallenging.length > 0) {
-    return `Natal career promise presents mixed structural indications with ${natalSupporting.length} supporting and ${natalChallenging.length} challenging factors.`;
-  }
-  if (natalChallenging.length > 0) {
-    return `Natal career promise faces structural challenges.`;
-  }
-  return legacySummary || 'Natal career promise evaluation is complete.';
-}
-
-export function buildCareerDashaStatement(
-  dashaEvidence: readonly DomainEvidence[]
-): string {
-  if (dashaEvidence.length === 0) {
-    return 'No active career Dasha activation identified.';
-  }
-  const supporting = dashaEvidence.filter((e) => e.polarity === 'SUPPORTING');
-  if (supporting.length > 0) {
-    return `Current Dasha period actively supports career manifestations.`;
-  }
-  return `Current Dasha period indicates mixed or challenging timing for career initiatives.`;
-}
-
-export function buildCareerTransitStatement(
-  transitEvidence: readonly DomainEvidence[]
-): string {
-  if (transitEvidence.length === 0) {
-    return 'No material transit trigger identified.';
-  }
-  return `Transit triggers are currently influencing career timing.`;
-}
-
-export function buildD10Statement(
-  d10Evidence: readonly DomainEvidence[],
-  relationship: VargaRelationship
-): string {
-  if (relationship === 'UNAVAILABLE' || d10Evidence.length === 0) {
-    return 'D10 divisional analysis unavailable or neutral.';
-  }
-  if (relationship === 'CONFIRMS') {
-    return 'D10 Dasamsa confirms and elevates professional execution and status.';
-  }
-  if (relationship === 'CONFLICTS') {
-    return 'D10 Dasamsa diverges from natal promise, indicating execution friction in career realization.';
-  }
-  if (relationship === 'MODIFIES') {
-    return 'D10 Dasamsa modifies the career orientation toward specialized divisional roles.';
-  }
-  return 'D10 Dasamsa partially confirms career execution.';
-}
-
-export function buildCareerManifestations(
-  rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[],
-  evidence: readonly DomainEvidence[]
-): readonly DomainManifestation[] {
-  const manifestations: DomainManifestation[] = [];
-
-  // Deterministic manifestation mapping via CareerEvidenceFamily and ruleIds
-  const hasLeadership = rawEvidence.some(
-    (item) =>
-      item.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE ||
-      item.evidenceFamily === CareerEvidenceFamily.TENTH_LORD ||
-      item.evidenceFamily === CareerEvidenceFamily.SUN ||
-      item.evidenceFamily === CareerEvidenceFamily.JUPITER ||
-      item.evidenceFamily === CareerEvidenceFamily.YOGA ||
-      item.ruleId?.includes('10th') ||
-      item.ruleId?.includes('sun') ||
-      item.ruleId?.includes('raja_yoga')
-  );
-
-  const hasEmployment = rawEvidence.some(
-    (item) =>
-      item.evidenceFamily === CareerEvidenceFamily.SIXTH_HOUSE ||
-      item.evidenceFamily === CareerEvidenceFamily.SIXTH_LORD ||
-      item.evidenceFamily === CareerEvidenceFamily.SATURN ||
-      item.ruleId?.includes('6th') ||
-      item.ruleId?.includes('saturn') ||
-      item.ruleId?.includes('service')
-  );
-
-  const hasTechnical = rawEvidence.some(
-    (item) =>
-      item.evidenceFamily === CareerEvidenceFamily.MERCURY ||
-      item.evidenceFamily === CareerEvidenceFamily.MARS ||
-      item.ruleId?.includes('mercury') ||
-      item.ruleId?.includes('mars') ||
-      item.ruleId?.includes('analytical')
-  );
-
-  const hasIndependent = rawEvidence.some(
-    (item) =>
-      item.evidenceFamily === CareerEvidenceFamily.ELEVENTH_HOUSE ||
-      item.evidenceFamily === CareerEvidenceFamily.ELEVENTH_LORD ||
-      item.ruleId?.includes('11th') ||
-      item.ruleId?.includes('3rd') ||
-      item.ruleId?.includes('entrepreneur')
-  );
-
-  manifestations.push(
-    createDomainManifestation({
-      mode: 'LEADERSHIP',
-      confidence: hasLeadership ? 'HIGH' : 'MODERATE',
-      statement: hasLeadership
-        ? 'Strong potential for leadership, executive authority, and organizational visibility.'
-        : 'Moderate potential for leadership roles depending on timing.',
-      evidenceIds: evidence
-        .filter((e) => e.priority >= 70 && e.polarity === 'SUPPORTING')
-        .map((e) => e.id)
-    })
-  );
-
-  manifestations.push(
-    createDomainManifestation({
-      mode: 'EMPLOYMENT',
-      confidence: hasEmployment ? 'HIGH' : 'MODERATE',
-      statement: hasEmployment
-        ? 'Structured professional employment and service career pathways are well supported.'
-        : 'Standard employment tracks operate as secondary or supplementary avenues.',
-      evidenceIds: evidence
-        .filter((e) => e.priority >= 50 && e.polarity === 'SUPPORTING')
-        .map((e) => e.id)
-    })
-  );
-
-  manifestations.push(
-    createDomainManifestation({
-      mode: 'TECHNICAL_SPECIALIZATION',
-      confidence: hasTechnical ? 'HIGH' : 'MODERATE',
-      statement: hasTechnical
-        ? 'High suitability for analytical, technical, or specialized domain mastery.'
-        : 'General professional domain application without strict technical constraints.',
-      evidenceIds: evidence
-        .filter((e) => e.priority >= 50)
-        .map((e) => e.id)
-    })
-  );
-
-  if (hasIndependent) {
-    manifestations.push(
-      createDomainManifestation({
-        mode: 'ENTREPRENEURSHIP',
-        confidence: 'MODERATE',
-        statement: 'Supportive planetary configurations for independent enterprise and self-directed ventures.',
-        evidenceIds: evidence
-          .filter((e) => e.polarity === 'SUPPORTING')
-          .map((e) => e.id)
-      })
-    );
-  }
-
-  return Object.freeze(manifestations);
-}
-
-export function buildCareerConclusion(
-  natalPromise: NatalPromise,
-  dashaActivation: DashaActivation,
-  transitTrigger: TransitTrigger,
-  vargaConfirmations: readonly VargaConfirmation[],
-  legacySummary?: string,
-  d10Relationship?: VargaRelationship
-): string {
-  const parts: string[] = [];
-
-  if (legacySummary) {
-    parts.push(legacySummary);
-  } else {
-    parts.push(natalPromise.statement);
-  }
-
-  if (dashaActivation.active) {
-    parts.push(dashaActivation.statement);
-  }
-
-  const d10 = vargaConfirmations.find((v) => v.varga === 'D10');
-  if (d10 && d10.relationship === 'CONFIRMS') {
-    parts.push(d10.statement);
-  } else if (d10 && d10.relationship === 'CONFLICTS') {
-    parts.push(d10.statement);
-  }
-
-  return parts.join(' ');
-}
-
+export { calculateCareerDataCompleteness } from './careerDataCompleteness';
+export * from './careerTypes';

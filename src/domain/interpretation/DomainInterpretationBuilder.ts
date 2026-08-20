@@ -19,6 +19,8 @@ export interface DomainInterpretationParts {
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly conclusion: DomainConclusion;
+  readonly timingActivations?: readonly any[];
+  readonly dataCompleteness?: any;
 }
 
 export interface BuildDomainInterpretationOptions {
@@ -52,6 +54,8 @@ export function buildDomainInterpretation(
       ...parts.conflicts
     ]),
     conclusion: parts.conclusion,
+    ...(parts.timingActivations ? { timingActivations: Object.freeze([...parts.timingActivations]) } : {}),
+    ...(parts.dataCompleteness !== undefined ? { dataCompleteness: parts.dataCompleteness } : {}),
     generatedAt: timestamp
   });
 }

@@ -23,7 +23,9 @@ export interface DomainEvidence {
 }
 
 export function createDomainEvidence(
-  evidence: DomainEvidence
+  evidence: Omit<DomainEvidence, 'relatedEvidenceIds'> & {
+    readonly relatedEvidenceIds?: readonly string[];
+  }
 ): DomainEvidence {
   return Object.freeze({
     ...evidence,

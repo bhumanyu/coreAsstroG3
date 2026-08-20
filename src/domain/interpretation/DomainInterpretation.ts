@@ -19,6 +19,8 @@ export interface DomainInterpretation {
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly conclusion: DomainConclusion;
+  readonly timingActivations?: readonly any[];
+  readonly dataCompleteness?: any;
   readonly generatedAt: string;
 }
 
@@ -38,6 +40,9 @@ export function createDomainInterpretation(
     ]),
     conflicts: Object.freeze([
       ...interpretation.conflicts
-    ])
+    ]),
+    ...(interpretation.timingActivations
+      ? { timingActivations: Object.freeze([...interpretation.timingActivations]) }
+      : {})
   });
 }
