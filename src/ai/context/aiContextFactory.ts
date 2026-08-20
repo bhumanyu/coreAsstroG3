@@ -35,6 +35,10 @@ import {
   projectDomainInterpretationForAi,
   type DomainInterpretationAiProjection
 } from '../../domain/interpretation';
+import {
+  synthesizeLifeAnalysis,
+  projectLifeAnalysisForAi
+} from '../../domain/synthesis';
 import { deepFreeze } from './deepFreeze';
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -658,6 +662,9 @@ export function buildAiContext(horoscope: Horoscope): AiContext {
     projectDomainInterpretationForAi(wealthInterp)
   ];
 
+  const lifeAnalysis = synthesizeLifeAnalysis([careerInterp, wealthInterp]);
+  const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysis);
+
   const context: AiContext = {
     schemaVersion: AI_CONTEXT_SCHEMA_VERSION,
     source,
@@ -672,7 +679,8 @@ export function buildAiContext(horoscope: Horoscope): AiContext {
     lifeThemes,
     evidence,
     methodology,
-    domainInterpretations
+    domainInterpretations,
+    lifeAnalysis: projectedLifeAnalysis
   };
 
   return deepFreeze(context);

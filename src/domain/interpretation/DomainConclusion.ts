@@ -16,21 +16,26 @@ export interface DomainConclusion {
 }
 
 export function createDomainConclusion(
-  conclusion: DomainConclusion
+  conclusion: Partial<DomainConclusion> & {
+    statement: string;
+  }
 ): DomainConclusion {
   return Object.freeze({
-    ...conclusion,
+    domain: conclusion.domain ?? 'CAREER',
+    strength: conclusion.strength ?? 'MODERATE',
+    confidence: conclusion.confidence ?? 'MODERATE',
+    statement: conclusion.statement,
     primaryEvidenceIds: Object.freeze([
-      ...conclusion.primaryEvidenceIds
+      ...(conclusion.primaryEvidenceIds ?? [])
     ]),
     supportingEvidenceIds: Object.freeze([
-      ...conclusion.supportingEvidenceIds
+      ...(conclusion.supportingEvidenceIds ?? [])
     ]),
     challengingEvidenceIds: Object.freeze([
-      ...conclusion.challengingEvidenceIds
+      ...(conclusion.challengingEvidenceIds ?? [])
     ]),
     unresolvedQuestions: Object.freeze([
-      ...conclusion.unresolvedQuestions
+      ...(conclusion.unresolvedQuestions ?? [])
     ])
   });
 }

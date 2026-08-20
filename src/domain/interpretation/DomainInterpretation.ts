@@ -26,27 +26,82 @@ export interface DomainInterpretation {
 }
 
 export function createDomainInterpretation(
-  interpretation: DomainInterpretation
+  interpretation: Partial<DomainInterpretation> & {
+    domain: DomainId;
+    natalPromise: NatalPromise;
+  }
 ): DomainInterpretation {
+  const evidence = interpretation.evidence ?? [];
+  const vargaConfirmations = interpretation.vargaConfirmations ?? [];
+  const manifestations = interpretation.manifestations ?? [];
+  const conflicts = interpretation.conflicts ?? [];
+
   return Object.freeze({
-    ...interpretation,
-    evidence: Object.freeze([
-      ...interpretation.evidence
-    ]),
-    vargaConfirmations: Object.freeze([
-      ...interpretation.vargaConfirmations
-    ]),
-    manifestations: Object.freeze([
-      ...interpretation.manifestations
-    ]),
-    conflicts: Object.freeze([
-      ...interpretation.conflicts
-    ]),
+    domain: interpretation.domain,
+    version: interpretation.version ?? 'V2',
+    evidence: Object.freeze([...evidence]),
+    natalPromise: interpretation.natalPromise,
+    dashaActivation:
+      interpretation.dashaActivation ??
+      ({
+        domain: interpretation.domain,
+        active: false,
+        effect: 'UNKNOWN',
+        strength: 'MODERATE',
+        confidence: 'LOW',
+        statement: '',
+        evidenceIds: [],
+        activatedPromiseEvidenceIds: []
+      } as any),
+    transitTrigger:
+      interpretation.transitTrigger ??
+      ({
+        domain: interpretation.domain,
+        active: false,
+        effect: 'UNKNOWN',
+        strength: 'MODERATE',
+        confidence: 'LOW',
+        statement: '',
+        evidenceIds: [],
+        triggeredPromiseEvidenceIds: []
+      } as any),
+    vargaConfirmations: Object.freeze([...vargaConfirmations]),
+    manifestations: Object.freeze([...manifestations]),
+    conflicts: Object.freeze([...conflicts]),
+    conclusion:
+      interpretation.conclusion ??
+      ({
+        domain: interpretation.domain,
+        strength: interpretation.natalPromise.strength,
+        confidence: interpretation.natalPromise.confidence,
+        statement: interpretation.natalPromise.statement,
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        unresolvedQuestions: []
+      } as any),
     ...(interpretation.timingActivations
-      ? { timingActivations: Object.freeze([...interpretation.timingActivations]) }
+      ? {
+          timingActivations: Object.freeze([
+            ...interpretation.timingActivations
+          ])
+        }
       : {}),
     ...(interpretation.conclusionData
-      ? { conclusionData: Object.freeze({ ...interpretation.conclusionData }) }
-      : {})
+      ? {
+          conclusionData: Object.freeze({
+            ...interpretation.conclusionData
+          })
+        }
+      : {}),
+    ...(interpretation.dataCompleteness
+      ? {
+          dataCompleteness: Object.freeze({
+            ...interpretation.dataCompleteness
+          })
+        }
+      : {}),
+    generatedAt:
+      interpretation.generatedAt ?? new Date().toISOString()
   });
 }

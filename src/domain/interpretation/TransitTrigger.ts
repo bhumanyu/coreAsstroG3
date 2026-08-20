@@ -17,15 +17,24 @@ export interface TransitTrigger {
 }
 
 export function createTransitTrigger(
-  trigger: TransitTrigger
+  trigger: Partial<TransitTrigger> & {
+    effect: TransitTriggerEffect;
+  }
 ): TransitTrigger {
+  const evidenceIds = trigger.evidenceIds ?? [];
+  const triggeredPromiseEvidenceIds =
+    trigger.triggeredPromiseEvidenceIds ?? [];
+
   return Object.freeze({
-    ...trigger,
-    evidenceIds: Object.freeze([
-      ...trigger.evidenceIds
-    ]),
+    domain: trigger.domain ?? 'CAREER',
+    active: trigger.active ?? true,
+    effect: trigger.effect,
+    strength: trigger.strength ?? 'MODERATE',
+    confidence: trigger.confidence ?? 'MODERATE',
+    statement: trigger.statement ?? '',
+    evidenceIds: Object.freeze([...evidenceIds]),
     triggeredPromiseEvidenceIds: Object.freeze([
-      ...trigger.triggeredPromiseEvidenceIds
+      ...triggeredPromiseEvidenceIds
     ])
   });
 }

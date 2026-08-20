@@ -15,18 +15,21 @@ export interface NatalPromise {
 }
 
 export function createNatalPromise(
-  promise: NatalPromise
+  promise: Partial<NatalPromise> & { strength: DomainStrength }
 ): NatalPromise {
+  const supporting = promise.supportingEvidenceIds ?? [];
+  const challenging = promise.challengingEvidenceIds ?? [];
+  const evidenceIds =
+    promise.evidenceIds ??
+    Array.from(new Set([...supporting, ...challenging]));
+
   return Object.freeze({
-    ...promise,
-    evidenceIds: Object.freeze([
-      ...promise.evidenceIds
-    ]),
-    supportingEvidenceIds: Object.freeze([
-      ...promise.supportingEvidenceIds
-    ]),
-    challengingEvidenceIds: Object.freeze([
-      ...promise.challengingEvidenceIds
-    ])
+    domain: promise.domain ?? 'CAREER',
+    strength: promise.strength,
+    confidence: promise.confidence ?? 'MODERATE',
+    statement: promise.statement ?? '',
+    evidenceIds: Object.freeze([...evidenceIds]),
+    supportingEvidenceIds: Object.freeze([...supporting]),
+    challengingEvidenceIds: Object.freeze([...challenging])
   });
 }

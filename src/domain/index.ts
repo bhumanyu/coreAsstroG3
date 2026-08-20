@@ -1,4 +1,5 @@
 export * from './interpretation';
+export * from './synthesis';
 export { CareerDomainInterpreter } from './career/CareerDomainInterpreter';
 export {
   interpretCareerV2,

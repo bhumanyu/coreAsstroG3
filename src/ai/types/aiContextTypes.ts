@@ -6,8 +6,9 @@ import {
   AiEvidenceEffect
 } from './aiTypes';
 import type { DomainInterpretationAiProjection } from '../../domain/interpretation';
+import type { LifeAnalysisAiProjection } from '../../domain/synthesis';
 
-export type { DomainInterpretationAiProjection };
+export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection };
 
 export type CareerNatalPromise =
   | 'STRONG'
@@ -237,4 +238,5 @@ export interface AiContext {
   readonly evidence: readonly AiEvidence[];
   readonly methodology: AiContextMethodology;
   readonly domainInterpretations?: readonly DomainInterpretationAiProjection[];
+  readonly lifeAnalysis?: LifeAnalysisAiProjection;
 }

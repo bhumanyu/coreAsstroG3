@@ -17,15 +17,24 @@ export interface DashaActivation {
 }
 
 export function createDashaActivation(
-  activation: DashaActivation
+  activation: Partial<DashaActivation> & {
+    effect: TimingActivationEffect;
+  }
 ): DashaActivation {
+  const evidenceIds = activation.evidenceIds ?? [];
+  const activatedPromiseEvidenceIds =
+    activation.activatedPromiseEvidenceIds ?? [];
+
   return Object.freeze({
-    ...activation,
-    evidenceIds: Object.freeze([
-      ...activation.evidenceIds
-    ]),
+    domain: activation.domain ?? 'CAREER',
+    active: activation.active ?? true,
+    effect: activation.effect,
+    strength: activation.strength ?? 'MODERATE',
+    confidence: activation.confidence ?? 'MODERATE',
+    statement: activation.statement ?? '',
+    evidenceIds: Object.freeze([...evidenceIds]),
     activatedPromiseEvidenceIds: Object.freeze([
-      ...activation.activatedPromiseEvidenceIds
+      ...activatedPromiseEvidenceIds
     ])
   });
 }

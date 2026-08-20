@@ -26,15 +26,27 @@ export interface DomainEvidence {
 }
 
 export function createDomainEvidence(
-  evidence: Omit<DomainEvidence, 'relatedEvidenceIds'> & {
-    readonly relatedEvidenceIds?: readonly string[];
+  evidence: Partial<DomainEvidence> & {
+    id: string;
   }
 ): DomainEvidence {
   return Object.freeze({
-    ...evidence,
+    id: evidence.id,
+    domain: evidence.domain ?? 'CAREER',
+    role: evidence.role ?? 'PRIMARY',
+    phase: evidence.phase ?? 'NATAL_PROMISE',
+    source: evidence.source ?? 'D1',
+    statement: evidence.statement ?? '',
+    polarity: evidence.polarity ?? 'SUPPORTING',
+    strength: evidence.strength ?? 'STRONG',
+    priority: evidence.priority ?? 1,
     relatedEvidenceIds: Object.freeze([
       ...(evidence.relatedEvidenceIds ?? [])
     ]),
-    ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {})
+    ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
+    ...(evidence.notes ? { notes: evidence.notes } : {}),
+    ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {}),
+    ...(evidence.evidenceFamily ? { evidenceFamily: evidence.evidenceFamily } : {}),
+    ...(evidence.dimension ? { dimension: evidence.dimension } : {})
   });
 }
