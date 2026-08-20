@@ -1,9 +1,9 @@
 import type { Horoscope } from '../../types';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
-  WealthEvidenceFamily
+  WealthEvidenceFamily,
+  type WealthEvidence
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import {
   buildDomainInterpretation,
   createNatalPromise,
@@ -296,7 +296,7 @@ export function evaluateD2Relationship(
   natalEvidence?: readonly DomainEvidence[],
   d2Evidence?: readonly DomainEvidence[],
   relatedNatalEvidenceIds?: readonly string[],
-  rawEvidence?: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[],
+  rawEvidence?: readonly WealthEvidence[],
   legacyStatus?: string
 ): VargaRelationship {
   if (d2Evidence && d2Evidence.length === 0 && (!rawEvidence || rawEvidence.length === 0)) {
