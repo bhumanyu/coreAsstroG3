@@ -7,7 +7,8 @@ import {
   buildHighPressureCareerInterpretation,
   STAGE1_GOLDEN_CAREER,
   STAGE1_GOLDEN_WEALTH,
-  STAGE1_GOLDEN_INPUT
+  STAGE1_GOLDEN_INPUT,
+  STAGE1_GOLDEN_EXPECTATION
 } from './stage1GoldenFixture';
 import { runStage1Integration } from './stage1IntegrationHarness';
 
@@ -34,17 +35,19 @@ describe('Stage-1 AI Projection Integration', () => {
   });
 
   it('preserves D2 and D10 varga confirmations without degradation or loss', () => {
-    const projectedCareer = projectDomainInterpretationForAi(STAGE1_GOLDEN_CAREER);
-    const projectedWealth = projectDomainInterpretationForAi(STAGE1_GOLDEN_WEALTH);
+    const careerWithD10 = buildHighPressureCareerInterpretation();
+    const wealthWithD2 = buildSpeculationChallengedWealthInterpretation();
+
+    const projectedCareer = projectDomainInterpretationForAi(careerWithD10);
+    const projectedWealth = projectDomainInterpretationForAi(wealthWithD2);
 
     const d10Conf = projectedCareer.vargaConfirmations.find((v) => v.varga === 'D10');
     expect(d10Conf).toBeDefined();
-    expect(d10Conf?.relationship).toBeDefined();
-    expect(d10Conf?.relationship).not.toBe('UNAVAILABLE');
+    expect(d10Conf?.relationship).toBe('CONFIRMS');
 
     const d2Conf = projectedWealth.vargaConfirmations.find((v) => v.varga === 'D2');
     expect(d2Conf).toBeDefined();
-    expect(d2Conf?.relationship).toBeDefined();
+    expect(d2Conf?.relationship).toBe('CONFIRMS');
   });
 
   it('preserves Dasha timing and per-dimension activation effects distinctly', () => {
@@ -101,7 +104,7 @@ describe('Stage-1 AI Projection Integration', () => {
     expect(projected.conclusion.strength).toBe('VERY_STRONG');
 
     const conclusionData = projected.conclusion.conclusionData as Record<string, unknown> | undefined;
-    expect(conclusionData?.currentPressure).toBe('MODERATE');
+    expect(conclusionData?.currentPressure).toBe('HIGH');
     expect(conclusionData?.currentActivation).toBe('ACTIVE');
   });
 });

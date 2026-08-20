@@ -354,7 +354,8 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
       .map((e) => e.id),
     challengingEvidenceIds: evidence
       .filter((e) => e.polarity === 'CHALLENGING')
-      .map((e) => e.id)
+      .map((e) => e.id),
+    unresolvedQuestions: []
   });
 
   return buildDomainInterpretation({
@@ -444,15 +445,16 @@ export function buildIncompleteCareerInterpretation(): DomainInterpretation {
   ];
 
   const manifestations = deriveCareerManifestations(evidence);
-  const conclusionData = buildCareerConclusionData({
-    natalPromise,
-    dashaActivation,
+  const conclusionData = buildCareerConclusionData(
+    natalStrength,
+    'UNAVAILABLE',
+    [],
     transitTrigger,
-    vargaConfirmations,
+    [],
     manifestations,
-    conflicts: [],
-    evidence
-  });
+    natalSupporting.map((e) => e.id),
+    []
+  );
 
   const conclusion = createDomainConclusion({
     domain: 'CAREER',
@@ -474,7 +476,8 @@ export function buildIncompleteCareerInterpretation(): DomainInterpretation {
     ),
     primaryEvidenceIds: evidence.map((e) => e.id),
     supportingEvidenceIds: evidence.map((e) => e.id),
-    challengingEvidenceIds: []
+    challengingEvidenceIds: [],
+    unresolvedQuestions: []
   });
 
   return buildDomainInterpretation({
@@ -596,7 +599,8 @@ export function buildIncompleteWealthInterpretation(): DomainInterpretation {
     ),
     primaryEvidenceIds: evidence.map((e) => e.id),
     supportingEvidenceIds: evidence.map((e) => e.id),
-    challengingEvidenceIds: []
+    challengingEvidenceIds: [],
+    unresolvedQuestions: []
   });
 
   return buildDomainInterpretation({
@@ -760,15 +764,16 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
   ];
 
   const manifestations = deriveCareerManifestations(evidence);
-  const conclusionData = buildCareerConclusionData({
-    natalPromise,
-    dashaActivation,
+  const conclusionData = buildCareerConclusionData(
+    natalStrength,
+    d10Relationship,
+    timingActivations,
     transitTrigger,
-    vargaConfirmations,
-    manifestations,
     conflicts,
-    evidence
-  });
+    manifestations,
+    natalSupporting.map((e) => e.id),
+    []
+  );
 
   const conclusion = createDomainConclusion({
     domain: 'CAREER',
@@ -790,7 +795,8 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
     ),
     primaryEvidenceIds: evidence.filter((e) => e.role === 'PRIMARY').map((e) => e.id),
     supportingEvidenceIds: evidence.filter((e) => e.polarity === 'SUPPORTING').map((e) => e.id),
-    challengingEvidenceIds: evidence.filter((e) => e.polarity === 'CHALLENGING').map((e) => e.id)
+    challengingEvidenceIds: evidence.filter((e) => e.polarity === 'CHALLENGING').map((e) => e.id),
+    unresolvedQuestions: []
   });
 
   return buildDomainInterpretation({

@@ -4,6 +4,8 @@ import type {
   ConflictTier,
   EvidenceSource,
   ManifestationMode,
+  TimingActivationEffect,
+  TransitTriggerEffect,
   VargaRelationship
 } from './DomainInterpretationTypes';
 
@@ -17,11 +19,13 @@ export interface DomainInterpretationAiProjection {
 
   readonly dashaActivation: {
     readonly active: boolean;
+    readonly effect?: TimingActivationEffect;
     readonly statement: string;
   };
 
   readonly transitTrigger: {
     readonly active: boolean;
+    readonly effect?: TransitTriggerEffect;
     readonly statement: string;
   };
 
@@ -66,11 +70,13 @@ export function projectDomainInterpretationForAi(
 
     dashaActivation: Object.freeze({
       active: interpretation.dashaActivation.active,
+      effect: interpretation.dashaActivation.effect,
       statement: interpretation.dashaActivation.statement
     }),
 
     transitTrigger: Object.freeze({
       active: interpretation.transitTrigger.active,
+      effect: interpretation.transitTrigger.effect,
       statement: interpretation.transitTrigger.statement
     }),
 
