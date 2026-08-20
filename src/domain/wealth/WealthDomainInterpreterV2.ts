@@ -324,7 +324,10 @@ export function mapWealthPhase(
   ) {
     return 'DASHA_ACTIVATION';
   }
-  if (item.evidenceFamily === WealthEvidenceFamily.TRANSIT) {
+  if (
+    item.evidenceFamily === WealthEvidenceFamily.TRANSIT ||
+    Boolean(item.transitEvidence)
+  ) {
     return 'TRANSIT_TRIGGER';
   }
   if (
@@ -348,7 +351,10 @@ export function mapWealthSource(
   if (item.evidenceFamily === WealthEvidenceFamily.DASHA) {
     return 'DASHA';
   }
-  if (item.evidenceFamily === WealthEvidenceFamily.TRANSIT) {
+  if (
+    item.evidenceFamily === WealthEvidenceFamily.TRANSIT ||
+    Boolean(item.transitEvidence)
+  ) {
     return 'TRANSIT';
   }
   return 'D1';

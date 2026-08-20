@@ -101,7 +101,7 @@ export function isCareerTransitEvidence(
     item.ruleId.startsWith('CAREER_TRANSIT_') ||
     item.ruleId.includes('TRANSIT') ||
     item.id.includes('TRANSIT') ||
-    Boolean((item as any).transitEvidence) ||
+    Boolean(item.transitEvidence) ||
     (item.evidenceFamily as string) === 'TRANSIT'
   );
 }

@@ -92,6 +92,13 @@ export interface ThemeTimingEvidence {
   readonly relevanceType?: string;
 }
 
+export interface ThemeTransitEvidence {
+  readonly planet?: Planet;
+  readonly house?: number;
+  readonly effect?: ThemeEvidenceEffect;
+  readonly relevanceReason?: string;
+}
+
 export interface CareerTimingEvidence extends ThemeTimingEvidence {}
 
 export interface ThemeInterpretationEvidence<TFamily extends string = string> {
@@ -109,6 +116,7 @@ export interface ThemeInterpretationEvidence<TFamily extends string = string> {
   readonly dimension?: 'NATAL_STRUCTURE' | 'MODIFIER' | 'CONFIRMATION' | 'TIMING';
   readonly vargaEvidence?: VargaThemeEvidence;
   readonly timingEvidence?: ThemeTimingEvidence;
+  readonly transitEvidence?: ThemeTransitEvidence;
 }
 
 export interface ThemeRuleResult<TFamily extends string = string> {

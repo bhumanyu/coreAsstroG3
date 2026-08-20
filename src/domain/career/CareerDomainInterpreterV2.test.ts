@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Planet } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
@@ -45,7 +46,8 @@ import {
 } from './careerEvidenceLinker';
 import {
   CareerEvidenceFamily,
-  type ThemeInterpretationEvidence
+  type ThemeInterpretationEvidence,
+  type ThemeTransitEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
 
 describe('CareerDomainInterpreterV2', () => {
@@ -1178,19 +1180,45 @@ describe('CareerDomainInterpreterV2', () => {
   // 15. Explicit Transit Source Mapping (P1-9)
   describe('Explicit transit source mapping', () => {
     it('maps transit evidence items to source TRANSIT and phase TRANSIT_TRIGGER', () => {
-      const transitRawItem = {
+      const transitRawItem: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
         id: 'CAREER_TRANSIT_JUPITER_10H',
         ruleId: 'CAREER_TRANSIT_TRIGGER_10H',
-        evidenceFamily: 'TRANSIT' as any,
-        priority: 'TIMING' as any,
-        strength: 'STRONG' as any,
-        effect: 'SUPPORT' as any,
+        evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+        priority: 'TIMING',
+        strength: 'STRONG',
+        effect: 'SUPPORT',
         statement: 'Jupiter transit stimulates 10th house',
-        points: 20
+        transitEvidence: {
+          planet: Planet.JUPITER,
+          house: 10,
+          effect: 'SUPPORT',
+          relevanceReason: 'Jupiter transiting 10th house'
+        }
       };
 
-      expect(mapCareerSource(transitRawItem as any)).toBe('TRANSIT');
-      expect(mapCareerPhase(transitRawItem as any)).toBe('TRANSIT_TRIGGER');
+      expect(mapCareerSource(transitRawItem)).toBe('TRANSIT');
+      expect(mapCareerPhase(transitRawItem)).toBe('TRANSIT_TRIGGER');
+    });
+
+    it('correctly maps structured transitEvidence without relying on ruleId/id naming conventions', () => {
+      const customTransitItem: ThemeInterpretationEvidence<CareerEvidenceFamily> = {
+        id: 'CUSTOM_JUPITER_INFLUENCE_001',
+        ruleId: 'CUSTOM_RULE_001',
+        evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+        priority: 'TIMING',
+        strength: 'STRONG',
+        effect: 'SUPPORT',
+        statement: 'Planetary transit influence active',
+        transitEvidence: {
+          planet: Planet.JUPITER,
+          house: 10,
+          effect: 'SUPPORT',
+          relevanceReason: 'Transit triggers career'
+        }
+      };
+
+      expect(mapCareerSource(customTransitItem)).toBe('TRANSIT');
+      expect(mapCareerPhase(customTransitItem)).toBe('TRANSIT_TRIGGER');
     });
   });
 
