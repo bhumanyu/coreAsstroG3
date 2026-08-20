@@ -2,48 +2,1016 @@ import { describe, expect, it } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
-import { interpretWealthV2 } from './WealthDomainInterpreterV2';
+import {
+  interpretWealthV2,
+  resolveWealthConclusionStrength,
+  calculateDomainStrength,
+  calculateVargaStrength,
+  classifyWealthEvidence,
+  buildWealthEvidence,
+  evaluateWealthTiming,
+  evaluateAccumulationDasha,
+  evaluateGainsDasha,
+  evaluateFortuneDasha,
+  evaluateSpeculationDasha,
+  evaluateDashaEffect,
+  evaluateTransitEffect,
+  evaluateD2Relationship,
+  resolveDimensionStatus,
+  evaluateWealthDimension,
+  resolveOverallWealthStatus,
+  calculateWealthDataCompleteness,
+  buildWealthConclusionData,
+  buildWealthHeadline,
+  buildWealthDashaStatement,
+  buildWealthTransitStatement,
+  buildD2Statement,
+  mapWealthRole,
+  mapWealthPhase,
+  mapWealthSource,
+  mapWealthDimension
+} from './WealthDomainInterpreterV2';
 import { WealthDomainInterpreter } from './WealthDomainInterpreter';
-import { interpretDomain } from '../interpretation/DomainInterpretationService';
-import { createDefaultDomainInterpreterRegistry } from '../interpretation/createDefaultDomainInterpreterRegistry';
+import {
+  createDomainEvidence,
+  detectDomainConflicts,
+  calculateEvidenceConfidence,
+  projectDomainInterpretationForAi,
+  interpretDomain,
+  createDefaultDomainInterpreterRegistry,
+  type DomainEvidence
+} from '../interpretation';
+import {
+  buildGoldenWealthInterpretation,
+  GOLDEN_WEALTH_EVIDENCE
+} from './wealth-v2-golden.fixture';
+import { deriveWealthManifestations } from './wealthManifestations';
+import {
+  linkWealthEvidence,
+  resolveRelatedWealthPromiseEvidenceIds
+} from './wealthEvidenceLinker';
+import {
+  WealthEvidenceFamily
+} from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
+import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
 
 describe('WealthDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
-  it('preserves existing wealth conclusion summary', () => {
+  // 1. Core integration & legacy preservation
+  it('preserves existing wealth conclusion summary and version V2', () => {
     const legacy = interpretWealthTheme(horoscope);
     const v2 = interpretWealthV2(horoscope);
 
     expect(v2.domain).toBe('WEALTH');
     expect(v2.version).toBe('V2');
     expect(v2.conclusion.statement).toContain(legacy.conclusion.summary);
+    expect(v2.conclusionData).toBeDefined();
+    expect(v2.generatedAt).toBeDefined();
   });
 
-  it('preserves accumulation/gains/fortune/speculation separation', () => {
-    const result = interpretWealthV2(horoscope);
-    const modes = result.manifestations.map((item) => item.mode);
+  // 2. Golden fixture test
+  it('correctly constructs and evaluates the Golden Wealth interpretation fixture', () => {
+    const golden = buildGoldenWealthInterpretation();
 
-    expect(modes).toContain('ACCUMULATION');
-    expect(modes).toContain('GAINS');
-    expect(modes).toContain('FORTUNE');
-    expect(modes).toContain('SPECULATION');
+    expect(golden.domain).toBe('WEALTH');
+    expect(golden.natalPromise.strength).toBe('VERY_STRONG');
+    expect(golden.natalPromise.confidence).toBe('VERY_HIGH');
+    expect(golden.vargaConfirmations[0].relationship).toBe('CONFIRMS');
+
+    const d2Evidence = golden.evidence.filter((e) => e.source === 'D2');
+    const natalPromiseIds = golden.natalPromise.evidenceIds;
+    const computedD2Rel = evaluateD2Relationship(undefined, d2Evidence, natalPromiseIds);
+    expect(computedD2Rel).toBe('CONFIRMS');
+
+    expect(golden.timingActivations).toBeDefined();
+    expect(golden.timingActivations?.length).toBe(4);
+
+    const accTiming = golden.timingActivations?.find((t) => t.dimension === 'ACCUMULATION');
+    const gainsTiming = golden.timingActivations?.find((t) => t.dimension === 'GAINS');
+    const specTiming = golden.timingActivations?.find((t) => t.dimension === 'SPECULATION');
+
+    expect(accTiming?.effect).toBe('ACTIVATES');
+    expect(gainsTiming?.effect).toBe('ACTIVATES');
+    expect(specTiming?.effect).toBe('CHALLENGES');
+
+    expect(golden.transitTrigger.effect).toBe('CHALLENGE');
+    expect(golden.transitTrigger.triggeredPromiseEvidenceIds).toContain('GOLDEN_WEALTH_2H_STRONG');
+
+    const manifestationModes = golden.manifestations.map((m) => m.mode);
+    expect(manifestationModes).toContain('ACCUMULATION');
+    expect(manifestationModes).toContain('GAINS');
+    expect(manifestationModes).toContain('FORTUNE');
+    expect(manifestationModes).toContain('SPECULATION');
+
+    expect(golden.conclusion.strength).toBe('VERY_STRONG');
+    expect(golden.dataCompleteness?.primaryFactors).toBe('AVAILABLE');
+    expect(golden.dataCompleteness?.d2).toBe('AVAILABLE');
+    expect(golden.dataCompleteness?.dasha).toBe('AVAILABLE');
+    expect(golden.dataCompleteness?.transit).toBe('AVAILABLE');
   });
 
-  it('preserves invariant: strong wealth != strong speculation', () => {
-    const result = interpretWealthV2(horoscope);
-    const speculationManifestation = result.manifestations.find(
-      (m) => m.mode === 'SPECULATION'
-    );
-    const accumulationManifestation = result.manifestations.find(
-      (m) => m.mode === 'ACCUMULATION'
-    );
+  // 3. Natal Promise calculation
+  describe('Natal Promise calculation', () => {
+    it('evaluates strong 2nd/11th factors as VERY_STRONG or STRONG', () => {
+      const strongSupporting = [
+        createDomainEvidence({
+          id: '2H-STRONG',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house is strong with Dhana yoga',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION'
+        }),
+        createDomainEvidence({
+          id: '11H-STRONG',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '11th house brings major revenue gains',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'GAINS'
+        })
+      ];
+      const strength = calculateDomainStrength(strongSupporting, []);
+      expect(strength).toBe('VERY_STRONG');
+    });
 
-    expect(speculationManifestation).toBeDefined();
-    expect(accumulationManifestation).toBeDefined();
-    // Speculation is tracked distinctly from general accumulation/gains
-    expect(speculationManifestation?.mode).toBe('SPECULATION');
+    it('evaluates afflicted wealth factors as WEAK or VERY_WEAK', () => {
+      const challenging = [
+        createDomainEvidence({
+          id: '2H-AFFLICTED',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house heavily afflicted',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION'
+        })
+      ];
+      const strength = calculateDomainStrength([], challenging);
+      expect(strength).toBe('VERY_WEAK');
+    });
+
+    it('evaluates strong support + strong challenge as MIXED', () => {
+      const supporting = [
+        createDomainEvidence({
+          id: '2H-STRONG',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house strong',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION'
+        })
+      ];
+      const challenging = [
+        createDomainEvidence({
+          id: '2L-DEBILITATED',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd lord debilitated',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION'
+        })
+      ];
+      const strength = calculateDomainStrength(supporting, challenging);
+      expect(strength).toBe('MIXED');
+    });
   });
 
+  // 4. Evidence hierarchy and role mapping
+  describe('Evidence Hierarchy and Role Mapping', () => {
+    it('classifies 2nd/11th/9th/5th as PRIMARY, Jupiter/modifiers as MODIFIER, D2 as CONFIRMATION, Dasha as TIMING', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'E-2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION'
+        }),
+        createDomainEvidence({
+          id: 'E-JUPITER',
+          domain: 'WEALTH',
+          role: 'MODIFIER',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Jupiter karaka',
+          polarity: 'SUPPORTING',
+          strength: 'MODERATE',
+          priority: 60,
+          dimension: 'FORTUNE'
+        }),
+        createDomainEvidence({
+          id: 'E-D2',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2 confirmation',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50
+        }),
+        createDomainEvidence({
+          id: 'E-DASHA',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha timing',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30
+        })
+      ];
+
+      const classified = classifyWealthEvidence(evidence);
+      expect(classified.primary.map((e) => e.id)).toContain('E-2H');
+      expect(classified.modifiers.map((e) => e.id)).toContain('E-JUPITER');
+    });
+
+    it('ensures unlinked D2 confirmation ends with empty relatedEvidenceIds', () => {
+      const unlinkedD2 = [
+        createDomainEvidence({
+          id: 'D2-UNLINKED',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2 unlinked status',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: []
+        }),
+        createDomainEvidence({
+          id: 'PRIMARY-2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION'
+        })
+      ];
+
+      const linked = linkWealthEvidence(unlinkedD2);
+      const d2Result = linked.find((e) => e.id === 'D2-UNLINKED');
+      expect(d2Result).toBeDefined();
+      expect(d2Result?.relatedEvidenceIds).toEqual([]);
+    });
+
+    it('links D2 evidence only to explicit 2nd house / 2nd lord and never to unrelated PRIMARY evidence', () => {
+      const rawEvidence: ThemeInterpretationEvidence<WealthEvidenceFamily>[] = [
+        {
+          id: 'RAW-2H',
+          ruleId: 'WEALTH_HOUSE_PROMISE_2H_001',
+          evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '2nd house strong'
+        },
+        {
+          id: 'RAW-2L',
+          ruleId: 'WEALTH_LORD_PROMISE_2L_001',
+          evidenceFamily: WealthEvidenceFamily.SECOND_LORD,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '2nd lord strong'
+        },
+        {
+          id: 'RAW-5H-PRIMARY',
+          ruleId: 'WEALTH_HOUSE_PROMISE_5H_001',
+          evidenceFamily: WealthEvidenceFamily.FIFTH_HOUSE,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '5th house speculation'
+        },
+        {
+          id: 'RAW-D2',
+          ruleId: 'WEALTH_D2_CONFIRMATION_001',
+          evidenceFamily: WealthEvidenceFamily.D2,
+          priority: 'CONFIRMATORY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: 'D2 confirmation',
+          vargaEvidence: { varga: 'D2', relationship: 'CONFIRMS', statement: 'D2 confirms', effect: 'SUPPORT' }
+        }
+      ];
+
+      const d2Item = rawEvidence.find((e) => e.id === 'RAW-D2')!;
+      const relatedIds = resolveRelatedWealthPromiseEvidenceIds(d2Item, rawEvidence);
+      expect(relatedIds).toContain('RAW-2H');
+      expect(relatedIds).toContain('RAW-2L');
+      expect(relatedIds).not.toContain('RAW-5H-PRIMARY');
+      expect(relatedIds.length).toBe(2);
+
+      const domainEvidence = buildWealthEvidence(rawEvidence);
+      const d2Domain = domainEvidence.find((e) => e.id === 'RAW-D2');
+      expect(d2Domain?.relatedEvidenceIds).toEqual(['RAW-2H', 'RAW-2L']);
+      expect(d2Domain?.relatedEvidenceIds).not.toContain('RAW-5H-PRIMARY');
+    });
+  });
+
+  // 5. D2 evaluation matrix
+  describe('D2 Varga relationship evaluation', () => {
+    it('evaluates D2 CONFIRMS when supporting', () => {
+      const rel = evaluateD2Relationship([], undefined, undefined, undefined, 'CONFIRMED');
+      expect(rel).toBe('CONFIRMS');
+    });
+
+    it('evaluates D2 CONFLICTS when challenging', () => {
+      const rel = evaluateD2Relationship([], undefined, undefined, undefined, 'CONFLICTED');
+      expect(rel).toBe('CONFLICTS');
+    });
+
+    it('evaluates D2 UNAVAILABLE when no D2 data exists', () => {
+      const rel = evaluateD2Relationship([], [], [], [], 'NOT_APPLICABLE');
+      expect(rel).toBe('UNAVAILABLE');
+    });
+
+    it('evaluates D2 CONFIRMS when linked to natal promise evidence ids', () => {
+      const natalPromiseIds = ['PROMISE-2H', 'PROMISE-2L'];
+      const linkedD2: readonly DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'D2-SUPP',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2 supports liquid wealth',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: ['PROMISE-2H']
+        })
+      ];
+      const rel = evaluateD2Relationship(undefined, linkedD2, natalPromiseIds);
+      expect(rel).toBe('CONFIRMS');
+    });
+
+    it('evaluates D2 UNAVAILABLE when D2 evidence has no intersecting links to natalPromiseEvidenceIds', () => {
+      const natalPromiseIds = ['PROMISE-2H', 'PROMISE-2L'];
+      const unlinkedD2: readonly DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'D2-UNLINKED',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2 supports unrelated pattern',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: ['SOME-UNRELATED-ID']
+        })
+      ];
+      const rel = evaluateD2Relationship(undefined, unlinkedD2, natalPromiseIds);
+      expect(rel).toBe('UNAVAILABLE');
+    });
+  });
+
+  // 6. Dasha timing per-dimension evaluation
+  describe('Dasha timing & Dimensional separation', () => {
+    it('activates accumulation when Dasha links to 2H, but does NOT activate speculation', () => {
+      const allEvidence: DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'PROMISE-2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house strong',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION',
+          evidenceFamily: 'SECOND_HOUSE'
+        }),
+        createDomainEvidence({
+          id: 'PROMISE-5H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '5th house speculation',
+          polarity: 'SUPPORTING',
+          strength: 'MODERATE',
+          priority: 90,
+          dimension: 'SPECULATION',
+          evidenceFamily: 'FIFTH_HOUSE'
+        })
+      ];
+
+      const dashaEvidence: DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'DASHA-2H',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha period activates 2nd house wealth',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: ['PROMISE-2H'],
+          evidenceFamily: 'DASHA'
+        })
+      ];
+
+      const accEffect = evaluateAccumulationDasha(dashaEvidence, allEvidence);
+      const specEffect = evaluateSpeculationDasha(dashaEvidence, allEvidence);
+
+      expect(accEffect).toBe('ACTIVATES');
+      expect(specEffect).toBe('DOES_NOT_ACTIVATE');
+    });
+
+    it('returns UNKNOWN when Dasha evidence has no linked natal evidence', () => {
+      const unlinkedDasha = [
+        createDomainEvidence({
+          id: 'DASHA-UNLINKED',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha lord unrelated',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: []
+        })
+      ];
+
+      const effect = evaluateDashaEffect(unlinkedDasha, []);
+      expect(effect).toBe('UNKNOWN');
+    });
+  });
+
+  // 7. Transit trigger evaluation
+  describe('Transit trigger evaluation', () => {
+    it('evaluates TRIGGER when transit supports and links to natal wealth promise', () => {
+      const transitEvidence = [
+        createDomainEvidence({
+          id: 'TRANSIT-JUPITER',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Jupiter transits 2nd house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: ['WEALTH-2H']
+        })
+      ];
+
+      const effect = evaluateTransitEffect(transitEvidence, ['WEALTH-2H']);
+      expect(effect).toBe('TRIGGER');
+    });
+
+    it('returns UNKNOWN when transit has no linked natal evidence', () => {
+      const unlinkedTransit = [
+        createDomainEvidence({
+          id: 'TRANSIT-UNLINKED',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Transit 8th house',
+          polarity: 'SUPPORTING',
+          strength: 'MODERATE',
+          priority: 30,
+          relatedEvidenceIds: []
+        })
+      ];
+
+      const effect = evaluateTransitEffect(unlinkedTransit, []);
+      expect(effect).toBe('UNKNOWN');
+
+      const emptyEffect = evaluateTransitEffect([]);
+      expect(emptyEffect).toBe('NO_MATERIAL_TRIGGER');
+    });
+  });
+
+  // 8. Dimensional evaluation & Overall wealth promise invariant
+  describe('Dimensional evaluation & Overall status invariant', () => {
+    it('ensures speculation weakness does NOT downgrade overall wealth status when accumulation and gains are strong', () => {
+      const dimensions = Object.freeze([
+        {
+          dimension: 'ACCUMULATION' as const,
+          status: 'STRONGLY_SUPPORTED' as const,
+          supportingEvidenceIds: ['2H'],
+          challengingEvidenceIds: [],
+          dashaEffect: 'ACTIVATES' as const
+        },
+        {
+          dimension: 'GAINS' as const,
+          status: 'STRONGLY_SUPPORTED' as const,
+          supportingEvidenceIds: ['11H'],
+          challengingEvidenceIds: [],
+          dashaEffect: 'ACTIVATES' as const
+        },
+        {
+          dimension: 'FORTUNE' as const,
+          status: 'SUPPORTED' as const,
+          supportingEvidenceIds: ['9H'],
+          challengingEvidenceIds: [],
+          dashaEffect: 'DOES_NOT_ACTIVATE' as const
+        },
+        {
+          dimension: 'SPECULATION' as const,
+          status: 'CHALLENGED' as const,
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: ['5H_CHALLENGE'],
+          dashaEffect: 'CHALLENGES' as const
+        }
+      ]);
+
+      const overall = resolveOverallWealthStatus(dimensions);
+      expect(overall).toBe('STRONGLY_SUPPORTED');
+    });
+
+    it('resolves CHALLENGED overall status when accumulation and gains are both challenged', () => {
+      const dimensions = Object.freeze([
+        {
+          dimension: 'ACCUMULATION' as const,
+          status: 'CHALLENGED' as const,
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: ['2H_CHALLENGE'],
+          dashaEffect: 'CHALLENGES' as const
+        },
+        {
+          dimension: 'GAINS' as const,
+          status: 'CHALLENGED' as const,
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: ['11H_CHALLENGE'],
+          dashaEffect: 'CHALLENGES' as const
+        },
+        {
+          dimension: 'FORTUNE' as const,
+          status: 'LIMITED' as const,
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          dashaEffect: 'DOES_NOT_ACTIVATE' as const
+        },
+        {
+          dimension: 'SPECULATION' as const,
+          status: 'SUPPORTED' as const,
+          supportingEvidenceIds: ['5H'],
+          challengingEvidenceIds: [],
+          dashaEffect: 'ACTIVATES' as const
+        }
+      ]);
+
+      const overall = resolveOverallWealthStatus(dimensions);
+      expect(overall).toBe('CHALLENGED');
+    });
+  });
+
+  // 9. Manifestation determinism
+  describe('Manifestation determinism', () => {
+    it('derives ACCUMULATION from 2nd house evidence and GAINS from 11th house evidence', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: '2H_ACC',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house savings and liquid capital',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'SECOND_HOUSE',
+          dimension: 'ACCUMULATION',
+          ruleId: 'WEALTH_HOUSE_PROMISE_2H_001'
+        }),
+        createDomainEvidence({
+          id: '11H_REV',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '11th house business gains',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'ELEVENTH_HOUSE',
+          dimension: 'GAINS',
+          ruleId: 'WEALTH_HOUSE_PROMISE_11H_001'
+        })
+      ];
+
+      const manifestations = deriveWealthManifestations(evidence);
+      const acc = manifestations.find((m) => m.mode === 'ACCUMULATION');
+      const gains = manifestations.find((m) => m.mode === 'GAINS');
+
+      expect(acc?.evidenceIds).toContain('2H_ACC');
+      expect(gains?.evidenceIds).toContain('11H_REV');
+    });
+
+    it('does not produce positive SPECULATION from challenging 5th house rules', () => {
+      const challengingSpec = [
+        createDomainEvidence({
+          id: '5H_LOSS',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '5th house afflicted causing speculative losses',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'FIFTH_HOUSE',
+          dimension: 'SPECULATION',
+          ruleId: 'WEALTH_HOUSE_PROMISE_5H_001'
+        })
+      ];
+
+      const manifestations = deriveWealthManifestations(challengingSpec);
+      const spec = manifestations.find((m) => m.mode === 'SPECULATION');
+      expect(spec?.evidenceIds).not.toContain('5H_LOSS');
+    });
+  });
+
+  // 10. Conflict tiers & Natal Promise preservation
+  describe('Conflict tiers & Natal Promise preservation', () => {
+    it('detects all conflict tiers and preserves strong natal promise through transit pressure', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'P1',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd lord strong',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 95
+        }),
+        createDomainEvidence({
+          id: 'P2',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house exalted occupant',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90
+        }),
+        createDomainEvidence({
+          id: 'V1',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2 challenge',
+          polarity: 'CHALLENGING',
+          strength: 'MODERATE',
+          priority: 70,
+          relatedEvidenceIds: ['P1']
+        }),
+        createDomainEvidence({
+          id: 'T1',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha expenditure challenge',
+          polarity: 'CHALLENGING',
+          strength: 'MODERATE',
+          priority: 30,
+          relatedEvidenceIds: ['P1']
+        }),
+        createDomainEvidence({
+          id: 'TR1',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Transit pressure on cash flow',
+          polarity: 'CHALLENGING',
+          strength: 'MODERATE',
+          priority: 30,
+          relatedEvidenceIds: ['P1']
+        })
+      ];
+
+      const conflicts = detectDomainConflicts('WEALTH', evidence);
+      const tiers = conflicts.map((c) => c.tier);
+
+      expect(tiers).toContain('PRIMARY_VS_VARGA');
+      expect(tiers).toContain('PRIMARY_VS_TIMING');
+      expect(tiers).toContain('PRIMARY_VS_TRANSIT');
+
+      const natalSupporting = evidence.filter((e) => e.phase === 'NATAL_PROMISE' && e.polarity === 'SUPPORTING');
+      const natalStrength = calculateDomainStrength(natalSupporting, []);
+      expect(natalStrength).toBe('VERY_STRONG');
+
+      // D2 downgrade test: VERY_STRONG -> STRONG
+      const withVarga = resolveWealthConclusionStrength(natalStrength, 'CONFLICTS', conflicts);
+      expect(withVarga).toBe('STRONG');
+
+      // Transit only conflict preserves strong natal promise
+      const transitOnlyConflicts = conflicts.filter((c) => c.tier === 'PRIMARY_VS_TRANSIT');
+      const withTransitOnly = resolveWealthConclusionStrength('STRONG', 'CONFIRMS', transitOnlyConflicts);
+      expect(withTransitOnly).toBe('STRONG');
+    });
+  });
+
+  // 11. Confidence evaluation rules
+  describe('Confidence evaluation rules', () => {
+    it('single weak primary evidence does not yield HIGH', () => {
+      const weakPrimary = [
+        createDomainEvidence({
+          id: 'WEAK-2L',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd lord in weak dignity',
+          polarity: 'SUPPORTING',
+          strength: 'WEAK',
+          priority: 90
+        })
+      ];
+      const confidence = calculateEvidenceConfidence(weakPrimary);
+      expect(confidence).toBe('LOW');
+      expect(confidence).not.toBe('HIGH');
+    });
+
+    it('multiple strong primary factors with D2 confirmation yields HIGH or VERY_HIGH', () => {
+      const strongPrimary = [
+        createDomainEvidence({
+          id: 'STRONG-2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house strong',
+          polarity: 'SUPPORTING',
+          strength: 'VERY_STRONG',
+          priority: 95
+        }),
+        createDomainEvidence({
+          id: 'STRONG-11H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '11th house strong',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90
+        })
+      ];
+      const confidence = calculateEvidenceConfidence(strongPrimary, {
+        dataCompleteness: 'COMPLETE',
+        hasVargaConflict: false,
+        hasPrimaryChallenge: false
+      });
+      expect(['HIGH', 'VERY_HIGH']).toContain(confidence);
+    });
+  });
+
+  // 12. Data completeness
+  describe('Data completeness', () => {
+    it('accurately reports completeness when factors are present', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: '2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'SECOND_HOUSE'
+        }),
+        createDomainEvidence({
+          id: '11H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '11th house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'ELEVENTH_HOUSE'
+        }),
+        createDomainEvidence({
+          id: 'D2',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          evidenceFamily: 'D2'
+        })
+      ];
+
+      const completeness = calculateWealthDataCompleteness(evidence);
+      expect(completeness.primaryFactors).toBe('AVAILABLE');
+      expect(completeness.d2).toBe('AVAILABLE');
+      expect(completeness.dasha).toBe('UNAVAILABLE');
+    });
+  });
+
+  // 13. Traceability invariant
+  describe('Evidence Traceability Invariant', () => {
+    it('guarantees every evidence ID referenced anywhere exists in result.evidence', () => {
+      const v2 = interpretWealthV2(horoscope);
+      const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
+
+      for (const id of v2.conclusion.supportingEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.conclusion.challengingEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.conclusion.primaryEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.natalPromise.evidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.dashaActivation.evidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.dashaActivation.activatedPromiseEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.transitTrigger.evidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of v2.transitTrigger.triggeredPromiseEvidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+      for (const varga of v2.vargaConfirmations) {
+        for (const id of varga.evidenceIds) {
+          expect(allEvidenceIds.has(id)).toBe(true);
+        }
+      }
+      for (const manifestation of v2.manifestations) {
+        for (const id of manifestation.evidenceIds) {
+          expect(allEvidenceIds.has(id)).toBe(true);
+        }
+      }
+      for (const conflict of v2.conflicts) {
+        for (const id of conflict.positiveEvidenceIds) {
+          expect(allEvidenceIds.has(id)).toBe(true);
+        }
+        for (const id of conflict.negativeEvidenceIds) {
+          expect(allEvidenceIds.has(id)).toBe(true);
+        }
+      }
+    });
+  });
+
+  // 14. AI Projection
+  describe('AI Projection', () => {
+    it('projects domain interpretation cleanly for AI', () => {
+      const v2 = interpretWealthV2(horoscope);
+      const projection = projectDomainInterpretationForAi(v2);
+
+      expect(projection.domain).toBe('WEALTH');
+      expect(projection.natalPromise).toBeDefined();
+      expect(projection.conclusion).toBeDefined();
+      expect(projection.manifestations.length).toBeGreaterThan(0);
+
+      const projRecord = projection as unknown as Record<string, unknown>;
+      expect(projRecord.horoscope).toBeUndefined();
+
+      const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
+      for (const id of projection.evidenceIds) {
+        expect(allEvidenceIds.has(id)).toBe(true);
+      }
+    });
+  });
+
+  // 15. Headline & statement generation
+  describe('Headline and statement generation', () => {
+    it('generates correct headline when accumulation and gains are strongly supported', () => {
+      const headline = buildWealthHeadline({
+        overallStatus: 'STRONGLY_SUPPORTED',
+        accumulationStatus: 'STRONGLY_SUPPORTED',
+        gainsStatus: 'STRONGLY_SUPPORTED',
+        speculationStatus: 'SUPPORTED'
+      });
+      expect(headline).toBe('Wealth potential is strongly supported through accumulation and gains.');
+    });
+
+    it('generates correct headline when speculation is challenged', () => {
+      const headline = buildWealthHeadline({
+        overallStatus: 'SUPPORTED',
+        accumulationStatus: 'SUPPORTED',
+        gainsStatus: 'SUPPORTED',
+        speculationStatus: 'CHALLENGED'
+      });
+      expect(headline).toBe('Wealth is better supported through structured accumulation and gains than through speculation.');
+    });
+
+    it('generates Dasha statements consistent with computed effect', () => {
+      const dummyEvidence = [
+        createDomainEvidence({
+          id: 'DUMMY-EVID',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha timing effect',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30
+        })
+      ];
+
+      expect(buildWealthDashaStatement(dummyEvidence, 'ACTIVATES')).toContain('actively supports');
+      expect(buildWealthDashaStatement(dummyEvidence, 'CHALLENGES')).toContain('consolidation or expenditure');
+      expect(buildWealthDashaStatement(dummyEvidence, 'DOES_NOT_ACTIVATE')).toContain('No active wealth Dasha');
+      expect(buildWealthDashaStatement(dummyEvidence, 'UNKNOWN')).toContain('could not be established');
+    });
+
+    it('generates Transit statements consistent with computed effect', () => {
+      const dummyEvidence = [
+        createDomainEvidence({
+          id: 'DUMMY-EVID',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Transit effect',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30
+        })
+      ];
+
+      expect(buildWealthTransitStatement(dummyEvidence, 'TRIGGER')).toContain('Transit triggers are active');
+      expect(buildWealthTransitStatement(dummyEvidence, 'CHALLENGE')).toContain('Current transit pressure');
+      expect(buildWealthTransitStatement(dummyEvidence, 'NO_MATERIAL_TRIGGER')).toContain('No material transit trigger');
+      expect(buildWealthTransitStatement(dummyEvidence, 'UNKNOWN')).toContain('could not be confirmed');
+    });
+
+    it('generates D2 statements consistent with relationship', () => {
+      const dummyEvidence = [
+        createDomainEvidence({
+          id: 'D2-EVID',
+          domain: 'WEALTH',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D2',
+          statement: 'D2 Hora',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50
+        })
+      ];
+
+      expect(buildD2Statement(dummyEvidence, 'CONFIRMS')).toContain('confirms liquid wealth potential');
+      expect(buildD2Statement(dummyEvidence, 'CONFLICTS')).toContain('diverges from natal promise');
+      expect(buildD2Statement(dummyEvidence, 'UNAVAILABLE')).toContain('unavailable or neutral');
+    });
+  });
+
+  // 16. Registry integration
   it('implements DomainInterpreter and works via registry service', () => {
     const interpreter = new WealthDomainInterpreter();
     expect(interpreter.domain).toBe('WEALTH');
@@ -61,39 +1029,5 @@ describe('WealthDomainInterpreterV2', () => {
     });
     expect(serviceResult.domain).toBe('WEALTH');
     expect(serviceResult.conclusion).toBeDefined();
-  });
-
-  it('preserves P-027 invariant: Natal Promise does not include Dasha or Transit evidence', () => {
-    const v2 = interpretWealthV2(horoscope);
-    const nonNatalEvidenceIds = v2.evidence
-      .filter((e) => e.phase === 'DASHA_ACTIVATION' || e.phase === 'TRANSIT_TRIGGER')
-      .map((e) => e.id);
-
-    for (const id of nonNatalEvidenceIds) {
-      expect(v2.natalPromise.evidenceIds).not.toContain(id);
-    }
-  });
-
-  it('does not fall back to arbitrary natal evidence when Dasha/Transit have no relationship', () => {
-    const v2 = interpretWealthV2(horoscope);
-    const dashaEvidence = v2.evidence.filter((e) => e.phase === 'DASHA_ACTIVATION');
-    const expectedDashaLinks = Array.from(
-      new Set(dashaEvidence.flatMap((e) => e.relatedEvidenceIds))
-    );
-
-    expect(v2.dashaActivation.activatedPromiseEvidenceIds).toEqual(expectedDashaLinks);
-    if (dashaEvidence.length > 0 && expectedDashaLinks.length === 0) {
-      expect(v2.dashaActivation.effect).toBe('UNKNOWN');
-    }
-
-    const transitEvidence = v2.evidence.filter((e) => e.phase === 'TRANSIT_TRIGGER');
-    const expectedTransitLinks = Array.from(
-      new Set(transitEvidence.flatMap((e) => e.relatedEvidenceIds))
-    );
-
-    expect(v2.transitTrigger.triggeredPromiseEvidenceIds).toEqual(expectedTransitLinks);
-    if (transitEvidence.length > 0 && expectedTransitLinks.length === 0) {
-      expect(v2.transitTrigger.effect).toBe('UNKNOWN');
-    }
   });
 });

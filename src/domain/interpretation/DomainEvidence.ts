@@ -21,6 +21,8 @@ export interface DomainEvidence {
   readonly relatedEvidenceIds: readonly string[];
   readonly notes?: string;
   readonly timing?: { readonly period: 'MD' | 'AD' | 'PD' };
+  readonly evidenceFamily?: string;
+  readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
 }
 
 export function createDomainEvidence(
