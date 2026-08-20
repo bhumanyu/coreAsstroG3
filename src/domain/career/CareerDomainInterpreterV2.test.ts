@@ -39,7 +39,14 @@ import {
   GOLDEN_CAREER_EVIDENCE
 } from './career-v2-golden.fixture';
 import { deriveCareerManifestations } from './careerManifestations';
-import { linkCareerEvidence } from './careerEvidenceLinker';
+import {
+  linkCareerEvidence,
+  resolveRelatedCareerPromiseEvidenceIds
+} from './careerEvidenceLinker';
+import {
+  CareerEvidenceFamily,
+  type ThemeInterpretationEvidence
+} from '../../engine/themeInterpretation/themeInterpretationTypes';
 
 describe('CareerDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -279,6 +286,91 @@ describe('CareerDomainInterpreterV2', () => {
       const d10Result = linked.find((e) => e.id === 'D10-UNLINKED');
       expect(d10Result).toBeDefined();
       expect(d10Result?.relatedEvidenceIds).toEqual([]);
+    });
+
+    it('links D10 evidence only to explicit 10th house / 10th lord and never to unrelated PRIMARY evidence', () => {
+      const rawEvidence: ThemeInterpretationEvidence<CareerEvidenceFamily>[] = [
+        {
+          id: 'RAW-10H',
+          ruleId: 'CAREER_HOUSE_PROMISE_10H_001',
+          evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '10th house strong'
+        },
+        {
+          id: 'RAW-10L',
+          ruleId: 'CAREER_LORD_PROMISE_10L_001',
+          evidenceFamily: CareerEvidenceFamily.TENTH_LORD,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '10th lord strong'
+        },
+        {
+          id: 'RAW-2H-PRIMARY',
+          ruleId: 'CAREER_HOUSE_PROMISE_2H_001',
+          evidenceFamily: CareerEvidenceFamily.SECOND_HOUSE,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '2nd house wealth accumulated'
+        },
+        {
+          id: 'RAW-D10',
+          ruleId: 'CAREER_D10_CONFIRMATION_001',
+          evidenceFamily: CareerEvidenceFamily.D10,
+          priority: 'CONFIRMATORY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: 'D10 confirmation',
+          vargaEvidence: { varga: 'D10', relationship: 'CONFIRMS', statement: 'D10 confirms', effect: 'SUPPORT' }
+        }
+      ];
+
+      const d10Item = rawEvidence.find((e) => e.id === 'RAW-D10')!;
+      const relatedIds = resolveRelatedCareerPromiseEvidenceIds(d10Item, rawEvidence);
+      expect(relatedIds).toContain('RAW-10H');
+      expect(relatedIds).toContain('RAW-10L');
+      expect(relatedIds).not.toContain('RAW-2H-PRIMARY');
+      expect(relatedIds.length).toBe(2);
+
+      // When mapped through buildCareerEvidence
+      const domainEvidence = buildCareerEvidence(rawEvidence);
+      const d10Domain = domainEvidence.find((e) => e.id === 'RAW-D10');
+      expect(d10Domain?.relatedEvidenceIds).toEqual(['RAW-10H', 'RAW-10L']);
+      expect(d10Domain?.relatedEvidenceIds).not.toContain('RAW-2H-PRIMARY');
+
+      // When no 10H/10L is present
+      const rawEvidenceNo10th: ThemeInterpretationEvidence<CareerEvidenceFamily>[] = [
+        {
+          id: 'RAW-2H-PRIMARY',
+          ruleId: 'CAREER_HOUSE_PROMISE_2H_001',
+          evidenceFamily: CareerEvidenceFamily.SECOND_HOUSE,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: '2nd house wealth accumulated'
+        },
+        {
+          id: 'RAW-D10',
+          ruleId: 'CAREER_D10_CONFIRMATION_001',
+          evidenceFamily: CareerEvidenceFamily.D10,
+          priority: 'CONFIRMATORY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: 'D10 confirmation',
+          vargaEvidence: { varga: 'D10', relationship: 'CONFIRMS', statement: 'D10 confirms', effect: 'SUPPORT' }
+        }
+      ];
+      const d10ItemNo10th = rawEvidenceNo10th.find((e) => e.id === 'RAW-D10')!;
+      const relatedIdsNo10th = resolveRelatedCareerPromiseEvidenceIds(d10ItemNo10th, rawEvidenceNo10th);
+      expect(relatedIdsNo10th).toEqual([]);
+
+      const domainEvidenceNo10th = buildCareerEvidence(rawEvidenceNo10th);
+      const d10DomainNo10th = domainEvidenceNo10th.find((e) => e.id === 'RAW-D10');
+      expect(d10DomainNo10th?.relatedEvidenceIds).toEqual([]);
     });
   });
 
@@ -788,6 +880,50 @@ describe('CareerDomainInterpreterV2', () => {
 
       expect(tech?.evidenceIds).not.toContain('CHALLENGING_MERCURY');
       expect(emp?.evidenceIds).not.toContain('CHALLENGING_SATURN');
+    });
+
+    it('does not produce LEADERSHIP from generic PRIMARY evidence without leadership family or rule', () => {
+      const nonLeadershipPrimary = [
+        createDomainEvidence({
+          id: 'PRIMARY_2H_WEALTH',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house financial accumulation support',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          ruleId: 'CAREER_HOUSE_PROMISE_2H_001'
+        })
+      ];
+
+      const manifestations = deriveCareerManifestations(nonLeadershipPrimary);
+      const lead = manifestations.find((m) => m.mode === 'LEADERSHIP');
+      expect(lead).toBeDefined();
+      expect(lead?.evidenceIds).toEqual([]);
+      expect(lead?.confidence).toBe('LOW');
+
+      // Conversely, explicit leadership rule / family produces LEADERSHIP
+      const explicitLeadership = [
+        createDomainEvidence({
+          id: 'LEADERSHIP_10H',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '10th house executive leadership authority',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          ruleId: 'CAREER_10H_STRONG_001'
+        })
+      ];
+      const manifestationsExplicit = deriveCareerManifestations(explicitLeadership);
+      const leadExplicit = manifestationsExplicit.find((m) => m.mode === 'LEADERSHIP');
+      expect(leadExplicit).toBeDefined();
+      expect(leadExplicit?.evidenceIds).toContain('LEADERSHIP_10H');
+      expect(leadExplicit?.confidence).toBe('HIGH');
     });
   });
 

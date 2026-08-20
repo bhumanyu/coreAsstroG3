@@ -107,8 +107,7 @@ export function deriveCareerManifestations(
 
   const getSupportingEvidence = (
     families: ReadonlySet<CareerEvidenceFamily>,
-    ruleSet: ReadonlySet<string>,
-    allowPrimaryFallback = false
+    ruleSet: ReadonlySet<string>
   ): DomainEvidence[] => {
     return evidence.filter((item) => {
       // Must be SUPPORTING
@@ -137,10 +136,6 @@ export function deriveCareerManifestations(
         }
       }
 
-      if (allowPrimaryFallback && item.role === 'PRIMARY' && item.source === 'D1') {
-        return true;
-      }
-
       return false;
     });
   };
@@ -148,8 +143,7 @@ export function deriveCareerManifestations(
   // 1. LEADERSHIP & AUTHORITY
   const leadershipEvidence = getSupportingEvidence(
     CAREER_LEADERSHIP_FAMILIES,
-    CAREER_LEADERSHIP_RULES,
-    true
+    CAREER_LEADERSHIP_RULES
   );
   const leadershipConfidence = calculateManifestationConfidence(leadershipEvidence);
   manifestations.push(

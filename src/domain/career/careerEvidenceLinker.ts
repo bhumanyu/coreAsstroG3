@@ -33,8 +33,7 @@ export function resolveRelatedCareerPromiseEvidenceIds(
     const tenthItems = structuralItems.filter(
       (e) =>
         e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE ||
-        e.evidenceFamily === CareerEvidenceFamily.TENTH_LORD ||
-        e.priority === 'PRIMARY'
+        e.evidenceFamily === CareerEvidenceFamily.TENTH_LORD
     );
     // Hard P-027 invariant: Never slice arbitrary structural items if no match exists
     return Object.freeze(tenthItems.map((e) => e.id));
