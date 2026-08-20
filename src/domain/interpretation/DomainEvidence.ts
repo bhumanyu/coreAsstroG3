@@ -20,7 +20,11 @@ export interface DomainEvidence {
   readonly ruleId?: string;
   readonly relatedEvidenceIds: readonly string[];
   readonly notes?: string;
-  readonly timing?: { readonly period: 'MD' | 'AD' | 'PD' };
+  readonly timing?: {
+    readonly period: 'MD' | 'AD' | 'PD';
+    readonly level?: 'MD' | 'AD' | 'PD';
+    readonly periodKey?: string;
+  };
   readonly evidenceFamily?: string;
   readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
 }

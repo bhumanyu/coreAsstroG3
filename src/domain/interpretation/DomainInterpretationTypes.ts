@@ -61,7 +61,8 @@ export type TransitTriggerEffect =
   | 'MODIFIER'
   | 'CHALLENGE'
   | 'NO_MATERIAL_TRIGGER'
-  | 'UNKNOWN';
+  | 'UNKNOWN'
+  | 'INSUFFICIENT_DATA';
 
 export type ConflictTier =
   | 'PRIMARY_VS_PRIMARY'
