@@ -421,6 +421,59 @@ describe('CareerDomainInterpreterV2', () => {
       const rel = evaluateD10Relationship([], 'NOT_APPLICABLE');
       expect(rel).toBe('UNAVAILABLE');
     });
+
+    it('evaluates D10 CONFIRMS when linked to natal promise evidence ids', () => {
+      const natalPromiseIds = ['PROMISE-10H', 'PROMISE-10L'];
+      const linkedD10: readonly DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'D10-SUPP',
+          domain: 'CAREER',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D10',
+          statement: 'D10 supports career',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: ['PROMISE-10H']
+        })
+      ];
+      const rel = evaluateD10Relationship([], undefined, linkedD10, natalPromiseIds);
+      expect(rel).toBe('CONFIRMS');
+    });
+
+    it('evaluates D10 UNAVAILABLE when D10 evidence has no intersecting links to natalPromiseEvidenceIds and no raw hints', () => {
+      const natalPromiseIds = ['PROMISE-10H', 'PROMISE-10L'];
+      const unlinkedD10: readonly DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'D10-UNLINKED-SUPP',
+          domain: 'CAREER',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D10',
+          statement: 'D10 supports unrelated pattern',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: ['SOME-UNRELATED-ID']
+        }),
+        createDomainEvidence({
+          id: 'D10-UNLINKED-CHALL',
+          domain: 'CAREER',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          source: 'D10',
+          statement: 'D10 challenges unrelated pattern',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 50,
+          relatedEvidenceIds: []
+        })
+      ];
+
+      const rel = evaluateD10Relationship([], undefined, unlinkedD10, natalPromiseIds);
+      expect(rel).toBe('UNAVAILABLE');
+    });
   });
 
   // 6. Dasha timing activation MD / AD / PD & negative test (§28, §29)

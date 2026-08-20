@@ -417,18 +417,21 @@ export function evaluateD10Relationship(
 
   // DomainEvidence-based path (primary)
   if (d10Evidence && d10Evidence.length > 0) {
-    const linkedD10 = natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
-      ? d10Evidence.filter((e) =>
-          e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
-        )
-      : d10Evidence;
+    const linkedD10 =
+      natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
+        ? d10Evidence.filter((e) =>
+            e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
+          )
+        : d10Evidence;
 
-    const evalTarget = linkedD10.length > 0 ? linkedD10 : d10Evidence;
-    const hasSupport = evalTarget.some((e) => e.polarity === 'SUPPORTING');
-    const hasChallenge = evalTarget.some((e) => e.polarity === 'CHALLENGING');
-    if (hasSupport && !hasChallenge) return 'CONFIRMS';
-    if (hasSupport && hasChallenge) return 'MODIFIES';
-    if (hasChallenge && !hasSupport) return 'CONFLICTS';
+    if (linkedD10.length > 0) {
+      const hasSupport = linkedD10.some((e) => e.polarity === 'SUPPORTING');
+      const hasChallenge = linkedD10.some((e) => e.polarity === 'CHALLENGING');
+      if (hasSupport && !hasChallenge) return 'CONFIRMS';
+      if (hasSupport && hasChallenge) return 'MODIFIES';
+      if (hasChallenge && !hasSupport) return 'CONFLICTS';
+    }
+    // No linked D10 → do not fabricate; fall through to raw/legacy hints below.
   }
 
   // Fallback hints from raw evidence or legacy status
