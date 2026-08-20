@@ -130,9 +130,6 @@ export function mapWealthRole(
       break;
   }
 
-  if (item.priority === 'PRIMARY') {
-    return 'PRIMARY';
-  }
   if (
     item.vargaEvidence ||
     item.evidenceFamily === WealthEvidenceFamily.D2 ||

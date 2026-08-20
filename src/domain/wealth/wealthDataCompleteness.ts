@@ -10,52 +10,38 @@ export function calculateWealthDataCompleteness(
   rawEvidence?: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
 ): WealthDataCompleteness {
   const has2H = evidence.some(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE ||
-      e.ruleId?.includes('2H') ||
-      e.id.includes('HOUSE_2') ||
-      e.statement.includes('2nd house')
+    (e) => e.evidenceFamily === WealthEvidenceFamily.SECOND_HOUSE
   );
 
   const has2L = evidence.some(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD ||
-      e.ruleId?.includes('2L') ||
-      e.id.includes('2L') ||
-      e.statement.includes('2nd lord')
+    (e) => e.evidenceFamily === WealthEvidenceFamily.SECOND_LORD
   );
 
   const has11H = evidence.some(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_HOUSE ||
-      e.ruleId?.includes('11H') ||
-      e.id.includes('HOUSE_11') ||
-      e.statement.includes('11th house')
+    (e) => e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_HOUSE
   );
 
   const has11L = evidence.some(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_LORD ||
-      e.ruleId?.includes('11L') ||
-      e.id.includes('11L') ||
-      e.statement.includes('11th lord')
+    (e) => e.evidenceFamily === WealthEvidenceFamily.ELEVENTH_LORD
   );
 
   const has9H = evidence.some(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.NINTH_HOUSE ||
-      e.ruleId?.includes('9H') ||
-      e.id.includes('HOUSE_9')
+    (e) => e.evidenceFamily === WealthEvidenceFamily.NINTH_HOUSE
+  );
+
+  const has9L = evidence.some(
+    (e) => e.evidenceFamily === WealthEvidenceFamily.NINTH_LORD
   );
 
   const has5H = evidence.some(
-    (e) =>
-      e.evidenceFamily === WealthEvidenceFamily.FIFTH_HOUSE ||
-      e.ruleId?.includes('5H') ||
-      e.id.includes('HOUSE_5')
+    (e) => e.evidenceFamily === WealthEvidenceFamily.FIFTH_HOUSE
   );
 
-  const primaryCount = [has2H, has2L, has11H, has11L, has9H, has5H].filter(Boolean).length;
+  const has5L = evidence.some(
+    (e) => e.evidenceFamily === WealthEvidenceFamily.FIFTH_LORD
+  );
+
+  const primaryCount = [has2H, has2L, has11H, has11L, has9H, has9L, has5H, has5L].filter(Boolean).length;
 
   let primaryFactors: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
   if ((has2H || has2L) && (has11H || has11L)) {

@@ -67,6 +67,7 @@ export interface WealthManifestation {
   readonly confidence: ConfidenceLevel;
   readonly evidenceIds: readonly string[];
   readonly statement: string;
+  readonly status?: 'SUPPORTED' | 'CHALLENGED' | 'MIXED' | 'INSUFFICIENT_DATA';
 }
 
 export interface WealthConclusionData {

@@ -12,6 +12,7 @@ export interface DomainManifestation {
     | 'VERY_LOW';
   readonly statement: string;
   readonly evidenceIds: readonly string[];
+  readonly status?: 'SUPPORTED' | 'CHALLENGED' | 'MIXED' | 'INSUFFICIENT_DATA';
 }
 
 export function createDomainManifestation(

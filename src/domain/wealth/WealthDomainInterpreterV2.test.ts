@@ -342,6 +342,107 @@ describe('WealthDomainInterpreterV2', () => {
       expect(d2Domain?.relatedEvidenceIds).toEqual(['RAW-2H', 'RAW-2L']);
       expect(d2Domain?.relatedEvidenceIds).not.toContain('RAW-5H-PRIMARY');
     });
+
+    it('maps unknown evidence family with PRIMARY priority to SECONDARY role (P0)', () => {
+      const rawEvidence: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'RAW-UNKNOWN',
+        ruleId: 'UNKNOWN_RULE_001',
+        evidenceFamily: 'CUSTOM_UNLISTED_FAMILY' as unknown as WealthEvidenceFamily,
+        priority: 'PRIMARY',
+        strength: 'STRONG',
+        effect: 'SUPPORT',
+        statement: 'Unknown family raw evidence'
+      };
+
+      const role = mapWealthRole(rawEvidence);
+      expect(role).not.toBe('PRIMARY');
+      expect(role).toBe('SECONDARY');
+    });
+
+    it('maps all known WealthEvidenceFamily members to their designated roles (regression)', () => {
+      const primaryFamilies = [
+        WealthEvidenceFamily.SECOND_HOUSE,
+        WealthEvidenceFamily.SECOND_LORD,
+        WealthEvidenceFamily.ELEVENTH_HOUSE,
+        WealthEvidenceFamily.ELEVENTH_LORD,
+        WealthEvidenceFamily.NINTH_HOUSE,
+        WealthEvidenceFamily.NINTH_LORD,
+        WealthEvidenceFamily.FIFTH_HOUSE,
+        WealthEvidenceFamily.FIFTH_LORD
+      ];
+      for (const fam of primaryFamilies) {
+        expect(
+          mapWealthRole({
+            id: 'test',
+            ruleId: 'r',
+            evidenceFamily: fam,
+            priority: 'SECONDARY',
+            strength: 'STRONG',
+            effect: 'SUPPORT',
+            statement: 's'
+          })
+        ).toBe('PRIMARY');
+      }
+
+      const modifierFamilies = [
+        WealthEvidenceFamily.JUPITER,
+        WealthEvidenceFamily.VENUS,
+        WealthEvidenceFamily.MERCURY,
+        WealthEvidenceFamily.YOGA,
+        WealthEvidenceFamily.FUNCTIONAL_ROLE,
+        WealthEvidenceFamily.PLANETARY_STRENGTH,
+        WealthEvidenceFamily.ASPECT
+      ];
+      for (const fam of modifierFamilies) {
+        expect(
+          mapWealthRole({
+            id: 'test',
+            ruleId: 'r',
+            evidenceFamily: fam,
+            priority: 'PRIMARY',
+            strength: 'STRONG',
+            effect: 'SUPPORT',
+            statement: 's'
+          })
+        ).toBe('MODIFIER');
+      }
+
+      expect(
+        mapWealthRole({
+          id: 'test',
+          ruleId: 'r',
+          evidenceFamily: WealthEvidenceFamily.D2,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: 's'
+        })
+      ).toBe('CONFIRMATION');
+
+      expect(
+        mapWealthRole({
+          id: 'test',
+          ruleId: 'r',
+          evidenceFamily: WealthEvidenceFamily.DASHA,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: 's'
+        })
+      ).toBe('TIMING');
+
+      expect(
+        mapWealthRole({
+          id: 'test',
+          ruleId: 'r',
+          evidenceFamily: WealthEvidenceFamily.TRANSIT,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'SUPPORT',
+          statement: 's'
+        })
+      ).toBe('TIMING');
+    });
   });
 
   // 5. D2 evaluation matrix
@@ -768,6 +869,72 @@ describe('WealthDomainInterpreterV2', () => {
       const spec = manifestations.find((m) => m.mode === 'SPECULATION');
       expect(spec?.evidenceIds).not.toContain('5H_LOSS');
     });
+
+    it('sets INSUFFICIENT_DATA status and VERY_LOW confidence when dimension has no evidence, and applies softened speculation wording', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: '2H_ACC',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house savings',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'SECOND_HOUSE',
+          dimension: 'ACCUMULATION',
+          ruleId: 'WEALTH_HOUSE_PROMISE_2H_001'
+        })
+      ];
+
+      const manifestations = deriveWealthManifestations(evidence);
+      const acc = manifestations.find((m) => m.mode === 'ACCUMULATION');
+      const spec = manifestations.find((m) => m.mode === 'SPECULATION');
+      const fortune = manifestations.find((m) => m.mode === 'FORTUNE');
+      const gains = manifestations.find((m) => m.mode === 'GAINS');
+
+      expect(acc?.status).toBe('SUPPORTED');
+      expect(acc?.confidence).toBe('HIGH');
+
+      expect(spec?.status).toBe('INSUFFICIENT_DATA');
+      expect(spec?.confidence).toBe('VERY_LOW');
+      expect(spec?.statement).toBe('Speculative indicators are comparatively weaker than accumulation and gains.');
+      expect(spec?.statement).not.toContain('speculative returns');
+      expect(spec?.statement).not.toContain('calculated investments');
+
+      expect(fortune?.status).toBe('INSUFFICIENT_DATA');
+      expect(fortune?.confidence).toBe('VERY_LOW');
+
+      expect(gains?.status).toBe('INSUFFICIENT_DATA');
+      expect(gains?.confidence).toBe('VERY_LOW');
+    });
+
+    it('emits softened positive speculation wording when supportive 5th house evidence is present', () => {
+      const specEvidence = [
+        createDomainEvidence({
+          id: '5H_SPEC',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '5th house supportive',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: 'FIFTH_HOUSE',
+          dimension: 'SPECULATION',
+          ruleId: 'WEALTH_HOUSE_PROMISE_5H_001'
+        })
+      ];
+
+      const manifestations = deriveWealthManifestations(specEvidence);
+      const spec = manifestations.find((m) => m.mode === 'SPECULATION');
+      expect(spec?.status).toBe('SUPPORTED');
+      expect(spec?.statement).toBe(
+        'The chart contains supportive indicators for speculative activity, though these should be interpreted separately from overall wealth potential.'
+      );
+    });
   });
 
   // 10. Conflict tiers & Natal Promise preservation
@@ -999,6 +1166,61 @@ describe('WealthDomainInterpreterV2', () => {
       const completeness = calculateWealthDataCompleteness(transitOnly);
       expect(completeness.dasha).toBe('UNAVAILABLE');
       expect(completeness.transit).toBe('AVAILABLE');
+    });
+
+    it('determines primary factors completeness authoritatively by evidenceFamily, not statement text', () => {
+      // Evidence with valid evidenceFamily but generic statement text
+      const evidence = [
+        createDomainEvidence({
+          id: 'EVID-A',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Completely generic text',
+          ruleId: 'CUSTOM_RULE_AAA',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE
+        }),
+        createDomainEvidence({
+          id: 'EVID-B',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Another generic statement',
+          ruleId: 'CUSTOM_RULE_BBB',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          evidenceFamily: WealthEvidenceFamily.ELEVENTH_LORD
+        })
+      ];
+
+      const completeness = calculateWealthDataCompleteness(evidence);
+      expect(completeness.primaryFactors).toBe('AVAILABLE');
+
+      // Evidence with statement containing "2nd house" but wrong evidenceFamily (e.g. JUPITER) does NOT flip has2H
+      const statementOnlyEvidence = [
+        createDomainEvidence({
+          id: 'HOUSE_2_NAME',
+          domain: 'WEALTH',
+          role: 'MODIFIER',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house is influenced by Jupiter karaka',
+          ruleId: 'WEALTH_JUPITER_KARAKA_001',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 60,
+          evidenceFamily: WealthEvidenceFamily.JUPITER
+        })
+      ];
+
+      const statementOnlyCompleteness = calculateWealthDataCompleteness(statementOnlyEvidence);
+      expect(statementOnlyCompleteness.primaryFactors).toBe('UNAVAILABLE');
     });
   });
 
