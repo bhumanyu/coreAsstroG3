@@ -36,7 +36,7 @@ export function calculateCareerDataCompleteness(
     : 'UNAVAILABLE';
 
   const dasha: 'AVAILABLE' | 'UNAVAILABLE' = evidence.some(
-    (e) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION' || e.role === 'TIMING'
+    (e) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION'
   )
     ? 'AVAILABLE'
     : 'UNAVAILABLE';

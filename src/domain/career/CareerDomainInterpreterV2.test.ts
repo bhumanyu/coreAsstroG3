@@ -92,7 +92,7 @@ describe('CareerDomainInterpreterV2', () => {
     expect(ad?.effect).toBe('PARTIALLY_ACTIVATES');
     expect(ad?.activatedPromiseEvidenceIds).toContain('GOLDEN_CAREER_10H_STRONG');
 
-    expect(pd?.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(pd?.effect).toBe('INSUFFICIENT_DATA');
 
     expect(golden.transitTrigger.effect).toBe('CHALLENGE');
     expect(golden.transitTrigger.triggeredPromiseEvidenceIds).toContain('GOLDEN_CAREER_10H_STRONG');
@@ -539,7 +539,7 @@ describe('CareerDomainInterpreterV2', () => {
       expect(ad.activatedPromiseEvidenceIds).toEqual(['CAREER-NATAL-01']);
     });
 
-    it('evaluates PD DOES_NOT_ACTIVATE when no PD timing evidence is present', () => {
+    it('evaluates PD INSUFFICIENT_DATA when no PD timing evidence is present', () => {
       const dashaEvidence = [
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:MAHADASHA:SUN',
@@ -558,7 +558,7 @@ describe('CareerDomainInterpreterV2', () => {
 
       const pd = evaluateCareerTimingActivation('PD', dashaEvidence, natalPromiseIds);
       expect(pd.period).toBe('PD');
-      expect(pd.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(pd.effect).toBe('INSUFFICIENT_DATA');
       expect(pd.activatedPromiseEvidenceIds).toEqual([]);
     });
 

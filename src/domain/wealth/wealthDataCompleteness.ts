@@ -80,7 +80,6 @@ export function calculateWealthDataCompleteness(
     (e) =>
       e.source === 'DASHA' ||
       e.phase === 'DASHA_ACTIVATION' ||
-      e.role === 'TIMING' ||
       e.evidenceFamily === WealthEvidenceFamily.DASHA
   )
     ? 'AVAILABLE'

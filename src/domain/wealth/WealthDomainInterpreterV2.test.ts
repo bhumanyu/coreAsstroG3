@@ -14,6 +14,7 @@ import {
   evaluateGainsDasha,
   evaluateFortuneDasha,
   evaluateSpeculationDasha,
+  evaluateWealthTimingActivation,
   evaluateDashaEffect,
   evaluateTransitEffect,
   evaluateD2Relationship,
@@ -456,6 +457,111 @@ describe('WealthDomainInterpreterV2', () => {
       expect(specEffect).toBe('DOES_NOT_ACTIVATE');
     });
 
+    it('returns INSUFFICIENT_DATA when timing evidence is completely empty', () => {
+      const emptyTiming: DomainEvidence[] = [];
+      const accEffect = evaluateAccumulationDasha(emptyTiming);
+      const specEffect = evaluateSpeculationDasha(emptyTiming);
+      const dashaEffect = evaluateDashaEffect(emptyTiming);
+      const timingActivation = evaluateWealthTimingActivation('MD', emptyTiming, ['PROMISE-2H']);
+
+      expect(accEffect).toBe('INSUFFICIENT_DATA');
+      expect(specEffect).toBe('INSUFFICIENT_DATA');
+      expect(dashaEffect).toBe('INSUFFICIENT_DATA');
+      expect(timingActivation.effect).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('returns DOES_NOT_ACTIVATE when timing evidence is present but unrelated to the dimension', () => {
+      const allEvidence: DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'PROMISE-2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house strong',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION',
+          evidenceFamily: 'SECOND_HOUSE'
+        })
+      ];
+
+      const dashaEvidence: DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'DASHA-2H',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha activates 2H',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: ['PROMISE-2H'],
+          evidenceFamily: 'DASHA'
+        })
+      ];
+
+      const specEffect = evaluateSpeculationDasha(dashaEvidence, allEvidence);
+      expect(specEffect).toBe('DOES_NOT_ACTIVATE');
+    });
+
+    it('returns CHALLENGES and PARTIALLY_ACTIVATES for linked timing combinations', () => {
+      const allEvidence: DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'PROMISE-2H',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd house',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          dimension: 'ACCUMULATION',
+          evidenceFamily: 'SECOND_HOUSE'
+        })
+      ];
+
+      const challengingDasha: DomainEvidence[] = [
+        createDomainEvidence({
+          id: 'DASHA-CHALLENGE',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha challenge to 2H',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: ['PROMISE-2H'],
+          evidenceFamily: 'DASHA'
+        })
+      ];
+
+      expect(evaluateAccumulationDasha(challengingDasha, allEvidence)).toBe('CHALLENGES');
+
+      const mixedDasha: DomainEvidence[] = [
+        ...challengingDasha,
+        createDomainEvidence({
+          id: 'DASHA-SUPPORT',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Dasha support to 2H',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          relatedEvidenceIds: ['PROMISE-2H'],
+          evidenceFamily: 'DASHA'
+        })
+      ];
+
+      expect(evaluateAccumulationDasha(mixedDasha, allEvidence)).toBe('PARTIALLY_ACTIVATES');
+    });
+
     it('returns UNKNOWN when Dasha evidence has no linked natal evidence', () => {
       const unlinkedDasha = [
         createDomainEvidence({
@@ -851,6 +957,48 @@ describe('WealthDomainInterpreterV2', () => {
       expect(completeness.primaryFactors).toBe('AVAILABLE');
       expect(completeness.d2).toBe('AVAILABLE');
       expect(completeness.dasha).toBe('UNAVAILABLE');
+    });
+
+    it('reports dasha AVAILABLE and transit UNAVAILABLE when ONLY Dasha evidence is present (regression test)', () => {
+      const dashaOnly = [
+        createDomainEvidence({
+          id: 'DASHA-1',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: 'Active Dasha',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          evidenceFamily: 'DASHA'
+        })
+      ];
+
+      const completeness = calculateWealthDataCompleteness(dashaOnly);
+      expect(completeness.dasha).toBe('AVAILABLE');
+      expect(completeness.transit).toBe('UNAVAILABLE');
+    });
+
+    it('reports dasha UNAVAILABLE and transit AVAILABLE when ONLY Transit evidence is present with role TIMING (regression test)', () => {
+      const transitOnly = [
+        createDomainEvidence({
+          id: 'TRANSIT-1',
+          domain: 'WEALTH',
+          role: 'TIMING',
+          phase: 'TRANSIT_TRIGGER',
+          source: 'TRANSIT',
+          statement: 'Active Transit',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 30,
+          evidenceFamily: 'TRANSIT'
+        })
+      ];
+
+      const completeness = calculateWealthDataCompleteness(transitOnly);
+      expect(completeness.dasha).toBe('UNAVAILABLE');
+      expect(completeness.transit).toBe('AVAILABLE');
     });
   });
 

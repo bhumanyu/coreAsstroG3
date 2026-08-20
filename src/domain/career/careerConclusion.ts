@@ -118,7 +118,7 @@ export function buildCareerDashaStatement(
   dashaEvidence: readonly DomainEvidence[],
   effect?: TimingActivationEffect
 ): string {
-  if (dashaEvidence.length === 0 || effect === 'DOES_NOT_ACTIVATE') {
+  if (dashaEvidence.length === 0 || effect === 'INSUFFICIENT_DATA' || effect === 'DOES_NOT_ACTIVATE') {
     return 'Current Dasha period provides no active support for natal career promise.';
   }
   if (effect === 'UNKNOWN') {

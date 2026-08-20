@@ -377,7 +377,7 @@ export function evaluateWealthTiming(
   allEvidence?: readonly DomainEvidence[]
 ): TimingActivationEffect {
   if (timingEvidence.length === 0) {
-    return 'DOES_NOT_ACTIVATE';
+    return 'INSUFFICIENT_DATA';
   }
 
   const relevant = timingEvidence.filter((item) => {
@@ -583,7 +583,7 @@ export function evaluateDashaEffect(
   activatedPromiseEvidenceIds?: readonly string[]
 ): TimingActivationEffect {
   if (dashaEvidence.length === 0) {
-    return 'DOES_NOT_ACTIVATE';
+    return 'INSUFFICIENT_DATA';
   }
   const linkedPromiseIds = activatedPromiseEvidenceIds
     ? new Set(activatedPromiseEvidenceIds)
@@ -648,10 +648,10 @@ export function evaluateWealthTimingActivation(
   if (periodEvidence.length === 0) {
     return Object.freeze({
       period,
-      effect: 'DOES_NOT_ACTIVATE',
+      effect: 'INSUFFICIENT_DATA',
       activatedPromiseEvidenceIds: Object.freeze([]),
       evidenceIds: Object.freeze([]),
-      statement: `${period} period lord does not directly activate natal wealth promise.`
+      statement: `${period} timing data is insufficient or unavailable.`
     });
   }
 

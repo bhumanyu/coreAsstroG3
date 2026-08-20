@@ -53,7 +53,8 @@ export type TimingActivationEffect =
   | 'PARTIALLY_ACTIVATES'
   | 'DOES_NOT_ACTIVATE'
   | 'CHALLENGES'
-  | 'UNKNOWN';
+  | 'UNKNOWN'
+  | 'INSUFFICIENT_DATA';
 
 export type TransitTriggerEffect =
   | 'TRIGGER'

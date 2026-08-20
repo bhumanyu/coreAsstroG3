@@ -281,6 +281,8 @@ export function buildCareerTimingStatement(
       return `${period} period lord introduces timing friction or challenges to career initiatives.`;
     case 'DOES_NOT_ACTIVATE':
       return `${period} period lord does not directly activate natal career promise.`;
+    case 'INSUFFICIENT_DATA':
+      return `${period} timing data is insufficient or unavailable.`;
     case 'UNKNOWN':
     default:
       return `${period} activation could not be established from linked natal career evidence.`;
@@ -297,10 +299,10 @@ export function evaluateCareerTimingActivation(
   if (periodEvidence.length === 0) {
     return Object.freeze({
       period,
-      effect: 'DOES_NOT_ACTIVATE',
+      effect: 'INSUFFICIENT_DATA',
       activatedPromiseEvidenceIds: Object.freeze([]),
       evidenceIds: Object.freeze([]),
-      statement: `${period} period lord does not directly activate natal career promise.`
+      statement: `${period} timing data is insufficient or unavailable.`
     });
   }
 
@@ -350,7 +352,7 @@ export function evaluateDashaEffect(
   activatedPromiseEvidenceIds?: readonly string[]
 ): TimingActivationEffect {
   if (dashaEvidence.length === 0) {
-    return 'DOES_NOT_ACTIVATE';
+    return 'INSUFFICIENT_DATA';
   }
   const linkedPromiseIds = activatedPromiseEvidenceIds
     ? new Set(activatedPromiseEvidenceIds)
