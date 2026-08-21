@@ -117,7 +117,7 @@ describe('Domain Synthesis Refactored Unit Tests (P-028)', () => {
   describe('3. Explicit missing state (P1)', () => {
     it('uses typed defaults without as any in createDomainInterpretation', () => {
       const bare = createDomainInterpretation({
-        domain: 'HEALTH' as any,
+        domain: 'HEALTH',
         natalPromise: createNatalPromise({ strength: 'MODERATE' })
       });
 
