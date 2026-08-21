@@ -2,12 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   buildWhyExperience,
   resolveLifeAnalysisEvidenceDetails,
+  resolveDomainEvidence,
+  groupWealthDimensionEvidence,
+  sortEvidence,
   calculateEvidenceIntegrity,
-  groupEvidence
+  groupEvidence,
+  ROLE_ORDER
 } from './lifeAnalysisWhy';
 import { mapEvidenceSource } from './domainPresentationUtils';
 import { resolveRuleMetadata } from './lifeAnalysisEvidenceRules';
 import { runLifeAnalysisProduct } from './lifeAnalysisProductService';
+import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
+import { buildAiContext } from '../../ai/context/aiContextFactory';
 import {
   STAGE1_GOLDEN_HOROSCOPE,
   STAGE1_GOLDEN_CAREER,
@@ -18,6 +24,7 @@ import type { DomainEvidence } from '../../domain/interpretation/DomainEvidence'
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type { AiRouter } from '../../ai/routing/AiRouter';
+import type { EvidenceDetailViewModel } from './lifeAnalysisEvidenceTypes';
 
 describe('P-030 Deterministic Traceable Why Experience', () => {
   const goldenAnalysis = buildLifeAnalysis([
@@ -522,5 +529,298 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(sourceVM.type).toBe('OTHER');
     expect(sourceVM.label).toBe('Natal Chart (D1)');
     expect(sourceVM.calculationId).toBeUndefined();
+  });
+
+  it('Test 18 (P-034): Deterministic ordering — sortEvidence orders by ROLE_ORDER (PRIMARY, SECONDARY, MODIFIER, CONFIRMATION, TIMING) and then id', () => {
+    const mockItems: EvidenceDetailViewModel[] = [
+      {
+        id: 'TIMING_1',
+        domain: 'CAREER',
+        role: 'TIMING',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Timing factor',
+        statement: 'Timing statement',
+        source: { type: 'DASHA', label: 'Dasha' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'TIMING_1', domain: 'CAREER', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'CONFIRMATION_1',
+        domain: 'CAREER',
+        role: 'CONFIRMATION',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Confirmation factor',
+        statement: 'Confirmation statement',
+        source: { type: 'VARGA', label: 'D10' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'CONFIRMATION_1', domain: 'CAREER', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'PRIMARY_B',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Primary factor B',
+        statement: 'Primary statement B',
+        source: { type: 'HOUSE', label: '10th House' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'PRIMARY_B', domain: 'CAREER', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'PRIMARY_A',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Primary factor A',
+        statement: 'Primary statement A',
+        source: { type: 'HOUSE', label: '10th Lord' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'PRIMARY_A', domain: 'CAREER', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'MODIFIER_1',
+        domain: 'CAREER',
+        role: 'MODIFIER',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Modifier factor',
+        statement: 'Modifier statement',
+        source: { type: 'ASPECT', label: 'Aspect' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'MODIFIER_1', domain: 'CAREER', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'SECONDARY_1',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Secondary factor',
+        statement: 'Secondary statement',
+        source: { type: 'HOUSE', label: 'House' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'SECONDARY_1', domain: 'CAREER', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      }
+    ];
+
+    const sorted = sortEvidence(mockItems);
+    expect(sorted.map((e) => e.id)).toEqual([
+      'PRIMARY_A',
+      'PRIMARY_B',
+      'SECONDARY_1',
+      'MODIFIER_1',
+      'CONFIRMATION_1',
+      'TIMING_1'
+    ]);
+
+    expect(ROLE_ORDER).toEqual([
+      'PRIMARY',
+      'SECONDARY',
+      'MODIFIER',
+      'CONFIRMATION',
+      'TIMING'
+    ]);
+  });
+
+  it('Test 19 (P-034): Domain scoping — Career resolver returns only CAREER evidence, Wealth only WEALTH', () => {
+    const careerEvidence = resolveDomainEvidence(
+      {
+        analysis: goldenAnalysis,
+        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+      },
+      'CAREER'
+    );
+
+    const wealthEvidence = resolveDomainEvidence(
+      {
+        analysis: goldenAnalysis,
+        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+      },
+      'WEALTH'
+    );
+
+    expect(careerEvidence.length).toBeGreaterThan(0);
+    expect(careerEvidence.every((e) => e.domain === 'CAREER')).toBe(true);
+
+    expect(wealthEvidence.length).toBeGreaterThan(0);
+    expect(wealthEvidence.every((e) => e.domain === 'WEALTH')).toBe(true);
+
+    // Scoped buildWhyExperience tests
+    const careerWhy = buildWhyExperience(
+      {
+        analysis: goldenAnalysis,
+        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+      },
+      'CAREER'
+    );
+    expect(careerWhy.evidence.every((e) => e.domain === 'CAREER')).toBe(true);
+    expect(careerWhy.integrity.status).toBe('VALID');
+
+    const wealthWhy = buildWhyExperience(
+      {
+        analysis: goldenAnalysis,
+        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+      },
+      'WEALTH'
+    );
+    expect(wealthWhy.evidence.every((e) => e.domain === 'WEALTH')).toBe(true);
+    expect(wealthWhy.integrity.status).toBe('VALID');
+  });
+
+  it('Test 20 (P-034): Wealth dimensions — groupWealthDimensionEvidence partitions evidence into ACCUMULATION, GAINS, FORTUNE, SPECULATION, and UNCLASSIFIED', () => {
+    const mockWealthItems: EvidenceDetailViewModel[] = [
+      {
+        id: 'ACC_1',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        dimension: 'ACCUMULATION',
+        title: 'Accumulation',
+        statement: '2H strength',
+        source: { type: 'HOUSE', label: '2H' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'ACC_1', domain: 'WEALTH', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'GAINS_1',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        dimension: 'GAINS',
+        title: 'Gains',
+        statement: '11H strength',
+        source: { type: 'HOUSE', label: '11H' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'GAINS_1', domain: 'WEALTH', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'FORTUNE_1',
+        domain: 'WEALTH',
+        role: 'SECONDARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        dimension: 'FORTUNE',
+        title: 'Fortune',
+        statement: '9H strength',
+        source: { type: 'HOUSE', label: '9H' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'FORTUNE_1', domain: 'WEALTH', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'SPEC_1',
+        domain: 'WEALTH',
+        role: 'SECONDARY',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        dimension: 'SPECULATION',
+        title: 'Speculation',
+        statement: '5H strength',
+        source: { type: 'HOUSE', label: '5H' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'SPEC_1', domain: 'WEALTH', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      },
+      {
+        id: 'UNCLASS_1',
+        domain: 'WEALTH',
+        role: 'TIMING',
+        polarity: 'SUPPORTING',
+        displayPolarity: 'SUPPORTING',
+        title: 'Timing',
+        statement: 'Dasha activation',
+        source: { type: 'DASHA', label: 'Dasha' },
+        relatedEvidenceIds: [],
+        traceability: { evidenceId: 'UNCLASS_1', domain: 'WEALTH', relatedEvidenceIds: [], valid: true },
+        availability: 'AVAILABLE'
+      }
+    ];
+
+    const grouped = groupWealthDimensionEvidence(mockWealthItems);
+    expect(grouped.ACCUMULATION).toHaveLength(1);
+    expect(grouped.ACCUMULATION[0].id).toBe('ACC_1');
+    expect(grouped.GAINS).toHaveLength(1);
+    expect(grouped.GAINS[0].id).toBe('GAINS_1');
+    expect(grouped.FORTUNE).toHaveLength(1);
+    expect(grouped.FORTUNE[0].id).toBe('FORTUNE_1');
+    expect(grouped.SPECULATION).toHaveLength(1);
+    expect(grouped.SPECULATION[0].id).toBe('SPEC_1');
+    expect(grouped.UNCLASSIFIED).toHaveLength(1);
+    expect(grouped.UNCLASSIFIED[0].id).toBe('UNCLASS_1');
+  });
+
+  it('Test 21 (P-034): AI evidence-ID consistency (§34) — every careerWhy and wealthWhy evidence ID exists in buildAiContext(...).evidence', () => {
+    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE, {
+      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH],
+      lifeAnalysis: goldenAnalysis
+    });
+
+    const aiEvidenceIdSet = new Set(aiContext.evidence.map((e) => e.id));
+
+    const viewModel = buildLifeAnalysisViewModel(
+      goldenAnalysis,
+      STAGE1_GOLDEN_CAREER,
+      STAGE1_GOLDEN_WEALTH,
+      []
+    );
+
+    expect(viewModel.careerWhy).toBeDefined();
+    expect(viewModel.wealthWhy).toBeDefined();
+
+    for (const careerItem of viewModel.careerWhy!.evidence) {
+      expect(
+        aiEvidenceIdSet.has(careerItem.id),
+        `Career Why evidence ID ${careerItem.id} missing from AI Context evidence universe`
+      ).toBe(true);
+    }
+
+    for (const wealthItem of viewModel.wealthWhy!.evidence) {
+      expect(
+        aiEvidenceIdSet.has(wealthItem.id),
+        `Wealth Why evidence ID ${wealthItem.id} missing from AI Context evidence universe`
+      ).toBe(true);
+    }
+  });
+
+  it('Test 22 (P-034): Deduplication and related evidence resolution in domain scoping', () => {
+    const duplicatedAnalysis: LifeAnalysis = {
+      ...goldenAnalysis,
+      domains: [
+        {
+          ...goldenAnalysis.domains[0],
+          supportingEvidenceIds: [
+            ...goldenAnalysis.domains[0].supportingEvidenceIds,
+            goldenAnalysis.domains[0].supportingEvidenceIds[0] // duplicate
+          ]
+        },
+        goldenAnalysis.domains[1]
+      ]
+    };
+
+    const careerEvidence = resolveDomainEvidence(
+      {
+        analysis: duplicatedAnalysis,
+        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+      },
+      'CAREER'
+    );
+
+    const ids = careerEvidence.map((e) => e.id);
+    const uniqueIds = Array.from(new Set(ids));
+    expect(ids.length).toBe(uniqueIds.length);
   });
 });

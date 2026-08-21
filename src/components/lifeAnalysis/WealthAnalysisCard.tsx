@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Coins,
   ShieldCheck,
@@ -8,12 +8,14 @@ import {
   TrendingUp,
   Vault,
   Trophy,
-  Target
+  Target,
+  HelpCircle
 } from 'lucide-react';
 import type {
   LifeAnalysisWealthDetailViewModel,
   LifeAnalysisDomainSummaryViewModel
 } from '../../product/life-analysis/lifeAnalysisTypes';
+import type { WhyExperienceViewModel } from '../../product/life-analysis/lifeAnalysisEvidenceTypes';
 import {
   formatEnum,
   getVargaBadgeClass,
@@ -21,16 +23,21 @@ import {
   getWealthDimensionColor
 } from './lifeAnalysisUx';
 import { DomainPromiseBadge } from './DomainPromiseBadge';
+import { LifeAnalysisEvidencePanel } from './LifeAnalysisEvidencePanel';
 
 interface WealthAnalysisCardProps {
   readonly detail?: LifeAnalysisWealthDetailViewModel;
   readonly summary?: LifeAnalysisDomainSummaryViewModel;
+  readonly why?: WhyExperienceViewModel;
 }
 
 export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
   detail,
-  summary
+  summary,
+  why
 }) => {
+  const [isWhyOpen, setIsWhyOpen] = useState(false);
+
   if (!detail) {
     return null;
   }
@@ -55,11 +62,19 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           </div>
         </div>
 
-        {summary && (
-          <div className="flex items-center gap-2">
-            <DomainPromiseBadge promise={summary.strength} />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {why && (
+            <button
+              type="button"
+              onClick={() => setIsWhyOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Why this conclusion?</span>
+            </button>
+          )}
+          {summary && <DomainPromiseBadge promise={summary.strength} />}
+        </div>
       </div>
 
       {detail.headline && (
@@ -181,6 +196,17 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
           Note: High accumulation capacity (2nd House) reflects wealth retention and stability, which functions independently from speculative risk tolerance (5th House).
         </p>
       </div>
+
+      {/* Domain Evidence Modal Dialog */}
+      {why && (
+        <LifeAnalysisEvidencePanel
+          isOpen={isWhyOpen}
+          onClose={() => setIsWhyOpen(false)}
+          title="Wealth & Prosperity Evidence"
+          domain="WEALTH"
+          why={why}
+        />
+      )}
     </article>
   );
 };

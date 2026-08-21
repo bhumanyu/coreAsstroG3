@@ -1,11 +1,13 @@
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { DomainEvidence } from '../../domain/interpretation/DomainEvidence';
+import type { DomainId, EvidenceRole } from '../../domain/interpretation/DomainInterpretationTypes';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type {
   EvidenceDetailViewModel,
   EvidenceIntegrityViewModel,
   EvidenceIntegrityStatus,
   GroupedEvidenceViewModel,
+  GroupedWealthDimensionEvidenceViewModel,
   WhyExperienceViewModel,
   EvidenceChartFactViewModel
 } from './lifeAnalysisEvidenceTypes';
@@ -16,6 +18,34 @@ import { deepFreeze } from '../../ai/context/deepFreeze';
 export interface ResolveWhyEvidenceOptions {
   readonly analysis: LifeAnalysis;
   readonly domainInterpretations: readonly DomainInterpretation[];
+}
+
+/**
+ * Fixed deterministic ordering hierarchy for evidence roles:
+ * PRIMARY -> SECONDARY -> MODIFIER -> CONFIRMATION -> TIMING
+ */
+export const ROLE_ORDER: Readonly<Record<EvidenceRole, number>> = Object.freeze({
+  PRIMARY: 0,
+  SECONDARY: 1,
+  MODIFIER: 2,
+  CONFIRMATION: 3,
+  TIMING: 4
+});
+
+/**
+ * Sorts evidence items deterministically by role order then by ID alphabetically.
+ */
+export function sortEvidence(
+  evidence: readonly EvidenceDetailViewModel[]
+): readonly EvidenceDetailViewModel[] {
+  return [...evidence].sort((a, b) => {
+    const roleA = ROLE_ORDER[a.role] ?? 99;
+    const roleB = ROLE_ORDER[b.role] ?? 99;
+    if (roleA !== roleB) {
+      return roleA - roleB;
+    }
+    return a.id.localeCompare(b.id);
+  });
 }
 
 /**
@@ -75,6 +105,7 @@ function deriveEvidenceTitle(
  * Invariant: Consumes DomainEvidence directly from domain interpretations.
  * Invariant: Unknown evidence IDs with no matching DomainEvidence are dropped.
  * Invariant: Traceability is marked valid=true when DomainEvidence resolves, regardless of rule metadata presence.
+ * Invariant: Outputs are deterministically ordered by ROLE_ORDER then id.localeCompare.
  */
 export function resolveLifeAnalysisEvidenceDetails(
   options: ResolveWhyEvidenceOptions
@@ -156,6 +187,7 @@ export function resolveLifeAnalysisEvidenceDetails(
         source,
         ...(rule ? { rule } : {}),
         ...(chartFact ? { chartFact } : {}),
+        ...(domainEvidence.dimension ? { dimension: domainEvidence.dimension } : {}),
         relatedEvidenceIds: domainEvidence.relatedEvidenceIds ?? Object.freeze([]),
         traceability: Object.freeze({
           evidenceId: domainEvidence.id,
@@ -169,7 +201,66 @@ export function resolveLifeAnalysisEvidenceDetails(
     );
   }
 
-  return deepFreeze(resolvedList);
+  return deepFreeze(sortEvidence(resolvedList));
+}
+
+/**
+ * Resolves deterministic DomainEvidence filtered strictly to a specific life domain (e.g. CAREER or WEALTH).
+ * Reuses the canonical indexing, deduplication, and unknown-ID dropping logic.
+ */
+export function resolveDomainEvidence(
+  options: ResolveWhyEvidenceOptions,
+  domain: DomainId
+): readonly EvidenceDetailViewModel[] {
+  const allResolved = resolveLifeAnalysisEvidenceDetails(options);
+  const domainFiltered = allResolved.filter((e) => e.domain === domain);
+  return deepFreeze(sortEvidence(domainFiltered));
+}
+
+/**
+ * Groups Wealth domain evidence items into classical wealth dimensions
+ * (ACCUMULATION, GAINS, FORTUNE, SPECULATION, UNCLASSIFIED).
+ */
+export function groupWealthDimensionEvidence(
+  evidence: readonly EvidenceDetailViewModel[]
+): GroupedWealthDimensionEvidenceViewModel {
+  const accumulation: EvidenceDetailViewModel[] = [];
+  const gains: EvidenceDetailViewModel[] = [];
+  const fortune: EvidenceDetailViewModel[] = [];
+  const speculation: EvidenceDetailViewModel[] = [];
+  const unclassified: EvidenceDetailViewModel[] = [];
+
+  for (const item of evidence) {
+    if (item.domain !== 'WEALTH') {
+      continue;
+    }
+
+    switch (item.dimension) {
+      case 'ACCUMULATION':
+        accumulation.push(item);
+        break;
+      case 'GAINS':
+        gains.push(item);
+        break;
+      case 'FORTUNE':
+        fortune.push(item);
+        break;
+      case 'SPECULATION':
+        speculation.push(item);
+        break;
+      default:
+        unclassified.push(item);
+        break;
+    }
+  }
+
+  return deepFreeze({
+    ACCUMULATION: Object.freeze(sortEvidence(accumulation)),
+    GAINS: Object.freeze(sortEvidence(gains)),
+    FORTUNE: Object.freeze(sortEvidence(fortune)),
+    SPECULATION: Object.freeze(sortEvidence(speculation)),
+    UNCLASSIFIED: Object.freeze(sortEvidence(unclassified))
+  });
 }
 
 /**
@@ -177,18 +268,40 @@ export function resolveLifeAnalysisEvidenceDetails(
  */
 export function calculateEvidenceIntegrity(
   analysis: LifeAnalysis,
-  availableEvidenceIds: ReadonlySet<string> | readonly string[]
+  availableEvidenceIds: ReadonlySet<string> | readonly string[],
+  domain?: DomainId
 ): EvidenceIntegrityViewModel {
-  const totalReferenced = analysis.evidenceIds?.length ?? 0;
   const availableSet =
     availableEvidenceIds instanceof Set
       ? availableEvidenceIds
       : new Set(availableEvidenceIds);
 
+  let targetEvidenceIds: readonly string[];
+
+  if (domain) {
+    const domainSummary = analysis.domains?.find((d) => d.domain === domain);
+    const domainSpecificIds = new Set<string>([
+      ...(domainSummary?.supportingEvidenceIds ?? []),
+      ...(domainSummary?.challengingEvidenceIds ?? [])
+    ]);
+
+    // Also include any analysis.evidenceIds that exist in this domain's available set
+    for (const id of analysis.evidenceIds ?? []) {
+      if (availableSet.has(id)) {
+        domainSpecificIds.add(id);
+      }
+    }
+
+    targetEvidenceIds = Array.from(domainSpecificIds);
+  } else {
+    targetEvidenceIds = analysis.evidenceIds ?? [];
+  }
+
+  const totalReferenced = targetEvidenceIds.length;
   const unresolvedIds: string[] = [];
   let resolvedCount = 0;
 
-  for (const id of analysis.evidenceIds ?? []) {
+  for (const id of targetEvidenceIds) {
     if (availableSet.has(id)) {
       resolvedCount++;
     } else {
@@ -253,30 +366,36 @@ export function groupEvidence(
   }
 
   return deepFreeze({
-    primary: Object.freeze(primary),
-    supporting: Object.freeze(supporting),
-    challenging: Object.freeze(challenging),
-    conflicting: Object.freeze(conflicting),
-    modifiers: Object.freeze(modifiers),
-    confirmations: Object.freeze(confirmations),
-    timing: Object.freeze(timing)
+    primary: Object.freeze(sortEvidence(primary)),
+    supporting: Object.freeze(sortEvidence(supporting)),
+    challenging: Object.freeze(sortEvidence(challenging)),
+    conflicting: Object.freeze(sortEvidence(conflicting)),
+    modifiers: Object.freeze(sortEvidence(modifiers)),
+    confirmations: Object.freeze(sortEvidence(confirmations)),
+    timing: Object.freeze(sortEvidence(timing))
   });
 }
 
 /**
- * Builds the complete deterministic Why Experience View Model for P-030.
+ * Builds the complete deterministic Why Experience View Model for P-030 and P-034.
  *
  * Invariant: Reads domain interpretations directly.
  * Invariant: Never invokes the AI layer or remote providers.
  */
 export function buildWhyExperience(
-  options: ResolveWhyEvidenceOptions
+  options: ResolveWhyEvidenceOptions,
+  domain?: DomainId
 ): WhyExperienceViewModel {
-  const evidence = resolveLifeAnalysisEvidenceDetails(options);
+  const evidence = domain
+    ? resolveDomainEvidence(options, domain)
+    : resolveLifeAnalysisEvidenceDetails(options);
 
   // Universe of resolvable DomainEvidence IDs
   const availableEvidenceIds = new Set<string>();
   for (const interp of options.domainInterpretations ?? []) {
+    if (domain && interp.domain !== domain) {
+      continue;
+    }
     for (const ev of interp.evidence ?? []) {
       if (ev && ev.id) {
         availableEvidenceIds.add(ev.id);
@@ -286,7 +405,8 @@ export function buildWhyExperience(
 
   const integrity = calculateEvidenceIntegrity(
     options.analysis,
-    availableEvidenceIds
+    availableEvidenceIds,
+    domain
   );
   const grouped = groupEvidence(evidence);
 

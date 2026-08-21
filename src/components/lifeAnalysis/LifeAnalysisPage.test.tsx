@@ -137,6 +137,160 @@ describe('LifeAnalysisPage', () => {
         source: 'Gochara Transit'
       }
     ],
+    careerWhy: {
+      integrity: {
+        status: 'VALID',
+        resolved: 1,
+        totalReferenced: 1,
+        unresolved: 0,
+        unresolvedIds: []
+      },
+      grouped: {
+        primary: [
+          {
+            id: 'E-CAREER-01',
+            domain: 'CAREER',
+            role: 'PRIMARY',
+            polarity: 'SUPPORTING',
+            displayPolarity: 'SUPPORTING',
+            title: 'Sun Digbala in 10th House',
+            statement: 'Sun occupies the 10th house Kendra possessing maximum directional strength.',
+            source: { label: 'D1 Natal Chart', type: 'HOUSE' },
+            relatedEvidenceIds: [],
+            traceability: {
+              evidenceId: 'E-CAREER-01',
+              domain: 'CAREER',
+              relatedEvidenceIds: [],
+              valid: true
+            },
+            availability: 'AVAILABLE'
+          }
+        ],
+        supporting: [],
+        challenging: [],
+        conflicting: [],
+        confirmations: [],
+        timing: [],
+        modifiers: []
+      },
+      evidence: [
+        {
+          id: 'E-CAREER-01',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          polarity: 'SUPPORTING',
+          displayPolarity: 'SUPPORTING',
+          title: 'Sun Digbala in 10th House',
+          statement: 'Sun occupies the 10th house Kendra possessing maximum directional strength.',
+          source: { label: 'D1 Natal Chart', type: 'HOUSE' },
+          relatedEvidenceIds: [],
+          traceability: {
+            evidenceId: 'E-CAREER-01',
+            domain: 'CAREER',
+            relatedEvidenceIds: [],
+            valid: true
+          },
+          availability: 'AVAILABLE'
+        }
+      ]
+    },
+    wealthWhy: {
+      integrity: {
+        status: 'VALID',
+        resolved: 2,
+        totalReferenced: 2,
+        unresolved: 0,
+        unresolvedIds: []
+      },
+      grouped: {
+        primary: [],
+        supporting: [
+          {
+            id: 'E-WEALTH-ACC',
+            domain: 'WEALTH',
+            role: 'PRIMARY',
+            polarity: 'SUPPORTING',
+            displayPolarity: 'SUPPORTING',
+            dimension: 'ACCUMULATION',
+            title: '2nd Lord Exalted in Kendra',
+            statement: '2nd Lord strong in Kendra ensures liquid wealth preservation.',
+            source: { label: 'D1 Natal Chart', type: 'HOUSE' },
+            relatedEvidenceIds: [],
+            traceability: {
+              evidenceId: 'E-WEALTH-ACC',
+              domain: 'WEALTH',
+              relatedEvidenceIds: [],
+              valid: true
+            },
+            availability: 'AVAILABLE'
+          },
+          {
+            id: 'E-WEALTH-SPEC',
+            domain: 'WEALTH',
+            role: 'SECONDARY',
+            polarity: 'CHALLENGING',
+            displayPolarity: 'CHALLENGING',
+            dimension: 'SPECULATION',
+            title: '5th Lord in 8th House Placement',
+            statement: 'Speculative returns experience elevated volatility.',
+            source: { label: 'D1 Natal Chart', type: 'LORDSHIP' },
+            relatedEvidenceIds: [],
+            traceability: {
+              evidenceId: 'E-WEALTH-SPEC',
+              domain: 'WEALTH',
+              relatedEvidenceIds: [],
+              valid: true
+            },
+            availability: 'AVAILABLE'
+          }
+        ],
+        challenging: [],
+        conflicting: [],
+        confirmations: [],
+        timing: [],
+        modifiers: []
+      },
+      evidence: [
+        {
+          id: 'E-WEALTH-ACC',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          polarity: 'SUPPORTING',
+          displayPolarity: 'SUPPORTING',
+          dimension: 'ACCUMULATION',
+          title: '2nd Lord Exalted in Kendra',
+          statement: '2nd Lord strong in Kendra ensures liquid wealth preservation.',
+          source: { label: 'D1 Natal Chart', type: 'HOUSE' },
+          relatedEvidenceIds: [],
+          traceability: {
+            evidenceId: 'E-WEALTH-ACC',
+            domain: 'WEALTH',
+            relatedEvidenceIds: [],
+            valid: true
+          },
+          availability: 'AVAILABLE'
+        },
+        {
+          id: 'E-WEALTH-SPEC',
+          domain: 'WEALTH',
+          role: 'SECONDARY',
+          polarity: 'CHALLENGING',
+          displayPolarity: 'CHALLENGING',
+          dimension: 'SPECULATION',
+          title: '5th Lord in 8th House Placement',
+          statement: 'Speculative returns experience elevated volatility.',
+          source: { label: 'D1 Natal Chart', type: 'LORDSHIP' },
+          relatedEvidenceIds: [],
+          traceability: {
+            evidenceId: 'E-WEALTH-SPEC',
+            domain: 'WEALTH',
+            relatedEvidenceIds: [],
+            valid: true
+          },
+          availability: 'AVAILABLE'
+        }
+      ]
+    },
     why: {
       integrity: {
         status: 'VALID',
@@ -504,5 +658,67 @@ describe('LifeAnalysisPage', () => {
     const hasNumericPercentScores = badgeTexts.some((text) => /^[0-9]+(\.[0-9]+)?%$/.test(text.trim()));
 
     expect(hasNumericPercentScores).toBe(false);
+  });
+
+  it('P-034: clicking "Why this conclusion?" on Career card opens dialog with aria-modal and Career evidence', () => {
+    const state: LifeAnalysisProductState = {
+      status: 'READY',
+      analysis: mockReadyAnalysis
+    };
+
+    render(<LifeAnalysisPage state={state} />);
+
+    // Find the Career card's "Why this conclusion?" button
+    const whyButtons = screen.getAllByRole('button', { name: /Why this conclusion\?/i });
+    expect(whyButtons.length).toBeGreaterThanOrEqual(2);
+
+    // Click the first one (Career card)
+    fireEvent.click(whyButtons[0]);
+
+    // Check modal opens with role="dialog" and aria-modal="true"
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(screen.getByText('Career & Vocation Evidence')).toBeInTheDocument();
+
+    // Check close button
+    const closeBtn = screen.getByRole('button', { name: /Close evidence panel/i });
+    expect(closeBtn).toBeInTheDocument();
+    fireEvent.click(closeBtn);
+
+    // Dialog should be closed
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('P-034: clicking "Why this conclusion?" on Wealth card opens dialog showing Accumulation and Speculation dimensions', () => {
+    const state: LifeAnalysisProductState = {
+      status: 'READY',
+      analysis: mockReadyAnalysis
+    };
+
+    render(<LifeAnalysisPage state={state} />);
+
+    // Find the Wealth card's "Why this conclusion?" button (second button)
+    const whyButtons = screen.getAllByRole('button', { name: /Why this conclusion\?/i });
+    expect(whyButtons.length).toBeGreaterThanOrEqual(2);
+
+    // Click the second one (Wealth card)
+    fireEvent.click(whyButtons[1]);
+
+    // Check modal opens
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(screen.getByText('Wealth & Prosperity Evidence')).toBeInTheDocument();
+
+    // Wealth panel groups by dimension: should show Accumulation and Speculation tabs or sections
+    expect(screen.getByText(/Accumulation/i)).toBeInTheDocument();
+    expect(screen.getByText(/Speculation/i)).toBeInTheDocument();
+
+    // Check close button
+    const closeBtn = screen.getByRole('button', { name: /Close evidence panel/i });
+    expect(closeBtn).toBeInTheDocument();
+    fireEvent.click(closeBtn);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

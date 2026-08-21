@@ -55,6 +55,7 @@ export interface EvidenceDetailViewModel {
   readonly source: EvidenceSourceViewModel;
   readonly rule?: EvidenceRuleViewModel;
   readonly chartFact?: EvidenceChartFactViewModel;
+  readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
   readonly relatedEvidenceIds: readonly string[];
   readonly traceability: EvidenceTraceabilityViewModel;
   readonly availability: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
@@ -78,6 +79,20 @@ export interface GroupedEvidenceViewModel {
   readonly modifiers: readonly EvidenceDetailViewModel[];
   readonly confirmations: readonly EvidenceDetailViewModel[];
   readonly timing: readonly EvidenceDetailViewModel[];
+}
+
+export type WealthDimensionKey =
+  | 'ACCUMULATION'
+  | 'GAINS'
+  | 'FORTUNE'
+  | 'SPECULATION';
+
+export interface GroupedWealthDimensionEvidenceViewModel {
+  readonly ACCUMULATION: readonly EvidenceDetailViewModel[];
+  readonly GAINS: readonly EvidenceDetailViewModel[];
+  readonly FORTUNE: readonly EvidenceDetailViewModel[];
+  readonly SPECULATION: readonly EvidenceDetailViewModel[];
+  readonly UNCLASSIFIED: readonly EvidenceDetailViewModel[];
 }
 
 export interface WhyExperienceViewModel {

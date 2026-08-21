@@ -113,6 +113,8 @@ export interface LifeAnalysisViewModel {
   readonly completeness: LifeAnalysisCompletenessViewModel;
   readonly evidence: readonly LifeAnalysisEvidenceViewModel[];
   readonly why: WhyExperienceViewModel;
+  readonly careerWhy?: WhyExperienceViewModel;
+  readonly wealthWhy?: WhyExperienceViewModel;
   readonly careerDetail?: LifeAnalysisCareerDetailViewModel;
   readonly wealthDetail?: LifeAnalysisWealthDetailViewModel;
 }

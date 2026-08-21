@@ -87,10 +87,12 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
           <CareerAnalysisCard
             detail={analysis.careerDetail}
             summary={careerSummary}
+            why={analysis.careerWhy}
           />
           <WealthAnalysisCard
             detail={analysis.wealthDetail}
             summary={wealthSummary}
+            why={analysis.wealthWhy}
           />
         </div>
       </section>

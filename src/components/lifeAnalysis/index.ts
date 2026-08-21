@@ -14,5 +14,6 @@ export * from './SharedTimingSection';
 export * from './ConflictSection';
 export * from './EvidenceSection';
 export * from './EvidenceCard';
+export * from './LifeAnalysisEvidencePanel';
 export * from './AiExplanationSection';
 export * from './LifeAnalysisPage';

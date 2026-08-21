@@ -1,25 +1,31 @@
-import React from 'react';
-import { Briefcase, ShieldCheck, Compass, Activity, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { Briefcase, ShieldCheck, Compass, Activity, Zap, HelpCircle } from 'lucide-react';
 import type {
   LifeAnalysisCareerDetailViewModel,
   LifeAnalysisDomainSummaryViewModel
 } from '../../product/life-analysis/lifeAnalysisTypes';
+import type { WhyExperienceViewModel } from '../../product/life-analysis/lifeAnalysisEvidenceTypes';
 import {
   formatEnum,
   getVargaBadgeClass,
   getEffectBadgeClass
 } from './lifeAnalysisUx';
 import { DomainPromiseBadge } from './DomainPromiseBadge';
+import { LifeAnalysisEvidencePanel } from './LifeAnalysisEvidencePanel';
 
 interface CareerAnalysisCardProps {
   readonly detail?: LifeAnalysisCareerDetailViewModel;
   readonly summary?: LifeAnalysisDomainSummaryViewModel;
+  readonly why?: WhyExperienceViewModel;
 }
 
 export const CareerAnalysisCard: React.FC<CareerAnalysisCardProps> = ({
   detail,
-  summary
+  summary,
+  why
 }) => {
+  const [isWhyOpen, setIsWhyOpen] = useState(false);
+
   if (!detail) {
     return null;
   }
@@ -44,11 +50,19 @@ export const CareerAnalysisCard: React.FC<CareerAnalysisCardProps> = ({
           </div>
         </div>
 
-        {summary && (
-          <div className="flex items-center gap-2">
-            <DomainPromiseBadge promise={summary.strength} />
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {why && (
+            <button
+              type="button"
+              onClick={() => setIsWhyOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Why this conclusion?</span>
+            </button>
+          )}
+          {summary && <DomainPromiseBadge promise={summary.strength} />}
+        </div>
       </div>
 
       {detail.headline && (
@@ -134,6 +148,17 @@ export const CareerAnalysisCard: React.FC<CareerAnalysisCardProps> = ({
             ))}
           </div>
         </div>
+      )}
+
+      {/* Domain Evidence Modal Dialog */}
+      {why && (
+        <LifeAnalysisEvidencePanel
+          isOpen={isWhyOpen}
+          onClose={() => setIsWhyOpen(false)}
+          title="Career & Vocation Evidence"
+          domain="CAREER"
+          why={why}
+        />
       )}
     </article>
   );

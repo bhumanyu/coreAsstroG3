@@ -173,6 +173,20 @@ export function buildLifeAnalysisViewModel(
       analysis,
       domainInterpretations: [career, wealth]
     }),
+    careerWhy: buildWhyExperience(
+      {
+        analysis,
+        domainInterpretations: [career, wealth]
+      },
+      'CAREER'
+    ),
+    wealthWhy: buildWhyExperience(
+      {
+        analysis,
+        domainInterpretations: [career, wealth]
+      },
+      'WEALTH'
+    ),
     careerDetail,
     wealthDetail
   };
