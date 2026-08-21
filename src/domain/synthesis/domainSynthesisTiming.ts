@@ -11,7 +11,7 @@ export type TimingLevel = 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
 
 export interface TimingIdentity {
   readonly source: TimingSource;
-  readonly level?: TimingLevel | string;
+  readonly level?: TimingLevel;
   readonly periodKey?: string;
 }
 
@@ -261,7 +261,7 @@ export function deriveSharedTiming(
           statement,
           evidenceIds: Object.freeze(Array.from(evidenceIdSet).sort()),
           isConflict,
-          ...(identity.level ? { level: identity.level as any } : {}),
+          ...(identity.level ? { level: identity.level } : {}),
           ...(identity.periodKey ? { periodKey: identity.periodKey } : {})
         })
       );
