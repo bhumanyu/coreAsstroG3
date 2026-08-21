@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from './App';
 import * as lifeAnalysisProductService from './product/life-analysis/lifeAnalysisProductService';
-import { STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from './integration/stage1/stage1GoldenFixture';
+import { STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from './integration/stage1/stage1GoldenFixture';
 import { buildLifeAnalysis } from './domain/synthesis';
 import { buildLifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisMapper';
 import type { LifeAnalysisProductState, LifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisTypes';
@@ -104,7 +104,10 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     fireEvent.click(calcBtn);
 
     await waitFor(() => {
-      expect(lifeAnalysisProductService.runLifeAnalysisProduct).toHaveBeenCalledTimes(2);
+      const calls = vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mock.calls;
+      expect(calls).toHaveLength(2);
+      expect(calls[0][0].horoscope).not.toEqual(calls[1][0].horoscope);
+      expect(calls[0][0].horoscope.birthDetails.latitude).not.toEqual(calls[1][0].horoscope.birthDetails.latitude);
     });
   });
 
@@ -194,7 +197,77 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
   });
 
-  it('7. Tab routing: navigating to Detailed Analysis, Horoscope, Planets, Transit, Divisional tabs renders cleanly', async () => {
+  it('7. Stale retry protection: late-resolving retry on Chart A does not overwrite newer Chart B', async () => {
+    const errorState: LifeAnalysisProductState = {
+      status: 'ERROR',
+      errorMessage: 'First attempt error'
+    };
+
+    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce(errorState);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Life Analysis Computation Error')).toBeInTheDocument();
+    });
+
+    let resolveRetryPromise!: (value: LifeAnalysisProductState) => void;
+    const retryPromise = new Promise<LifeAnalysisProductState>((resolve) => {
+      resolveRetryPromise = resolve;
+    });
+
+    // When retry button clicked, hang the retry request
+    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockReturnValueOnce(retryPromise);
+
+    const retryBtn = screen.getByRole('button', { name: /retry analysis/i });
+    fireEvent.click(retryBtn);
+
+    // While retry is pending, user changes chart to Chart B
+    const chartBViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      overall: {
+        ...sampleViewModel.overall,
+        statement: 'Statement from Chart B - Fresh Selection'
+      }
+    };
+    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce({
+      status: 'READY',
+      analysis: chartBViewModel
+    });
+
+    const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
+    fireEvent.click(editBtn);
+
+    const j2000PresetBtn = screen.getByText('J2000 Astronomical Epoch');
+    fireEvent.click(j2000PresetBtn);
+
+    const calcBtn = screen.getByRole('button', { name: /calculate chart/i });
+    fireEvent.click(calcBtn);
+
+    // Chart B resolves and renders
+    await waitFor(() => {
+      expect(screen.getByText('Statement from Chart B - Fresh Selection')).toBeInTheDocument();
+    });
+
+    // Now late retry on Chart A resolves
+    const staleRetryViewModel: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      overall: {
+        ...sampleViewModel.overall,
+        statement: 'Late Retry Result Chart A - Should Be Discarded'
+      }
+    };
+    resolveRetryPromise({
+      status: 'READY',
+      analysis: staleRetryViewModel
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText('Late Retry Result Chart A - Should Be Discarded')).not.toBeInTheDocument();
+    expect(screen.getByText('Statement from Chart B - Fresh Selection')).toBeInTheDocument();
+  });
+
+  it('8. Tab routing: navigating to Detailed Analysis, Horoscope, Planets, Transit, Divisional tabs renders cleanly', async () => {
     render(<App />);
 
     // Click Detailed Analysis tab
@@ -222,6 +295,6 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     // Click Divisional Vargas tab
     const divisionalTab = screen.getByRole('button', { name: 'Divisional Vargas (D1, D3, D9, D10)' });
     fireEvent.click(divisionalTab);
-    expect(screen.getByText('Varga Explorer')).toBeInTheDocument();
+    expect(screen.getByText('Divisional Vargas Inspection (D1, D3, D9, D10)')).toBeInTheDocument();
   });
 });

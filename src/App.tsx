@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Header } from './components/Header';
 import { BirthFormModal, PRESET_PROFILES } from './components/BirthFormModal';
 import { KundaliChart } from './components/KundaliChart';
@@ -30,42 +30,47 @@ export const App: React.FC = () => {
     return calculateHoroscope(birthDetails);
   }, [birthDetails]);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLifeAnalysisState({ status: 'LOADING' });
+  const lifeAnalysisRequestId = useRef(0);
 
-    runLifeAnalysisProduct({ horoscope, includeAiExplanation: true })
+  const executeLifeAnalysis = useCallback(() => {
+    const requestId = ++lifeAnalysisRequestId.current;
+
+    setLifeAnalysisState({
+      status: 'LOADING'
+    });
+
+    void runLifeAnalysisProduct({
+      horoscope,
+      includeAiExplanation: true
+    })
       .then((result) => {
-        if (!cancelled) {
-          setLifeAnalysisState(result);
+        if (requestId !== lifeAnalysisRequestId.current) {
+          return;
         }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setLifeAnalysisState({
-            status: 'ERROR',
-            errorMessage: error instanceof Error ? error.message : String(error)
-          });
-        }
-      });
 
-    return () => {
-      cancelled = true;
-    };
-  }, [horoscope]);
-
-  const handleLifeAnalysisRetry = () => {
-    setLifeAnalysisState({ status: 'LOADING' });
-    runLifeAnalysisProduct({ horoscope, includeAiExplanation: true })
-      .then((result) => {
         setLifeAnalysisState(result);
       })
       .catch((error) => {
+        if (requestId !== lifeAnalysisRequestId.current) {
+          return;
+        }
+
         setLifeAnalysisState({
           status: 'ERROR',
-          errorMessage: error instanceof Error ? error.message : String(error)
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : String(error)
         });
       });
+  }, [horoscope]);
+
+  useEffect(() => {
+    executeLifeAnalysis();
+  }, [executeLifeAnalysis]);
+
+  const handleLifeAnalysisRetry = () => {
+    executeLifeAnalysis();
   };
 
   const handleResetPreset = () => {
