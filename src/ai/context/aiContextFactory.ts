@@ -672,40 +672,23 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const lifeThemes = buildLifeThemeFacts(horoscope);
   const evidence = buildEvidence(horoscope);
 
-  // Use pre-computed domain interpretations if provided, otherwise instantiate from registry
-  let domainInterpretations: readonly DomainInterpretationAiProjection[];
-  let lifeAnalysisValue: LifeAnalysis;
+  // Use pre-computed domain interpretations if provided, otherwise resolve once from registry
+  const rawDomainInterpretations: readonly DomainInterpretation[] =
+    options?.domainInterpretations && options.domainInterpretations.length > 0
+      ? options.domainInterpretations
+      : (() => {
+          const registry = createDefaultDomainInterpreterRegistry();
+          return [
+            registry.get('CAREER').interpret(horoscope),
+            registry.get('WEALTH').interpret(horoscope)
+          ];
+        })();
 
-  if (options?.domainInterpretations && options.domainInterpretations.length > 0) {
-    // Project pre-computed domain interpretations
-    domainInterpretations = options.domainInterpretations.map(
-      projectDomainInterpretationForAi
-    );
-  } else {
-    // Default path: instantiate from registry (maintains backward compatibility)
-    const registry = createDefaultDomainInterpreterRegistry();
-    const careerInterp = registry.get('CAREER').interpret(horoscope);
-    const wealthInterp = registry.get('WEALTH').interpret(horoscope);
-    domainInterpretations = [
-      projectDomainInterpretationForAi(careerInterp),
-      projectDomainInterpretationForAi(wealthInterp)
-    ];
-  }
+  const domainInterpretations: readonly DomainInterpretationAiProjection[] =
+    rawDomainInterpretations.map(projectDomainInterpretationForAi);
 
-  // Use pre-computed life analysis if provided, otherwise synthesize
-  if (options?.lifeAnalysis) {
-    lifeAnalysisValue = options.lifeAnalysis;
-  } else if (options?.domainInterpretations && options.domainInterpretations.length > 0) {
-    // Synthesize from pre-computed domain interpretations
-    lifeAnalysisValue = synthesizeLifeAnalysis(options.domainInterpretations);
-  } else {
-    // Fallback: this path should not be reached under normal P-029 operation,
-    // but preserves behavior if neither lifeAnalysis nor complete domainInterpretations are provided
-    const registry = createDefaultDomainInterpreterRegistry();
-    const careerInterp = registry.get('CAREER').interpret(horoscope);
-    const wealthInterp = registry.get('WEALTH').interpret(horoscope);
-    lifeAnalysisValue = synthesizeLifeAnalysis([careerInterp, wealthInterp]);
-  }
+  const lifeAnalysisValue: LifeAnalysis =
+    options?.lifeAnalysis ?? synthesizeLifeAnalysis(rawDomainInterpretations);
 
   const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysisValue);
 

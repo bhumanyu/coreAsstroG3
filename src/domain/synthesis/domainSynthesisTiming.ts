@@ -181,6 +181,29 @@ export function buildTransitStatement(
   return `Transit triggers operate across ${domains.join(' and ')}.`;
 }
 
+export function isTimingConflicted(
+  source: TimingSource,
+  effects: Record<string, string>
+): boolean {
+  const effectValues = Object.values(effects);
+  if (source === 'DASHA') {
+    const hasActivating = effectValues.some(
+      (e) => e === 'ACTIVATES' || e === 'PARTIALLY_ACTIVATES'
+    );
+    const hasChallenging = effectValues.some(
+      (e) => e === 'CHALLENGES' || e === 'CHALLENGE'
+    );
+    return hasActivating && hasChallenging;
+  } else if (source === 'TRANSIT') {
+    const hasTriggering = effectValues.some((e) => e === 'TRIGGER');
+    const hasChallenging = effectValues.some(
+      (e) => e === 'CHALLENGE' || e === 'CHALLENGES'
+    );
+    return hasTriggering && hasChallenging;
+  }
+  return false;
+}
+
 export function deriveSharedTiming(
   domains: readonly DomainInterpretation[]
 ): readonly SharedTimingActivation[] {
@@ -226,6 +249,8 @@ export function deriveSharedTiming(
         ? buildDashaStatement(effects, participatingDomains)
         : buildTransitStatement(effects, participatingDomains);
 
+      const isConflict = isTimingConflicted(identity.source, effects);
+
       sharedTimings.push(
         Object.freeze({
           source: identity.source,
@@ -235,6 +260,7 @@ export function deriveSharedTiming(
           effects: Object.freeze(effects),
           statement,
           evidenceIds: Object.freeze(Array.from(evidenceIdSet).sort()),
+          isConflict,
           ...(identity.level ? { level: identity.level as any } : {}),
           ...(identity.periodKey ? { periodKey: identity.periodKey } : {})
         })

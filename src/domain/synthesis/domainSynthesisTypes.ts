@@ -44,14 +44,9 @@ export interface SharedTimingActivation {
   readonly effects: Readonly<Record<string, string>>;
   readonly statement: string;
   readonly evidenceIds: readonly string[];
+  readonly isConflict: boolean;
   readonly level?: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly periodKey?: string;
-  /**
-   * Stage-1 specific: indicates whether this timing contains conflicting effects
-   * across participating domains (e.g., ACTIVATES in Career but CHALLENGES in Wealth).
-   * This field is populated during synthesis and used for UI conflict presentation.
-   */
-  readonly isConflict?: boolean;
 }
 
 export interface CrossDomainConflict {

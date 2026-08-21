@@ -47,54 +47,6 @@ function getWealthConclusionData(
   return undefined;
 }
 
-
-switch (domain) {
-  case 'CAREER':
-    return 'Career';
-  case 'WEALTH':
-    return 'Wealth';
-  case 'MARRIAGE':
-    return 'Marriage';
-  case 'CHILDREN':
-    return 'Children';
-  case 'PROPERTY':
-    return 'Property';
-  case 'HEALTH':
-    return 'Health';
-  case 'SPIRITUALITY':
-    return 'Spirituality';
-  default:
-    return domain.charAt(0).toUpperCase() + domain.slice(1).toLowerCase();
-}
-}
-
-export function formatCompletenessLabel(
-  overall: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA'
-): string {
-  switch (overall) {
-    case 'COMPLETE':
-      return 'Complete Analysis';
-    case 'PARTIAL':
-      return 'Partial Analysis';
-    case 'INSUFFICIENT_DATA':
-      return 'Insufficient Data';
-    default:
-      return 'Unknown';
-  }
-}
-
-export function mapProductStatus(
-  overall: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA'
-): 'READY' | 'PARTIAL' | 'INSUFFICIENT_DATA' {
-  if (overall === 'COMPLETE') {
-    return 'READY';
-  }
-  if (overall === 'PARTIAL') {
-    return 'PARTIAL';
-  }
-  return 'INSUFFICIENT_DATA';
-}
-
 function formatSharedTimingTitle(st: SharedTimingActivation): string {
   if (st.source === 'DASHA') {
     const level = st.level
@@ -148,7 +100,7 @@ export function buildLifeAnalysisViewModel(
       })),
       statement: st.statement,
       evidenceCount: st.evidenceIds.length,
-      isConflict: st.isConflict ?? false
+      isConflict: st.isConflict
     })
   );
 

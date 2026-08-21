@@ -75,7 +75,7 @@ export interface LifeAnalysisTimingViewModel {
   readonly domains: readonly LifeAnalysisTimingDomainEffect[];
   readonly statement: string;
   readonly evidenceCount: number;
-  readonly isConflict?: boolean;
+  readonly isConflict: boolean;
 }
 
 export interface LifeAnalysisConflictViewModel {

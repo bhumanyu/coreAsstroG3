@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { LifeAnalysisTimingViewModel } from '../../product/life-analysis/lifeAnalysisTypes';
-import { formatDomainDisplayName } from '../../product/life-analysis/lifeAnalysisMapper';
+import { formatDomainDisplayName } from '../../product/life-analysis/domainPresentationUtils';
 
 interface SharedTimingSectionProps {
   readonly sharedTiming: readonly LifeAnalysisTimingViewModel[];
