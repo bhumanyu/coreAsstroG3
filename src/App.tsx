@@ -39,7 +39,7 @@ export const App: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans">
       {/* Header Bar */}
       <Header
         birthDetails={birthDetails}
