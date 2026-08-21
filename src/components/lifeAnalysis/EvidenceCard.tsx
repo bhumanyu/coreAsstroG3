@@ -10,6 +10,7 @@ import type {
   EvidenceDetailViewModel
 } from '../../product/life-analysis/lifeAnalysisEvidenceTypes';
 import { formatDomainDisplayName } from '../../product/life-analysis/domainPresentationUtils';
+import { formatEnum } from './lifeAnalysisUx';
 
 interface EvidenceCardProps {
   readonly evidence: EvidenceDetailViewModel;
@@ -77,7 +78,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
               )}`}
               title={`Evidence Role: ${evidence.role}`}
             >
-              {evidence.role}
+              {formatEnum(evidence.role)}
             </span>
           </div>
 
@@ -87,7 +88,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
             )}`}
             title={`Directional Effect: ${evidence.displayPolarity}`}
           >
-            {evidence.displayPolarity}
+            {formatEnum(evidence.displayPolarity)}
           </span>
         </div>
 
@@ -105,14 +106,14 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
       {/* "Why is this relevant?" Disclosure */}
       <details className="group/details pt-2 border-t border-slate-800/60">
         <summary className="text-[11px] text-indigo-400 hover:text-indigo-300 cursor-pointer select-none flex items-center gap-1 font-medium transition-colors list-none">
-          <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200 group-open/details:rotate-90 text-indigo-400" />
+          <ChevronRight className="w-3.5 h-3.5 transition-transform duration-200 group-open/details:rotate-90 text-indigo-400" aria-hidden="true" />
           <span>Why is this relevant?</span>
         </summary>
 
         <div className="mt-2.5 pt-2 border-t border-slate-800/40 space-y-2 text-[11px] text-slate-300">
           {/* Source Fact */}
           <div className="flex items-start gap-2">
-            <Compass className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+            <Compass className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" aria-hidden="true" />
             <div>
               <span className="text-slate-400 font-medium">Source: </span>
               <span className="text-slate-200">{evidence.source.label}</span>
@@ -125,7 +126,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
           {/* Rule Metadata (only when defined) */}
           {evidence.rule && (
             <div className="flex items-start gap-2 bg-slate-900/60 border border-slate-800/60 rounded-lg p-2">
-              <FileCode className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
+              <FileCode className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" aria-hidden="true" />
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1.5">
                   <span className="text-indigo-300 font-medium">
@@ -147,7 +148,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
           {/* Chart Fact (only when present) */}
           {evidence.chartFact && (
             <div className="flex items-start gap-2">
-              <div className="w-3.5 h-3.5 rounded-full bg-slate-800 flex items-center justify-center text-[9px] text-slate-400 mt-0.5 shrink-0">
+              <div className="w-3.5 h-3.5 rounded-full bg-slate-800 flex items-center justify-center text-[9px] text-slate-400 mt-0.5 shrink-0" aria-hidden="true">
                 •
               </div>
               <div>
@@ -164,7 +165,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
           {/* Related Evidence links (only linking to rendered items) */}
           {validRelatedItems.length > 0 && (
             <div className="flex items-start gap-2 pt-1">
-              <Link2 className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />
+              <Link2 className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" aria-hidden="true" />
               <div className="space-y-1">
                 <span className="text-slate-400 font-medium">Related Factors:</span>
                 <div className="flex flex-wrap gap-1">
@@ -188,7 +189,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
               ID: {evidence.id}
             </span>
             <div className="flex items-center gap-1 text-emerald-400 font-sans font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" />
+              <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Verified Traceable</span>
             </div>
           </div>

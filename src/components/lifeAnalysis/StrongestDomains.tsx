@@ -15,10 +15,10 @@ export const StrongestDomains: React.FC<StrongestDomainsProps> = ({
   }
 
   return (
-    <section className="space-y-4">
+    <section aria-labelledby="strongest-domains-heading" className="space-y-4">
       <div className="flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-amber-400" />
-        <h2 className="text-base sm:text-lg font-semibold text-slate-100">
+        <Sparkles className="w-5 h-5 text-amber-400" aria-hidden="true" />
+        <h2 id="strongest-domains-heading" className="text-base sm:text-lg font-semibold text-slate-100">
           Strongest Life Domains
         </h2>
         <span className="text-xs font-mono-code text-slate-400">

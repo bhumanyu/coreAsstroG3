@@ -1,6 +1,8 @@
 import React from 'react';
 import { Briefcase, Coins, Sparkles, CheckCircle2, CircleAlert } from 'lucide-react';
 import type { LifeAnalysisDomainSummaryViewModel } from '../../product/life-analysis/lifeAnalysisTypes';
+import { formatEnum } from './lifeAnalysisUx';
+import { DomainPromiseBadge } from './DomainPromiseBadge';
 
 interface DomainAnalysisCardProps {
   readonly summary: LifeAnalysisDomainSummaryViewModel;
@@ -14,26 +16,11 @@ export const DomainAnalysisCard: React.FC<DomainAnalysisCardProps> = ({
   const getDomainIcon = (domain: string) => {
     switch (domain) {
       case 'CAREER':
-        return <Briefcase className="w-5 h-5 text-indigo-400" />;
+        return <Briefcase className="w-5 h-5 text-indigo-400" aria-hidden="true" />;
       case 'WEALTH':
-        return <Coins className="w-5 h-5 text-amber-400" />;
+        return <Coins className="w-5 h-5 text-amber-400" aria-hidden="true" />;
       default:
-        return <Sparkles className="w-5 h-5 text-purple-400" />;
-    }
-  };
-
-  const getStrengthBadge = (strength: string) => {
-    switch (strength) {
-      case 'VERY_STRONG':
-        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-      case 'STRONG':
-        return 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30';
-      case 'MODERATE':
-        return 'bg-blue-500/15 text-blue-300 border-blue-500/30';
-      case 'WEAK':
-        return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
-      default:
-        return 'bg-slate-800 text-slate-400 border-slate-700';
+        return <Sparkles className="w-5 h-5 text-purple-400" aria-hidden="true" />;
     }
   };
 
@@ -61,15 +48,9 @@ export const DomainAnalysisCard: React.FC<DomainAnalysisCardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStrengthBadge(
-              summary.strength
-            )}`}
-          >
-            {summary.strength.replace(/_/g, ' ')}
-          </span>
+          <DomainPromiseBadge promise={summary.strength} />
           <span className="text-[10px] font-mono-code px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-            {summary.confidence}
+            {formatEnum(summary.confidence)}
           </span>
         </div>
       </div>
@@ -81,18 +62,18 @@ export const DomainAnalysisCard: React.FC<DomainAnalysisCardProps> = ({
       <div className="mt-4 pt-3 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1 text-emerald-400 font-mono-code text-[11px]">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+            <CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />
             {summary.supportingEvidenceCount} Supporting
           </span>
           {summary.challengingEvidenceCount > 0 && (
             <span className="inline-flex items-center gap-1 text-amber-400 font-mono-code text-[11px]">
-              <CircleAlert className="w-3.5 h-3.5" />
+              <CircleAlert className="w-3.5 h-3.5" aria-hidden="true" />
               {summary.challengingEvidenceCount} Challenging
             </span>
           )}
         </div>
         <span className="text-[11px] font-mono-code text-slate-400">
-          Status: {summary.status.replace(/_/g, ' ')}
+          Status: {formatEnum(summary.status)}
         </span>
       </div>
     </article>

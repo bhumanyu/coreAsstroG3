@@ -1,3 +1,8 @@
+export * from './lifeAnalysisUx';
+export * from './DomainPromiseBadge';
+export * from './LifeAnalysisStatusBadge';
+export * from './LifeAnalysisHeader';
+export * from './LifeAnalysisPartial';
 export * from './LifeAnalysisLoading';
 export * from './LifeAnalysisError';
 export * from './LifeAnalysisOverview';
@@ -8,5 +13,6 @@ export * from './WealthAnalysisCard';
 export * from './SharedTimingSection';
 export * from './ConflictSection';
 export * from './EvidenceSection';
+export * from './EvidenceCard';
 export * from './AiExplanationSection';
 export * from './LifeAnalysisPage';

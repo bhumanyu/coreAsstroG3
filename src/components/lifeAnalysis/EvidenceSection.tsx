@@ -17,6 +17,7 @@ import type {
 } from '../../product/life-analysis/lifeAnalysisEvidenceTypes';
 import type { LifeAnalysisEvidenceViewModel } from '../../product/life-analysis/lifeAnalysisTypes';
 import { EvidenceCard } from './EvidenceCard';
+import { formatEnum } from './lifeAnalysisUx';
 
 interface EvidenceSectionProps {
   readonly why?: WhyExperienceViewModel;
@@ -54,7 +55,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
     if (status === 'VALID') {
       return (
         <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
-          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+          <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
           <div className="text-xs space-y-0.5">
             <span className="font-semibold text-emerald-200">
               Deterministic Evidence Fully Traceable
@@ -70,7 +71,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
     if (status === 'PARTIAL') {
       return (
         <div className="flex items-center gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <div className="text-xs space-y-0.5">
             <span className="font-semibold text-amber-200">
               Partial Astrological Evidence Basis
@@ -85,7 +86,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
 
     return (
       <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 text-slate-300">
-        <Info className="w-4 h-4 text-slate-400 shrink-0" />
+        <Info className="w-4 h-4 text-slate-400 shrink-0" aria-hidden="true" />
         <div className="text-xs space-y-0.5">
           <span className="font-semibold text-slate-200">
             Evidence Traceability Limited
@@ -140,8 +141,15 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
     );
   };
 
+  // Concise preview for legacy evidence: cap to 5 items if why structure is absent
+  const conciseLegacyEvidence = evidence ? evidence.slice(0, 5) : [];
+
   return (
-    <section id="why-conclusion-section" className="space-y-4">
+    <section
+      id="why-conclusion-section"
+      aria-labelledby="why-conclusion-heading"
+      className="space-y-4"
+    >
       <details
         id="why-conclusion-details"
         className="group bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden transition-all duration-200"
@@ -149,10 +157,10 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
         <summary className="p-5 flex items-center justify-between cursor-pointer list-none select-none hover:bg-slate-800/50 transition-colors">
           <div className="flex items-center gap-3.5">
             <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-              <HelpCircle className="w-5 h-5" />
+              <HelpCircle className="w-5 h-5" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
+              <h2 id="why-conclusion-heading" className="text-sm sm:text-base font-semibold text-slate-100 flex items-center gap-2">
                 <span>Why this conclusion?</span>
                 <span className="text-xs font-mono-code text-slate-400">
                   ({totalFacts} astrological factors)
@@ -163,7 +171,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               </p>
             </div>
           </div>
-          <ChevronDown className="w-5 h-5 text-slate-400 transition-transform duration-200 group-open:rotate-180 shrink-0" />
+          <ChevronDown className="w-5 h-5 text-slate-400 transition-transform duration-200 group-open:rotate-180 shrink-0" aria-hidden="true" />
         </summary>
 
         <div className="p-5 pt-2 border-t border-slate-800/60 mt-1 space-y-6">
@@ -176,7 +184,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 1. Primary Pillars (Role: PRIMARY) */}
               {renderGroupSection(
                 'Primary Structural Pillars',
-                <Layers className="w-4 h-4 text-indigo-400" />,
+                <Layers className="w-4 h-4 text-indigo-400" aria-hidden="true" />,
                 why.grouped.primary,
                 'Foundational house and lordship placements (Role: Primary)'
               )}
@@ -184,7 +192,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 2. Supporting Factors (Role: SECONDARY) */}
               {renderGroupSection(
                 'Supporting Evidence',
-                <CheckCircle2 className="w-4 h-4 text-blue-400" />,
+                <CheckCircle2 className="w-4 h-4 text-blue-400" aria-hidden="true" />,
                 why.grouped.supporting,
                 'Karaka planet significators and secondary linkages (Role: Secondary)'
               )}
@@ -192,7 +200,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 3. Challenging Factors (Polarity: CHALLENGING) */}
               {renderGroupSection(
                 'Challenging Factors',
-                <AlertTriangle className="w-4 h-4 text-amber-400" />,
+                <AlertTriangle className="w-4 h-4 text-amber-400" aria-hidden="true" />,
                 why.grouped.challenging,
                 'Frictions, afflictions, or adverse dignity configurations (Direction: Challenging)'
               )}
@@ -200,7 +208,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 4. Conflicting Factors (Polarity: CONFLICTING) */}
               {renderGroupSection(
                 'Cross-Domain Conflicting Factors',
-                <AlertCircle className="w-4 h-4 text-rose-400" />,
+                <AlertCircle className="w-4 h-4 text-rose-400" aria-hidden="true" />,
                 why.grouped.conflicting,
                 'Factors producing mixed or divergent effects across domains (Direction: Conflicting)'
               )}
@@ -208,7 +216,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 5. Confirmations & Yogas (Role: CONFIRMATION) */}
               {renderGroupSection(
                 'Divisional & Yoga Confirmations',
-                <Sparkles className="w-4 h-4 text-emerald-400" />,
+                <Sparkles className="w-4 h-4 text-emerald-400" aria-hidden="true" />,
                 why.grouped.confirmations,
                 'D10/D2 divisional validation and classical yogas (Role: Confirmation)'
               )}
@@ -216,7 +224,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 6. Timing Activations (Role: TIMING) */}
               {renderGroupSection(
                 'Timing Activations',
-                <Clock className="w-4 h-4 text-amber-400" />,
+                <Clock className="w-4 h-4 text-amber-400" aria-hidden="true" />,
                 why.grouped.timing,
                 'Active Vimshottari Dasha and Gochara transit influences (Role: Timing)'
               )}
@@ -224,15 +232,15 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               {/* 7. Modifiers (Role: MODIFIER) */}
               {renderGroupSection(
                 'Modifiers & Secondary Influences',
-                <Info className="w-4 h-4 text-purple-400" />,
+                <Info className="w-4 h-4 text-purple-400" aria-hidden="true" />,
                 why.grouped.modifiers,
                 'Planetary aspects, strengths, and conditional nuances (Role: Modifier)'
               )}
             </div>
           ) : (
-            /* Fallback rendering if only legacy evidence is present */
+            /* Fallback rendering if only legacy evidence is present (capped at 5 preview items) */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-              {evidence?.map((item) => (
+              {conciseLegacyEvidence.map((item) => (
                 <article
                   key={item.id}
                   className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3.5 space-y-2 flex flex-col justify-between"
@@ -242,7 +250,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
                       {item.id}
                     </span>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wider bg-slate-800 text-slate-300 border-slate-700">
-                      {item.role}
+                      {formatEnum(item.role)}
                     </span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed font-serif-astro">
