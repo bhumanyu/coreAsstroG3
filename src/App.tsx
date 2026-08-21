@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Header } from './components/Header';
 import { BirthFormModal, PRESET_PROFILES } from './components/BirthFormModal';
 import { KundaliChart } from './components/KundaliChart';
@@ -9,7 +9,10 @@ import { RelationshipMatrix } from './components/RelationshipMatrix';
 import { EngineValidator } from './components/EngineValidator';
 import { GocharaTransitView } from './components/GocharaTransitView';
 import { FullNatalReportView } from './components/fullNatalReport/FullNatalReportView';
-import { AiExplanationPanel } from './components/ai/AiExplanationPanel';
+import { LifeAnalysisPage } from './components/lifeAnalysis/LifeAnalysisPage';
+import { runLifeAnalysisProduct } from './product/life-analysis/lifeAnalysisProductService';
+import type { LifeAnalysisProductState } from './product/life-analysis/lifeAnalysisTypes';
+import type { AppTab } from './types/appTabs';
 import { calculateHoroscope } from './engine/astroEngine';
 import { BirthDetails, Planet, DignityStatus, ChartType } from './types';
 import { PLANETS_METADATA } from './data/astroData';
@@ -20,11 +23,50 @@ export const App: React.FC = () => {
     PRESET_PROFILES[0].details
   );
   const [isBirthFormOpen, setIsBirthFormOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('horoscope');
+  const [activeTab, setActiveTab] = useState<AppTab>('life-analysis');
+  const [lifeAnalysisState, setLifeAnalysisState] = useState<LifeAnalysisProductState>({ status: 'LOADING' });
 
   const horoscope = useMemo(() => {
     return calculateHoroscope(birthDetails);
   }, [birthDetails]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLifeAnalysisState({ status: 'LOADING' });
+
+    runLifeAnalysisProduct({ horoscope, includeAiExplanation: true })
+      .then((result) => {
+        if (!cancelled) {
+          setLifeAnalysisState(result);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setLifeAnalysisState({
+            status: 'ERROR',
+            errorMessage: error instanceof Error ? error.message : String(error)
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [horoscope]);
+
+  const handleLifeAnalysisRetry = () => {
+    setLifeAnalysisState({ status: 'LOADING' });
+    runLifeAnalysisProduct({ horoscope, includeAiExplanation: true })
+      .then((result) => {
+        setLifeAnalysisState(result);
+      })
+      .catch((error) => {
+        setLifeAnalysisState({
+          status: 'ERROR',
+          errorMessage: error instanceof Error ? error.message : String(error)
+        });
+      });
+  };
 
   const handleResetPreset = () => {
     setBirthDetails(PRESET_PROFILES[0].details);
@@ -51,15 +93,15 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'report' && (
-          <FullNatalReportView report={horoscope.fullNatalAnalysis} />
+        {activeTab === 'life-analysis' && (
+          <LifeAnalysisPage
+            state={lifeAnalysisState}
+            onRetry={handleLifeAnalysisRetry}
+          />
         )}
 
-        {activeTab === 'ai-explanation' && (
-          <AiExplanationPanel
-            horoscope={horoscope}
-            birthDetails={birthDetails}
-          />
+        {activeTab === 'report' && (
+          <FullNatalReportView report={horoscope.fullNatalAnalysis} />
         )}
 
         {activeTab === 'horoscope' && (

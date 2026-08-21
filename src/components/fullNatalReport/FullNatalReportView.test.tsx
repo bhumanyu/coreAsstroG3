@@ -40,9 +40,9 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
   });
 
   // Case 3: Existing app tabs still present
-  it('3. App renders existing navigation tabs along with Full Natal Analysis tab', () => {
+  it('3. App renders existing navigation tabs along with Detailed Analysis tab', () => {
     render(<App />);
-    expect(screen.getByText('Full Natal Analysis')).toBeInTheDocument();
+    expect(screen.getByText('Detailed Analysis')).toBeInTheDocument();
     expect(screen.getByText('Horoscope & Charts')).toBeInTheDocument();
     expect(screen.getByText('Planetary Facts & Dignity')).toBeInTheDocument();
     expect(screen.getByText('Gochara Transits (PR-037)')).toBeInTheDocument();

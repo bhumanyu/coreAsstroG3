@@ -1,12 +1,13 @@
 import React from 'react';
 import { Compass, Sparkles, Calendar, MapPin, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { BirthDetails, AyanamsaType } from '../types';
+import { AppTab } from '../types/appTabs';
 
 interface HeaderProps {
   birthDetails: BirthDetails;
   onOpenBirthForm: () => void;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   onResetPreset: () => void;
 }
 
@@ -17,9 +18,9 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onResetPreset
 }) => {
-  const tabs = [
-    { id: 'report', label: 'Full Natal Analysis' },
-    { id: 'ai-explanation', label: 'AI Explanation' },
+  const tabs: readonly { id: AppTab; label: string }[] = [
+    { id: 'life-analysis', label: 'Life Analysis' },
+    { id: 'report', label: 'Detailed Analysis' },
     { id: 'horoscope', label: 'Horoscope & Charts' },
     { id: 'planets', label: 'Planetary Facts & Dignity' },
     { id: 'transit', label: 'Gochara Transits (PR-037)' },

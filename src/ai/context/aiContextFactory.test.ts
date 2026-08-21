@@ -339,7 +339,7 @@ describe('AI Context Factory', () => {
           ...createDomainEvidence({
             id: 'test-varga-id',
             ruleId: 'RULE_VARGA_TEST',
-            sourceType: 'D10',
+            sourceType: 'VARGA',
             role: 'CONFIRMATION',
             strength: 'STRONG',
             polarity: 'SUPPORTING',
