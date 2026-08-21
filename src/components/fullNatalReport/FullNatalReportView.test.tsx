@@ -1,9 +1,12 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { calculateHoroscope } from '../../engine/astroEngine';
+import * as vimshottariModule from '../../engine/dasha/vimshottari';
+import * as dashaInterpModule from '../../engine/dashaInterpretation/dashaInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { FullNatalReportView } from './FullNatalReportView';
+import { DashaSection } from './DashaSection';
 import { App } from '../../App';
 import { REPORT_SECTION_IDS, REPORT_NAVIGATION, formatPlanetName } from './reportUtils';
 import { FullNatalAnalysisReport, Planet } from '../../types';
@@ -127,9 +130,44 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
   });
 
   // Case 14: Vimshottari Timeline
-  it('14. Vimshottari timeline renders mahadashas', () => {
+  it('14. Vimshottari timeline renders mahadashas, first and last dates, birth anchor, and does not render unavailable EmptyState', () => {
     render(<FullNatalReportView report={canonicalReport} />);
     expect(screen.getByText('Vimshottari Dasha Timeline')).toBeInTheDocument();
+    expect(screen.queryByText('Vimshottari Dasha Unavailable')).toBeNull();
+
+    const vimshottari = canonicalReport.vimshottari;
+    expect(vimshottari.status).toBe('AVAILABLE');
+    expect(vimshottari.birthAnchor).toBeDefined();
+
+    // Birth Nakshatra anchor rendered
+    expect(screen.getAllByText(vimshottari.birthAnchor!.nakshatra).length).toBeGreaterThan(0);
+
+    // First and last Mahadasha dates rendered
+    const mahadashas = vimshottari.mahadashas!;
+    const firstM = mahadashas[0];
+    const lastM = mahadashas[mahadashas.length - 1];
+
+    expect(screen.getAllByText(firstM.start).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(firstM.end).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(lastM.start).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(lastM.end).length).toBeGreaterThan(0);
+  });
+
+  it('14b. DashaSection component directly renders birth anchor, dates, and does not render unavailable EmptyState', () => {
+    render(<DashaSection section={canonicalReport.vimshottari} />);
+    expect(screen.queryByText('Vimshottari Dasha Unavailable')).toBeNull();
+
+    const vimshottari = canonicalReport.vimshottari;
+    expect(screen.getByText(vimshottari.birthAnchor!.nakshatra)).toBeInTheDocument();
+
+    const mahadashas = vimshottari.mahadashas!;
+    const firstM = mahadashas[0];
+    const lastM = mahadashas[mahadashas.length - 1];
+
+    expect(screen.getAllByText(firstM.start).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(firstM.end).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(lastM.start).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(lastM.end).length).toBeGreaterThan(0);
   });
 
   // Case 15: Current Dasha
@@ -289,5 +327,29 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
     const { container } = render(<FullNatalReportView report={canonicalReport} />);
     expect(container.querySelector('.grid-cols-1')).not.toBeNull();
     expect(container.querySelector('.lg\\:grid-cols-12')).not.toBeNull();
+  });
+
+  // No-duplicate-calculation verification
+  it('invokes calculateVimshottari and analyzeDashaInterpretation exactly once during calculateHoroscope and 0 times during DashaSection/FullNatalReportView render', () => {
+    const calculateVimshottariSpy = vi.spyOn(vimshottariModule, 'calculateVimshottari');
+    const analyzeDashaInterpretationSpy = vi.spyOn(dashaInterpModule, 'analyzeDashaInterpretation');
+
+    calculateVimshottariSpy.mockClear();
+    analyzeDashaInterpretationSpy.mockClear();
+
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    expect(calculateVimshottariSpy).toHaveBeenCalledTimes(1);
+    expect(analyzeDashaInterpretationSpy).toHaveBeenCalledTimes(1);
+
+    // Render FullNatalReportView and DashaSection
+    render(<FullNatalReportView report={horoscope.fullNatalAnalysis} />);
+    render(<DashaSection section={horoscope.fullNatalAnalysis.vimshottari} />);
+
+    // Assert neither was invoked during React render
+    expect(calculateVimshottariSpy).toHaveBeenCalledTimes(1);
+    expect(analyzeDashaInterpretationSpy).toHaveBeenCalledTimes(1);
+
+    calculateVimshottariSpy.mockRestore();
+    analyzeDashaInterpretationSpy.mockRestore();
   });
 });

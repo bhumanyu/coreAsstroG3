@@ -362,6 +362,36 @@ describe('P-21 FullNatalAnalysis Engine', () => {
     expect(report.vimshottari.mahadashas).toBeUndefined();
   });
 
+  it('should deterministically populate vimshottari section for canonical chart with mahadashas and birth anchor', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const report = horoscope.fullNatalAnalysis;
+
+    expect(report.vimshottari.status).toBe('AVAILABLE');
+    expect(report.vimshottari.mahadashas).toBeDefined();
+    expect(report.vimshottari.mahadashas!.length).toBeGreaterThan(0);
+    expect(report.vimshottari.birthAnchor).toBeDefined();
+    expect(report.vimshottari.birthAnchor!.nakshatra).toBeDefined();
+    expect(report.vimshottari.birthAnchor!.nakshatraLord).toBeDefined();
+
+    const mahadashas = report.vimshottari.mahadashas!;
+    const firstMahadasha = mahadashas[0];
+    const lastMahadasha = mahadashas[mahadashas.length - 1];
+
+    expect(firstMahadasha.start).toBeDefined();
+    expect(firstMahadasha.end).toBeDefined();
+    expect(typeof firstMahadasha.start).toBe('string');
+    expect(typeof firstMahadasha.end).toBe('string');
+    expect(Date.parse(firstMahadasha.start)).not.toBeNaN();
+    expect(Date.parse(firstMahadasha.end)).not.toBeNaN();
+
+    expect(lastMahadasha.start).toBeDefined();
+    expect(lastMahadasha.end).toBeDefined();
+    expect(typeof lastMahadasha.start).toBe('string');
+    expect(typeof lastMahadasha.end).toBe('string');
+    expect(Date.parse(lastMahadasha.start)).not.toBeNaN();
+    expect(Date.parse(lastMahadasha.end)).not.toBeNaN();
+  });
+
   it('should reflect PARTIAL status for mix of COMPLETE and PARTIAL Shadbala status', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const modifiedPlanets = { ...horoscope.planetaryStrength.planets };
