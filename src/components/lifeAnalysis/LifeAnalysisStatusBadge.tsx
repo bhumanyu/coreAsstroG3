@@ -21,7 +21,6 @@ export const LifeAnalysisStatusBadge: React.FC<LifeAnalysisStatusBadgeProps> = (
   if (code === 'PARTIAL') {
     return (
       <span
-        role="status"
         aria-label="Partial Analysis"
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 ${className}`}
       >
@@ -34,7 +33,6 @@ export const LifeAnalysisStatusBadge: React.FC<LifeAnalysisStatusBadgeProps> = (
   if (code === 'INSUFFICIENT_DATA') {
     return (
       <span
-        role="status"
         aria-label="Insufficient Data"
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-300 border border-rose-500/30 ${className}`}
       >
@@ -46,7 +44,6 @@ export const LifeAnalysisStatusBadge: React.FC<LifeAnalysisStatusBadgeProps> = (
 
   return (
     <span
-      role="status"
       aria-label="Analysis Complete"
       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 ${className}`}
     >

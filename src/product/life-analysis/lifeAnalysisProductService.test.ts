@@ -6,7 +6,8 @@ import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
 import {
   STAGE1_GOLDEN_HOROSCOPE,
   STAGE1_GOLDEN_CAREER,
-  STAGE1_GOLDEN_WEALTH
+  STAGE1_GOLDEN_WEALTH,
+  createTestHoroscope
 } from '../../integration/stage1/stage1GoldenFixture';
 import * as careerModule from '../../domain/career/CareerDomainInterpreterV2';
 import * as wealthModule from '../../domain/wealth/WealthDomainInterpreterV2';
@@ -252,5 +253,37 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     if (result.aiExplanation?.kind === 'ERROR') {
       expect(result.aiExplanation.message).toBeDefined();
     }
+  });
+
+  it('Test 6: demonstrates chart sensitivity across distinct horoscopes with differing deterministic evidence IDs', async () => {
+    const horoscopeA = createTestHoroscope();
+    const horoscopeB = createTestHoroscope({
+      latitude: 13.0827,
+      longitude: 80.2707,
+      timeZone: 'Asia/Kolkata',
+      dateTimeStr: '2005-11-20T18:45:00+05:30'
+    });
+
+    const resultA = await runLifeAnalysisProduct({
+      horoscope: horoscopeA,
+      includeAiExplanation: false
+    });
+
+    const resultB = await runLifeAnalysisProduct({
+      horoscope: horoscopeB,
+      includeAiExplanation: false
+    });
+
+    expect(resultA.analysis).toBeDefined();
+    expect(resultB.analysis).toBeDefined();
+
+    const evidenceIdsA = new Set(resultA.analysis!.evidence.map((e) => e.id));
+    const evidenceIdsB = new Set(resultB.analysis!.evidence.map((e) => e.id));
+
+    expect(evidenceIdsA.size).toBeGreaterThan(0);
+    expect(evidenceIdsB.size).toBeGreaterThan(0);
+
+    // Underlying deterministic evidence IDs differ across distinct charts
+    expect(evidenceIdsA).not.toEqual(evidenceIdsB);
   });
 });

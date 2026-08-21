@@ -56,6 +56,15 @@ import type {
   Stage1GoldenExpectation,
   Stage1IntegrationInput
 } from './stage1IntegrationTypes';
+import type { BirthDetails, Horoscope } from '../../types';
+
+export function createTestHoroscope(overrideBirthDetails?: Partial<BirthDetails>): Horoscope {
+  const details: BirthDetails = {
+    ...CANONICAL_BIRTH_DETAILS,
+    ...overrideBirthDetails
+  };
+  return calculateHoroscope(details);
+}
 
 export const STAGE1_GOLDEN_HOROSCOPE = Object.freeze(
   calculateHoroscope(CANONICAL_BIRTH_DETAILS)

@@ -15,7 +15,7 @@ describe('LifeAnalysisPage', () => {
       status: 'STRONGLY_SUPPORTED',
       statement: 'Overall life alignment indicates exceptional potential in career and wealth generation.',
       strongestDomainNames: ['Career & Vocation', 'Wealth & Assets'],
-      challengedDomainNames: ['Health & Vitality']
+      challengedDomainNames: []
     },
     strongestDomains: [
       {
@@ -113,8 +113,8 @@ describe('LifeAnalysisPage', () => {
       {
         type: 'DOMAIN_VS_TIMING',
         severity: 'MODERATE',
-        domains: ['CAREER', 'HEALTH'],
-        statement: 'High vocational exertion conflicts with 6th house physical recuperation cycles.',
+        domains: ['CAREER', 'WEALTH'],
+        statement: 'Dasha lord activates career while challenging wealth accumulation.',
         evidenceCount: 3
       }
     ],
@@ -436,7 +436,7 @@ describe('LifeAnalysisPage', () => {
     // Conflict section exists
     expect(screen.getByText('Cross-Domain Conflicts & Tensions')).toBeInTheDocument();
     expect(
-      screen.getByText(/High vocational exertion conflicts with 6th house physical recuperation cycles/i)
+      screen.getByText(/Dasha lord activates career while challenging wealth accumulation/i)
     ).toBeInTheDocument();
   });
 

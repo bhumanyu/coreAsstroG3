@@ -19,7 +19,7 @@ export const LifeAnalysisHeader: React.FC<LifeAnalysisHeaderProps> = ({
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="px-2.5 py-0.5 rounded-md text-[10px] font-mono-code font-semibold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            P-029 Product Layer
+            Core Astro Analysis
           </span>
           <span className="text-xs font-mono-code text-slate-500" aria-hidden="true">•</span>
           <span className="text-xs font-mono-code text-slate-400">
