@@ -88,7 +88,7 @@ export interface LifeAnalysisConflictViewModel {
 
 export interface LifeAnalysisEvidenceViewModel {
   readonly id: string;
-  readonly role: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+  readonly role: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING' | 'NEUTRAL';
   readonly statement: string;
   readonly source: string;
   readonly domain?: string;

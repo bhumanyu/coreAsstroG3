@@ -3,6 +3,8 @@ import type {
   LifeAnalysis,
   SharedTimingActivation
 } from '../../domain/synthesis';
+import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
   LifeAnalysisViewModel,
   LifeAnalysisOverallViewModel,
@@ -14,27 +16,56 @@ import type {
   LifeAnalysisCareerDetailViewModel,
   LifeAnalysisWealthDetailViewModel
 } from './lifeAnalysisTypes';
+import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';
 import { deepFreeze } from '../../ai/context/deepFreeze';
 
-export function formatDomainDisplayName(domain: string): string {
-  switch (domain) {
-    case 'CAREER':
-      return 'Career';
-    case 'WEALTH':
-      return 'Wealth';
-    case 'MARRIAGE':
-      return 'Marriage';
-    case 'CHILDREN':
-      return 'Children';
-    case 'PROPERTY':
-      return 'Property';
-    case 'HEALTH':
-      return 'Health';
-    case 'SPIRITUALITY':
-      return 'Spirituality';
-    default:
-      return domain.charAt(0).toUpperCase() + domain.slice(1).toLowerCase();
+/**
+ * Safely extract CareerConclusionData from a domain interpretation.
+ * Returns typed data or undefined if not available.
+ */
+function getCareerConclusionData(
+  interpretation: DomainInterpretation
+): CareerConclusionData | undefined {
+  if (interpretation.conclusionData && typeof interpretation.conclusionData === 'object') {
+    const data = interpretation.conclusionData as CareerConclusionData | undefined;
+    return data;
   }
+  return undefined;
+}
+
+/**
+ * Safely extract WealthConclusionData from a domain interpretation.
+ * Returns typed data or undefined if not available.
+ */
+function getWealthConclusionData(
+  interpretation: DomainInterpretation
+): WealthConclusionData | undefined {
+  if (interpretation.conclusionData && typeof interpretation.conclusionData === 'object') {
+    const data = interpretation.conclusionData as WealthConclusionData | undefined;
+    return data;
+  }
+  return undefined;
+}
+
+
+switch (domain) {
+  case 'CAREER':
+    return 'Career';
+  case 'WEALTH':
+    return 'Wealth';
+  case 'MARRIAGE':
+    return 'Marriage';
+  case 'CHILDREN':
+    return 'Children';
+  case 'PROPERTY':
+    return 'Property';
+  case 'HEALTH':
+    return 'Health';
+  case 'SPIRITUALITY':
+    return 'Spirituality';
+  default:
+    return domain.charAt(0).toUpperCase() + domain.slice(1).toLowerCase();
+}
 }
 
 export function formatCompletenessLabel(
@@ -72,15 +103,6 @@ function formatSharedTimingTitle(st: SharedTimingActivation): string {
     return st.periodKey ? `${level} (${st.periodKey})` : `${level} Activation`;
   }
   return st.periodKey ? `Transit (${st.periodKey})` : 'Active Transits';
-}
-
-function isTimingConflict(st: SharedTimingActivation): boolean {
-  const effects = Object.values(st.effects);
-  if (effects.length <= 1) {
-    return false;
-  }
-  const first = effects[0];
-  return effects.some((e) => e !== first);
 }
 
 export function buildLifeAnalysisViewModel(
@@ -126,7 +148,7 @@ export function buildLifeAnalysisViewModel(
       })),
       statement: st.statement,
       evidenceCount: st.evidenceIds.length,
-      isConflict: isTimingConflict(st)
+      isConflict: st.isConflict ?? false
     })
   );
 
@@ -145,34 +167,42 @@ export function buildLifeAnalysisViewModel(
     label: formatCompletenessLabel(analysis.dataCompleteness.overall)
   };
 
-  const careerConclusionData = career.conclusionData as Record<string, unknown> | undefined;
+  // Extract typed Career conclusion data
+  const careerConclusionData = getCareerConclusionData(career);
   const careerD10Varga = career.vargaConfirmations.find((v) => v.varga === 'D10');
   const careerDetail: LifeAnalysisCareerDetailViewModel = {
     natalPromise: career.natalPromise.strength,
-    d10Relationship: careerD10Varga?.relationship ?? (careerConclusionData?.d10Relationship as any) ?? 'UNAVAILABLE',
+    d10Relationship:
+      careerD10Varga?.relationship ??
+      careerConclusionData?.d10Relationship ??
+      'UNAVAILABLE',
     currentDashaEffect: career.dashaActivation.effect,
     currentTransitEffect: career.transitTrigger.effect,
-    currentActivation: careerConclusionData?.currentActivation as string | undefined,
-    currentPressure: careerConclusionData?.currentPressure as string | undefined,
-    dominantManifestations: careerConclusionData?.dominantManifestations as readonly string[] | undefined,
-    headline: careerConclusionData?.headline as string | undefined,
+    currentActivation: careerConclusionData?.currentActivation,
+    currentPressure: careerConclusionData?.currentPressure,
+    dominantManifestations: careerConclusionData?.dominantManifestations,
+    headline: careerConclusionData?.headline,
     statement: career.conclusion.statement
   };
 
-  const wealthConclusionData = wealth.conclusionData as Record<string, unknown> | undefined;
+  // Extract typed Wealth conclusion data
+  const wealthConclusionData = getWealthConclusionData(wealth);
   const wealthD2Varga = wealth.vargaConfirmations.find((v) => v.varga === 'D2');
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
-    d2Relationship: wealthD2Varga?.relationship ?? (wealthConclusionData?.d2Relationship as any) ?? 'UNAVAILABLE',
+    d2Relationship:
+      wealthD2Varga?.relationship ??
+      wealthConclusionData?.d2Relationship ??
+      'UNAVAILABLE',
     currentDashaEffect: wealth.dashaActivation.effect,
     currentTransitEffect: wealth.transitTrigger.effect,
-    overallStatus: (wealthConclusionData?.overallStatus as any) ?? wealth.natalPromise.strength,
-    accumulationStatus: (wealthConclusionData?.accumulationStatus as any) ?? 'UNAVAILABLE',
-    gainsStatus: (wealthConclusionData?.gainsStatus as any) ?? 'UNAVAILABLE',
-    fortuneStatus: (wealthConclusionData?.fortuneStatus as any) ?? 'UNAVAILABLE',
-    speculationStatus: (wealthConclusionData?.speculationStatus as any) ?? 'UNAVAILABLE',
-    dominantManifestations: wealthConclusionData?.dominantManifestations as readonly string[] | undefined,
-    headline: wealthConclusionData?.headline as string | undefined,
+    overallStatus: wealthConclusionData?.overallStatus ?? wealth.natalPromise.strength,
+    accumulationStatus: wealthConclusionData?.accumulationStatus ?? 'UNAVAILABLE',
+    gainsStatus: wealthConclusionData?.gainsStatus ?? 'UNAVAILABLE',
+    fortuneStatus: wealthConclusionData?.fortuneStatus ?? 'UNAVAILABLE',
+    speculationStatus: wealthConclusionData?.speculationStatus ?? 'UNAVAILABLE',
+    dominantManifestations: wealthConclusionData?.dominantManifestations,
+    headline: wealthConclusionData?.headline,
     statement: wealth.conclusion.statement
   };
 

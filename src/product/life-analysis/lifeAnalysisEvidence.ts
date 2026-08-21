@@ -7,7 +7,11 @@ import { deepFreeze } from '../../ai/context/deepFreeze';
  * Resolves deterministic LifeAnalysis evidence IDs against available AiContext evidence items.
  *
  * Invariant: Never emits an entry for an ID not present in contextEvidence.
- * Invariant: Infers role (SUPPORTING vs. CHALLENGING vs. NEUTRAL) from domain evidence sets.
+ * Invariant: Classifies role (SUPPORTING vs. CHALLENGING vs. CONFLICTING vs. NEUTRAL) from domain evidence sets.
+ * - CONFLICTING: evidence appears in both supporting and challenging sets
+ * - SUPPORTING: evidence appears only in supporting set
+ * - CHALLENGING: evidence appears only in challenging set
+ * - NEUTRAL: evidence not in either set (derived from effect if available)
  */
 export function resolveLifeAnalysisEvidence(
   analysis: LifeAnalysis,
@@ -50,10 +54,17 @@ export function resolveLifeAnalysisEvidence(
 
     seenIds.add(id);
 
-    let role: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL' = 'NEUTRAL';
-    if (supportingIds.has(id)) {
+    // Determine role based on which evidence sets contain this ID
+    let role: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING' | 'NEUTRAL' = 'NEUTRAL';
+    const inSupporting = supportingIds.has(id);
+    const inChallenging = challengingIds.has(id);
+
+    if (inSupporting && inChallenging) {
+      // Evidence appears in both sets = CONFLICTING
+      role = 'CONFLICTING';
+    } else if (inSupporting) {
       role = 'SUPPORTING';
-    } else if (challengingIds.has(id)) {
+    } else if (inChallenging) {
       role = 'CHALLENGING';
     } else if (raw.effect === 'CHALLENGE') {
       role = 'CHALLENGING';

@@ -1,5 +1,5 @@
 import type { Horoscope } from '../../types';
-import { buildAiContext } from '../context/aiContextFactory';
+import { buildAiContext, type BuildAiContextOptions } from '../context/aiContextFactory';
 import { createAiRequest } from '../api/createAiRequest';
 import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
 import type { AiRouter } from '../routing/AiRouter';
@@ -14,7 +14,7 @@ import {
   type AiExplanationStructuredOutput
 } from './aiExplanationTypes';
 
-export interface RunAiExplanationOptions {
+export interface RunAiExplanationOptions extends BuildAiContextOptions {
   readonly horoscope: Horoscope;
   readonly task: AiTask;
   readonly router?: AiRouter;
@@ -26,7 +26,10 @@ export async function runAiExplanation(
   const requestId = createRequestId();
 
   try {
-    const context = buildAiContext(options.horoscope);
+    const context = buildAiContext(options.horoscope, {
+      domainInterpretations: options.domainInterpretations,
+      lifeAnalysis: options.lifeAnalysis
+    });
 
     const request = createAiRequest(
       options.task,
@@ -128,8 +131,8 @@ function mapRoutingResultToViewModel(
 
   const fallbackWarnings = structuredOutputWasProvided
     ? [
-        'Structured AI explanation was unavailable; displaying the available textual explanation.'
-      ]
+      'Structured AI explanation was unavailable; displaying the available textual explanation.'
+    ]
     : [];
 
   const content = result.response.content?.trim() ?? '';

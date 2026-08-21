@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import type { LifeAnalysisConflictViewModel } from '../../product/life-analysis/lifeAnalysisTypes';
 
 interface ConflictSectionProps {

@@ -37,9 +37,28 @@ import {
 } from '../../domain/interpretation';
 import {
   synthesizeLifeAnalysis,
-  projectLifeAnalysisForAi
+  projectLifeAnalysisForAi,
+  type LifeAnalysis
 } from '../../domain/synthesis';
+import type { DomainInterpretation } from '../../domain/interpretation';
 import { deepFreeze } from './deepFreeze';
+
+/**
+ * Options to avoid double calculation when domain interpretations and life analysis
+ * have already been computed upstream.
+ */
+export interface BuildAiContextOptions {
+  /**
+   * Pre-computed domain interpretations (e.g., Career V2, Wealth V2).
+   * When provided, these bypass the default registry instantiation and interpretation.
+   */
+  readonly domainInterpretations?: readonly DomainInterpretation[];
+  /**
+   * Pre-computed life analysis result.
+   * When provided, this bypasses synthesis from domain interpretations.
+   */
+  readonly lifeAnalysis?: LifeAnalysis;
+}
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
   Planet.SUN,
@@ -128,8 +147,8 @@ function buildPlanetFacts(horoscope: Horoscope): readonly PlanetFactSummary[] {
       typeof fact?.nakshatraResult?.padaNumber === 'number'
         ? fact.nakshatraResult.padaNumber
         : typeof fact?.nakshatraResult?.pada === 'number'
-        ? fact.nakshatraResult.pada
-        : undefined;
+          ? fact.nakshatraResult.pada
+          : undefined;
 
     facts.push({
       planet,
@@ -283,27 +302,27 @@ function buildDivisionalFacts(horoscope: Horoscope): DivisionalFacts {
 
   const d9: DivisionalFact = d9Interp
     ? {
-        varga: 'D9',
-        status: 'AVAILABLE' as AiAvailability,
-        ...(d9Interp.ascendant?.sign ? { ascendantSign: d9Interp.ascendant.sign } : {}),
-        confidence: d9Interp.confidence as AiConfidence
-      }
+      varga: 'D9',
+      status: 'AVAILABLE' as AiAvailability,
+      ...(d9Interp.ascendant?.sign ? { ascendantSign: d9Interp.ascendant.sign } : {}),
+      confidence: d9Interp.confidence as AiConfidence
+    }
     : {
-        varga: 'D9',
-        status: 'UNAVAILABLE' as AiAvailability
-      };
+      varga: 'D9',
+      status: 'UNAVAILABLE' as AiAvailability
+    };
 
   const d10: DivisionalFact = d10Interp
     ? {
-        varga: 'D10',
-        status: 'AVAILABLE' as AiAvailability,
-        ...(d10Interp.ascendant?.sign ? { ascendantSign: d10Interp.ascendant.sign } : {}),
-        confidence: d10Interp.confidence as AiConfidence
-      }
+      varga: 'D10',
+      status: 'AVAILABLE' as AiAvailability,
+      ...(d10Interp.ascendant?.sign ? { ascendantSign: d10Interp.ascendant.sign } : {}),
+      confidence: d10Interp.confidence as AiConfidence
+    }
     : {
-        varga: 'D10',
-        status: 'UNAVAILABLE' as AiAvailability
-      };
+      varga: 'D10',
+      status: 'UNAVAILABLE' as AiAvailability
+    };
 
   return {
     d9,
@@ -627,7 +646,7 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
   return Array.from(evidenceMap.values());
 }
 
-export function buildAiContext(horoscope: Horoscope): AiContext {
+export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOptions): AiContext {
   const source: AiContextSource = {
     engine: 'CORE_ASTRO',
     deterministic: true,
@@ -653,17 +672,42 @@ export function buildAiContext(horoscope: Horoscope): AiContext {
   const lifeThemes = buildLifeThemeFacts(horoscope);
   const evidence = buildEvidence(horoscope);
 
-  const registry = createDefaultDomainInterpreterRegistry();
-  const careerInterp = registry.get('CAREER').interpret(horoscope);
-  const wealthInterp = registry.get('WEALTH').interpret(horoscope);
+  // Use pre-computed domain interpretations if provided, otherwise instantiate from registry
+  let domainInterpretations: readonly DomainInterpretationAiProjection[];
+  let lifeAnalysisValue: LifeAnalysis;
 
-  const domainInterpretations: readonly DomainInterpretationAiProjection[] = [
-    projectDomainInterpretationForAi(careerInterp),
-    projectDomainInterpretationForAi(wealthInterp)
-  ];
+  if (options?.domainInterpretations && options.domainInterpretations.length > 0) {
+    // Project pre-computed domain interpretations
+    domainInterpretations = options.domainInterpretations.map(
+      projectDomainInterpretationForAi
+    );
+  } else {
+    // Default path: instantiate from registry (maintains backward compatibility)
+    const registry = createDefaultDomainInterpreterRegistry();
+    const careerInterp = registry.get('CAREER').interpret(horoscope);
+    const wealthInterp = registry.get('WEALTH').interpret(horoscope);
+    domainInterpretations = [
+      projectDomainInterpretationForAi(careerInterp),
+      projectDomainInterpretationForAi(wealthInterp)
+    ];
+  }
 
-  const lifeAnalysis = synthesizeLifeAnalysis([careerInterp, wealthInterp]);
-  const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysis);
+  // Use pre-computed life analysis if provided, otherwise synthesize
+  if (options?.lifeAnalysis) {
+    lifeAnalysisValue = options.lifeAnalysis;
+  } else if (options?.domainInterpretations && options.domainInterpretations.length > 0) {
+    // Synthesize from pre-computed domain interpretations
+    lifeAnalysisValue = synthesizeLifeAnalysis(options.domainInterpretations);
+  } else {
+    // Fallback: this path should not be reached under normal P-029 operation,
+    // but preserves behavior if neither lifeAnalysis nor complete domainInterpretations are provided
+    const registry = createDefaultDomainInterpreterRegistry();
+    const careerInterp = registry.get('CAREER').interpret(horoscope);
+    const wealthInterp = registry.get('WEALTH').interpret(horoscope);
+    lifeAnalysisValue = synthesizeLifeAnalysis([careerInterp, wealthInterp]);
+  }
+
+  const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysisValue);
 
   const context: AiContext = {
     schemaVersion: AI_CONTEXT_SCHEMA_VERSION,

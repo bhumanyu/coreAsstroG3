@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, CheckCircle2, ShieldCheck, Compass, Activity, Zap } from 'lucide-react';
+import { Briefcase, ShieldCheck, Compass, Activity, Zap } from 'lucide-react';
 import type {
   LifeAnalysisCareerDetailViewModel,
   LifeAnalysisDomainSummaryViewModel
