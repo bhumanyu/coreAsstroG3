@@ -17,7 +17,11 @@ import type {
   LifeAnalysisWealthDetailViewModel
 } from './lifeAnalysisTypes';
 import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';
-import { buildWhyExperience } from './lifeAnalysisWhy';
+import {
+  buildWhyExperience,
+  buildCareerWhyExperience,
+  buildWealthWhyExperience
+} from './lifeAnalysisWhy';
 import { deepFreeze } from '../../ai/context/deepFreeze';
 
 /**
@@ -173,20 +177,14 @@ export function buildLifeAnalysisViewModel(
       analysis,
       domainInterpretations: [career, wealth]
     }),
-    careerWhy: buildWhyExperience(
-      {
-        analysis,
-        domainInterpretations: [career, wealth]
-      },
-      'CAREER'
-    ),
-    wealthWhy: buildWhyExperience(
-      {
-        analysis,
-        domainInterpretations: [career, wealth]
-      },
-      'WEALTH'
-    ),
+    careerWhy: buildCareerWhyExperience({
+      analysis,
+      domainInterpretations: [career, wealth]
+    }),
+    wealthWhy: buildWealthWhyExperience({
+      analysis,
+      domainInterpretations: [career, wealth]
+    }),
     careerDetail,
     wealthDetail
   };

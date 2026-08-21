@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   X,
   ShieldCheck,
@@ -19,7 +19,6 @@ import type {
   WhyExperienceViewModel,
   EvidenceDetailViewModel
 } from '../../product/life-analysis/lifeAnalysisEvidenceTypes';
-import { groupWealthDimensionEvidence } from '../../product/life-analysis/lifeAnalysisWhy';
 import { EvidenceCard } from './EvidenceCard';
 
 export interface LifeAnalysisEvidencePanelProps {
@@ -37,9 +36,18 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
   domain,
   why
 }) => {
-  // Close on Escape key press
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const lastActiveElementRef = useRef<HTMLElement | null>(null);
+
+  // Focus management & Escape key handler
   useEffect(() => {
     if (!isOpen) return;
+
+    lastActiveElementRef.current = (document.activeElement as HTMLElement) || null;
+
+    const timer = setTimeout(() => {
+      closeButtonRef.current?.focus();
+    }, 0);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -48,7 +56,11 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', handleKeyDown);
+      lastActiveElementRef.current?.focus();
+    };
   }, [isOpen, onClose]);
 
   // Map of all resolved evidence items by ID for related evidence link resolution
@@ -61,13 +73,6 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
     }
     return map;
   }, [why?.evidence]);
-
-  const wealthDimensions = useMemo(() => {
-    if (domain === 'WEALTH' && why?.evidence) {
-      return groupWealthDimensionEvidence(why.evidence);
-    }
-    return null;
-  }, [domain, why?.evidence]);
 
   if (!isOpen) {
     return null;
@@ -90,7 +95,7 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
               Deterministic Domain Evidence Fully Traceable
             </span>
             <p className="text-emerald-300/80 leading-normal">
-              All {resolved} referenced factors in this domain are resolved from the astrological calculations.
+              All {resolved} referenced evidence items are resolved from the deterministic domain analysis.
             </p>
           </div>
         </div>
@@ -106,7 +111,7 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
               Partial Astrological Evidence Basis
             </span>
             <p className="text-amber-300/80 leading-normal">
-              {resolved} of {totalReferenced} referenced astrological factors are verified against available inputs.
+              {resolved} of {totalReferenced} referenced evidence items are available in the deterministic domain analysis.
             </p>
           </div>
         </div>
@@ -131,7 +136,7 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
   const renderGroupSection = (
     sectionTitle: string,
     icon: React.ReactNode,
-    items: readonly EvidenceDetailViewModel[],
+    items?: readonly EvidenceDetailViewModel[],
     subtitle?: string
   ) => {
     if (!items || items.length === 0) {
@@ -196,6 +201,7 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
             </p>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             aria-label="Close evidence"
             onClick={onClose}
@@ -209,40 +215,39 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
         <div className="p-5 overflow-y-auto space-y-6 flex-1">
           {renderIntegrityBanner()}
 
-          {domain === 'WEALTH' && wealthDimensions ? (
+          {domain === 'WEALTH' ? (
             /* Wealth Dimension-Grouped Sections */
             <div className="space-y-6">
               {renderGroupSection(
                 'Accumulation',
                 <Landmark className="w-4 h-4 text-emerald-400" aria-hidden="true" />,
-                wealthDimensions.ACCUMULATION,
+                why?.grouped?.accumulation,
                 '2nd House fixed assets, capital preservation, and treasury retention'
               )}
               {renderGroupSection(
                 'Gains',
                 <TrendingUp className="w-4 h-4 text-cyan-400" aria-hidden="true" />,
-                wealthDimensions.GAINS,
+                why?.grouped?.gains,
                 '11th House cashflow, recurring profits, and professional earnings'
               )}
               {renderGroupSection(
                 'Fortune',
                 <Compass className="w-4 h-4 text-indigo-400" aria-hidden="true" />,
-                wealthDimensions.FORTUNE,
+                why?.grouped?.fortune,
                 '9th House Lakshmi sthana, divine grace, and effortless prosperity'
               )}
               {renderGroupSection(
                 'Speculation',
                 <Coins className="w-4 h-4 text-amber-400" aria-hidden="true" />,
-                wealthDimensions.SPECULATION,
+                why?.grouped?.speculation,
                 '5th House purva punya, market intelligence, and risk ventures'
               )}
-              {wealthDimensions.UNCLASSIFIED.length > 0 &&
-                renderGroupSection(
-                  'Timing & Additional Wealth Factors',
-                  <Clock className="w-4 h-4 text-purple-400" aria-hidden="true" />,
-                  wealthDimensions.UNCLASSIFIED,
-                  'Active dasha, transit, and general planetary significations'
-                )}
+              {renderGroupSection(
+                'Timing & Additional Wealth Factors',
+                <Clock className="w-4 h-4 text-purple-400" aria-hidden="true" />,
+                why?.grouped?.unclassified,
+                'Active dasha, transit, and general planetary significations'
+              )}
             </div>
           ) : (
             /* Career & General Role-Grouped Sections */
@@ -250,43 +255,43 @@ export const LifeAnalysisEvidencePanel: React.FC<LifeAnalysisEvidencePanelProps>
               {renderGroupSection(
                 'Primary Structural Pillars',
                 <Layers className="w-4 h-4 text-indigo-400" aria-hidden="true" />,
-                why.grouped.primary,
+                why?.grouped?.primary,
                 'Foundational house and lordship placements (Role: Primary)'
               )}
               {renderGroupSection(
                 'Supporting Evidence',
                 <CheckCircle2 className="w-4 h-4 text-blue-400" aria-hidden="true" />,
-                why.grouped.supporting,
+                why?.grouped?.supporting,
                 'Karaka planet significators and secondary linkages (Role: Secondary)'
               )}
               {renderGroupSection(
                 'Challenging Factors',
                 <AlertTriangle className="w-4 h-4 text-amber-400" aria-hidden="true" />,
-                why.grouped.challenging,
+                why?.grouped?.challenging,
                 'Frictions, afflictions, or adverse dignity configurations (Direction: Challenging)'
               )}
               {renderGroupSection(
                 'Cross-Domain Conflicting Factors',
                 <AlertCircle className="w-4 h-4 text-rose-400" aria-hidden="true" />,
-                why.grouped.conflicting,
+                why?.grouped?.conflicting,
                 'Factors producing mixed or divergent effects across domains (Direction: Conflicting)'
               )}
               {renderGroupSection(
                 'Divisional & Yoga Confirmations',
                 <Sparkles className="w-4 h-4 text-emerald-400" aria-hidden="true" />,
-                why.grouped.confirmations,
+                why?.grouped?.confirmations,
                 'D10 Dasamsa confirmations and classical yogas (Role: Confirmation)'
               )}
               {renderGroupSection(
                 'Timing Activations',
                 <Clock className="w-4 h-4 text-amber-400" aria-hidden="true" />,
-                why.grouped.timing,
+                why?.grouped?.timing,
                 'Active Vimshottari Dasha and Gochara transit influences (Role: Timing)'
               )}
               {renderGroupSection(
                 'Modifiers & Secondary Influences',
                 <Info className="w-4 h-4 text-purple-400" aria-hidden="true" />,
-                why.grouped.modifiers,
+                why?.grouped?.modifiers,
                 'Planetary aspects, strengths, and conditional nuances (Role: Modifier)'
               )}
             </div>

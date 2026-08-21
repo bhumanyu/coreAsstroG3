@@ -79,6 +79,11 @@ export interface GroupedEvidenceViewModel {
   readonly modifiers: readonly EvidenceDetailViewModel[];
   readonly confirmations: readonly EvidenceDetailViewModel[];
   readonly timing: readonly EvidenceDetailViewModel[];
+  readonly accumulation?: readonly EvidenceDetailViewModel[];
+  readonly gains?: readonly EvidenceDetailViewModel[];
+  readonly fortune?: readonly EvidenceDetailViewModel[];
+  readonly speculation?: readonly EvidenceDetailViewModel[];
+  readonly unclassified?: readonly EvidenceDetailViewModel[];
 }
 
 export type WealthDimensionKey =

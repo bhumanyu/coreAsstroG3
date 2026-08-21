@@ -61,7 +61,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               Deterministic Evidence Fully Traceable
             </span>
             <p className="text-emerald-300/80 leading-normal">
-              All {resolved} referenced astrological factors are resolved from the deterministic chart, divisional, and timing analysis.
+              All {resolved} referenced evidence items are resolved from the deterministic domain analysis.
             </p>
           </div>
         </div>
@@ -77,7 +77,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               Partial Astrological Evidence Basis
             </span>
             <p className="text-amber-300/80 leading-normal">
-              {resolved} of {totalReferenced} referenced astrological factors are verified against available planetary and divisional calculations.
+              {resolved} of {totalReferenced} referenced evidence items are available in the deterministic domain analysis.
             </p>
           </div>
         </div>

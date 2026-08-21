@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   buildWhyExperience,
+  buildCareerWhyExperience,
+  buildWealthWhyExperience,
   resolveLifeAnalysisEvidenceDetails,
   resolveDomainEvidence,
   groupWealthDimensionEvidence,
@@ -656,25 +658,24 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(wealthEvidence.every((e) => e.domain === 'WEALTH')).toBe(true);
 
     // Scoped buildWhyExperience tests
-    const careerWhy = buildWhyExperience(
-      {
-        analysis: goldenAnalysis,
-        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
-      },
-      'CAREER'
-    );
+    const careerWhy = buildCareerWhyExperience({
+      analysis: goldenAnalysis,
+      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+    });
     expect(careerWhy.evidence.every((e) => e.domain === 'CAREER')).toBe(true);
     expect(careerWhy.integrity.status).toBe('VALID');
 
-    const wealthWhy = buildWhyExperience(
-      {
-        analysis: goldenAnalysis,
-        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
-      },
-      'WEALTH'
-    );
+    const wealthWhy = buildWealthWhyExperience({
+      analysis: goldenAnalysis,
+      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+    });
     expect(wealthWhy.evidence.every((e) => e.domain === 'WEALTH')).toBe(true);
     expect(wealthWhy.integrity.status).toBe('VALID');
+    expect(wealthWhy.grouped.accumulation).toBeDefined();
+    expect(wealthWhy.grouped.gains).toBeDefined();
+    expect(wealthWhy.grouped.fortune).toBeDefined();
+    expect(wealthWhy.grouped.speculation).toBeDefined();
+    expect(wealthWhy.grouped.unclassified).toBeDefined();
   });
 
   it('Test 20 (P-034): Wealth dimensions — groupWealthDimensionEvidence partitions evidence into ACCUMULATION, GAINS, FORTUNE, SPECULATION, and UNCLASSIFIED', () => {

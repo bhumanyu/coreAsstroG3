@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { LifeAnalysisPage } from './LifeAnalysisPage';
 import type {
   LifeAnalysisProductState,
@@ -248,7 +248,52 @@ describe('LifeAnalysisPage', () => {
         conflicting: [],
         confirmations: [],
         timing: [],
-        modifiers: []
+        modifiers: [],
+        accumulation: [
+          {
+            id: 'E-WEALTH-ACC',
+            domain: 'WEALTH',
+            role: 'PRIMARY',
+            polarity: 'SUPPORTING',
+            displayPolarity: 'SUPPORTING',
+            dimension: 'ACCUMULATION',
+            title: '2nd Lord Exalted in Kendra',
+            statement: '2nd Lord strong in Kendra ensures liquid wealth preservation.',
+            source: { label: 'D1 Natal Chart', type: 'HOUSE' },
+            relatedEvidenceIds: [],
+            traceability: {
+              evidenceId: 'E-WEALTH-ACC',
+              domain: 'WEALTH',
+              relatedEvidenceIds: [],
+              valid: true
+            },
+            availability: 'AVAILABLE'
+          }
+        ],
+        gains: [],
+        fortune: [],
+        speculation: [
+          {
+            id: 'E-WEALTH-SPEC',
+            domain: 'WEALTH',
+            role: 'SECONDARY',
+            polarity: 'CHALLENGING',
+            displayPolarity: 'CHALLENGING',
+            dimension: 'SPECULATION',
+            title: '5th Lord in 8th House Placement',
+            statement: 'Speculative returns experience elevated volatility.',
+            source: { label: 'D1 Natal Chart', type: 'LORDSHIP' },
+            relatedEvidenceIds: [],
+            traceability: {
+              evidenceId: 'E-WEALTH-SPEC',
+              domain: 'WEALTH',
+              relatedEvidenceIds: [],
+              valid: true
+            },
+            availability: 'AVAILABLE'
+          }
+        ],
+        unclassified: []
       },
       evidence: [
         {
@@ -540,7 +585,7 @@ describe('LifeAnalysisPage', () => {
 
     render(<LifeAnalysisPage state={state} />);
 
-    expect(screen.getByText('Why this conclusion?')).toBeInTheDocument();
+    expect(screen.getAllByText('Why this conclusion?').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Primary Structural Pillars')).toBeInTheDocument();
     expect(screen.getByText('Supporting Evidence')).toBeInTheDocument();
     expect(screen.getByText('Challenging Factors')).toBeInTheDocument();
@@ -660,7 +705,7 @@ describe('LifeAnalysisPage', () => {
     expect(hasNumericPercentScores).toBe(false);
   });
 
-  it('P-034: clicking "Why this conclusion?" on Career card opens dialog with aria-modal and Career evidence', () => {
+  it('P-034: clicking "Why this conclusion?" on Career card opens dialog with aria-modal, correct banner, and Career evidence', () => {
     const state: LifeAnalysisProductState = {
       status: 'READY',
       analysis: mockReadyAnalysis
@@ -672,19 +717,28 @@ describe('LifeAnalysisPage', () => {
     const whyButtons = screen.getAllByRole('button', { name: /Why this conclusion\?/i });
     expect(whyButtons.length).toBeGreaterThanOrEqual(2);
 
+    const careerButton = whyButtons[0];
+    careerButton.focus();
+    expect(document.activeElement).toBe(careerButton);
+
     // Click the first one (Career card)
-    fireEvent.click(whyButtons[0]);
+    fireEvent.click(careerButton);
 
     // Check modal opens with role="dialog" and aria-modal="true"
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(screen.getByText('Career & Vocation Evidence')).toBeInTheDocument();
+    expect(within(dialog).getByText('Career & Vocation Evidence')).toBeInTheDocument();
 
-    // Check close button
-    const closeBtn = screen.getByRole('button', { name: /Close evidence panel/i });
-    expect(closeBtn).toBeInTheDocument();
-    fireEvent.click(closeBtn);
+    // Check updated banner wording
+    expect(
+      within(dialog).getByText(/All 1 referenced evidence items are resolved from the deterministic domain analysis\./i)
+    ).toBeInTheDocument();
+
+    // Check close button and click to close
+    const closeBtns = within(dialog).getAllByRole('button', { name: /Close evidence/i });
+    expect(closeBtns.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(closeBtns[0]);
 
     // Dialog should be closed
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -709,16 +763,16 @@ describe('LifeAnalysisPage', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(screen.getByText('Wealth & Prosperity Evidence')).toBeInTheDocument();
+    expect(within(dialog).getByText('Wealth & Prosperity Evidence')).toBeInTheDocument();
 
-    // Wealth panel groups by dimension: should show Accumulation and Speculation tabs or sections
-    expect(screen.getByText(/Accumulation/i)).toBeInTheDocument();
-    expect(screen.getByText(/Speculation/i)).toBeInTheDocument();
+    // Wealth panel groups by dimension: should show Accumulation and Speculation sections in dialog
+    expect(within(dialog).getByRole('heading', { name: /Accumulation/i })).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: /Speculation/i })).toBeInTheDocument();
 
     // Check close button
-    const closeBtn = screen.getByRole('button', { name: /Close evidence panel/i });
-    expect(closeBtn).toBeInTheDocument();
-    fireEvent.click(closeBtn);
+    const closeBtns = within(dialog).getAllByRole('button', { name: /Close evidence/i });
+    expect(closeBtns.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(closeBtns[0]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

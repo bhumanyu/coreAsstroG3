@@ -24,7 +24,15 @@ export interface ResolveWhyEvidenceOptions {
  * Fixed deterministic ordering hierarchy for evidence roles:
  * PRIMARY -> SECONDARY -> MODIFIER -> CONFIRMATION -> TIMING
  */
-export const ROLE_ORDER: Readonly<Record<EvidenceRole, number>> = Object.freeze({
+export const ROLE_ORDER: readonly EvidenceRole[] = Object.freeze([
+  'PRIMARY',
+  'SECONDARY',
+  'MODIFIER',
+  'CONFIRMATION',
+  'TIMING'
+]);
+
+export const ROLE_PRIORITY_MAP: Readonly<Record<EvidenceRole, number>> = Object.freeze({
   PRIMARY: 0,
   SECONDARY: 1,
   MODIFIER: 2,
@@ -39,8 +47,8 @@ export function sortEvidence(
   evidence: readonly EvidenceDetailViewModel[]
 ): readonly EvidenceDetailViewModel[] {
   return [...evidence].sort((a, b) => {
-    const roleA = ROLE_ORDER[a.role] ?? 99;
-    const roleB = ROLE_ORDER[b.role] ?? 99;
+    const roleA = ROLE_PRIORITY_MAP[a.role] ?? 99;
+    const roleB = ROLE_PRIORITY_MAP[b.role] ?? 99;
     if (roleA !== roleB) {
       return roleA - roleB;
     }
@@ -330,7 +338,7 @@ export function calculateEvidenceIntegrity(
 }
 
 /**
- * Groups evidence detail view models by role and display polarity.
+ * Groups evidence detail view models by role, display polarity, and wealth dimensions.
  */
 export function groupEvidence(
   evidence: readonly EvidenceDetailViewModel[]
@@ -342,6 +350,11 @@ export function groupEvidence(
   const modifiers: EvidenceDetailViewModel[] = [];
   const confirmations: EvidenceDetailViewModel[] = [];
   const timing: EvidenceDetailViewModel[] = [];
+  const accumulation: EvidenceDetailViewModel[] = [];
+  const gains: EvidenceDetailViewModel[] = [];
+  const fortune: EvidenceDetailViewModel[] = [];
+  const speculation: EvidenceDetailViewModel[] = [];
+  const unclassified: EvidenceDetailViewModel[] = [];
 
   for (const item of evidence) {
     // Role-based grouping
@@ -363,6 +376,19 @@ export function groupEvidence(
     } else if (item.displayPolarity === 'CONFLICTING') {
       conflicting.push(item);
     }
+
+    // Wealth dimension grouping (from DomainEvidence.dimension)
+    if (item.dimension === 'ACCUMULATION') {
+      accumulation.push(item);
+    } else if (item.dimension === 'GAINS') {
+      gains.push(item);
+    } else if (item.dimension === 'FORTUNE') {
+      fortune.push(item);
+    } else if (item.dimension === 'SPECULATION') {
+      speculation.push(item);
+    } else if (item.domain === 'WEALTH') {
+      unclassified.push(item);
+    }
   }
 
   return deepFreeze({
@@ -372,7 +398,12 @@ export function groupEvidence(
     conflicting: Object.freeze(sortEvidence(conflicting)),
     modifiers: Object.freeze(sortEvidence(modifiers)),
     confirmations: Object.freeze(sortEvidence(confirmations)),
-    timing: Object.freeze(sortEvidence(timing))
+    timing: Object.freeze(sortEvidence(timing)),
+    accumulation: Object.freeze(sortEvidence(accumulation)),
+    gains: Object.freeze(sortEvidence(gains)),
+    fortune: Object.freeze(sortEvidence(fortune)),
+    speculation: Object.freeze(sortEvidence(speculation)),
+    unclassified: Object.freeze(sortEvidence(unclassified))
   });
 }
 
@@ -415,4 +446,24 @@ export function buildWhyExperience(
     evidence,
     grouped
   });
+}
+
+/**
+ * Builds the deterministic Career domain Why Experience View Model.
+ * Filters DomainEvidence strictly to Career domain and returns ready-to-render view model.
+ */
+export function buildCareerWhyExperience(
+  options: ResolveWhyEvidenceOptions
+): WhyExperienceViewModel {
+  return buildWhyExperience(options, 'CAREER');
+}
+
+/**
+ * Builds the deterministic Wealth domain Why Experience View Model.
+ * Filters DomainEvidence strictly to Wealth domain and groups dimensions into ready-to-render view model.
+ */
+export function buildWealthWhyExperience(
+  options: ResolveWhyEvidenceOptions
+): WhyExperienceViewModel {
+  return buildWhyExperience(options, 'WEALTH');
 }
