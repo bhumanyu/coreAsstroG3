@@ -328,7 +328,9 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
     expect(container.querySelector('.grid-cols-1')).not.toBeNull();
     expect(container.querySelector('.lg\\:grid-cols-12')).not.toBeNull();
   });
+});
 
+describe('D01 — Dasha Report Wiring', () => {
   // No-duplicate-calculation verification
   it('invokes calculateVimshottari and analyzeDashaInterpretation exactly once during calculateHoroscope and 0 times during DashaSection/FullNatalReportView render', () => {
     const calculateVimshottariSpy = vi.spyOn(vimshottariModule, 'calculateVimshottari');

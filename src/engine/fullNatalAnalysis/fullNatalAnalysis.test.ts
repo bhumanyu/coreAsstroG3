@@ -5,7 +5,7 @@ import { calculateHoroscope } from '../astroEngine';
 import { buildFullNatalAnalysis, validateInput } from './fullNatalAnalysis';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { EXPECTED_PLANET_ORDER } from './fullNatalAnalysisMetadata';
-import { LifeTheme, Planet } from '../../types';
+import { LifeTheme, Planet, BirthDetails, AyanamsaType } from '../../types';
 
 describe('P-21 FullNatalAnalysis Engine', () => {
   it('should throw TypeError when input is null or missing required fields', () => {
@@ -344,52 +344,84 @@ describe('P-21 FullNatalAnalysis Engine', () => {
     expect(report.houses.status).toBe('PARTIAL');
   });
 
-  it('should handle missing dashaInterpretation gracefully with status UNAVAILABLE', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-    const modifiedHoroscope = {
-      ...horoscope,
-      dashaInterpretation: undefined as any
-    };
+  describe('D01 — Dasha Report Wiring', () => {
+    it('wires the calculated Vimshottari result into FullNatalAnalysis', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const report = horoscope.fullNatalAnalysis;
 
-    const report = buildFullNatalAnalysis({
-      horoscope: modifiedHoroscope,
-      lifeThemes: horoscope.lifeThemes,
-      chartSynthesis: horoscope.chartSynthesis
+      expect(report.vimshottari.status).toBe('AVAILABLE');
+      expect(report.vimshottari.mahadashas).toEqual(horoscope.dashaInterpretation?.mahadashas);
+      expect(report.vimshottari.birthAnchor).toEqual(horoscope.dashaInterpretation?.birthAnchor);
+      expect(report.vimshottari.mahadashas).toBeDefined();
+      expect(report.vimshottari.mahadashas!.length).toBeGreaterThan(0);
+      expect(report.vimshottari.birthAnchor).toBeDefined();
+      expect(report.vimshottari.birthAnchor!.nakshatra).toBeDefined();
+      expect(report.vimshottari.birthAnchor!.nakshatraLord).toBeDefined();
+
+      const mahadashas = report.vimshottari.mahadashas!;
+      const firstMahadasha = mahadashas[0];
+      const lastMahadasha = mahadashas[mahadashas.length - 1];
+
+      expect(firstMahadasha.start).toBeDefined();
+      expect(firstMahadasha.end).toBeDefined();
+      expect(typeof firstMahadasha.start).toBe('string');
+      expect(typeof firstMahadasha.end).toBe('string');
+      expect(Date.parse(firstMahadasha.start)).not.toBeNaN();
+      expect(Date.parse(firstMahadasha.end)).not.toBeNaN();
+
+      expect(lastMahadasha.start).toBeDefined();
+      expect(lastMahadasha.end).toBeDefined();
+      expect(typeof lastMahadasha.start).toBe('string');
+      expect(typeof lastMahadasha.end).toBe('string');
+      expect(Date.parse(lastMahadasha.start)).not.toBeNaN();
+      expect(Date.parse(lastMahadasha.end)).not.toBeNaN();
     });
 
-    expect(report.vimshottari.status).toBe('UNAVAILABLE');
-    expect(report.vimshottari.birthAnchor).toBeUndefined();
-    expect(report.vimshottari.mahadashas).toBeUndefined();
-  });
+    it('produces deep-equal fullNatalAnalysis.vimshottari for two calculateHoroscope calls (determinism)', () => {
+      const horoscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const horoscope2 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
-  it('should deterministically populate vimshottari section for canonical chart with mahadashas and birth anchor', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-    const report = horoscope.fullNatalAnalysis;
+      expect(horoscope1.fullNatalAnalysis.vimshottari).toEqual(horoscope2.fullNatalAnalysis.vimshottari);
+    });
 
-    expect(report.vimshottari.status).toBe('AVAILABLE');
-    expect(report.vimshottari.mahadashas).toBeDefined();
-    expect(report.vimshottari.mahadashas!.length).toBeGreaterThan(0);
-    expect(report.vimshottari.birthAnchor).toBeDefined();
-    expect(report.vimshottari.birthAnchor!.nakshatra).toBeDefined();
-    expect(report.vimshottari.birthAnchor!.nakshatraLord).toBeDefined();
+    it('produces different report.vimshottari.birthAnchor and mahadashas for two distinct birth details (chart sensitivity)', () => {
+      const alternativeBirthDetails: BirthDetails = {
+        name: 'Sample New Delhi',
+        placeOfBirth: 'New Delhi, India',
+        dateTimeStr: '1995-10-24T06:30:00+05:30',
+        timeZone: 'Asia/Kolkata',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        ayanamsa: CANONICAL_BIRTH_DETAILS.ayanamsa
+      };
 
-    const mahadashas = report.vimshottari.mahadashas!;
-    const firstMahadasha = mahadashas[0];
-    const lastMahadasha = mahadashas[mahadashas.length - 1];
+      const horoscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const horoscope2 = calculateHoroscope(alternativeBirthDetails);
 
-    expect(firstMahadasha.start).toBeDefined();
-    expect(firstMahadasha.end).toBeDefined();
-    expect(typeof firstMahadasha.start).toBe('string');
-    expect(typeof firstMahadasha.end).toBe('string');
-    expect(Date.parse(firstMahadasha.start)).not.toBeNaN();
-    expect(Date.parse(firstMahadasha.end)).not.toBeNaN();
+      const report1 = horoscope1.fullNatalAnalysis;
+      const report2 = horoscope2.fullNatalAnalysis;
 
-    expect(lastMahadasha.start).toBeDefined();
-    expect(lastMahadasha.end).toBeDefined();
-    expect(typeof lastMahadasha.start).toBe('string');
-    expect(typeof lastMahadasha.end).toBe('string');
-    expect(Date.parse(lastMahadasha.start)).not.toBeNaN();
-    expect(Date.parse(lastMahadasha.end)).not.toBeNaN();
+      expect(report1.vimshottari.birthAnchor).not.toEqual(report2.vimshottari.birthAnchor);
+      expect(report1.vimshottari.mahadashas).not.toEqual(report2.vimshottari.mahadashas);
+    });
+
+    it('should handle missing dashaInterpretation gracefully with status UNAVAILABLE', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const modifiedHoroscope = {
+        ...horoscope,
+        dashaInterpretation: undefined as any
+      };
+
+      const report = buildFullNatalAnalysis({
+        horoscope: modifiedHoroscope,
+        lifeThemes: horoscope.lifeThemes,
+        chartSynthesis: horoscope.chartSynthesis
+      });
+
+      expect(report.vimshottari.status).toBe('UNAVAILABLE');
+      expect(report.vimshottari.birthAnchor).toBeUndefined();
+      expect(report.vimshottari.mahadashas).toBeUndefined();
+    });
   });
 
   it('should reflect PARTIAL status for mix of COMPLETE and PARTIAL Shadbala status', () => {
