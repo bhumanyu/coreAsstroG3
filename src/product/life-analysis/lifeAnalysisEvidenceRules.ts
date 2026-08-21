@@ -112,7 +112,7 @@ export const WEALTH_RULE_METADATA_REGISTRY: Readonly<Record<string, EvidenceRule
     id: 'WEALTH_5H_11H_LINK_001',
     name: '5th-11th House Speculation-Gains Link',
     category: 'STRUCTURAL',
-    description: 'Association between the 5th and 11th houses considered relevant to speculative and gains-related analysis.'
+    description: 'Association between the 5th and 11th houses considered relevant to speculative activity and gains.'
   }),
   WEALTH_9H_11H_LINK_001: Object.freeze({
     id: 'WEALTH_9H_11H_LINK_001',

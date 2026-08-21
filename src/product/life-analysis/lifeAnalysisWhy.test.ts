@@ -5,6 +5,7 @@ import {
   calculateEvidenceIntegrity,
   groupEvidence
 } from './lifeAnalysisWhy';
+import { mapEvidenceSource } from './domainPresentationUtils';
 import { resolveRuleMetadata } from './lifeAnalysisEvidenceRules';
 import { runLifeAnalysisProduct } from './lifeAnalysisProductService';
 import {
@@ -288,7 +289,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(grouped.conflicting).toHaveLength(1);
   });
 
-  it('Test 9: AI remains downstream — runLifeAnalysisProduct with includeAiExplanation=false skips AI and produces deterministic Why model', async () => {
+  it('Test 9: Why experience remains deterministic when AI explanation is disabled — mockRouter is never invoked', async () => {
     const mockRouter: AiRouter = {
       route: vi.fn()
     } as unknown as AiRouter;
@@ -460,5 +461,60 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
 
     expect(why.evidence).toHaveLength(1);
     expect(why.evidence[0].displayPolarity).toBe('NEUTRAL');
+  });
+
+  it('Test 16: mapEvidenceSource calculationId contract — never derives calculationId from ruleId', () => {
+    const evidenceWithRuleId: DomainEvidence = {
+      id: 'EV_RULE_ONLY_001',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      polarity: 'SUPPORTING',
+      statement: '10th House strong placement.',
+      source: 'D1',
+      phase: 'NATAL_PROMISE',
+      strength: 'STRONG',
+      priority: 1,
+      ruleId: 'CAREER_10H_STRONG_001',
+      evidenceFamily: 'TENTH_HOUSE',
+      relatedEvidenceIds: []
+    };
+
+    const sourceVM = mapEvidenceSource('D1', evidenceWithRuleId);
+    expect(sourceVM.calculationId).toBeUndefined();
+    expect(sourceVM.type).toBe('HOUSE');
+    expect(sourceVM.label).toBe('Natal House (D1)');
+
+    // Test across various sources
+    const vargaVM = mapEvidenceSource('D10', { ...evidenceWithRuleId, source: 'D10' });
+    expect(vargaVM.calculationId).toBeUndefined();
+    expect(vargaVM.type).toBe('VARGA');
+
+    const dashaVM = mapEvidenceSource('DASHA', { ...evidenceWithRuleId, source: 'DASHA' });
+    expect(dashaVM.calculationId).toBeUndefined();
+    expect(dashaVM.type).toBe('DASHA');
+
+    const transitVM = mapEvidenceSource('TRANSIT', { ...evidenceWithRuleId, source: 'TRANSIT' });
+    expect(transitVM.calculationId).toBeUndefined();
+    expect(transitVM.type).toBe('TRANSIT');
+  });
+
+  it('Test 17: mapEvidenceSource D1 fallback — unclassified D1 evidence without house/lord metadata maps to type OTHER', () => {
+    const unclassifiedEvidence: DomainEvidence = {
+      id: 'EV_UNCLASSIFIED_001',
+      domain: 'WEALTH',
+      role: 'SECONDARY',
+      polarity: 'SUPPORTING',
+      statement: 'General natal chart observation.',
+      source: 'D1',
+      phase: 'NATAL_PROMISE',
+      strength: 'MODERATE',
+      priority: 2,
+      relatedEvidenceIds: []
+    };
+
+    const sourceVM = mapEvidenceSource('D1', unclassifiedEvidence);
+    expect(sourceVM.type).toBe('OTHER');
+    expect(sourceVM.label).toBe('Natal Chart (D1)');
+    expect(sourceVM.calculationId).toBeUndefined();
   });
 });

@@ -64,32 +64,28 @@ export function formatDomainDisplayName(domain: DomainId | string): string {
  * Maps an astrological evidence source and domain evidence object to an EvidenceSourceViewModel.
  *
  * NOTE: The string/family/ruleId heuristics below represent a presentation-only mapping layer.
- * A deterministic `sourceType` should later be added to DomainEvidence in a future infrastructure update.
+ * A deterministic `sourceType` should later be added to DomainEvidence in a future infrastructure update (P-031).
  * DomainEvidence currently has no calculationId field (ruleId !== calculationId), so calculationId is
- * omitted from view models unless an actual calculation identity is present on the domain model.
+ * not populated on view models.
  */
 export function mapEvidenceSource(
   source: EvidenceSource,
   evidence: DomainEvidence
 ): EvidenceSourceViewModel {
-  const calculationId = (evidence as { calculationId?: string }).calculationId;
-
   if (source === 'DASHA') {
     const periodLabel = evidence.timing?.periodKey
       ? `Dasha (${evidence.timing.periodKey})`
       : 'Vimshottari Dasha';
     return Object.freeze({
       type: 'DASHA' as EvidenceSourceType,
-      label: periodLabel,
-      ...(calculationId ? { calculationId } : {})
+      label: periodLabel
     });
   }
 
   if (source === 'TRANSIT') {
     return Object.freeze({
       type: 'TRANSIT' as EvidenceSourceType,
-      label: 'Gochara / Transit',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Gochara / Transit'
     });
   }
 
@@ -98,12 +94,13 @@ export function mapEvidenceSource(
     const label = VARGA_NAMES[source] ?? `Divisional Chart (${source})`;
     return Object.freeze({
       type: 'VARGA' as EvidenceSourceType,
-      label,
-      ...(calculationId ? { calculationId } : {})
+      label
     });
   }
 
-  // D1 Natal Chart source - classify based on evidenceFamily, ruleId, or source properties
+  // D1 Natal Chart source - presentation heuristic mapping tied to current Career/Wealth rule naming.
+  // A future infrastructure update (P-031) will add an explicit sourceType directly on DomainEvidence
+  // rather than deriving from rule IDs or evidence family strings.
   const family = evidence.evidenceFamily ?? '';
   const ruleId = evidence.ruleId ?? '';
 
@@ -125,8 +122,7 @@ export function mapEvidenceSource(
   ) {
     return Object.freeze({
       type: 'HOUSE' as EvidenceSourceType,
-      label: 'Natal House (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Natal House (D1)'
     });
   }
 
@@ -148,8 +144,7 @@ export function mapEvidenceSource(
   ) {
     return Object.freeze({
       type: 'LORDSHIP' as EvidenceSourceType,
-      label: 'House Lordship (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'House Lordship (D1)'
     });
   }
 
@@ -169,47 +164,41 @@ export function mapEvidenceSource(
   ) {
     return Object.freeze({
       type: 'PLANET' as EvidenceSourceType,
-      label: 'Planetary Position (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Planetary Position (D1)'
     });
   }
 
   if (family === 'ASPECT' || ruleId.includes('_ASPECT_')) {
     return Object.freeze({
       type: 'ASPECT' as EvidenceSourceType,
-      label: 'Graha Drishti / Aspect (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Graha Drishti / Aspect (D1)'
     });
   }
 
   if (family === 'YOGA' || ruleId.includes('_YOGA_')) {
     return Object.freeze({
       type: 'YOGA' as EvidenceSourceType,
-      label: 'Natal Yoga (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Natal Yoga (D1)'
     });
   }
 
   if (family === 'PLANETARY_STRENGTH' || family === 'STRENGTH') {
     return Object.freeze({
       type: 'STRENGTH' as EvidenceSourceType,
-      label: 'Planetary Strength (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Planetary Strength (D1)'
     });
   }
 
   if (source === 'D1') {
     return Object.freeze({
       type: 'OTHER' as EvidenceSourceType,
-      label: 'Natal Chart (D1)',
-      ...(calculationId ? { calculationId } : {})
+      label: 'Natal Chart (D1)'
     });
   }
 
   return Object.freeze({
     type: 'OTHER' as EvidenceSourceType,
-    label: 'Astrological Calculation',
-    ...(calculationId ? { calculationId } : {})
+    label: 'Astrological Calculation'
   });
 }
 
