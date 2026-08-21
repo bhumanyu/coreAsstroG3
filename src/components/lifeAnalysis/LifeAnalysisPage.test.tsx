@@ -775,4 +775,23 @@ describe('LifeAnalysisPage', () => {
     fireEvent.click(closeBtns[0]);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  it('P-035: validates Career and Wealth Why entry points and categorical prediction integrity', () => {
+    const state: LifeAnalysisProductState = {
+      status: 'READY',
+      analysis: mockReadyAnalysis
+    };
+
+    const { container } = render(<LifeAnalysisPage state={state} />);
+
+    // Career and Wealth Why entry points are present
+    const whyButtons = screen.getAllByRole('button', { name: /Why this conclusion/i });
+    expect(whyButtons.length).toBeGreaterThanOrEqual(2);
+
+    // Verify categorical ratings without numeric percentage prediction scores in domain sections
+    const domainCards = container.querySelectorAll('[data-testid="career-domain-card"], [data-testid="wealth-domain-card"]');
+    for (const card of Array.from(domainCards)) {
+      expect(/\b\d{1,3}%\b/.test(card.textContent ?? '')).toBe(false);
+    }
+  });
 });
