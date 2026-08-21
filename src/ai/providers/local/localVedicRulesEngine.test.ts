@@ -76,6 +76,7 @@ describe('localVedicRulesEngine', () => {
       'WEALTH_ANALYSIS',
       'DASHA_ANALYSIS',
       'LIFE_THEME_ANALYSIS',
+      'LIFE_ANALYSIS_EXPLANATION',
       'GENERAL_QUERY'
     ];
 
@@ -124,6 +125,17 @@ describe('localVedicRulesEngine', () => {
     expect(result.triggeredRuleIds.some((id) => id.startsWith('LOCAL-THEME'))).toBe(true);
   });
 
+  it('should execute life analysis explanation rules properly and select supporting evidence', () => {
+    const result = reasonWithLocalRules('LIFE_ANALYSIS_EXPLANATION', context);
+
+    expect(result.status).toBeDefined();
+    expect(result.conclusion).toBeDefined();
+    expect(result.conclusion).toContain('Career');
+    expect(result.conclusion).toContain('Wealth');
+    expect(result.supportingEvidenceIds.length).toBeGreaterThan(0);
+    expect(result.triggeredRuleIds.some((id) => id.startsWith('LOCAL-LIFE'))).toBe(true);
+  });
+
   it('should strictly isolate domain rules and not trigger GENERAL rules for domain tasks', () => {
     const careerResult = reasonWithLocalRules('CAREER_ANALYSIS', context);
     expect(careerResult.triggeredRuleIds.some((id) => id.startsWith('LOCAL-GEN'))).toBe(false);
@@ -132,6 +144,10 @@ describe('localVedicRulesEngine', () => {
     const wealthResult = reasonWithLocalRules('WEALTH_ANALYSIS', context);
     expect(wealthResult.triggeredRuleIds.some((id) => id.startsWith('LOCAL-GEN'))).toBe(false);
     expect(wealthResult.triggeredRuleIds.every((id) => id.startsWith('LOCAL-WEALTH'))).toBe(true);
+
+    const lifeResult = reasonWithLocalRules('LIFE_ANALYSIS_EXPLANATION', context);
+    expect(lifeResult.triggeredRuleIds.some((id) => id.startsWith('LOCAL-GEN'))).toBe(false);
+    expect(lifeResult.triggeredRuleIds.every((id) => id.startsWith('LOCAL-LIFE'))).toBe(true);
 
     const generalResult = reasonWithLocalRules('GENERAL_QUERY', context);
     expect(generalResult.triggeredRuleIds.every((id) => id.startsWith('LOCAL-GEN'))).toBe(true);

@@ -39,7 +39,9 @@ function buildLifeAnalysisExplanationConclusion(context: AiContext): string {
     ? ` Overall synthesis: ${context.lifeAnalysis.overallStatement}`
     : ` Overall synthesis indicates ${context.lifeAnalysis.status} alignment across domains.`;
 
-  return `Cross-domain synthesis integrates Career and Wealth domain interpretations: ${careerPart}; ${wealthPart}.${overall}`;
+  const evidencePart = ` Grounded in ${context.evidence.length} projected evidence factors across evaluated domains.`;
+
+  return `Cross-domain synthesis integrates Career and Wealth domain interpretations: ${careerPart}; ${wealthPart}.${overall}${evidencePart}`;
 }
 
 function buildConclusion(task: AiTask, context: AiContext): string {

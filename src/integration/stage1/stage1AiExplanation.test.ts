@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runAiExplanation } from '../../ai/product/aiExplanationService';
+import { buildAiContext } from '../../ai/context/aiContextFactory';
 import {
   STAGE1_GOLDEN_HOROSCOPE,
   STAGE1_GOLDEN_CAREER,
@@ -189,5 +190,49 @@ describe('Stage-1 AI Explanation Service Integration', () => {
     expect(lifeAnalysis.evidenceIds).toEqual(beforeEvidenceIds);
     expect(JSON.stringify(lifeAnalysis.conflicts)).toBe(beforeConflicts);
     expect(JSON.stringify(lifeAnalysis.sharedTiming)).toBe(beforeSharedTiming);
+  });
+
+  it('executes real local reasoning engine for LIFE_ANALYSIS_EXPLANATION without mock provider', async () => {
+    const domainInterpretations = [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH];
+    const lifeAnalysis = buildLifeAnalysis(domainInterpretations);
+
+    const result = await runAiExplanation({
+      horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      task: 'LIFE_ANALYSIS_EXPLANATION',
+      domainInterpretations,
+      lifeAnalysis
+    });
+
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.task).toBe('LIFE_ANALYSIS_EXPLANATION');
+      expect(result.providerKind).toBe('LOCAL_RULES');
+      expect(result.fallbackUsed).toBe(false);
+      expect(result.routingMode).toBe('LOCAL_ONLY');
+
+      // The new LIFE_ANALYSIS rules produced grounded evidence, not an empty list
+      expect(result.supportingEvidence.length).toBeGreaterThan(0);
+
+      // Rebuild the same context to get the canonical evidence universe
+      const canonicalContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE, {
+        domainInterpretations,
+        lifeAnalysis
+      });
+      const canonicalEvidenceMap = new Map(canonicalContext.evidence.map((e) => [e.id, e]));
+
+      for (const item of result.supportingEvidence) {
+        expect(item.evidence).toBeDefined();
+        expect(item.evidence.id).toBeDefined();
+        expect(canonicalEvidenceMap.has(item.evidence.id)).toBe(true);
+        expect(item.role).toBe('SUPPORTING');
+      }
+
+      for (const item of result.challengingEvidence) {
+        expect(item.evidence).toBeDefined();
+        expect(item.evidence.id).toBeDefined();
+        expect(canonicalEvidenceMap.has(item.evidence.id)).toBe(true);
+        expect(item.role).toBe('CHALLENGING');
+      }
+    }
   });
 });
