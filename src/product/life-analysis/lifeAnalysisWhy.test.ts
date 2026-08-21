@@ -484,21 +484,21 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
       relatedEvidenceIds: []
     };
 
-    const sourceVM = mapEvidenceSource('D1', evidenceWithRuleId);
+    const sourceVM = mapEvidenceSource(evidenceWithRuleId);
     expect(sourceVM.calculationId).toBeUndefined();
     expect(sourceVM.type).toBe('HOUSE');
     expect(sourceVM.label).toBe('Natal House (D1)');
 
     // Test across various sources
-    const vargaVM = mapEvidenceSource('D10', { ...evidenceWithRuleId, sourceType: 'VARGA', source: 'D10' });
+    const vargaVM = mapEvidenceSource({ ...evidenceWithRuleId, sourceType: 'VARGA', source: 'D10' });
     expect(vargaVM.calculationId).toBeUndefined();
     expect(vargaVM.type).toBe('VARGA');
 
-    const dashaVM = mapEvidenceSource('DASHA', { ...evidenceWithRuleId, sourceType: 'DASHA', source: 'DASHA' });
+    const dashaVM = mapEvidenceSource({ ...evidenceWithRuleId, sourceType: 'DASHA', source: 'DASHA' });
     expect(dashaVM.calculationId).toBeUndefined();
     expect(dashaVM.type).toBe('DASHA');
 
-    const transitVM = mapEvidenceSource('TRANSIT', { ...evidenceWithRuleId, sourceType: 'TRANSIT', source: 'TRANSIT' });
+    const transitVM = mapEvidenceSource({ ...evidenceWithRuleId, sourceType: 'TRANSIT', source: 'TRANSIT' });
     expect(transitVM.calculationId).toBeUndefined();
     expect(transitVM.type).toBe('TRANSIT');
   });
@@ -518,7 +518,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
       relatedEvidenceIds: []
     };
 
-    const sourceVM = mapEvidenceSource('D1', unclassifiedEvidence);
+    const sourceVM = mapEvidenceSource(unclassifiedEvidence);
     expect(sourceVM.type).toBe('OTHER');
     expect(sourceVM.label).toBe('Natal Chart (D1)');
     expect(sourceVM.calculationId).toBeUndefined();

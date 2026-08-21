@@ -61,14 +61,12 @@ export function formatDomainDisplayName(domain: DomainId | string): string {
 }
 
 /**
- * Resolves the display label for an evidence source type and domain evidence.
+ * Resolves the display label for a domain evidence item based on its sourceType and source.
  */
 export function resolveEvidenceSourceLabel(
-  source: EvidenceSource,
-  sourceType: EvidenceSourceType,
   evidence: DomainEvidence
 ): string {
-  switch (sourceType) {
+  switch (evidence.sourceType) {
     case 'HOUSE':
       return 'Natal House (D1)';
     case 'LORDSHIP':
@@ -82,9 +80,9 @@ export function resolveEvidenceSourceLabel(
     case 'STRENGTH':
       return 'Planetary Strength (D1)';
     case 'VARGA':
-      return (source !== 'D1' && source !== 'OTHER' && VARGA_NAMES[source])
-        ? VARGA_NAMES[source]
-        : (source !== 'D1' && source !== 'OTHER' ? `Divisional Chart (${source})` : 'Divisional Chart');
+      return (evidence.source !== 'D1' && evidence.source !== 'OTHER' && VARGA_NAMES[evidence.source])
+        ? VARGA_NAMES[evidence.source]
+        : (evidence.source !== 'D1' && evidence.source !== 'OTHER' ? `Divisional Chart (${evidence.source})` : 'Divisional Chart');
     case 'DASHA':
       return evidence.timing?.periodKey
         ? `Dasha (${evidence.timing.periodKey})`
@@ -93,21 +91,20 @@ export function resolveEvidenceSourceLabel(
       return 'Gochara / Transit';
     case 'OTHER':
     default:
-      return source === 'D1' ? 'Natal Chart (D1)' : 'Astrological Calculation';
+      return evidence.source === 'D1' ? 'Natal Chart (D1)' : 'Astrological Calculation';
   }
 }
 
 /**
- * Maps an astrological evidence source and domain evidence object to an EvidenceSourceViewModel.
+ * Maps domain evidence to an EvidenceSourceViewModel.
  * Driven deterministically by `evidence.sourceType`.
  */
 export function mapEvidenceSource(
-  source: EvidenceSource,
   evidence: DomainEvidence
 ): EvidenceSourceViewModel {
   return Object.freeze({
     type: evidence.sourceType,
-    label: resolveEvidenceSourceLabel(source, evidence.sourceType, evidence)
+    label: resolveEvidenceSourceLabel(evidence)
   });
 }
 

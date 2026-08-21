@@ -140,7 +140,7 @@ export function resolveLifeAnalysisEvidenceDetails(
     }
 
     const rule = resolveRuleMetadata(domainEvidence.ruleId);
-    const source = mapEvidenceSource(domainEvidence.source, domainEvidence);
+    const source = mapEvidenceSource(domainEvidence);
     const chartFact = extractChartFact(domainEvidence);
     const title = deriveEvidenceTitle(domainEvidence, rule?.name);
 

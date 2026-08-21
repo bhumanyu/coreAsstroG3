@@ -53,6 +53,7 @@ export function mapWealthSourceType(
     case WealthEvidenceFamily.JUPITER:
     case WealthEvidenceFamily.VENUS:
     case WealthEvidenceFamily.MERCURY:
+    case WealthEvidenceFamily.FUNCTIONAL_ROLE:
       return 'PLANET';
 
     case WealthEvidenceFamily.PLANETARY_STRENGTH:
@@ -63,10 +64,6 @@ export function mapWealthSourceType(
 
     case WealthEvidenceFamily.YOGA:
       return 'YOGA';
-
-    case WealthEvidenceFamily.FUNCTIONAL_ROLE:
-      // Functional benefic/malefic role determination maps to OTHER
-      return 'OTHER';
 
     default:
       return 'OTHER';

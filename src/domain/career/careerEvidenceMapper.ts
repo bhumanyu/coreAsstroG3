@@ -52,6 +52,7 @@ export function mapCareerSourceType(
     case CareerEvidenceFamily.MERCURY:
     case CareerEvidenceFamily.MARS:
     case CareerEvidenceFamily.JUPITER:
+    case CareerEvidenceFamily.FUNCTIONAL_ROLE:
       return 'PLANET';
 
     case CareerEvidenceFamily.PLANETARY_STRENGTH:
@@ -62,10 +63,6 @@ export function mapCareerSourceType(
 
     case CareerEvidenceFamily.YOGA:
       return 'YOGA';
-
-    case CareerEvidenceFamily.FUNCTIONAL_ROLE:
-      // Functional benefic/malefic role determination maps to OTHER
-      return 'OTHER';
 
     default:
       return 'OTHER';
