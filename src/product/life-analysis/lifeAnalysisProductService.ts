@@ -55,7 +55,8 @@ export async function runLifeAnalysisProduct(
       analysis,
       career,
       wealth,
-      resolvedEvidence
+      resolvedEvidence,
+      options.horoscope.dashaInterpretation?.current
     );
 
     const deterministicStatus: LifeAnalysisProductStatus =

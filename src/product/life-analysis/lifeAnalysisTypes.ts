@@ -16,8 +16,19 @@ import type {
 import type { WealthDimensionStatus } from '../../domain/wealth/wealthTypes';
 import type { AiExplanationResult } from '../../ai';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
+import type {
+  DashaInterpretationProduct,
+  DashaPlanetProduct,
+  DashaPairProduct,
+  DashaLevel,
+  DashaInterpretationStatus
+} from './dasha/dashaInterpretationProductTypes';
 
 export * from './lifeAnalysisEvidenceTypes';
+export * from './dasha/dashaInterpretationProductTypes';
+
+export type LifeAnalysisActiveDashaViewModel = DashaInterpretationProduct;
+export type LifeAnalysisDashaViewModel = DashaInterpretationProduct;
 
 export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR';
 
@@ -117,6 +128,8 @@ export interface LifeAnalysisViewModel {
   readonly wealthWhy?: WhyExperienceViewModel;
   readonly careerDetail?: LifeAnalysisCareerDetailViewModel;
   readonly wealthDetail?: LifeAnalysisWealthDetailViewModel;
+  readonly activeDasha?: LifeAnalysisActiveDashaViewModel;
+  readonly dasha?: LifeAnalysisDashaViewModel;
 }
 
 export interface LifeAnalysisProductState {

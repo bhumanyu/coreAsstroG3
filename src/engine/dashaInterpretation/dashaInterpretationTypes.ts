@@ -18,6 +18,8 @@ import {
   PlanetStrengthInterpretation,
   PlanetInterpretationReport
 } from '../planetInterpretation/planetInterpretationTypes';
+
+export type { InterpretationConfidence };
 import {
   HouseInterpretationEvidence,
   HouseInterpretationReport

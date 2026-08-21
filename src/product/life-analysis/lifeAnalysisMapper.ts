@@ -5,6 +5,8 @@ import type {
 } from '../../domain/synthesis';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
+import type { ActiveDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type { Horoscope } from '../../types';
 import type {
   LifeAnalysisViewModel,
   LifeAnalysisOverallViewModel,
@@ -16,6 +18,7 @@ import type {
   LifeAnalysisCareerDetailViewModel,
   LifeAnalysisWealthDetailViewModel
 } from './lifeAnalysisTypes';
+import { buildDashaInterpretationProduct } from './dasha/buildDashaInterpretationProduct';
 import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';
 import {
   buildWhyExperience,
@@ -66,9 +69,23 @@ export function buildLifeAnalysisViewModel(
   analysis: LifeAnalysis,
   career: DomainInterpretation,
   wealth: DomainInterpretation,
-  evidence: readonly LifeAnalysisEvidenceViewModel[]
+  evidence: readonly LifeAnalysisEvidenceViewModel[],
+  activeDashaOrHoroscope?: ActiveDashaInterpretation | Horoscope
 ): LifeAnalysisViewModel {
   const status = mapProductStatus(analysis.dataCompleteness.overall);
+
+  let activeDashaInterpretation: ActiveDashaInterpretation | undefined;
+  if (activeDashaOrHoroscope) {
+    if ('dashaInterpretation' in activeDashaOrHoroscope) {
+      activeDashaInterpretation = activeDashaOrHoroscope.dashaInterpretation?.current;
+    } else if ('mahadasha' in activeDashaOrHoroscope) {
+      activeDashaInterpretation = activeDashaOrHoroscope as ActiveDashaInterpretation;
+    }
+  }
+
+  const mappedActiveDasha = activeDashaInterpretation
+    ? buildDashaInterpretationProduct(activeDashaInterpretation)
+    : undefined;
 
   const overall: LifeAnalysisOverallViewModel = {
     status: analysis.conclusion.status,
@@ -186,7 +203,9 @@ export function buildLifeAnalysisViewModel(
       domainInterpretations: [career, wealth]
     }),
     careerDetail,
-    wealthDetail
+    wealthDetail,
+    activeDasha: mappedActiveDasha,
+    dasha: mappedActiveDasha
   };
 
   return deepFreeze(viewModel);
