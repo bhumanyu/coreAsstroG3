@@ -4,8 +4,7 @@ import {
   ShieldCheck,
   Compass,
   FileCode,
-  Link2,
-  AlertCircle
+  Link2
 } from 'lucide-react';
 import type {
   EvidenceDetailViewModel
@@ -49,6 +48,8 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
         return 'bg-rose-500/10 text-rose-300 border-rose-500/20';
       case 'CHALLENGING':
         return 'bg-amber-500/10 text-amber-300 border-amber-500/20';
+      case 'NEUTRAL':
+        return 'bg-slate-500/10 text-slate-300 border-slate-500/20';
       case 'SUPPORTING':
       default:
         return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20';
@@ -61,16 +62,20 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
       className="bg-slate-950/70 border border-slate-800/90 hover:border-slate-700/80 rounded-xl p-4 space-y-3 transition-colors flex flex-col justify-between"
     >
       <div className="space-y-2">
-        {/* Header Badges */}
+        {/* Header Badges: Domain, Evidence Role, and Polarity Effect */}
         <div className="flex flex-wrap items-center justify-between gap-1.5 text-[10px]">
           <div className="flex items-center gap-1.5">
-            <span className="px-2 py-0.5 rounded font-mono-code font-semibold uppercase tracking-wider bg-slate-800/80 text-slate-300 border border-slate-700/80">
+            <span
+              className="px-2 py-0.5 rounded font-mono-code font-semibold uppercase tracking-wider bg-slate-800/80 text-slate-300 border border-slate-700/80"
+              title="Astrological Life Domain"
+            >
               {formatDomainDisplayName(evidence.domain)}
             </span>
             <span
               className={`px-2 py-0.5 rounded font-mono-code font-semibold uppercase tracking-wider border ${getRoleBadgeClasses(
                 evidence.role
               )}`}
+              title={`Evidence Role: ${evidence.role}`}
             >
               {evidence.role}
             </span>
@@ -80,6 +85,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
             className={`px-2 py-0.5 rounded font-mono-code font-semibold uppercase tracking-wider border ${getPolarityBadgeClasses(
               evidence.displayPolarity
             )}`}
+            title={`Directional Effect: ${evidence.displayPolarity}`}
           >
             {evidence.displayPolarity}
           </span>

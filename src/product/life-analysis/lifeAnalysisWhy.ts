@@ -128,13 +128,15 @@ export function resolveLifeAnalysisEvidenceDetails(
     const inSupporting = supportingIds.has(id);
     const inChallenging = challengingIds.has(id);
 
-    let displayPolarity: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING';
+    let displayPolarity: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING' | 'NEUTRAL';
     if (inSupporting && inChallenging) {
       displayPolarity = 'CONFLICTING';
     } else if (inChallenging || domainEvidence.polarity === 'CHALLENGING') {
       displayPolarity = 'CHALLENGING';
-    } else {
+    } else if (inSupporting || domainEvidence.polarity === 'SUPPORTING') {
       displayPolarity = 'SUPPORTING';
+    } else {
+      displayPolarity = 'NEUTRAL';
     }
 
     const rule = resolveRuleMetadata(domainEvidence.ruleId);

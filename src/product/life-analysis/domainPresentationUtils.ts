@@ -62,12 +62,17 @@ export function formatDomainDisplayName(domain: DomainId | string): string {
 
 /**
  * Maps an astrological evidence source and domain evidence object to an EvidenceSourceViewModel.
+ *
+ * NOTE: The string/family/ruleId heuristics below represent a presentation-only mapping layer.
+ * A deterministic `sourceType` should later be added to DomainEvidence in a future infrastructure update.
+ * DomainEvidence currently has no calculationId field (ruleId !== calculationId), so calculationId is
+ * omitted from view models unless an actual calculation identity is present on the domain model.
  */
 export function mapEvidenceSource(
   source: EvidenceSource,
   evidence: DomainEvidence
 ): EvidenceSourceViewModel {
-  const calculationId = evidence.ruleId;
+  const calculationId = (evidence as { calculationId?: string }).calculationId;
 
   if (source === 'DASHA') {
     const periodLabel = evidence.timing?.periodKey
@@ -195,8 +200,8 @@ export function mapEvidenceSource(
 
   if (source === 'D1') {
     return Object.freeze({
-      type: 'HOUSE' as EvidenceSourceType,
-      label: 'Natal Rasi (D1)',
+      type: 'OTHER' as EvidenceSourceType,
+      label: 'Natal Chart (D1)',
       ...(calculationId ? { calculationId } : {})
     });
   }

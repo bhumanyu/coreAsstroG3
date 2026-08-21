@@ -58,7 +58,7 @@ export interface EvidenceDetailViewModel {
   readonly domain: DomainId;
   readonly role: EvidenceRole;
   readonly polarity: EvidencePolarity;
-  readonly displayPolarity: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING';
+  readonly displayPolarity: 'SUPPORTING' | 'CHALLENGING' | 'CONFLICTING' | 'NEUTRAL';
   readonly title: string;
   readonly statement: string;
   readonly source: EvidenceSourceViewModel;

@@ -60,7 +60,7 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
               Deterministic Evidence Fully Traceable
             </span>
             <p className="text-emerald-300/80 leading-normal">
-              All {resolved} referenced astrological factors are mathematically derived and fully traceable to natal, divisional (Varga), and timing (Dasha/Gochara) calculations.
+              All {resolved} referenced astrological factors are resolved from the deterministic chart, divisional, and timing analysis.
             </p>
           </div>
         </div>
@@ -173,60 +173,60 @@ export const EvidenceSection: React.FC<EvidenceSectionProps> = ({
           {/* Grouped Evidence Subsections if why model is available */}
           {why ? (
             <div className="space-y-6">
-              {/* 1. Primary Pillars */}
+              {/* 1. Primary Pillars (Role: PRIMARY) */}
               {renderGroupSection(
                 'Primary Structural Pillars',
                 <Layers className="w-4 h-4 text-indigo-400" />,
                 why.grouped.primary,
-                'Foundational house and lordship placements (D1)'
+                'Foundational house and lordship placements (Role: Primary)'
               )}
 
-              {/* 2. Supporting Factors */}
+              {/* 2. Supporting Factors (Role: SECONDARY) */}
               {renderGroupSection(
                 'Supporting Evidence',
                 <CheckCircle2 className="w-4 h-4 text-blue-400" />,
                 why.grouped.supporting,
-                'Karaka planet significators and secondary linkages'
+                'Karaka planet significators and secondary linkages (Role: Secondary)'
               )}
 
-              {/* 3. Challenging Factors */}
+              {/* 3. Challenging Factors (Polarity: CHALLENGING) */}
               {renderGroupSection(
                 'Challenging Factors',
                 <AlertTriangle className="w-4 h-4 text-amber-400" />,
                 why.grouped.challenging,
-                'Frictions, afflictions, or adverse dignity configurations'
+                'Frictions, afflictions, or adverse dignity configurations (Direction: Challenging)'
               )}
 
-              {/* 4. Conflicting Factors */}
+              {/* 4. Conflicting Factors (Polarity: CONFLICTING) */}
               {renderGroupSection(
                 'Cross-Domain Conflicting Factors',
                 <AlertCircle className="w-4 h-4 text-rose-400" />,
                 why.grouped.conflicting,
-                'Factors producing mixed or divergent effects across domains'
+                'Factors producing mixed or divergent effects across domains (Direction: Conflicting)'
               )}
 
-              {/* 5. Confirmations & Yogas */}
+              {/* 5. Confirmations & Yogas (Role: CONFIRMATION) */}
               {renderGroupSection(
                 'Divisional & Yoga Confirmations',
                 <Sparkles className="w-4 h-4 text-emerald-400" />,
                 why.grouped.confirmations,
-                'D10/D2 divisional validation and classical yogas'
+                'D10/D2 divisional validation and classical yogas (Role: Confirmation)'
               )}
 
-              {/* 6. Timing Activations */}
+              {/* 6. Timing Activations (Role: TIMING) */}
               {renderGroupSection(
                 'Timing Activations',
                 <Clock className="w-4 h-4 text-amber-400" />,
                 why.grouped.timing,
-                'Active Vimshottari Dasha and Gochara transit influences'
+                'Active Vimshottari Dasha and Gochara transit influences (Role: Timing)'
               )}
 
-              {/* 7. Modifiers */}
+              {/* 7. Modifiers (Role: MODIFIER) */}
               {renderGroupSection(
                 'Modifiers & Secondary Influences',
                 <Info className="w-4 h-4 text-purple-400" />,
                 why.grouped.modifiers,
-                'Planetary aspects, strengths, and conditional nuances'
+                'Planetary aspects, strengths, and conditional nuances (Role: Modifier)'
               )}
             </div>
           ) : (

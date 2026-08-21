@@ -288,10 +288,15 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(grouped.conflicting).toHaveLength(1);
   });
 
-  it('Test 9: AI remains downstream — buildWhyExperience never invokes AI and produces pure deterministic output', async () => {
+  it('Test 9: AI remains downstream — runLifeAnalysisProduct with includeAiExplanation=false skips AI and produces deterministic Why model', async () => {
+    const mockRouter: AiRouter = {
+      route: vi.fn()
+    } as unknown as AiRouter;
+
     const productResult = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
-      includeAiExplanation: false
+      includeAiExplanation: false,
+      router: mockRouter
     });
 
     expect(productResult.status).toBe('READY');
@@ -299,6 +304,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(productResult.analysis?.why.integrity.status).toBe('VALID');
     expect(productResult.analysis?.why.evidence.length).toBeGreaterThan(0);
     expect(productResult.aiExplanation).toBeUndefined();
+    expect(mockRouter.route).not.toHaveBeenCalled();
   });
 
   it('Test 10: AI failure resilience — Why experience remains fully populated when AI explanation throws an error', async () => {
@@ -363,5 +369,96 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
 
     const unknownRule = resolveRuleMetadata('RANDOM_NON_EXISTENT');
     expect(unknownRule).toBeUndefined();
+  });
+
+  it('Test 13: calculationId omission — calculationId is omitted from source and traceability when not present on DomainEvidence', () => {
+    const why = buildWhyExperience({
+      analysis: goldenAnalysis,
+      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
+    });
+
+    for (const item of why.evidence) {
+      expect(item.source.calculationId).toBeUndefined();
+      expect(item.traceability.calculationId).toBeUndefined();
+      expect(item.traceability.ruleId).toBeDefined(); // ruleId is populated
+    }
+  });
+
+  it('Test 14: D1 fallback mapping — unclassified D1 source falls back to type OTHER with Natal Chart (D1) label', () => {
+    const unclassifiedD1Evidence: DomainEvidence = {
+      id: 'UNCLASSIFIED_D1_EV_001',
+      domain: 'CAREER',
+      role: 'SECONDARY',
+      polarity: 'SUPPORTING',
+      statement: 'Unclassified general D1 fact.',
+      source: 'D1',
+      phase: 'NATAL_PROMISE',
+      strength: 'MODERATE',
+      priority: 2,
+      relatedEvidenceIds: []
+    };
+
+    const customInterp: DomainInterpretation = {
+      ...STAGE1_GOLDEN_CAREER,
+      evidence: [unclassifiedD1Evidence]
+    };
+
+    const customAnalysis: LifeAnalysis = {
+      ...goldenAnalysis,
+      evidenceIds: ['UNCLASSIFIED_D1_EV_001']
+    };
+
+    const why = buildWhyExperience({
+      analysis: customAnalysis,
+      domainInterpretations: [customInterp]
+    });
+
+    expect(why.evidence).toHaveLength(1);
+    expect(why.evidence[0].source.type).toBe('OTHER');
+    expect(why.evidence[0].source.label).toBe('Natal Chart (D1)');
+  });
+
+  it('Test 15: NEUTRAL polarity mapping — NEUTRAL DomainEvidence maps to displayPolarity NEUTRAL when not explicitly in supporting or challenging sets', () => {
+    const neutralEvidence: DomainEvidence = {
+      id: 'NEUTRAL_EV_001',
+      domain: 'CAREER',
+      role: 'MODIFIER',
+      polarity: 'NEUTRAL',
+      statement: 'Neutral ambient factor.',
+      source: 'D1',
+      phase: 'NATAL_PROMISE',
+      strength: 'MODERATE',
+      priority: 3,
+      relatedEvidenceIds: []
+    };
+
+    const customInterp: DomainInterpretation = {
+      ...STAGE1_GOLDEN_CAREER,
+      evidence: [neutralEvidence]
+    };
+
+    const customAnalysis: LifeAnalysis = {
+      ...goldenAnalysis,
+      domains: [
+        {
+          domain: 'CAREER',
+          status: 'MIXED',
+          strength: 'MODERATE',
+          confidence: 'HIGH',
+          primaryConclusion: 'Mixed signals',
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: []
+        }
+      ],
+      evidenceIds: ['NEUTRAL_EV_001']
+    };
+
+    const why = buildWhyExperience({
+      analysis: customAnalysis,
+      domainInterpretations: [customInterp]
+    });
+
+    expect(why.evidence).toHaveLength(1);
+    expect(why.evidence[0].displayPolarity).toBe('NEUTRAL');
   });
 });
