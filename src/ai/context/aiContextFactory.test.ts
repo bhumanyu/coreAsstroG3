@@ -3,7 +3,19 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { Planet } from '../../types';
 import { AI_CONTEXT_SCHEMA_VERSION } from '../types/aiTypes';
-import { buildAiContext } from './aiContextFactory';
+import {
+  buildAiContext,
+  buildEvidenceFromDomainInterpretations,
+  projectDomainEvidenceToAi
+} from './aiContextFactory';
+import {
+  createDomainInterpretation,
+  createDomainEvidence,
+  createNatalPromise,
+  createDashaActivation,
+  createTransitTrigger,
+  createDomainConclusion
+} from '../../domain/interpretation';
 import { createAiRequest } from '../api/createAiRequest';
 
 describe('AI Context Factory', () => {
@@ -233,63 +245,59 @@ describe('AI Context Factory', () => {
   });
 
   it('should throw an error on conflicting evidence ID with different payload', () => {
-    const horoscopeWithConflict = {
-      ...horoscope,
-      themeInterpretationV2: {
-        ...horoscope.themeInterpretationV2,
-        career: {
-          ...horoscope.themeInterpretationV2?.career,
-          evidence: [
-            {
-              id: 'test-conflict-id',
-              ruleId: 'RULE_A',
-              evidenceFamily: 'TENTH_HOUSE',
-              priority: 'PRIMARY',
-              strength: 'STRONG',
-              effect: 'SUPPORT',
-              statement: 'Statement A'
-            },
-            {
-              id: 'test-conflict-id',
-              ruleId: 'RULE_B',
-              evidenceFamily: 'SIXTH_HOUSE',
-              priority: 'SECONDARY',
-              strength: 'WEAK',
-              effect: 'CHALLENGE',
-              statement: 'Statement B (Conflicting)'
-            }
-          ]
-        }
-      }
-    } as any;
+    const conflictingCareer = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: ['test-conflict-id'], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        createDomainEvidence({
+          id: 'test-conflict-id',
+          ruleId: 'RULE_A',
+          sourceType: 'HOUSE',
+          role: 'PRIMARY',
+          strength: 'STRONG',
+          polarity: 'SUPPORTING',
+          statement: 'Statement A'
+        }),
+        createDomainEvidence({
+          id: 'test-conflict-id',
+          ruleId: 'RULE_B',
+          sourceType: 'HOUSE',
+          role: 'SECONDARY',
+          strength: 'WEAK',
+          polarity: 'CHALLENGING',
+          statement: 'Statement B (Conflicting)'
+        })
+      ]
+    });
 
-    expect(() => buildAiContext(horoscopeWithConflict)).toThrowError(
-      /Cannot build AiContext: conflicting evidence id test-conflict-id/
-    );
+    expect(() =>
+      buildAiContext(horoscope, { domainInterpretations: [conflictingCareer] })
+    ).toThrowError(/Cannot build AiContext: conflicting evidence id test-conflict-id/);
   });
 
   it('should deduplicate identical evidence items silently', () => {
-    const identicalItem = {
+    const identicalItem = createDomainEvidence({
       id: 'test-identical-id',
       ruleId: 'RULE_A',
-      evidenceFamily: 'TENTH_HOUSE',
-      priority: 'PRIMARY',
+      sourceType: 'HOUSE',
+      role: 'PRIMARY',
       strength: 'STRONG',
-      effect: 'SUPPORT',
+      polarity: 'SUPPORTING',
       statement: 'Statement A'
-    };
-    const horoscopeWithDuplicates = {
-      ...horoscope,
-      themeInterpretationV2: {
-        ...horoscope.themeInterpretationV2,
-        career: {
-          ...horoscope.themeInterpretationV2?.career,
-          evidence: [identicalItem, identicalItem]
-        }
-      }
-    } as any;
+    });
+    const duplicateCareer = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: ['test-identical-id'], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [identicalItem, identicalItem]
+    });
 
-    const ctx = buildAiContext(horoscopeWithDuplicates);
+    const ctx = buildAiContext(horoscope, { domainInterpretations: [duplicateCareer] });
     const matches = ctx.evidence.filter((e) => e.id === 'test-identical-id');
     expect(matches).toHaveLength(1);
   });
@@ -320,46 +328,32 @@ describe('AI Context Factory', () => {
   });
 
   it('should project vargaEvidence relationship accurately from engine evidence', () => {
-    const allEvidence = [
-      ...(horoscope.themeInterpretationV2?.career?.evidence || []),
-      ...(horoscope.themeInterpretationV2?.wealth?.evidence || [])
-    ];
-    const sourceVargaEvidence = allEvidence.find((e) => e.vargaEvidence);
-    expect(sourceVargaEvidence).toBeDefined();
-    expect(sourceVargaEvidence?.vargaEvidence).toBeDefined();
-    if (sourceVargaEvidence && sourceVargaEvidence.vargaEvidence) {
-      const projected = context.evidence.find((e) => e.id === sourceVargaEvidence.id);
-      expect(projected).toBeDefined();
-      expect(projected?.vargaRelationship).toBe(sourceVargaEvidence.vargaEvidence.relationship);
-    }
+    const simulatedVargaCareer = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: ['test-varga-id'], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'D10 test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'test-varga-id',
+            ruleId: 'RULE_VARGA_TEST',
+            sourceType: 'D10',
+            role: 'CONFIRMATION',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'D10 confirmation statement'
+          }),
+          varga: 'D10',
+          vargaRelationship: 'CONFIRMS'
+        } as any
+      ]
+    });
 
-    // Explicit test with simulated varga evidence
-    const simulatedVargaHoroscope = {
-      ...horoscope,
-      themeInterpretationV2: {
-        ...horoscope.themeInterpretationV2,
-        career: {
-          ...horoscope.themeInterpretationV2?.career,
-          evidence: [
-            {
-              id: 'test-varga-id',
-              ruleId: 'RULE_VARGA_TEST',
-              evidenceFamily: 'D10',
-              priority: 'CONFIRMATORY',
-              strength: 'STRONG',
-              effect: 'SUPPORT',
-              statement: 'D10 confirmation statement',
-              vargaEvidence: {
-                varga: 'D10',
-                relationship: 'CONFIRMS',
-                statement: 'D10 confirms career strength'
-              }
-            }
-          ]
-        }
-      }
-    } as any;
-    const simContext = buildAiContext(simulatedVargaHoroscope);
+    const simContext = buildAiContext(horoscope, {
+      domainInterpretations: [simulatedVargaCareer]
+    });
     const simProjected = simContext.evidence.find((e) => e.id === 'test-varga-id');
     expect(simProjected).toBeDefined();
     expect(simProjected?.varga).toBe('D10');
@@ -367,50 +361,35 @@ describe('AI Context Factory', () => {
   });
 
   it('should project timing evidence with all timing fields accurately from engine evidence', () => {
-    const allEvidence = [
-      ...(horoscope.themeInterpretationV2?.career?.evidence || []),
-      ...(horoscope.themeInterpretationV2?.wealth?.evidence || [])
-    ];
-    const sourceTimingEvidence = allEvidence.find((e) => e.timingEvidence);
-    if (sourceTimingEvidence && sourceTimingEvidence.timingEvidence) {
-      const projected = context.evidence.find((e) => e.id === sourceTimingEvidence.id);
-      expect(projected).toBeDefined();
-      expect(projected?.dashaLevel).toBe(sourceTimingEvidence.timingEvidence.dashaLevel);
-      expect(projected?.timingPlanet).toBe(sourceTimingEvidence.timingEvidence.planet);
-      expect(projected?.timingReason).toBe(sourceTimingEvidence.timingEvidence.relevanceReason);
-      expect(projected?.timingRelevanceType).toBe(sourceTimingEvidence.timingEvidence.relevanceType);
-      expect(projected?.timingHouses).toEqual(sourceTimingEvidence.timingEvidence.houses);
-    }
+    const simulatedTimingCareer = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: ['test-timing-id'], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Timing test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'test-timing-id',
+            ruleId: 'RULE_TIMING_TEST',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Timing test statement'
+          }),
+          dashaLevel: 'MAHADASHA',
+          timingPlanet: Planet.JUPITER,
+          timingReason: 'Career timing lord',
+          timingRelevanceType: 'CAREER_LORD',
+          timingHouses: [10, 11]
+        } as any
+      ]
+    });
 
-    // Also test explicitly with simulated timing evidence
-    const simulatedTimingHoroscope = {
-      ...horoscope,
-      themeInterpretationV2: {
-        ...horoscope.themeInterpretationV2,
-        career: {
-          ...horoscope.themeInterpretationV2?.career,
-          evidence: [
-            {
-              id: 'test-timing-id',
-              ruleId: 'RULE_TIMING_TEST',
-              evidenceFamily: 'DASHA',
-              priority: 'TIMING',
-              strength: 'STRONG',
-              effect: 'SUPPORT',
-              statement: 'Timing test statement',
-              timingEvidence: {
-                dashaLevel: 'MAHADASHA',
-                planet: Planet.JUPITER,
-                relevanceReason: 'Career timing lord',
-                relevanceType: 'CAREER_LORD',
-                houses: [10, 11]
-              }
-            }
-          ]
-        }
-      }
-    } as any;
-    const simContext = buildAiContext(simulatedTimingHoroscope);
+    const simContext = buildAiContext(horoscope, {
+      domainInterpretations: [simulatedTimingCareer]
+    });
     const simProjected = simContext.evidence.find((e) => e.id === 'test-timing-id');
     expect(simProjected).toBeDefined();
     expect(simProjected?.dashaLevel).toBe('MAHADASHA');
@@ -532,5 +511,123 @@ describe('AI Context Factory', () => {
     const wealthDomain = aiContext.domainInterpretations?.find((d) => d.domain === 'WEALTH');
     expect(wealthDomain).toBeDefined();
     expect(wealthDomain?.manifestations.length).toBeGreaterThan(0);
+  });
+
+  it('should project DomainEvidence to AiEvidence preserving ID, polarity, strength, and source', () => {
+    const domainEvidence = createDomainEvidence({
+      id: 'CUSTOM_CAREER_EVID_1',
+      sourceType: 'HOUSE',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      statement: '10th lord strong in kendra',
+      ruleId: 'RULE_10L_KENDRA',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE'
+    });
+
+    const aiEvidence = projectDomainEvidenceToAi(domainEvidence);
+    expect(aiEvidence.id).toBe('CUSTOM_CAREER_EVID_1');
+    expect(aiEvidence.source).toBe('HOUSE');
+    expect(aiEvidence.effect).toBe('SUPPORT');
+    expect(aiEvidence.strength).toBe('STRONG');
+    expect(aiEvidence.statement).toBe('10th lord strong in kendra');
+    expect(aiEvidence.ruleId).toBe('RULE_10L_KENDRA');
+    expect(aiEvidence.priority).toBe('PRIMARY');
+    expect(aiEvidence.dimension).toBe('NATAL_STRUCTURE');
+  });
+
+  it('should guarantee invariant: every context.domainInterpretations[].evidence[].id exists in context.evidence', () => {
+    const aiContext = buildAiContext(horoscope);
+    const contextEvidenceIds = new Set(aiContext.evidence.map((e) => e.id));
+
+    expect(aiContext.domainInterpretations).toBeDefined();
+    for (const domainInterp of aiContext.domainInterpretations!) {
+      for (const ev of domainInterp.evidence) {
+        expect(contextEvidenceIds.has(ev.id)).toBe(true);
+      }
+    }
+  });
+
+  it('should use precomputed domain interpretations when supplied (precomputed-wins test)', () => {
+    const distinctiveId = 'DISTINCTIVE_PRECOMPUTED_EVIDENCE_999';
+    const customCareer = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({
+        strength: 'VERY_STRONG',
+        supportingEvidenceIds: [distinctiveId],
+        challengingEvidenceIds: []
+      }),
+      dashaActivation: createDashaActivation({
+        effect: 'ACTIVATES',
+        evidenceIds: []
+      }),
+      transitTrigger: createTransitTrigger({
+        effect: 'TRIGGER',
+        evidenceIds: []
+      }),
+      conclusion: createDomainConclusion({
+        statement: 'Precomputed career interpretation statement.',
+        confidence: 'HIGH'
+      }),
+      evidence: [
+        createDomainEvidence({
+          id: distinctiveId,
+          sourceType: 'PLANET',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          statement: 'Precomputed distinctive planetary evidence'
+        })
+      ]
+    });
+
+    const aiContext = buildAiContext(horoscope, {
+      domainInterpretations: [customCareer]
+    });
+
+    const foundInContext = aiContext.evidence.find((e) => e.id === distinctiveId);
+    expect(foundInContext).toBeDefined();
+    expect(foundInContext?.statement).toBe('Precomputed distinctive planetary evidence');
+    expect(aiContext.domainInterpretations?.some((d) => d.domain === 'CAREER')).toBe(true);
+  });
+
+  it('should throw error when conflicting evidence with same ID but different contents is supplied', () => {
+    const duplicateId = 'DUP_EVIDENCE_CONFLICT';
+    const interp1 = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test 1', confidence: 'HIGH' }),
+      evidence: [
+        createDomainEvidence({
+          id: duplicateId,
+          sourceType: 'HOUSE',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          statement: 'Statement version A'
+        })
+      ]
+    });
+
+    const interp2 = createDomainInterpretation({
+      domain: 'WEALTH',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test 2', confidence: 'HIGH' }),
+      evidence: [
+        createDomainEvidence({
+          id: duplicateId,
+          sourceType: 'HOUSE',
+          polarity: 'CHALLENGING',
+          strength: 'WEAK',
+          statement: 'Statement version B'
+        })
+      ]
+    });
+
+    expect(() => buildEvidenceFromDomainInterpretations([interp1, interp2])).toThrow(
+      /conflicting evidence id DUP_EVIDENCE_CONFLICT/
+    );
   });
 });

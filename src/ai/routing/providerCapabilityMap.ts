@@ -7,7 +7,7 @@ export const TASK_REQUIRED_CAPABILITIES: Readonly<Record<AiTask, readonly AiCapa
   WEALTH_ANALYSIS: Object.freeze(['WEALTH'] as const),
   DASHA_ANALYSIS: Object.freeze(['DASHA'] as const),
   LIFE_THEME_ANALYSIS: Object.freeze(['LIFE_THEMES'] as const),
-  LIFE_ANALYSIS_EXPLANATION: Object.freeze(['CHART_SYNTHESIS'] as const),
+  LIFE_ANALYSIS_EXPLANATION: Object.freeze(['LIFE_ANALYSIS'] as const),
   GENERAL_QUERY: Object.freeze([] as const)
 });
 

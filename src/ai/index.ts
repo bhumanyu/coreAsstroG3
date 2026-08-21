@@ -54,7 +54,11 @@ export {
 } from './context/aiContextPrivacy';
 export type { ForbiddenAiContextKey } from './context/aiContextPrivacy';
 
-export { buildAiContext } from './context/aiContextFactory';
+export {
+  buildAiContext,
+  buildEvidenceFromDomainInterpretations,
+  projectDomainEvidenceToAi
+} from './context/aiContextFactory';
 export { createAiRequest } from './api/createAiRequest';
 
 export { LocalVedicRulesProvider, reasonWithLocalRules } from './providers/local';

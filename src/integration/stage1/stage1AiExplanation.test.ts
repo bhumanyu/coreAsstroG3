@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { runAiExplanation } from '../../ai/product/aiExplanationService';
-import { STAGE1_GOLDEN_HOROSCOPE } from './stage1GoldenFixture';
+import {
+  STAGE1_GOLDEN_HOROSCOPE,
+  STAGE1_GOLDEN_CAREER,
+  STAGE1_GOLDEN_WEALTH
+} from './stage1GoldenFixture';
+import { buildLifeAnalysis } from '../../domain/synthesis';
 import { AiRouter } from '../../ai/routing/AiRouter';
 import { AiProviderRegistry } from '../../ai/routing/AiProviderRegistry';
 import type { AiProvider } from '../../ai/types/aiProviderTypes';
@@ -100,5 +105,89 @@ describe('Stage-1 AI Explanation Service Integration', () => {
         )
       ).toBe(false);
     }
+  });
+
+  it('resolves real domain evidence ID without dropping it (canonical evidence resolution)', async () => {
+    const domainInterpretations = [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH];
+    const lifeAnalysis = buildLifeAnalysis(domainInterpretations);
+
+    // Pick a real domain evidence ID from the career domain interpretation
+    const targetCareerEvidenceId = STAGE1_GOLDEN_CAREER.evidence[0].id;
+
+    const mockAiProvider: AiProvider = {
+      identity: {
+        id: 'mock-canonical-provider',
+        name: 'Mock Canonical Provider',
+        kind: 'LOCAL_RULES'
+      },
+      capabilities: ['STRUCTURED_OUTPUT', 'OFFLINE', 'LIFE_ANALYSIS'],
+      getStatus: () => ({ availability: 'AVAILABLE' }),
+      generate: async (request: AiRequest): Promise<AiResponse> => {
+        return Object.freeze({
+          requestId: request.requestId,
+          format: 'STRUCTURED',
+          content: 'Simulated explanation referencing real domain evidence.',
+          structuredOutput: Object.freeze({
+            status: 'SUCCESS',
+            conclusion: 'Synthesized domain explanation with valid evidence ID.',
+            supportingEvidenceIds: Object.freeze([targetCareerEvidenceId]),
+            challengingEvidenceIds: Object.freeze([]),
+            unresolvedQuestions: Object.freeze([]),
+            warnings: Object.freeze([])
+          }),
+          warnings: Object.freeze([])
+        });
+      }
+    };
+
+    const registry = new AiProviderRegistry();
+    registry.register(mockAiProvider);
+    const mockRouter = new AiRouter(registry);
+
+    const result = await runAiExplanation({
+      horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      task: 'LIFE_ANALYSIS_EXPLANATION',
+      domainInterpretations,
+      lifeAnalysis,
+      router: mockRouter
+    });
+
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.supportingEvidence.length).toBe(1);
+      expect(result.supportingEvidence[0].evidence.id).toBe(targetCareerEvidenceId);
+    }
+  });
+
+  it('guarantees deterministic LifeAnalysis state survives AI run untouched', async () => {
+    const domainInterpretations = [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH];
+    const lifeAnalysis = buildLifeAnalysis(domainInterpretations);
+
+    // Capture state before AI run
+    const beforeStatus = lifeAnalysis.conclusion.status;
+    const beforeStatement = lifeAnalysis.conclusion.statement;
+    const beforeStrongest = [...lifeAnalysis.strongestDomains];
+    const beforeChallenged = [...lifeAnalysis.challengedDomains];
+    const beforeEvidenceIds = [...lifeAnalysis.evidenceIds];
+    const beforeConflicts = JSON.stringify(lifeAnalysis.conflicts);
+    const beforeSharedTiming = JSON.stringify(lifeAnalysis.sharedTiming);
+
+    const result = await runAiExplanation({
+      horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      task: 'LIFE_ANALYSIS_EXPLANATION',
+      domainInterpretations,
+      lifeAnalysis
+    });
+
+    expect(result.kind).toBe('SUCCESS');
+
+    // Assert lifeAnalysis is completely untouched
+    expect(lifeAnalysis.conclusion.status).toBe(beforeStatus);
+    expect(lifeAnalysis.conclusion.statement).toBe(beforeStatement);
+    expect(lifeAnalysis.strongestDomains).toEqual(beforeStrongest);
+    expect(lifeAnalysis.challengedDomains).toEqual(beforeChallenged);
+    expect(lifeAnalysis.evidenceIds).toEqual(beforeEvidenceIds);
+    expect(JSON.stringify(lifeAnalysis.conflicts)).toBe(beforeConflicts);
+    expect(JSON.stringify(lifeAnalysis.sharedTiming)).toBe(beforeSharedTiming);
   });
 });

@@ -25,6 +25,7 @@ export class LocalVedicRulesProvider implements AiProvider {
     'DASHA',
     'LIFE_THEMES',
     'CHART_SYNTHESIS',
+    'LIFE_ANALYSIS',
     'STRUCTURED_OUTPUT'
   ]);
 

@@ -10,7 +10,8 @@ export type AiCapability =
   | 'WEALTH'
   | 'DASHA'
   | 'LIFE_THEMES'
-  | 'CHART_SYNTHESIS';
+  | 'CHART_SYNTHESIS'
+  | 'LIFE_ANALYSIS';
 
 export type AiProviderAvailability = 'AVAILABLE' | 'DEGRADED' | 'UNAVAILABLE';
 

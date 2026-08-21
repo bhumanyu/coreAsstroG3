@@ -10,12 +10,13 @@ import type { AiContext } from '../types/aiContextTypes';
 describe('providerCapabilityMap', () => {
   const dummyContext = {} as AiContext;
 
-  it('should map all six AiTask types correctly in TASK_REQUIRED_CAPABILITIES', () => {
+  it('should map all seven AiTask types correctly in TASK_REQUIRED_CAPABILITIES', () => {
     expect(TASK_REQUIRED_CAPABILITIES.CHART_SYNTHESIS).toEqual(['CHART_SYNTHESIS']);
     expect(TASK_REQUIRED_CAPABILITIES.CAREER_ANALYSIS).toEqual(['CAREER']);
     expect(TASK_REQUIRED_CAPABILITIES.WEALTH_ANALYSIS).toEqual(['WEALTH']);
     expect(TASK_REQUIRED_CAPABILITIES.DASHA_ANALYSIS).toEqual(['DASHA']);
     expect(TASK_REQUIRED_CAPABILITIES.LIFE_THEME_ANALYSIS).toEqual(['LIFE_THEMES']);
+    expect(TASK_REQUIRED_CAPABILITIES.LIFE_ANALYSIS_EXPLANATION).toEqual(['LIFE_ANALYSIS']);
     expect(TASK_REQUIRED_CAPABILITIES.GENERAL_QUERY).toEqual([]);
   });
 

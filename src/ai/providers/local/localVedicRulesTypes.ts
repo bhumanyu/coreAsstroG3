@@ -9,6 +9,7 @@ export type LocalRuleDomain =
   | 'WEALTH'
   | 'DASHA'
   | 'LIFE_THEME'
+  | 'LIFE_ANALYSIS'
   | 'GENERAL';
 
 export interface LocalRuleEvaluation {

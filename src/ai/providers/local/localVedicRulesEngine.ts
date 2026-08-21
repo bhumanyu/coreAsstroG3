@@ -11,9 +11,36 @@ export const TASK_DOMAIN: Record<AiTask, LocalRuleDomain> = Object.freeze({
   WEALTH_ANALYSIS: 'WEALTH',
   DASHA_ANALYSIS: 'DASHA',
   LIFE_THEME_ANALYSIS: 'LIFE_THEME',
-  LIFE_ANALYSIS_EXPLANATION: 'CHART',
+  LIFE_ANALYSIS_EXPLANATION: 'LIFE_ANALYSIS',
   GENERAL_QUERY: 'GENERAL'
 });
+
+function buildLifeAnalysisExplanationConclusion(context: AiContext): string {
+  if (!context.lifeAnalysis) {
+    return 'Life analysis facts and cross-domain synthesis are not available in the provided context.';
+  }
+
+  const careerInterp = context.domainInterpretations?.find((d) => d.domain === 'CAREER');
+  const wealthInterp = context.domainInterpretations?.find((d) => d.domain === 'WEALTH');
+
+  const careerPart = careerInterp
+    ? `Career analysis indicates ${careerInterp.conclusion.statement}`
+    : context.career
+      ? `Career analysis indicates ${context.career.status}`
+      : 'Career analysis is pending';
+
+  const wealthPart = wealthInterp
+    ? `Wealth analysis indicates ${wealthInterp.conclusion.statement}`
+    : context.wealth
+      ? `Wealth analysis indicates ${context.wealth.status}`
+      : 'Wealth analysis is pending';
+
+  const overall = context.lifeAnalysis.overallStatement
+    ? ` Overall synthesis: ${context.lifeAnalysis.overallStatement}`
+    : ` Overall synthesis indicates ${context.lifeAnalysis.status} alignment across domains.`;
+
+  return `Cross-domain synthesis integrates Career and Wealth domain interpretations: ${careerPart}; ${wealthPart}.${overall}`;
+}
 
 function buildConclusion(task: AiTask, context: AiContext): string {
   switch (task) {
@@ -44,7 +71,9 @@ function buildConclusion(task: AiTask, context: AiContext): string {
     case 'LIFE_THEME_ANALYSIS': {
       return `Life theme analysis evaluated ${context.lifeThemes.length} foundational themes across career, wealth, spiritual development, and life vitality.`;
     }
-    case 'LIFE_ANALYSIS_EXPLANATION':
+    case 'LIFE_ANALYSIS_EXPLANATION': {
+      return buildLifeAnalysisExplanationConclusion(context);
+    }
     case 'CHART_SYNTHESIS': {
       return `Chart synthesis evaluates the native's birth chart incorporating ${context.evidence.length} evidence items across ${context.planets.length} planetary positions, ${context.houses.length} house structures, and divisional alignments.`;
     }
@@ -113,7 +142,12 @@ export function reasonWithLocalRules(
       }
       break;
     }
-    case 'LIFE_ANALYSIS_EXPLANATION':
+    case 'LIFE_ANALYSIS_EXPLANATION': {
+      if (!context.lifeAnalysis) {
+        unresolvedQuestionsSet.add('Life analysis is unavailable.');
+      }
+      break;
+    }
     case 'CHART_SYNTHESIS': {
       if (context.planets.length === 0) {
         unresolvedQuestionsSet.add('Planetary facts are unavailable in the provided context.');

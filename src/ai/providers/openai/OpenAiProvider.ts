@@ -10,7 +10,8 @@ const OPENAI_CAPABILITIES = Object.freeze([
   'WEALTH',
   'DASHA',
   'LIFE_THEMES',
-  'CHART_SYNTHESIS'
+  'CHART_SYNTHESIS',
+  'LIFE_ANALYSIS'
 ] as const);
 
 export class OpenAiProvider extends RemoteAiProvider {

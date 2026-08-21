@@ -33,6 +33,7 @@ export function createMockProvider(config: MockProviderConfig): AiProvider {
     'WEALTH',
     'DASHA',
     'LIFE_THEMES',
+    'LIFE_ANALYSIS',
     'STRUCTURED_OUTPUT'
   ]);
 

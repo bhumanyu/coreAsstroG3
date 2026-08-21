@@ -32,6 +32,23 @@ describe('localVedicRulesEngine', () => {
     for (const task of tasks) {
       expect(TASK_DOMAIN[task]).toBeDefined();
     }
+    expect(TASK_DOMAIN.LIFE_ANALYSIS_EXPLANATION).toBe('LIFE_ANALYSIS');
+  });
+
+  it('should produce dedicated life analysis explanation conclusion mentioning Career and Wealth', () => {
+    const result = reasonWithLocalRules('LIFE_ANALYSIS_EXPLANATION', context);
+    expect(result.conclusion).toContain('Career');
+    expect(result.conclusion).toContain('Wealth');
+    expect(result.conclusion).toContain('Cross-domain synthesis');
+  });
+
+  it('should add unresolved question when lifeAnalysis is missing for LIFE_ANALYSIS_EXPLANATION', () => {
+    const contextWithoutLifeAnalysis = {
+      ...context,
+      lifeAnalysis: undefined
+    };
+    const result = reasonWithLocalRules('LIFE_ANALYSIS_EXPLANATION', contextWithoutLifeAnalysis);
+    expect(result.unresolvedQuestions).toContain('Life analysis is unavailable.');
   });
 
   it('should reason deterministically across multiple evaluations', () => {

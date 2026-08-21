@@ -33,6 +33,8 @@ import type { YogaResult } from '../../engine/yoga/yogaTypes';
 import {
   createDefaultDomainInterpreterRegistry,
   projectDomainInterpretationForAi,
+  type DomainInterpretation,
+  type DomainEvidence,
   type DomainInterpretationAiProjection
 } from '../../domain/interpretation';
 import {
@@ -40,7 +42,6 @@ import {
   projectLifeAnalysisForAi,
   type LifeAnalysis
 } from '../../domain/synthesis';
-import type { DomainInterpretation } from '../../domain/interpretation';
 import { deepFreeze } from './deepFreeze';
 
 /**
@@ -530,26 +531,84 @@ function isEvidenceEqual(a: AiEvidence, b: AiEvidence): boolean {
   return true;
 }
 
-function projectV2Evidence(e: any): AiEvidence {
-  const source = mapToAiEvidenceSource(e.evidenceFamily || e.source);
+function mapPolarityToAiEffect(polarity: unknown): AiEvidenceEffect {
+  if (polarity === 'SUPPORTING' || polarity === 'SUPPORT') return 'SUPPORT';
+  if (polarity === 'CHALLENGING' || polarity === 'CHALLENGE') return 'CHALLENGE';
+  if (polarity === 'NEUTRAL') return 'NEUTRAL';
+  if (polarity === 'MIXED') return 'MIXED';
+  return 'UNKNOWN';
+}
+
+export function projectDomainEvidenceToAi(evidence: DomainEvidence): AiEvidence {
+  const e = evidence as any;
+  const source = mapToAiEvidenceSource(e.evidenceFamily || e.sourceType || e.source);
   const strength = normalizeEvidenceStrength(e.strength);
-  const effect = normalizeEvidenceEffect(e.effect);
+  const effect = mapPolarityToAiEffect(e.polarity ?? e.effect);
   const statement = String(e.statement || '');
   const ruleId = e.ruleId ? String(e.ruleId) : undefined;
-  const priority = (e.priority as AiEvidencePriority) || undefined;
-  const dimension = (e.dimension as AiEvidenceDimension) || undefined;
-  const conditional = typeof e.conditional === 'boolean' ? e.conditional : undefined;
+
+  let priority: AiEvidencePriority | undefined = undefined;
+  if (
+    e.priority === 'PRIMARY' ||
+    e.priority === 'SECONDARY' ||
+    e.priority === 'CONFIRMATORY' ||
+    e.priority === 'TIMING'
+  ) {
+    priority = e.priority;
+  } else if (e.role === 'PRIMARY') {
+    priority = 'PRIMARY';
+  } else if (e.role === 'SECONDARY') {
+    priority = 'SECONDARY';
+  } else if (e.role === 'CONFIRMATION') {
+    priority = 'CONFIRMATORY';
+  } else if (e.role === 'TIMING') {
+    priority = 'TIMING';
+  }
+
+  let dimension: AiEvidenceDimension | undefined = undefined;
+  if (
+    e.dimension === 'NATAL_STRUCTURE' ||
+    e.dimension === 'MODIFIER' ||
+    e.dimension === 'CONFIRMATION' ||
+    e.dimension === 'TIMING'
+  ) {
+    dimension = e.dimension;
+  } else if (e.phase === 'NATAL_PROMISE') {
+    dimension = 'NATAL_STRUCTURE';
+  } else if (e.phase === 'VARGA_CONFIRMATION') {
+    dimension = 'CONFIRMATION';
+  } else if (e.phase === 'TIMING_TRIGGER' || e.phase === 'DASHA_ACTIVATION') {
+    dimension = 'TIMING';
+  } else if (e.phase === 'MODIFIER' || e.role === 'MODIFIER') {
+    dimension = 'MODIFIER';
+  }
+
+  const conditional =
+    e.polarity === 'CONDITIONAL' || e.conditional === true ? true : undefined;
 
   let varga: 'D9' | 'D10' | undefined = undefined;
-  const vargaVal = e.vargaEvidence?.varga || e.varga;
+  const vargaVal =
+    e.vargaEvidence?.varga ||
+    e.varga ||
+    (e.source === 'D10' || e.source === 'D9' ? e.source : undefined);
   if (vargaVal === 'D10' || vargaVal === 'D9') {
     varga = vargaVal;
   }
 
-  const vargaRelationship = e.vargaEvidence?.relationship;
+  const vargaRelationship =
+    e.vargaRelationship || e.vargaEvidence?.relationship;
 
   let dashaLevel: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | undefined = undefined;
-  const dashaVal = e.timingEvidence?.dashaLevel || e.dashaLevel;
+  const dashaVal =
+    e.timingEvidence?.dashaLevel ||
+    e.dashaLevel ||
+    (e.timing?.period === 'MD' || e.timing?.level === 'MD'
+      ? 'MAHADASHA'
+      : e.timing?.period === 'AD' || e.timing?.level === 'AD'
+        ? 'ANTARDASHA'
+        : e.timing?.period === 'PD' || e.timing?.level === 'PD'
+          ? 'PRATYANTARDASHA'
+          : undefined);
   if (
     dashaVal === 'MAHADASHA' ||
     dashaVal === 'ANTARDASHA' ||
@@ -560,13 +619,24 @@ function projectV2Evidence(e: any): AiEvidence {
 
   let timingPlanet: Planet | undefined = undefined;
   const tPlanet = e.timingEvidence?.planet || e.timingPlanet;
-  if (tPlanet) {
+  if (tPlanet && PLANET_ORDER.includes(tPlanet)) {
     timingPlanet = tPlanet;
+  } else if (e.timing?.periodKey && PLANET_ORDER.includes(e.timing.periodKey as Planet)) {
+    timingPlanet = e.timing.periodKey as Planet;
   }
 
-  const timingHouses = e.timingEvidence?.houses?.length ? [...e.timingEvidence.houses] : undefined;
-  const timingReason = e.timingEvidence?.relevanceReason || undefined;
-  const timingRelevanceType = e.timingEvidence?.relevanceType || undefined;
+  const planets = e.planets && e.planets.length > 0 ? [...e.planets] : undefined;
+  const houses = e.houses && e.houses.length > 0 ? [...e.houses] : undefined;
+  const timingHouses =
+    e.timingEvidence?.houses?.length
+      ? [...e.timingEvidence.houses]
+      : e.timingHouses?.length
+        ? [...e.timingHouses]
+        : undefined;
+  const timingReason =
+    e.timingEvidence?.relevanceReason || e.timingReason || undefined;
+  const timingRelevanceType =
+    e.timingEvidence?.relevanceType || e.timingRelevanceType || undefined;
 
   return {
     id: String(e.id),
@@ -574,8 +644,8 @@ function projectV2Evidence(e: any): AiEvidence {
     effect,
     strength,
     statement,
-    ...(e.planets && e.planets.length > 0 ? { planets: [...e.planets] } : {}),
-    ...(e.houses && e.houses.length > 0 ? { houses: [...e.houses] } : {}),
+    ...(planets ? { planets } : {}),
+    ...(houses ? { houses } : {}),
     ...(ruleId ? { ruleId } : {}),
     ...(priority ? { priority } : {}),
     ...(dimension ? { dimension } : {}),
@@ -590,33 +660,30 @@ function projectV2Evidence(e: any): AiEvidence {
   };
 }
 
-function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
+export function buildEvidenceFromDomainInterpretations(
+  interpretations: readonly DomainInterpretation[]
+): readonly AiEvidence[] {
   const evidenceMap = new Map<string, AiEvidence>();
 
-  function insertEvidence(item: AiEvidence) {
-    const existing = evidenceMap.get(item.id);
-    if (existing) {
-      if (!isEvidenceEqual(existing, item)) {
-        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
+  for (const interpretation of interpretations) {
+    for (const item of interpretation.evidence || []) {
+      const projected = projectDomainEvidenceToAi(item);
+      const existing = evidenceMap.get(projected.id);
+      if (existing) {
+        if (!isEvidenceEqual(existing, projected)) {
+          throw new Error(`Cannot build AiContext: conflicting evidence id ${projected.id}`);
+        }
+        continue;
       }
-      return;
+      evidenceMap.set(projected.id, projected);
     }
-    evidenceMap.set(item.id, item);
   }
 
-  // 1. Career Evidence from themeInterpretationV2
-  const careerEvidence = horoscope.themeInterpretationV2?.career?.evidence || [];
-  for (const e of careerEvidence) {
-    insertEvidence(projectV2Evidence(e));
-  }
+  return Array.from(evidenceMap.values());
+}
 
-  // 2. Wealth Evidence from themeInterpretationV2
-  const wealthEvidence = horoscope.themeInterpretationV2?.wealth?.evidence || [];
-  for (const e of wealthEvidence) {
-    insertEvidence(projectV2Evidence(e));
-  }
-
-  // 3. Life-theme Evidence with deterministic namespaced ID
+function buildLifeThemeEvidence(horoscope: Horoscope): readonly AiEvidence[] {
+  const evidenceMap = new Map<string, AiEvidence>();
   const themes = horoscope.lifeThemes?.themes || [];
   for (const t of themes) {
     const themeName = String(t.theme || '');
@@ -630,7 +697,7 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
       const ruleId = e.ruleId ? String(e.ruleId) : '';
       const id = `LIFE_THEME:${themeName}:${ruleId}:${statement}:${planetsStr}:${housesStr}`;
 
-      insertEvidence({
+      const item: AiEvidence = {
         id,
         source,
         effect,
@@ -639,10 +706,18 @@ function buildEvidence(horoscope: Horoscope): readonly AiEvidence[] {
         ...(e.planets && e.planets.length > 0 ? { planets: [...e.planets] } : {}),
         ...(e.houses && e.houses.length > 0 ? { houses: [...e.houses] } : {}),
         ...(ruleId ? { ruleId } : {})
-      });
+      };
+
+      const existing = evidenceMap.get(id);
+      if (existing) {
+        if (!isEvidenceEqual(existing, item)) {
+          throw new Error(`Cannot build AiContext: conflicting evidence id ${id}`);
+        }
+        continue;
+      }
+      evidenceMap.set(id, item);
     }
   }
-
   return Array.from(evidenceMap.values());
 }
 
@@ -670,7 +745,6 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const career = buildCareerFact(horoscope);
   const wealth = buildWealthFact(horoscope);
   const lifeThemes = buildLifeThemeFacts(horoscope);
-  const evidence = buildEvidence(horoscope);
 
   // Use pre-computed domain interpretations if provided, otherwise resolve once from registry
   const rawDomainInterpretations: readonly DomainInterpretation[] =
@@ -691,6 +765,37 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
     options?.lifeAnalysis ?? synthesizeLifeAnalysis(rawDomainInterpretations);
 
   const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysisValue);
+
+  // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence
+  const domainEvidenceList = buildEvidenceFromDomainInterpretations(rawDomainInterpretations);
+  const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);
+
+  const evidenceMap = new Map<string, AiEvidence>();
+  for (const item of domainEvidenceList) {
+    evidenceMap.set(item.id, item);
+  }
+  for (const item of lifeThemeEvidenceList) {
+    const existing = evidenceMap.get(item.id);
+    if (existing) {
+      if (!isEvidenceEqual(existing, item)) {
+        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
+      }
+      continue;
+    }
+    evidenceMap.set(item.id, item);
+  }
+  const evidence = Array.from(evidenceMap.values());
+
+  // Net invariant assertion: every context.domainInterpretations[].evidence[].id MUST exist in context.evidence
+  for (const di of domainInterpretations) {
+    for (const e of di.evidence) {
+      if (!evidenceMap.has(e.id)) {
+        throw new Error(
+          `Invariant violation: domain interpretation evidence id '${e.id}' not found in context.evidence`
+        );
+      }
+    }
+  }
 
   const context: AiContext = {
     schemaVersion: AI_CONTEXT_SCHEMA_VERSION,
