@@ -23,6 +23,14 @@ export type {
   DomainEvidence
 } from './DomainEvidence';
 
+export type {
+  EvidenceSourceType
+} from '../evidence';
+
+export {
+  isEvidenceSourceType
+} from '../evidence';
+
 export {
   createNatalPromise
 } from './NatalPromise';

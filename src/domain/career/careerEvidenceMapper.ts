@@ -9,10 +9,68 @@ import type {
   EvidencePolarity,
   EvidenceRole,
   EvidenceSource,
-  EvidenceStrength
+  EvidenceStrength,
+  EvidenceSourceType
 } from '../interpretation';
 import type { CareerEvidenceClassification } from './careerTypes';
 import { resolveRelatedCareerPromiseEvidenceIds } from './careerEvidenceLinker';
+
+export function mapCareerSourceType(
+  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
+): EvidenceSourceType {
+  if (isCareerTransitEvidence(item)) {
+    return 'TRANSIT';
+  }
+  if (
+    item.vargaEvidence ||
+    item.evidenceFamily === CareerEvidenceFamily.D10
+  ) {
+    return 'VARGA';
+  }
+  if (
+    item.evidenceFamily === CareerEvidenceFamily.DASHA ||
+    Boolean(item.timingEvidence)
+  ) {
+    return 'DASHA';
+  }
+
+  switch (item.evidenceFamily) {
+    case CareerEvidenceFamily.TENTH_HOUSE:
+    case CareerEvidenceFamily.SIXTH_HOUSE:
+    case CareerEvidenceFamily.SECOND_HOUSE:
+    case CareerEvidenceFamily.ELEVENTH_HOUSE:
+      return 'HOUSE';
+
+    case CareerEvidenceFamily.TENTH_LORD:
+    case CareerEvidenceFamily.SIXTH_LORD:
+    case CareerEvidenceFamily.SECOND_LORD:
+    case CareerEvidenceFamily.ELEVENTH_LORD:
+      return 'LORDSHIP';
+
+    case CareerEvidenceFamily.SUN:
+    case CareerEvidenceFamily.SATURN:
+    case CareerEvidenceFamily.MERCURY:
+    case CareerEvidenceFamily.MARS:
+    case CareerEvidenceFamily.JUPITER:
+      return 'PLANET';
+
+    case CareerEvidenceFamily.PLANETARY_STRENGTH:
+      return 'STRENGTH';
+
+    case CareerEvidenceFamily.ASPECT:
+      return 'ASPECT';
+
+    case CareerEvidenceFamily.YOGA:
+      return 'YOGA';
+
+    case CareerEvidenceFamily.FUNCTIONAL_ROLE:
+      // Functional benefic/malefic role determination maps to OTHER
+      return 'OTHER';
+
+    default:
+      return 'OTHER';
+  }
+}
 
 export function mapCareerDashaPeriod(
   item: ThemeInterpretationEvidence<CareerEvidenceFamily>
@@ -43,6 +101,7 @@ export function buildCareerEvidence(
 
       return createDomainEvidence({
         id: item.id,
+        sourceType: mapCareerSourceType(item),
         domain: 'CAREER',
         role,
         phase: mapCareerPhase(item),

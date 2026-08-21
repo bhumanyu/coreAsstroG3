@@ -17,6 +17,7 @@ describe('DomainInterpretationBuilder', () => {
       evidence: [
         {
           id: 'CAREER-001',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -321,6 +322,7 @@ describe('detectDomainConflicts', () => {
     const conflicts = detectDomainConflicts('CAREER', [
       {
         id: 'CAREER-001',
+        sourceType: 'LORDSHIP',
         domain: 'CAREER',
         role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
@@ -333,6 +335,7 @@ describe('detectDomainConflicts', () => {
       },
       {
         id: 'CAREER-002',
+        sourceType: 'VARGA',
         domain: 'CAREER',
         role: 'CONFIRMATION',
         phase: 'VARGA_CONFIRMATION',
@@ -355,6 +358,7 @@ describe('detectDomainConflicts', () => {
     const conflicts = detectDomainConflicts('CAREER', [
       {
         id: 'CAREER-001',
+        sourceType: 'LORDSHIP',
         domain: 'CAREER',
         role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
@@ -376,6 +380,7 @@ describe('sortDomainEvidence', () => {
     const sorted = sortDomainEvidence([
       {
         id: 'E1',
+        sourceType: 'HOUSE',
         domain: 'CAREER',
         role: 'SECONDARY',
         phase: 'NATAL_PROMISE',
@@ -388,6 +393,7 @@ describe('sortDomainEvidence', () => {
       },
       {
         id: 'E2',
+        sourceType: 'HOUSE',
         domain: 'CAREER',
         role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
@@ -400,6 +406,7 @@ describe('sortDomainEvidence', () => {
       },
       {
         id: 'E3',
+        sourceType: 'HOUSE',
         domain: 'CAREER',
         role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
@@ -428,6 +435,7 @@ describe('calculateEvidenceConfidence', () => {
       calculateEvidenceConfidence([
         {
           id: 'E1',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',

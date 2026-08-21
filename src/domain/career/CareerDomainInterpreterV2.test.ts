@@ -115,6 +115,7 @@ describe('CareerDomainInterpreterV2', () => {
       const strongSupporting = [
         createDomainEvidence({
           id: '10H-STRONG',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -126,6 +127,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: '10L-STRONG',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -144,6 +146,7 @@ describe('CareerDomainInterpreterV2', () => {
       const challenging = [
         createDomainEvidence({
           id: '10H-AFFLICTED',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -162,6 +165,7 @@ describe('CareerDomainInterpreterV2', () => {
       const supporting = [
         createDomainEvidence({
           id: '10H-STRONG',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -175,6 +179,7 @@ describe('CareerDomainInterpreterV2', () => {
       const challenging = [
         createDomainEvidence({
           id: '10L-DEBILITATED',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -196,6 +201,7 @@ describe('CareerDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: 'E-10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -207,6 +213,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-6H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'SECONDARY',
           phase: 'NATAL_PROMISE',
@@ -218,6 +225,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-MOD',
+          sourceType: 'PLANET',
           domain: 'CAREER',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -229,6 +237,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-D10',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -240,6 +249,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-DASHA',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -261,6 +271,7 @@ describe('CareerDomainInterpreterV2', () => {
       const unlinkedD10 = [
         createDomainEvidence({
           id: 'D10-UNLINKED',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -273,6 +284,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'PRIMARY-10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -387,6 +399,7 @@ describe('CareerDomainInterpreterV2', () => {
       const d10Item: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D10-MOD',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -398,6 +411,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'D10-CHALL',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -427,6 +441,7 @@ describe('CareerDomainInterpreterV2', () => {
       const linkedD10: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D10-SUPP',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -447,6 +462,7 @@ describe('CareerDomainInterpreterV2', () => {
       const unlinkedD10: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D10-UNLINKED-SUPP',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -459,6 +475,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'D10-UNLINKED-CHALL',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -484,6 +501,7 @@ describe('CareerDomainInterpreterV2', () => {
       const dashaEvidence = [
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:MAHADASHA:SUN',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -507,6 +525,7 @@ describe('CareerDomainInterpreterV2', () => {
       const dashaEvidence = [
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:ANTARDASHA:MARS',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -520,6 +539,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:ANTARDASHA:RAHU',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -543,6 +563,7 @@ describe('CareerDomainInterpreterV2', () => {
       const dashaEvidence = [
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:MAHADASHA:SUN',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -567,6 +588,7 @@ describe('CareerDomainInterpreterV2', () => {
       const unlinkedDashaEvidence = [
         createDomainEvidence({
           id: 'CAREER_DASHA_TIMING_001:MAHADASHA:VENUS',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -598,6 +620,7 @@ describe('CareerDomainInterpreterV2', () => {
       const transitEvidence = [
         createDomainEvidence({
           id: 'TRANSIT-JUPITER',
+          sourceType: 'TRANSIT',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -618,6 +641,7 @@ describe('CareerDomainInterpreterV2', () => {
       const transitEvidence = [
         createDomainEvidence({
           id: 'TRANSIT-SATURN',
+          sourceType: 'TRANSIT',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -638,6 +662,7 @@ describe('CareerDomainInterpreterV2', () => {
       const unlinkedTransit = [
         createDomainEvidence({
           id: 'TRANSIT-MARS',
+          sourceType: 'TRANSIT',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -664,6 +689,7 @@ describe('CareerDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: 'P1',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -675,6 +701,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'P2',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -686,6 +713,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'V1',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -698,6 +726,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'T1',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -710,6 +739,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'TR1',
+          sourceType: 'TRANSIT',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -751,6 +781,7 @@ describe('CareerDomainInterpreterV2', () => {
       const weakPrimary = [
         createDomainEvidence({
           id: 'WEAK-10L',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -771,6 +802,7 @@ describe('CareerDomainInterpreterV2', () => {
       const strongPrimary = [
         createDomainEvidence({
           id: 'STRONG-10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -782,6 +814,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'STRONG-10L',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -793,6 +826,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'SUPPORT-6H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'SECONDARY',
           phase: 'NATAL_PROMISE',
@@ -815,6 +849,7 @@ describe('CareerDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: 'STRONG-10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -843,6 +878,7 @@ describe('CareerDomainInterpreterV2', () => {
       const techEvidence = [
         createDomainEvidence({
           id: 'MERCURY_RULE',
+          sourceType: 'PLANET',
           domain: 'CAREER',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -864,6 +900,7 @@ describe('CareerDomainInterpreterV2', () => {
       const serviceEvidence = [
         createDomainEvidence({
           id: '6H_SERVICE',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'SECONDARY',
           phase: 'NATAL_PROMISE',
@@ -885,6 +922,7 @@ describe('CareerDomainInterpreterV2', () => {
       const unrelatedSaturn = [
         createDomainEvidence({
           id: 'UNRELATED_SATURN',
+          sourceType: 'PLANET',
           domain: 'CAREER',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -905,6 +943,7 @@ describe('CareerDomainInterpreterV2', () => {
       const challengingRules = [
         createDomainEvidence({
           id: 'CHALLENGING_MERCURY',
+          sourceType: 'PLANET',
           domain: 'CAREER',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -917,6 +956,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'CHALLENGING_SATURN',
+          sourceType: 'PLANET',
           domain: 'CAREER',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -941,6 +981,7 @@ describe('CareerDomainInterpreterV2', () => {
       const nonLeadershipPrimary = [
         createDomainEvidence({
           id: 'PRIMARY_2H_WEALTH',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -963,6 +1004,7 @@ describe('CareerDomainInterpreterV2', () => {
       const explicitLeadership = [
         createDomainEvidence({
           id: 'LEADERSHIP_10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -988,6 +1030,7 @@ describe('CareerDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: '10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1000,6 +1043,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: '10L',
+          sourceType: 'LORDSHIP',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1012,6 +1056,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'D10',
+          sourceType: 'VARGA',
           domain: 'CAREER',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -1024,6 +1069,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'DASHA',
+          sourceType: 'DASHA',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -1036,6 +1082,7 @@ describe('CareerDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'TRANSIT',
+          sourceType: 'TRANSIT',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -1059,6 +1106,7 @@ describe('CareerDomainInterpreterV2', () => {
       const partialEvidence = [
         createDomainEvidence({
           id: '10H',
+          sourceType: 'HOUSE',
           domain: 'CAREER',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1187,6 +1235,7 @@ describe('CareerDomainInterpreterV2', () => {
     const dummyEvidence = [
       createDomainEvidence({
         id: 'DUMMY-EVID',
+        sourceType: 'DASHA',
         domain: 'CAREER',
         role: 'TIMING',
         phase: 'DASHA_ACTIVATION',
@@ -1211,6 +1260,7 @@ describe('CareerDomainInterpreterV2', () => {
       const transitDummy = [
         createDomainEvidence({
           id: 'DUMMY-TRANSIT',
+          sourceType: 'TRANSIT',
           domain: 'CAREER',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',

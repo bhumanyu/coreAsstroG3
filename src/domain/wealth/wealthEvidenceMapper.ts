@@ -9,13 +9,69 @@ import type {
   EvidencePolarity,
   EvidenceRole,
   EvidenceSource,
-  EvidenceStrength
+  EvidenceStrength,
+  EvidenceSourceType
 } from '../interpretation';
 import type {
   WealthDimension,
   WealthEvidenceClassification
 } from './wealthTypes';
 import { resolveRelatedWealthPromiseEvidenceIds } from './wealthEvidenceLinker';
+
+export function mapWealthSourceType(
+  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+): EvidenceSourceType {
+  if (isWealthTransitEvidence(item)) {
+    return 'TRANSIT';
+  }
+  if (
+    item.vargaEvidence ||
+    item.evidenceFamily === WealthEvidenceFamily.D2
+  ) {
+    return 'VARGA';
+  }
+  if (
+    item.evidenceFamily === WealthEvidenceFamily.DASHA ||
+    Boolean(item.timingEvidence)
+  ) {
+    return 'DASHA';
+  }
+
+  switch (item.evidenceFamily) {
+    case WealthEvidenceFamily.SECOND_HOUSE:
+    case WealthEvidenceFamily.FIFTH_HOUSE:
+    case WealthEvidenceFamily.NINTH_HOUSE:
+    case WealthEvidenceFamily.ELEVENTH_HOUSE:
+      return 'HOUSE';
+
+    case WealthEvidenceFamily.SECOND_LORD:
+    case WealthEvidenceFamily.FIFTH_LORD:
+    case WealthEvidenceFamily.NINTH_LORD:
+    case WealthEvidenceFamily.ELEVENTH_LORD:
+      return 'LORDSHIP';
+
+    case WealthEvidenceFamily.JUPITER:
+    case WealthEvidenceFamily.VENUS:
+    case WealthEvidenceFamily.MERCURY:
+      return 'PLANET';
+
+    case WealthEvidenceFamily.PLANETARY_STRENGTH:
+      return 'STRENGTH';
+
+    case WealthEvidenceFamily.ASPECT:
+      return 'ASPECT';
+
+    case WealthEvidenceFamily.YOGA:
+      return 'YOGA';
+
+    case WealthEvidenceFamily.FUNCTIONAL_ROLE:
+      // Functional benefic/malefic role determination maps to OTHER
+      return 'OTHER';
+
+    default:
+      return 'OTHER';
+  }
+}
 
 export function mapWealthDashaPeriod(
   item: ThemeInterpretationEvidence<WealthEvidenceFamily>
@@ -78,6 +134,7 @@ export function buildWealthEvidence(
 
       return createDomainEvidence({
         id: item.id,
+        sourceType: mapWealthSourceType(item),
         domain: 'WEALTH',
         role,
         phase: mapWealthPhase(item),

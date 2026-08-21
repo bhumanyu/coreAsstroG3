@@ -37,6 +37,7 @@ import {
 export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   createDomainEvidence({
     id: 'GOLDEN_CAREER_10H_STRONG',
+    sourceType: 'HOUSE',
     domain: 'CAREER',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -50,6 +51,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_10L_STRONG',
+    sourceType: 'LORDSHIP',
     domain: 'CAREER',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -63,6 +65,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_6H_SERVICE',
+    sourceType: 'HOUSE',
     domain: 'CAREER',
     role: 'SECONDARY',
     phase: 'NATAL_PROMISE',
@@ -76,6 +79,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_11H_GAINS',
+    sourceType: 'HOUSE',
     domain: 'CAREER',
     role: 'SECONDARY',
     phase: 'NATAL_PROMISE',
@@ -89,6 +93,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_MERCURY_TECH',
+    sourceType: 'PLANET',
     domain: 'CAREER',
     role: 'MODIFIER',
     phase: 'NATAL_PROMISE',
@@ -102,6 +107,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_D10_CONFIRMS',
+    sourceType: 'VARGA',
     domain: 'CAREER',
     role: 'CONFIRMATION',
     phase: 'VARGA_CONFIRMATION',
@@ -115,6 +121,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_DASHA_MD_ACTIVATES',
+    sourceType: 'DASHA',
     domain: 'CAREER',
     role: 'TIMING',
     phase: 'DASHA_ACTIVATION',
@@ -129,6 +136,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_DASHA_AD_SUPPORT',
+    sourceType: 'DASHA',
     domain: 'CAREER',
     role: 'TIMING',
     phase: 'DASHA_ACTIVATION',
@@ -143,6 +151,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_DASHA_AD_CHALLENGE',
+    sourceType: 'DASHA',
     domain: 'CAREER',
     role: 'TIMING',
     phase: 'DASHA_ACTIVATION',
@@ -157,6 +166,7 @@ export const GOLDEN_CAREER_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_CAREER_TRANSIT_CHALLENGE',
+    sourceType: 'TRANSIT',
     domain: 'CAREER',
     role: 'TIMING',
     phase: 'TRANSIT_TRIGGER',

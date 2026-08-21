@@ -40,6 +40,7 @@ import type { WealthDimensionInterpretation } from './wealthTypes';
 export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_2H_STRONG',
+    sourceType: 'HOUSE',
     domain: 'WEALTH',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -55,6 +56,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_2L_STRONG',
+    sourceType: 'LORDSHIP',
     domain: 'WEALTH',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -70,6 +72,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_11H_GAINS',
+    sourceType: 'HOUSE',
     domain: 'WEALTH',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -85,6 +88,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_11L_STRONG',
+    sourceType: 'LORDSHIP',
     domain: 'WEALTH',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -100,6 +104,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_9H_FORTUNE',
+    sourceType: 'HOUSE',
     domain: 'WEALTH',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -115,6 +120,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_5H_SPECULATION',
+    sourceType: 'HOUSE',
     domain: 'WEALTH',
     role: 'PRIMARY',
     phase: 'NATAL_PROMISE',
@@ -130,6 +136,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_JUPITER_KARAKA',
+    sourceType: 'PLANET',
     domain: 'WEALTH',
     role: 'MODIFIER',
     phase: 'NATAL_PROMISE',
@@ -145,6 +152,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_D2_CONFIRMS',
+    sourceType: 'VARGA',
     domain: 'WEALTH',
     role: 'CONFIRMATION',
     phase: 'VARGA_CONFIRMATION',
@@ -159,6 +167,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_DASHA_MD_ACTIVATES',
+    sourceType: 'DASHA',
     domain: 'WEALTH',
     role: 'TIMING',
     phase: 'DASHA_ACTIVATION',
@@ -174,6 +183,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_DASHA_AD_SUPPORT',
+    sourceType: 'DASHA',
     domain: 'WEALTH',
     role: 'TIMING',
     phase: 'DASHA_ACTIVATION',
@@ -189,6 +199,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_DASHA_AD_CHALLENGE',
+    sourceType: 'DASHA',
     domain: 'WEALTH',
     role: 'TIMING',
     phase: 'DASHA_ACTIVATION',
@@ -204,6 +215,7 @@ export const GOLDEN_WEALTH_EVIDENCE: readonly DomainEvidence[] = Object.freeze([
   }),
   createDomainEvidence({
     id: 'GOLDEN_WEALTH_TRANSIT_CHALLENGE',
+    sourceType: 'TRANSIT',
     domain: 'WEALTH',
     role: 'TIMING',
     phase: 'TRANSIT_TRIGGER',

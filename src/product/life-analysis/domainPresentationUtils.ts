@@ -61,144 +61,53 @@ export function formatDomainDisplayName(domain: DomainId | string): string {
 }
 
 /**
+ * Resolves the display label for an evidence source type and domain evidence.
+ */
+export function resolveEvidenceSourceLabel(
+  source: EvidenceSource,
+  sourceType: EvidenceSourceType,
+  evidence: DomainEvidence
+): string {
+  switch (sourceType) {
+    case 'HOUSE':
+      return 'Natal House (D1)';
+    case 'LORDSHIP':
+      return 'House Lordship (D1)';
+    case 'PLANET':
+      return 'Planetary Position (D1)';
+    case 'ASPECT':
+      return 'Graha Drishti / Aspect (D1)';
+    case 'YOGA':
+      return 'Natal Yoga (D1)';
+    case 'STRENGTH':
+      return 'Planetary Strength (D1)';
+    case 'VARGA':
+      return (source !== 'D1' && source !== 'OTHER' && VARGA_NAMES[source])
+        ? VARGA_NAMES[source]
+        : (source !== 'D1' && source !== 'OTHER' ? `Divisional Chart (${source})` : 'Divisional Chart');
+    case 'DASHA':
+      return evidence.timing?.periodKey
+        ? `Dasha (${evidence.timing.periodKey})`
+        : 'Vimshottari Dasha';
+    case 'TRANSIT':
+      return 'Gochara / Transit';
+    case 'OTHER':
+    default:
+      return source === 'D1' ? 'Natal Chart (D1)' : 'Astrological Calculation';
+  }
+}
+
+/**
  * Maps an astrological evidence source and domain evidence object to an EvidenceSourceViewModel.
- *
- * NOTE: The string/family/ruleId heuristics below represent a presentation-only mapping layer.
- * A deterministic `sourceType` should later be added to DomainEvidence in a future infrastructure update (P-031).
- * DomainEvidence currently has no calculationId field (ruleId !== calculationId), so calculationId is
- * not populated on view models.
+ * Driven deterministically by `evidence.sourceType`.
  */
 export function mapEvidenceSource(
   source: EvidenceSource,
   evidence: DomainEvidence
 ): EvidenceSourceViewModel {
-  if (source === 'DASHA') {
-    const periodLabel = evidence.timing?.periodKey
-      ? `Dasha (${evidence.timing.periodKey})`
-      : 'Vimshottari Dasha';
-    return Object.freeze({
-      type: 'DASHA' as EvidenceSourceType,
-      label: periodLabel
-    });
-  }
-
-  if (source === 'TRANSIT') {
-    return Object.freeze({
-      type: 'TRANSIT' as EvidenceSourceType,
-      label: 'Gochara / Transit'
-    });
-  }
-
-  // Check if it's a divisional chart other than D1
-  if (source !== 'D1' && source !== 'OTHER') {
-    const label = VARGA_NAMES[source] ?? `Divisional Chart (${source})`;
-    return Object.freeze({
-      type: 'VARGA' as EvidenceSourceType,
-      label
-    });
-  }
-
-  // D1 Natal Chart source - presentation heuristic mapping tied to current Career/Wealth rule naming.
-  // A future infrastructure update (P-031) will add an explicit sourceType directly on DomainEvidence
-  // rather than deriving from rule IDs or evidence family strings.
-  const family = evidence.evidenceFamily ?? '';
-  const ruleId = evidence.ruleId ?? '';
-
-  if (
-    family.includes('HOUSE') ||
-    family === 'TENTH_HOUSE' ||
-    family === 'SIXTH_HOUSE' ||
-    family === 'ELEVENTH_HOUSE' ||
-    family === 'SECOND_HOUSE' ||
-    family === 'FIFTH_HOUSE' ||
-    family === 'NINTH_HOUSE' ||
-    ruleId.includes('_HOUSE_') ||
-    ruleId.includes('_10H_') ||
-    ruleId.includes('_6H_') ||
-    ruleId.includes('_11H_') ||
-    ruleId.includes('_2H_') ||
-    ruleId.includes('_5H_') ||
-    ruleId.includes('_9H_')
-  ) {
-    return Object.freeze({
-      type: 'HOUSE' as EvidenceSourceType,
-      label: 'Natal House (D1)'
-    });
-  }
-
-  if (
-    family.includes('LORD') ||
-    family === 'TENTH_LORD' ||
-    family === 'SIXTH_LORD' ||
-    family === 'ELEVENTH_LORD' ||
-    family === 'SECOND_LORD' ||
-    family === 'FIFTH_LORD' ||
-    family === 'NINTH_LORD' ||
-    ruleId.includes('_LORD_') ||
-    ruleId.includes('_10L_') ||
-    ruleId.includes('_6L_') ||
-    ruleId.includes('_11L_') ||
-    ruleId.includes('_2L_') ||
-    ruleId.includes('_5L_') ||
-    ruleId.includes('_9L_')
-  ) {
-    return Object.freeze({
-      type: 'LORDSHIP' as EvidenceSourceType,
-      label: 'House Lordship (D1)'
-    });
-  }
-
-  if (
-    family === 'SUN' ||
-    family === 'MOON' ||
-    family === 'MARS' ||
-    family === 'MERCURY' ||
-    family === 'JUPITER' ||
-    family === 'VENUS' ||
-    family === 'SATURN' ||
-    family === 'RAHU' ||
-    family === 'KETU' ||
-    family === 'PLANET' ||
-    ruleId.includes('_KARAKA_') ||
-    ruleId.includes('_RELEVANCE_')
-  ) {
-    return Object.freeze({
-      type: 'PLANET' as EvidenceSourceType,
-      label: 'Planetary Position (D1)'
-    });
-  }
-
-  if (family === 'ASPECT' || ruleId.includes('_ASPECT_')) {
-    return Object.freeze({
-      type: 'ASPECT' as EvidenceSourceType,
-      label: 'Graha Drishti / Aspect (D1)'
-    });
-  }
-
-  if (family === 'YOGA' || ruleId.includes('_YOGA_')) {
-    return Object.freeze({
-      type: 'YOGA' as EvidenceSourceType,
-      label: 'Natal Yoga (D1)'
-    });
-  }
-
-  if (family === 'PLANETARY_STRENGTH' || family === 'STRENGTH') {
-    return Object.freeze({
-      type: 'STRENGTH' as EvidenceSourceType,
-      label: 'Planetary Strength (D1)'
-    });
-  }
-
-  if (source === 'D1') {
-    return Object.freeze({
-      type: 'OTHER' as EvidenceSourceType,
-      label: 'Natal Chart (D1)'
-    });
-  }
-
   return Object.freeze({
-    type: 'OTHER' as EvidenceSourceType,
-    label: 'Astrological Calculation'
+    type: evidence.sourceType,
+    label: resolveEvidenceSourceLabel(source, evidence.sourceType, evidence)
   });
 }
 

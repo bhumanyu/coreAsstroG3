@@ -118,6 +118,7 @@ describe('WealthDomainInterpreterV2', () => {
       const strongSupporting = [
         createDomainEvidence({
           id: '2H-STRONG',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -130,6 +131,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: '11H-STRONG',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -149,6 +151,7 @@ describe('WealthDomainInterpreterV2', () => {
       const challenging = [
         createDomainEvidence({
           id: '2H-AFFLICTED',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -168,6 +171,7 @@ describe('WealthDomainInterpreterV2', () => {
       const supporting = [
         createDomainEvidence({
           id: '2H-STRONG',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -182,6 +186,7 @@ describe('WealthDomainInterpreterV2', () => {
       const challenging = [
         createDomainEvidence({
           id: '2L-DEBILITATED',
+          sourceType: 'LORDSHIP',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -204,6 +209,7 @@ describe('WealthDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: 'E-2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -216,6 +222,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-JUPITER',
+          sourceType: 'PLANET',
           domain: 'WEALTH',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -228,6 +235,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-D2',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -239,6 +247,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'E-DASHA',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -259,6 +268,7 @@ describe('WealthDomainInterpreterV2', () => {
       const unlinkedD2 = [
         createDomainEvidence({
           id: 'D2-UNLINKED',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -271,6 +281,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'PRIMARY-2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -467,6 +478,7 @@ describe('WealthDomainInterpreterV2', () => {
       const linkedD2: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D2-SUPP',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -487,6 +499,7 @@ describe('WealthDomainInterpreterV2', () => {
       const unlinkedD2: readonly DomainEvidence[] = [
         createDomainEvidence({
           id: 'D2-UNLINKED',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -509,6 +522,7 @@ describe('WealthDomainInterpreterV2', () => {
       const allEvidence: DomainEvidence[] = [
         createDomainEvidence({
           id: 'PROMISE-2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -522,6 +536,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'PROMISE-5H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -538,6 +553,7 @@ describe('WealthDomainInterpreterV2', () => {
       const dashaEvidence: DomainEvidence[] = [
         createDomainEvidence({
           id: 'DASHA-2H',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -575,6 +591,7 @@ describe('WealthDomainInterpreterV2', () => {
       const allEvidence: DomainEvidence[] = [
         createDomainEvidence({
           id: 'PROMISE-2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -591,6 +608,7 @@ describe('WealthDomainInterpreterV2', () => {
       const dashaEvidence: DomainEvidence[] = [
         createDomainEvidence({
           id: 'DASHA-2H',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -612,6 +630,7 @@ describe('WealthDomainInterpreterV2', () => {
       const allEvidence: DomainEvidence[] = [
         createDomainEvidence({
           id: 'PROMISE-2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -628,6 +647,7 @@ describe('WealthDomainInterpreterV2', () => {
       const challengingDasha: DomainEvidence[] = [
         createDomainEvidence({
           id: 'DASHA-CHALLENGE',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -647,6 +667,7 @@ describe('WealthDomainInterpreterV2', () => {
         ...challengingDasha,
         createDomainEvidence({
           id: 'DASHA-SUPPORT',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -667,6 +688,7 @@ describe('WealthDomainInterpreterV2', () => {
       const unlinkedDasha = [
         createDomainEvidence({
           id: 'DASHA-UNLINKED',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -690,6 +712,7 @@ describe('WealthDomainInterpreterV2', () => {
       const transitEvidence = [
         createDomainEvidence({
           id: 'TRANSIT-JUPITER',
+          sourceType: 'TRANSIT',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -710,6 +733,7 @@ describe('WealthDomainInterpreterV2', () => {
       const unlinkedTransit = [
         createDomainEvidence({
           id: 'TRANSIT-UNLINKED',
+          sourceType: 'TRANSIT',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -811,6 +835,7 @@ describe('WealthDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: '2H_ACC',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -825,6 +850,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: '11H_REV',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -851,6 +877,7 @@ describe('WealthDomainInterpreterV2', () => {
       const challengingSpec = [
         createDomainEvidence({
           id: '5H_LOSS',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -874,6 +901,7 @@ describe('WealthDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: '2H_ACC',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -914,6 +942,7 @@ describe('WealthDomainInterpreterV2', () => {
       const specEvidence = [
         createDomainEvidence({
           id: '5H_SPEC',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -943,6 +972,7 @@ describe('WealthDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: 'P1',
+          sourceType: 'LORDSHIP',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -954,6 +984,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'P2',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -965,6 +996,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'V1',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -977,6 +1009,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'T1',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -989,6 +1022,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'TR1',
+          sourceType: 'TRANSIT',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -1029,6 +1063,7 @@ describe('WealthDomainInterpreterV2', () => {
       const weakPrimary = [
         createDomainEvidence({
           id: 'WEAK-2L',
+          sourceType: 'LORDSHIP',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1048,6 +1083,7 @@ describe('WealthDomainInterpreterV2', () => {
       const strongPrimary = [
         createDomainEvidence({
           id: 'STRONG-2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1059,6 +1095,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'STRONG-11H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1084,6 +1121,7 @@ describe('WealthDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: '2H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1096,6 +1134,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: '11H',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1108,6 +1147,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'D2',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',
@@ -1130,6 +1170,7 @@ describe('WealthDomainInterpreterV2', () => {
       const dashaOnly = [
         createDomainEvidence({
           id: 'DASHA-1',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -1151,6 +1192,7 @@ describe('WealthDomainInterpreterV2', () => {
       const transitOnly = [
         createDomainEvidence({
           id: 'TRANSIT-1',
+          sourceType: 'TRANSIT',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -1173,6 +1215,7 @@ describe('WealthDomainInterpreterV2', () => {
       const evidence = [
         createDomainEvidence({
           id: 'EVID-A',
+          sourceType: 'HOUSE',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1186,6 +1229,7 @@ describe('WealthDomainInterpreterV2', () => {
         }),
         createDomainEvidence({
           id: 'EVID-B',
+          sourceType: 'LORDSHIP',
           domain: 'WEALTH',
           role: 'PRIMARY',
           phase: 'NATAL_PROMISE',
@@ -1206,6 +1250,7 @@ describe('WealthDomainInterpreterV2', () => {
       const statementOnlyEvidence = [
         createDomainEvidence({
           id: 'HOUSE_2_NAME',
+          sourceType: 'PLANET',
           domain: 'WEALTH',
           role: 'MODIFIER',
           phase: 'NATAL_PROMISE',
@@ -1322,6 +1367,7 @@ describe('WealthDomainInterpreterV2', () => {
       const dummyEvidence = [
         createDomainEvidence({
           id: 'DUMMY-EVID',
+          sourceType: 'DASHA',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'DASHA_ACTIVATION',
@@ -1343,6 +1389,7 @@ describe('WealthDomainInterpreterV2', () => {
       const dummyEvidence = [
         createDomainEvidence({
           id: 'DUMMY-EVID',
+          sourceType: 'TRANSIT',
           domain: 'WEALTH',
           role: 'TIMING',
           phase: 'TRANSIT_TRIGGER',
@@ -1364,6 +1411,7 @@ describe('WealthDomainInterpreterV2', () => {
       const dummyEvidence = [
         createDomainEvidence({
           id: 'D2-EVID',
+          sourceType: 'VARGA',
           domain: 'WEALTH',
           role: 'CONFIRMATION',
           phase: 'VARGA_CONFIRMATION',

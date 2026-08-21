@@ -143,6 +143,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
   it('Test 6: missing rule metadata — unknown ruleId yields rule: undefined while traceability.valid remains true', () => {
     const customEvidence: DomainEvidence = {
       id: 'CUSTOM_TEST_EV_001',
+      sourceType: 'HOUSE',
       domain: 'CAREER',
       role: 'SECONDARY',
       polarity: 'SUPPORTING',
@@ -181,6 +182,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
   it('Test 7: missing chart fact — chartFact is undefined when no notes/periodKey/dimension exist', () => {
     const minimalEvidence: DomainEvidence = {
       id: 'MINIMAL_EV_001',
+      sourceType: 'HOUSE',
       domain: 'WEALTH',
       role: 'PRIMARY',
       polarity: 'SUPPORTING',
@@ -388,6 +390,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
   it('Test 14: D1 fallback mapping — unclassified D1 source falls back to type OTHER with Natal Chart (D1) label', () => {
     const unclassifiedD1Evidence: DomainEvidence = {
       id: 'UNCLASSIFIED_D1_EV_001',
+      sourceType: 'OTHER',
       domain: 'CAREER',
       role: 'SECONDARY',
       polarity: 'SUPPORTING',
@@ -422,6 +425,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
   it('Test 15: NEUTRAL polarity mapping — NEUTRAL DomainEvidence maps to displayPolarity NEUTRAL when not explicitly in supporting or challenging sets', () => {
     const neutralEvidence: DomainEvidence = {
       id: 'NEUTRAL_EV_001',
+      sourceType: 'HOUSE',
       domain: 'CAREER',
       role: 'MODIFIER',
       polarity: 'NEUTRAL',
@@ -466,6 +470,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
   it('Test 16: mapEvidenceSource calculationId contract — never derives calculationId from ruleId', () => {
     const evidenceWithRuleId: DomainEvidence = {
       id: 'EV_RULE_ONLY_001',
+      sourceType: 'HOUSE',
       domain: 'CAREER',
       role: 'PRIMARY',
       polarity: 'SUPPORTING',
@@ -485,15 +490,15 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(sourceVM.label).toBe('Natal House (D1)');
 
     // Test across various sources
-    const vargaVM = mapEvidenceSource('D10', { ...evidenceWithRuleId, source: 'D10' });
+    const vargaVM = mapEvidenceSource('D10', { ...evidenceWithRuleId, sourceType: 'VARGA', source: 'D10' });
     expect(vargaVM.calculationId).toBeUndefined();
     expect(vargaVM.type).toBe('VARGA');
 
-    const dashaVM = mapEvidenceSource('DASHA', { ...evidenceWithRuleId, source: 'DASHA' });
+    const dashaVM = mapEvidenceSource('DASHA', { ...evidenceWithRuleId, sourceType: 'DASHA', source: 'DASHA' });
     expect(dashaVM.calculationId).toBeUndefined();
     expect(dashaVM.type).toBe('DASHA');
 
-    const transitVM = mapEvidenceSource('TRANSIT', { ...evidenceWithRuleId, source: 'TRANSIT' });
+    const transitVM = mapEvidenceSource('TRANSIT', { ...evidenceWithRuleId, sourceType: 'TRANSIT', source: 'TRANSIT' });
     expect(transitVM.calculationId).toBeUndefined();
     expect(transitVM.type).toBe('TRANSIT');
   });
@@ -501,6 +506,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
   it('Test 17: mapEvidenceSource D1 fallback — unclassified D1 evidence without house/lord metadata maps to type OTHER', () => {
     const unclassifiedEvidence: DomainEvidence = {
       id: 'EV_UNCLASSIFIED_001',
+      sourceType: 'OTHER',
       domain: 'WEALTH',
       role: 'SECONDARY',
       polarity: 'SUPPORTING',

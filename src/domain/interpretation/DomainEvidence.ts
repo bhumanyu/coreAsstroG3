@@ -1,3 +1,4 @@
+import type { EvidenceSourceType } from '../evidence';
 import type {
   DomainId,
   EvidencePhase,
@@ -9,6 +10,7 @@ import type {
 
 export interface DomainEvidence {
   readonly id: string;
+  readonly sourceType: EvidenceSourceType;
   readonly domain: DomainId;
   readonly role: EvidenceRole;
   readonly phase: EvidencePhase;
@@ -32,10 +34,12 @@ export interface DomainEvidence {
 export function createDomainEvidence(
   evidence: Partial<DomainEvidence> & {
     id: string;
+    sourceType: EvidenceSourceType;
   }
 ): DomainEvidence {
   return Object.freeze({
     id: evidence.id,
+    sourceType: evidence.sourceType,
     domain: evidence.domain ?? 'CAREER',
     role: evidence.role ?? 'PRIMARY',
     phase: evidence.phase ?? 'NATAL_PROMISE',

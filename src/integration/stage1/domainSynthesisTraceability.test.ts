@@ -34,10 +34,10 @@ describe('Domain Synthesis Traceability (P-028)', () => {
         confidence: 'HIGH'
       }),
       evidence: [
-        createDomainEvidence({ id: 'CAREER:NP:1' }),
-        createDomainEvidence({ id: 'CAREER:NP:2' }),
-        createDomainEvidence({ id: 'CAREER:DA:1' }),
-        createDomainEvidence({ id: 'CAREER:TT:1' })
+        createDomainEvidence({ id: 'CAREER:NP:1', sourceType: 'HOUSE' }),
+        createDomainEvidence({ id: 'CAREER:NP:2', sourceType: 'LORDSHIP' }),
+        createDomainEvidence({ id: 'CAREER:DA:1', sourceType: 'DASHA' }),
+        createDomainEvidence({ id: 'CAREER:TT:1', sourceType: 'TRANSIT' })
       ],
       conclusionData: { natalStatus: 'STRONG' }
     });
@@ -62,10 +62,10 @@ describe('Domain Synthesis Traceability (P-028)', () => {
         confidence: 'HIGH'
       }),
       evidence: [
-        createDomainEvidence({ id: 'WEALTH:NP:1' }),
-        createDomainEvidence({ id: 'WEALTH:NP:CH' }),
-        createDomainEvidence({ id: 'WEALTH:DA:1' }),
-        createDomainEvidence({ id: 'WEALTH:TT:1' })
+        createDomainEvidence({ id: 'WEALTH:NP:1', sourceType: 'HOUSE' }),
+        createDomainEvidence({ id: 'WEALTH:NP:CH', sourceType: 'HOUSE' }),
+        createDomainEvidence({ id: 'WEALTH:DA:1', sourceType: 'DASHA' }),
+        createDomainEvidence({ id: 'WEALTH:TT:1', sourceType: 'TRANSIT' })
       ],
       conclusionData: { overallStatus: 'SUPPORTED' }
     });

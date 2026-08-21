@@ -36,7 +36,7 @@ describe('Domain Synthesis AI Projection (P-028)', () => {
         statement: 'Executive career supported.',
         confidence: 'HIGH'
       }),
-      evidence: [createDomainEvidence({ id: 'CAREER:E1' })],
+      evidence: [createDomainEvidence({ id: 'CAREER:E1', sourceType: 'HOUSE' })],
       conclusionData: { natalStatus: 'VERY_STRONG' }
     });
 
@@ -59,7 +59,7 @@ describe('Domain Synthesis AI Projection (P-028)', () => {
         statement: 'Solid wealth foundation.',
         confidence: 'HIGH'
       }),
-      evidence: [createDomainEvidence({ id: 'WEALTH:E1' })],
+      evidence: [createDomainEvidence({ id: 'WEALTH:E1', sourceType: 'HOUSE' })],
       conclusionData: { overallStatus: 'SUPPORTED' }
     });
 

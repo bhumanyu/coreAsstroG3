@@ -33,7 +33,7 @@ describe('Domain Synthesis (P-028)', () => {
         statement: 'Career is strongly supported.',
         confidence: 'HIGH'
       }),
-      evidence: [createDomainEvidence({ id: 'CAREER:E1' })],
+      evidence: [createDomainEvidence({ id: 'CAREER:E1', sourceType: 'HOUSE' })],
       conclusionData: { natalStatus: 'VERY_STRONG' }
     });
   }
@@ -59,8 +59,8 @@ describe('Domain Synthesis (P-028)', () => {
         confidence: 'HIGH'
       }),
       evidence: [
-        createDomainEvidence({ id: 'WEALTH:E1' }),
-        createDomainEvidence({ id: 'WEALTH:E2' })
+        createDomainEvidence({ id: 'WEALTH:E1', sourceType: 'HOUSE' }),
+        createDomainEvidence({ id: 'WEALTH:E2', sourceType: 'HOUSE' })
       ],
       conclusionData: { overallStatus: 'SUPPORTED' }
     });

@@ -117,6 +117,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
   const rawEvidence = [
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_2H_STRONG',
+      sourceType: 'HOUSE',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -131,6 +132,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_2L_STRONG',
+      sourceType: 'LORDSHIP',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -145,6 +147,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_11H_GAINS',
+      sourceType: 'HOUSE',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -159,6 +162,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_11L_STRONG',
+      sourceType: 'LORDSHIP',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -173,6 +177,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_9H_FORTUNE',
+      sourceType: 'HOUSE',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -187,6 +192,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_5H_CHALLENGED',
+      sourceType: 'HOUSE',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -201,6 +207,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_D2_CONFIRMS',
+      sourceType: 'VARGA',
       domain: 'WEALTH',
       role: 'CONFIRMATION',
       phase: 'VARGA_CONFIRMATION',
@@ -215,6 +222,7 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     }),
     createDomainEvidence({
       id: 'SCENARIO_WEALTH_DASHA_MD_ACTIVATES',
+      sourceType: 'DASHA',
       domain: 'WEALTH',
       role: 'TIMING',
       phase: 'DASHA_ACTIVATION',
@@ -384,6 +392,7 @@ export function buildIncompleteCareerInterpretation(): DomainInterpretation {
   const rawEvidence = [
     createDomainEvidence({
       id: 'CAREER_BASIC_10H',
+      sourceType: 'HOUSE',
       domain: 'CAREER',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -506,6 +515,7 @@ export function buildIncompleteWealthInterpretation(): DomainInterpretation {
   const rawEvidence = [
     createDomainEvidence({
       id: 'WEALTH_BASIC_2H',
+      sourceType: 'HOUSE',
       domain: 'WEALTH',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -631,6 +641,7 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
   const rawEvidence = [
     createDomainEvidence({
       id: 'CAREER_HP_10H',
+      sourceType: 'HOUSE',
       domain: 'CAREER',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -643,6 +654,7 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
     }),
     createDomainEvidence({
       id: 'CAREER_HP_10L',
+      sourceType: 'LORDSHIP',
       domain: 'CAREER',
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
@@ -655,6 +667,7 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
     }),
     createDomainEvidence({
       id: 'CAREER_HP_D10',
+      sourceType: 'VARGA',
       domain: 'CAREER',
       role: 'CONFIRMATION',
       phase: 'VARGA_CONFIRMATION',
@@ -668,6 +681,7 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
     }),
     createDomainEvidence({
       id: 'CAREER_HP_DASHA',
+      sourceType: 'DASHA',
       domain: 'CAREER',
       role: 'TIMING',
       phase: 'DASHA_ACTIVATION',
@@ -682,6 +696,7 @@ export function buildHighPressureCareerInterpretation(): DomainInterpretation {
     }),
     createDomainEvidence({
       id: 'CAREER_HP_TRANSIT_CHALLENGE',
+      sourceType: 'TRANSIT',
       domain: 'CAREER',
       role: 'TIMING',
       phase: 'TRANSIT_TRIGGER',

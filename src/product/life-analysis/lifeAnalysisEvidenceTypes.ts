@@ -3,18 +3,9 @@ import type {
   EvidenceRole,
   EvidencePolarity
 } from '../../domain/interpretation/DomainInterpretationTypes';
+import type { EvidenceSourceType } from '../../domain/evidence';
 
-export type EvidenceSourceType =
-  | 'HOUSE'
-  | 'PLANET'
-  | 'LORDSHIP'
-  | 'ASPECT'
-  | 'YOGA'
-  | 'VARGA'
-  | 'DASHA'
-  | 'TRANSIT'
-  | 'STRENGTH'
-  | 'OTHER';
+export type { EvidenceSourceType };
 
 export interface EvidenceSourceViewModel {
   readonly type: EvidenceSourceType;
