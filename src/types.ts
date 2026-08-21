@@ -854,7 +854,10 @@ import type {
   PlanetInterpretationReport
 } from './engine/planetInterpretation/planetInterpretationTypes';
 import type { HouseInterpretationReport } from './engine/houseInterpretation/houseInterpretationTypes';
-import type { DashaInterpretationReport } from './engine/dashaInterpretation/dashaInterpretationTypes';
+import type {
+  DashaInterpretationReport,
+  ActiveDashaInterpretation
+} from './engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   DivisionalInterpretationReport,
   DivisionalDomainMetadata
@@ -950,6 +953,7 @@ export type {
   PlanetInterpretationReport,
   HouseInterpretationReport,
   DashaInterpretationReport,
+  ActiveDashaInterpretation,
   DivisionalInterpretationReport,
   DivisionalDomainMetadata,
   LifeThemeReport,

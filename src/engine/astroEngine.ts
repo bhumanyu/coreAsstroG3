@@ -44,7 +44,11 @@ import { analyzeFunctionalRoles } from './functionalNature/functionalRoles';
 import { analyzePlanetaryStrength } from './planetaryStrength/planetaryStrength';
 import { analyzePlanetInterpretation } from './planetInterpretation/planetInterpretation';
 import { analyzeHouseInterpretation } from './houseInterpretation/houseInterpretation';
-import { analyzeDashaInterpretation } from './dashaInterpretation/dashaInterpretation';
+import { analyzeDashaInterpretation, analyzeActiveDasha } from './dashaInterpretation/dashaInterpretation';
+import {
+  DashaInterpretationInput,
+  DashaInterpretationReport
+} from './dashaInterpretation/dashaInterpretationTypes';
 import { analyzeDivisionalInterpretation } from './divisionalInterpretation/divisionalInterpretation';
 import { analyzeLifeThemes } from './lifeThemes/lifeThemes';
 import { synthesizeChart } from './chartSynthesis/chartSynthesis';
@@ -296,10 +300,37 @@ export function calculateAscendant(birthDetails: BirthDetails): number {
   return normalizeDegree(ascTropicalDeg - ayanamsaShift);
 }
 
+export interface CalculateHoroscopeOptions {
+  customPositions?: Record<Planet, PlanetPosition>;
+  asOf?: string | Date;
+}
+
 /**
  * Constructs a complete Horoscope object with all derived facts and vargas.
  */
-export function calculateHoroscope(birthDetails: BirthDetails, customPositions?: Record<Planet, PlanetPosition>): Horoscope {
+export function calculateHoroscope(
+  birthDetails: BirthDetails,
+  customPositionsOrOptions?: Record<Planet, PlanetPosition> | CalculateHoroscopeOptions,
+  asOfParam?: string | Date
+): Horoscope {
+  let customPositions: Record<Planet, PlanetPosition> | undefined;
+  let asOf: string | Date | undefined;
+
+  if (customPositionsOrOptions) {
+    if ('customPositions' in customPositionsOrOptions || 'asOf' in customPositionsOrOptions) {
+      const opts = customPositionsOrOptions as CalculateHoroscopeOptions;
+      customPositions = opts.customPositions;
+      asOf = opts.asOf ?? asOfParam;
+    } else {
+      customPositions = customPositionsOrOptions as Record<Planet, PlanetPosition>;
+      asOf = asOfParam;
+    }
+  } else {
+    asOf = asOfParam;
+  }
+
+  const resolvedAsOf = asOf ?? new Date();
+
   const positions = customPositions || generatePlanetaryPositions(birthDetails);
   const ascendantLong = calculateAscendant(birthDetails);
   const ascendantSign = calculateSign(ascendantLong);
@@ -433,7 +464,7 @@ export function calculateHoroscope(birthDetails: BirthDetails, customPositions?:
     planetaryStrength
   });
 
-  const dashaInterpretation = analyzeDashaInterpretation({
+  const dashaInterpretationInput: DashaInterpretationInput = {
     vimshottari,
     planetInterpretation,
     houseInterpretation,
@@ -442,6 +473,19 @@ export function calculateHoroscope(birthDetails: BirthDetails, customPositions?:
     yogas,
     planetAnalysis,
     planetaryStrength
+  };
+
+  const rawDashaInterpretation = analyzeDashaInterpretation(dashaInterpretationInput);
+  let activeDasha = null;
+  try {
+    activeDasha = analyzeActiveDasha(dashaInterpretationInput, resolvedAsOf);
+  } catch {
+    activeDasha = null;
+  }
+
+  const dashaInterpretation: DashaInterpretationReport = Object.freeze({
+    ...rawDashaInterpretation,
+    ...(activeDasha ? { current: activeDasha } : {})
   });
 
   const divisionalInterpretation = analyzeDivisionalInterpretation({

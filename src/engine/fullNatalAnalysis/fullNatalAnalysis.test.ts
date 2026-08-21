@@ -6,6 +6,7 @@ import { buildFullNatalAnalysis, validateInput } from './fullNatalAnalysis';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { EXPECTED_PLANET_ORDER } from './fullNatalAnalysisMetadata';
 import { LifeTheme, Planet, BirthDetails, AyanamsaType } from '../../types';
+import { buildAiContext } from '../../ai/context/aiContextFactory';
 
 describe('P-21 FullNatalAnalysis Engine', () => {
   it('should throw TypeError when input is null or missing required fields', () => {
@@ -421,6 +422,108 @@ describe('P-21 FullNatalAnalysis Engine', () => {
       expect(report.vimshottari.status).toBe('UNAVAILABLE');
       expect(report.vimshottari.birthAnchor).toBeUndefined();
       expect(report.vimshottari.mahadashas).toBeUndefined();
+    });
+  });
+
+  describe('D02 — Active Dasha Invocations and Wiring', () => {
+    const fixedAsOf1 = '2024-06-01T00:00:00.000Z';
+    const fixedAsOf2 = '2000-01-01T00:00:00.000Z';
+
+    it('produces deep-equal dashaInterpretation.current for same birthDetails and fixed asOf (determinism)', () => {
+      const horoscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const horoscope2 = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+
+      expect(horoscope1.dashaInterpretation?.current).toBeDefined();
+      expect(horoscope2.dashaInterpretation?.current).toBeDefined();
+      expect(horoscope1.dashaInterpretation?.current).toEqual(horoscope2.dashaInterpretation?.current);
+    });
+
+    it('produces different active MD/AD/PD for distinct asOf dates in different periods (sensitivity)', () => {
+      const horoscopePeriod1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const horoscopePeriod2 = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf2 });
+
+      const current1 = horoscopePeriod1.dashaInterpretation?.current;
+      const current2 = horoscopePeriod2.dashaInterpretation?.current;
+
+      expect(current1).toBeDefined();
+      expect(current2).toBeDefined();
+
+      const period1Signature = `${current1!.mahadasha.planet}-${current1!.antardasha.planet}-${current1!.pratyantardasha.planet}`;
+      const period2Signature = `${current2!.mahadasha.planet}-${current2!.antardasha.planet}-${current2!.pratyantardasha.planet}`;
+
+      expect(period1Signature).not.toEqual(period2Signature);
+    });
+
+    it('defines current.mahadasha, current.antardasha, and current.pratyantardasha when asOf is inside a period (presence)', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const current = horoscope.dashaInterpretation?.current;
+
+      expect(current).toBeDefined();
+      expect(current!.mahadasha).toBeDefined();
+      expect(current!.mahadasha.planet).toBeDefined();
+      expect(current!.antardasha).toBeDefined();
+      expect(current!.antardasha.planet).toBeDefined();
+      expect(current!.pratyantardasha).toBeDefined();
+      expect(current!.pratyantardasha.planet).toBeDefined();
+      expect(current!.evidence).toBeDefined();
+      expect(current!.confidence).toBeDefined();
+    });
+
+    it('ensures all MD/AD/PD start and end dates parse as valid timestamps (date validity)', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const current = horoscope.dashaInterpretation?.current!;
+
+      expect(Date.parse(current.mahadasha.start)).not.toBeNaN();
+      expect(Date.parse(current.mahadasha.end)).not.toBeNaN();
+      expect(Date.parse(current.antardasha.start)).not.toBeNaN();
+      expect(Date.parse(current.antardasha.end)).not.toBeNaN();
+      expect(Date.parse(current.pratyantardasha.start)).not.toBeNaN();
+      expect(Date.parse(current.pratyantardasha.end)).not.toBeNaN();
+    });
+
+    it('validates hierarchical containment: PD within AD within MD (hierarchy)', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const current = horoscope.dashaInterpretation?.current!;
+
+      const mdStart = new Date(current.mahadasha.start).getTime();
+      const mdEnd = new Date(current.mahadasha.end).getTime();
+      const adStart = new Date(current.antardasha.start).getTime();
+      const adEnd = new Date(current.antardasha.end).getTime();
+      const pdStart = new Date(current.pratyantardasha.start).getTime();
+      const pdEnd = new Date(current.pratyantardasha.end).getTime();
+
+      expect(adStart).toBeGreaterThanOrEqual(mdStart);
+      expect(adEnd).toBeLessThanOrEqual(mdEnd);
+      expect(pdStart).toBeGreaterThanOrEqual(adStart);
+      expect(pdEnd).toBeLessThanOrEqual(adEnd);
+    });
+
+    it('wires currentDasha into fullNatalAnalysis with status AVAILABLE when asOf is inside a period', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const currentDashaSection = horoscope.fullNatalAnalysis.currentDasha;
+
+      expect(currentDashaSection.status).toBe('AVAILABLE');
+      expect(currentDashaSection.current).toBeDefined();
+      expect(currentDashaSection.current).toEqual(horoscope.dashaInterpretation?.current);
+    });
+
+    it('leaves current unset and currentDasha status UNAVAILABLE when asOf is out of range', () => {
+      const horoscopeOutOfRange = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: '2500-01-01T00:00:00.000Z' });
+
+      expect(horoscopeOutOfRange.dashaInterpretation?.current).toBeUndefined();
+      expect(horoscopeOutOfRange.fullNatalAnalysis.currentDasha.status).toBe('UNAVAILABLE');
+      expect(horoscopeOutOfRange.fullNatalAnalysis.currentDasha.current).toBeUndefined();
+    });
+
+    it('populates aiContext dasha.active matching current MD/AD/PD (aiContext wiring)', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
+      const aiContext = buildAiContext(horoscope);
+      const current = horoscope.dashaInterpretation?.current!;
+
+      expect(aiContext.dasha.active).toBeDefined();
+      expect(aiContext.dasha.active?.mahadasha).toBe(current.mahadasha.planet);
+      expect(aiContext.dasha.active?.antardasha).toBe(current.antardasha.planet);
+      expect(aiContext.dasha.active?.pratyantardasha).toBe(current.pratyantardasha.planet);
     });
   });
 
