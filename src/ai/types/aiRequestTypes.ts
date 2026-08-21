@@ -7,6 +7,7 @@ export type AiTask =
   | 'WEALTH_ANALYSIS'
   | 'DASHA_ANALYSIS'
   | 'LIFE_THEME_ANALYSIS'
+  | 'LIFE_ANALYSIS_EXPLANATION'
   | 'GENERAL_QUERY';
 
 export interface AiRequest {

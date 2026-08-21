@@ -11,6 +11,7 @@ export const TASK_DOMAIN: Record<AiTask, LocalRuleDomain> = Object.freeze({
   WEALTH_ANALYSIS: 'WEALTH',
   DASHA_ANALYSIS: 'DASHA',
   LIFE_THEME_ANALYSIS: 'LIFE_THEME',
+  LIFE_ANALYSIS_EXPLANATION: 'CHART',
   GENERAL_QUERY: 'GENERAL'
 });
 
@@ -43,6 +44,7 @@ function buildConclusion(task: AiTask, context: AiContext): string {
     case 'LIFE_THEME_ANALYSIS': {
       return `Life theme analysis evaluated ${context.lifeThemes.length} foundational themes across career, wealth, spiritual development, and life vitality.`;
     }
+    case 'LIFE_ANALYSIS_EXPLANATION':
     case 'CHART_SYNTHESIS': {
       return `Chart synthesis evaluates the native's birth chart incorporating ${context.evidence.length} evidence items across ${context.planets.length} planetary positions, ${context.houses.length} house structures, and divisional alignments.`;
     }
@@ -111,6 +113,7 @@ export function reasonWithLocalRules(
       }
       break;
     }
+    case 'LIFE_ANALYSIS_EXPLANATION':
     case 'CHART_SYNTHESIS': {
       if (context.planets.length === 0) {
         unresolvedQuestionsSet.add('Planetary facts are unavailable in the provided context.');

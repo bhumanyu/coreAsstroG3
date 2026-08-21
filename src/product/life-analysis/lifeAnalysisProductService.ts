@@ -71,7 +71,7 @@ export async function runLifeAnalysisProduct(
     // Pass pre-computed domain interpretations and life analysis to avoid double calculation
     const aiExplanation = await runAiExplanation({
       horoscope: options.horoscope,
-      task: 'CHART_SYNTHESIS',
+      task: 'LIFE_ANALYSIS_EXPLANATION',
       router: options.router,
       domainInterpretations,
       lifeAnalysis: analysis

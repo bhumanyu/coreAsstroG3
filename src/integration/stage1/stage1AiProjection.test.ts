@@ -154,4 +154,45 @@ describe('Stage-1 AI Projection Integration', () => {
     expect(conclusionData?.currentPressure).toBe('HIGH');
     expect(conclusionData?.currentActivation).toBe('ACTIVE');
   });
+
+  it('enriches DomainInterpretationAiProjection with full frozen evidence detail matching source evidence', () => {
+    const projectedCareer = projectDomainInterpretationForAi(STAGE1_GOLDEN_CAREER);
+    const projectedWealth = projectDomainInterpretationForAi(STAGE1_GOLDEN_WEALTH);
+
+    expect(projectedCareer.evidence).toBeDefined();
+    expect(projectedCareer.evidence.length).toBe(STAGE1_GOLDEN_CAREER.evidence.length);
+    expect(Object.isFrozen(projectedCareer.evidence)).toBe(true);
+
+    for (let i = 0; i < projectedCareer.evidence.length; i++) {
+      const proj = projectedCareer.evidence[i];
+      const orig = STAGE1_GOLDEN_CAREER.evidence[i];
+      expect(proj.id).toBe(orig.id);
+      expect(proj.statement).toBe(orig.statement);
+      expect(proj.sourceType).toBe(orig.sourceType);
+      expect(proj.role).toBe(orig.role);
+      expect(proj.polarity).toBe(orig.polarity);
+      expect(proj.strength).toBe(orig.strength);
+      if (orig.ruleId) expect(proj.ruleId).toBe(orig.ruleId);
+      if (orig.dimension) expect(proj.dimension).toBe(orig.dimension);
+      expect(Object.isFrozen(proj)).toBe(true);
+    }
+
+    expect(projectedWealth.evidence).toBeDefined();
+    expect(projectedWealth.evidence.length).toBe(STAGE1_GOLDEN_WEALTH.evidence.length);
+    expect(Object.isFrozen(projectedWealth.evidence)).toBe(true);
+
+    for (let i = 0; i < projectedWealth.evidence.length; i++) {
+      const proj = projectedWealth.evidence[i];
+      const orig = STAGE1_GOLDEN_WEALTH.evidence[i];
+      expect(proj.id).toBe(orig.id);
+      expect(proj.statement).toBe(orig.statement);
+      expect(proj.sourceType).toBe(orig.sourceType);
+      expect(proj.role).toBe(orig.role);
+      expect(proj.polarity).toBe(orig.polarity);
+      expect(proj.strength).toBe(orig.strength);
+      if (orig.ruleId) expect(proj.ruleId).toBe(orig.ruleId);
+      if (orig.dimension) expect(proj.dimension).toBe(orig.dimension);
+      expect(Object.isFrozen(proj)).toBe(true);
+    }
+  });
 });

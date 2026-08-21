@@ -143,5 +143,6 @@ export {
 } from './DomainInterpretationAiProjection';
 
 export type {
-  DomainInterpretationAiProjection
+  DomainInterpretationAiProjection,
+  DomainEvidenceAiProjection
 } from './DomainInterpretationAiProjection';

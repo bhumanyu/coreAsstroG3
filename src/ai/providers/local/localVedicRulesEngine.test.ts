@@ -18,13 +18,14 @@ describe('localVedicRulesEngine', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
   const context = buildAiContext(horoscope);
 
-  it('should have an exhaustive TASK_DOMAIN mapping for all six tasks', () => {
+  it('should have an exhaustive TASK_DOMAIN mapping for all seven tasks', () => {
     const tasks: readonly AiTask[] = [
       'CHART_SYNTHESIS',
       'CAREER_ANALYSIS',
       'WEALTH_ANALYSIS',
       'DASHA_ANALYSIS',
       'LIFE_THEME_ANALYSIS',
+      'LIFE_ANALYSIS_EXPLANATION',
       'GENERAL_QUERY'
     ];
 

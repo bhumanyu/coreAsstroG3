@@ -2,12 +2,27 @@ import type { DomainInterpretation } from './DomainInterpretation';
 import type {
   ConfidenceLevel,
   ConflictTier,
+  EvidencePolarity,
+  EvidenceRole,
   EvidenceSource,
+  EvidenceStrength,
   ManifestationMode,
   TimingActivationEffect,
   TransitTriggerEffect,
   VargaRelationship
 } from './DomainInterpretationTypes';
+import type { EvidenceSourceType } from '../evidence/evidenceSourceTypes';
+
+export interface DomainEvidenceAiProjection {
+  readonly id: string;
+  readonly statement: string;
+  readonly sourceType: EvidenceSourceType;
+  readonly role: EvidenceRole;
+  readonly polarity: EvidencePolarity;
+  readonly strength: EvidenceStrength;
+  readonly ruleId?: string;
+  readonly dimension?: string;
+}
 
 export interface DomainInterpretationAiProjection {
   readonly domain: DomainInterpretation['domain'];
@@ -55,6 +70,8 @@ export interface DomainInterpretationAiProjection {
   }[];
 
   readonly evidenceIds: readonly string[];
+
+  readonly evidence: readonly DomainEvidenceAiProjection[];
 }
 
 export function projectDomainInterpretationForAi(
@@ -121,6 +138,21 @@ export function projectDomainInterpretationForAi(
 
     evidenceIds: Object.freeze([
       ...interpretation.conclusion.primaryEvidenceIds
-    ])
+    ]),
+
+    evidence: Object.freeze(
+      interpretation.evidence.map((e) =>
+        Object.freeze({
+          id: e.id,
+          statement: e.statement,
+          sourceType: e.sourceType,
+          role: e.role,
+          polarity: e.polarity,
+          strength: e.strength,
+          ...(e.ruleId ? { ruleId: e.ruleId } : {}),
+          ...(e.dimension ? { dimension: e.dimension } : {})
+        })
+      )
+    )
   });
 }

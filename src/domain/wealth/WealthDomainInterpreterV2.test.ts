@@ -1338,6 +1338,18 @@ describe('WealthDomainInterpreterV2', () => {
       for (const id of projection.evidenceIds) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
+
+      // Verify enriched evidence array in projection
+      expect(projection.evidence).toBeDefined();
+      expect(projection.evidence.length).toBe(v2.evidence.length);
+      for (const ev of projection.evidence) {
+        expect(allEvidenceIds.has(ev.id)).toBe(true);
+        expect(ev.statement).toBeDefined();
+        expect(ev.sourceType).toBeDefined();
+        expect(ev.role).toBeDefined();
+        expect(ev.polarity).toBeDefined();
+        expect(ev.strength).toBeDefined();
+      }
     });
   });
 
