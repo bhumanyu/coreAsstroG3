@@ -7,6 +7,11 @@ import type {
   CrossDomainConflictType,
   CrossDomainSeverity
 } from './domainSynthesisTypes';
+import {
+  extractDomainTimingRecords,
+  type TimingIdentity,
+  type DomainTimingRecord
+} from './domainSynthesisTiming';
 
 export function createConflictId(
   type: CrossDomainConflictType,
@@ -21,112 +26,84 @@ export function detectCrossDomainConflicts(
 ): readonly CrossDomainConflict[] {
   const conflicts: CrossDomainConflict[] = [];
 
-  // Pairwise evaluation
-  for (let i = 0; i < domains.length; i++) {
-    for (let j = i + 1; j < domains.length; j++) {
-      const d1 = domains[i];
-      const d2 = domains[j];
+  const allRecords = domains.flatMap(extractDomainTimingRecords);
+  const groups = new Map<string, { identity: TimingIdentity; records: DomainTimingRecord[] }>();
 
-      // 1. DOMAIN_VS_TIMING: Dasha conflict (one activates, one challenges)
-      const d1DashaEffect = d1.dashaActivation?.effect as string | undefined;
-      const d2DashaEffect = d2.dashaActivation?.effect as string | undefined;
+  for (const rec of allRecords) {
+    let g = groups.get(rec.identityKey);
+    if (!g) {
+      g = { identity: rec.identity, records: [] };
+      groups.set(rec.identityKey, g);
+    }
+    g.records.push(rec);
+  }
 
-      const d1DashaActivates =
-        d1.dashaActivation?.active &&
-        (d1DashaEffect === 'ACTIVATES' || d1DashaEffect === 'PARTIALLY_ACTIVATES');
-      const d1DashaChallenges =
-        d1.dashaActivation?.active &&
-        (d1DashaEffect === 'CHALLENGES' || d1DashaEffect === 'CHALLENGE');
+  for (const { identity, records } of groups.values()) {
+    for (let i = 0; i < records.length; i++) {
+      for (let j = i + 1; j < records.length; j++) {
+        const r1 = records[i];
+        const r2 = records[j];
+        if (r1.domain === r2.domain) continue;
 
-      const d2DashaActivates =
-        d2.dashaActivation?.active &&
-        (d2DashaEffect === 'ACTIVATES' || d2DashaEffect === 'PARTIALLY_ACTIVATES');
-      const d2DashaChallenges =
-        d2.dashaActivation?.active &&
-        (d2DashaEffect === 'CHALLENGES' || d2DashaEffect === 'CHALLENGE');
-
-      if (
-        (d1DashaActivates && d2DashaChallenges) ||
-        (d1DashaChallenges && d2DashaActivates)
-      ) {
-        const activatingDomain = d1DashaActivates ? d1.domain : d2.domain;
-        const challengingDomain = d1DashaChallenges ? d1.domain : d2.domain;
         const participatingDomains: readonly DomainId[] = Object.freeze(
-          [d1.domain, d2.domain].sort()
-        );
-        const evidenceIds = Object.freeze(
-          Array.from(
-            new Set([
-              ...(d1.dashaActivation?.evidenceIds ?? []),
-              ...(d2.dashaActivation?.evidenceIds ?? [])
-            ])
-          ).sort()
+          [r1.domain, r2.domain].sort()
         );
 
-        const id = createConflictId('DOMAIN_VS_TIMING', participatingDomains);
-        const severity: CrossDomainSeverity = 'HIGH';
-        const description = `Dasha timing activates ${activatingDomain} while challenging ${challengingDomain}.`;
+        if (identity.source === 'DASHA') {
+          const r1Activates = r1.effect === 'ACTIVATES' || r1.effect === 'PARTIALLY_ACTIVATES';
+          const r1Challenges = r1.effect === 'CHALLENGES' || r1.effect === 'CHALLENGE';
+          const r2Activates = r2.effect === 'ACTIVATES' || r2.effect === 'PARTIALLY_ACTIVATES';
+          const r2Challenges = r2.effect === 'CHALLENGES' || r2.effect === 'CHALLENGE';
 
-        conflicts.push(
-          Object.freeze({
-            id,
-            type: 'DOMAIN_VS_TIMING',
-            severity,
-            participatingDomains,
-            description,
-            evidenceIds
-          })
-        );
-      }
+          if ((r1Activates && r2Challenges) || (r1Challenges && r2Activates)) {
+            const activatingDomain = r1Activates ? r1.domain : r2.domain;
+            const challengingDomain = r1Challenges ? r1.domain : r2.domain;
+            const evidenceIds = Object.freeze(
+              Array.from(new Set([...r1.evidenceIds, ...r2.evidenceIds])).sort()
+            );
+            const id = createConflictId('DOMAIN_VS_TIMING', participatingDomains);
+            const severity: CrossDomainSeverity = 'HIGH';
+            const description = `Dasha timing activates ${activatingDomain} while challenging ${challengingDomain}.`;
 
-      // 2. DOMAIN_VS_TRANSIT: Transit conflict (one triggers, one challenges)
-      const d1TransitEffect = d1.transitTrigger?.effect as string | undefined;
-      const d2TransitEffect = d2.transitTrigger?.effect as string | undefined;
+            conflicts.push(
+              Object.freeze({
+                id,
+                type: 'DOMAIN_VS_TIMING',
+                severity,
+                participatingDomains,
+                description,
+                evidenceIds
+              })
+            );
+          }
+        } else if (identity.source === 'TRANSIT') {
+          const r1Triggers = r1.effect === 'TRIGGER';
+          const r1Challenges = r1.effect === 'CHALLENGE' || r1.effect === 'CHALLENGES';
+          const r2Triggers = r2.effect === 'TRIGGER';
+          const r2Challenges = r2.effect === 'CHALLENGE' || r2.effect === 'CHALLENGES';
 
-      const d1TransitTriggers =
-        d1.transitTrigger?.active && d1TransitEffect === 'TRIGGER';
-      const d1TransitChallenges =
-        d1.transitTrigger?.active &&
-        (d1TransitEffect === 'CHALLENGE' || d1TransitEffect === 'CHALLENGES');
+          if ((r1Triggers && r2Challenges) || (r1Challenges && r2Triggers)) {
+            const triggeringDomain = r1Triggers ? r1.domain : r2.domain;
+            const challengingDomain = r1Challenges ? r1.domain : r2.domain;
+            const evidenceIds = Object.freeze(
+              Array.from(new Set([...r1.evidenceIds, ...r2.evidenceIds])).sort()
+            );
+            const id = createConflictId('DOMAIN_VS_TRANSIT', participatingDomains);
+            const severity: CrossDomainSeverity = 'MODERATE';
+            const description = `Transit movements trigger ${triggeringDomain} while challenging ${challengingDomain}.`;
 
-      const d2TransitTriggers =
-        d2.transitTrigger?.active && d2TransitEffect === 'TRIGGER';
-      const d2TransitChallenges =
-        d2.transitTrigger?.active &&
-        (d2TransitEffect === 'CHALLENGE' || d2TransitEffect === 'CHALLENGES');
-
-      if (
-        (d1TransitTriggers && d2TransitChallenges) ||
-        (d1TransitChallenges && d2TransitTriggers)
-      ) {
-        const triggeringDomain = d1TransitTriggers ? d1.domain : d2.domain;
-        const challengingDomain = d1TransitChallenges ? d1.domain : d2.domain;
-        const participatingDomains: readonly DomainId[] = Object.freeze(
-          [d1.domain, d2.domain].sort()
-        );
-        const evidenceIds = Object.freeze(
-          Array.from(
-            new Set([
-              ...(d1.transitTrigger?.evidenceIds ?? []),
-              ...(d2.transitTrigger?.evidenceIds ?? [])
-            ])
-          ).sort()
-        );
-
-        const id = createConflictId('DOMAIN_VS_TRANSIT', participatingDomains);
-        const severity: CrossDomainSeverity = 'MODERATE';
-        const description = `Transit movements trigger ${triggeringDomain} while challenging ${challengingDomain}.`;
-
-        conflicts.push(
-          Object.freeze({
-            id,
-            type: 'DOMAIN_VS_TRANSIT',
-            severity,
-            participatingDomains,
-            description,
-            evidenceIds
-          })
-        );
+            conflicts.push(
+              Object.freeze({
+                id,
+                type: 'DOMAIN_VS_TRANSIT',
+                severity,
+                participatingDomains,
+                description,
+                evidenceIds
+              })
+            );
+          }
+        }
       }
     }
   }

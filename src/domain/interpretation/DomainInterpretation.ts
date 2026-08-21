@@ -1,10 +1,10 @@
 import type { DomainConflict } from './DomainConflict';
-import type { DomainConclusion } from './DomainConclusion';
+import { createDomainConclusion, type DomainConclusion } from './DomainConclusion';
 import type { DomainEvidence } from './DomainEvidence';
-import type { DashaActivation } from './DashaActivation';
+import { createDashaActivation, type DashaActivation } from './DashaActivation';
 import type { DomainManifestation } from './ManifestationMode';
 import type { NatalPromise } from './NatalPromise';
-import type { TransitTrigger } from './TransitTrigger';
+import { createTransitTrigger, type TransitTrigger } from './TransitTrigger';
 import type { VargaConfirmation } from './VargaConfirmation';
 import type { DomainId } from './DomainInterpretationTypes';
 
@@ -43,34 +43,34 @@ export function createDomainInterpretation(
     natalPromise: interpretation.natalPromise,
     dashaActivation:
       interpretation.dashaActivation ??
-      ({
+      createDashaActivation({
         domain: interpretation.domain,
         active: false,
-        effect: 'UNKNOWN',
-        strength: 'MODERATE',
-        confidence: 'LOW',
+        effect: 'INSUFFICIENT_DATA',
+        strength: 'UNDETERMINED',
+        confidence: 'UNDETERMINED',
         statement: '',
         evidenceIds: [],
         activatedPromiseEvidenceIds: []
-      } as any),
+      }),
     transitTrigger:
       interpretation.transitTrigger ??
-      ({
+      createTransitTrigger({
         domain: interpretation.domain,
         active: false,
-        effect: 'UNKNOWN',
-        strength: 'MODERATE',
-        confidence: 'LOW',
+        effect: 'NO_MATERIAL_TRIGGER',
+        strength: 'UNDETERMINED',
+        confidence: 'UNDETERMINED',
         statement: '',
         evidenceIds: [],
         triggeredPromiseEvidenceIds: []
-      } as any),
+      }),
     vargaConfirmations: Object.freeze([...vargaConfirmations]),
     manifestations: Object.freeze([...manifestations]),
     conflicts: Object.freeze([...conflicts]),
     conclusion:
       interpretation.conclusion ??
-      ({
+      createDomainConclusion({
         domain: interpretation.domain,
         strength: interpretation.natalPromise.strength,
         confidence: interpretation.natalPromise.confidence,
@@ -79,7 +79,7 @@ export function createDomainInterpretation(
         supportingEvidenceIds: [],
         challengingEvidenceIds: [],
         unresolvedQuestions: []
-      } as any),
+      }),
     ...(interpretation.timingActivations
       ? {
           timingActivations: Object.freeze([

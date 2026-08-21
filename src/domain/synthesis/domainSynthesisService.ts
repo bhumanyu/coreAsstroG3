@@ -94,49 +94,55 @@ export function determineOverallStatus(
     return 'INSUFFICIENT_DATA';
   }
 
+  const total = validSummaries.length;
+  const stronglySupportedCount = validSummaries.filter(
+    (s) => s.status === 'STRONGLY_SUPPORTED' || s.strength === 'VERY_STRONG'
+  ).length;
+  const supportedCount = validSummaries.filter(
+    (s) =>
+      s.status === 'STRONGLY_SUPPORTED' ||
+      s.status === 'SUPPORTED' ||
+      s.strength === 'VERY_STRONG' ||
+      s.strength === 'STRONG'
+  ).length;
+  const challengedCount = validSummaries.filter(
+    (s) => s.status === 'CHALLENGED'
+  ).length;
+  const challengedOrWeakCount = validSummaries.filter(
+    (s) =>
+      s.status === 'CHALLENGED' ||
+      s.status === 'LIMITED' ||
+      s.strength === 'WEAK'
+  ).length;
+
+  let baseStatus: LifeAnalysisStatus;
+
+  if (supportedCount / total >= 0.75) {
+    if (stronglySupportedCount / total >= 0.75) {
+      baseStatus = 'STRONGLY_SUPPORTED';
+    } else {
+      baseStatus = 'SUPPORTED';
+    }
+  } else if (challengedOrWeakCount / total >= 0.5) {
+    if (challengedCount / total >= 0.5) {
+      baseStatus = 'CHALLENGED';
+    } else {
+      baseStatus = 'LIMITED';
+    }
+  } else {
+    baseStatus = 'MIXED';
+  }
+
   if (conflictCount > 0) {
-    return 'MIXED';
+    if (baseStatus === 'STRONGLY_SUPPORTED') {
+      return 'SUPPORTED';
+    }
+    if (baseStatus === 'SUPPORTED') {
+      return 'MIXED';
+    }
   }
 
-  const statuses = validSummaries.map((s) => s.status);
-  const strengths = validSummaries.map((s) => s.strength);
-
-  const allStronglySupported = statuses.every(
-    (st) => st === 'STRONGLY_SUPPORTED'
-  );
-  if (allStronglySupported) {
-    return 'STRONGLY_SUPPORTED';
-  }
-
-  const allSupportedOrStrong = statuses.every(
-    (st) => st === 'STRONGLY_SUPPORTED' || st === 'SUPPORTED'
-  );
-  if (allSupportedOrStrong) {
-    return 'SUPPORTED';
-  }
-
-  const allChallenged = statuses.every((st) => st === 'CHALLENGED');
-  if (allChallenged) {
-    return 'CHALLENGED';
-  }
-
-  const allLimited = statuses.every((st) => st === 'LIMITED');
-  if (allLimited) {
-    return 'LIMITED';
-  }
-
-  const hasStrong = strengths.some(
-    (s) => s === 'VERY_STRONG' || s === 'STRONG'
-  );
-  const hasWeakOrChallenged =
-    strengths.some((s) => s === 'WEAK') ||
-    statuses.some((st) => st === 'CHALLENGED' || st === 'LIMITED');
-
-  if (hasStrong && hasWeakOrChallenged) {
-    return 'MIXED';
-  }
-
-  return 'SUPPORTED';
+  return baseStatus;
 }
 
 export function buildLifeConclusion(

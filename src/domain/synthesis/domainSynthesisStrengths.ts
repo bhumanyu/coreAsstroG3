@@ -100,12 +100,6 @@ export function normalizeLifeAnalysisStatus(
 }
 
 export function extractRawDomainStrength(domain: DomainInterpretation): string {
-  if (domain.domain === 'CAREER' && domain.conclusionData?.natalStatus) {
-    return String(domain.conclusionData.natalStatus);
-  }
-  if (domain.domain === 'WEALTH' && domain.conclusionData?.overallStatus) {
-    return String(domain.conclusionData.overallStatus);
-  }
   return domain.natalPromise?.strength ?? 'INSUFFICIENT_DATA';
 }
 

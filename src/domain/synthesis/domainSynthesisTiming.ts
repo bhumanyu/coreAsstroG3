@@ -6,21 +6,135 @@ import type {
   SharedTimingActivation
 } from './domainSynthesisTypes';
 
-const QUALIFYING_DASHA_EFFECTS = new Set([
+export type TimingSource = 'DASHA' | 'TRANSIT';
+export type TimingLevel = 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
+
+export interface TimingIdentity {
+  readonly source: TimingSource;
+  readonly level?: TimingLevel | string;
+  readonly periodKey?: string;
+}
+
+export interface DomainTimingRecord {
+  readonly domain: DomainId;
+  readonly identity: TimingIdentity;
+  readonly identityKey: string;
+  readonly effect: string;
+  readonly active: boolean;
+  readonly evidenceIds: readonly string[];
+}
+
+export const QUALIFYING_DASHA_EFFECTS: ReadonlySet<string> = new Set([
   'ACTIVATES',
   'PARTIALLY_ACTIVATES',
   'CHALLENGES',
   'CHALLENGE'
 ]);
 
-const QUALIFYING_TRANSIT_EFFECTS = new Set([
+export const QUALIFYING_TRANSIT_EFFECTS: ReadonlySet<string> = new Set([
   'TRIGGER',
   'MODIFIER',
   'CHALLENGE',
   'CHALLENGES'
 ]);
 
-function buildDashaStatement(
+export function createTimingIdentityKey(identity: TimingIdentity): string {
+  return `${identity.source}:${identity.level ?? '*'}:${identity.periodKey ?? '*'}`;
+}
+
+export function normalizeTimingLevel(val: any): TimingLevel | undefined {
+  if (!val) return undefined;
+  const str = String(val).toUpperCase();
+  if (str === 'MD' || str === 'MAHADASHA') return 'MAHADASHA';
+  if (str === 'AD' || str === 'ANTARDASHA') return 'ANTARDASHA';
+  if (str === 'PD' || str === 'PRATYANTARDASHA') return 'PRATYANTARDASHA';
+  return undefined;
+}
+
+export function extractDomainTimingRecords(
+  domain: DomainInterpretation
+): readonly DomainTimingRecord[] {
+  const records: DomainTimingRecord[] = [];
+  let hasDashaTimingActivation = false;
+  let hasTransitTimingActivation = false;
+
+  if (Array.isArray(domain.timingActivations) && domain.timingActivations.length > 0) {
+    for (const t of domain.timingActivations) {
+      if (!t) continue;
+      const isTransit = t.source === 'TRANSIT' || Boolean(t.transit);
+      const source: TimingSource = isTransit ? 'TRANSIT' : 'DASHA';
+      const level = t.level ? normalizeTimingLevel(t.level) ?? t.level : normalizeTimingLevel(t.period);
+      const periodKey = t.periodKey ? String(t.periodKey) : undefined;
+      const effect = t.effect ?? (source === 'DASHA' ? domain.dashaActivation?.effect : domain.transitTrigger?.effect);
+      const active = t.active ?? (source === 'DASHA' ? domain.dashaActivation?.active ?? true : domain.transitTrigger?.active ?? true);
+      const evidenceIds = t.evidenceIds ?? (source === 'DASHA' ? domain.dashaActivation?.evidenceIds ?? [] : domain.transitTrigger?.evidenceIds ?? []);
+
+      if (source === 'DASHA') {
+        hasDashaTimingActivation = true;
+      } else {
+        hasTransitTimingActivation = true;
+      }
+
+      if (effect && effect !== 'UNKNOWN' && effect !== 'INSUFFICIENT_DATA' && effect !== 'DOES_NOT_ACTIVATE' && effect !== 'NO_MATERIAL_TRIGGER') {
+        const identity: TimingIdentity = { source, level, periodKey };
+        records.push({
+          domain: domain.domain,
+          identity,
+          identityKey: createTimingIdentityKey(identity),
+          effect: String(effect),
+          active: Boolean(active),
+          evidenceIds
+        });
+      }
+    }
+  }
+
+  if (!hasDashaTimingActivation && domain.dashaActivation) {
+    const da = domain.dashaActivation;
+    const effect = da.effect;
+    const active = da.active;
+    const level = (da as any).level ? normalizeTimingLevel((da as any).level) ?? (da as any).level : normalizeTimingLevel((da as any).period);
+    const periodKey = (da as any).periodKey ? String((da as any).periodKey) : undefined;
+    const evidenceIds = da.evidenceIds ?? [];
+
+    if (active && effect && effect !== 'UNKNOWN' && effect !== 'INSUFFICIENT_DATA' && effect !== 'DOES_NOT_ACTIVATE') {
+      const identity: TimingIdentity = { source: 'DASHA', level, periodKey };
+      records.push({
+        domain: domain.domain,
+        identity,
+        identityKey: createTimingIdentityKey(identity),
+        effect: String(effect),
+        active: Boolean(active),
+        evidenceIds
+      });
+    }
+  }
+
+  if (!hasTransitTimingActivation && domain.transitTrigger) {
+    const tt = domain.transitTrigger;
+    const effect = tt.effect;
+    const active = tt.active;
+    const level = (tt as any).level ? normalizeTimingLevel((tt as any).level) ?? (tt as any).level : undefined;
+    const periodKey = (tt as any).periodKey ? String((tt as any).periodKey) : undefined;
+    const evidenceIds = tt.evidenceIds ?? [];
+
+    if (active && effect && effect !== 'UNKNOWN' && effect !== 'NO_MATERIAL_TRIGGER') {
+      const identity: TimingIdentity = { source: 'TRANSIT', level, periodKey };
+      records.push({
+        domain: domain.domain,
+        identity,
+        identityKey: createTimingIdentityKey(identity),
+        effect: String(effect),
+        active: Boolean(active),
+        evidenceIds
+      });
+    }
+  }
+
+  return records;
+}
+
+export function buildDashaStatement(
   effects: Record<string, string>,
   participatingDomains: readonly DomainId[]
 ): string {
@@ -45,7 +159,7 @@ function buildDashaStatement(
   return `Active Dasha timing operates across ${domains.join(' and ')}.`;
 }
 
-function buildTransitStatement(
+export function buildTransitStatement(
   effects: Record<string, string>,
   participatingDomains: readonly DomainId[]
 ): string {
@@ -72,101 +186,60 @@ export function deriveSharedTiming(
 ): readonly SharedTimingActivation[] {
   const sharedTimings: SharedTimingActivation[] = [];
 
-  // 1. Shared Dasha Timing
-  const qualifyingDashaDomains = domains.filter(
-    (d) =>
-      d.dashaActivation?.active &&
-      d.dashaActivation.effect &&
-      QUALIFYING_DASHA_EFFECTS.has(d.dashaActivation.effect)
-  );
+  const allRecords = domains.flatMap(extractDomainTimingRecords);
+  const groups = new Map<string, { identity: TimingIdentity; records: DomainTimingRecord[] }>();
 
-  if (qualifyingDashaDomains.length >= 2) {
-    const participatingDomains: DomainId[] = qualifyingDashaDomains.map(
-      (d) => d.domain
-    );
-    const effects: Record<string, string> = {};
-    const evidenceIdSet = new Set<string>();
-
-    for (const d of qualifyingDashaDomains) {
-      if (d.dashaActivation.effect) {
-        effects[d.domain] = d.dashaActivation.effect;
-      }
-      for (const eId of d.dashaActivation.evidenceIds ?? []) {
-        evidenceIdSet.add(eId);
-      }
+  for (const rec of allRecords) {
+    let g = groups.get(rec.identityKey);
+    if (!g) {
+      g = { identity: rec.identity, records: [] };
+      groups.set(rec.identityKey, g);
     }
+    g.records.push(rec);
+  }
 
-    const statement = buildDashaStatement(effects, participatingDomains);
+  for (const { identity, records } of groups.values()) {
+    const qualifyingSet = identity.source === 'DASHA' ? QUALIFYING_DASHA_EFFECTS : QUALIFYING_TRANSIT_EFFECTS;
+    const domainMap = new Map<DomainId, DomainTimingRecord>();
 
-    // Derivable level and periodKey
-    let level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | undefined = undefined;
-    let periodKey: string | undefined = undefined;
-
-    for (const d of qualifyingDashaDomains) {
-      if (d.timingActivations) {
-        for (const t of d.timingActivations) {
-          if (t.level && !level) {
-            level = t.level;
-          }
-          if (t.periodKey && !periodKey) {
-            periodKey = t.periodKey;
-          }
+    for (const rec of records) {
+      if (rec.active && qualifyingSet.has(rec.effect)) {
+        if (!domainMap.has(rec.domain)) {
+          domainMap.set(rec.domain, rec);
         }
       }
     }
 
-    sharedTimings.push(
-      Object.freeze({
-        source: 'DASHA',
-        timingType: 'DASHA',
-        active: true,
-        participatingDomains: Object.freeze(participatingDomains),
-        effects: Object.freeze(effects),
-        statement,
-        evidenceIds: Object.freeze(Array.from(evidenceIdSet).sort()),
-        ...(level ? { level } : {}),
-        ...(periodKey ? { periodKey } : {})
-      })
-    );
-  }
+    if (domainMap.size >= 2) {
+      const participatingDomains = Array.from(domainMap.keys());
+      const effects: Record<string, string> = {};
+      const evidenceIdSet = new Set<string>();
 
-  // 2. Shared Transit Timing
-  const qualifyingTransitDomains = domains.filter(
-    (d) =>
-      d.transitTrigger?.active &&
-      d.transitTrigger.effect &&
-      QUALIFYING_TRANSIT_EFFECTS.has(d.transitTrigger.effect)
-  );
-
-  if (qualifyingTransitDomains.length >= 2) {
-    const participatingDomains: DomainId[] = qualifyingTransitDomains.map(
-      (d) => d.domain
-    );
-    const effects: Record<string, string> = {};
-    const evidenceIdSet = new Set<string>();
-
-    for (const d of qualifyingTransitDomains) {
-      if (d.transitTrigger.effect) {
-        effects[d.domain] = d.transitTrigger.effect;
+      for (const [dom, rec] of domainMap.entries()) {
+        effects[dom] = rec.effect;
+        for (const eId of rec.evidenceIds) {
+          evidenceIdSet.add(eId);
+        }
       }
-      for (const eId of d.transitTrigger.evidenceIds ?? []) {
-        evidenceIdSet.add(eId);
-      }
+
+      const statement = identity.source === 'DASHA'
+        ? buildDashaStatement(effects, participatingDomains)
+        : buildTransitStatement(effects, participatingDomains);
+
+      sharedTimings.push(
+        Object.freeze({
+          source: identity.source,
+          timingType: identity.source,
+          active: true,
+          participatingDomains: Object.freeze([...participatingDomains]),
+          effects: Object.freeze(effects),
+          statement,
+          evidenceIds: Object.freeze(Array.from(evidenceIdSet).sort()),
+          ...(identity.level ? { level: identity.level as any } : {}),
+          ...(identity.periodKey ? { periodKey: identity.periodKey } : {})
+        })
+      );
     }
-
-    const statement = buildTransitStatement(effects, participatingDomains);
-
-    sharedTimings.push(
-      Object.freeze({
-        source: 'TRANSIT',
-        timingType: 'TRANSIT',
-        active: true,
-        participatingDomains: Object.freeze(participatingDomains),
-        effects: Object.freeze(effects),
-        statement,
-        evidenceIds: Object.freeze(Array.from(evidenceIdSet).sort())
-      })
-    );
   }
 
   return Object.freeze(sharedTimings);
