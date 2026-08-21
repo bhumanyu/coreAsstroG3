@@ -17,6 +17,7 @@ import type {
   LifeAnalysisWealthDetailViewModel
 } from './lifeAnalysisTypes';
 import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';
+import { buildWhyExperience } from './lifeAnalysisWhy';
 import { deepFreeze } from '../../ai/context/deepFreeze';
 
 /**
@@ -168,6 +169,10 @@ export function buildLifeAnalysisViewModel(
     confidence: analysis.confidence,
     completeness,
     evidence,
+    why: buildWhyExperience({
+      analysis,
+      domainInterpretations: [career, wealth]
+    }),
     careerDetail,
     wealthDetail
   };

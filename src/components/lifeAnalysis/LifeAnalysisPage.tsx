@@ -116,7 +116,7 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
       <ConflictSection conflicts={analysis.conflicts} />
 
       {/* 6. Why? Evidence Collapsible */}
-      <EvidenceSection evidence={analysis.evidence} />
+      <EvidenceSection why={analysis.why} evidence={analysis.evidence} />
 
       {/* 7. AI Explanation Section — RENDERED LAST */}
       <AiExplanationSection explanation={aiExplanation} />

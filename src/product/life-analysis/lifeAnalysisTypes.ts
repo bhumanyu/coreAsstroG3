@@ -15,6 +15,9 @@ import type {
 } from '../../domain/synthesis';
 import type { WealthDimensionStatus } from '../../domain/wealth/wealthTypes';
 import type { AiExplanationResult } from '../../ai';
+import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
+
+export * from './lifeAnalysisEvidenceTypes';
 
 export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR';
 
@@ -109,6 +112,7 @@ export interface LifeAnalysisViewModel {
   readonly confidence: LifeAnalysisConfidence;
   readonly completeness: LifeAnalysisCompletenessViewModel;
   readonly evidence: readonly LifeAnalysisEvidenceViewModel[];
+  readonly why: WhyExperienceViewModel;
   readonly careerDetail?: LifeAnalysisCareerDetailViewModel;
   readonly wealthDetail?: LifeAnalysisWealthDetailViewModel;
 }
