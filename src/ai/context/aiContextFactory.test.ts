@@ -738,7 +738,7 @@ describe('AI Context Factory', () => {
       const projected2 = projectDashaEvidenceToAi(ev2Different);
 
       expect(projected1.id).toBe(projected1Dup.id);
-      expect(projected1.id).toBe('DASHA:MAHADASHA:D-MD-01:Jupiter in 9th house brings expansion:JUPITER:9');
+      expect(projected1.id).toBe('DASHA:MAHADASHA:D-MD-01:JUPITER:9:SUPPORT');
       expect(projected1.id).not.toBe(projected2.id);
       expect(projected1.source).toBe('DASHA');
       expect(projected1.priority).toBe('TIMING');

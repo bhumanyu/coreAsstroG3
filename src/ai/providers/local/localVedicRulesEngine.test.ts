@@ -625,12 +625,12 @@ describe('localVedicRulesEngine', () => {
       );
     });
 
-    it('should evaluate LOCAL-DASHA-002 with newly-bound deterministic dasha interpretation evidence', () => {
+    it('should evaluate LOCAL-DASHA-002 with fallback timing evidence when interpretation is absent', () => {
       const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002');
       expect(dashaRule002).toBeDefined();
 
       const supportEv: AiEvidence = {
-        id: 'DASHA:MAHADASHA:D-MD-01:Jupiter functional benefic in Kendra:JUPITER:1',
+        id: 'DASHA:MAHADASHA:D-MD-01:JUPITER:1:SUPPORT',
         source: 'DASHA',
         effect: 'SUPPORT',
         strength: 'STRONG',
@@ -644,7 +644,7 @@ describe('localVedicRulesEngine', () => {
       };
 
       const challengeEv: AiEvidence = {
-        id: 'DASHA:ANTARDASHA:D-AD-01:Saturn placed in 8th house:SATURN:8',
+        id: 'DASHA:ANTARDASHA:D-AD-01:SATURN:8:CHALLENGE',
         source: 'DASHA',
         effect: 'CHALLENGE',
         strength: 'STRONG',
@@ -701,6 +701,237 @@ describe('localVedicRulesEngine', () => {
       expect(mixedResult.statement).toBe(
         'The active Vimshottari period has both supporting and challenging deterministic timing evidence.'
       );
+    });
+
+    it('should consume MD×AD pair relationship evidence in LOCAL-DASHA-002', () => {
+      const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002');
+      expect(dashaRule002).toBeDefined();
+
+      const pairEvId = 'DASHA:PAIR:D-PAIR-01:JUPITER,SATURN::SUPPORT';
+      const pairEv: AiEvidence = {
+        id: pairEvId,
+        source: 'DASHA',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Jupiter and Saturn form supportive trine relationship',
+        planets: [Planet.JUPITER, Planet.SATURN],
+        priority: 'TIMING',
+        dimension: 'TIMING'
+      };
+
+      const mdEvId = 'DASHA:MAHADASHA:D-MD-01:JUPITER:9:SUPPORT';
+      const mdEv: AiEvidence = {
+        id: mdEvId,
+        source: 'DASHA',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Jupiter in 9th house',
+        planets: [Planet.JUPITER],
+        houses: [9],
+        priority: 'TIMING',
+        dimension: 'TIMING',
+        dashaLevel: 'MAHADASHA',
+        timingPlanet: Planet.JUPITER
+      };
+
+      const hierarchicalContext: AiContext = {
+        ...context,
+        evidence: [mdEv, pairEv],
+        dasha: {
+          system: 'VIMSHOTTARI',
+          periods: [],
+          active: {
+            mahadasha: Planet.JUPITER,
+            antardasha: Planet.SATURN
+          },
+          interpretation: {
+            status: 'AVAILABLE',
+            asOf: '2024-06-01T00:00:00.000Z',
+            confidence: 'HIGH',
+            evidenceIds: [],
+            mahadasha: {
+              level: 'MAHADASHA',
+              planet: Planet.JUPITER,
+              start: '2020-01-01',
+              end: '2036-01-01',
+              placement: { house: 9, sign: Sign.SAGITTARIUS },
+              ownedHouses: [9, 12],
+              functionalRoles: ['TRIKONA_LORD'],
+              evidenceIds: [mdEvId],
+              confidence: 'HIGH'
+            },
+            antardasha: {
+              level: 'ANTARDASHA',
+              planet: Planet.SATURN,
+              start: '2022-01-01',
+              end: '2024-07-01',
+              placement: { house: 11, sign: Sign.AQUARIUS },
+              ownedHouses: [10, 11],
+              functionalRoles: ['KENDRA_LORD'],
+              evidenceIds: [],
+              confidence: 'HIGH'
+            },
+            pair: {
+              mahadashaLord: Planet.JUPITER,
+              antardashaLord: Planet.SATURN,
+              sharedHouses: [],
+              combinedHouseSet: [9, 10, 11, 12],
+              relationshipEvidenceIds: [pairEvId]
+            }
+          }
+        }
+      };
+
+      const result = dashaRule002!.evaluate(hierarchicalContext);
+      expect(result.triggered).toBe(true);
+      expect(result.effect).toBe('SUPPORT');
+      expect(result.supportingEvidenceIds).toContain(pairEvId);
+      expect(result.supportingEvidenceIds).toContain(mdEvId);
+      expect(result.statement).toContain('Mahadasha of JUPITER establishes a support primary timing foundation.');
+      expect(result.statement).toContain('Antardasha of SATURN (with JUPITER-SATURN relationship)');
+      expect(result.statement).toContain('Hierarchical timing outcome is SUPPORT.');
+
+      const fullTaskResult = reasonWithLocalRules('DASHA_ANALYSIS', hierarchicalContext);
+      expect(fullTaskResult.supportingEvidenceIds).toContain(pairEvId);
+    });
+
+    it('should preserve MD primacy when MD is SUPPORT and multiple PD evidence entries are CHALLENGE', () => {
+      const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002');
+      expect(dashaRule002).toBeDefined();
+
+      const mdEvId = 'DASHA:MAHADASHA:D-MD-01:JUPITER:9:SUPPORT';
+      const mdEv: AiEvidence = {
+        id: mdEvId,
+        source: 'DASHA',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Jupiter strong in 9th house',
+        planets: [Planet.JUPITER],
+        houses: [9],
+        priority: 'TIMING',
+        dimension: 'TIMING',
+        dashaLevel: 'MAHADASHA',
+        timingPlanet: Planet.JUPITER
+      };
+
+      // 4 challenging PD evidence items
+      const pdEvIds = [
+        'DASHA:PRATYANTARDASHA:D-PD-01:MERCURY:6:CHALLENGE',
+        'DASHA:PRATYANTARDASHA:D-PD-02:MERCURY:8:CHALLENGE',
+        'DASHA:PRATYANTARDASHA:D-PD-03:MERCURY:12:CHALLENGE',
+        'DASHA:PRATYANTARDASHA:D-PD-04:MERCURY::CHALLENGE'
+      ];
+      const pdEvList: AiEvidence[] = pdEvIds.map((id, index) => ({
+        id,
+        source: 'DASHA',
+        effect: 'CHALLENGE',
+        strength: 'MODERATE' as const,
+        statement: `Mercury challenging transit ${index + 1}`,
+        planets: [Planet.MERCURY],
+        priority: 'TIMING',
+        dimension: 'TIMING',
+        dashaLevel: 'PRATYANTARDASHA',
+        timingPlanet: Planet.MERCURY
+      }));
+
+      const hierarchyContext: AiContext = {
+        ...context,
+        evidence: [mdEv, ...pdEvList],
+        dasha: {
+          system: 'VIMSHOTTARI',
+          periods: [],
+          active: {
+            mahadasha: Planet.JUPITER,
+            antardasha: Planet.SATURN,
+            pratyantardasha: Planet.MERCURY
+          },
+          interpretation: {
+            status: 'AVAILABLE',
+            asOf: '2024-06-01T00:00:00.000Z',
+            confidence: 'HIGH',
+            evidenceIds: [],
+            mahadasha: {
+              level: 'MAHADASHA',
+              planet: Planet.JUPITER,
+              start: '2020-01-01',
+              end: '2036-01-01',
+              placement: { house: 9, sign: Sign.SAGITTARIUS },
+              ownedHouses: [9, 12],
+              functionalRoles: ['TRIKONA_LORD'],
+              evidenceIds: [mdEvId],
+              confidence: 'HIGH'
+            },
+            antardasha: {
+              level: 'ANTARDASHA',
+              planet: Planet.SATURN,
+              start: '2022-01-01',
+              end: '2024-07-01',
+              placement: { house: 11, sign: Sign.AQUARIUS },
+              ownedHouses: [10, 11],
+              functionalRoles: ['KENDRA_LORD'],
+              evidenceIds: [],
+              confidence: 'HIGH'
+            },
+            pratyantardasha: {
+              level: 'PRATYANTARDASHA',
+              planet: Planet.MERCURY,
+              start: '2024-01-01',
+              end: '2024-05-01',
+              placement: { house: 6, sign: Sign.VIRGO },
+              ownedHouses: [3, 6],
+              functionalRoles: ['DUSTHANA_LORD'],
+              evidenceIds: pdEvIds,
+              confidence: 'MEDIUM'
+            }
+          }
+        }
+      };
+
+      const result = dashaRule002!.evaluate(hierarchyContext);
+      expect(result.triggered).toBe(true);
+      // MD primacy is preserved — outcome must NOT be flipped to CHALLENGE by PD count
+      expect(result.effect).not.toBe('CHALLENGE');
+      expect(result.effect).toBe('SUPPORT');
+      expect(result.supportingEvidenceIds).toContain(mdEvId);
+      for (const pdId of pdEvIds) {
+        expect(result.challengingEvidenceIds).toContain(pdId);
+      }
+      expect(result.statement).toContain('Mahadasha of JUPITER establishes a support primary timing foundation.');
+      expect(result.statement).toContain('Pratyantardasha of MERCURY provides challenge short-term refinement.');
+      expect(result.statement).toContain('Hierarchical timing outcome is SUPPORT.');
+    });
+
+    it('should produce deep-equal deterministic rule output for end-to-end horoscope across multiple runs', () => {
+      const e2eHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
+        asOf: '2024-06-01T00:00:00.000Z'
+      });
+      const e2eContext1 = buildAiContext(e2eHoroscope);
+      const e2eContext2 = buildAiContext(e2eHoroscope);
+
+      const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002')!;
+      const run1 = dashaRule002.evaluate(e2eContext1);
+      const run2 = dashaRule002.evaluate(e2eContext2);
+
+      expect(run1).toEqual(run2);
+
+      const fullRun1 = reasonWithLocalRules('DASHA_ANALYSIS', e2eContext1);
+      const fullRun2 = reasonWithLocalRules('DASHA_ANALYSIS', e2eContext2);
+      expect(fullRun1).toEqual(fullRun2);
+
+      // Verify all returned evidence IDs resolve against context.evidence
+      const contextEvidenceIds = new Set(e2eContext1.evidence.map((e) => e.id));
+      for (const id of run1.supportingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of run1.challengingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of fullRun1.supportingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of fullRun1.challengingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
     });
   });
 });

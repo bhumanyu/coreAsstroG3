@@ -804,9 +804,8 @@ export function projectDashaEvidenceToAi(e: DashaInterpretationEvidence): AiEvid
   const ruleId = e.ruleId ? String(e.ruleId) : '';
   const level = String(e.level || '');
   const statement = String(e.statement || '');
-  const id = `DASHA:${level}:${ruleId}:${statement}:${planetsStr}:${housesStr}`;
-
   const effect = normalizeEvidenceEffect(e.effect);
+  const id = `DASHA:${level}:${ruleId}:${planetsStr}:${housesStr}:${effect}`;
   const strength = normalizeEvidenceStrength((e as any).strength);
   const dashaLevel =
     e.level === 'MAHADASHA' || e.level === 'ANTARDASHA' || e.level === 'PRATYANTARDASHA'
