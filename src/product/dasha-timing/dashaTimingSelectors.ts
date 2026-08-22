@@ -4,6 +4,7 @@ import type {
   DashaTimelinePeriodProduct,
   DashaBirthAnchorProduct,
   DashaInterpretationProduct,
+  DashaTimingEvidenceProduct,
   CareerTimingProduct,
   WealthTimingProduct
 } from './dashaTimingTypes';
@@ -78,4 +79,13 @@ export function selectWealthTiming(
   viewModel: DashaTimingViewModel
 ): WealthTimingProduct | undefined {
   return viewModel.wealth;
+}
+
+/**
+ * Selects the canonical dasha & timing evidence collection from the view model.
+ */
+export function selectDashaTimingEvidence(
+  viewModel: DashaTimingViewModel
+): readonly DashaTimingEvidenceProduct[] {
+  return viewModel.evidence;
 }

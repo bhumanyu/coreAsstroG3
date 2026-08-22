@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import {
   Clock,
-  Sparkles,
   Calendar,
   AlertTriangle,
-  HelpCircle,
   X,
-  FileText,
-  ShieldCheck
+  FileText
 } from 'lucide-react';
 import type { DashaTimingViewModel } from '../../product/dasha-timing/dashaTimingTypes';
 import { DashaBirthAnchor } from './DashaBirthAnchor';
@@ -43,11 +40,11 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
     setSelectedEvidenceIds(null);
   };
 
-  // Find evidence details from interpretation
-  const activeInterpretationEvidence = viewModel.interpretation?.evidence || [];
+  // Find evidence details from canonical evidence collection
+  const allEvidence = viewModel.evidence || [];
   const modalEvidenceList = selectedEvidenceIds
-    ? activeInterpretationEvidence.filter(e => selectedEvidenceIds.includes(e.ruleId))
-    : activeInterpretationEvidence;
+    ? allEvidence.filter(e => selectedEvidenceIds.includes(e.id))
+    : allEvidence;
 
   if (viewModel.availability === 'UNAVAILABLE') {
     return (
@@ -190,24 +187,28 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
               {modalEvidenceList.length > 0 ? (
                 modalEvidenceList.map((item, idx) => (
                   <div
-                    key={`${item.ruleId}-${idx}`}
+                    key={`${item.id}-${idx}`}
                     className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-mono-code font-bold text-indigo-300 text-[11px] bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                        {item.ruleId} • {item.level}
+                        {item.ruleId || item.id}{item.level ? ` • ${item.level}` : ''}
                       </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase border ${getEffectBadgeClass(
-                          item.effect
-                        )}`}
-                      >
-                        {item.effect}
-                      </span>
+                      {item.effect && (
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono-code font-bold uppercase border ${getEffectBadgeClass(
+                            item.effect
+                          )}`}
+                        >
+                          {item.effect}
+                        </span>
+                      )}
                     </div>
-                    <p className="text-slate-200 font-serif-astro leading-relaxed">
-                      {item.statement}
-                    </p>
+                    {item.statement && (
+                      <p className="text-slate-200 font-serif-astro leading-relaxed">
+                        {item.statement}
+                      </p>
+                    )}
                     {item.source && (
                       <p className="text-[10px] font-mono-code text-slate-500 pt-1 border-t border-slate-800/50">
                         Source: {item.source}

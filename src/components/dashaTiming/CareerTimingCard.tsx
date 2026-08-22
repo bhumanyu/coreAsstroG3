@@ -1,5 +1,5 @@
 import React from 'react';
-import { Briefcase, HelpCircle, Activity } from 'lucide-react';
+import { Briefcase, HelpCircle } from 'lucide-react';
 import type { CareerTimingProduct } from '../../product/dasha-timing/dashaTimingTypes';
 import { formatPlanetName } from '../fullNatalReport/reportUtils';
 import { formatEnum, getEffectBadgeClass } from '../lifeAnalysis/lifeAnalysisUx';
@@ -25,18 +25,10 @@ export const CareerTimingCard: React.FC<CareerTimingCardProps> = ({
   }
 
   const periods = [
-    timing.mahadasha ? { ...timing.mahadasha, title: 'Mahadasha', periodKey: 'MD' as const } : null,
-    timing.antardasha ? { ...timing.antardasha, title: 'Antardasha', periodKey: 'AD' as const } : null,
-    timing.pratyantardasha ? { ...timing.pratyantardasha, title: 'Pratyantardasha', periodKey: 'PD' as const } : null
-  ].filter(Boolean) as Array<{
-    period: 'MD' | 'AD' | 'PD';
-    planet?: any;
-    effect: string;
-    evidenceIds: readonly string[];
-    statement?: string;
-    title: string;
-    periodKey: 'MD' | 'AD' | 'PD';
-  }>;
+    timing.mahadasha ? { ...timing.mahadasha, title: 'Mahadasha' } : undefined,
+    timing.antardasha ? { ...timing.antardasha, title: 'Antardasha' } : undefined,
+    timing.pratyantardasha ? { ...timing.pratyantardasha, title: 'Pratyantardasha' } : undefined
+  ].filter((p): p is NonNullable<typeof p> => p !== undefined);
 
   return (
     <article
