@@ -31,13 +31,6 @@ export function deriveDirectionalDashaEvidence(
   const derived: DashaReasoningEvidence[] = [];
   const reasoningFacts = input.reasoningEvidence ?? [];
 
-  // Pass-through any pre-existing IMPLICATION or OUTCOME items
-  for (const item of reasoningFacts) {
-    if (item.level === 'IMPLICATION' || item.level === 'OUTCOME') {
-      derived.push(item);
-    }
-  }
-
   // 1. Placement Implication (Relevance only -> NEUTRAL)
   const placementFactId = findFactId(
     reasoningFacts,
@@ -51,7 +44,7 @@ export function deriveDirectionalDashaEvidence(
       level: 'IMPLICATION',
       basis: 'PLACEMENT',
       effect: 'NEUTRAL',
-      statement: `Placement of ${input.planet} in House ${input.house} establishes thematic activation for House ${input.house} affairs during this dasha.`,
+      statement: `Placement of ${input.planet} in ${input.sign} (House ${input.house}) establishes thematic activation for House ${input.house} affairs during this dasha.`,
       confidence: 1.0,
       sourceEvidenceIds: Object.freeze([placementFactId]),
       activatedHouses: Object.freeze([input.house])
@@ -88,7 +81,11 @@ export function deriveDirectionalDashaEvidence(
         const targetH = aspect.targetHouse;
         const aspectFactId = findFactId(
           reasoningFacts,
-          (e) => e.level === 'FACT' && e.basis === 'ASPECT' && e.activatedHouses.includes(targetH),
+          (e) =>
+            e.level === 'FACT' &&
+            e.basis === 'ASPECT' &&
+            e.id.includes('CAST') &&
+            e.activatedHouses.includes(targetH),
           `DASHA_REASONING:FACT:DASHA_LORD_CAST_ASPECT_${aspect.aspectType}_H${targetH}:${input.planet}:${targetH}:NEUTRAL`
         );
 
@@ -108,7 +105,37 @@ export function deriveDirectionalDashaEvidence(
     }
   }
 
-  // 4. Directional Planetary Condition Outcome Synthesis
+  // 4. Received Aspect Implications (Relevance -> NEUTRAL)
+  if (input.receivedAspects && input.receivedAspects.length > 0) {
+    for (const aspect of input.receivedAspects) {
+      const sourceH = aspect.sourceHouse ?? input.house;
+      const sourceP = aspect.sourcePlanet ?? 'GRAHA';
+      const aspectFactId = findFactId(
+        reasoningFacts,
+        (e) =>
+          e.level === 'FACT' &&
+          e.basis === 'ASPECT' &&
+          (e.id.includes(`RECEIVED_ASPECT_${aspect.aspectType}_P${sourceP}`) ||
+            e.statement.includes(String(sourceP))),
+        `DASHA_REASONING:FACT:DASHA_LORD_RECEIVED_ASPECT_${aspect.aspectType}_P${sourceP}:${input.planet}:${sourceH}:NEUTRAL`
+      );
+
+      derived.push(
+        Object.freeze({
+          id: `DASHA_REASONING:IMPLICATION:RECEIVED_ASPECT_${aspect.aspectType}_P${sourceP}_H${sourceH}:${input.planet}:${sourceH}:NEUTRAL`,
+          level: 'IMPLICATION',
+          basis: 'ASPECT',
+          effect: 'NEUTRAL',
+          statement: `Dasha lord ${input.planet} receives ${aspect.aspectType} aspect from ${sourceP} in House ${sourceH}, establishing relational influence.`,
+          confidence: 1.0,
+          sourceEvidenceIds: Object.freeze([aspectFactId]),
+          activatedHouses: Object.freeze([sourceH])
+        })
+      );
+    }
+  }
+
+  // 5. Directional Planetary Condition Outcome Synthesis
   let supportScore = 0;
   let challengeScore = 0;
   const contributingFactIds: string[] = [];
@@ -131,13 +158,23 @@ export function deriveDirectionalDashaEvidence(
     } else if (dignityStr === 'OWN_SIGN' || dignityStr === 'OWN') {
       supportScore += 1.25;
       contributingFactIds.push(dignityFactId);
-    } else if (dignityStr === 'GREAT_FRIEND_SIGN' || dignityStr === 'GREAT_FRIEND' || dignityStr === 'FRIEND_SIGN' || dignityStr === 'FRIEND') {
+    } else if (
+      dignityStr === 'GREAT_FRIEND_SIGN' ||
+      dignityStr === 'GREAT_FRIEND' ||
+      dignityStr === 'FRIEND_SIGN' ||
+      dignityStr === 'FRIEND'
+    ) {
       supportScore += 0.75;
       contributingFactIds.push(dignityFactId);
     } else if (dignityStr === 'DEBILITATED') {
       challengeScore += 2.0;
       contributingFactIds.push(dignityFactId);
-    } else if (dignityStr === 'GREAT_ENEMY_SIGN' || dignityStr === 'GREAT_ENEMY' || dignityStr === 'ENEMY_SIGN' || dignityStr === 'ENEMY') {
+    } else if (
+      dignityStr === 'GREAT_ENEMY_SIGN' ||
+      dignityStr === 'GREAT_ENEMY' ||
+      dignityStr === 'ENEMY_SIGN' ||
+      dignityStr === 'ENEMY'
+    ) {
       challengeScore += 0.75;
       contributingFactIds.push(dignityFactId);
     }
@@ -161,9 +198,16 @@ export function deriveDirectionalDashaEvidence(
     }
   }
 
-  const isYogakaraka = input.functionalRoles && input.functionalRoles.some((r) => String(r) === 'YOGAKARAKA');
+  const isYogakaraka =
+    input.functionalRoles && input.functionalRoles.some((r) => String(r) === 'YOGAKARAKA');
   if (isYogakaraka) {
+    const yogakarakaFactId = findFactId(
+      reasoningFacts,
+      (e) => e.level === 'FACT' && e.basis === 'FUNCTIONAL_ROLE' && e.id.includes('YOGAKARAKA'),
+      `DASHA_REASONING:FACT:DASHA_LORD_ROLE_YOGAKARAKA:${input.planet}::NEUTRAL`
+    );
     supportScore += 1.5;
+    contributingFactIds.push(yogakarakaFactId);
   }
 
   // C. Planetary State / Afflictions
@@ -175,7 +219,10 @@ export function deriveDirectionalDashaEvidence(
     );
 
     const conditionStr = String(input.state.condition ?? '');
-    const isCombust = conditionStr === 'COMBUST' || conditionStr === 'DEEP_COMBUST' || Boolean((input.state as { combust?: boolean }).combust);
+    const isCombust =
+      conditionStr === 'COMBUST' ||
+      conditionStr === 'DEEP_COMBUST' ||
+      Boolean((input.state as { combust?: boolean }).combust);
 
     if (isCombust) {
       challengeScore += 1.5;
@@ -215,7 +262,10 @@ export function deriveDirectionalDashaEvidence(
       if (y.finalStatus !== 'CANCELLED' && yogaScoreAdded < 3.0) {
         const yogaFactId = findFactId(
           reasoningFacts,
-          (e) => e.level === 'FACT' && e.basis === 'YOGA' && (e.id.includes(y.yogaType) || e.statement.includes(y.yogaType)),
+          (e) =>
+            e.level === 'FACT' &&
+            e.basis === 'YOGA' &&
+            (e.id.includes(y.yogaType) || e.statement.includes(y.yogaType)),
           `DASHA_REASONING:FACT:DASHA_LORD_YOGA_${y.yogaType}:${input.planet}::NEUTRAL`
         );
         supportScore += 1.0;

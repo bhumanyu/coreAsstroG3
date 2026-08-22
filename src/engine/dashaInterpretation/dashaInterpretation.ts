@@ -11,6 +11,7 @@ import {
 } from '../planetInterpretation/planetInterpretationTypes';
 import { HOUSE_DOMAIN_METADATA } from '../houseInterpretation/houseInterpretationTypes';
 import { adaptInterpretationEvidenceListToReasoningFacts } from './dashaFactAdapter';
+import { DashaReasoningEvidence } from './dashaDirectionalEvidence';
 import { deriveDirectionalDashaEvidence } from './dashaDirectionalReasoner';
 import { synthesizeDashaDirection } from './dashaDirectionalSynthesisEngine';
 import { DashaDirectionalSynthesis } from './dashaDirectionalSynthesis';
@@ -676,10 +677,16 @@ function computePlanetarySynthesisForActivation(
     castAspects: activation.castAspects,
     receivedAspects: activation.receivedAspects,
     yogaParticipation: activation.yogaParticipation,
-    existingEvidence: activation.evidence,
     reasoningEvidence: facts
   });
-  const allReasoning = [...facts, ...derived];
+  const reasoningMap = new Map<string, DashaReasoningEvidence>();
+  for (const item of facts) {
+    reasoningMap.set(item.id, item);
+  }
+  for (const item of derived) {
+    reasoningMap.set(item.id, item);
+  }
+  const allReasoning = Array.from(reasoningMap.values());
   const planetarySynthesis = synthesizeDashaDirection(allReasoning);
   const allActivatedHouses = [activation.house, ...(activation.ownedHouses ?? [])];
   const domainSynthesis = synthesizeDashaDomains(allReasoning, allActivatedHouses);

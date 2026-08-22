@@ -3,13 +3,14 @@ import { deriveDirectionalDashaEvidence } from './dashaDirectionalReasoner';
 import { synthesizeDashaDomains } from './dashaDomainSynthesis';
 import { adaptInterpretationEvidenceListToReasoningFacts } from './dashaFactAdapter';
 import { synthesizeDashaDirection } from './dashaDirectionalSynthesisEngine';
-import { Planet, DignityStatus, PlanetStateCondition } from '../../types';
+import { Planet, Sign, DignityStatus, PlanetStateCondition, AspectType } from '../../types';
 import { FunctionalNature } from '../functionalNature/functionalNature';
 import { DashaInterpretationEvidence } from './dashaInterpretationTypes';
+import { DashaReasoningEvidence } from './dashaReasoningTypes';
 
 describe('Dasha Directional Reasoner & Domain Synthesis', () => {
   describe('deriveDirectionalDashaEvidence', () => {
-    it('derives NEUTRAL implication for house placement and ownership with preserved lineage', () => {
+    it('Ownership alone yields IMPLICATION with NEUTRAL effect and does NOT become SUPPORT', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
           ruleId: 'DASHA_LORD_PLACEMENT',
@@ -47,10 +48,9 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const derived = deriveDirectionalDashaEvidence({
         planet: Planet.JUPITER,
         house: 9,
-        sign: 'SAGITTARIUS' as any,
+        sign: Sign.SAGITTARIUS,
         ownedHouses: [9, 12],
-        reasoningEvidence: facts,
-        existingEvidence: rawEvidence
+        reasoningEvidence: facts
       });
 
       // Implications for placement and ownerships
@@ -72,9 +72,25 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       );
       expect(ownership12Imp).toBeDefined();
       expect(ownership12Imp?.effect).toBe('NEUTRAL');
+
+      // Ownership alone without combined dignity/strength must NOT become SUPPORT
+      const outcome = derived.find((e) => e.level === 'OUTCOME');
+      expect(outcome).toBeDefined();
+      expect(outcome?.effect).toBe('NEUTRAL');
+      expect(outcome?.confidence).toBe(0);
+
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
+      const synthesis = synthesizeDashaDirection(allReasoning);
+      expect(synthesis.effect).toBe('NEUTRAL');
+      expect(synthesis.confidence).toBe(0);
+      expect(synthesis.supportingEvidenceIds).toHaveLength(0);
     });
 
-    it('derives SUPPORT outcome when planet has Exalted dignity and Benefic functional nature', () => {
+    it('Ownership + strong dignity + benefic nature derives OUTCOME SUPPORT with non-zero confidence and correct sourceEvidenceIds', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
           ruleId: 'DASHA_LORD_DIGNITY',
@@ -102,7 +118,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const derived = deriveDirectionalDashaEvidence({
         planet: Planet.JUPITER,
         house: 4,
-        sign: 'CANCER' as any,
+        sign: Sign.CANCER,
         ownedHouses: [9, 12],
         dignity: DignityStatus.EXALTED,
         functionalNature: FunctionalNature.BENEFIC,
@@ -111,23 +127,38 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
           totalRupa: 7.5,
           meetsMinimum: true
         },
-        reasoningEvidence: facts,
-        existingEvidence: rawEvidence
+        reasoningEvidence: facts
       });
 
       const outcome = derived.find((e) => e.level === 'OUTCOME');
       expect(outcome).toBeDefined();
       expect(outcome?.effect).toBe('SUPPORT');
+      expect(outcome?.confidence).toBeGreaterThan(0);
       expect(outcome?.sourceEvidenceIds.length).toBeGreaterThan(0);
 
+      // Verify lineage references the dignity and functional nature facts
+      const dignityFact = facts.find((f) => f.basis === 'DIGNITY');
+      const natureFact = facts.find((f) => f.basis === 'FUNCTIONAL_NATURE');
+      if (dignityFact) {
+        expect(outcome?.sourceEvidenceIds).toContain(dignityFact.id);
+      }
+      if (natureFact) {
+        expect(outcome?.sourceEvidenceIds).toContain(natureFact.id);
+      }
+
       // Full synthesis should yield SUPPORT
-      const allReasoning = [...facts, ...derived];
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
       const synthesis = synthesizeDashaDirection(allReasoning);
       expect(synthesis.effect).toBe('SUPPORT');
+      expect(synthesis.confidence).toBeGreaterThan(0);
       expect(synthesis.supportingEvidenceIds).toContain(outcome?.id);
     });
 
-    it('derives CHALLENGE outcome when planet has Debilitated dignity and is Combust', () => {
+    it('Ownership + Debilitation/Affliction derives OUTCOME CHALLENGE', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
           ruleId: 'DASHA_LORD_DIGNITY',
@@ -155,7 +186,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const derived = deriveDirectionalDashaEvidence({
         planet: Planet.SATURN,
         house: 1,
-        sign: 'ARIES' as any,
+        sign: Sign.ARIES,
         ownedHouses: [10, 11],
         dignity: DignityStatus.DEBILITATED,
         functionalNature: FunctionalNature.MALEFIC,
@@ -169,21 +200,25 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
           totalRupa: 4.2,
           meetsMinimum: false
         },
-        reasoningEvidence: facts,
-        existingEvidence: rawEvidence
+        reasoningEvidence: facts
       });
 
       const outcome = derived.find((e) => e.level === 'OUTCOME');
       expect(outcome).toBeDefined();
       expect(outcome?.effect).toBe('CHALLENGE');
+      expect(outcome?.confidence).toBeGreaterThan(0);
 
-      const allReasoning = [...facts, ...derived];
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
       const synthesis = synthesizeDashaDirection(allReasoning);
       expect(synthesis.effect).toBe('CHALLENGE');
       expect(synthesis.challengingEvidenceIds).toContain(outcome?.id);
     });
 
-    it('remains strictly deterministic without relying on freeform text parsing', () => {
+    it('No text inference: a NEUTRAL fact whose statement contains strong/powerful stays NEUTRAL', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
           ruleId: 'DASHA_LORD_PLACEMENT',
@@ -191,7 +226,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
           level: 'MAHADASHA',
           planets: [Planet.MARS],
           houses: [10],
-          statement: 'Dasha lord Mars achieves supreme fabulous spectacular victory.',
+          statement: 'Dasha lord Mars achieves supreme strong powerful glorious fabulous victory.',
           effect: 'NEUTRAL',
           source: 'Planet Analysis'
         }
@@ -201,10 +236,9 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const derived = deriveDirectionalDashaEvidence({
         planet: Planet.MARS,
         house: 10,
-        sign: 'CAPRICORN' as any,
+        sign: Sign.CAPRICORN,
         ownedHouses: [1, 8],
-        reasoningEvidence: facts,
-        existingEvidence: rawEvidence
+        reasoningEvidence: facts
       });
 
       const outcome = derived.find((e) => e.level === 'OUTCOME');
@@ -212,14 +246,112 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       expect(outcome?.effect).toBe('NEUTRAL');
       expect(outcome?.confidence).toBe(0);
 
-      const allReasoning = [...facts, ...derived];
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
       const synthesis = synthesizeDashaDirection(allReasoning);
       expect(synthesis.effect).toBe('NEUTRAL');
       expect(synthesis.confidence).toBe(0);
     });
+
+    it('Deduplicates reasoning evidence by ID so each item appears exactly once', () => {
+      const rawEvidence: DashaInterpretationEvidence[] = [
+        {
+          ruleId: 'DASHA_LORD_PLACEMENT',
+          type: 'HOUSE_PLACEMENT',
+          level: 'MAHADASHA',
+          planets: [Planet.SUN],
+          houses: [10],
+          statement: 'Dasha lord Sun occupies House 10.',
+          effect: 'NEUTRAL',
+          source: 'Planet Analysis'
+        }
+      ];
+
+      const facts = adaptInterpretationEvidenceListToReasoningFacts(rawEvidence);
+      const derived = deriveDirectionalDashaEvidence({
+        planet: Planet.SUN,
+        house: 10,
+        sign: Sign.ARIES,
+        ownedHouses: [5],
+        reasoningEvidence: facts
+      });
+
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
+      const uniqueIds = new Set(allReasoning.map((e) => e.id));
+      expect(allReasoning.length).toBe(uniqueIds.size);
+    });
+
+    it('derives cast and received aspect implications with NEUTRAL effect', () => {
+      const rawEvidence: DashaInterpretationEvidence[] = [
+        {
+          ruleId: 'DASHA_LORD_CAST_ASPECT_FULL_H7',
+          type: 'ASPECT',
+          level: 'MAHADASHA',
+          planets: [Planet.MARS],
+          houses: [7],
+          statement: 'Dasha lord Mars casts FULL aspect on House 7.',
+          effect: 'NEUTRAL',
+          source: 'Planet Analysis'
+        }
+      ];
+
+      const facts = adaptInterpretationEvidenceListToReasoningFacts(rawEvidence);
+      const derived = deriveDirectionalDashaEvidence({
+        planet: Planet.MARS,
+        house: 1,
+        sign: Sign.ARIES,
+        ownedHouses: [1, 8],
+        castAspects: [
+          {
+            sourcePlanet: Planet.MARS,
+            sourceHouse: 1,
+            targetPlanet: undefined,
+            targetHouse: 7,
+            aspectType: AspectType.FULL,
+            orb: 0,
+            strength: 1.0,
+            special: false
+          }
+        ],
+        receivedAspects: [
+          {
+            sourcePlanet: Planet.JUPITER,
+            sourceHouse: 9,
+            targetPlanet: Planet.MARS,
+            targetHouse: 1,
+            aspectType: AspectType.FULL,
+            orb: 0,
+            strength: 1.0,
+            special: false
+          }
+        ],
+        reasoningEvidence: facts
+      });
+
+      const castImp = derived.find(
+        (e) => e.level === 'IMPLICATION' && e.id.includes('CAST_ASPECT')
+      );
+      expect(castImp).toBeDefined();
+      expect(castImp?.effect).toBe('NEUTRAL');
+      expect(castImp?.activatedHouses).toContain(7);
+
+      const receivedImp = derived.find(
+        (e) => e.level === 'IMPLICATION' && e.id.includes('RECEIVED_ASPECT')
+      );
+      expect(receivedImp).toBeDefined();
+      expect(receivedImp?.effect).toBe('NEUTRAL');
+      expect(receivedImp?.activatedHouses).toContain(9);
+    });
   });
 
-  describe('synthesizeDashaDomains', () => {
+  describe('synthesizeDashaDomains & Contract Separation', () => {
     it('synthesizes CAREER domain when house 10 or 2 or 6 or 11 is activated', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
@@ -248,15 +380,18 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const derived = deriveDirectionalDashaEvidence({
         planet: Planet.SUN,
         house: 10,
-        sign: 'ARIES' as any,
+        sign: Sign.ARIES,
         ownedHouses: [5],
         dignity: DignityStatus.EXALTED,
         functionalNature: FunctionalNature.BENEFIC,
-        reasoningEvidence: facts,
-        existingEvidence: rawEvidence
+        reasoningEvidence: facts
       });
 
-      const allReasoning = [...facts, ...derived];
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
       const activatedHouses = [10, 5];
       const domains = synthesizeDashaDomains(allReasoning, activatedHouses);
 
@@ -267,7 +402,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       expect(careerDomain?.supportingEvidenceIds.length).toBeGreaterThan(0);
     });
 
-    it('synthesizes WEALTH and MARRIAGE domains accurately with isolated house activations', () => {
+    it('synthesizes WEALTH and MARRIAGE domains accurately and maintains separate contracts from planetarySynthesis', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
           ruleId: 'DASHA_LORD_PLACEMENT',
@@ -278,6 +413,16 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
           statement: 'Dasha lord Venus occupies House 7.',
           effect: 'NEUTRAL',
           source: 'Planet Analysis'
+        },
+        {
+          ruleId: 'DASHA_LORD_DIGNITY',
+          type: 'DIGNITY',
+          level: 'MAHADASHA',
+          planets: [Planet.VENUS],
+          houses: [7],
+          statement: 'Dasha lord Venus is in OWN_SIGN in Libra.',
+          effect: 'SUPPORT',
+          source: 'Planet Analysis'
         }
       ];
 
@@ -285,18 +430,27 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const derived = deriveDirectionalDashaEvidence({
         planet: Planet.VENUS,
         house: 7,
-        sign: 'LIBRA' as any,
+        sign: Sign.LIBRA,
         ownedHouses: [2, 7],
         dignity: DignityStatus.OWN_SIGN,
         functionalNature: FunctionalNature.BENEFIC,
-        reasoningEvidence: facts,
-        existingEvidence: rawEvidence
+        reasoningEvidence: facts
       });
 
-      const allReasoning = [...facts, ...derived];
+      const reasoningMap = new Map<string, DashaReasoningEvidence>();
+      for (const item of facts) reasoningMap.set(item.id, item);
+      for (const item of derived) reasoningMap.set(item.id, item);
+      const allReasoning = Array.from(reasoningMap.values());
+
+      const planetarySynthesis = synthesizeDashaDirection(allReasoning);
       const activatedHouses = [7, 2];
       const domains = synthesizeDashaDomains(allReasoning, activatedHouses);
 
+      // Planetary synthesis is strictly planetary-level
+      expect(planetarySynthesis.effect).toBe('SUPPORT');
+      expect(planetarySynthesis.confidence).toBeGreaterThan(0);
+
+      // Domain synthesis is exposed under separate domain contracts
       const marriageDomain = domains.find((d) => d.domain === 'MARRIAGE');
       expect(marriageDomain).toBeDefined();
       expect(marriageDomain?.effect).toBe('SUPPORT');
@@ -306,6 +460,10 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       expect(wealthDomain).toBeDefined();
       expect(wealthDomain?.effect).toBe('SUPPORT');
       expect(wealthDomain?.activatedHouses).toContain(2);
+
+      // Domains are independent objects with their own activated houses
+      expect(marriageDomain?.domain).toBe('MARRIAGE');
+      expect(wealthDomain?.domain).toBe('WEALTH');
     });
   });
 });

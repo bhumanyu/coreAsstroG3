@@ -120,6 +120,9 @@ export interface DashaPeriodStrengthFacts {
   readonly shadbalaStatus?: string;
 }
 
+/**
+ * Planetary-level directional synthesis only. `effect` here means the planet's overall directional tendency, NOT a domain outcome (Career/Wealth/etc.). Domain direction is a separate contract.
+ */
 export interface DashaPeriodSynthesisFacts {
   readonly effect: string;
   readonly confidence: number;
