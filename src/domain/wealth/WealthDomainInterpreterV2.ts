@@ -1,4 +1,4 @@
-import type { Horoscope } from '../../types';
+import type { Horoscope, Planet } from '../../types';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
   WealthEvidenceFamily,
@@ -33,6 +33,7 @@ import type {
   WealthDimensionInterpretation,
   WealthDataCompleteness,
   WealthTimingActivation,
+  WealthPeriodTimingActivation,
   WealthConclusionData,
   WealthEvidenceClassification,
   WealthManifestationMode
@@ -222,13 +223,51 @@ export function interpretWealthV2(
     conflicts
   );
 
+  const currentDasha =
+    horoscope.dashaInterpretation?.current ||
+    (horoscope.dashaInterpretation as any)?.activePeriods ||
+    (horoscope as any).fullNatalAnalysis?.currentDasha?.current;
+
+  const mdPlanet = currentDasha?.mahadasha?.planet;
+  const adPlanet = currentDasha?.antardasha?.planet;
+  const pdPlanet = currentDasha?.pratyantardasha?.planet;
+
+  const mdPeriodTiming = evaluateWealthPeriodTimingActivation(
+    'MD',
+    dashaEvidence,
+    evidence,
+    natalPromiseEvidenceIds,
+    mdPlanet
+  );
+  const adPeriodTiming = evaluateWealthPeriodTimingActivation(
+    'AD',
+    dashaEvidence,
+    evidence,
+    natalPromiseEvidenceIds,
+    adPlanet
+  );
+  const pdPeriodTiming = evaluateWealthPeriodTimingActivation(
+    'PD',
+    dashaEvidence,
+    evidence,
+    natalPromiseEvidenceIds,
+    pdPlanet
+  );
+
+  const periodTimingActivations: readonly WealthPeriodTimingActivation[] = Object.freeze([
+    mdPeriodTiming,
+    adPeriodTiming,
+    pdPeriodTiming
+  ]);
+
   const conclusionData = buildWealthConclusionData({
     overallStatus,
     dimensions,
     d2Relationship,
     manifestations,
     conflicts,
-    evidence
+    evidence,
+    periodTimingActivations
   });
 
   const conclusion = createDomainConclusion({
@@ -287,6 +326,7 @@ export function interpretWealthV2(
     conflicts,
     conclusion,
     timingActivations,
+    periodTimingActivations,
     dataCompleteness,
     conclusionData
   });
@@ -697,6 +737,64 @@ export function evaluateWealthTimingActivation(
     activatedPromiseEvidenceIds: Object.freeze(activatedPromiseEvidenceIds),
     evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
     statement: `${period} period lord ${effect === 'ACTIVATES' ? 'actively supports' : effect === 'CHALLENGES' ? 'introduces challenges to' : 'partially activates'} natal wealth potential.`
+  });
+}
+
+export function evaluateWealthPeriodTimingActivation(
+  period: 'MD' | 'AD' | 'PD',
+  dashaEvidence: readonly DomainEvidence[],
+  allEvidence: readonly DomainEvidence[],
+  natalPromiseEvidenceIds: readonly string[],
+  planet?: Planet
+): WealthPeriodTimingActivation {
+  const periodEvidence = dashaEvidence.filter((e) => e.timing?.period === period);
+  const resolvedPlanet =
+    planet ||
+    (periodEvidence.find((e) => (e as any).timingPlanet)?.timingPlanet as Planet) ||
+    (periodEvidence.find((e) => e.timing?.periodKey)?.timing?.periodKey as Planet) ||
+    undefined;
+
+  if (periodEvidence.length === 0) {
+    return Object.freeze({
+      period,
+      ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
+      dimensions: Object.freeze({
+        accumulation: 'INSUFFICIENT_DATA' as TimingActivationEffect,
+        gains: 'INSUFFICIENT_DATA' as TimingActivationEffect,
+        fortune: 'INSUFFICIENT_DATA' as TimingActivationEffect,
+        speculation: 'INSUFFICIENT_DATA' as TimingActivationEffect
+      }),
+      evidenceIds: Object.freeze([]),
+      effect: 'INSUFFICIENT_DATA',
+      activatedPromiseEvidenceIds: Object.freeze([]),
+      statement: `${period} timing data is insufficient or unavailable.`
+    });
+  }
+
+  const accumulation = evaluateAccumulationDasha(periodEvidence, allEvidence);
+  const gains = evaluateGainsDasha(periodEvidence, allEvidence);
+  const fortune = evaluateFortuneDasha(periodEvidence, allEvidence);
+  const speculation = evaluateSpeculationDasha(periodEvidence, allEvidence);
+
+  const baseActivation = evaluateWealthTimingActivation(
+    period,
+    dashaEvidence,
+    natalPromiseEvidenceIds
+  );
+
+  return Object.freeze({
+    period,
+    ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
+    dimensions: Object.freeze({
+      accumulation,
+      gains,
+      fortune,
+      speculation
+    }),
+    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
+    effect: baseActivation.effect,
+    activatedPromiseEvidenceIds: baseActivation.activatedPromiseEvidenceIds,
+    statement: baseActivation.statement
   });
 }
 

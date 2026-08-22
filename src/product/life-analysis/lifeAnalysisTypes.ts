@@ -1,4 +1,5 @@
 import type { ConfidenceLevel } from '../../domain/interpretation/DomainInterpretationTypes';
+import type { Planet } from '../../types';
 import type {
   DomainId,
   DomainStrength,
@@ -31,6 +32,46 @@ export type LifeAnalysisActiveDashaViewModel = DashaInterpretationProduct;
 
 export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR';
 
+export type TimingAvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE';
+
+export interface CareerPeriodTimingProduct {
+  readonly period: 'MD' | 'AD' | 'PD';
+  readonly planet?: Planet;
+  readonly effect: TimingActivationEffect | string;
+  readonly evidenceIds: readonly string[];
+  readonly statement?: string;
+}
+
+export interface CareerTimingProduct {
+  readonly status: TimingAvailabilityStatus;
+  readonly asOf?: string;
+  readonly mahadasha?: CareerPeriodTimingProduct;
+  readonly antardasha?: CareerPeriodTimingProduct;
+  readonly pratyantardasha?: CareerPeriodTimingProduct;
+}
+
+export interface WealthPeriodTimingProduct {
+  readonly period: 'MD' | 'AD' | 'PD';
+  readonly planet?: Planet;
+  readonly effect?: TimingActivationEffect | string;
+  readonly dimensions: {
+    readonly accumulation: TimingActivationEffect | string;
+    readonly gains: TimingActivationEffect | string;
+    readonly fortune: TimingActivationEffect | string;
+    readonly speculation: TimingActivationEffect | string;
+  };
+  readonly evidenceIds: readonly string[];
+  readonly statement?: string;
+}
+
+export interface WealthTimingProduct {
+  readonly status: TimingAvailabilityStatus;
+  readonly asOf?: string;
+  readonly mahadasha?: WealthPeriodTimingProduct;
+  readonly antardasha?: WealthPeriodTimingProduct;
+  readonly pratyantardasha?: WealthPeriodTimingProduct;
+}
+
 export interface LifeAnalysisOverallViewModel {
   readonly status: LifeAnalysisStatus;
   readonly statement: string;
@@ -59,6 +100,7 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly dominantManifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;
+  readonly timing?: CareerTimingProduct;
 }
 
 export interface LifeAnalysisWealthDetailViewModel {
@@ -74,6 +116,7 @@ export interface LifeAnalysisWealthDetailViewModel {
   readonly dominantManifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;
+  readonly timing?: WealthTimingProduct;
 }
 
 export interface LifeAnalysisTimingDomainEffect {

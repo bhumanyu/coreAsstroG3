@@ -182,6 +182,22 @@ export interface DivisionalFacts {
   readonly d2?: DivisionalFact;
 }
 
+export interface CareerPeriodTimingFact {
+  readonly period: 'MD' | 'AD' | 'PD';
+  readonly planet?: Planet;
+  readonly effect: string;
+  readonly evidenceIds: readonly string[];
+  readonly statement?: string;
+}
+
+export interface CareerTimingFact {
+  readonly status: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly asOf?: string;
+  readonly mahadasha?: CareerPeriodTimingFact;
+  readonly antardasha?: CareerPeriodTimingFact;
+  readonly pratyantardasha?: CareerPeriodTimingFact;
+}
+
 export interface CareerFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
@@ -196,6 +212,29 @@ export interface CareerFact {
   readonly supportingFactors: readonly string[];
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
+  readonly timing?: CareerTimingFact;
+}
+
+export interface WealthPeriodTimingFact {
+  readonly period: 'MD' | 'AD' | 'PD';
+  readonly planet?: Planet;
+  readonly effect?: string;
+  readonly dimensions: {
+    readonly accumulation: string;
+    readonly gains: string;
+    readonly fortune: string;
+    readonly speculation: string;
+  };
+  readonly evidenceIds: readonly string[];
+  readonly statement?: string;
+}
+
+export interface WealthTimingFact {
+  readonly status: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly asOf?: string;
+  readonly mahadasha?: WealthPeriodTimingFact;
+  readonly antardasha?: WealthPeriodTimingFact;
+  readonly pratyantardasha?: WealthPeriodTimingFact;
 }
 
 export interface WealthSubthemeFact {
@@ -227,6 +266,7 @@ export interface WealthFact {
   readonly supportingFactors: readonly string[];
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
+  readonly timing?: WealthTimingFact;
 }
 
 export interface LifeThemeFact {

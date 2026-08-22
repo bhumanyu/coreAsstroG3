@@ -6,6 +6,7 @@ import type {
   VargaRelationship
 } from '../interpretation/DomainInterpretationTypes';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
+import type { Planet } from '../../types';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -34,6 +35,7 @@ export interface CareerManifestation {
 
 export interface CareerTimingActivation {
   readonly period: 'MD' | 'AD' | 'PD';
+  readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
   readonly activatedPromiseEvidenceIds: readonly string[];
   readonly evidenceIds: readonly string[];

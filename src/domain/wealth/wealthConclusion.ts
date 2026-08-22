@@ -133,13 +133,15 @@ export function buildWealthConclusionData(params: {
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly evidence: readonly DomainEvidence[];
+  readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
 }): WealthConclusionData {
   const {
     overallStatus,
     dimensions,
     d2Relationship,
     manifestations,
-    evidence
+    evidence,
+    periodTimingActivations
   } = params;
 
   const getDim = (dimName: WealthDimension): WealthDimensionInterpretation | undefined =>
@@ -219,7 +221,10 @@ export function buildWealthConclusionData(params: {
     dominantManifestations: Object.freeze(dominantManifestations),
     headline,
     supportingEvidenceIds: Object.freeze(supporting.map((e) => e.id)),
-    challengingEvidenceIds: Object.freeze(challenging.map((e) => e.id))
+    challengingEvidenceIds: Object.freeze(challenging.map((e) => e.id)),
+    ...(periodTimingActivations
+      ? { periodTimingActivations: Object.freeze([...periodTimingActivations]) }
+      : {})
   });
 }
 

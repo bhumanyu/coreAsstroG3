@@ -3,8 +3,8 @@ import type {
   LifeAnalysis,
   SharedTimingActivation
 } from '../../domain/synthesis';
-import type { CareerConclusionData } from '../../domain/career/careerTypes';
-import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
+import type { CareerConclusionData, CareerTimingActivation } from '../../domain/career/careerTypes';
+import type { WealthConclusionData, WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { ActiveDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   LifeAnalysisViewModel,
@@ -15,7 +15,11 @@ import type {
   LifeAnalysisEvidenceViewModel,
   LifeAnalysisCompletenessViewModel,
   LifeAnalysisCareerDetailViewModel,
-  LifeAnalysisWealthDetailViewModel
+  LifeAnalysisWealthDetailViewModel,
+  CareerTimingProduct,
+  WealthTimingProduct,
+  WealthPeriodTimingProduct,
+  TimingAvailabilityStatus
 } from './lifeAnalysisTypes';
 import { buildDashaInterpretationProduct } from './dasha/buildDashaInterpretationProduct';
 import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';
@@ -62,6 +66,109 @@ function formatSharedTimingTitle(st: SharedTimingActivation): string {
     return st.periodKey ? `${level} (${st.periodKey})` : `${level} Activation`;
   }
   return st.periodKey ? `Transit (${st.periodKey})` : 'Active Transits';
+}
+
+function buildCareerTimingProduct(
+  career: DomainInterpretation,
+  asOf?: string
+): CareerTimingProduct | undefined {
+  const activations = career.timingActivations as readonly CareerTimingActivation[] | undefined;
+  if (!activations || activations.length === 0) {
+    return { status: 'UNAVAILABLE', asOf };
+  }
+  const md = activations.find((a) => a.period === 'MD');
+  const ad = activations.find((a) => a.period === 'AD');
+  const pd = activations.find((a) => a.period === 'PD');
+
+  const hasAnyData = [md, ad, pd].some(
+    (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
+  );
+  const status: TimingAvailabilityStatus = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
+
+  return {
+    status,
+    asOf,
+    ...(md
+      ? {
+          mahadasha: {
+            period: 'MD',
+            planet: md.planet,
+            effect: md.effect,
+            evidenceIds: md.evidenceIds,
+            statement: md.statement
+          }
+        }
+      : {}),
+    ...(ad
+      ? {
+          antardasha: {
+            period: 'AD',
+            planet: ad.planet,
+            effect: ad.effect,
+            evidenceIds: ad.evidenceIds,
+            statement: ad.statement
+          }
+        }
+      : {}),
+    ...(pd
+      ? {
+          pratyantardasha: {
+            period: 'PD',
+            planet: pd.planet,
+            effect: pd.effect,
+            evidenceIds: pd.evidenceIds,
+            statement: pd.statement
+          }
+        }
+      : {})
+  };
+}
+
+function buildWealthTimingProduct(
+  wealth: DomainInterpretation,
+  asOf?: string
+): WealthTimingProduct | undefined {
+  const conclusionData = getWealthConclusionData(wealth);
+  const periodActivations =
+    conclusionData?.periodTimingActivations ||
+    (wealth.periodTimingActivations as readonly WealthPeriodTimingActivation[] | undefined);
+
+  if (!periodActivations || periodActivations.length === 0) {
+    return { status: 'UNAVAILABLE', asOf };
+  }
+
+  const md = periodActivations.find((a) => a.period === 'MD');
+  const ad = periodActivations.find((a) => a.period === 'AD');
+  const pd = periodActivations.find((a) => a.period === 'PD');
+
+  const hasAnyData = [md, ad, pd].some(
+    (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
+  );
+  const status: TimingAvailabilityStatus = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
+
+  const mapPeriod = (p?: WealthPeriodTimingActivation): WealthPeriodTimingProduct | undefined => {
+    if (!p) return undefined;
+    return {
+      period: p.period,
+      planet: p.planet,
+      effect: p.effect,
+      dimensions: p.dimensions,
+      evidenceIds: p.evidenceIds,
+      statement: p.statement
+    };
+  };
+
+  const mahadasha = mapPeriod(md);
+  const antardasha = mapPeriod(ad);
+  const pratyantardasha = mapPeriod(pd);
+
+  return {
+    status,
+    asOf,
+    ...(mahadasha ? { mahadasha } : {}),
+    ...(antardasha ? { antardasha } : {}),
+    ...(pratyantardasha ? { pratyantardasha } : {})
+  };
 }
 
 export function buildLifeAnalysisViewModel(
@@ -134,6 +241,7 @@ export function buildLifeAnalysisViewModel(
   // Extract typed Career conclusion data
   const careerConclusionData = getCareerConclusionData(career);
   const careerD10Varga = career.vargaConfirmations.find((v) => v.varga === 'D10');
+  const careerTiming = buildCareerTimingProduct(career, activeDasha?.asOf ?? analysis.generatedAt);
   const careerDetail: LifeAnalysisCareerDetailViewModel = {
     natalPromise: career.natalPromise.strength,
     d10Relationship:
@@ -146,12 +254,14 @@ export function buildLifeAnalysisViewModel(
     currentPressure: careerConclusionData?.currentPressure,
     dominantManifestations: careerConclusionData?.dominantManifestations,
     headline: careerConclusionData?.headline,
-    statement: career.conclusion.statement
+    statement: career.conclusion.statement,
+    timing: careerTiming
   };
 
   // Extract typed Wealth conclusion data
   const wealthConclusionData = getWealthConclusionData(wealth);
   const wealthD2Varga = wealth.vargaConfirmations.find((v) => v.varga === 'D2');
+  const wealthTiming = buildWealthTimingProduct(wealth, activeDasha?.asOf ?? analysis.generatedAt);
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
     d2Relationship:
@@ -167,7 +277,8 @@ export function buildLifeAnalysisViewModel(
     speculationStatus: wealthConclusionData?.speculationStatus ?? 'UNAVAILABLE',
     dominantManifestations: wealthConclusionData?.dominantManifestations,
     headline: wealthConclusionData?.headline,
-    statement: wealth.conclusion.statement
+    statement: wealth.conclusion.statement,
+    timing: wealthTiming
   };
 
   const viewModel: LifeAnalysisViewModel = {

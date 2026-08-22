@@ -17,6 +17,8 @@ import {
   AiEvidenceStrength,
   AscendantFact,
   CareerFact,
+  CareerTimingFact,
+  CareerPeriodTimingFact,
   DashaFacts,
   DashaInterpretationFacts,
   DashaPairFacts,
@@ -28,9 +30,13 @@ import {
   LifeThemeFact,
   PlanetFactSummary,
   WealthFact,
+  WealthTimingFact,
+  WealthPeriodTimingFact,
   WealthSubthemeFact,
   YogaFactSummary
 } from '../types/aiContextTypes';
+import type { CareerTimingActivation } from '../../domain/career/careerTypes';
+import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
 import type {
@@ -472,28 +478,160 @@ function mapThemeEffectToStatus(
   }
 }
 
-function buildCareerFact(horoscope: Horoscope): CareerFact | undefined {
-  const career = horoscope.themeInterpretationV2?.career;
-  if (!career) {
-    return undefined;
+function buildCareerTimingFact(
+  careerInterpretation?: DomainInterpretation,
+  asOf?: string
+): CareerTimingFact | undefined {
+  if (!careerInterpretation) return undefined;
+  const activations = careerInterpretation.timingActivations as readonly CareerTimingActivation[] | undefined;
+  if (!activations || activations.length === 0) {
+    return { status: 'UNAVAILABLE', asOf };
   }
+  const md = activations.find((a) => a.period === 'MD');
+  const ad = activations.find((a) => a.period === 'AD');
+  const pd = activations.find((a) => a.period === 'PD');
+
+  const hasAnyData = [md, ad, pd].some(
+    (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
+  );
+  const status = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
 
   return {
-    status: career.conclusion.status,
-    confidence: career.conclusion.confidence as AiConfidence,
-    natalPromise: career.careerNatalPromise.status,
-    d10Relationship: career.metadata.vargaConfirmationStatus,
-    supportingFactors: [...career.conclusion.keySupportingFactors],
-    challengingFactors: [...career.conclusion.keyChallengingFactors],
-    conditionalFactors: [...career.conclusion.keyConditionalFactors]
+    status,
+    asOf,
+    ...(md
+      ? {
+          mahadasha: {
+            period: 'MD',
+            planet: md.planet,
+            effect: md.effect,
+            evidenceIds: md.evidenceIds,
+            statement: md.statement
+          }
+        }
+      : {}),
+    ...(ad
+      ? {
+          antardasha: {
+            period: 'AD',
+            planet: ad.planet,
+            effect: ad.effect,
+            evidenceIds: ad.evidenceIds,
+            statement: ad.statement
+          }
+        }
+      : {}),
+    ...(pd
+      ? {
+          pratyantardasha: {
+            period: 'PD',
+            planet: pd.planet,
+            effect: pd.effect,
+            evidenceIds: pd.evidenceIds,
+            statement: pd.statement
+          }
+        }
+      : {})
   };
 }
 
-function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
-  const wealth = horoscope.themeInterpretationV2?.wealth;
-  if (!wealth) {
-    return undefined;
+function buildWealthTimingFact(
+  wealthInterpretation?: DomainInterpretation,
+  asOf?: string
+): WealthTimingFact | undefined {
+  if (!wealthInterpretation) return undefined;
+  const periodActivations =
+    (wealthInterpretation.conclusionData as any)?.periodTimingActivations ||
+    (wealthInterpretation.periodTimingActivations as readonly WealthPeriodTimingActivation[] | undefined);
+
+  if (!periodActivations || periodActivations.length === 0) {
+    return { status: 'UNAVAILABLE', asOf };
   }
+
+  const md = periodActivations.find((a: any) => a.period === 'MD');
+  const ad = periodActivations.find((a: any) => a.period === 'AD');
+  const pd = periodActivations.find((a: any) => a.period === 'PD');
+
+  const hasAnyData = [md, ad, pd].some(
+    (p: any) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
+  );
+  const status = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
+
+  const mapPeriod = (p?: any): WealthPeriodTimingFact | undefined => {
+    if (!p) return undefined;
+    return {
+      period: p.period,
+      planet: p.planet,
+      effect: p.effect,
+      dimensions: {
+        accumulation: p.dimensions?.accumulation ?? 'INSUFFICIENT_DATA',
+        gains: p.dimensions?.gains ?? 'INSUFFICIENT_DATA',
+        fortune: p.dimensions?.fortune ?? 'INSUFFICIENT_DATA',
+        speculation: p.dimensions?.speculation ?? 'INSUFFICIENT_DATA'
+      },
+      evidenceIds: p.evidenceIds ?? [],
+      statement: p.statement
+    };
+  };
+
+  const mahadasha = mapPeriod(md);
+  const antardasha = mapPeriod(ad);
+  const pratyantardasha = mapPeriod(pd);
+
+  return {
+    status,
+    asOf,
+    ...(mahadasha ? { mahadasha } : {}),
+    ...(antardasha ? { antardasha } : {}),
+    ...(pratyantardasha ? { pratyantardasha } : {})
+  };
+}
+
+function buildCareerFact(
+  horoscope: Horoscope,
+  careerInterpretation?: DomainInterpretation,
+  asOf?: string
+): CareerFact | undefined {
+  const career = horoscope.themeInterpretationV2?.career;
+  const timing = buildCareerTimingFact(careerInterpretation, asOf);
+
+  if (career) {
+    return {
+      status: career.conclusion.status,
+      confidence: career.conclusion.confidence as AiConfidence,
+      natalPromise: career.careerNatalPromise.status,
+      d10Relationship: career.metadata.vargaConfirmationStatus,
+      supportingFactors: [...career.conclusion.keySupportingFactors],
+      challengingFactors: [...career.conclusion.keyChallengingFactors],
+      conditionalFactors: [...career.conclusion.keyConditionalFactors],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  if (careerInterpretation) {
+    const d10 = careerInterpretation.vargaConfirmations.find((v) => v.varga === 'D10');
+    return {
+      status: careerInterpretation.conclusion.strength as any,
+      confidence: careerInterpretation.conclusion.confidence as AiConfidence,
+      natalPromise: careerInterpretation.natalPromise.strength as any,
+      d10Relationship: (d10?.relationship ?? 'UNAVAILABLE') as any,
+      supportingFactors: [],
+      challengingFactors: [],
+      conditionalFactors: [],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  return undefined;
+}
+
+function buildWealthFact(
+  horoscope: Horoscope,
+  wealthInterpretation?: DomainInterpretation,
+  asOf?: string
+): WealthFact | undefined {
+  const wealth = horoscope.themeInterpretationV2?.wealth;
+  const timing = buildWealthTimingFact(wealthInterpretation, asOf);
 
   const subthemeKeys: readonly WealthSubthemeKey[] = [
     'ACCUMULATION',
@@ -503,7 +641,7 @@ function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
   ];
   const subthemes: WealthSubthemeFact[] = [];
 
-  if (wealth.subthemes) {
+  if (wealth?.subthemes) {
     for (const key of subthemeKeys) {
       const summary = wealth.subthemes[key];
       if (summary) {
@@ -520,14 +658,31 @@ function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
     }
   }
 
-  return {
-    status: wealth.conclusion.status,
-    confidence: wealth.conclusion.confidence as AiConfidence,
-    subthemes,
-    supportingFactors: [...wealth.conclusion.keySupportingFactors],
-    challengingFactors: [...wealth.conclusion.keyChallengingFactors],
-    conditionalFactors: [...wealth.conclusion.keyConditionalFactors]
-  };
+  if (wealth) {
+    return {
+      status: wealth.conclusion.status,
+      confidence: wealth.conclusion.confidence as AiConfidence,
+      subthemes,
+      supportingFactors: [...wealth.conclusion.keySupportingFactors],
+      challengingFactors: [...wealth.conclusion.keyChallengingFactors],
+      conditionalFactors: [...wealth.conclusion.keyConditionalFactors],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  if (wealthInterpretation) {
+    return {
+      status: wealthInterpretation.conclusion.strength as any,
+      confidence: wealthInterpretation.conclusion.confidence as AiConfidence,
+      subthemes: [],
+      supportingFactors: [],
+      challengingFactors: [],
+      conditionalFactors: [],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  return undefined;
 }
 
 function normalizeEvidenceEffect(effect: unknown): AiEvidenceEffect {
@@ -926,8 +1081,6 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const yogas = buildYogaFacts(horoscope);
   const dasha = buildDashaFacts(horoscope);
   const divisional = buildDivisionalFacts(horoscope);
-  const career = buildCareerFact(horoscope);
-  const wealth = buildWealthFact(horoscope);
   const lifeThemes = buildLifeThemeFacts(horoscope);
 
   // Use pre-computed domain interpretations if provided, otherwise resolve once from registry
@@ -941,6 +1094,13 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
             registry.get('WEALTH').interpret(horoscope)
           ];
         })();
+
+  const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
+  const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
+  const asOf = horoscope.dashaInterpretation?.current?.asOf;
+
+  const career = buildCareerFact(horoscope, careerInterpretation, asOf);
+  const wealth = buildWealthFact(horoscope, wealthInterpretation, asOf);
 
   const domainInterpretations: readonly DomainInterpretationAiProjection[] =
     rawDomainInterpretations.map(projectDomainInterpretationForAi);
@@ -1033,6 +1193,36 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
           throw new Error(
             `Invariant violation: dasha pair evidence id '${evId}' not found in context.evidence`
           );
+        }
+      }
+    }
+  }
+
+  if (career?.timing) {
+    const timing = career.timing;
+    for (const p of [timing.mahadasha, timing.antardasha, timing.pratyantardasha]) {
+      if (p) {
+        for (const evId of p.evidenceIds) {
+          if (!evidenceMap.has(evId)) {
+            throw new Error(
+              `Invariant violation: career timing evidence id '${evId}' not found in context.evidence`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  if (wealth?.timing) {
+    const timing = wealth.timing;
+    for (const p of [timing.mahadasha, timing.antardasha, timing.pratyantardasha]) {
+      if (p) {
+        for (const evId of p.evidenceIds) {
+          if (!evidenceMap.has(evId)) {
+            throw new Error(
+              `Invariant violation: wealth timing evidence id '${evId}' not found in context.evidence`
+            );
+          }
         }
       }
     }

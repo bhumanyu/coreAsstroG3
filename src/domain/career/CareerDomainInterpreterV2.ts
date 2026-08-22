@@ -148,9 +148,17 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const mdActivation = evaluateCareerTimingActivation('MD', dashaEvidence, natalPromiseEvidenceIds);
-  const adActivation = evaluateCareerTimingActivation('AD', dashaEvidence, natalPromiseEvidenceIds);
-  const pdActivation = evaluateCareerTimingActivation('PD', dashaEvidence, natalPromiseEvidenceIds);
+  const currentDasha =
+    horoscope.dashaInterpretation?.current ||
+    (horoscope.dashaInterpretation as any)?.activePeriods ||
+    (horoscope as any).fullNatalAnalysis?.currentDasha?.current;
+  const mdPlanet = currentDasha?.mahadasha?.planet;
+  const adPlanet = currentDasha?.antardasha?.planet;
+  const pdPlanet = currentDasha?.pratyantardasha?.planet;
+
+  const mdActivation = evaluateCareerTimingActivation('MD', dashaEvidence, natalPromiseEvidenceIds, mdPlanet);
+  const adActivation = evaluateCareerTimingActivation('AD', dashaEvidence, natalPromiseEvidenceIds, adPlanet);
+  const pdActivation = evaluateCareerTimingActivation('PD', dashaEvidence, natalPromiseEvidenceIds, pdPlanet);
   const timingActivations: readonly CareerTimingActivation[] = Object.freeze([
     mdActivation,
     adActivation,
@@ -292,13 +300,20 @@ export function buildCareerTimingStatement(
 export function evaluateCareerTimingActivation(
   period: 'MD' | 'AD' | 'PD',
   timingEvidence: readonly DomainEvidence[],
-  natalPromiseEvidenceIds: readonly string[]
+  natalPromiseEvidenceIds: readonly string[],
+  planet?: Planet
 ): CareerTimingActivation {
   const periodEvidence = timingEvidence.filter((e) => e.timing?.period === period);
+  const resolvedPlanet =
+    planet ||
+    (periodEvidence.find((e) => (e as any).timingPlanet)?.timingPlanet as Planet) ||
+    (periodEvidence.find((e) => e.timing?.periodKey)?.timing?.periodKey as Planet) ||
+    undefined;
 
   if (periodEvidence.length === 0) {
     return Object.freeze({
       period,
+      ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
       effect: 'INSUFFICIENT_DATA',
       activatedPromiseEvidenceIds: Object.freeze([]),
       evidenceIds: Object.freeze([]),
@@ -313,6 +328,7 @@ export function evaluateCareerTimingActivation(
   if (linkedEvidence.length === 0) {
     return Object.freeze({
       period,
+      ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
       effect: 'UNKNOWN',
       activatedPromiseEvidenceIds: Object.freeze([]),
       evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
@@ -340,6 +356,7 @@ export function evaluateCareerTimingActivation(
 
   return Object.freeze({
     period,
+    ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
     effect,
     activatedPromiseEvidenceIds: Object.freeze(activatedPromiseEvidenceIds),
     evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
