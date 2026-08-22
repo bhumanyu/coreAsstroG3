@@ -1,7 +1,7 @@
 import { Planet, Sign, PlanetState, NatalGrahaDrishti } from '../../types';
 import { FunctionalRole } from '../functionalNature/functionalRoleTypes';
 import { FunctionalNature } from '../functionalNature/functionalNature';
-import { DashaYogaReference, DashaInterpretationEvidence } from './dashaInterpretationTypes';
+import { DashaYogaReference } from './dashaInterpretationTypes';
 import { PlanetStrengthInterpretation } from '../planetInterpretation/planetInterpretationTypes';
 import { DashaReasoningEvidence } from './dashaReasoningTypes';
 
@@ -18,6 +18,5 @@ export interface DirectionalEvidenceInput {
   readonly castAspects?: readonly NatalGrahaDrishti[];
   readonly receivedAspects?: readonly NatalGrahaDrishti[];
   readonly yogaParticipation?: readonly DashaYogaReference[];
-  readonly existingEvidence?: readonly DashaInterpretationEvidence[];
   readonly reasoningEvidence?: readonly DashaReasoningEvidence[];
 }
