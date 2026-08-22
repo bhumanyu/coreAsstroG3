@@ -292,7 +292,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
       const rawEvidence: DashaInterpretationEvidence[] = [
         {
           ruleId: 'DASHA_LORD_CAST_ASPECT_FULL_H7',
-          type: 'ASPECT',
+          type: 'ASPECT_CAST',
           level: 'MAHADASHA',
           planets: [Planet.MARS],
           houses: [7],
@@ -314,10 +314,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
             sourceHouse: 1,
             targetPlanet: undefined,
             targetHouse: 7,
-            aspectType: AspectType.FULL,
-            orb: 0,
-            strength: 1.0,
-            special: false
+            aspectType: AspectType.FULL_7TH
           }
         ],
         receivedAspects: [
@@ -326,10 +323,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
             sourceHouse: 9,
             targetPlanet: Planet.MARS,
             targetHouse: 1,
-            aspectType: AspectType.FULL,
-            orb: 0,
-            strength: 1.0,
-            special: false
+            aspectType: AspectType.FULL_7TH
           }
         ],
         reasoningEvidence: facts
