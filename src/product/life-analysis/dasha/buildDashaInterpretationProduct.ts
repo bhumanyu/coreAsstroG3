@@ -17,24 +17,16 @@ function mapDashaPlanet(
   start: string,
   end: string,
   confidence: InterpretationConfidence
-): DashaPlanetProduct {
+): DashaPlanetProduct | undefined {
   if (!activation) {
-    return {
-      planet: 'SUN' as any,
-      level,
-      start,
-      end,
-      placement: {
-        sign: 'ARIES',
-        house: 1
-      },
-      ownedHouses: [],
-      functionalRoles: [],
-      evidence: [],
-      confidence: confidence ?? 'MEDIUM'
-    };
+    return undefined;
   }
 
+  // Preserve richer deterministic astrological details:
+  // While activation.evidence conveys human-readable narrative statements,
+  // it lacks structured quantitative metrics (totalRupa, percentageOfMinimum, etc.)
+  // and structured aspect/yoga participant references. We expose these deterministic
+  // details on DashaPlanetProduct for programmatic consumers while keeping evidence as the narrative spine.
   return {
     planet: activation.planet,
     level,
@@ -53,9 +45,17 @@ function mapDashaPlanet(
     state: activation.state?.condition ?? (typeof activation.state === 'string' ? activation.state : undefined),
     strength: activation.strength
       ? {
-          availability: activation.strength.availability ?? 'AVAILABLE'
+          availability: activation.strength.availability ?? 'AVAILABLE',
+          totalRupa: activation.strength.totalRupa,
+          totalShastiamsa: activation.strength.totalShastiamsa,
+          percentageOfMinimum: activation.strength.percentageOfMinimum,
+          meetsMinimum: activation.strength.meetsMinimum,
+          shadbalaStatus: activation.strength.shadbalaStatus
         }
       : undefined,
+    castAspects: activation.castAspects,
+    receivedAspects: activation.receivedAspects,
+    yogaParticipation: activation.yogaParticipation,
     evidence: activation.evidence ?? [],
     confidence
   };

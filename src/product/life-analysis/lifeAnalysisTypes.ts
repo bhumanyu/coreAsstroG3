@@ -28,7 +28,6 @@ export * from './lifeAnalysisEvidenceTypes';
 export * from './dasha/dashaInterpretationProductTypes';
 
 export type LifeAnalysisActiveDashaViewModel = DashaInterpretationProduct;
-export type LifeAnalysisDashaViewModel = DashaInterpretationProduct;
 
 export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR';
 
@@ -129,7 +128,6 @@ export interface LifeAnalysisViewModel {
   readonly careerDetail?: LifeAnalysisCareerDetailViewModel;
   readonly wealthDetail?: LifeAnalysisWealthDetailViewModel;
   readonly activeDasha?: LifeAnalysisActiveDashaViewModel;
-  readonly dasha?: LifeAnalysisDashaViewModel;
 }
 
 export interface LifeAnalysisProductState {

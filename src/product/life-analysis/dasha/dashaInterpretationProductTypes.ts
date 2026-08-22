@@ -1,15 +1,22 @@
-import type { Planet } from '../../../types';
+import type { Planet, NatalGrahaDrishti } from '../../../types';
 import type { 
-  ActiveDashaInterpretation, 
   DashaInterpretationEvidence,
-  DashaPairInterpretation,
-  DashaPlanetActivation,
+  DashaYogaReference,
   InterpretationConfidence
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
  
 export type DashaInterpretationStatus = 'AVAILABLE' | 'UNAVAILABLE';
  
 export type DashaLevel = 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
+
+export interface DashaPlanetStrengthProduct {
+  readonly availability: string;
+  readonly totalRupa?: number;
+  readonly totalShastiamsa?: number;
+  readonly percentageOfMinimum?: number;
+  readonly meetsMinimum?: boolean;
+  readonly shadbalaStatus?: string;
+}
  
 export interface DashaPlanetProduct {
   readonly planet: Planet;
@@ -25,9 +32,10 @@ export interface DashaPlanetProduct {
   readonly functionalNature?: string;
   readonly dignity?: string;
   readonly state?: string;
-  readonly strength?: {
-    readonly availability: string;
-  };
+  readonly strength?: DashaPlanetStrengthProduct;
+  readonly castAspects?: readonly NatalGrahaDrishti[];
+  readonly receivedAspects?: readonly NatalGrahaDrishti[];
+  readonly yogaParticipation?: readonly DashaYogaReference[];
   readonly evidence: readonly DashaInterpretationEvidence[];
   readonly confidence: InterpretationConfidence;
 }

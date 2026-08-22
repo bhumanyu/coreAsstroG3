@@ -6,7 +6,6 @@ import type {
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { ActiveDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
-import type { Horoscope } from '../../types';
 import type {
   LifeAnalysisViewModel,
   LifeAnalysisOverallViewModel,
@@ -70,21 +69,12 @@ export function buildLifeAnalysisViewModel(
   career: DomainInterpretation,
   wealth: DomainInterpretation,
   evidence: readonly LifeAnalysisEvidenceViewModel[],
-  activeDashaOrHoroscope?: ActiveDashaInterpretation | Horoscope
+  activeDasha?: ActiveDashaInterpretation
 ): LifeAnalysisViewModel {
   const status = mapProductStatus(analysis.dataCompleteness.overall);
 
-  let activeDashaInterpretation: ActiveDashaInterpretation | undefined;
-  if (activeDashaOrHoroscope) {
-    if ('dashaInterpretation' in activeDashaOrHoroscope) {
-      activeDashaInterpretation = activeDashaOrHoroscope.dashaInterpretation?.current;
-    } else if ('mahadasha' in activeDashaOrHoroscope) {
-      activeDashaInterpretation = activeDashaOrHoroscope as ActiveDashaInterpretation;
-    }
-  }
-
-  const mappedActiveDasha = activeDashaInterpretation
-    ? buildDashaInterpretationProduct(activeDashaInterpretation)
+  const mappedActiveDasha = activeDasha
+    ? buildDashaInterpretationProduct(activeDasha)
     : undefined;
 
   const overall: LifeAnalysisOverallViewModel = {
@@ -204,8 +194,7 @@ export function buildLifeAnalysisViewModel(
     }),
     careerDetail,
     wealthDetail,
-    activeDasha: mappedActiveDasha,
-    dasha: mappedActiveDasha
+    activeDasha: mappedActiveDasha
   };
 
   return deepFreeze(viewModel);

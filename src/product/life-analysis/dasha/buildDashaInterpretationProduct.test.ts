@@ -52,6 +52,13 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(md.ownedHouses).toEqual(current.mahadasha.natal.ownedHouses);
     expect(md.functionalRoles).toEqual(current.mahadasha.natal.functionalRoles);
     expect(md.confidence).toBe(current.mahadasha.confidence);
+    expect(md.castAspects).toEqual(current.mahadasha.natal.castAspects);
+    expect(md.receivedAspects).toEqual(current.mahadasha.natal.receivedAspects);
+    expect(md.yogaParticipation).toEqual(current.mahadasha.natal.yogaParticipation);
+    if (current.mahadasha.natal.strength) {
+      expect(md.strength?.totalRupa).toBe(current.mahadasha.natal.strength.totalRupa);
+      expect(md.strength?.percentageOfMinimum).toBe(current.mahadasha.natal.strength.percentageOfMinimum);
+    }
   });
 
   it('Test 4: maps antardasha planet, level, start, end, placement, ownedHouses, functionalRoles, and confidence accurately', () => {
@@ -140,7 +147,7 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
       STAGE1_GOLDEN_CAREER,
       STAGE1_GOLDEN_WEALTH,
       [],
-      horoscope
+      horoscope.dashaInterpretation?.current
     );
 
     expect(viewModel.activeDasha).toBeDefined();
@@ -148,7 +155,6 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(viewModel.activeDasha?.mahadasha?.planet).toBe(horoscope.dashaInterpretation?.current?.mahadasha.planet);
     expect(viewModel.activeDasha?.antardasha?.planet).toBe(horoscope.dashaInterpretation?.current?.antardasha.planet);
     expect(viewModel.activeDasha?.pratyantardasha?.planet).toBe(horoscope.dashaInterpretation?.current?.pratyantardasha.planet);
-    expect(viewModel.dasha).toEqual(viewModel.activeDasha);
   });
 
   it('Test 10: leaves activeDasha undefined in buildLifeAnalysisViewModel when current dasha is absent / out of range', () => {
@@ -160,11 +166,10 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
       STAGE1_GOLDEN_CAREER,
       STAGE1_GOLDEN_WEALTH,
       [],
-      horoscopeOutOfRange
+      horoscopeOutOfRange.dashaInterpretation?.current
     );
 
     expect(viewModel.activeDasha).toBeUndefined();
-    expect(viewModel.dasha).toBeUndefined();
     expect(mapActiveDasha(horoscopeOutOfRange.dashaInterpretation?.current)).toBeUndefined();
   });
 
@@ -196,5 +201,33 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
 
     expect(activeDashaVM.pair?.mahadashaLord).toBe(expectedCurrent.antardasha.pairInterpretation?.mahadashaLord);
     expect(activeDashaVM.pair?.antardashaLord).toBe(expectedCurrent.antardasha.pairInterpretation?.antardashaLord);
+  });
+
+  it('Test 12: fabrication regression - returns undefined for mahadasha/levels when natal activation is absent, never fabricating SUN/ARIES fallback', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const current = horoscope.dashaInterpretation?.current!;
+
+    const currentWithMissingNatal: ActiveDashaInterpretation = {
+      ...current,
+      mahadasha: {
+        ...current.mahadasha,
+        natal: undefined as any
+      },
+      antardasha: {
+        ...current.antardasha,
+        natal: undefined as any
+      },
+      pratyantardasha: {
+        ...current.pratyantardasha,
+        natal: undefined as any
+      }
+    };
+
+    const product = buildDashaInterpretationProduct(currentWithMissingNatal);
+
+    expect(product.status).toBe('AVAILABLE');
+    expect(product.mahadasha).toBeUndefined();
+    expect(product.antardasha).toBeUndefined();
+    expect(product.pratyantardasha).toBeUndefined();
   });
 });
