@@ -10,6 +10,8 @@ import { EngineValidator } from './components/EngineValidator';
 import { GocharaTransitView } from './components/GocharaTransitView';
 import { FullNatalReportView } from './components/fullNatalReport/FullNatalReportView';
 import { LifeAnalysisPage } from './components/lifeAnalysis/LifeAnalysisPage';
+import { DashaTimingPage } from './components/dashaTiming';
+import { buildDashaTimingViewModel } from './product/dasha-timing';
 import { runLifeAnalysisProduct } from './product/life-analysis/lifeAnalysisProductService';
 import type { LifeAnalysisProductState } from './product/life-analysis/lifeAnalysisTypes';
 import type { AppTab } from './types/appTabs';
@@ -29,6 +31,19 @@ export const App: React.FC = () => {
   const horoscope = useMemo(() => {
     return calculateHoroscope(birthDetails);
   }, [birthDetails]);
+
+  const dashaTimingViewModel = useMemo(() => {
+    const careerTiming =
+      lifeAnalysisState.status === 'READY'
+        ? lifeAnalysisState.analysis?.careerDetail?.timing
+        : undefined;
+    const wealthTiming =
+      lifeAnalysisState.status === 'READY'
+        ? lifeAnalysisState.analysis?.wealthDetail?.timing
+        : undefined;
+
+    return buildDashaTimingViewModel(horoscope, careerTiming, wealthTiming);
+  }, [horoscope, lifeAnalysisState]);
 
   const lifeAnalysisRequestId = useRef(0);
 
@@ -102,11 +117,22 @@ export const App: React.FC = () => {
           <LifeAnalysisPage
             state={lifeAnalysisState}
             onRetry={handleLifeAnalysisRetry}
+            onNavigateToDashaTiming={() => setActiveTab('dasha-timing')}
+          />
+        )}
+
+        {activeTab === 'dasha-timing' && (
+          <DashaTimingPage
+            viewModel={dashaTimingViewModel}
+            onSelectTab={(tab) => setActiveTab(tab as AppTab)}
           />
         )}
 
         {activeTab === 'report' && (
-          <FullNatalReportView report={horoscope.fullNatalAnalysis} />
+          <FullNatalReportView
+            report={horoscope.fullNatalAnalysis}
+            onNavigateToDashaTiming={() => setActiveTab('dasha-timing')}
+          />
         )}
 
         {activeTab === 'horoscope' && (

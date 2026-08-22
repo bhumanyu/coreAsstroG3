@@ -25,9 +25,13 @@ import { OverallSynthesisSection } from './OverallSynthesisSection';
 
 export interface FullNatalReportViewProps {
   readonly report: FullNatalAnalysisReport;
+  readonly onNavigateToDashaTiming?: () => void;
 }
 
-export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({ report }) => {
+export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({
+  report,
+  onNavigateToDashaTiming
+}) => {
   const activeSectionId = useReportSectionObserver(REPORT_SECTION_IDS);
 
   return (
@@ -184,7 +188,10 @@ export const FullNatalReportView: React.FC<FullNatalReportViewProps> = ({ report
             subtitle="Current active Mahadasha, Antardasha, and Pratyantardasha"
             status={report.currentDasha?.status}
           >
-            <CurrentDashaSection section={report.currentDasha} />
+            <CurrentDashaSection
+              section={report.currentDasha}
+              onNavigateToDashaTiming={onNavigateToDashaTiming}
+            />
           </ReportSection>
 
           {/* Section 14: Current Transit Analysis */}

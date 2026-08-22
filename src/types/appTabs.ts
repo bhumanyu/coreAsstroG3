@@ -1,5 +1,6 @@
 export type AppTab =
   | 'life-analysis'
+  | 'dasha-timing'
   | 'report'
   | 'horoscope'
   | 'planets'

@@ -6,10 +6,12 @@ import { formatEnum, getEffectBadgeClass } from './lifeAnalysisUx';
 
 interface SharedTimingSectionProps {
   readonly sharedTiming: readonly LifeAnalysisTimingViewModel[];
+  readonly onNavigateToDashaTiming?: () => void;
 }
 
 export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
-  sharedTiming
+  sharedTiming,
+  onNavigateToDashaTiming
 }) => {
   if (!sharedTiming || sharedTiming.length === 0) {
     return null;
@@ -17,14 +19,26 @@ export const SharedTimingSection: React.FC<SharedTimingSectionProps> = ({
 
   return (
     <section aria-labelledby="shared-timing-heading" className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Clock className="w-5 h-5 text-indigo-400" aria-hidden="true" />
-        <h2 id="shared-timing-heading" className="text-base sm:text-lg font-semibold text-slate-100">
-          Shared Cross-Domain Timing Activations
-        </h2>
-        <span className="text-xs font-mono-code text-slate-400">
-          ({sharedTiming.length})
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Clock className="w-5 h-5 text-indigo-400" aria-hidden="true" />
+          <h2 id="shared-timing-heading" className="text-base sm:text-lg font-semibold text-slate-100">
+            Shared Cross-Domain Timing Activations
+          </h2>
+          <span className="text-xs font-mono-code text-slate-400">
+            ({sharedTiming.length})
+          </span>
+        </div>
+
+        {onNavigateToDashaTiming && (
+          <button
+            type="button"
+            onClick={onNavigateToDashaTiming}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors cursor-pointer"
+          >
+            <span>View Full Dasha & Timing View</span>
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4">

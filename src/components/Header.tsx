@@ -20,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const tabs: readonly { id: AppTab; label: string }[] = [
     { id: 'life-analysis', label: 'Life Analysis' },
+    { id: 'dasha-timing', label: 'Dasha & Timing' },
     { id: 'report', label: 'Detailed Analysis' },
     { id: 'horoscope', label: 'Horoscope & Charts' },
     { id: 'planets', label: 'Planetary Facts & Dignity' },
