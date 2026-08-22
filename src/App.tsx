@@ -85,8 +85,26 @@ export const App: React.FC = () => {
     (f) => f.state.condition !== 'NORMAL'
   );
 
+  const tz = birthDetails.timeZone || 'UTC';
+  const isoClean = (birthDetails.dateTimeStr && (birthDetails.dateTimeStr.includes('Z') || birthDetails.dateTimeStr.includes('+') || (birthDetails.dateTimeStr.length > 10 && birthDetails.dateTimeStr.slice(10).includes('-'))))
+    ? birthDetails.dateTimeStr
+    : (birthDetails.dateTimeStr ? birthDetails.dateTimeStr + 'Z' : new Date().toISOString());
+  const formattedDate = new Date(isoClean).toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: tz
+  });
+
+  const zoneLabel = {
+    'UTC': 'UTC',
+    'Asia/Kolkata': 'IST',
+    'America/New_York': 'EST',
+    'Europe/London': 'GMT',
+    'Asia/Tokyo': 'JST'
+  }[tz] || tz;
+
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans app-shell">
       {/* Header Bar */}
       <Header
         birthDetails={birthDetails}
@@ -97,7 +115,43 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="relative flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <section className="ui-panel relative overflow-hidden mb-6">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(99,102,241,0.22),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(168,85,247,0.16),_transparent_30%)]" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <p className="mb-2 text-[10px] font-mono-code uppercase tracking-[0.24em] text-indigo-300/80">
+                birth chart overview
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-serif-astro">
+                {birthDetails.name || 'Custom Horoscope'}
+              </h2>
+              <p className="mt-2 text-sm text-slate-300">
+                {birthDetails.placeOfBirth} • {formattedDate} {zoneLabel} • {birthDetails.ayanamsa}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full max-w-xl">
+              <div className="ui-stat">
+                <span className="label">Ascendant</span>
+                <strong>{horoscope.rasiChart.ascendantSign}</strong>
+              </div>
+              <div className="ui-stat">
+                <span className="label">Sun</span>
+                <strong>{horoscope.planetFacts[Planet.SUN].sign}</strong>
+              </div>
+              <div className="ui-stat">
+                <span className="label">Moon</span>
+                <strong>{horoscope.planetFacts[Planet.MOON].sign}</strong>
+              </div>
+              <div className="ui-stat">
+                <span className="label">Status</span>
+                <strong>{exaltedPlanets.length > 0 ? 'Exalted' : 'Balanced'}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {activeTab === 'life-analysis' && (
           <LifeAnalysisPage
             state={lifeAnalysisState}

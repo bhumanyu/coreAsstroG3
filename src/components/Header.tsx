@@ -49,7 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
   }[tz] || tz;
 
   return (
-    <header className="bg-slate-900/90 border-b border-indigo-500/20 sticky top-0 z-40 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 shadow-[0_12px_40px_rgba(15,23,42,0.45)] backdrop-blur-xl">
       {/* Top Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Brand */}
@@ -117,18 +117,17 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 flex overflow-x-auto no-scrollbar">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 flex overflow-x-auto scrollbar-none">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-xs font-medium whitespace-nowrap transition-colors border-b-2 cursor-pointer flex items-center space-x-1.5 ${
-                isActive
-                  ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-              }`}
+              className={`px-4 py-3 text-xs font-medium whitespace-nowrap transition-all border-b-2 cursor-pointer flex items-center space-x-1.5 ${isActive
+                  ? 'border-indigo-400 text-indigo-300 bg-gradient-to-b from-indigo-500/10 to-transparent'
+                  : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700 hover:bg-slate-800/40'
+                }`}
             >
               <span>{tab.label}</span>
               {tab.id === 'validator' && (

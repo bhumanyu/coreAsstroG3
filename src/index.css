@@ -2,7 +2,8 @@
 
 @layer base {
   html {
-    background: #0f172a;
+    background: #020817;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -10,10 +11,11 @@
     min-height: 100vh;
     font-family: 'Plus Jakarta Sans', sans-serif;
     background:
-      radial-gradient(circle at top, rgba(99, 102, 241, 0.18), transparent 32%),
-      radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 22%),
-      linear-gradient(180deg, #0f172a 0%, #111827 100%);
+      radial-gradient(circle at top, rgba(129, 140, 248, 0.18), transparent 25%),
+      radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.14), transparent 20%),
+      linear-gradient(180deg, #020817 0%, #0f172a 36%, #111827 100%);
     color: #e2e8f0;
+    letter-spacing: -0.01em;
   }
 
   #root {
@@ -30,6 +32,56 @@
 
   .font-mono-code {
     font-family: 'Space Mono', monospace;
+  }
+
+  .app-shell {
+    background-image: linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .ui-panel {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    background: rgba(15, 23, 42, 0.7);
+    box-shadow: 0 20px 60px rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(18px);
+    padding: 1.25rem;
+  }
+
+  .ui-stat {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    background: rgba(2, 6, 23, 0.5);
+    padding: 0.625rem 0.75rem 0.75rem;
+    box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.06);
+  }
+
+  .ui-stat .label {
+    display: block;
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #94a3b8;
+  }
+
+  .ui-stat strong {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #f8fafc;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -50,6 +102,20 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(99, 102, 241, 0.6);
+}
+
+@keyframes slow-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: slow-spin 10s linear infinite;
 }
 
 /* Print Styles */
