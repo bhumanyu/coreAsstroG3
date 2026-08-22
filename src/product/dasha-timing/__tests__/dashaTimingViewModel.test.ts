@@ -322,5 +322,78 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
     expect(model1).toEqual(model2);
   });
+
+  it('Test 12: dynamically updates active dasha periods when crossing an Antardasha boundary (asOf temporal sensitivity)', () => {
+    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const mahadashas = baseHoroscope.vimshottari?.mahadashas ?? [];
+    expect(mahadashas.length).toBeGreaterThan(0);
+
+    const firstMd = mahadashas[0];
+    const antardashas = firstMd.antardashas ?? [];
+    expect(antardashas.length).toBeGreaterThan(1);
+
+    // Pick the boundary between first and second Antardasha
+    const firstAd = antardashas[0];
+    const boundaryTime = new Date(firstAd.end).getTime();
+
+    // 1 hour before and 1 hour after boundary
+    const beforeInstant = new Date(boundaryTime - 3600 * 1000).toISOString();
+    const afterInstant = new Date(boundaryTime + 3600 * 1000).toISOString();
+
+    const horoscopeBefore = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: beforeInstant });
+    const horoscopeAfter = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: afterInstant });
+
+    const model1 = buildDashaTimingViewModel(horoscopeBefore, undefined, undefined, { asOf: beforeInstant });
+    const model2 = buildDashaTimingViewModel(horoscopeAfter, undefined, undefined, { asOf: afterInstant });
+
+    expect(model1.current?.antardasha?.planet).toBeDefined();
+    expect(model2.current?.antardasha?.planet).toBeDefined();
+    expect(model1.current?.antardasha?.planet).not.toBe(model2.current?.antardasha?.planet);
+  });
+
+  it('Test 13: does NOT fabricate evidence when unresolved Wealth timing evidence IDs are referenced, sets availability to PARTIAL and records unresolvedEvidenceIds', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+
+    const unresolvableWealthEvidenceId = 'NON_EXISTENT_WEALTH_EVIDENCE_999';
+    const mockWealthTiming: WealthTimingProduct = {
+      status: 'AVAILABLE',
+      asOf: fixedAsOf,
+      mahadasha: {
+        period: 'MD',
+        planet: Planet.JUPITER,
+        effect: 'SUPPORT',
+        dimensions: {
+          accumulation: 'SUPPORT',
+          gains: 'SUPPORT',
+          fortune: 'SUPPORT',
+          speculation: 'SUPPORT'
+        },
+        evidenceIds: [unresolvableWealthEvidenceId]
+      }
+    };
+
+    const model = buildDashaTimingViewModel(
+      horoscope,
+      undefined,
+      mockWealthTiming,
+      { asOf: fixedAsOf }
+    );
+
+    // 1. Assert NO fabricated evidence with template text exists
+    const fabricatedEvidence = model.evidence.filter(
+      (e) =>
+        e.statement?.match(/Astrological timing evidence for/) ||
+        e.id === unresolvableWealthEvidenceId
+    );
+    expect(fabricatedEvidence).toHaveLength(0);
+
+    // 2. Assert availability was downgraded to PARTIAL due to unresolved references
+    expect(model.availability).toBe('PARTIAL');
+
+    // 3. Assert unresolvedEvidenceIds contains the unresolvable ID
+    expect(model.unresolvedEvidenceIds).toBeDefined();
+    expect(model.unresolvedEvidenceIds).toContain(unresolvableWealthEvidenceId);
+    expect(selectUnresolvedEvidenceIds(model)).toEqual(model.unresolvedEvidenceIds);
+  });
 });
 
