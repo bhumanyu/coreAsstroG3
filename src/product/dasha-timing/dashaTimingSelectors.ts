@@ -89,3 +89,12 @@ export function selectDashaTimingEvidence(
 ): readonly DashaTimingEvidenceProduct[] {
   return viewModel.evidence;
 }
+
+/**
+ * Selects any unresolved evidence IDs from the view model.
+ */
+export function selectUnresolvedEvidenceIds(
+  viewModel: DashaTimingViewModel
+): readonly string[] | undefined {
+  return viewModel.unresolvedEvidenceIds;
+}

@@ -1,4 +1,8 @@
-import type { Horoscope } from '../../types';
+import type {
+  Horoscope,
+  VimshottariMahadashaPeriod,
+  VimshottariAntardashaPeriod
+} from '../../types';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import {
   buildNormalizedCareerTiming,
@@ -31,7 +35,7 @@ export interface BuildDashaTimingViewModelOptions {
  * Invariants:
  * - Deterministic: Never computes or recalculates Vimshottari or Active Dasha.
  * - Reuses D03 Active Dasha Mapper (mapActiveDasha) and D05 Domain Timing Adapters.
- * - Does not call `new Date()` for period selection; `asOf` is propagated from upstream.
+ * - Does not call Date constructor anywhere; `asOf` is propagated from upstream.
  * - Free of internal engine or raw ASTRO data types.
  */
 export function buildDashaTimingViewModel(
@@ -43,7 +47,9 @@ export function buildDashaTimingViewModel(
   const asOf = options?.asOf ?? horoscope.dashaInterpretation?.current?.at;
 
   // 1. Resolve Timeline from deterministic horoscope
-  const rawMahadashas =
+  // TODO(D01): Once upstream canonically consolidates to horoscope.dashaInterpretation,
+  // the fallbacks to vimshottari/fullNatalAnalysis can be removed.
+  const rawMahadashas: readonly VimshottariMahadashaPeriod[] | undefined =
     horoscope.dashaInterpretation?.mahadashas ??
     horoscope.vimshottari?.mahadashas ??
     horoscope.fullNatalAnalysis?.vimshottari?.mahadashas;
@@ -67,15 +73,15 @@ export function buildDashaTimingViewModel(
   }
 
   const hasTimeline = Array.isArray(rawMahadashas) && rawMahadashas.length > 0;
-  const periods: readonly DashaTimelinePeriodProduct[] = hasTimeline
-    ? rawMahadashas.map((m: any, idx: number) => ({
+  const periods: readonly DashaTimelinePeriodProduct[] = hasTimeline && rawMahadashas
+    ? rawMahadashas.map((m: VimshottariMahadashaPeriod, idx: number) => ({
         planet: m.planet,
         start: m.start,
         end: m.end,
         durationYears: m.durationYears,
         index: idx + 1,
         antardashas: Array.isArray(m.antardashas)
-          ? m.antardashas.map((a: any) => ({
+          ? m.antardashas.map((a: VimshottariAntardashaPeriod) => ({
               planet: a.planet,
               start: a.start,
               end: a.end,
@@ -301,16 +307,17 @@ export function buildDashaTimingViewModel(
     allReferencedEvidenceIds.push(...resolvedWealthTiming.pratyantardasha.evidenceIds);
   }
 
+  const unresolvedEvidenceIds: string[] = [];
   for (const id of allReferencedEvidenceIds) {
     if (id && !evidenceMap.has(id)) {
-      evidenceMap.set(id, {
-        id,
-        ruleId: id,
-        statement: `Astrological timing evidence for ${id}.`,
-        effect: 'SUPPORT',
-        source: 'TIMING'
-      });
+      if (!unresolvedEvidenceIds.includes(id)) {
+        unresolvedEvidenceIds.push(id);
+      }
     }
+  }
+
+  if (unresolvedEvidenceIds.length > 0 && availability === 'AVAILABLE') {
+    availability = 'PARTIAL';
   }
 
   const evidence: readonly DashaTimingEvidenceProduct[] = Object.freeze(
@@ -330,6 +337,8 @@ export function buildDashaTimingViewModel(
     ...(resolvedCareerTiming ? { career: resolvedCareerTiming } : {}),
     ...(resolvedWealthTiming ? { wealth: resolvedWealthTiming } : {}),
     evidence,
-    generatedAt: new Date().toISOString()
+    ...(unresolvedEvidenceIds.length > 0
+      ? { unresolvedEvidenceIds: Object.freeze(unresolvedEvidenceIds) }
+      : {})
   };
 }
