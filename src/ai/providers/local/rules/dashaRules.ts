@@ -37,8 +37,10 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
       }
 
       const statement = active
-        ? `Active Vimshottari period is Mahadasha of ${active.mahadasha}${
-            active.antardasha ? `, Antardasha of ${active.antardasha}` : ''
+        ? `Active Vimshottari period hierarchy: Mahadasha of ${active.mahadasha} (primary)${
+            active.antardasha ? `, Antardasha of ${active.antardasha} (secondary)` : ''
+          }${
+            active.pratyantardasha ? `, Pratyantardasha of ${active.pratyantardasha} (short-term)` : ''
           }.`
         : `Vimshottari Dasha system configured with ${context.dasha.periods.length} life cycle periods.`;
 
@@ -60,6 +62,7 @@ export const DASHA_RULES: readonly LocalRuleDefinition[] = Object.freeze([
       const timingEvidence = rankEvidence(
         context.evidence.filter(
           (e) =>
+            e.source === 'DASHA' ||
             e.dimension === 'TIMING' ||
             e.priority === 'TIMING' ||
             e.timingReason != null

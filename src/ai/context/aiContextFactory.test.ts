@@ -6,7 +6,9 @@ import { AI_CONTEXT_SCHEMA_VERSION } from '../types/aiTypes';
 import {
   buildAiContext,
   buildEvidenceFromDomainInterpretations,
-  projectDomainEvidenceToAi
+  projectDomainEvidenceToAi,
+  projectDashaEvidenceToAi,
+  buildDashaEvidence
 } from './aiContextFactory';
 import {
   createDomainInterpretation,
@@ -629,5 +631,176 @@ describe('AI Context Factory', () => {
     expect(() => buildEvidenceFromDomainInterpretations([interp1, interp2])).toThrow(
       /conflicting evidence id DUP_EVIDENCE_CONFLICT/
     );
+  });
+
+  describe('D04 Dasha Context & Evidence Projection', () => {
+    it('should project rich dasha interpretation facts when active dasha interpretation is present', () => {
+      expect(context.dasha.interpretation).toBeDefined();
+      expect(context.dasha.interpretation?.status).toBe('AVAILABLE');
+
+      const md = context.dasha.interpretation?.mahadasha;
+      expect(md).toBeDefined();
+      expect(md?.level).toBe('MAHADASHA');
+      expect(md?.planet).toBeDefined();
+      expect(md?.placement.house).toBeGreaterThanOrEqual(1);
+      expect(md?.placement.sign).toBeDefined();
+      expect(Array.isArray(md?.ownedHouses)).toBe(true);
+      expect(Array.isArray(md?.functionalRoles)).toBe(true);
+      expect(md?.strength).toBeDefined();
+      expect(md?.confidence).toBeDefined();
+      expect(Array.isArray(md?.evidenceIds)).toBe(true);
+
+      const ad = context.dasha.interpretation?.antardasha;
+      expect(ad).toBeDefined();
+      expect(ad?.level).toBe('ANTARDASHA');
+      expect(ad?.planet).toBeDefined();
+
+      const pd = context.dasha.interpretation?.pratyantardasha;
+      expect(pd).toBeDefined();
+      expect(pd?.level).toBe('PRATYANTARDASHA');
+      expect(pd?.planet).toBeDefined();
+
+      const pair = context.dasha.interpretation?.pair;
+      expect(pair).toBeDefined();
+      expect(pair?.mahadashaLord).toBe(md?.planet);
+      expect(pair?.antardashaLord).toBe(ad?.planet);
+      expect(Array.isArray(pair?.sharedHouses)).toBe(true);
+      expect(Array.isArray(pair?.combinedHouseSet)).toBe(true);
+      expect(Array.isArray(pair?.relationshipEvidenceIds)).toBe(true);
+    });
+
+    it('should bind all dasha interpretation evidence into context.evidence and ensure resolution', () => {
+      const contextEvidenceIds = new Set(context.evidence.map((e) => e.id));
+      const interp = context.dasha.interpretation;
+      expect(interp).toBeDefined();
+
+      for (const evId of interp!.evidenceIds) {
+        expect(contextEvidenceIds.has(evId)).toBe(true);
+      }
+      if (interp!.mahadasha) {
+        for (const evId of interp!.mahadasha.evidenceIds) {
+          expect(contextEvidenceIds.has(evId)).toBe(true);
+        }
+      }
+      if (interp!.antardasha) {
+        for (const evId of interp!.antardasha.evidenceIds) {
+          expect(contextEvidenceIds.has(evId)).toBe(true);
+        }
+      }
+      if (interp!.pratyantardasha) {
+        for (const evId of interp!.pratyantardasha.evidenceIds) {
+          expect(contextEvidenceIds.has(evId)).toBe(true);
+        }
+      }
+      if (interp!.pair) {
+        for (const evId of interp!.pair.relationshipEvidenceIds) {
+          expect(contextEvidenceIds.has(evId)).toBe(true);
+        }
+      }
+    });
+
+    it('should synthesize deterministic evidence IDs identically for equal inputs and distinctly for different inputs', () => {
+      const ev1 = {
+        level: 'MAHADASHA' as const,
+        ruleId: 'D-MD-01',
+        statement: 'Jupiter in 9th house brings expansion',
+        planets: [Planet.JUPITER],
+        houses: [9],
+        effect: 'SUPPORT' as const,
+        type: 'HOUSE_PLACEMENT' as const,
+        source: 'DASHA_MAHADASHA'
+      };
+
+      const ev1Duplicate = {
+        level: 'MAHADASHA' as const,
+        ruleId: 'D-MD-01',
+        statement: 'Jupiter in 9th house brings expansion',
+        planets: [Planet.JUPITER],
+        houses: [9],
+        effect: 'SUPPORT' as const,
+        type: 'HOUSE_PLACEMENT' as const,
+        source: 'DASHA_MAHADASHA'
+      };
+
+      const ev2Different = {
+        level: 'ANTARDASHA' as const,
+        ruleId: 'D-AD-01',
+        statement: 'Saturn transit delay',
+        planets: [Planet.SATURN],
+        houses: [10],
+        effect: 'CHALLENGE' as const,
+        type: 'HOUSE_PLACEMENT' as const,
+        source: 'DASHA_ANTARDASHA'
+      };
+
+      const projected1 = projectDashaEvidenceToAi(ev1);
+      const projected1Dup = projectDashaEvidenceToAi(ev1Duplicate);
+      const projected2 = projectDashaEvidenceToAi(ev2Different);
+
+      expect(projected1.id).toBe(projected1Dup.id);
+      expect(projected1.id).toBe('DASHA:MAHADASHA:D-MD-01:Jupiter in 9th house brings expansion:JUPITER:9');
+      expect(projected1.id).not.toBe(projected2.id);
+      expect(projected1.source).toBe('DASHA');
+      expect(projected1.priority).toBe('TIMING');
+      expect(projected1.dimension).toBe('TIMING');
+      expect(projected1.dashaLevel).toBe('MAHADASHA');
+      expect(projected1.timingPlanet).toBe(Planet.JUPITER);
+    });
+
+    it('should handle gracefully missing periods without fabricating fallback data', () => {
+      const partialHoroscope = {
+        ...horoscope,
+        dashaInterpretation: {
+          status: 'AVAILABLE',
+          at: '2026-08-22',
+          confidence: 'HIGH',
+          evidence: [],
+          activePeriods: {
+            mahadasha: {
+              planet: Planet.SUN,
+              level: 'MAHADASHA',
+              start: '2020-01-01',
+              end: '2026-01-01',
+              natal: {
+                planet: Planet.SUN,
+                placement: { house: 1, sign: 'ARIES' },
+                ownedHouses: [5],
+                functionalRoles: ['TRIKONA_LORD'],
+                evidence: []
+              }
+            }
+            // antardasha and pratyantardasha are missing
+          },
+          current: {
+            status: 'AVAILABLE',
+            at: '2026-08-22',
+            confidence: 'HIGH',
+            evidence: [],
+            mahadasha: {
+              planet: Planet.SUN,
+              level: 'MAHADASHA',
+              start: '2020-01-01',
+              end: '2026-01-01',
+              natal: {
+                planet: Planet.SUN,
+                placement: { house: 1, sign: 'ARIES' },
+                ownedHouses: [5],
+                functionalRoles: ['TRIKONA_LORD'],
+                evidence: []
+              }
+            }
+            // antardasha, pratyantardasha, pairInterpretation omitted
+          }
+        }
+      } as any;
+
+      const partialContext = buildAiContext(partialHoroscope);
+      expect(partialContext.dasha.interpretation).toBeDefined();
+      expect(partialContext.dasha.interpretation?.mahadasha).toBeDefined();
+      expect(partialContext.dasha.interpretation?.mahadasha?.planet).toBe(Planet.SUN);
+      expect(partialContext.dasha.interpretation?.antardasha).toBeUndefined();
+      expect(partialContext.dasha.interpretation?.pratyantardasha).toBeUndefined();
+      expect(partialContext.dasha.interpretation?.pair).toBeUndefined();
+    });
   });
 });

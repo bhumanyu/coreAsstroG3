@@ -599,4 +599,108 @@ describe('localVedicRulesEngine', () => {
       'Dhana and prosperity yoga patterns evaluated: 1 positive, 1 weakened, 1 cancelled.'
     );
   });
+
+  describe('D04 Local Dasha Rules Evaluation', () => {
+    it('should format LOCAL-DASHA-001 statement with explicit MD/AD/PD hierarchy', () => {
+      const dashaRule001 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-001');
+      expect(dashaRule001).toBeDefined();
+
+      const mockContext: AiContext = {
+        ...context,
+        dasha: {
+          system: 'VIMSHOTTARI',
+          periods: [],
+          active: {
+            mahadasha: Planet.JUPITER,
+            antardasha: Planet.SATURN,
+            pratyantardasha: Planet.MERCURY
+          }
+        }
+      };
+
+      const evalResult = dashaRule001!.evaluate(mockContext);
+      expect(evalResult.triggered).toBe(true);
+      expect(evalResult.statement).toBe(
+        'Active Vimshottari period hierarchy: Mahadasha of JUPITER (primary), Antardasha of SATURN (secondary), Pratyantardasha of MERCURY (short-term).'
+      );
+    });
+
+    it('should evaluate LOCAL-DASHA-002 with newly-bound deterministic dasha interpretation evidence', () => {
+      const dashaRule002 = DASHA_RULES.find((r) => r.id === 'LOCAL-DASHA-002');
+      expect(dashaRule002).toBeDefined();
+
+      const supportEv: AiEvidence = {
+        id: 'DASHA:MAHADASHA:D-MD-01:Jupiter functional benefic in Kendra:JUPITER:1',
+        source: 'DASHA',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Jupiter functional benefic in Kendra',
+        planets: [Planet.JUPITER],
+        houses: [1],
+        priority: 'TIMING',
+        dimension: 'TIMING',
+        dashaLevel: 'MAHADASHA',
+        timingPlanet: Planet.JUPITER
+      };
+
+      const challengeEv: AiEvidence = {
+        id: 'DASHA:ANTARDASHA:D-AD-01:Saturn placed in 8th house:SATURN:8',
+        source: 'DASHA',
+        effect: 'CHALLENGE',
+        strength: 'STRONG',
+        statement: 'Saturn placed in 8th house',
+        planets: [Planet.SATURN],
+        houses: [8],
+        priority: 'TIMING',
+        dimension: 'TIMING',
+        dashaLevel: 'ANTARDASHA',
+        timingPlanet: Planet.SATURN
+      };
+
+      // Context with more supporting than challenging
+      const supportContext: AiContext = {
+        ...context,
+        dasha: {
+          system: 'VIMSHOTTARI',
+          periods: [],
+          active: {
+            mahadasha: Planet.JUPITER,
+            antardasha: Planet.SATURN
+          }
+        },
+        evidence: [supportEv]
+      };
+
+      const supportResult = dashaRule002!.evaluate(supportContext);
+      expect(supportResult.triggered).toBe(true);
+      expect(supportResult.effect).toBe('SUPPORT');
+      expect(supportResult.supportingEvidenceIds).toContain(supportEv.id);
+      expect(supportResult.statement).toBe(
+        'The active Vimshottari period has supporting deterministic timing evidence.'
+      );
+
+      // Context with both supporting and challenging (mixed)
+      const mixedContext: AiContext = {
+        ...context,
+        dasha: {
+          system: 'VIMSHOTTARI',
+          periods: [],
+          active: {
+            mahadasha: Planet.JUPITER,
+            antardasha: Planet.SATURN
+          }
+        },
+        evidence: [supportEv, challengeEv]
+      };
+
+      const mixedResult = dashaRule002!.evaluate(mixedContext);
+      expect(mixedResult.triggered).toBe(true);
+      expect(mixedResult.effect).toBe('MIXED');
+      expect(mixedResult.supportingEvidenceIds).toContain(supportEv.id);
+      expect(mixedResult.challengingEvidenceIds).toContain(challengeEv.id);
+      expect(mixedResult.statement).toBe(
+        'The active Vimshottari period has both supporting and challenging deterministic timing evidence.'
+      );
+    });
+  });
 });

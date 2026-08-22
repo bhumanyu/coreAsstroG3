@@ -1,4 +1,5 @@
-import { Planet, Sign } from '../../types';
+import { Planet, Sign, NatalGrahaDrishti } from '../../types';
+import type { DashaYogaReference } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import {
   AiAvailability,
   AiConfidence,
@@ -110,10 +111,62 @@ export interface ActiveDashaFact {
   readonly pratyantardasha?: Planet;
 }
 
+export interface DashaPeriodStrengthFacts {
+  readonly availability: string;
+  readonly totalRupa?: number;
+  readonly totalShastiamsa?: number;
+  readonly percentageOfMinimum?: number;
+  readonly meetsMinimum?: boolean;
+  readonly shadbalaStatus?: string;
+}
+
+export interface DashaPeriodFacts {
+  readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
+  readonly planet: Planet;
+  readonly start: string;
+  readonly end: string;
+  readonly placement: {
+    readonly house: number;
+    readonly sign: string;
+  };
+  readonly ownedHouses: readonly number[];
+  readonly functionalRoles: readonly string[];
+  readonly functionalNature?: string;
+  readonly dignity?: string;
+  readonly state?: string;
+  readonly strength?: DashaPeriodStrengthFacts;
+  readonly castAspects?: readonly NatalGrahaDrishti[];
+  readonly receivedAspects?: readonly NatalGrahaDrishti[];
+  readonly yogaParticipation?: readonly DashaYogaReference[];
+  readonly evidenceIds: readonly string[];
+  readonly confidence: string;
+}
+
+export interface DashaPairFacts {
+  readonly mahadashaLord: Planet;
+  readonly antardashaLord: Planet;
+  readonly sharedHouses: readonly number[];
+  readonly combinedHouseSet: readonly number[];
+  readonly relationshipEvidenceIds: readonly string[];
+}
+
+export interface DashaInterpretationFacts {
+  readonly status: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly mahadasha?: DashaPeriodFacts;
+  readonly antardasha?: DashaPeriodFacts;
+  readonly pratyantardasha?: DashaPeriodFacts;
+  readonly pair?: DashaPairFacts;
+  readonly evidenceIds: readonly string[];
+  readonly confidence?: string;
+  readonly asOf?: string;
+}
+
 export interface DashaFacts {
   readonly system: 'VIMSHOTTARI';
   readonly periods: readonly DashaPeriodFact[];
   readonly active?: ActiveDashaFact;
+  readonly asOf?: string;
+  readonly interpretation?: DashaInterpretationFacts;
 }
 
 export interface DivisionalFact {
