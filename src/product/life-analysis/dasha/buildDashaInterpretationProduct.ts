@@ -2,7 +2,8 @@ import type {
   ActiveDashaInterpretation,
   DashaPlanetActivation,
   DashaPairInterpretation,
-  InterpretationConfidence
+  InterpretationConfidence,
+  DashaDirectionalSynthesis
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   DashaInterpretationProduct,
@@ -16,7 +17,8 @@ function mapDashaPlanet(
   level: DashaLevel,
   start: string,
   end: string,
-  confidence: InterpretationConfidence
+  confidence: InterpretationConfidence,
+  planetarySynthesis?: DashaDirectionalSynthesis
 ): DashaPlanetProduct | undefined {
   if (!activation) {
     return undefined;
@@ -57,7 +59,8 @@ function mapDashaPlanet(
     receivedAspects: activation.receivedAspects,
     yogaParticipation: activation.yogaParticipation,
     evidence: activation.evidence ?? [],
-    confidence
+    confidence,
+    planetarySynthesis
   };
 }
 
@@ -89,7 +92,8 @@ export function buildDashaInterpretationProduct(
           'MAHADASHA',
           current.mahadasha.start,
           current.mahadasha.end,
-          current.mahadasha.confidence
+          current.mahadasha.confidence,
+          current.mahadasha.planetarySynthesis
         )
       : undefined,
     antardasha: current.antardasha
@@ -98,7 +102,8 @@ export function buildDashaInterpretationProduct(
           'ANTARDASHA',
           current.antardasha.start,
           current.antardasha.end,
-          current.antardasha.confidence
+          current.antardasha.confidence,
+          current.antardasha.planetarySynthesis
         )
       : undefined,
     pratyantardasha: current.pratyantardasha
@@ -107,7 +112,8 @@ export function buildDashaInterpretationProduct(
           'PRATYANTARDASHA',
           current.pratyantardasha.start,
           current.pratyantardasha.end,
-          current.pratyantardasha.confidence
+          current.pratyantardasha.confidence,
+          current.pratyantardasha.planetarySynthesis
         )
       : undefined,
     pair: current.antardasha?.pairInterpretation 
