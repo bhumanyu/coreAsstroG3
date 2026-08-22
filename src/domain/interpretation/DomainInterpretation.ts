@@ -7,6 +7,38 @@ import type { NatalPromise } from './NatalPromise';
 import { createTransitTrigger, type TransitTrigger } from './TransitTrigger';
 import type { VargaConfirmation } from './VargaConfirmation';
 import type { DomainId } from './DomainInterpretationTypes';
+import type { CareerTimingActivation, CareerConclusionData, CareerDataCompleteness } from '../career/careerTypes';
+import type {
+  WealthTimingActivation,
+  WealthPeriodTimingActivation,
+  WealthConclusionData,
+  WealthDataCompleteness
+} from '../wealth/wealthTypes';
+
+export type DomainTimingActivation = CareerTimingActivation | WealthTimingActivation;
+
+export interface CommonDomainConclusionFields {
+  readonly natalStatus?: string;
+  readonly overallStatus?: string;
+  readonly accumulationStatus?: string;
+  readonly gainsStatus?: string;
+  readonly fortuneStatus?: string;
+  readonly speculationStatus?: string;
+  readonly d2Relationship?: string;
+  readonly d10Relationship?: string;
+  readonly currentActivation?: string;
+  readonly currentPressure?: string;
+  readonly [key: string]: any;
+}
+
+export type DomainConclusionData =
+  | (CareerConclusionData & CommonDomainConclusionFields)
+  | (WealthConclusionData & CommonDomainConclusionFields)
+  | CommonDomainConclusionFields;
+export type DomainDataCompleteness =
+  | (CareerDataCompleteness & { readonly d2?: string })
+  | (WealthDataCompleteness & { readonly d10?: string })
+  | Record<string, any>;
 
 export interface DomainInterpretation {
   readonly domain: DomainId;
@@ -19,10 +51,10 @@ export interface DomainInterpretation {
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly conclusion: DomainConclusion;
-  readonly timingActivations?: readonly any[];
-  readonly periodTimingActivations?: readonly any[];
-  readonly dataCompleteness?: any;
-  readonly conclusionData?: any;
+  readonly timingActivations?: readonly DomainTimingActivation[];
+  readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
+  readonly dataCompleteness?: DomainDataCompleteness;
+  readonly conclusionData?: DomainConclusionData;
   readonly generatedAt: string;
 }
 

@@ -87,13 +87,11 @@ export function buildCareerEvidence(
       const role = mapCareerRole(item);
       const relatedEvidenceIds = resolveRelatedCareerPromiseEvidenceIds(item, rawEvidence);
       const period = mapCareerDashaPeriod(item);
-      const periodKey = item.timingEvidence?.planet
-        ? String(item.timingEvidence.planet)
-        : (item.transitEvidence?.planet ? String(item.transitEvidence.planet) : undefined);
+      const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? undefined;
       const timing = period
-        ? { period, level: period, ...(periodKey ? { periodKey } : {}) }
+        ? { period, level: period, ...(planet ? { planet } : {}) }
         : (item.transitEvidence?.planet
-          ? { period: 'MD' as const, ...(periodKey ? { periodKey } : {}) }
+          ? { period: 'MD' as const, ...(planet ? { planet } : {}) }
           : undefined);
 
       return createDomainEvidence({

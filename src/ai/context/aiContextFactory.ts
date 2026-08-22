@@ -51,6 +51,8 @@ import {
 import {
   createDefaultDomainInterpreterRegistry,
   projectDomainInterpretationForAi,
+  buildNormalizedCareerTiming,
+  buildNormalizedWealthTiming,
   type DomainInterpretation,
   type DomainEvidence,
   type DomainInterpretationAiProjection
@@ -478,122 +480,13 @@ function mapThemeEffectToStatus(
   }
 }
 
-function buildCareerTimingFact(
-  careerInterpretation?: DomainInterpretation,
-  asOf?: string
-): CareerTimingFact | undefined {
-  if (!careerInterpretation) return undefined;
-  const activations = careerInterpretation.timingActivations as readonly CareerTimingActivation[] | undefined;
-  if (!activations || activations.length === 0) {
-    return { status: 'UNAVAILABLE', asOf };
-  }
-  const md = activations.find((a) => a.period === 'MD');
-  const ad = activations.find((a) => a.period === 'AD');
-  const pd = activations.find((a) => a.period === 'PD');
-
-  const hasAnyData = [md, ad, pd].some(
-    (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
-  );
-  const status = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
-
-  return {
-    status,
-    asOf,
-    ...(md
-      ? {
-          mahadasha: {
-            period: 'MD',
-            planet: md.planet,
-            effect: md.effect,
-            evidenceIds: md.evidenceIds,
-            statement: md.statement
-          }
-        }
-      : {}),
-    ...(ad
-      ? {
-          antardasha: {
-            period: 'AD',
-            planet: ad.planet,
-            effect: ad.effect,
-            evidenceIds: ad.evidenceIds,
-            statement: ad.statement
-          }
-        }
-      : {}),
-    ...(pd
-      ? {
-          pratyantardasha: {
-            period: 'PD',
-            planet: pd.planet,
-            effect: pd.effect,
-            evidenceIds: pd.evidenceIds,
-            statement: pd.statement
-          }
-        }
-      : {})
-  };
-}
-
-function buildWealthTimingFact(
-  wealthInterpretation?: DomainInterpretation,
-  asOf?: string
-): WealthTimingFact | undefined {
-  if (!wealthInterpretation) return undefined;
-  const periodActivations =
-    (wealthInterpretation.conclusionData as any)?.periodTimingActivations ||
-    (wealthInterpretation.periodTimingActivations as readonly WealthPeriodTimingActivation[] | undefined);
-
-  if (!periodActivations || periodActivations.length === 0) {
-    return { status: 'UNAVAILABLE', asOf };
-  }
-
-  const md = periodActivations.find((a: any) => a.period === 'MD');
-  const ad = periodActivations.find((a: any) => a.period === 'AD');
-  const pd = periodActivations.find((a: any) => a.period === 'PD');
-
-  const hasAnyData = [md, ad, pd].some(
-    (p: any) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
-  );
-  const status = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
-
-  const mapPeriod = (p?: any): WealthPeriodTimingFact | undefined => {
-    if (!p) return undefined;
-    return {
-      period: p.period,
-      planet: p.planet,
-      effect: p.effect,
-      dimensions: {
-        accumulation: p.dimensions?.accumulation ?? 'INSUFFICIENT_DATA',
-        gains: p.dimensions?.gains ?? 'INSUFFICIENT_DATA',
-        fortune: p.dimensions?.fortune ?? 'INSUFFICIENT_DATA',
-        speculation: p.dimensions?.speculation ?? 'INSUFFICIENT_DATA'
-      },
-      evidenceIds: p.evidenceIds ?? [],
-      statement: p.statement
-    };
-  };
-
-  const mahadasha = mapPeriod(md);
-  const antardasha = mapPeriod(ad);
-  const pratyantardasha = mapPeriod(pd);
-
-  return {
-    status,
-    asOf,
-    ...(mahadasha ? { mahadasha } : {}),
-    ...(antardasha ? { antardasha } : {}),
-    ...(pratyantardasha ? { pratyantardasha } : {})
-  };
-}
-
 function buildCareerFact(
   horoscope: Horoscope,
   careerInterpretation?: DomainInterpretation,
   asOf?: string
 ): CareerFact | undefined {
   const career = horoscope.themeInterpretationV2?.career;
-  const timing = buildCareerTimingFact(careerInterpretation, asOf);
+  const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
   if (career) {
     return {
@@ -631,7 +524,7 @@ function buildWealthFact(
   asOf?: string
 ): WealthFact | undefined {
   const wealth = horoscope.themeInterpretationV2?.wealth;
-  const timing = buildWealthTimingFact(wealthInterpretation, asOf);
+  const timing = buildNormalizedWealthTiming(wealthInterpretation, asOf) as WealthTimingFact | undefined;
 
   const subthemeKeys: readonly WealthSubthemeKey[] = [
     'ACCUMULATION',
@@ -889,7 +782,7 @@ export function projectDomainEvidenceToAi(evidence: DomainEvidence): AiEvidence 
   }
 
   let timingPlanet: Planet | undefined = undefined;
-  const tPlanet = e.timingEvidence?.planet || e.timingPlanet;
+  const tPlanet = e.timingEvidence?.planet || e.timingPlanet || e.timing?.planet;
   if (tPlanet && PLANET_ORDER.includes(tPlanet)) {
     timingPlanet = tPlanet;
   } else if (e.timing?.periodKey && PLANET_ORDER.includes(e.timing.periodKey as Planet)) {

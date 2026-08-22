@@ -34,12 +34,17 @@ export interface CareerManifestation {
 }
 
 export interface CareerTimingActivation {
-  readonly period: 'MD' | 'AD' | 'PD';
+  readonly period?: 'MD' | 'AD' | 'PD' | string;
+  readonly level?: 'MD' | 'AD' | 'PD' | 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | string;
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
-  readonly activatedPromiseEvidenceIds: readonly string[];
-  readonly evidenceIds: readonly string[];
-  readonly statement: string;
+  readonly activatedPromiseEvidenceIds?: readonly string[];
+  readonly evidenceIds?: readonly string[];
+  readonly statement?: string;
+  readonly source?: string;
+  readonly periodKey?: string;
+  readonly active?: boolean;
+  readonly dimension?: string;
 }
 
 export interface CareerDataCompleteness {

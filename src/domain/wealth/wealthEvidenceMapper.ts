@@ -126,13 +126,11 @@ export function buildWealthEvidence(
       const role = mapWealthRole(item);
       const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, rawEvidence);
       const period = mapWealthDashaPeriod(item);
-      const periodKey = item.timingEvidence?.planet
-        ? String(item.timingEvidence.planet)
-        : (item.transitEvidence?.planet ? String(item.transitEvidence.planet) : undefined);
+      const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? undefined;
       const timing = period
-        ? { period, level: period, ...(periodKey ? { periodKey } : {}) }
+        ? { period, level: period, ...(planet ? { planet } : {}) }
         : (item.transitEvidence?.planet
-          ? { period: 'MD' as const, ...(periodKey ? { periodKey } : {}) }
+          ? { period: 'MD' as const, ...(planet ? { planet } : {}) }
           : undefined);
       const dimension = mapWealthDimension(item);
 

@@ -33,12 +33,17 @@ export type WealthManifestationMode =
   | 'SPECULATION';
 
 export interface WealthTimingActivation {
-  readonly period?: 'MD' | 'AD' | 'PD';
+  readonly period?: 'MD' | 'AD' | 'PD' | string;
+  readonly level?: 'MD' | 'AD' | 'PD' | 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | string;
   readonly dimension?: WealthDimension;
   readonly effect: TimingActivationEffect;
-  readonly activatedPromiseEvidenceIds: readonly string[];
-  readonly evidenceIds: readonly string[];
-  readonly statement: string;
+  readonly activatedPromiseEvidenceIds?: readonly string[];
+  readonly evidenceIds?: readonly string[];
+  readonly statement?: string;
+  readonly source?: string;
+  readonly periodKey?: string;
+  readonly planet?: Planet;
+  readonly active?: boolean;
 }
 
 export interface WealthPeriodDimensionEffects {

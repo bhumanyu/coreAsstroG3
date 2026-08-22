@@ -17,7 +17,8 @@ import type {
   WealthDimensionStatus,
   WealthDimensionInterpretation,
   WealthConclusionData,
-  WealthManifestationMode
+  WealthManifestationMode,
+  WealthPeriodTimingActivation
 } from './wealthTypes';
 
 export function resolveWealthConclusionStrength(

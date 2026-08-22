@@ -1,4 +1,9 @@
-import type { DomainInterpretation } from './DomainInterpretation';
+import type {
+  DomainInterpretation,
+  DomainTimingActivation,
+  DomainConclusionData,
+  DomainDataCompleteness
+} from './DomainInterpretation';
 import type { DomainEvidence } from './DomainEvidence';
 import type { NatalPromise } from './NatalPromise';
 import type { DashaActivation } from './DashaActivation';
@@ -8,6 +13,7 @@ import type { DomainConflict } from './DomainConflict';
 import type { DomainManifestation } from './ManifestationMode';
 import type { DomainConclusion } from './DomainConclusion';
 import type { DomainId } from './DomainInterpretationTypes';
+import type { WealthPeriodTimingActivation } from '../wealth/wealthTypes';
 
 export interface DomainInterpretationParts {
   readonly domain: DomainId;
@@ -19,9 +25,10 @@ export interface DomainInterpretationParts {
   readonly manifestations: readonly DomainManifestation[];
   readonly conflicts: readonly DomainConflict[];
   readonly conclusion: DomainConclusion;
-  readonly timingActivations?: readonly any[];
-  readonly dataCompleteness?: any;
-  readonly conclusionData?: any;
+  readonly timingActivations?: readonly DomainTimingActivation[];
+  readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
+  readonly dataCompleteness?: DomainDataCompleteness;
+  readonly conclusionData?: DomainConclusionData;
 }
 
 export interface BuildDomainInterpretationOptions {
@@ -56,6 +63,9 @@ export function buildDomainInterpretation(
     ]),
     conclusion: parts.conclusion,
     ...(parts.timingActivations ? { timingActivations: Object.freeze([...parts.timingActivations]) } : {}),
+    ...(parts.periodTimingActivations
+      ? { periodTimingActivations: Object.freeze([...parts.periodTimingActivations]) }
+      : {}),
     ...(parts.dataCompleteness !== undefined ? { dataCompleteness: parts.dataCompleteness } : {}),
     ...(parts.conclusionData !== undefined ? { conclusionData: Object.freeze({ ...parts.conclusionData }) } : {}),
     generatedAt: timestamp

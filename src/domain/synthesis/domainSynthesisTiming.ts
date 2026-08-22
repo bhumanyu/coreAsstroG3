@@ -5,6 +5,7 @@ import type {
 import type {
   SharedTimingActivation
 } from './domainSynthesisTypes';
+import type { Planet } from '../../types';
 
 export type TimingSource = 'DASHA' | 'TRANSIT';
 export type TimingLevel = 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
@@ -13,6 +14,7 @@ export interface TimingIdentity {
   readonly source: TimingSource;
   readonly level?: TimingLevel;
   readonly periodKey?: string;
+  readonly planet?: Planet;
 }
 
 export interface DomainTimingRecord {
@@ -39,7 +41,8 @@ export const QUALIFYING_TRANSIT_EFFECTS: ReadonlySet<string> = new Set([
 ]);
 
 export function createTimingIdentityKey(identity: TimingIdentity): string {
-  return `${identity.source}:${identity.level ?? '*'}:${identity.periodKey ?? '*'}`;
+  const planetOrKey = identity.planet ?? identity.periodKey ?? '*';
+  return `${identity.source}:${identity.level ?? '*'}:${planetOrKey}`;
 }
 
 export function normalizeTimingLevel(val: any): TimingLevel | undefined {
@@ -61,13 +64,14 @@ export function extractDomainTimingRecords(
   if (Array.isArray(domain.timingActivations) && domain.timingActivations.length > 0) {
     for (const t of domain.timingActivations) {
       if (!t) continue;
-      const isTransit = t.source === 'TRANSIT' || Boolean(t.transit);
+      const isTransit = (t as any).source === 'TRANSIT' || Boolean((t as any).transit);
       const source: TimingSource = isTransit ? 'TRANSIT' : 'DASHA';
-      const level = t.level ? normalizeTimingLevel(t.level) ?? t.level : normalizeTimingLevel(t.period);
-      const periodKey = t.periodKey ? String(t.periodKey) : undefined;
-      const effect = t.effect ?? (source === 'DASHA' ? domain.dashaActivation?.effect : domain.transitTrigger?.effect);
-      const active = t.active ?? (source === 'DASHA' ? domain.dashaActivation?.active ?? true : domain.transitTrigger?.active ?? true);
-      const evidenceIds = t.evidenceIds ?? (source === 'DASHA' ? domain.dashaActivation?.evidenceIds ?? [] : domain.transitTrigger?.evidenceIds ?? []);
+      const level = (t as any).level ? normalizeTimingLevel((t as any).level) ?? (t as any).level : normalizeTimingLevel((t as any).period);
+      const planet: Planet | undefined = (t as any).planet ?? undefined;
+      const periodKey = (t as any).periodKey ? String((t as any).periodKey) : (planet ? String(planet) : undefined);
+      const effect = (t as any).effect ?? (source === 'DASHA' ? domain.dashaActivation?.effect : domain.transitTrigger?.effect);
+      const active = (t as any).active ?? (source === 'DASHA' ? domain.dashaActivation?.active ?? true : domain.transitTrigger?.active ?? true);
+      const evidenceIds = (t as any).evidenceIds ?? (source === 'DASHA' ? domain.dashaActivation?.evidenceIds ?? [] : domain.transitTrigger?.evidenceIds ?? []);
 
       if (source === 'DASHA') {
         hasDashaTimingActivation = true;
@@ -76,7 +80,7 @@ export function extractDomainTimingRecords(
       }
 
       if (effect && effect !== 'UNKNOWN' && effect !== 'INSUFFICIENT_DATA' && effect !== 'DOES_NOT_ACTIVATE' && effect !== 'NO_MATERIAL_TRIGGER') {
-        const identity: TimingIdentity = { source, level, periodKey };
+        const identity: TimingIdentity = { source, level, periodKey, planet };
         records.push({
           domain: domain.domain,
           identity,
@@ -94,11 +98,12 @@ export function extractDomainTimingRecords(
     const effect = da.effect;
     const active = da.active;
     const level = (da as any).level ? normalizeTimingLevel((da as any).level) ?? (da as any).level : normalizeTimingLevel((da as any).period);
-    const periodKey = (da as any).periodKey ? String((da as any).periodKey) : undefined;
+    const planet: Planet | undefined = (da as any).planet ?? undefined;
+    const periodKey = (da as any).periodKey ? String((da as any).periodKey) : (planet ? String(planet) : undefined);
     const evidenceIds = da.evidenceIds ?? [];
 
     if (active && effect && effect !== 'UNKNOWN' && effect !== 'INSUFFICIENT_DATA' && effect !== 'DOES_NOT_ACTIVATE') {
-      const identity: TimingIdentity = { source: 'DASHA', level, periodKey };
+      const identity: TimingIdentity = { source: 'DASHA', level, periodKey, planet };
       records.push({
         domain: domain.domain,
         identity,
@@ -115,11 +120,12 @@ export function extractDomainTimingRecords(
     const effect = tt.effect;
     const active = tt.active;
     const level = (tt as any).level ? normalizeTimingLevel((tt as any).level) ?? (tt as any).level : undefined;
-    const periodKey = (tt as any).periodKey ? String((tt as any).periodKey) : undefined;
+    const planet: Planet | undefined = (tt as any).planet ?? undefined;
+    const periodKey = (tt as any).periodKey ? String((tt as any).periodKey) : (planet ? String(planet) : undefined);
     const evidenceIds = tt.evidenceIds ?? [];
 
     if (active && effect && effect !== 'UNKNOWN' && effect !== 'NO_MATERIAL_TRIGGER') {
-      const identity: TimingIdentity = { source: 'TRANSIT', level, periodKey };
+      const identity: TimingIdentity = { source: 'TRANSIT', level, periodKey, planet };
       records.push({
         domain: domain.domain,
         identity,
@@ -262,7 +268,8 @@ export function deriveSharedTiming(
           evidenceIds: Object.freeze(Array.from(evidenceIdSet).sort()),
           isConflict,
           ...(identity.level ? { level: identity.level } : {}),
-          ...(identity.periodKey ? { periodKey: identity.periodKey } : {})
+          ...(identity.periodKey ? { periodKey: identity.periodKey } : {}),
+          ...(identity.planet ? { planet: identity.planet } : {})
         })
       );
     }

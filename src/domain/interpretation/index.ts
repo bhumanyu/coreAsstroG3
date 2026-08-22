@@ -146,3 +146,21 @@ export type {
   DomainInterpretationAiProjection,
   DomainEvidenceAiProjection
 } from './DomainInterpretationAiProjection';
+
+export {
+  getCareerConclusionData,
+  getWealthConclusionData,
+  getCareerTimingActivations,
+  getWealthPeriodTimingActivations,
+  buildNormalizedCareerTiming,
+  buildNormalizedWealthTiming,
+  deriveCareerTimingEffect,
+  deriveWealthDimensionTiming,
+  deriveWealthTimingEffect
+} from './domainTimingAdapter';
+
+export type {
+  DomainTimingActivation,
+  DomainConclusionData,
+  DomainDataCompleteness
+} from './DomainInterpretation';

@@ -3,6 +3,7 @@ import type {
   DomainInterpretation,
   ConfidenceLevel
 } from '../interpretation';
+import type { Planet } from '../../types';
 
 export type LifeAnalysisStatus =
   | 'STRONGLY_SUPPORTED'
@@ -47,6 +48,7 @@ export interface SharedTimingActivation {
   readonly isConflict: boolean;
   readonly level?: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly periodKey?: string;
+  readonly planet?: Planet;
 }
 
 export interface CrossDomainConflict {

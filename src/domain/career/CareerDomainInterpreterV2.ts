@@ -1,4 +1,4 @@
-import type { Horoscope } from '../../types';
+import type { Horoscope, Planet } from '../../types';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import {
   CareerEvidenceFamily,
@@ -148,10 +148,7 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const currentDasha =
-    horoscope.dashaInterpretation?.current ||
-    (horoscope.dashaInterpretation as any)?.activePeriods ||
-    (horoscope as any).fullNatalAnalysis?.currentDasha?.current;
+  const currentDasha = horoscope.dashaInterpretation?.current;
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
   const pdPlanet = currentDasha?.pratyantardasha?.planet;
@@ -306,8 +303,7 @@ export function evaluateCareerTimingActivation(
   const periodEvidence = timingEvidence.filter((e) => e.timing?.period === period);
   const resolvedPlanet =
     planet ||
-    (periodEvidence.find((e) => (e as any).timingPlanet)?.timingPlanet as Planet) ||
-    (periodEvidence.find((e) => e.timing?.periodKey)?.timing?.periodKey as Planet) ||
+    periodEvidence.find((e) => e.timing?.planet)?.timing?.planet ||
     undefined;
 
   if (periodEvidence.length === 0) {

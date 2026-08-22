@@ -101,6 +101,7 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly headline?: string;
   readonly statement?: string;
   readonly timing?: CareerTimingProduct;
+  readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
 }
 
 export interface LifeAnalysisWealthDetailViewModel {
@@ -117,6 +118,13 @@ export interface LifeAnalysisWealthDetailViewModel {
   readonly headline?: string;
   readonly statement?: string;
   readonly timing?: WealthTimingProduct;
+  readonly dimensionTiming?: {
+    readonly accumulation: TimingActivationEffect | string;
+    readonly gains: TimingActivationEffect | string;
+    readonly fortune: TimingActivationEffect | string;
+    readonly speculation: TimingActivationEffect | string;
+  };
+  readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
 }
 
 export interface LifeAnalysisTimingDomainEffect {
