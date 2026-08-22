@@ -14,6 +14,7 @@ import { adaptInterpretationEvidenceListToReasoningFacts } from './dashaFactAdap
 import { deriveDirectionalDashaEvidence } from './dashaDirectionalReasoner';
 import { synthesizeDashaDirection } from './dashaDirectionalSynthesisEngine';
 import { DashaDirectionalSynthesis } from './dashaDirectionalSynthesis';
+import { synthesizeDashaDomains, DashaDomainSynthesis } from './dashaDomainSynthesis';
 import {
   DashaInterpretationInput,
   DashaInterpretationReport,
@@ -657,7 +658,10 @@ export function validateDashaInterpretationInput(input: DashaInterpretationInput
 
 function computePlanetarySynthesisForActivation(
   activation: DashaPlanetActivation
-): DashaDirectionalSynthesis {
+): {
+  planetarySynthesis: DashaDirectionalSynthesis;
+  domainSynthesis: readonly DashaDomainSynthesis[];
+} {
   const facts = adaptInterpretationEvidenceListToReasoningFacts(activation.evidence);
   const derived = deriveDirectionalDashaEvidence({
     planet: activation.planet,
@@ -676,7 +680,10 @@ function computePlanetarySynthesisForActivation(
     reasoningEvidence: facts
   });
   const allReasoning = [...facts, ...derived];
-  return synthesizeDashaDirection(allReasoning);
+  const planetarySynthesis = synthesizeDashaDirection(allReasoning);
+  const allActivatedHouses = [activation.house, ...(activation.ownedHouses ?? [])];
+  const domainSynthesis = synthesizeDashaDomains(allReasoning, allActivatedHouses);
+  return { planetarySynthesis, domainSynthesis };
 }
 
 export function analyzeDashaInterpretation(
@@ -724,7 +731,8 @@ export function analyzeDashaInterpretation(
           evidence: pdActivation.evidence,
           confidence: computeConfidenceForPlanet(pdLord, input),
           summary: pdSummary,
-          planetarySynthesis: pdSynthesis
+          planetarySynthesis: pdSynthesis.planetarySynthesis,
+          domainSynthesis: pdSynthesis.domainSynthesis
         });
 
         pratyantardashasInterp.push(pdInterp);
@@ -740,7 +748,8 @@ export function analyzeDashaInterpretation(
         confidence: computeConfidenceForPlanet(adLord, input),
         summary: adSummary,
         pairInterpretation: pairInterp,
-        planetarySynthesis: adSynthesis
+        planetarySynthesis: adSynthesis.planetarySynthesis,
+        domainSynthesis: adSynthesis.domainSynthesis
       });
 
       antardashasInterp.push(adInterp);
@@ -755,7 +764,8 @@ export function analyzeDashaInterpretation(
       evidence: mdActivation.evidence,
       confidence: computeConfidenceForPlanet(mdLord, input),
       summary: mdSummary,
-      planetarySynthesis: mdSynthesis
+      planetarySynthesis: mdSynthesis.planetarySynthesis,
+      domainSynthesis: mdSynthesis.domainSynthesis
     });
 
     mahadashasInterp.push(mdInterp);
@@ -819,7 +829,8 @@ export function analyzeActiveDasha(
     evidence: pdActivation.evidence,
     confidence: computeConfidenceForPlanet(pdLord, input),
     summary: pdSummary,
-    planetarySynthesis: pdSynthesis
+    planetarySynthesis: pdSynthesis.planetarySynthesis,
+    domainSynthesis: pdSynthesis.domainSynthesis
   });
 
   const adInterp: DashaAntardashaInterpretation = Object.freeze({
@@ -832,7 +843,8 @@ export function analyzeActiveDasha(
     confidence: computeConfidenceForPlanet(adLord, input),
     summary: adSummary,
     pairInterpretation: pairInterp,
-    planetarySynthesis: adSynthesis
+    planetarySynthesis: adSynthesis.planetarySynthesis,
+    domainSynthesis: adSynthesis.domainSynthesis
   });
 
   const mdInterp: DashaMahadashaInterpretation = Object.freeze({
@@ -844,7 +856,8 @@ export function analyzeActiveDasha(
     evidence: mdActivation.evidence,
     confidence: computeConfidenceForPlanet(mdLord, input),
     summary: mdSummary,
-    planetarySynthesis: mdSynthesis
+    planetarySynthesis: mdSynthesis.planetarySynthesis,
+    domainSynthesis: mdSynthesis.domainSynthesis
   });
 
   const allEvidence = Object.freeze([
@@ -870,6 +883,8 @@ export function analyzeActiveDasha(
     antardasha: adInterp,
     pratyantardasha: pdInterp,
     evidence: allEvidence,
-    confidence: activeConfidence
+    confidence: activeConfidence,
+    planetarySynthesis: mdSynthesis.planetarySynthesis,
+    domainSynthesis: mdSynthesis.domainSynthesis
   });
 }
