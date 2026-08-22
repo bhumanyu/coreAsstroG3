@@ -88,7 +88,7 @@ export interface DashaTimingViewModel {
   readonly career?: CareerTimingProduct;
   readonly wealth?: WealthTimingProduct;
   readonly evidence: readonly DashaTimingEvidenceProduct[];
-  readonly generatedAt: string;
+  readonly unresolvedEvidenceIds?: readonly string[];
 }
 
 export type {

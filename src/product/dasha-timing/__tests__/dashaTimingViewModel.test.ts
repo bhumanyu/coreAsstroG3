@@ -14,9 +14,12 @@ import {
   selectDashaInterpretation,
   selectCareerTiming,
   selectWealthTiming,
-  selectDashaTimingEvidence
+  selectDashaTimingEvidence,
+  selectUnresolvedEvidenceIds
 } from '../dashaTimingSelectors';
+import { Planet } from '../../../types';
 import type { Horoscope } from '../../../types';
+import type { CareerTimingProduct, WealthTimingProduct } from '../dashaTimingTypes';
 
 describe('Dasha & Timing Product View Model & Selectors', () => {
   const fixedAsOf = '2024-06-01T00:00:00.000Z';
@@ -45,7 +48,6 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     expect(viewModel.interpretation).toBeUndefined();
     expect(viewModel.career).toBeUndefined();
     expect(viewModel.wealth).toBeUndefined();
-    expect(viewModel.generatedAt).toBeDefined();
   });
 
   it('Test 2: maps current MD/AD/PD planets and explicit levels correctly', () => {
@@ -257,6 +259,68 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       expect(matched?.statement).toBeDefined();
       expect(matched?.effect).toBeDefined();
     }
+  });
+
+  it('Test 10: does NOT fabricate evidence when unresolved IDs are referenced, sets availability to PARTIAL and records unresolvedEvidenceIds', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+
+    // Mock an activation referencing an unresolved/unregistered evidence ID
+    const unresolvableEvidenceId = 'NON_EXISTENT_EVIDENCE_999';
+    const mockCareerTiming: CareerTimingProduct = {
+      status: 'AVAILABLE',
+      asOf: fixedAsOf,
+      mahadasha: {
+        period: 'MD',
+        planet: Planet.JUPITER,
+        effect: 'SUPPORT',
+        evidenceIds: [unresolvableEvidenceId]
+      }
+    };
+
+    const model = buildDashaTimingViewModel(
+      horoscope,
+      mockCareerTiming,
+      undefined,
+      { asOf: fixedAsOf }
+    );
+
+    // 1. Assert NO fabricated evidence with template text exists
+    const fabricatedEvidence = model.evidence.filter(
+      (e) =>
+        e.statement?.match(/Astrological timing evidence for/) ||
+        e.id === unresolvableEvidenceId
+    );
+    expect(fabricatedEvidence).toHaveLength(0);
+
+    // 2. Assert availability was downgraded to PARTIAL due to unresolved references
+    expect(model.availability).toBe('PARTIAL');
+
+    // 3. Assert unresolvedEvidenceIds contains the unresolvable ID
+    expect(model.unresolvedEvidenceIds).toBeDefined();
+    expect(model.unresolvedEvidenceIds).toContain(unresolvableEvidenceId);
+    expect(selectUnresolvedEvidenceIds(model)).toEqual(model.unresolvedEvidenceIds);
+  });
+
+  it('Test 11: is completely deterministic across multiple invocations on identical inputs', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const careerInterp = interpretCareerV2(horoscope);
+    const wealthInterp = interpretWealthV2(horoscope);
+
+    const model1 = buildDashaTimingViewModel(
+      horoscope,
+      careerInterp,
+      wealthInterp,
+      { asOf: fixedAsOf }
+    );
+
+    const model2 = buildDashaTimingViewModel(
+      horoscope,
+      careerInterp,
+      wealthInterp,
+      { asOf: fixedAsOf }
+    );
+
+    expect(model1).toEqual(model2);
   });
 });
 

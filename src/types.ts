@@ -910,6 +910,21 @@ import { LifeTheme } from './engine/lifeThemes/lifeThemeTypes';
 
 export { LifeTheme };
 
+export interface VimshottariAntardashaPeriod {
+  readonly planet: Planet;
+  readonly start: string;
+  readonly end: string;
+  readonly durationYears?: number;
+}
+
+export interface VimshottariMahadashaPeriod {
+  readonly planet: Planet;
+  readonly start: string;
+  readonly end: string;
+  readonly durationYears?: number;
+  readonly antardashas?: readonly VimshottariAntardashaPeriod[];
+}
+
 export interface Horoscope {
   birthDetails: BirthDetails;
   ascendant?: AscendantDetails;

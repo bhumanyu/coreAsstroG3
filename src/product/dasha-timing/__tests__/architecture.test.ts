@@ -51,12 +51,11 @@ describe('Dasha & Timing Product Architecture Constraints', () => {
     }
   });
 
-  it('verifies UI and view-model do NOT instantiate new Date() for period selection', () => {
+  it('verifies UI and view-model do NOT instantiate new Date() for period selection or timestamps', () => {
     const productFile = path.resolve(currentDir, '../buildDashaTimingViewModel.ts');
     const content = fs.readFileSync(productFile, 'utf8');
 
-    // It is acceptable to use new Date().toISOString() ONLY for generatedAt metadata,
-    // but calculation of active periods MUST use asOf parameter.
     expect(content).toMatch(/asOf = options\?\.asOf \?\? horoscope\.dashaInterpretation\?\.current\?\.at/);
+    expect(content).not.toMatch(/new Date\(\)/);
   });
 });
