@@ -76,6 +76,13 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(ad.ownedHouses).toEqual(current.antardasha.natal.ownedHouses);
     expect(ad.functionalRoles).toEqual(current.antardasha.natal.functionalRoles);
     expect(ad.confidence).toBe(current.antardasha.confidence);
+    expect(ad.castAspects).toEqual(current.antardasha.natal.castAspects);
+    expect(ad.receivedAspects).toEqual(current.antardasha.natal.receivedAspects);
+    expect(ad.yogaParticipation).toEqual(current.antardasha.natal.yogaParticipation);
+    if (current.antardasha.natal.strength) {
+      expect(ad.strength?.totalRupa).toBe(current.antardasha.natal.strength.totalRupa);
+      expect(ad.strength?.percentageOfMinimum).toBe(current.antardasha.natal.strength.percentageOfMinimum);
+    }
   });
 
   it('Test 5: maps pratyantardasha planet, level, start, end, placement, ownedHouses, functionalRoles, and confidence accurately', () => {
@@ -93,6 +100,13 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
     expect(pd.ownedHouses).toEqual(current.pratyantardasha.natal.ownedHouses);
     expect(pd.functionalRoles).toEqual(current.pratyantardasha.natal.functionalRoles);
     expect(pd.confidence).toBe(current.pratyantardasha.confidence);
+    expect(pd.castAspects).toEqual(current.pratyantardasha.natal.castAspects);
+    expect(pd.receivedAspects).toEqual(current.pratyantardasha.natal.receivedAspects);
+    expect(pd.yogaParticipation).toEqual(current.pratyantardasha.natal.yogaParticipation);
+    if (current.pratyantardasha.natal.strength) {
+      expect(pd.strength?.totalRupa).toBe(current.pratyantardasha.natal.strength.totalRupa);
+      expect(pd.strength?.percentageOfMinimum).toBe(current.pratyantardasha.natal.strength.percentageOfMinimum);
+    }
   });
 
   it('Test 6: maps antardasha pair interpretation (mahadashaLord, antardashaLord, sharedHouses, combinedHouseSet, relationshipEvidence) when present', () => {
