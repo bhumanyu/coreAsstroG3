@@ -2,6 +2,7 @@ import { Planet } from '../../../types';
 import { ThemeInterpretationContext } from '../themeInterpretationContext';
 import { CareerTimingEvidence } from '../themeInterpretationTypes';
 import { getHouseLord } from '../themeInterpretationUtils';
+import { defaultDomainActivationRuleProvider } from '../../dashaInterpretation/domainActivationRuleProvider';
 
 export function evaluateCareerDashaTiming(
   context: ThemeInterpretationContext
@@ -24,8 +25,11 @@ export function evaluateCareerDashaTiming(
     let reason = '';
     const houses: number[] = [];
 
-    // Check if lord of 10H, 6H, 11H, 2H, 1H
-    for (const hNum of [10, 6, 11, 2, 1]) {
+    // Canonical career domain houses sourced from DomainActivationRuleProvider (10, 6, 2, 11) + Lagna (1)
+    const canonicalCareerHouses = defaultDomainActivationRuleProvider.getRelevantHouses('CAREER');
+    const careerHousesToCheck = Array.from(new Set([...canonicalCareerHouses, 1]));
+
+    for (const hNum of careerHousesToCheck) {
       const houseLord = getHouseLord(context, hNum);
       if (houseLord === lordPlanet) {
         isRelevant = true;
