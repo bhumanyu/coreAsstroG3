@@ -8,9 +8,13 @@ import { Sparkles, Calendar } from 'lucide-react';
 
 interface CurrentDashaSectionProps {
   readonly section: CurrentDashaSectionType;
+  readonly onNavigateToDashaTiming?: () => void;
 }
 
-export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({ section }) => {
+export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({
+  section,
+  onNavigateToDashaTiming
+}) => {
   if (section.status === 'UNAVAILABLE' || !section.current) {
     return <EmptyState title="Active Dasha Period Unavailable" message="Active dasha calculations were not provided in the report." />;
   }
@@ -19,7 +23,20 @@ export const CurrentDashaSection: React.FC<CurrentDashaSectionProps> = ({ sectio
 
   return (
     <div className="space-y-4">
-      {section.status === 'PARTIAL' && <PartialStateNotice message="Active dasha period details are partial." />}
+      <div className="flex items-center justify-between">
+        {section.status === 'PARTIAL' ? (
+          <PartialStateNotice message="Active dasha period details are partial." />
+        ) : <div />}
+        {onNavigateToDashaTiming && (
+          <button
+            type="button"
+            onClick={onNavigateToDashaTiming}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors cursor-pointer"
+          >
+            <span>Open Dedicated Dasha & Timing View</span>
+          </button>
+        )}
+      </div>
 
       {/* Main Active Dasha Display Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

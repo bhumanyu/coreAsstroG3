@@ -18,11 +18,13 @@ import { EmptyState } from '../fullNatalReport/EmptyState';
 interface LifeAnalysisPageProps {
   readonly state: LifeAnalysisProductState;
   readonly onRetry?: () => void;
+  readonly onNavigateToDashaTiming?: () => void;
 }
 
 export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
   state,
-  onRetry
+  onRetry,
+  onNavigateToDashaTiming
 }) => {
   if (state.status === 'LOADING') {
     return <LifeAnalysisLoading />;
@@ -98,7 +100,10 @@ export const LifeAnalysisPage: React.FC<LifeAnalysisPageProps> = ({
       </section>
 
       {/* 6. Shared Timing Section */}
-      <SharedTimingSection sharedTiming={analysis.sharedTiming} />
+      <SharedTimingSection
+        sharedTiming={analysis.sharedTiming}
+        onNavigateToDashaTiming={onNavigateToDashaTiming}
+      />
 
       {/* 7. Cross-Domain Conflicts */}
       <ConflictSection conflicts={analysis.conflicts} />
