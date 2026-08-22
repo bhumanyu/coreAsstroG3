@@ -13,7 +13,8 @@ import {
   selectDashaBirthAnchor,
   selectDashaInterpretation,
   selectCareerTiming,
-  selectWealthTiming
+  selectWealthTiming,
+  selectDashaTimingEvidence
 } from '../dashaTimingSelectors';
 import type { Horoscope } from '../../../types';
 
@@ -197,6 +198,65 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     expect(selectDashaInterpretation(viewModel)).toEqual(viewModel.interpretation);
     expect(selectCareerTiming(viewModel)).toEqual(viewModel.career);
     expect(selectWealthTiming(viewModel)).toEqual(viewModel.wealth);
+    expect(selectDashaTimingEvidence(viewModel)).toEqual(viewModel.evidence);
+  });
+
+  it('Test 9: resolves Career and Wealth timing evidence through canonical evidence ids', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const careerInterp = interpretCareerV2(horoscope);
+    const wealthInterp = interpretWealthV2(horoscope);
+
+    const model = buildDashaTimingViewModel(
+      horoscope,
+      careerInterp,
+      wealthInterp,
+      { asOf: fixedAsOf }
+    );
+
+    expect(model.evidence).toBeDefined();
+    expect(model.evidence.length).toBeGreaterThan(0);
+
+    // 1. Assert every id in career activations resolves against model.evidence by id
+    const careerMdEvidenceIds = model.career?.mahadasha?.evidenceIds ?? [];
+    const careerAdEvidenceIds = model.career?.antardasha?.evidenceIds ?? [];
+    const careerPdEvidenceIds = model.career?.pratyantardasha?.evidenceIds ?? [];
+
+    expect(careerMdEvidenceIds.length).toBeGreaterThan(0);
+    for (const id of careerMdEvidenceIds) {
+      expect(model.evidence.some((e) => e.id === id)).toBe(true);
+    }
+    for (const id of careerAdEvidenceIds) {
+      expect(model.evidence.some((e) => e.id === id)).toBe(true);
+    }
+    for (const id of careerPdEvidenceIds) {
+      expect(model.evidence.some((e) => e.id === id)).toBe(true);
+    }
+
+    // 2. Assert every id in wealth activations resolves against model.evidence by id
+    const wealthMdEvidenceIds = model.wealth?.mahadasha?.evidenceIds ?? [];
+    const wealthAdEvidenceIds = model.wealth?.antardasha?.evidenceIds ?? [];
+    const wealthPdEvidenceIds = model.wealth?.pratyantardasha?.evidenceIds ?? [];
+
+    expect(wealthMdEvidenceIds.length).toBeGreaterThan(0);
+    for (const id of wealthMdEvidenceIds) {
+      expect(model.evidence.some((e) => e.id === id)).toBe(true);
+    }
+    for (const id of wealthAdEvidenceIds) {
+      expect(model.evidence.some((e) => e.id === id)).toBe(true);
+    }
+    for (const id of wealthPdEvidenceIds) {
+      expect(model.evidence.some((e) => e.id === id)).toBe(true);
+    }
+
+    // 3. Assert interpretation-level evidence IDs also resolve against model.evidence by id
+    const interpretationEvidence = model.interpretation?.evidence ?? [];
+    expect(interpretationEvidence.length).toBeGreaterThan(0);
+    for (const interpItem of interpretationEvidence) {
+      expect(model.evidence.some((e) => e.id === interpItem.ruleId)).toBe(true);
+      const matched = model.evidence.find((e) => e.id === interpItem.ruleId);
+      expect(matched?.statement).toBeDefined();
+      expect(matched?.effect).toBeDefined();
+    }
   });
 });
 

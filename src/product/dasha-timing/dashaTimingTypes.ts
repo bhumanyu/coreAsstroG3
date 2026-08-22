@@ -68,6 +68,17 @@ export interface DashaCurrentPeriodsProduct {
   readonly pair?: DashaPairProduct;
 }
 
+export interface DashaTimingEvidenceProduct {
+  readonly id: string;
+  readonly ruleId?: string;
+  readonly statement?: string;
+  readonly effect?: string;
+  readonly level?: string;
+  readonly source?: string;
+  readonly strength?: string;
+  readonly domain?: string;
+}
+
 export interface DashaTimingViewModel {
   readonly availability: DashaTimingStatus;
   readonly asOf?: string;
@@ -76,6 +87,7 @@ export interface DashaTimingViewModel {
   readonly interpretation?: DashaInterpretationProduct;
   readonly career?: CareerTimingProduct;
   readonly wealth?: WealthTimingProduct;
+  readonly evidence: readonly DashaTimingEvidenceProduct[];
   readonly generatedAt: string;
 }
 

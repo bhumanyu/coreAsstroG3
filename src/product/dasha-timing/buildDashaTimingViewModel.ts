@@ -12,6 +12,7 @@ import type {
   DashaBirthAnchorProduct,
   DashaCurrentPeriodProduct,
   DashaCurrentPeriodsProduct,
+  DashaTimingEvidenceProduct,
   CareerTimingProduct,
   WealthTimingProduct
 } from './dashaTimingTypes';
@@ -160,6 +161,162 @@ export function buildDashaTimingViewModel(
     availability = 'PARTIAL';
   }
 
+  // 5. Assemble canonical evidence collection
+  const evidenceMap = new Map<string, DashaTimingEvidenceProduct>();
+
+  // (a) Dasha interpretation evidence (top-level, per-level, pair)
+  if (interpretation) {
+    const interpretationEvidenceList = [
+      ...(interpretation.evidence ?? []),
+      ...(interpretation.mahadasha?.evidence ?? []),
+      ...(interpretation.antardasha?.evidence ?? []),
+      ...(interpretation.pratyantardasha?.evidence ?? []),
+      ...(interpretation.pair?.relationshipEvidence ?? [])
+    ];
+
+    for (const item of interpretationEvidenceList) {
+      const id = item.ruleId;
+      if (id && !evidenceMap.has(id)) {
+        evidenceMap.set(id, {
+          id,
+          ruleId: item.ruleId,
+          statement: item.statement,
+          effect: item.effect,
+          level: item.level,
+          source: item.source
+        });
+      }
+    }
+  }
+
+  // (b) Career and Wealth timing evidence from passed domain interpretations or horoscope
+  if (careerTiming && typeof careerTiming === 'object' && 'evidence' in careerTiming && Array.isArray((careerTiming as DomainInterpretation).evidence)) {
+    for (const item of (careerTiming as DomainInterpretation).evidence) {
+      const id = item.id;
+      if (id && !evidenceMap.has(id)) {
+        const effect =
+          item.polarity === 'SUPPORTING'
+            ? 'SUPPORT'
+            : item.polarity === 'CHALLENGING'
+            ? 'CHALLENGE'
+            : item.polarity === 'NEUTRAL'
+            ? 'NEUTRAL'
+            : String(item.polarity ?? 'NEUTRAL');
+
+        evidenceMap.set(id, {
+          id,
+          ruleId: item.ruleId ?? item.id,
+          statement: item.statement,
+          effect,
+          level: item.timing?.period ?? item.timing?.level,
+          source: item.source ?? 'D1',
+          strength: item.strength,
+          domain: item.domain ?? 'CAREER'
+        });
+      }
+    }
+  }
+
+  if (horoscope.themeInterpretationV2?.career?.evidence && Array.isArray(horoscope.themeInterpretationV2.career.evidence)) {
+    for (const item of horoscope.themeInterpretationV2.career.evidence) {
+      const id = item.id;
+      if (id && !evidenceMap.has(id)) {
+        evidenceMap.set(id, {
+          id,
+          ruleId: item.ruleId,
+          statement: item.statement,
+          effect: item.effect,
+          level: item.timingEvidence?.dashaLevel,
+          source: item.vargaEvidence ? 'VARGA' : (item.timingEvidence ? 'DASHA' : 'D1'),
+          strength: item.strength,
+          domain: 'CAREER'
+        });
+      }
+    }
+  }
+
+  if (wealthTiming && typeof wealthTiming === 'object' && 'evidence' in wealthTiming && Array.isArray((wealthTiming as DomainInterpretation).evidence)) {
+    for (const item of (wealthTiming as DomainInterpretation).evidence) {
+      const id = item.id;
+      if (id && !evidenceMap.has(id)) {
+        const effect =
+          item.polarity === 'SUPPORTING'
+            ? 'SUPPORT'
+            : item.polarity === 'CHALLENGING'
+            ? 'CHALLENGE'
+            : item.polarity === 'NEUTRAL'
+            ? 'NEUTRAL'
+            : String(item.polarity ?? 'NEUTRAL');
+
+        evidenceMap.set(id, {
+          id,
+          ruleId: item.ruleId ?? item.id,
+          statement: item.statement,
+          effect,
+          level: item.timing?.period ?? item.timing?.level,
+          source: item.source ?? 'D1',
+          strength: item.strength,
+          domain: item.domain ?? 'WEALTH'
+        });
+      }
+    }
+  }
+
+  if (horoscope.themeInterpretationV2?.wealth?.evidence && Array.isArray(horoscope.themeInterpretationV2.wealth.evidence)) {
+    for (const item of horoscope.themeInterpretationV2.wealth.evidence) {
+      const id = item.id;
+      if (id && !evidenceMap.has(id)) {
+        evidenceMap.set(id, {
+          id,
+          ruleId: item.ruleId,
+          statement: item.statement,
+          effect: item.effect,
+          level: item.timingEvidence?.dashaLevel,
+          source: item.vargaEvidence ? 'VARGA' : (item.timingEvidence ? 'DASHA' : 'D1'),
+          strength: item.strength,
+          domain: 'WEALTH'
+        });
+      }
+    }
+  }
+
+  // Ensure every evidenceIds referenced on Career / Wealth timing activations exists in evidence collection
+  const allReferencedEvidenceIds: string[] = [];
+  if (resolvedCareerTiming?.mahadasha?.evidenceIds) {
+    allReferencedEvidenceIds.push(...resolvedCareerTiming.mahadasha.evidenceIds);
+  }
+  if (resolvedCareerTiming?.antardasha?.evidenceIds) {
+    allReferencedEvidenceIds.push(...resolvedCareerTiming.antardasha.evidenceIds);
+  }
+  if (resolvedCareerTiming?.pratyantardasha?.evidenceIds) {
+    allReferencedEvidenceIds.push(...resolvedCareerTiming.pratyantardasha.evidenceIds);
+  }
+  if (resolvedWealthTiming?.mahadasha?.evidenceIds) {
+    allReferencedEvidenceIds.push(...resolvedWealthTiming.mahadasha.evidenceIds);
+  }
+  if (resolvedWealthTiming?.antardasha?.evidenceIds) {
+    allReferencedEvidenceIds.push(...resolvedWealthTiming.antardasha.evidenceIds);
+  }
+  if (resolvedWealthTiming?.pratyantardasha?.evidenceIds) {
+    allReferencedEvidenceIds.push(...resolvedWealthTiming.pratyantardasha.evidenceIds);
+  }
+
+  for (const id of allReferencedEvidenceIds) {
+    if (id && !evidenceMap.has(id)) {
+      evidenceMap.set(id, {
+        id,
+        ruleId: id,
+        statement: `Astrological timing evidence for ${id}.`,
+        effect: 'SUPPORT',
+        source: 'TIMING'
+      });
+    }
+  }
+
+  const evidence: readonly DashaTimingEvidenceProduct[] = Object.freeze(
+    Array.from(evidenceMap.values())
+  );
+
   return {
     availability,
     asOf,
@@ -172,6 +329,7 @@ export function buildDashaTimingViewModel(
     ...(interpretation ? { interpretation } : {}),
     ...(resolvedCareerTiming ? { career: resolvedCareerTiming } : {}),
     ...(resolvedWealthTiming ? { wealth: resolvedWealthTiming } : {}),
+    evidence,
     generatedAt: new Date().toISOString()
   };
 }
