@@ -129,6 +129,17 @@ export interface DashaPeriodSynthesisFacts {
   readonly summary: string;
 }
 
+export interface DashaDomainSynthesisFacts {
+  readonly domain: string;
+  readonly effect: string;
+  readonly confidence: number;
+  readonly supportingEvidenceIds: readonly string[];
+  readonly challengingEvidenceIds: readonly string[];
+  readonly neutralEvidenceIds: readonly string[];
+  readonly activatedHouses: readonly number[];
+  readonly summary: string;
+}
+
 export interface DashaPeriodFacts {
   readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly planet: Planet;
@@ -150,6 +161,7 @@ export interface DashaPeriodFacts {
   readonly evidenceIds: readonly string[];
   readonly confidence: string;
   readonly planetarySynthesis?: DashaPeriodSynthesisFacts;
+  readonly domainSynthesis?: readonly DashaDomainSynthesisFacts[];
 }
 
 export interface DashaPairFacts {

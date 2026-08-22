@@ -3,7 +3,8 @@ import type {
   DashaInterpretationEvidence,
   DashaYogaReference,
   InterpretationConfidence,
-  DashaDirectionalSynthesis
+  DashaDirectionalSynthesis,
+  DashaDomainSynthesis
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
  
 export type DashaInterpretationStatus = 'AVAILABLE' | 'UNAVAILABLE';
@@ -40,6 +41,7 @@ export interface DashaPlanetProduct {
   readonly evidence: readonly DashaInterpretationEvidence[];
   readonly confidence: InterpretationConfidence;
   readonly planetarySynthesis?: DashaDirectionalSynthesis;
+  readonly domainSynthesis?: readonly DashaDomainSynthesis[];
 }
  
 export interface DashaPairProduct {

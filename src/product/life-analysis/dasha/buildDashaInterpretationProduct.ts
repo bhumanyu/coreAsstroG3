@@ -3,7 +3,8 @@ import type {
   DashaPlanetActivation,
   DashaPairInterpretation,
   InterpretationConfidence,
-  DashaDirectionalSynthesis
+  DashaDirectionalSynthesis,
+  DashaDomainSynthesis
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   DashaInterpretationProduct,
@@ -18,7 +19,8 @@ function mapDashaPlanet(
   start: string,
   end: string,
   confidence: InterpretationConfidence,
-  planetarySynthesis?: DashaDirectionalSynthesis
+  planetarySynthesis?: DashaDirectionalSynthesis,
+  domainSynthesis?: readonly DashaDomainSynthesis[]
 ): DashaPlanetProduct | undefined {
   if (!activation) {
     return undefined;
@@ -60,7 +62,8 @@ function mapDashaPlanet(
     yogaParticipation: activation.yogaParticipation,
     evidence: activation.evidence ?? [],
     confidence,
-    planetarySynthesis
+    planetarySynthesis,
+    domainSynthesis
   };
 }
 
@@ -93,7 +96,8 @@ export function buildDashaInterpretationProduct(
           current.mahadasha.start,
           current.mahadasha.end,
           current.mahadasha.confidence,
-          current.mahadasha.planetarySynthesis
+          current.mahadasha.planetarySynthesis,
+          current.mahadasha.domainSynthesis
         )
       : undefined,
     antardasha: current.antardasha
@@ -103,7 +107,8 @@ export function buildDashaInterpretationProduct(
           current.antardasha.start,
           current.antardasha.end,
           current.antardasha.confidence,
-          current.antardasha.planetarySynthesis
+          current.antardasha.planetarySynthesis,
+          current.antardasha.domainSynthesis
         )
       : undefined,
     pratyantardasha: current.pratyantardasha
@@ -113,7 +118,8 @@ export function buildDashaInterpretationProduct(
           current.pratyantardasha.start,
           current.pratyantardasha.end,
           current.pratyantardasha.confidence,
-          current.pratyantardasha.planetarySynthesis
+          current.pratyantardasha.planetarySynthesis,
+          current.pratyantardasha.domainSynthesis
         )
       : undefined,
     pair: current.antardasha?.pairInterpretation 

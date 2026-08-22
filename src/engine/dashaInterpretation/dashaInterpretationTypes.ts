@@ -25,8 +25,9 @@ import {
   HouseInterpretationReport
 } from '../houseInterpretation/houseInterpretationTypes';
 import { DashaDirectionalSynthesis } from './dashaDirectionalSynthesis';
+import { DashaDomainSynthesis } from './dashaDomainSynthesis';
 
-export type { DashaDirectionalSynthesis };
+export type { DashaDirectionalSynthesis, DashaDomainSynthesis };
 
 export type DashaInterpretationEvidenceType =
   | 'DASHA_LORD'
@@ -106,6 +107,7 @@ export interface DashaPratyantardashaInterpretation {
   readonly confidence: InterpretationConfidence;
   readonly summary?: DashaInterpretationSummary;
   readonly planetarySynthesis?: DashaDirectionalSynthesis;
+  readonly domainSynthesis?: readonly DashaDomainSynthesis[];
 }
 
 export interface DashaAntardashaInterpretation {
@@ -120,6 +122,7 @@ export interface DashaAntardashaInterpretation {
   readonly summary?: DashaInterpretationSummary;
   readonly pairInterpretation?: DashaPairInterpretation;
   readonly planetarySynthesis?: DashaDirectionalSynthesis;
+  readonly domainSynthesis?: readonly DashaDomainSynthesis[];
 }
 
 export interface DashaMahadashaInterpretation {
@@ -133,6 +136,7 @@ export interface DashaMahadashaInterpretation {
   readonly confidence: InterpretationConfidence;
   readonly summary?: DashaInterpretationSummary;
   readonly planetarySynthesis?: DashaDirectionalSynthesis;
+  readonly domainSynthesis?: readonly DashaDomainSynthesis[];
 }
 
 export interface DashaBirthAnchor {
@@ -150,6 +154,7 @@ export interface ActiveDashaInterpretation {
   readonly evidence: readonly DashaInterpretationEvidence[];
   readonly confidence: InterpretationConfidence;
   readonly planetarySynthesis?: DashaDirectionalSynthesis;
+  readonly domainSynthesis?: readonly DashaDomainSynthesis[];
 }
 
 export interface DashaInterpretationReport {

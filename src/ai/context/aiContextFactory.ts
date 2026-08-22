@@ -346,6 +346,20 @@ function mapDashaPlanetProductToPeriodFacts(
           }
         }
       : {}),
+    ...(product.domainSynthesis
+      ? {
+          domainSynthesis: product.domainSynthesis.map((ds) => ({
+            domain: ds.domain,
+            effect: ds.effect,
+            confidence: ds.confidence,
+            supportingEvidenceIds: [...ds.supportingEvidenceIds],
+            challengingEvidenceIds: [...ds.challengingEvidenceIds],
+            neutralEvidenceIds: [...ds.neutralEvidenceIds],
+            activatedHouses: [...ds.activatedHouses],
+            summary: ds.summary
+          }))
+        }
+      : {}),
     evidenceIds,
     confidence: product.confidence
   };
