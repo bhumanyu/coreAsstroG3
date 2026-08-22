@@ -120,7 +120,9 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
           <div className="space-y-1">
             <p className="font-semibold">Partial Timing Resolution</p>
             <p className="text-amber-300/80 leading-relaxed">
-              Vimshottari timeline sequence is available, but active period resolution was partial. Some active dasha cards may be omitted.
+              {viewModel.unresolvedEvidenceIds && viewModel.unresolvedEvidenceIds.length > 0
+                ? 'Some supporting evidence could not be resolved. The affected timing explanations may be incomplete.'
+                : 'Vimshottari timeline sequence is available, but active period resolution was partial. Some active dasha cards may be omitted.'}
             </p>
           </div>
         </div>
