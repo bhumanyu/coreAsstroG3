@@ -7,6 +7,7 @@ import type {
   EvidenceSource,
   EvidenceStrength
 } from './DomainInterpretationTypes';
+import type { Planet } from '../../types';
 
 export interface DomainEvidence {
   readonly id: string;
@@ -25,7 +26,7 @@ export interface DomainEvidence {
   readonly timing?: {
     readonly period: 'MD' | 'AD' | 'PD';
     readonly level?: 'MD' | 'AD' | 'PD';
-    readonly periodKey?: string;
+    readonly planet?: Planet;
   };
   readonly evidenceFamily?: string;
   readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';

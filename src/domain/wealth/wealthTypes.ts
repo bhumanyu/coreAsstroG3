@@ -7,6 +7,7 @@ import type {
   VargaRelationship
 } from '../interpretation/DomainInterpretationTypes';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
+import type { Planet } from '../../types';
 import { WealthEvidenceFamily } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 
 export { WealthEvidenceFamily };
@@ -32,12 +33,34 @@ export type WealthManifestationMode =
   | 'SPECULATION';
 
 export interface WealthTimingActivation {
-  readonly period?: 'MD' | 'AD' | 'PD';
+  readonly period?: 'MD' | 'AD' | 'PD' | string;
+  readonly level?: 'MD' | 'AD' | 'PD' | 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA' | string;
   readonly dimension?: WealthDimension;
   readonly effect: TimingActivationEffect;
-  readonly activatedPromiseEvidenceIds: readonly string[];
+  readonly activatedPromiseEvidenceIds?: readonly string[];
+  readonly evidenceIds?: readonly string[];
+  readonly statement?: string;
+  readonly source?: string;
+  readonly periodKey?: string;
+  readonly planet?: Planet;
+  readonly active?: boolean;
+}
+
+export interface WealthPeriodDimensionEffects {
+  readonly accumulation: TimingActivationEffect;
+  readonly gains: TimingActivationEffect;
+  readonly fortune: TimingActivationEffect;
+  readonly speculation: TimingActivationEffect;
+}
+
+export interface WealthPeriodTimingActivation {
+  readonly period: 'MD' | 'AD' | 'PD';
+  readonly planet?: Planet;
+  readonly dimensions: WealthPeriodDimensionEffects;
   readonly evidenceIds: readonly string[];
-  readonly statement: string;
+  readonly effect?: TimingActivationEffect;
+  readonly activatedPromiseEvidenceIds?: readonly string[];
+  readonly statement?: string;
 }
 
 export interface WealthDimensionInterpretation {
@@ -87,4 +110,5 @@ export interface WealthConclusionData {
   readonly headline: string;
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
+  readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
 }

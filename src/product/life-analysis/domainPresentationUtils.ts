@@ -84,8 +84,8 @@ export function resolveEvidenceSourceLabel(
         ? VARGA_NAMES[evidence.source]
         : (evidence.source !== 'D1' && evidence.source !== 'OTHER' ? `Divisional Chart (${evidence.source})` : 'Divisional Chart');
     case 'DASHA':
-      return evidence.timing?.periodKey
-        ? `Dasha (${evidence.timing.periodKey})`
+      return evidence.timing?.planet
+        ? `Dasha (${evidence.timing.planet})`
         : 'Vimshottari Dasha';
     case 'TRANSIT':
       return 'Gochara / Transit';

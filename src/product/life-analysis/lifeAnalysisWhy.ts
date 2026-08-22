@@ -63,10 +63,10 @@ export function sortEvidence(
 function extractChartFact(
   evidence: DomainEvidence
 ): EvidenceChartFactViewModel | undefined {
-  if (evidence.timing?.periodKey) {
+  if (evidence.timing?.planet) {
     return Object.freeze({
       label: 'Dasha Period',
-      value: evidence.timing.periodKey,
+      value: evidence.timing.planet,
       source: evidence.source
     });
   }

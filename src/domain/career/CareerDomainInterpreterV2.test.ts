@@ -1343,7 +1343,7 @@ describe('CareerDomainInterpreterV2', () => {
       const v2 = interpretCareerV2(horoscope);
       expect(v2.conclusionData).toBeDefined();
 
-      const cd: CareerConclusionData = v2.conclusionData;
+      const cd: CareerConclusionData = v2.conclusionData as CareerConclusionData;
       expect(cd.natalStatus).toBe(v2.natalPromise.strength);
       expect(['ACTIVE', 'PARTIALLY_ACTIVE', 'INACTIVE', 'UNKNOWN']).toContain(cd.currentActivation);
       expect(['LOW', 'MODERATE', 'HIGH', 'UNKNOWN']).toContain(cd.currentPressure);

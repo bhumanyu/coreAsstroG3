@@ -1,10 +1,17 @@
 import type { DomainInterpretation } from '../../domain/interpretation';
+import {
+  getCareerConclusionData,
+  getWealthConclusionData,
+  buildNormalizedCareerTiming,
+  buildNormalizedWealthTiming,
+  deriveCareerTimingEffect,
+  deriveWealthDimensionTiming,
+  deriveWealthTimingEffect
+} from '../../domain/interpretation';
 import type {
   LifeAnalysis,
   SharedTimingActivation
 } from '../../domain/synthesis';
-import type { CareerConclusionData } from '../../domain/career/careerTypes';
-import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { ActiveDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   LifeAnalysisViewModel,
@@ -26,42 +33,16 @@ import {
 } from './lifeAnalysisWhy';
 import { deepFreeze } from '../../ai/context/deepFreeze';
 
-/**
- * Safely extract CareerConclusionData from a domain interpretation.
- * Returns typed data or undefined if not available.
- */
-function getCareerConclusionData(
-  interpretation: DomainInterpretation
-): CareerConclusionData | undefined {
-  if (interpretation.conclusionData && typeof interpretation.conclusionData === 'object') {
-    const data = interpretation.conclusionData as CareerConclusionData | undefined;
-    return data;
-  }
-  return undefined;
-}
-
-/**
- * Safely extract WealthConclusionData from a domain interpretation.
- * Returns typed data or undefined if not available.
- */
-function getWealthConclusionData(
-  interpretation: DomainInterpretation
-): WealthConclusionData | undefined {
-  if (interpretation.conclusionData && typeof interpretation.conclusionData === 'object') {
-    const data = interpretation.conclusionData as WealthConclusionData | undefined;
-    return data;
-  }
-  return undefined;
-}
-
 function formatSharedTimingTitle(st: SharedTimingActivation): string {
   if (st.source === 'DASHA') {
     const level = st.level
       ? st.level.charAt(0).toUpperCase() + st.level.slice(1).toLowerCase()
       : 'Dasha';
-    return st.periodKey ? `${level} (${st.periodKey})` : `${level} Activation`;
+    const key = st.planet ?? st.periodKey;
+    return key ? `${level} (${key})` : `${level} Activation`;
   }
-  return st.periodKey ? `Transit (${st.periodKey})` : 'Active Transits';
+  const transitKey = st.planet ?? st.periodKey;
+  return transitKey ? `Transit (${transitKey})` : 'Active Transits';
 }
 
 export function buildLifeAnalysisViewModel(
@@ -134,6 +115,7 @@ export function buildLifeAnalysisViewModel(
   // Extract typed Career conclusion data
   const careerConclusionData = getCareerConclusionData(career);
   const careerD10Varga = career.vargaConfirmations.find((v) => v.varga === 'D10');
+  const careerTiming = buildNormalizedCareerTiming(career, activeDasha?.at ?? career.generatedAt);
   const careerDetail: LifeAnalysisCareerDetailViewModel = {
     natalPromise: career.natalPromise.strength,
     d10Relationship:
@@ -146,12 +128,15 @@ export function buildLifeAnalysisViewModel(
     currentPressure: careerConclusionData?.currentPressure,
     dominantManifestations: careerConclusionData?.dominantManifestations,
     headline: careerConclusionData?.headline,
-    statement: career.conclusion.statement
+    statement: career.conclusion.statement,
+    timing: careerTiming,
+    currentTimingEffect: deriveCareerTimingEffect(careerTiming)
   };
 
   // Extract typed Wealth conclusion data
   const wealthConclusionData = getWealthConclusionData(wealth);
   const wealthD2Varga = wealth.vargaConfirmations.find((v) => v.varga === 'D2');
+  const wealthTiming = buildNormalizedWealthTiming(wealth, activeDasha?.at ?? wealth.generatedAt);
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
     d2Relationship:
@@ -167,7 +152,10 @@ export function buildLifeAnalysisViewModel(
     speculationStatus: wealthConclusionData?.speculationStatus ?? 'UNAVAILABLE',
     dominantManifestations: wealthConclusionData?.dominantManifestations,
     headline: wealthConclusionData?.headline,
-    statement: wealth.conclusion.statement
+    statement: wealth.conclusion.statement,
+    timing: wealthTiming,
+    dimensionTiming: deriveWealthDimensionTiming(wealthTiming),
+    currentTimingEffect: deriveWealthTimingEffect(wealthTiming)
   };
 
   const viewModel: LifeAnalysisViewModel = {

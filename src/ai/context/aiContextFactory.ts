@@ -17,22 +17,42 @@ import {
   AiEvidenceStrength,
   AscendantFact,
   CareerFact,
+  CareerTimingFact,
+  CareerPeriodTimingFact,
   DashaFacts,
+  DashaInterpretationFacts,
+  DashaPairFacts,
   DashaPeriodFact,
+  DashaPeriodFacts,
   DivisionalFact,
   DivisionalFacts,
   HouseFactSummary,
   LifeThemeFact,
   PlanetFactSummary,
   WealthFact,
+  WealthTimingFact,
+  WealthPeriodTimingFact,
   WealthSubthemeFact,
   YogaFactSummary
 } from '../types/aiContextTypes';
+import type { CareerTimingActivation } from '../../domain/career/careerTypes';
+import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
+import type {
+  ActiveDashaInterpretation,
+  DashaInterpretationEvidence
+} from '../../engine/dashaInterpretation/dashaInterpretationTypes';
+import {
+  mapActiveDasha,
+  type DashaPlanetProduct,
+  type DashaPairProduct
+} from '../../product/life-analysis/dasha/activeDashaMapper';
 import {
   createDefaultDomainInterpreterRegistry,
   projectDomainInterpretationForAi,
+  buildNormalizedCareerTiming,
+  buildNormalizedWealthTiming,
   type DomainInterpretation,
   type DomainEvidence,
   type DomainInterpretationAiProjection
@@ -266,6 +286,79 @@ function buildYogaFacts(horoscope: Horoscope): readonly YogaFactSummary[] {
   });
 }
 
+function mapDashaPlanetProductToPeriodFacts(
+  product: DashaPlanetProduct | undefined
+): DashaPeriodFacts | undefined {
+  if (!product) {
+    return undefined;
+  }
+
+  const evidenceIds = (product.evidence || []).map((e) => projectDashaEvidenceToAi(e).id);
+
+  return {
+    level: product.level,
+    planet: product.planet,
+    start: product.start,
+    end: product.end,
+    placement: {
+      house: product.placement.house,
+      sign: product.placement.sign
+    },
+    ownedHouses: [...product.ownedHouses],
+    functionalRoles: [...product.functionalRoles],
+    ...(product.functionalNature ? { functionalNature: product.functionalNature } : {}),
+    ...(product.dignity ? { dignity: product.dignity } : {}),
+    ...(product.state ? { state: product.state } : {}),
+    ...(product.strength
+      ? {
+          strength: {
+            availability: product.strength.availability,
+            ...(typeof product.strength.totalRupa === 'number'
+              ? { totalRupa: product.strength.totalRupa }
+              : {}),
+            ...(typeof product.strength.totalShastiamsa === 'number'
+              ? { totalShastiamsa: product.strength.totalShastiamsa }
+              : {}),
+            ...(typeof product.strength.percentageOfMinimum === 'number'
+              ? { percentageOfMinimum: product.strength.percentageOfMinimum }
+              : {}),
+            ...(typeof product.strength.meetsMinimum === 'boolean'
+              ? { meetsMinimum: product.strength.meetsMinimum }
+              : {}),
+            ...(product.strength.shadbalaStatus
+              ? { shadbalaStatus: product.strength.shadbalaStatus }
+              : {})
+          }
+        }
+      : {}),
+    ...(product.castAspects ? { castAspects: product.castAspects } : {}),
+    ...(product.receivedAspects ? { receivedAspects: product.receivedAspects } : {}),
+    ...(product.yogaParticipation ? { yogaParticipation: product.yogaParticipation } : {}),
+    evidenceIds,
+    confidence: product.confidence
+  };
+}
+
+function mapDashaPairProductToPairFacts(
+  pair: DashaPairProduct | undefined
+): DashaPairFacts | undefined {
+  if (!pair) {
+    return undefined;
+  }
+
+  const relationshipEvidenceIds = (pair.relationshipEvidence || []).map(
+    (e) => projectDashaEvidenceToAi(e).id
+  );
+
+  return {
+    mahadashaLord: pair.mahadashaLord,
+    antardashaLord: pair.antardashaLord,
+    sharedHouses: [...pair.sharedHouses],
+    combinedHouseSet: [...pair.combinedHouseSet],
+    relationshipEvidenceIds
+  };
+}
+
 function buildDashaFacts(horoscope: Horoscope): DashaFacts {
   const mahadashas = horoscope.vimshottari?.mahadashas || [];
   // v1: only Mahadasha projection is supported currently
@@ -290,10 +383,41 @@ function buildDashaFacts(horoscope: Horoscope): DashaFacts {
     };
   }
 
+  const product = mapActiveDasha(horoscope.dashaInterpretation?.current);
+
+  let interpretation: DashaInterpretationFacts | undefined;
+  let asOf: string | undefined;
+
+  if (product && product.status === 'AVAILABLE') {
+    asOf = product.at;
+    const topLevelEvidenceIds = (product.evidence || []).map(
+      (e) => projectDashaEvidenceToAi(e).id
+    );
+
+    interpretation = {
+      status: product.status,
+      ...(product.mahadasha
+        ? { mahadasha: mapDashaPlanetProductToPeriodFacts(product.mahadasha) }
+        : {}),
+      ...(product.antardasha
+        ? { antardasha: mapDashaPlanetProductToPeriodFacts(product.antardasha) }
+        : {}),
+      ...(product.pratyantardasha
+        ? { pratyantardasha: mapDashaPlanetProductToPeriodFacts(product.pratyantardasha) }
+        : {}),
+      ...(product.pair ? { pair: mapDashaPairProductToPairFacts(product.pair) } : {}),
+      evidenceIds: topLevelEvidenceIds,
+      ...(product.confidence ? { confidence: product.confidence } : {}),
+      ...(product.at ? { asOf: product.at } : {})
+    };
+  }
+
   return {
     system: 'VIMSHOTTARI',
     periods,
-    active
+    ...(active ? { active } : {}),
+    ...(asOf ? { asOf } : {}),
+    ...(interpretation ? { interpretation } : {})
   };
 }
 
@@ -356,28 +480,51 @@ function mapThemeEffectToStatus(
   }
 }
 
-function buildCareerFact(horoscope: Horoscope): CareerFact | undefined {
+function buildCareerFact(
+  horoscope: Horoscope,
+  careerInterpretation?: DomainInterpretation,
+  asOf?: string
+): CareerFact | undefined {
   const career = horoscope.themeInterpretationV2?.career;
-  if (!career) {
-    return undefined;
+  const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
+
+  if (career) {
+    return {
+      status: career.conclusion.status,
+      confidence: career.conclusion.confidence as AiConfidence,
+      natalPromise: career.careerNatalPromise.status,
+      d10Relationship: career.metadata.vargaConfirmationStatus,
+      supportingFactors: [...career.conclusion.keySupportingFactors],
+      challengingFactors: [...career.conclusion.keyChallengingFactors],
+      conditionalFactors: [...career.conclusion.keyConditionalFactors],
+      ...(timing ? { timing } : {})
+    };
   }
 
-  return {
-    status: career.conclusion.status,
-    confidence: career.conclusion.confidence as AiConfidence,
-    natalPromise: career.careerNatalPromise.status,
-    d10Relationship: career.metadata.vargaConfirmationStatus,
-    supportingFactors: [...career.conclusion.keySupportingFactors],
-    challengingFactors: [...career.conclusion.keyChallengingFactors],
-    conditionalFactors: [...career.conclusion.keyConditionalFactors]
-  };
+  if (careerInterpretation) {
+    const d10 = careerInterpretation.vargaConfirmations.find((v) => v.varga === 'D10');
+    return {
+      status: careerInterpretation.conclusion.strength as any,
+      confidence: careerInterpretation.conclusion.confidence as AiConfidence,
+      natalPromise: careerInterpretation.natalPromise.strength as any,
+      d10Relationship: (d10?.relationship ?? 'UNAVAILABLE') as any,
+      supportingFactors: [],
+      challengingFactors: [],
+      conditionalFactors: [],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  return undefined;
 }
 
-function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
+function buildWealthFact(
+  horoscope: Horoscope,
+  wealthInterpretation?: DomainInterpretation,
+  asOf?: string
+): WealthFact | undefined {
   const wealth = horoscope.themeInterpretationV2?.wealth;
-  if (!wealth) {
-    return undefined;
-  }
+  const timing = buildNormalizedWealthTiming(wealthInterpretation, asOf) as WealthTimingFact | undefined;
 
   const subthemeKeys: readonly WealthSubthemeKey[] = [
     'ACCUMULATION',
@@ -387,7 +534,7 @@ function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
   ];
   const subthemes: WealthSubthemeFact[] = [];
 
-  if (wealth.subthemes) {
+  if (wealth?.subthemes) {
     for (const key of subthemeKeys) {
       const summary = wealth.subthemes[key];
       if (summary) {
@@ -404,14 +551,31 @@ function buildWealthFact(horoscope: Horoscope): WealthFact | undefined {
     }
   }
 
-  return {
-    status: wealth.conclusion.status,
-    confidence: wealth.conclusion.confidence as AiConfidence,
-    subthemes,
-    supportingFactors: [...wealth.conclusion.keySupportingFactors],
-    challengingFactors: [...wealth.conclusion.keyChallengingFactors],
-    conditionalFactors: [...wealth.conclusion.keyConditionalFactors]
-  };
+  if (wealth) {
+    return {
+      status: wealth.conclusion.status,
+      confidence: wealth.conclusion.confidence as AiConfidence,
+      subthemes,
+      supportingFactors: [...wealth.conclusion.keySupportingFactors],
+      challengingFactors: [...wealth.conclusion.keyChallengingFactors],
+      conditionalFactors: [...wealth.conclusion.keyConditionalFactors],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  if (wealthInterpretation) {
+    return {
+      status: wealthInterpretation.conclusion.strength as any,
+      confidence: wealthInterpretation.conclusion.confidence as AiConfidence,
+      subthemes: [],
+      supportingFactors: [],
+      challengingFactors: [],
+      conditionalFactors: [],
+      ...(timing ? { timing } : {})
+    };
+  }
+
+  return undefined;
 }
 
 function normalizeEvidenceEffect(effect: unknown): AiEvidenceEffect {
@@ -618,7 +782,7 @@ export function projectDomainEvidenceToAi(evidence: DomainEvidence): AiEvidence 
   }
 
   let timingPlanet: Planet | undefined = undefined;
-  const tPlanet = e.timingEvidence?.planet || e.timingPlanet;
+  const tPlanet = e.timingEvidence?.planet || e.timingPlanet || e.timing?.planet;
   if (tPlanet && PLANET_ORDER.includes(tPlanet)) {
     timingPlanet = tPlanet;
   } else if (e.timing?.periodKey && PLANET_ORDER.includes(e.timing.periodKey as Planet)) {
@@ -677,6 +841,74 @@ export function buildEvidenceFromDomainInterpretations(
       }
       evidenceMap.set(projected.id, projected);
     }
+  }
+
+  return Array.from(evidenceMap.values());
+}
+
+export function projectDashaEvidenceToAi(e: DashaInterpretationEvidence): AiEvidence {
+  const planetsStr = (e.planets || []).join(',');
+  const housesStr = (e.houses || []).join(',');
+  const ruleId = e.ruleId ? String(e.ruleId) : '';
+  const level = String(e.level || '');
+  const statement = String(e.statement || '');
+  const effect = normalizeEvidenceEffect(e.effect);
+  const id = `DASHA:${level}:${ruleId}:${planetsStr}:${housesStr}:${effect}`;
+  const strength = normalizeEvidenceStrength((e as any).strength);
+  const dashaLevel =
+    e.level === 'MAHADASHA' || e.level === 'ANTARDASHA' || e.level === 'PRATYANTARDASHA'
+      ? e.level
+      : undefined;
+
+  const planets = e.planets && e.planets.length > 0 ? [...e.planets] : undefined;
+  const houses = e.houses && e.houses.length > 0 ? [...e.houses] : undefined;
+  const timingPlanet = planets && planets.length > 0 ? planets[0] : undefined;
+
+  return {
+    id,
+    source: 'DASHA',
+    effect,
+    strength,
+    statement,
+    ...(planets ? { planets } : {}),
+    ...(houses ? { houses } : {}),
+    ...(ruleId ? { ruleId } : {}),
+    priority: 'TIMING',
+    dimension: 'TIMING',
+    ...(dashaLevel ? { dashaLevel } : {}),
+    ...(timingPlanet ? { timingPlanet } : {})
+  };
+}
+
+export function buildDashaEvidence(
+  current: ActiveDashaInterpretation | undefined
+): readonly AiEvidence[] {
+  if (!current) {
+    return [];
+  }
+
+  const rawList: DashaInterpretationEvidence[] = [
+    ...(current.evidence || []),
+    ...(current.mahadasha?.natal?.evidence || []),
+    ...(current.mahadasha?.evidence || []),
+    ...(current.antardasha?.natal?.evidence || []),
+    ...(current.antardasha?.evidence || []),
+    ...(current.pratyantardasha?.natal?.evidence || []),
+    ...(current.pratyantardasha?.evidence || []),
+    ...(current.antardasha?.pairInterpretation?.relationshipEvidence || [])
+  ];
+
+  const evidenceMap = new Map<string, AiEvidence>();
+  for (const raw of rawList) {
+    const item = projectDashaEvidenceToAi(raw);
+    const existing = evidenceMap.get(item.id);
+    if (existing) {
+      if (!isEvidenceEqual(existing, item)) {
+        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
+      }
+      continue;
+    }
+    evidenceMap.set(item.id, item);
   }
 
   return Array.from(evidenceMap.values());
@@ -742,8 +974,6 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const yogas = buildYogaFacts(horoscope);
   const dasha = buildDashaFacts(horoscope);
   const divisional = buildDivisionalFacts(horoscope);
-  const career = buildCareerFact(horoscope);
-  const wealth = buildWealthFact(horoscope);
   const lifeThemes = buildLifeThemeFacts(horoscope);
 
   // Use pre-computed domain interpretations if provided, otherwise resolve once from registry
@@ -758,6 +988,13 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
           ];
         })();
 
+  const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
+  const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
+  const asOf = horoscope.dashaInterpretation?.current?.asOf;
+
+  const career = buildCareerFact(horoscope, careerInterpretation, asOf);
+  const wealth = buildWealthFact(horoscope, wealthInterpretation, asOf);
+
   const domainInterpretations: readonly DomainInterpretationAiProjection[] =
     rawDomainInterpretations.map(projectDomainInterpretationForAi);
 
@@ -766,15 +1003,26 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysisValue);
 
-  // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence
+  // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence + Dasha interpretation evidence
   const domainEvidenceList = buildEvidenceFromDomainInterpretations(rawDomainInterpretations);
   const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);
+  const dashaEvidenceList = buildDashaEvidence(horoscope.dashaInterpretation?.current);
 
   const evidenceMap = new Map<string, AiEvidence>();
   for (const item of domainEvidenceList) {
     evidenceMap.set(item.id, item);
   }
   for (const item of lifeThemeEvidenceList) {
+    const existing = evidenceMap.get(item.id);
+    if (existing) {
+      if (!isEvidenceEqual(existing, item)) {
+        throw new Error(`Cannot build AiContext: conflicting evidence id ${item.id}`);
+      }
+      continue;
+    }
+    evidenceMap.set(item.id, item);
+  }
+  for (const item of dashaEvidenceList) {
     const existing = evidenceMap.get(item.id);
     if (existing) {
       if (!isEvidenceEqual(existing, item)) {
@@ -793,6 +1041,82 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
         throw new Error(
           `Invariant violation: domain interpretation evidence id '${e.id}' not found in context.evidence`
         );
+      }
+    }
+  }
+
+  if (dasha.interpretation) {
+    for (const evId of dasha.interpretation.evidenceIds) {
+      if (!evidenceMap.has(evId)) {
+        throw new Error(
+          `Invariant violation: dasha interpretation evidence id '${evId}' not found in context.evidence`
+        );
+      }
+    }
+    if (dasha.interpretation.mahadasha) {
+      for (const evId of dasha.interpretation.mahadasha.evidenceIds) {
+        if (!evidenceMap.has(evId)) {
+          throw new Error(
+            `Invariant violation: dasha mahadasha evidence id '${evId}' not found in context.evidence`
+          );
+        }
+      }
+    }
+    if (dasha.interpretation.antardasha) {
+      for (const evId of dasha.interpretation.antardasha.evidenceIds) {
+        if (!evidenceMap.has(evId)) {
+          throw new Error(
+            `Invariant violation: dasha antardasha evidence id '${evId}' not found in context.evidence`
+          );
+        }
+      }
+    }
+    if (dasha.interpretation.pratyantardasha) {
+      for (const evId of dasha.interpretation.pratyantardasha.evidenceIds) {
+        if (!evidenceMap.has(evId)) {
+          throw new Error(
+            `Invariant violation: dasha pratyantardasha evidence id '${evId}' not found in context.evidence`
+          );
+        }
+      }
+    }
+    if (dasha.interpretation.pair) {
+      for (const evId of dasha.interpretation.pair.relationshipEvidenceIds) {
+        if (!evidenceMap.has(evId)) {
+          throw new Error(
+            `Invariant violation: dasha pair evidence id '${evId}' not found in context.evidence`
+          );
+        }
+      }
+    }
+  }
+
+  if (career?.timing) {
+    const timing = career.timing;
+    for (const p of [timing.mahadasha, timing.antardasha, timing.pratyantardasha]) {
+      if (p) {
+        for (const evId of p.evidenceIds) {
+          if (!evidenceMap.has(evId)) {
+            throw new Error(
+              `Invariant violation: career timing evidence id '${evId}' not found in context.evidence`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  if (wealth?.timing) {
+    const timing = wealth.timing;
+    for (const p of [timing.mahadasha, timing.antardasha, timing.pratyantardasha]) {
+      if (p) {
+        for (const evId of p.evidenceIds) {
+          if (!evidenceMap.has(evId)) {
+            throw new Error(
+              `Invariant violation: wealth timing evidence id '${evId}' not found in context.evidence`
+            );
+          }
+        }
       }
     }
   }
