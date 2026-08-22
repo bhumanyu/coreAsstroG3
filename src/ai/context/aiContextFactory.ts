@@ -334,6 +334,18 @@ function mapDashaPlanetProductToPeriodFacts(
     ...(product.castAspects ? { castAspects: product.castAspects } : {}),
     ...(product.receivedAspects ? { receivedAspects: product.receivedAspects } : {}),
     ...(product.yogaParticipation ? { yogaParticipation: product.yogaParticipation } : {}),
+    ...(product.planetarySynthesis
+      ? {
+          planetarySynthesis: {
+            effect: product.planetarySynthesis.effect,
+            confidence: product.planetarySynthesis.confidence,
+            supportingEvidenceIds: [...product.planetarySynthesis.supportingEvidenceIds],
+            challengingEvidenceIds: [...product.planetarySynthesis.challengingEvidenceIds],
+            neutralEvidenceIds: [...product.planetarySynthesis.neutralEvidenceIds],
+            summary: product.planetarySynthesis.summary
+          }
+        }
+      : {}),
     evidenceIds,
     confidence: product.confidence
   };

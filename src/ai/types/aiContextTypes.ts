@@ -120,6 +120,15 @@ export interface DashaPeriodStrengthFacts {
   readonly shadbalaStatus?: string;
 }
 
+export interface DashaPeriodSynthesisFacts {
+  readonly effect: string;
+  readonly confidence: number;
+  readonly supportingEvidenceIds: readonly string[];
+  readonly challengingEvidenceIds: readonly string[];
+  readonly neutralEvidenceIds: readonly string[];
+  readonly summary: string;
+}
+
 export interface DashaPeriodFacts {
   readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly planet: Planet;
@@ -140,6 +149,7 @@ export interface DashaPeriodFacts {
   readonly yogaParticipation?: readonly DashaYogaReference[];
   readonly evidenceIds: readonly string[];
   readonly confidence: string;
+  readonly planetarySynthesis?: DashaPeriodSynthesisFacts;
 }
 
 export interface DashaPairFacts {

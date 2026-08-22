@@ -2,7 +2,8 @@ import type { Planet, NatalGrahaDrishti } from '../../../types';
 import type { 
   DashaInterpretationEvidence,
   DashaYogaReference,
-  InterpretationConfidence
+  InterpretationConfidence,
+  DashaDirectionalSynthesis
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
  
 export type DashaInterpretationStatus = 'AVAILABLE' | 'UNAVAILABLE';
@@ -38,6 +39,7 @@ export interface DashaPlanetProduct {
   readonly yogaParticipation?: readonly DashaYogaReference[];
   readonly evidence: readonly DashaInterpretationEvidence[];
   readonly confidence: InterpretationConfidence;
+  readonly planetarySynthesis?: DashaDirectionalSynthesis;
 }
  
 export interface DashaPairProduct {

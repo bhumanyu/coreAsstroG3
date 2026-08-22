@@ -10,6 +10,10 @@ import {
   InterpretationConfidence
 } from '../planetInterpretation/planetInterpretationTypes';
 import { HOUSE_DOMAIN_METADATA } from '../houseInterpretation/houseInterpretationTypes';
+import { adaptInterpretationEvidenceListToReasoningFacts } from './dashaFactAdapter';
+import { deriveDirectionalDashaEvidence } from './dashaDirectionalReasoner';
+import { synthesizeDashaDirection } from './dashaDirectionalSynthesisEngine';
+import { DashaDirectionalSynthesis } from './dashaDirectionalSynthesis';
 import {
   DashaInterpretationInput,
   DashaInterpretationReport,
@@ -651,6 +655,30 @@ export function validateDashaInterpretationInput(input: DashaInterpretationInput
   }
 }
 
+function computePlanetarySynthesisForActivation(
+  activation: DashaPlanetActivation
+): DashaDirectionalSynthesis {
+  const facts = adaptInterpretationEvidenceListToReasoningFacts(activation.evidence);
+  const derived = deriveDirectionalDashaEvidence({
+    planet: activation.planet,
+    house: activation.house,
+    sign: activation.sign,
+    ownedHouses: activation.ownedHouses,
+    functionalRoles: activation.functionalRoles,
+    functionalNature: activation.functionalNature,
+    dignity: activation.dignity,
+    state: activation.state,
+    strength: activation.strength,
+    castAspects: activation.castAspects,
+    receivedAspects: activation.receivedAspects,
+    yogaParticipation: activation.yogaParticipation,
+    existingEvidence: activation.evidence,
+    reasoningEvidence: facts
+  });
+  const allReasoning = [...facts, ...derived];
+  return synthesizeDashaDirection(allReasoning);
+}
+
 export function analyzeDashaInterpretation(
   input: DashaInterpretationInput
 ): DashaInterpretationReport {
@@ -669,6 +697,7 @@ export function analyzeDashaInterpretation(
     const mdLord = md.planet;
     const mdActivation = buildActivation(mdLord, 'MAHADASHA', input);
     const mdSummary = buildSummary(mdActivation, mdActivation.evidence);
+    const mdSynthesis = computePlanetarySynthesisForActivation(mdActivation);
 
     const antardashasInterp: DashaAntardashaInterpretation[] = [];
 
@@ -677,6 +706,7 @@ export function analyzeDashaInterpretation(
       const adActivation = buildActivation(adLord, 'ANTARDASHA', input);
       const adSummary = buildSummary(adActivation, adActivation.evidence);
       const pairInterp = buildPairInterpretation(mdLord, adLord, input);
+      const adSynthesis = computePlanetarySynthesisForActivation(adActivation);
 
       const pratyantardashasInterp: DashaPratyantardashaInterpretation[] = [];
 
@@ -684,6 +714,7 @@ export function analyzeDashaInterpretation(
         const pdLord = pd.planet;
         const pdActivation = buildActivation(pdLord, 'PRATYANTARDASHA', input);
         const pdSummary = buildSummary(pdActivation, pdActivation.evidence);
+        const pdSynthesis = computePlanetarySynthesisForActivation(pdActivation);
 
         const pdInterp: DashaPratyantardashaInterpretation = Object.freeze({
           planet: pdLord,
@@ -692,7 +723,8 @@ export function analyzeDashaInterpretation(
           natal: pdActivation,
           evidence: pdActivation.evidence,
           confidence: computeConfidenceForPlanet(pdLord, input),
-          summary: pdSummary
+          summary: pdSummary,
+          planetarySynthesis: pdSynthesis
         });
 
         pratyantardashasInterp.push(pdInterp);
@@ -707,7 +739,8 @@ export function analyzeDashaInterpretation(
         evidence: adActivation.evidence,
         confidence: computeConfidenceForPlanet(adLord, input),
         summary: adSummary,
-        pairInterpretation: pairInterp
+        pairInterpretation: pairInterp,
+        planetarySynthesis: adSynthesis
       });
 
       antardashasInterp.push(adInterp);
@@ -721,7 +754,8 @@ export function analyzeDashaInterpretation(
       antardashas: Object.freeze(antardashasInterp),
       evidence: mdActivation.evidence,
       confidence: computeConfidenceForPlanet(mdLord, input),
-      summary: mdSummary
+      summary: mdSummary,
+      planetarySynthesis: mdSynthesis
     });
 
     mahadashasInterp.push(mdInterp);
@@ -771,6 +805,10 @@ export function analyzeActiveDasha(
   const adSummary = buildSummary(adActivation, adActivation.evidence);
   const pdSummary = buildSummary(pdActivation, pdActivation.evidence);
 
+  const mdSynthesis = computePlanetarySynthesisForActivation(mdActivation);
+  const adSynthesis = computePlanetarySynthesisForActivation(adActivation);
+  const pdSynthesis = computePlanetarySynthesisForActivation(pdActivation);
+
   const pairInterp = buildPairInterpretation(mdLord, adLord, input);
 
   const pdInterp: DashaPratyantardashaInterpretation = Object.freeze({
@@ -780,7 +818,8 @@ export function analyzeActiveDasha(
     natal: pdActivation,
     evidence: pdActivation.evidence,
     confidence: computeConfidenceForPlanet(pdLord, input),
-    summary: pdSummary
+    summary: pdSummary,
+    planetarySynthesis: pdSynthesis
   });
 
   const adInterp: DashaAntardashaInterpretation = Object.freeze({
@@ -792,7 +831,8 @@ export function analyzeActiveDasha(
     evidence: adActivation.evidence,
     confidence: computeConfidenceForPlanet(adLord, input),
     summary: adSummary,
-    pairInterpretation: pairInterp
+    pairInterpretation: pairInterp,
+    planetarySynthesis: adSynthesis
   });
 
   const mdInterp: DashaMahadashaInterpretation = Object.freeze({
@@ -803,7 +843,8 @@ export function analyzeActiveDasha(
     antardashas: Object.freeze([adInterp]),
     evidence: mdActivation.evidence,
     confidence: computeConfidenceForPlanet(mdLord, input),
-    summary: mdSummary
+    summary: mdSummary,
+    planetarySynthesis: mdSynthesis
   });
 
   const allEvidence = Object.freeze([
