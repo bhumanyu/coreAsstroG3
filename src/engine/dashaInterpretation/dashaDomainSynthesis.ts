@@ -1,17 +1,12 @@
 import { DashaEvidenceEffect, DashaReasoningEvidence } from './dashaReasoningTypes';
 import { DASHA_REASONING_WEIGHTS } from './dashaReasoningWeights';
+import {
+  DomainActivationRuleProvider,
+  defaultDomainActivationRuleProvider,
+  DashaLifeDomain
+} from './domainActivationRuleProvider';
 
-export type DashaLifeDomain = 'CAREER' | 'WEALTH' | 'MARRIAGE';
-
-/**
- * Domain house associations for dasha timing synthesis.
- * Defined strictly at the domain layer (not inside the generic planetary reasoner).
- */
-export const DASHA_DOMAIN_HOUSES: Readonly<Record<DashaLifeDomain, readonly number[]>> = Object.freeze({
-  CAREER: Object.freeze([10, 6, 2, 1, 7]),
-  WEALTH: Object.freeze([2, 11, 5, 9, 1]),
-  MARRIAGE: Object.freeze([7, 2, 11, 4, 8, 12])
-});
+export type { DashaLifeDomain };
 
 export interface DashaDomainSynthesis {
   readonly domain: DashaLifeDomain | string;
@@ -56,13 +51,14 @@ function buildDomainSummary(
  */
 export function synthesizeDashaDomains(
   evidence: readonly DashaReasoningEvidence[],
-  planetActivatedHouses: readonly number[]
+  planetActivatedHouses: readonly number[],
+  domainRuleProvider: DomainActivationRuleProvider = defaultDomainActivationRuleProvider
 ): readonly DashaDomainSynthesis[] {
   const domains: readonly DashaLifeDomain[] = ['CAREER', 'WEALTH', 'MARRIAGE'];
   const results: DashaDomainSynthesis[] = [];
 
   for (const domain of domains) {
-    const domainHouses = DASHA_DOMAIN_HOUSES[domain];
+    const domainHouses = domainRuleProvider.getRelevantHouses(domain);
 
     // Relevant houses activated for this domain
     const relevantHouses = Array.from(

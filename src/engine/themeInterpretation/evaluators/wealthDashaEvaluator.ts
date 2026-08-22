@@ -3,8 +3,7 @@ import type { ThemeInterpretationContext } from '../themeInterpretationContext';
 import type { WealthTimingEvidence } from '../wealthThemeInterpretationTypes';
 import { evaluateHouseStatus } from './houseEvaluator';
 import { getHouseLord } from '../themeInterpretationUtils';
-
-const WEALTH_HOUSES = [2, 11, 9, 5];
+import { defaultDomainActivationRuleProvider } from '../../dashaInterpretation/domainActivationRuleProvider';
 
 export function evaluateWealthDashaTiming(
   context: ThemeInterpretationContext
@@ -16,6 +15,8 @@ export function evaluateWealthDashaTiming(
   if (!current) {
     return Object.freeze([]);
   }
+
+  const wealthHouses = defaultDomainActivationRuleProvider.getRelevantHouses('WEALTH');
 
   const checkPeriod = (
     level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA',
@@ -34,7 +35,7 @@ export function evaluateWealthDashaTiming(
       | undefined;
 
     // Check if lord of 2H, 11H, 9H, 5H
-    for (const hNum of WEALTH_HOUSES) {
+    for (const hNum of wealthHouses) {
       const houseLord = getHouseLord(context, hNum);
       if (houseLord === lordPlanet) {
         isRelevant = true;
@@ -56,9 +57,9 @@ export function evaluateWealthDashaTiming(
     }
 
     // Check if aspecting wealth houses or wealth lords
-    const wealthLords = WEALTH_HOUSES.map((h) => getHouseLord(context, h)).filter((p): p is Planet => !!p);
+    const wealthLords = wealthHouses.map((h) => getHouseLord(context, h)).filter((p): p is Planet => !!p);
     const aspects = context.natalGrahaDrishti?.aspects || [];
-    for (const wh of WEALTH_HOUSES) {
+    for (const wh of wealthHouses) {
       if (aspects.some((a) => a.sourcePlanet === lordPlanet && a.targetHouse === wh)) {
         isRelevant = true;
         if (!houses.includes(wh)) houses.push(wh);

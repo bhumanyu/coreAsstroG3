@@ -5,6 +5,8 @@ import { DashaYogaReference } from './dashaInterpretationTypes';
 import { PlanetStrengthInterpretation } from '../planetInterpretation/planetInterpretationTypes';
 import { DashaReasoningEvidence } from './dashaReasoningTypes';
 
+export type { DashaReasoningEvidence };
+
 export interface DirectionalEvidenceInput {
   readonly planet: Planet;
   readonly house: number;

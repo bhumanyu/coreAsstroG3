@@ -231,45 +231,49 @@ export function computeWealthNatalPromise(
   });
 }
 
+export interface WealthSubthemeConfig {
+  readonly key: WealthSubthemeKey;
+  readonly title: string;
+  readonly houseNumber: number;
+  readonly primaryFamily: WealthEvidenceFamily;
+  readonly lordFamily: WealthEvidenceFamily;
+}
+
+export const WEALTH_SUBTHEME_CONFIGS: readonly WealthSubthemeConfig[] = Object.freeze([
+  {
+    key: 'ACCUMULATION',
+    title: 'Wealth Accumulation & Liquid Assets',
+    houseNumber: 2,
+    primaryFamily: WealthEvidenceFamily.SECOND_HOUSE,
+    lordFamily: WealthEvidenceFamily.SECOND_LORD
+  },
+  {
+    key: 'GAINS',
+    title: 'Income, Gains & Financial Inflows',
+    houseNumber: 11,
+    primaryFamily: WealthEvidenceFamily.ELEVENTH_HOUSE,
+    lordFamily: WealthEvidenceFamily.ELEVENTH_LORD
+  },
+  {
+    key: 'FORTUNE',
+    title: 'Prosperity & Bhagya (Fortune)',
+    houseNumber: 9,
+    primaryFamily: WealthEvidenceFamily.NINTH_HOUSE,
+    lordFamily: WealthEvidenceFamily.NINTH_LORD
+  },
+  {
+    key: 'SPECULATION',
+    title: 'Investments & Speculative Growth',
+    houseNumber: 5,
+    primaryFamily: WealthEvidenceFamily.FIFTH_HOUSE,
+    lordFamily: WealthEvidenceFamily.FIFTH_LORD
+  }
+]);
+
 function buildWealthSubthemes(
   familySummaries: Readonly<Partial<Record<WealthEvidenceFamily, EvidenceFamilySummary<WealthEvidenceFamily>>>>
 ): Readonly<Record<WealthSubthemeKey, WealthSubthemeSummary>> {
-  const configs: {
-    key: WealthSubthemeKey;
-    title: string;
-    houseNumber: number;
-    primaryFamily: WealthEvidenceFamily;
-    lordFamily: WealthEvidenceFamily;
-  }[] = [
-    {
-      key: 'ACCUMULATION',
-      title: 'Wealth Accumulation & Liquid Assets',
-      houseNumber: 2,
-      primaryFamily: WealthEvidenceFamily.SECOND_HOUSE,
-      lordFamily: WealthEvidenceFamily.SECOND_LORD
-    },
-    {
-      key: 'GAINS',
-      title: 'Income, Gains & Financial Inflows',
-      houseNumber: 11,
-      primaryFamily: WealthEvidenceFamily.ELEVENTH_HOUSE,
-      lordFamily: WealthEvidenceFamily.ELEVENTH_LORD
-    },
-    {
-      key: 'FORTUNE',
-      title: 'Prosperity & Bhagya (Fortune)',
-      houseNumber: 9,
-      primaryFamily: WealthEvidenceFamily.NINTH_HOUSE,
-      lordFamily: WealthEvidenceFamily.NINTH_LORD
-    },
-    {
-      key: 'SPECULATION',
-      title: 'Investments & Speculative Growth',
-      houseNumber: 5,
-      primaryFamily: WealthEvidenceFamily.FIFTH_HOUSE,
-      lordFamily: WealthEvidenceFamily.FIFTH_LORD
-    }
-  ];
+  const configs = WEALTH_SUBTHEME_CONFIGS;
 
   const subthemes: Partial<Record<WealthSubthemeKey, WealthSubthemeSummary>> = {};
 
