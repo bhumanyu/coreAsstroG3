@@ -72,11 +72,15 @@ export type {
 } from './DomainConflict';
 
 export {
-  createDomainManifestation
+  createDomainManifestation,
+  resolveManifestationStatus,
+  getEvidenceIndependenceKey,
+  groupEvidenceByIndependence
 } from './ManifestationMode';
 
 export type {
-  DomainManifestation
+  DomainManifestation,
+  ManifestationStatus
 } from './ManifestationMode';
 
 export {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { Planet } from '../../types';
 import { interpretCareerV2 } from './CareerDomainInterpreterV2';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
@@ -283,52 +284,121 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
     });
   });
 
-  describe('Manifestation Gating & Canonical Vocabulary', () => {
-    it('Descriptive-fact guard: a single supporting evidence item yields POSSIBLE, requiring independent corroborator for SUPPORTED', () => {
-      const singleEv = createDomainEvidence({
-        id: 'EV_SUN_LEADERSHIP',
+  describe('Manifestation Gating & Independence Resolution', () => {
+    it('Independence gating: 3 duplicate evidence items sharing the same key yield PARTIALLY_SUPPORTED, not SUPPORTED', () => {
+      // 3 items with identical independence key (same sourceType, base ruleId, source, phase, planet)
+      const ev1 = createDomainEvidence({
+        id: 'EV_SUN_1',
         sourceType: 'PLANET',
         domain: 'CAREER',
         role: 'SECONDARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
-        statement: 'Sun governs executive authority',
+        statement: 'Sun has strong dignity in natal chart',
         polarity: 'SUPPORTING',
         strength: 'STRONG',
         priority: 70,
-        ruleId: 'CAREER_SUN_RELEVANCE_001'
+        ruleId: 'CAREER_SUN_RELEVANCE_001',
+        planet: Planet.SUN
       });
 
-      const singleResult = evaluateCareerReasoningHierarchy({
-        evidence: [singleEv]
+      const ev2 = createDomainEvidence({
+        id: 'EV_SUN_2',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Sun shows high Shadbala strength',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 70,
+        ruleId: 'CAREER_SUN_RELEVANCE_001:SUN',
+        planet: Planet.SUN
       });
 
-      const singleLeadership = singleResult.manifestations.find((m) => m.mode === 'LEADERSHIP');
-      expect(singleLeadership).toBeDefined();
-      expect(singleLeadership?.status).toBe('POSSIBLE');
+      const ev3 = createDomainEvidence({
+        id: 'EV_SUN_3',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Sun governs authority and executive presence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 70,
+        ruleId: 'CAREER_SUN_RELEVANCE_001',
+        planet: Planet.SUN
+      });
 
-      // Now add independent corroborator (10H strong)
-      const corroboratingEv = createDomainEvidence({
-        id: 'EV_10H_LEADERSHIP',
+      const duplicateResult = evaluateCareerReasoningHierarchy({
+        evidence: [ev1, ev2, ev3]
+      });
+
+      const leadership = duplicateResult.manifestations.find((m) => m.mode === 'LEADERSHIP');
+      expect(leadership).toBeDefined();
+      expect(leadership?.status).toBe('PARTIALLY_SUPPORTED');
+      expect(leadership?.status).not.toBe('SUPPORTED');
+      // Confidence should not inflate to VERY_HIGH or HIGH without independent factors
+      expect(leadership?.confidence).toBe('MODERATE');
+    });
+
+    it('Independence gating: 1 primary/strong factor + 1 genuinely independent supporting factor yields SUPPORTED', () => {
+      const primaryEv = createDomainEvidence({
+        id: 'EV_10H_STRONG',
         sourceType: 'HOUSE',
         domain: 'CAREER',
         role: 'PRIMARY',
         phase: 'NATAL_PROMISE',
         source: 'D1',
-        statement: '10th house is strong',
+        statement: '10th house is strong with auspicious occupants',
         polarity: 'SUPPORTING',
         strength: 'STRONG',
         priority: 95,
-        ruleId: 'CAREER_10H_STRONG_001'
+        ruleId: 'CAREER_10H_STRONG_001',
+        house: 10
+      });
+
+      const independentSupportingEv = createDomainEvidence({
+        id: 'EV_SUN_KARAKA',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Sun is well-placed natural karaka for authority',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 70,
+        ruleId: 'CAREER_SUN_RELEVANCE_001',
+        planet: Planet.SUN
       });
 
       const corroboratedResult = evaluateCareerReasoningHierarchy({
-        evidence: [singleEv, corroboratingEv]
+        evidence: [primaryEv, independentSupportingEv]
       });
 
-      const corroboratedLeadership = corroboratedResult.manifestations.find((m) => m.mode === 'LEADERSHIP');
-      expect(corroboratedLeadership).toBeDefined();
-      expect(corroboratedLeadership?.status).toBe('SUPPORTED');
+      const leadership = corroboratedResult.manifestations.find((m) => m.mode === 'LEADERSHIP');
+      expect(leadership).toBeDefined();
+      expect(leadership?.status).toBe('SUPPORTED');
+      expect(leadership?.confidence).toBe('HIGH');
+    });
+
+    it('Deterministic horoscope independence evaluation using canonical birth details', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
+        asOf: '2024-06-01T00:00:00.000Z'
+      });
+      const result = interpretCareerV2(horoscope, { strategy: 'CW01' });
+
+      expect(result.manifestations).toBeDefined();
+      expect(result.manifestations.length).toBe(7);
+
+      for (const m of result.manifestations) {
+        expect(['SUPPORTED', 'PARTIALLY_SUPPORTED', 'INSUFFICIENT_DATA']).toContain(m.status);
+        expect(['VERY_HIGH', 'HIGH', 'MODERATE', 'LOW', 'VERY_LOW']).toContain(m.confidence);
+        expect(m.statement.length).toBeGreaterThan(0);
+      }
     });
 
     it('contains only the 7 canonical manifestation modes', () => {

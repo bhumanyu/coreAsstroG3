@@ -126,7 +126,8 @@ export function buildWealthEvidence(
       const role = mapWealthRole(item);
       const relatedEvidenceIds = resolveRelatedWealthPromiseEvidenceIds(item, rawEvidence);
       const period = mapWealthDashaPeriod(item);
-      const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? undefined;
+      const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? item.planets?.[0] ?? undefined;
+      const house = item.houses?.[0] ?? undefined;
       const timing = period
         ? { period, level: period, ...(planet ? { planet } : {}) }
         : (item.transitEvidence?.planet
@@ -149,7 +150,9 @@ export function buildWealthEvidence(
         relatedEvidenceIds,
         timing,
         evidenceFamily: item.evidenceFamily,
-        dimension
+        dimension,
+        planet,
+        house
       });
     })
   );

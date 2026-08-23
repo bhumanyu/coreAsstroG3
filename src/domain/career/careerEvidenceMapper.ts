@@ -87,7 +87,8 @@ export function buildCareerEvidence(
       const role = mapCareerRole(item);
       const relatedEvidenceIds = resolveRelatedCareerPromiseEvidenceIds(item, rawEvidence);
       const period = mapCareerDashaPeriod(item);
-      const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? undefined;
+      const planet = item.timingEvidence?.planet ?? item.transitEvidence?.planet ?? item.planets?.[0] ?? undefined;
+      const house = item.houses?.[0] ?? undefined;
       const timing = period
         ? { period, level: period, ...(planet ? { planet } : {}) }
         : (item.transitEvidence?.planet
@@ -107,7 +108,10 @@ export function buildCareerEvidence(
         priority: mapCareerPriority(item.priority),
         ruleId: item.ruleId,
         relatedEvidenceIds,
-        timing
+        timing,
+        evidenceFamily: item.evidenceFamily,
+        planet,
+        house
       });
     })
   );
