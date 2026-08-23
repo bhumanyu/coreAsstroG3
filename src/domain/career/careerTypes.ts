@@ -24,8 +24,10 @@ export type CareerManifestationMode =
 
 export const CAREER_PRIMARY_HOUSES: ReadonlySet<number> = new Set([10]);
 export const CAREER_SUPPORTING_HOUSES: ReadonlySet<number> = new Set([6, 2, 11]);
+export const CAREER_CHALLENGING_HOUSES: ReadonlySet<number> = new Set([8, 12]);
 export const CAREER_PRIMARY_LORDS: ReadonlySet<string> = new Set(['10L']);
 export const CAREER_SUPPORTING_LORDS: ReadonlySet<string> = new Set(['6L', '2L', '11L']);
+export const CAREER_CHALLENGING_LORDS: ReadonlySet<string> = new Set(['8L', '12L']);
 
 export interface CareerManifestation {
   readonly mode: ManifestationMode;

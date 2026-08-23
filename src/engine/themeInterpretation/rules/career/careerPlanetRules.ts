@@ -171,6 +171,38 @@ function evaluateKarakaPlanet(
   return { triggered: true, evidence };
 }
 
+export interface CareerKarakaDefinition {
+  readonly title: string;
+  readonly description: string;
+}
+
+export const CAREER_KARAKA_DEFINITIONS: Readonly<Partial<Record<Planet, CareerKarakaDefinition>>> = Object.freeze({
+  [Planet.SUN]: Object.freeze({
+    title: 'Karaka for Public Status & Authority',
+    description: 'Sun governs public visibility, managerial authority, executive dignity, and government standing.'
+  }),
+  [Planet.SATURN]: Object.freeze({
+    title: 'Karaka for Karma & Professional Endurance',
+    description: 'Saturn governs career discipline, long-term perseverance, institutional structures, and labor duties.'
+  }),
+  [Planet.MERCURY]: Object.freeze({
+    title: 'Karaka for Commerce & Analytical Intellect',
+    description: 'Mercury governs commercial transactions, analytical reasoning, communication skills, and trade skills.'
+  }),
+  [Planet.MARS]: Object.freeze({
+    title: 'Karaka for Executive Drive & Technical Initiative',
+    description: 'Mars provides executive energy, decisive initiative, courage in leadership, and technical problem solving.'
+  }),
+  [Planet.JUPITER]: Object.freeze({
+    title: 'Karaka for Executive Wisdom & Guidance',
+    description: 'Jupiter provides ethical expansion, high-level counsel, administrative wisdom, and organizational guidance.'
+  })
+});
+
+export function getCareerKarakaDefinition(planet: Planet): CareerKarakaDefinition | undefined {
+  return CAREER_KARAKA_DEFINITIONS[planet];
+}
+
 export const careerPlanetRules: readonly ThemeRule[] = Object.freeze([
   // Sun
   {
@@ -178,13 +210,14 @@ export const careerPlanetRules: readonly ThemeRule[] = Object.freeze([
     evidenceFamily: CareerEvidenceFamily.SUN,
     priority: 'SECONDARY',
     evaluate: (context: ThemeInterpretationContext): ThemeRuleResult => {
+      const def = CAREER_KARAKA_DEFINITIONS[Planet.SUN]!;
       return evaluateKarakaPlanet(
         context,
         Planet.SUN,
         CareerEvidenceFamily.SUN,
         'CAREER_SUN_RELEVANCE_001',
-        'Karaka for Public Status & Authority',
-        'Sun governs public visibility, managerial authority, executive dignity, and government standing.'
+        def.title,
+        def.description
       );
     }
   },
@@ -195,13 +228,14 @@ export const careerPlanetRules: readonly ThemeRule[] = Object.freeze([
     evidenceFamily: CareerEvidenceFamily.SATURN,
     priority: 'SECONDARY',
     evaluate: (context: ThemeInterpretationContext): ThemeRuleResult => {
+      const def = CAREER_KARAKA_DEFINITIONS[Planet.SATURN]!;
       return evaluateKarakaPlanet(
         context,
         Planet.SATURN,
         CareerEvidenceFamily.SATURN,
         'CAREER_SATURN_RELEVANCE_001',
-        'Karaka for Karma & Professional Endurance',
-        'Saturn governs career discipline, long-term perseverance, institutional structures, and labor duties.'
+        def.title,
+        def.description
       );
     }
   },
@@ -212,13 +246,14 @@ export const careerPlanetRules: readonly ThemeRule[] = Object.freeze([
     evidenceFamily: CareerEvidenceFamily.MERCURY,
     priority: 'SECONDARY',
     evaluate: (context: ThemeInterpretationContext): ThemeRuleResult => {
+      const def = CAREER_KARAKA_DEFINITIONS[Planet.MERCURY]!;
       return evaluateKarakaPlanet(
         context,
         Planet.MERCURY,
         CareerEvidenceFamily.MERCURY,
         'CAREER_MERCURY_RELEVANCE_001',
-        'Karaka for Commerce & Analytical Intellect',
-        'Mercury governs commercial transactions, analytical reasoning, communication skills, and trade skills.'
+        def.title,
+        def.description
       );
     }
   },
@@ -229,13 +264,14 @@ export const careerPlanetRules: readonly ThemeRule[] = Object.freeze([
     evidenceFamily: CareerEvidenceFamily.MARS,
     priority: 'SECONDARY',
     evaluate: (context: ThemeInterpretationContext): ThemeRuleResult => {
+      const def = CAREER_KARAKA_DEFINITIONS[Planet.MARS]!;
       return evaluateKarakaPlanet(
         context,
         Planet.MARS,
         CareerEvidenceFamily.MARS,
         'CAREER_MARS_RELEVANCE_001',
-        'Karaka for Executive Drive & Technical Initiative',
-        'Mars provides executive energy, decisive initiative, courage in leadership, and technical problem solving.'
+        def.title,
+        def.description
       );
     }
   },
@@ -246,13 +282,14 @@ export const careerPlanetRules: readonly ThemeRule[] = Object.freeze([
     evidenceFamily: CareerEvidenceFamily.JUPITER,
     priority: 'SECONDARY',
     evaluate: (context: ThemeInterpretationContext): ThemeRuleResult => {
+      const def = CAREER_KARAKA_DEFINITIONS[Planet.JUPITER]!;
       return evaluateKarakaPlanet(
         context,
         Planet.JUPITER,
         CareerEvidenceFamily.JUPITER,
         'CAREER_JUPITER_RELEVANCE_001',
-        'Karaka for Executive Wisdom & Guidance',
-        'Jupiter provides ethical expansion, high-level counsel, administrative wisdom, and organizational guidance.'
+        def.title,
+        def.description
       );
     }
   }

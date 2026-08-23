@@ -85,22 +85,28 @@ export function buildNormalizedCareerTiming(
         period: 'MD',
         planet: careerDasha.md.planet,
         effect: careerDasha.md.effect,
-        evidenceIds: careerDasha.md.factors.map((f) => f.id),
-        statement: careerDasha.md.summary
+        evidenceIds: careerDasha.md.factors.map((f: { id: string }) => f.id),
+        statement: careerDasha.md.summary,
+        ...(careerDasha.md.start ? { start: careerDasha.md.start } : {}),
+        ...(careerDasha.md.end ? { end: careerDasha.md.end } : {})
       },
       antardasha: {
         period: 'AD',
         planet: careerDasha.ad.planet,
         effect: careerDasha.ad.effect,
-        evidenceIds: careerDasha.ad.factors.map((f) => f.id),
-        statement: careerDasha.ad.summary
+        evidenceIds: careerDasha.ad.factors.map((f: { id: string }) => f.id),
+        statement: careerDasha.ad.summary,
+        ...(careerDasha.ad.start ? { start: careerDasha.ad.start } : {}),
+        ...(careerDasha.ad.end ? { end: careerDasha.ad.end } : {})
       },
       pratyantardasha: {
         period: 'PD',
         planet: careerDasha.pd.planet,
         effect: careerDasha.pd.effect,
-        evidenceIds: careerDasha.pd.factors.map((f) => f.id),
-        statement: careerDasha.pd.summary
+        evidenceIds: careerDasha.pd.factors.map((f: { id: string }) => f.id),
+        statement: careerDasha.pd.summary,
+        ...(careerDasha.pd.start ? { start: careerDasha.pd.start } : {}),
+        ...(careerDasha.pd.end ? { end: careerDasha.pd.end } : {})
       }
     };
   }

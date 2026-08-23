@@ -35,7 +35,8 @@ import {
   WealthTimingFact,
   WealthPeriodTimingFact,
   WealthSubthemeFact,
-  YogaFactSummary
+  YogaFactSummary,
+  TimingActivationEffect
 } from '../types/aiContextTypes';
 import type { CareerTimingActivation } from '../../domain/career/careerTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
@@ -540,23 +541,29 @@ function buildCareerFact(
         level: 'MAHADASHA',
         role: 'PRIMARY',
         planet: syn.md.planet,
-        effect: mapEffect(syn.md.effect)
+        effect: mapEffect(syn.md.effect),
+        ...(syn.md.start ? { start: syn.md.start } : {}),
+        ...(syn.md.end ? { end: syn.md.end } : {})
       },
       modifier: {
         level: 'ANTARDASHA',
         role: 'MODIFIER',
         planet: syn.ad.planet,
-        effect: mapEffect(syn.ad.effect)
+        effect: mapEffect(syn.ad.effect),
+        ...(syn.ad.start ? { start: syn.ad.start } : {}),
+        ...(syn.ad.end ? { end: syn.ad.end } : {})
       },
       trigger: {
         level: 'PRATYANTARDASHA',
         role: 'TRIGGER',
         planet: syn.pd.planet,
-        effect: mapEffect(syn.pd.effect)
+        effect: mapEffect(syn.pd.effect),
+        ...(syn.pd.start ? { start: syn.pd.start } : {}),
+        ...(syn.pd.end ? { end: syn.pd.end } : {})
       },
       overallEffect: mapEffect(syn.combinedEffect),
-      confidence: syn.combinedConfidence === 'HIGH' ? 0.9 : syn.combinedConfidence === 'MODERATE' ? 0.7 : 0.5,
-      evidenceIds: careerDashaSynthesis.factors.map((f) => f.id),
+      confidence: syn.combinedConfidence === 'HIGH' ? 0.9 : syn.combinedConfidence === 'MEDIUM' ? 0.7 : 0.5,
+      evidenceIds: careerDashaSynthesis.factors.map((f: { id: string }) => f.id),
       summary: syn.summary
     };
   } else if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {

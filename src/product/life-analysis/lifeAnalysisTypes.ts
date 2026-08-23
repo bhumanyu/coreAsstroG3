@@ -45,6 +45,8 @@ export interface CareerPeriodTimingProduct {
   readonly effect: TimingActivationEffect | string;
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface CareerTimingProduct {

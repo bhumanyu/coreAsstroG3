@@ -55,6 +55,11 @@ export function resolveCareerDashaEffect(
   if (total === 0) {
     return 'DOES_NOT_ACTIVATE';
   }
+  // D10 chart-level confirmation alone without planetary career connection cannot manufacture activation
+  const nonD10Factors = factors.filter((f) => f.category !== 'D10' && f.direction !== 'NEUTRAL');
+  if (nonD10Factors.length === 0) {
+    return 'DOES_NOT_ACTIVATE';
+  }
   const ratio = support / total;
   if (ratio >= 0.75 && support >= 3.0) {
     return 'STRONGLY_SUPPORTS';
@@ -75,7 +80,7 @@ export function resolveCombinedCareerDashaEffect(
   md: CareerDashaPlanetSynthesis,
   ad: CareerDashaPlanetSynthesis,
   pd: CareerDashaPlanetSynthesis,
-  combinedScore: number
+  _combinedScore?: number
 ): CareerDashaEffect {
   if (
     md.effect === 'INSUFFICIENT_DATA' ||
@@ -84,75 +89,125 @@ export function resolveCombinedCareerDashaEffect(
     return 'INSUFFICIENT_DATA';
   }
 
+  // ISSUE 8: MD DOES_NOT_ACTIVATE cannot yield full SUPPORTS/CHALLENGES
   if (md.effect === 'DOES_NOT_ACTIVATE') {
     if (ad.effect === 'DOES_NOT_ACTIVATE' && pd.effect === 'DOES_NOT_ACTIVATE') {
       return 'DOES_NOT_ACTIVATE';
     }
-    if (ad.effect === 'STRONGLY_SUPPORTS' || ad.effect === 'SUPPORTS') {
-      return 'SUPPORTS';
-    }
-    if (ad.effect === 'STRONGLY_CHALLENGES' || ad.effect === 'CHALLENGES') {
-      return 'CHALLENGES';
-    }
+    // Sub-period activation without MD base is partial/sub-period (MIXED)
     return 'MIXED';
   }
 
-  // MD sets the base framework; AD and PD modify and refine
+  // ISSUE 9: Structural hierarchy (MD base -> AD allowed transitions -> PD refinement)
   switch (md.effect) {
     case 'STRONGLY_SUPPORTS': {
-      // AD and PD can only modify/refine: outcome MUST be in { STRONGLY_SUPPORTS, SUPPORTS, MIXED }
-      if (combinedScore >= 1.2) {
+      if (ad.effect === 'STRONGLY_SUPPORTS') {
+        if (pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'SUPPORTS';
+        }
         return 'STRONGLY_SUPPORTS';
       }
-      if (combinedScore >= 0.2) {
+      if (ad.effect === 'SUPPORTS') {
+        if (pd.effect === 'CHALLENGES' || pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'SUPPORTS';
+        }
+        return 'STRONGLY_SUPPORTS';
+      }
+      if (ad.effect === 'MIXED' || ad.effect === 'DOES_NOT_ACTIVATE') {
+        if (pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'MIXED';
+        }
         return 'SUPPORTS';
       }
+      // ad.effect is CHALLENGES or STRONGLY_CHALLENGES
       return 'MIXED';
     }
     case 'SUPPORTS': {
-      // Outcome can be elevated to STRONGLY_SUPPORTS or lowered to MIXED or CHALLENGES, but never STRONGLY_CHALLENGES
-      if (combinedScore >= 1.3 && (ad.effect === 'STRONGLY_SUPPORTS' || pd.effect === 'STRONGLY_SUPPORTS')) {
+      if (ad.effect === 'STRONGLY_SUPPORTS') {
+        if (pd.effect === 'STRONGLY_CHALLENGES' || pd.effect === 'CHALLENGES') {
+          return 'SUPPORTS';
+        }
         return 'STRONGLY_SUPPORTS';
       }
-      if (combinedScore >= 0.3) {
+      if (ad.effect === 'SUPPORTS') {
+        if (pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'MIXED';
+        }
         return 'SUPPORTS';
       }
-      if (combinedScore >= -0.7) {
+      if (ad.effect === 'MIXED' || ad.effect === 'DOES_NOT_ACTIVATE') {
+        if (pd.effect === 'CHALLENGES' || pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'MIXED';
+        }
+        return 'SUPPORTS';
+      }
+      if (ad.effect === 'CHALLENGES') {
         return 'MIXED';
       }
-      return 'CHALLENGES';
+      if (ad.effect === 'STRONGLY_CHALLENGES') {
+        if (pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'CHALLENGES';
+        }
+        return 'MIXED';
+      }
+      return 'SUPPORTS';
     }
     case 'MIXED': {
-      if (combinedScore >= 0.7) {
+      if (ad.effect === 'STRONGLY_SUPPORTS' || ad.effect === 'SUPPORTS') {
+        if (pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'MIXED';
+        }
         return 'SUPPORTS';
       }
-      if (combinedScore <= -0.7) {
+      if (ad.effect === 'STRONGLY_CHALLENGES' || ad.effect === 'CHALLENGES') {
+        if (pd.effect === 'STRONGLY_SUPPORTS') {
+          return 'MIXED';
+        }
+        return 'CHALLENGES';
+      }
+      if (pd.effect === 'STRONGLY_SUPPORTS') {
+        return 'SUPPORTS';
+      }
+      if (pd.effect === 'STRONGLY_CHALLENGES') {
         return 'CHALLENGES';
       }
       return 'MIXED';
     }
     case 'CHALLENGES': {
-      // Outcome can be elevated to MIXED or lowered to STRONGLY_CHALLENGES, but never STRONGLY_SUPPORTS
-      if (combinedScore >= 0.5 && (ad.effect === 'STRONGLY_SUPPORTS' || pd.effect === 'STRONGLY_SUPPORTS')) {
+      if (ad.effect === 'STRONGLY_SUPPORTS' || ad.effect === 'SUPPORTS') {
         return 'MIXED';
       }
-      if (combinedScore <= -1.3 && (ad.effect === 'STRONGLY_CHALLENGES' || pd.effect === 'STRONGLY_CHALLENGES')) {
+      if (ad.effect === 'STRONGLY_CHALLENGES') {
         return 'STRONGLY_CHALLENGES';
       }
-      if (combinedScore <= -0.3) {
+      if (ad.effect === 'CHALLENGES') {
+        if (pd.effect === 'STRONGLY_CHALLENGES') {
+          return 'STRONGLY_CHALLENGES';
+        }
         return 'CHALLENGES';
       }
-      return 'MIXED';
+      if (pd.effect === 'STRONGLY_SUPPORTS') {
+        return 'MIXED';
+      }
+      if (pd.effect === 'STRONGLY_CHALLENGES') {
+        return 'STRONGLY_CHALLENGES';
+      }
+      return 'CHALLENGES';
     }
     case 'STRONGLY_CHALLENGES': {
-      // Outcome MUST be in { STRONGLY_CHALLENGES, CHALLENGES, MIXED }
-      if (combinedScore <= -1.2) {
-        return 'STRONGLY_CHALLENGES';
+      if (ad.effect === 'STRONGLY_SUPPORTS') {
+        return 'MIXED';
       }
-      if (combinedScore <= -0.2) {
+      if (ad.effect === 'SUPPORTS') {
         return 'CHALLENGES';
       }
-      return 'MIXED';
+      if (ad.effect === 'CHALLENGES' || ad.effect === 'STRONGLY_CHALLENGES') {
+        return 'STRONGLY_CHALLENGES';
+      }
+      if (pd.effect === 'STRONGLY_SUPPORTS') {
+        return 'CHALLENGES';
+      }
+      return 'STRONGLY_CHALLENGES';
     }
     default:
       return 'DOES_NOT_ACTIVATE';
@@ -168,7 +223,7 @@ export function combineCareerDashaConfidence(
     switch (c) {
       case 'HIGH':
         return 3;
-      case 'MODERATE':
+      case 'MEDIUM':
         return 2;
       case 'LOW':
       default:
@@ -178,6 +233,6 @@ export function combineCareerDashaConfidence(
 
   const weighted = (confToScore(mdConf) * 1.0 + confToScore(adConf) * 0.6 + confToScore(pdConf) * 0.3) / 1.9;
   if (weighted >= 2.5) return 'HIGH';
-  if (weighted >= 1.7) return 'MODERATE';
+  if (weighted >= 1.7) return 'MEDIUM';
   return 'LOW';
 }
