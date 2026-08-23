@@ -110,9 +110,7 @@ export function resolveNatalPromise(
     primarySupport,
     primaryChallenge,
     secondarySupport,
-    secondaryChallenge,
-    modifierSupport,
-    modifierChallenge
+    secondaryChallenge
   });
 
   // Calculate contradiction summary

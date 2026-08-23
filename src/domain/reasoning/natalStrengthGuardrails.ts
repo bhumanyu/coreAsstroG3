@@ -7,10 +7,7 @@ import type {
 export const NATAL_STRENGTH_GUARDRAILS = Object.freeze({
   SUPPORT_SECONDARY_CONTRADICTION_CAP: 'STRONG' as const,
   MIXED_PRIMARY_CAP: 'MODERATE' as const,
-  CHALLENGE_SECONDARY_CONTRADICTION_CAP: 'MODERATE' as const,
-  MAX_SUPPORT_STRENGTH: 'STRONG' as const,
-  MAX_MIXED_STRENGTH: 'MODERATE' as const,
-  MAX_CHALLENGE_STRENGTH: 'MODERATE' as const
+  CHALLENGE_SECONDARY_CONTRADICTION_CAP: 'MODERATE' as const
 });
 
 export interface NatalGuardrailInput {
@@ -20,8 +17,6 @@ export interface NatalGuardrailInput {
   readonly primaryChallenge: number;
   readonly secondarySupport: number;
   readonly secondaryChallenge: number;
-  readonly modifierSupport?: number;
-  readonly modifierChallenge?: number;
 }
 
 export interface NatalGuardrailResult {
@@ -95,8 +90,10 @@ export function applyNatalStrengthGuardrails(
         strength = capped;
       }
     }
+  } else if (input.primaryDirection === 'NEUTRAL') {
+    direction = 'NEUTRAL';
+    strength = 'UNDETERMINED';
   } else {
-    // Handle 'NEUTRAL' fallthrough explicitly
     direction = input.primaryDirection;
     strength = input.primaryStrength;
   }
