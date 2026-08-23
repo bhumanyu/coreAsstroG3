@@ -9,10 +9,21 @@ describe('CW-01 Reasoning Conflict Resolver', () => {
   const strongNatalPromise: NatalPromiseResult = {
     direction: 'SUPPORT',
     strength: 'STRONG',
+    primaryDirection: 'SUPPORT',
+    primaryStrength: 'STRONG',
     primarySupport: 10,
     primaryChallenge: 0,
     secondarySupport: 5,
     secondaryChallenge: 0,
+    modifierSupport: 0,
+    modifierChallenge: 0,
+    guardrails: ['NONE'],
+    contradiction: {
+      hasContradiction: false,
+      primaryContradictionRatio: 0,
+      secondaryContradictionRatio: 0,
+      modifierContradictionRatio: 0
+    },
     rationale: 'Natal promise strong'
   };
 
@@ -43,10 +54,21 @@ describe('CW-01 Reasoning Conflict Resolver', () => {
     const challengedNatal: NatalPromiseResult = {
       direction: 'CHALLENGE',
       strength: 'WEAK',
+      primaryDirection: 'CHALLENGE',
+      primaryStrength: 'WEAK',
       primarySupport: 0,
       primaryChallenge: 10,
       secondarySupport: 0,
       secondaryChallenge: 5,
+      modifierSupport: 0,
+      modifierChallenge: 0,
+      guardrails: ['NONE'],
+      contradiction: {
+        hasContradiction: false,
+        primaryContradictionRatio: 0,
+        secondaryContradictionRatio: 0,
+        modifierContradictionRatio: 0
+      },
       rationale: 'Challenged chart'
     };
 
