@@ -6,6 +6,7 @@ import {
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import {
   buildDomainInterpretation,
+  createDomainEvidence,
   createNatalPromise,
   createDashaActivation,
   createTransitTrigger,
@@ -58,6 +59,10 @@ import {
   buildCareerManifestations,
   calculateManifestationConfidence
 } from './careerManifestations';
+import {
+  buildCareerDashaSynthesis,
+  type D10CareerContext
+} from './careerDasha';
 import {
   buildCareerConclusion,
   buildCareerConclusionData,
@@ -238,6 +243,34 @@ export function interpretCareerV2(
       rawConflicts: conflicts
     });
 
+    const d10Context: D10CareerContext = {
+      relationship: d10Relationship,
+      statement: buildD10Statement(d10Evidence, d10Relationship)
+    };
+
+    const careerDashaSynthesis = buildCareerDashaSynthesis({
+      dashaInterpretation: horoscope.dashaInterpretation,
+      d10Context
+    });
+
+    const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) =>
+      createDomainEvidence({
+        id: f.id,
+        sourceType: 'DASHA',
+        domain: 'CAREER',
+        role: 'MODIFIER',
+        phase: 'DASHA_ACTIVATION',
+        source: 'DASHA',
+        statement: f.statement,
+        polarity: f.direction === 'SUPPORT' ? 'SUPPORTING' : f.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
+        strength: f.weight >= 2.0 ? 'STRONG' : 'MODERATE',
+        priority: 3,
+        houses: f.houses
+      })
+    );
+
+    const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
+
     const conclusionData = buildCareerConclusionData(
       cw01Result.natalStrength,
       d10Relationship,
@@ -279,7 +312,7 @@ export function interpretCareerV2(
 
     return buildDomainInterpretation({
       domain: 'CAREER',
-      evidence,
+      evidence: mergedEvidence,
       natalPromise,
       dashaActivation,
       transitTrigger,
@@ -292,7 +325,8 @@ export function interpretCareerV2(
       conclusionData: {
         ...conclusionData,
         currentActivation: cw01Result.currentActivation,
-        currentPressure: cw01Result.currentPressure
+        currentPressure: cw01Result.currentPressure,
+        careerDashaSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: 'CW-01'

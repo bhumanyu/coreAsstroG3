@@ -7,3 +7,4 @@ export * from './careerDataCompleteness';
 export * from './CareerDomainInterpreterV2';
 export * from './CareerDomainInterpreter';
 export * from './career-v2-golden.fixture';
+export * from './careerDasha';

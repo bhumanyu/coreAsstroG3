@@ -524,7 +524,42 @@ function buildCareerFact(
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
   let hierarchy: CareerHierarchyFact | undefined;
-  if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
+  const careerDashaSynthesis = careerInterpretation?.conclusionData?.careerDashaSynthesis;
+
+  if (careerDashaSynthesis && careerDashaSynthesis.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
+    const syn = careerDashaSynthesis.combined;
+    const mapEffect = (effect: string): TimingActivationEffect => {
+      if (effect === 'STRONGLY_SUPPORTS' || effect === 'SUPPORTS') return 'ACTIVATES';
+      if (effect === 'CHALLENGES' || effect === 'STRONGLY_CHALLENGES') return 'CHALLENGES';
+      if (effect === 'MIXED') return 'PARTIALLY_ACTIVATES';
+      return 'DOES_NOT_ACTIVATE';
+    };
+
+    hierarchy = {
+      primary: {
+        level: 'MAHADASHA',
+        role: 'PRIMARY',
+        planet: syn.md.planet,
+        effect: mapEffect(syn.md.effect)
+      },
+      modifier: {
+        level: 'ANTARDASHA',
+        role: 'MODIFIER',
+        planet: syn.ad.planet,
+        effect: mapEffect(syn.ad.effect)
+      },
+      trigger: {
+        level: 'PRATYANTARDASHA',
+        role: 'TRIGGER',
+        planet: syn.pd.planet,
+        effect: mapEffect(syn.pd.effect)
+      },
+      overallEffect: mapEffect(syn.combinedEffect),
+      confidence: syn.combinedConfidence === 'HIGH' ? 0.9 : syn.combinedConfidence === 'MODERATE' ? 0.7 : 0.5,
+      evidenceIds: careerDashaSynthesis.factors.map((f) => f.id),
+      summary: syn.summary
+    };
+  } else if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
     const activations = getCareerTimingActivations(careerInterpretation);
     const { md, ad, pd } = indexDashaPeriodActivations(activations);
 
