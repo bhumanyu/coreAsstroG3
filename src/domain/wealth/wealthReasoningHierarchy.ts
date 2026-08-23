@@ -2,25 +2,28 @@ import type {
   DomainEvidence,
   DomainManifestation,
   DomainConflict,
-  ConfidenceLevel,
   ManifestationMode
 } from '../interpretation';
-import { createDomainManifestation } from '../interpretation/ManifestationMode';
+import {
+  createDomainManifestation,
+  resolveManifestationStatus
+} from '../interpretation/ManifestationMode';
 
 import {
   classifyReasoningEvidence,
   summarizeLayers
 } from '../reasoning/reasoningHierarchy';
 import {
-  resolveNatalPromise,
-  resolveStrength
+  resolveNatalPromise
 } from '../reasoning/reasoningConclusion';
 import {
   resolveDashaHierarchy,
   type DashaTimingEvidence
 } from '../reasoning/dashaHierarchy';
 import {
-  resolveReasoningConflicts
+  resolveReasoningConflicts,
+  resolveFinalDomainStrength,
+  resolveGradedCurrentPressure
 } from '../reasoning/reasoningConflictResolver';
 import { buildReasoningTrace } from '../reasoning/reasoningTrace';
 import type {
@@ -50,7 +53,7 @@ export interface WealthReasoningResult extends HierarchicalDomainResult {
   readonly timingHierarchy: TimingHierarchyResult;
   readonly dimensionResults: Readonly<Record<WealthManifestationMode, WealthDimensionReasoningResult>>;
   readonly currentActivation: 'STRONG' | 'MODERATE' | 'LOW' | 'INSUFFICIENT_DATA';
-  readonly currentPressure: 'STRONG' | 'MODERATE' | 'LOW' | 'NONE';
+  readonly currentPressure: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'STRONG';
 }
 
 export function evaluateWealthDimension(
@@ -166,7 +169,7 @@ export function deriveWealthReasoningManifestations(
       createDomainManifestation({
         mode: mode as ManifestationMode,
         confidence,
-        status: supporting.length > 0 ? 'SUPPORTED' : 'INSUFFICIENT_DATA',
+        status: resolveManifestationStatus(supporting),
         statement,
         evidenceIds: supporting.map((e) => e.id)
       })
@@ -219,6 +222,7 @@ export function evaluateWealthReasoningHierarchy(params: {
   const vargaDirection: ReasoningDirection = 'UNAVAILABLE';
 
   // 5. Resolve Dasha Timing Hierarchy
+  // TODO(CW-01 Follow-up Issue #2): Implement true per-planet Dasha domain synthesis across karaka and lordships.
   const mdTiming: DashaTimingEvidence = dashaTimings?.md ?? {
     level: 'MD',
     effect: 'INSUFFICIENT_DATA',
@@ -241,6 +245,7 @@ export function evaluateWealthReasoningHierarchy(params: {
   const timingHierarchy = resolveDashaHierarchy(mdTiming, adTiming, pdTiming);
 
   // 6. Resolve Transit Trigger Direction
+  // TODO(CW-01 Follow-up Issue #6): Implement rich transit target/strength/role modeling beyond binary polarity checks.
   let transitDirection: ReasoningDirection = 'NEUTRAL';
   if (transitEvidence.length > 0) {
     const hasTransitChallenge = transitEvidence.some((e) => e.polarity === 'CHALLENGING');
@@ -262,9 +267,17 @@ export function evaluateWealthReasoningHierarchy(params: {
     transitDirection
   });
 
-  const finalStrength: DomainStrength = natalPromiseResult.strength;
+  // Calculate final strength using centralized resolver (consumes full hierarchy)
+  const finalStrength: DomainStrength = resolveFinalDomainStrength({
+    natalStrength: natalPromiseResult.strength,
+    natalDirection: natalPromiseResult.direction,
+    vargaDirection,
+    dashaEffect: timingHierarchy.finalEffect,
+    transitDirection,
+    conflicts: conflictRes.conflicts
+  });
 
-  // Derive current activation and pressure
+  // Derive current activation
   let currentActivation: 'STRONG' | 'MODERATE' | 'LOW' | 'INSUFFICIENT_DATA' = 'INSUFFICIENT_DATA';
   if (timingHierarchy.finalEffect === 'ACTIVATES') {
     currentActivation = 'STRONG';
@@ -277,12 +290,14 @@ export function evaluateWealthReasoningHierarchy(params: {
     currentActivation = 'LOW';
   }
 
-  let currentPressure: 'STRONG' | 'MODERATE' | 'LOW' | 'NONE' = 'NONE';
-  if (transitDirection === 'CHALLENGE') {
-    currentPressure = 'MODERATE';
-  } else if (timingHierarchy.finalEffect === 'CHALLENGES') {
-    currentPressure = 'STRONG';
-  }
+  // Derive graded current pressure
+  const currentPressure = resolveGradedCurrentPressure({
+    transitEvidence,
+    transitDirection,
+    timingHierarchy,
+    dashaEffect: timingHierarchy.finalEffect,
+    conflicts: conflictRes.conflicts
+  });
 
   // Collect evidence IDs
   const primaryEvidenceIds = weightedEvidence

@@ -151,9 +151,10 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
 
     expect(result.natalDirection).toBe('CHALLENGE');
     expect(result.natalStrength).toBe('VERY_WEAK');
+    expect(result.finalStrength).toBe('VERY_WEAK');
   });
 
-  it('C4: Challenging transit does not erase strong natal promise', () => {
+  it('C4: Challenging transit creates temporary pressure without erasing natal promise', () => {
     const ev10H = createDomainEvidence({
       id: 'EV_10H_STRONG',
       sourceType: 'HOUSE',
@@ -187,31 +188,167 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
     });
 
     expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('VERY_STRONG');
+    expect(result.finalStrength).toBe('VERY_STRONG');
     expect(result.currentPressure).toBe('MODERATE');
   });
 
-  it('C6: Accurately derives multiple supporting career manifestations', () => {
-    const evLeadership = createDomainEvidence({
-      id: 'EV_SUN_LEADERSHIP',
-      sourceType: 'PLANET',
+  it('C5: Strong natal + MD CHALLENGES + AD CHALLENGES + transit CHALLENGE reflects timing challenge in finalStrength and HIGH pressure', () => {
+    const ev10H = createDomainEvidence({
+      id: 'EV_10H_STRONG',
+      sourceType: 'HOUSE',
       domain: 'CAREER',
-      role: 'SECONDARY',
+      role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
       source: 'D1',
-      statement: 'Sun governs executive authority',
+      statement: '10th house is strong',
       polarity: 'SUPPORTING',
+      strength: 'VERY_STRONG',
+      priority: 95,
+      ruleId: 'CAREER_10H_STRONG_001'
+    });
+
+    const transitChallenging = createDomainEvidence({
+      id: 'EV_TRANSIT_SATURN',
+      sourceType: 'TRANSIT',
+      domain: 'CAREER',
+      role: 'TIMING',
+      phase: 'TRANSIT_TRIGGER',
+      source: 'TRANSIT',
+      statement: 'Saturn transit over 10th house creates friction',
+      polarity: 'CHALLENGING',
       strength: 'STRONG',
-      priority: 70,
-      ruleId: 'CAREER_SUN_RELEVANCE_001'
+      priority: 60
     });
 
     const result = evaluateCareerReasoningHierarchy({
-      evidence: [evLeadership]
+      evidence: [ev10H, transitChallenging],
+      dashaTimings: {
+        md: { level: 'MD', effect: 'CHALLENGES', evidenceIds: ['MD_CHAL'], confidence: 1 },
+        ad: { level: 'AD', effect: 'CHALLENGES', evidenceIds: ['AD_CHAL'], confidence: 1 }
+      },
+      transitEvidence: [transitChallenging]
     });
 
-    const leadershipManifestation = result.manifestations.find((m) => m.mode === 'LEADERSHIP');
-    expect(leadershipManifestation).toBeDefined();
-    expect(leadershipManifestation?.status).toBe('SUPPORTED');
+    expect(result.natalDirection).toBe('SUPPORT');
+    expect(result.natalStrength).toBe('VERY_STRONG');
+    // Strong natal + challenging Dasha downgrades final strength to STRONG
+    expect(result.finalStrength).toBe('STRONG');
+    // Compounded dasha challenge + transit challenge yields HIGH pressure
+    expect(result.currentPressure).toBe('HIGH');
+    expect(result.currentActivation).toBe('LOW');
+  });
+
+  describe('Dasha Precedence Matrix (MD > AD > PD)', () => {
+    const ev10H = createDomainEvidence({
+      id: 'EV_10H_STRONG',
+      sourceType: 'HOUSE',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: '10th house is strong',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      ruleId: 'CAREER_10H_STRONG_001'
+    });
+
+    it('MD ACTIVATES + AD CHALLENGES yields PARTIALLY_ACTIVATES; AD cannot completely override MD', () => {
+      const result = evaluateCareerReasoningHierarchy({
+        evidence: [ev10H],
+        dashaTimings: {
+          md: { level: 'MD', effect: 'ACTIVATES', evidenceIds: ['MD_1'], confidence: 1 },
+          ad: { level: 'AD', effect: 'CHALLENGES', evidenceIds: ['AD_1'], confidence: 1 }
+        }
+      });
+
+      expect(result.dasha.finalEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.dasha.dominantLevel).toBe('MD');
+      expect(result.currentActivation).toBe('MODERATE');
+    });
+
+    it('MD CHALLENGES + AD ACTIVATES yields PARTIALLY_ACTIVATES / partial mitigation, never ACTIVATES', () => {
+      const result = evaluateCareerReasoningHierarchy({
+        evidence: [ev10H],
+        dashaTimings: {
+          md: { level: 'MD', effect: 'CHALLENGES', evidenceIds: ['MD_1'], confidence: 1 },
+          ad: { level: 'AD', effect: 'ACTIVATES', evidenceIds: ['AD_1'], confidence: 1 }
+        }
+      });
+
+      expect(result.dasha.finalEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.dasha.dominantLevel).toBe('MD');
+      expect(result.currentActivation).toBe('MODERATE');
+    });
+  });
+
+  describe('Manifestation Gating & Canonical Vocabulary', () => {
+    it('Descriptive-fact guard: a single supporting evidence item yields POSSIBLE, requiring independent corroborator for SUPPORTED', () => {
+      const singleEv = createDomainEvidence({
+        id: 'EV_SUN_LEADERSHIP',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        role: 'SECONDARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Sun governs executive authority',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 70,
+        ruleId: 'CAREER_SUN_RELEVANCE_001'
+      });
+
+      const singleResult = evaluateCareerReasoningHierarchy({
+        evidence: [singleEv]
+      });
+
+      const singleLeadership = singleResult.manifestations.find((m) => m.mode === 'LEADERSHIP');
+      expect(singleLeadership).toBeDefined();
+      expect(singleLeadership?.status).toBe('POSSIBLE');
+
+      // Now add independent corroborator (10H strong)
+      const corroboratingEv = createDomainEvidence({
+        id: 'EV_10H_LEADERSHIP',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: '10th house is strong',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95,
+        ruleId: 'CAREER_10H_STRONG_001'
+      });
+
+      const corroboratedResult = evaluateCareerReasoningHierarchy({
+        evidence: [singleEv, corroboratingEv]
+      });
+
+      const corroboratedLeadership = corroboratedResult.manifestations.find((m) => m.mode === 'LEADERSHIP');
+      expect(corroboratedLeadership).toBeDefined();
+      expect(corroboratedLeadership?.status).toBe('SUPPORTED');
+    });
+
+    it('contains only the 7 canonical manifestation modes', () => {
+      const result = evaluateCareerReasoningHierarchy({
+        evidence: []
+      });
+
+      const modes = result.manifestations.map((m) => m.mode);
+      expect(modes).toEqual([
+        'LEADERSHIP',
+        'MANAGEMENT',
+        'TECHNICAL_SPECIALIZATION',
+        'SERVICE_EMPLOYMENT',
+        'AUTHORITY',
+        'INDEPENDENT_WORK',
+        'BUSINESS_ENTREPRENEURSHIP'
+      ]);
+      expect(modes).not.toContain('EMPLOYMENT');
+      expect(modes).not.toContain('ENTREPRENEURSHIP');
+    });
   });
 
   it('C7: Reasoning trace contains resolvable evidence ids', () => {
@@ -236,3 +373,4 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
     expect(result.reasoningTrace.primaryPromise[0].evidenceId).toBe('EV_TEST_TRACE');
   });
 });
+

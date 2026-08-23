@@ -63,8 +63,8 @@ export interface CareerEvidenceClassification {
 
 export interface CareerConclusionData {
   readonly natalStatus: DomainStrength;
-  readonly currentActivation: 'ACTIVE' | 'PARTIALLY_ACTIVE' | 'INACTIVE' | 'UNKNOWN';
-  readonly currentPressure: 'LOW' | 'MODERATE' | 'HIGH' | 'UNKNOWN';
+  readonly currentActivation: 'ACTIVE' | 'PARTIALLY_ACTIVE' | 'INACTIVE' | 'STRONG' | 'MODERATE' | 'LOW' | 'INSUFFICIENT_DATA' | 'UNKNOWN';
+  readonly currentPressure: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'STRONG' | 'UNKNOWN';
   readonly d10Relationship: VargaRelationship;
   readonly dominantManifestations: readonly ManifestationMode[];
   readonly headline: string;
