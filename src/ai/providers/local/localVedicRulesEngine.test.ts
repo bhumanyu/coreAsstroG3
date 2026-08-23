@@ -1079,6 +1079,50 @@ describe('localVedicRulesEngine', () => {
       }
     });
 
+    it('should assert no top-level hierarchy.overallEffect exists for Wealth and handles uniform dimensions', () => {
+      // Top-level hierarchy.overallEffect must be undefined for wealth
+      expect((baseContext.wealth?.timing?.hierarchy as unknown as Record<string, unknown> | undefined)?.overallEffect).toBeUndefined();
+
+      const evSupport: AiEvidence = {
+        id: 'ev-wealth-all-support',
+        source: 'WEALTH',
+        dimension: 'TIMING',
+        statement: 'All wealth dimensions activated',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY'
+      };
+
+      const mockAllActivates: AiContext = {
+        ...baseContext,
+        evidence: [...baseContext.evidence, evSupport],
+        wealth: {
+          ...baseContext.wealth!,
+          timing: {
+            status: 'AVAILABLE',
+            asOf: '2024-06-01T00:00:00.000Z',
+            hierarchy: {
+              primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: Planet.JUPITER, effect: 'ACTIVATES' },
+              modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: Planet.SATURN, effect: 'ACTIVATES' },
+              trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: Planet.MERCURY, effect: 'ACTIVATES' },
+              dimensions: [
+                { dimension: 'ACCUMULATION', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' },
+                { dimension: 'GAINS', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' },
+                { dimension: 'FORTUNE', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' },
+                { dimension: 'SPECULATION', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' }
+              ],
+              evidenceIds: ['ev-wealth-all-support']
+            }
+          }
+        }
+      };
+
+      expect((mockAllActivates.wealth?.timing?.hierarchy as unknown as Record<string, unknown> | undefined)?.overallEffect).toBeUndefined();
+      const allActResult = wealthRule004.evaluate(mockAllActivates);
+      expect(allActResult.triggered).toBe(true);
+      expect(allActResult.effect).toBe('SUPPORT');
+    });
+
     it('should evaluate deterministically with deep-equal outputs across multiple runs', () => {
       const e2eHoroscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
         asOf: '2024-06-01T00:00:00.000Z'

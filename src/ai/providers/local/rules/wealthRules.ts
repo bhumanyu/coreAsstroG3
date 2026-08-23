@@ -1,7 +1,6 @@
 import type {
   AiContext,
-  WealthDimensionHierarchyFact,
-  TimingActivationEffect
+  WealthDimensionHierarchyFact
 } from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
 import { rankEvidence } from '../utils/evidenceScorer';
@@ -170,21 +169,25 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         }
       }
 
-      // Default to MIXED if no upstream canonical aggregate exists; never invent a majority-vote verdict
+      const dimEffects = (hierarchy.dimensions ?? []).map((d) => d.overallEffect);
       let effect: LocalRuleEffect = 'MIXED';
-      const canonicalOverallEffect = (hierarchy as { readonly overallEffect?: TimingActivationEffect }).overallEffect;
-      if (canonicalOverallEffect === 'ACTIVATES') {
-        effect = 'SUPPORT';
-      } else if (canonicalOverallEffect === 'CHALLENGES') {
-        effect = 'CHALLENGE';
-      } else if (canonicalOverallEffect === 'PARTIALLY_ACTIVATES') {
-        effect = 'MIXED';
-      } else if (
-        canonicalOverallEffect === 'DOES_NOT_ACTIVATE' ||
-        canonicalOverallEffect === 'UNKNOWN' ||
-        canonicalOverallEffect === 'INSUFFICIENT_DATA'
-      ) {
-        effect = 'NEUTRAL';
+      if (dimEffects.length > 0) {
+        if (dimEffects.every((eff) => eff === 'ACTIVATES')) {
+          effect = 'SUPPORT';
+        } else if (dimEffects.every((eff) => eff === 'CHALLENGES')) {
+          effect = 'CHALLENGE';
+        } else if (
+          dimEffects.every(
+            (eff) =>
+              eff === 'DOES_NOT_ACTIVATE' ||
+              eff === 'UNKNOWN' ||
+              eff === 'INSUFFICIENT_DATA'
+          )
+        ) {
+          effect = 'NEUTRAL';
+        } else {
+          effect = 'MIXED';
+        }
       }
 
       const dimSummaries = (hierarchy.dimensions ?? []).map(
