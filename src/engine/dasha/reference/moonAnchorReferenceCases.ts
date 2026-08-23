@@ -16,6 +16,7 @@ export interface MoonAnchorReferenceCase {
   readonly source: ReferenceSource;
   readonly conventions: ReferenceConventions;
   readonly notes?: string;
+  readonly crossChecks?: readonly ReferenceSource[];
 }
 
 /**
@@ -31,11 +32,28 @@ export const MOON_ANCHOR_REFERENCE_CONVENTIONS: ReferenceConventions = Object.fr
 /**
  * Independent Moon-anchor reference cases.
  *
- * PROVENANCE & METHODOLOGY NOTE:
- * These cases specify real, non-placeholder geographic coordinates and timestamps.
- * Expected Moon sidereal longitudes are targeted for Swiss Ephemeris / JPL Horizons (Lahiri sidereal).
- * In accordance with repository testing standards, test suites consuming these cases maintain
- * honest external benchmark separation and avoid circular self-validation against current engine outputs.
+ * PROVENANCE, METHODOLOGY & REPRODUCIBILITY ARTIFACT:
+ * ---------------------------------------------------
+ * These reference cases specify real, non-placeholder geographic coordinates and timestamps.
+ * IMPORTANT: The expected Moon sidereal longitudes (68.4215°, 308.1542°, 194.8876°) are currently
+ * UNVERIFIED TARGETS pending external ground-truth ephemeris capture from Swiss Ephemeris / DE431.
+ *
+ * Intended ground-truth capture parameters for the reproducibility artifact:
+ * - Ephemeris engine: Swiss Ephemeris (sweph) v2.10+ / DE431
+ * - Target body: Moon (SE_MOON)
+ * - Calculation mode: Geocentric apparent sidereal longitude (SEFLG_SWIEPH | SEFLG_SIDEREAL | SEFLG_SPEED)
+ * - Ayanamsa mode: SE_SIDM_LAHIRI (Traditional Lahiri Chitrapaksha, IAU 1980 / 2000 precession)
+ * - Birth instant input: UTC timestamp parsed from ISO-8601
+ * - Geographic coordinates: Geocentric latitude / longitude
+ *
+ * Regeneration Reference:
+ * To capture and verify ground-truth longitudes, run the Swiss Ephemeris CLI tool `swetest`:
+ * ```bash
+ * # Example for New Delhi 1980-01-01 06:00:00 UTC (11:30 IST):
+ * swetest -b1.1.1980 -ut06:00:00 -p1 -eswe -sid1 -fP -head
+ * ```
+ * Test suites consuming these cases maintain strict separation and remain skipped in CI (`describe.skip`)
+ * until verified external ephemeris values are captured and cross-checked.
  */
 export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = Object.freeze([
   {
@@ -48,13 +66,13 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
       ayanamsa: AyanamsaType.LAHIRI,
       dateTimeStr: '1980-01-01T11:30:00+05:30'
     },
-    // Target Swiss Ephemeris Lahiri Sidereal Moon Longitude (Gemini / Mrigashira)
+    // Target Swiss Ephemeris Lahiri Sidereal Moon Longitude (Gemini / Mrigashira) - UNVERIFIED TARGET
     expectedMoonSiderealLongitude: 68.4215,
     expectedSign: 'Gemini',
     source: {
       type: 'EXTERNAL_EPHEMERIS',
-      name: 'Swiss Ephemeris / JPL Horizons Lahiri Ephemeris Reference',
-      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction',
+      name: 'Swiss Ephemeris',
+      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction (geocentric apparent)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Asia/Kolkata',
@@ -68,7 +86,7 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
       timezone: 'Asia/Kolkata',
       yearLength: VIMSHOTTARI_YEAR_DAYS
     },
-    notes: 'Real-world New Delhi birth coordinates with Swiss Ephemeris Lahiri target.'
+    notes: 'Real-world New Delhi birth coordinates with TARGET/UNVERIFIED Swiss Ephemeris Lahiri value pending ground-truth ephemeris capture.'
   },
   {
     id: 'MOON-ANCHOR-02-LONDON-2000',
@@ -80,13 +98,13 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
       ayanamsa: AyanamsaType.LAHIRI,
       dateTimeStr: '2000-06-21T13:00:00+01:00'
     },
-    // Target Swiss Ephemeris Lahiri Sidereal Moon Longitude (Aquarius / Shatabhisha)
+    // Target Swiss Ephemeris Lahiri Sidereal Moon Longitude (Aquarius / Shatabhisha) - UNVERIFIED TARGET
     expectedMoonSiderealLongitude: 308.1542,
     expectedSign: 'Aquarius',
     source: {
       type: 'EXTERNAL_EPHEMERIS',
-      name: 'Swiss Ephemeris / JPL Horizons Lahiri Ephemeris Reference',
-      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction',
+      name: 'Swiss Ephemeris',
+      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction (geocentric apparent)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Europe/London',
@@ -100,7 +118,7 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
       timezone: 'Europe/London',
       yearLength: VIMSHOTTARI_YEAR_DAYS
     },
-    notes: 'Real-world London birth coordinates with Swiss Ephemeris Lahiri target.'
+    notes: 'Real-world London birth coordinates with TARGET/UNVERIFIED Swiss Ephemeris Lahiri value pending ground-truth ephemeris capture.'
   },
   {
     id: 'MOON-ANCHOR-03-TOKYO-2015',
@@ -112,13 +130,13 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
       ayanamsa: AyanamsaType.LAHIRI,
       dateTimeStr: '2015-10-15T09:00:00+09:00'
     },
-    // Target Swiss Ephemeris Lahiri Sidereal Moon Longitude (Libra / Swati)
+    // Target Swiss Ephemeris Lahiri Sidereal Moon Longitude (Libra / Swati) - UNVERIFIED TARGET
     expectedMoonSiderealLongitude: 194.8876,
     expectedSign: 'Libra',
     source: {
       type: 'EXTERNAL_EPHEMERIS',
-      name: 'Swiss Ephemeris / JPL Horizons Lahiri Ephemeris Reference',
-      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction',
+      name: 'Swiss Ephemeris',
+      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction (geocentric apparent)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Asia/Tokyo',
@@ -132,6 +150,6 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
       timezone: 'Asia/Tokyo',
       yearLength: VIMSHOTTARI_YEAR_DAYS
     },
-    notes: 'Real-world Tokyo birth coordinates with Swiss Ephemeris Lahiri target.'
+    notes: 'Real-world Tokyo birth coordinates with TARGET/UNVERIFIED Swiss Ephemeris Lahiri value pending ground-truth ephemeris capture.'
   }
 ]);

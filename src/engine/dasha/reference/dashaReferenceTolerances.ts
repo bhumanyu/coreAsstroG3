@@ -25,8 +25,11 @@
  *    without failing due to sub-second millisecond truncation/rounding differences.
  *
  * 5. `astronomyMoonLongitudeDegrees` (1e-4° ≈ 0.36 arcsec):
- *    Planetary astronomy coordinate generation involves trigonometric series calculations.
- *    A tolerance of 1e-4° allows verification of the astronomical calculation pipeline.
+ *    Used for external ephemeris comparisons (e.g., engine vs Swiss Ephemeris / JPL Horizons benchmarks).
+ *    Planetary astronomy coordinate generation involves numerical ephemeris integration and ayanamsa
+ *    subtraction. A tolerance of 1e-4° (0.36 arcsec) accounts for differences in ephemeris models
+ *    (e.g., DE431 vs VSOP/analytical series) and ayanamsa calculation definitions, providing a realistic
+ *    budget for astronomical benchmark validation beyond float precision.
  */
 export const DASHA_REFERENCE_TOLERANCES = Object.freeze({
   moonLongitudeDegrees: 1e-6,

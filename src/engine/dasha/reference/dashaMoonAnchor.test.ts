@@ -43,7 +43,7 @@ describe('D08-A: Moon Sidereal Anchor Validation', () => {
           moonFact.position.siderealLongitude ??
           moonFact.position.eclipticLongitude ??
           moonFact.position.longitude;
-        const tolerance: number = DASHA_REFERENCE_TOLERANCES.moonLongitudeDegrees;
+        const tolerance: number = DASHA_REFERENCE_TOLERANCES.astronomyMoonLongitudeDegrees;
 
         expectCloseToReference(
           actualMoonLongitude,
