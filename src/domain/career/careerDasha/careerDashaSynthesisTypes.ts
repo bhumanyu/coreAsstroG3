@@ -1,6 +1,9 @@
 import type { Planet } from '../../../types';
 import type { InterpretationConfidence } from '../../../engine/planetInterpretation/planetInterpretationTypes';
-import type { DashaPlanetActivation } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type {
+  DashaPlanetActivation,
+  DashaInterpretationReport
+} from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { VargaRelationship } from '../../interpretation/DomainInterpretationTypes';
 
 export type CareerDashaPeriod = 'MD' | 'AD' | 'PD';
@@ -42,10 +45,12 @@ export interface CareerDashaFactor {
 export interface CareerHousePortfolio {
   readonly primary: readonly number[];
   readonly supporting: readonly number[];
+  readonly challenging: readonly number[];
   readonly secondary: readonly number[];
 }
 
 export interface D10CareerContext {
+  // TODO: Deeper Dasha-planet × D10 planetary-condition synthesis (varga dignity, varga aspect, etc.) is deferred to a future milestone. Currently using varga relationship integration.
   readonly relationship: VargaRelationship;
   readonly statement?: string;
 }
@@ -55,6 +60,9 @@ export interface CareerDashaPlanetInput {
   readonly activation: DashaPlanetActivation;
   readonly housePortfolio: CareerHousePortfolio;
   readonly d10: D10CareerContext;
+  readonly confidence?: InterpretationConfidence;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface CareerDashaPlanetSynthesis {
@@ -72,6 +80,8 @@ export interface CareerDashaPlanetSynthesis {
   readonly activatedCareerHouses: readonly number[];
   readonly d10Effect: 'SUPPORTS' | 'CHALLENGES' | 'NEUTRAL';
   readonly summary: string;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface CareerDashaHierarchyRole {
@@ -100,4 +110,10 @@ export interface CareerDashaSynthesis {
   readonly combined: CareerDashaPeriodSynthesis;
   readonly factors: readonly CareerDashaFactor[];
   readonly summary: string;
+}
+
+export interface BuildCareerDashaSynthesisParams {
+  readonly dashaInterpretation?: DashaInterpretationReport;
+  readonly d10Context?: D10CareerContext;
+  readonly housePortfolio?: CareerHousePortfolio;
 }

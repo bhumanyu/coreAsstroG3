@@ -1,5 +1,12 @@
-import type { DashaInterpretation } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
+import { Planet } from '../../../types';
 import type {
+  DashaPlanetActivation,
+  DashaMahadashaInterpretation,
+  DashaAntardashaInterpretation,
+  DashaPratyantardashaInterpretation
+} from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type {
+  BuildCareerDashaSynthesisParams,
   CareerDashaFactor,
   CareerDashaPeriod,
   CareerDashaPeriodSynthesis,
@@ -8,7 +15,6 @@ import type {
   CareerDashaSynthesis,
   CareerFactorCategory,
   CareerFactorDirection,
-  CareerHousePortfolio,
   D10CareerContext
 } from './careerDashaSynthesisTypes';
 import {
@@ -28,11 +34,12 @@ import {
   resolveCareerDashaEffect,
   resolveCombinedCareerDashaEffect
 } from './careerDashaScoring';
+import type { InterpretationConfidence } from '../../../engine/planetInterpretation/planetInterpretationTypes';
 
 export function synthesizeCareerDashaPlanet(
   input: CareerDashaPlanetInput
 ): CareerDashaPlanetSynthesis {
-  const { period, activation, housePortfolio, d10 } = input;
+  const { period, activation, housePortfolio, d10, start, end } = input;
   const planet = activation.planet;
   const factors: CareerDashaFactor[] = [];
 
@@ -87,9 +94,9 @@ export function synthesizeCareerDashaPlanet(
     }
   }
 
-  // 3. Functional Role
+  // 3. Functional Role (contextualized with activation and portfolio)
   for (const role of activation.functionalRoles || []) {
-    const cls = classifyCareerFunctionalRole(role);
+    const cls = classifyCareerFunctionalRole(role, activation, housePortfolio);
     if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
       addFactor(
         'FUNCTIONAL_ROLE',
@@ -101,9 +108,9 @@ export function synthesizeCareerDashaPlanet(
     }
   }
 
-  // 4. Functional Nature
+  // 4. Functional Nature (contextualized modifier)
   if (activation.functionalNature) {
-    const cls = classifyCareerFunctionalNature(activation.functionalNature);
+    const cls = classifyCareerFunctionalNature(activation.functionalNature, activation, housePortfolio);
     if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
       addFactor(
         'FUNCTIONAL_NATURE',
@@ -116,8 +123,8 @@ export function synthesizeCareerDashaPlanet(
   }
 
   // 5. Dignity
-  const digRaw = typeof activation.dignity === 'string' ? activation.dignity : (activation.dignity as any)?.status;
-  if (digRaw && typeof digRaw === 'string') {
+  const digRaw = typeof activation.dignity === 'string' ? activation.dignity : undefined;
+  if (digRaw) {
     const digUpper = digRaw.toUpperCase();
     let direction: CareerFactorDirection = 'NEUTRAL';
     let weight = 0;
@@ -151,8 +158,8 @@ export function synthesizeCareerDashaPlanet(
   }
 
   // 6. State
-  const stRaw = typeof activation.state === 'string' ? activation.state : (activation.state as any)?.state;
-  if (stRaw && typeof stRaw === 'string') {
+  const stRaw = typeof activation.state === 'string' ? activation.state : undefined;
+  if (stRaw) {
     const stUpper = stRaw.toUpperCase();
     let direction: CareerFactorDirection = 'NEUTRAL';
     let weight = 0;
@@ -197,8 +204,9 @@ export function synthesizeCareerDashaPlanet(
     for (let i = 0; i < activation.castAspects.length; i++) {
       const asp = activation.castAspects[i];
       if (
-        housePortfolio.primary.includes(asp.targetHouse) ||
-        housePortfolio.supporting.includes(asp.targetHouse)
+        asp.targetHouse !== undefined &&
+        (housePortfolio.primary.includes(asp.targetHouse) ||
+          housePortfolio.supporting.includes(asp.targetHouse))
       ) {
         const isPrimary = housePortfolio.primary.includes(asp.targetHouse);
         addFactor(
@@ -213,10 +221,10 @@ export function synthesizeCareerDashaPlanet(
     }
   }
 
-  // 9. Yoga
+  // 9. Yoga (Career relevance checked)
   if (activation.yogaParticipation) {
     for (const yoga of activation.yogaParticipation) {
-      const cls = classifyCareerYoga(yoga);
+      const cls = classifyCareerYoga(yoga, activation, housePortfolio);
       if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
         addFactor(
           'YOGA',
@@ -229,8 +237,8 @@ export function synthesizeCareerDashaPlanet(
     }
   }
 
-  // 10. Karaka
-  const karaka = resolveCareerKarakaRelevance(planet, activation);
+  // 10. Karaka (Derived from career karaka infrastructure with strict career linkage)
+  const karaka = resolveCareerKarakaRelevance(planet, activation, housePortfolio);
   if (karaka) {
     addFactor(
       'KARAKA',
@@ -242,6 +250,8 @@ export function synthesizeCareerDashaPlanet(
   }
 
   // 11. D10 Confirmation
+  // TODO: Deferred synthesis - in a future milestone, expand D10 planetary placement/lagnamsha synthesis
+  // rather than using chart-level relationship confirmation only.
   if (d10 && d10.relationship) {
     let direction: CareerFactorDirection = 'NEUTRAL';
     let weight = 0;
@@ -288,7 +298,10 @@ export function synthesizeCareerDashaPlanet(
   const { support: supportScore, challenge: challengeScore } = calculateFactorScore(factors);
   const netScore = Math.round((supportScore - challengeScore) * 100) / 100;
   const effect = resolveCareerDashaEffect(supportScore, challengeScore, factors);
-  const confidence = (activation as any).confidence ?? 'HIGH';
+  const resolvedConfidence: InterpretationConfidence =
+    input.confidence ??
+    (activation as any).confidence ??
+    (activation.strength?.level === 'STRONG' || activation.strength?.score !== undefined ? 'HIGH' : 'MEDIUM');
 
   const supportingFactorIds = Object.freeze(
     factors.filter((f) => f.direction === 'SUPPORT').map((f) => f.id)
@@ -306,7 +319,7 @@ export function synthesizeCareerDashaPlanet(
     period,
     planet,
     effect,
-    confidence,
+    confidence: resolvedConfidence,
     supportScore,
     challengeScore,
     netScore,
@@ -316,7 +329,9 @@ export function synthesizeCareerDashaPlanet(
     neutralFactorIds,
     activatedCareerHouses,
     d10Effect,
-    summary
+    summary,
+    ...(start ? { start } : {}),
+    ...(end ? { end } : {})
   });
 }
 
@@ -352,7 +367,12 @@ export function synthesizeCareerDashaPeriods(
   const combinedEffect = resolveCombinedCareerDashaEffect(md, ad, pd, combinedScore);
   const combinedConfidence = combineCareerDashaConfidence(md.confidence, ad.confidence, pd.confidence);
 
-  const summary = `Career Dasha timing is ${combinedEffect.toLowerCase().replace(/_/g, ' ')} with ${md.planet} Mahadasha (Primary), ${ad.planet} Antardasha (Modifier), and ${pd.planet} Pratyantardasha (Refinement).`;
+  let summary: string;
+  if (md.effect === 'DOES_NOT_ACTIVATE' && (ad.effect === 'SUPPORTS' || ad.effect === 'STRONGLY_SUPPORTS')) {
+    summary = `The ${md.planet} Mahadasha does not establish a primary Career theme; ${ad.planet} Antardasha provides temporary sub-period activation.`;
+  } else {
+    summary = `Career Dasha timing is ${combinedEffect.toLowerCase().replace(/_/g, ' ')} with ${md.planet} Mahadasha (Primary), ${ad.planet} Antardasha (Modifier), and ${pd.planet} Pratyantardasha (Refinement).`;
+  }
 
   return Object.freeze({
     hierarchy,
@@ -366,33 +386,22 @@ export function synthesizeCareerDashaPeriods(
   });
 }
 
-function extractActivation(periodInterp: any): DashaPlanetActivation | undefined {
+function extractActivation(
+  periodInterp?:
+    | DashaMahadashaInterpretation
+    | DashaAntardashaInterpretation
+    | DashaPratyantardashaInterpretation
+    | { readonly natal?: DashaPlanetActivation }
+    | DashaPlanetActivation
+): DashaPlanetActivation | undefined {
   if (!periodInterp) return undefined;
-  if (periodInterp.natal) return periodInterp.natal;
-  if (periodInterp.planet) {
-    return {
-      planet: periodInterp.planet,
-      house: periodInterp.house ?? (periodInterp.housesOccupied?.[0] ?? 1),
-      sign: periodInterp.sign ?? 'Aries',
-      ownedHouses: periodInterp.ownedHouses ?? periodInterp.housesOwned ?? [],
-      functionalRoles: periodInterp.functionalRoles ?? (periodInterp.functionalRole ? [periodInterp.functionalRole.role || periodInterp.functionalRole] : []),
-      functionalNature: periodInterp.functionalNature ?? periodInterp.functionalRole?.nature,
-      dignity: periodInterp.dignity?.status ?? periodInterp.dignity,
-      strength: periodInterp.strength,
-      castAspects: periodInterp.castAspects ?? [],
-      receivedAspects: periodInterp.receivedAspects ?? [],
-      yogaParticipation: periodInterp.yogaParticipation ?? [],
-      houseEvidence: periodInterp.houseEvidence ?? [],
-      evidence: periodInterp.evidence ?? []
-    };
+  if ('natal' in periodInterp && periodInterp.natal) {
+    return periodInterp.natal;
+  }
+  if ('planet' in periodInterp && typeof periodInterp.planet === 'string') {
+    return periodInterp as DashaPlanetActivation;
   }
   return undefined;
-}
-
-export interface BuildCareerDashaSynthesisParams {
-  readonly dashaInterpretation?: any;
-  readonly d10Context?: D10CareerContext;
-  readonly housePortfolio?: CareerHousePortfolio;
 }
 
 export function buildCareerDashaSynthesis(
@@ -404,7 +413,7 @@ export function buildCareerDashaSynthesis(
   const fallbackPlanet = (period: CareerDashaPeriod): CareerDashaPlanetSynthesis =>
     Object.freeze({
       period,
-      planet: 'Sun',
+      planet: Planet.SUN,
       effect: 'INSUFFICIENT_DATA',
       confidence: 'LOW',
       supportScore: 0,
@@ -454,16 +463,23 @@ export function buildCareerDashaSynthesis(
   const current = params.dashaInterpretation.current;
   const asOf = current.at;
 
-  const mdAct = extractActivation(current.mahadasha);
-  const adAct = extractActivation(current.antardasha);
-  const pdAct = extractActivation(current.pratyantardasha);
+  const mdInterp = current.mahadasha;
+  const adInterp = current.antardasha;
+  const pdInterp = current.pratyantardasha;
+
+  const mdAct = extractActivation(mdInterp);
+  const adAct = extractActivation(adInterp);
+  const pdAct = extractActivation(pdInterp);
 
   const md = mdAct
     ? synthesizeCareerDashaPlanet({
         period: 'MD',
         activation: mdAct,
         housePortfolio: portfolio,
-        d10: d10Context
+        d10: d10Context,
+        confidence: mdInterp?.confidence,
+        start: mdInterp?.start,
+        end: mdInterp?.end
       })
     : fallbackPlanet('MD');
 
@@ -472,7 +488,10 @@ export function buildCareerDashaSynthesis(
         period: 'AD',
         activation: adAct,
         housePortfolio: portfolio,
-        d10: d10Context
+        d10: d10Context,
+        confidence: adInterp?.confidence,
+        start: adInterp?.start,
+        end: adInterp?.end
       })
     : fallbackPlanet('AD');
 
@@ -481,7 +500,10 @@ export function buildCareerDashaSynthesis(
         period: 'PD',
         activation: pdAct,
         housePortfolio: portfolio,
-        d10: d10Context
+        d10: d10Context,
+        confidence: pdInterp?.confidence,
+        start: pdInterp?.start,
+        end: pdInterp?.end
       })
     : fallbackPlanet('PD');
 

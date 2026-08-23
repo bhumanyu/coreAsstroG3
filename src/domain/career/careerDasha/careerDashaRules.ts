@@ -1,13 +1,21 @@
-import type { Planet } from '../../../types';
-import { CAREER_PRIMARY_HOUSES, CAREER_SUPPORTING_HOUSES } from '../careerTypes';
+import { Planet } from '../../../types';
+import {
+  CAREER_PRIMARY_HOUSES,
+  CAREER_SUPPORTING_HOUSES,
+  CAREER_CHALLENGING_HOUSES
+} from '../careerTypes';
 import { FunctionalRole } from '../../../engine/functionalNature/functionalRoleTypes';
 import { FunctionalNature } from '../../../engine/functionalNature/functionalNature';
 import type { PlanetStrengthInterpretation } from '../../../engine/planetInterpretation/planetInterpretationTypes';
-import type { DashaPlanetActivation, DashaYogaReference } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type {
+  DashaPlanetActivation,
+  DashaYogaReference
+} from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   CareerFactorDirection,
   CareerHousePortfolio
 } from './careerDashaSynthesisTypes';
+import { getCareerKarakaDefinition } from '../../../engine/themeInterpretation/rules/career/careerPlanetRules';
 
 export const CAREER_DASHA_PERIOD_WEIGHTS = Object.freeze({
   MD: 1.0,
@@ -19,6 +27,7 @@ export function getCareerHousePortfolio(): CareerHousePortfolio {
   return {
     primary: Object.freeze(Array.from(CAREER_PRIMARY_HOUSES)),
     supporting: Object.freeze(Array.from(CAREER_SUPPORTING_HOUSES)),
+    challenging: Object.freeze(Array.from(CAREER_CHALLENGING_HOUSES)),
     secondary: Object.freeze([])
   };
 }
@@ -33,7 +42,7 @@ export function classifyCareerHouseOwnership(
   if (portfolio.supporting.includes(house)) {
     return { direction: 'SUPPORT', weight: 1.5 };
   }
-  if (house === 8 || house === 12) {
+  if (portfolio.challenging.includes(house)) {
     return { direction: 'CHALLENGE', weight: 1.5 };
   }
   return { direction: 'NEUTRAL', weight: 0 };
@@ -49,7 +58,7 @@ export function classifyCareerHousePlacement(
   if (portfolio.supporting.includes(house)) {
     return { direction: 'SUPPORT', weight: 1.5 };
   }
-  if (house === 8 || house === 12) {
+  if (portfolio.challenging.includes(house)) {
     return { direction: 'CHALLENGE', weight: 1.5 };
   }
   return { direction: 'NEUTRAL', weight: 0 };
@@ -58,48 +67,76 @@ export function classifyCareerHousePlacement(
 export function getHouseWeight(house: number, portfolio: CareerHousePortfolio): number {
   if (portfolio.primary.includes(house)) return 3.0;
   if (portfolio.supporting.includes(house)) return 1.5;
-  if (house === 8 || house === 12) return 1.5;
+  if (portfolio.challenging.includes(house)) return 1.5;
   return 0;
 }
 
-export function classifyCareerFunctionalRole(role: FunctionalRole): {
+export function classifyCareerFunctionalRole(
+  role: FunctionalRole,
+  activation?: DashaPlanetActivation,
+  portfolio?: CareerHousePortfolio
+): {
   direction: CareerFactorDirection;
   weight: number;
 } {
   switch (role) {
+    case FunctionalRole.YOGAKARAKA:
+      return { direction: 'SUPPORT', weight: 2.5 };
     case FunctionalRole.LAGNA_LORD:
     case FunctionalRole.KENDRA_LORD:
     case FunctionalRole.TRIKONA_LORD:
-      return { direction: 'SUPPORT', weight: 2.0 };
-    case FunctionalRole.YOGAKARAKA:
-      return { direction: 'SUPPORT', weight: 3.0 };
+      return { direction: 'SUPPORT', weight: 1.5 };
     case FunctionalRole.SECOND_LORD:
     case FunctionalRole.ELEVENTH_LORD:
-      return { direction: 'SUPPORT', weight: 1.5 };
+      return { direction: 'SUPPORT', weight: 1.0 };
     case FunctionalRole.THIRD_LORD:
       return { direction: 'NEUTRAL', weight: 0.5 };
-    case FunctionalRole.DUSTHANA_LORD:
-      return { direction: 'CHALLENGE', weight: 2.0 };
+    case FunctionalRole.DUSTHANA_LORD: {
+      const port = portfolio ?? getCareerHousePortfolio();
+      const hasCareerLink =
+        activation?.ownedHouses?.some((h) => port.primary.includes(h) || port.supporting.includes(h)) ||
+        (activation?.house !== undefined && (port.primary.includes(activation.house) || port.supporting.includes(activation.house))) ||
+        activation?.functionalRoles?.includes(FunctionalRole.YOGAKARAKA);
+
+      if (hasCareerLink) {
+        return { direction: 'NEUTRAL', weight: 0.5 };
+      }
+      return { direction: 'CHALLENGE', weight: 0.75 };
+    }
     case FunctionalRole.MARAKA_LORD:
     case FunctionalRole.BADHAKA_LORD:
-      return { direction: 'CHALLENGE', weight: 1.5 };
+      return { direction: 'CHALLENGE', weight: 0.75 };
     default:
       return { direction: 'NEUTRAL', weight: 0 };
   }
 }
 
-export function classifyCareerFunctionalNature(nature: FunctionalNature | undefined): {
+export function classifyCareerFunctionalNature(
+  nature: FunctionalNature | undefined,
+  activation?: DashaPlanetActivation,
+  portfolio?: CareerHousePortfolio
+): {
   direction: CareerFactorDirection;
   weight: number;
 } {
   if (!nature) return { direction: 'NEUTRAL', weight: 0 };
   switch (nature) {
     case FunctionalNature.BENEFIC:
-      return { direction: 'SUPPORT', weight: 1.5 };
-    case FunctionalNature.MALEFIC:
-      return { direction: 'CHALLENGE', weight: 1.5 };
+      return { direction: 'SUPPORT', weight: 0.5 };
+    case FunctionalNature.MALEFIC: {
+      const port = portfolio ?? getCareerHousePortfolio();
+      const isCareerAligned =
+        activation?.functionalRoles?.includes(FunctionalRole.YOGAKARAKA) ||
+        activation?.ownedHouses?.some((h) => port.primary.includes(h)) ||
+        (activation?.house !== undefined && port.primary.includes(activation.house));
+
+      if (isCareerAligned) {
+        return { direction: 'NEUTRAL', weight: 0.25 };
+      }
+      return { direction: 'CHALLENGE', weight: 0.5 };
+    }
     case FunctionalNature.MIXED:
-      return { direction: 'NEUTRAL', weight: 0.5 };
+      return { direction: 'NEUTRAL', weight: 0.25 };
     case FunctionalNature.NEUTRAL:
     default:
       return { direction: 'NEUTRAL', weight: 0 };
@@ -115,28 +152,74 @@ export function classifyPlanetStrengthDirection(strength?: PlanetStrengthInterpr
   }
   if (
     strength.meetsMinimum === true ||
-    (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum >= 100) ||
-    strength.shadbalaStatus === 'STRONG' ||
-    strength.shadbalaStatus === 'SUFFICIENT'
+    (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum >= 100)
   ) {
     return { direction: 'SUPPORT', weight: 1.0 };
   }
   if (
     strength.meetsMinimum === false ||
-    (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum < 80) ||
-    strength.shadbalaStatus === 'WEAK' ||
-    strength.shadbalaStatus === 'VERY_WEAK'
+    (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum < 80)
   ) {
     return { direction: 'CHALLENGE', weight: 1.0 };
   }
   return { direction: 'NEUTRAL', weight: 0 };
 }
 
-export function classifyCareerYoga(yoga: DashaYogaReference): {
+export function isCareerRelevantYoga(
+  yoga: DashaYogaReference,
+  activation?: DashaPlanetActivation,
+  portfolio?: CareerHousePortfolio
+): boolean {
+  const yogaUpper = (yoga.name || yoga.type || '').toUpperCase();
+  const isStatusOrCareerYoga =
+    yogaUpper.includes('RAJA') ||
+    yogaUpper.includes('DHANA') ||
+    yogaUpper.includes('MAHAPURUSHA') ||
+    yogaUpper.includes('GAJA_KESARI') ||
+    yogaUpper.includes('GAJAKESARI') ||
+    yogaUpper.includes('RUCHAKA') ||
+    yogaUpper.includes('BHADRA') ||
+    yogaUpper.includes('HAMSA') ||
+    yogaUpper.includes('MALAVYA') ||
+    yogaUpper.includes('SHASHA') ||
+    yogaUpper.includes('PARVATA') ||
+    yogaUpper.includes('KAHALA') ||
+    yogaUpper.includes('AMALA') ||
+    yogaUpper.includes('CHAMARA') ||
+    yogaUpper.includes('LAKSHMI') ||
+    yogaUpper.includes('SARASWATI') ||
+    yogaUpper.includes('BUDHADITYA') ||
+    yogaUpper.includes('VIPARITA');
+
+  if (isStatusOrCareerYoga) {
+    return true;
+  }
+
+  if (activation) {
+    const port = portfolio ?? getCareerHousePortfolio();
+    const linksCareer =
+      activation.ownedHouses?.some((h) => port.primary.includes(h) || port.supporting.includes(h)) ||
+      (activation.house !== undefined && (port.primary.includes(activation.house) || port.supporting.includes(activation.house))) ||
+      activation.castAspects?.some((a) => port.primary.includes(a.targetHouse)) ||
+      activation.receivedAspects?.some((a) => port.primary.includes(a.sourceHouse) || port.primary.includes(a.targetHouse));
+
+    if (linksCareer) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function classifyCareerYoga(
+  yoga: DashaYogaReference,
+  activation?: DashaPlanetActivation,
+  portfolio?: CareerHousePortfolio
+): {
   direction: CareerFactorDirection;
   weight: number;
 } {
-  if (yoga.finalStatus === 'CANCELLED') {
+  if (yoga.finalStatus === 'CANCELLED' || !isCareerRelevantYoga(yoga, activation, portfolio)) {
     return { direction: 'NEUTRAL', weight: 0 };
   }
   if (yoga.finalStatus === 'WEAKENED') {
@@ -160,62 +243,45 @@ export interface CareerKarakaResolution {
 
 export function resolveCareerKarakaRelevance(
   planet: Planet,
-  activation: DashaPlanetActivation
+  activation: DashaPlanetActivation,
+  portfolio: CareerHousePortfolio
 ): CareerKarakaResolution | undefined {
-  const karakaMap: Partial<Record<Planet, { title: string; desc: string }>> = {
-    Sun: {
-      title: 'Karaka for Public Status & Authority',
-      desc: 'Sun governs public visibility, managerial authority, executive dignity, and government standing.'
-    },
-    Saturn: {
-      title: 'Karaka for Karma & Professional Endurance',
-      desc: 'Saturn governs career discipline, long-term perseverance, institutional structures, and labor duties.'
-    },
-    Mercury: {
-      title: 'Karaka for Commerce & Analytical Intellect',
-      desc: 'Mercury governs commercial transactions, analytical reasoning, communication skills, and trade skills.'
-    },
-    Mars: {
-      title: 'Karaka for Executive Drive & Technical Initiative',
-      desc: 'Mars provides executive energy, decisive initiative, courage in leadership, and technical problem solving.'
-    },
-    Jupiter: {
-      title: 'Karaka for Executive Wisdom & Guidance',
-      desc: 'Jupiter provides ethical expansion, high-level counsel, administrative wisdom, and organizational guidance.'
-    }
-  };
-
-  const karakaInfo = karakaMap[planet];
+  const karakaInfo = getCareerKarakaDefinition(planet);
   if (!karakaInfo) {
     return undefined;
   }
 
-  // Check linkage to 10H/10L or career supporting houses (6, 11, 2)
-  const rules10 = activation.ownedHouses?.includes(10);
-  const occupies10 = activation.house === 10;
+  const rules10 = activation.ownedHouses?.some((h) => portfolio.primary.includes(h));
+  const occupies10 = activation.house !== undefined && portfolio.primary.includes(activation.house);
   const connects10 =
-    activation.castAspects?.some((a) => a.targetHouse === 10) ||
-    activation.receivedAspects?.some((a) => a.sourceHouse === 10 || a.targetHouse === 10);
+    activation.castAspects?.some((a) => portfolio.primary.includes(a.targetHouse)) ||
+    activation.receivedAspects?.some(
+      (a) => portfolio.primary.includes(a.sourceHouse) || portfolio.primary.includes(a.targetHouse)
+    );
   const yogaRelevant =
-    activation.yogaParticipation && activation.yogaParticipation.some((y) => y.finalStatus !== 'CANCELLED');
-  const rulesOrOccupiesCareerHouses =
-    (activation.house !== undefined && [6, 11, 2].includes(activation.house)) ||
-    activation.ownedHouses?.some((h) => [6, 11, 2].includes(h));
+    activation.yogaParticipation &&
+    activation.yogaParticipation.some(
+      (y) => y.finalStatus !== 'CANCELLED' && isCareerRelevantYoga(y, activation, portfolio)
+    );
+  const rulesOrOccupiesSupporting =
+    (activation.house !== undefined && portfolio.supporting.includes(activation.house)) ||
+    activation.ownedHouses?.some((h) => portfolio.supporting.includes(h));
 
-  const isLinked = Boolean(rules10 || occupies10 || connects10 || yogaRelevant || rulesOrOccupiesCareerHouses);
+  const isLinked = Boolean(
+    rules10 || occupies10 || connects10 || yogaRelevant || rulesOrOccupiesSupporting
+  );
 
   if (!isLinked) {
     return undefined;
   }
 
-  // If linked, check dignity
   const isDebilitated =
     activation.dignity?.toUpperCase().includes('DEBILITATED') ||
     activation.dignity?.toUpperCase().includes('ENEMY');
 
   return {
     karakaTitle: karakaInfo.title,
-    traitDescription: karakaInfo.desc,
+    traitDescription: karakaInfo.description,
     direction: isDebilitated ? 'CHALLENGE' : 'SUPPORT',
     weight: 1.5
   };
