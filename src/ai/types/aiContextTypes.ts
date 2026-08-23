@@ -1,5 +1,7 @@
 import { Planet, Sign, NatalGrahaDrishti } from '../../types';
 import type { DashaYogaReference } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
+import type { TimingActivationEffect } from '../../domain/interpretation/DomainInterpretationTypes';
+import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import {
   AiAvailability,
   AiConfidence,
@@ -9,7 +11,7 @@ import {
 import type { DomainInterpretationAiProjection } from '../../domain/interpretation';
 import type { LifeAnalysisAiProjection } from '../../domain/synthesis';
 
-export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection };
+export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection, TimingActivationEffect, WealthSubthemeKey };
 
 export type CareerNatalPromise =
   | 'STRONG'
@@ -211,14 +213,14 @@ export interface DashaHierarchyLevelFact {
   readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly role: 'PRIMARY' | 'MODIFIER' | 'TRIGGER';
   readonly planet?: Planet;
-  readonly effect: string;
+  readonly effect: TimingActivationEffect;
 }
 
 export interface CareerHierarchyFact {
   readonly primary: DashaHierarchyLevelFact;
   readonly modifier: DashaHierarchyLevelFact;
   readonly trigger: DashaHierarchyLevelFact;
-  readonly overallEffect: string;
+  readonly overallEffect: TimingActivationEffect;
   readonly confidence?: number;
   readonly evidenceIds?: readonly string[];
   readonly summary?: string;
@@ -259,11 +261,11 @@ export interface CareerFact {
 }
 
 export interface WealthDimensionHierarchyFact {
-  readonly dimension: string;
-  readonly primary: string;
-  readonly modifier: string;
-  readonly trigger: string;
-  readonly overallEffect: string;
+  readonly dimension: WealthSubthemeKey;
+  readonly primary: TimingActivationEffect;
+  readonly modifier: TimingActivationEffect;
+  readonly trigger: TimingActivationEffect;
+  readonly overallEffect: TimingActivationEffect;
   readonly confidence?: number;
 }
 

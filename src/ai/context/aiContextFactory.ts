@@ -17,6 +17,7 @@ import {
   AiEvidenceStrength,
   AscendantFact,
   CareerFact,
+  CareerHierarchyFact,
   CareerTimingFact,
   CareerPeriodTimingFact,
   DashaFacts,
@@ -30,6 +31,7 @@ import {
   LifeThemeFact,
   PlanetFactSummary,
   WealthFact,
+  WealthHierarchyFact,
   WealthTimingFact,
   WealthPeriodTimingFact,
   WealthSubthemeFact,
@@ -61,7 +63,8 @@ import {
 } from '../../domain/interpretation';
 import {
   synthesizeCareerDashaHierarchy,
-  synthesizeWealthDashaHierarchy
+  synthesizeWealthDashaHierarchy,
+  indexDashaPeriodActivations
 } from '../../product/life-analysis';
 import {
   synthesizeLifeAnalysis,
@@ -520,12 +523,10 @@ function buildCareerFact(
   const career = horoscope.themeInterpretationV2?.career;
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
-  let hierarchy: import('../types/aiContextTypes').CareerHierarchyFact | undefined;
+  let hierarchy: CareerHierarchyFact | undefined;
   if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
     const activations = getCareerTimingActivations(careerInterpretation);
-    const md = activations?.find((a) => a.period === 'MD');
-    const ad = activations?.find((a) => a.period === 'AD');
-    const pd = activations?.find((a) => a.period === 'PD');
+    const { md, ad, pd } = indexDashaPeriodActivations(activations);
 
     if (md && ad && pd) {
       const syn = synthesizeCareerDashaHierarchy(md, ad, pd);
@@ -586,12 +587,10 @@ function buildWealthFact(
   const wealth = horoscope.themeInterpretationV2?.wealth;
   const timing = buildNormalizedWealthTiming(wealthInterpretation, asOf) as WealthTimingFact | undefined;
 
-  let hierarchy: import('../types/aiContextTypes').WealthHierarchyFact | undefined;
+  let hierarchy: WealthHierarchyFact | undefined;
   if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
     const activations = getWealthPeriodTimingActivations(wealthInterpretation);
-    const md = activations?.find((a) => a.period === 'MD');
-    const ad = activations?.find((a) => a.period === 'AD');
-    const pd = activations?.find((a) => a.period === 'PD');
+    const { md, ad, pd } = indexDashaPeriodActivations(activations);
 
     if (md && ad && pd) {
       const syn = synthesizeWealthDashaHierarchy(md, ad, pd);

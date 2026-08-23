@@ -23,6 +23,32 @@ export function formatEffectLabel(effect?: TimingActivationEffect | string): str
   }
 }
 
+export interface DashaPeriodActivations<T extends { period: 'MD' | 'AD' | 'PD' }> {
+  readonly md?: T;
+  readonly ad?: T;
+  readonly pd?: T;
+}
+
+/**
+ * Indexes an array of period timing activations into `{ md, ad, pd }`.
+ */
+export function indexDashaPeriodActivations<T extends { period: 'MD' | 'AD' | 'PD' }>(
+  activations?: readonly T[]
+): DashaPeriodActivations<T> {
+  if (!activations || activations.length === 0) {
+    return {};
+  }
+  let md: T | undefined;
+  let ad: T | undefined;
+  let pd: T | undefined;
+  for (const act of activations) {
+    if (act.period === 'MD') md = act;
+    else if (act.period === 'AD') ad = act;
+    else if (act.period === 'PD') pd = act;
+  }
+  return { md, ad, pd };
+}
+
 /**
  * Deterministic rule-based hierarchical timing effect combination.
  * Hierarchy: Primary (MD) -> Modifier (AD) -> Trigger (PD)
