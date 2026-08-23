@@ -1,17 +1,31 @@
 import React from 'react';
-import { Coins, HelpCircle, Landmark, TrendingUp, Trophy, Target } from 'lucide-react';
-import type { WealthTimingProduct } from '../../product/dasha-timing/dashaTimingTypes';
+import {
+  Coins,
+  HelpCircle,
+  Landmark,
+  TrendingUp,
+  Trophy,
+  Target,
+  Layers,
+  ShieldCheck
+} from 'lucide-react';
+import type {
+  WealthTimingProduct,
+  DashaWealthHierarchySynthesis
+} from '../../product/dasha-timing/dashaTimingTypes';
 import { formatPlanetName } from '../fullNatalReport/reportUtils';
 import { formatEnum, getEffectBadgeClass } from '../lifeAnalysis/lifeAnalysisUx';
 import { EmptyState } from '../fullNatalReport/EmptyState';
 
 export interface WealthTimingCardProps {
   readonly timing?: WealthTimingProduct;
+  readonly hierarchy?: DashaWealthHierarchySynthesis;
   readonly onOpenEvidence?: (evidenceIds: readonly string[]) => void;
 }
 
 export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
   timing,
+  hierarchy,
   onOpenEvidence
 }) => {
   if (!timing || timing.status === 'UNAVAILABLE') {
@@ -25,9 +39,9 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
   }
 
   const periods = [
-    timing.mahadasha ? { ...timing.mahadasha, title: 'Mahadasha' } : undefined,
-    timing.antardasha ? { ...timing.antardasha, title: 'Antardasha' } : undefined,
-    timing.pratyantardasha ? { ...timing.pratyantardasha, title: 'Pratyantardasha' } : undefined
+    timing.mahadasha ? { ...timing.mahadasha, title: 'Mahadasha', role: 'PRIMARY' as const } : undefined,
+    timing.antardasha ? { ...timing.antardasha, title: 'Antardasha', role: 'MODIFIER' as const } : undefined,
+    timing.pratyantardasha ? { ...timing.pratyantardasha, title: 'Pratyantardasha', role: 'TRIGGER' as const } : undefined
   ].filter((p): p is NonNullable<typeof p> => p !== undefined);
 
   return (
@@ -54,12 +68,72 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
         </span>
       </div>
 
+      {/* Synthesized 4D Hierarchy Summary Banner */}
+      {hierarchy && (
+        <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3.5 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-400" aria-hidden="true" />
+              <span className="text-xs font-mono-code font-bold text-amber-200">
+                Synthesized 4-Dimension Hierarchy (MD &gt; AD &gt; PD)
+              </span>
+            </div>
+            {hierarchy.evidenceIds && hierarchy.evidenceIds.length > 0 && onOpenEvidence && (
+              <button
+                type="button"
+                onClick={() => onOpenEvidence(hierarchy.evidenceIds)}
+                className="inline-flex items-center gap-1 text-[11px] font-mono-code text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+              >
+                <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>View Evidence ({hierarchy.evidenceIds.length} rules)</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono-code">
+            {hierarchy.dimensions.map((dim) => (
+              <div
+                key={dim.dimension}
+                className="bg-slate-950/70 border border-slate-800/90 rounded-lg p-2 space-y-1"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {dim.dimension.charAt(0) + dim.dimension.slice(1).toLowerCase()}
+                  </span>
+                  {typeof dim.confidence === 'number' && (
+                    <span className="text-[9px] text-slate-500 flex items-center gap-0.5">
+                      <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />
+                      {Math.round(dim.confidence * 100)}%
+                    </span>
+                  )}
+                </div>
+                <div className="pt-0.5">
+                  <span
+                    className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold border ${getEffectBadgeClass(
+                      dim.overallEffect
+                    )}`}
+                  >
+                    {formatEnum(dim.overallEffect)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {hierarchy.summary && (
+            <p className="text-xs text-slate-300 font-serif-astro leading-relaxed">
+              {hierarchy.summary}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Desktop/Tablet 4x3 Matrix Grid Table */}
       <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-xs text-left border-collapse font-mono-code">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-950/60 text-slate-400 text-[10px] uppercase">
-              <th className="py-2.5 px-3 font-semibold">Active Period</th>
+              <th className="py-2.5 px-3 font-semibold">Active Period & Role</th>
               <th className="py-2.5 px-3 font-semibold">
                 <span className="flex items-center gap-1">
                   <Landmark className="w-3 h-3 text-emerald-400" aria-hidden="true" />
@@ -93,10 +167,15 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
 
               return (
                 <tr key={p.period} className="hover:bg-slate-800/30 transition-colors">
-                  {/* Period & Lord */}
+                  {/* Period & Lord & Role */}
                   <td className="py-3 px-3">
-                    <div className="font-bold text-slate-200">
-                      {p.period} ({p.title})
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-200">
+                        {p.period} ({p.title})
+                      </span>
+                      <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-semibold border border-slate-700">
+                        {p.role}
+                      </span>
                     </div>
                     {p.planet && (
                       <div className="text-[11px] font-serif-astro text-amber-300">
@@ -183,9 +262,14 @@ export const WealthTimingCard: React.FC<WealthTimingCardProps> = ({
             >
               <div className="flex items-center justify-between border-b border-slate-800/60 pb-2">
                 <div>
-                  <span className="font-mono-code font-bold text-xs text-slate-200">
-                    {p.period} • {p.title}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono-code font-bold text-xs text-slate-200">
+                      {p.period} • {p.title}
+                    </span>
+                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-semibold border border-slate-700">
+                      {p.role}
+                    </span>
+                  </div>
                   {p.planet && (
                     <span className="block text-xs font-serif-astro text-amber-300">
                       {formatPlanetName(p.planet)}

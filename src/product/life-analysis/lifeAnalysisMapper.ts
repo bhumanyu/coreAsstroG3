@@ -2,12 +2,16 @@ import type { DomainInterpretation } from '../../domain/interpretation';
 import {
   getCareerConclusionData,
   getWealthConclusionData,
+  getCareerTimingActivations,
+  getWealthPeriodTimingActivations,
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
   deriveCareerTimingEffect,
   deriveWealthDimensionTiming,
   deriveWealthTimingEffect
 } from '../../domain/interpretation';
+import { synthesizeCareerDashaHierarchy } from './dashaCareerHierarchy';
+import { synthesizeWealthDashaHierarchy } from './dashaWealthHierarchy';
 import type {
   LifeAnalysis,
   SharedTimingActivation
@@ -116,6 +120,15 @@ export function buildLifeAnalysisViewModel(
   const careerConclusionData = getCareerConclusionData(career);
   const careerD10Varga = career.vargaConfirmations.find((v) => v.varga === 'D10');
   const careerTiming = buildNormalizedCareerTiming(career, activeDasha?.at ?? career.generatedAt);
+  const careerActivations = getCareerTimingActivations(career);
+  const mdCareer = careerActivations?.find((a) => a.period === 'MD');
+  const adCareer = careerActivations?.find((a) => a.period === 'AD');
+  const pdCareer = careerActivations?.find((a) => a.period === 'PD');
+  const careerDashaHierarchy =
+    mdCareer && adCareer && pdCareer
+      ? synthesizeCareerDashaHierarchy(mdCareer, adCareer, pdCareer)
+      : undefined;
+
   const careerDetail: LifeAnalysisCareerDetailViewModel = {
     natalPromise: career.natalPromise.strength,
     d10Relationship:
@@ -130,13 +143,23 @@ export function buildLifeAnalysisViewModel(
     headline: careerConclusionData?.headline,
     statement: career.conclusion.statement,
     timing: careerTiming,
-    currentTimingEffect: deriveCareerTimingEffect(careerTiming)
+    currentTimingEffect: deriveCareerTimingEffect(careerTiming),
+    ...(careerDashaHierarchy ? { dashaHierarchy: careerDashaHierarchy } : {})
   };
 
   // Extract typed Wealth conclusion data
   const wealthConclusionData = getWealthConclusionData(wealth);
   const wealthD2Varga = wealth.vargaConfirmations.find((v) => v.varga === 'D2');
   const wealthTiming = buildNormalizedWealthTiming(wealth, activeDasha?.at ?? wealth.generatedAt);
+  const wealthActivations = getWealthPeriodTimingActivations(wealth);
+  const mdWealth = wealthActivations?.find((a) => a.period === 'MD');
+  const adWealth = wealthActivations?.find((a) => a.period === 'AD');
+  const pdWealth = wealthActivations?.find((a) => a.period === 'PD');
+  const wealthDashaHierarchy =
+    mdWealth && adWealth && pdWealth
+      ? synthesizeWealthDashaHierarchy(mdWealth, adWealth, pdWealth)
+      : undefined;
+
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
     d2Relationship:
@@ -155,7 +178,8 @@ export function buildLifeAnalysisViewModel(
     statement: wealth.conclusion.statement,
     timing: wealthTiming,
     dimensionTiming: deriveWealthDimensionTiming(wealthTiming),
-    currentTimingEffect: deriveWealthTimingEffect(wealthTiming)
+    currentTimingEffect: deriveWealthTimingEffect(wealthTiming),
+    ...(wealthDashaHierarchy ? { dashaHierarchy: wealthDashaHierarchy } : {})
   };
 
   const viewModel: LifeAnalysisViewModel = {
