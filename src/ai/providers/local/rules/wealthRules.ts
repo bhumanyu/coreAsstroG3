@@ -141,5 +141,55 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         `${cancelledYogas.length} cancelled.`;
       return triggered(effect, statement, supportingIds, challengingIds);
     }
+  },
+  {
+    id: 'LOCAL-WEALTH-004',
+    domain: 'WEALTH',
+    priority: 85,
+    evaluate(context: AiContext) {
+      const hierarchy = context.wealth?.timing?.hierarchy;
+      if (!hierarchy) {
+        return notTriggered();
+      }
+
+      const evidenceMap = new Map(context.evidence.map((e) => [e.id, e]));
+      const supportingIds: string[] = [];
+      const challengingIds: string[] = [];
+
+      for (const id of hierarchy.evidenceIds ?? []) {
+        const ev = evidenceMap.get(id);
+        if (!ev) continue;
+        if (ev.effect === 'SUPPORT') {
+          supportingIds.push(id);
+        } else if (ev.effect === 'CHALLENGE') {
+          challengingIds.push(id);
+        }
+      }
+
+      const dimActivations =
+        hierarchy.dimensions?.filter((d) => d.overallEffect === 'ACTIVATES').length ?? 0;
+      const dimChallenges =
+        hierarchy.dimensions?.filter((d) => d.overallEffect === 'CHALLENGES').length ?? 0;
+      const dimPartials =
+        hierarchy.dimensions?.filter((d) => d.overallEffect === 'PARTIALLY_ACTIVATES').length ?? 0;
+
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (dimActivations > dimChallenges) {
+        effect = 'SUPPORT';
+      } else if (dimChallenges > dimActivations) {
+        effect = 'CHALLENGE';
+      } else if (dimPartials > 0 || (dimActivations > 0 && dimChallenges > 0)) {
+        effect = 'MIXED';
+      }
+
+      const statement =
+        `Wealth timing hierarchy evaluated across financial dimensions: ` +
+        `Mahadasha of ${hierarchy.primary.planet ?? 'primary lord'} (${hierarchy.primary.role}) ${hierarchy.primary.effect.toLowerCase()}, ` +
+        `Antardasha of ${hierarchy.modifier.planet ?? 'modifier lord'} (${hierarchy.modifier.role}) ${hierarchy.modifier.effect.toLowerCase()}, ` +
+        `Pratyantardasha of ${hierarchy.trigger.planet ?? 'trigger lord'} (${hierarchy.trigger.role}) ${hierarchy.trigger.effect.toLowerCase()}. ` +
+        `Deterministic synthesis outcome is ${effect}.`;
+
+      return triggered(effect, statement, supportingIds, challengingIds);
+    }
   }
 ]);

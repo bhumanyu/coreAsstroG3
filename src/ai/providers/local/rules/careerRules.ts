@@ -74,5 +74,48 @@ export const CAREER_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         challengingIds
       );
     }
+  },
+  {
+    id: 'LOCAL-CAREER-003',
+    domain: 'CAREER',
+    priority: 80,
+    evaluate(context: AiContext) {
+      const hierarchy = context.career?.timing?.hierarchy;
+      if (!hierarchy) {
+        return notTriggered();
+      }
+
+      const evidenceMap = new Map(context.evidence.map((e) => [e.id, e]));
+      const supportingIds: string[] = [];
+      const challengingIds: string[] = [];
+
+      for (const id of hierarchy.evidenceIds ?? []) {
+        const ev = evidenceMap.get(id);
+        if (!ev) continue;
+        if (ev.effect === 'SUPPORT') {
+          supportingIds.push(id);
+        } else if (ev.effect === 'CHALLENGE') {
+          challengingIds.push(id);
+        }
+      }
+
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (hierarchy.overallEffect === 'ACTIVATES') {
+        effect = 'SUPPORT';
+      } else if (hierarchy.overallEffect === 'CHALLENGES') {
+        effect = 'CHALLENGE';
+      } else if (hierarchy.overallEffect === 'PARTIALLY_ACTIVATES') {
+        effect = 'MIXED';
+      }
+
+      const statement =
+        `Career timing hierarchy evaluated: ` +
+        `Mahadasha of ${hierarchy.primary.planet ?? 'primary lord'} (${hierarchy.primary.role}) ${hierarchy.primary.effect.toLowerCase()}, ` +
+        `Antardasha of ${hierarchy.modifier.planet ?? 'modifier lord'} (${hierarchy.modifier.role}) ${hierarchy.modifier.effect.toLowerCase()}, ` +
+        `Pratyantardasha of ${hierarchy.trigger.planet ?? 'trigger lord'} (${hierarchy.trigger.role}) ${hierarchy.trigger.effect.toLowerCase()}. ` +
+        `Deterministic synthesis outcome is ${hierarchy.overallEffect}.`;
+
+      return triggered(effect, statement, supportingIds, challengingIds);
+    }
   }
 ]);

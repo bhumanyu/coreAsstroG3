@@ -23,7 +23,7 @@ export function formatEffectLabel(effect?: TimingActivationEffect | string): str
   }
 }
 
-export interface DashaPeriodActivations<T extends { period: 'MD' | 'AD' | 'PD' }> {
+export interface DashaPeriodActivations<T> {
   readonly md?: T;
   readonly ad?: T;
   readonly pd?: T;
@@ -32,7 +32,7 @@ export interface DashaPeriodActivations<T extends { period: 'MD' | 'AD' | 'PD' }
 /**
  * Indexes an array of period timing activations into `{ md, ad, pd }`.
  */
-export function indexDashaPeriodActivations<T extends { period: 'MD' | 'AD' | 'PD' }>(
+export function indexDashaPeriodActivations<T extends { readonly period?: string }>(
   activations?: readonly T[]
 ): DashaPeriodActivations<T> {
   if (!activations || activations.length === 0) {
@@ -42,9 +42,22 @@ export function indexDashaPeriodActivations<T extends { period: 'MD' | 'AD' | 'P
   let ad: T | undefined;
   let pd: T | undefined;
   for (const act of activations) {
-    if (act.period === 'MD') md = act;
-    else if (act.period === 'AD') ad = act;
-    else if (act.period === 'PD') pd = act;
+    if (act.period === 'MD') {
+      if (md !== undefined) {
+        throw new Error("Invariant violation: duplicate dasha period 'MD' in timing activations");
+      }
+      md = act;
+    } else if (act.period === 'AD') {
+      if (ad !== undefined) {
+        throw new Error("Invariant violation: duplicate dasha period 'AD' in timing activations");
+      }
+      ad = act;
+    } else if (act.period === 'PD') {
+      if (pd !== undefined) {
+        throw new Error("Invariant violation: duplicate dasha period 'PD' in timing activations");
+      }
+      pd = act;
+    }
   }
   return { md, ad, pd };
 }

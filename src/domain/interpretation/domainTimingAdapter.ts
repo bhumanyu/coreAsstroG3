@@ -8,6 +8,7 @@ import type {
   WealthPeriodTimingProduct,
   TimingAvailabilityStatus
 } from '../../product/life-analysis/lifeAnalysisTypes';
+import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 
 /**
  * Safely extract CareerConclusionData from a domain interpretation.
@@ -78,9 +79,7 @@ export function buildNormalizedCareerTiming(
     return { status: 'UNAVAILABLE', asOf };
   }
 
-  const md = activations.find((a) => a.period === 'MD');
-  const ad = activations.find((a) => a.period === 'AD');
-  const pd = activations.find((a) => a.period === 'PD');
+  const { md, ad, pd } = indexDashaPeriodActivations(activations);
 
   const hasAnyData = [md, ad, pd].some(
     (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
@@ -139,9 +138,7 @@ export function buildNormalizedWealthTiming(
     return { status: 'UNAVAILABLE', asOf };
   }
 
-  const md = periodActivations.find((a) => a.period === 'MD');
-  const ad = periodActivations.find((a) => a.period === 'AD');
-  const pd = periodActivations.find((a) => a.period === 'PD');
+  const { md, ad, pd } = indexDashaPeriodActivations(periodActivations);
 
   const hasAnyData = [md, ad, pd].some(
     (p) => p && p.effect !== 'INSUFFICIENT_DATA' && p.effect !== 'UNKNOWN'
