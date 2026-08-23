@@ -2,10 +2,12 @@ import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
-import { createDomainManifestation } from '../interpretation/ManifestationMode';
+import {
+  createDomainManifestation,
+  resolveManifestationStatus
+} from '../interpretation/ManifestationMode';
 import type { DomainManifestation } from '../interpretation/ManifestationMode';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
-import type { ConfidenceLevel } from '../interpretation/DomainInterpretationTypes';
 import type { WealthManifestationMode } from './wealthTypes';
 
 export const WEALTH_ACCUMULATION_FAMILIES: ReadonlySet<WealthEvidenceFamily> = new Set([
@@ -160,7 +162,7 @@ export function deriveWealthManifestations(
     createDomainManifestation({
       mode: 'ACCUMULATION',
       confidence: accumulationConfidence,
-      status: accumulationEvidence.length > 0 ? 'SUPPORTED' : 'INSUFFICIENT_DATA',
+      status: resolveManifestationStatus(accumulationEvidence),
       statement: accumulationEvidence.length > 0
         ? 'Strong capacity for capital accumulation, liquid savings preservation, and tangible asset building.'
         : 'Limited or insufficient data for liquid savings and capital accumulation in the available evidence.',
@@ -179,7 +181,7 @@ export function deriveWealthManifestations(
     createDomainManifestation({
       mode: 'GAINS',
       confidence: gainsConfidence,
-      status: gainsEvidence.length > 0 ? 'SUPPORTED' : 'INSUFFICIENT_DATA',
+      status: resolveManifestationStatus(gainsEvidence),
       statement: gainsEvidence.length > 0
         ? 'Active channels for recurring income, business revenues, and social network monetization.'
         : 'Limited or insufficient data for recurring gains and network monetization in the available evidence.',
@@ -198,7 +200,7 @@ export function deriveWealthManifestations(
     createDomainManifestation({
       mode: 'FORTUNE',
       confidence: fortuneConfidence,
-      status: fortuneEvidence.length > 0 ? 'SUPPORTED' : 'INSUFFICIENT_DATA',
+      status: resolveManifestationStatus(fortuneEvidence),
       statement: fortuneEvidence.length > 0
         ? 'Auspicious indications for long-term prosperity, luck, and hereditary or unearned fortune.'
         : 'Standard financial fortune trajectory without pronounced indicators in the available evidence.',
@@ -217,7 +219,7 @@ export function deriveWealthManifestations(
     createDomainManifestation({
       mode: 'SPECULATION',
       confidence: speculationConfidence,
-      status: speculationEvidence.length > 0 ? 'SUPPORTED' : 'INSUFFICIENT_DATA',
+      status: resolveManifestationStatus(speculationEvidence),
       statement: speculationEvidence.length > 0
         ? 'The chart contains supportive indicators for speculative activity, though these should be interpreted separately from overall wealth potential.'
         : 'Speculative indicators are comparatively weaker than accumulation and gains.',

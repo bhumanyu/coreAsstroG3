@@ -913,6 +913,21 @@ describe('WealthDomainInterpreterV2', () => {
           evidenceFamily: 'SECOND_HOUSE',
           dimension: 'ACCUMULATION',
           ruleId: 'WEALTH_HOUSE_PROMISE_2H_001'
+        }),
+        createDomainEvidence({
+          id: '2L_ACC',
+          sourceType: 'LORDSHIP',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '2nd lord strong',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 85,
+          evidenceFamily: 'SECOND_LORD',
+          dimension: 'ACCUMULATION',
+          ruleId: 'WEALTH_LORD_PROMISE_2L_001'
         })
       ];
 
@@ -923,7 +938,7 @@ describe('WealthDomainInterpreterV2', () => {
       const gains = manifestations.find((m) => m.mode === 'GAINS');
 
       expect(acc?.status).toBe('SUPPORTED');
-      expect(acc?.confidence).toBe('HIGH');
+      expect(acc?.confidence).toBe('VERY_HIGH');
 
       expect(spec?.status).toBe('INSUFFICIENT_DATA');
       expect(spec?.confidence).toBe('VERY_LOW');
@@ -954,6 +969,21 @@ describe('WealthDomainInterpreterV2', () => {
           evidenceFamily: 'FIFTH_HOUSE',
           dimension: 'SPECULATION',
           ruleId: 'WEALTH_HOUSE_PROMISE_5H_001'
+        }),
+        createDomainEvidence({
+          id: '5L_SPEC',
+          sourceType: 'LORDSHIP',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: '5th lord supportive',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 85,
+          evidenceFamily: 'FIFTH_LORD',
+          dimension: 'SPECULATION',
+          ruleId: 'WEALTH_LORD_PROMISE_5L_001'
         })
       ];
 

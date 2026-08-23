@@ -3,25 +3,28 @@ import type {
   DomainManifestation,
   DomainConflict,
   VargaConfirmation,
-  ConfidenceLevel,
   ManifestationMode
 } from '../interpretation';
-import { createDomainManifestation } from '../interpretation/ManifestationMode';
+import {
+  createDomainManifestation,
+  resolveManifestationStatus
+} from '../interpretation/ManifestationMode';
 
 import {
   classifyReasoningEvidence,
   summarizeLayers
 } from '../reasoning/reasoningHierarchy';
 import {
-  resolveNatalPromise,
-  resolveStrength
+  resolveNatalPromise
 } from '../reasoning/reasoningConclusion';
 import {
   resolveDashaHierarchy,
   type DashaTimingEvidence
 } from '../reasoning/dashaHierarchy';
 import {
-  resolveReasoningConflicts
+  resolveReasoningConflicts,
+  resolveFinalDomainStrength,
+  resolveGradedCurrentPressure
 } from '../reasoning/reasoningConflictResolver';
 import { buildReasoningTrace } from '../reasoning/reasoningTrace';
 import type {
@@ -41,7 +44,7 @@ export interface CareerReasoningResult extends HierarchicalDomainResult {
   readonly conflicts: readonly DomainConflict[];
   readonly timingHierarchy: TimingHierarchyResult;
   readonly currentActivation: 'STRONG' | 'MODERATE' | 'LOW' | 'INSUFFICIENT_DATA';
-  readonly currentPressure: 'STRONG' | 'MODERATE' | 'LOW' | 'NONE';
+  readonly currentPressure: 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'STRONG';
 }
 
 export function deriveCareerReasoningManifestations(
@@ -69,6 +72,7 @@ export function deriveCareerReasoningManifestations(
       rawConfidence === 'VERY_LOW'
     ) ? rawConfidence : 'LOW';
     const mode = modeKey as ManifestationMode;
+    const status = resolveManifestationStatus(supporting);
 
     let statement = '';
     if (supporting.length > 0) {
@@ -83,7 +87,6 @@ export function deriveCareerReasoningManifestations(
           statement = 'Pronounced aptitude for specialized analytical, engineering, or technical problem solving.';
           break;
         case 'SERVICE_EMPLOYMENT':
-        case 'EMPLOYMENT':
           statement = 'Consistent capacity for professional service, organizational employment, and structured execution.';
           break;
         case 'AUTHORITY':
@@ -93,7 +96,6 @@ export function deriveCareerReasoningManifestations(
           statement = 'Clear inclinations and independent drive toward self-directed professional initiatives.';
           break;
         case 'BUSINESS_ENTREPRENEURSHIP':
-        case 'ENTREPRENEURSHIP':
           statement = 'Supportive commercial acumen, business enterprise potential, and trade network leverage.';
           break;
         default:
@@ -107,7 +109,7 @@ export function deriveCareerReasoningManifestations(
       createDomainManifestation({
         mode,
         confidence,
-        status: supporting.length > 0 ? 'SUPPORTED' : 'INSUFFICIENT_DATA',
+        status,
         statement,
         evidenceIds: supporting.map((e) => e.id)
       })
@@ -159,6 +161,7 @@ export function evaluateCareerReasoningHierarchy(params: {
   }
 
   // 4. Resolve Dasha Timing Hierarchy
+  // TODO(CW-01 Follow-up Issue #2): Implement true per-planet Dasha domain synthesis across karaka and lordships.
   const mdTiming: DashaTimingEvidence = dashaTimings?.md ?? {
     level: 'MD',
     effect: 'INSUFFICIENT_DATA',
@@ -181,6 +184,7 @@ export function evaluateCareerReasoningHierarchy(params: {
   const timingHierarchy = resolveDashaHierarchy(mdTiming, adTiming, pdTiming);
 
   // 5. Resolve Transit Trigger Direction
+  // TODO(CW-01 Follow-up Issue #6): Implement rich transit target/strength/role modeling beyond binary polarity checks.
   let transitDirection: ReasoningDirection = 'NEUTRAL';
   if (transitEvidence.length > 0) {
     const hasTransitChallenge = transitEvidence.some((e) => e.polarity === 'CHALLENGING');
@@ -202,15 +206,17 @@ export function evaluateCareerReasoningHierarchy(params: {
     transitDirection
   });
 
-  // Calculate final strength:
-  // D10 qualifies/confirms, never replaces D1.
-  let finalStrength: DomainStrength = natalPromiseResult.strength;
-  if (vargaDirection === 'CHALLENGE' && (finalStrength === 'VERY_STRONG' || finalStrength === 'STRONG')) {
-    // Downgrade one notch due to divisional friction while preserving supportive direction
-    finalStrength = finalStrength === 'VERY_STRONG' ? 'STRONG' : 'MODERATE';
-  }
+  // Calculate final strength using centralized resolver (consumes full hierarchy)
+  const finalStrength: DomainStrength = resolveFinalDomainStrength({
+    natalStrength: natalPromiseResult.strength,
+    natalDirection: natalPromiseResult.direction,
+    vargaDirection,
+    dashaEffect: timingHierarchy.finalEffect,
+    transitDirection,
+    conflicts: conflictRes.conflicts
+  });
 
-  // Derive current activation and pressure
+  // Derive current activation
   let currentActivation: 'STRONG' | 'MODERATE' | 'LOW' | 'INSUFFICIENT_DATA' = 'INSUFFICIENT_DATA';
   if (timingHierarchy.finalEffect === 'ACTIVATES') {
     currentActivation = 'STRONG';
@@ -223,12 +229,14 @@ export function evaluateCareerReasoningHierarchy(params: {
     currentActivation = 'LOW';
   }
 
-  let currentPressure: 'STRONG' | 'MODERATE' | 'LOW' | 'NONE' = 'NONE';
-  if (transitDirection === 'CHALLENGE') {
-    currentPressure = 'MODERATE';
-  } else if (timingHierarchy.finalEffect === 'CHALLENGES') {
-    currentPressure = 'STRONG';
-  }
+  // Derive graded current pressure
+  const currentPressure = resolveGradedCurrentPressure({
+    transitEvidence,
+    transitDirection,
+    timingHierarchy,
+    dashaEffect: timingHierarchy.finalEffect,
+    conflicts: conflictRes.conflicts
+  });
 
   // Collect evidence IDs
   const primaryEvidenceIds = weightedEvidence
