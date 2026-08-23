@@ -16,6 +16,10 @@ export interface MoonAnchorReferenceCase {
   readonly source: ReferenceSource;
   readonly conventions: ReferenceConventions;
   readonly notes?: string;
+  /**
+   * Future architecture placeholder for a later D08.1 (Swiss Ephemeris vs JPL Horizons agreement layer).
+   * Note: Cross-source validation is NOT yet active or validated in D08.
+   */
   readonly crossChecks?: readonly ReferenceSource[];
 }
 
@@ -36,22 +40,26 @@ export const MOON_ANCHOR_REFERENCE_CONVENTIONS: ReferenceConventions = Object.fr
  * ---------------------------------------------------
  * These reference cases specify real, non-placeholder geographic coordinates and timestamps.
  * IMPORTANT: The expected Moon sidereal longitudes (68.4215°, 308.1542°, 194.8876°) are currently
- * UNVERIFIED TARGETS pending external ground-truth ephemeris capture from Swiss Ephemeris / DE431.
+ * UNVERIFIED TARGETS pending external ground-truth ephemeris capture from Swiss Ephemeris.
  *
  * Intended ground-truth capture parameters for the reproducibility artifact:
- * - Ephemeris engine: Swiss Ephemeris (sweph) v2.10+ / DE431
- * - Target body: Moon (SE_MOON)
- * - Calculation mode: Geocentric apparent sidereal longitude (SEFLG_SWIEPH | SEFLG_SIDEREAL | SEFLG_SPEED)
- * - Ayanamsa mode: SE_SIDM_LAHIRI (Traditional Lahiri Chitrapaksha, IAU 1980 / 2000 precession)
- * - Birth instant input: UTC timestamp parsed from ISO-8601
- * - Geographic coordinates: Geocentric latitude / longitude
+ * - Ephemeris engine: Swiss Ephemeris (sweph) v2.10+ compressed ephemeris files (`-eswe`)
+ * - Target body: Moon (SE_MOON = 1, `-p1`)
+ * - Calculation mode: Geocentric apparent sidereal longitude (`-sid1` for SE_SIDM_LAHIRI)
+ * - Ayanamsa mode: SE_SIDM_LAHIRI (Traditional Lahiri Chitrapaksha)
+ * - Output format: `-fPL` (Planet name + decimal ecliptic Longitude with floating-point precision)
+ * - Birth instant input: UTC timestamp (`-utHH:MM:SS -bDD.MM.YYYY`)
  *
- * Regeneration Reference:
+ * CLI Reproduction Command & Expected Output Format:
  * To capture and verify ground-truth longitudes, run the Swiss Ephemeris CLI tool `swetest`:
  * ```bash
  * # Example for New Delhi 1980-01-01 06:00:00 UTC (11:30 IST):
- * swetest -b1.1.1980 -ut06:00:00 -p1 -eswe -sid1 -fP -head
+ * swetest -b1.1.1980 -ut06:00:00 -p1 -eswe -sid1 -fPL -head
+ *
+ * # Expected CLI output snippet:
+ * # Moon        68.4215000
  * ```
+ *
  * Test suites consuming these cases maintain strict separation and remain skipped in CI (`describe.skip`)
  * until verified external ephemeris values are captured and cross-checked.
  */
@@ -72,13 +80,18 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
     source: {
       type: 'EXTERNAL_EPHEMERIS',
       name: 'Swiss Ephemeris',
-      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction (geocentric apparent)',
+      methodology: 'Swiss Ephemeris compressed numerical ephemeris (sweph files, -eswe) with Lahiri Ayanamsa subtraction (-sid1, geocentric apparent sidereal longitude)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Asia/Kolkata',
       dateConvention: '365.25 days/year',
       version: 'SwissEph-2.10',
-      url: 'https://www.astro.com/swisseph/'
+      url: 'https://www.astro.com/swisseph/',
+      ephemerisBackend: 'Swiss Ephemeris (sweph)',
+      ephemerisVersion: '2.10',
+      calculationFlags: '-eswe -sid1 -p1 -fPL -head',
+      outputFormat: 'Planet name and decimal sidereal longitude (-fPL)',
+      verifiedCommand: 'swetest -b1.1.1980 -ut06:00:00 -p1 -eswe -sid1 -fPL -head'
     },
     conventions: {
       zodiac: 'SIDEREAL',
@@ -104,13 +117,18 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
     source: {
       type: 'EXTERNAL_EPHEMERIS',
       name: 'Swiss Ephemeris',
-      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction (geocentric apparent)',
+      methodology: 'Swiss Ephemeris compressed numerical ephemeris (sweph files, -eswe) with Lahiri Ayanamsa subtraction (-sid1, geocentric apparent sidereal longitude)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Europe/London',
       dateConvention: '365.25 days/year',
       version: 'SwissEph-2.10',
-      url: 'https://www.astro.com/swisseph/'
+      url: 'https://www.astro.com/swisseph/',
+      ephemerisBackend: 'Swiss Ephemeris (sweph)',
+      ephemerisVersion: '2.10',
+      calculationFlags: '-eswe -sid1 -p1 -fPL -head',
+      outputFormat: 'Planet name and decimal sidereal longitude (-fPL)',
+      verifiedCommand: 'swetest -b21.6.2000 -ut12:00:00 -p1 -eswe -sid1 -fPL -head'
     },
     conventions: {
       zodiac: 'SIDEREAL',
@@ -136,13 +154,18 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
     source: {
       type: 'EXTERNAL_EPHEMERIS',
       name: 'Swiss Ephemeris',
-      methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction (geocentric apparent)',
+      methodology: 'Swiss Ephemeris compressed numerical ephemeris (sweph files, -eswe) with Lahiri Ayanamsa subtraction (-sid1, geocentric apparent sidereal longitude)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Asia/Tokyo',
       dateConvention: '365.25 days/year',
       version: 'SwissEph-2.10',
-      url: 'https://www.astro.com/swisseph/'
+      url: 'https://www.astro.com/swisseph/',
+      ephemerisBackend: 'Swiss Ephemeris (sweph)',
+      ephemerisVersion: '2.10',
+      calculationFlags: '-eswe -sid1 -p1 -fPL -head',
+      outputFormat: 'Planet name and decimal sidereal longitude (-fPL)',
+      verifiedCommand: 'swetest -b15.10.2015 -ut00:00:00 -p1 -eswe -sid1 -fPL -head'
     },
     conventions: {
       zodiac: 'SIDEREAL',

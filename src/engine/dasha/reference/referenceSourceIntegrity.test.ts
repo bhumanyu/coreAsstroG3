@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DASHA_REFERENCE_CASES } from './dashaReferenceCases';
 import { MOON_ANCHOR_REFERENCE_CASES } from './moonAnchorReferenceCases';
-import { DashaReferenceSourceType } from './dashaReferenceTypes';
+import { DashaReferenceSourceType, ReferenceSource } from './dashaReferenceTypes';
 
 /**
  * Task D08 Fixture-Integrity Validation Test (Review Point 10)
@@ -17,17 +17,7 @@ describe('Reference Source Fixture Integrity Validation', () => {
 
   const allFixtures: Array<{
     readonly id: string;
-    readonly source: {
-      readonly type: DashaReferenceSourceType;
-      readonly name: string;
-      readonly methodology: string;
-      readonly zodiac: 'SIDEREAL' | 'TROPICAL';
-      readonly ayanamsa: string;
-      readonly timezone: string;
-      readonly dateConvention: string;
-      readonly version?: string;
-      readonly url?: string;
-    };
+    readonly source: ReferenceSource;
   }> = [
     ...DASHA_REFERENCE_CASES.map(c => ({ id: c.id, source: c.source })),
     ...MOON_ANCHOR_REFERENCE_CASES.map(c => ({ id: c.id, source: c.source }))
@@ -64,7 +54,7 @@ describe('Reference Source Fixture Integrity Validation', () => {
       });
 
       if (source.type === 'EXTERNAL_EPHEMERIS') {
-        it('requires version and url for EXTERNAL_EPHEMERIS and rejects ambiguous multi-system names with "/"', () => {
+        it('requires version, url, and explicit reproducibility metadata for EXTERNAL_EPHEMERIS and rejects ambiguous multi-system names with "/"', () => {
           expect(source.version).toBeDefined();
           expect(source.version!.trim().length).toBeGreaterThan(0);
 
@@ -75,6 +65,22 @@ describe('Reference Source Fixture Integrity Validation', () => {
           // Guard against ambiguous combined names like "Swiss Ephemeris / JPL Horizons"
           expect(source.name).not.toContain('/');
           expect(source.name.toLowerCase()).not.toContain(' / ');
+
+          // Explicit reproducibility fields
+          expect(source.ephemerisBackend).toBeDefined();
+          expect(source.ephemerisBackend!.trim().length).toBeGreaterThan(0);
+
+          expect(source.ephemerisVersion).toBeDefined();
+          expect(source.ephemerisVersion!.trim().length).toBeGreaterThan(0);
+
+          expect(source.calculationFlags).toBeDefined();
+          expect(source.calculationFlags!.trim().length).toBeGreaterThan(0);
+
+          expect(source.outputFormat).toBeDefined();
+          expect(source.outputFormat!.trim().length).toBeGreaterThan(0);
+
+          expect(source.verifiedCommand).toBeDefined();
+          expect(source.verifiedCommand!.trim().length).toBeGreaterThan(0);
         });
       }
     });

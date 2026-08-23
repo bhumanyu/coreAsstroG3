@@ -19,6 +19,12 @@ export interface ReferenceSource {
   readonly dateConvention: string;
   readonly version?: string;
   readonly url?: string;
+  // Explicit reproducibility fields for external ephemeris benchmarks
+  readonly ephemerisBackend?: string;
+  readonly ephemerisVersion?: string;
+  readonly calculationFlags?: string;
+  readonly outputFormat?: string;
+  readonly verifiedCommand?: string;
 }
 
 /**

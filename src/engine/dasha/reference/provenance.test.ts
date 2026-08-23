@@ -74,7 +74,27 @@ describe('D08-B: Reference Provenance & Metadata Validation', () => {
           expect(moonCase.source.zodiac).toBe('SIDEREAL');
           expect(moonCase.source.ayanamsa).toBe('LAHIRI');
           expect(moonCase.source.timezone).toBeDefined();
+          expect(moonCase.source.timezone.trim().length).toBeGreaterThan(0);
           expect(moonCase.source.dateConvention).toBeDefined();
+          expect(moonCase.source.dateConvention.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.version).toBeDefined();
+          expect(moonCase.source.version!.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.url).toBeDefined();
+          expect(moonCase.source.url!.trim().length).toBeGreaterThan(0);
+        });
+
+        it('has explicit external ephemeris reproducibility metadata', () => {
+          expect(moonCase.source.ephemerisBackend).toBeDefined();
+          expect(moonCase.source.ephemerisBackend!.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.ephemerisVersion).toBeDefined();
+          expect(moonCase.source.ephemerisVersion!.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.calculationFlags).toBeDefined();
+          expect(moonCase.source.calculationFlags!.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.outputFormat).toBeDefined();
+          expect(moonCase.source.outputFormat!.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.verifiedCommand).toBeDefined();
+          expect(moonCase.source.verifiedCommand!.trim().length).toBeGreaterThan(0);
+          expect(moonCase.source.verifiedCommand).toContain('swetest');
         });
 
         it('has valid birth coordinates and expected moon sidereal longitude', () => {
