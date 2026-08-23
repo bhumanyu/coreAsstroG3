@@ -14,6 +14,7 @@ import type {
   WealthConclusionData,
   WealthDataCompleteness
 } from '../wealth/wealthTypes';
+import type { ReasoningTrace } from '../reasoning/reasoningTypes';
 
 export type DomainTimingActivation = CareerTimingActivation | WealthTimingActivation;
 
@@ -55,6 +56,8 @@ export interface DomainInterpretation {
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
   readonly dataCompleteness?: DomainDataCompleteness;
   readonly conclusionData?: DomainConclusionData;
+  readonly reasoningTrace?: ReasoningTrace;
+  readonly reasoningVersion?: 'CW-01';
   readonly generatedAt: string;
 }
 
@@ -139,6 +142,16 @@ export function createDomainInterpretation(
           dataCompleteness: Object.freeze({
             ...interpretation.dataCompleteness
           })
+        }
+      : {}),
+    ...(interpretation.reasoningTrace
+      ? {
+          reasoningTrace: interpretation.reasoningTrace
+        }
+      : {}),
+    ...(interpretation.reasoningVersion
+      ? {
+          reasoningVersion: interpretation.reasoningVersion
         }
       : {}),
     generatedAt:

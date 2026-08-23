@@ -14,6 +14,7 @@ import type { DomainManifestation } from './ManifestationMode';
 import type { DomainConclusion } from './DomainConclusion';
 import type { DomainId } from './DomainInterpretationTypes';
 import type { WealthPeriodTimingActivation } from '../wealth/wealthTypes';
+import type { ReasoningTrace } from '../reasoning/reasoningTypes';
 
 export interface DomainInterpretationParts {
   readonly domain: DomainId;
@@ -29,6 +30,8 @@ export interface DomainInterpretationParts {
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
   readonly dataCompleteness?: DomainDataCompleteness;
   readonly conclusionData?: DomainConclusionData;
+  readonly reasoningTrace?: ReasoningTrace;
+  readonly reasoningVersion?: 'CW-01';
 }
 
 export interface BuildDomainInterpretationOptions {
@@ -68,6 +71,8 @@ export function buildDomainInterpretation(
       : {}),
     ...(parts.dataCompleteness !== undefined ? { dataCompleteness: parts.dataCompleteness } : {}),
     ...(parts.conclusionData !== undefined ? { conclusionData: Object.freeze({ ...parts.conclusionData }) } : {}),
+    ...(parts.reasoningTrace !== undefined ? { reasoningTrace: parts.reasoningTrace } : {}),
+    ...(parts.reasoningVersion !== undefined ? { reasoningVersion: parts.reasoningVersion } : {}),
     generatedAt: timestamp
   });
 }
