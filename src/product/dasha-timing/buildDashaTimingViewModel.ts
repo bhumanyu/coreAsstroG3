@@ -6,9 +6,13 @@ import type {
 import type { DomainInterpretation } from '../../domain/interpretation';
 import {
   buildNormalizedCareerTiming,
-  buildNormalizedWealthTiming
+  buildNormalizedWealthTiming,
+  getCareerTimingActivations,
+  getWealthPeriodTimingActivations
 } from '../../domain/interpretation/domainTimingAdapter';
 import { mapActiveDasha } from '../life-analysis/dasha/activeDashaMapper';
+import { synthesizeCareerDashaHierarchy } from '../life-analysis/dashaCareerHierarchy';
+import { synthesizeWealthDashaHierarchy } from '../life-analysis/dashaWealthHierarchy';
 import type {
   DashaTimingViewModel,
   DashaTimingStatus,
@@ -18,7 +22,9 @@ import type {
   DashaCurrentPeriodsProduct,
   DashaTimingEvidenceProduct,
   CareerTimingProduct,
-  WealthTimingProduct
+  WealthTimingProduct,
+  DashaCareerHierarchySynthesis,
+  DashaWealthHierarchySynthesis
 } from './dashaTimingTypes';
 
 /**
@@ -324,6 +330,36 @@ export function buildDashaTimingViewModel(
     Array.from(evidenceMap.values())
   );
 
+  let careerHierarchy: DashaCareerHierarchySynthesis | undefined;
+  if (
+    careerTiming &&
+    typeof careerTiming === 'object' &&
+    'timingActivations' in (careerTiming as any)
+  ) {
+    const activations = getCareerTimingActivations(careerTiming as DomainInterpretation);
+    const md = activations?.find((a) => a.period === 'MD');
+    const ad = activations?.find((a) => a.period === 'AD');
+    const pd = activations?.find((a) => a.period === 'PD');
+    if (md && ad && pd) {
+      careerHierarchy = synthesizeCareerDashaHierarchy(md, ad, pd);
+    }
+  }
+
+  let wealthHierarchy: DashaWealthHierarchySynthesis | undefined;
+  if (
+    wealthTiming &&
+    typeof wealthTiming === 'object' &&
+    'periodTimingActivations' in (wealthTiming as any)
+  ) {
+    const activations = getWealthPeriodTimingActivations(wealthTiming as DomainInterpretation);
+    const md = activations?.find((a) => a.period === 'MD');
+    const ad = activations?.find((a) => a.period === 'AD');
+    const pd = activations?.find((a) => a.period === 'PD');
+    if (md && ad && pd) {
+      wealthHierarchy = synthesizeWealthDashaHierarchy(md, ad, pd);
+    }
+  }
+
   return {
     availability,
     asOf,
@@ -336,6 +372,8 @@ export function buildDashaTimingViewModel(
     ...(interpretation ? { interpretation } : {}),
     ...(resolvedCareerTiming ? { career: resolvedCareerTiming } : {}),
     ...(resolvedWealthTiming ? { wealth: resolvedWealthTiming } : {}),
+    ...(careerHierarchy ? { careerHierarchy } : {}),
+    ...(wealthHierarchy ? { wealthHierarchy } : {}),
     evidence,
     ...(unresolvedEvidenceIds.length > 0
       ? { unresolvedEvidenceIds: Object.freeze(unresolvedEvidenceIds) }

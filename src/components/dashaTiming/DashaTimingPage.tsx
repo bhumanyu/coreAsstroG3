@@ -141,6 +141,8 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
         <DashaDomainActivation
           career={viewModel.career}
           wealth={viewModel.wealth}
+          careerHierarchy={viewModel.careerHierarchy}
+          wealthHierarchy={viewModel.wealthHierarchy}
           onOpenEvidence={handleOpenEvidence}
         />
       )}

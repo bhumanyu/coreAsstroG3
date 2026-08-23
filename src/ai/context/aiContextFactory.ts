@@ -53,10 +53,16 @@ import {
   projectDomainInterpretationForAi,
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
+  getCareerTimingActivations,
+  getWealthPeriodTimingActivations,
   type DomainInterpretation,
   type DomainEvidence,
   type DomainInterpretationAiProjection
 } from '../../domain/interpretation';
+import {
+  synthesizeCareerDashaHierarchy,
+  synthesizeWealthDashaHierarchy
+} from '../../product/life-analysis';
 import {
   synthesizeLifeAnalysis,
   projectLifeAnalysisForAi,
@@ -514,6 +520,34 @@ function buildCareerFact(
   const career = horoscope.themeInterpretationV2?.career;
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
+  let hierarchy: import('../types/aiContextTypes').CareerHierarchyFact | undefined;
+  if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
+    const activations = getCareerTimingActivations(careerInterpretation);
+    const md = activations?.find((a) => a.period === 'MD');
+    const ad = activations?.find((a) => a.period === 'AD');
+    const pd = activations?.find((a) => a.period === 'PD');
+
+    if (md && ad && pd) {
+      const syn = synthesizeCareerDashaHierarchy(md, ad, pd);
+      hierarchy = {
+        primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: md.planet, effect: md.effect },
+        modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: ad.planet, effect: ad.effect },
+        trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: pd.planet, effect: pd.effect },
+        overallEffect: syn.overallEffect,
+        confidence: syn.confidence,
+        evidenceIds: syn.evidenceIds,
+        summary: syn.summary
+      };
+    }
+  }
+
+  const enrichedTiming: CareerTimingFact | undefined = timing
+    ? {
+        ...timing,
+        ...(hierarchy ? { hierarchy } : {})
+      }
+    : undefined;
+
   if (career) {
     return {
       status: career.conclusion.status,
@@ -523,7 +557,7 @@ function buildCareerFact(
       supportingFactors: [...career.conclusion.keySupportingFactors],
       challengingFactors: [...career.conclusion.keyChallengingFactors],
       conditionalFactors: [...career.conclusion.keyConditionalFactors],
-      ...(timing ? { timing } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {})
     };
   }
 
@@ -537,7 +571,7 @@ function buildCareerFact(
       supportingFactors: [],
       challengingFactors: [],
       conditionalFactors: [],
-      ...(timing ? { timing } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {})
     };
   }
 
@@ -551,6 +585,40 @@ function buildWealthFact(
 ): WealthFact | undefined {
   const wealth = horoscope.themeInterpretationV2?.wealth;
   const timing = buildNormalizedWealthTiming(wealthInterpretation, asOf) as WealthTimingFact | undefined;
+
+  let hierarchy: import('../types/aiContextTypes').WealthHierarchyFact | undefined;
+  if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
+    const activations = getWealthPeriodTimingActivations(wealthInterpretation);
+    const md = activations?.find((a) => a.period === 'MD');
+    const ad = activations?.find((a) => a.period === 'AD');
+    const pd = activations?.find((a) => a.period === 'PD');
+
+    if (md && ad && pd) {
+      const syn = synthesizeWealthDashaHierarchy(md, ad, pd);
+      hierarchy = {
+        primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: md.planet, effect: md.effect ?? 'UNKNOWN' },
+        modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: ad.planet, effect: ad.effect ?? 'UNKNOWN' },
+        trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: pd.planet, effect: pd.effect ?? 'UNKNOWN' },
+        dimensions: syn.dimensions.map((d) => ({
+          dimension: d.dimension,
+          primary: d.primary,
+          modifier: d.modifier,
+          trigger: d.trigger,
+          overallEffect: d.overallEffect,
+          confidence: d.confidence
+        })),
+        evidenceIds: syn.evidenceIds,
+        summary: syn.summary
+      };
+    }
+  }
+
+  const enrichedTiming: WealthTimingFact | undefined = timing
+    ? {
+        ...timing,
+        ...(hierarchy ? { hierarchy } : {})
+      }
+    : undefined;
 
   const subthemeKeys: readonly WealthSubthemeKey[] = [
     'ACCUMULATION',
@@ -585,7 +653,7 @@ function buildWealthFact(
       supportingFactors: [...wealth.conclusion.keySupportingFactors],
       challengingFactors: [...wealth.conclusion.keyChallengingFactors],
       conditionalFactors: [...wealth.conclusion.keyConditionalFactors],
-      ...(timing ? { timing } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {})
     };
   }
 
@@ -597,7 +665,7 @@ function buildWealthFact(
       supportingFactors: [],
       challengingFactors: [],
       conditionalFactors: [],
-      ...(timing ? { timing } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {})
     };
   }
 
@@ -1130,6 +1198,15 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
         }
       }
     }
+    if (timing.hierarchy?.evidenceIds) {
+      for (const evId of timing.hierarchy.evidenceIds) {
+        if (!evidenceMap.has(evId)) {
+          throw new Error(
+            `Invariant violation: career timing hierarchy evidence id '${evId}' not found in context.evidence`
+          );
+        }
+      }
+    }
   }
 
   if (wealth?.timing) {
@@ -1142,6 +1219,15 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
               `Invariant violation: wealth timing evidence id '${evId}' not found in context.evidence`
             );
           }
+        }
+      }
+    }
+    if (timing.hierarchy?.evidenceIds) {
+      for (const evId of timing.hierarchy.evidenceIds) {
+        if (!evidenceMap.has(evId)) {
+          throw new Error(
+            `Invariant violation: wealth timing hierarchy evidence id '${evId}' not found in context.evidence`
+          );
         }
       }
     }

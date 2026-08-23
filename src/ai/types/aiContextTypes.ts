@@ -207,6 +207,23 @@ export interface DivisionalFacts {
   readonly d2?: DivisionalFact;
 }
 
+export interface DashaHierarchyLevelFact {
+  readonly level: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
+  readonly role: 'PRIMARY' | 'MODIFIER' | 'TRIGGER';
+  readonly planet?: Planet;
+  readonly effect: string;
+}
+
+export interface CareerHierarchyFact {
+  readonly primary: DashaHierarchyLevelFact;
+  readonly modifier: DashaHierarchyLevelFact;
+  readonly trigger: DashaHierarchyLevelFact;
+  readonly overallEffect: string;
+  readonly confidence?: number;
+  readonly evidenceIds?: readonly string[];
+  readonly summary?: string;
+}
+
 export interface CareerPeriodTimingFact {
   readonly period: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
@@ -221,6 +238,7 @@ export interface CareerTimingFact {
   readonly mahadasha?: CareerPeriodTimingFact;
   readonly antardasha?: CareerPeriodTimingFact;
   readonly pratyantardasha?: CareerPeriodTimingFact;
+  readonly hierarchy?: CareerHierarchyFact;
 }
 
 export interface CareerFact {
@@ -238,6 +256,24 @@ export interface CareerFact {
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
   readonly timing?: CareerTimingFact;
+}
+
+export interface WealthDimensionHierarchyFact {
+  readonly dimension: string;
+  readonly primary: string;
+  readonly modifier: string;
+  readonly trigger: string;
+  readonly overallEffect: string;
+  readonly confidence?: number;
+}
+
+export interface WealthHierarchyFact {
+  readonly primary: DashaHierarchyLevelFact;
+  readonly modifier: DashaHierarchyLevelFact;
+  readonly trigger: DashaHierarchyLevelFact;
+  readonly dimensions: readonly WealthDimensionHierarchyFact[];
+  readonly evidenceIds?: readonly string[];
+  readonly summary?: string;
 }
 
 export interface WealthPeriodTimingFact {
@@ -260,6 +296,7 @@ export interface WealthTimingFact {
   readonly mahadasha?: WealthPeriodTimingFact;
   readonly antardasha?: WealthPeriodTimingFact;
   readonly pratyantardasha?: WealthPeriodTimingFact;
+  readonly hierarchy?: WealthHierarchyFact;
 }
 
 export interface WealthSubthemeFact {

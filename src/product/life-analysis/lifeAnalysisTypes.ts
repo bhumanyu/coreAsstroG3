@@ -24,9 +24,14 @@ import type {
   DashaLevel,
   DashaInterpretationStatus
 } from './dasha/dashaInterpretationProductTypes';
+import type {
+  DashaCareerHierarchySynthesis,
+  DashaWealthHierarchySynthesis
+} from './dashaHierarchyTypes';
 
 export * from './lifeAnalysisEvidenceTypes';
 export * from './dasha/dashaInterpretationProductTypes';
+export * from './dashaHierarchyTypes';
 
 export type LifeAnalysisActiveDashaViewModel = DashaInterpretationProduct;
 
@@ -102,6 +107,7 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly statement?: string;
   readonly timing?: CareerTimingProduct;
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
+  readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
 }
 
 export interface LifeAnalysisWealthDetailViewModel {
@@ -125,6 +131,7 @@ export interface LifeAnalysisWealthDetailViewModel {
     readonly speculation: TimingActivationEffect | string;
   };
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
+  readonly dashaHierarchy?: DashaWealthHierarchySynthesis;
 }
 
 export interface LifeAnalysisTimingDomainEffect {

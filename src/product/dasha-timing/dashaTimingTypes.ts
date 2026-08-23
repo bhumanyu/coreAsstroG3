@@ -7,7 +7,9 @@ import type {
 import type {
   CareerTimingProduct,
   WealthTimingProduct,
-  TimingAvailabilityStatus
+  TimingAvailabilityStatus,
+  DashaCareerHierarchySynthesis,
+  DashaWealthHierarchySynthesis
 } from '../life-analysis/lifeAnalysisTypes';
 
 export type DashaTimingStatus = 'AVAILABLE' | 'UNAVAILABLE' | 'PARTIAL';
@@ -87,6 +89,8 @@ export interface DashaTimingViewModel {
   readonly interpretation?: DashaInterpretationProduct;
   readonly career?: CareerTimingProduct;
   readonly wealth?: WealthTimingProduct;
+  readonly careerHierarchy?: DashaCareerHierarchySynthesis;
+  readonly wealthHierarchy?: DashaWealthHierarchySynthesis;
   readonly evidence: readonly DashaTimingEvidenceProduct[];
   readonly unresolvedEvidenceIds?: readonly string[];
 }
@@ -97,5 +101,7 @@ export type {
   DashaPairProduct,
   CareerTimingProduct,
   WealthTimingProduct,
-  TimingAvailabilityStatus
+  TimingAvailabilityStatus,
+  DashaCareerHierarchySynthesis,
+  DashaWealthHierarchySynthesis
 };

@@ -1,18 +1,27 @@
 import React from 'react';
 import { Target } from 'lucide-react';
-import type { CareerTimingProduct, WealthTimingProduct } from '../../product/dasha-timing/dashaTimingTypes';
+import type {
+  CareerTimingProduct,
+  WealthTimingProduct,
+  DashaCareerHierarchySynthesis,
+  DashaWealthHierarchySynthesis
+} from '../../product/dasha-timing/dashaTimingTypes';
 import { CareerTimingCard } from './CareerTimingCard';
 import { WealthTimingCard } from './WealthTimingCard';
 
 export interface DashaDomainActivationProps {
   readonly career?: CareerTimingProduct;
   readonly wealth?: WealthTimingProduct;
+  readonly careerHierarchy?: DashaCareerHierarchySynthesis;
+  readonly wealthHierarchy?: DashaWealthHierarchySynthesis;
   readonly onOpenEvidence?: (evidenceIds: readonly string[]) => void;
 }
 
 export const DashaDomainActivation: React.FC<DashaDomainActivationProps> = ({
   career,
   wealth,
+  careerHierarchy,
+  wealthHierarchy,
   onOpenEvidence
 }) => {
   return (
@@ -34,8 +43,16 @@ export const DashaDomainActivation: React.FC<DashaDomainActivationProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <CareerTimingCard timing={career} onOpenEvidence={onOpenEvidence} />
-        <WealthTimingCard timing={wealth} onOpenEvidence={onOpenEvidence} />
+        <CareerTimingCard
+          timing={career}
+          hierarchy={careerHierarchy}
+          onOpenEvidence={onOpenEvidence}
+        />
+        <WealthTimingCard
+          timing={wealth}
+          hierarchy={wealthHierarchy}
+          onOpenEvidence={onOpenEvidence}
+        />
       </div>
     </section>
   );
