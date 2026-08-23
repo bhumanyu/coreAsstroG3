@@ -13,6 +13,7 @@ import {
 import { mapActiveDasha } from '../life-analysis/dasha/activeDashaMapper';
 import { synthesizeCareerDashaHierarchy } from '../life-analysis/dashaCareerHierarchy';
 import { synthesizeWealthDashaHierarchy } from '../life-analysis/dashaWealthHierarchy';
+import { indexDashaPeriodActivations } from '../life-analysis/dashaHierarchyUtils';
 import type {
   DashaTimingViewModel,
   DashaTimingStatus,
@@ -337,9 +338,7 @@ export function buildDashaTimingViewModel(
     'timingActivations' in (careerTiming as any)
   ) {
     const activations = getCareerTimingActivations(careerTiming as DomainInterpretation);
-    const md = activations?.find((a) => a.period === 'MD');
-    const ad = activations?.find((a) => a.period === 'AD');
-    const pd = activations?.find((a) => a.period === 'PD');
+    const { md, ad, pd } = indexDashaPeriodActivations(activations);
     if (md && ad && pd) {
       careerHierarchy = synthesizeCareerDashaHierarchy(md, ad, pd);
     }
@@ -352,9 +351,7 @@ export function buildDashaTimingViewModel(
     'periodTimingActivations' in (wealthTiming as any)
   ) {
     const activations = getWealthPeriodTimingActivations(wealthTiming as DomainInterpretation);
-    const md = activations?.find((a) => a.period === 'MD');
-    const ad = activations?.find((a) => a.period === 'AD');
-    const pd = activations?.find((a) => a.period === 'PD');
+    const { md, ad, pd } = indexDashaPeriodActivations(activations);
     if (md && ad && pd) {
       wealthHierarchy = synthesizeWealthDashaHierarchy(md, ad, pd);
     }
