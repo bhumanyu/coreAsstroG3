@@ -251,6 +251,7 @@ export function generatePlanetaryPositions(birthDetails: BirthDetails): Record<P
     result[planet] = {
       planet,
       eclipticLongitude: siderealLong,
+      siderealLongitude: siderealLong,
       longitude: siderealLong,
       sign,
       house: 1,

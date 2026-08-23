@@ -55,6 +55,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.MERCURY
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation from Lahiri Sidereal 0° Aries cusp, 27 equal nakshatras, Parashari 7y Ketu, 365.25d/yr convention',
       zodiac: 'SIDEREAL',
@@ -93,6 +94,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.MERCURY
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Bharani (13°20\' - 26°40\') midpoint at 20°00\'00", 50% elapsed, 10.000y Venus balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -131,6 +133,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.VENUS
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Krittika Pada 1 end at 30°00\'00" (offset 3°20\'), 25% elapsed, 4.500y Sun balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -169,6 +172,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.RAHU
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Rohini start 40°00\'00", 0% elapsed, 10.000y Moon balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -207,6 +211,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.JUPITER
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Mrigashira midpoint at 60°00\'00", 50% elapsed, 3.500y Mars balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -245,6 +250,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.KETU
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Shatabhisha at 310°00\'00" (offset 3°20\'), 25% elapsed, 13.500y Rahu balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -283,6 +289,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.RAHU
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Purva Bhadrapada midpoint at 326°40\'00", 50% elapsed, 8.000y Jupiter balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -321,6 +328,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.SUN
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Pushya midpoint at 100°00\'00", 50% elapsed, 9.500y Saturn balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -359,6 +367,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.MOON
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Analytical Parashari Standard',
       methodology: 'Analytical derivation: Ashlesha at 110°00\'00" (offset 3°20\'), 25% elapsed, 12.750y Mercury balance on 365.25d/yr calendar',
       zodiac: 'SIDEREAL',
@@ -397,8 +406,9 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       pratyantardasha: Planet.SATURN
     },
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'Classical Jyotish Reference (B.V. Raman / Jagannatha Hora standard)',
-      methodology: 'Standard 365.25-day Lahiri Vimshottari Dasha calculation benchmark on Shatabhisha 312.5°',
+      methodology: 'Standard 365.25-day Lahiri Vimshottari Dasha calculation benchmark on Shatabhisha 312.5° (analytical dasha-rule/sequence derivation)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'UTC',
@@ -439,8 +449,9 @@ export const ASTRONOMY_REFERENCE_CASES: readonly AstronomyReferenceCase[] = Obje
     expectedMoonLongitude: 282.2994051952583,
     expectedSign: 'Capricorn',
     source: {
+      type: 'MATHEMATICAL_ANALYTICAL',
       name: 'CoreAstro Planetary Astronomy Subsystem',
-      methodology: 'VSOP/analytical lunar orbital algorithm with Lahiri Ayanamsa subtraction',
+      methodology: 'Internal engine-baseline: VSOP/analytical lunar orbital algorithm with Lahiri Ayanamsa subtraction (not an independent external ephemeris ground truth)',
       zodiac: 'SIDEREAL',
       ayanamsa: 'LAHIRI',
       timezone: 'Asia/Kolkata',
