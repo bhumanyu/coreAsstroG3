@@ -294,7 +294,7 @@ describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
     expect(wealthRule004).toBeDefined();
     const wealthEval = wealthRule004!.evaluate(context);
     expect(wealthEval.triggered).toBe(true);
-    expect(wealthEval.statement).toContain('Wealth timing hierarchy evaluated across financial dimensions');
+    expect(wealthEval.statement).toContain('Wealth timing hierarchy evaluated per dimension');
     expect(wealthEval.statement).toContain('PRIMARY');
     expect(wealthEval.statement).toContain('MODIFIER');
     expect(wealthEval.statement).toContain('TRIGGER');

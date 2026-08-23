@@ -1,4 +1,8 @@
-import type { AiContext } from '../../../types/aiContextTypes';
+import type {
+  AiContext,
+  WealthDimensionHierarchyFact,
+  TimingActivationEffect
+} from '../../../types/aiContextTypes';
 import type { LocalRuleDefinition, LocalRuleEffect } from '../localVedicRulesTypes';
 import { rankEvidence } from '../utils/evidenceScorer';
 import { notTriggered, triggered } from '../utils/ruleResult';
@@ -166,28 +170,36 @@ export const WEALTH_RULES: readonly LocalRuleDefinition[] = Object.freeze([
         }
       }
 
-      const dimActivations =
-        hierarchy.dimensions?.filter((d) => d.overallEffect === 'ACTIVATES').length ?? 0;
-      const dimChallenges =
-        hierarchy.dimensions?.filter((d) => d.overallEffect === 'CHALLENGES').length ?? 0;
-      const dimPartials =
-        hierarchy.dimensions?.filter((d) => d.overallEffect === 'PARTIALLY_ACTIVATES').length ?? 0;
-
-      let effect: LocalRuleEffect = 'NEUTRAL';
-      if (dimActivations > dimChallenges) {
+      // Default to MIXED if no upstream canonical aggregate exists; never invent a majority-vote verdict
+      let effect: LocalRuleEffect = 'MIXED';
+      const canonicalOverallEffect = (hierarchy as { readonly overallEffect?: TimingActivationEffect }).overallEffect;
+      if (canonicalOverallEffect === 'ACTIVATES') {
         effect = 'SUPPORT';
-      } else if (dimChallenges > dimActivations) {
+      } else if (canonicalOverallEffect === 'CHALLENGES') {
         effect = 'CHALLENGE';
-      } else if (dimPartials > 0 || (dimActivations > 0 && dimChallenges > 0)) {
+      } else if (canonicalOverallEffect === 'PARTIALLY_ACTIVATES') {
         effect = 'MIXED';
+      } else if (
+        canonicalOverallEffect === 'DOES_NOT_ACTIVATE' ||
+        canonicalOverallEffect === 'UNKNOWN' ||
+        canonicalOverallEffect === 'INSUFFICIENT_DATA'
+      ) {
+        effect = 'NEUTRAL';
       }
 
+      const dimSummaries = (hierarchy.dimensions ?? []).map(
+        (d: WealthDimensionHierarchyFact) => {
+          const dimName = d.dimension.charAt(0) + d.dimension.slice(1).toLowerCase();
+          return `${dimName} [MD: ${d.primary}, AD: ${d.modifier}, PD: ${d.trigger} -> ${d.overallEffect}]`;
+        }
+      );
+
       const statement =
-        `Wealth timing hierarchy evaluated across financial dimensions: ` +
-        `Mahadasha of ${hierarchy.primary.planet ?? 'primary lord'} (${hierarchy.primary.role}) ${hierarchy.primary.effect.toLowerCase()}, ` +
-        `Antardasha of ${hierarchy.modifier.planet ?? 'modifier lord'} (${hierarchy.modifier.role}) ${hierarchy.modifier.effect.toLowerCase()}, ` +
-        `Pratyantardasha of ${hierarchy.trigger.planet ?? 'trigger lord'} (${hierarchy.trigger.role}) ${hierarchy.trigger.effect.toLowerCase()}. ` +
-        `Deterministic synthesis outcome is ${effect}.`;
+        `Wealth timing hierarchy evaluated per dimension: ` +
+        `Mahadasha of ${hierarchy.primary.planet ?? 'primary lord'} (${hierarchy.primary.role}), ` +
+        `Antardasha of ${hierarchy.modifier.planet ?? 'modifier lord'} (${hierarchy.modifier.role}), ` +
+        `Pratyantardasha of ${hierarchy.trigger.planet ?? 'trigger lord'} (${hierarchy.trigger.role}). ` +
+        `Dimensions: ${dimSummaries.join('; ')}.`;
 
       return triggered(effect, statement, supportingIds, challengingIds);
     }

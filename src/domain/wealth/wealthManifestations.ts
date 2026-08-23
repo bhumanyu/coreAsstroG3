@@ -2,12 +2,10 @@ import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
-import { createDomainManifestation } from '../interpretation';
-import type {
-  DomainEvidence,
-  DomainManifestation,
-  ConfidenceLevel
-} from '../interpretation';
+import { createDomainManifestation } from '../interpretation/ManifestationMode';
+import type { DomainManifestation } from '../interpretation/ManifestationMode';
+import type { DomainEvidence } from '../interpretation/DomainEvidence';
+import type { ConfidenceLevel } from '../interpretation/DomainInterpretationTypes';
 import type { WealthManifestationMode } from './wealthTypes';
 
 export const WEALTH_ACCUMULATION_FAMILIES: ReadonlySet<WealthEvidenceFamily> = new Set([
