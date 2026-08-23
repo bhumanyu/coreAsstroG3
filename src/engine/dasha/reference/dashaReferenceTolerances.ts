@@ -23,10 +23,15 @@
  *    (years * 365.25 * 86,400,000 ms) involves floating point arithmetic and rounding. A 1000 ms
  *    (1 second) tolerance ensures tests verify exact boundary transitions over multi-decade spans
  *    without failing due to sub-second millisecond truncation/rounding differences.
+ *
+ * 5. `astronomyMoonLongitudeDegrees` (1e-4° ≈ 0.36 arcsec):
+ *    Planetary astronomy coordinate generation involves trigonometric series calculations.
+ *    A tolerance of 1e-4° allows verification of the astronomical calculation pipeline.
  */
 export const DASHA_REFERENCE_TOLERANCES = Object.freeze({
   moonLongitudeDegrees: 1e-6,
   nakshatraProgress: 1e-6,
   dashaBalanceYears: 1e-5,
-  boundaryMilliseconds: 1000
+  boundaryMilliseconds: 1000,
+  astronomyMoonLongitudeDegrees: 1e-4
 } as const);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateVimshottari, MS_PER_VIMSHOTTARI_YEAR } from '../vimshottari';
+import { calculateVimshottari, DASHA_YEARS, MS_PER_VIMSHOTTARI_YEAR } from '../vimshottari';
 import { DASHA_REFERENCE_CASES } from './dashaReferenceCases';
 import { DASHA_REFERENCE_TOLERANCES } from './dashaReferenceTolerances';
 import { expectCloseToReference } from './dashaReferenceAssertions';
@@ -46,19 +46,31 @@ describe('D08-E: Nakshatra Progress & Birth Balance Validation', () => {
           `${refCase.id} progress + remaining sum`
         );
 
-        // 5. First Mahadasha balance duration in years
+        // 5. Direct birth balance calculation (Point #15):
+        // Directly exposed timeline.remainingFraction * DASHA_YEARS[lord]
+        const lordFullYears = DASHA_YEARS[timeline.nakshatraLord];
+        const directBalanceYears = timeline.remainingFraction * lordFullYears;
+
+        expectCloseToReference(
+          directBalanceYears,
+          refCase.expectedBirthDashaBalanceYears,
+          DASHA_REFERENCE_TOLERANCES.dashaBalanceYears,
+          `${refCase.id} direct birth balance years (remainingFraction * DASHA_YEARS[lord])`
+        );
+
+        // 6. First Mahadasha lord and secondary derived-duration cross-check
         expect(timeline.mahadashas.length).toBeGreaterThan(0);
         const firstMd = timeline.mahadashas[0];
         expect(firstMd.planet).toBe(refCase.expectedMahadashaLord);
 
         const firstMdDurationMs = new Date(firstMd.end).getTime() - new Date(firstMd.start).getTime();
-        const firstMdDurationYears = firstMdDurationMs / MS_PER_VIMSHOTTARI_YEAR;
+        const derivedFirstMdDurationYears = firstMdDurationMs / MS_PER_VIMSHOTTARI_YEAR;
 
         expectCloseToReference(
-          firstMdDurationYears,
+          derivedFirstMdDurationYears,
           refCase.expectedBirthDashaBalanceYears,
           DASHA_REFERENCE_TOLERANCES.dashaBalanceYears,
-          `${refCase.id} birthDashaBalanceYears`
+          `${refCase.id} secondary cross-check: derived firstMd duration years`
         );
       });
     });
