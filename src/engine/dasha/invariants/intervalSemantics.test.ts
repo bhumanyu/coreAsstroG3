@@ -1,36 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { calculateVimshottari, getActiveDasha } from '../vimshottari';
-import { DASHA_REFERENCE_CASES } from './dashaReferenceCases';
 
 /**
- * Task D08-H: Active Dasha and Boundary Interval Semantics Validation
+ * Engine Invariant: Half-Open [start, end) Boundary Interval Semantics
+ *
+ * Asserts the standard half-open interval rule where a period begins at its exact `start` instant
+ * (inclusive) and transitions to the subsequent period at its exact `end` instant (exclusive).
  */
-describe('D08-H: Active Dasha & Half-Open [start, end) Boundary Validation', () => {
-  describe('Active Dasha for Specified Reference Points', () => {
-    const casesWithActive = DASHA_REFERENCE_CASES.filter((c) => c.expectedActiveDasha !== undefined);
-
-    for (const refCase of casesWithActive) {
-      it(`evaluates active MD/AD/PD correctly for ${refCase.id} at ${refCase.expectedActiveDasha!.asOf}`, () => {
-        const timeline = calculateVimshottari({
-          birthDateTime: refCase.birth.dateTimeStr,
-          moonSiderealLongitude: refCase.expectedMoonLongitude
-        });
-
-        const active = getActiveDasha(timeline, refCase.expectedActiveDasha!.asOf);
-        expect(active).not.toBeNull();
-
-        expect(active!.mahadasha.planet).toBe(refCase.expectedActiveDasha!.mahadasha);
-        expect(active!.antardasha.planet).toBe(refCase.expectedActiveDasha!.antardasha);
-        expect(active!.pratyantardasha.planet).toBe(refCase.expectedActiveDasha!.pratyantardasha);
-      });
-    }
-  });
-
-  describe('Half-Open [start, end) Boundary Semantics (boundary-1ms, boundary, boundary+1ms)', () => {
-    it('switches to the next period at the exact boundary millisecond for Mahadasha transitions', () => {
+describe('Engine Invariant: Half-Open [start, end) Interval Semantics', () => {
+  describe('Mahadasha Transition Boundaries (boundary-1ms, boundary, boundary+1ms)', () => {
+    it('switches to the next Mahadasha at the exact boundary millisecond', () => {
       const timeline = calculateVimshottari({
         birthDateTime: '2000-01-01T00:00:00.000Z',
-        moonSiderealLongitude: 0.0 // Ashwini: Ketu MD starts at 2000-01-01
+        moonSiderealLongitude: 0.0 // Ashwini: Ketu MD
       });
 
       expect(timeline.mahadashas.length).toBeGreaterThan(1);
@@ -57,8 +39,10 @@ describe('D08-H: Active Dasha & Half-Open [start, end) Boundary Validation', () 
       expect(activeAfter).not.toBeNull();
       expect(activeAfter!.mahadasha.planet).toBe(secondMd.planet);
     });
+  });
 
-    it('switches to the next period at the exact boundary millisecond for Antardasha transitions', () => {
+  describe('Antardasha Transition Boundaries', () => {
+    it('switches to the next Antardasha at the exact boundary millisecond', () => {
       const timeline = calculateVimshottari({
         birthDateTime: '2000-01-01T00:00:00.000Z',
         moonSiderealLongitude: 0.0
@@ -86,8 +70,10 @@ describe('D08-H: Active Dasha & Half-Open [start, end) Boundary Validation', () 
       expect(activeAfter).not.toBeNull();
       expect(activeAfter!.antardasha.planet).toBe(secondAd.planet);
     });
+  });
 
-    it('switches to the next period at the exact boundary millisecond for Pratyantardasha transitions', () => {
+  describe('Pratyantardasha Transition Boundaries', () => {
+    it('switches to the next Pratyantardasha at the exact boundary millisecond', () => {
       const timeline = calculateVimshottari({
         birthDateTime: '2000-01-01T00:00:00.000Z',
         moonSiderealLongitude: 0.0

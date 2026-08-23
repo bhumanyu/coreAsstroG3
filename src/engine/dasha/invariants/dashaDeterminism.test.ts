@@ -2,19 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { calculateVimshottari, getActiveDasha } from '../vimshottari';
 import { calculateHoroscope } from '../../astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
-import { DASHA_REFERENCE_CASES } from './dashaReferenceCases';
+import { DASHA_REFERENCE_CASES } from '../reference/dashaReferenceCases';
 
 /**
- * Task D08-J: Determinism Validation
+ * Engine Invariant: Determinism Validation
  *
- * Asserts that calculateVimshottari and getActiveDasha produce identical deep-equal outputs
- * across repeated calls on identical inputs. Where calculateHoroscope is called, a fixed
- * asOf timestamp is passed to avoid nondeterministic runtime dependencies.
+ * Asserts that `calculateVimshottari` and `getActiveDasha` produce strictly identical deep-equal
+ * outputs across repeated executions with identical inputs.
+ * For end-to-end horoscope tests, a fixed `asOf` timestamp is always supplied to eliminate
+ * nondeterministic reliance on `new Date()`.
  */
-describe('D08-J: Determinism Validation', () => {
-  describe('calculateVimshottari Determinism across all Reference Cases', () => {
+describe('Engine Invariant: Dasha Engine Determinism', () => {
+  describe('calculateVimshottari Determinism', () => {
     for (const refCase of DASHA_REFERENCE_CASES) {
-      it(`produces identical deep-equal timelines across consecutive calls for ${refCase.id}`, () => {
+      it(`produces identical deep-equal timelines across multiple executions for ${refCase.id}`, () => {
         const input = {
           birthDateTime: refCase.birth.dateTimeStr,
           moonSiderealLongitude: refCase.expectedMoonLongitude
@@ -28,7 +29,7 @@ describe('D08-J: Determinism Validation', () => {
     }
   });
 
-  describe('getActiveDasha Determinism across all Reference Cases with Active Targets', () => {
+  describe('getActiveDasha Determinism', () => {
     const casesWithActive = DASHA_REFERENCE_CASES.filter((c) => c.expectedActiveDasha !== undefined);
 
     for (const refCase of casesWithActive) {
@@ -47,7 +48,7 @@ describe('D08-J: Determinism Validation', () => {
     }
   });
 
-  describe('Horoscope Vimshottari Integration Determinism with Fixed asOf', () => {
+  describe('Horoscope Vimshottari Integration Determinism (with fixed asOf)', () => {
     it('produces identical deep-equal horoscope.vimshottari across multiple executions', () => {
       const fixedAsOf = '2024-06-01T00:00:00.000Z';
 

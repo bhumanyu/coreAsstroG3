@@ -3,12 +3,15 @@ import { calculateVimshottari, normalizeDegrees } from '../vimshottari';
 import { Planet } from '../../../types';
 
 /**
- * Task D08-I: Longitude Wraparound and Nakshatra Boundary Validation
+ * Engine Invariant: Longitude Normalization and Cusp Boundary Edge Cases
+ *
+ * Asserts the mathematical invariant mechanics of angular normalization [0°, 360°)
+ * and nakshatra boundary resolution.
  */
-describe('D08-I: Longitude Wraparound & Boundary Edge Cases', () => {
+describe('Engine Invariant: Longitude Normalization & Cusp Boundaries', () => {
   const birthIso = '2000-01-01T00:00:00.000Z';
 
-  describe('normalizeDegrees Angular Mapping', () => {
+  describe('normalizeDegrees Angular Mapping Invariants', () => {
     it('maps 360°, multiples of 360°, and negative multiples to 0°', () => {
       expect(normalizeDegrees(0)).toBe(0);
       expect(normalizeDegrees(360)).toBe(0);
