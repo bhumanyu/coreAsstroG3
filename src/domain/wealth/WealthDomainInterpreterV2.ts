@@ -79,9 +79,12 @@ import {
 import { calculateWealthDataCompleteness } from './wealthDataCompleteness';
 import { calculateWealthConfidence } from './wealthConfidence';
 import { detectWealthConflicts } from './wealthConflicts';
+import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
+import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
 
 export function interpretWealthV2(
-  horoscope: Horoscope
+  horoscope: Horoscope,
+  options?: DomainReasoningOptions
 ): DomainInterpretation {
   const legacyWealth = interpretWealthTheme(horoscope);
   const rawEvidence = legacyWealth.evidence;
@@ -215,14 +218,7 @@ export function interpretWealthV2(
       ]
     : [];
 
-  const manifestations = deriveWealthManifestations(evidence, rawEvidence);
-
-  const conclusionStrength = resolveWealthConclusionStrength(
-    natalStrength,
-    d2Relationship,
-    conflicts
-  );
-
+  // Multi-period timing (MD / AD / PD)
   const currentDasha = horoscope.dashaInterpretation?.current;
 
   const mdPlanet = currentDasha?.mahadasha?.planet;
@@ -256,6 +252,143 @@ export function interpretWealthV2(
     adPeriodTiming,
     pdPeriodTiming
   ]);
+
+  // If CW01 strategy is requested, resolve through CW01 reasoning hierarchy
+  if (options?.strategy === 'CW01') {
+    const cw01Result = evaluateWealthReasoningHierarchy({
+      evidence,
+      dashaTimings: {
+        md: {
+          level: 'MD',
+          effect: mdPeriodTiming.dimensions.accumulation === 'ACTIVATES' || mdPeriodTiming.dimensions.gains === 'ACTIVATES' ? 'ACTIVATES' : (mdPeriodTiming.dimensions.accumulation === 'CHALLENGES' ? 'CHALLENGES' : 'PARTIALLY_ACTIVATES'),
+          evidenceIds: mdPeriodTiming.evidenceIds,
+          confidence: 1.0
+        },
+        ad: {
+          level: 'AD',
+          effect: adPeriodTiming.dimensions.accumulation === 'ACTIVATES' || adPeriodTiming.dimensions.gains === 'ACTIVATES' ? 'ACTIVATES' : (adPeriodTiming.dimensions.accumulation === 'CHALLENGES' ? 'CHALLENGES' : 'PARTIALLY_ACTIVATES'),
+          evidenceIds: adPeriodTiming.evidenceIds,
+          confidence: 1.0
+        },
+        pd: {
+          level: 'PD',
+          effect: pdPeriodTiming.dimensions.accumulation === 'ACTIVATES' || pdPeriodTiming.dimensions.gains === 'ACTIVATES' ? 'ACTIVATES' : (pdPeriodTiming.dimensions.accumulation === 'CHALLENGES' ? 'CHALLENGES' : 'PARTIALLY_ACTIVATES'),
+          evidenceIds: pdPeriodTiming.evidenceIds,
+          confidence: 1.0
+        }
+      },
+      transitEvidence,
+      rawConflicts: conflicts
+    });
+
+    const accumulationStatus: WealthDimensionStatus = cw01Result.dimensionResults.ACCUMULATION.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.ACCUMULATION.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.ACCUMULATION.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
+    const gainsStatus: WealthDimensionStatus = cw01Result.dimensionResults.GAINS.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.GAINS.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.GAINS.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
+    const fortuneStatus: WealthDimensionStatus = cw01Result.dimensionResults.FORTUNE.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.FORTUNE.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.FORTUNE.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
+    const speculationStatus: WealthDimensionStatus = cw01Result.dimensionResults.SPECULATION.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.SPECULATION.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.SPECULATION.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
+    const overallStatus: WealthDimensionStatus = cw01Result.finalStrength === 'VERY_STRONG' || cw01Result.finalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.finalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
+
+    const dimInterpretations: readonly WealthDimensionInterpretation[] = Object.freeze([
+      {
+        dimension: 'ACCUMULATION',
+        status: accumulationStatus,
+        supportingEvidenceIds: cw01Result.dimensionResults.ACCUMULATION.evidenceIds,
+        challengingEvidenceIds: [],
+        dashaEffect: cw01Result.dimensionResults.ACCUMULATION.timingEffect as TimingActivationEffect
+      },
+      {
+        dimension: 'GAINS',
+        status: gainsStatus,
+        supportingEvidenceIds: cw01Result.dimensionResults.GAINS.evidenceIds,
+        challengingEvidenceIds: [],
+        dashaEffect: cw01Result.dimensionResults.GAINS.timingEffect as TimingActivationEffect
+      },
+      {
+        dimension: 'FORTUNE',
+        status: fortuneStatus,
+        supportingEvidenceIds: cw01Result.dimensionResults.FORTUNE.evidenceIds,
+        challengingEvidenceIds: [],
+        dashaEffect: cw01Result.dimensionResults.FORTUNE.timingEffect as TimingActivationEffect
+      },
+      {
+        dimension: 'SPECULATION',
+        status: speculationStatus,
+        supportingEvidenceIds: cw01Result.dimensionResults.SPECULATION.evidenceIds,
+        challengingEvidenceIds: [],
+        dashaEffect: cw01Result.dimensionResults.SPECULATION.timingEffect as TimingActivationEffect
+      }
+    ]);
+
+    const conclusionData = buildWealthConclusionData({
+      overallStatus,
+      dimensions: dimInterpretations,
+      d2Relationship: 'UNAVAILABLE',
+      manifestations: cw01Result.manifestations,
+      conflicts,
+      evidence,
+      periodTimingActivations
+    });
+
+    const conclusion = createDomainConclusion({
+      domain: 'WEALTH',
+      strength: cw01Result.finalStrength,
+      confidence: calculateEvidenceConfidence(evidence, {
+        dataCompleteness: dataCompleteness.primaryFactors === 'AVAILABLE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
+        hasVargaConflict,
+        hasPrimaryChallenge
+      }),
+      statement: buildWealthConclusion(
+        natalPromise,
+        dashaActivation,
+        transitTrigger,
+        legacyWealth.conclusion?.summary,
+        {
+          vargaConfirmations,
+          conclusionData
+        }
+      ),
+      primaryEvidenceIds: cw01Result.primaryEvidenceIds,
+      supportingEvidenceIds: cw01Result.supportingEvidenceIds,
+      challengingEvidenceIds: cw01Result.challengingEvidenceIds,
+      unresolvedQuestions: []
+    });
+
+    const timingActivations = Object.freeze([
+      { dimension: 'ACCUMULATION' as WealthDimension, effect: cw01Result.dimensionResults.ACCUMULATION.timingEffect as TimingActivationEffect },
+      { dimension: 'GAINS' as WealthDimension, effect: cw01Result.dimensionResults.GAINS.timingEffect as TimingActivationEffect },
+      { dimension: 'FORTUNE' as WealthDimension, effect: cw01Result.dimensionResults.FORTUNE.timingEffect as TimingActivationEffect },
+      { dimension: 'SPECULATION' as WealthDimension, effect: cw01Result.dimensionResults.SPECULATION.timingEffect as TimingActivationEffect }
+    ]);
+
+    return buildDomainInterpretation({
+      domain: 'WEALTH',
+      evidence,
+      natalPromise,
+      dashaActivation,
+      transitTrigger,
+      vargaConfirmations,
+      manifestations: cw01Result.manifestations,
+      conflicts,
+      conclusion,
+      timingActivations,
+      periodTimingActivations,
+      dataCompleteness,
+      conclusionData: {
+        ...conclusionData,
+        currentActivation: cw01Result.currentActivation,
+        currentPressure: cw01Result.currentPressure
+      },
+      reasoningTrace: cw01Result.reasoningTrace,
+      reasoningVersion: 'CW-01'
+    });
+  }
+
+  const manifestations = deriveWealthManifestations(evidence, rawEvidence);
+
+  const conclusionStrength = resolveWealthConclusionStrength(
+    natalStrength,
+    d2Relationship,
+    conflicts
+  );
 
   const conclusionData = buildWealthConclusionData({
     overallStatus,

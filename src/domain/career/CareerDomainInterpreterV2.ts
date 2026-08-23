@@ -73,9 +73,12 @@ import {
   buildD10Statement
 } from './careerConclusion';
 import { calculateCareerDataCompleteness } from './careerDataCompleteness';
+import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
+import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
 
 export function interpretCareerV2(
-  horoscope: Horoscope
+  horoscope: Horoscope,
+  options?: DomainReasoningOptions
 ): DomainInterpretation {
   const legacyCareer = interpretCareerTheme(horoscope);
   const rawEvidence = legacyCareer.evidence;
@@ -195,17 +198,106 @@ export function interpretCareerV2(
     natalPromiseEvidenceIds
   );
 
-  const vargaConfirmations: readonly VargaConfirmation[] = [
-    createVargaConfirmation({
+  const vargaConfirmation = createVargaConfirmation({
+    domain: 'CAREER',
+    varga: 'D10',
+    relationship: d10Relationship,
+    strength: calculateVargaStrength(evidence, 'D10'),
+    confidence: calculateEvidenceConfidence(d10Evidence),
+    statement: buildD10Statement(d10Evidence, d10Relationship),
+    evidenceIds: d10Evidence.map((item) => item.id)
+  });
+  const vargaConfirmations: readonly VargaConfirmation[] = [vargaConfirmation];
+
+  // If CW01 strategy is requested, resolve through CW01 reasoning hierarchy
+  if (options?.strategy === 'CW01') {
+    const cw01Result = evaluateCareerReasoningHierarchy({
+      evidence,
+      d10Confirmation: vargaConfirmation,
+      dashaTimings: {
+        md: {
+          level: 'MD',
+          effect: mdActivation.effect,
+          evidenceIds: mdActivation.evidenceIds ?? [],
+          confidence: 1.0
+        },
+        ad: {
+          level: 'AD',
+          effect: adActivation.effect,
+          evidenceIds: adActivation.evidenceIds ?? [],
+          confidence: 1.0
+        },
+        pd: {
+          level: 'PD',
+          effect: pdActivation.effect,
+          evidenceIds: pdActivation.evidenceIds ?? [],
+          confidence: 1.0
+        }
+      },
+      transitEvidence,
+      rawConflicts: conflicts
+    });
+
+    const conclusionData = buildCareerConclusionData(
+      cw01Result.natalStrength,
+      d10Relationship,
+      timingActivations,
+      transitTrigger,
+      conflicts,
+      cw01Result.manifestations,
+      cw01Result.supportingEvidenceIds,
+      cw01Result.challengingEvidenceIds
+    );
+
+    const conclusion = createDomainConclusion({
       domain: 'CAREER',
-      varga: 'D10',
-      relationship: d10Relationship,
-      strength: calculateVargaStrength(evidence, 'D10'),
-      confidence: calculateEvidenceConfidence(d10Evidence),
-      statement: buildD10Statement(d10Evidence, d10Relationship),
-      evidenceIds: d10Evidence.map((item) => item.id)
-    })
-  ];
+      strength: cw01Result.finalStrength,
+      confidence: calculateEvidenceConfidence(evidence, {
+        dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
+        hasVargaConflict,
+        hasPrimaryChallenge
+      }),
+      statement: buildCareerConclusion(
+        natalPromise,
+        dashaActivation,
+        transitTrigger,
+        vargaConfirmations,
+        legacyCareer.conclusion?.summary,
+        d10Relationship,
+        {
+          timingActivations,
+          conflicts,
+          manifestations: cw01Result.manifestations,
+          conclusionData
+        }
+      ),
+      primaryEvidenceIds: cw01Result.primaryEvidenceIds,
+      supportingEvidenceIds: cw01Result.supportingEvidenceIds,
+      challengingEvidenceIds: cw01Result.challengingEvidenceIds,
+      unresolvedQuestions: []
+    });
+
+    return buildDomainInterpretation({
+      domain: 'CAREER',
+      evidence,
+      natalPromise,
+      dashaActivation,
+      transitTrigger,
+      vargaConfirmations,
+      manifestations: cw01Result.manifestations,
+      conflicts,
+      conclusion,
+      timingActivations,
+      dataCompleteness,
+      conclusionData: {
+        ...conclusionData,
+        currentActivation: cw01Result.currentActivation,
+        currentPressure: cw01Result.currentPressure
+      },
+      reasoningTrace: cw01Result.reasoningTrace,
+      reasoningVersion: 'CW-01'
+    });
+  }
 
   const manifestations = deriveCareerManifestations(evidence, rawEvidence);
 
