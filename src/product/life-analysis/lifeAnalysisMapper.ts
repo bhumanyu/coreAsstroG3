@@ -12,6 +12,7 @@ import {
 } from '../../domain/interpretation';
 import { synthesizeCareerDashaHierarchy } from './dashaCareerHierarchy';
 import { synthesizeWealthDashaHierarchy } from './dashaWealthHierarchy';
+import { indexDashaPeriodActivations } from './dashaHierarchyUtils';
 import type {
   LifeAnalysis,
   SharedTimingActivation
@@ -121,9 +122,7 @@ export function buildLifeAnalysisViewModel(
   const careerD10Varga = career.vargaConfirmations.find((v) => v.varga === 'D10');
   const careerTiming = buildNormalizedCareerTiming(career, activeDasha?.at ?? career.generatedAt);
   const careerActivations = getCareerTimingActivations(career);
-  const mdCareer = careerActivations?.find((a) => a.period === 'MD');
-  const adCareer = careerActivations?.find((a) => a.period === 'AD');
-  const pdCareer = careerActivations?.find((a) => a.period === 'PD');
+  const { md: mdCareer, ad: adCareer, pd: pdCareer } = indexDashaPeriodActivations(careerActivations);
   const careerDashaHierarchy =
     mdCareer && adCareer && pdCareer
       ? synthesizeCareerDashaHierarchy(mdCareer, adCareer, pdCareer)
@@ -152,9 +151,7 @@ export function buildLifeAnalysisViewModel(
   const wealthD2Varga = wealth.vargaConfirmations.find((v) => v.varga === 'D2');
   const wealthTiming = buildNormalizedWealthTiming(wealth, activeDasha?.at ?? wealth.generatedAt);
   const wealthActivations = getWealthPeriodTimingActivations(wealth);
-  const mdWealth = wealthActivations?.find((a) => a.period === 'MD');
-  const adWealth = wealthActivations?.find((a) => a.period === 'AD');
-  const pdWealth = wealthActivations?.find((a) => a.period === 'PD');
+  const { md: mdWealth, ad: adWealth, pd: pdWealth } = indexDashaPeriodActivations(wealthActivations);
   const wealthDashaHierarchy =
     mdWealth && adWealth && pdWealth
       ? synthesizeWealthDashaHierarchy(mdWealth, adWealth, pdWealth)

@@ -934,4 +934,173 @@ describe('localVedicRulesEngine', () => {
       }
     });
   });
+
+  describe('LOCAL-WEALTH-004 Dasha Timing Rule (per-dimension projection)', () => {
+    const e2eHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
+      asOf: '2024-06-01T00:00:00.000Z'
+    });
+    const baseContext = buildAiContext(e2eHoroscope);
+    const wealthRule004 = WEALTH_RULES.find((r) => r.id === 'LOCAL-WEALTH-004')!;
+
+    it('should not emit a blanket SUPPORT when Accumulation/Gains/Fortune = ACTIVATES and Speculation = CHALLENGES', () => {
+      expect(wealthRule004).toBeDefined();
+
+      const evSupport: AiEvidence = {
+        id: 'ev-wealth-dim-support',
+        source: 'WEALTH',
+        dimension: 'TIMING',
+        statement: 'Benefic activates accumulation and gains',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY'
+      };
+      const evChallenge: AiEvidence = {
+        id: 'ev-wealth-dim-challenge',
+        source: 'WEALTH',
+        dimension: 'TIMING',
+        statement: 'Malefic challenges speculation',
+        effect: 'CHALLENGE',
+        strength: 'STRONG',
+        priority: 'PRIMARY'
+      };
+
+      const mockContext3Act1Chal: AiContext = {
+        ...baseContext,
+        evidence: [...baseContext.evidence, evSupport, evChallenge],
+        wealth: {
+          ...baseContext.wealth!,
+          timing: {
+            status: 'AVAILABLE',
+            asOf: '2024-06-01T00:00:00.000Z',
+            hierarchy: {
+              primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: Planet.JUPITER, effect: 'ACTIVATES' },
+              modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: Planet.SATURN, effect: 'ACTIVATES' },
+              trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: Planet.MERCURY, effect: 'CHALLENGES' },
+              dimensions: [
+                { dimension: 'ACCUMULATION', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' },
+                { dimension: 'GAINS', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' },
+                { dimension: 'FORTUNE', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' },
+                { dimension: 'SPECULATION', primary: 'CHALLENGES', modifier: 'CHALLENGES', trigger: 'CHALLENGES', overallEffect: 'CHALLENGES' }
+              ],
+              evidenceIds: ['ev-wealth-dim-support', 'ev-wealth-dim-challenge']
+            }
+          }
+        }
+      };
+
+      const evalResult = wealthRule004.evaluate(mockContext3Act1Chal);
+      expect(evalResult.triggered).toBe(true);
+      // Must not collapse 3:1 majority into a blanket SUPPORT
+      expect(evalResult.effect).not.toBe('SUPPORT');
+      expect(evalResult.effect).toBe('MIXED');
+      // Speculation CHALLENGES effect must be preserved and visible in statement
+      expect(evalResult.statement).toContain('Speculation');
+      expect(evalResult.statement).toContain('CHALLENGES');
+      expect(evalResult.statement).toContain('Accumulation');
+      expect(evalResult.statement).toContain('ACTIVATES');
+      // Challenging evidence must be emitted
+      expect(evalResult.challengingEvidenceIds).toContain('ev-wealth-dim-challenge');
+      expect(evalResult.supportingEvidenceIds).toContain('ev-wealth-dim-support');
+
+      // Assert all projected evidenceIds resolve in context.evidence
+      const contextEvidenceIds = new Set(mockContext3Act1Chal.evidence.map((e) => e.id));
+      for (const id of evalResult.supportingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of evalResult.challengingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+    });
+
+    it('should not emit a blanket CHALLENGE when 1 dimension ACTIVATES and 3 CHALLENGE, preserving each dimension', () => {
+      const evSupport: AiEvidence = {
+        id: 'ev-wealth-dim-support-2',
+        source: 'WEALTH',
+        dimension: 'TIMING',
+        statement: 'Benefic activates speculation',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY'
+      };
+      const evChallenge: AiEvidence = {
+        id: 'ev-wealth-dim-challenge-2',
+        source: 'WEALTH',
+        dimension: 'TIMING',
+        statement: 'Malefic challenges accumulation/gains/fortune',
+        effect: 'CHALLENGE',
+        strength: 'STRONG',
+        priority: 'PRIMARY'
+      };
+
+      const mockContext1Act3Chal: AiContext = {
+        ...baseContext,
+        evidence: [...baseContext.evidence, evSupport, evChallenge],
+        wealth: {
+          ...baseContext.wealth!,
+          timing: {
+            status: 'AVAILABLE',
+            asOf: '2024-06-01T00:00:00.000Z',
+            hierarchy: {
+              primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: Planet.JUPITER, effect: 'CHALLENGES' },
+              modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: Planet.SATURN, effect: 'CHALLENGES' },
+              trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: Planet.MERCURY, effect: 'ACTIVATES' },
+              dimensions: [
+                { dimension: 'ACCUMULATION', primary: 'CHALLENGES', modifier: 'CHALLENGES', trigger: 'CHALLENGES', overallEffect: 'CHALLENGES' },
+                { dimension: 'GAINS', primary: 'CHALLENGES', modifier: 'CHALLENGES', trigger: 'CHALLENGES', overallEffect: 'CHALLENGES' },
+                { dimension: 'FORTUNE', primary: 'CHALLENGES', modifier: 'CHALLENGES', trigger: 'CHALLENGES', overallEffect: 'CHALLENGES' },
+                { dimension: 'SPECULATION', primary: 'ACTIVATES', modifier: 'ACTIVATES', trigger: 'ACTIVATES', overallEffect: 'ACTIVATES' }
+              ],
+              evidenceIds: ['ev-wealth-dim-support-2', 'ev-wealth-dim-challenge-2']
+            }
+          }
+        }
+      };
+
+      const evalResult = wealthRule004.evaluate(mockContext1Act3Chal);
+      expect(evalResult.triggered).toBe(true);
+      // Must not collapse 1:3 into a blanket CHALLENGE
+      expect(evalResult.effect).not.toBe('CHALLENGE');
+      expect(evalResult.effect).toBe('MIXED');
+      // Each dimension's effect is preserved in the projected statement
+      expect(evalResult.statement).toContain('Speculation');
+      expect(evalResult.statement).toContain('ACTIVATES');
+      expect(evalResult.statement).toContain('Accumulation');
+      expect(evalResult.statement).toContain('CHALLENGES');
+      expect(evalResult.statement).toContain('Gains');
+      expect(evalResult.statement).toContain('Fortune');
+
+      // Assert all projected evidenceIds resolve in context.evidence
+      const contextEvidenceIds = new Set(mockContext1Act3Chal.evidence.map((e) => e.id));
+      for (const id of evalResult.supportingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of evalResult.challengingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+    });
+
+    it('should evaluate deterministically with deep-equal outputs across multiple runs', () => {
+      const e2eHoroscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
+        asOf: '2024-06-01T00:00:00.000Z'
+      });
+      const e2eContext1 = buildAiContext(e2eHoroscope1);
+      const e2eContext2 = buildAiContext(e2eHoroscope1);
+
+      const run1 = wealthRule004.evaluate(e2eContext1);
+      const run2 = wealthRule004.evaluate(e2eContext2);
+      expect(run1).toEqual(run2);
+
+      const fullRun1 = reasonWithLocalRules('WEALTH_ANALYSIS', e2eContext1);
+      const fullRun2 = reasonWithLocalRules('WEALTH_ANALYSIS', e2eContext2);
+      expect(fullRun1).toEqual(fullRun2);
+
+      const contextEvidenceIds = new Set(e2eContext1.evidence.map((e) => e.id));
+      for (const id of run1.supportingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+      for (const id of run1.challengingEvidenceIds || []) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
+      }
+    });
+  });
 });

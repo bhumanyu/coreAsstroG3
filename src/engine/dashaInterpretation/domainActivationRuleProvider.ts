@@ -11,9 +11,9 @@ import {
 import { WealthDimension } from '../../domain/wealth/wealthTypes';
 import {
   WEALTH_SUBTHEME_CONFIGS,
-  WealthSubthemeConfig
-} from '../themeInterpretation/wealthThemeInterpretation';
-import { WealthEvidenceFamily } from '../themeInterpretation/wealthThemeInterpretationTypes';
+  WealthSubthemeConfig,
+  WealthEvidenceFamily
+} from '../themeInterpretation/wealthThemeInterpretationTypes';
 
 export type DashaLifeDomain = 'CAREER' | 'WEALTH' | 'MARRIAGE';
 
@@ -28,10 +28,11 @@ export interface DomainActivationRuleProvider {
  */
 function resolveHouseNumbersFromFamilies(
   families: ReadonlySet<WealthEvidenceFamily>,
-  configs: readonly WealthSubthemeConfig[]
+  configs?: readonly WealthSubthemeConfig[]
 ): readonly number[] {
+  const resolvedConfigs = configs ?? WEALTH_SUBTHEME_CONFIGS ?? [];
   const houses = new Set<number>();
-  for (const config of configs) {
+  for (const config of resolvedConfigs) {
     if (families.has(config.primaryFamily) || families.has(config.lordFamily)) {
       houses.add(config.houseNumber);
     }
@@ -43,38 +44,43 @@ export class CanonicalDomainActivationRuleProvider implements DomainActivationRu
   constructor(
     private readonly careerPrimaryHouses: ReadonlySet<number> = CAREER_PRIMARY_HOUSES,
     private readonly careerSupportingHouses: ReadonlySet<number> = CAREER_SUPPORTING_HOUSES,
-    private readonly wealthSubthemeConfigs: readonly WealthSubthemeConfig[] = WEALTH_SUBTHEME_CONFIGS,
+    private readonly wealthSubthemeConfigs?: readonly WealthSubthemeConfig[],
     private readonly wealthAccumulationFamilies: ReadonlySet<WealthEvidenceFamily> = WEALTH_ACCUMULATION_FAMILIES,
     private readonly wealthGainsFamilies: ReadonlySet<WealthEvidenceFamily> = WEALTH_GAINS_FAMILIES,
     private readonly wealthFortuneFamilies: ReadonlySet<WealthEvidenceFamily> = WEALTH_FORTUNE_FAMILIES,
     private readonly wealthSpeculationFamilies: ReadonlySet<WealthEvidenceFamily> = WEALTH_SPECULATION_FAMILIES
   ) {}
 
+  private getEffectiveWealthSubthemeConfigs(): readonly WealthSubthemeConfig[] {
+    return this.wealthSubthemeConfigs ?? WEALTH_SUBTHEME_CONFIGS ?? [];
+  }
+
   getRelevantHousesByDimension(dimension: WealthDimension | string): readonly number[] {
     const dim = dimension.toUpperCase();
+    const configs = this.getEffectiveWealthSubthemeConfigs();
     switch (dim) {
       case 'ACCUMULATION':
         return resolveHouseNumbersFromFamilies(
           this.wealthAccumulationFamilies,
-          this.wealthSubthemeConfigs
+          configs
         );
       case 'GAINS':
         return resolveHouseNumbersFromFamilies(
           this.wealthGainsFamilies,
-          this.wealthSubthemeConfigs
+          configs
         );
       case 'FORTUNE':
         return resolveHouseNumbersFromFamilies(
           this.wealthFortuneFamilies,
-          this.wealthSubthemeConfigs
+          configs
         );
       case 'SPECULATION':
         return resolveHouseNumbersFromFamilies(
           this.wealthSpeculationFamilies,
-          this.wealthSubthemeConfigs
+          configs
         );
       default: {
-        const config = this.wealthSubthemeConfigs.find((c) => c.key === dim);
+        const config = configs.find((c) => c.key === dim);
         return config ? Object.freeze([config.houseNumber]) : Object.freeze([]);
       }
     }
