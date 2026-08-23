@@ -56,9 +56,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation from Lahiri Sidereal 0° Aries cusp, 27 equal nakshatras, Parashari 7y Ketu, 365.25d/yr convention',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation from Lahiri Sidereal 0° Aries cusp, 27 equal nakshatras, Parashari 7y Ketu, 365.25d/yr convention'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: 'Moon at exact beginning of zodiac. 100% of 7-year Ketu Mahadasha remaining.'
@@ -90,9 +94,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Bharani (13°20\' - 26°40\') midpoint at 20°00\'00", 50% elapsed, 10.000y Venus balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Bharani (13°20\' - 26°40\') midpoint at 20°00\'00", 50% elapsed, 10.000y Venus balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '50% progress through Bharani yields exactly 10.0 years of 20-year Venus Mahadasha.'
@@ -124,9 +132,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Krittika Pada 1 end at 30°00\'00" (offset 3°20\'), 25% elapsed, 4.500y Sun balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Krittika Pada 1 end at 30°00\'00" (offset 3°20\'), 25% elapsed, 4.500y Sun balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '25% elapsed in Krittika yields 75% of 6-year Sun Mahadasha = 4.5 years.'
@@ -158,9 +170,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Rohini start 40°00\'00", 0% elapsed, 10.000y Moon balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Rohini start 40°00\'00", 0% elapsed, 10.000y Moon balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: 'Rohini start cusp with full 10-year Moon Mahadasha balance.'
@@ -192,9 +208,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Mrigashira midpoint at 60°00\'00", 50% elapsed, 3.500y Mars balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Mrigashira midpoint at 60°00\'00", 50% elapsed, 3.500y Mars balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '50% progress in Mrigashira yields 3.5 years of 7-year Mars Mahadasha.'
@@ -226,9 +246,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Shatabhisha at 310°00\'00" (offset 3°20\'), 25% elapsed, 13.500y Rahu balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Shatabhisha at 310°00\'00" (offset 3°20\'), 25% elapsed, 13.500y Rahu balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '25% elapsed in Shatabhisha yields 75% of 18-year Rahu Mahadasha = 13.5 years.'
@@ -260,9 +284,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Purva Bhadrapada midpoint at 326°40\'00", 50% elapsed, 8.000y Jupiter balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Purva Bhadrapada midpoint at 326°40\'00", 50% elapsed, 8.000y Jupiter balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '50% progress through Purva Bhadrapada yields 8.0 years of 16-year Jupiter Mahadasha.'
@@ -294,9 +322,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Pushya midpoint at 100°00\'00", 50% elapsed, 9.500y Saturn balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Pushya midpoint at 100°00\'00", 50% elapsed, 9.500y Saturn balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '50% progress through Pushya yields 9.5 years of 19-year Saturn Mahadasha.'
@@ -328,9 +360,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Analytical Parashari Standard',
+      methodology: 'Analytical derivation: Ashlesha at 110°00\'00" (offset 3°20\'), 25% elapsed, 12.750y Mercury balance on 365.25d/yr calendar',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '1.0.0',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha',
-      methodology: 'Analytical derivation: Ashlesha at 110°00\'00" (offset 3°20\'), 25% elapsed, 12.750y Mercury balance on 365.25d/yr calendar'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: '25% elapsed in Ashlesha yields 75% of 17-year Mercury Mahadasha = 12.75 years.'
@@ -362,9 +398,13 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     },
     source: {
       name: 'Classical Jyotish Reference (B.V. Raman / Jagannatha Hora standard)',
+      methodology: 'Standard 365.25-day Lahiri Vimshottari Dasha calculation benchmark on Shatabhisha 312.5°',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'UTC',
+      dateConvention: '365.25 days/year (31,557,600,000 ms/year)',
       version: '365.25d-Lahiri',
-      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)',
-      methodology: 'Standard 365.25-day Lahiri Vimshottari Dasha calculation benchmark on Shatabhisha 312.5°'
+      url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
     notes: 'Classical benchmark test chart for multi-period Mahadasha/Antardasha transitions.'
@@ -400,8 +440,12 @@ export const ASTRONOMY_REFERENCE_CASES: readonly AstronomyReferenceCase[] = Obje
     expectedSign: 'Capricorn',
     source: {
       name: 'CoreAstro Planetary Astronomy Subsystem',
-      version: '1.0.0',
-      methodology: 'VSOP/analytical lunar orbital algorithm with Lahiri Ayanamsa subtraction'
+      methodology: 'VSOP/analytical lunar orbital algorithm with Lahiri Ayanamsa subtraction',
+      zodiac: 'SIDEREAL',
+      ayanamsa: 'LAHIRI',
+      timezone: 'Asia/Kolkata',
+      dateConvention: '365.25 days/year',
+      version: '1.0.0'
     },
     conventions: {
       zodiac: 'SIDEREAL',

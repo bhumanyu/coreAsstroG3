@@ -5,9 +5,13 @@ import { BirthDetails, Planet } from '../../../types';
  */
 export interface ReferenceSource {
   readonly name: string;
+  readonly methodology: string;
+  readonly zodiac: 'SIDEREAL' | 'TROPICAL';
+  readonly ayanamsa: string; // e.g. 'LAHIRI'
+  readonly timezone: string;
+  readonly dateConvention: string;
   readonly version?: string;
   readonly url?: string;
-  readonly methodology: string;
 }
 
 /**

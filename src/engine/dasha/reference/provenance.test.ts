@@ -24,13 +24,19 @@ describe('D08-B: Reference Provenance & Metadata Validation', () => {
           expect(refCase.description.trim().length).toBeGreaterThan(0);
         });
 
-        it('has non-empty source block with name and methodology', () => {
+        it('has non-empty source block with name, methodology, zodiac, ayanamsa, timezone, and dateConvention', () => {
           expect(refCase.source).toBeDefined();
           expect(typeof refCase.source).toBe('object');
           expect(refCase.source.name).toBeDefined();
           expect(refCase.source.name.trim().length).toBeGreaterThan(0);
           expect(refCase.source.methodology).toBeDefined();
           expect(refCase.source.methodology.trim().length).toBeGreaterThan(0);
+          expect(refCase.source.zodiac).toBe('SIDEREAL');
+          expect(refCase.source.ayanamsa).toBe('LAHIRI');
+          expect(refCase.source.timezone).toBeDefined();
+          expect(refCase.source.timezone.trim().length).toBeGreaterThan(0);
+          expect(refCase.source.dateConvention).toBeDefined();
+          expect(refCase.source.dateConvention.trim().length).toBeGreaterThan(0);
         });
 
         it('has non-empty conventions block matching repository standards', () => {
