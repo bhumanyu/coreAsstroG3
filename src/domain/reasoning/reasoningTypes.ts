@@ -25,8 +25,6 @@ export type DomainStrength =
   | 'VERY_WEAK'
   | 'UNDETERMINED';
 
-export type NatalStrengthBand = DomainStrength;
-
 export type NatalGuardrail =
   | 'NONE'
   | 'PRIMARY_SUPPORT_CAP'

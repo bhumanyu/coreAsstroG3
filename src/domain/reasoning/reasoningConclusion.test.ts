@@ -268,4 +268,48 @@ describe('CW-01A Reasoning Conclusion', () => {
     expect(natalPromise.primaryChallenge).toBe(0);
     expect(natalPromise.guardrails).toContain('NO_PRIMARY_PROMISE');
   });
+
+  describe('Natal strength guardrail policy tests', () => {
+    it('does not allow neutral primary evidence to produce strong natal promise', () => {
+      const result = applyNatalStrengthGuardrails({
+        primaryDirection: 'NEUTRAL',
+        primaryStrength: 'VERY_STRONG',
+        primarySupport: 0,
+        primaryChallenge: 0,
+        secondarySupport: 10,
+        secondaryChallenge: 0
+      });
+
+      expect(result.direction).toBe('NEUTRAL');
+      expect(result.strength).toBe('UNDETERMINED');
+    });
+
+    it('secondary contradiction cannot increase primary strength', () => {
+      const result = applyNatalStrengthGuardrails({
+        primaryDirection: 'SUPPORT',
+        primaryStrength: 'STRONG',
+        primarySupport: 7.5,
+        primaryChallenge: 0,
+        secondarySupport: 0,
+        secondaryChallenge: 100
+      });
+
+      expect(result.direction).toBe('SUPPORT');
+      expect(result.strength).toBe('STRONG');
+    });
+
+    it('secondary support cannot improve a mixed primary beyond MODERATE', () => {
+      const result = applyNatalStrengthGuardrails({
+        primaryDirection: 'MIXED',
+        primaryStrength: 'MIXED',
+        primarySupport: 5,
+        primaryChallenge: 5,
+        secondarySupport: 100,
+        secondaryChallenge: 0
+      });
+
+      expect(result.direction).toBe('MIXED');
+      expect(result.strength).toBe('MODERATE');
+    });
+  });
 });

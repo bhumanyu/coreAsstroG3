@@ -74,6 +74,37 @@ export function buildNormalizedCareerTiming(
   asOf?: string
 ): CareerTimingProduct | undefined {
   if (!career) return undefined;
+
+  const careerDasha = career.conclusionData?.careerDashaSynthesis;
+  if (careerDasha && careerDasha.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
+    const timingAsOf = asOf ?? careerDasha.asOf;
+    return {
+      status: 'AVAILABLE',
+      asOf: timingAsOf,
+      mahadasha: {
+        period: 'MD',
+        planet: careerDasha.md.planet,
+        effect: careerDasha.md.effect,
+        evidenceIds: careerDasha.md.factors.map((f) => f.id),
+        statement: careerDasha.md.summary
+      },
+      antardasha: {
+        period: 'AD',
+        planet: careerDasha.ad.planet,
+        effect: careerDasha.ad.effect,
+        evidenceIds: careerDasha.ad.factors.map((f) => f.id),
+        statement: careerDasha.ad.summary
+      },
+      pratyantardasha: {
+        period: 'PD',
+        planet: careerDasha.pd.planet,
+        effect: careerDasha.pd.effect,
+        evidenceIds: careerDasha.pd.factors.map((f) => f.id),
+        statement: careerDasha.pd.summary
+      }
+    };
+  }
+
   const activations = getCareerTimingActivations(career);
   if (!activations || activations.length === 0) {
     return { status: 'UNAVAILABLE', asOf };
