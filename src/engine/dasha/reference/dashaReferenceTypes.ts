@@ -1,15 +1,22 @@
 import { BirthDetails, Planet } from '../../../types';
 
 /**
+ * Discriminator type distinguishing mathematical analytical reference fixtures
+ * from external ephemeris benchmarks.
+ */
+export type DashaReferenceSourceType = 'MATHEMATICAL_ANALYTICAL' | 'EXTERNAL_EPHEMERIS';
+
+/**
  * Provenance source metadata for reference validation cases.
  */
 export interface ReferenceSource {
+  readonly type: DashaReferenceSourceType;
   readonly name: string;
   readonly methodology: string;
-  readonly zodiac: 'SIDEREAL' | 'TROPICAL';
-  readonly ayanamsa: string; // e.g. 'LAHIRI'
-  readonly timezone: string;
-  readonly dateConvention: string;
+  readonly zodiac?: 'SIDEREAL' | 'TROPICAL';
+  readonly ayanamsa?: string; // e.g. 'LAHIRI'
+  readonly timezone?: string;
+  readonly dateConvention?: string;
   readonly version?: string;
   readonly url?: string;
 }

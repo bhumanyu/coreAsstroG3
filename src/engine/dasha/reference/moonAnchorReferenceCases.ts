@@ -52,6 +52,7 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
     expectedMoonSiderealLongitude: 68.4215,
     expectedSign: 'Gemini',
     source: {
+      type: 'EXTERNAL_EPHEMERIS',
       name: 'Swiss Ephemeris / JPL Horizons Lahiri Ephemeris Reference',
       methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction',
       zodiac: 'SIDEREAL',
@@ -83,6 +84,7 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
     expectedMoonSiderealLongitude: 308.1542,
     expectedSign: 'Aquarius',
     source: {
+      type: 'EXTERNAL_EPHEMERIS',
       name: 'Swiss Ephemeris / JPL Horizons Lahiri Ephemeris Reference',
       methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction',
       zodiac: 'SIDEREAL',
@@ -114,6 +116,7 @@ export const MOON_ANCHOR_REFERENCE_CASES: readonly MoonAnchorReferenceCase[] = O
     expectedMoonSiderealLongitude: 194.8876,
     expectedSign: 'Libra',
     source: {
+      type: 'EXTERNAL_EPHEMERIS',
       name: 'Swiss Ephemeris / JPL Horizons Lahiri Ephemeris Reference',
       methodology: 'High-precision numerical integration (DE431) with Swiss Ephemeris Lahiri Ayanamsa subtraction',
       zodiac: 'SIDEREAL',

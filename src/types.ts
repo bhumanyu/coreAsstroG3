@@ -225,6 +225,7 @@ export interface Position {
   planet?: Planet;
   longitude: number;
   eclipticLongitude?: number;
+  siderealLongitude?: number;
   eclipticLatitude?: number;
   sign: Sign;
   house: number;
