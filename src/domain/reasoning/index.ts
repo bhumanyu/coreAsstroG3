@@ -4,4 +4,5 @@ export * from './reasoningHierarchy';
 export * from './reasoningConclusion';
 export * from './dashaHierarchy';
 export * from './reasoningConflictResolver';
+export * from './natalStrengthGuardrails';
 export * from './reasoningTrace';

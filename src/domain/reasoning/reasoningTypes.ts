@@ -25,6 +25,24 @@ export type DomainStrength =
   | 'VERY_WEAK'
   | 'UNDETERMINED';
 
+export type NatalStrengthBand = DomainStrength;
+
+export type NatalGuardrail =
+  | 'NONE'
+  | 'PRIMARY_SUPPORT_CAP'
+  | 'PRIMARY_MIXED_CAP'
+  | 'PRIMARY_CHALLENGE_CAP'
+  | 'SECONDARY_CONTRADICTION'
+  | 'MODIFIER_CAP'
+  | 'NO_PRIMARY_PROMISE';
+
+export interface NatalContradictionSummary {
+  readonly hasContradiction: boolean;
+  readonly primaryContradictionRatio: number;
+  readonly secondaryContradictionRatio: number;
+  readonly modifierContradictionRatio: number;
+}
+
 export type TimingActivationEffect =
   | 'ACTIVATES'
   | 'PARTIALLY_ACTIVATES'
