@@ -2,11 +2,22 @@ import {
   CareerEvidenceFamily,
   type ThemeInterpretationEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
-import { createDomainManifestation } from '../interpretation';
+import {
+  createDomainManifestation,
+  resolveManifestationStatus,
+  getEvidenceIndependenceKey,
+  groupEvidenceByIndependence
+} from '../interpretation';
 import type {
   DomainEvidence,
   DomainManifestation
 } from '../interpretation';
+
+export {
+  resolveManifestationStatus,
+  getEvidenceIndependenceKey,
+  groupEvidenceByIndependence
+};
 
 export const CAREER_LEADERSHIP_FAMILIES = new Set<CareerEvidenceFamily>([
   CareerEvidenceFamily.TENTH_HOUSE,
@@ -67,25 +78,42 @@ export const CAREER_ENTREPRENEURSHIP_RULES = new Set<string>([
 export function calculateManifestationConfidence(
   evidence: readonly DomainEvidence[]
 ): 'VERY_HIGH' | 'HIGH' | 'MODERATE' | 'LOW' | 'VERY_LOW' {
-  if (evidence.length === 0) {
+  const supporting = evidence.filter((e) => e.polarity === 'SUPPORTING');
+  if (supporting.length === 0) {
     return 'LOW';
   }
 
-  const primary = evidence.filter((e) => e.role === 'PRIMARY');
-  const strong = evidence.filter(
-    (e) => e.strength === 'STRONG' || e.strength === 'VERY_STRONG'
+  const independentGroups = Array.from(
+    groupEvidenceByIndependence(supporting).values()
   );
-  const supporting = evidence.filter((e) => e.polarity === 'SUPPORTING');
+  const numIndependentFactors = independentGroups.length;
 
-  if (primary.length >= 2 && strong.length >= 2) {
+  const numIndependentPrimary = independentGroups.filter((group) =>
+    group.some((e) => e.role === 'PRIMARY')
+  ).length;
+
+  const numIndependentStrong = independentGroups.filter((group) =>
+    group.some((e) => e.strength === 'STRONG' || e.strength === 'VERY_STRONG')
+  ).length;
+
+  const numIndependentSupporting = numIndependentFactors;
+
+  if (numIndependentPrimary >= 2 && numIndependentStrong >= 2) {
     return 'VERY_HIGH';
   }
 
-  if ((primary.length >= 1 && strong.length >= 1) || (primary.length >= 2 && supporting.length >= 2)) {
+  if (
+    (numIndependentPrimary >= 1 && numIndependentStrong >= 1) ||
+    (numIndependentPrimary >= 2 && numIndependentSupporting >= 2)
+  ) {
     return 'HIGH';
   }
 
-  if (primary.length >= 1 || strong.length >= 1 || supporting.length >= 2) {
+  if (
+    numIndependentPrimary >= 1 ||
+    numIndependentStrong >= 1 ||
+    numIndependentSupporting >= 2
+  ) {
     return 'MODERATE';
   }
 
