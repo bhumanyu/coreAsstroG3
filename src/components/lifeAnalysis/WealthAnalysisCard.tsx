@@ -147,7 +147,7 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
       {/* 4 Wealth Dimensions Matrix */}
       <div className="space-y-2 pt-2">
         <span className="text-[11px] font-mono-code text-slate-400 block">
-          4 Classical Wealth Dimensions (CW-04 Manifestation):
+          4 Classical Wealth Dimensions:
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">

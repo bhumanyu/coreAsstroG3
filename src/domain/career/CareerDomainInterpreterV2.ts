@@ -291,6 +291,7 @@ export function interpretCareerV2(
         polarity: f.direction === 'SUPPORT' ? 'SUPPORTING' : f.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
         strength: f.weight >= 2.0 ? 'STRONG' : 'MODERATE',
         priority,
+        ruleId: f.id,
         ...(f.houses?.[0] !== undefined ? { house: f.houses[0] } : {})
       });
     });
@@ -418,9 +419,67 @@ export function interpretCareerV2(
     unresolvedQuestions: []
   });
 
+  const d10Context: D10CareerContext = {
+    relationship: d10Relationship,
+    statement: buildD10Statement(d10Evidence, d10Relationship)
+  };
+
+  const careerDashaSynthesis = buildCareerDashaSynthesis({
+    dashaInterpretation: horoscope.dashaInterpretation,
+    d10Context
+  });
+
+  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
+  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+
+  let careerTimingSynthesis: CareerTimingSynthesis;
+  if (asOfDate && !isNaN(asOfDate.getTime())) {
+    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
+    careerTimingSynthesis = synthesizeCareerTiming(natalStrength, careerDashaSynthesis, careerTransitSynthesis);
+  } else {
+    careerTimingSynthesis = Object.freeze({
+      natalPromise: natalStrength,
+      dashaEffect: careerDashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA',
+      transitEffect: 'INSUFFICIENT_DATA',
+      overallEffect: 'INSUFFICIENT_DATA',
+      confidence: 0.5,
+      factors: Object.freeze([]),
+      summary: 'Timing calculation unavailable: asOf date not provided.'
+    });
+  }
+
+  const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
+    const priority = getCareerDashaEvidencePriority(f.period, f.category);
+
+    return createDomainEvidence({
+      id: f.id,
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      role: 'MODIFIER',
+      phase: 'DASHA_ACTIVATION',
+      source: 'DASHA',
+      statement: f.statement,
+      polarity: f.direction === 'SUPPORT' ? 'SUPPORTING' : f.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
+      strength: f.weight >= 2.0 ? 'STRONG' : 'MODERATE',
+      priority,
+      ruleId: f.id,
+      ...(f.houses?.[0] !== undefined ? { house: f.houses[0] } : {})
+    });
+  });
+
+  const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
+
+  const careerManifestationSynthesis = synthesizeCareerManifestations(
+    mergedEvidence,
+    careerDashaSynthesis,
+    careerTimingSynthesis,
+    horoscope
+  );
+
   return buildDomainInterpretation({
     domain: 'CAREER',
-    evidence,
+    evidence: mergedEvidence,
     natalPromise,
     dashaActivation,
     transitTrigger,
@@ -430,7 +489,12 @@ export function interpretCareerV2(
     conclusion,
     timingActivations,
     dataCompleteness,
-    conclusionData
+    conclusionData: {
+      ...conclusionData,
+      careerDashaSynthesis,
+      careerTimingSynthesis,
+      careerManifestationSynthesis
+    }
   });
 }
 

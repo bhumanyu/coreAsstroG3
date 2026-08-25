@@ -1576,4 +1576,57 @@ describe('WealthDomainInterpreterV2', () => {
     expect(synthesizedChallenge.dimensions.ACCUMULATION.dashaEffect).toBe('CHALLENGES');
     expect(synthesizedChallenge.dimensions.ACCUMULATION.overallEffect).toBe('CHALLENGES');
   });
+
+  // End-to-end CW-04 Wealth Manifestation Pipeline Test
+  it('CW-04 end-to-end pipeline: produces deterministic wealth manifestation synthesis with explicit asOf date', () => {
+    const asOf = '2024-06-15T12:00:00.000Z';
+    const result1 = interpretWealthV2(horoscope, { asOf });
+    const result2 = interpretWealthV2(horoscope, { asOf });
+
+    const manifestationSynthesis = result1.conclusionData?.wealthManifestationSynthesis;
+    expect(manifestationSynthesis).toBeDefined();
+    expect(manifestationSynthesis?.reasoningVersion).toBe('CW-04');
+    expect(typeof manifestationSynthesis?.summary).toBe('string');
+    expect(manifestationSynthesis?.summary.length).toBeGreaterThan(0);
+
+    const dims = manifestationSynthesis?.dimensions;
+    expect(dims).toBeDefined();
+    expect(dims).toHaveProperty('ACCUMULATION');
+    expect(dims).toHaveProperty('GAINS');
+    expect(dims).toHaveProperty('FORTUNE');
+    expect(dims).toHaveProperty('SPECULATION');
+
+    const dimensions: ('ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION')[] = [
+      'ACCUMULATION',
+      'GAINS',
+      'FORTUNE',
+      'SPECULATION'
+    ];
+
+    for (const dim of dimensions) {
+      const syn = dims![dim];
+      expect(syn).toBeDefined();
+      expect(syn.dimension).toBe(dim);
+      expect(syn.reasoningVersion).toBe('CW-04');
+      expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(syn.status);
+      expect(['LOW', 'MEDIUM', 'HIGH']).toContain(syn.confidence);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.natalSupport);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.dashaSupport);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.transitSupport);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.d2Support);
+      expect(typeof syn.summary).toBe('string');
+
+      for (const factor of syn.factors) {
+        expect(factor.dimension).toBe(dim);
+        expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(factor.direction);
+        expect(['NATAL', 'DASHA', 'TRANSIT', 'D2']).toContain(factor.source);
+        expect(typeof factor.statement).toBe('string');
+      }
+    }
+
+    // Strict determinism verification
+    expect(result1.conclusionData?.wealthManifestationSynthesis).toEqual(
+      result2.conclusionData?.wealthManifestationSynthesis
+    );
+  });
 });

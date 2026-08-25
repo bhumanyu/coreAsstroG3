@@ -1433,4 +1433,55 @@ describe('CareerDomainInterpreterV2', () => {
     expect(serviceResult.domain).toBe('CAREER');
     expect(serviceResult.conclusion).toBeDefined();
   });
+
+  // 18. End-to-end CW-04 Career Manifestation Pipeline Test
+  it('CW-04 end-to-end pipeline: produces deterministic career manifestation synthesis with explicit asOf date', () => {
+    const asOf = '2024-06-15T12:00:00.000Z';
+    const result1 = interpretCareerV2(horoscope, { asOf });
+    const result2 = interpretCareerV2(horoscope, { asOf });
+
+    // Verify presence and reasoning version
+    const manifestations = result1.conclusionData?.careerManifestationSynthesis;
+    expect(manifestations).toBeDefined();
+    expect(Array.isArray(manifestations)).toBe(true);
+    expect(manifestations?.length).toBe(7);
+
+    // Verify canonical modes
+    const modes = manifestations?.map((m: any) => m.mode);
+    expect(modes).toEqual([
+      'LEADERSHIP',
+      'MANAGEMENT',
+      'TECHNICAL_SPECIALIZATION',
+      'SERVICE_EMPLOYMENT',
+      'AUTHORITY',
+      'INDEPENDENT_WORK',
+      'BUSINESS_ENTREPRENEURSHIP'
+    ]);
+
+    // Verify structure and contracts for each mode
+    for (const syn of manifestations ?? []) {
+      expect(syn.reasoningVersion).toBe('CW-04');
+      expect(['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(syn.status);
+      expect(['LOW', 'MEDIUM', 'HIGH']).toContain(syn.confidence);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.natalSupport);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.dashaSupport);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.transitSupport);
+      expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(syn.d10Support);
+      expect(typeof syn.summary).toBe('string');
+      expect(syn.summary.length).toBeGreaterThan(0);
+
+      // Verify factors
+      for (const factor of syn.factors) {
+        expect(factor.mode).toBe(syn.mode);
+        expect(['SUPPORT', 'CHALLENGE', 'NEUTRAL']).toContain(factor.direction);
+        expect(['NATAL', 'DASHA', 'TRANSIT', 'D10']).toContain(factor.source);
+        expect(typeof factor.statement).toBe('string');
+      }
+    }
+
+    // Verify strict determinism
+    expect(result1.conclusionData?.careerManifestationSynthesis).toEqual(
+      result2.conclusionData?.careerManifestationSynthesis
+    );
+  });
 });

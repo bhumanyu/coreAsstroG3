@@ -484,9 +484,11 @@ export interface WealthDimensionManifestationSynthesisFact {
 
 export interface WealthManifestationSynthesisFact {
   readonly reasoningVersion: 'CW-04';
-  readonly dimensions: Record<
-    WealthManifestationDimension | string,
-    WealthDimensionManifestationSynthesisFact
+  readonly dimensions: Partial<
+    Record<
+      WealthManifestationDimension,
+      WealthDimensionManifestationSynthesisFact
+    >
   >;
   readonly summary: string;
 }

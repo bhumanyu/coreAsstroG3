@@ -154,6 +154,7 @@ describe('D07-C: Missing Period Hierarchy Guard Tests', () => {
     const validEvidenceId = STAGE1_GOLDEN_CAREER.evidence[0]?.id ?? 'CAREER-EVID-1';
     const partialCareer: DomainInterpretation = {
       ...STAGE1_GOLDEN_CAREER,
+      conclusionData: undefined,
       timingActivations: [
         {
           period: 'MD',
@@ -193,6 +194,7 @@ describe('D07-C: Missing Period Hierarchy Guard Tests', () => {
     const validEvidenceId = STAGE1_GOLDEN_WEALTH.evidence[0]?.id ?? 'WEALTH-EVID-1';
     const partialWealth: DomainInterpretation = {
       ...STAGE1_GOLDEN_WEALTH,
+      conclusionData: undefined,
       periodTimingActivations: [
         {
           period: 'MD',

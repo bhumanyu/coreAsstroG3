@@ -42,8 +42,8 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     const gainsEvidence = createMockNatalEvidence(['WR_L11_11H_SELF_GAINS'], 'GAINS');
     const mixedNatal = [...accumulationEvidence, ...gainsEvidence];
 
-    const accumulationResult = resolveWealthDimensionManifestation('ACCUMULATION', mixedNatal, undefined, 'CONFIRMED');
-    const speculationResult = resolveWealthDimensionManifestation('SPECULATION', mixedNatal, undefined, 'CONFIRMED');
+    const accumulationResult = resolveWealthDimensionManifestation('ACCUMULATION', mixedNatal, undefined, 'CONFIRMS');
+    const speculationResult = resolveWealthDimensionManifestation('SPECULATION', mixedNatal, undefined, 'CONFIRMS');
 
     expect(accumulationResult.status).toBe('STRONGLY_SUPPORTED');
     expect(accumulationResult.natalSupport).toBe('SUPPORT');
@@ -72,20 +72,41 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(speculationResult.natalSupport).toBe('CHALLENGE');
   });
 
-  it('incorporates D2 Hora confirmation into accumulation and gains synthesis', () => {
+  it('incorporates D2 Hora confirmation and conflict into accumulation and gains synthesis', () => {
     const accumulationEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
 
-    const resultWithD2 = resolveWealthDimensionManifestation(
+    const resultWithConfirm = resolveWealthDimensionManifestation(
       'ACCUMULATION',
       accumulationEvidence,
       undefined,
-      'CONFIRMED'
+      'CONFIRMS'
     );
 
-    expect(resultWithD2.d2Support).toBe('SUPPORT');
-    const d2Factor = resultWithD2.factors.find((f) => f.source === 'D2');
+    expect(resultWithConfirm.d2Support).toBe('SUPPORT');
+    const d2Factor = resultWithConfirm.factors.find((f) => f.source === 'D2');
     expect(d2Factor).toBeDefined();
     expect(d2Factor?.direction).toBe('SUPPORT');
+    expect(d2Factor?.weight).toBe(1.0);
+
+    const resultWithPartial = resolveWealthDimensionManifestation(
+      'ACCUMULATION',
+      accumulationEvidence,
+      undefined,
+      'PARTIALLY_CONFIRMS'
+    );
+    expect(resultWithPartial.d2Support).toBe('SUPPORT');
+    const d2PartialFactor = resultWithPartial.factors.find((f) => f.source === 'D2');
+    expect(d2PartialFactor?.weight).toBe(0.5);
+
+    const resultWithConflict = resolveWealthDimensionManifestation(
+      'ACCUMULATION',
+      accumulationEvidence,
+      undefined,
+      'CONFLICTS'
+    );
+    expect(resultWithConflict.d2Support).toBe('CHALLENGE');
+    const d2ConflictFactor = resultWithConflict.factors.find((f) => f.source === 'D2');
+    expect(d2ConflictFactor?.direction).toBe('CHALLENGE');
   });
 
   it('synthesizes all 4 classical wealth dimensions via synthesizeWealthManifestations', () => {
@@ -151,7 +172,7 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
       overallSummary: 'Wealth timing overall summary'
     };
 
-    const synthesis = synthesizeWealthManifestations(natalEvidence, mockWealthTiming, 'CONFIRMED');
+    const synthesis = synthesizeWealthManifestations(natalEvidence, mockWealthTiming, 'CONFIRMS');
 
     expect(synthesis.reasoningVersion).toBe('CW-04');
     expect(synthesis.dimensions).toHaveProperty('ACCUMULATION');
@@ -163,5 +184,116 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(synthesis.dimensions.GAINS.status).toBe('STRONGLY_SUPPORTED');
     expect(synthesis.dimensions.SPECULATION.status).toBe('INSUFFICIENT_DATA');
     expect(synthesis.summary).toBeTruthy();
+  });
+
+  it('Test C: resolves to MIXED when natal SUPPORT encounters any secondary CHALLENGE (dasha challenge)', () => {
+    const natalEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
+
+    const mockWealthTiming: WealthTimingSynthesis = {
+      dimensions: {
+        ACCUMULATION: {
+          dimension: 'ACCUMULATION',
+          natalPromise: 'STRONG',
+          dashaEffect: 'CHALLENGES',
+          transitEffect: 'SUPPORTS',
+          overallEffect: 'MODIFIES',
+          confidence: 0.8,
+          factors: [
+            {
+              id: 'W_TR_2',
+              planet: Planet.JUPITER,
+              dimension: 'ACCUMULATION',
+              category: 'WEALTH_HOUSE_TRANSIT',
+              direction: 'SUPPORT',
+              weight: 1.5,
+              statement: 'Jupiter transit supports 2nd house.'
+            }
+          ],
+          summary: 'Dasha challenges while transit supports.'
+        }
+      } as any,
+      overallSummary: 'Wealth timing summary'
+    };
+
+    const result = resolveWealthDimensionManifestation('ACCUMULATION', natalEvidence, mockWealthTiming, 'CONFIRMS');
+
+    expect(result.dimension).toBe('ACCUMULATION');
+    expect(result.natalSupport).toBe('SUPPORT');
+    expect(result.dashaSupport).toBe('CHALLENGE');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.status).toBe('MIXED');
+    expect(result.confidence).toBe('MEDIUM');
+  });
+
+  it('Test D: resolves to STRONGLY_SUPPORTED when natal SUPPORT + structural secondary SUPPORT (dasha + D2) without transit (transit NEUTRAL)', () => {
+    const natalEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
+
+    const mockWealthTiming: WealthTimingSynthesis = {
+      dimensions: {
+        ACCUMULATION: {
+          dimension: 'ACCUMULATION',
+          natalPromise: 'STRONG',
+          dashaEffect: 'SUPPORTS',
+          transitEffect: 'NEUTRAL',
+          overallEffect: 'ACTIVATES',
+          confidence: 0.8,
+          factors: [],
+          summary: 'Dasha supports accumulation, transit is neutral.'
+        }
+      } as any,
+      overallSummary: 'Wealth timing summary'
+    };
+
+    const result = resolveWealthDimensionManifestation('ACCUMULATION', natalEvidence, mockWealthTiming, 'CONFIRMS');
+
+    expect(result.dimension).toBe('ACCUMULATION');
+    expect(result.natalSupport).toBe('SUPPORT');
+    expect(result.dashaSupport).toBe('SUPPORT');
+    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.transitSupport).toBe('NEUTRAL');
+    expect(result.status).toBe('STRONGLY_SUPPORTED');
+    expect(result.confidence).toBe('HIGH');
+  });
+
+  it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence for dimension is missing even with strong dasha + transit + D2 support', () => {
+    const emptyNatalEvidence: DomainEvidence[] = [];
+
+    const mockWealthTiming: WealthTimingSynthesis = {
+      dimensions: {
+        ACCUMULATION: {
+          dimension: 'ACCUMULATION',
+          natalPromise: 'STRONG',
+          dashaEffect: 'SUPPORTS',
+          transitEffect: 'SUPPORTS',
+          overallEffect: 'ACTIVATES',
+          confidence: 0.9,
+          factors: [
+            {
+              id: 'W_TR_2',
+              planet: Planet.JUPITER,
+              dimension: 'ACCUMULATION',
+              category: 'WEALTH_HOUSE_TRANSIT',
+              direction: 'SUPPORT',
+              weight: 2.0,
+              statement: 'Jupiter transit supports 2nd house.'
+            }
+          ],
+          summary: 'Timing supports accumulation.'
+        }
+      } as any,
+      overallSummary: 'Wealth timing summary'
+    };
+
+    const result = resolveWealthDimensionManifestation('ACCUMULATION', emptyNatalEvidence, mockWealthTiming, 'CONFIRMS');
+
+    // Guardrail: secondary evidence cannot manufacture a manifestation without natal support
+    expect(result.dimension).toBe('ACCUMULATION');
+    expect(result.natalSupport).toBe('NEUTRAL');
+    expect(result.dashaSupport).toBe('SUPPORT');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d2Support).toBe('SUPPORT');
+    expect(result.status).toBe('INSUFFICIENT_DATA');
+    expect(result.confidence).toBe('LOW');
   });
 });

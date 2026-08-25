@@ -932,5 +932,296 @@ describe('AI Context Factory', () => {
       expect(challengeFactor?.direction).toBe('CHALLENGE');
       expect(challengeFactor?.category).toBe('FUNCTIONAL_NATURE');
     });
+
+    it('should map Career CW-04 manifestationSynthesis with full fidelity as passthrough', () => {
+      const customCareerInterpretation: DomainInterpretation = createDomainInterpretation({
+        domain: 'CAREER',
+        natalPromise: createNatalPromise({
+          strength: 'STRONG',
+          statement: 'Natal promise is strong.'
+        }),
+        dashaActivation: createDashaActivation({
+          effect: 'ACTIVATES',
+          statement: 'Sun activates 10th house.'
+        }),
+        transitTrigger: createTransitTrigger({
+          effect: 'TRIGGER',
+          statement: 'Jupiter triggers career growth.'
+        }),
+        vargaConfirmations: [
+          {
+            varga: 'D10',
+            domain: 'CAREER',
+            relationship: 'CONFIRMS',
+            strength: 'STRONG',
+            confidence: 'HIGH',
+            evidenceIds: [],
+            statement: 'D10 confirms leadership capability.'
+          }
+        ],
+        manifestations: [],
+        conflicts: [],
+        conclusion: createDomainConclusion({
+          domain: 'CAREER',
+          strength: 'STRONG',
+          confidence: 'HIGH',
+          statement: 'Career leadership is strongly supported.'
+        }),
+        conclusionData: {
+          careerManifestationSynthesis: [
+            {
+              reasoningVersion: 'CW-04',
+              mode: 'LEADERSHIP',
+              status: 'STRONGLY_SUPPORTED',
+              confidence: 'HIGH',
+              natalSupport: 'SUPPORT',
+              dashaSupport: 'SUPPORT',
+              transitSupport: 'SUPPORT',
+              d10Support: 'SUPPORT',
+              factors: [
+                {
+                  id: 'NATAL_LEADERSHIP_1',
+                  mode: 'LEADERSHIP',
+                  direction: 'SUPPORT',
+                  weight: 2.0,
+                  source: 'NATAL',
+                  statement: 'Sun placed in 10th house with high digbala.',
+                  evidenceIds: ['EV_NAT_SUN_10']
+                },
+                {
+                  id: 'DASHA_LEADERSHIP_1',
+                  mode: 'LEADERSHIP',
+                  direction: 'SUPPORT',
+                  weight: 1.5,
+                  source: 'DASHA',
+                  statement: 'Sun MD activates authority.',
+                  dashaEvidenceIds: ['D_SUN_MD']
+                },
+                {
+                  id: 'TRANSIT_LEADERSHIP_1',
+                  mode: 'LEADERSHIP',
+                  direction: 'SUPPORT',
+                  weight: 1.0,
+                  source: 'TRANSIT',
+                  statement: 'Jupiter transit supports 10th house.',
+                  transitEvidenceIds: ['TR_JUP_10']
+                },
+                {
+                  id: 'D10_LEADERSHIP_1',
+                  mode: 'LEADERSHIP',
+                  direction: 'SUPPORT',
+                  weight: 1.5,
+                  source: 'D10',
+                  statement: 'Sun strong in D10 career chart.'
+                }
+              ],
+              summary: 'Executive leadership is strongly supported across all four analytical dimensions.'
+            }
+          ]
+        }
+      });
+
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [customCareerInterpretation]
+      });
+
+      const careerFact = aiContext.career;
+      expect(careerFact).toBeDefined();
+      expect(careerFact?.manifestationSynthesis).toBeDefined();
+      expect(careerFact?.manifestationSynthesis).toHaveLength(1);
+
+      const leadership = careerFact?.manifestationSynthesis?.[0];
+      expect(leadership?.reasoningVersion).toBe('CW-04');
+      expect(leadership?.mode).toBe('LEADERSHIP');
+      expect(leadership?.status).toBe('STRONGLY_SUPPORTED');
+      expect(leadership?.confidence).toBe('HIGH');
+      expect(leadership?.natalSupport).toBe('SUPPORT');
+      expect(leadership?.dashaSupport).toBe('SUPPORT');
+      expect(leadership?.transitSupport).toBe('SUPPORT');
+      expect(leadership?.d10Support).toBe('SUPPORT');
+      expect(leadership?.summary).toBe('Executive leadership is strongly supported across all four analytical dimensions.');
+
+      expect(leadership?.factors).toHaveLength(4);
+      const natalFactor = leadership?.factors.find((f) => f.id === 'NATAL_LEADERSHIP_1');
+      expect(natalFactor).toEqual({
+        id: 'NATAL_LEADERSHIP_1',
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORT',
+        weight: 2.0,
+        source: 'NATAL',
+        statement: 'Sun placed in 10th house with high digbala.',
+        evidenceIds: ['EV_NAT_SUN_10']
+      });
+
+      const dashaFactor = leadership?.factors.find((f) => f.id === 'DASHA_LEADERSHIP_1');
+      expect(dashaFactor?.dashaEvidenceIds).toEqual(['D_SUN_MD']);
+
+      const transitFactor = leadership?.factors.find((f) => f.id === 'TRANSIT_LEADERSHIP_1');
+      expect(transitFactor?.transitEvidenceIds).toEqual(['TR_JUP_10']);
+    });
+
+    it('should map Wealth CW-04 manifestationSynthesis with all 4 dimensions surviving and SPECULATION isolated', () => {
+      const customWealthInterpretation: DomainInterpretation = createDomainInterpretation({
+        domain: 'WEALTH',
+        natalPromise: createNatalPromise({
+          strength: 'STRONG',
+          statement: 'Natal wealth promise is solid.'
+        }),
+        dashaActivation: createDashaActivation({
+          domain: 'WEALTH',
+          effect: 'ACTIVATES',
+          statement: 'Jupiter activates 2nd house.'
+        }),
+        transitTrigger: createTransitTrigger({
+          domain: 'WEALTH',
+          effect: 'TRIGGER',
+          statement: 'Jupiter triggers wealth expansion.'
+        }),
+        vargaConfirmations: [
+          {
+            varga: 'D2',
+            domain: 'WEALTH',
+            relationship: 'CONFIRMS',
+            strength: 'STRONG',
+            confidence: 'HIGH',
+            evidenceIds: [],
+            statement: 'D2 confirms wealth capacity.'
+          }
+        ],
+        manifestations: [],
+        conflicts: [],
+        conclusion: createDomainConclusion({
+          domain: 'WEALTH',
+          strength: 'STRONG',
+          confidence: 'HIGH',
+          statement: 'Wealth generation is supported.'
+        }),
+        conclusionData: {
+          wealthManifestationSynthesis: {
+            reasoningVersion: 'CW-04',
+            dimensions: {
+              ACCUMULATION: {
+                reasoningVersion: 'CW-04',
+                dimension: 'ACCUMULATION',
+                status: 'STRONGLY_SUPPORTED',
+                confidence: 'HIGH',
+                natalSupport: 'SUPPORT',
+                dashaSupport: 'SUPPORT',
+                transitSupport: 'SUPPORT',
+                d2Support: 'SUPPORT',
+                factors: [
+                  {
+                    id: 'W_NAT_ACC_1',
+                    dimension: 'ACCUMULATION',
+                    direction: 'SUPPORT',
+                    weight: 2.0,
+                    source: 'NATAL',
+                    statement: 'Lord of 2nd exalted.',
+                    evidenceIds: ['EV_W_2']
+                  }
+                ],
+                summary: 'Asset accumulation is strongly supported.'
+              },
+              GAINS: {
+                reasoningVersion: 'CW-04',
+                dimension: 'GAINS',
+                status: 'SUPPORTED',
+                confidence: 'MEDIUM',
+                natalSupport: 'SUPPORT',
+                dashaSupport: 'SUPPORT',
+                transitSupport: 'NEUTRAL',
+                d2Support: 'NEUTRAL',
+                factors: [
+                  {
+                    id: 'W_NAT_GAINS_1',
+                    dimension: 'GAINS',
+                    direction: 'SUPPORT',
+                    weight: 1.5,
+                    source: 'NATAL',
+                    statement: '11th house strong.',
+                    evidenceIds: ['EV_W_11']
+                  }
+                ],
+                summary: 'Revenue gains are supported.'
+              },
+              FORTUNE: {
+                reasoningVersion: 'CW-04',
+                dimension: 'FORTUNE',
+                status: 'MIXED',
+                confidence: 'MEDIUM',
+                natalSupport: 'SUPPORT',
+                dashaSupport: 'CHALLENGE',
+                transitSupport: 'NEUTRAL',
+                d2Support: 'NEUTRAL',
+                factors: [
+                  {
+                    id: 'W_NAT_FORT_1',
+                    dimension: 'FORTUNE',
+                    direction: 'SUPPORT',
+                    weight: 1.0,
+                    source: 'NATAL',
+                    statement: '9th lord well-aspected.'
+                  }
+                ],
+                summary: 'Long-term fortune faces mixed timing.'
+              },
+              SPECULATION: {
+                reasoningVersion: 'CW-04',
+                dimension: 'SPECULATION',
+                status: 'INSUFFICIENT_DATA',
+                confidence: 'LOW',
+                natalSupport: 'NEUTRAL',
+                dashaSupport: 'CHALLENGE',
+                transitSupport: 'CHALLENGE',
+                d2Support: 'NEUTRAL',
+                factors: [
+                  {
+                    id: 'W_TR_SPEC_1',
+                    dimension: 'SPECULATION',
+                    direction: 'CHALLENGE',
+                    weight: 1.0,
+                    source: 'TRANSIT',
+                    statement: 'Saturn transiting 5th house restricts speculation.',
+                    transitEvidenceIds: ['TR_SAT_5']
+                  }
+                ],
+                summary: 'Speculative ventures lack natal foundation.'
+              }
+            },
+            summary: 'Wealth synthesis across all four dimensions.'
+          }
+        }
+      });
+
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [customWealthInterpretation]
+      });
+
+      const wealthFact = aiContext.wealth;
+      expect(wealthFact).toBeDefined();
+      expect(wealthFact?.manifestationSynthesis).toBeDefined();
+      expect(wealthFact?.manifestationSynthesis?.reasoningVersion).toBe('CW-04');
+      expect(wealthFact?.manifestationSynthesis?.summary).toBe('Wealth synthesis across all four dimensions.');
+
+      const dims = wealthFact?.manifestationSynthesis?.dimensions;
+      expect(dims).toBeDefined();
+      expect(dims?.ACCUMULATION).toBeDefined();
+      expect(dims?.GAINS).toBeDefined();
+      expect(dims?.FORTUNE).toBeDefined();
+      expect(dims?.SPECULATION).toBeDefined();
+
+      expect(dims?.ACCUMULATION?.status).toBe('STRONGLY_SUPPORTED');
+      expect(dims?.ACCUMULATION?.natalSupport).toBe('SUPPORT');
+      expect(dims?.ACCUMULATION?.d2Support).toBe('SUPPORT');
+      expect(dims?.ACCUMULATION?.factors[0].evidenceIds).toEqual(['EV_W_2']);
+
+      expect(dims?.GAINS?.status).toBe('SUPPORTED');
+      expect(dims?.FORTUNE?.status).toBe('MIXED');
+
+      // SPECULATION is isolated from ACCUMULATION and GAINS
+      expect(dims?.SPECULATION?.status).toBe('INSUFFICIENT_DATA');
+      expect(dims?.SPECULATION?.natalSupport).toBe('NEUTRAL');
+      expect(dims?.SPECULATION?.factors[0].transitEvidenceIds).toEqual(['TR_SAT_5']);
+    });
   });
 });

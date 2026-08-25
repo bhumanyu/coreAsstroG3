@@ -54,7 +54,7 @@ import {
 import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynthesis } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerManifestationSynthesis, CareerManifestationFactor } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
-import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor } from '../../domain/wealth/manifestation/wealthManifestationTypes';
+import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
@@ -818,9 +818,13 @@ function buildWealthFact(
   const wealthManifestationSynthesis = wealthInterpretation?.conclusionData?.wealthManifestationSynthesis;
   let wealthManifestationSynthesisFact: WealthManifestationSynthesisFact | undefined;
   if (wealthManifestationSynthesis) {
-    const dimFacts: Record<string, WealthDimensionManifestationSynthesisFact> = {};
-    for (const [dimKey, dimSyn] of Object.entries(wealthManifestationSynthesis.dimensions)) {
-      const synObj = dimSyn as WealthDimensionManifestationSynthesis;
+    const dimFacts: Partial<Record<WealthManifestationDimension, WealthDimensionManifestationSynthesisFact>> = {};
+    const dimEntries = Object.entries(wealthManifestationSynthesis.dimensions) as [
+      WealthManifestationDimension,
+      WealthDimensionManifestationSynthesis | undefined
+    ][];
+    for (const [dimKey, synObj] of dimEntries) {
+      if (!synObj) continue;
       dimFacts[dimKey] = {
         reasoningVersion: 'CW-04',
         dimension: synObj.dimension,
