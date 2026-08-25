@@ -7,7 +7,7 @@ import type {
   VargaRelationship
 } from '../interpretation/DomainInterpretationTypes';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
-import type { Planet } from '../../types';
+import { Planet } from '../../types';
 import { WealthEvidenceFamily } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 
 import type { WealthTimingSynthesis } from '../timing/careerWealthTiming/careerWealthTimingTypes';
@@ -19,6 +19,20 @@ export type WealthDimension =
   | 'GAINS'
   | 'FORTUNE'
   | 'SPECULATION';
+
+export const WEALTH_DIMENSION_HOUSES: Readonly<Record<WealthDimension, number>> = Object.freeze({
+  ACCUMULATION: 2,
+  GAINS: 11,
+  FORTUNE: 9,
+  SPECULATION: 5
+});
+
+export const WEALTH_DIMENSION_KARAKAS: Readonly<Record<WealthDimension, readonly Planet[]>> = Object.freeze({
+  ACCUMULATION: Object.freeze([Planet.JUPITER, Planet.VENUS]),
+  GAINS: Object.freeze([Planet.JUPITER]),
+  FORTUNE: Object.freeze([Planet.JUPITER]),
+  SPECULATION: Object.freeze([Planet.VENUS, Planet.MERCURY])
+});
 
 export type WealthDimensionStatus =
   | 'STRONGLY_SUPPORTED'

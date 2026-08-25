@@ -4,7 +4,11 @@ import { calculateTransit } from '../../../engine/transitEngine';
 import { calculateCurrentTransitLongitudes } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
 import type { DomainStrength } from '../../interpretation/DomainInterpretationTypes';
-import type { WealthDimension } from '../../wealth/wealthTypes';
+import {
+  type WealthDimension,
+  WEALTH_DIMENSION_HOUSES,
+  WEALTH_DIMENSION_KARAKAS
+} from '../../wealth/wealthTypes';
 import type {
   WealthTransitFactor,
   WealthTransitDimensionSynthesis,
@@ -70,20 +74,6 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
   return undefined;
 }
 
-const DIMENSION_HOUSES: Record<WealthDimension, number> = {
-  ACCUMULATION: 2,
-  GAINS: 11,
-  FORTUNE: 9,
-  SPECULATION: 5
-};
-
-const DIMENSION_KARAKAS: Record<WealthDimension, readonly Planet[]> = {
-  ACCUMULATION: [Planet.JUPITER, Planet.VENUS],
-  GAINS: [Planet.JUPITER],
-  FORTUNE: [Planet.JUPITER],
-  SPECULATION: [Planet.VENUS, Planet.MERCURY]
-};
-
 /**
  * Synthesizes wealth transit and timing synthesis across all four wealth dimensions independently.
  */
@@ -107,7 +97,7 @@ export function synthesizeWealthTiming(
   if (natalMoonLongitude === undefined || natalAscendantLongitude === undefined || natalPlanetLongitudes === undefined) {
     const insufficientSyntheses: Partial<Record<WealthDimension, WealthTransitDimensionSynthesis>> = {};
     for (const dim of dimensions) {
-      const natalPromise = natalPromises?.[dim] ?? 'MODERATE';
+      const natalPromise = natalPromises?.[dim] ?? 'UNDETERMINED';
       const dashaEffect = dashaEffects?.[dim] ?? 'INSUFFICIENT_DATA';
       const overallEffect = resolveWealthDimensionTransitEffect(natalPromise, dashaEffect, { transitEffect: 'INSUFFICIENT_DATA' });
       insufficientSyntheses[dim] = Object.freeze({
@@ -159,8 +149,8 @@ export function synthesizeWealthTiming(
     const dignity = pf?.dignity?.status;
     const isExaltedOrOwn = dignity === 'EXALTED' || dignity === 'OWN_SIGN' || dignity === 'MOOLATRIKONA';
     const isDebilitated = dignity === 'DEBILITATED';
-    const isKaraka = DIMENSION_KARAKAS[dim].includes(planet);
-    const targetHouse = DIMENSION_HOUSES[dim];
+    const isKaraka = WEALTH_DIMENSION_KARAKAS[dim].includes(planet);
+    const targetHouse = WEALTH_DIMENSION_HOUSES[dim];
     const ownsTargetHouse = ownedHouses.includes(targetHouse);
     const ownsWealthHouse = ownedHouses.some((h) => [2, 11, 9, 5].includes(h));
     const ownsLagna = ownedHouses.includes(1);
@@ -183,7 +173,7 @@ export function synthesizeWealthTiming(
   };
 
   for (const dim of dimensions) {
-    const targetHouse = DIMENSION_HOUSES[dim];
+    const targetHouse = WEALTH_DIMENSION_HOUSES[dim];
 
     // 1. House Transits for dimension
     for (const p of Object.values(Planet)) {
@@ -249,7 +239,8 @@ export function synthesizeWealthTiming(
           weight,
           statement,
           dimension: dim,
-          houses: [targetHouse]
+          houses: [targetHouse],
+          transitingPlanet: p
         }));
       }
     }
@@ -292,7 +283,8 @@ export function synthesizeWealthTiming(
               weight,
               statement,
               dimension: dim,
-              houses: [targetHouse, currentHouse]
+              houses: [targetHouse, currentHouse],
+              transitingPlanet: lord
             }));
           }
         }
@@ -300,7 +292,7 @@ export function synthesizeWealthTiming(
     }
 
     // 3. Karaka Transits for dimension
-    const karakas = DIMENSION_KARAKAS[dim];
+    const karakas = WEALTH_DIMENSION_KARAKAS[dim];
     for (const kp of karakas) {
       const kpRes = transitAnalysis.results[kp];
       if (kpRes?.housePosition) {
@@ -317,7 +309,8 @@ export function synthesizeWealthTiming(
               weight: 1.5,
               statement: `Wealth karaka ${kp} transits key house ${hPos} for ${dim}.`,
               dimension: dim,
-              houses: [hPos]
+              houses: [hPos],
+              transitingPlanet: kp
             }));
           }
         }
@@ -331,7 +324,7 @@ export function synthesizeWealthTiming(
     const dimFactors = factors.filter((f) => f.dimension === dim);
     const { transitEffect, confidence } = mapWealthDimensionTransitEffect(dimFactors, dim);
 
-    const natalPromise: DomainStrength = natalPromises?.[dim] ?? 'MODERATE';
+    const natalPromise: DomainStrength = natalPromises?.[dim] ?? 'UNDETERMINED';
     const dashaEffect = dashaEffects?.[dim] ?? 'INSUFFICIENT_DATA';
 
     const overallEffect = resolveWealthDimensionTransitEffect(natalPromise, dashaEffect, { transitEffect });

@@ -285,6 +285,9 @@ export interface CareerTimingFactorFact {
   readonly houses?: readonly number[];
   readonly natalEvidenceIds?: readonly string[];
   readonly dashaEvidenceIds?: readonly string[];
+  readonly transitingPlanet?: Planet;
+  readonly targetPlanet?: Planet;
+  readonly dashaPlanet?: Planet;
 }
 
 export interface CareerTimingSynthesisFact {
@@ -370,6 +373,9 @@ export interface WealthTimingFactorFact {
   readonly houses?: readonly number[];
   readonly natalEvidenceIds?: readonly string[];
   readonly dashaEvidenceIds?: readonly string[];
+  readonly transitingPlanet?: Planet;
+  readonly targetPlanet?: Planet;
+  readonly dashaPlanet?: Planet;
 }
 
 export interface WealthTimingSynthesisFact {

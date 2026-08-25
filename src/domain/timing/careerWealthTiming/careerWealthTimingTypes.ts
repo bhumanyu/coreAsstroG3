@@ -30,6 +30,11 @@ export type TimingSourceCategory =
 
 export interface CareerTransitFactor {
   readonly id: string;
+  /**
+   * Primary subject planet of the factor.
+   * For CAREER_HOUSE_TRANSIT / CAREER_LORD_TRANSIT / CAREER_KARAKA_TRANSIT: aliases transitingPlanet.
+   * For DASHA_LORD_TRANSIT: aliases dashaPlanet (the activated Dasha lord).
+   */
   readonly planet: Planet;
   readonly category: TimingSourceCategory;
   readonly direction: TimingDirection;
@@ -38,6 +43,9 @@ export interface CareerTransitFactor {
   readonly houses?: readonly number[];
   readonly natalEvidenceIds?: readonly string[];
   readonly dashaEvidenceIds?: readonly string[];
+  readonly transitingPlanet?: Planet;
+  readonly targetPlanet?: Planet;
+  readonly dashaPlanet?: Planet;
 }
 
 export type CareerTimingFactor = CareerTransitFactor;
@@ -63,6 +71,11 @@ export interface CareerTimingSynthesis {
 
 export interface WealthTransitFactor {
   readonly id: string;
+  /**
+   * Primary subject planet of the factor.
+   * For WEALTH_HOUSE_TRANSIT / WEALTH_LORD_TRANSIT / WEALTH_KARAKA_TRANSIT: aliases transitingPlanet.
+   * For DASHA_LORD_TRANSIT: aliases dashaPlanet.
+   */
   readonly planet: Planet;
   readonly category: TimingSourceCategory;
   readonly direction: TimingDirection;
@@ -72,6 +85,9 @@ export interface WealthTransitFactor {
   readonly houses?: readonly number[];
   readonly natalEvidenceIds?: readonly string[];
   readonly dashaEvidenceIds?: readonly string[];
+  readonly transitingPlanet?: Planet;
+  readonly targetPlanet?: Planet;
+  readonly dashaPlanet?: Planet;
 }
 
 export interface WealthTransitDimensionSynthesis {
