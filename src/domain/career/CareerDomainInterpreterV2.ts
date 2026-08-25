@@ -63,6 +63,7 @@ import {
   buildCareerDashaSynthesis,
   type D10CareerContext
 } from './careerDasha';
+import { getCareerDashaEvidencePriority } from './careerDasha/careerDashaRules';
 import {
   buildCareerConclusion,
   buildCareerConclusionData,
@@ -254,19 +255,7 @@ export function interpretCareerV2(
     });
 
     const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
-      let basePriority = 30;
-      if (f.id.includes('_MD_')) basePriority = 60;
-      else if (f.id.includes('_AD_')) basePriority = 40;
-      else if (f.id.includes('_PD_')) basePriority = 20;
-
-      let categoryOffset = 0;
-      if (f.category === 'HOUSE_OWNERSHIP' || f.category === 'HOUSE_PLACEMENT' || f.category === 'D10' || f.category === 'STRENGTH') {
-        categoryOffset = 8;
-      } else if (f.category === 'YOGA' || f.category === 'DIGNITY' || f.category === 'STATE' || f.category === 'KARAKA') {
-        categoryOffset = 5;
-      } else if (f.category === 'FUNCTIONAL_ROLE' || f.category === 'FUNCTIONAL_NATURE' || f.category === 'ASPECT') {
-        categoryOffset = 3;
-      }
+      const priority = getCareerDashaEvidencePriority(f.period, f.category);
 
       return createDomainEvidence({
         id: f.id,
@@ -278,7 +267,7 @@ export function interpretCareerV2(
         statement: f.statement,
         polarity: f.direction === 'SUPPORT' ? 'SUPPORTING' : f.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
         strength: f.weight >= 2.0 ? 'STRONG' : 'MODERATE',
-        priority: basePriority + categoryOffset,
+        priority,
         ...(f.houses?.[0] !== undefined ? { house: f.houses[0] } : {})
       });
     });

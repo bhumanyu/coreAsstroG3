@@ -60,17 +60,18 @@ export function resolveCareerDashaEffect(
   if (nonD10Factors.length === 0) {
     return 'DOES_NOT_ACTIVATE';
   }
-  const ratio = support / total;
-  if (ratio >= 0.75 && support >= 3.0) {
+  const supportRatio = support / total;
+  const challengeRatio = challenge / total;
+  if (supportRatio >= 0.75) {
     return 'STRONGLY_SUPPORTS';
   }
-  if (ratio >= 0.6) {
+  if (supportRatio >= 0.6) {
     return 'SUPPORTS';
   }
-  if (ratio <= 0.25 && challenge >= 3.0) {
+  if (challengeRatio >= 0.75) {
     return 'STRONGLY_CHALLENGES';
   }
-  if (ratio <= 0.4) {
+  if (challengeRatio >= 0.6) {
     return 'CHALLENGES';
   }
   return 'MIXED';

@@ -5,6 +5,9 @@ import type {
   DashaInterpretationReport
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { VargaRelationship } from '../../interpretation/DomainInterpretationTypes';
+import type { CareerHousePortfolio } from '../careerTypes';
+
+export type { CareerHousePortfolio };
 
 export type CareerDashaPeriod = 'MD' | 'AD' | 'PD';
 
@@ -34,25 +37,35 @@ export type CareerFactorCategory =
 
 export interface CareerDashaFactor {
   readonly id: string;
+  readonly period: CareerDashaPeriod;
+  readonly planet: Planet;
   readonly category: CareerFactorCategory;
   readonly direction: CareerFactorDirection;
   readonly weight: number;
   readonly statement: string;
   readonly houses?: readonly number[];
+  readonly evidenceIds?: readonly string[];
   readonly meta?: Record<string, unknown>;
 }
 
-export interface CareerHousePortfolio {
-  readonly primary: readonly number[];
-  readonly supporting: readonly number[];
-  readonly challenging: readonly number[];
-  readonly secondary: readonly number[];
-}
+export type D10CareerRelationship =
+  | 'CONFIRMS'
+  | 'MODIFIES'
+  | 'CONFLICTS'
+  | 'UNAVAILABLE'
+  | VargaRelationship;
 
 export interface D10CareerContext {
   // TODO: Deeper Dasha-planet × D10 planetary-condition synthesis (varga dignity, varga aspect, etc.) is deferred to a future milestone. Currently using varga relationship integration.
-  readonly relationship: VargaRelationship;
+  readonly relationship: D10CareerRelationship;
   readonly statement?: string;
+}
+
+export interface CareerDashaTiming {
+  readonly period: CareerDashaPeriod;
+  readonly planet: Planet;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface CareerDashaPlanetInput {
@@ -104,6 +117,12 @@ export interface CareerDashaPeriodSynthesis {
 export interface CareerDashaSynthesis {
   readonly asOf?: string;
   readonly natalPromiseProtected: true;
+  readonly reasoningVersion: 'CW-02';
+  readonly timing: {
+    readonly md: CareerDashaTiming;
+    readonly ad: CareerDashaTiming;
+    readonly pd: CareerDashaTiming;
+  };
   readonly md: CareerDashaPlanetSynthesis;
   readonly ad: CareerDashaPlanetSynthesis;
   readonly pd: CareerDashaPlanetSynthesis;

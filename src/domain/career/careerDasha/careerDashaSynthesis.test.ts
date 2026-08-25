@@ -50,12 +50,12 @@ describe('Career Dasha Synthesis', () => {
 
   it('classifies house ownership accurately', () => {
     const portfolio = getCareerHousePortfolio();
-    expect(classifyCareerHouseOwnership(10, portfolio)).toEqual({ direction: 'SUPPORT', weight: 3.0 });
+    expect(classifyCareerHouseOwnership(10, portfolio)).toEqual({ direction: 'SUPPORT', weight: 2.5 });
     expect(classifyCareerHouseOwnership(6, portfolio)).toEqual({ direction: 'SUPPORT', weight: 1.5 });
     expect(classifyCareerHouseOwnership(2, portfolio)).toEqual({ direction: 'SUPPORT', weight: 1.5 });
     expect(classifyCareerHouseOwnership(11, portfolio)).toEqual({ direction: 'SUPPORT', weight: 1.5 });
-    expect(classifyCareerHouseOwnership(8, portfolio)).toEqual({ direction: 'CHALLENGE', weight: 1.5 });
-    expect(classifyCareerHouseOwnership(12, portfolio)).toEqual({ direction: 'CHALLENGE', weight: 1.5 });
+    expect(classifyCareerHouseOwnership(8, portfolio)).toEqual({ direction: 'CHALLENGE', weight: 0.75 });
+    expect(classifyCareerHouseOwnership(12, portfolio)).toEqual({ direction: 'CHALLENGE', weight: 0.75 });
     expect(classifyCareerHouseOwnership(3, portfolio)).toEqual({ direction: 'NEUTRAL', weight: 0 });
   });
 
@@ -74,6 +74,8 @@ describe('Career Dasha Synthesis', () => {
     const factorIds = synthesis.factors.map((f) => f.id);
     expect(factorIds).toContain('CAREER_DASHA_MD_SATURN_FUNCTIONAL_ROLE_YOGAKARAKA');
     expect(factorIds).toContain('CAREER_DASHA_MD_SATURN_DIGNITY_EXALTED');
+    expect(synthesis.factors[0].period).toBe('MD');
+    expect(synthesis.factors[0].planet).toBe('SATURN');
   });
 
   it('scores a challenging planet synthesis correctly', () => {
@@ -127,6 +129,14 @@ describe('Career Dasha Synthesis', () => {
     });
 
     expect(synthesis.asOf).toBe('2026-08-23T12:00:00.000Z');
+    expect(synthesis.reasoningVersion).toBe('CW-02');
+    expect(synthesis.timing.md.period).toBe('MD');
+    expect(synthesis.timing.md.planet).toBe('SATURN');
+    expect(synthesis.timing.ad.period).toBe('AD');
+    expect(synthesis.timing.ad.planet).toBe('MERCURY');
+    expect(synthesis.timing.pd.period).toBe('PD');
+    expect(synthesis.timing.pd.planet).toBe('SUN');
+
     expect(synthesis.combined.hierarchy.mdRole).toBe('PRIMARY');
     expect(synthesis.combined.hierarchy.adRole).toBe('MODIFIER');
     expect(synthesis.combined.hierarchy.pdRole).toBe('REFINEMENT');
@@ -231,7 +241,7 @@ describe('Career Dasha Synthesis', () => {
       house: 5,
       sign: 'TAURUS' as any,
       ownedHouses: [5, 12],
-      functionalRoles: [FunctionalRole.FIFTH_LORD],
+      functionalRoles: [FunctionalRole.TRIKONA_LORD],
       functionalNature: FunctionalNature.BENEFIC,
       strength: undefined,
       dignity: 'OWN_SIGN',
@@ -258,5 +268,18 @@ describe('Career Dasha Synthesis', () => {
 
     const karakaFactor = synthesis.factors.find((f) => f.category === 'KARAKA');
     expect(karakaFactor).toBeUndefined();
+  });
+
+  it('supports MODIFIES relationship in D10 career context', () => {
+    const activation = createMockActivation(Planet.SATURN, [10]);
+    const synthesis = scoreCareerDashaPlanet('MD', activation, {
+      relationship: 'MODIFIES',
+      statement: 'D10 modifies trajectory'
+    });
+
+    expect(synthesis.d10Effect).toBe('SUPPORTS');
+    const d10Factor = synthesis.factors.find((f) => f.category === 'D10');
+    expect(d10Factor?.weight).toBe(1.0);
+    expect(d10Factor?.direction).toBe('SUPPORT');
   });
 });

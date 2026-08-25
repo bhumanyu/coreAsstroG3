@@ -57,7 +57,7 @@ export interface DomainInterpretation {
   readonly dataCompleteness?: DomainDataCompleteness;
   readonly conclusionData?: DomainConclusionData;
   readonly reasoningTrace?: ReasoningTrace;
-  readonly reasoningVersion?: 'CW-01';
+  readonly reasoningVersion?: 'CW-01' | 'CW-02';
   readonly generatedAt: string;
 }
 
