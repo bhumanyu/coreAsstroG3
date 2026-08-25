@@ -205,10 +205,54 @@ describe('CW-03 Career Transit Synthesis', () => {
 
     // Dasha transit factors carry dashaPlanet and transitingPlanet
     const dashaFactors = result.factors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
-    if (dashaFactors.length > 0) {
-      for (const df of dashaFactors) {
-        expect(df.dashaPlanet).toBeDefined();
-        expect(df.transitingPlanet).toBeDefined();
+    expect(dashaFactors.length).toBeGreaterThan(0);
+    for (const df of dashaFactors) {
+      expect(df.dashaPlanet).toBeDefined();
+      expect(df.transitingPlanet).toBeDefined();
+    }
+  });
+
+  it('produces DASHA_LORD_TRANSIT factor with concrete expected dashaPlanet, transitingPlanet, and targetPlanet', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    // In mockHoroscope, natal Sun is at 45° (Taurus) and natal Mercury is at 50° (Taurus).
+    // On 2026-06-01, transiting Sun is in Taurus (~45°), so transit Sun contacts natal Sun and natal Mercury.
+    // Setting Mahadasha lord to Sun ensures MAHADASHA_PLANET_OVER_NATAL_PLANET fires with target natal Sun / Mercury.
+    const activeDasha = {
+      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
+      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
+    };
+
+    const result = synthesizeCareerTransit(mockHoroscope, activeDasha as any, asOf);
+    const dashaFactors = result.factors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
+    expect(dashaFactors.length).toBeGreaterThan(0);
+
+    const sunOverNatalFactor = dashaFactors.find(
+      (df) => df.dashaPlanet === Planet.SUN && df.targetPlanet !== undefined
+    );
+    expect(sunOverNatalFactor).toBeDefined();
+    expect(sunOverNatalFactor!.dashaPlanet).toBe(Planet.SUN);
+    expect(sunOverNatalFactor!.transitingPlanet).toBe(Planet.SUN);
+    expect(sunOverNatalFactor!.planet).toBe(Planet.SUN);
+    expect([Planet.SUN, Planet.MERCURY]).toContain(sunOverNatalFactor!.targetPlanet);
+  });
+
+  it('strictly satisfies the planet invariant across all factor categories', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    const activeDasha = {
+      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
+      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
+    };
+
+    const result = synthesizeCareerTransit(mockHoroscope, activeDasha as any, asOf);
+    expect(result.factors.length).toBeGreaterThan(0);
+
+    for (const factor of result.factors) {
+      if (['CAREER_HOUSE_TRANSIT', 'CAREER_LORD_TRANSIT', 'CAREER_KARAKA_TRANSIT'].includes(factor.category)) {
+        expect(factor.transitingPlanet).toBeDefined();
+        expect(factor.planet).toBe(factor.transitingPlanet);
+      } else if (factor.category === 'DASHA_LORD_TRANSIT') {
+        expect(factor.dashaPlanet).toBeDefined();
+        expect(factor.planet).toBe(factor.dashaPlanet);
       }
     }
   });

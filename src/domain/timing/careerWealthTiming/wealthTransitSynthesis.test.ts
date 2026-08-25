@@ -2,6 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { Planet, Sign, AyanamsaType, type Horoscope } from '../../../types';
 import { synthesizeWealthTiming } from './wealthTransitSynthesis';
 import { resolveWealthDimensionTransitEffect } from './wealthTransitRules';
+import {
+  WEALTH_DIMENSION_HOUSES,
+  WEALTH_HOUSES,
+  WEALTH_DIMENSION_KARAKAS
+} from '../../wealth/wealthTypes';
+import { mapWealthDimension } from '../../wealth/wealthEvidenceMapper';
+import { WealthEvidenceFamily } from '../../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 
 describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
   const mockHoroscope: Horoscope = {
@@ -114,5 +121,79 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
     expect(accumEffect).toBe('ACTIVATES');
     expect(specEffect).toBe('DOES_NOT_ACTIVATE');
     expect(accumEffect).not.toEqual(specEffect);
+  });
+
+  it('produces DASHA_LORD_TRANSIT factors for Wealth with concrete dashaPlanet, transitingPlanet, and targetPlanet', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    const activeDasha = {
+      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
+      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
+    };
+
+    const result = synthesizeWealthTiming(mockHoroscope, activeDasha as any, asOf);
+    const allFactors = Object.values(result.dimensions).flatMap((d) => d.factors);
+    const dashaFactors = allFactors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
+
+    expect(dashaFactors.length).toBeGreaterThan(0);
+    for (const df of dashaFactors) {
+      expect(df.dashaPlanet).toBeDefined();
+      expect(df.transitingPlanet).toBeDefined();
+      expect(df.planet).toBe(df.dashaPlanet);
+    }
+
+    const sunOverNatalFactor = dashaFactors.find((df) => df.dashaPlanet === Planet.SUN && df.targetPlanet !== undefined);
+    expect(sunOverNatalFactor).toBeDefined();
+    expect(sunOverNatalFactor!.dashaPlanet).toBe(Planet.SUN);
+    expect(sunOverNatalFactor!.transitingPlanet).toBe(Planet.SUN);
+    expect([Planet.SUN, Planet.MERCURY]).toContain(sunOverNatalFactor!.targetPlanet);
+  });
+
+  it('strictly satisfies the planet invariant across all wealth factor categories', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    const activeDasha = {
+      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
+      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
+    };
+
+    const result = synthesizeWealthTiming(mockHoroscope, activeDasha as any, asOf);
+    const allFactors = Object.values(result.dimensions).flatMap((d) => d.factors);
+    expect(allFactors.length).toBeGreaterThan(0);
+
+    for (const factor of allFactors) {
+      if (['WEALTH_HOUSE_TRANSIT', 'WEALTH_LORD_TRANSIT', 'WEALTH_KARAKA_TRANSIT'].includes(factor.category)) {
+        expect(factor.transitingPlanet).toBeDefined();
+        expect(factor.planet).toBe(factor.transitingPlanet);
+      } else if (factor.category === 'DASHA_LORD_TRANSIT') {
+        expect(factor.dashaPlanet).toBeDefined();
+        expect(factor.planet).toBe(factor.dashaPlanet);
+      }
+    }
+  });
+
+  it('aligns canonical WEALTH_DIMENSION_HOUSES and WEALTH_DIMENSION_KARAKAS across modules', () => {
+    expect(WEALTH_DIMENSION_HOUSES.ACCUMULATION).toBe(2);
+    expect(WEALTH_DIMENSION_HOUSES.GAINS).toBe(11);
+    expect(WEALTH_DIMENSION_HOUSES.FORTUNE).toBe(9);
+    expect(WEALTH_DIMENSION_HOUSES.SPECULATION).toBe(5);
+
+    expect(WEALTH_HOUSES).toEqual([2, 11, 9, 5]);
+
+    expect(WEALTH_DIMENSION_KARAKAS.ACCUMULATION).toContain(Planet.JUPITER);
+    expect(WEALTH_DIMENSION_KARAKAS.ACCUMULATION).toContain(Planet.VENUS);
+    expect(WEALTH_DIMENSION_KARAKAS.GAINS).toContain(Planet.JUPITER);
+    expect(WEALTH_DIMENSION_KARAKAS.FORTUNE).toContain(Planet.JUPITER);
+    expect(WEALTH_DIMENSION_KARAKAS.SPECULATION).toContain(Planet.VENUS);
+    expect(WEALTH_DIMENSION_KARAKAS.SPECULATION).toContain(Planet.MERCURY);
+
+    // Verify mapWealthDimension corresponds to canonical houses
+    const dummyHouse2: any = { evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE };
+    const dummyHouse11: any = { evidenceFamily: WealthEvidenceFamily.ELEVENTH_HOUSE };
+    const dummyHouse9: any = { evidenceFamily: WealthEvidenceFamily.NINTH_HOUSE };
+    const dummyHouse5: any = { evidenceFamily: WealthEvidenceFamily.FIFTH_HOUSE };
+
+    expect(mapWealthDimension(dummyHouse2)).toBe('ACCUMULATION');
+    expect(mapWealthDimension(dummyHouse11)).toBe('GAINS');
+    expect(mapWealthDimension(dummyHouse9)).toBe('FORTUNE');
+    expect(mapWealthDimension(dummyHouse5)).toBe('SPECULATION');
   });
 });
