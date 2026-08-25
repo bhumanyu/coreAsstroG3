@@ -276,7 +276,20 @@ export function interpretCareerV2(
         summary: 'Timing calculation unavailable: asOf date not provided.'
       });
     }
-
+    // INVARIANT & ARCHITECTURAL CONTRACT:
+    // (a) Traceability vs. Natal Scoring Non-Double-Counting Invariant:
+    //     These DASHA-sourced evidence items are injected into `mergedEvidence` for traceability and auditability only.
+    //     The manifestation resolver (synthesizeCareerManifestations / resolveManifestation) explicitly excludes
+    //     items with `source === 'DASHA'` from natal scoring and reads dasha contributions directly from the
+    //     separate `careerDashaSynthesis` parameter, guaranteeing zero double-counting of dasha influences.
+    // (b) Strength vs. Priority Distinction:
+    //     `strength` here encodes factor magnitude (derived from `f.weight >= 2.0` -> 'STRONG' vs 'MODERATE')
+    //     while `priority` (derived from `getCareerDashaEvidencePriority`) encodes the MD > AD > PD temporal and
+    //     semantic hierarchy. These two are intentionally distinct orthogonal concepts.
+    // TODO: Architectural note on evidence roles: Dasha factor evidence currently uses a blanket `role: 'MODIFIER'`.
+    //       A period-derived role mapping (e.g. MD -> PRIMARY-equivalent, AD -> MODIFIER, PD -> REFINEMENT)
+    //       can be evaluated if the EvidenceRole union is extended; currently the temporal/semantic hierarchy is cleanly
+    //       governed by the `priority` field without risking cross-engine regressions.
     const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
       const priority = getCareerDashaEvidencePriority(f.period, f.category);
 
@@ -448,7 +461,20 @@ export function interpretCareerV2(
       summary: 'Timing calculation unavailable: asOf date not provided.'
     });
   }
-
+  // INVARIANT & ARCHITECTURAL CONTRACT:
+  // (a) Traceability vs. Natal Scoring Non-Double-Counting Invariant:
+  //     These DASHA-sourced evidence items are injected into `mergedEvidence` for traceability and auditability only.
+  //     The manifestation resolver (synthesizeCareerManifestations / resolveManifestation) explicitly excludes
+  //     items with `source === 'DASHA'` from natal scoring and reads dasha contributions directly from the
+  //     separate `careerDashaSynthesis` parameter, guaranteeing zero double-counting of dasha influences.
+  // (b) Strength vs. Priority Distinction:
+  //     `strength` here encodes factor magnitude (derived from `f.weight >= 2.0` -> 'STRONG' vs 'MODERATE')
+  //     while `priority` (derived from `getCareerDashaEvidencePriority`) encodes the MD > AD > PD temporal and
+  //     semantic hierarchy. These two are intentionally distinct orthogonal concepts.
+  // TODO: Architectural note on evidence roles: Dasha factor evidence currently uses a blanket `role: 'MODIFIER'`.
+  //       A period-derived role mapping (e.g. MD -> PRIMARY-equivalent, AD -> MODIFIER, PD -> REFINEMENT)
+  //       can be evaluated if the EvidenceRole union is extended; currently the temporal/semantic hierarchy is cleanly
+  //       governed by the `priority` field without risking cross-engine regressions.
   const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
     const priority = getCareerDashaEvidencePriority(f.period, f.category);
 
