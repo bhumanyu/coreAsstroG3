@@ -20,6 +20,7 @@ import {
   CareerHierarchyFact,
   CareerTimingFact,
   CareerPeriodTimingFact,
+  CareerDashaSynthesisFact,
   DashaFacts,
   DashaInterpretationFacts,
   DashaPairFacts,
@@ -525,6 +526,7 @@ function buildCareerFact(
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
 
   let hierarchy: CareerHierarchyFact | undefined;
+  let dashaSynthesisFact: CareerDashaSynthesisFact | undefined;
   const careerDashaSynthesis = careerInterpretation?.conclusionData?.careerDashaSynthesis;
 
   if (careerDashaSynthesis && careerDashaSynthesis.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
@@ -534,6 +536,32 @@ function buildCareerFact(
       if (effect === 'CHALLENGES' || effect === 'STRONGLY_CHALLENGES') return 'CHALLENGES';
       if (effect === 'MIXED') return 'PARTIALLY_ACTIVATES';
       return 'DOES_NOT_ACTIVATE';
+    };
+
+    dashaSynthesisFact = {
+      reasoningVersion: 'CW-02',
+      md: {
+        planet: syn.md.planet,
+        effect: syn.md.effect,
+        factors: syn.md.factors.map((f: { statement: string }) => f.statement)
+      },
+      ad: {
+        planet: syn.ad.planet,
+        effect: syn.ad.effect,
+        factors: syn.ad.factors.map((f: { statement: string }) => f.statement)
+      },
+      pd: {
+        planet: syn.pd.planet,
+        effect: syn.pd.effect,
+        factors: syn.pd.factors.map((f: { statement: string }) => f.statement)
+      },
+      hierarchy: {
+        mdRole: syn.hierarchy.mdRole,
+        adRole: syn.hierarchy.adRole,
+        pdRole: syn.hierarchy.pdRole,
+        combinedEffect: syn.combinedEffect
+      },
+      summary: syn.summary
     };
 
     hierarchy = {
@@ -587,7 +615,8 @@ function buildCareerFact(
   const enrichedTiming: CareerTimingFact | undefined = timing
     ? {
         ...timing,
-        ...(hierarchy ? { hierarchy } : {})
+        ...(hierarchy ? { hierarchy } : {}),
+        ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {})
       }
     : undefined;
 
@@ -600,7 +629,8 @@ function buildCareerFact(
       supportingFactors: [...career.conclusion.keySupportingFactors],
       challengingFactors: [...career.conclusion.keyChallengingFactors],
       conditionalFactors: [...career.conclusion.keyConditionalFactors],
-      ...(enrichedTiming ? { timing: enrichedTiming } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {}),
+      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {})
     };
   }
 
@@ -614,7 +644,8 @@ function buildCareerFact(
       supportingFactors: [],
       challengingFactors: [],
       conditionalFactors: [],
-      ...(enrichedTiming ? { timing: enrichedTiming } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {}),
+      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {})
     };
   }
 

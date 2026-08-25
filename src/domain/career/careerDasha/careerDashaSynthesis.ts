@@ -50,15 +50,19 @@ export function synthesizeCareerDashaPlanet(
     weight: number,
     statement: string,
     houses?: readonly number[],
+    evidenceIds?: readonly string[],
     meta?: Record<string, unknown>
   ) => {
     factors.push({
       id: `CAREER_DASHA_${period}_${planet.toUpperCase()}_${category}_${suffix}`,
+      period,
+      planet,
       category,
       direction,
       weight,
       statement,
       ...(houses ? { houses } : {}),
+      ...(evidenceIds ? { evidenceIds } : {}),
       ...(meta ? { meta } : {})
     });
   };
@@ -158,7 +162,12 @@ export function synthesizeCareerDashaPlanet(
   }
 
   // 6. State
-  const stRaw = typeof activation.state === 'string' ? activation.state : undefined;
+  const stRaw =
+    typeof activation.state === 'string'
+      ? (activation.state as string)
+      : activation.state?.condition
+        ? String(activation.state.condition)
+        : undefined;
   if (stRaw) {
     const stUpper = stRaw.toUpperCase();
     let direction: CareerFactorDirection = 'NEUTRAL';
@@ -252,12 +261,15 @@ export function synthesizeCareerDashaPlanet(
   // 11. D10 Confirmation
   // TODO: Deferred synthesis - in a future milestone, expand D10 planetary placement/lagnamsha synthesis
   // rather than using chart-level relationship confirmation only.
-  if (d10 && d10.relationship) {
+  if (d10 && d10.relationship && d10.relationship !== 'UNAVAILABLE') {
     let direction: CareerFactorDirection = 'NEUTRAL';
     let weight = 0;
-    if (d10.relationship === 'CONFIRMS' || d10.relationship === 'PARTIALLY_CONFIRMS') {
+    if (d10.relationship === 'CONFIRMS') {
       direction = 'SUPPORT';
-      weight = d10.relationship === 'CONFIRMS' ? 1.5 : 1.0;
+      weight = 1.5;
+    } else if (d10.relationship === 'MODIFIES' || d10.relationship === 'PARTIALLY_CONFIRMS') {
+      direction = 'SUPPORT';
+      weight = 1.0;
     } else if (d10.relationship === 'CONFLICTS') {
       direction = 'CHALLENGE';
       weight = 1.5;
@@ -275,7 +287,9 @@ export function synthesizeCareerDashaPlanet(
   }
 
   const d10Effect: 'SUPPORTS' | 'CHALLENGES' | 'NEUTRAL' =
-    d10?.relationship === 'CONFIRMS' || d10?.relationship === 'PARTIALLY_CONFIRMS'
+    d10?.relationship === 'CONFIRMS' ||
+    d10?.relationship === 'MODIFIES' ||
+    d10?.relationship === 'PARTIALLY_CONFIRMS'
       ? 'SUPPORTS'
       : d10?.relationship === 'CONFLICTS'
         ? 'CHALLENGES'
@@ -301,7 +315,12 @@ export function synthesizeCareerDashaPlanet(
   const resolvedConfidence: InterpretationConfidence =
     input.confidence ??
     (activation as any).confidence ??
-    (activation.strength?.level === 'STRONG' || activation.strength?.score !== undefined ? 'HIGH' : 'MEDIUM');
+    (activation.strength?.meetsMinimum ||
+    (activation.strength?.totalRupa !== undefined && activation.strength.totalRupa >= 5) ||
+    (activation.strength as any)?.level === 'STRONG' ||
+    (activation.strength as any)?.score !== undefined
+      ? 'HIGH'
+      : 'MEDIUM');
 
   const supportingFactorIds = Object.freeze(
     factors.filter((f) => f.direction === 'SUPPORT').map((f) => f.id)
@@ -433,6 +452,12 @@ export function buildCareerDashaSynthesis(
     const adFallback = fallbackPlanet('AD');
     const pdFallback = fallbackPlanet('PD');
 
+    const timing = Object.freeze({
+      md: Object.freeze({ period: 'MD' as const, planet: Planet.SUN }),
+      ad: Object.freeze({ period: 'AD' as const, planet: Planet.SUN }),
+      pd: Object.freeze({ period: 'PD' as const, planet: Planet.SUN })
+    });
+
     const combined: CareerDashaPeriodSynthesis = Object.freeze({
       hierarchy: Object.freeze({
         mdRole: 'PRIMARY' as const,
@@ -451,6 +476,8 @@ export function buildCareerDashaSynthesis(
     return Object.freeze({
       asOf: undefined,
       natalPromiseProtected: true,
+      reasoningVersion: 'CW-02' as const,
+      timing,
       md: mdFallback,
       ad: adFallback,
       pd: pdFallback,
@@ -510,9 +537,32 @@ export function buildCareerDashaSynthesis(
   const combined = synthesizeCareerDashaPeriods(md, ad, pd);
   const allFactors = Object.freeze([...md.factors, ...ad.factors, ...pd.factors]);
 
+  const timing = Object.freeze({
+    md: Object.freeze({
+      period: 'MD' as const,
+      planet: md.planet,
+      ...(md.start ? { start: md.start } : {}),
+      ...(md.end ? { end: md.end } : {})
+    }),
+    ad: Object.freeze({
+      period: 'AD' as const,
+      planet: ad.planet,
+      ...(ad.start ? { start: ad.start } : {}),
+      ...(ad.end ? { end: ad.end } : {})
+    }),
+    pd: Object.freeze({
+      period: 'PD' as const,
+      planet: pd.planet,
+      ...(pd.start ? { start: pd.start } : {}),
+      ...(pd.end ? { end: pd.end } : {})
+    })
+  });
+
   return Object.freeze({
     asOf,
     natalPromiseProtected: true,
+    reasoningVersion: 'CW-02' as const,
+    timing,
     md,
     ad,
     pd,

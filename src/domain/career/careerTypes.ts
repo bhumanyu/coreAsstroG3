@@ -29,6 +29,38 @@ export const CAREER_PRIMARY_LORDS: ReadonlySet<string> = new Set(['10L']);
 export const CAREER_SUPPORTING_LORDS: ReadonlySet<string> = new Set(['6L', '2L', '11L']);
 export const CAREER_CHALLENGING_LORDS: ReadonlySet<string> = new Set(['8L', '12L']);
 
+export interface CareerHousePortfolio {
+  readonly primary: readonly number[];
+  readonly supporting: readonly number[];
+  readonly challenging: readonly number[];
+  readonly secondary?: readonly number[];
+}
+
+export const CAREER_HOUSE_PORTFOLIO: CareerHousePortfolio = Object.freeze({
+  primary: Object.freeze([10]),
+  supporting: Object.freeze([6, 2, 11]),
+  challenging: Object.freeze([8, 12]),
+  secondary: Object.freeze([])
+});
+
+export type CareerHouseDirection = 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+
+export function classifyCareerHouse(
+  house: number,
+  portfolio: CareerHousePortfolio = CAREER_HOUSE_PORTFOLIO
+): CareerHouseDirection {
+  if (portfolio.primary.includes(house)) {
+    return 'PRIMARY';
+  }
+  if (portfolio.supporting.includes(house)) {
+    return 'SUPPORTING';
+  }
+  if (portfolio.challenging.includes(house)) {
+    return 'CHALLENGING';
+  }
+  return 'NEUTRAL';
+}
+
 export interface CareerManifestation {
   readonly mode: ManifestationMode;
   readonly confidence: ConfidenceLevel;

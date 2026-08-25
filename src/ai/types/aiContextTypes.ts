@@ -238,6 +238,28 @@ export interface CareerPeriodTimingFact {
   readonly end?: string;
 }
 
+export interface CareerDashaSynthesisPeriodFact {
+  readonly planet: Planet;
+  readonly effect: string;
+  readonly factors: readonly string[];
+}
+
+export interface CareerDashaSynthesisHierarchyFact {
+  readonly mdRole: string;
+  readonly adRole: string;
+  readonly pdRole: string;
+  readonly combinedEffect: string;
+}
+
+export interface CareerDashaSynthesisFact {
+  readonly reasoningVersion: 'CW-02';
+  readonly md: CareerDashaSynthesisPeriodFact;
+  readonly ad: CareerDashaSynthesisPeriodFact;
+  readonly pd: CareerDashaSynthesisPeriodFact;
+  readonly hierarchy: CareerDashaSynthesisHierarchyFact;
+  readonly summary: string;
+}
+
 export interface CareerTimingFact {
   readonly status: 'AVAILABLE' | 'UNAVAILABLE';
   readonly asOf?: string;
@@ -245,6 +267,7 @@ export interface CareerTimingFact {
   readonly antardasha?: CareerPeriodTimingFact;
   readonly pratyantardasha?: CareerPeriodTimingFact;
   readonly hierarchy?: CareerHierarchyFact;
+  readonly dashaSynthesis?: CareerDashaSynthesisFact;
 }
 
 export interface CareerFact {
@@ -262,6 +285,7 @@ export interface CareerFact {
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
   readonly timing?: CareerTimingFact;
+  readonly dashaSynthesis?: CareerDashaSynthesisFact;
 }
 
 export interface WealthDimensionHierarchyFact {
