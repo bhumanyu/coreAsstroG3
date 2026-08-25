@@ -418,6 +418,43 @@ export function interpretCareerV2(
     unresolvedQuestions: []
   });
 
+  const d10Context: D10CareerContext = {
+    relationship: d10Relationship,
+    statement: buildD10Statement(d10Evidence, d10Relationship)
+  };
+
+  const careerDashaSynthesis = buildCareerDashaSynthesis({
+    dashaInterpretation: horoscope.dashaInterpretation,
+    d10Context
+  });
+
+  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
+  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+
+  let careerTimingSynthesis: CareerTimingSynthesis;
+  if (asOfDate && !isNaN(asOfDate.getTime())) {
+    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
+    careerTimingSynthesis = synthesizeCareerTiming(natalStrength, careerDashaSynthesis, careerTransitSynthesis);
+  } else {
+    careerTimingSynthesis = Object.freeze({
+      natalPromise: natalStrength,
+      dashaEffect: careerDashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA',
+      transitEffect: 'INSUFFICIENT_DATA',
+      overallEffect: 'INSUFFICIENT_DATA',
+      confidence: 0.5,
+      factors: Object.freeze([]),
+      summary: 'Timing calculation unavailable: asOf date not provided.'
+    });
+  }
+
+  const careerManifestationSynthesis = synthesizeCareerManifestations(
+    evidence,
+    careerDashaSynthesis,
+    careerTimingSynthesis,
+    horoscope
+  );
+
   return buildDomainInterpretation({
     domain: 'CAREER',
     evidence,
@@ -430,7 +467,12 @@ export function interpretCareerV2(
     conclusion,
     timingActivations,
     dataCompleteness,
-    conclusionData
+    conclusionData: {
+      ...conclusionData,
+      careerDashaSynthesis,
+      careerTimingSynthesis,
+      careerManifestationSynthesis
+    }
   });
 }
 

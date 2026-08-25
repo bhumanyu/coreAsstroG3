@@ -247,6 +247,138 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     expect(result.dashaSupport).toBe('CHALLENGE');
   });
 
+  it('strictly enforces natal ceiling: natal CHALLENGE + dasha/transit/d10 SUPPORT resolves to CHALLENGED', () => {
+    // Natal promise is challenging for BUSINESS_ENTREPRENEURSHIP
+    const challengingNatalEvidence = createMockNatalEvidence(['CAREER_11H_GAINS_001', 'CAREER_10H_11H_LINK_001'], 'CHALLENGING');
+
+    const supportingDasha: CareerDashaSynthesis = {
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: Planet.MERCURY },
+        ad: { period: 'AD', planet: Planet.SUN },
+        pd: { period: 'PD', planet: Planet.MARS }
+      },
+      md: {
+        period: 'MD',
+        planet: Planet.MERCURY,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 4.0,
+        challengeScore: 0,
+        netScore: 4.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [3, 7],
+        d10Effect: 'SUPPORTS',
+        summary: 'Mercury MD supports enterprise.'
+      },
+      ad: {
+        period: 'AD',
+        planet: Planet.SUN,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 2.0,
+        challengeScore: 0,
+        netScore: 2.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Sun AD supports enterprise.'
+      },
+      pd: {
+        period: 'PD',
+        planet: Planet.MARS,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 1.0,
+        challengeScore: 0,
+        netScore: 1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [3],
+        d10Effect: 'SUPPORTS',
+        summary: 'Mars PD supports enterprise.'
+      },
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 7.0,
+        summary: 'Combined dasha strongly supports enterprise.'
+      },
+      factors: [
+        {
+          id: 'DASH_MERC_1',
+          planet: Planet.MERCURY,
+          period: 'MD',
+          category: 'KARAKA',
+          direction: 'SUPPORT',
+          weight: 2.0,
+          statement: 'Mercury MD activates commercial enterprise.'
+        }
+      ],
+      summary: 'Dasha supports business enterprise.'
+    };
+
+    const supportingTransit: CareerTimingSynthesis = {
+      natalPromise: 'WEAK',
+      dashaEffect: 'SUPPORTS',
+      transitEffect: 'SUPPORTS',
+      overallEffect: 'ACTIVATES',
+      confidence: 0.9,
+      factors: [
+        {
+          id: 'TR_MERC_3',
+          planet: Planet.MERCURY,
+          category: 'CAREER_HOUSE_TRANSIT',
+          direction: 'SUPPORT',
+          weight: 1.5,
+          statement: 'Mercury transit supports enterprise.'
+        }
+      ],
+      summary: 'Timing supports enterprise.'
+    };
+
+    const supportingD10Factors = [
+      {
+        id: 'D10_ENTREPRENEURSHIP_Mercury_SUPPORT',
+        mode: 'BUSINESS_ENTREPRENEURSHIP' as const,
+        direction: 'SUPPORT' as const,
+        weight: 1.5,
+        planet: Planet.MERCURY,
+        statement: 'D10 Mercury supports commercial ventures.'
+      }
+    ];
+
+    const result = resolveManifestation(
+      'BUSINESS_ENTREPRENEURSHIP',
+      challengingNatalEvidence,
+      supportingDasha,
+      supportingTransit,
+      supportingD10Factors
+    );
+
+    // Invariant: Natal ceiling MUST prevent status from becoming STRONGLY_SUPPORTED or SUPPORTED or MIXED
+    expect(result.mode).toBe('BUSINESS_ENTREPRENEURSHIP');
+    expect(result.natalSupport).toBe('CHALLENGE');
+    expect(result.dashaSupport).toBe('SUPPORT');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d10Support).toBe('SUPPORT');
+    expect(result.status).toBe('CHALLENGED');
+    expect(result.confidence).toBe('HIGH');
+  });
+
   it('synthesizes all 7 canonical career manifestation modes via synthesizeCareerManifestations', () => {
     const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_11H_GAINS_001']);
     const allModes = synthesizeCareerManifestations(natalEvidence);

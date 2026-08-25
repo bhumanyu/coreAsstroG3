@@ -78,27 +78,30 @@ export function resolveWealthDimensionManifestation(
     natalSupport = natalChallengeCount >= natalSupportCount ? 'CHALLENGE' : 'SUPPORT';
   }
 
-  // 2. D2 VARGA FACTORS
+  // 2. D2 VARGA FACTORS (Canonical VargaRelationship: 'CONFIRMS' | 'CONFLICTS' | 'PARTIALLY_CONFIRMS' | 'MODIFIES' | 'UNAVAILABLE')
   let d2Support: WealthManifestationDirection = 'NEUTRAL';
-  if (d2Relationship === 'CONFIRMED' || d2Relationship === 'SUPPORTIVE' || d2Relationship === 'FAVORABLE') {
+  if (d2Relationship === 'CONFIRMS' || d2Relationship === 'PARTIALLY_CONFIRMS') {
     d2Support = 'SUPPORT';
+    const isPartial = d2Relationship === 'PARTIALLY_CONFIRMS';
     factors.push({
-      id: `D2_${dimension}_CONFIRMED`,
+      id: `D2_${dimension}_${d2Relationship}`,
       dimension,
       direction: 'SUPPORT',
-      weight: 1.0,
+      weight: isPartial ? 0.5 : 1.0,
       source: 'D2',
-      statement: `D2 Hora confirms wealth capacity for ${dimension.toLowerCase()}.`
+      statement: isPartial
+        ? `D2 Hora partially confirms wealth capacity for ${dimension.toLowerCase()}.`
+        : `D2 Hora confirms wealth capacity for ${dimension.toLowerCase()}.`
     });
-  } else if (d2Relationship === 'CONTRADICTED' || d2Relationship === 'CHALLENGED' || d2Relationship === 'UNFAVORABLE') {
+  } else if (d2Relationship === 'CONFLICTS') {
     d2Support = 'CHALLENGE';
     factors.push({
-      id: `D2_${dimension}_CONTRADICTED`,
+      id: `D2_${dimension}_CONFLICTS`,
       dimension,
       direction: 'CHALLENGE',
       weight: 1.0,
       source: 'D2',
-      statement: `D2 Hora contradicts or restricts wealth capacity for ${dimension.toLowerCase()}.`
+      statement: `D2 Hora conflicts with or restricts wealth capacity for ${dimension.toLowerCase()}.`
     });
   }
 
