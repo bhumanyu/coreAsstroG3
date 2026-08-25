@@ -379,6 +379,371 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     expect(result.confidence).toBe('HIGH');
   });
 
+  it('Test C: resolves to MIXED when natal SUPPORT encounters any secondary CHALLENGE (dasha challenge)', () => {
+    const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
+
+    const dashaChallenge: CareerDashaSynthesis = {
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: Planet.SUN },
+        ad: { period: 'AD', planet: Planet.MARS },
+        pd: { period: 'PD', planet: Planet.JUPITER }
+      },
+      md: {
+        period: 'MD',
+        planet: Planet.SUN,
+        effect: 'CHALLENGES',
+        confidence: 'HIGH',
+        supportScore: 0,
+        challengeScore: 3.0,
+        netScore: -3.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [8],
+        d10Effect: 'CHALLENGES',
+        summary: 'Sun MD challenges.'
+      },
+      ad: {
+        period: 'AD',
+        planet: Planet.MARS,
+        effect: 'CHALLENGES',
+        confidence: 'HIGH',
+        supportScore: 0,
+        challengeScore: 1.0,
+        netScore: -1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [12],
+        d10Effect: 'CHALLENGES',
+        summary: 'Mars AD challenges.'
+      },
+      pd: {
+        period: 'PD',
+        planet: Planet.JUPITER,
+        effect: 'CHALLENGES',
+        confidence: 'HIGH',
+        supportScore: 0,
+        challengeScore: 0.5,
+        netScore: -0.5,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [6],
+        d10Effect: 'CHALLENGES',
+        summary: 'Jupiter PD challenges.'
+      },
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'CHALLENGES',
+        combinedConfidence: 'HIGH',
+        combinedScore: -4.5,
+        summary: 'Dasha challenges.'
+      },
+      factors: [
+        {
+          id: 'DASH_SUN_CHALLENGE',
+          planet: Planet.SUN,
+          period: 'MD',
+          category: 'KARAKA',
+          direction: 'CHALLENGE',
+          weight: 2.0,
+          statement: 'Sun MD challenges leadership authority.'
+        }
+      ],
+      summary: 'Dasha restricts leadership.'
+    };
+
+    const transitSupport: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'CHALLENGES',
+      transitEffect: 'SUPPORTS',
+      overallEffect: 'MODIFIES',
+      confidence: 0.8,
+      factors: [
+        {
+          id: 'TR_JUP_10',
+          planet: Planet.JUPITER,
+          category: 'CAREER_HOUSE_TRANSIT',
+          direction: 'SUPPORT',
+          weight: 1.5,
+          statement: 'Jupiter transit supports 10th house.'
+        }
+      ],
+      summary: 'Transit supports.'
+    };
+
+    const d10Support = [
+      {
+        id: 'D10_LEADERSHIP_Sun_SUPPORT',
+        mode: 'LEADERSHIP' as const,
+        direction: 'SUPPORT' as const,
+        weight: 1.5,
+        planet: Planet.SUN,
+        statement: 'D10 Sun in 10th house supports leadership.'
+      }
+    ];
+
+    const result = resolveManifestation('LEADERSHIP', natalEvidence, dashaChallenge, transitSupport, d10Support);
+
+    expect(result.mode).toBe('LEADERSHIP');
+    expect(result.natalSupport).toBe('SUPPORT');
+    expect(result.dashaSupport).toBe('CHALLENGE');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d10Support).toBe('SUPPORT');
+    expect(result.status).toBe('MIXED');
+    expect(result.confidence).toBe('MEDIUM');
+  });
+
+  it('Test D: resolves to STRONGLY_SUPPORTED when natal SUPPORT + structural secondary SUPPORT (dasha + d10) without transit (transit NEUTRAL)', () => {
+    const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
+
+    const dashaSupport: CareerDashaSynthesis = {
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: Planet.SUN },
+        ad: { period: 'AD', planet: Planet.MARS },
+        pd: { period: 'PD', planet: Planet.JUPITER }
+      },
+      md: {
+        period: 'MD',
+        planet: Planet.SUN,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 4.0,
+        challengeScore: 0,
+        netScore: 4.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Sun MD supports.'
+      },
+      ad: {
+        period: 'AD',
+        planet: Planet.MARS,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 2.0,
+        challengeScore: 0,
+        netScore: 2.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Mars AD supports.'
+      },
+      pd: {
+        period: 'PD',
+        planet: Planet.JUPITER,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 1.0,
+        challengeScore: 0,
+        netScore: 1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Jupiter PD supports.'
+      },
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 7.0,
+        summary: 'Dasha supports.'
+      },
+      factors: [
+        {
+          id: 'DASH_SUN_SUPPORT',
+          planet: Planet.SUN,
+          period: 'MD',
+          category: 'KARAKA',
+          direction: 'SUPPORT',
+          weight: 2.0,
+          statement: 'Sun MD activates authority.'
+        }
+      ],
+      summary: 'Dasha supports leadership.'
+    };
+
+    const transitNeutral: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'SUPPORTS',
+      transitEffect: 'NEUTRAL',
+      overallEffect: 'ACTIVATES',
+      confidence: 0.7,
+      factors: [],
+      summary: 'Transit is neutral.'
+    };
+
+    const d10Support = [
+      {
+        id: 'D10_LEADERSHIP_Sun_SUPPORT',
+        mode: 'LEADERSHIP' as const,
+        direction: 'SUPPORT' as const,
+        weight: 1.5,
+        planet: Planet.SUN,
+        statement: 'D10 Sun supports leadership.'
+      }
+    ];
+
+    const result = resolveManifestation('LEADERSHIP', natalEvidence, dashaSupport, transitNeutral, d10Support);
+
+    expect(result.mode).toBe('LEADERSHIP');
+    expect(result.natalSupport).toBe('SUPPORT');
+    expect(result.dashaSupport).toBe('SUPPORT');
+    expect(result.d10Support).toBe('SUPPORT');
+    expect(result.transitSupport).toBe('NEUTRAL');
+    expect(result.status).toBe('STRONGLY_SUPPORTED');
+    expect(result.confidence).toBe('HIGH');
+  });
+
+  it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence is empty/neutral even with strong dasha + transit + d10 support', () => {
+    // Empty natal evidence: no foundational promise for LEADERSHIP
+    const emptyNatalEvidence: DomainEvidence[] = [];
+
+    const strongDasha: CareerDashaSynthesis = {
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: Planet.SUN },
+        ad: { period: 'AD', planet: Planet.MARS },
+        pd: { period: 'PD', planet: Planet.JUPITER }
+      },
+      md: {
+        period: 'MD',
+        planet: Planet.SUN,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 4.0,
+        challengeScore: 0,
+        netScore: 4.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Sun MD supports.'
+      },
+      ad: {
+        period: 'AD',
+        planet: Planet.MARS,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 2.0,
+        challengeScore: 0,
+        netScore: 2.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Mars AD supports.'
+      },
+      pd: {
+        period: 'PD',
+        planet: Planet.JUPITER,
+        effect: 'SUPPORTS',
+        confidence: 'HIGH',
+        supportScore: 1.0,
+        challengeScore: 0,
+        netScore: 1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [10],
+        d10Effect: 'SUPPORTS',
+        summary: 'Jupiter PD supports.'
+      },
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 7.0,
+        summary: 'Dasha supports.'
+      },
+      factors: [
+        {
+          id: 'DASH_SUN_SUPPORT',
+          planet: Planet.SUN,
+          period: 'MD',
+          category: 'KARAKA',
+          direction: 'SUPPORT',
+          weight: 3.0,
+          statement: 'Sun MD activates leadership.'
+        }
+      ],
+      summary: 'Dasha supports leadership.'
+    };
+
+    const strongTransit: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'SUPPORTS',
+      transitEffect: 'SUPPORTS',
+      overallEffect: 'ACTIVATES',
+      confidence: 0.9,
+      factors: [
+        {
+          id: 'TR_JUP_10',
+          planet: Planet.JUPITER,
+          category: 'CAREER_HOUSE_TRANSIT',
+          direction: 'SUPPORT',
+          weight: 2.0,
+          statement: 'Jupiter transiting 10th house supports leadership.'
+        }
+      ],
+      summary: 'Transit supports.'
+    };
+
+    const strongD10 = [
+      {
+        id: 'D10_LEADERSHIP_Sun_SUPPORT',
+        mode: 'LEADERSHIP' as const,
+        direction: 'SUPPORT' as const,
+        weight: 2.0,
+        planet: Planet.SUN,
+        statement: 'D10 Sun strongly supports leadership.'
+      }
+    ];
+
+    const result = resolveManifestation('LEADERSHIP', emptyNatalEvidence, strongDasha, strongTransit, strongD10);
+
+    // Guardrail: secondary evidence cannot manufacture a manifestation without natal support
+    expect(result.mode).toBe('LEADERSHIP');
+    expect(result.natalSupport).toBe('NEUTRAL');
+    expect(result.dashaSupport).toBe('SUPPORT');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d10Support).toBe('SUPPORT');
+    expect(result.status).toBe('INSUFFICIENT_DATA');
+    expect(result.confidence).toBe('LOW');
+  });
+
   it('synthesizes all 7 canonical career manifestation modes via synthesizeCareerManifestations', () => {
     const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_11H_GAINS_001']);
     const allModes = synthesizeCareerManifestations(natalEvidence);

@@ -79,6 +79,10 @@ export function resolveWealthDimensionManifestation(
   }
 
   // 2. D2 VARGA FACTORS (Canonical VargaRelationship: 'CONFIRMS' | 'CONFLICTS' | 'PARTIALLY_CONFIRMS' | 'MODIFIES' | 'UNAVAILABLE')
+  const d2EvidenceIds = natalEvidence
+    .filter((item) => item.source === 'D2' || item.sourceType === 'VARGA')
+    .map((item) => item.id);
+
   let d2Support: WealthManifestationDirection = 'NEUTRAL';
   if (d2Relationship === 'CONFIRMS' || d2Relationship === 'PARTIALLY_CONFIRMS') {
     d2Support = 'SUPPORT';
@@ -91,7 +95,8 @@ export function resolveWealthDimensionManifestation(
       source: 'D2',
       statement: isPartial
         ? `D2 Hora partially confirms wealth capacity for ${dimension.toLowerCase()}.`
-        : `D2 Hora confirms wealth capacity for ${dimension.toLowerCase()}.`
+        : `D2 Hora confirms wealth capacity for ${dimension.toLowerCase()}.`,
+      ...(d2EvidenceIds.length > 0 ? { evidenceIds: d2EvidenceIds } : {})
     });
   } else if (d2Relationship === 'CONFLICTS') {
     d2Support = 'CHALLENGE';
@@ -101,7 +106,8 @@ export function resolveWealthDimensionManifestation(
       direction: 'CHALLENGE',
       weight: 1.0,
       source: 'D2',
-      statement: `D2 Hora conflicts with or restricts wealth capacity for ${dimension.toLowerCase()}.`
+      statement: `D2 Hora conflicts with or restricts wealth capacity for ${dimension.toLowerCase()}.`,
+      ...(d2EvidenceIds.length > 0 ? { evidenceIds: d2EvidenceIds } : {})
     });
   }
 
