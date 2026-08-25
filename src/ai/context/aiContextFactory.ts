@@ -41,6 +41,7 @@ import {
   TimingActivationEffect
 } from '../types/aiContextTypes';
 import type { CareerTimingActivation } from '../../domain/career/careerTypes';
+import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
@@ -539,22 +540,14 @@ function buildCareerFact(
       return 'DOES_NOT_ACTIVATE';
     };
 
-    const mapSynthesisFactor = (f: {
-      id: string;
-      category: string;
-      direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-      weight: number;
-      statement: string;
-      houses?: readonly number[];
-      evidenceIds?: readonly string[];
-    }): CareerDashaSynthesisFactorFact => ({
+    const mapSynthesisFactor = (f: CareerDashaFactor): CareerDashaSynthesisFactorFact => ({
       id: f.id,
       category: f.category,
       direction: f.direction,
       weight: f.weight,
       statement: f.statement,
-      ...(f.houses ? { houses: f.houses } : {}),
-      ...(f.evidenceIds ? { evidenceIds: f.evidenceIds } : {})
+      ...(f.houses ? { houses: [...f.houses] } : {}),
+      ...(f.evidenceIds ? { evidenceIds: [...f.evidenceIds] } : {})
     });
 
     dashaSynthesisFact = {
@@ -610,7 +603,7 @@ function buildCareerFact(
       },
       overallEffect: mapEffect(syn.combinedEffect),
       confidence: syn.combinedConfidence === 'HIGH' ? 0.9 : syn.combinedConfidence === 'MEDIUM' ? 0.7 : 0.5,
-      evidenceIds: careerDashaSynthesis.factors.map((f: { id: string }) => f.id),
+      evidenceIds: (careerDashaSynthesis.factors ?? []).map((f: { id: string }) => f.id),
       summary: syn.summary
     };
   } else if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {

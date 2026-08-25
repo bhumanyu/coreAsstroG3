@@ -8,6 +8,7 @@ import {
   getCareerHousePortfolio,
   classifyCareerHouseOwnership,
   scoreCareerDashaPlanet,
+  isCareerRelevantYoga,
   type D10CareerContext
 } from './index';
 
@@ -293,5 +294,45 @@ describe('Career Dasha Synthesis', () => {
     const d10Factor = synthesis.factors.find((f) => f.category === 'D10');
     expect(d10Factor?.weight).toBe(1.5);
     expect(d10Factor?.direction).toBe('CHALLENGE');
+  });
+
+  describe('isCareerRelevantYoga fallback hierarchy', () => {
+    it('returns true when yoga has no participatingHouses but dasha planet owns H10 (career primary house)', () => {
+      const yoga = { yogaType: 'Raja Yoga', finalStatus: 'STRONG' };
+      const activation: DashaPlanetActivation = {
+        planet: Planet.SATURN,
+        house: 5,
+        sign: 'CAPRICORN' as any,
+        ownedHouses: [10],
+        functionalRoles: [FunctionalRole.YOGAKARAKA],
+        functionalNature: FunctionalNature.BENEFIC,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+      expect(isCareerRelevantYoga(yoga, activation)).toBe(true);
+    });
+
+    it('returns false when yoga has no participatingHouses and dasha planet owns only non-career house', () => {
+      const yoga = { yogaType: 'Raja Yoga', finalStatus: 'STRONG' };
+      const activation: DashaPlanetActivation = {
+        planet: Planet.SATURN,
+        house: 5,
+        sign: 'CAPRICORN' as any,
+        ownedHouses: [4],
+        functionalRoles: [],
+        functionalNature: FunctionalNature.NEUTRAL,
+        dignity: 'NEUTRAL',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+      expect(isCareerRelevantYoga(yoga, activation)).toBe(false);
+    });
   });
 });

@@ -2,6 +2,7 @@ import { Planet, Sign, NatalGrahaDrishti } from '../../types';
 import type { DashaYogaReference } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { TimingActivationEffect } from '../../domain/interpretation/DomainInterpretationTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
+import type { CareerFactorCategory } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import {
   AiAvailability,
   AiConfidence,
@@ -240,7 +241,7 @@ export interface CareerPeriodTimingFact {
 
 export interface CareerDashaSynthesisFactorFact {
   readonly id: string;
-  readonly category: string;
+  readonly category: CareerFactorCategory;
   readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly weight: number;
   readonly statement: string;
