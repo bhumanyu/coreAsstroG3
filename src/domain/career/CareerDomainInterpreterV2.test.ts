@@ -1467,6 +1467,14 @@ describe('CareerDomainInterpreterV2', () => {
     const byMode = Object.fromEntries(
       (typedManifestations ?? []).map((m: CareerManifestationSynthesis) => [m.mode, m])
     );
+    expect(typedManifestations).toHaveLength(7);
+    expect(byMode).toHaveProperty('LEADERSHIP');
+    expect(byMode).toHaveProperty('MANAGEMENT');
+    expect(byMode).toHaveProperty('TECHNICAL_SPECIALIZATION');
+    expect(byMode).toHaveProperty('SERVICE_EMPLOYMENT');
+    expect(byMode).toHaveProperty('AUTHORITY');
+    expect(byMode).toHaveProperty('INDEPENDENT_WORK');
+    expect(byMode).toHaveProperty('BUSINESS_ENTREPRENEURSHIP');
     expect(byMode.LEADERSHIP.status).toBe('STRONGLY_SUPPORTED');
     expect(byMode.MANAGEMENT.status).toBe('STRONGLY_SUPPORTED');
     expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('STRONGLY_SUPPORTED');

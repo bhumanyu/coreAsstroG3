@@ -4,13 +4,18 @@ import {
   synthesizeWealthManifestations
 } from './wealthManifestationSynthesis';
 import { createDomainEvidence, type DomainEvidence } from '../../interpretation';
-import type { WealthTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
+import type {
+  WealthTimingSynthesis,
+  WealthTransitDimensionSynthesis,
+  WealthTransitFactor
+} from '../../timing/careerWealthTiming/careerWealthTimingTypes';
+import type { WealthDimension } from '../../wealth/wealthTypes';
 import { Planet } from '../../../types';
 
 describe('wealthManifestationSynthesis (CW-04B)', () => {
   const createMockNatalEvidence = (
     rules: string[],
-    dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION',
+    dimension?: WealthDimension,
     polarity: 'SUPPORTING' | 'CHALLENGING' = 'SUPPORTING'
   ): DomainEvidence[] => {
     return rules.map((ruleId, idx) =>
@@ -28,6 +33,33 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
       })
     );
   };
+
+  const createMockWealthDimensionTiming = (
+    dimension: WealthDimension,
+    overrides?: Partial<WealthTransitDimensionSynthesis>
+  ): WealthTransitDimensionSynthesis => ({
+    dimension,
+    natalPromise: 'STRONG',
+    dashaEffect: 'NEUTRAL',
+    transitEffect: 'NEUTRAL',
+    overallEffect: 'ACTIVATES',
+    confidence: 0.8,
+    factors: [],
+    summary: `${dimension} timing summary`,
+    ...overrides
+  });
+
+  const createMockWealthTiming = (
+    dimMap?: Partial<Record<WealthDimension, Partial<WealthTransitDimensionSynthesis>>>
+  ): WealthTimingSynthesis => ({
+    dimensions: {
+      ACCUMULATION: createMockWealthDimensionTiming('ACCUMULATION', dimMap?.ACCUMULATION),
+      GAINS: createMockWealthDimensionTiming('GAINS', dimMap?.GAINS),
+      FORTUNE: createMockWealthDimensionTiming('FORTUNE', dimMap?.FORTUNE),
+      SPECULATION: createMockWealthDimensionTiming('SPECULATION', dimMap?.SPECULATION)
+    },
+    overallSummary: 'Wealth timing summary'
+  });
 
   it('returns INSUFFICIENT_DATA when natal evidence for dimension is missing', () => {
     const result = resolveWealthDimensionManifestation('SPECULATION', []);
@@ -189,31 +221,28 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
   it('Test C: resolves to MIXED when natal SUPPORT encounters any secondary CHALLENGE (dasha challenge)', () => {
     const natalEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
 
-    const mockWealthTiming: WealthTimingSynthesis = {
-      dimensions: {
-        ACCUMULATION: {
-          dimension: 'ACCUMULATION',
-          natalPromise: 'STRONG',
-          dashaEffect: 'CHALLENGES',
-          transitEffect: 'SUPPORTS',
-          overallEffect: 'MODIFIES',
-          confidence: 0.8,
-          factors: [
-            {
-              id: 'W_TR_2',
-              planet: Planet.JUPITER,
-              dimension: 'ACCUMULATION',
-              category: 'WEALTH_HOUSE_TRANSIT',
-              direction: 'SUPPORT',
-              weight: 1.5,
-              statement: 'Jupiter transit supports 2nd house.'
-            }
-          ],
-          summary: 'Dasha challenges while transit supports.'
-        }
-      } as any,
-      overallSummary: 'Wealth timing summary'
-    };
+    const mockWealthTiming = createMockWealthTiming({
+      ACCUMULATION: {
+        dimension: 'ACCUMULATION',
+        natalPromise: 'STRONG',
+        dashaEffect: 'CHALLENGES',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'MODIFIES',
+        confidence: 0.8,
+        factors: [
+          {
+            id: 'W_TR_2',
+            planet: Planet.JUPITER,
+            dimension: 'ACCUMULATION',
+            category: 'WEALTH_HOUSE_TRANSIT',
+            direction: 'SUPPORT',
+            weight: 1.5,
+            statement: 'Jupiter transit supports 2nd house.'
+          }
+        ],
+        summary: 'Dasha challenges while transit supports.'
+      }
+    });
 
     const result = resolveWealthDimensionManifestation('ACCUMULATION', natalEvidence, mockWealthTiming, 'CONFIRMS');
 
@@ -229,21 +258,18 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
   it('Test D: resolves to STRONGLY_SUPPORTED when natal SUPPORT + structural secondary SUPPORT (dasha + D2) without transit (transit NEUTRAL)', () => {
     const natalEvidence = createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION');
 
-    const mockWealthTiming: WealthTimingSynthesis = {
-      dimensions: {
-        ACCUMULATION: {
-          dimension: 'ACCUMULATION',
-          natalPromise: 'STRONG',
-          dashaEffect: 'SUPPORTS',
-          transitEffect: 'NEUTRAL',
-          overallEffect: 'ACTIVATES',
-          confidence: 0.8,
-          factors: [],
-          summary: 'Dasha supports accumulation, transit is neutral.'
-        }
-      } as any,
-      overallSummary: 'Wealth timing summary'
-    };
+    const mockWealthTiming = createMockWealthTiming({
+      ACCUMULATION: {
+        dimension: 'ACCUMULATION',
+        natalPromise: 'STRONG',
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'NEUTRAL',
+        overallEffect: 'ACTIVATES',
+        confidence: 0.8,
+        factors: [],
+        summary: 'Dasha supports accumulation, transit is neutral.'
+      }
+    });
 
     const result = resolveWealthDimensionManifestation('ACCUMULATION', natalEvidence, mockWealthTiming, 'CONFIRMS');
 
@@ -259,31 +285,28 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
   it('Test 5: resolves to INSUFFICIENT_DATA when natal evidence for dimension is missing even with strong dasha + transit + D2 support', () => {
     const emptyNatalEvidence: DomainEvidence[] = [];
 
-    const mockWealthTiming: WealthTimingSynthesis = {
-      dimensions: {
-        ACCUMULATION: {
-          dimension: 'ACCUMULATION',
-          natalPromise: 'STRONG',
-          dashaEffect: 'SUPPORTS',
-          transitEffect: 'SUPPORTS',
-          overallEffect: 'ACTIVATES',
-          confidence: 0.9,
-          factors: [
-            {
-              id: 'W_TR_2',
-              planet: Planet.JUPITER,
-              dimension: 'ACCUMULATION',
-              category: 'WEALTH_HOUSE_TRANSIT',
-              direction: 'SUPPORT',
-              weight: 2.0,
-              statement: 'Jupiter transit supports 2nd house.'
-            }
-          ],
-          summary: 'Timing supports accumulation.'
-        }
-      } as any,
-      overallSummary: 'Wealth timing summary'
-    };
+    const mockWealthTiming = createMockWealthTiming({
+      ACCUMULATION: {
+        dimension: 'ACCUMULATION',
+        natalPromise: 'STRONG',
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'ACTIVATES',
+        confidence: 0.9,
+        factors: [
+          {
+            id: 'W_TR_2',
+            planet: Planet.JUPITER,
+            dimension: 'ACCUMULATION',
+            category: 'WEALTH_HOUSE_TRANSIT',
+            direction: 'SUPPORT',
+            weight: 2.0,
+            statement: 'Jupiter transit supports 2nd house.'
+          }
+        ],
+        summary: 'Timing supports accumulation.'
+      }
+    });
 
     const result = resolveWealthDimensionManifestation('ACCUMULATION', emptyNatalEvidence, mockWealthTiming, 'CONFIRMS');
 
@@ -295,5 +318,51 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(result.d2Support).toBe('SUPPORT');
     expect(result.status).toBe('INSUFFICIENT_DATA');
     expect(result.confidence).toBe('LOW');
+  });
+
+  it('enforces natal ceiling per-dimension: secondary support cannot overturn a natal challenge on an isolated dimension in the same synthesis run', () => {
+    const natalEvidence = [
+      ...createMockNatalEvidence(['WR_JUP_2H_DHANA', 'WR_L2_EXALTED_DHANA'], 'ACCUMULATION', 'SUPPORTING'),
+      ...createMockNatalEvidence(['WR_L5_COMBUST', 'WR_RAHU_5H_VOLATILE'], 'SPECULATION', 'CHALLENGING')
+    ];
+
+    const mockWealthTiming = createMockWealthTiming({
+      ACCUMULATION: {
+        dimension: 'ACCUMULATION',
+        natalPromise: 'STRONG',
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'ACTIVATES',
+        confidence: 0.9,
+        factors: [],
+        summary: 'Timing supports accumulation.'
+      },
+      SPECULATION: {
+        dimension: 'SPECULATION',
+        natalPromise: 'WEAK',
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'ACTIVATES',
+        confidence: 0.9,
+        factors: [],
+        summary: 'Timing supports speculation.'
+      }
+    });
+
+    const synthesis = synthesizeWealthManifestations(natalEvidence, mockWealthTiming, 'CONFIRMS');
+
+    // ACCUMULATION has natal SUPPORT + secondary SUPPORT -> STRONGLY_SUPPORTED
+    expect(synthesis.dimensions.ACCUMULATION.status).toBe('STRONGLY_SUPPORTED');
+    expect(synthesis.dimensions.ACCUMULATION.natalSupport).toBe('SUPPORT');
+    expect(synthesis.dimensions.ACCUMULATION.dashaSupport).toBe('SUPPORT');
+    expect(synthesis.dimensions.ACCUMULATION.transitSupport).toBe('SUPPORT');
+    expect(synthesis.dimensions.ACCUMULATION.d2Support).toBe('SUPPORT');
+
+    // SPECULATION has natal CHALLENGE + secondary SUPPORT everywhere -> strictly CHALLENGED (natal ceiling)
+    expect(synthesis.dimensions.SPECULATION.status).toBe('CHALLENGED');
+    expect(synthesis.dimensions.SPECULATION.natalSupport).toBe('CHALLENGE');
+    expect(synthesis.dimensions.SPECULATION.dashaSupport).toBe('SUPPORT');
+    expect(synthesis.dimensions.SPECULATION.transitSupport).toBe('SUPPORT');
+    expect(synthesis.dimensions.SPECULATION.d2Support).toBe('SUPPORT');
   });
 });
