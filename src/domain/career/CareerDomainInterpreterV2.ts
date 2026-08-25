@@ -83,6 +83,7 @@ import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
 import { synthesizeCareerTransit, synthesizeCareerTiming, type CareerTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
+import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretCareerV2(
@@ -357,6 +358,14 @@ export function interpretCareerV2(
       horoscope
     );
 
+    const careerFinalSynthesis = synthesizeCareerFinal({
+      natalPromise: cw01Result.finalStrength,
+      dashaSynthesis: careerDashaSynthesis,
+      timingSynthesis: careerTimingSynthesis,
+      manifestationSynthesis: careerManifestationSynthesis,
+      d10Relationship
+    });
+
     return buildDomainInterpretation({
       domain: 'CAREER',
       evidence: mergedEvidence,
@@ -375,10 +384,11 @@ export function interpretCareerV2(
         currentPressure: cw01Result.currentPressure,
         careerDashaSynthesis,
         careerTimingSynthesis,
-        careerManifestationSynthesis
+        careerManifestationSynthesis,
+        careerFinalSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
-      reasoningVersion: 'CW-01'
+      reasoningVersion: 'CW-05'
     });
   }
 
@@ -503,6 +513,14 @@ export function interpretCareerV2(
     horoscope
   );
 
+  const careerFinalSynthesis = synthesizeCareerFinal({
+    natalPromise: natalStrength,
+    dashaSynthesis: careerDashaSynthesis,
+    timingSynthesis: careerTimingSynthesis,
+    manifestationSynthesis: careerManifestationSynthesis,
+    d10Relationship
+  });
+
   return buildDomainInterpretation({
     domain: 'CAREER',
     evidence: mergedEvidence,
@@ -519,8 +537,10 @@ export function interpretCareerV2(
       ...conclusionData,
       careerDashaSynthesis,
       careerTimingSynthesis,
-      careerManifestationSynthesis
-    }
+      careerManifestationSynthesis,
+      careerFinalSynthesis
+    },
+    reasoningVersion: 'CW-05'
   });
 }
 

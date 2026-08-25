@@ -28,6 +28,8 @@ import {
   CareerTimingFactorFact,
   CareerManifestationSynthesisFact,
   CareerManifestationFactorFact,
+  CareerWealthFinalSynthesisFact,
+  WealthDimensionFinalSynthesisFact,
   WealthTimingSynthesisFact,
   WealthTimingFactorFact,
   WealthManifestationSynthesisFact,
@@ -55,6 +57,7 @@ import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynth
 import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerManifestationSynthesis, CareerManifestationFactor } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
+import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
@@ -692,6 +695,9 @@ function buildCareerFact(
     }));
   }
 
+  const careerFinalSynthesis = careerInterpretation?.conclusionData?.careerFinalSynthesis;
+  const careerFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(careerFinalSynthesis);
+
   const enrichedTiming: CareerTimingFact | undefined = timing || careerTimingSynthesisFact
     ? {
         ...(timing ?? { status: 'AVAILABLE' }),
@@ -712,7 +718,8 @@ function buildCareerFact(
       conditionalFactors: [...career.conclusion.keyConditionalFactors],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
       ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
-      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {})
+      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {}),
+      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {})
     };
   }
 
@@ -728,7 +735,8 @@ function buildCareerFact(
       conditionalFactors: [],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
       ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
-      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {})
+      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {}),
+      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {})
     };
   }
 
@@ -888,6 +896,9 @@ function buildWealthFact(
     }
   }
 
+  const wealthFinalSynthesis = wealthInterpretation?.conclusionData?.wealthFinalSynthesis;
+  const wealthFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(wealthFinalSynthesis);
+
   if (wealth) {
     return {
       status: wealth.conclusion.status,
@@ -897,7 +908,8 @@ function buildWealthFact(
       challengingFactors: [...wealth.conclusion.keyChallengingFactors],
       conditionalFactors: [...wealth.conclusion.keyConditionalFactors],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {})
+      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {}),
+      ...(wealthFinalSynthesisFact ? { finalSynthesis: wealthFinalSynthesisFact } : {})
     };
   }
 
@@ -910,11 +922,60 @@ function buildWealthFact(
       challengingFactors: [],
       conditionalFactors: [],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {})
+      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {}),
+      ...(wealthFinalSynthesisFact ? { finalSynthesis: wealthFinalSynthesisFact } : {})
     };
   }
 
   return undefined;
+}
+
+function mapCareerWealthFinalSynthesisToFact(
+  syn?: CareerWealthFinalSynthesis
+): CareerWealthFinalSynthesisFact | undefined {
+  if (!syn) return undefined;
+  const dimensionsFact: Record<string, WealthDimensionFinalSynthesisFact> | undefined = syn.dimensions
+    ? Object.fromEntries(
+        Object.entries(syn.dimensions).map(([dimKey, dimVal]) => [
+          dimKey,
+          {
+            status: dimVal.status,
+            confidence: dimVal.confidence,
+            primaryPromise: dimVal.primaryPromise,
+            dashaEffect: dimVal.dashaEffect,
+            timingEffect: dimVal.timingEffect,
+            divisionalEffect: dimVal.divisionalEffect,
+            summary: dimVal.summary,
+            evidenceIds: [...dimVal.evidenceIds]
+          }
+        ])
+      )
+    : undefined;
+
+  return {
+    reasoningVersion: 'CW-05',
+    domain: syn.domain,
+    status: syn.status,
+    confidence: syn.confidence,
+    primaryPromise: String(syn.primaryPromise),
+    manifestationSummary: syn.manifestationSummary.map((m) => ({
+      mode: m.mode,
+      status: m.status,
+      confidence: m.confidence
+    })),
+    strongestAreas: [...syn.strongestAreas],
+    challengedAreas: [...syn.challengedAreas],
+    dashaEffect: syn.dashaEffect,
+    timingEffect: syn.timingEffect,
+    divisionalEffect: syn.divisionalEffect,
+    keySupport: [...syn.keySupport],
+    keyChallenges: [...syn.keyChallenges],
+    summary: syn.summary,
+    ruleIds: [...syn.ruleIds],
+    evidenceIds: [...syn.evidenceIds],
+    ...(dimensionsFact ? { dimensions: dimensionsFact } : {}),
+    ...(syn.riskProfile ? { riskProfile: syn.riskProfile } : {})
+  };
 }
 
 function normalizeEvidenceEffect(effect: unknown): AiEvidenceEffect {

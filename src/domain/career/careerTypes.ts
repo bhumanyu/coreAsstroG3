@@ -10,6 +10,7 @@ import type { Planet } from '../../types';
 import type { CareerDashaSynthesis } from './careerDasha/careerDashaSynthesisTypes';
 import type { CareerTimingSynthesis } from '../timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
+import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -110,4 +111,5 @@ export interface CareerConclusionData {
   readonly careerDashaSynthesis?: CareerDashaSynthesis;
   readonly careerTimingSynthesis?: CareerTimingSynthesis;
   readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];
+  readonly careerFinalSynthesis?: CareerWealthFinalSynthesis;
 }

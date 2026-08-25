@@ -83,6 +83,7 @@ import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
 import { synthesizeWealthTiming, type WealthTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeWealthManifestations } from './manifestation/wealthManifestationSynthesis';
+import { synthesizeWealthFinal } from '../careerWealth/finalSynthesis/wealthFinalSynthesis';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretWealthV2(
@@ -368,6 +369,17 @@ export function interpretWealthV2(
       'UNAVAILABLE'
     );
 
+    const wealthFinalSynthesis = synthesizeWealthFinal({
+      natalPromise: {
+        ACCUMULATION: cw01Result.dimensionResults.ACCUMULATION.natalStrength,
+        GAINS: cw01Result.dimensionResults.GAINS.natalStrength,
+        FORTUNE: cw01Result.dimensionResults.FORTUNE.natalStrength,
+        SPECULATION: cw01Result.dimensionResults.SPECULATION.natalStrength
+      },
+      manifestationSynthesis: wealthManifestationSynthesis,
+      d2Relationship: 'UNAVAILABLE'
+    });
+
     return buildDomainInterpretation({
       domain: 'WEALTH',
       evidence,
@@ -385,10 +397,11 @@ export function interpretWealthV2(
         ...conclusionData,
         currentActivation: cw01Result.currentActivation,
         currentPressure: cw01Result.currentPressure,
-        wealthManifestationSynthesis
+        wealthManifestationSynthesis,
+        wealthFinalSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
-      reasoningVersion: 'CW-01'
+      reasoningVersion: 'CW-05'
     });
   }
 
@@ -555,6 +568,13 @@ export function interpretWealthV2(
     d2Relationship
   );
 
+  const wealthFinalSynthesis = synthesizeWealthFinal({
+    natalPromise: natalPromises,
+    timingSynthesis: wealthTimingSynthesis,
+    manifestationSynthesis: wealthManifestationSynthesis,
+    d2Relationship
+  });
+
   return buildDomainInterpretation({
     domain: 'WEALTH',
     evidence,
@@ -571,8 +591,10 @@ export function interpretWealthV2(
     conclusionData: {
       ...conclusionData,
       wealthTimingSynthesis,
-      wealthManifestationSynthesis
-    }
+      wealthManifestationSynthesis,
+      wealthFinalSynthesis
+    },
+    reasoningVersion: 'CW-05'
   });
 }
 

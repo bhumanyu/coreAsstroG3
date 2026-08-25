@@ -4,7 +4,11 @@ import {
   synthesizeCareerManifestations
 } from './careerManifestationSynthesis';
 import { createDomainEvidence, type DomainEvidence } from '../../interpretation';
-import type { CareerDashaSynthesis } from '../careerDasha/careerDashaSynthesisTypes';
+import type {
+  CareerDashaSynthesis,
+  CareerDashaPlanetSynthesis
+} from '../careerDasha/careerDashaSynthesisTypes';
+import type { D10ManifestationFactor } from '../d10/d10CareerManifestationTypes';
 import type { CareerTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
 import { Planet } from '../../../types';
 
@@ -34,6 +38,54 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
 
   it('correctly derives STRONGLY_SUPPORTED when natal, D10, dasha, and transit all support', () => {
     const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001', 'CAREER_10L_DIGNITY_001']);
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.SUN,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 4.0,
+      challengeScore: 0,
+      netScore: 4.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Sun MD strongly supports career.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.MARS,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 2.0,
+      challengeScore: 0,
+      netScore: 2.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Mars AD supports career.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.JUPITER,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Jupiter PD supports career.'
+    };
     const mockDasha: CareerDashaSynthesis = {
       natalPromiseProtected: true,
       reasoningVersion: 'CW-02',
@@ -42,59 +94,14 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
         ad: { period: 'AD', planet: Planet.MARS },
         pd: { period: 'PD', planet: Planet.JUPITER }
       },
-      md: {
-        period: 'MD',
-        planet: Planet.SUN,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 4.0,
-        challengeScore: 0,
-        netScore: 4.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Sun MD strongly supports career.'
-      },
-      ad: {
-        period: 'AD',
-        planet: Planet.MARS,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 2.0,
-        challengeScore: 0,
-        netScore: 2.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Mars AD supports career.'
-      },
-      pd: {
-        period: 'PD',
-        planet: Planet.JUPITER,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 1.0,
-        challengeScore: 0,
-        netScore: 1.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Jupiter PD supports career.'
-      },
+      md,
+      ad,
+      pd,
       combined: {
         hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
+        md,
+        ad,
+        pd,
         combinedEffect: 'SUPPORTS',
         combinedConfidence: 'HIGH',
         combinedScore: 7.0,
@@ -158,6 +165,54 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
 
   it('correctly derives CHALLENGED when natal evidence is challenging and timing opposes', () => {
     const challengingEvidence = createMockNatalEvidence(['CAREER_11H_GAINS_001', 'CAREER_10H_11H_LINK_001'], 'CHALLENGING');
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.SATURN,
+      effect: 'CHALLENGES',
+      confidence: 'HIGH',
+      supportScore: 0,
+      challengeScore: 3.0,
+      netScore: -3.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [8],
+      d10Effect: 'CHALLENGES',
+      summary: 'Saturn MD challenges career.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.KETU,
+      effect: 'CHALLENGES',
+      confidence: 'HIGH',
+      supportScore: 0,
+      challengeScore: 1.5,
+      netScore: -1.5,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [12],
+      d10Effect: 'CHALLENGES',
+      summary: 'Ketu AD challenges career.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.RAHU,
+      effect: 'CHALLENGES',
+      confidence: 'HIGH',
+      supportScore: 0,
+      challengeScore: 1.0,
+      netScore: -1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [8],
+      d10Effect: 'CHALLENGES',
+      summary: 'Rahu PD challenges career.'
+    };
     const mockDasha: CareerDashaSynthesis = {
       natalPromiseProtected: true,
       reasoningVersion: 'CW-02',
@@ -166,59 +221,14 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
         ad: { period: 'AD', planet: Planet.KETU },
         pd: { period: 'PD', planet: Planet.RAHU }
       },
-      md: {
-        period: 'MD',
-        planet: Planet.SATURN,
-        effect: 'CHALLENGES',
-        confidence: 'HIGH',
-        supportScore: 0,
-        challengeScore: 3.0,
-        netScore: -3.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [8],
-        d10Effect: 'CHALLENGES',
-        summary: 'Saturn MD challenges career.'
-      },
-      ad: {
-        period: 'AD',
-        planet: Planet.KETU,
-        effect: 'CHALLENGES',
-        confidence: 'HIGH',
-        supportScore: 0,
-        challengeScore: 1.5,
-        netScore: -1.5,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [12],
-        d10Effect: 'CHALLENGES',
-        summary: 'Ketu AD challenges career.'
-      },
-      pd: {
-        period: 'PD',
-        planet: Planet.RAHU,
-        effect: 'CHALLENGES',
-        confidence: 'HIGH',
-        supportScore: 0,
-        challengeScore: 1.0,
-        netScore: -1.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [8],
-        d10Effect: 'CHALLENGES',
-        summary: 'Rahu PD challenges career.'
-      },
+      md,
+      ad,
+      pd,
       combined: {
         hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
+        md,
+        ad,
+        pd,
         combinedEffect: 'CHALLENGES',
         combinedConfidence: 'HIGH',
         combinedScore: -5.5,
@@ -242,15 +252,65 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     const result = resolveManifestation('BUSINESS_ENTREPRENEURSHIP', challengingEvidence, mockDasha);
 
     expect(result.mode).toBe('BUSINESS_ENTREPRENEURSHIP');
-    expect(result.status).toBe('CHALLENGED');
     expect(result.natalSupport).toBe('CHALLENGE');
     expect(result.dashaSupport).toBe('CHALLENGE');
+    expect(result.transitSupport).toBe('NEUTRAL');
+    expect(result.d10Support).toBe('NEUTRAL');
+    expect(result.status).toBe('CHALLENGED');
   });
 
   it('strictly enforces natal ceiling: natal CHALLENGE + dasha/transit/d10 SUPPORT resolves to CHALLENGED', () => {
     // Natal promise is challenging for BUSINESS_ENTREPRENEURSHIP
     const challengingNatalEvidence = createMockNatalEvidence(['CAREER_11H_GAINS_001', 'CAREER_10H_11H_LINK_001'], 'CHALLENGING');
 
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.MERCURY,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 4.0,
+      challengeScore: 0,
+      netScore: 4.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [3, 7],
+      d10Effect: 'SUPPORTS',
+      summary: 'Mercury MD supports enterprise.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.SUN,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 2.0,
+      challengeScore: 0,
+      netScore: 2.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Sun AD supports enterprise.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.MARS,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [3],
+      d10Effect: 'SUPPORTS',
+      summary: 'Mars PD supports enterprise.'
+    };
     const supportingDasha: CareerDashaSynthesis = {
       natalPromiseProtected: true,
       reasoningVersion: 'CW-02',
@@ -259,59 +319,14 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
         ad: { period: 'AD', planet: Planet.SUN },
         pd: { period: 'PD', planet: Planet.MARS }
       },
-      md: {
-        period: 'MD',
-        planet: Planet.MERCURY,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 4.0,
-        challengeScore: 0,
-        netScore: 4.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [3, 7],
-        d10Effect: 'SUPPORTS',
-        summary: 'Mercury MD supports enterprise.'
-      },
-      ad: {
-        period: 'AD',
-        planet: Planet.SUN,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 2.0,
-        challengeScore: 0,
-        netScore: 2.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Sun AD supports enterprise.'
-      },
-      pd: {
-        period: 'PD',
-        planet: Planet.MARS,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 1.0,
-        challengeScore: 0,
-        netScore: 1.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [3],
-        d10Effect: 'SUPPORTS',
-        summary: 'Mars PD supports enterprise.'
-      },
+      md,
+      ad,
+      pd,
       combined: {
         hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
+        md,
+        ad,
+        pd,
         combinedEffect: 'SUPPORTS',
         combinedConfidence: 'HIGH',
         combinedScore: 7.0,
@@ -382,6 +397,54 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
   it('Test C: resolves to MIXED when natal SUPPORT encounters any secondary CHALLENGE (dasha challenge)', () => {
     const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
 
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.SUN,
+      effect: 'CHALLENGES',
+      confidence: 'HIGH',
+      supportScore: 0,
+      challengeScore: 3.0,
+      netScore: -3.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [8],
+      d10Effect: 'CHALLENGES',
+      summary: 'Sun MD challenges.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.MARS,
+      effect: 'CHALLENGES',
+      confidence: 'HIGH',
+      supportScore: 0,
+      challengeScore: 1.0,
+      netScore: -1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [12],
+      d10Effect: 'CHALLENGES',
+      summary: 'Mars AD challenges.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.JUPITER,
+      effect: 'CHALLENGES',
+      confidence: 'HIGH',
+      supportScore: 0,
+      challengeScore: 0.5,
+      netScore: -0.5,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [6],
+      d10Effect: 'CHALLENGES',
+      summary: 'Jupiter PD challenges.'
+    };
     const dashaChallenge: CareerDashaSynthesis = {
       natalPromiseProtected: true,
       reasoningVersion: 'CW-02',
@@ -390,59 +453,14 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
         ad: { period: 'AD', planet: Planet.MARS },
         pd: { period: 'PD', planet: Planet.JUPITER }
       },
-      md: {
-        period: 'MD',
-        planet: Planet.SUN,
-        effect: 'CHALLENGES',
-        confidence: 'HIGH',
-        supportScore: 0,
-        challengeScore: 3.0,
-        netScore: -3.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [8],
-        d10Effect: 'CHALLENGES',
-        summary: 'Sun MD challenges.'
-      },
-      ad: {
-        period: 'AD',
-        planet: Planet.MARS,
-        effect: 'CHALLENGES',
-        confidence: 'HIGH',
-        supportScore: 0,
-        challengeScore: 1.0,
-        netScore: -1.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [12],
-        d10Effect: 'CHALLENGES',
-        summary: 'Mars AD challenges.'
-      },
-      pd: {
-        period: 'PD',
-        planet: Planet.JUPITER,
-        effect: 'CHALLENGES',
-        confidence: 'HIGH',
-        supportScore: 0,
-        challengeScore: 0.5,
-        netScore: -0.5,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [6],
-        d10Effect: 'CHALLENGES',
-        summary: 'Jupiter PD challenges.'
-      },
+      md,
+      ad,
+      pd,
       combined: {
         hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
+        md,
+        ad,
+        pd,
         combinedEffect: 'CHALLENGES',
         combinedConfidence: 'HIGH',
         combinedScore: -4.5,
@@ -506,6 +524,54 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
   it('Test D: resolves to STRONGLY_SUPPORTED when natal SUPPORT + structural secondary SUPPORT (dasha + d10) without transit (transit NEUTRAL)', () => {
     const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
 
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.SUN,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 4.0,
+      challengeScore: 0,
+      netScore: 4.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Sun MD supports.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.MARS,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 2.0,
+      challengeScore: 0,
+      netScore: 2.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Mars AD supports.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.JUPITER,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Jupiter PD supports.'
+    };
     const dashaSupport: CareerDashaSynthesis = {
       natalPromiseProtected: true,
       reasoningVersion: 'CW-02',
@@ -514,59 +580,14 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
         ad: { period: 'AD', planet: Planet.MARS },
         pd: { period: 'PD', planet: Planet.JUPITER }
       },
-      md: {
-        period: 'MD',
-        planet: Planet.SUN,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 4.0,
-        challengeScore: 0,
-        netScore: 4.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Sun MD supports.'
-      },
-      ad: {
-        period: 'AD',
-        planet: Planet.MARS,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 2.0,
-        challengeScore: 0,
-        netScore: 2.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Mars AD supports.'
-      },
-      pd: {
-        period: 'PD',
-        planet: Planet.JUPITER,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 1.0,
-        challengeScore: 0,
-        netScore: 1.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Jupiter PD supports.'
-      },
+      md,
+      ad,
+      pd,
       combined: {
         hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
+        md,
+        ad,
+        pd,
         combinedEffect: 'SUPPORTS',
         combinedConfidence: 'HIGH',
         combinedScore: 7.0,
@@ -622,6 +643,54 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     // Empty natal evidence: no foundational promise for LEADERSHIP
     const emptyNatalEvidence: DomainEvidence[] = [];
 
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.SUN,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 4.0,
+      challengeScore: 0,
+      netScore: 4.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Sun MD supports.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.MARS,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 2.0,
+      challengeScore: 0,
+      netScore: 2.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Mars AD supports.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.JUPITER,
+      effect: 'SUPPORTS',
+      confidence: 'HIGH',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [10],
+      d10Effect: 'SUPPORTS',
+      summary: 'Jupiter PD supports.'
+    };
     const strongDasha: CareerDashaSynthesis = {
       natalPromiseProtected: true,
       reasoningVersion: 'CW-02',
@@ -630,59 +699,14 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
         ad: { period: 'AD', planet: Planet.MARS },
         pd: { period: 'PD', planet: Planet.JUPITER }
       },
-      md: {
-        period: 'MD',
-        planet: Planet.SUN,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 4.0,
-        challengeScore: 0,
-        netScore: 4.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Sun MD supports.'
-      },
-      ad: {
-        period: 'AD',
-        planet: Planet.MARS,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 2.0,
-        challengeScore: 0,
-        netScore: 2.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Mars AD supports.'
-      },
-      pd: {
-        period: 'PD',
-        planet: Planet.JUPITER,
-        effect: 'SUPPORTS',
-        confidence: 'HIGH',
-        supportScore: 1.0,
-        challengeScore: 0,
-        netScore: 1.0,
-        factors: [],
-        supportingFactorIds: [],
-        challengingFactorIds: [],
-        neutralFactorIds: [],
-        activatedCareerHouses: [10],
-        d10Effect: 'SUPPORTS',
-        summary: 'Jupiter PD supports.'
-      },
+      md,
+      ad,
+      pd,
       combined: {
         hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
+        md,
+        ad,
+        pd,
         combinedEffect: 'SUPPORTS',
         combinedConfidence: 'HIGH',
         combinedScore: 7.0,
@@ -757,6 +781,155 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     expect(modeNames).toContain('AUTHORITY');
     expect(modeNames).toContain('INDEPENDENT_WORK');
     expect(modeNames).toContain('BUSINESS_ENTREPRENEURSHIP');
+  });
+
+  it('proves injecting DASHA-sourced evidence into the evidence array does not alter natal contribution or status (prevents double-counting)', () => {
+    const natalOnly = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
+    const dashaEvidence = createDomainEvidence({
+      id: 'EV_DASHA_SUN_1',
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      phase: 'DASHA_ACTIVATION',
+      source: 'DASHA',
+      polarity: 'SUPPORTING',
+      statement: 'Sun MD activates authority and leadership.'
+    });
+    const natalPlusDasha = [...natalOnly, dashaEvidence];
+
+    const resultA = resolveManifestation('LEADERSHIP', natalOnly);
+    const resultB = resolveManifestation('LEADERSHIP', natalPlusDasha);
+
+    expect(resultA.natalSupport).toBe(resultB.natalSupport);
+    expect(resultA.status).toBe(resultB.status);
+    expect(resultA.status).toBe('SUPPORTED');
+
+    const natalFactorsA = resultA.factors.filter((f) => f.source === 'NATAL');
+    const natalFactorsB = resultB.factors.filter((f) => f.source === 'NATAL');
+    expect(natalFactorsA).toEqual(natalFactorsB);
+  });
+
+  it('resolves to SUPPORTED (confidence MEDIUM) with Natal SUPPORT + Dasha NEUTRAL + Transit SUPPORT + D10 NEUTRAL', () => {
+    const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
+
+    // Construct a CareerDashaSynthesis whose factors do not match LEADERSHIP mode rules
+    // (LEADERSHIP primary planets: SUN, JUPITER, MARS; supporting houses: 10, 1, 9, 5; challenging: 6, 8, 12)
+    // VENUS with houses [2, 4] is non-matching, resolving dashaSupport to NEUTRAL
+    const md: CareerDashaPlanetSynthesis = {
+      period: 'MD',
+      planet: Planet.VENUS,
+      effect: 'SUPPORTS',
+      confidence: 'LOW',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [2, 4],
+      d10Effect: 'NEUTRAL',
+      summary: 'Venus MD activates 2nd/4th houses.'
+    };
+    const ad: CareerDashaPlanetSynthesis = {
+      period: 'AD',
+      planet: Planet.VENUS,
+      effect: 'SUPPORTS',
+      confidence: 'LOW',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [2, 4],
+      d10Effect: 'NEUTRAL',
+      summary: 'Venus AD activates 2nd/4th houses.'
+    };
+    const pd: CareerDashaPlanetSynthesis = {
+      period: 'PD',
+      planet: Planet.VENUS,
+      effect: 'SUPPORTS',
+      confidence: 'LOW',
+      supportScore: 1.0,
+      challengeScore: 0,
+      netScore: 1.0,
+      factors: [],
+      supportingFactorIds: [],
+      challengingFactorIds: [],
+      neutralFactorIds: [],
+      activatedCareerHouses: [2, 4],
+      d10Effect: 'NEUTRAL',
+      summary: 'Venus PD activates 2nd/4th houses.'
+    };
+    const neutralDasha: CareerDashaSynthesis = {
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: Planet.VENUS },
+        ad: { period: 'AD', planet: Planet.VENUS },
+        pd: { period: 'PD', planet: Planet.VENUS }
+      },
+      md,
+      ad,
+      pd,
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md,
+        ad,
+        pd,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'LOW',
+        combinedScore: 1.0,
+        summary: 'Combined dasha.'
+      },
+      factors: [
+        {
+          id: 'DASH_VENUS_2',
+          planet: Planet.VENUS,
+          period: 'MD',
+          category: 'KARAKA',
+          direction: 'SUPPORT',
+          weight: 1.0,
+          houses: [2, 4],
+          statement: 'Venus MD activates 2nd and 4th houses.'
+        }
+      ],
+      summary: 'Dasha is active.'
+    };
+
+    // Mode-relevant transit support: Sun transiting 10th house
+    const transitSupport: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'DOES_NOT_ACTIVATE',
+      transitEffect: 'SUPPORTS',
+      overallEffect: 'ACTIVATES',
+      confidence: 0.8,
+      factors: [
+        {
+          id: 'TR_SUN_10',
+          planet: Planet.SUN,
+          category: 'CAREER_HOUSE_TRANSIT',
+          direction: 'SUPPORT',
+          weight: 1.5,
+          houses: [10],
+          statement: 'Sun transiting 10th house supports leadership.'
+        }
+      ],
+      summary: 'Transit supports.'
+    };
+
+    const d10Neutral: readonly D10ManifestationFactor[] = [];
+
+    const result = resolveManifestation('LEADERSHIP', natalEvidence, neutralDasha, transitSupport, d10Neutral);
+
+    expect(result.mode).toBe('LEADERSHIP');
+    expect(result.natalSupport).toBe('SUPPORT');
+    expect(result.dashaSupport).toBe('NEUTRAL');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d10Support).toBe('NEUTRAL');
+    expect(result.status).toBe('SUPPORTED');
+    expect(result.confidence).toBe('MEDIUM');
   });
 
   it('ensures synthesis never mutates or overrides natal evidence', () => {
