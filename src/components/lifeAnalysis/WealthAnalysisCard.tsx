@@ -147,53 +147,73 @@ export const WealthAnalysisCard: React.FC<WealthAnalysisCardProps> = ({
       {/* 4 Wealth Dimensions Matrix */}
       <div className="space-y-2 pt-2">
         <span className="text-[11px] font-mono-code text-slate-400 block">
-          4 Classical Wealth Dimensions:
+          4 Classical Wealth Dimensions (CW-04 Manifestation):
         </span>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
               <Vault className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
               <span>Accumulation (2H)</span>
             </div>
-            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.accumulationStatus)}`}>
-              {formatEnum(detail.accumulationStatus)}
+            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.manifestationSynthesis?.dimensions.ACCUMULATION?.status ?? detail.accumulationStatus)}`}>
+              {formatEnum(detail.manifestationSynthesis?.dimensions.ACCUMULATION?.status ?? detail.accumulationStatus)}
             </span>
+            {detail.manifestationSynthesis?.dimensions.ACCUMULATION?.summary && (
+              <p className="text-[11px] text-slate-400 leading-tight">
+                {detail.manifestationSynthesis.dimensions.ACCUMULATION.summary}
+              </p>
+            )}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
               <span>Gains (11H)</span>
             </div>
-            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.gainsStatus)}`}>
-              {formatEnum(detail.gainsStatus)}
+            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.manifestationSynthesis?.dimensions.GAINS?.status ?? detail.gainsStatus)}`}>
+              {formatEnum(detail.manifestationSynthesis?.dimensions.GAINS?.status ?? detail.gainsStatus)}
             </span>
+            {detail.manifestationSynthesis?.dimensions.GAINS?.summary && (
+              <p className="text-[11px] text-slate-400 leading-tight">
+                {detail.manifestationSynthesis.dimensions.GAINS.summary}
+              </p>
+            )}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
               <Trophy className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
               <span>Fortune (9H)</span>
             </div>
-            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.fortuneStatus)}`}>
-              {formatEnum(detail.fortuneStatus)}
+            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.manifestationSynthesis?.dimensions.FORTUNE?.status ?? detail.fortuneStatus)}`}>
+              {formatEnum(detail.manifestationSynthesis?.dimensions.FORTUNE?.status ?? detail.fortuneStatus)}
             </span>
+            {detail.manifestationSynthesis?.dimensions.FORTUNE?.summary && (
+              <p className="text-[11px] text-slate-400 leading-tight">
+                {detail.manifestationSynthesis.dimensions.FORTUNE.summary}
+              </p>
+            )}
           </div>
 
-          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3">
+          <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium mb-1">
               <Target className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
               <span>Speculation (5H)</span>
             </div>
-            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.speculationStatus)}`}>
-              {formatEnum(detail.speculationStatus)}
+            <span className={`text-xs font-semibold ${getWealthDimensionColor(detail.manifestationSynthesis?.dimensions.SPECULATION?.status ?? detail.speculationStatus)}`}>
+              {formatEnum(detail.manifestationSynthesis?.dimensions.SPECULATION?.status ?? detail.speculationStatus)}
             </span>
+            {detail.manifestationSynthesis?.dimensions.SPECULATION?.summary && (
+              <p className="text-[11px] text-slate-400 leading-tight">
+                {detail.manifestationSynthesis.dimensions.SPECULATION.summary}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Note on independence of accumulation vs speculation */}
         <p className="text-[11px] text-slate-400/80 italic mt-1.5">
-          Note: High accumulation capacity (2nd House) reflects wealth retention and stability, which functions independently from speculative risk tolerance (5th House).
+          Note: High accumulation capacity (2nd House) reflects wealth retention and stability, which functions independently from speculative risk tolerance (5th House). Speculation is strictly isolated.
         </p>
       </div>
 

@@ -8,7 +8,8 @@ import type { WhyExperienceViewModel } from '../../product/life-analysis/lifeAna
 import {
   formatEnum,
   getVargaBadgeClass,
-  getEffectBadgeClass
+  getEffectBadgeClass,
+  getStatusBadgeClass
 } from './lifeAnalysisUx';
 import { DomainPromiseBadge } from './DomainPromiseBadge';
 import { LifeAnalysisEvidencePanel } from './LifeAnalysisEvidencePanel';
@@ -132,7 +133,37 @@ export const CareerAnalysisCard: React.FC<CareerAnalysisCardProps> = ({
         </div>
       </div>
 
-      {detail.dominantManifestations && detail.dominantManifestations.length > 0 && (
+      {detail.manifestationSynthesis && detail.manifestationSynthesis.length > 0 ? (
+        <div className="pt-2 space-y-2">
+          <span className="text-[11px] font-mono-code text-slate-400 block">
+            Manifestation Modes (CW-04 Synthesis):
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {detail.manifestationSynthesis.map((syn) => (
+              <div
+                key={syn.mode}
+                className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-3 space-y-1.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-200">
+                    {formatEnum(syn.mode)}
+                  </span>
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium border ${getStatusBadgeClass(
+                      syn.status
+                    )}`}
+                  >
+                    {formatEnum(syn.status)}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  {syn.summary}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : detail.dominantManifestations && detail.dominantManifestations.length > 0 ? (
         <div className="pt-2">
           <span className="text-[11px] font-mono-code text-slate-400 block mb-2">
             Dominant Career Archetypes & Manifestations:
@@ -148,7 +179,7 @@ export const CareerAnalysisCard: React.FC<CareerAnalysisCardProps> = ({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Domain Evidence Modal Dialog */}
       {why && (
