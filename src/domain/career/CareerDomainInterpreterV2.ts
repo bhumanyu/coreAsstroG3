@@ -81,6 +81,8 @@ import {
 import { calculateCareerDataCompleteness } from './careerDataCompleteness';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
+import { synthesizeCareerTransit, synthesizeCareerTiming, type CareerTimingSynthesis } from '../timing/careerWealthTiming';
+import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
@@ -254,6 +256,26 @@ export function interpretCareerV2(
       d10Context
     });
 
+    const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
+    const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+
+    let careerTimingSynthesis: CareerTimingSynthesis;
+    if (asOfDate && !isNaN(asOfDate.getTime())) {
+      const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+      const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
+      careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
+    } else {
+      careerTimingSynthesis = Object.freeze({
+        natalPromise: cw01Result.natalStrength,
+        dashaEffect: careerDashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA',
+        transitEffect: 'INSUFFICIENT_DATA',
+        overallEffect: 'INSUFFICIENT_DATA',
+        confidence: 0.5,
+        factors: Object.freeze([]),
+        summary: 'Timing calculation unavailable: asOf date not provided.'
+      });
+    }
+
     const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
       const priority = getCareerDashaEvidencePriority(f.period, f.category);
 
@@ -329,7 +351,8 @@ export function interpretCareerV2(
         ...conclusionData,
         currentActivation: cw01Result.currentActivation,
         currentPressure: cw01Result.currentPressure,
-        careerDashaSynthesis
+        careerDashaSynthesis,
+        careerTimingSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: 'CW-01'

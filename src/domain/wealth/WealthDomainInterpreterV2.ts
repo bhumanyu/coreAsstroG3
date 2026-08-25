@@ -81,6 +81,8 @@ import { calculateWealthConfidence } from './wealthConfidence';
 import { detectWealthConflicts } from './wealthConflicts';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
+import { synthesizeWealthTiming, type WealthTimingSynthesis } from '../timing/careerWealthTiming';
+import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretWealthV2(
   horoscope: Horoscope,
@@ -445,6 +447,73 @@ export function interpretWealthV2(
     }
   ]);
 
+  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
+  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+
+  let wealthTimingSynthesis: WealthTimingSynthesis;
+  if (asOfDate && !isNaN(asOfDate.getTime())) {
+    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const mapActivationToEffect = (eff: string): 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' => {
+      if (eff === 'ACTIVATES' || eff === 'PARTIALLY_ACTIVATES') return 'SUPPORTS';
+      if (eff === 'CHALLENGES') return 'CHALLENGES';
+      if (eff === 'MODIFIES') return 'MIXED';
+      return 'NEUTRAL';
+    };
+    const dashaEffects: Partial<Record<WealthDimension, 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA'>> = {
+      ACCUMULATION: mapActivationToEffect(accumulationDasha),
+      GAINS: mapActivationToEffect(gainsDasha),
+      FORTUNE: mapActivationToEffect(fortuneDasha),
+      SPECULATION: mapActivationToEffect(speculationDasha)
+    };
+    wealthTimingSynthesis = synthesizeWealthTiming(horoscope, activeDashaState, asOfDate, undefined, dashaEffects);
+  } else {
+    wealthTimingSynthesis = Object.freeze({
+      dimensions: {
+        ACCUMULATION: Object.freeze({
+          dimension: 'ACCUMULATION',
+          natalPromise: 'MODERATE',
+          dashaEffect: 'INSUFFICIENT_DATA',
+          transitEffect: 'INSUFFICIENT_DATA',
+          overallEffect: 'INSUFFICIENT_DATA',
+          confidence: 0.5,
+          factors: Object.freeze([]),
+          summary: 'Timing calculation unavailable: asOf date not provided.'
+        }),
+        GAINS: Object.freeze({
+          dimension: 'GAINS',
+          natalPromise: 'MODERATE',
+          dashaEffect: 'INSUFFICIENT_DATA',
+          transitEffect: 'INSUFFICIENT_DATA',
+          overallEffect: 'INSUFFICIENT_DATA',
+          confidence: 0.5,
+          factors: Object.freeze([]),
+          summary: 'Timing calculation unavailable: asOf date not provided.'
+        }),
+        FORTUNE: Object.freeze({
+          dimension: 'FORTUNE',
+          natalPromise: 'MODERATE',
+          dashaEffect: 'INSUFFICIENT_DATA',
+          transitEffect: 'INSUFFICIENT_DATA',
+          overallEffect: 'INSUFFICIENT_DATA',
+          confidence: 0.5,
+          factors: Object.freeze([]),
+          summary: 'Timing calculation unavailable: asOf date not provided.'
+        }),
+        SPECULATION: Object.freeze({
+          dimension: 'SPECULATION',
+          natalPromise: 'MODERATE',
+          dashaEffect: 'INSUFFICIENT_DATA',
+          transitEffect: 'INSUFFICIENT_DATA',
+          overallEffect: 'INSUFFICIENT_DATA',
+          confidence: 0.5,
+          factors: Object.freeze([]),
+          summary: 'Timing calculation unavailable: asOf date not provided.'
+        })
+      },
+      overallSummary: 'Timing calculation unavailable: asOf date not provided.'
+    });
+  }
+
   return buildDomainInterpretation({
     domain: 'WEALTH',
     evidence,
@@ -458,7 +527,10 @@ export function interpretWealthV2(
     timingActivations,
     periodTimingActivations,
     dataCompleteness,
-    conclusionData
+    conclusionData: {
+      ...conclusionData,
+      wealthTimingSynthesis
+    }
   });
 }
 
