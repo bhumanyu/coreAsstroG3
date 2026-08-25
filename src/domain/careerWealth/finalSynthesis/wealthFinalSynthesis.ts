@@ -5,9 +5,12 @@ import type {
   FinalDomainConfidence,
   ManifestationSummary,
   WealthDimensionFinalSynthesis,
-  WealthRiskProfile
+  WealthRiskProfile,
+  SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
 import type { WealthDimension } from '../../wealth/wealthTypes';
+import type { DomainStrength } from '../../reasoning/reasoningTypes';
+import type { VargaRelationship } from '../../interpretation/DomainInterpretationTypes';
 import {
   enforceWealthNatalCeiling,
   enforceWealthDimensionIsolation
@@ -21,6 +24,65 @@ const WEALTH_DIMENSIONS: readonly WealthDimension[] = [
   'SPECULATION'
 ];
 
+function mapStrengthToPromiseStatus(strength: DomainStrength | undefined): FinalDomainStatus {
+  switch (strength) {
+    case 'VERY_STRONG':
+      return 'VERY_STRONG';
+    case 'STRONG':
+      return 'STRONG';
+    case 'MODERATE':
+      return 'MODERATE';
+    case 'MIXED':
+      return 'MIXED';
+    case 'WEAK':
+    case 'VERY_WEAK':
+      return 'CHALLENGED';
+    case 'UNDETERMINED':
+    default:
+      return 'INSUFFICIENT_DATA';
+  }
+}
+
+function deriveAxisStatus(effect: string | undefined): SynthesisAxisStatus {
+  if (!effect) return 'INSUFFICIENT_DATA';
+  const norm = effect.toUpperCase();
+  if (
+    norm === 'SUPPORTS' ||
+    norm === 'STRONGLY_SUPPORTS' ||
+    norm === 'ACTIVATES' ||
+    norm === 'PARTIALLY_ACTIVATES' ||
+    norm === 'SUPPORT'
+  ) {
+    return 'SUPPORT';
+  }
+  if (norm === 'CHALLENGES' || norm === 'STRONGLY_CHALLENGES' || norm === 'CHALLENGE') {
+    return 'CHALLENGE';
+  }
+  if (norm === 'MIXED' || norm === 'MODIFIES') {
+    return 'MIXED';
+  }
+  if (norm === 'NEUTRAL' || norm === 'DOES_NOT_ACTIVATE') {
+    return 'NEUTRAL';
+  }
+  return 'INSUFFICIENT_DATA';
+}
+
+function mapManifestationStatus(status: string | undefined): FinalDomainStatus {
+  switch (status) {
+    case 'STRONGLY_SUPPORTED':
+      return 'VERY_STRONG';
+    case 'SUPPORTED':
+      return 'STRONG';
+    case 'MIXED':
+      return 'MIXED';
+    case 'CHALLENGED':
+      return 'CHALLENGED';
+    case 'INSUFFICIENT_DATA':
+    default:
+      return 'INSUFFICIENT_DATA';
+  }
+}
+
 export function synthesizeWealthFinal(
   input: WealthFinalSynthesisInput
 ): CareerWealthFinalSynthesis {
@@ -28,11 +90,14 @@ export function synthesizeWealthFinal(
     natalPromise,
     timingSynthesis,
     manifestationSynthesis,
-    d2Relationship = 'UNAVAILABLE'
+    d2Synthesis,
+    d2Relationship = 'UNAVAILABLE',
+    natalEvidenceIds = [],
+    natalRuleIds = []
   } = input;
 
   const isD2Confirmed = d2Relationship === 'CONFIRMS' || d2Relationship === 'PARTIALLY_CONFIRMS';
-  const dimensionSyntheses: Record<WealthDimension, WealthDimensionFinalSynthesis> = {} as any;
+  const dimensionSyntheses: Partial<Record<WealthDimension, WealthDimensionFinalSynthesis>> = {};
   const manifestationSummaryList: ManifestationSummary[] = [];
   const strongestAreas: string[] = [];
   const challengedAreas: string[] = [];
@@ -41,19 +106,31 @@ export function synthesizeWealthFinal(
   const keySupport: string[] = [];
   const keyChallenges: string[] = [];
 
+  const allNatalEvidenceIds = Array.isArray(natalEvidenceIds)
+    ? natalEvidenceIds
+    : Object.values(natalEvidenceIds).flat();
+  const allNatalRuleIds = Array.isArray(natalRuleIds)
+    ? natalRuleIds
+    : Object.values(natalRuleIds).flat();
+
+  allNatalEvidenceIds.forEach((id) => evidenceIdSet.add(id));
+  allNatalRuleIds.forEach((id) => ruleIdSet.add(id));
+
   // 1. Process each dimension in strict isolation
   for (const dim of WEALTH_DIMENSIONS) {
     const dimNatal = natalPromise[dim] ?? 'UNDETERMINED';
-    const dimManifestation = manifestationSynthesis?.dimensions
-      ? (manifestationSynthesis.dimensions as Record<WealthDimension, any>)[dim]
-      : undefined;
-    const dimTiming = timingSynthesis?.dimensions
-      ? (timingSynthesis.dimensions as Record<WealthDimension, any>)[dim]
-      : undefined;
+    const dimManifestation = manifestationSynthesis?.dimensions?.[dim];
+    const dimTiming = timingSynthesis?.dimensions?.[dim];
 
     const dashaEffect = dimTiming?.dashaEffect ?? (dimManifestation?.dashaSupport === 'SUPPORT' ? 'SUPPORTS' : dimManifestation?.dashaSupport === 'CHALLENGE' ? 'CHALLENGES' : 'INSUFFICIENT_DATA');
     const timingEffect = dimTiming?.overallEffect ?? (dimManifestation?.transitSupport === 'SUPPORT' ? 'SUPPORTS' : dimManifestation?.transitSupport === 'CHALLENGE' ? 'CHALLENGES' : 'INSUFFICIENT_DATA');
-    const divisionalEffect = d2Relationship !== 'UNAVAILABLE' ? d2Relationship : (dimManifestation?.d2Support === 'SUPPORT' ? 'CONFIRMS' : dimManifestation?.d2Support === 'CHALLENGE' ? 'CONFLICTS' : 'UNAVAILABLE');
+    const divisionalEffect: VargaRelationship = d2Relationship !== 'UNAVAILABLE' ? d2Relationship : (dimManifestation?.d2Support === 'SUPPORT' ? 'CONFIRMS' : dimManifestation?.d2Support === 'CHALLENGE' ? 'CONFLICTS' : 'UNAVAILABLE');
+
+    const promiseStatus = mapStrengthToPromiseStatus(dimNatal);
+    const activationStatus = deriveAxisStatus(dashaEffect);
+    const timingStatus = deriveAxisStatus(timingEffect);
+    const divisionalStatus = divisionalEffect;
+    const manifestationStatus = mapManifestationStatus(dimManifestation?.status);
 
     let candidate: FinalDomainStatus;
 
@@ -73,9 +150,36 @@ export function synthesizeWealthFinal(
       candidate = 'STRONG';
     } else if (dimNatal === 'MODERATE') {
       candidate = 'MODERATE';
+    } else if (dimNatal === 'MIXED') {
+      candidate = 'MIXED';
     } else {
       candidate = 'INSUFFICIENT_DATA';
     }
+
+    // D2 structural layer (Divisional Layer: D2 conflict downgrades candidate by 1 notch)
+    if (divisionalStatus === 'CONFLICTS') {
+      if (candidate === 'VERY_STRONG') {
+        candidate = 'STRONG';
+      } else if (candidate === 'STRONG') {
+        candidate = 'MODERATE';
+      } else if (candidate === 'MODERATE') {
+        candidate = 'MIXED';
+      }
+    }
+
+    // Dasha timing impact (Activation Layer: genuine CHALLENGE downgrades candidate by 1 notch)
+    if (activationStatus === 'CHALLENGE') {
+      if (candidate === 'VERY_STRONG') {
+        candidate = 'STRONG';
+      } else if (candidate === 'STRONG') {
+        candidate = 'MODERATE';
+      } else if (candidate === 'MODERATE') {
+        candidate = 'MIXED';
+      }
+    }
+
+    // ARCHITECTURAL CONTRACT:
+    // Transit timingEffect / timingStatus is a timing modifier only and cannot fabricate or overturn foundational promise.
 
     const dimFinalStatus = enforceWealthNatalCeiling(dimNatal, candidate);
 
@@ -91,6 +195,18 @@ export function synthesizeWealthFinal(
     );
 
     const dimEvidenceIds: string[] = [];
+    const dimRuleIds: string[] = [];
+
+    const dimNatalEv = Array.isArray(natalEvidenceIds)
+      ? natalEvidenceIds
+      : (natalEvidenceIds?.[dim] ?? []);
+    const dimNatalR = Array.isArray(natalRuleIds)
+      ? natalRuleIds
+      : (natalRuleIds?.[dim] ?? []);
+
+    dimNatalEv.forEach((id) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
+    dimNatalR.forEach((id) => { dimRuleIds.push(id); ruleIdSet.add(id); });
+
     if (dimManifestation) {
       manifestationSummaryList.push({
         mode: dim,
@@ -99,6 +215,7 @@ export function synthesizeWealthFinal(
       });
 
       for (const f of dimManifestation.factors) {
+        dimRuleIds.push(f.id);
         ruleIdSet.add(f.id);
         if (f.evidenceIds) f.evidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
         if (f.dashaEvidenceIds) f.dashaEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
@@ -108,6 +225,7 @@ export function synthesizeWealthFinal(
 
     if (dimTiming) {
       for (const f of dimTiming.factors) {
+        dimRuleIds.push(f.id);
         ruleIdSet.add(f.id);
         if (f.natalEvidenceIds) f.natalEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
         if (f.dashaEvidenceIds) f.dashaEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
@@ -125,21 +243,42 @@ export function synthesizeWealthFinal(
     const dimSummary = `${dim} dimension status is ${dimFinalStatus} (Promise: ${dimNatal}, Timing: ${timingEffect}).`;
 
     dimensionSyntheses[dim] = Object.freeze({
+      dimension: dim,
       status: dimFinalStatus,
+      finalStatus: dimFinalStatus,
+      promiseStatus,
+      activationStatus,
+      timingStatus,
+      divisionalStatus,
+      manifestationStatus,
       confidence: dimConfidence,
       primaryPromise: dimNatal,
       dashaEffect,
       timingEffect,
       divisionalEffect,
       summary: dimSummary,
-      evidenceIds: Object.freeze([...new Set(dimEvidenceIds)])
+      ruleIds: Object.freeze([...new Set(dimRuleIds)]),
+      evidenceIds: Object.freeze([...new Set(dimEvidenceIds)]),
+      natalEvidenceIds: Object.freeze([...new Set(dimNatalEv)]),
+      natalRuleIds: Object.freeze([...new Set(dimNatalR)])
     });
+  }
+
+  if (d2Synthesis) {
+    for (const item of d2Synthesis) {
+      evidenceIdSet.add(item.id);
+      if (item.ruleId) ruleIdSet.add(item.ruleId);
+    }
   }
 
   // Guarantee strict dimension isolation
   const isolatedDimensions = enforceWealthDimensionIsolation(dimensionSyntheses);
 
   // 2. Synthesize Overall Wealth Status (Domain-level, without averaging)
+  // ARCHITECTURAL CONTRACT: Speculation is intentionally excluded from the overall Wealth status
+  // calculation and ONLY drives the riskProfile. Core wealth status is determined strictly by
+  // Accumulation, Gains, and Fortune to prevent high-variance speculative exposure from
+  // distorting foundational wealth capacity.
   const coreStatuses = [
     isolatedDimensions.ACCUMULATION.status,
     isolatedDimensions.GAINS.status,
@@ -171,16 +310,21 @@ export function synthesizeWealthFinal(
 
   // 3. Compute Risk Profile (Speculation isolation and exposure)
   const specStatus = isolatedDimensions.SPECULATION.status;
+  const specNatal = natalPromise.SPECULATION;
+  const specActivation = isolatedDimensions.SPECULATION.activationStatus;
+  const specTiming = isolatedDimensions.SPECULATION.timingStatus;
   let riskProfile: WealthRiskProfile;
 
   if (specStatus === 'INSUFFICIENT_DATA') {
     riskProfile = 'INSUFFICIENT_DATA';
-  } else if (specStatus === 'CHALLENGED') {
+  } else if (specStatus === 'CHALLENGED' || specNatal === 'WEAK' || specNatal === 'VERY_WEAK') {
     riskProfile = overallStatus === 'STRONG' || overallStatus === 'VERY_STRONG' ? 'ELEVATED' : 'HIGH';
   } else if (specStatus === 'MIXED') {
+    riskProfile = specActivation === 'CHALLENGE' || specTiming === 'CHALLENGE' ? 'ELEVATED' : 'MODERATE';
+  } else if (specStatus === 'STRONG' || specStatus === 'VERY_STRONG') {
+    riskProfile = specActivation === 'CHALLENGE' ? 'MODERATE' : 'LOW';
+  } else if (specStatus === 'MODERATE') {
     riskProfile = 'MODERATE';
-  } else if (specStatus === 'STRONG' || specStatus === 'VERY_STRONG' || specStatus === 'MODERATE') {
-    riskProfile = 'LOW';
   } else {
     riskProfile = 'MODERATE';
   }
@@ -191,7 +335,14 @@ export function synthesizeWealthFinal(
   const lowConfCount = allConf.filter((c) => c === 'LOW').length;
   const overallConfidence: FinalDomainConfidence = highConfCount >= 2 ? 'HIGH' : lowConfCount >= 3 ? 'LOW' : 'MEDIUM';
 
-  // 5. Build authoritative summary statement
+  // 5. Secondary strengths
+  const secondaryStrengths: readonly WealthDimension[] = Object.freeze(
+    WEALTH_DIMENSIONS.filter(
+      (d) => isolatedDimensions[d].status === 'VERY_STRONG' || isolatedDimensions[d].status === 'STRONG'
+    )
+  );
+
+  // 6. Build authoritative summary statement
   let summary = `Wealth domain synthesis evaluates to ${overallStatus} with ${overallConfidence} confidence and ${riskProfile} risk profile.`;
   if (isolatedDimensions.ACCUMULATION.status === 'STRONG' || isolatedDimensions.ACCUMULATION.status === 'VERY_STRONG') {
     summary += ` Core accumulation capability remains stable.`;
@@ -204,8 +355,16 @@ export function synthesizeWealthFinal(
     reasoningVersion: 'CW-05' as const,
     domain: 'WEALTH' as const,
     status: overallStatus,
+    finalStatus: overallStatus,
+    promiseStatus: isolatedDimensions.ACCUMULATION.promiseStatus,
+    activationStatus: isolatedDimensions.ACCUMULATION.activationStatus,
+    timingStatus: isolatedDimensions.ACCUMULATION.timingStatus,
+    divisionalStatus: d2Relationship,
+    manifestationStatus: isolatedDimensions.ACCUMULATION.manifestationStatus,
     confidence: overallConfidence,
     primaryPromise: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
+    primaryStrength: natalPromise.ACCUMULATION ?? 'UNDETERMINED',
+    secondaryStrengths,
     manifestationSummary: Object.freeze(manifestationSummaryList),
     strongestAreas: Object.freeze(strongestAreas),
     challengedAreas: Object.freeze(challengedAreas),
@@ -217,6 +376,9 @@ export function synthesizeWealthFinal(
     summary,
     ruleIds: Object.freeze([...ruleIdSet]),
     evidenceIds: Object.freeze([...evidenceIdSet]),
+    natalEvidenceIds: Object.freeze([...new Set(allNatalEvidenceIds)]),
+    natalRuleIds: Object.freeze([...new Set(allNatalRuleIds)]),
+    d2Evidence: d2Synthesis ? Object.freeze([...d2Synthesis]) : undefined,
     dimensions: isolatedDimensions,
     riskProfile
   });

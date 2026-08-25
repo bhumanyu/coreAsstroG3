@@ -377,7 +377,10 @@ export function interpretWealthV2(
         SPECULATION: cw01Result.dimensionResults.SPECULATION.natalStrength
       },
       manifestationSynthesis: wealthManifestationSynthesis,
-      d2Relationship: 'UNAVAILABLE'
+      d2Synthesis: d2Evidence,
+      d2Relationship: 'UNAVAILABLE',
+      natalEvidenceIds: natalPromiseEvidenceIds,
+      natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
     });
 
     return buildDomainInterpretation({
@@ -401,7 +404,7 @@ export function interpretWealthV2(
         wealthFinalSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
-      reasoningVersion: 'CW-05'
+      reasoningVersion: options?.strategy === 'CW01' ? 'CW-01' : undefined
     });
   }
 
@@ -572,7 +575,10 @@ export function interpretWealthV2(
     natalPromise: natalPromises,
     timingSynthesis: wealthTimingSynthesis,
     manifestationSynthesis: wealthManifestationSynthesis,
-    d2Relationship
+    d2Synthesis: d2Evidence,
+    d2Relationship,
+    natalEvidenceIds: natalPromiseEvidenceIds,
+    natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
   });
 
   return buildDomainInterpretation({
@@ -593,8 +599,7 @@ export function interpretWealthV2(
       wealthTimingSynthesis,
       wealthManifestationSynthesis,
       wealthFinalSynthesis
-    },
-    reasoningVersion: 'CW-05'
+    }
   });
 }
 

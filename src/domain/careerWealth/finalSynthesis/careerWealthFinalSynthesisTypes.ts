@@ -23,6 +23,13 @@ export type FinalDomainStatus =
 
 export type FinalDomainConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 
+export type SynthesisAxisStatus =
+  | 'SUPPORT'
+  | 'CHALLENGE'
+  | 'MIXED'
+  | 'NEUTRAL'
+  | 'INSUFFICIENT_DATA';
+
 export type WealthRiskProfile =
   | 'LOW'
   | 'MODERATE'
@@ -46,20 +53,36 @@ export interface ManifestationSummary {
 }
 
 export interface WealthDimensionFinalSynthesis {
+  readonly dimension?: WealthDimension;
   readonly status: FinalDomainStatus;
+  readonly finalStatus: FinalDomainStatus;
+  readonly promiseStatus: FinalDomainStatus;
+  readonly activationStatus: SynthesisAxisStatus;
+  readonly timingStatus: SynthesisAxisStatus;
+  readonly divisionalStatus: VargaRelationship;
+  readonly manifestationStatus: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
   readonly primaryPromise: DomainStrength;
   readonly dashaEffect: string;
   readonly timingEffect: string;
   readonly divisionalEffect: string;
   readonly summary: string;
+  readonly ruleIds: readonly string[];
   readonly evidenceIds: readonly string[];
+  readonly natalEvidenceIds: readonly string[];
+  readonly natalRuleIds: readonly string[];
 }
 
 export interface CareerWealthFinalSynthesis {
   readonly reasoningVersion: 'CW-05';
   readonly domain: 'CAREER' | 'WEALTH';
   readonly status: FinalDomainStatus;
+  readonly finalStatus: FinalDomainStatus;
+  readonly promiseStatus: FinalDomainStatus;
+  readonly activationStatus: SynthesisAxisStatus;
+  readonly timingStatus: SynthesisAxisStatus;
+  readonly divisionalStatus: VargaRelationship;
+  readonly manifestationStatus: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
   readonly primaryPromise: DomainStrength | string;
   readonly manifestationSummary: readonly ManifestationSummary[];
@@ -73,8 +96,17 @@ export interface CareerWealthFinalSynthesis {
   readonly summary: string;
   readonly ruleIds: readonly string[];
   readonly evidenceIds: readonly string[];
+  readonly natalEvidenceIds: readonly string[];
+  readonly natalRuleIds: readonly string[];
   readonly dimensions?: Readonly<Record<WealthDimension, WealthDimensionFinalSynthesis>>;
   readonly riskProfile?: WealthRiskProfile;
+  readonly primaryStrength?: DomainStrength;
+  readonly secondaryStrengths?: readonly WealthDimension[];
+  readonly d10Evidence?: readonly DomainEvidence[];
+  readonly d2Evidence?: readonly DomainEvidence[];
+  readonly dashaFactors?: readonly any[];
+  readonly timingFactors?: readonly any[];
+  readonly manifestationFactors?: readonly any[];
 }
 
 export interface CareerFinalSynthesisInput {
@@ -84,6 +116,8 @@ export interface CareerFinalSynthesisInput {
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesis[];
   readonly d10Synthesis?: readonly DomainEvidence[];
   readonly d10Relationship?: VargaRelationship;
+  readonly natalEvidenceIds?: readonly string[];
+  readonly natalRuleIds?: readonly string[];
 }
 
 export interface WealthFinalSynthesisInput {
@@ -92,4 +126,6 @@ export interface WealthFinalSynthesisInput {
   readonly manifestationSynthesis?: WealthManifestationSynthesis;
   readonly d2Synthesis?: readonly DomainEvidence[];
   readonly d2Relationship?: VargaRelationship;
+  readonly natalEvidenceIds?: Partial<Record<WealthDimension, readonly string[]>> | readonly string[];
+  readonly natalRuleIds?: Partial<Record<WealthDimension, readonly string[]>> | readonly string[];
 }

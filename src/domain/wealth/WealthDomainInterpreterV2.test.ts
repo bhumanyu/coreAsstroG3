@@ -1635,4 +1635,78 @@ describe('WealthDomainInterpreterV2', () => {
       result2.conclusionData?.wealthManifestationSynthesis
     );
   });
+
+  // End-to-end CW-05 Wealth Final Synthesis Pipeline Test
+  it('CW-05 end-to-end pipeline: produces deterministic wealth final synthesis with multi-axis dimensions, riskProfile, and provenance', () => {
+    const asOf = '2024-06-15T12:00:00.000Z';
+    const result1 = interpretWealthV2(horoscope, { asOf });
+    const result2 = interpretWealthV2(horoscope, { asOf });
+
+    const finalSynthesis = result1.conclusionData?.wealthFinalSynthesis;
+    expect(finalSynthesis).toBeDefined();
+    expect(finalSynthesis?.domain).toBe('WEALTH');
+    expect(finalSynthesis?.reasoningVersion).toBe('CW-05');
+    expect(typeof finalSynthesis?.summary).toBe('string');
+    expect(finalSynthesis?.summary.length).toBeGreaterThan(0);
+
+    // Verify all 6 axes on overall synthesis
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.promiseStatus);
+    expect(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.activationStatus);
+    expect(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.timingStatus);
+    expect(['CONFIRMS', 'CONFLICTS', 'UNAVAILABLE']).toContain(finalSynthesis?.divisionalStatus);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.manifestationStatus);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.finalStatus);
+
+    // Verify backward compatibility aliases
+    expect(finalSynthesis?.status).toBe(finalSynthesis?.finalStatus);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNDETERMINED']).toContain(finalSynthesis?.primaryPromise);
+
+    // Verify risk profile (driven by speculation, never diluting overall wealth status)
+    expect(['LOW', 'MODERATE', 'ELEVATED', 'HIGH', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.riskProfile);
+
+    // Verify all 4 dimensions
+    expect(finalSynthesis?.dimensions).toBeDefined();
+    const dimensions: ('ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION')[] = [
+      'ACCUMULATION',
+      'GAINS',
+      'FORTUNE',
+      'SPECULATION'
+    ];
+
+    for (const dim of dimensions) {
+      const dimSyn = finalSynthesis?.dimensions?.[dim];
+      expect(dimSyn).toBeDefined();
+      expect(dimSyn?.dimension).toBe(dim);
+      expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(dimSyn?.status);
+      expect(['LOW', 'MEDIUM', 'HIGH']).toContain(dimSyn?.confidence);
+      expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(dimSyn?.promiseStatus);
+      expect(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'INSUFFICIENT_DATA']).toContain(dimSyn?.activationStatus);
+      expect(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'INSUFFICIENT_DATA']).toContain(dimSyn?.timingStatus);
+      expect(['CONFIRMS', 'CONFLICTS', 'UNAVAILABLE']).toContain(dimSyn?.divisionalStatus);
+      expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(dimSyn?.manifestationStatus);
+      expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(dimSyn?.finalStatus);
+      expect(typeof dimSyn?.summary).toBe('string');
+    }
+
+    // Verify structured lists and metadata
+    expect(Array.isArray(finalSynthesis?.strongestAreas)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.challengedAreas)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.keySupport)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.keyChallenges)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.manifestationSummary)).toBe(true);
+
+    // Verify provenance fields
+    expect(Array.isArray(finalSynthesis?.natalEvidenceIds)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.natalRuleIds)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.d2Evidence)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.ruleIds)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.evidenceIds)).toBe(true);
+
+    expect(finalSynthesis?.ruleIds).toContain('CW-05-WEALTH-SYNTHESIS');
+
+    // Strict determinism
+    expect(result1.conclusionData?.wealthFinalSynthesis).toEqual(
+      result2.conclusionData?.wealthFinalSynthesis
+    );
+  });
 });
