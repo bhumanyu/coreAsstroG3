@@ -55,6 +55,10 @@ import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
+import { Planet } from '../../types';
+import { synthesizeWealthTiming } from '../timing/careerWealthTiming';
+import { resolveWealthDimensionTransitEffect } from '../timing/careerWealthTiming/wealthTransitRules';
+import { createMockActiveDashaState } from '../timing/careerWealthTiming/__testUtils__/mockDasha';
 
 describe('WealthDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -1491,7 +1495,7 @@ describe('WealthDomainInterpreterV2', () => {
     expect(serviceResult.conclusion).toBeDefined();
   });
 
-  // 17. CW-02 -> CW-03 end-to-end timing integration (Concern 9)
+  // 17. CW-02 -> CW-03 end-to-end timing integration (Concern 9 & Concern 11)
   it('plumbs CW-02 Dasha activations through to CW-03 wealthTimingSynthesis given an explicit asOf date', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
     const result = interpretWealthV2(horoscope, { asOf });
@@ -1515,12 +1519,61 @@ describe('WealthDomainInterpreterV2', () => {
       expect(dimSynthesis.factors).toBeDefined();
     }
 
-    // GAINS dimension specific verification (Concern 9):
-    // Confirms CW-02 dasha effect and natal promise actively derive CW-03 overall effect (not INSUFFICIENT_DATA)
+    // GAINS dimension concrete verification on canonical chart
     const gainsSynthesis = wealthTiming.dimensions.GAINS;
-    expect(gainsSynthesis.dashaEffect).not.toBe('INSUFFICIENT_DATA');
-    expect(['SUPPORTS', 'CHALLENGES', 'MIXED', 'NEUTRAL']).toContain(gainsSynthesis.dashaEffect);
-    expect(gainsSynthesis.overallEffect).not.toBe('INSUFFICIENT_DATA');
-    expect(['ACTIVATES', 'PARTIALLY_ACTIVATES', 'MODIFIES', 'CHALLENGES', 'DOES_NOT_ACTIVATE']).toContain(gainsSynthesis.overallEffect);
+    expect(gainsSynthesis.dashaEffect).toBe('NEUTRAL');
+    expect(gainsSynthesis.natalPromise).toBe('STRONG');
+    expect(gainsSynthesis.overallEffect).toBe('DOES_NOT_ACTIVATE');
+  });
+
+  it('proves deterministic CW-02 -> CW-03 activation pipeline (STRONG natal + SUPPORTS Dasha + SUPPORTS Transit -> ACTIVATES)', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+
+    // Direct resolver proof:
+    expect(
+      resolveWealthDimensionTransitEffect('STRONG', 'SUPPORTS', { transitEffect: 'SUPPORTS' })
+    ).toBe('ACTIVATES');
+
+    // Direct synthesizer proof with explicit natal promise and dasha effects:
+    const supportiveDashaState = createMockActiveDashaState({
+      mdPlanet: Planet.SATURN,
+      adPlanet: Planet.SATURN,
+      pdPlanet: Planet.SATURN
+    });
+
+    const synthesizedSupport = synthesizeWealthTiming(
+      horoscope,
+      supportiveDashaState,
+      asOf,
+      { ACCUMULATION: 'STRONG' },
+      { ACCUMULATION: 'SUPPORTS' }
+    );
+    expect(synthesizedSupport.dimensions.ACCUMULATION.natalPromise).toBe('STRONG');
+    expect(synthesizedSupport.dimensions.ACCUMULATION.dashaEffect).toBe('SUPPORTS');
+    expect(synthesizedSupport.dimensions.ACCUMULATION.overallEffect).toBe('ACTIVATES');
+
+    // Corresponding challenge cases pinning exact CW-03 matrix transitions:
+    expect(
+      resolveWealthDimensionTransitEffect('STRONG', 'CHALLENGES', { transitEffect: 'SUPPORTS' })
+    ).toBe('MODIFIES');
+    expect(
+      resolveWealthDimensionTransitEffect('STRONG', 'SUPPORTS', { transitEffect: 'CHALLENGES' })
+    ).toBe('MODIFIES');
+    expect(
+      resolveWealthDimensionTransitEffect('STRONG', 'CHALLENGES', { transitEffect: 'CHALLENGES' })
+    ).toBe('CHALLENGES');
+    expect(
+      resolveWealthDimensionTransitEffect('WEAK', 'SUPPORTS', { transitEffect: 'SUPPORTS' })
+    ).toBe('DOES_NOT_ACTIVATE');
+
+    const synthesizedChallenge = synthesizeWealthTiming(
+      horoscope,
+      supportiveDashaState,
+      asOf,
+      { ACCUMULATION: 'STRONG' },
+      { ACCUMULATION: 'CHALLENGES' }
+    );
+    expect(synthesizedChallenge.dimensions.ACCUMULATION.dashaEffect).toBe('CHALLENGES');
+    expect(synthesizedChallenge.dimensions.ACCUMULATION.overallEffect).toBe('CHALLENGES');
   });
 });

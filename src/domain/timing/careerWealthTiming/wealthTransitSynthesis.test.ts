@@ -9,6 +9,7 @@ import {
 } from '../../wealth/wealthTypes';
 import { mapWealthDimension } from '../../wealth/wealthEvidenceMapper';
 import { WealthEvidenceFamily } from '../../../engine/themeInterpretation/wealthThemeInterpretationTypes';
+import { createMockActiveDashaState } from './__testUtils__/mockDasha';
 
 describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
   const mockHoroscope: Horoscope = {
@@ -125,12 +126,12 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
 
   it('produces DASHA_LORD_TRANSIT factors for Wealth with concrete dashaPlanet, transitingPlanet, and targetPlanet', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = {
-      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
-      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
-    };
+    const activeDasha = createMockActiveDashaState({
+      mdPlanet: Planet.SUN,
+      adPlanet: Planet.JUPITER
+    });
 
-    const result = synthesizeWealthTiming(mockHoroscope, activeDasha as any, asOf);
+    const result = synthesizeWealthTiming(mockHoroscope, activeDasha, asOf);
     const allFactors = Object.values(result.dimensions).flatMap((d) => d.factors);
     const dashaFactors = allFactors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
 
@@ -150,12 +151,12 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
 
   it('strictly satisfies the planet invariant across all wealth factor categories', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = {
-      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
-      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
-    };
+    const activeDasha = createMockActiveDashaState({
+      mdPlanet: Planet.SUN,
+      adPlanet: Planet.JUPITER
+    });
 
-    const result = synthesizeWealthTiming(mockHoroscope, activeDasha as any, asOf);
+    const result = synthesizeWealthTiming(mockHoroscope, activeDasha, asOf);
     const allFactors = Object.values(result.dimensions).flatMap((d) => d.factors);
     expect(allFactors.length).toBeGreaterThan(0);
 
