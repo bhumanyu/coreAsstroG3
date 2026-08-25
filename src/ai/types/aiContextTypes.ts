@@ -3,6 +3,8 @@ import type { DashaYogaReference } from '../../engine/dashaInterpretation/dashaI
 import type { TimingActivationEffect } from '../../domain/interpretation/DomainInterpretationTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { CareerFactorCategory } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
+import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
+import type { TimingEffect } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import {
   AiAvailability,
   AiConfidence,
@@ -271,6 +273,29 @@ export interface CareerDashaSynthesisFact {
   readonly summary: string;
 }
 
+export interface CareerTimingFactorFact {
+  readonly id: string;
+  readonly planet: Planet;
+  readonly category: string;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly weight: number;
+  readonly statement: string;
+  readonly houses?: readonly number[];
+  readonly natalEvidenceIds?: readonly string[];
+  readonly dashaEvidenceIds?: readonly string[];
+}
+
+export interface CareerTimingSynthesisFact {
+  readonly reasoningVersion: 'CW-03';
+  readonly natalPromise: DomainStrength;
+  readonly dashaEffect: string;
+  readonly transitEffect: string;
+  readonly overallEffect: TimingEffect;
+  readonly confidence: number;
+  readonly factors: readonly CareerTimingFactorFact[];
+  readonly summary: string;
+}
+
 export interface CareerTimingFact {
   readonly status: 'AVAILABLE' | 'UNAVAILABLE';
   readonly asOf?: string;
@@ -279,6 +304,7 @@ export interface CareerTimingFact {
   readonly pratyantardasha?: CareerPeriodTimingFact;
   readonly hierarchy?: CareerHierarchyFact;
   readonly dashaSynthesis?: CareerDashaSynthesisFact;
+  readonly timingSynthesis?: CareerTimingSynthesisFact;
 }
 
 export interface CareerFact {
@@ -331,6 +357,34 @@ export interface WealthPeriodTimingFact {
   readonly statement?: string;
 }
 
+export interface WealthTimingFactorFact {
+  readonly id: string;
+  readonly planet: Planet;
+  readonly category: string;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly weight: number;
+  readonly statement: string;
+  readonly dimension: string;
+  readonly houses?: readonly number[];
+  readonly natalEvidenceIds?: readonly string[];
+  readonly dashaEvidenceIds?: readonly string[];
+}
+
+export interface WealthTimingSynthesisFact {
+  readonly reasoningVersion: 'CW-03';
+  readonly dimensions: Record<string, {
+    readonly dimension: string;
+    readonly natalPromise: DomainStrength;
+    readonly dashaEffect: string;
+    readonly transitEffect: string;
+    readonly overallEffect: TimingEffect;
+    readonly confidence: number;
+    readonly factors: readonly WealthTimingFactorFact[];
+    readonly summary: string;
+  }>;
+  readonly overallSummary: string;
+}
+
 export interface WealthTimingFact {
   readonly status: 'AVAILABLE' | 'UNAVAILABLE';
   readonly asOf?: string;
@@ -338,6 +392,7 @@ export interface WealthTimingFact {
   readonly antardasha?: WealthPeriodTimingFact;
   readonly pratyantardasha?: WealthPeriodTimingFact;
   readonly hierarchy?: WealthHierarchyFact;
+  readonly timingSynthesis?: WealthTimingSynthesisFact;
 }
 
 export interface WealthSubthemeFact {

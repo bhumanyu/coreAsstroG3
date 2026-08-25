@@ -22,6 +22,10 @@ import {
   CareerPeriodTimingFact,
   CareerDashaSynthesisFact,
   CareerDashaSynthesisFactorFact,
+  CareerTimingSynthesisFact,
+  CareerTimingFactorFact,
+  WealthTimingSynthesisFact,
+  WealthTimingFactorFact,
   DashaFacts,
   DashaInterpretationFacts,
   DashaPairFacts,
@@ -40,7 +44,7 @@ import {
   YogaFactSummary,
   TimingActivationEffect
 } from '../types/aiContextTypes';
-import type { CareerTimingActivation } from '../../domain/career/careerTypes';
+import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynthesis } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
@@ -624,11 +628,37 @@ function buildCareerFact(
     }
   }
 
-  const enrichedTiming: CareerTimingFact | undefined = timing
+  const careerTimingSynthesis = careerInterpretation?.conclusionData?.careerTimingSynthesis;
+  let careerTimingSynthesisFact: CareerTimingSynthesisFact | undefined;
+  if (careerTimingSynthesis) {
+    careerTimingSynthesisFact = {
+      reasoningVersion: 'CW-03',
+      natalPromise: careerTimingSynthesis.natalPromise,
+      dashaEffect: careerTimingSynthesis.dashaEffect,
+      transitEffect: careerTimingSynthesis.transitEffect,
+      overallEffect: careerTimingSynthesis.overallEffect,
+      confidence: careerTimingSynthesis.confidence,
+      factors: careerTimingSynthesis.factors.map((f: CareerTimingFactor): CareerTimingFactorFact => ({
+        id: f.id,
+        planet: f.planet,
+        category: f.category,
+        direction: f.direction,
+        weight: f.weight,
+        statement: f.statement,
+        ...(f.houses ? { houses: [...f.houses] } : {}),
+        ...(f.natalEvidenceIds ? { natalEvidenceIds: [...f.natalEvidenceIds] } : {}),
+        ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {})
+      })),
+      summary: careerTimingSynthesis.summary
+    };
+  }
+
+  const enrichedTiming: CareerTimingFact | undefined = timing || careerTimingSynthesisFact
     ? {
-        ...timing,
+        ...(timing ?? { status: 'AVAILABLE' }),
         ...(hierarchy ? { hierarchy } : {}),
-        ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {})
+        ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
+        ...(careerTimingSynthesisFact ? { timingSynthesis: careerTimingSynthesisFact } : {})
       }
     : undefined;
 
@@ -697,10 +727,55 @@ function buildWealthFact(
     }
   }
 
-  const enrichedTiming: WealthTimingFact | undefined = timing
+  const wealthTimingSynthesis = wealthInterpretation?.conclusionData?.wealthTimingSynthesis;
+  let wealthTimingSynthesisFact: WealthTimingSynthesisFact | undefined;
+  if (wealthTimingSynthesis) {
+    const dimFacts: Record<string, {
+      readonly dimension: string;
+      readonly natalPromise: any;
+      readonly dashaEffect: string;
+      readonly transitEffect: string;
+      readonly overallEffect: any;
+      readonly confidence: number;
+      readonly factors: readonly WealthTimingFactorFact[];
+      readonly summary: string;
+    }> = {};
+    for (const [dimKey, dimSyn] of Object.entries(wealthTimingSynthesis.dimensions)) {
+      const synObj = dimSyn as WealthDimensionTimingSynthesis;
+      dimFacts[dimKey] = {
+        dimension: synObj.dimension,
+        natalPromise: synObj.natalPromise,
+        dashaEffect: synObj.dashaEffect,
+        transitEffect: synObj.transitEffect,
+        overallEffect: synObj.overallEffect,
+        confidence: synObj.confidence,
+        factors: synObj.factors.map((f: WealthTimingFactor): WealthTimingFactorFact => ({
+          id: f.id,
+          planet: f.planet,
+          category: f.category,
+          direction: f.direction,
+          weight: f.weight,
+          statement: f.statement,
+          dimension: f.dimension,
+          ...(f.houses ? { houses: [...f.houses] } : {}),
+          ...(f.natalEvidenceIds ? { natalEvidenceIds: [...f.natalEvidenceIds] } : {}),
+          ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {})
+        })),
+        summary: synObj.summary
+      };
+    }
+    wealthTimingSynthesisFact = {
+      reasoningVersion: 'CW-03',
+      dimensions: dimFacts,
+      overallSummary: wealthTimingSynthesis.overallSummary
+    };
+  }
+
+  const enrichedTiming: WealthTimingFact | undefined = timing || wealthTimingSynthesisFact
     ? {
-        ...timing,
-        ...(hierarchy ? { hierarchy } : {})
+        ...(timing ?? { status: 'AVAILABLE' }),
+        ...(hierarchy ? { hierarchy } : {}),
+        ...(wealthTimingSynthesisFact ? { timingSynthesis: wealthTimingSynthesisFact } : {})
       }
     : undefined;
 

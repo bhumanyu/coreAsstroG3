@@ -10,6 +10,8 @@ import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import type { Planet } from '../../types';
 import { WealthEvidenceFamily } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 
+import type { WealthTimingSynthesis } from '../timing/careerWealthTiming/careerWealthTimingTypes';
+
 export { WealthEvidenceFamily };
 
 export type WealthDimension =
@@ -111,4 +113,5 @@ export interface WealthConclusionData {
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
+  readonly wealthTimingSynthesis?: WealthTimingSynthesis;
 }

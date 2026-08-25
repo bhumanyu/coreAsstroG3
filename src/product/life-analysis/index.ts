@@ -11,4 +11,8 @@ export * from './dashaHierarchyTypes';
 export * from './dashaHierarchyUtils';
 export * from './dashaCareerHierarchy';
 export * from './dashaWealthHierarchy';
+export * from './CareerTimingSection';
+export * from './WealthTimingSection';
+export * from './SharedTimingSection';
+
 

@@ -81,6 +81,8 @@ import { calculateWealthConfidence } from './wealthConfidence';
 import { detectWealthConflicts } from './wealthConflicts';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
+import { synthesizeWealthTiming } from '../timing/careerWealthTiming';
+import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretWealthV2(
   horoscope: Horoscope,
@@ -445,6 +447,17 @@ export function interpretWealthV2(
     }
   ]);
 
+  const asOfDate = options?.asOf
+    ? (typeof options.asOf === 'string' ? new Date(options.asOf) : options.asOf)
+    : (horoscope.dashaInterpretation?.at
+        ? new Date(horoscope.dashaInterpretation.at)
+        : (horoscope.birthDetails?.dateTimeStr
+            ? new Date(horoscope.birthDetails.dateTimeStr)
+            : new Date('2026-01-01T00:00:00Z')));
+
+  const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+  const wealthTimingSynthesis = synthesizeWealthTiming(horoscope, activeDashaState, asOfDate);
+
   return buildDomainInterpretation({
     domain: 'WEALTH',
     evidence,
@@ -458,7 +471,10 @@ export function interpretWealthV2(
     timingActivations,
     periodTimingActivations,
     dataCompleteness,
-    conclusionData
+    conclusionData: {
+      ...conclusionData,
+      wealthTimingSynthesis
+    }
   });
 }
 

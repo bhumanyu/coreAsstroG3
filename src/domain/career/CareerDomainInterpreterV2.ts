@@ -81,6 +81,8 @@ import {
 import { calculateCareerDataCompleteness } from './careerDataCompleteness';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
+import { synthesizeCareerTransit, synthesizeCareerTiming } from '../timing/careerWealthTiming';
+import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
@@ -254,6 +256,18 @@ export function interpretCareerV2(
       d10Context
     });
 
+    const asOfDate = options?.asOf
+      ? (typeof options.asOf === 'string' ? new Date(options.asOf) : options.asOf)
+      : (horoscope.dashaInterpretation?.at
+          ? new Date(horoscope.dashaInterpretation.at)
+          : (horoscope.birthDetails?.dateTimeStr
+              ? new Date(horoscope.birthDetails.dateTimeStr)
+              : new Date('2026-01-01T00:00:00Z')));
+
+    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate);
+    const careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
+
     const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
       const priority = getCareerDashaEvidencePriority(f.period, f.category);
 
@@ -329,7 +343,8 @@ export function interpretCareerV2(
         ...conclusionData,
         currentActivation: cw01Result.currentActivation,
         currentPressure: cw01Result.currentPressure,
-        careerDashaSynthesis
+        careerDashaSynthesis,
+        careerTimingSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: 'CW-01'
@@ -386,6 +401,18 @@ export function interpretCareerV2(
     unresolvedQuestions: []
   });
 
+  const stdAsOfDate = options?.asOf
+    ? (typeof options.asOf === 'string' ? new Date(options.asOf) : options.asOf)
+    : (horoscope.dashaInterpretation?.at
+        ? new Date(horoscope.dashaInterpretation.at)
+        : (horoscope.birthDetails?.dateTimeStr
+            ? new Date(horoscope.birthDetails.dateTimeStr)
+            : new Date('2026-01-01T00:00:00Z')));
+
+  const stdActiveDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, stdAsOfDate) : null;
+  const stdCareerTransitSynthesis = synthesizeCareerTransit(horoscope, stdActiveDashaState, stdAsOfDate);
+  const stdCareerTimingSynthesis = synthesizeCareerTiming(natalStrength, undefined, stdCareerTransitSynthesis);
+
   return buildDomainInterpretation({
     domain: 'CAREER',
     evidence,
@@ -398,7 +425,10 @@ export function interpretCareerV2(
     conclusion,
     timingActivations,
     dataCompleteness,
-    conclusionData
+    conclusionData: {
+      ...conclusionData,
+      careerTimingSynthesis: stdCareerTimingSynthesis
+    }
   });
 }
 
