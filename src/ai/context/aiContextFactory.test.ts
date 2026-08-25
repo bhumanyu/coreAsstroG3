@@ -1223,5 +1223,68 @@ describe('AI Context Factory', () => {
       expect(dims?.SPECULATION?.natalSupport).toBe('NEUTRAL');
       expect(dims?.SPECULATION?.factors[0].transitEvidenceIds).toEqual(['TR_SAT_5']);
     });
+
+    it('should map Career and Wealth CW-05 finalSynthesis facts with activation hierarchy and confidence preserved', () => {
+      const customCareerInterpretation: DomainInterpretation = createDomainInterpretation({
+        domain: 'CAREER',
+        natalPromise: createNatalPromise({ strength: 'STRONG' }),
+        dashaActivation: createDashaActivation({ effect: 'ACTIVATES' }),
+        transitTrigger: createTransitTrigger({ effect: 'TRIGGER' }),
+        conclusion: createDomainConclusion({ statement: 'Career strong', confidence: 'HIGH' }),
+        evidence: [],
+        conclusionData: {
+          careerFinalSynthesis: {
+            reasoningVersion: 'CW-05',
+            domain: 'CAREER',
+            status: 'STRONG',
+            finalStatus: 'STRONG',
+            promiseStatus: 'STRONG',
+            activationStatus: 'SUPPORT',
+            activationConfidence: 'HIGH',
+            activationStrength: 2.75,
+            activationSummary: 'MD Jupiter provides primary SUPPORT; AD Sun reinforces support; PD Mars introduces short-term CHALLENGE qualification',
+            activationHierarchy: {
+              md: { effect: 'SUPPORTS', role: 'PRIMARY' },
+              ad: { effect: 'SUPPORTS', role: 'MODIFIER' },
+              pd: { effect: 'CHALLENGES', role: 'REFINEMENT' }
+            },
+            timingStatus: 'SUPPORT',
+            divisionalStatus: 'CONFIRMS',
+            manifestationStatus: 'STRONG',
+            confidence: 'HIGH',
+            primaryPromise: 'STRONG',
+            primaryStrength: 2.5,
+            manifestationSummary: [],
+            strongestAreas: ['LEADERSHIP'],
+            challengedAreas: [],
+            dashaEffect: 'SUPPORTS',
+            timingEffect: 'ACTIVATES',
+            divisionalEffect: 'CONFIRMS',
+            keySupport: ['Jupiter 10H'],
+            keyChallenges: [],
+            summary: 'Career final synthesis',
+            ruleIds: ['CW-05-CAREER-SYNTHESIS'],
+            evidenceIds: ['EV-1']
+          }
+        }
+      });
+
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [customCareerInterpretation]
+      });
+
+      const finalSyn = aiContext.career?.finalSynthesis;
+      expect(finalSyn).toBeDefined();
+      expect(finalSyn?.reasoningVersion).toBe('CW-05');
+      expect(finalSyn?.activationStatus).toBe('SUPPORT');
+      expect(finalSyn?.activationConfidence).toBe('HIGH');
+      expect(finalSyn?.activationStrength).toBe(2.75);
+      expect(finalSyn?.activationSummary).toContain('MD Jupiter provides primary SUPPORT');
+      expect(finalSyn?.activationHierarchy).toEqual({
+        md: { effect: 'SUPPORTS', role: 'PRIMARY' },
+        ad: { effect: 'SUPPORTS', role: 'MODIFIER' },
+        pd: { effect: 'CHALLENGES', role: 'REFINEMENT' }
+      });
+    });
   });
 });

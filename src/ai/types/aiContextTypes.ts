@@ -280,7 +280,8 @@ import type {
   FinalDomainStatus,
   FinalDomainConfidence,
   WealthRiskProfile,
-  SynthesisAxisStatus
+  SynthesisAxisStatus,
+  FinalSynthesisActivationHierarchy
 } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { VargaRelationship } from '../../domain/interpretation/DomainInterpretationTypes';
 
@@ -362,6 +363,10 @@ export interface WealthDimensionFinalSynthesisFact {
   readonly finalStatus?: FinalDomainStatus;
   readonly promiseStatus?: FinalDomainStatus;
   readonly activationStatus?: SynthesisAxisStatus;
+  readonly activationConfidence?: FinalDomainConfidence;
+  readonly activationStrength?: number;
+  readonly activationSummary?: string;
+  readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus?: SynthesisAxisStatus;
   readonly divisionalStatus?: VargaRelationship;
   readonly manifestationStatus?: FinalDomainStatus;
@@ -384,6 +389,10 @@ export interface CareerWealthFinalSynthesisFact {
   readonly finalStatus?: FinalDomainStatus;
   readonly promiseStatus?: FinalDomainStatus;
   readonly activationStatus?: SynthesisAxisStatus;
+  readonly activationConfidence?: FinalDomainConfidence;
+  readonly activationStrength?: number;
+  readonly activationSummary?: string;
+  readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus?: SynthesisAxisStatus;
   readonly divisionalStatus?: VargaRelationship;
   readonly manifestationStatus?: FinalDomainStatus;

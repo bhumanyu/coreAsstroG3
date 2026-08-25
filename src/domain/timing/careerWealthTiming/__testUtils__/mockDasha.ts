@@ -11,6 +11,7 @@ import type {
   CareerDashaPlanetSynthesis,
   CareerDashaFactor
 } from '../../../career/careerDasha/careerDashaSynthesisTypes';
+import type { InterpretationConfidence } from '../../../../engine/planetInterpretation/planetInterpretationTypes';
 
 export interface MockActiveDashaOptions {
   mdPlanet?: Planet;
@@ -65,22 +66,38 @@ export function createMockActiveDashaState(options?: MockActiveDashaOptions): Ac
 
 export function createMockCareerDashaSynthesis(options?: {
   combinedEffect?: CareerDashaEffect;
+  combinedConfidence?: InterpretationConfidence;
+  combinedScore?: number;
   mdPlanet?: Planet;
   adPlanet?: Planet;
   pdPlanet?: Planet;
+  mdEffect?: CareerDashaEffect;
+  adEffect?: CareerDashaEffect;
+  pdEffect?: CareerDashaEffect;
+  mdConfidence?: InterpretationConfidence;
+  adConfidence?: InterpretationConfidence;
+  pdConfidence?: InterpretationConfidence;
   factors?: readonly CareerDashaFactor[];
 }): CareerDashaSynthesis {
   const combinedEffect = options?.combinedEffect ?? 'SUPPORTS';
+  const combinedConfidence = options?.combinedConfidence ?? 'HIGH';
+  const combinedScore = options?.combinedScore ?? 3.0;
   const mdPlanet = options?.mdPlanet ?? Planet.JUPITER;
   const adPlanet = options?.adPlanet ?? Planet.SATURN;
   const pdPlanet = options?.pdPlanet ?? Planet.MERCURY;
+  const mdEffect = options?.mdEffect ?? combinedEffect;
+  const adEffect = options?.adEffect ?? combinedEffect;
+  const pdEffect = options?.pdEffect ?? combinedEffect;
+  const mdConfidence = options?.mdConfidence ?? 'HIGH';
+  const adConfidence = options?.adConfidence ?? 'HIGH';
+  const pdConfidence = options?.pdConfidence ?? 'HIGH';
   const factors = options?.factors ?? [];
 
   const mdSynthesis: CareerDashaPlanetSynthesis = {
     period: 'MD',
     planet: mdPlanet,
-    effect: combinedEffect,
-    confidence: 'HIGH',
+    effect: mdEffect,
+    confidence: mdConfidence,
     supportScore: 2.5,
     challengeScore: 0,
     netScore: 2.5,
@@ -96,8 +113,8 @@ export function createMockCareerDashaSynthesis(options?: {
   const adSynthesis: CareerDashaPlanetSynthesis = {
     period: 'AD',
     planet: adPlanet,
-    effect: combinedEffect,
-    confidence: 'HIGH',
+    effect: adEffect,
+    confidence: adConfidence,
     supportScore: 1.5,
     challengeScore: 0,
     netScore: 1.5,
@@ -113,8 +130,8 @@ export function createMockCareerDashaSynthesis(options?: {
   const pdSynthesis: CareerDashaPlanetSynthesis = {
     period: 'PD',
     planet: pdPlanet,
-    effect: combinedEffect,
-    confidence: 'HIGH',
+    effect: pdEffect,
+    confidence: pdConfidence,
     supportScore: 1.0,
     challengeScore: 0,
     netScore: 1.0,
@@ -144,8 +161,8 @@ export function createMockCareerDashaSynthesis(options?: {
       ad: adSynthesis,
       pd: pdSynthesis,
       combinedEffect,
-      combinedConfidence: 'HIGH',
-      combinedScore: 3.0,
+      combinedConfidence,
+      combinedScore,
       summary: `Combined effect ${combinedEffect}`
     },
     factors,
