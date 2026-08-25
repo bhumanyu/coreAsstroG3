@@ -11,6 +11,7 @@ import {
   buildDashaEvidence
 } from './aiContextFactory';
 import {
+  DomainInterpretation,
   createDomainInterpretation,
   createDomainEvidence,
   createNatalPromise,
@@ -801,6 +802,135 @@ describe('AI Context Factory', () => {
       expect(partialContext.dasha.interpretation?.antardasha).toBeUndefined();
       expect(partialContext.dasha.interpretation?.pratyantardasha).toBeUndefined();
       expect(partialContext.dasha.interpretation?.pair).toBeUndefined();
+    });
+
+    it('never reinterprets factor direction or category when mapping CareerDashaSynthesisFactorFact', () => {
+      const customCareerInterpretation = createDomainInterpretation({
+        domain: 'CAREER',
+        natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+        dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+        transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+        conclusion: createDomainConclusion({ statement: 'Career active', confidence: 'HIGH' }),
+        evidence: [
+          createDomainEvidence({
+            id: 'F_SUPPORT_1',
+            sourceType: 'HOUSE',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Owns 10th house'
+          }),
+          createDomainEvidence({
+            id: 'F_CHALLENGE_1',
+            sourceType: 'PLANET',
+            polarity: 'CHALLENGING',
+            strength: 'MODERATE',
+            statement: 'Malefic functional nature'
+          })
+        ],
+        conclusionData: {
+          careerDashaSynthesis: {
+            md: {
+              planet: Planet.SATURN,
+              effect: 'SUPPORTS',
+              factors: [
+                {
+                  id: 'F_SUPPORT_1',
+                  period: 'MD',
+                  planet: Planet.SATURN,
+                  category: 'HOUSE_OWNERSHIP',
+                  direction: 'SUPPORT',
+                  weight: 2.5,
+                  statement: 'Owns 10th house',
+                  houses: [10]
+                },
+                {
+                  id: 'F_CHALLENGE_1',
+                  period: 'MD',
+                  planet: Planet.SATURN,
+                  category: 'FUNCTIONAL_NATURE',
+                  direction: 'CHALLENGE',
+                  weight: 0.5,
+                  statement: 'Malefic functional nature',
+                  houses: []
+                }
+              ]
+            },
+            ad: {
+              planet: Planet.MERCURY,
+              effect: 'NEUTRAL',
+              factors: []
+            },
+            pd: {
+              planet: Planet.VENUS,
+              effect: 'NEUTRAL',
+              factors: []
+            },
+            combined: {
+              md: {
+                planet: Planet.SATURN,
+                effect: 'SUPPORTS',
+                factors: [
+                  {
+                    id: 'F_SUPPORT_1',
+                    period: 'MD',
+                    planet: Planet.SATURN,
+                    category: 'HOUSE_OWNERSHIP',
+                    direction: 'SUPPORT',
+                    weight: 2.5,
+                    statement: 'Owns 10th house',
+                    houses: [10]
+                  },
+                  {
+                    id: 'F_CHALLENGE_1',
+                    period: 'MD',
+                    planet: Planet.SATURN,
+                    category: 'FUNCTIONAL_NATURE',
+                    direction: 'CHALLENGE',
+                    weight: 0.5,
+                    statement: 'Malefic functional nature',
+                    houses: []
+                  }
+                ]
+              },
+              ad: {
+                planet: Planet.MERCURY,
+                effect: 'NEUTRAL',
+                factors: []
+              },
+              pd: {
+                planet: Planet.VENUS,
+                effect: 'NEUTRAL',
+                factors: []
+              },
+              hierarchy: {
+                mdRole: 'PRIMARY_DRIVER',
+                adRole: 'MODIFIER',
+                pdRole: 'TRIGGER',
+                combinedEffect: 'SUPPORTS'
+              }
+            },
+            factors: [],
+            summary: 'Career synthesis summary'
+          }
+        }
+      });
+
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [customCareerInterpretation]
+      });
+
+      const synFact = aiContext.career?.dashaSynthesis;
+      expect(synFact).toBeDefined();
+      expect(synFact?.md.factors).toHaveLength(2);
+
+      const supportFactor = synFact?.md.factors.find((f) => f.id === 'F_SUPPORT_1');
+      const challengeFactor = synFact?.md.factors.find((f) => f.id === 'F_CHALLENGE_1');
+
+      expect(supportFactor?.direction).toBe('SUPPORT');
+      expect(supportFactor?.category).toBe('HOUSE_OWNERSHIP');
+
+      expect(challengeFactor?.direction).toBe('CHALLENGE');
+      expect(challengeFactor?.category).toBe('FUNCTIONAL_NATURE');
     });
   });
 });
