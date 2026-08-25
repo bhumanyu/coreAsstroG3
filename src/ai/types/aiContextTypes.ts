@@ -273,10 +273,21 @@ export interface CareerDashaSynthesisFact {
   readonly summary: string;
 }
 
+import type { WealthDimension } from '../../domain/wealth/wealthTypes';
+
+export type TimingSourceCategory =
+  | 'CAREER_HOUSE_TRANSIT'
+  | 'CAREER_LORD_TRANSIT'
+  | 'DASHA_LORD_TRANSIT'
+  | 'CAREER_KARAKA_TRANSIT'
+  | 'WEALTH_HOUSE_TRANSIT'
+  | 'WEALTH_LORD_TRANSIT'
+  | 'WEALTH_KARAKA_TRANSIT';
+
 export interface CareerTimingFactorFact {
   readonly id: string;
   readonly planet: Planet;
-  readonly category: string;
+  readonly category: TimingSourceCategory | string;
   readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly weight: number;
   readonly statement: string;
@@ -360,11 +371,11 @@ export interface WealthPeriodTimingFact {
 export interface WealthTimingFactorFact {
   readonly id: string;
   readonly planet: Planet;
-  readonly category: string;
+  readonly category: TimingSourceCategory | string;
   readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly weight: number;
   readonly statement: string;
-  readonly dimension: string;
+  readonly dimension: WealthDimension | string;
   readonly houses?: readonly number[];
   readonly natalEvidenceIds?: readonly string[];
   readonly dashaEvidenceIds?: readonly string[];
@@ -372,8 +383,8 @@ export interface WealthTimingFactorFact {
 
 export interface WealthTimingSynthesisFact {
   readonly reasoningVersion: 'CW-03';
-  readonly dimensions: Record<string, {
-    readonly dimension: string;
+  readonly dimensions: Record<WealthDimension | string, {
+    readonly dimension: WealthDimension | string;
     readonly natalPromise: DomainStrength;
     readonly dashaEffect: string;
     readonly transitEffect: string;

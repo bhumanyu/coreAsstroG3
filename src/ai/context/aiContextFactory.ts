@@ -1,4 +1,6 @@
 import { Horoscope, Planet, Sign } from '../../types';
+import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
+import type { TimingEffect } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import {
   AI_CONTEXT_SCHEMA_VERSION,
   AiAvailability,
@@ -732,10 +734,10 @@ function buildWealthFact(
   if (wealthTimingSynthesis) {
     const dimFacts: Record<string, {
       readonly dimension: string;
-      readonly natalPromise: any;
+      readonly natalPromise: DomainStrength;
       readonly dashaEffect: string;
       readonly transitEffect: string;
-      readonly overallEffect: any;
+      readonly overallEffect: TimingEffect;
       readonly confidence: number;
       readonly factors: readonly WealthTimingFactorFact[];
       readonly summary: string;

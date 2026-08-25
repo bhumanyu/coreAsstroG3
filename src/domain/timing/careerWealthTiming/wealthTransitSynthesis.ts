@@ -15,48 +15,51 @@ import {
   resolveWealthDimensionTransitEffect
 } from './wealthTransitRules';
 
-function getNatalMoonLongitude(horoscope: Horoscope): number {
+function getNatalMoonLongitude(horoscope: Horoscope): number | undefined {
   if (horoscope.positions?.MOON?.eclipticLongitude !== undefined) {
     return horoscope.positions.MOON.eclipticLongitude;
   }
-  const moonFact = horoscope.planetFacts?.[Planet.MOON] as any;
-  if (moonFact?.longitude !== undefined) {
-    return moonFact.longitude;
-  }
+  const moonFact = horoscope.planetFacts?.[Planet.MOON];
   if (moonFact?.position?.eclipticLongitude !== undefined) {
     return moonFact.position.eclipticLongitude;
   }
-  return 0;
+  if (typeof (moonFact as unknown as { longitude?: number })?.longitude === 'number') {
+    return (moonFact as unknown as { longitude?: number }).longitude;
+  }
+  return undefined;
 }
 
-function getNatalAscendantLongitude(horoscope: Horoscope): number {
+function getNatalAscendantLongitude(horoscope: Horoscope): number | undefined {
   if (horoscope.ascendant?.longitude !== undefined) {
     return horoscope.ascendant.longitude;
   }
-  const bhava1 = horoscope.bhavas?.[1] as any;
-  if (bhava1?.degree !== undefined) {
+  const bhava1 = horoscope.bhavas?.[1] as unknown as { degree?: number; longitude?: number } | undefined;
+  if (typeof bhava1?.degree === 'number') {
     return bhava1.degree;
   }
-  if (bhava1?.longitude !== undefined) {
+  if (typeof bhava1?.longitude === 'number') {
     return bhava1.longitude;
   }
   if (horoscope.rasiChart?.ascendantDegree !== undefined) {
     return horoscope.rasiChart.ascendantDegree;
   }
-  return 0;
+  return undefined;
 }
 
-function getNatalPlanetLongitudes(horoscope: Horoscope): Partial<Record<Planet, number>> {
+function getNatalPlanetLongitudes(horoscope: Horoscope): Partial<Record<Planet, number>> | undefined {
   const result: Partial<Record<Planet, number>> = {};
+  let count = 0;
   for (const p of Object.values(Planet)) {
-    const pf = horoscope.planetFacts?.[p] as any;
-    if (pf?.longitude !== undefined) {
-      result[p] = pf.longitude;
-    } else if (pf?.position?.eclipticLongitude !== undefined) {
+    const pf = horoscope.planetFacts?.[p];
+    if (pf?.position?.eclipticLongitude !== undefined) {
       result[p] = pf.position.eclipticLongitude;
+      count++;
+    } else if (typeof (pf as unknown as { longitude?: number })?.longitude === 'number') {
+      result[p] = (pf as unknown as { longitude?: number }).longitude!;
+      count++;
     }
   }
-  return result;
+  return count > 0 ? result : undefined;
 }
 
 function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undefined {
@@ -68,8 +71,6 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
   }
   return undefined;
 }
-
-const BENEFIC_PLANETS = new Set<Planet>([Planet.JUPITER, Planet.VENUS, Planet.MERCURY]);
 
 const DIMENSION_HOUSES: Record<WealthDimension, number> = {
   ACCUMULATION: 2,
@@ -99,10 +100,34 @@ export function synthesizeWealthTiming(
     throw new TypeError('Valid asOf Date instance is required.');
   }
 
-  const ayanamsa = horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI;
-  const transitLongitudes = calculateCurrentTransitLongitudes(asOf, ayanamsa);
   const natalMoonLongitude = getNatalMoonLongitude(horoscope);
   const natalAscendantLongitude = getNatalAscendantLongitude(horoscope);
+  const natalPlanetLongitudes = getNatalPlanetLongitudes(horoscope);
+
+  const dimensions: WealthDimension[] = ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'];
+
+  if (natalMoonLongitude === undefined || natalAscendantLongitude === undefined || natalPlanetLongitudes === undefined) {
+    const insufficientSyntheses: Partial<Record<WealthDimension, WealthTransitDimensionSynthesis>> = {};
+    for (const dim of dimensions) {
+      insufficientSyntheses[dim] = Object.freeze({
+        dimension: dim,
+        natalPromise: natalPromises?.[dim] ?? 'MODERATE',
+        dashaEffect: dashaEffects?.[dim] ?? 'INSUFFICIENT_DATA',
+        transitEffect: 'INSUFFICIENT_DATA',
+        overallEffect: 'INSUFFICIENT_DATA',
+        confidence: 0.5,
+        factors: Object.freeze([]),
+        summary: 'Required natal position longitudes unavailable for timing calculation.'
+      });
+    }
+    return Object.freeze({
+      dimensions: insufficientSyntheses as Record<WealthDimension, WealthTransitDimensionSynthesis>,
+      overallSummary: 'Required natal position longitudes unavailable for wealth timing calculation.'
+    });
+  }
+
+  const ayanamsa = horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI;
+  const transitLongitudes = calculateCurrentTransitLongitudes(asOf, ayanamsa);
 
   const transitInput = {
     at: asOf.toISOString(),
@@ -112,7 +137,6 @@ export function synthesizeWealthTiming(
   };
 
   const transitAnalysis = calculateTransit(transitInput);
-  const natalPlanetLongitudes = getNatalPlanetLongitudes(horoscope);
 
   analyzeTransits({
     transit: transitAnalysis,
@@ -122,7 +146,33 @@ export function synthesizeWealthTiming(
   const factors: WealthTransitFactor[] = [];
   const trackedFactorIds = new Set<string>();
 
-  const dimensions: WealthDimension[] = ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'];
+  const getPlanetWealthRole = (planet: Planet, dim: WealthDimension) => {
+    const ownedHouses: number[] = [];
+    for (let h = 1; h <= 12; h++) {
+      if (getHouseLord(horoscope, h) === planet) {
+        ownedHouses.push(h);
+      }
+    }
+    const natalHouse = horoscope.planetFacts?.[planet]?.house;
+    const isKaraka = DIMENSION_KARAKAS[dim].includes(planet);
+    const targetHouse = DIMENSION_HOUSES[dim];
+    const ownsTargetHouse = ownedHouses.includes(targetHouse);
+    const ownsWealthHouse = ownedHouses.some((h) => [2, 11, 9, 5].includes(h));
+    const ownsLagna = ownedHouses.includes(1);
+    const ownsDusthana = ownedHouses.some((h) => [8, 12].includes(h));
+    const occupiesWealthHouse = natalHouse !== undefined && [2, 11, 9, 5].includes(natalHouse);
+
+    return {
+      ownedHouses,
+      natalHouse,
+      isKaraka,
+      ownsTargetHouse,
+      ownsWealthHouse,
+      ownsLagna,
+      ownsDusthana,
+      occupiesWealthHouse
+    };
+  };
 
   for (const dim of dimensions) {
     const targetHouse = DIMENSION_HOUSES[dim];
@@ -140,9 +190,41 @@ export function synthesizeWealthTiming(
         if (trackedFactorIds.has(factorId)) continue;
         trackedFactorIds.add(factorId);
 
-        const isBenefic = BENEFIC_PLANETS.has(p);
-        const direction = isBenefic ? 'SUPPORT' : 'CHALLENGE';
-        const weight = isBenefic ? 2.0 : 1.0;
+        const role = getPlanetWealthRole(p, dim);
+        let direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' = 'NEUTRAL';
+        let weight = isOccupying ? 2.0 : 1.5;
+
+        if (dim === 'SPECULATION') {
+          if (role.ownsTargetHouse || role.ownsLagna || role.isKaraka || p === Planet.VENUS || p === Planet.MERCURY) {
+            direction = 'SUPPORT';
+          } else if (p === Planet.SATURN || p === Planet.MARS || p === Planet.RAHU || p === Planet.KETU || (role.ownsDusthana && !role.ownsWealthHouse)) {
+            direction = 'CHALLENGE';
+            weight = 1.5;
+          } else {
+            direction = 'NEUTRAL';
+          }
+        } else if (dim === 'GAINS') {
+          if (p === Planet.SATURN || p === Planet.MARS) {
+            direction = 'SUPPORT';
+            weight = isOccupying ? 2.0 : 1.5;
+          } else if (role.ownsWealthHouse || role.ownsLagna || role.isKaraka) {
+            direction = 'SUPPORT';
+          } else if (role.ownsDusthana && !role.ownsWealthHouse) {
+            direction = 'CHALLENGE';
+          } else {
+            direction = 'NEUTRAL';
+          }
+        } else {
+          if (role.ownsWealthHouse || role.ownsLagna || role.isKaraka || role.occupiesWealthHouse) {
+            direction = 'SUPPORT';
+          } else if (role.ownsDusthana && !role.ownsWealthHouse && !role.isKaraka) {
+            direction = 'CHALLENGE';
+            weight = 1.5;
+          } else {
+            direction = 'NEUTRAL';
+          }
+        }
+
         const actionText = isOccupying ? 'occupies' : 'aspects';
         const statement = `Transit ${p} ${actionText} wealth house ${targetHouse} (${dim}).`;
 
@@ -169,9 +251,24 @@ export function synthesizeWealthTiming(
           const factorId = `WTR_LORD_${dim}_${lord}_H${targetHouse}_IN_H${currentHouse}`;
           if (!trackedFactorIds.has(factorId)) {
             trackedFactorIds.add(factorId);
-            const isGoodPlacement = [2, 11, 9, 5, 1, 10].includes(currentHouse);
-            const direction = isGoodPlacement ? 'SUPPORT' : 'CHALLENGE';
-            const weight = isGoodPlacement ? 2.0 : 1.0;
+
+            let direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' = 'NEUTRAL';
+            let weight = 2.0;
+
+            if (currentHouse === targetHouse) {
+              direction = 'SUPPORT';
+              weight = 2.5;
+            } else if ([2, 11, 9, 5, 1, 10].includes(currentHouse)) {
+              direction = 'SUPPORT';
+            } else if (currentHouse === 6) {
+              direction = dim === 'GAINS' ? 'SUPPORT' : 'NEUTRAL';
+            } else if (currentHouse === 8 || currentHouse === 12) {
+              direction = 'CHALLENGE';
+              weight = 1.5;
+            } else {
+              direction = 'NEUTRAL';
+            }
+
             const statement = `Wealth lord of house ${targetHouse} (${dim}) (${lord}) transits house ${currentHouse}.`;
 
             factors.push(Object.freeze({

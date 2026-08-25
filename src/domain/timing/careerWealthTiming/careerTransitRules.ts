@@ -78,7 +78,8 @@ export function resolveMixedNatalCareerPromise(
  */
 export function resolveSupportedNatalCareerPromise(
   dashaEffect: CareerDashaEffect | 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA',
-  transitEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA'
+  transitEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA',
+  hasDirectPrimaryActivation: boolean = false
 ): TimingEffect {
   if (dashaEffect === 'SUPPORTS') {
     if (transitEffect === 'CHALLENGES' || transitEffect === 'MIXED') {
@@ -98,9 +99,12 @@ export function resolveSupportedNatalCareerPromise(
     return 'MODIFIES';
   }
 
-  // Dasha is NEUTRAL or INSUFFICIENT_DATA
+  // Dasha is NEUTRAL or INSUFFICIENT_DATA:
+  // Transits alone act as modifiers/opportunities rather than a full secondary Dasha engine.
+  // Returns ACTIVATES only when a transit directly activates a very strong primary natal Career factor
+  // AND explicit rule designates direct primary activation.
   if (transitEffect === 'SUPPORTS') {
-    return 'ACTIVATES';
+    return hasDirectPrimaryActivation ? 'ACTIVATES' : 'MODIFIES';
   }
   if (transitEffect === 'CHALLENGES' || transitEffect === 'MIXED') {
     return 'MODIFIES';
@@ -116,7 +120,10 @@ export function resolveSupportedNatalCareerPromise(
 export function resolveCareerTransitEffect(
   natalPromise: DomainStrength,
   dashaEffect: CareerDashaEffect | 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA',
-  transitSynthesis: { transitEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' }
+  transitSynthesis: {
+    transitEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA';
+    hasDirectPrimaryActivation?: boolean;
+  }
 ): TimingEffect {
   // WEAK natal promise: Ceiling principle ensures it can never be activated or upgraded
   if (natalPromise === 'WEAK') {
@@ -130,7 +137,11 @@ export function resolveCareerTransitEffect(
   }
 
   if (natalPromise === 'STRONG' || natalPromise === 'MODERATE') {
-    return resolveSupportedNatalCareerPromise(dashaEffect, transitEffect);
+    return resolveSupportedNatalCareerPromise(
+      dashaEffect,
+      transitEffect,
+      transitSynthesis.hasDirectPrimaryActivation ?? false
+    );
   }
 
   if (natalPromise === 'MIXED') {
