@@ -3,10 +3,12 @@ import type { ActiveDashaState } from '../../../engine/dasha/vimshottari';
 import { calculateTransit } from '../../../engine/transitEngine';
 import { calculateCurrentTransitLongitudes } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
+import { correlateDashaAndTransit, type DashaState } from '../../../engine/dashaTransitCorrelation';
 import type { DomainStrength } from '../../interpretation/DomainInterpretationTypes';
 import {
   type WealthDimension,
   WEALTH_DIMENSION_HOUSES,
+  WEALTH_HOUSES,
   WEALTH_DIMENSION_KARAKAS
 } from '../../wealth/wealthTypes';
 import type {
@@ -129,7 +131,7 @@ export function synthesizeWealthTiming(
 
   const transitAnalysis = calculateTransit(transitInput);
 
-  analyzeTransits({
+  const transitReport = analyzeTransits({
     transit: transitAnalysis,
     natalPlanetLongitudes
   });
@@ -152,10 +154,10 @@ export function synthesizeWealthTiming(
     const isKaraka = WEALTH_DIMENSION_KARAKAS[dim].includes(planet);
     const targetHouse = WEALTH_DIMENSION_HOUSES[dim];
     const ownsTargetHouse = ownedHouses.includes(targetHouse);
-    const ownsWealthHouse = ownedHouses.some((h) => [2, 11, 9, 5].includes(h));
+    const ownsWealthHouse = ownedHouses.some((h) => WEALTH_HOUSES.includes(h));
     const ownsLagna = ownedHouses.includes(1);
     const ownsDusthana = ownedHouses.some((h) => [8, 12].includes(h));
-    const occupiesWealthHouse = natalHouse !== undefined && [2, 11, 9, 5].includes(natalHouse);
+    const occupiesWealthHouse = natalHouse !== undefined && WEALTH_HOUSES.includes(natalHouse);
 
     return {
       ownedHouses,
@@ -313,6 +315,88 @@ export function synthesizeWealthTiming(
               transitingPlanet: kp
             }));
           }
+        }
+      }
+    }
+  }
+
+  // 4. Dasha-Lord Transits for Wealth
+  if (activeDasha) {
+    const dashaState: DashaState = {
+      mahadashaPlanet: activeDasha.mahadasha.planet,
+      antardashaPlanet: activeDasha.antardasha?.planet,
+      pratyantardashaPlanet: activeDasha.pratyantardasha?.planet
+    };
+
+    const correlation = correlateDashaAndTransit({
+      dasha: dashaState,
+      transit: transitReport
+    });
+
+    if (correlation.correlations && correlation.correlations.length > 0) {
+      for (const corr of correlation.correlations) {
+        const dashaPlanet = corr.dashaPlanet;
+        const transitingPlanet = corr.transitPlanet;
+        const targetPlanet = corr.natalPlanet ?? (corr as { natalTargetPlanet?: Planet }).natalTargetPlanet;
+        const weight = corr.dashaLevel === 'MAHADASHA' ? 3.0 : corr.dashaLevel === 'ANTARDASHA' ? 2.0 : 1.0;
+
+        for (const dim of dimensions) {
+          const planetRole = getPlanetWealthRole(dashaPlanet, dim);
+          const targetRole = targetPlanet ? getPlanetWealthRole(targetPlanet, dim) : undefined;
+
+          // Check if this correlation is relevant to this dimension
+          const isDimensionRelevant =
+            planetRole.ownsTargetHouse ||
+            planetRole.isKaraka ||
+            planetRole.ownsWealthHouse ||
+            planetRole.occupiesWealthHouse ||
+            (targetRole && (targetRole.ownsTargetHouse || targetRole.isKaraka || targetRole.ownsWealthHouse)) ||
+            (planetRole.ownsDusthana && !planetRole.ownsWealthHouse) ||
+            String(corr.type).includes('TRANSIT_CONDITION');
+
+          if (!isDimensionRelevant) {
+            continue;
+          }
+
+          const factorId = `WTR_DASHA_${dim}_${corr.dashaLevel}_${dashaPlanet}_${corr.type}`;
+          if (trackedFactorIds.has(factorId)) continue;
+          trackedFactorIds.add(factorId);
+
+          let direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' = 'NEUTRAL';
+
+          if (String(corr.type).includes('TRANSIT_CONDITION')) {
+            if (corr.reason?.toLowerCase().includes('sade sati') || corr.reason?.toLowerCase().includes('saturn over moon')) {
+              direction = 'CHALLENGE';
+            } else {
+              direction = (planetRole.ownsTargetHouse || planetRole.isKaraka || planetRole.ownsWealthHouse) ? 'SUPPORT' : 'NEUTRAL';
+            }
+          } else {
+            if (planetRole.ownsDusthana && !planetRole.ownsWealthHouse && !planetRole.isKaraka) {
+              direction = 'CHALLENGE';
+            } else if (
+              planetRole.ownsTargetHouse ||
+              planetRole.isKaraka ||
+              planetRole.ownsWealthHouse ||
+              (targetRole && (targetRole.ownsTargetHouse || targetRole.isKaraka || targetRole.ownsWealthHouse))
+            ) {
+              direction = 'SUPPORT';
+            } else {
+              direction = 'NEUTRAL';
+            }
+          }
+
+          factors.push(Object.freeze({
+            id: factorId,
+            planet: dashaPlanet,
+            category: 'DASHA_LORD_TRANSIT',
+            direction,
+            weight,
+            statement: `Active ${corr.dashaLevel} lord ${dashaPlanet} transit correlation for ${dim}: ${corr.reason}`,
+            dimension: dim,
+            dashaPlanet,
+            transitingPlanet,
+            ...(targetPlanet ? { targetPlanet } : {})
+          }));
         }
       }
     }

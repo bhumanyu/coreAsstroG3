@@ -31,9 +31,11 @@ export type TimingSourceCategory =
 export interface CareerTransitFactor {
   readonly id: string;
   /**
-   * Primary subject planet of the factor.
-   * For CAREER_HOUSE_TRANSIT / CAREER_LORD_TRANSIT / CAREER_KARAKA_TRANSIT: aliases transitingPlanet.
-   * For DASHA_LORD_TRANSIT: aliases dashaPlanet (the activated Dasha lord).
+   * Primary subject planet of the factor, strictly enforcing category invariants:
+   * - CAREER_HOUSE_TRANSIT: `planet === transitingPlanet`
+   * - CAREER_LORD_TRANSIT: `planet === transitingPlanet`
+   * - CAREER_KARAKA_TRANSIT: `planet === transitingPlanet`
+   * - DASHA_LORD_TRANSIT: `planet === dashaPlanet` (the activated Dasha lord)
    */
   readonly planet: Planet;
   readonly category: TimingSourceCategory;
@@ -72,9 +74,11 @@ export interface CareerTimingSynthesis {
 export interface WealthTransitFactor {
   readonly id: string;
   /**
-   * Primary subject planet of the factor.
-   * For WEALTH_HOUSE_TRANSIT / WEALTH_LORD_TRANSIT / WEALTH_KARAKA_TRANSIT: aliases transitingPlanet.
-   * For DASHA_LORD_TRANSIT: aliases dashaPlanet.
+   * Primary subject planet of the factor, strictly enforcing category invariants:
+   * - WEALTH_HOUSE_TRANSIT: `planet === transitingPlanet`
+   * - WEALTH_LORD_TRANSIT: `planet === transitingPlanet`
+   * - WEALTH_KARAKA_TRANSIT: `planet === transitingPlanet`
+   * - DASHA_LORD_TRANSIT: `planet === dashaPlanet` (the activated Dasha lord)
    */
   readonly planet: Planet;
   readonly category: TimingSourceCategory;

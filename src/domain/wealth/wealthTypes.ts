@@ -27,6 +27,10 @@ export const WEALTH_DIMENSION_HOUSES: Readonly<Record<WealthDimension, number>> 
   SPECULATION: 5
 });
 
+export const WEALTH_HOUSES: readonly number[] = Object.freeze(
+  Object.values(WEALTH_DIMENSION_HOUSES)
+);
+
 export const WEALTH_DIMENSION_KARAKAS: Readonly<Record<WealthDimension, readonly Planet[]>> = Object.freeze({
   ACCUMULATION: Object.freeze([Planet.JUPITER, Planet.VENUS]),
   GAINS: Object.freeze([Planet.JUPITER]),
