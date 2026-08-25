@@ -31,7 +31,7 @@ export interface DomainInterpretationParts {
   readonly dataCompleteness?: DomainDataCompleteness;
   readonly conclusionData?: DomainConclusionData;
   readonly reasoningTrace?: ReasoningTrace;
-  readonly reasoningVersion?: 'CW-01';
+  readonly reasoningVersion?: 'CW-01' | 'CW-02' | 'CW-03' | 'CW-04' | 'CW-05' | string;
 }
 
 export interface BuildDomainInterpretationOptions {

@@ -344,6 +344,44 @@ export interface CareerManifestationSynthesisFact {
   readonly summary: string;
 }
 
+export interface ManifestationSummaryFact {
+  readonly mode: string;
+  readonly status: string;
+  readonly confidence: string;
+}
+
+export interface WealthDimensionFinalSynthesisFact {
+  readonly status: string;
+  readonly confidence: string;
+  readonly primaryPromise: string;
+  readonly dashaEffect: string;
+  readonly timingEffect: string;
+  readonly divisionalEffect: string;
+  readonly summary: string;
+  readonly evidenceIds: readonly string[];
+}
+
+export interface CareerWealthFinalSynthesisFact {
+  readonly reasoningVersion: 'CW-05';
+  readonly domain: 'CAREER' | 'WEALTH';
+  readonly status: string;
+  readonly confidence: string;
+  readonly primaryPromise: string;
+  readonly manifestationSummary: readonly ManifestationSummaryFact[];
+  readonly strongestAreas: readonly string[];
+  readonly challengedAreas: readonly string[];
+  readonly dashaEffect: string;
+  readonly timingEffect: string;
+  readonly divisionalEffect: string;
+  readonly keySupport: readonly string[];
+  readonly keyChallenges: readonly string[];
+  readonly summary: string;
+  readonly ruleIds: readonly string[];
+  readonly evidenceIds: readonly string[];
+  readonly dimensions?: Record<string, WealthDimensionFinalSynthesisFact>;
+  readonly riskProfile?: string;
+}
+
 export interface CareerFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
@@ -361,6 +399,7 @@ export interface CareerFact {
   readonly timing?: CareerTimingFact;
   readonly dashaSynthesis?: CareerDashaSynthesisFact;
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesisFact[];
+  readonly finalSynthesis?: CareerWealthFinalSynthesisFact;
 }
 
 export interface WealthDimensionHierarchyFact {
@@ -508,6 +547,7 @@ export interface WealthFact {
   readonly conditionalFactors?: readonly string[];
   readonly timing?: WealthTimingFact;
   readonly manifestationSynthesis?: WealthManifestationSynthesisFact;
+  readonly finalSynthesis?: CareerWealthFinalSynthesisFact;
 }
 
 export interface LifeThemeFact {
