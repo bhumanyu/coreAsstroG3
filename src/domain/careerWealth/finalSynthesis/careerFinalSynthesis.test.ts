@@ -7,6 +7,7 @@ import type {
 import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationSynthesis } from '../../career/manifestation/careerManifestationSynthesisTypes';
+import { createDomainEvidence } from '../../interpretation/DomainEvidence';
 
 describe('synthesizeCareerFinal (CW-05)', () => {
   it('enforces natal ceiling: weak natal cannot be elevated to strong despite supportive dasha and timing', () => {
@@ -302,13 +303,18 @@ describe('synthesizeCareerFinal (CW-05)', () => {
         timingSynthesis: mockTiming,
         manifestationSynthesis: mockManifestations,
         d10Synthesis: [
-          {
+          createDomainEvidence({
             id: 'D10-EV-1',
             ruleId: 'D10-R-1',
+            sourceType: 'VARGA',
+            domain: 'CAREER',
+            role: 'CONFIRMATION',
+            phase: 'VARGA_CONFIRMATION',
             polarity: 'SUPPORTING',
             strength: 'STRONG',
-            statement: 'D10 confirms career dignity'
-          }
+            statement: 'D10 confirms career dignity',
+            priority: 1
+          })
         ],
         d10Relationship: 'CONFIRMS',
         natalEvidenceIds: ['NATAL-EV-1', 'NATAL-EV-2'],
@@ -329,13 +335,13 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       expect(result.natalEvidenceIds).toEqual(['NATAL-EV-1', 'NATAL-EV-2']);
       expect(result.natalRuleIds).toEqual(['NATAL-RULE-1']);
       expect(result.dashaFactors).toHaveLength(1);
-      expect(result.dashaFactors[0].id).toBe('D-FACT-1');
+      expect(result.dashaFactors![0].id).toBe('D-FACT-1');
       expect(result.timingFactors).toHaveLength(1);
-      expect(result.timingFactors[0].id).toBe('T-FACT-1');
+      expect(result.timingFactors![0].id).toBe('T-FACT-1');
       expect(result.manifestationFactors).toHaveLength(1);
-      expect(result.manifestationFactors[0].id).toBe('M-FACT-1');
+      expect(result.manifestationFactors![0].id).toBe('M-FACT-1');
       expect(result.d10Evidence).toHaveLength(1);
-      expect(result.d10Evidence[0].id).toBe('D10-EV-1');
+      expect(result.d10Evidence![0].id).toBe('D10-EV-1');
 
       // Aggregate rule IDs and evidence IDs
       expect(result.evidenceIds).toContain('NATAL-EV-1');
@@ -410,7 +416,7 @@ describe('synthesizeCareerFinal (CW-05)', () => {
     it('ensures transit challenge acts as timing modifier only and does not fabricate or erase promise', () => {
       const mockTiming: CareerTimingSynthesis = {
         natalPromise: 'STRONG',
-        dashaEffect: 'NEUTRAL',
+        dashaEffect: 'DOES_NOT_ACTIVATE',
         transitEffect: 'CHALLENGES',
         overallEffect: 'CHALLENGES',
         confidence: 0.7,

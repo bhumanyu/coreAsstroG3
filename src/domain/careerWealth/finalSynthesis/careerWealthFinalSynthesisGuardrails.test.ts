@@ -63,7 +63,10 @@ describe('CW-05 Guardrails', () => {
           timingEffect: 'SUPPORTS',
           divisionalEffect: 'CONFIRMS',
           summary: 'Accumulation is strong.',
-          evidenceIds: ['E1']
+          ruleIds: ['R1'],
+          evidenceIds: ['E1'],
+          natalEvidenceIds: ['E1'],
+          natalRuleIds: ['R1']
         },
         SPECULATION: {
           status: 'CHALLENGED',
@@ -79,7 +82,10 @@ describe('CW-05 Guardrails', () => {
           timingEffect: 'SUPPORTS',
           divisionalEffect: 'CONFIRMS',
           summary: 'Speculation is challenged.',
-          evidenceIds: ['E2']
+          ruleIds: ['R2'],
+          evidenceIds: ['E2'],
+          natalEvidenceIds: ['E2'],
+          natalRuleIds: ['R2']
         }
       };
 

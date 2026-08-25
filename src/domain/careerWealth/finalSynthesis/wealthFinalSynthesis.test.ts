@@ -6,6 +6,7 @@ import type {
 } from './careerWealthFinalSynthesisTypes';
 import type { WealthManifestationSynthesis } from '../../wealth/manifestation/wealthManifestationTypes';
 import type { WealthTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
+import { createDomainEvidence } from '../../interpretation/DomainEvidence';
 
 describe('synthesizeWealthFinal (CW-05)', () => {
   it('enforces dimension isolation: accumulation supported while speculation challenged', () => {
@@ -233,13 +234,18 @@ describe('synthesizeWealthFinal (CW-05)', () => {
         },
         d2Relationship: 'CONFIRMS',
         d2Synthesis: [
-          {
+          createDomainEvidence({
             id: 'D2-EV-1',
             ruleId: 'D2-R-1',
+            sourceType: 'VARGA',
+            domain: 'WEALTH',
+            role: 'CONFIRMATION',
+            phase: 'VARGA_CONFIRMATION',
             polarity: 'SUPPORTING',
             strength: 'STRONG',
-            statement: 'D2 confirms wealth'
-          }
+            statement: 'D2 confirms wealth',
+            priority: 1
+          })
         ],
         natalEvidenceIds: ['NATAL-W-1', 'NATAL-W-2'],
         natalRuleIds: ['NATAL-W-R1']
@@ -268,7 +274,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.natalEvidenceIds).toEqual(['NATAL-W-1', 'NATAL-W-2']);
       expect(result.natalRuleIds).toEqual(['NATAL-W-R1']);
       expect(result.d2Evidence).toHaveLength(1);
-      expect(result.d2Evidence[0].id).toBe('D2-EV-1');
+      expect(result.d2Evidence![0].id).toBe('D2-EV-1');
       expect(result.evidenceIds).toContain('NATAL-W-1');
       expect(result.evidenceIds).toContain('D2-EV-1');
       expect(result.ruleIds).toContain('CW-05-WEALTH-SYNTHESIS');

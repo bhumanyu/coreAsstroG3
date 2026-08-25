@@ -56,9 +56,9 @@ import {
 import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynthesis } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerManifestationSynthesis, CareerManifestationFactor } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
-import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension, WealthDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
+import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis, WealthDimensionFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
-import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
+import type { WealthPeriodTimingActivation, WealthDimension } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
 import type {

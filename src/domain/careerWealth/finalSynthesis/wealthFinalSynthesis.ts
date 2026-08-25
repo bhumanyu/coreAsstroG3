@@ -197,15 +197,19 @@ export function synthesizeWealthFinal(
     const dimEvidenceIds: string[] = [];
     const dimRuleIds: string[] = [];
 
-    const dimNatalEv = Array.isArray(natalEvidenceIds)
+    const dimNatalEv: readonly string[] = Array.isArray(natalEvidenceIds)
       ? natalEvidenceIds
-      : (natalEvidenceIds?.[dim] ?? []);
-    const dimNatalR = Array.isArray(natalRuleIds)
+      : (typeof natalEvidenceIds === 'object' && natalEvidenceIds !== null
+          ? ((natalEvidenceIds as Partial<Record<WealthDimension, readonly string[]>>)[dim] ?? [])
+          : []);
+    const dimNatalR: readonly string[] = Array.isArray(natalRuleIds)
       ? natalRuleIds
-      : (natalRuleIds?.[dim] ?? []);
+      : (typeof natalRuleIds === 'object' && natalRuleIds !== null
+          ? ((natalRuleIds as Partial<Record<WealthDimension, readonly string[]>>)[dim] ?? [])
+          : []);
 
-    dimNatalEv.forEach((id) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
-    dimNatalR.forEach((id) => { dimRuleIds.push(id); ruleIdSet.add(id); });
+    dimNatalEv.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
+    dimNatalR.forEach((id: string) => { dimRuleIds.push(id); ruleIdSet.add(id); });
 
     if (dimManifestation) {
       manifestationSummaryList.push({
