@@ -15,6 +15,8 @@ import type {
   LifeAnalysisConfidence
 } from '../../domain/synthesis';
 import type { WealthDimensionStatus } from '../../domain/wealth/wealthTypes';
+import type { CareerManifestationSynthesis } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
+import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { AiExplanationResult } from '../../ai';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
 import type {
@@ -110,6 +112,7 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly timing?: CareerTimingProduct;
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
   readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
+  readonly manifestationSynthesis?: readonly CareerManifestationSynthesis[];
 }
 
 export interface LifeAnalysisWealthDetailViewModel {
@@ -134,6 +137,7 @@ export interface LifeAnalysisWealthDetailViewModel {
   };
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
   readonly dashaHierarchy?: DashaWealthHierarchySynthesis;
+  readonly manifestationSynthesis?: WealthManifestationSynthesis;
 }
 
 export interface LifeAnalysisTimingDomainEffect {

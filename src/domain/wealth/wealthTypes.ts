@@ -11,6 +11,7 @@ import { Planet } from '../../types';
 import { WealthEvidenceFamily } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 
 import type { WealthTimingSynthesis } from '../timing/careerWealthTiming/careerWealthTimingTypes';
+import type { WealthManifestationSynthesis } from './manifestation/wealthManifestationTypes';
 
 export { WealthEvidenceFamily };
 
@@ -132,4 +133,5 @@ export interface WealthConclusionData {
   readonly challengingEvidenceIds: readonly string[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
   readonly wealthTimingSynthesis?: WealthTimingSynthesis;
+  readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;
 }

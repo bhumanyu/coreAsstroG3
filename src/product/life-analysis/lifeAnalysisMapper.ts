@@ -143,6 +143,7 @@ export function buildLifeAnalysisViewModel(
     statement: career.conclusion.statement,
     timing: careerTiming,
     currentTimingEffect: deriveCareerTimingEffect(careerTiming),
+    manifestationSynthesis: careerConclusionData?.careerManifestationSynthesis,
     ...(careerDashaHierarchy ? { dashaHierarchy: careerDashaHierarchy } : {})
   };
 
@@ -176,6 +177,7 @@ export function buildLifeAnalysisViewModel(
     timing: wealthTiming,
     dimensionTiming: deriveWealthDimensionTiming(wealthTiming),
     currentTimingEffect: deriveWealthTimingEffect(wealthTiming),
+    manifestationSynthesis: wealthConclusionData?.wealthManifestationSynthesis,
     ...(wealthDashaHierarchy ? { dashaHierarchy: wealthDashaHierarchy } : {})
   };
 

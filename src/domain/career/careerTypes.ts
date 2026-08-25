@@ -9,6 +9,7 @@ import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import type { Planet } from '../../types';
 import type { CareerDashaSynthesis } from './careerDasha/careerDashaSynthesisTypes';
 import type { CareerTimingSynthesis } from '../timing/careerWealthTiming/careerWealthTimingTypes';
+import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -108,4 +109,5 @@ export interface CareerConclusionData {
   readonly challengingEvidenceIds: readonly string[];
   readonly careerDashaSynthesis?: CareerDashaSynthesis;
   readonly careerTimingSynthesis?: CareerTimingSynthesis;
+  readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];
 }

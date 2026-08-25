@@ -26,8 +26,13 @@ import {
   CareerDashaSynthesisFactorFact,
   CareerTimingSynthesisFact,
   CareerTimingFactorFact,
+  CareerManifestationSynthesisFact,
+  CareerManifestationFactorFact,
   WealthTimingSynthesisFact,
   WealthTimingFactorFact,
+  WealthManifestationSynthesisFact,
+  WealthDimensionManifestationSynthesisFact,
+  WealthManifestationFactorFact,
   DashaFacts,
   DashaInterpretationFacts,
   DashaPairFacts,
@@ -48,6 +53,8 @@ import {
 } from '../types/aiContextTypes';
 import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynthesis } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
+import type { CareerManifestationSynthesis, CareerManifestationFactor } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
+import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
@@ -658,6 +665,33 @@ function buildCareerFact(
     };
   }
 
+  const careerManifestationSynthesis = careerInterpretation?.conclusionData?.careerManifestationSynthesis;
+  let careerManifestationSynthesisFacts: readonly CareerManifestationSynthesisFact[] | undefined;
+  if (careerManifestationSynthesis && careerManifestationSynthesis.length > 0) {
+    careerManifestationSynthesisFacts = careerManifestationSynthesis.map((syn: CareerManifestationSynthesis): CareerManifestationSynthesisFact => ({
+      reasoningVersion: 'CW-04',
+      mode: syn.mode,
+      status: syn.status,
+      confidence: syn.confidence,
+      natalSupport: syn.natalSupport,
+      dashaSupport: syn.dashaSupport,
+      transitSupport: syn.transitSupport,
+      d10Support: syn.d10Support,
+      factors: syn.factors.map((f: CareerManifestationFactor): CareerManifestationFactorFact => ({
+        id: f.id,
+        mode: f.mode,
+        direction: f.direction,
+        weight: f.weight,
+        source: f.source,
+        statement: f.statement,
+        ...(f.evidenceIds ? { evidenceIds: [...f.evidenceIds] } : {}),
+        ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {}),
+        ...(f.transitEvidenceIds ? { transitEvidenceIds: [...f.transitEvidenceIds] } : {})
+      })),
+      summary: syn.summary
+    }));
+  }
+
   const enrichedTiming: CareerTimingFact | undefined = timing || careerTimingSynthesisFact
     ? {
         ...(timing ?? { status: 'AVAILABLE' }),
@@ -677,7 +711,8 @@ function buildCareerFact(
       challengingFactors: [...career.conclusion.keyChallengingFactors],
       conditionalFactors: [...career.conclusion.keyConditionalFactors],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {})
+      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
+      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {})
     };
   }
 
@@ -692,7 +727,8 @@ function buildCareerFact(
       challengingFactors: [],
       conditionalFactors: [],
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
-      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {})
+      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
+      ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {})
     };
   }
 
@@ -779,6 +815,42 @@ function buildWealthFact(
     };
   }
 
+  const wealthManifestationSynthesis = wealthInterpretation?.conclusionData?.wealthManifestationSynthesis;
+  let wealthManifestationSynthesisFact: WealthManifestationSynthesisFact | undefined;
+  if (wealthManifestationSynthesis) {
+    const dimFacts: Record<string, WealthDimensionManifestationSynthesisFact> = {};
+    for (const [dimKey, dimSyn] of Object.entries(wealthManifestationSynthesis.dimensions)) {
+      const synObj = dimSyn as WealthDimensionManifestationSynthesis;
+      dimFacts[dimKey] = {
+        reasoningVersion: 'CW-04',
+        dimension: synObj.dimension,
+        status: synObj.status,
+        confidence: synObj.confidence,
+        natalSupport: synObj.natalSupport,
+        dashaSupport: synObj.dashaSupport,
+        transitSupport: synObj.transitSupport,
+        d2Support: synObj.d2Support,
+        factors: synObj.factors.map((f: WealthManifestationFactor): WealthManifestationFactorFact => ({
+          id: f.id,
+          dimension: f.dimension,
+          direction: f.direction,
+          weight: f.weight,
+          source: f.source,
+          statement: f.statement,
+          ...(f.evidenceIds ? { evidenceIds: [...f.evidenceIds] } : {}),
+          ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {}),
+          ...(f.transitEvidenceIds ? { transitEvidenceIds: [...f.transitEvidenceIds] } : {})
+        })),
+        summary: synObj.summary
+      };
+    }
+    wealthManifestationSynthesisFact = {
+      reasoningVersion: 'CW-04',
+      dimensions: dimFacts,
+      summary: wealthManifestationSynthesis.summary
+    };
+  }
+
   const enrichedTiming: WealthTimingFact | undefined = timing || wealthTimingSynthesisFact
     ? {
         ...(timing ?? { status: 'AVAILABLE' }),
@@ -820,7 +892,8 @@ function buildWealthFact(
       supportingFactors: [...wealth.conclusion.keySupportingFactors],
       challengingFactors: [...wealth.conclusion.keyChallengingFactors],
       conditionalFactors: [...wealth.conclusion.keyConditionalFactors],
-      ...(enrichedTiming ? { timing: enrichedTiming } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {}),
+      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {})
     };
   }
 
@@ -832,7 +905,8 @@ function buildWealthFact(
       supportingFactors: [],
       challengingFactors: [],
       conditionalFactors: [],
-      ...(enrichedTiming ? { timing: enrichedTiming } : {})
+      ...(enrichedTiming ? { timing: enrichedTiming } : {}),
+      ...(wealthManifestationSynthesisFact ? { manifestationSynthesis: wealthManifestationSynthesisFact } : {})
     };
   }
 

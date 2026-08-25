@@ -82,6 +82,7 @@ import { detectWealthConflicts } from './wealthConflicts';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
 import { synthesizeWealthTiming, type WealthTimingSynthesis } from '../timing/careerWealthTiming';
+import { synthesizeWealthManifestations } from './manifestation/wealthManifestationSynthesis';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretWealthV2(
@@ -361,6 +362,12 @@ export function interpretWealthV2(
       { dimension: 'SPECULATION' as WealthDimension, effect: cw01Result.dimensionResults.SPECULATION.timingEffect as TimingActivationEffect }
     ]);
 
+    const wealthManifestationSynthesis = synthesizeWealthManifestations(
+      evidence,
+      undefined,
+      'UNAVAILABLE'
+    );
+
     return buildDomainInterpretation({
       domain: 'WEALTH',
       evidence,
@@ -377,7 +384,8 @@ export function interpretWealthV2(
       conclusionData: {
         ...conclusionData,
         currentActivation: cw01Result.currentActivation,
-        currentPressure: cw01Result.currentPressure
+        currentPressure: cw01Result.currentPressure,
+        wealthManifestationSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: 'CW-01'
@@ -541,6 +549,12 @@ export function interpretWealthV2(
     });
   }
 
+  const wealthManifestationSynthesis = synthesizeWealthManifestations(
+    evidence,
+    wealthTimingSynthesis,
+    d2Relationship
+  );
+
   return buildDomainInterpretation({
     domain: 'WEALTH',
     evidence,
@@ -556,7 +570,8 @@ export function interpretWealthV2(
     dataCompleteness,
     conclusionData: {
       ...conclusionData,
-      wealthTimingSynthesis
+      wealthTimingSynthesis,
+      wealthManifestationSynthesis
     }
   });
 }

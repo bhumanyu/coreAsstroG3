@@ -5,6 +5,8 @@ import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthT
 import type { CareerFactorCategory } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
+import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
+import type { WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import {
   AiAvailability,
   AiConfidence,
@@ -312,6 +314,36 @@ export interface CareerTimingFact {
   readonly timingSynthesis?: CareerTimingSynthesisFact;
 }
 
+export interface CareerManifestationFactorFact {
+  readonly id: string;
+  readonly mode: CareerManifestationMode;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly weight: number;
+  readonly source: 'NATAL' | 'DASHA' | 'TRANSIT' | 'D10';
+  readonly statement: string;
+  readonly evidenceIds?: readonly string[];
+  readonly dashaEvidenceIds?: readonly string[];
+  readonly transitEvidenceIds?: readonly string[];
+}
+
+export interface CareerManifestationSynthesisFact {
+  readonly reasoningVersion: 'CW-04';
+  readonly mode: CareerManifestationMode;
+  readonly status:
+    | 'STRONGLY_SUPPORTED'
+    | 'SUPPORTED'
+    | 'MIXED'
+    | 'CHALLENGED'
+    | 'INSUFFICIENT_DATA';
+  readonly confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  readonly natalSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly dashaSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly transitSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly d10Support: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly factors: readonly CareerManifestationFactorFact[];
+  readonly summary: string;
+}
+
 export interface CareerFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
@@ -328,6 +360,7 @@ export interface CareerFact {
   readonly conditionalFactors?: readonly string[];
   readonly timing?: CareerTimingFact;
   readonly dashaSynthesis?: CareerDashaSynthesisFact;
+  readonly manifestationSynthesis?: readonly CareerManifestationSynthesisFact[];
 }
 
 export interface WealthDimensionHierarchyFact {
@@ -419,6 +452,45 @@ export interface WealthSubthemeFact {
   readonly summary: string;
 }
 
+export interface WealthManifestationFactorFact {
+  readonly id: string;
+  readonly dimension: WealthManifestationDimension;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly weight: number;
+  readonly source: 'NATAL' | 'DASHA' | 'TRANSIT' | 'D2';
+  readonly statement: string;
+  readonly evidenceIds?: readonly string[];
+  readonly dashaEvidenceIds?: readonly string[];
+  readonly transitEvidenceIds?: readonly string[];
+}
+
+export interface WealthDimensionManifestationSynthesisFact {
+  readonly reasoningVersion: 'CW-04';
+  readonly dimension: WealthManifestationDimension;
+  readonly status:
+    | 'STRONGLY_SUPPORTED'
+    | 'SUPPORTED'
+    | 'MIXED'
+    | 'CHALLENGED'
+    | 'INSUFFICIENT_DATA';
+  readonly confidence: 'LOW' | 'MEDIUM' | 'HIGH';
+  readonly natalSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly dashaSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly transitSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly d2Support: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly factors: readonly WealthManifestationFactorFact[];
+  readonly summary: string;
+}
+
+export interface WealthManifestationSynthesisFact {
+  readonly reasoningVersion: 'CW-04';
+  readonly dimensions: Record<
+    WealthManifestationDimension | string,
+    WealthDimensionManifestationSynthesisFact
+  >;
+  readonly summary: string;
+}
+
 export interface WealthFact {
   readonly status:
     | 'STRONGLY_SUPPORTED'
@@ -433,6 +505,7 @@ export interface WealthFact {
   readonly challengingFactors: readonly string[];
   readonly conditionalFactors?: readonly string[];
   readonly timing?: WealthTimingFact;
+  readonly manifestationSynthesis?: WealthManifestationSynthesisFact;
 }
 
 export interface LifeThemeFact {

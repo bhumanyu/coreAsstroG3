@@ -50,5 +50,29 @@ export const D10_MANIFESTATION_MODE_RULES: Readonly<Record<CareerManifestationMo
     primaryPlanets: Object.freeze([Planet.MERCURY, Planet.VENUS, Planet.JUPITER]),
     supportingHouses: Object.freeze([7, 10, 11, 2]),
     challengingHouses: Object.freeze([6, 8, 12])
+  }),
+  EMPLOYMENT: Object.freeze({
+    mode: 'EMPLOYMENT',
+    primaryPlanets: Object.freeze([Planet.SATURN, Planet.MERCURY]),
+    supportingHouses: Object.freeze([6, 10, 2]),
+    challengingHouses: Object.freeze([8, 12])
+  }),
+  ENTREPRENEURSHIP: Object.freeze({
+    mode: 'ENTREPRENEURSHIP',
+    primaryPlanets: Object.freeze([Planet.MERCURY, Planet.VENUS, Planet.JUPITER]),
+    supportingHouses: Object.freeze([7, 10, 11, 2]),
+    challengingHouses: Object.freeze([6, 8, 12])
+  }),
+  PUBLIC_INSTITUTIONAL: Object.freeze({
+    mode: 'PUBLIC_INSTITUTIONAL',
+    primaryPlanets: Object.freeze([Planet.SUN, Planet.JUPITER, Planet.SATURN]),
+    supportingHouses: Object.freeze([10, 9, 1, 11]),
+    challengingHouses: Object.freeze([8, 12, 6])
+  }),
+  SPECIALIZATION: Object.freeze({
+    mode: 'SPECIALIZATION',
+    primaryPlanets: Object.freeze([Planet.MERCURY, Planet.MARS, Planet.RAHU, Planet.KETU]),
+    supportingHouses: Object.freeze([3, 5, 10, 8]),
+    challengingHouses: Object.freeze([12])
   })
 });

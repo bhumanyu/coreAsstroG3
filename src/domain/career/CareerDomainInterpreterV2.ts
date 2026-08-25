@@ -82,6 +82,7 @@ import { calculateCareerDataCompleteness } from './careerDataCompleteness';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
 import { synthesizeCareerTransit, synthesizeCareerTiming, type CareerTimingSynthesis } from '../timing/careerWealthTiming';
+import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretCareerV2(
@@ -335,6 +336,13 @@ export function interpretCareerV2(
       unresolvedQuestions: []
     });
 
+    const careerManifestationSynthesis = synthesizeCareerManifestations(
+      evidence,
+      careerDashaSynthesis,
+      careerTimingSynthesis,
+      horoscope
+    );
+
     return buildDomainInterpretation({
       domain: 'CAREER',
       evidence: mergedEvidence,
@@ -352,7 +360,8 @@ export function interpretCareerV2(
         currentActivation: cw01Result.currentActivation,
         currentPressure: cw01Result.currentPressure,
         careerDashaSynthesis,
-        careerTimingSynthesis
+        careerTimingSynthesis,
+        careerManifestationSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: 'CW-01'
