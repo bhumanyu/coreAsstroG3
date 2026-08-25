@@ -10,8 +10,10 @@ import type { WealthTimingSynthesis } from '../../timing/careerWealthTiming/care
 describe('synthesizeWealthFinal (CW-05)', () => {
   it('enforces dimension isolation: accumulation supported while speculation challenged', () => {
     const mockManifestations: WealthManifestationSynthesis = {
+      reasoningVersion: 'CW-04',
       dimensions: {
         ACCUMULATION: {
+          reasoningVersion: 'CW-04',
           dimension: 'ACCUMULATION',
           status: 'STRONGLY_SUPPORTED',
           confidence: 'HIGH',
@@ -33,6 +35,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           summary: 'Accumulation strongly supported'
         },
         GAINS: {
+          reasoningVersion: 'CW-04',
           dimension: 'GAINS',
           status: 'SUPPORTED',
           confidence: 'HIGH',
@@ -44,6 +47,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           summary: 'Gains supported'
         },
         FORTUNE: {
+          reasoningVersion: 'CW-04',
           dimension: 'FORTUNE',
           status: 'SUPPORTED',
           confidence: 'HIGH',
@@ -55,6 +59,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           summary: 'Fortune supported'
         },
         SPECULATION: {
+          reasoningVersion: 'CW-04',
           dimension: 'SPECULATION',
           status: 'CHALLENGED',
           confidence: 'HIGH',
@@ -80,13 +85,11 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     };
 
     const mockTiming: WealthTimingSynthesis = {
-      transitEffect: 'SUPPORTS',
-      timingEffect: 'ACTIVATES',
-      confidence: 0.85,
       dimensions: {
         ACCUMULATION: {
           dimension: 'ACCUMULATION',
-          overallEffect: 'SUPPORTS',
+          natalPromise: 'STRONG',
+          overallEffect: 'ACTIVATES',
           dashaEffect: 'SUPPORTS',
           transitEffect: 'SUPPORTS',
           confidence: 0.85,
@@ -98,29 +101,36 @@ describe('synthesizeWealthFinal (CW-05)', () => {
               direction: 'SUPPORT',
               weight: 1.5,
               statement: 'Jupiter transit 2nd house',
+              dimension: 'ACCUMULATION',
               natalEvidenceIds: ['E-2H-TR']
             }
-          ]
+          ],
+          summary: 'Accumulation timing supported'
         },
         GAINS: {
           dimension: 'GAINS',
-          overallEffect: 'SUPPORTS',
+          natalPromise: 'STRONG',
+          overallEffect: 'ACTIVATES',
           dashaEffect: 'SUPPORTS',
           transitEffect: 'SUPPORTS',
           confidence: 0.85,
-          factors: []
+          factors: [],
+          summary: 'Gains timing supported'
         },
         FORTUNE: {
           dimension: 'FORTUNE',
-          overallEffect: 'SUPPORTS',
+          natalPromise: 'STRONG',
+          overallEffect: 'ACTIVATES',
           dashaEffect: 'SUPPORTS',
           transitEffect: 'SUPPORTS',
           confidence: 0.85,
-          factors: []
+          factors: [],
+          summary: 'Fortune timing supported'
         },
         SPECULATION: {
           dimension: 'SPECULATION',
-          overallEffect: 'SUPPORTS',
+          natalPromise: 'WEAK',
+          overallEffect: 'ACTIVATES',
           dashaEffect: 'SUPPORTS',
           transitEffect: 'SUPPORTS',
           confidence: 0.85,
@@ -132,9 +142,11 @@ describe('synthesizeWealthFinal (CW-05)', () => {
               direction: 'SUPPORT',
               weight: 1.0,
               statement: 'Venus transits 5th house',
+              dimension: 'SPECULATION',
               natalEvidenceIds: ['E-5H-TR']
             }
-          ]
+          ],
+          summary: 'Speculation timing supported'
         }
       },
       overallSummary: 'Timing active across wealth'

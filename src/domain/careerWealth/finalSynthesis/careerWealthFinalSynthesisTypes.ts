@@ -81,7 +81,7 @@ export interface CareerFinalSynthesisInput {
   readonly natalPromise: DomainStrength;
   readonly dashaSynthesis?: CareerDashaSynthesis;
   readonly timingSynthesis?: CareerTimingSynthesis;
-  readonly manifestationSynthesis: readonly CareerManifestationSynthesis[];
+  readonly manifestationSynthesis?: readonly CareerManifestationSynthesis[];
   readonly d10Synthesis?: readonly DomainEvidence[];
   readonly d10Relationship?: VargaRelationship;
 }
@@ -89,7 +89,7 @@ export interface CareerFinalSynthesisInput {
 export interface WealthFinalSynthesisInput {
   readonly natalPromise: Partial<Record<WealthDimension, DomainStrength>>;
   readonly timingSynthesis?: WealthTimingSynthesis;
-  readonly manifestationSynthesis: WealthManifestationSynthesis;
+  readonly manifestationSynthesis?: WealthManifestationSynthesis;
   readonly d2Synthesis?: readonly DomainEvidence[];
   readonly d2Relationship?: VargaRelationship;
 }

@@ -60,7 +60,6 @@ export function synthesizeCareerFinal(
     }
   } else if (natalPromise === 'STRONG') {
     const dashaSupports =
-      dashaSynthesis?.dashaEffect === 'SUPPORTS' ||
       dashaSynthesis?.combined?.combinedEffect === 'SUPPORTS' ||
       dashaSynthesis?.combined?.combinedEffect === 'STRONGLY_SUPPORTS';
     const d10Supports = d10Relationship === 'CONFIRMS' || d10Relationship === 'PARTIALLY_CONFIRMS';
@@ -95,7 +94,7 @@ export function synthesizeCareerFinal(
   }
 
   // 3. Dasha modifier
-  const dashaEffect = dashaSynthesis?.dashaEffect ?? dashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA';
+  const dashaEffect = dashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA';
   if (dashaEffect === 'CHALLENGES' || dashaEffect === 'STRONGLY_CHALLENGES') {
     if (candidate === 'VERY_STRONG') {
       candidate = mixedCount > 0 || challengedCount > 0 ? 'MIXED' : 'STRONG';
@@ -118,7 +117,7 @@ export function synthesizeCareerFinal(
   const finalStatus = enforceCareerNatalCeiling(natalPromise, candidate);
 
   // 6. Timing effect
-  const timingEffect = timingSynthesis?.timingEffect ?? timingSynthesis?.transitEffect ?? 'INSUFFICIENT_DATA';
+  const timingEffect = timingSynthesis?.overallEffect ?? timingSynthesis?.transitEffect ?? 'INSUFFICIENT_DATA';
 
   // 7. Calculate confidence
   const primaryEvidenceCount = (natalPromise !== 'UNDETERMINED' ? 1 : 0) + manifestationSynthesis.length;

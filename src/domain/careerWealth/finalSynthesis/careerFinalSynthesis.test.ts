@@ -11,13 +11,32 @@ import type { CareerManifestationSynthesis } from '../../career/manifestation/ca
 describe('synthesizeCareerFinal (CW-05)', () => {
   it('enforces natal ceiling: weak natal cannot be elevated to strong despite supportive dasha and timing', () => {
     const mockDasha: CareerDashaSynthesis = {
-      dashaEffect: 'SUPPORTS',
-      confidence: 0.9,
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: 'JUPITER' as any },
+        ad: { period: 'AD', planet: 'SUN' as any },
+        pd: { period: 'PD', planet: 'MARS' as any }
+      },
+      md: {} as any,
+      ad: {} as any,
+      pd: {} as any,
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 2.0,
+        summary: 'Dasha strongly supports'
+      },
       factors: [
         {
           id: 'D-1',
-          lord: 'JUPITER' as any,
-          level: 'MD',
+          planet: 'JUPITER' as any,
+          period: 'MD',
+          category: 'FUNCTIONAL_ROLE',
           direction: 'SUPPORT',
           weight: 2.0,
           statement: 'Jupiter supports career',
@@ -28,8 +47,10 @@ describe('synthesizeCareerFinal (CW-05)', () => {
     };
 
     const mockTiming: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'SUPPORTS',
       transitEffect: 'SUPPORTS',
-      timingEffect: 'ACTIVATES',
+      overallEffect: 'ACTIVATES',
       confidence: 0.85,
       factors: [
         {
@@ -42,11 +63,12 @@ describe('synthesizeCareerFinal (CW-05)', () => {
           natalEvidenceIds: ['E-10H']
         }
       ],
-      overallSummary: 'Transits support career'
+      summary: 'Transits support career'
     };
 
     const mockManifestations: CareerManifestationSynthesis[] = [
       {
+        reasoningVersion: 'CW-04',
         mode: 'LEADERSHIP',
         status: 'STRONGLY_SUPPORTED',
         confidence: 'HIGH',
@@ -98,14 +120,33 @@ describe('synthesizeCareerFinal (CW-05)', () => {
 
   it('produces VERY_STRONG / STRONG when natal promise is strong and secondary layers align', () => {
     const mockDasha: CareerDashaSynthesis = {
-      dashaEffect: 'SUPPORTS',
-      confidence: 0.9,
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: 'JUPITER' as any },
+        ad: { period: 'AD', planet: 'SUN' as any },
+        pd: { period: 'PD', planet: 'MARS' as any }
+      },
+      md: {} as any,
+      ad: {} as any,
+      pd: {} as any,
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 2.0,
+        summary: 'Dasha supports'
+      },
       factors: [],
       summary: 'Dasha supports'
     };
 
     const mockManifestations: CareerManifestationSynthesis[] = [
       {
+        reasoningVersion: 'CW-04',
         mode: 'MANAGEMENT',
         status: 'STRONGLY_SUPPORTED',
         confidence: 'HIGH',
@@ -117,6 +158,7 @@ describe('synthesizeCareerFinal (CW-05)', () => {
         summary: 'Management supported'
       },
       {
+        reasoningVersion: 'CW-04',
         mode: 'LEADERSHIP',
         status: 'STRONGLY_SUPPORTED',
         confidence: 'HIGH',
