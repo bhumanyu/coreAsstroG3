@@ -267,9 +267,12 @@ export function synthesizeCareerDashaPlanet(
     if (d10.relationship === 'CONFIRMS') {
       direction = 'SUPPORT';
       weight = 1.5;
-    } else if (d10.relationship === 'MODIFIES' || d10.relationship === 'PARTIALLY_CONFIRMS') {
+    } else if (d10.relationship === 'PARTIALLY_CONFIRMS') {
       direction = 'SUPPORT';
       weight = 1.0;
+    } else if (d10.relationship === 'MODIFIES') {
+      direction = 'NEUTRAL';
+      weight = 0;
     } else if (d10.relationship === 'CONFLICTS') {
       direction = 'CHALLENGE';
       weight = 1.5;
@@ -287,9 +290,7 @@ export function synthesizeCareerDashaPlanet(
   }
 
   const d10Effect: 'SUPPORTS' | 'CHALLENGES' | 'NEUTRAL' =
-    d10?.relationship === 'CONFIRMS' ||
-    d10?.relationship === 'MODIFIES' ||
-    d10?.relationship === 'PARTIALLY_CONFIRMS'
+    d10?.relationship === 'CONFIRMS' || d10?.relationship === 'PARTIALLY_CONFIRMS'
       ? 'SUPPORTS'
       : d10?.relationship === 'CONFLICTS'
         ? 'CHALLENGES'

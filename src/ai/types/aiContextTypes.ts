@@ -238,10 +238,20 @@ export interface CareerPeriodTimingFact {
   readonly end?: string;
 }
 
+export interface CareerDashaSynthesisFactorFact {
+  readonly id: string;
+  readonly category: string;
+  readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly weight: number;
+  readonly statement: string;
+  readonly houses?: readonly number[];
+  readonly evidenceIds?: readonly string[];
+}
+
 export interface CareerDashaSynthesisPeriodFact {
   readonly planet: Planet;
   readonly effect: string;
-  readonly factors: readonly string[];
+  readonly factors: readonly CareerDashaSynthesisFactorFact[];
 }
 
 export interface CareerDashaSynthesisHierarchyFact {
