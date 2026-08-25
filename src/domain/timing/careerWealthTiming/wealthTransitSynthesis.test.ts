@@ -47,7 +47,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
     fullNatalAnalysis: {} as any
   };
 
-  it('synthesizes wealth timing independently across 4 dimensions', () => {
+  it('synthesizes wealth timing independently across 4 dimensions with UNDETERMINED promise when not provided', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
     const result = synthesizeWealthTiming(mockHoroscope, null, asOf);
 
@@ -56,6 +56,23 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
     expect(result.dimensions.GAINS).toBeDefined();
     expect(result.dimensions.FORTUNE).toBeDefined();
     expect(result.dimensions.SPECULATION).toBeDefined();
+
+    // Without provided natal promises, defaults to UNDETERMINED and INSUFFICIENT_DATA (no MODERATE fallback)
+    expect(result.dimensions.ACCUMULATION.natalPromise).toBe('UNDETERMINED');
+    expect(result.dimensions.ACCUMULATION.overallEffect).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('populates explicit transitingPlanet field on WealthTransitFactor items', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    const result = synthesizeWealthTiming(mockHoroscope, null, asOf);
+
+    for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+      const factors = result.dimensions[dim].factors;
+      for (const f of factors) {
+        expect(f.transitingPlanet).toBeDefined();
+        expect(f.transitingPlanet).toBe(f.planet);
+      }
+    }
   });
 
   it('enforces natal promise ceiling across dimensions in synthesizeWealthTiming', () => {

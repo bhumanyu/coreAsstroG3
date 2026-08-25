@@ -60,10 +60,14 @@ export function mapWealthDimensionTransitEffect(
  * - Speculation is independent and isolated.
  */
 export function resolveWealthDimensionTransitEffect(
-  natalPromise: DomainStrength,
+  natalPromise: DomainStrength | undefined,
   dashaEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA',
   transitSynthesis: { transitEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' }
 ): TimingEffect {
+  if (!natalPromise || natalPromise === 'UNDETERMINED') {
+    return 'INSUFFICIENT_DATA';
+  }
+
   if (natalPromise === 'WEAK') {
     return 'DOES_NOT_ACTIVATE';
   }

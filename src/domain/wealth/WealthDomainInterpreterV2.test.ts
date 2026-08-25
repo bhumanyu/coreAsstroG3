@@ -1490,4 +1490,37 @@ describe('WealthDomainInterpreterV2', () => {
     expect(serviceResult.domain).toBe('WEALTH');
     expect(serviceResult.conclusion).toBeDefined();
   });
+
+  // 17. CW-02 -> CW-03 end-to-end timing integration (Concern 9)
+  it('plumbs CW-02 Dasha activations through to CW-03 wealthTimingSynthesis given an explicit asOf date', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    const result = interpretWealthV2(horoscope, { asOf });
+
+    expect(result.domain).toBe('WEALTH');
+    expect(result.conclusionData).toBeDefined();
+
+    const wealthTiming = (result.conclusionData as any).wealthTimingSynthesis;
+    expect(wealthTiming).toBeDefined();
+    expect(wealthTiming.dimensions).toBeDefined();
+
+    // Verify all 4 dimensions are populated
+    for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+      const dimSynthesis = wealthTiming.dimensions[dim];
+      expect(dimSynthesis).toBeDefined();
+      expect(dimSynthesis.dimension).toBe(dim);
+      expect(dimSynthesis.natalPromise).toBeDefined();
+      expect(dimSynthesis.dashaEffect).toBeDefined();
+      expect(dimSynthesis.transitEffect).toBeDefined();
+      expect(dimSynthesis.overallEffect).toBeDefined();
+      expect(dimSynthesis.factors).toBeDefined();
+    }
+
+    // GAINS dimension specific verification (Concern 9):
+    // Confirms CW-02 dasha effect and natal promise actively derive CW-03 overall effect (not INSUFFICIENT_DATA)
+    const gainsSynthesis = wealthTiming.dimensions.GAINS;
+    expect(gainsSynthesis.dashaEffect).not.toBe('INSUFFICIENT_DATA');
+    expect(['SUPPORTS', 'CHALLENGES', 'MIXED', 'NEUTRAL']).toContain(gainsSynthesis.dashaEffect);
+    expect(gainsSynthesis.overallEffect).not.toBe('INSUFFICIENT_DATA');
+    expect(['ACTIVATES', 'PARTIALLY_ACTIVATES', 'MODIFIES', 'CHALLENGES', 'DOES_NOT_ACTIVATE']).toContain(gainsSynthesis.overallEffect);
+  });
 });

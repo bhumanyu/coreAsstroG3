@@ -221,7 +221,8 @@ export function synthesizeCareerTransit(
           direction,
           weight,
           statement,
-          houses: [houseNum]
+          houses: [houseNum],
+          transitingPlanet: p
         }));
       }
     }
@@ -294,7 +295,8 @@ export function synthesizeCareerTransit(
       direction,
       weight,
       statement,
-      houses: [hNum, currentHouse]
+      houses: [hNum, currentHouse],
+      transitingPlanet: lord
     }));
   }
 
@@ -321,6 +323,9 @@ export function synthesizeCareerTransit(
         const planetRole = getPlanetCareerRole(corr.dashaPlanet);
 
         let direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' = 'NEUTRAL';
+        const targetPlanet = corr.natalPlanet ?? (corr as { natalTargetPlanet?: Planet }).natalTargetPlanet;
+        const transitingPlanet = corr.transitPlanet;
+        const dashaPlanet = corr.dashaPlanet;
 
         if (String(corr.type).includes('TRANSIT_CONDITION')) {
           if (corr.reason?.toLowerCase().includes('sade sati') || corr.reason?.toLowerCase().includes('saturn over moon')) {
@@ -329,7 +334,7 @@ export function synthesizeCareerTransit(
             direction = planetRole.ownsCareerHouse || planetRole.isKaraka ? 'SUPPORT' : 'NEUTRAL';
           }
         } else {
-          const target = (corr as { natalTargetPlanet?: Planet }).natalTargetPlanet;
+          const target = targetPlanet;
           const targetRole = target ? getPlanetCareerRole(target) : undefined;
 
           if (planetRole.ownsDusthana && !planetRole.ownsCareerHouse && !planetRole.isKaraka) {
@@ -347,7 +352,10 @@ export function synthesizeCareerTransit(
           category: 'DASHA_LORD_TRANSIT',
           direction,
           weight,
-          statement: `Active ${corr.dashaLevel} lord ${corr.dashaPlanet} transit correlation: ${corr.reason}`
+          statement: `Active ${corr.dashaLevel} lord ${corr.dashaPlanet} transit correlation: ${corr.reason}`,
+          dashaPlanet,
+          transitingPlanet,
+          ...(targetPlanet ? { targetPlanet } : {})
         }));
       }
     }
@@ -373,7 +381,8 @@ export function synthesizeCareerTransit(
         direction: 'SUPPORT',
         weight: 1.5,
         statement: `Natural career karaka ${kp} transits key angular house ${hPos}. ${karakaDef?.title ?? ''}`,
-        houses: [hPos]
+        houses: [hPos],
+        transitingPlanet: kp
       }));
     }
   }

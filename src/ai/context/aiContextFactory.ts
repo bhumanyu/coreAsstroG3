@@ -649,7 +649,10 @@ function buildCareerFact(
         statement: f.statement,
         ...(f.houses ? { houses: [...f.houses] } : {}),
         ...(f.natalEvidenceIds ? { natalEvidenceIds: [...f.natalEvidenceIds] } : {}),
-        ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {})
+        ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {}),
+        ...(f.transitingPlanet ? { transitingPlanet: f.transitingPlanet } : {}),
+        ...(f.targetPlanet ? { targetPlanet: f.targetPlanet } : {}),
+        ...(f.dashaPlanet ? { dashaPlanet: f.dashaPlanet } : {})
       })),
       summary: careerTimingSynthesis.summary
     };
@@ -761,7 +764,10 @@ function buildWealthFact(
           dimension: f.dimension,
           ...(f.houses ? { houses: [...f.houses] } : {}),
           ...(f.natalEvidenceIds ? { natalEvidenceIds: [...f.natalEvidenceIds] } : {}),
-          ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {})
+          ...(f.dashaEvidenceIds ? { dashaEvidenceIds: [...f.dashaEvidenceIds] } : {}),
+          ...(f.transitingPlanet ? { transitingPlanet: f.transitingPlanet } : {}),
+          ...(f.targetPlanet ? { targetPlanet: f.targetPlanet } : {}),
+          ...(f.dashaPlanet ? { dashaPlanet: f.dashaPlanet } : {})
         })),
         summary: synObj.summary
       };

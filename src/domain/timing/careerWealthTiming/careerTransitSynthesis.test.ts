@@ -171,8 +171,45 @@ describe('CW-03 Career Transit Synthesis', () => {
 
     // Neutral house transit factors should have direction NEUTRAL
     const neutralFactors = result.factors.filter((f) => f.direction === 'NEUTRAL');
+    expect(neutralFactors.length).toBeGreaterThan(0);
     for (const nf of neutralFactors) {
       expect(nf.direction).toBe('NEUTRAL');
+      expect(nf.transitingPlanet).toBeDefined();
+      expect(nf.transitingPlanet).toBe(nf.planet);
+    }
+  });
+
+  it('populates explicit source, target, and dasha planet fields on CareerTransitFactors', () => {
+    const asOf = new Date('2026-06-01T00:00:00Z');
+    const activeDasha = {
+      mahadasha: { planet: Planet.JUPITER, start: '2020-01-01', end: '2036-01-01' },
+      antardasha: { planet: Planet.SATURN, start: '2025-01-01', end: '2027-01-01' },
+      pratyantardasha: { planet: Planet.MERCURY, start: '2026-05-01', end: '2026-08-01' }
+    };
+
+    const result = synthesizeCareerTransit(mockHoroscope, activeDasha as any, asOf);
+
+    // All house transit factors carry transitingPlanet
+    const houseFactors = result.factors.filter((f) => f.category === 'CAREER_HOUSE_TRANSIT');
+    expect(houseFactors.length).toBeGreaterThan(0);
+    for (const hf of houseFactors) {
+      expect(hf.transitingPlanet).toBe(hf.planet);
+    }
+
+    // All lord transit factors carry transitingPlanet
+    const lordFactors = result.factors.filter((f) => f.category === 'CAREER_LORD_TRANSIT');
+    expect(lordFactors.length).toBeGreaterThan(0);
+    for (const lf of lordFactors) {
+      expect(lf.transitingPlanet).toBe(lf.planet);
+    }
+
+    // Dasha transit factors carry dashaPlanet and transitingPlanet
+    const dashaFactors = result.factors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
+    if (dashaFactors.length > 0) {
+      for (const df of dashaFactors) {
+        expect(df.dashaPlanet).toBeDefined();
+        expect(df.transitingPlanet).toBeDefined();
+      }
     }
   });
 });
