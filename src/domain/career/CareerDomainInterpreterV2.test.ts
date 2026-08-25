@@ -1447,7 +1447,9 @@ describe('CareerDomainInterpreterV2', () => {
     expect(manifestations?.length).toBe(7);
 
     // Verify canonical modes
-    const modes = manifestations?.map((m: any) => m.mode);
+    const typedManifestations: readonly CareerManifestationSynthesis[] | undefined = (result1.conclusionData as CareerConclusionData)?.careerManifestationSynthesis;
+    expect(typedManifestations).toBeDefined();
+    const modes = typedManifestations?.map((m: CareerManifestationSynthesis) => m.mode);
     expect(modes).toEqual([
       'LEADERSHIP',
       'MANAGEMENT',
@@ -1457,6 +1459,8 @@ describe('CareerDomainInterpreterV2', () => {
       'INDEPENDENT_WORK',
       'BUSINESS_ENTREPRENEURSHIP'
     ]);
+
+    console.log('CAREER_MANIFESTATIONS_CANONICAL:', JSON.stringify(typedManifestations?.map(m => ({ mode: m.mode, status: m.status, natal: m.natalSupport, dasha: m.dashaSupport, transit: m.transitSupport, d10: m.d10Support }))));
 
     // Verify structure and contracts for each mode
     for (const syn of manifestations ?? []) {

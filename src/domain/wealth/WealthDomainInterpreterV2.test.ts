@@ -1596,6 +1596,8 @@ describe('WealthDomainInterpreterV2', () => {
     expect(dims).toHaveProperty('FORTUNE');
     expect(dims).toHaveProperty('SPECULATION');
 
+    console.log('WEALTH_MANIFESTATIONS_CANONICAL:', JSON.stringify(dims));
+
     const dimensions: ('ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION')[] = [
       'ACCUMULATION',
       'GAINS',
