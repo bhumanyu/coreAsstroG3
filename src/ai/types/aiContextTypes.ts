@@ -4,7 +4,7 @@ import type { TimingActivationEffect } from '../../domain/interpretation/DomainI
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { CareerFactorCategory } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
-import type { TimingEffect } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
+import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import {
   AiAvailability,
   AiConfidence,
@@ -14,7 +14,7 @@ import {
 import type { DomainInterpretationAiProjection } from '../../domain/interpretation';
 import type { LifeAnalysisAiProjection } from '../../domain/synthesis';
 
-export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection, TimingActivationEffect, WealthSubthemeKey };
+export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection, TimingActivationEffect, WealthSubthemeKey, TimingSourceCategory };
 
 export type CareerNatalPromise =
   | 'STRONG'
@@ -275,19 +275,10 @@ export interface CareerDashaSynthesisFact {
 
 import type { WealthDimension } from '../../domain/wealth/wealthTypes';
 
-export type TimingSourceCategory =
-  | 'CAREER_HOUSE_TRANSIT'
-  | 'CAREER_LORD_TRANSIT'
-  | 'DASHA_LORD_TRANSIT'
-  | 'CAREER_KARAKA_TRANSIT'
-  | 'WEALTH_HOUSE_TRANSIT'
-  | 'WEALTH_LORD_TRANSIT'
-  | 'WEALTH_KARAKA_TRANSIT';
-
 export interface CareerTimingFactorFact {
   readonly id: string;
   readonly planet: Planet;
-  readonly category: TimingSourceCategory | string;
+  readonly category: TimingSourceCategory;
   readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly weight: number;
   readonly statement: string;
@@ -371,7 +362,7 @@ export interface WealthPeriodTimingFact {
 export interface WealthTimingFactorFact {
   readonly id: string;
   readonly planet: Planet;
-  readonly category: TimingSourceCategory | string;
+  readonly category: TimingSourceCategory;
   readonly direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly weight: number;
   readonly statement: string;

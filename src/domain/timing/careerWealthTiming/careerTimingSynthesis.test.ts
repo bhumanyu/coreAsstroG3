@@ -49,7 +49,10 @@ describe('CW-03 Career Timing Synthesis Core Principles', () => {
   });
 
   it('synthesizeCareerTiming produces a deterministic CareerTimingSynthesis object', () => {
-    const timing = synthesizeCareerTiming('STRONG', undefined, mockSupportsTransit);
+    const mockDasha: any = {
+      combined: { combinedEffect: 'SUPPORTS' }
+    };
+    const timing = synthesizeCareerTiming('STRONG', mockDasha, mockSupportsTransit);
     expect(timing.natalPromise).toBe('STRONG');
     expect(timing.overallEffect).toBe('ACTIVATES');
     expect(timing.summary).toContain('ACTIVATES');

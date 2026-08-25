@@ -21,9 +21,15 @@ function getNatalMoonLongitude(horoscope: Horoscope): number | undefined {
   if (horoscope.positions?.MOON?.eclipticLongitude !== undefined) {
     return horoscope.positions.MOON.eclipticLongitude;
   }
+  if (horoscope.positions?.MOON?.longitude !== undefined) {
+    return horoscope.positions.MOON.longitude;
+  }
   const moonFact = horoscope.planetFacts?.[Planet.MOON];
   if (moonFact?.position?.eclipticLongitude !== undefined) {
     return moonFact.position.eclipticLongitude;
+  }
+  if (moonFact?.position?.longitude !== undefined) {
+    return moonFact.position.longitude;
   }
   if (typeof (moonFact as unknown as { longitude?: number })?.longitude === 'number') {
     return (moonFact as unknown as { longitude?: number }).longitude;
@@ -34,13 +40,6 @@ function getNatalMoonLongitude(horoscope: Horoscope): number | undefined {
 function getNatalAscendantLongitude(horoscope: Horoscope): number | undefined {
   if (horoscope.ascendant?.longitude !== undefined) {
     return horoscope.ascendant.longitude;
-  }
-  const bhava1 = horoscope.bhavas?.[1] as unknown as { degree?: number; longitude?: number } | undefined;
-  if (typeof bhava1?.degree === 'number') {
-    return bhava1.degree;
-  }
-  if (typeof bhava1?.longitude === 'number') {
-    return bhava1.longitude;
   }
   if (horoscope.rasiChart?.ascendantDegree !== undefined) {
     return horoscope.rasiChart.ascendantDegree;
@@ -53,11 +52,10 @@ function getNatalPlanetLongitudes(horoscope: Horoscope): Partial<Record<Planet, 
   let count = 0;
   for (const p of Object.values(Planet)) {
     const pf = horoscope.planetFacts?.[p];
-    if (pf?.position?.eclipticLongitude !== undefined) {
-      result[p] = pf.position.eclipticLongitude;
-      count++;
-    } else if (typeof (pf as unknown as { longitude?: number })?.longitude === 'number') {
-      result[p] = (pf as unknown as { longitude?: number }).longitude!;
+    const pos = horoscope.positions?.[p];
+    const lon = pos?.eclipticLongitude ?? pos?.longitude ?? pf?.position?.eclipticLongitude ?? pf?.position?.longitude;
+    if (lon !== undefined) {
+      result[p] = lon;
       count++;
     }
   }
@@ -128,7 +126,11 @@ export function synthesizeCareerTransit(
         ownedHouses.push(h);
       }
     }
-    const natalHouse = horoscope.planetFacts?.[planet]?.house;
+    const pf = horoscope.planetFacts?.[planet];
+    const natalHouse = pf?.house;
+    const dignity = pf?.dignity?.status;
+    const isExaltedOrOwn = dignity === 'EXALTED' || dignity === 'OWN_SIGN' || dignity === 'MOOLATRIKONA';
+    const isDebilitated = dignity === 'DEBILITATED';
     const isKaraka = CAREER_KARAKA_DEFINITIONS[planet] !== undefined;
     const ownsCareerHouse = ownedHouses.some((h) => [10, 6, 2, 11].includes(h));
     const ownsLagna = ownedHouses.includes(1);
@@ -138,6 +140,9 @@ export function synthesizeCareerTransit(
     return {
       ownedHouses,
       natalHouse,
+      dignity,
+      isExaltedOrOwn,
+      isDebilitated,
       isKaraka,
       ownsCareerHouse,
       ownsLagna,
@@ -169,6 +174,8 @@ export function synthesizeCareerTransit(
         let weight = isPrimary ? (isOccupying ? 2.5 : 2.0) : (isOccupying ? 1.5 : 1.0);
 
         if (houseNum === 10) {
+          // Saturn transiting 10H: Saturn is the natural Karma-Karaka (significator of profession, authority, and sustained duty).
+          // Its transit over the 10th house actively stimulates professional responsibility and career status.
           if (p === Planet.SATURN) {
             direction = 'SUPPORT';
             weight = isOccupying ? 2.5 : 2.0;
@@ -178,9 +185,12 @@ export function synthesizeCareerTransit(
             direction = 'CHALLENGE';
             weight = 1.5;
           } else {
+            // Non-linked benefics or malefics remain NEUTRAL to avoid unsolicited auto-classification
             direction = 'NEUTRAL';
           }
         } else if (houseNum === 6) {
+          // Upachaya rule in Vedic astrology: Natural malefics (Mars, Saturn) transiting the 6th house provide
+          // strategic vigor to overcome competitors, disputes, and operational obstacles (Shatru/Roga/Rina).
           if (p === Planet.MARS || p === Planet.SATURN) {
             direction = 'SUPPORT';
             weight = isOccupying ? 2.0 : 1.5;
@@ -240,15 +250,39 @@ export function synthesizeCareerTransit(
     let direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' = 'NEUTRAL';
     let weight = isPrimaryLord ? 2.5 : 1.5;
 
+    // Consult natal role (ownership, karaka, lagna, dusthana, dignity) alongside current transit house
     if ([10, 11, 1, 5, 9, 2].includes(currentHouse)) {
-      direction = 'SUPPORT';
+      if (lordRole.isDebilitated && !isPrimaryLord) {
+        direction = 'NEUTRAL';
+        weight = 1.0;
+      } else {
+        direction = 'SUPPORT';
+        if (lordRole.isExaltedOrOwn || lordRole.ownsLagna) {
+          weight = isPrimaryLord ? 3.0 : 2.0;
+        }
+      }
     } else if (currentHouse === 6) {
-      direction = isPrimaryLord || hNum === 6 ? 'SUPPORT' : 'NEUTRAL';
+      if (isPrimaryLord || hNum === 6 || lordRole.isKaraka || lordRole.ownsCareerHouse) {
+        direction = 'SUPPORT';
+        weight = isPrimaryLord ? 2.0 : 1.5;
+      } else if (lordRole.ownsDusthana && !lordRole.ownsLagna) {
+        direction = 'CHALLENGE';
+      } else {
+        direction = 'NEUTRAL';
+      }
     } else if (currentHouse === 8 || currentHouse === 12) {
       direction = 'CHALLENGE';
-      weight = isPrimaryLord ? 2.0 : 1.5;
+      weight = (isPrimaryLord || (lordRole.ownsDusthana && !lordRole.ownsLagna)) ? 2.0 : 1.5;
     } else {
-      direction = lordRole.isKaraka || lordRole.ownsLagna ? 'SUPPORT' : 'NEUTRAL';
+      if (lordRole.isKaraka || lordRole.ownsLagna || lordRole.isExaltedOrOwn) {
+        direction = 'SUPPORT';
+        weight = 1.5;
+      } else if (lordRole.ownsDusthana && !lordRole.ownsCareerHouse) {
+        direction = 'CHALLENGE';
+        weight = 1.5;
+      } else {
+        direction = 'NEUTRAL';
+      }
     }
 
     const statement = `${lord} is lord of Career-related house ${hNum} and currently transits house ${currentHouse}.`;
@@ -353,8 +387,19 @@ export function synthesizeCareerTransit(
         const dashaEvidenceIds = matchingDashaFactors.map((df) => df.id);
         const isStrongDashaAgent = matchingDashaFactors.some((df) => df.direction === 'SUPPORT' && df.weight >= 2.0);
 
-        const newWeight = isStrongDashaAgent ? Number((factor.weight * 1.25).toFixed(2)) : factor.weight;
-        const newDirection = isStrongDashaAgent ? 'SUPPORT' : factor.direction;
+        let newWeight = factor.weight;
+        let newDirection = factor.direction;
+
+        // Blocker Concern 1: A strong Dasha agent only amplifies magnitude of an EXISTING SUPPORT (x1.25 boost)
+        // and NEVER changes a CHALLENGE to SUPPORT.
+        if (factor.direction === 'SUPPORT' && isStrongDashaAgent) {
+          newWeight = Number((factor.weight * 1.25).toFixed(2));
+          newDirection = 'SUPPORT';
+        } else if (factor.direction === 'CHALLENGE') {
+          newDirection = 'CHALLENGE';
+        } else if (factor.direction === 'NEUTRAL') {
+          newDirection = 'NEUTRAL';
+        }
 
         factors[i] = Object.freeze({
           ...factor,
