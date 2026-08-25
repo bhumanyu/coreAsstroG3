@@ -51,6 +51,12 @@ describe('CW-05 Guardrails', () => {
       const dimMap: Partial<Record<any, WealthDimensionFinalSynthesis>> = {
         ACCUMULATION: {
           status: 'STRONG',
+          finalStatus: 'STRONG',
+          promiseStatus: 'STRONG',
+          activationStatus: 'SUPPORT',
+          timingStatus: 'SUPPORT',
+          divisionalStatus: 'CONFIRMS',
+          manifestationStatus: 'STRONG',
           confidence: 'HIGH',
           primaryPromise: 'STRONG',
           dashaEffect: 'SUPPORTS',
@@ -61,6 +67,12 @@ describe('CW-05 Guardrails', () => {
         },
         SPECULATION: {
           status: 'CHALLENGED',
+          finalStatus: 'CHALLENGED',
+          promiseStatus: 'CHALLENGED',
+          activationStatus: 'SUPPORT',
+          timingStatus: 'SUPPORT',
+          divisionalStatus: 'CONFIRMS',
+          manifestationStatus: 'CHALLENGED',
           confidence: 'MEDIUM',
           primaryPromise: 'WEAK',
           dashaEffect: 'SUPPORTS',

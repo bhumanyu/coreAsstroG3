@@ -56,8 +56,8 @@ import {
 import type { CareerTimingFactor, WealthTimingFactor, WealthDimensionTimingSynthesis } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerDashaFactor } from '../../domain/career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerManifestationSynthesis, CareerManifestationFactor } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
-import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
-import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension, WealthDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
+import type { CareerWealthFinalSynthesis, WealthDimensionFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
@@ -934,19 +934,28 @@ function mapCareerWealthFinalSynthesisToFact(
   syn?: CareerWealthFinalSynthesis
 ): CareerWealthFinalSynthesisFact | undefined {
   if (!syn) return undefined;
-  const dimensionsFact: Record<string, WealthDimensionFinalSynthesisFact> | undefined = syn.dimensions
+  const dimensionsFact: Partial<Record<WealthDimension, WealthDimensionFinalSynthesisFact>> | undefined = syn.dimensions
     ? Object.fromEntries(
-        Object.entries(syn.dimensions).map(([dimKey, dimVal]) => [
+        (Object.entries(syn.dimensions) as [WealthDimension, WealthDimensionFinalSynthesis][]).map(([dimKey, dimVal]) => [
           dimKey,
           {
             status: dimVal.status,
+            finalStatus: dimVal.finalStatus,
+            promiseStatus: dimVal.promiseStatus,
+            activationStatus: dimVal.activationStatus,
+            timingStatus: dimVal.timingStatus,
+            divisionalStatus: dimVal.divisionalStatus,
+            manifestationStatus: dimVal.manifestationStatus,
             confidence: dimVal.confidence,
             primaryPromise: dimVal.primaryPromise,
             dashaEffect: dimVal.dashaEffect,
             timingEffect: dimVal.timingEffect,
             divisionalEffect: dimVal.divisionalEffect,
             summary: dimVal.summary,
-            evidenceIds: [...dimVal.evidenceIds]
+            ruleIds: dimVal.ruleIds ? [...dimVal.ruleIds] : undefined,
+            evidenceIds: [...dimVal.evidenceIds],
+            natalEvidenceIds: dimVal.natalEvidenceIds ? [...dimVal.natalEvidenceIds] : undefined,
+            natalRuleIds: dimVal.natalRuleIds ? [...dimVal.natalRuleIds] : undefined
           }
         ])
       )
@@ -956,8 +965,16 @@ function mapCareerWealthFinalSynthesisToFact(
     reasoningVersion: 'CW-05',
     domain: syn.domain,
     status: syn.status,
+    finalStatus: syn.finalStatus,
+    promiseStatus: syn.promiseStatus,
+    activationStatus: syn.activationStatus,
+    timingStatus: syn.timingStatus,
+    divisionalStatus: syn.divisionalStatus,
+    manifestationStatus: syn.manifestationStatus,
     confidence: syn.confidence,
-    primaryPromise: String(syn.primaryPromise),
+    primaryPromise: syn.primaryPromise,
+    primaryStrength: syn.primaryStrength,
+    secondaryStrengths: syn.secondaryStrengths ? [...syn.secondaryStrengths] : undefined,
     manifestationSummary: syn.manifestationSummary.map((m) => ({
       mode: m.mode,
       status: m.status,
@@ -973,6 +990,8 @@ function mapCareerWealthFinalSynthesisToFact(
     summary: syn.summary,
     ruleIds: [...syn.ruleIds],
     evidenceIds: [...syn.evidenceIds],
+    natalEvidenceIds: syn.natalEvidenceIds ? [...syn.natalEvidenceIds] : undefined,
+    natalRuleIds: syn.natalRuleIds ? [...syn.natalRuleIds] : undefined,
     ...(dimensionsFact ? { dimensions: dimensionsFact } : {}),
     ...(syn.riskProfile ? { riskProfile: syn.riskProfile } : {})
   };

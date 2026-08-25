@@ -1509,4 +1509,54 @@ describe('CareerDomainInterpreterV2', () => {
       result2.conclusionData?.careerManifestationSynthesis
     );
   });
+
+  // End-to-end CW-05 Career Final Synthesis Pipeline Test
+  it('CW-05 end-to-end pipeline: produces deterministic career final synthesis with multi-axis evaluation and provenance', () => {
+    const asOf = '2024-06-15T12:00:00.000Z';
+    const result1 = interpretCareerV2(horoscope, { asOf });
+    const result2 = interpretCareerV2(horoscope, { asOf });
+
+    const finalSynthesis = result1.conclusionData?.careerFinalSynthesis;
+    expect(finalSynthesis).toBeDefined();
+    expect(finalSynthesis?.domain).toBe('CAREER');
+    expect(finalSynthesis?.reasoningVersion).toBe('CW-05');
+    expect(typeof finalSynthesis?.summary).toBe('string');
+    expect(finalSynthesis?.summary.length).toBeGreaterThan(0);
+
+    // Verify all 6 axes are populated
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.promiseStatus);
+    expect(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.activationStatus);
+    expect(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.timingStatus);
+    expect(['CONFIRMS', 'CONFLICTS', 'UNAVAILABLE']).toContain(finalSynthesis?.divisionalStatus);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.manifestationStatus);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'CHALLENGED', 'INSUFFICIENT_DATA']).toContain(finalSynthesis?.finalStatus);
+
+    // Verify backward compatibility aliases
+    expect(finalSynthesis?.status).toBe(finalSynthesis?.finalStatus);
+    expect(['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNDETERMINED']).toContain(finalSynthesis?.primaryPromise);
+
+    // Verify structured lists and metadata
+    expect(Array.isArray(finalSynthesis?.strongestAreas)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.challengedAreas)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.keySupport)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.keyChallenges)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.manifestationSummary)).toBe(true);
+
+    // Verify provenance fields
+    expect(Array.isArray(finalSynthesis?.natalEvidenceIds)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.natalRuleIds)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.dashaFactors)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.timingFactors)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.manifestationFactors)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.d10Evidence)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.ruleIds)).toBe(true);
+    expect(Array.isArray(finalSynthesis?.evidenceIds)).toBe(true);
+
+    expect(finalSynthesis?.ruleIds).toContain('CW-05-CAREER-SYNTHESIS');
+
+    // Strict determinism
+    expect(result1.conclusionData?.careerFinalSynthesis).toEqual(
+      result2.conclusionData?.careerFinalSynthesis
+    );
+  });
 });

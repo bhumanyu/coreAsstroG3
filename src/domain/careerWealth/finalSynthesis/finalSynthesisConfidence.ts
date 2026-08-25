@@ -25,7 +25,7 @@ export function calculateFinalConfidence(
 
   if (
     primaryEvidenceCount >= 1 &&
-    (supportingManifestations >= 1 || challengingManifestations >= 1 || activeManifestations >= 1)
+    (supportingManifestations >= 1 || challengingManifestations >= 1 || activeManifestations >= 1 || divisionalConfirmation)
   ) {
     return 'MEDIUM';
   }

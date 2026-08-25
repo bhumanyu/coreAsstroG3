@@ -221,4 +221,239 @@ describe('synthesizeWealthFinal (CW-05)', () => {
     expect(Object.isFrozen(result.ruleIds)).toBe(true);
     expect(Object.isFrozen(result.evidenceIds)).toBe(true);
   });
+
+  describe('CW-05 Multi-Axis Semantics & Deterministic Matrices', () => {
+    it('populates multi-axis statuses on both overall synthesis and per-dimension records', () => {
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'WEAK'
+        },
+        d2Relationship: 'CONFIRMS',
+        d2Synthesis: [
+          {
+            id: 'D2-EV-1',
+            ruleId: 'D2-R-1',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'D2 confirms wealth'
+          }
+        ],
+        natalEvidenceIds: ['NATAL-W-1', 'NATAL-W-2'],
+        natalRuleIds: ['NATAL-W-R1']
+      };
+
+      const result = synthesizeWealthFinal(input);
+
+      // Verify overall axes
+      expect(result.promiseStatus).toBe('STRONG');
+      expect(result.divisionalStatus).toBe('CONFIRMS');
+      expect(result.finalStatus).toBe('STRONG');
+      expect(result.riskProfile).toBe('ELEVATED');
+
+      // Verify per-dimension axes
+      const acc = result.dimensions!.ACCUMULATION;
+      expect(acc.promiseStatus).toBe('STRONG');
+      expect(acc.divisionalStatus).toBe('CONFIRMS');
+      expect(acc.finalStatus).toBe('STRONG');
+
+      const spec = result.dimensions!.SPECULATION;
+      expect(spec.promiseStatus).toBe('CHALLENGED');
+      expect(spec.divisionalStatus).toBe('CONFIRMS');
+      expect(spec.finalStatus).toBe('CHALLENGED');
+
+      // Verify provenance
+      expect(result.natalEvidenceIds).toEqual(['NATAL-W-1', 'NATAL-W-2']);
+      expect(result.natalRuleIds).toEqual(['NATAL-W-R1']);
+      expect(result.d2Evidence).toHaveLength(1);
+      expect(result.d2Evidence[0].id).toBe('D2-EV-1');
+      expect(result.evidenceIds).toContain('NATAL-W-1');
+      expect(result.evidenceIds).toContain('D2-EV-1');
+      expect(result.ruleIds).toContain('CW-05-WEALTH-SYNTHESIS');
+      expect(result.ruleIds).toContain('NATAL-W-R1');
+      expect(result.ruleIds).toContain('D2-R-1');
+    });
+
+    it('enforces speculation exclusion: weak speculation drives riskProfile to HIGH/ELEVATED without diluting overall wealth status', () => {
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'WEAK'
+        },
+        d2Relationship: 'CONFIRMS'
+      };
+
+      const result = synthesizeWealthFinal(input);
+
+      // Foundational wealth capacity is unaffected by high-variance speculation
+      expect(result.status).toBe('STRONG');
+      expect(result.finalStatus).toBe('STRONG');
+      expect(result.riskProfile).toBe('ELEVATED');
+      expect(result.strongestAreas).toContain('ACCUMULATION');
+      expect(result.strongestAreas).toContain('GAINS');
+      expect(result.challengedAreas).toContain('SPECULATION');
+    });
+
+    it('enforces D2 conflict structural downgrade on overall and per-dimension statuses', () => {
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'STRONG'
+        },
+        d2Relationship: 'CONFLICTS'
+      };
+
+      const result = synthesizeWealthFinal(input);
+
+      expect(result.divisionalStatus).toBe('CONFLICTS');
+      // D2 conflict downgrades candidate from STRONG to MODERATE
+      expect(result.status).toBe('MODERATE');
+      expect(result.finalStatus).toBe('MODERATE');
+      expect(result.dimensions!.ACCUMULATION.status).toBe('MODERATE');
+      expect(result.confidence).toBe('LOW');
+    });
+
+    it('enforces Dasha challenge downgrade across dimensions', () => {
+      const mockTiming: WealthTimingSynthesis = {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            natalPromise: 'STRONG',
+            overallEffect: 'CHALLENGES',
+            dashaEffect: 'CHALLENGES',
+            transitEffect: 'NEUTRAL',
+            confidence: 0.8,
+            factors: [],
+            summary: 'Dasha challenging accumulation'
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            natalPromise: 'STRONG',
+            overallEffect: 'CHALLENGES',
+            dashaEffect: 'CHALLENGES',
+            transitEffect: 'NEUTRAL',
+            confidence: 0.8,
+            factors: [],
+            summary: 'Dasha challenging gains'
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            natalPromise: 'STRONG',
+            overallEffect: 'CHALLENGES',
+            dashaEffect: 'CHALLENGES',
+            transitEffect: 'NEUTRAL',
+            confidence: 0.8,
+            factors: [],
+            summary: 'Dasha challenging fortune'
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            natalPromise: 'STRONG',
+            overallEffect: 'CHALLENGES',
+            dashaEffect: 'CHALLENGES',
+            transitEffect: 'NEUTRAL',
+            confidence: 0.8,
+            factors: [],
+            summary: 'Dasha challenging speculation'
+          }
+        },
+        overallSummary: 'Dasha challenges'
+      };
+
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG',
+          GAINS: 'STRONG',
+          FORTUNE: 'STRONG',
+          SPECULATION: 'STRONG'
+        },
+        timingSynthesis: mockTiming,
+        d2Relationship: 'CONFIRMS'
+      };
+
+      const result = synthesizeWealthFinal(input);
+
+      expect(result.activationStatus).toBe('CHALLENGE');
+      // Dasha challenge downgrades overall status from STRONG to MODERATE
+      expect(result.status).toBe('MODERATE');
+      expect(result.finalStatus).toBe('MODERATE');
+      expect(result.dimensions!.ACCUMULATION.status).toBe('MODERATE');
+      expect(result.dimensions!.ACCUMULATION.activationStatus).toBe('CHALLENGE');
+    });
+
+    it('enforces natal ceiling for wealth dimensions: weak natal cannot be elevated by supportive dasha/timing', () => {
+      const mockTiming: WealthTimingSynthesis = {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            natalPromise: 'WEAK',
+            overallEffect: 'ACTIVATES',
+            dashaEffect: 'SUPPORTS',
+            transitEffect: 'SUPPORTS',
+            confidence: 0.9,
+            factors: [],
+            summary: 'Supportive timing'
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            natalPromise: 'WEAK',
+            overallEffect: 'ACTIVATES',
+            dashaEffect: 'SUPPORTS',
+            transitEffect: 'SUPPORTS',
+            confidence: 0.9,
+            factors: [],
+            summary: 'Supportive timing'
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            natalPromise: 'WEAK',
+            overallEffect: 'ACTIVATES',
+            dashaEffect: 'SUPPORTS',
+            transitEffect: 'SUPPORTS',
+            confidence: 0.9,
+            factors: [],
+            summary: 'Supportive timing'
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            natalPromise: 'WEAK',
+            overallEffect: 'ACTIVATES',
+            dashaEffect: 'SUPPORTS',
+            transitEffect: 'SUPPORTS',
+            confidence: 0.9,
+            factors: [],
+            summary: 'Supportive timing'
+          }
+        },
+        overallSummary: 'Supportive timing'
+      };
+
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'WEAK',
+          GAINS: 'WEAK',
+          FORTUNE: 'WEAK',
+          SPECULATION: 'WEAK'
+        },
+        timingSynthesis: mockTiming,
+        d2Relationship: 'CONFIRMS'
+      };
+
+      const result = synthesizeWealthFinal(input);
+
+      // Weak natal ceiling caps overall status and all dimension statuses at CHALLENGED
+      expect(result.status).toBe('CHALLENGED');
+      expect(result.finalStatus).toBe('CHALLENGED');
+      expect(result.dimensions!.ACCUMULATION.status).toBe('CHALLENGED');
+      expect(result.dimensions!.GAINS.status).toBe('CHALLENGED');
+      expect(result.dimensions!.FORTUNE.status).toBe('CHALLENGED');
+      expect(result.dimensions!.SPECULATION.status).toBe('CHALLENGED');
+    });
+  });
 });

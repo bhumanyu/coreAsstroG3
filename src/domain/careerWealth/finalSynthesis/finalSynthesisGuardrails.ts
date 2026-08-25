@@ -84,23 +84,38 @@ export function enforceWealthNatalCeiling(
 export function enforceWealthDimensionIsolation(
   dimensions: Partial<Record<WealthDimension, WealthDimensionFinalSynthesis>>
 ): Readonly<Record<WealthDimension, WealthDimensionFinalSynthesis>> {
-  const result: Record<WealthDimension, WealthDimensionFinalSynthesis> = {} as any;
-  for (const dim of ALL_WEALTH_DIMENSIONS) {
-    const existing = dimensions[dim];
-    if (existing) {
-      result[dim] = Object.isFrozen(existing) ? existing : Object.freeze({ ...existing });
-    } else {
-      result[dim] = Object.freeze({
-        status: 'INSUFFICIENT_DATA',
-        confidence: 'LOW',
-        primaryPromise: 'UNDETERMINED',
-        dashaEffect: 'INSUFFICIENT_DATA',
-        timingEffect: 'INSUFFICIENT_DATA',
-        divisionalEffect: 'UNAVAILABLE',
-        summary: `${dim} has insufficient data.`,
-        evidenceIds: Object.freeze([])
-      });
-    }
-  }
+  const createDefaultDimensionSynthesis = (dim: WealthDimension): WealthDimensionFinalSynthesis =>
+    Object.freeze({
+      status: 'INSUFFICIENT_DATA',
+      finalStatus: 'INSUFFICIENT_DATA',
+      promiseStatus: 'INSUFFICIENT_DATA',
+      activationStatus: 'INSUFFICIENT_DATA',
+      timingStatus: 'INSUFFICIENT_DATA',
+      divisionalStatus: 'UNAVAILABLE',
+      manifestationStatus: 'INSUFFICIENT_DATA',
+      confidence: 'LOW',
+      primaryPromise: 'UNDETERMINED',
+      dashaEffect: 'INSUFFICIENT_DATA',
+      timingEffect: 'INSUFFICIENT_DATA',
+      divisionalEffect: 'UNAVAILABLE',
+      summary: `${dim} has insufficient data.`,
+      ruleIds: Object.freeze([]),
+      evidenceIds: Object.freeze([]),
+      natalEvidenceIds: Object.freeze([]),
+      natalRuleIds: Object.freeze([])
+    });
+
+  const accumulation = dimensions.ACCUMULATION ? (Object.isFrozen(dimensions.ACCUMULATION) ? dimensions.ACCUMULATION : Object.freeze({ ...dimensions.ACCUMULATION })) : createDefaultDimensionSynthesis('ACCUMULATION');
+  const gains = dimensions.GAINS ? (Object.isFrozen(dimensions.GAINS) ? dimensions.GAINS : Object.freeze({ ...dimensions.GAINS })) : createDefaultDimensionSynthesis('GAINS');
+  const fortune = dimensions.FORTUNE ? (Object.isFrozen(dimensions.FORTUNE) ? dimensions.FORTUNE : Object.freeze({ ...dimensions.FORTUNE })) : createDefaultDimensionSynthesis('FORTUNE');
+  const speculation = dimensions.SPECULATION ? (Object.isFrozen(dimensions.SPECULATION) ? dimensions.SPECULATION : Object.freeze({ ...dimensions.SPECULATION })) : createDefaultDimensionSynthesis('SPECULATION');
+
+  const result: Record<WealthDimension, WealthDimensionFinalSynthesis> = {
+    ACCUMULATION: accumulation,
+    GAINS: gains,
+    FORTUNE: fortune,
+    SPECULATION: speculation
+  };
+
   return Object.freeze(result);
 }

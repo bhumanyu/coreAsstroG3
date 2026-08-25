@@ -359,11 +359,14 @@ export function interpretCareerV2(
     );
 
     const careerFinalSynthesis = synthesizeCareerFinal({
-      natalPromise: cw01Result.finalStrength,
+      natalPromise: cw01Result.natalStrength,
       dashaSynthesis: careerDashaSynthesis,
       timingSynthesis: careerTimingSynthesis,
       manifestationSynthesis: careerManifestationSynthesis,
-      d10Relationship
+      d10Synthesis: d10Evidence,
+      d10Relationship,
+      natalEvidenceIds: natalPromiseEvidenceIds,
+      natalRuleIds: natalPromiseEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
     });
 
     return buildDomainInterpretation({
@@ -388,7 +391,7 @@ export function interpretCareerV2(
         careerFinalSynthesis
       },
       reasoningTrace: cw01Result.reasoningTrace,
-      reasoningVersion: 'CW-05'
+      reasoningVersion: options?.strategy === 'CW01' ? 'CW-01' : undefined
     });
   }
 
@@ -518,7 +521,10 @@ export function interpretCareerV2(
     dashaSynthesis: careerDashaSynthesis,
     timingSynthesis: careerTimingSynthesis,
     manifestationSynthesis: careerManifestationSynthesis,
-    d10Relationship
+    d10Synthesis: d10Evidence,
+    d10Relationship,
+    natalEvidenceIds: natalPromiseEvidenceIds,
+    natalRuleIds: natalPromiseEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
   });
 
   return buildDomainInterpretation({
@@ -539,8 +545,7 @@ export function interpretCareerV2(
       careerTimingSynthesis,
       careerManifestationSynthesis,
       careerFinalSynthesis
-    },
-    reasoningVersion: 'CW-05'
+    }
   });
 }
 
