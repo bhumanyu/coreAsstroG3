@@ -3,6 +3,7 @@ import { Planet, Sign, AyanamsaType, type Horoscope } from '../../../types';
 import { synthesizeCareerTransit } from './careerTransitSynthesis';
 import { mapTransitEffect } from './careerTransitRules';
 import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
+import { createMockActiveDashaState, createMockCareerDashaSynthesis } from './__testUtils__/mockDasha';
 
 describe('CW-03 Career Transit Synthesis', () => {
   const mockHoroscope: Horoscope = {
@@ -87,17 +88,11 @@ describe('CW-03 Career Transit Synthesis', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
 
     // Create a mock Dasha synthesis where Saturn is a strong SUPPORT agent (weight 3.0, direction: SUPPORT)
-    const mockDashaSynthesis: CareerDashaSynthesis = {
-      natalPromiseProtected: true,
-      reasoningVersion: 'CW-02',
-      timing: {
-        md: { period: 'MD', planet: Planet.SATURN },
-        ad: { period: 'AD', planet: Planet.MERCURY },
-        pd: { period: 'PD', planet: Planet.VENUS }
-      },
-      md: {} as any,
-      ad: {} as any,
-      pd: {} as any,
+    const mockDashaSynthesis: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+      combinedEffect: 'SUPPORTS',
+      mdPlanet: Planet.SATURN,
+      adPlanet: Planet.MERCURY,
+      pdPlanet: Planet.VENUS,
       factors: [
         {
           id: 'DASHA_FACT_SAT_SUPPORT',
@@ -108,19 +103,8 @@ describe('CW-03 Career Transit Synthesis', () => {
           weight: 3.0,
           statement: 'Saturn is strong primary dasha lord'
         }
-      ],
-      combined: {
-        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
-        combinedEffect: 'SUPPORTS',
-        combinedConfidence: 0.9 as any,
-        combinedScore: 3.0,
-        summary: 'Strong'
-      },
-      summary: 'Strong Saturn MD'
-    };
+      ]
+    });
 
     // Synthesize career transit with the dasha linkage
     const result = synthesizeCareerTransit(mockHoroscope, null, asOf, mockDashaSynthesis);
@@ -181,13 +165,13 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('populates explicit source, target, and dasha planet fields on CareerTransitFactors', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = {
-      mahadasha: { planet: Planet.JUPITER, start: '2020-01-01', end: '2036-01-01' },
-      antardasha: { planet: Planet.SATURN, start: '2025-01-01', end: '2027-01-01' },
-      pratyantardasha: { planet: Planet.MERCURY, start: '2026-05-01', end: '2026-08-01' }
-    };
+    const activeDasha = createMockActiveDashaState({
+      mdPlanet: Planet.JUPITER,
+      adPlanet: Planet.SATURN,
+      pdPlanet: Planet.MERCURY
+    });
 
-    const result = synthesizeCareerTransit(mockHoroscope, activeDasha as any, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, activeDasha, asOf);
 
     // All house transit factors carry transitingPlanet
     const houseFactors = result.factors.filter((f) => f.category === 'CAREER_HOUSE_TRANSIT');
@@ -217,12 +201,12 @@ describe('CW-03 Career Transit Synthesis', () => {
     // In mockHoroscope, natal Sun is at 45° (Taurus) and natal Mercury is at 50° (Taurus).
     // On 2026-06-01, transiting Sun is in Taurus (~45°), so transit Sun contacts natal Sun and natal Mercury.
     // Setting Mahadasha lord to Sun ensures MAHADASHA_PLANET_OVER_NATAL_PLANET fires with target natal Sun / Mercury.
-    const activeDasha = {
-      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
-      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
-    };
+    const activeDasha = createMockActiveDashaState({
+      mdPlanet: Planet.SUN,
+      adPlanet: Planet.JUPITER
+    });
 
-    const result = synthesizeCareerTransit(mockHoroscope, activeDasha as any, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, activeDasha, asOf);
     const dashaFactors = result.factors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
     expect(dashaFactors.length).toBeGreaterThan(0);
 
@@ -238,12 +222,12 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('strictly satisfies the planet invariant across all factor categories', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = {
-      mahadasha: { planet: Planet.SUN, start: '2020-01-01', end: '2026-01-01', antardashas: [] },
-      antardasha: { planet: Planet.JUPITER, start: '2025-01-01', end: '2026-01-01' }
-    };
+    const activeDasha = createMockActiveDashaState({
+      mdPlanet: Planet.SUN,
+      adPlanet: Planet.JUPITER
+    });
 
-    const result = synthesizeCareerTransit(mockHoroscope, activeDasha as any, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, activeDasha, asOf);
     expect(result.factors.length).toBeGreaterThan(0);
 
     for (const factor of result.factors) {
