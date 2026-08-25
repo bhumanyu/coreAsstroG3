@@ -1,7 +1,7 @@
 import type { DomainStrength } from '../../reasoning/reasoningTypes';
 import type { VargaRelationship } from '../../interpretation/DomainInterpretationTypes';
 import type { DomainEvidence } from '../../interpretation/DomainEvidence';
-import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
+import type { CareerDashaSynthesis, CareerDashaEffect } from '../../career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerTimingSynthesis, WealthTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
 import type {
   CareerManifestationSynthesis,
@@ -46,6 +46,21 @@ export interface FinalSynthesisEvidence {
   readonly priority: 'PRIMARY' | 'SECONDARY' | 'REFINEMENT';
 }
 
+export interface FinalSynthesisActivationHierarchy {
+  readonly md: {
+    readonly effect: CareerDashaEffect | string;
+    readonly role: 'PRIMARY';
+  };
+  readonly ad: {
+    readonly effect: CareerDashaEffect | string;
+    readonly role: 'MODIFIER';
+  };
+  readonly pd: {
+    readonly effect: CareerDashaEffect | string;
+    readonly role: 'REFINEMENT';
+  };
+}
+
 export interface ManifestationSummary {
   readonly mode: string;
   readonly status: ManifestationStatus | WealthManifestationStatus;
@@ -58,6 +73,10 @@ export interface WealthDimensionFinalSynthesis {
   readonly finalStatus: FinalDomainStatus;
   readonly promiseStatus: FinalDomainStatus;
   readonly activationStatus: SynthesisAxisStatus;
+  readonly activationConfidence?: FinalDomainConfidence;
+  readonly activationStrength?: number;
+  readonly activationSummary?: string;
+  readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus: SynthesisAxisStatus;
   readonly divisionalStatus: VargaRelationship;
   readonly manifestationStatus: FinalDomainStatus;
@@ -80,6 +99,10 @@ export interface CareerWealthFinalSynthesis {
   readonly finalStatus: FinalDomainStatus;
   readonly promiseStatus: FinalDomainStatus;
   readonly activationStatus: SynthesisAxisStatus;
+  readonly activationConfidence?: FinalDomainConfidence;
+  readonly activationStrength?: number;
+  readonly activationSummary?: string;
+  readonly activationHierarchy?: FinalSynthesisActivationHierarchy;
   readonly timingStatus: SynthesisAxisStatus;
   readonly divisionalStatus: VargaRelationship;
   readonly manifestationStatus: FinalDomainStatus;

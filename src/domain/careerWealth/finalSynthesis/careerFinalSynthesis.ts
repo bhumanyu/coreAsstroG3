@@ -2,9 +2,12 @@ import type {
   CareerFinalSynthesisInput,
   CareerWealthFinalSynthesis,
   FinalDomainStatus,
+  FinalDomainConfidence,
+  FinalSynthesisActivationHierarchy,
   ManifestationSummary,
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
+import type { CareerDashaPeriodSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
 import { enforceCareerNatalCeiling } from './finalSynthesisGuardrails';
 import { calculateFinalConfidence } from './finalSynthesisConfidence';
 
@@ -51,6 +54,79 @@ function deriveAxisStatus(effect: string | undefined): SynthesisAxisStatus {
   return 'INSUFFICIENT_DATA';
 }
 
+function mapConfidence(confidence: string | undefined): FinalDomainConfidence | undefined {
+  if (!confidence) return undefined;
+  const norm = confidence.toUpperCase();
+  if (norm === 'HIGH' || norm === 'MEDIUM' || norm === 'LOW') {
+    return norm as FinalDomainConfidence;
+  }
+  return undefined;
+}
+
+function formatPlanetName(planet?: string): string {
+  if (!planet) return '';
+  return planet.charAt(0).toUpperCase() + planet.slice(1).toLowerCase();
+}
+
+function buildActivationSummary(combined: CareerDashaPeriodSynthesis): string {
+  const mdPlanetStr = combined.md?.planet ? ` ${formatPlanetName(combined.md.planet)}` : '';
+  const adPlanetStr = combined.ad?.planet ? ` ${formatPlanetName(combined.ad.planet)}` : '';
+  const pdPlanetStr = combined.pd?.planet ? ` ${formatPlanetName(combined.pd.planet)}` : '';
+
+  const mdEff = combined.md?.effect;
+  const adEff = combined.ad?.effect;
+  const pdEff = combined.pd?.effect;
+
+  const parts: string[] = [];
+
+  // MD Primary
+  if (mdEff === 'STRONGLY_SUPPORTS' || mdEff === 'SUPPORTS') {
+    parts.push(`MD${mdPlanetStr} provides primary SUPPORT`);
+  } else if (mdEff === 'STRONGLY_CHALLENGES' || mdEff === 'CHALLENGES') {
+    parts.push(`MD${mdPlanetStr} provides primary CHALLENGE`);
+  } else if (mdEff === 'MIXED') {
+    parts.push(`MD${mdPlanetStr} provides primary MIXED activation`);
+  } else {
+    parts.push(`MD${mdPlanetStr} is ${mdEff ?? 'INSUFFICIENT_DATA'}`);
+  }
+
+  // AD Modifier
+  const mdIsSupport = mdEff === 'STRONGLY_SUPPORTS' || mdEff === 'SUPPORTS';
+  const mdIsChallenge = mdEff === 'STRONGLY_CHALLENGES' || mdEff === 'CHALLENGES';
+  const adIsSupport = adEff === 'STRONGLY_SUPPORTS' || adEff === 'SUPPORTS';
+  const adIsChallenge = adEff === 'STRONGLY_CHALLENGES' || adEff === 'CHALLENGES';
+
+  if (adIsSupport && mdIsSupport) {
+    parts.push(`AD${adPlanetStr} reinforces support`);
+  } else if (adIsChallenge && mdIsChallenge) {
+    parts.push(`AD${adPlanetStr} reinforces challenge`);
+  } else if (adIsChallenge && mdIsSupport) {
+    parts.push(`AD${adPlanetStr} introduces modifying CHALLENGE`);
+  } else if (adIsSupport && mdIsChallenge) {
+    parts.push(`AD${adPlanetStr} provides modifying SUPPORT`);
+  } else if (adEff === 'MIXED') {
+    parts.push(`AD${adPlanetStr} provides modifying MIXED influence`);
+  } else {
+    parts.push(`AD${adPlanetStr} is ${adEff ?? 'INSUFFICIENT_DATA'}`);
+  }
+
+  // PD Refinement
+  const pdIsSupport = pdEff === 'STRONGLY_SUPPORTS' || pdEff === 'SUPPORTS';
+  const pdIsChallenge = pdEff === 'STRONGLY_CHALLENGES' || pdEff === 'CHALLENGES';
+
+  if (pdIsChallenge) {
+    parts.push(`PD${pdPlanetStr} introduces short-term CHALLENGE qualification`);
+  } else if (pdIsSupport) {
+    parts.push(`PD${pdPlanetStr} provides short-term SUPPORT trigger`);
+  } else if (pdEff === 'MIXED') {
+    parts.push(`PD${pdPlanetStr} introduces short-term MIXED refinement`);
+  } else {
+    parts.push(`PD${pdPlanetStr} is ${pdEff ?? 'INSUFFICIENT_DATA'}`);
+  }
+
+  return parts.join('; ') + '.';
+}
+
 export function synthesizeCareerFinal(
   input: CareerFinalSynthesisInput
 ): CareerWealthFinalSynthesis {
@@ -91,6 +167,32 @@ export function synthesizeCareerFinal(
 
   const rawDashaEffect = dashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA';
   const activationStatus = deriveAxisStatus(rawDashaEffect);
+
+  let activationConfidence: FinalDomainConfidence | undefined;
+  let activationStrength: number | undefined;
+  let activationSummary: string | undefined;
+  let activationHierarchy: FinalSynthesisActivationHierarchy | undefined;
+
+  if (dashaSynthesis?.combined) {
+    const combined = dashaSynthesis.combined;
+    activationConfidence = mapConfidence(combined.combinedConfidence);
+    activationStrength = combined.combinedScore;
+    activationSummary = buildActivationSummary(combined);
+    activationHierarchy = Object.freeze({
+      md: Object.freeze({
+        effect: combined.md?.effect ?? 'INSUFFICIENT_DATA',
+        role: combined.hierarchy?.mdRole ?? 'PRIMARY'
+      }),
+      ad: Object.freeze({
+        effect: combined.ad?.effect ?? 'INSUFFICIENT_DATA',
+        role: combined.hierarchy?.adRole ?? 'MODIFIER'
+      }),
+      pd: Object.freeze({
+        effect: combined.pd?.effect ?? 'INSUFFICIENT_DATA',
+        role: combined.hierarchy?.pdRole ?? 'REFINEMENT'
+      })
+    });
+  }
 
   const rawTimingEffect = timingSynthesis?.overallEffect ?? timingSynthesis?.transitEffect ?? 'INSUFFICIENT_DATA';
   const timingStatus = deriveAxisStatus(rawTimingEffect);
@@ -287,6 +389,10 @@ export function synthesizeCareerFinal(
     finalStatus,
     promiseStatus,
     activationStatus,
+    activationConfidence,
+    activationStrength,
+    activationSummary,
+    activationHierarchy,
     timingStatus,
     divisionalStatus,
     manifestationStatus,

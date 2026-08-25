@@ -194,8 +194,8 @@ export function synthesizeWealthFinal(
       isD2Confirmed
     );
 
-    const dimEvidenceIds: string[] = [];
-    const dimRuleIds: string[] = [];
+    const dimEvidenceIdSet = new Set<string>();
+    const dimRuleIdSet = new Set<string>();
 
     const dimNatalEv: readonly string[] = Array.isArray(natalEvidenceIds)
       ? natalEvidenceIds
@@ -208,8 +208,8 @@ export function synthesizeWealthFinal(
           ? ((natalRuleIds as Partial<Record<WealthDimension, readonly string[]>>)[dim] ?? [])
           : []);
 
-    dimNatalEv.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
-    dimNatalR.forEach((id: string) => { dimRuleIds.push(id); ruleIdSet.add(id); });
+    dimNatalEv.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
+    dimNatalR.forEach((id: string) => { dimRuleIdSet.add(id); ruleIdSet.add(id); });
 
     if (dimManifestation) {
       manifestationSummaryList.push({
@@ -219,20 +219,20 @@ export function synthesizeWealthFinal(
       });
 
       for (const f of dimManifestation.factors) {
-        dimRuleIds.push(f.id);
+        dimRuleIdSet.add(f.id);
         ruleIdSet.add(f.id);
-        if (f.evidenceIds) f.evidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
-        if (f.dashaEvidenceIds) f.dashaEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
-        if (f.transitEvidenceIds) f.transitEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
+        if (f.evidenceIds) f.evidenceIds.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
+        if (f.dashaEvidenceIds) f.dashaEvidenceIds.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
+        if (f.transitEvidenceIds) f.transitEvidenceIds.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
       }
     }
 
     if (dimTiming) {
       for (const f of dimTiming.factors) {
-        dimRuleIds.push(f.id);
+        dimRuleIdSet.add(f.id);
         ruleIdSet.add(f.id);
-        if (f.natalEvidenceIds) f.natalEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
-        if (f.dashaEvidenceIds) f.dashaEvidenceIds.forEach((id: string) => { dimEvidenceIds.push(id); evidenceIdSet.add(id); });
+        if (f.natalEvidenceIds) f.natalEvidenceIds.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
+        if (f.dashaEvidenceIds) f.dashaEvidenceIds.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
       }
     }
 
@@ -246,6 +246,8 @@ export function synthesizeWealthFinal(
 
     const dimSummary = `${dim} dimension status is ${dimFinalStatus} (Promise: ${dimNatal}, Timing: ${timingEffect}).`;
 
+    // Note: Wealth has no CareerDashaSynthesis-equivalent combined MD/AD/PD hierarchy object today;
+    // activationConfidence, activationStrength, activationSummary, and activationHierarchy are left undefined.
     dimensionSyntheses[dim] = Object.freeze({
       dimension: dim,
       status: dimFinalStatus,
@@ -261,8 +263,8 @@ export function synthesizeWealthFinal(
       timingEffect,
       divisionalEffect,
       summary: dimSummary,
-      ruleIds: Object.freeze([...new Set(dimRuleIds)]),
-      evidenceIds: Object.freeze([...new Set(dimEvidenceIds)]),
+      ruleIds: Object.freeze([...dimRuleIdSet]),
+      evidenceIds: Object.freeze([...dimEvidenceIdSet]),
       natalEvidenceIds: Object.freeze([...new Set(dimNatalEv)]),
       natalRuleIds: Object.freeze([...new Set(dimNatalR)])
     });

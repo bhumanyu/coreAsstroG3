@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Planet } from '../../../types';
 import { synthesizeCareerFinal } from './careerFinalSynthesis';
 import type {
   CareerFinalSynthesisInput,
@@ -8,34 +9,21 @@ import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaS
 import type { CareerTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationSynthesis } from '../../career/manifestation/careerManifestationSynthesisTypes';
 import { createDomainEvidence } from '../../interpretation/DomainEvidence';
+import { createMockCareerDashaSynthesis } from '../../timing/careerWealthTiming/__testUtils__/mockDasha';
 
 describe('synthesizeCareerFinal (CW-05)', () => {
   it('enforces natal ceiling: weak natal cannot be elevated to strong despite supportive dasha and timing', () => {
-    const mockDasha: CareerDashaSynthesis = {
-      natalPromiseProtected: true,
-      reasoningVersion: 'CW-02',
-      timing: {
-        md: { period: 'MD', planet: 'JUPITER' as any },
-        ad: { period: 'AD', planet: 'SUN' as any },
-        pd: { period: 'PD', planet: 'MARS' as any }
-      },
-      md: {} as any,
-      ad: {} as any,
-      pd: {} as any,
-      combined: {
-        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
-        combinedEffect: 'SUPPORTS',
-        combinedConfidence: 'HIGH',
-        combinedScore: 2.0,
-        summary: 'Dasha strongly supports'
-      },
+    const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+      combinedEffect: 'SUPPORTS',
+      combinedConfidence: 'HIGH',
+      combinedScore: 2.0,
+      mdPlanet: Planet.JUPITER,
+      adPlanet: Planet.SUN,
+      pdPlanet: Planet.MARS,
       factors: [
         {
           id: 'D-1',
-          planet: 'JUPITER' as any,
+          planet: Planet.JUPITER,
           period: 'MD',
           category: 'FUNCTIONAL_ROLE',
           direction: 'SUPPORT',
@@ -43,9 +31,8 @@ describe('synthesizeCareerFinal (CW-05)', () => {
           statement: 'Jupiter supports career',
           evidenceIds: ['E-JUP']
         }
-      ],
-      summary: 'Dasha strongly supports'
-    };
+      ]
+    });
 
     const mockTiming: CareerTimingSynthesis = {
       natalPromise: 'STRONG',
@@ -56,7 +43,7 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       factors: [
         {
           id: 'T-1',
-          planet: 'JUPITER' as any,
+          planet: Planet.JUPITER,
           category: 'CAREER_HOUSE_TRANSIT',
           direction: 'SUPPORT',
           weight: 1.5,
@@ -120,30 +107,14 @@ describe('synthesizeCareerFinal (CW-05)', () => {
   });
 
   it('produces VERY_STRONG / STRONG when natal promise is strong and secondary layers align', () => {
-    const mockDasha: CareerDashaSynthesis = {
-      natalPromiseProtected: true,
-      reasoningVersion: 'CW-02',
-      timing: {
-        md: { period: 'MD', planet: 'JUPITER' as any },
-        ad: { period: 'AD', planet: 'SUN' as any },
-        pd: { period: 'PD', planet: 'MARS' as any }
-      },
-      md: {} as any,
-      ad: {} as any,
-      pd: {} as any,
-      combined: {
-        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
-        combinedEffect: 'SUPPORTS',
-        combinedConfidence: 'HIGH',
-        combinedScore: 2.0,
-        summary: 'Dasha supports'
-      },
-      factors: [],
-      summary: 'Dasha supports'
-    };
+    const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+      combinedEffect: 'SUPPORTS',
+      combinedConfidence: 'HIGH',
+      combinedScore: 2.0,
+      mdPlanet: Planet.JUPITER,
+      adPlanet: Planet.SUN,
+      pdPlanet: Planet.MARS
+    });
 
     const mockManifestations: CareerManifestationSynthesis[] = [
       {
@@ -216,31 +187,17 @@ describe('synthesizeCareerFinal (CW-05)', () => {
 
   describe('CW-05 Multi-Axis Semantics & Deterministic Matrices', () => {
     it('populates all orthogonal axes deterministically and maps effects correctly', () => {
-      const mockDasha: CareerDashaSynthesis = {
-        natalPromiseProtected: true,
-        reasoningVersion: 'CW-02',
-        timing: {
-          md: { period: 'MD', planet: 'JUPITER' as any },
-          ad: { period: 'AD', planet: 'SUN' as any },
-          pd: { period: 'PD', planet: 'MARS' as any }
-        },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
-        combined: {
-          hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-          md: {} as any,
-          ad: {} as any,
-          pd: {} as any,
-          combinedEffect: 'SUPPORTS',
-          combinedConfidence: 'HIGH',
-          combinedScore: 2.0,
-          summary: 'Dasha supports'
-        },
+      const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 2.0,
+        mdPlanet: Planet.JUPITER,
+        adPlanet: Planet.SUN,
+        pdPlanet: Planet.MARS,
         factors: [
           {
             id: 'D-FACT-1',
-            planet: 'JUPITER' as any,
+            planet: Planet.JUPITER,
             period: 'MD',
             category: 'FUNCTIONAL_ROLE',
             direction: 'SUPPORT',
@@ -248,9 +205,8 @@ describe('synthesizeCareerFinal (CW-05)', () => {
             statement: 'Jupiter functional benefic',
             evidenceIds: ['E-JUP-1']
           }
-        ],
-        summary: 'Dasha supports'
-      };
+        ]
+      });
 
       const mockTiming: CareerTimingSynthesis = {
         natalPromise: 'STRONG',
@@ -261,7 +217,7 @@ describe('synthesizeCareerFinal (CW-05)', () => {
         factors: [
           {
             id: 'T-FACT-1',
-            planet: 'SATURN' as any,
+            planet: Planet.SATURN,
             category: 'CAREER_HOUSE_TRANSIT',
             direction: 'SUPPORT',
             weight: 1.5,
@@ -374,30 +330,14 @@ describe('synthesizeCareerFinal (CW-05)', () => {
     });
 
     it('enforces Dasha CHALLENGES structural downgrade', () => {
-      const mockDasha: CareerDashaSynthesis = {
-        natalPromiseProtected: true,
-        reasoningVersion: 'CW-02',
-        timing: {
-          md: { period: 'MD', planet: 'SATURN' as any },
-          ad: { period: 'AD', planet: 'RAHU' as any },
-          pd: { period: 'PD', planet: 'KETU' as any }
-        },
-        md: {} as any,
-        ad: {} as any,
-        pd: {} as any,
-        combined: {
-          hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
-          md: {} as any,
-          ad: {} as any,
-          pd: {} as any,
-          combinedEffect: 'CHALLENGES',
-          combinedConfidence: 'HIGH',
-          combinedScore: -2.0,
-          summary: 'Dasha challenging'
-        },
-        factors: [],
-        summary: 'Dasha challenging'
-      };
+      const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+        combinedEffect: 'CHALLENGES',
+        combinedConfidence: 'HIGH',
+        combinedScore: -2.0,
+        mdPlanet: Planet.SATURN,
+        adPlanet: Planet.RAHU,
+        pdPlanet: Planet.KETU
+      });
 
       const input: CareerFinalSynthesisInput = {
         natalPromise: 'STRONG',
@@ -465,6 +405,143 @@ describe('synthesizeCareerFinal (CW-05)', () => {
             : 'INSUFFICIENT_DATA'
         );
       }
+    });
+  });
+
+  describe('CW-05B Activation & Hierarchy Tests', () => {
+    it('combined SUPPORTS + HIGH confidence + high combinedScore => activationStatus SUPPORT, activationConfidence HIGH, activationStrength reflects the score', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 3.5,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'SUPPORTS'
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationStatus).toBe('SUPPORT');
+      expect(result.activationConfidence).toBe('HIGH');
+      expect(result.activationStrength).toBe(3.5);
+      expect(result.activationHierarchy).toBeDefined();
+      expect(result.activationHierarchy?.md).toEqual({ effect: 'SUPPORTS', role: 'PRIMARY' });
+      expect(result.activationHierarchy?.ad).toEqual({ effect: 'SUPPORTS', role: 'MODIFIER' });
+      expect(result.activationHierarchy?.pd).toEqual({ effect: 'SUPPORTS', role: 'REFINEMENT' });
+      expect(result.activationSummary).toBeDefined();
+      expect(typeof result.activationSummary).toBe('string');
+    });
+
+    it('combined SUPPORTS + LOW confidence + low combinedScore => activationStatus SUPPORT but activationConfidence LOW', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'LOW',
+        combinedScore: 0.5,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'SUPPORTS'
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationStatus).toBe('SUPPORT');
+      expect(result.activationConfidence).toBe('LOW');
+      expect(result.activationStrength).toBe(0.5);
+    });
+
+    it('MD SUPPORT + AD SUPPORT + PD CHALLENGE => carries correct hierarchy and activationSummary mentions PD qualification', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        mdPlanet: Planet.JUPITER,
+        adPlanet: Planet.SUN,
+        pdPlanet: Planet.MARS,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'CHALLENGES',
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'MEDIUM',
+        combinedScore: 2.0
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationHierarchy).toEqual({
+        md: { effect: 'SUPPORTS', role: 'PRIMARY' },
+        ad: { effect: 'SUPPORTS', role: 'MODIFIER' },
+        pd: { effect: 'CHALLENGES', role: 'REFINEMENT' }
+      });
+      expect(result.activationSummary).toContain('MD Jupiter provides primary SUPPORT');
+      expect(result.activationSummary).toContain('AD Sun reinforces support');
+      expect(result.activationSummary).toContain('PD Mars introduces short-term CHALLENGE qualification');
+    });
+
+    it('MD CHALLENGE + AD SUPPORT + PD SUPPORT => carries correct hierarchy and summary', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        mdPlanet: Planet.SATURN,
+        adPlanet: Planet.JUPITER,
+        pdPlanet: Planet.SUN,
+        mdEffect: 'CHALLENGES',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'SUPPORTS',
+        combinedEffect: 'CHALLENGES',
+        combinedConfidence: 'HIGH',
+        combinedScore: -1.5
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationHierarchy).toEqual({
+        md: { effect: 'CHALLENGES', role: 'PRIMARY' },
+        ad: { effect: 'SUPPORTS', role: 'MODIFIER' },
+        pd: { effect: 'SUPPORTS', role: 'REFINEMENT' }
+      });
+      expect(result.activationSummary).toContain('MD Saturn provides primary CHALLENGE');
+      expect(result.activationSummary).toContain('AD Jupiter provides modifying SUPPORT');
+      expect(result.activationSummary).toContain('PD Sun provides short-term SUPPORT trigger');
+    });
+
+    it('MD SUPPORT + AD CHALLENGE + PD SUPPORT => carries correct hierarchy and summary', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        mdPlanet: Planet.JUPITER,
+        adPlanet: Planet.SATURN,
+        pdPlanet: Planet.SUN,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'CHALLENGES',
+        pdEffect: 'SUPPORTS',
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'MEDIUM',
+        combinedScore: 1.0
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationHierarchy).toEqual({
+        md: { effect: 'SUPPORTS', role: 'PRIMARY' },
+        ad: { effect: 'CHALLENGES', role: 'MODIFIER' },
+        pd: { effect: 'SUPPORTS', role: 'REFINEMENT' }
+      });
+      expect(result.activationSummary).toContain('MD Jupiter provides primary SUPPORT');
+      expect(result.activationSummary).toContain('AD Saturn introduces modifying CHALLENGE');
+      expect(result.activationSummary).toContain('PD Sun provides short-term SUPPORT trigger');
     });
   });
 });

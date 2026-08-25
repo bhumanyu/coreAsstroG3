@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Planet } from '../../../types';
 import { synthesizeWealthFinal } from './wealthFinalSynthesis';
 import type {
   WealthFinalSynthesisInput,
@@ -97,7 +98,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           factors: [
             {
               id: 'WT-ACC-1',
-              planet: 'JUPITER' as any,
+              planet: Planet.JUPITER,
               category: 'WEALTH_HOUSE_TRANSIT',
               direction: 'SUPPORT',
               weight: 1.5,
@@ -138,7 +139,7 @@ describe('synthesizeWealthFinal (CW-05)', () => {
           factors: [
             {
               id: 'WT-SPEC-1',
-              planet: 'VENUS' as any,
+              planet: Planet.VENUS,
               category: 'WEALTH_HOUSE_TRANSIT',
               direction: 'SUPPORT',
               weight: 1.0,
@@ -460,6 +461,109 @@ describe('synthesizeWealthFinal (CW-05)', () => {
       expect(result.dimensions!.GAINS.status).toBe('CHALLENGED');
       expect(result.dimensions!.FORTUNE.status).toBe('CHALLENGED');
       expect(result.dimensions!.SPECULATION.status).toBe('CHALLENGED');
+    });
+
+    it('deduplicates provenance IDs using Set and leaves wealth activation fields undefined', () => {
+      const mockManifestations: WealthManifestationSynthesis = {
+        reasoningVersion: 'CW-04',
+        dimensions: {
+          ACCUMULATION: {
+            reasoningVersion: 'CW-04',
+            dimension: 'ACCUMULATION',
+            status: 'STRONGLY_SUPPORTED',
+            confidence: 'HIGH',
+            natalSupport: 'SUPPORT',
+            dashaSupport: 'SUPPORT',
+            transitSupport: 'SUPPORT',
+            d2Support: 'SUPPORT',
+            factors: [
+              {
+                id: 'FACT-DUPLICATE',
+                dimension: 'ACCUMULATION',
+                direction: 'SUPPORT',
+                weight: 1.0,
+                source: 'NATAL',
+                statement: 'Factor 1',
+                evidenceIds: ['EV-DUPLICATE', 'EV-1']
+              },
+              {
+                id: 'FACT-DUPLICATE',
+                dimension: 'ACCUMULATION',
+                direction: 'SUPPORT',
+                weight: 1.0,
+                source: 'NATAL',
+                statement: 'Factor 1 duplicate ID',
+                evidenceIds: ['EV-DUPLICATE', 'EV-2']
+              }
+            ],
+            summary: 'Accumulation'
+          },
+          GAINS: {
+            reasoningVersion: 'CW-04',
+            dimension: 'GAINS',
+            status: 'SUPPORTED',
+            confidence: 'HIGH',
+            natalSupport: 'SUPPORT',
+            dashaSupport: 'SUPPORT',
+            transitSupport: 'NEUTRAL',
+            d2Support: 'SUPPORT',
+            factors: [],
+            summary: 'Gains'
+          },
+          FORTUNE: {
+            reasoningVersion: 'CW-04',
+            dimension: 'FORTUNE',
+            status: 'SUPPORTED',
+            confidence: 'HIGH',
+            natalSupport: 'SUPPORT',
+            dashaSupport: 'SUPPORT',
+            transitSupport: 'NEUTRAL',
+            d2Support: 'SUPPORT',
+            factors: [],
+            summary: 'Fortune'
+          },
+          SPECULATION: {
+            reasoningVersion: 'CW-04',
+            dimension: 'SPECULATION',
+            status: 'SUPPORTED',
+            confidence: 'HIGH',
+            natalSupport: 'SUPPORT',
+            dashaSupport: 'SUPPORT',
+            transitSupport: 'NEUTRAL',
+            d2Support: 'SUPPORT',
+            factors: [],
+            summary: 'Speculation'
+          }
+        },
+        summary: 'Manifestation summary'
+      };
+
+      const input: WealthFinalSynthesisInput = {
+        natalPromise: {
+          ACCUMULATION: 'STRONG'
+        },
+        manifestationSynthesis: mockManifestations,
+        d2Relationship: 'CONFIRMS',
+        natalEvidenceIds: ['NATAL-EV-DUP', 'NATAL-EV-DUP'],
+        natalRuleIds: ['NATAL-R-DUP', 'NATAL-R-DUP']
+      };
+
+      const result = synthesizeWealthFinal(input);
+
+      // Verify Set-based deduplication
+      const duplicateEvidenceCount = result.evidenceIds.filter((id) => id === 'EV-DUPLICATE').length;
+      expect(duplicateEvidenceCount).toBe(1);
+
+      const duplicateRuleCount = result.ruleIds.filter((id) => id === 'FACT-DUPLICATE').length;
+      expect(duplicateRuleCount).toBe(1);
+
+      // Verify wealth activation metadata fields remain undefined
+      expect(result.activationConfidence).toBeUndefined();
+      expect(result.activationStrength).toBeUndefined();
+      expect(result.activationSummary).toBeUndefined();
+      expect(result.activationHierarchy).toBeUndefined();
+      expect(result.dimensions!.ACCUMULATION.activationConfidence).toBeUndefined();
+      expect(result.dimensions!.ACCUMULATION.activationStrength).toBeUndefined();
     });
   });
 });
