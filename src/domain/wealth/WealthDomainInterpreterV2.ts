@@ -450,6 +450,33 @@ export function interpretWealthV2(
   const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
   const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
 
+  const getDimStatus = (dim: WealthDimension): WealthDimensionStatus | undefined =>
+    dimensions.find((d) => d.dimension === dim)?.status;
+
+  const mapStatusToNatalPromise = (status?: WealthDimensionStatus): DomainStrength => {
+    switch (status) {
+      case 'STRONGLY_SUPPORTED':
+        return 'STRONG';
+      case 'SUPPORTED':
+        return 'MODERATE';
+      case 'MIXED':
+        return 'MIXED';
+      case 'CHALLENGED':
+      case 'LIMITED':
+        return 'WEAK';
+      case 'INSUFFICIENT_DATA':
+      default:
+        return 'UNDETERMINED';
+    }
+  };
+
+  const natalPromises: Partial<Record<WealthDimension, DomainStrength>> = {
+    ACCUMULATION: mapStatusToNatalPromise(getDimStatus('ACCUMULATION')),
+    GAINS: mapStatusToNatalPromise(getDimStatus('GAINS')),
+    FORTUNE: mapStatusToNatalPromise(getDimStatus('FORTUNE')),
+    SPECULATION: mapStatusToNatalPromise(getDimStatus('SPECULATION'))
+  };
+
   let wealthTimingSynthesis: WealthTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
     const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
@@ -465,13 +492,13 @@ export function interpretWealthV2(
       FORTUNE: mapActivationToEffect(fortuneDasha),
       SPECULATION: mapActivationToEffect(speculationDasha)
     };
-    wealthTimingSynthesis = synthesizeWealthTiming(horoscope, activeDashaState, asOfDate, undefined, dashaEffects);
+    wealthTimingSynthesis = synthesizeWealthTiming(horoscope, activeDashaState, asOfDate, natalPromises, dashaEffects);
   } else {
     wealthTimingSynthesis = Object.freeze({
       dimensions: {
         ACCUMULATION: Object.freeze({
           dimension: 'ACCUMULATION',
-          natalPromise: 'MODERATE',
+          natalPromise: natalPromises.ACCUMULATION ?? 'UNDETERMINED',
           dashaEffect: 'INSUFFICIENT_DATA',
           transitEffect: 'INSUFFICIENT_DATA',
           overallEffect: 'INSUFFICIENT_DATA',
@@ -481,7 +508,7 @@ export function interpretWealthV2(
         }),
         GAINS: Object.freeze({
           dimension: 'GAINS',
-          natalPromise: 'MODERATE',
+          natalPromise: natalPromises.GAINS ?? 'UNDETERMINED',
           dashaEffect: 'INSUFFICIENT_DATA',
           transitEffect: 'INSUFFICIENT_DATA',
           overallEffect: 'INSUFFICIENT_DATA',
@@ -491,7 +518,7 @@ export function interpretWealthV2(
         }),
         FORTUNE: Object.freeze({
           dimension: 'FORTUNE',
-          natalPromise: 'MODERATE',
+          natalPromise: natalPromises.FORTUNE ?? 'UNDETERMINED',
           dashaEffect: 'INSUFFICIENT_DATA',
           transitEffect: 'INSUFFICIENT_DATA',
           overallEffect: 'INSUFFICIENT_DATA',
@@ -501,7 +528,7 @@ export function interpretWealthV2(
         }),
         SPECULATION: Object.freeze({
           dimension: 'SPECULATION',
-          natalPromise: 'MODERATE',
+          natalPromise: natalPromises.SPECULATION ?? 'UNDETERMINED',
           dashaEffect: 'INSUFFICIENT_DATA',
           transitEffect: 'INSUFFICIENT_DATA',
           overallEffect: 'INSUFFICIENT_DATA',

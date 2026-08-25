@@ -19,9 +19,15 @@ function getNatalMoonLongitude(horoscope: Horoscope): number | undefined {
   if (horoscope.positions?.MOON?.eclipticLongitude !== undefined) {
     return horoscope.positions.MOON.eclipticLongitude;
   }
+  if (horoscope.positions?.MOON?.longitude !== undefined) {
+    return horoscope.positions.MOON.longitude;
+  }
   const moonFact = horoscope.planetFacts?.[Planet.MOON];
   if (moonFact?.position?.eclipticLongitude !== undefined) {
     return moonFact.position.eclipticLongitude;
+  }
+  if (moonFact?.position?.longitude !== undefined) {
+    return moonFact.position.longitude;
   }
   if (typeof (moonFact as unknown as { longitude?: number })?.longitude === 'number') {
     return (moonFact as unknown as { longitude?: number }).longitude;
@@ -32,13 +38,6 @@ function getNatalMoonLongitude(horoscope: Horoscope): number | undefined {
 function getNatalAscendantLongitude(horoscope: Horoscope): number | undefined {
   if (horoscope.ascendant?.longitude !== undefined) {
     return horoscope.ascendant.longitude;
-  }
-  const bhava1 = horoscope.bhavas?.[1] as unknown as { degree?: number; longitude?: number } | undefined;
-  if (typeof bhava1?.degree === 'number') {
-    return bhava1.degree;
-  }
-  if (typeof bhava1?.longitude === 'number') {
-    return bhava1.longitude;
   }
   if (horoscope.rasiChart?.ascendantDegree !== undefined) {
     return horoscope.rasiChart.ascendantDegree;
@@ -51,11 +50,10 @@ function getNatalPlanetLongitudes(horoscope: Horoscope): Partial<Record<Planet, 
   let count = 0;
   for (const p of Object.values(Planet)) {
     const pf = horoscope.planetFacts?.[p];
-    if (pf?.position?.eclipticLongitude !== undefined) {
-      result[p] = pf.position.eclipticLongitude;
-      count++;
-    } else if (typeof (pf as unknown as { longitude?: number })?.longitude === 'number') {
-      result[p] = (pf as unknown as { longitude?: number }).longitude!;
+    const pos = horoscope.positions?.[p];
+    const lon = pos?.eclipticLongitude ?? pos?.longitude ?? pf?.position?.eclipticLongitude ?? pf?.position?.longitude;
+    if (lon !== undefined) {
+      result[p] = lon;
       count++;
     }
   }
@@ -109,12 +107,15 @@ export function synthesizeWealthTiming(
   if (natalMoonLongitude === undefined || natalAscendantLongitude === undefined || natalPlanetLongitudes === undefined) {
     const insufficientSyntheses: Partial<Record<WealthDimension, WealthTransitDimensionSynthesis>> = {};
     for (const dim of dimensions) {
+      const natalPromise = natalPromises?.[dim] ?? 'MODERATE';
+      const dashaEffect = dashaEffects?.[dim] ?? 'INSUFFICIENT_DATA';
+      const overallEffect = resolveWealthDimensionTransitEffect(natalPromise, dashaEffect, { transitEffect: 'INSUFFICIENT_DATA' });
       insufficientSyntheses[dim] = Object.freeze({
         dimension: dim,
-        natalPromise: natalPromises?.[dim] ?? 'MODERATE',
-        dashaEffect: dashaEffects?.[dim] ?? 'INSUFFICIENT_DATA',
+        natalPromise,
+        dashaEffect,
         transitEffect: 'INSUFFICIENT_DATA',
-        overallEffect: 'INSUFFICIENT_DATA',
+        overallEffect,
         confidence: 0.5,
         factors: Object.freeze([]),
         summary: 'Required natal position longitudes unavailable for timing calculation.'
@@ -153,7 +154,11 @@ export function synthesizeWealthTiming(
         ownedHouses.push(h);
       }
     }
-    const natalHouse = horoscope.planetFacts?.[planet]?.house;
+    const pf = horoscope.planetFacts?.[planet];
+    const natalHouse = pf?.house;
+    const dignity = pf?.dignity?.status;
+    const isExaltedOrOwn = dignity === 'EXALTED' || dignity === 'OWN_SIGN' || dignity === 'MOOLATRIKONA';
+    const isDebilitated = dignity === 'DEBILITATED';
     const isKaraka = DIMENSION_KARAKAS[dim].includes(planet);
     const targetHouse = DIMENSION_HOUSES[dim];
     const ownsTargetHouse = ownedHouses.includes(targetHouse);
@@ -165,6 +170,9 @@ export function synthesizeWealthTiming(
     return {
       ownedHouses,
       natalHouse,
+      dignity,
+      isExaltedOrOwn,
+      isDebilitated,
       isKaraka,
       ownsTargetHouse,
       ownsWealthHouse,
@@ -195,6 +203,9 @@ export function synthesizeWealthTiming(
         let weight = isOccupying ? 2.0 : 1.5;
 
         if (dim === 'SPECULATION') {
+          // 5th house speculation heuristics:
+          // - Venus & Mercury are natural karakas for intelligence, speculative intellect, and trading (Purva Punya / Dhimanth).
+          // - Saturn, Mars, Rahu, Ketu transiting 5H introduce speculative volatility, impulsive risk, or loss of capital.
           if (role.ownsTargetHouse || role.ownsLagna || role.isKaraka || p === Planet.VENUS || p === Planet.MERCURY) {
             direction = 'SUPPORT';
           } else if (p === Planet.SATURN || p === Planet.MARS || p === Planet.RAHU || p === Planet.KETU || (role.ownsDusthana && !role.ownsWealthHouse)) {
@@ -204,6 +215,8 @@ export function synthesizeWealthTiming(
             direction = 'NEUTRAL';
           }
         } else if (dim === 'GAINS') {
+          // 11th house gains heuristics:
+          // - Upachaya rule: Saturn and Mars transiting 11H (house of gains/Labha) yield material persistence and competitive gains.
           if (p === Planet.SATURN || p === Planet.MARS) {
             direction = 'SUPPORT';
             weight = isOccupying ? 2.0 : 1.5;
