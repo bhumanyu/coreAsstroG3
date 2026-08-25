@@ -270,16 +270,28 @@ describe('Career Dasha Synthesis', () => {
     expect(karakaFactor).toBeUndefined();
   });
 
-  it('supports MODIFIES relationship in D10 career context', () => {
+  it('handles MODIFIES relationship in D10 career context as NEUTRAL with no directional D10 factor', () => {
     const activation = createMockActivation(Planet.SATURN, [10]);
     const synthesis = scoreCareerDashaPlanet('MD', activation, {
       relationship: 'MODIFIES',
       statement: 'D10 modifies trajectory'
     });
 
-    expect(synthesis.d10Effect).toBe('SUPPORTS');
+    expect(synthesis.d10Effect).toBe('NEUTRAL');
     const d10Factor = synthesis.factors.find((f) => f.category === 'D10');
-    expect(d10Factor?.weight).toBe(1.0);
-    expect(d10Factor?.direction).toBe('SUPPORT');
+    expect(d10Factor).toBeUndefined();
+  });
+
+  it('handles CONFLICTS relationship in D10 career context yielding CHALLENGES and a CHALLENGE D10 factor', () => {
+    const activation = createMockActivation(Planet.SATURN, [10]);
+    const synthesis = scoreCareerDashaPlanet('MD', activation, {
+      relationship: 'CONFLICTS',
+      statement: 'D10 conflicts trajectory'
+    });
+
+    expect(synthesis.d10Effect).toBe('CHALLENGES');
+    const d10Factor = synthesis.factors.find((f) => f.category === 'D10');
+    expect(d10Factor?.weight).toBe(1.5);
+    expect(d10Factor?.direction).toBe('CHALLENGE');
   });
 });

@@ -204,15 +204,55 @@ export interface CareerYogaContext {
   readonly relationship?: string;
 }
 
+export function getCareerYogaContext(yoga: CareerYogaContext | DashaYogaReference): CareerYogaContext {
+  if (!yoga || typeof yoga !== 'object') {
+    return {};
+  }
+  const y = yoga as Record<string, unknown>;
+  const yogaType =
+    'yogaType' in y && typeof y.yogaType === 'string'
+      ? y.yogaType
+      : 'type' in y && typeof y.type === 'string'
+        ? y.type
+        : undefined;
+
+  const yogaId = 'yogaId' in y && typeof y.yogaId === 'string' ? y.yogaId : undefined;
+
+  const participatingHouses =
+    'participatingHouses' in y && Array.isArray(y.participatingHouses)
+      ? (y.participatingHouses as readonly number[])
+      : undefined;
+
+  const finalStatus =
+    'finalStatus' in y && typeof y.finalStatus === 'string'
+      ? y.finalStatus
+      : undefined;
+
+  const strength = 'strength' in y && typeof y.strength === 'string' ? y.strength : undefined;
+
+  const relationship =
+    'relationship' in y && typeof y.relationship === 'string' ? y.relationship : undefined;
+
+  return {
+    yogaType,
+    yogaId,
+    participatingHouses,
+    finalStatus,
+    strength,
+    relationship
+  };
+}
+
 export function isCareerRelevantYoga(
   yoga: CareerYogaContext | DashaYogaReference,
   activation?: DashaPlanetActivation,
   portfolio?: CareerHousePortfolio
 ): boolean {
+  const ctx = getCareerYogaContext(yoga);
   const port = portfolio ?? getCareerHousePortfolio();
   const relevantHouses = new Set([...port.primary, ...port.supporting]);
 
-  const yogaHouses = (yoga as any).participatingHouses as readonly number[] | undefined;
+  const yogaHouses = ctx.participatingHouses;
   if (yogaHouses && Array.isArray(yogaHouses) && yogaHouses.length > 0) {
     return yogaHouses.some((h) => relevantHouses.has(h));
   }
@@ -239,8 +279,9 @@ export function classifyCareerYoga(
   direction: CareerFactorDirection;
   weight: number;
 } {
-  const status = (yoga as any).finalStatus || (yoga as any).strength;
-  if (status === 'CANCELLED' || !isCareerRelevantYoga(yoga, activation, portfolio)) {
+  const ctx = getCareerYogaContext(yoga);
+  const status = ctx.finalStatus || ctx.strength;
+  if (status === 'CANCELLED' || !isCareerRelevantYoga(ctx, activation, portfolio)) {
     return { direction: 'NEUTRAL', weight: 0 };
   }
   if (status === 'STRONG') {

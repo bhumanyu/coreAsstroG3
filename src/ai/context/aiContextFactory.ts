@@ -21,6 +21,7 @@ import {
   CareerTimingFact,
   CareerPeriodTimingFact,
   CareerDashaSynthesisFact,
+  CareerDashaSynthesisFactorFact,
   DashaFacts,
   DashaInterpretationFacts,
   DashaPairFacts,
@@ -538,22 +539,40 @@ function buildCareerFact(
       return 'DOES_NOT_ACTIVATE';
     };
 
+    const mapSynthesisFactor = (f: {
+      id: string;
+      category: string;
+      direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+      weight: number;
+      statement: string;
+      houses?: readonly number[];
+      evidenceIds?: readonly string[];
+    }): CareerDashaSynthesisFactorFact => ({
+      id: f.id,
+      category: f.category,
+      direction: f.direction,
+      weight: f.weight,
+      statement: f.statement,
+      ...(f.houses ? { houses: f.houses } : {}),
+      ...(f.evidenceIds ? { evidenceIds: f.evidenceIds } : {})
+    });
+
     dashaSynthesisFact = {
       reasoningVersion: 'CW-02',
       md: {
         planet: syn.md.planet,
         effect: syn.md.effect,
-        factors: syn.md.factors.map((f: { statement: string }) => f.statement)
+        factors: syn.md.factors.map(mapSynthesisFactor)
       },
       ad: {
         planet: syn.ad.planet,
         effect: syn.ad.effect,
-        factors: syn.ad.factors.map((f: { statement: string }) => f.statement)
+        factors: syn.ad.factors.map(mapSynthesisFactor)
       },
       pd: {
         planet: syn.pd.planet,
         effect: syn.pd.effect,
-        factors: syn.pd.factors.map((f: { statement: string }) => f.statement)
+        factors: syn.pd.factors.map(mapSynthesisFactor)
       },
       hierarchy: {
         mdRole: syn.hierarchy.mdRole,
