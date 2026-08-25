@@ -39,7 +39,10 @@ import {
   buildGoldenCareerInterpretation,
   GOLDEN_CAREER_EVIDENCE
 } from './career-v2-golden.fixture';
-import { deriveCareerManifestations } from './careerManifestations';
+import {
+  deriveCareerManifestations
+} from './careerManifestations';
+import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import {
   linkCareerEvidence,
   resolveRelatedCareerPromiseEvidenceIds
@@ -1460,7 +1463,17 @@ describe('CareerDomainInterpreterV2', () => {
       'BUSINESS_ENTREPRENEURSHIP'
     ]);
 
-    console.log('CAREER_MANIFESTATIONS_CANONICAL:', JSON.stringify(typedManifestations?.map(m => ({ mode: m.mode, status: m.status, natal: m.natalSupport, dasha: m.dashaSupport, transit: m.transitSupport, d10: m.d10Support }))));
+    // Pin deterministic per-mode statuses for canonical chart at asOf date
+    const byMode = Object.fromEntries(
+      (typedManifestations ?? []).map((m: CareerManifestationSynthesis) => [m.mode, m])
+    );
+    expect(byMode.LEADERSHIP.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.MANAGEMENT.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.SERVICE_EMPLOYMENT.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.AUTHORITY.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.INDEPENDENT_WORK.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.BUSINESS_ENTREPRENEURSHIP.status).toBe('MIXED');
 
     // Verify structure and contracts for each mode
     for (const syn of manifestations ?? []) {

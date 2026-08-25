@@ -1596,7 +1596,11 @@ describe('WealthDomainInterpreterV2', () => {
     expect(dims).toHaveProperty('FORTUNE');
     expect(dims).toHaveProperty('SPECULATION');
 
-    console.log('WEALTH_MANIFESTATIONS_CANONICAL:', JSON.stringify(dims));
+    // Pin deterministic per-dimension statuses for canonical chart at asOf date
+    expect(dims?.ACCUMULATION.status).toBe('SUPPORTED');
+    expect(dims?.GAINS.status).toBe('SUPPORTED');
+    expect(dims?.FORTUNE.status).toBe('SUPPORTED');
+    expect(dims?.SPECULATION.status).toBe('SUPPORTED');
 
     const dimensions: ('ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION')[] = [
       'ACCUMULATION',

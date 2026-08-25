@@ -242,9 +242,11 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     const result = resolveManifestation('BUSINESS_ENTREPRENEURSHIP', challengingEvidence, mockDasha);
 
     expect(result.mode).toBe('BUSINESS_ENTREPRENEURSHIP');
-    expect(result.status).toBe('CHALLENGED');
     expect(result.natalSupport).toBe('CHALLENGE');
     expect(result.dashaSupport).toBe('CHALLENGE');
+    expect(result.transitSupport).toBe('NEUTRAL');
+    expect(result.d10Support).toBe('NEUTRAL');
+    expect(result.status).toBe('CHALLENGED');
   });
 
   it('strictly enforces natal ceiling: natal CHALLENGE + dasha/transit/d10 SUPPORT resolves to CHALLENGED', () => {
@@ -757,6 +759,152 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
     expect(modeNames).toContain('AUTHORITY');
     expect(modeNames).toContain('INDEPENDENT_WORK');
     expect(modeNames).toContain('BUSINESS_ENTREPRENEURSHIP');
+  });
+
+  it('proves injecting DASHA-sourced evidence into the evidence array does not alter natal contribution or status (prevents double-counting)', () => {
+    const natalOnly = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
+    const dashaEvidence = createDomainEvidence({
+      id: 'EV_DASHA_SUN_1',
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      phase: 'DASHA_ACTIVATION',
+      source: 'DASHA',
+      polarity: 'SUPPORTING',
+      statement: 'Sun MD activates authority and leadership.'
+    });
+    const natalPlusDasha = [...natalOnly, dashaEvidence];
+
+    const resultA = resolveManifestation('LEADERSHIP', natalOnly);
+    const resultB = resolveManifestation('LEADERSHIP', natalPlusDasha);
+
+    expect(resultA.natalSupport).toBe(resultB.natalSupport);
+    expect(resultA.status).toBe(resultB.status);
+    expect(resultA.status).toBe('SUPPORTED');
+
+    const natalFactorsA = resultA.factors.filter((f) => f.source === 'NATAL');
+    const natalFactorsB = resultB.factors.filter((f) => f.source === 'NATAL');
+    expect(natalFactorsA).toEqual(natalFactorsB);
+  });
+
+  it('resolves to SUPPORTED (confidence MEDIUM) with Natal SUPPORT + Dasha NEUTRAL + Transit SUPPORT + D10 NEUTRAL', () => {
+    const natalEvidence = createMockNatalEvidence(['CAREER_10H_STRONG_001', 'CAREER_SUN_RELEVANCE_001']);
+
+    // Construct a CareerDashaSynthesis whose factors do not match LEADERSHIP mode rules
+    // (LEADERSHIP primary planets: SUN, JUPITER, MARS; supporting houses: 10, 1, 9, 5; challenging: 6, 8, 12)
+    // VENUS with houses [2, 4] is non-matching, resolving dashaSupport to NEUTRAL
+    const neutralDasha: CareerDashaSynthesis = {
+      natalPromiseProtected: true,
+      reasoningVersion: 'CW-02',
+      timing: {
+        md: { period: 'MD', planet: Planet.VENUS },
+        ad: { period: 'AD', planet: Planet.VENUS },
+        pd: { period: 'PD', planet: Planet.VENUS }
+      },
+      md: {
+        period: 'MD',
+        planet: Planet.VENUS,
+        effect: 'SUPPORTS',
+        confidence: 'LOW',
+        supportScore: 1.0,
+        challengeScore: 0,
+        netScore: 1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [2, 4],
+        d10Effect: 'NEUTRAL',
+        summary: 'Venus MD activates 2nd/4th houses.'
+      },
+      ad: {
+        period: 'AD',
+        planet: Planet.VENUS,
+        effect: 'SUPPORTS',
+        confidence: 'LOW',
+        supportScore: 1.0,
+        challengeScore: 0,
+        netScore: 1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [2, 4],
+        d10Effect: 'NEUTRAL',
+        summary: 'Venus AD activates 2nd/4th houses.'
+      },
+      pd: {
+        period: 'PD',
+        planet: Planet.VENUS,
+        effect: 'SUPPORTS',
+        confidence: 'LOW',
+        supportScore: 1.0,
+        challengeScore: 0,
+        netScore: 1.0,
+        factors: [],
+        supportingFactorIds: [],
+        challengingFactorIds: [],
+        neutralFactorIds: [],
+        activatedCareerHouses: [2, 4],
+        d10Effect: 'NEUTRAL',
+        summary: 'Venus PD activates 2nd/4th houses.'
+      },
+      combined: {
+        hierarchy: { mdRole: 'PRIMARY', adRole: 'MODIFIER', pdRole: 'REFINEMENT' },
+        md: {} as any,
+        ad: {} as any,
+        pd: {} as any,
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'LOW',
+        combinedScore: 1.0,
+        summary: 'Combined dasha.'
+      },
+      factors: [
+        {
+          id: 'DASH_VENUS_2',
+          planet: Planet.VENUS,
+          period: 'MD',
+          category: 'KARAKA',
+          direction: 'SUPPORT',
+          weight: 1.0,
+          houses: [2, 4],
+          statement: 'Venus MD activates 2nd and 4th houses.'
+        }
+      ],
+      summary: 'Dasha is active.'
+    };
+
+    // Mode-relevant transit support: Sun transiting 10th house
+    const transitSupport: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'DOES_NOT_ACTIVATE',
+      transitEffect: 'SUPPORTS',
+      overallEffect: 'ACTIVATES',
+      confidence: 0.8,
+      factors: [
+        {
+          id: 'TR_SUN_10',
+          planet: Planet.SUN,
+          category: 'CAREER_HOUSE_TRANSIT',
+          direction: 'SUPPORT',
+          weight: 1.5,
+          houses: [10],
+          statement: 'Sun transiting 10th house supports leadership.'
+        }
+      ],
+      summary: 'Transit supports.'
+    };
+
+    const d10Neutral: any[] = [];
+
+    const result = resolveManifestation('LEADERSHIP', natalEvidence, neutralDasha, transitSupport, d10Neutral);
+
+    expect(result.mode).toBe('LEADERSHIP');
+    expect(result.natalSupport).toBe('SUPPORT');
+    expect(result.dashaSupport).toBe('NEUTRAL');
+    expect(result.transitSupport).toBe('SUPPORT');
+    expect(result.d10Support).toBe('NEUTRAL');
+    expect(result.status).toBe('SUPPORTED');
+    expect(result.confidence).toBe('MEDIUM');
   });
 
   it('ensures synthesis never mutates or overrides natal evidence', () => {
