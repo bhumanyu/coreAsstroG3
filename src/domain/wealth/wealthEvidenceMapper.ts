@@ -119,6 +119,45 @@ export function isWealthTransitEvidence(
   );
 }
 
+/**
+ * Resolves a deterministic, order-independent subjectKey for wealth evidence items.
+ * Guaranteed never to rely on positional array indexes or raw planet ordering.
+ */
+export function resolveWealthSubjectKey(
+  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+): string {
+  // Karaka rules: derive from the ruleId's karaka planet
+  if (item.ruleId === 'WEALTH_VENUS_KARAKA_001' || item.ruleId.includes('VENUS_KARAKA')) {
+    return 'VENUS_KARAKA';
+  }
+  if (item.ruleId.includes('KARAKA')) {
+    if (item.ruleId.includes('JUPITER')) return 'JUPITER_KARAKA';
+    if (item.ruleId.includes('MERCURY')) return 'MERCURY_KARAKA';
+    if (item.ruleId.includes('MOON')) return 'MOON_KARAKA';
+    if (item.ruleId.includes('SUN')) return 'SUN_KARAKA';
+    if (item.ruleId.includes('MARS')) return 'MARS_KARAKA';
+    if (item.ruleId.includes('SATURN')) return 'SATURN_KARAKA';
+    if (item.ruleId.includes('VENUS')) return 'VENUS_KARAKA';
+    return 'KARAKA';
+  }
+  // Relationship / link rules
+  if (item.ruleId.includes('LINK')) {
+    return 'LINK';
+  }
+  // Rules where the actual set of planets is the identity: sorted join ensures array order invariance
+  if (item.planets && item.planets.length > 0) {
+    return [...item.planets].map((p) => String(p)).sort().join('_');
+  }
+  // Fallback to sorted houses if present
+  if (item.houses && item.houses.length > 0) {
+    return [...item.houses].map((h) => `H${h}`).sort().join('_');
+  }
+  // Default to ruleId or fallback token
+  return item.ruleId || 'VENUS_KARAKA';
+}
+
+export const resolveSubjectKey = resolveWealthSubjectKey;
+
 export function buildWealthEvidence(
   rawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
 ): readonly DomainEvidence[] {
@@ -139,7 +178,7 @@ export function buildWealthEvidence(
       // CW-06A: Migrate WEALTH_VENUS_KARAKA_001 natal producer to emit provenance via createCareerWealthEvidence.
       // Remaining producers deferred to CW-06B.
       if (item.ruleId === 'WEALTH_VENUS_KARAKA_001') {
-        const subjectKey = item.planets?.[0] ?? 'VENUS';
+        const subjectKey = resolveWealthSubjectKey(item);
         const provenanceStrength =
           item.priority === 'PRIMARY'
             ? 'PRIMARY'

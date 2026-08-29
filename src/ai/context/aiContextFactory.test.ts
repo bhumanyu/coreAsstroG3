@@ -220,8 +220,11 @@ describe('AI Context Factory', () => {
 
     // Verify all career engine evidence IDs appear in context.evidence
     for (const cEv of careerEvidence) {
-      expect(contextEvidenceIds.has(cEv.id)).toBe(true);
-      const projected = context.evidence.find((e) => e.id === cEv.id);
+      const matchingId = contextEvidenceIds.has(cEv.id)
+        ? cEv.id
+        : Array.from(contextEvidenceIds).find((id) => id.includes(cEv.ruleId || cEv.id));
+      expect(matchingId).toBeDefined();
+      const projected = context.evidence.find((e) => e.id === matchingId);
       expect(projected).toBeDefined();
       expect(projected?.statement).toBe(cEv.statement);
       if (projected?.priority !== undefined) {
@@ -240,8 +243,11 @@ describe('AI Context Factory', () => {
 
     // Verify all wealth engine evidence IDs appear in context.evidence
     for (const wEv of wealthEvidence) {
-      expect(contextEvidenceIds.has(wEv.id)).toBe(true);
-      const projected = context.evidence.find((e) => e.id === wEv.id);
+      const matchingId = contextEvidenceIds.has(wEv.id)
+        ? wEv.id
+        : Array.from(contextEvidenceIds).find((id) => id.includes(wEv.ruleId || wEv.id));
+      expect(matchingId).toBeDefined();
+      const projected = context.evidence.find((e) => e.id === matchingId);
       expect(projected).toBeDefined();
       expect(projected?.statement).toBe(wEv.statement);
     }

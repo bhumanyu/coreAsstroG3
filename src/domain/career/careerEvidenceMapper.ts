@@ -80,6 +80,45 @@ export function mapCareerDashaPeriod(
   return undefined;
 }
 
+/**
+ * Resolves a deterministic, order-independent subjectKey for career evidence items.
+ * Guaranteed never to rely on positional array indexes or raw planet ordering.
+ */
+export function resolveCareerSubjectKey(
+  item: ThemeInterpretationEvidence<CareerEvidenceFamily>
+): string {
+  // Relationship / link rules: use rule-intrinsic key based on rule semantics
+  if (item.ruleId === 'CAREER_6L_10L_LINK_001' || item.ruleId.includes('6L_10L_LINK')) {
+    return 'L6_L10_LINK';
+  }
+  if (item.ruleId.includes('LINK')) {
+    return 'LINK';
+  }
+  // Karaka rules: derive from the ruleId's karaka planet
+  if (item.ruleId.includes('KARAKA')) {
+    if (item.ruleId.includes('SUN')) return 'SUN_KARAKA';
+    if (item.ruleId.includes('SATURN')) return 'SATURN_KARAKA';
+    if (item.ruleId.includes('MERCURY')) return 'MERCURY_KARAKA';
+    if (item.ruleId.includes('JUPITER')) return 'JUPITER_KARAKA';
+    if (item.ruleId.includes('MARS')) return 'MARS_KARAKA';
+    if (item.ruleId.includes('VENUS')) return 'VENUS_KARAKA';
+    if (item.ruleId.includes('MOON')) return 'MOON_KARAKA';
+    return 'KARAKA';
+  }
+  // Rules where the actual set of planets is the identity: sorted join ensures array order invariance
+  if (item.planets && item.planets.length > 0) {
+    return [...item.planets].map((p) => String(p)).sort().join('_');
+  }
+  // Fallback to sorted houses if present
+  if (item.houses && item.houses.length > 0) {
+    return [...item.houses].map((h) => `H${h}`).sort().join('_');
+  }
+  // Default to ruleId or fallback token
+  return item.ruleId || 'L6_L10_LINK';
+}
+
+export const resolveSubjectKey = resolveCareerSubjectKey;
+
 export function buildCareerEvidence(
   rawEvidence: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[]
 ): readonly DomainEvidence[] {
@@ -99,7 +138,7 @@ export function buildCareerEvidence(
       // CW-06A: Migrate CAREER_6L_10L_LINK_001 natal producer to emit provenance via createCareerWealthEvidence.
       // Remaining producers deferred to CW-06B.
       if (item.ruleId === 'CAREER_6L_10L_LINK_001') {
-        const subjectKey = item.planets?.[0] ?? 'L6_L10';
+        const subjectKey = resolveCareerSubjectKey(item);
         const provenanceStrength =
           item.priority === 'PRIMARY'
             ? 'PRIMARY'

@@ -97,4 +97,62 @@ describe('CW-06A Integration: Career and Wealth Natal Producer Provenance Attach
     );
     expect(legacyEvidence.provenance?.ruleId).toBe('CAREER_10H_STRONG_001');
   });
+
+  it('runs buildCareerEvidence on CAREER_6L_10L_LINK_001 with order-independent determinism', async () => {
+    const { buildCareerEvidence } = await import('../../career/careerEvidenceMapper');
+    const { CareerEvidenceFamily } = await import('../../../engine/themeInterpretation/themeInterpretationTypes');
+
+    const itemA = {
+      id: 'raw-link-a',
+      ruleId: 'CAREER_6L_10L_LINK_001',
+      evidenceFamily: CareerEvidenceFamily.FUNCTIONAL_ROLE,
+      statement: '6th and 10th lords linked',
+      effect: 'SUPPORT' as const,
+      strength: 'STRONG' as const,
+      priority: 'PRIMARY' as const,
+      planets: [Planet.MARS, Planet.SATURN]
+    };
+    const itemB = {
+      ...itemA,
+      id: 'raw-link-b',
+      planets: [Planet.SATURN, Planet.MARS]
+    };
+
+    const [evA] = buildCareerEvidence([itemA]);
+    const [evB] = buildCareerEvidence([itemB]);
+
+    expect(evA.id).toBe(evA.provenance?.evidenceId);
+    expect(evA.provenance?.ruleId).toBe('CAREER_6L_10L_LINK_001');
+    expect(evA.id).toBe(evB.id);
+    expect(evA.id).toBe('CW-CAREER-NATAL-D1-CAREER_6L_10L_LINK_001-L6_L10_LINK-SUPPORT-PRIMARY');
+  });
+
+  it('runs buildWealthEvidence on WEALTH_VENUS_KARAKA_001 with order-independent determinism', async () => {
+    const { buildWealthEvidence } = await import('../../wealth/wealthEvidenceMapper');
+    const { WealthEvidenceFamily } = await import('../../../engine/themeInterpretation/wealthThemeInterpretationTypes');
+
+    const itemA = {
+      id: 'raw-venus-a',
+      ruleId: 'WEALTH_VENUS_KARAKA_001',
+      evidenceFamily: WealthEvidenceFamily.VENUS,
+      statement: 'Venus as natural karaka of wealth',
+      effect: 'SUPPORT' as const,
+      strength: 'STRONG' as const,
+      priority: 'PRIMARY' as const,
+      planets: [Planet.VENUS]
+    };
+    const itemB = {
+      ...itemA,
+      id: 'raw-venus-b',
+      planets: [Planet.JUPITER, Planet.VENUS]
+    };
+
+    const [evA] = buildWealthEvidence([itemA]);
+    const [evB] = buildWealthEvidence([itemB]);
+
+    expect(evA.id).toBe(evA.provenance?.evidenceId);
+    expect(evA.provenance?.ruleId).toBe('WEALTH_VENUS_KARAKA_001');
+    expect(evA.id).toBe(evB.id);
+    expect(evA.id).toBe('CW-WEALTH-NATAL-D1-WEALTH_VENUS_KARAKA_001-VENUS_KARAKA-SUPPORT-PRIMARY');
+  });
 });
