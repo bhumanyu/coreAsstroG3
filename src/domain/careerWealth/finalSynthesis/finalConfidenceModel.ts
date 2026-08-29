@@ -363,11 +363,9 @@ function applyConsistencyCap(
   readonly confidence: FinalDomainConfidence;
   readonly applied: boolean;
 } {
-  const effectConsistent = input.dashaEffectConsistent;
-  const hierarchyConsistent = input.dashaHierarchyRolesConsistent;
-
   const hasInconsistency =
-    effectConsistent === false || hierarchyConsistent === false;
+    input.dashaEffectConsistent === false ||
+    input.dashaHierarchyRolesConsistent === false;
 
   if (!hasInconsistency) {
     return {
@@ -380,10 +378,18 @@ function applyConsistencyCap(
    * A Dasha inconsistency reduces confidence in the
    * synthesis, but MUST NOT change activationStatus
    * or natal promise.
+   * applied is only true if the cap actually reduced confidence from HIGH to MEDIUM.
    */
+  if (confidence === 'HIGH') {
+    return {
+      confidence: 'MEDIUM',
+      applied: true
+    };
+  }
+
   return {
-    confidence: confidence === 'HIGH' ? 'MEDIUM' : confidence,
-    applied: true
+    confidence,
+    applied: false
   };
 }
 
@@ -411,10 +417,13 @@ export function calculateFinalConfidenceV2(
     input.dashaEffectConsistent === undefined &&
     input.dashaHierarchyRolesConsistent === undefined
       ? 'UNAVAILABLE'
-      : input.dashaEffectConsistent !== false &&
-        input.dashaHierarchyRolesConsistent !== false
+      : input.dashaEffectConsistent === true &&
+        input.dashaHierarchyRolesConsistent === true
       ? 'CONSISTENT'
-      : 'INCONSISTENT';
+      : input.dashaEffectConsistent === false ||
+        input.dashaHierarchyRolesConsistent === false
+      ? 'INCONSISTENT'
+      : 'UNAVAILABLE';
 
   let confidence = determineBaseConfidence(input, {
     natal: natalQuality,
@@ -424,6 +433,10 @@ export function calculateFinalConfidenceV2(
     manifestation: manifestationQuality,
     coverage
   });
+
+  const consistency = applyConsistencyCap(confidence, input);
+
+  confidence = consistency.confidence;
 
   /*
    * Contradiction reduces certainty only.
@@ -435,10 +448,6 @@ export function calculateFinalConfidenceV2(
   ) {
     confidence = 'MEDIUM';
   }
-
-  const consistency = applyConsistencyCap(confidence, input);
-
-  confidence = consistency.confidence;
 
   const reasons: string[] = [];
 
