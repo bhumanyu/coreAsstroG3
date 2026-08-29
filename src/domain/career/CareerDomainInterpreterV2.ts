@@ -84,6 +84,11 @@ import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
 import { synthesizeCareerTransit, synthesizeCareerTiming, type CareerTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
 import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
+import {
+  ReasoningTraceBuilder,
+  validateReasoningTrace,
+  type ReasoningTraceGraph
+} from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretCareerV2(
@@ -369,6 +374,15 @@ export function interpretCareerV2(
       natalRuleIds: natalPromiseEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
     });
 
+    const reasoningTraceGraph = buildCareerReasoningTraceGraph({
+      evidence: mergedEvidence,
+      natalStrength: cw01Result.natalStrength,
+      careerDashaSynthesis,
+      d10Relationship,
+      careerManifestationSynthesis,
+      careerFinalSynthesis
+    });
+
     return buildDomainInterpretation({
       domain: 'CAREER',
       evidence: mergedEvidence,
@@ -388,7 +402,8 @@ export function interpretCareerV2(
         careerDashaSynthesis,
         careerTimingSynthesis,
         careerManifestationSynthesis,
-        careerFinalSynthesis
+        careerFinalSynthesis,
+        reasoningTraceGraph
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: options?.strategy === 'CW01' ? 'CW-01' : undefined
@@ -527,6 +542,15 @@ export function interpretCareerV2(
     natalRuleIds: natalPromiseEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
   });
 
+  const reasoningTraceGraph = buildCareerReasoningTraceGraph({
+    evidence: mergedEvidence,
+    natalStrength,
+    careerDashaSynthesis,
+    d10Relationship,
+    careerManifestationSynthesis,
+    careerFinalSynthesis
+  });
+
   return buildDomainInterpretation({
     domain: 'CAREER',
     evidence: mergedEvidence,
@@ -544,9 +568,117 @@ export function interpretCareerV2(
       careerDashaSynthesis,
       careerTimingSynthesis,
       careerManifestationSynthesis,
-      careerFinalSynthesis
+      careerFinalSynthesis,
+      reasoningTraceGraph
     }
   });
+}
+
+export function buildCareerReasoningTraceGraph(params: {
+  readonly evidence: readonly DomainEvidence[];
+  readonly natalStrength?: DomainStrength;
+  readonly careerDashaSynthesis?: CareerDashaSynthesis;
+  readonly d10Relationship?: VargaRelationship;
+  readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];
+  readonly careerFinalSynthesis: CareerWealthFinalSynthesis;
+}): ReasoningTraceGraph {
+  const traceBuilder = new ReasoningTraceBuilder('CAREER');
+  const natalNodeId = traceBuilder.addConclusionNode({
+    axis: 'NATAL',
+    subjectKey: 'NATAL_PROMISE',
+    label: `Natal Career Promise: ${params.natalStrength ?? 'UNKNOWN'}`
+  });
+  const dashaNodeId = traceBuilder.addConclusionNode({
+    axis: 'DASHA',
+    subjectKey: 'DASHA_ACTIVATION',
+    label: `Career Dasha Activation: ${params.careerDashaSynthesis?.overallActivation ?? 'UNKNOWN'}`
+  });
+  const divisionalNodeId = traceBuilder.addConclusionNode({
+    axis: 'DIVISIONAL',
+    subjectKey: 'D10_CONFIRMATION',
+    label: `D10 Relationship: ${params.d10Relationship ?? 'NEUTRAL'}`
+  });
+  const manifestationNodeId = traceBuilder.addConclusionNode({
+    axis: 'MANIFESTATION',
+    subjectKey: 'CAREER_MANIFESTATION',
+    label: `Career Manifestations: ${params.careerManifestationSynthesis?.length ?? 0} synthesized`
+  });
+  const finalNodeId = traceBuilder.addConclusionNode({
+    axis: 'FINAL',
+    subjectKey: 'FINAL_SYNTHESIS',
+    label: `Career Final Status: ${params.careerFinalSynthesis.finalStatus} (${params.careerFinalSynthesis.confidence})`
+  });
+
+  for (const e of params.evidence) {
+    if (e.provenance) {
+      const evNodeId = traceBuilder.addEvidenceNode({
+        provenance: e.provenance,
+        label: e.statement,
+        subjectKey: e.ruleId ?? e.id
+      });
+      const targetNodeId =
+        e.provenance.axis === 'NATAL'
+          ? natalNodeId
+          : e.provenance.axis === 'DASHA' || e.provenance.axis === 'TIMING'
+          ? dashaNodeId
+          : e.provenance.axis === 'DIVISIONAL'
+          ? divisionalNodeId
+          : e.provenance.axis === 'MANIFESTATION'
+          ? manifestationNodeId
+          : natalNodeId;
+
+      const edgeType =
+        e.provenance.axis === 'DASHA' || e.provenance.axis === 'TIMING'
+          ? e.provenance.effect === 'CHALLENGE'
+            ? 'CHALLENGES'
+            : 'ACTIVATES'
+          : e.provenance.axis === 'DIVISIONAL'
+          ? e.provenance.effect === 'CHALLENGE'
+            ? 'CHALLENGES'
+            : 'CONFIRMS'
+          : e.provenance.axis === 'MANIFESTATION'
+          ? 'MANIFESTS'
+          : e.provenance.effect === 'CHALLENGE'
+          ? 'CHALLENGES'
+          : 'SUPPORTS';
+
+      traceBuilder.addEdge({
+        fromNodeId: evNodeId,
+        toNodeId: targetNodeId,
+        type: edgeType,
+        explanation: `${e.provenance.ruleId} ${edgeType.toLowerCase()} ${e.provenance.axis.toLowerCase()} conclusion`
+      });
+    }
+  }
+
+  traceBuilder.addEdge({
+    fromNodeId: natalNodeId,
+    toNodeId: finalNodeId,
+    type: params.natalStrength === 'CHALLENGED' || params.natalStrength === 'POOR' ? 'CHALLENGES' : 'SUPPORTS',
+    explanation: 'Natal promise foundation feeds into final career synthesis'
+  });
+  traceBuilder.addEdge({
+    fromNodeId: dashaNodeId,
+    toNodeId: finalNodeId,
+    type: params.careerDashaSynthesis?.overallActivation === 'INACTIVE' ? 'CHALLENGES' : 'ACTIVATES',
+    explanation: 'Dasha activation modulates final career synthesis'
+  });
+  traceBuilder.addEdge({
+    fromNodeId: divisionalNodeId,
+    toNodeId: finalNodeId,
+    type: params.d10Relationship === 'CONFLICTING' ? 'CHALLENGES' : 'CONFIRMS',
+    explanation: 'D10 varga confirmation feeds into final career synthesis'
+  });
+  traceBuilder.addEdge({
+    fromNodeId: manifestationNodeId,
+    toNodeId: finalNodeId,
+    type: 'MANIFESTS',
+    explanation: 'Synthesized career manifestations qualify final career outcome'
+  });
+
+  const graph = traceBuilder.build();
+  validateReasoningTrace(graph);
+  return graph;
 }
 
 export function buildCareerTimingStatement(

@@ -84,6 +84,11 @@ import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
 import { synthesizeWealthTiming, type WealthTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeWealthManifestations } from './manifestation/wealthManifestationSynthesis';
 import { synthesizeWealthFinal } from '../careerWealth/finalSynthesis/wealthFinalSynthesis';
+import {
+  ReasoningTraceBuilder,
+  validateReasoningTrace,
+  type ReasoningTraceGraph
+} from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 
 export function interpretWealthV2(
@@ -383,6 +388,15 @@ export function interpretWealthV2(
       natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
     });
 
+    const reasoningTraceGraph = buildWealthReasoningTraceGraph({
+      evidence,
+      overallStatus: cw01Result.finalStrength,
+      wealthTimingSynthesis: undefined,
+      d2Relationship: 'UNAVAILABLE',
+      wealthManifestationSynthesis,
+      wealthFinalSynthesis
+    });
+
     return buildDomainInterpretation({
       domain: 'WEALTH',
       evidence,
@@ -401,7 +415,8 @@ export function interpretWealthV2(
         currentActivation: cw01Result.currentActivation,
         currentPressure: cw01Result.currentPressure,
         wealthManifestationSynthesis,
-        wealthFinalSynthesis
+        wealthFinalSynthesis,
+        reasoningTraceGraph
       },
       reasoningTrace: cw01Result.reasoningTrace,
       reasoningVersion: options?.strategy === 'CW01' ? 'CW-01' : undefined
@@ -581,6 +596,15 @@ export function interpretWealthV2(
     natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
   });
 
+  const reasoningTraceGraph = buildWealthReasoningTraceGraph({
+    evidence,
+    overallStatus,
+    wealthTimingSynthesis,
+    d2Relationship,
+    wealthManifestationSynthesis,
+    wealthFinalSynthesis
+  });
+
   return buildDomainInterpretation({
     domain: 'WEALTH',
     evidence,
@@ -598,9 +622,117 @@ export function interpretWealthV2(
       ...conclusionData,
       wealthTimingSynthesis,
       wealthManifestationSynthesis,
-      wealthFinalSynthesis
+      wealthFinalSynthesis,
+      reasoningTraceGraph
     }
   });
+}
+
+export function buildWealthReasoningTraceGraph(params: {
+  readonly evidence: readonly DomainEvidence[];
+  readonly overallStatus?: WealthDimensionStatus | string;
+  readonly wealthTimingSynthesis?: WealthTimingSynthesis;
+  readonly d2Relationship?: VargaRelationship;
+  readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;
+  readonly wealthFinalSynthesis: CareerWealthFinalSynthesis;
+}): ReasoningTraceGraph {
+  const traceBuilder = new ReasoningTraceBuilder('WEALTH');
+  const natalNodeId = traceBuilder.addConclusionNode({
+    axis: 'NATAL',
+    subjectKey: 'NATAL_PROMISE',
+    label: `Natal Wealth Promise: ${params.overallStatus ?? 'UNKNOWN'}`
+  });
+  const dashaNodeId = traceBuilder.addConclusionNode({
+    axis: 'DASHA',
+    subjectKey: 'DASHA_ACTIVATION',
+    label: `Wealth Timing Synthesis: ${params.wealthTimingSynthesis?.timingStatus ?? 'UNKNOWN'}`
+  });
+  const divisionalNodeId = traceBuilder.addConclusionNode({
+    axis: 'DIVISIONAL',
+    subjectKey: 'D2_CONFIRMATION',
+    label: `D2 Relationship: ${params.d2Relationship ?? 'NEUTRAL'}`
+  });
+  const manifestationNodeId = traceBuilder.addConclusionNode({
+    axis: 'MANIFESTATION',
+    subjectKey: 'WEALTH_MANIFESTATION',
+    label: `Wealth Manifestations: ${params.wealthManifestationSynthesis ? 'Synthesized' : 'None'}`
+  });
+  const finalNodeId = traceBuilder.addConclusionNode({
+    axis: 'FINAL',
+    subjectKey: 'FINAL_SYNTHESIS',
+    label: `Wealth Final Status: ${params.wealthFinalSynthesis.finalStatus} (${params.wealthFinalSynthesis.confidence})`
+  });
+
+  for (const e of params.evidence) {
+    if (e.provenance) {
+      const evNodeId = traceBuilder.addEvidenceNode({
+        provenance: e.provenance,
+        label: e.statement,
+        subjectKey: e.ruleId ?? e.id
+      });
+      const targetNodeId =
+        e.provenance.axis === 'NATAL'
+          ? natalNodeId
+          : e.provenance.axis === 'DASHA' || e.provenance.axis === 'TIMING'
+          ? dashaNodeId
+          : e.provenance.axis === 'DIVISIONAL'
+          ? divisionalNodeId
+          : e.provenance.axis === 'MANIFESTATION'
+          ? manifestationNodeId
+          : natalNodeId;
+
+      const edgeType =
+        e.provenance.axis === 'DASHA' || e.provenance.axis === 'TIMING'
+          ? e.provenance.effect === 'CHALLENGE'
+            ? 'CHALLENGES'
+            : 'ACTIVATES'
+          : e.provenance.axis === 'DIVISIONAL'
+          ? e.provenance.effect === 'CHALLENGE'
+            ? 'CHALLENGES'
+            : 'CONFIRMS'
+          : e.provenance.axis === 'MANIFESTATION'
+          ? 'MANIFESTS'
+          : e.provenance.effect === 'CHALLENGE'
+          ? 'CHALLENGES'
+          : 'SUPPORTS';
+
+      traceBuilder.addEdge({
+        fromNodeId: evNodeId,
+        toNodeId: targetNodeId,
+        type: edgeType,
+        explanation: `${e.provenance.ruleId} ${edgeType.toLowerCase()} ${e.provenance.axis.toLowerCase()} conclusion`
+      });
+    }
+  }
+
+  traceBuilder.addEdge({
+    fromNodeId: natalNodeId,
+    toNodeId: finalNodeId,
+    type: params.overallStatus === 'CHALLENGED' || params.overallStatus === 'LIMITED' ? 'CHALLENGES' : 'SUPPORTS',
+    explanation: 'Natal promise foundation feeds into final wealth synthesis'
+  });
+  traceBuilder.addEdge({
+    fromNodeId: dashaNodeId,
+    toNodeId: finalNodeId,
+    type: 'ACTIVATES',
+    explanation: 'Dasha and timing activations modulate final wealth synthesis'
+  });
+  traceBuilder.addEdge({
+    fromNodeId: divisionalNodeId,
+    toNodeId: finalNodeId,
+    type: params.d2Relationship === 'CONFLICTING' ? 'CHALLENGES' : 'CONFIRMS',
+    explanation: 'D2 varga confirmation feeds into final wealth synthesis'
+  });
+  traceBuilder.addEdge({
+    fromNodeId: manifestationNodeId,
+    toNodeId: finalNodeId,
+    type: 'MANIFESTS',
+    explanation: 'Synthesized wealth manifestations qualify final wealth outcome'
+  });
+
+  const graph = traceBuilder.build();
+  validateReasoningTrace(graph);
+  return graph;
 }
 
 export function evaluateD2Relationship(
