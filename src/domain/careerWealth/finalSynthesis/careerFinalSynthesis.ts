@@ -7,8 +7,12 @@ import type {
   ManifestationSummary,
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
+import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
+import type { CareerTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
+import type { DomainEvidence } from '../../interpretation/DomainEvidence';
+import type { CareerManifestationSynthesis } from '../../career/manifestation/careerManifestationSynthesisTypes';
 import { enforceCareerNatalCeiling } from './finalSynthesisGuardrails';
-import { calculateFinalConfidence } from './finalSynthesisConfidence';
+import { calculateFinalConfidenceV2 } from './finalConfidenceModel';
 import { resolveDashaActivationGuardrail } from './dashaActivationGuardrails';
 
 function mapStrengthToPromiseStatus(strength: string): FinalDomainStatus {
@@ -54,7 +58,51 @@ function deriveAxisStatus(effect: string | undefined): SynthesisAxisStatus {
   return 'INSUFFICIENT_DATA';
 }
 
+function calculateCareerEvidenceSourceCount(input: {
+  readonly natalEvidenceIds: readonly string[];
+  readonly dashaSynthesis?: CareerDashaSynthesis;
+  readonly timingSynthesis?: CareerTimingSynthesis;
+  readonly d10Synthesis?: readonly DomainEvidence[];
+  readonly manifestationSynthesis: readonly CareerManifestationSynthesis[];
+}): number {
+  let count = 0;
+
+  if (input.natalEvidenceIds.length > 0) {
+    count += 1;
+  }
+
+  if (
+    input.dashaSynthesis?.factors &&
+    input.dashaSynthesis.factors.length > 0
+  ) {
+    count += 1;
+  }
+
+  if (
+    input.timingSynthesis?.factors &&
+    input.timingSynthesis.factors.length > 0
+  ) {
+    count += 1;
+  }
+
+  if (
+    input.d10Synthesis &&
+    input.d10Synthesis.length > 0
+  ) {
+    count += 1;
+  }
+
+  if (
+    input.manifestationSynthesis.length > 0
+  ) {
+    count += 1;
+  }
+
+  return count;
+}
+
 export function synthesizeCareerFinal(
+
   input: CareerFinalSynthesisInput
 ): CareerWealthFinalSynthesis {
   const {
@@ -212,14 +260,44 @@ export function synthesizeCareerFinal(
   const finalStatus = enforceCareerNatalCeiling(natalPromise, candidate);
 
   // 7. Calculate confidence
-  const primaryEvidenceCount = (natalPromise !== 'UNDETERMINED' ? 1 : 0) + manifestationSynthesis.length;
-  const isDivisionalConfirmed = d10Relationship === 'CONFIRMS' || d10Relationship === 'PARTIALLY_CONFIRMS';
-  const confidence = calculateFinalConfidence(
-    primaryEvidenceCount,
-    stronglySupportedCount + supportedCount,
-    challengedCount,
-    isDivisionalConfirmed
-  );
+  const confidenceBreakdown = calculateFinalConfidenceV2({
+    natalPromise,
+    natalEvidenceCount: natalEvidenceIds.length,
+    activationStatus,
+    activationConfidence,
+    dashaEffectConsistent: dashaActivation.consistency.effectConsistent,
+    dashaHierarchyRolesConsistent: dashaActivation.consistency.hierarchyRolesConsistent,
+    timingStatus,
+    timingConfidence: timingSynthesis?.confidence,
+    divisionalStatus: d10Relationship,
+    manifestationConfidences: manifestationSynthesis.map(
+      (manifestation) => manifestation.confidence
+    ),
+    manifestationStatuses: manifestationSynthesis.map((manifestation) => {
+      switch (manifestation.status) {
+        case 'STRONGLY_SUPPORTED':
+          return 'VERY_STRONG';
+        case 'SUPPORTED':
+          return 'STRONG';
+        case 'MIXED':
+          return 'MIXED';
+        case 'CHALLENGED':
+          return 'CHALLENGED';
+        case 'INSUFFICIENT_DATA':
+        default:
+          return 'INSUFFICIENT_DATA';
+      }
+    }),
+    evidenceSourceCount: calculateCareerEvidenceSourceCount({
+      natalEvidenceIds,
+      dashaSynthesis,
+      timingSynthesis,
+      d10Synthesis,
+      manifestationSynthesis
+    })
+  });
+
+  const confidence = confidenceBreakdown.final;
 
   // 8. Collect evidence IDs, rule IDs, key support and challenges
   const evidenceIdSet = new Set<string>();
@@ -304,6 +382,7 @@ export function synthesizeCareerFinal(
     divisionalStatus,
     manifestationStatus,
     confidence,
+    confidenceBreakdown: Object.freeze(confidenceBreakdown),
     primaryPromise: natalPromise,
     manifestationSummary: Object.freeze(manifestationSummary),
     strongestAreas: Object.freeze(strongestAreas),

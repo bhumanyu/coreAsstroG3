@@ -1,34 +1,23 @@
-import type { FinalDomainConfidence } from './careerWealthFinalSynthesisTypes';
+import type {
+  FinalDomainConfidence
+} from './careerWealthFinalSynthesisTypes';
+
+import {
+  calculateFinalConfidenceV2,
+  type FinalConfidenceInput
+} from './finalConfidenceModel';
 
 /**
- * Deterministically calculates synthesis confidence based on primary evidence count,
- * manifestation coverage, and divisional confirmation.
+ * CW-05D compatibility wrapper.
+ *
+ * New code should prefer calculateFinalConfidenceV2()
+ * with the complete FinalConfidenceInput.
+ *
+ * This wrapper exists temporarily so older callers can
+ * migrate without changing semantics elsewhere.
  */
 export function calculateFinalConfidence(
-  primaryEvidenceCount: number,
-  supportingManifestations: number,
-  challengingManifestations: number,
-  divisionalConfirmation: boolean
+  input: FinalConfidenceInput
 ): FinalDomainConfidence {
-  if (primaryEvidenceCount === 0) {
-    return 'LOW';
-  }
-
-  const activeManifestations = supportingManifestations + challengingManifestations;
-  if (
-    primaryEvidenceCount >= 2 &&
-    (supportingManifestations >= 2 || challengingManifestations >= 2 || activeManifestations >= 3) &&
-    divisionalConfirmation
-  ) {
-    return 'HIGH';
-  }
-
-  if (
-    primaryEvidenceCount >= 1 &&
-    (supportingManifestations >= 1 || challengingManifestations >= 1 || activeManifestations >= 1 || divisionalConfirmation)
-  ) {
-    return 'MEDIUM';
-  }
-
-  return 'LOW';
+  return calculateFinalConfidenceV2(input).final;
 }

@@ -61,6 +61,20 @@ export interface FinalSynthesisActivationHierarchy {
   };
 }
 
+export interface FinalConfidenceBreakdownSummary {
+  readonly final: FinalDomainConfidence;
+  readonly natalEvidenceQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly activationQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly timingQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly divisionalQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly manifestationQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly evidenceCoverage: 'HIGH' | 'MEDIUM' | 'LOW';
+  readonly contradictionLevel: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
+  readonly dashaConsistency: 'CONSISTENT' | 'INCONSISTENT' | 'UNAVAILABLE';
+  readonly consistencyCapApplied: boolean;
+  readonly reasons: readonly string[];
+}
+
 export interface ManifestationSummary {
   readonly mode: string;
   readonly status: ManifestationStatus | WealthManifestationStatus;
@@ -81,6 +95,7 @@ export interface WealthDimensionFinalSynthesis {
   readonly divisionalStatus: VargaRelationship;
   readonly manifestationStatus: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
+  readonly confidenceBreakdown?: FinalConfidenceBreakdownSummary;
   readonly primaryPromise: DomainStrength;
   readonly dashaEffect: string;
   readonly timingEffect: string;
@@ -107,6 +122,7 @@ export interface CareerWealthFinalSynthesis {
   readonly divisionalStatus: VargaRelationship;
   readonly manifestationStatus: FinalDomainStatus;
   readonly confidence: FinalDomainConfidence;
+  readonly confidenceBreakdown?: FinalConfidenceBreakdownSummary;
   readonly primaryPromise: DomainStrength | string;
   readonly manifestationSummary: readonly ManifestationSummary[];
   readonly strongestAreas: readonly string[];

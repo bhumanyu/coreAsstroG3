@@ -2,6 +2,7 @@ export * from './careerWealthFinalSynthesisTypes';
 export * from './finalSynthesisGuardrails';
 export * from './dashaActivationGuardrails';
 export * from './finalSynthesisConfidence';
+export * from './finalConfidenceModel';
 export * from './finalSynthesisEvidence';
 export * from './careerFinalSynthesis';
 export * from './wealthFinalSynthesis';
