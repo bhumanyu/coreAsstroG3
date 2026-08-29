@@ -29,6 +29,14 @@ function normalizeSegment(value: string): string {
  * Format: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>-<EFFECT>-<STRENGTH>
  */
 export function buildEvidenceId(input: EvidenceIdentityInput): string {
+  if (!input.subjectKey || !input.subjectKey.trim()) {
+    throw new Error('Evidence subjectKey must not be empty');
+  }
+
+  if (!input.ruleId || !input.ruleId.trim()) {
+    throw new Error('Evidence ruleId must not be empty');
+  }
+
   const segments = [
     'CW',
     input.domain,

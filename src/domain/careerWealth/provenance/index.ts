@@ -14,3 +14,13 @@ export type { EvidenceIdentityInput } from './evidenceIdentity';
 export { buildEvidenceId } from './evidenceIdentity';
 
 export { createEvidenceProvenance } from './evidenceProvenanceFactory';
+
+export type {
+  CareerWealthEvidence,
+  CreateCareerWealthEvidenceInput
+} from './careerWealthEvidence';
+
+export {
+  createCareerWealthEvidence,
+  mapEffectToPolarity
+} from './careerWealthEvidence';

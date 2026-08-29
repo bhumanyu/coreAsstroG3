@@ -110,4 +110,24 @@ describe('CW-06A Evidence Identity & ID Generation', () => {
 
     expect([...forwardIds].sort()).toEqual([...reversedIds].sort());
   });
+
+  it('throws when subjectKey is empty or whitespace only', () => {
+    expect(() =>
+      buildEvidenceId({ ...sampleInput, subjectKey: '' })
+    ).toThrowError('Evidence subjectKey must not be empty');
+
+    expect(() =>
+      buildEvidenceId({ ...sampleInput, subjectKey: '   ' })
+    ).toThrowError('Evidence subjectKey must not be empty');
+  });
+
+  it('throws when ruleId is empty or whitespace only', () => {
+    expect(() =>
+      buildEvidenceId({ ...sampleInput, ruleId: '' })
+    ).toThrowError('Evidence ruleId must not be empty');
+
+    expect(() =>
+      buildEvidenceId({ ...sampleInput, ruleId: '   ' })
+    ).toThrowError('Evidence ruleId must not be empty');
+  });
 });
