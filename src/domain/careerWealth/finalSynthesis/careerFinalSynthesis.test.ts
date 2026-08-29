@@ -544,4 +544,87 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       expect(result.activationSummary).toContain('PD Sun provides short-term SUPPORT trigger');
     });
   });
+
+  describe('CW-05C Dasha Activation Guardrail Integration', () => {
+    it('derives activation status, confidence, strength, and hierarchy from guardrail', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        mdPlanet: Planet.JUPITER,
+        adPlanet: Planet.SUN,
+        pdPlanet: Planet.MARS,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'SUPPORTS',
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 2.5
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationStatus).toBe('SUPPORT');
+      expect(result.activationConfidence).toBe('HIGH');
+      expect(result.activationStrength).toBe(2.5);
+      expect(result.dashaEffect).toBe('SUPPORTS');
+      expect(result.activationHierarchy).toEqual({
+        md: { effect: 'SUPPORTS', role: 'PRIMARY' },
+        ad: { effect: 'SUPPORTS', role: 'MODIFIER' },
+        pd: { effect: 'SUPPORTS', role: 'REFINEMENT' }
+      });
+      expect(result.activationSummary).toContain('MD Jupiter provides primary SUPPORT');
+    });
+
+    it('preserves genuine CHALLENGE activation and applies final-status downgrade', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        mdPlanet: Planet.SATURN,
+        adPlanet: Planet.RAHU,
+        pdPlanet: Planet.MARS,
+        mdEffect: 'CHALLENGES',
+        adEffect: 'CHALLENGES',
+        pdEffect: 'CHALLENGES',
+        combinedEffect: 'CHALLENGES',
+        combinedConfidence: 'HIGH',
+        combinedScore: -2.0
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      expect(result.activationStatus).toBe('CHALLENGE');
+      expect(result.dashaEffect).toBe('CHALLENGES');
+      // Dasha challenge downgrades STRONG candidate to MODERATE
+      expect(result.finalStatus).toBe('MODERATE');
+    });
+
+    it('critical contradiction test: recomputes CHALLENGE from canonical MD/AD/PD despite inconsistent combinedEffect SUPPORTS', () => {
+      const dasha = createMockCareerDashaSynthesis({
+        mdPlanet: Planet.SATURN,
+        adPlanet: Planet.MARS,
+        pdPlanet: Planet.RAHU,
+        mdEffect: 'CHALLENGES',
+        adEffect: 'CHALLENGES',
+        pdEffect: 'CHALLENGES',
+        combinedEffect: 'SUPPORTS' // Stale / inconsistent combined effect
+      });
+
+      const result = synthesizeCareerFinal({
+        natalPromise: 'STRONG',
+        dashaSynthesis: dasha,
+        d10Relationship: 'CONFIRMS'
+      });
+
+      // Guardrail recomputes to CHALLENGE based on canonical resolver
+      expect(result.activationStatus).toBe('CHALLENGE');
+      expect(result.dashaEffect).toBe('CHALLENGES');
+      expect(result.activationSummary).toContain('CW-05 recomputed the activation');
+      // Downgrade applies because activationStatus is genuinely CHALLENGE
+      expect(result.finalStatus).toBe('MODERATE');
+    });
+  });
 });
