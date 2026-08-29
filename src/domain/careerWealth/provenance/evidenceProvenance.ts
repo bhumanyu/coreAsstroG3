@@ -20,6 +20,11 @@ export interface EvidenceProvenance {
   readonly axis: EvidenceAxis;
   readonly source: EvidenceSource;
   readonly effect: EvidenceEffect;
+  /**
+   * Hierarchical structural role of the evidence (PRIMARY / SECONDARY / TERTIARY).
+   * This is intentionally distinct from DomainEvidence.strength, which represents
+   * empirical magnitude (STRONG / MODERATE / WEAK / VERY_STRONG).
+   */
   readonly strength: EvidenceStrength;
 }
 
