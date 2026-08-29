@@ -20,6 +20,10 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     const evidence = createCareerWealthEvidence({
       identity,
       statement: '10th lord strong in lagna',
+      sourceType: 'LORDSHIP',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      priority: 90,
       strength: 'STRONG'
     });
 
@@ -33,6 +37,10 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     const evidence = createCareerWealthEvidence({
       identity,
       statement: '10th lord strong in lagna',
+      sourceType: 'LORDSHIP',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      priority: 90,
       strength: 'STRONG'
     });
 
@@ -44,6 +52,10 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     const supportEv = createCareerWealthEvidence({
       identity: { ...identity, effect: 'SUPPORT' },
       statement: 'Support',
+      sourceType: 'LORDSHIP',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      priority: 90,
       strength: 'STRONG'
     });
     expect(supportEv.polarity).toBe(mapEffectToPolarity('SUPPORT'));
@@ -52,6 +64,10 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     const challengeEv = createCareerWealthEvidence({
       identity: { ...identity, effect: 'CHALLENGE' },
       statement: 'Challenge',
+      sourceType: 'LORDSHIP',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      priority: 90,
       strength: 'MODERATE'
     });
     expect(challengeEv.polarity).toBe(mapEffectToPolarity('CHALLENGE'));
@@ -60,6 +76,10 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     const neutralEv = createCareerWealthEvidence({
       identity: { ...identity, effect: 'NEUTRAL' },
       statement: 'Neutral',
+      sourceType: 'LORDSHIP',
+      role: 'SECONDARY',
+      phase: 'NATAL_PROMISE',
+      priority: 70,
       strength: 'WEAK'
     });
     expect(neutralEv.polarity).toBe(mapEffectToPolarity('NEUTRAL'));
@@ -70,6 +90,10 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     const evidence = createCareerWealthEvidence({
       identity,
       statement: 'Frozen test',
+      sourceType: 'LORDSHIP',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      priority: 90,
       strength: 'STRONG'
     });
 

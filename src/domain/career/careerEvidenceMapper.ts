@@ -14,6 +14,7 @@ import type {
 } from '../interpretation';
 import type { CareerEvidenceClassification } from './careerTypes';
 import { resolveRelatedCareerPromiseEvidenceIds } from './careerEvidenceLinker';
+import { createCareerWealthEvidence } from '../careerWealth/provenance/careerWealthEvidence';
 
 export function mapCareerSourceType(
   item: ThemeInterpretationEvidence<CareerEvidenceFamily>
@@ -94,6 +95,40 @@ export function buildCareerEvidence(
         : (item.transitEvidence?.planet
           ? { period: 'MD' as const, ...(planet ? { planet } : {}) }
           : undefined);
+
+      // CW-06A: Migrate CAREER_6L_10L_LINK_001 natal producer to emit provenance via createCareerWealthEvidence.
+      // Remaining producers deferred to CW-06B.
+      if (item.ruleId === 'CAREER_6L_10L_LINK_001') {
+        const subjectKey = item.planets?.[0] ?? 'L6_L10';
+        const provenanceStrength =
+          item.priority === 'PRIMARY'
+            ? 'PRIMARY'
+            : item.priority === 'SECONDARY'
+              ? 'SECONDARY'
+              : 'TERTIARY';
+        return createCareerWealthEvidence({
+          identity: {
+            domain: 'CAREER',
+            axis: 'NATAL',
+            source: 'D1',
+            ruleId: item.ruleId,
+            subjectKey,
+            effect: item.effect,
+            strength: provenanceStrength
+          },
+          statement: item.statement,
+          sourceType: mapCareerSourceType(item),
+          role,
+          phase: mapCareerPhase(item),
+          priority: mapCareerPriority(item.priority),
+          strength: mapCareerStrength(item.strength),
+          planet,
+          house,
+          relatedEvidenceIds,
+          timing,
+          evidenceFamily: item.evidenceFamily
+        });
+      }
 
       return createDomainEvidence({
         id: item.id,
