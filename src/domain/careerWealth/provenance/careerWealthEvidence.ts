@@ -44,11 +44,11 @@ export function mapEffectToPolarity(effect: ProvenanceEffect): EvidencePolarity 
 export interface CreateCareerWealthEvidenceInput {
   readonly identity: EvidenceIdentityInput;
   readonly statement: string;
-  readonly sourceType: EvidenceSourceType;
-  readonly role: EvidenceRole;
-  readonly phase: EvidencePhase;
-  readonly priority: number;
-  readonly strength: GenericEvidenceStrength; // Magnitude in DomainEvidence (STRONG / MODERATE / WEAK / VERY_STRONG)
+  readonly sourceType?: EvidenceSourceType;
+  readonly role?: EvidenceRole;
+  readonly phase?: EvidencePhase;
+  readonly priority?: number;
+  readonly strength?: GenericEvidenceStrength; // Magnitude in DomainEvidence (STRONG / MODERATE / WEAK / VERY_STRONG)
   readonly planet?: Planet;
   readonly house?: number;
   readonly relatedEvidenceIds?: readonly string[];
@@ -60,7 +60,6 @@ export interface CreateCareerWealthEvidenceInput {
   };
   readonly evidenceFamily?: string;
   readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
-  readonly metadata?: Record<string, unknown>;
 }
 
 /**
@@ -81,7 +80,7 @@ export function createCareerWealthEvidence(
 
   const domainEvidence = createDomainEvidence({
     id: provenance.evidenceId,
-    sourceType: input.sourceType,
+    sourceType: input.sourceType ?? 'OTHER',
     domain: provenance.domain as DomainId,
     role: input.role,
     phase: input.phase,
@@ -98,8 +97,7 @@ export function createCareerWealthEvidence(
     evidenceFamily: input.evidenceFamily,
     dimension: input.dimension,
     planet: input.planet,
-    house: input.house,
-    metadata: input.metadata
+    house: input.house
   });
 
   return domainEvidence as CareerWealthEvidence;
