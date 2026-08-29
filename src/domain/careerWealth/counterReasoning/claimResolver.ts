@@ -91,7 +91,14 @@ export function resolveClaim(params: ResolveClaimParams): CounterReasoningClaim 
     }
   }
 
-  // Derive assertedOutcome from keywords
+  // CW-07A resolves exactly ONE asserted outcome per claim.
+  // Precedence order is deterministic: DELAY > LOSS > OBSTACLE > VOLATILITY > PROMOTION > GROWTH > CHALLENGE > SUPPORT (default).
+  // Multi-outcome propositions are a documented limitation deferred to CW-07B.
+  //
+  // NOTE & LIMITATION (CW-07A):
+  // Keyword-based outcome derivation below does not yet parse syntactic negation (e.g. "not getting promotion",
+  // "how can I avoid losses", "why is there no delay"). Negation awareness and explicit assertionMode ('AFFIRM' | 'DENY')
+  // are deferred to CW-07B.
   let assertedOutcome: CounterReasoningOutcome = 'SUPPORT';
   if (/\b(delay|delays|delayed|delaying)\b/i.test(question)) {
     assertedOutcome = 'DELAY';

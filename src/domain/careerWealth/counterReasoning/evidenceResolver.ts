@@ -7,6 +7,11 @@ import type {
 } from './counterReasoningTypes';
 import { resolveGraphContext } from './reasoningGraphResolver';
 
+/**
+ * NOTE (CW-07A): supportingEvidenceIds and challengingEvidenceIds represent graph-edge classification,
+ * not proposition-level semantic alignment.
+ * These evidence buckets are retained for backward compatibility with graph topology inspection.
+ */
 const SUPPORTING_EDGE_TYPES = new Set(['SUPPORTS', 'CONFIRMS', 'ACTIVATES', 'MANIFESTS']);
 const CHALLENGING_EDGE_TYPES = new Set(['CHALLENGES', 'CONTRADICTS']);
 

@@ -100,5 +100,73 @@ describe('claimResolver (CW-07)', () => {
     expect(delayClaim.assertedPolarity).toBe('CHALLENGE');
     expect(delayClaim.assertedOutcome).toBe('DELAY');
   });
+
+  describe('Keyword regression tests for assertedOutcome (Concern #13)', () => {
+    it('maps career growth to GROWTH', () => {
+      const claim = resolveClaim({
+        domain: 'CAREER',
+        question: 'Will this period bring career growth?'
+      });
+      expect(claim.assertedOutcome).toBe('GROWTH');
+    });
+
+    it('maps career promotion to PROMOTION', () => {
+      const claim = resolveClaim({
+        domain: 'CAREER',
+        question: 'Is a career promotion supported by the chart?'
+      });
+      expect(claim.assertedOutcome).toBe('PROMOTION');
+    });
+
+    it('maps wealth loss to LOSS', () => {
+      const claim = resolveClaim({
+        domain: 'WEALTH',
+        question: 'Will I suffer wealth loss during this dasha?'
+      });
+      expect(claim.assertedOutcome).toBe('LOSS');
+    });
+
+    it('maps financial volatility to VOLATILITY', () => {
+      const claim = resolveClaim({
+        domain: 'WEALTH',
+        question: 'Does the chart indicate financial volatility?'
+      });
+      expect(claim.assertedOutcome).toBe('VOLATILITY');
+    });
+
+    it('maps career obstacle to OBSTACLE', () => {
+      const claim = resolveClaim({
+        domain: 'CAREER',
+        question: 'What is the main career obstacle?'
+      });
+      expect(claim.assertedOutcome).toBe('OBSTACLE');
+    });
+  });
+
+  describe('Deterministic Precedence Contract (CW-07A Issue #1)', () => {
+    it('resolves multi-outcome "delay and financial loss" to DELAY (DELAY > LOSS)', () => {
+      const claim = resolveClaim({
+        domain: 'WEALTH',
+        question: 'Will this Dasha cause delay and financial loss?'
+      });
+      expect(claim.assertedOutcome).toBe('DELAY');
+    });
+
+    it('resolves "promotion but also obstacles" to OBSTACLE (OBSTACLE > PROMOTION)', () => {
+      const claim = resolveClaim({
+        domain: 'CAREER',
+        question: 'Can this period create promotion but also obstacles?'
+      });
+      expect(claim.assertedOutcome).toBe('OBSTACLE');
+    });
+
+    it('resolves "career growth despite challenges" to GROWTH (GROWTH > CHALLENGE)', () => {
+      const claim = resolveClaim({
+        domain: 'CAREER',
+        question: 'Will this create career growth despite challenges?'
+      });
+      expect(claim.assertedOutcome).toBe('GROWTH');
+    });
+  });
 });
 

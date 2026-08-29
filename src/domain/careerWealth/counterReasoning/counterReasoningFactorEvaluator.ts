@@ -9,18 +9,28 @@ import type {
 import { resolveEdgeSemantic, resolveOutcomePolarity } from './counterReasoningSemantics';
 
 /**
- * Evaluates the alignment of a single factor against the claim's asserted outcome.
+ * Evaluates the RAW DOMAIN RELATION of a single factor against the claim's asserted outcome.
+ *
+ * Contract:
+ * - Returns ALIGNS, OPPOSES, or NEUTRAL based on whether the factor's intrinsic astrological nature
+ *   directly aligns with or opposes the domain outcome.
+ * - This evaluates raw domain directionality WITHOUT proposition-level polarity inversion.
+ * - For proposition-aware evaluation (which inverts polarity when the proposition itself is negative,
+ *   e.g. asking about DELAY/LOSS), use evaluatePropositionFactor() instead.
  *
  * Rules (CW-07 Spec Section 10):
  * 1. Missing or UNKNOWN asserted outcome -> NEUTRAL alignment.
  * 2. ACTIVATION or MODIFICATION edge semantics represent domain activation/modulation
  *    and do not prove or disprove a specific outcome -> NEUTRAL alignment.
- * 3. Otherwise:
+ * 3. MANIFESTS edge type:
+ *    - If assertedOutcome === 'MANIFESTATION' and factor.relation === 'SUPPORT' -> ALIGNS
+ *    - For other outcomes -> NEUTRAL alignment.
+ * 4. Otherwise:
  *    - factor.relation === 'SUPPORT' -> ALIGNS
  *    - factor.relation === 'CHALLENGE' -> OPPOSES
  *    - otherwise -> NEUTRAL
  */
-export function evaluateFactor(
+export function evaluateFactorRelation(
   factor: CounterReasoningFactor,
   claim: CounterReasoningClaim
 ): EvaluatedCounterReasoningFactor {
@@ -32,6 +42,18 @@ export function evaluateFactor(
       relation: factor.relation,
       alignment: 'NEUTRAL',
       reason: 'No specific outcome asserted to align or oppose.'
+    };
+  }
+
+  if (factor.edgeType === 'MANIFESTS') {
+    // Note (CW-07A): MANIFESTS indicates domain manifestation; outcome-specific MANIFESTS handling is deferred to CW-07B.
+    return {
+      evidenceId: factor.evidenceId,
+      edgeType: factor.edgeType,
+      explanation: factor.explanation,
+      relation: factor.relation,
+      alignment: 'NEUTRAL',
+      reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
     };
   }
 
@@ -72,17 +94,26 @@ export function evaluateFactor(
 }
 
 /**
- * Evaluates a factor with respect to the user's proposition, taking into account
- * the asserted outcome's polarity (CW-07 Spec Section 14-15 with polarity correction).
+ * @deprecated Use evaluateFactorRelation instead.
+ */
+export const evaluateFactor = evaluateFactorRelation;
+
+/**
+ * Evaluates a factor with respect to the USER'S PROPOSITION (PROPOSITION SEMANTICS),
+ * taking into account the asserted outcome's polarity (CW-07 Spec Section 14-15 with polarity correction).
  *
- * Polarity awareness:
- * - If assertedOutcome has NEGATIVE polarity (e.g. DELAY, OBSTACLE, CHALLENGE, LOSS):
- *   A CHALLENGE edge in the graph represents friction/obstacle, which SUPPORTS the negative proposition.
- *   A SUPPORT edge in the graph represents strength/smoothness, which OPPOSES the negative proposition.
- * - If assertedOutcome has POSITIVE or NEUTRAL polarity (e.g. SUPPORT, GROWTH, PROMOTION):
- *   A SUPPORT edge in the graph SUPPORTS the positive proposition.
- *   A CHALLENGE edge in the graph OPPOSES the positive proposition.
- * - ACTIVATION / MODIFICATION edges remain NEUTRAL (ACTIVATION is not proof of delay or loss).
+ * Contract:
+ * - Returns SUPPORTS_PROPOSITION, OPPOSES_PROPOSITION, or NEUTRAL.
+ * - Polarity inversion:
+ *   - When the user asks a negative proposition (e.g. DELAY, OBSTACLE, CHALLENGE, LOSS):
+ *     A CHALLENGE edge in the graph represents friction/obstacle, which SUPPORTS_PROPOSITION.
+ *     A SUPPORT / CONFIRMS edge in the graph represents strength/smoothness, which OPPOSES_PROPOSITION.
+ *   - When the user asks a positive proposition (e.g. SUPPORT, GROWTH, PROMOTION, STABILITY, MANIFESTATION):
+ *     A SUPPORT / CONFIRMS edge in the graph SUPPORTS_PROPOSITION.
+ *     A CHALLENGE edge in the graph OPPOSES_PROPOSITION.
+ * - Special edge semantics:
+ *   - ACTIVATES / MODIFIES: Domain activation/modulation is NEUTRAL with respect to specific outcomes.
+ *   - MANIFESTS: Resolves to NEUTRAL in CW-07A even when assertedOutcome is MANIFESTATION.
  *
  * Note: full proposition-reversal via claim polarity for negated propositions (assertionMode: 'DENY')
  * is deferred to CW-07B since claimResolver does not yet parse explicit deny/affirm modes.
@@ -105,6 +136,21 @@ export function evaluatePropositionFactor(
     };
   }
 
+  // Handle MANIFESTS edge specifically
+  if (factor.edgeType === 'MANIFESTS') {
+    // Note (CW-07A): MANIFESTS edge with assertedOutcome 'MANIFESTATION' yields NEUTRAL in CW-07A.
+    // Outcome-specific MANIFESTS handling is deferred to CW-07B.
+    return {
+      evidenceId: factor.evidenceId,
+      edgeType: factor.edgeType,
+      explanation: factor.explanation,
+      relation: factor.relation,
+      edgeSemantic,
+      propositionAlignment: 'NEUTRAL',
+      reason: `${factor.edgeType} indicates domain manifestation. This relationship alone does not establish the asserted outcome.`
+    };
+  }
+
   if (edgeSemantic === 'ACTIVATION' || edgeSemantic === 'MODIFICATION') {
     return {
       evidenceId: factor.evidenceId,
@@ -122,6 +168,9 @@ export function evaluatePropositionFactor(
   let reason: string;
 
   if (polarity === 'NEGATIVE') {
+    // Note (CW-07A): A CHALLENGE-relation factor currently supports ANY negative proposition (DELAY/LOSS/OBSTACLE/VOLATILITY)
+    // because polarity is coarse-grained; outcome-specific evidence semantics (e.g. factor.outcomes = ['DELAY'] distinguishing
+    // DELAY from LOSS) are deferred to CW-07B.
     if (factor.relation === 'CHALLENGE') {
       propositionAlignment = 'SUPPORTS_PROPOSITION';
       reason = 'Factor indicates challenge or friction, which supports the negative proposition.';
