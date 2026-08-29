@@ -9,7 +9,8 @@ describe('counterReasoningValidator (CW-07)', () => {
       question: 'Why is career strong?',
       questionType: 'WHY',
       targetSubjectKey: 'FINAL_SYNTHESIS',
-      polarity: 'SUPPORT'
+      polarity: 'SUPPORT',
+      assertedPolarity: 'SUPPORT'
     },
     disposition: 'CONFIRMED',
     conclusionChanged: false,
