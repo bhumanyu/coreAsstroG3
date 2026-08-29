@@ -292,6 +292,33 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       const result = evaluatePropositionFactor(factor, unknownOutcomeClaim);
       expect(result.propositionAlignment).toBe('NEUTRAL');
     });
+
+    it('CW-07A treats all NEGATIVE outcomes as one coarse class (outcome-specificity deferred to CW-07B)', () => {
+      const negativeOutcomes: CounterReasoningOutcome[] = ['LOSS', 'OBSTACLE', 'DELAY', 'VOLATILITY'];
+
+      const factor: CounterReasoningFactor = {
+        evidenceId: 'EV_GENERIC_CHALLENGE',
+        edgeType: 'CHALLENGES',
+        explanation: 'Generic chart friction factor',
+        relation: 'CHALLENGE'
+      };
+
+      negativeOutcomes.forEach((outcome) => {
+        const claim: CounterReasoningClaim = {
+          domain: 'CAREER',
+          question: `Will this cause ${outcome}?`,
+          questionType: 'WHY',
+          targetSubjectKey: 'CAREER_OUTCOME',
+          polarity: 'CHALLENGE',
+          assertedPolarity: 'CHALLENGE',
+          assertedOutcome: outcome
+        };
+
+        const result = evaluatePropositionFactor(factor, claim);
+        expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
+        expect(result.edgeSemantic).toBe('CHALLENGE');
+      });
+    });
   });
 
   describe('Semantic Truth-Table Test Suite (CW-07A Issue #15)', () => {

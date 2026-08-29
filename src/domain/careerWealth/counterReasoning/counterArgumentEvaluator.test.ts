@@ -228,5 +228,57 @@ describe('counterArgumentEvaluator (CW-07)', () => {
       expect(res.evaluatedFactors.length).toBe(1);
       expect(res.rebuttal).toContain('confirm FINAL_SYNTHESIS');
     });
+
+    it('ignores deprecated supportingEvidenceIds and challengingEvidenceIds when factors is empty', () => {
+      const res = evaluateCounterArgument({
+        claim: neutralClaim,
+        factors: [],
+        supportingEvidenceIds: ['EV_1'],
+        challengingEvidenceIds: []
+      });
+
+      expect(res.disposition).toBe('INSUFFICIENT_EVIDENCE');
+      expect(res.evaluatedFactors).toEqual([]);
+    });
+
+    it('handles CONTRADICTS edge against positive claim: OPPOSES_PROPOSITION and REJECTED disposition', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_CONTRADICT_1',
+          edgeType: 'CONTRADICTS',
+          explanation: 'Chart feature contradicts positive manifestation',
+          relation: 'CHALLENGE'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        claim: neutralClaim,
+        factors
+      });
+
+      expect(res.disposition).toBe('REJECTED');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('OPPOSES_PROPOSITION');
+      expect(res.evaluatedFactors[0].edgeSemantic).toBe('CHALLENGE');
+    });
+
+    it('handles CONTRADICTS edge against DELAY claim: SUPPORTS_PROPOSITION and CONFIRMED disposition', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_CONTRADICT_1',
+          edgeType: 'CONTRADICTS',
+          explanation: 'Chart feature contradicts smooth timing, creating friction',
+          relation: 'CHALLENGE'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        claim: delayClaim,
+        factors
+      });
+
+      expect(res.disposition).toBe('CONFIRMED');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('SUPPORTS_PROPOSITION');
+      expect(res.evaluatedFactors[0].edgeSemantic).toBe('CHALLENGE');
+    });
   });
 });

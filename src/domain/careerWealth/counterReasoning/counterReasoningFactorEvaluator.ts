@@ -22,9 +22,7 @@ import { resolveEdgeSemantic, resolveOutcomePolarity } from './counterReasoningS
  * 1. Missing or UNKNOWN asserted outcome -> NEUTRAL alignment.
  * 2. ACTIVATION or MODIFICATION edge semantics represent domain activation/modulation
  *    and do not prove or disprove a specific outcome -> NEUTRAL alignment.
- * 3. MANIFESTS edge type:
- *    - If assertedOutcome === 'MANIFESTATION' and factor.relation === 'SUPPORT' -> ALIGNS
- *    - For other outcomes -> NEUTRAL alignment.
+ * 3. MANIFESTS edge type: CW-07A treats MANIFESTS as NEUTRAL for proposition alignment; outcome-specific manifestation alignment is deferred to CW-07B.
  * 4. Otherwise:
  *    - factor.relation === 'SUPPORT' -> ALIGNS
  *    - factor.relation === 'CHALLENGE' -> OPPOSES
@@ -94,13 +92,17 @@ export function evaluateFactorRelation(
 }
 
 /**
- * @deprecated Use evaluateFactorRelation instead.
+ * @deprecated Use evaluateFactorRelation or evaluatePropositionFactor instead.
+ * - evaluateFactorRelation: evaluates raw astrological/domain relation semantics (ALIGNS/OPPOSES/NEUTRAL).
+ * - evaluatePropositionFactor: evaluates user-proposition semantics with polarity awareness (SUPPORTS_PROPOSITION/OPPOSES_PROPOSITION/NEUTRAL).
  */
 export const evaluateFactor = evaluateFactorRelation;
 
 /**
  * Evaluates a factor with respect to the USER'S PROPOSITION (PROPOSITION SEMANTICS),
  * taking into account the asserted outcome's polarity (CW-07 Spec Section 14-15 with polarity correction).
+ *
+ * CW-07A: negative polarity establishes only generic negative proposition support; factor-specific outcome matching (DELAY != OBSTACLE != LOSS != VOLATILITY) is deferred to CW-07B.
  *
  * Contract:
  * - Returns SUPPORTS_PROPOSITION, OPPOSES_PROPOSITION, or NEUTRAL.
