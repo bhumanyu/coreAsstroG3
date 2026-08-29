@@ -1,6 +1,7 @@
 import type { ReasoningNodeDomain } from '../reasoningTrace/reasoningNode';
 import type {
   CounterReasoningClaim,
+  CounterReasoningOutcome,
   CounterReasoningQuestionType
 } from './counterReasoningTypes';
 import { classifyQuestion } from './questionClassifier';
@@ -91,11 +92,21 @@ export function resolveClaim(params: ResolveClaimParams): CounterReasoningClaim 
   }
 
   // Derive assertedOutcome from keywords
-  let assertedOutcome = 'SUPPORT';
+  let assertedOutcome: CounterReasoningOutcome = 'SUPPORT';
   if (/\b(delay|delays|delayed|delaying)\b/i.test(question)) {
     assertedOutcome = 'DELAY';
+  } else if (/\b(loss|losses|lose|losing|drain|drains|draining|depletion)\b/i.test(question)) {
+    assertedOutcome = 'LOSS';
+  } else if (/\b(obstacle|obstacles|blockage|blockages|barrier|barriers)\b/i.test(question)) {
+    assertedOutcome = 'OBSTACLE';
+  } else if (/\b(volatility|volatile|instability|unstable|fluctuation|fluctuations)\b/i.test(question)) {
+    assertedOutcome = 'VOLATILITY';
+  } else if (/\b(promotion|promotions|promote|promoted)\b/i.test(question)) {
+    assertedOutcome = 'PROMOTION';
+  } else if (/\b(growth|grow|growing|expansion)\b/i.test(question)) {
+    assertedOutcome = 'GROWTH';
   } else if (
-    /\b(weak|challenged|challenge|challenges|obstacle|obstacles|problem|problems|trouble|conflict|conflicts|friction|fail|failure|struggle|difficult|difficulty|lack)\b/i.test(question) ||
+    /\b(weak|weakness|challenged|challenge|challenges|problem|problems|trouble|troubles|conflict|conflicts|friction|fail|failure|struggle|struggles|difficult|difficulty|difficulties|lack)\b/i.test(question) ||
     questionType === 'WHY_NOT'
   ) {
     assertedOutcome = 'CHALLENGE';

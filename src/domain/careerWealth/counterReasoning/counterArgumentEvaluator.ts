@@ -2,8 +2,10 @@ import type {
   CounterReasoningClaim,
   CounterReasoningContext,
   CounterReasoningDisposition,
-  CounterReasoningFactor
+  CounterReasoningFactor,
+  CounterReasoningPropositionFactor
 } from './counterReasoningTypes';
+import { evaluatePropositionFactor } from './counterReasoningFactorEvaluator';
 
 export interface EvaluateCounterArgumentParams {
   readonly supportingEvidenceIds: readonly string[];
@@ -16,84 +18,84 @@ export interface EvaluateCounterArgumentParams {
 export interface EvaluateCounterArgumentResult {
   readonly disposition: CounterReasoningDisposition;
   readonly rebuttal: string;
+  readonly evaluatedFactors: readonly CounterReasoningPropositionFactor[];
 }
 
 /**
- * Evaluates counter-arguments against the resolved evidence and claim asserted polarity.
+ * Evaluates counter-arguments using deterministic semantic factor evaluation.
  *
- * Rules:
- * For CHALLENGE assertions (e.g. 'Is Dasha causing delays?'):
- * - Aligned evidence is challenging factors in the graph (challengeCount).
- * - Opposing evidence is supportive/activating factors in the graph (supportCount).
- * - challengeCount > 0 && supportCount === 0 -> CONFIRMED (challenge assertion is confirmed)
- * - challengeCount > 0 && supportCount > 0 -> PARTIALLY_CONFIRMED (friction exists alongside activation)
- * - challengeCount === 0 && supportCount > 0 -> INSUFFICIENT_EVIDENCE (delay/challenge claim is not supported; only activation/support present)
- * - challengeCount === 0 && supportCount === 0 -> INSUFFICIENT_EVIDENCE
- *
- * For SUPPORT / NEUTRAL propositions (e.g. 'Why is career strong?'):
- * - supportCount > 0 && challengeCount === 0 -> CONFIRMED
- * - supportCount > 0 && challengeCount > 0 -> PARTIALLY_CONFIRMED
- * - supportCount === 0 && challengeCount > 0 -> REJECTED
- * - supportCount === 0 && challengeCount === 0 -> INSUFFICIENT_EVIDENCE
- *
- * Note: Automatic conclusion reversal is strictly disallowed (conclusionChanged is immutable false).
+ * Rules (CW-07 Spec Section 19):
+ * 1. Each graph factor is mapped to a CounterReasoningPropositionFactor based on edge semantics and claim outcome polarity.
+ * 2. Factors are deterministically sorted by evidenceId then edgeType.
+ * 3. Dispositions are derived strictly from the presence (not magnitude) of supporting and opposing proposition factors:
+ *    - SUPPORTS_PROPOSITION > 0 && OPPOSES_PROPOSITION === 0 -> CONFIRMED
+ *    - SUPPORTS_PROPOSITION === 0 && OPPOSES_PROPOSITION > 0 -> REJECTED
+ *    - SUPPORTS_PROPOSITION > 0 && OPPOSES_PROPOSITION > 0 -> PARTIALLY_CONFIRMED
+ *    - SUPPORTS_PROPOSITION === 0 && OPPOSES_PROPOSITION === 0 -> INSUFFICIENT_EVIDENCE
+ * 4. Automatic conclusion reversal is strictly disallowed (conclusionChanged is immutable false).
  */
 export function evaluateCounterArgument(
   params: EvaluateCounterArgumentParams
 ): EvaluateCounterArgumentResult {
-  const { supportingEvidenceIds, challengingEvidenceIds, claim } = params;
+  const { claim, factors } = params;
 
-  const supportCount = supportingEvidenceIds.length;
-  const challengeCount = challengingEvidenceIds.length;
-
-  if (supportCount === 0 && challengeCount === 0) {
+  if (!factors || factors.length === 0) {
     return {
       disposition: 'INSUFFICIENT_EVIDENCE',
-      rebuttal: `No direct astrological evidence was identified in the reasoning graph for ${claim.targetSubjectKey}.`
+      rebuttal: `No direct astrological evidence was identified in the reasoning graph for ${claim.targetSubjectKey}.`,
+      evaluatedFactors: []
     };
   }
 
-  // Handle CHALLENGE assertions (question asserts delay, obstacle, or challenge)
-  if (claim.assertedPolarity === 'CHALLENGE') {
-    if (challengeCount > 0) {
-      if (supportCount > 0) {
-        return {
-          disposition: 'PARTIALLY_CONFIRMED',
-          rebuttal: `While ${challengeCount} challenge factor(s) introduce friction or delay for ${claim.targetSubjectKey}, ${supportCount} supportive factor(s) maintain activation.`
-        };
-      }
-      return {
-        disposition: 'CONFIRMED',
-        rebuttal: `${challengeCount} astrological counter-factor(s) confirm challenges or delays for ${claim.targetSubjectKey} with no unconstrained supportive factors found.`
-      };
-    }
+  // Evaluate each factor against the proposition and sort deterministically
+  const evaluatedFactors = factors
+    .map((factor) => evaluatePropositionFactor(factor, claim))
+    .sort((a, b) => {
+      const idCmp = a.evidenceId.localeCompare(b.evidenceId);
+      if (idCmp !== 0) return idCmp;
+      return a.edgeType.localeCompare(b.edgeType);
+    });
 
-    // challengeCount === 0 and supportCount > 0:
-    // User asserted a challenge/delay, but graph only has ACTIVATES / SUPPORTS
-    return {
-      disposition: 'INSUFFICIENT_EVIDENCE',
-      rebuttal: `No astrological challenge or delay factors were identified in the reasoning graph for ${claim.targetSubjectKey}; active factors indicate supportive or activating planetary influences.`
-    };
+  let supportsCount = 0;
+  let opposesCount = 0;
+
+  for (const factor of evaluatedFactors) {
+    if (factor.propositionAlignment === 'SUPPORTS_PROPOSITION') {
+      supportsCount++;
+    } else if (factor.propositionAlignment === 'OPPOSES_PROPOSITION') {
+      opposesCount++;
+    }
   }
 
-  // Handle SUPPORT / NEUTRAL propositions
-  if (supportCount > 0) {
-    if (challengeCount > 0) {
-      return {
-        disposition: 'PARTIALLY_CONFIRMED',
-        rebuttal: `While ${supportCount} astrological factor(s) support ${claim.targetSubjectKey}, ${challengeCount} challenge factor(s) present active friction or qualification.`
-      };
-    }
+  if (supportsCount > 0 && opposesCount === 0) {
     return {
       disposition: 'CONFIRMED',
-      rebuttal: `${supportCount} astrological factor(s) confirm ${claim.targetSubjectKey} with no counter-evidence found in the reasoning graph.`
+      rebuttal: `${supportsCount} astrological factor(s) confirm ${claim.targetSubjectKey} with no opposing factors found in the reasoning graph.`,
+      evaluatedFactors
     };
   }
 
-  // supportCount === 0 and challengeCount > 0
+  if (supportsCount > 0 && opposesCount > 0) {
+    return {
+      disposition: 'PARTIALLY_CONFIRMED',
+      rebuttal: `While ${supportsCount} astrological factor(s) support the proposition for ${claim.targetSubjectKey}, ${opposesCount} factor(s) present active qualification or friction.`,
+      evaluatedFactors
+    };
+  }
+
+  if (supportsCount === 0 && opposesCount > 0) {
+    return {
+      disposition: 'REJECTED',
+      rebuttal: `No supportive astrological evidence was found for ${claim.targetSubjectKey}; ${opposesCount} counter-factor(s) challenge this proposition.`,
+      evaluatedFactors
+    };
+  }
+
   return {
-    disposition: 'REJECTED',
-    rebuttal: `No supportive astrological evidence was found for ${claim.targetSubjectKey}; ${challengeCount} counter-factor(s) challenge this proposition.`
+    disposition: 'INSUFFICIENT_EVIDENCE',
+    rebuttal: `No direct confirming or opposing astrological factors were identified in the reasoning graph for ${claim.targetSubjectKey}; active factors provide general activation or modification without establishing the asserted outcome.`,
+    evaluatedFactors
   };
 }
+
 

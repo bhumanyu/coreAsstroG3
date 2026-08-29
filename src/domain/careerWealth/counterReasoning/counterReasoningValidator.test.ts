@@ -16,6 +16,7 @@ describe('counterReasoningValidator (CW-07)', () => {
     conclusionChanged: false,
     supportingEvidenceIds: ['EV_1', 'EV_2'],
     challengingEvidenceIds: ['EV_3'],
+    evaluatedFactors: [],
     rebuttal: 'Valid rebuttal',
     guardrailApplied: false,
     guardrailReasons: []
@@ -78,5 +79,21 @@ describe('counterReasoningValidator (CW-07)', () => {
         challengingEvidenceIds: ['EV_SHARED']
       })
     ).toThrow(/cannot be in both supporting and challenging sets/);
+  });
+
+  it('validates evaluatedFactors is an array if present', () => {
+    expect(() =>
+      validateCounterReasoning({
+        ...validOutput,
+        evaluatedFactors: []
+      })
+    ).not.toThrow();
+
+    expect(() =>
+      validateCounterReasoning({
+        ...validOutput,
+        evaluatedFactors: 'not-an-array' as any
+      })
+    ).toThrow(/evaluatedFactors must be an array/);
   });
 });

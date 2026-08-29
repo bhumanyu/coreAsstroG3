@@ -20,6 +20,10 @@ export function validateCounterReasoning(output: CounterReasoningOutput): void {
     throw new Error('conclusionChanged must strictly be false (immutable conclusion invariant)');
   }
 
+  if (output.evaluatedFactors !== undefined && !Array.isArray(output.evaluatedFactors)) {
+    throw new Error('evaluatedFactors must be an array');
+  }
+
   // Validate duplicate supporting IDs
   const supportingSet = new Set<string>();
   for (const id of output.supportingEvidenceIds) {

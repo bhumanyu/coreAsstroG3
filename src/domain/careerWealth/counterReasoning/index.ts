@@ -1,4 +1,6 @@
 export * from './counterReasoningTypes';
+export * from './counterReasoningSemantics';
+export * from './counterReasoningFactorEvaluator';
 export * from './questionClassifier';
 export * from './claimResolver';
 export * from './reasoningGraphResolver';

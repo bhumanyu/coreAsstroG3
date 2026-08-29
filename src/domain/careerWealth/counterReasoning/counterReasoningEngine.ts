@@ -72,6 +72,7 @@ export function evaluateCounterReasoning(
       conclusionChanged: false,
       supportingEvidenceIds: [],
       challengingEvidenceIds: [],
+      evaluatedFactors: [],
       rebuttal: "Counterfactual 'what-if' scenarios are not supported in deterministic chart evaluation.",
       guardrailApplied: true,
       guardrailReasons: ['CW-07: What-if scenarios cannot alter deterministic birth chart facts.']
@@ -89,6 +90,7 @@ export function evaluateCounterReasoning(
       conclusionChanged: false,
       supportingEvidenceIds: [],
       challengingEvidenceIds: [],
+      evaluatedFactors: [],
       rebuttal: `Target subject key '${claim.targetSubjectKey}' could not be matched in the reasoning graph.`,
       guardrailApplied: true,
       guardrailReasons: ['CW-07: Unknown or unrepresented subject key in graph topology.']
@@ -125,6 +127,7 @@ export function evaluateCounterReasoning(
     conclusionChanged: false,
     supportingEvidenceIds: evidenceRes.supportingEvidenceIds,
     challengingEvidenceIds: evidenceRes.challengingEvidenceIds,
+    evaluatedFactors: evalRes.evaluatedFactors,
     rebuttal: evalRes.rebuttal,
     guardrailApplied: guardrailRes.guardrailApplied,
     guardrailReasons: guardrailRes.guardrailReasons

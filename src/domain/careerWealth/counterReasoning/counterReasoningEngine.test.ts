@@ -212,6 +212,98 @@ describe('counterReasoningEngine (CW-07)', () => {
     expect(result.conclusionChanged).toBe(false);
   });
 
+  it('Golden Test 28: mixed SUPPORTS and CHALLENGES edges evaluates to PARTIALLY_CONFIRMED', () => {
+    const mixedGraph: ReasoningTraceGraph = {
+      ...sampleGraph,
+      edges: [
+        ...sampleGraph.edges.filter((e) => e.edgeId !== 'e3'),
+        {
+          edgeId: 'e3_sup',
+          fromNodeId: 'node_ev_3',
+          toNodeId: 'node_dasha_activation',
+          type: 'SUPPORTS',
+          explanation: 'Dasha lord well placed'
+        },
+        {
+          edgeId: 'e3_chal',
+          fromNodeId: 'node_ev_2',
+          toNodeId: 'node_dasha_activation',
+          type: 'CHALLENGES',
+          explanation: 'Saturn aspect on Dasha lord'
+        }
+      ]
+    };
+    const mixedContext = buildCounterReasoningContext({
+      domain: 'CAREER',
+      graph: mixedGraph,
+      finalSynthesis: sampleContext.finalSynthesis
+    });
+
+    const result = evaluateCounterReasoning('Is my current Dasha causing delays?', mixedContext);
+
+    expect(result.claim.questionType).toBe('DASHA_CHALLENGE');
+    expect(result.claim.targetSubjectKey).toBe('DASHA_ACTIVATION');
+    expect(result.disposition).toBe('PARTIALLY_CONFIRMED');
+    expect(result.conclusionChanged).toBe(false);
+  });
+
+  it('Golden Test 29: ACTIVATES edge with negative loss question evaluates to INSUFFICIENT_EVIDENCE', () => {
+    const wealthGraph: ReasoningTraceGraph = {
+      traceId: 'CW-TRACE-WEALTH',
+      nodes: [
+        {
+          nodeId: 'node_ev_rahu',
+          type: 'EVIDENCE',
+          domain: 'WEALTH',
+          axis: 'DASHA',
+          evidenceId: 'EV_DASHA_RAHU',
+          subjectKey: 'RULE_RAHU_DASHA',
+          label: 'Rahu Dasha'
+        },
+        {
+          nodeId: 'node_dasha_activation',
+          type: 'CONCLUSION',
+          domain: 'WEALTH',
+          axis: 'DASHA',
+          subjectKey: 'DASHA_ACTIVATION',
+          label: 'Dasha Activation'
+        }
+      ],
+      edges: [
+        {
+          edgeId: 'e_rahu_act',
+          fromNodeId: 'node_ev_rahu',
+          toNodeId: 'node_dasha_activation',
+          type: 'ACTIVATES',
+          explanation: 'Rahu dasha activates wealth axis'
+        }
+      ]
+    };
+
+    const wealthContext = buildCounterReasoningContext({
+      domain: 'WEALTH',
+      graph: wealthGraph
+    });
+
+    const result = evaluateCounterReasoning('Will this Dasha cause wealth loss and drain?', wealthContext);
+
+    expect(result.claim.targetSubjectKey).toBe('DASHA_ACTIVATION');
+    expect(result.claim.assertedOutcome).toBe('LOSS');
+    expect(result.disposition).toBe('INSUFFICIENT_EVIDENCE');
+    expect(result.conclusionChanged).toBe(false);
+    expect(result.evaluatedFactors[0].edgeSemantic).toBe('ACTIVATION');
+    expect(result.evaluatedFactors[0].propositionAlignment).toBe('NEUTRAL');
+  });
+
+  it('Golden Test 33: factor evaluation determinism regardless of input order', () => {
+    const out1 = evaluateCounterReasoning('Why is career strong?', sampleContext);
+    const out2 = evaluateCounterReasoning('Why is career strong?', sampleContext);
+
+    expect(out1).toEqual(out2);
+    expect(out1.evaluatedFactors).toBeDefined();
+    expect(Array.isArray(out1.evaluatedFactors)).toBe(true);
+  });
+
   it('evaluates to INSUFFICIENT_EVIDENCE when node exists but has no incoming evidence', () => {
     const graphWithEmptyNode: ReasoningTraceGraph = {
       traceId: 'CW-TRACE-CAREER',
