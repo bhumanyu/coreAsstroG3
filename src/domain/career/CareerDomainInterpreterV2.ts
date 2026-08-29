@@ -91,8 +91,8 @@ import {
   ReasoningTraceBuilder,
   validateEvidenceNodes,
   validateReasoningTrace,
-  mapAxisStatusToEdgeType,
   mapActivationStatusToEdgeType,
+  mapTimingStatusToEdgeType,
   mapDivisionalRelationshipToEdgeType,
   mapManifestationStatusToEdgeType,
   mapPromiseStatusToEdgeType,
@@ -675,8 +675,8 @@ export function buildCareerReasoningTraceGraph(params: {
     }
   }
 
-  // Natal -> Final: derived from params.careerFinalSynthesis.promiseStatus (falling back to natalStrength if unpopulated)
-  const natalEdgeType = mapPromiseStatusToEdgeType(params.careerFinalSynthesis.promiseStatus ?? params.natalStrength);
+  // Natal -> Final: derived from params.careerFinalSynthesis.promiseStatus
+  const natalEdgeType = mapPromiseStatusToEdgeType(params.careerFinalSynthesis.promiseStatus);
   if (natalEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: natalNodeId,
@@ -698,7 +698,7 @@ export function buildCareerReasoningTraceGraph(params: {
   }
 
   // Timing -> Final: derived from params.careerFinalSynthesis.timingStatus
-  const timingEdgeType = mapAxisStatusToEdgeType(params.careerFinalSynthesis.timingStatus);
+  const timingEdgeType = mapTimingStatusToEdgeType(params.careerFinalSynthesis.timingStatus);
   if (timingEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: timingNodeId,
@@ -709,7 +709,7 @@ export function buildCareerReasoningTraceGraph(params: {
   }
 
   // Divisional -> Final: derived from params.careerFinalSynthesis.divisionalStatus
-  const d10EdgeType = mapDivisionalRelationshipToEdgeType(params.careerFinalSynthesis.divisionalStatus ?? params.d10Relationship);
+  const d10EdgeType = mapDivisionalRelationshipToEdgeType(params.careerFinalSynthesis.divisionalStatus);
   if (d10EdgeType) {
     traceBuilder.addEdge({
       fromNodeId: divisionalNodeId,

@@ -90,8 +90,8 @@ import {
   ReasoningTraceBuilder,
   validateEvidenceNodes,
   validateReasoningTrace,
-  mapAxisStatusToEdgeType,
   mapActivationStatusToEdgeType,
+  mapTimingStatusToEdgeType,
   mapDivisionalRelationshipToEdgeType,
   mapManifestationStatusToEdgeType,
   mapPromiseStatusToEdgeType,
@@ -726,7 +726,7 @@ export function buildWealthReasoningTraceGraph(params: {
   }
 
   // Natal -> Final: derived from params.wealthFinalSynthesis.promiseStatus
-  const natalEdgeType = mapPromiseStatusToEdgeType(params.wealthFinalSynthesis.promiseStatus ?? params.overallStatus);
+  const natalEdgeType = mapPromiseStatusToEdgeType(params.wealthFinalSynthesis.promiseStatus);
   if (natalEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: natalNodeId,
@@ -748,7 +748,7 @@ export function buildWealthReasoningTraceGraph(params: {
   }
 
   // Timing -> Final: derived from params.wealthFinalSynthesis.timingStatus
-  const timingEdgeType = mapAxisStatusToEdgeType(params.wealthFinalSynthesis.timingStatus);
+  const timingEdgeType = mapTimingStatusToEdgeType(params.wealthFinalSynthesis.timingStatus);
   if (timingEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: timingNodeId,
@@ -759,7 +759,7 @@ export function buildWealthReasoningTraceGraph(params: {
   }
 
   // Divisional -> Final: derived from params.wealthFinalSynthesis.divisionalStatus
-  const d2EdgeType = mapDivisionalRelationshipToEdgeType(params.wealthFinalSynthesis.divisionalStatus ?? params.d2Relationship);
+  const d2EdgeType = mapDivisionalRelationshipToEdgeType(params.wealthFinalSynthesis.divisionalStatus);
   if (d2EdgeType) {
     traceBuilder.addEdge({
       fromNodeId: divisionalNodeId,

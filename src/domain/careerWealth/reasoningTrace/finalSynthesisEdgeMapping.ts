@@ -4,111 +4,134 @@ import type {
   FinalDomainStatus
 } from '../finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { VargaRelationship } from '../../interpretation/DomainInterpretationTypes';
-import type { DomainStrength } from '../../reasoning/reasoningTypes';
 
 /**
- * Maps a general synthesis axis status (SUPPORT/CHALLENGE) to a ReasoningEdgeType.
- * Returns undefined for NEUTRAL, INSUFFICIENT_DATA, MIXED, or unhandled values (no edge emitted).
+ * Maps a natal promise status to a ReasoningEdgeType for the Natal -> Final edge.
+ * VERY_STRONG / STRONG / MODERATE -> 'SUPPORTS'
+ * CHALLENGED -> 'CHALLENGES'
+ * MIXED / INSUFFICIENT_DATA -> undefined (no edge emitted)
  */
-export function mapAxisStatusToEdgeType(
-  status: SynthesisAxisStatus | string | undefined
+export function mapPromiseStatusToEdgeType(
+  status: FinalDomainStatus
 ): ReasoningEdgeType | undefined {
-  if (!status) return undefined;
-  const upper = status.toUpperCase();
-  if (upper === 'SUPPORT') {
-    return 'SUPPORTS';
+  switch (status) {
+    case 'VERY_STRONG':
+    case 'STRONG':
+    case 'MODERATE':
+      return 'SUPPORTS';
+    case 'CHALLENGED':
+      return 'CHALLENGES';
+    case 'MIXED':
+    case 'INSUFFICIENT_DATA':
+      return undefined;
+    default: {
+      const _exhaustive: never = status;
+      return undefined;
+    }
   }
-  if (upper === 'CHALLENGE') {
-    return 'CHALLENGES';
-  }
-  return undefined;
 }
 
 /**
  * Maps an activation synthesis axis status (e.g. Dasha activation) to a ReasoningEdgeType.
- * Returns ACTIVATES for SUPPORT, CHALLENGES for CHALLENGE, and undefined otherwise.
+ * SUPPORT -> 'ACTIVATES'
+ * CHALLENGE -> 'CHALLENGES'
+ * MIXED -> 'MODIFIES'
+ * NEUTRAL / INSUFFICIENT_DATA -> undefined
  */
 export function mapActivationStatusToEdgeType(
-  activationStatus: SynthesisAxisStatus | string | undefined
+  status: SynthesisAxisStatus
 ): ReasoningEdgeType | undefined {
-  if (!activationStatus) return undefined;
-  const upper = activationStatus.toUpperCase();
-  if (upper === 'SUPPORT' || upper === 'ACTIVE') {
-    return 'ACTIVATES';
+  switch (status) {
+    case 'SUPPORT':
+      return 'ACTIVATES';
+    case 'CHALLENGE':
+      return 'CHALLENGES';
+    case 'MIXED':
+      return 'MODIFIES';
+    case 'NEUTRAL':
+    case 'INSUFFICIENT_DATA':
+      return undefined;
+    default: {
+      const _exhaustive: never = status;
+      return undefined;
+    }
   }
-  if (upper === 'CHALLENGE' || upper === 'INACTIVE') {
-    return 'CHALLENGES';
+}
+
+/**
+ * Maps a timing synthesis axis status (e.g. Transit trigger) to a ReasoningEdgeType.
+ * SUPPORT -> 'ACTIVATES'
+ * CHALLENGE -> 'CHALLENGES'
+ * MIXED -> 'MODIFIES'
+ * NEUTRAL / INSUFFICIENT_DATA -> undefined
+ */
+export function mapTimingStatusToEdgeType(
+  status: SynthesisAxisStatus
+): ReasoningEdgeType | undefined {
+  switch (status) {
+    case 'SUPPORT':
+      return 'ACTIVATES';
+    case 'CHALLENGE':
+      return 'CHALLENGES';
+    case 'MIXED':
+      return 'MODIFIES';
+    case 'NEUTRAL':
+    case 'INSUFFICIENT_DATA':
+      return undefined;
+    default: {
+      const _exhaustive: never = status;
+      return undefined;
+    }
   }
-  return undefined;
 }
 
 /**
  * Maps a divisional relationship (D10 / D2) to a ReasoningEdgeType.
- * CONFIRMS / PARTIALLY_CONFIRMS -> CONFIRMS
- * CONFLICTS / CONFLICTING -> CHALLENGES
- * NEUTRAL / UNAVAILABLE / undefined -> undefined (no edge emitted)
+ * CONFIRMS / PARTIALLY_CONFIRMS -> 'CONFIRMS'
+ * CONFLICTS -> 'CHALLENGES'
+ * MODIFIES / UNAVAILABLE -> undefined (no edge emitted)
  */
 export function mapDivisionalRelationshipToEdgeType(
-  rel: VargaRelationship | string | undefined
+  rel: VargaRelationship
 ): ReasoningEdgeType | undefined {
-  if (!rel) return undefined;
-  const upper = rel.toUpperCase();
-  if (upper === 'CONFIRMS' || upper === 'PARTIALLY_CONFIRMS') {
-    return 'CONFIRMS';
+  switch (rel) {
+    case 'CONFIRMS':
+    case 'PARTIALLY_CONFIRMS':
+      return 'CONFIRMS';
+    case 'CONFLICTS':
+      return 'CHALLENGES';
+    case 'MODIFIES':
+    case 'UNAVAILABLE':
+      return undefined;
+    default: {
+      const _exhaustive: never = rel;
+      return undefined;
+    }
   }
-  if (upper === 'CONFLICTS' || upper === 'CONFLICTING') {
-    return 'CHALLENGES';
-  }
-  return undefined;
 }
 
 /**
  * Maps a manifestation status to a ReasoningEdgeType.
- * Returns MANIFESTS only when a real supported/mixed/challenged manifestation exists,
- * and undefined when status is INSUFFICIENT_DATA, absent, or undefined.
+ * VERY_STRONG / STRONG / MODERATE -> 'MANIFESTS'
+ * CHALLENGED -> 'CHALLENGES'
+ * MIXED / INSUFFICIENT_DATA -> undefined (no edge emitted)
  */
 export function mapManifestationStatusToEdgeType(
-  status: FinalDomainStatus | string | undefined
+  status: FinalDomainStatus
 ): ReasoningEdgeType | undefined {
-  if (!status) return undefined;
-  const upper = status.toUpperCase();
-  if (
-    upper === 'VERY_STRONG' ||
-    upper === 'STRONG' ||
-    upper === 'MODERATE' ||
-    upper === 'MIXED' ||
-    upper === 'CHALLENGED'
-  ) {
-    return 'MANIFESTS';
+  switch (status) {
+    case 'VERY_STRONG':
+    case 'STRONG':
+    case 'MODERATE':
+      return 'MANIFESTS';
+    case 'CHALLENGED':
+      return 'CHALLENGES';
+    case 'MIXED':
+    case 'INSUFFICIENT_DATA':
+      return undefined;
+    default: {
+      const _exhaustive: never = status;
+      return undefined;
+    }
   }
-  return undefined;
-}
-
-/**
- * Maps a natal promise status to a ReasoningEdgeType for the Natal -> Final edge.
- */
-export function mapPromiseStatusToEdgeType(
-  status: FinalDomainStatus | DomainStrength | string | undefined
-): ReasoningEdgeType | undefined {
-  if (!status) return undefined;
-  const upper = status.toUpperCase();
-  if (
-    upper === 'VERY_STRONG' ||
-    upper === 'STRONG' ||
-    upper === 'EXCELLENT' ||
-    upper === 'GOOD' ||
-    upper === 'MODERATE'
-  ) {
-    return 'SUPPORTS';
-  }
-  if (
-    upper === 'CHALLENGED' ||
-    upper === 'POOR' ||
-    upper === 'WEAK' ||
-    upper === 'VERY_WEAK' ||
-    upper === 'LIMITED'
-  ) {
-    return 'CHALLENGES';
-  }
-  return undefined;
 }
