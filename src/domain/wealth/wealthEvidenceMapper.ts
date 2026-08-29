@@ -17,6 +17,7 @@ import type {
   WealthEvidenceClassification
 } from './wealthTypes';
 import { resolveRelatedWealthPromiseEvidenceIds } from './wealthEvidenceLinker';
+import { createCareerWealthEvidence } from '../careerWealth/provenance/careerWealthEvidence';
 
 export function mapWealthSourceType(
   item: ThemeInterpretationEvidence<WealthEvidenceFamily>
@@ -134,6 +135,41 @@ export function buildWealthEvidence(
           ? { period: 'MD' as const, ...(planet ? { planet } : {}) }
           : undefined);
       const dimension = mapWealthDimension(item);
+
+      // CW-06A: Migrate WEALTH_VENUS_KARAKA_001 natal producer to emit provenance via createCareerWealthEvidence.
+      // Remaining producers deferred to CW-06B.
+      if (item.ruleId === 'WEALTH_VENUS_KARAKA_001') {
+        const subjectKey = item.planets?.[0] ?? 'VENUS';
+        const provenanceStrength =
+          item.priority === 'PRIMARY'
+            ? 'PRIMARY'
+            : item.priority === 'SECONDARY'
+              ? 'SECONDARY'
+              : 'TERTIARY';
+        return createCareerWealthEvidence({
+          identity: {
+            domain: 'WEALTH',
+            axis: 'NATAL',
+            source: 'D1',
+            ruleId: item.ruleId,
+            subjectKey,
+            effect: item.effect,
+            strength: provenanceStrength
+          },
+          statement: item.statement,
+          sourceType: mapWealthSourceType(item),
+          role,
+          phase: mapWealthPhase(item),
+          priority: mapWealthPriority(item.priority),
+          strength: mapWealthStrength(item.strength),
+          planet,
+          house,
+          relatedEvidenceIds,
+          timing,
+          evidenceFamily: item.evidenceFamily,
+          dimension
+        });
+      }
 
       return createDomainEvidence({
         id: item.id,
