@@ -58,7 +58,7 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
       expect(edgesToFinal.length).toBeGreaterThan(0);
 
       const natalEdge = edgesToFinal.find((e) => e.fromNodeId === natalNode?.nodeId);
-      if (finalSynthesis.promiseStatus === 'STRONG' || finalSynthesis.promiseStatus === 'VERY_STRONG') {
+      if (finalSynthesis.promiseStatus === 'STRONG' || finalSynthesis.promiseStatus === 'VERY_STRONG' || finalSynthesis.promiseStatus === 'MODERATE') {
         expect(natalEdge?.type).toBe('SUPPORTS');
       }
 
@@ -67,12 +67,14 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
         expect(dashaEdge?.type).toBe('ACTIVATES');
       } else if (finalSynthesis.activationStatus === 'CHALLENGE') {
         expect(dashaEdge?.type).toBe('CHALLENGES');
+      } else if (finalSynthesis.activationStatus === 'MIXED') {
+        expect(dashaEdge?.type).toBe('MODIFIES');
       }
 
       const divisionalEdge = edgesToFinal.find((e) => e.fromNodeId === divisionalNode?.nodeId);
       if (finalSynthesis.divisionalStatus === 'CONFIRMS' || finalSynthesis.divisionalStatus === 'PARTIALLY_CONFIRMS') {
         expect(divisionalEdge?.type).toBe('CONFIRMS');
-      } else if (finalSynthesis.divisionalStatus === 'UNAVAILABLE' || (finalSynthesis.divisionalStatus as string) === 'NEUTRAL') {
+      } else if (finalSynthesis.divisionalStatus === 'UNAVAILABLE' || finalSynthesis.divisionalStatus === 'MODIFIES') {
         expect(divisionalEdge).toBeUndefined();
       }
     }
@@ -122,7 +124,7 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     }
   });
 
-  it('enforces UNAVAILABLE guardrail: no CONFIRMS edge into FINAL for unavailable divisional status', () => {
+  it('enforces UNAVAILABLE / MODIFIES guardrail: no edge into FINAL for unavailable or modifying divisional status', () => {
     const mockEvidence: DomainEvidence[] = [
       createDomainEvidence({
         id: 'EV_NATAL_1',
@@ -145,9 +147,6 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     const careerGraphUnavailableD10 = buildCareerReasoningTraceGraph({
       evidence: mockEvidence,
       natalStrength: 'STRONG',
-      careerDashaSynthesis: { overallActivation: 'ACTIVE' } as any,
-      d10Relationship: 'UNAVAILABLE',
-      careerManifestationSynthesis: [],
       careerFinalSynthesis: {
         reasoningVersion: 'CW-05',
         domain: 'CAREER',
@@ -177,16 +176,15 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     });
 
     const divisionalNode = careerGraphUnavailableD10.nodes.find((n) => n.axis === 'DIVISIONAL');
-    const confirmsEdgesFromDivisional = careerGraphUnavailableD10.edges.filter(
-      (e) => e.fromNodeId === divisionalNode?.nodeId
+    const finalNode = careerGraphUnavailableD10.nodes.find((n) => n.axis === 'FINAL');
+    const edgesFromDivisionalToFinal = careerGraphUnavailableD10.edges.filter(
+      (e) => e.fromNodeId === divisionalNode?.nodeId && e.toNodeId === finalNode?.nodeId
     );
-    expect(confirmsEdgesFromDivisional.length).toBe(0);
+    expect(edgesFromDivisionalToFinal.length).toBe(0);
 
     const wealthGraphUnavailableD2 = buildWealthReasoningTraceGraph({
       evidence: mockEvidence,
       overallStatus: 'STRONG',
-      d2Relationship: 'UNAVAILABLE',
-      wealthManifestationSynthesis: undefined,
       wealthFinalSynthesis: {
         reasoningVersion: 'CW-05',
         domain: 'WEALTH',
@@ -216,10 +214,11 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     });
 
     const d2Node = wealthGraphUnavailableD2.nodes.find((n) => n.axis === 'DIVISIONAL');
-    const edgesFromD2 = wealthGraphUnavailableD2.edges.filter(
-      (e) => e.fromNodeId === d2Node?.nodeId
+    const wealthFinalNode = wealthGraphUnavailableD2.nodes.find((n) => n.axis === 'FINAL');
+    const edgesFromD2ToFinal = wealthGraphUnavailableD2.edges.filter(
+      (e) => e.fromNodeId === d2Node?.nodeId && e.toNodeId === wealthFinalNode?.nodeId
     );
-    expect(edgesFromD2.length).toBe(0);
+    expect(edgesFromD2ToFinal.length).toBe(0);
   });
 
   it('enforces manifestation guardrail: zero or INSUFFICIENT_DATA manifestations emit NO MANIFESTS edge into FINAL', () => {
@@ -274,8 +273,9 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     });
 
     const manifestNode = graphNoManifestations.nodes.find((n) => n.axis === 'MANIFESTATION');
+    const finalNode = graphNoManifestations.nodes.find((n) => n.axis === 'FINAL');
     const manifestEdges = graphNoManifestations.edges.filter(
-      (e) => e.fromNodeId === manifestNode?.nodeId
+      (e) => e.fromNodeId === manifestNode?.nodeId && e.toNodeId === finalNode?.nodeId
     );
     expect(manifestEdges.length).toBe(0);
 
@@ -311,31 +311,89 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     });
 
     const manifestNode2 = graphWithManifestations.nodes.find((n) => n.axis === 'MANIFESTATION');
+    const finalNode2 = graphWithManifestations.nodes.find((n) => n.axis === 'FINAL');
     const manifestEdges2 = graphWithManifestations.edges.filter(
-      (e) => e.fromNodeId === manifestNode2?.nodeId
+      (e) => e.fromNodeId === manifestNode2?.nodeId && e.toNodeId === finalNode2?.nodeId
     );
     expect(manifestEdges2.length).toBe(1);
     expect(manifestEdges2[0].type).toBe('MANIFESTS');
+  });
+
+  it('enforces partial Dasha activation: MIXED status produces MODIFIES edge into FINAL and not ACTIVATES', () => {
+    const mockEvidence: DomainEvidence[] = [
+      createDomainEvidence({
+        id: 'EV_NATAL_1',
+        sourceType: 'PLANET',
+        domain: 'CAREER',
+        polarity: 'SUPPORTING',
+        statement: '10th lord strong',
+        provenance: {
+          evidenceId: 'EV_NATAL_1',
+          ruleId: 'RULE_CAREER_01',
+          axis: 'NATAL',
+          source: 'D1',
+          effect: 'SUPPORT',
+          strength: 'PRIMARY',
+          domain: 'CAREER'
+        }
+      })
+    ];
+
+    const graphMixedDasha = buildCareerReasoningTraceGraph({
+      evidence: mockEvidence,
+      natalStrength: 'STRONG',
+      careerFinalSynthesis: {
+        reasoningVersion: 'CW-05',
+        domain: 'CAREER',
+        status: 'MODERATE',
+        finalStatus: 'MODERATE',
+        confidence: 'MEDIUM',
+        promiseStatus: 'STRONG',
+        activationStatus: 'MIXED',
+        timingStatus: 'NEUTRAL',
+        divisionalStatus: 'CONFIRMS',
+        manifestationStatus: 'INSUFFICIENT_DATA',
+        primaryPromise: 'STRONG',
+        manifestationSummary: [],
+        strongestAreas: [],
+        challengedAreas: [],
+        dashaEffect: 'Mixed',
+        timingEffect: 'Neutral',
+        divisionalEffect: 'Confirms',
+        keySupport: [],
+        keyChallenges: [],
+        summary: 'Partial dasha test',
+        ruleIds: [],
+        evidenceIds: [],
+        natalEvidenceIds: [],
+        natalRuleIds: []
+      }
+    });
+
+    const dashaNode = graphMixedDasha.nodes.find((n) => n.axis === 'DASHA' && n.subjectKey === 'DASHA_ACTIVATION');
+    const finalNode = graphMixedDasha.nodes.find((n) => n.axis === 'FINAL' && n.subjectKey === 'FINAL_SYNTHESIS');
+    const dashaToFinalEdges = graphMixedDasha.edges.filter(
+      (e) => e.fromNodeId === dashaNode?.nodeId && e.toNodeId === finalNode?.nodeId
+    );
+
+    expect(dashaToFinalEdges.length).toBe(1);
+    expect(dashaToFinalEdges[0].type).toBe('MODIFIES');
   });
 
   it('guarantees full-pipeline deterministic graph outputs across multiple runs', () => {
     const firstCareer = interpretCareerV2(dummyHoroscope);
     const secondCareer = interpretCareerV2(dummyHoroscope);
 
-    expect(
-      (firstCareer.conclusionData as any).reasoningTraceGraph
-    ).toEqual(
-      (secondCareer.conclusionData as any).reasoningTraceGraph
-    );
+    const firstCareerGraph = (firstCareer.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
+    const secondCareerGraph = (secondCareer.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
+    expect(firstCareerGraph).toEqual(secondCareerGraph);
 
     const firstWealth = interpretWealthV2(dummyHoroscope);
     const secondWealth = interpretWealthV2(dummyHoroscope);
 
-    expect(
-      (firstWealth.conclusionData as any).reasoningTraceGraph
-    ).toEqual(
-      (secondWealth.conclusionData as any).reasoningTraceGraph
-    );
+    const firstWealthGraph = (firstWealth.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
+    const secondWealthGraph = (secondWealth.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
+    expect(firstWealthGraph).toEqual(secondWealthGraph);
   });
 
   it('guarantees evidence order independence in graph construction', () => {
