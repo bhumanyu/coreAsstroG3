@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { calculateFinalConfidenceV2 } from './finalConfidenceModel';
+import {
+  calculateFinalConfidenceV2,
+  type FinalConfidenceInput
+} from './finalConfidenceModel';
 
 describe('CW-05D Final Confidence Model', () => {
   it('returns HIGH when multiple independent sources are strong and consistent', () => {
@@ -81,7 +84,7 @@ describe('CW-05D Final Confidence Model', () => {
     });
 
     expect(result.final).toBe('MEDIUM');
-    expect(result.contradictionLevel).toBe('HIGH');
+    expect(result.contradictionLevel).toBe('MEDIUM');
   });
 
   it('caps confidence when CW-05C Dasha consistency fails', () => {
@@ -110,6 +113,136 @@ describe('CW-05D Final Confidence Model', () => {
     expect(result.final).toBe('MEDIUM');
     expect(result.dashaConsistency).toBe('INCONSISTENT');
     expect(result.consistencyCapApplied).toBe(true);
+  });
+
+  it('does not set consistencyCapApplied to true if confidence was already LOW or MEDIUM', () => {
+    // Case 1: Base confidence is MEDIUM (e.g. natal evidence count 1)
+    const resultMedium = calculateFinalConfidenceV2({
+      natalPromise: 'STRONG',
+      natalEvidenceCount: 1, // MEDIUM natal quality
+
+      activationStatus: 'SUPPORT',
+      activationConfidence: 'LOW',
+
+      dashaEffectConsistent: false,
+      dashaHierarchyRolesConsistent: false,
+
+      timingStatus: 'SUPPORT',
+      timingConfidence: 0.2,
+
+      divisionalStatus: 'UNAVAILABLE',
+
+      manifestationConfidences: [],
+      manifestationStatuses: [],
+
+      evidenceSourceCount: 1
+    });
+
+    expect(resultMedium.final).toBe('MEDIUM');
+    expect(resultMedium.dashaConsistency).toBe('INCONSISTENT');
+    // Inconsistency existed, but did not reduce confidence level (already MEDIUM)
+    expect(resultMedium.consistencyCapApplied).toBe(false);
+
+    // Case 2: Base confidence is LOW (undetermined natal promise)
+    const resultLow = calculateFinalConfidenceV2({
+      natalPromise: 'UNDETERMINED',
+      natalEvidenceCount: 0,
+
+      activationStatus: 'SUPPORT',
+      activationConfidence: 'LOW',
+
+      dashaEffectConsistent: false,
+      dashaHierarchyRolesConsistent: false,
+
+      timingStatus: 'SUPPORT',
+      timingConfidence: 0.2,
+
+      divisionalStatus: 'UNAVAILABLE',
+
+      manifestationConfidences: [],
+      manifestationStatuses: [],
+
+      evidenceSourceCount: 1
+    });
+
+    expect(resultLow.final).toBe('LOW');
+    expect(resultLow.dashaConsistency).toBe('INCONSISTENT');
+    expect(resultLow.consistencyCapApplied).toBe(false);
+  });
+
+  it('correctly classifies partial Dasha consistency states', () => {
+    const baseInput: Omit<
+      FinalConfidenceInput,
+      'dashaEffectConsistent' | 'dashaHierarchyRolesConsistent'
+    > = {
+      natalPromise: 'STRONG',
+      natalEvidenceCount: 2,
+      activationStatus: 'SUPPORT',
+      timingStatus: 'SUPPORT',
+      divisionalStatus: 'CONFIRMS',
+      manifestationConfidences: [],
+      manifestationStatuses: [],
+      evidenceSourceCount: 3
+    };
+
+    // true + undefined => UNAVAILABLE
+    const res1 = calculateFinalConfidenceV2({
+      ...baseInput,
+      dashaEffectConsistent: true,
+      dashaHierarchyRolesConsistent: undefined
+    });
+    expect(res1.dashaConsistency).toBe('UNAVAILABLE');
+
+    // false + undefined => INCONSISTENT
+    const res2 = calculateFinalConfidenceV2({
+      ...baseInput,
+      dashaEffectConsistent: false,
+      dashaHierarchyRolesConsistent: undefined
+    });
+    expect(res2.dashaConsistency).toBe('INCONSISTENT');
+
+    // undefined + undefined => UNAVAILABLE
+    const res3 = calculateFinalConfidenceV2({
+      ...baseInput,
+      dashaEffectConsistent: undefined,
+      dashaHierarchyRolesConsistent: undefined
+    });
+    expect(res3.dashaConsistency).toBe('UNAVAILABLE');
+
+    // true + true => CONSISTENT
+    const res4 = calculateFinalConfidenceV2({
+      ...baseInput,
+      dashaEffectConsistent: true,
+      dashaHierarchyRolesConsistent: true
+    });
+    expect(res4.dashaConsistency).toBe('CONSISTENT');
+  });
+
+  it('does not treat aligned challenge signals as contradiction', () => {
+    const result = calculateFinalConfidenceV2({
+      natalPromise: 'STRONG',
+      natalEvidenceCount: 2,
+
+      activationStatus: 'CHALLENGE',
+      activationConfidence: 'HIGH',
+
+      dashaEffectConsistent: true,
+      dashaHierarchyRolesConsistent: true,
+
+      timingStatus: 'CHALLENGE',
+      timingConfidence: 0.85,
+
+      divisionalStatus: 'CONFIRMS',
+
+      manifestationConfidences: ['HIGH'],
+
+      manifestationStatuses: ['CHALLENGED'],
+
+      evidenceSourceCount: 5
+    });
+
+    expect(result.contradictionLevel).toBe('NONE');
+    expect(result.final).toBe('HIGH');
   });
 
   it('does not let strong secondary evidence override weak natal promise', () => {
@@ -219,6 +352,7 @@ describe('CW-05D Final Confidence Model', () => {
      * the current situation is challenging.
      */
     expect(result.final).toBe('HIGH');
+    expect(result.contradictionLevel).toBe('NONE');
   });
 
   it('does not count many manifestations as many independent evidence sources', () => {

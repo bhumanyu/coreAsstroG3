@@ -767,7 +767,7 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       // Confidence is determined on its own axis (medium because of divisional contradiction)
       expect(result.confidence).toBe('MEDIUM');
       expect(result.confidenceBreakdown).toBeDefined();
-      expect(result.confidenceBreakdown?.contradictionLevel).toBe('HIGH');
+      expect(result.confidenceBreakdown?.contradictionLevel).toBe('MEDIUM');
     });
 
     it('(b) WEAK natal + strong supportive secondaries yields CHALLENGED finalStatus with HIGH confidence', () => {
@@ -952,6 +952,47 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       // Consistency failure caps confidence to MEDIUM
       expect(result.confidenceBreakdown?.consistencyCapApplied).toBe(true);
       expect(result.confidence).toBe('MEDIUM');
+    });
+
+    it('(d) counts Dasha synthesis with empty factors but non-INSUFFICIENT_DATA combined effect as an evidence source', () => {
+      const mockDashaWithoutFactors: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 2.0,
+        mdPlanet: Planet.JUPITER,
+        adPlanet: Planet.SUN,
+        pdPlanet: Planet.MARS,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'SUPPORTS',
+        factors: [] // empty factor array
+      });
+
+      const mockTimingWithoutFactors: CareerTimingSynthesis = {
+        natalPromise: 'STRONG',
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'ACTIVATES',
+        confidence: 0.9,
+        factors: [], // empty factor array
+        summary: 'Timing activates'
+      };
+
+      const input: CareerFinalSynthesisInput = {
+        natalPromise: 'STRONG',
+        natalEvidenceIds: ['NATAL-1', 'NATAL-2'],
+        dashaSynthesis: mockDashaWithoutFactors,
+        timingSynthesis: mockTimingWithoutFactors,
+        manifestationSynthesis: [],
+        d10Relationship: 'CONFIRMS'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Natal (1) + Dasha (1) + Timing (1) = 3 sources
+      expect(result.confidenceBreakdown).toBeDefined();
+      expect(result.confidenceBreakdown?.evidenceCoverage).toBe('MEDIUM'); // 3 sources => MEDIUM coverage
+      expect(result.confidence).toBe('HIGH');
     });
   });
 });

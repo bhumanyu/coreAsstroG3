@@ -1,11 +1,14 @@
 import type {
   FinalDomainConfidence,
+  FinalDomainStatus,
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
 
 export type ConfidenceEvidenceQuality = 'HIGH' | 'MEDIUM' | 'LOW';
 
 export type ConfidenceContradictionLevel = 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type FinalDomainStatusForConfidence = FinalDomainStatus;
 
 export interface FinalConfidenceInput {
   /**
@@ -71,7 +74,7 @@ export interface FinalConfidenceInput {
   /**
    * Manifestation directional statuses.
    */
-  readonly manifestationStatuses: readonly FinalDomainStatusForConfidence[];
+  readonly manifestationStatuses: readonly FinalDomainStatus[];
 
   /**
    * Number of independently represented evidence sources.
@@ -85,14 +88,6 @@ export interface FinalConfidenceInput {
    */
   readonly evidenceSourceCount: number;
 }
-
-export type FinalDomainStatusForConfidence =
-  | 'VERY_STRONG'
-  | 'STRONG'
-  | 'MODERATE'
-  | 'MIXED'
-  | 'CHALLENGED'
-  | 'INSUFFICIENT_DATA';
 
 export interface FinalConfidenceBreakdown {
   readonly final: FinalDomainConfidence;
@@ -197,7 +192,7 @@ function qualityFromDivisionalStatus(
 
 function qualityFromManifestations(
   confidences: readonly FinalDomainConfidence[],
-  statuses: readonly FinalDomainStatusForConfidence[]
+  statuses: readonly FinalDomainStatus[]
 ): ConfidenceEvidenceQuality {
   if (confidences.length === 0) {
     return 'LOW';
@@ -252,27 +247,23 @@ function calculateContradictionLevel(
   let medium = 0;
   let low = 0;
 
+  // (a) Divisional conflicts with natal
   if (input.divisionalStatus === 'CONFLICTS') {
     high += 1;
   }
 
-  if (input.activationStatus === 'CHALLENGE') {
-    medium += 1;
+  // (b) CW-05C Dasha structural inconsistency is a genuine contradiction
+  if (
+    input.dashaEffectConsistent === false ||
+    input.dashaHierarchyRolesConsistent === false
+  ) {
+    high += 1;
   }
 
-  if (input.timingStatus === 'CHALLENGE') {
-    medium += 1;
-  }
-
+  // (c) Both supporting and challenged manifestations present (genuine mixed outcome)
   const challengedManifestations = input.manifestationStatuses.filter(
     (status) => status === 'CHALLENGED'
   ).length;
-
-  if (challengedManifestations >= 2) {
-    high += 1;
-  } else if (challengedManifestations === 1) {
-    medium += 1;
-  }
 
   const supportingManifestations = input.manifestationStatuses.filter(
     (status) => status === 'STRONG' || status === 'VERY_STRONG'
@@ -282,15 +273,15 @@ function calculateContradictionLevel(
     low += 1;
   }
 
-  if (high >= 1) {
+  if (high >= 2) {
     return 'HIGH';
   }
 
-  if (medium >= 2) {
+  if (high === 1 || medium >= 2) {
     return 'MEDIUM';
   }
 
-  if (medium === 1 || low > 0) {
+  if (low > 0) {
     return 'LOW';
   }
 
@@ -372,11 +363,9 @@ function applyConsistencyCap(
   readonly confidence: FinalDomainConfidence;
   readonly applied: boolean;
 } {
-  const effectConsistent = input.dashaEffectConsistent;
-  const hierarchyConsistent = input.dashaHierarchyRolesConsistent;
-
   const hasInconsistency =
-    effectConsistent === false || hierarchyConsistent === false;
+    input.dashaEffectConsistent === false ||
+    input.dashaHierarchyRolesConsistent === false;
 
   if (!hasInconsistency) {
     return {
@@ -389,6 +378,7 @@ function applyConsistencyCap(
    * A Dasha inconsistency reduces confidence in the
    * synthesis, but MUST NOT change activationStatus
    * or natal promise.
+   * applied is only true if the cap actually reduced confidence from HIGH to MEDIUM.
    */
   if (confidence === 'HIGH') {
     return {
@@ -427,10 +417,13 @@ export function calculateFinalConfidenceV2(
     input.dashaEffectConsistent === undefined &&
     input.dashaHierarchyRolesConsistent === undefined
       ? 'UNAVAILABLE'
-      : input.dashaEffectConsistent !== false &&
-        input.dashaHierarchyRolesConsistent !== false
+      : input.dashaEffectConsistent === true &&
+        input.dashaHierarchyRolesConsistent === true
       ? 'CONSISTENT'
-      : 'INCONSISTENT';
+      : input.dashaEffectConsistent === false ||
+        input.dashaHierarchyRolesConsistent === false
+      ? 'INCONSISTENT'
+      : 'UNAVAILABLE';
 
   let confidence = determineBaseConfidence(input, {
     natal: natalQuality,
@@ -441,17 +434,20 @@ export function calculateFinalConfidenceV2(
     coverage
   });
 
+  const consistency = applyConsistencyCap(confidence, input);
+
+  confidence = consistency.confidence;
+
   /*
    * Contradiction reduces certainty only.
    * It does not rewrite the direction or promise.
    */
-  if (contradiction === 'HIGH' && confidence === 'HIGH') {
+  if (
+    (contradiction === 'HIGH' || contradiction === 'MEDIUM') &&
+    confidence === 'HIGH'
+  ) {
     confidence = 'MEDIUM';
   }
-
-  const consistency = applyConsistencyCap(confidence, input);
-
-  confidence = consistency.confidence;
 
   const reasons: string[] = [];
 
