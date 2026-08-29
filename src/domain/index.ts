@@ -18,6 +18,9 @@ export {
   mapCareerPriority
 } from './career/CareerDomainInterpreterV2';
 export { WealthDomainInterpreter } from './wealth/WealthDomainInterpreter';
+export * from './careerWealth/finalSynthesis';
+export * from './careerWealth/reasoningTrace';
+export * from './careerWealth/counterReasoning';
 export {
   interpretWealthV2,
   buildWealthEvidence,
