@@ -105,8 +105,10 @@ export function evaluateCounterReasoning(
     supportingEvidenceIds: evidenceRes.supportingEvidenceIds,
     challengingEvidenceIds: evidenceRes.challengingEvidenceIds,
     claim,
-    context
+    context,
+    factors: evidenceRes.factors
   });
+
 
   // Apply CW-01A hierarchy and protection guardrails
   const guardrailRes = applyHierarchyGuardrails({

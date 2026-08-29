@@ -4,6 +4,7 @@ import {
   buildCounterReasoningContext
 } from './counterReasoningEngine';
 import type { ReasoningTraceGraph } from '../reasoningTrace/reasoningTraceGraph';
+import type { CareerWealthFinalSynthesis } from '../finalSynthesis/careerWealthFinalSynthesisTypes';
 import { interpretCareerV2 } from '../../career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../wealth/WealthDomainInterpreterV2';
 import { calculateHoroscope } from '../../../engine/astroEngine';
@@ -170,14 +171,44 @@ describe('counterReasoningEngine (CW-07)', () => {
     expect(result.guardrailApplied).toBe(true);
   });
 
-  it('evaluates Dasha challenge questions targeting DASHA_ACTIVATION', () => {
+  it('evaluates Dasha challenge questions over ACTIVATES-only edge to INSUFFICIENT_EVIDENCE', () => {
     const result = evaluateCounterReasoning('Is my current Dasha causing delays?', sampleContext);
 
     expect(result.claim.questionType).toBe('DASHA_CHALLENGE');
     expect(result.claim.targetSubjectKey).toBe('DASHA_ACTIVATION');
-    expect(result.disposition).toBe('CONFIRMED');
+    expect(result.disposition).toBe('INSUFFICIENT_EVIDENCE');
     expect(result.supportingEvidenceIds).toEqual(['EV_DASHA_1']);
     expect(result.challengingEvidenceIds).toEqual([]);
+    expect(result.conclusionChanged).toBe(false);
+  });
+
+  it('evaluates Dasha challenge questions over CHALLENGES edge to CONFIRMED', () => {
+    const dashaChallengingGraph: ReasoningTraceGraph = {
+      ...sampleGraph,
+      edges: [
+        ...sampleGraph.edges.filter((e) => e.edgeId !== 'e3'),
+        {
+          edgeId: 'e3_chal',
+          fromNodeId: 'node_ev_3',
+          toNodeId: 'node_dasha_activation',
+          type: 'CHALLENGES',
+          explanation: 'Dasha creates obstacles'
+        }
+      ]
+    };
+    const challengingContext = buildCounterReasoningContext({
+      domain: 'CAREER',
+      graph: dashaChallengingGraph,
+      finalSynthesis: sampleContext.finalSynthesis
+    });
+
+    const result = evaluateCounterReasoning('Is my current Dasha causing delays?', challengingContext);
+
+    expect(result.claim.questionType).toBe('DASHA_CHALLENGE');
+    expect(result.claim.targetSubjectKey).toBe('DASHA_ACTIVATION');
+    expect(result.disposition).toBe('CONFIRMED');
+    expect(result.challengingEvidenceIds).toEqual(['EV_DASHA_1']);
+    expect(result.supportingEvidenceIds).toEqual([]);
     expect(result.conclusionChanged).toBe(false);
   });
 
@@ -249,7 +280,7 @@ describe('counterReasoningEngine (CW-07)', () => {
     const careerInterp = interpretCareerV2(horoscope);
     const conclusionData = careerInterp.conclusionData as {
       reasoningTraceGraph?: ReasoningTraceGraph;
-      careerFinalSynthesis?: any;
+      careerFinalSynthesis?: CareerWealthFinalSynthesis;
     };
 
     expect(conclusionData.reasoningTraceGraph).toBeDefined();
@@ -259,20 +290,30 @@ describe('counterReasoningEngine (CW-07)', () => {
       finalSynthesis: conclusionData.careerFinalSynthesis
     });
 
+    const nodeIds = new Set(
+      conclusionData.reasoningTraceGraph!.nodes.map((n) => n.evidenceId ?? n.nodeId)
+    );
+
     const whyCareer = evaluateCounterReasoning('Why is my career structured this way?', context);
-    expect(whyCareer.disposition).toBeDefined();
+    expect(whyCareer.disposition).toBe('INSUFFICIENT_EVIDENCE');
     expect(whyCareer.conclusionChanged).toBe(false);
     expect(whyCareer.claim.targetSubjectKey).toBe('FINAL_SYNTHESIS');
+    whyCareer.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+    whyCareer.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
 
     const dashaChallenge = evaluateCounterReasoning('Is my current Dasha causing trouble in career?', context);
-    expect(dashaChallenge.disposition).toBeDefined();
+    expect(dashaChallenge.disposition).toBe('INSUFFICIENT_EVIDENCE');
     expect(dashaChallenge.claim.targetSubjectKey).toBe('DASHA_ACTIVATION');
     expect(dashaChallenge.conclusionChanged).toBe(false);
+    dashaChallenge.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+    dashaChallenge.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
 
     const d10Challenge = evaluateCounterReasoning('Does the D10 chart conflict with this?', context);
-    expect(d10Challenge.disposition).toBeDefined();
+    expect(d10Challenge.disposition).toBe('INSUFFICIENT_EVIDENCE');
     expect(d10Challenge.claim.targetSubjectKey).toBe('D10_CONFIRMATION');
     expect(d10Challenge.conclusionChanged).toBe(false);
+    d10Challenge.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+    d10Challenge.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
   });
 
   it('integrates end-to-end with real Wealth interpretation on canonical fixture', () => {
@@ -280,7 +321,7 @@ describe('counterReasoningEngine (CW-07)', () => {
     const wealthInterp = interpretWealthV2(horoscope);
     const conclusionData = wealthInterp.conclusionData as {
       reasoningTraceGraph?: ReasoningTraceGraph;
-      wealthFinalSynthesis?: any;
+      wealthFinalSynthesis?: CareerWealthFinalSynthesis;
     };
 
     expect(conclusionData.reasoningTraceGraph).toBeDefined();
@@ -290,18 +331,28 @@ describe('counterReasoningEngine (CW-07)', () => {
       finalSynthesis: conclusionData.wealthFinalSynthesis
     });
 
+    const nodeIds = new Set(
+      conclusionData.reasoningTraceGraph!.nodes.map((n) => n.evidenceId ?? n.nodeId)
+    );
+
     const whyWealth = evaluateCounterReasoning('Why is my wealth status evaluated this way?', context);
-    expect(whyWealth.disposition).toBeDefined();
+    expect(whyWealth.disposition).toBe('INSUFFICIENT_EVIDENCE');
     expect(whyWealth.conclusionChanged).toBe(false);
     expect(whyWealth.claim.targetSubjectKey).toBe('FINAL_SYNTHESIS');
+    whyWealth.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+    whyWealth.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+
 
     const d2Challenge = evaluateCounterReasoning('Does D2 Hora chart support my wealth?', context);
-    expect(d2Challenge.disposition).toBeDefined();
+    expect(d2Challenge.disposition).toBe('INSUFFICIENT_EVIDENCE');
     expect(d2Challenge.claim.targetSubjectKey).toBe('D2_CONFIRMATION');
     expect(d2Challenge.conclusionChanged).toBe(false);
+    d2Challenge.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+    d2Challenge.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
 
     const whatIf = evaluateCounterReasoning('What if Jupiter was placed in 8th house?', context);
     expect(whatIf.disposition).toBe('UNSUPPORTED_CLAIM');
     expect(whatIf.conclusionChanged).toBe(false);
   });
 });
+

@@ -1,13 +1,17 @@
 import type { ReasoningNode, ReasoningNodeDomain } from '../reasoningTrace/reasoningNode';
+import type { ReasoningEdgeType } from '../reasoningTrace/reasoningEdge';
 import type { ReasoningTraceGraph } from '../reasoningTrace/reasoningTraceGraph';
-import type { CounterReasoningEvidenceResolution } from './counterReasoningTypes';
+import type {
+  CounterReasoningEvidenceResolution,
+  CounterReasoningFactor
+} from './counterReasoningTypes';
 import { resolveGraphContext } from './reasoningGraphResolver';
 
 const SUPPORTING_EDGE_TYPES = new Set(['SUPPORTS', 'CONFIRMS', 'ACTIVATES', 'MANIFESTS']);
 const CHALLENGING_EDGE_TYPES = new Set(['CHALLENGES', 'CONTRADICTS']);
 
 /**
- * Resolves supporting and challenging evidence IDs and nodes for a target subjectKey in the graph.
+ * Resolves supporting and challenging evidence IDs, nodes, and detailed factors for a target subjectKey in the graph.
  * Enforces disjoint, deduplicated, and deterministically sorted results.
  */
 export function resolveEvidence(
@@ -22,7 +26,8 @@ export function resolveEvidence(
       supportingEvidenceIds: [],
       challengingEvidenceIds: [],
       supportingNodes: [],
-      challengingNodes: []
+      challengingNodes: [],
+      factors: []
     };
   }
 
@@ -30,6 +35,7 @@ export function resolveEvidence(
   const challengingIdSet = new Set<string>();
   const supportingNodeMap = new Map<string, ReasoningNode>();
   const challengingNodeMap = new Map<string, ReasoningNode>();
+  const rawFactors: CounterReasoningFactor[] = [];
 
   for (const evNode of context.connectedEvidenceNodes) {
     const evidenceId = evNode.evidenceId ?? evNode.nodeId;
@@ -41,11 +47,21 @@ export function resolveEvidence(
     let isSupporting = false;
 
     for (const edge of outgoingEdges) {
+      let relation: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' = 'NEUTRAL';
       if (CHALLENGING_EDGE_TYPES.has(edge.type)) {
         isChallenging = true;
+        relation = 'CHALLENGE';
       } else if (SUPPORTING_EDGE_TYPES.has(edge.type)) {
         isSupporting = true;
+        relation = 'SUPPORT';
       }
+
+      rawFactors.push({
+        evidenceId,
+        edgeType: edge.type as ReasoningEdgeType,
+        explanation: edge.explanation,
+        relation
+      });
     }
 
     if (isChallenging) {
@@ -74,10 +90,19 @@ export function resolveEvidence(
     .map((id) => challengingNodeMap.get(id)!)
     .filter(Boolean);
 
+  // Deterministically sort factors
+  const factors = rawFactors.sort((a, b) => {
+    const idCmp = a.evidenceId.localeCompare(b.evidenceId);
+    if (idCmp !== 0) return idCmp;
+    return a.edgeType.localeCompare(b.edgeType);
+  });
+
   return {
     supportingEvidenceIds,
     challengingEvidenceIds,
     supportingNodes,
-    challengingNodes
+    challengingNodes,
+    factors
   };
 }
+

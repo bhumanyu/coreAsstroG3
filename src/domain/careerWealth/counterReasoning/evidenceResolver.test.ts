@@ -107,6 +107,9 @@ describe('evidenceResolver (CW-07)', () => {
 
     expect(res.supportingEvidenceIds).toEqual(['EV_DASHA_1', 'EV_NATAL_1']);
     expect(res.challengingEvidenceIds).toEqual(['EV_NATAL_2']);
+    expect(res.factors.length).toBeGreaterThan(0);
+    expect(res.factors.some((f) => f.edgeType === 'ACTIVATES' && f.relation === 'SUPPORT')).toBe(true);
+    expect(res.factors.some((f) => f.edgeType === 'CHALLENGES' && f.relation === 'CHALLENGE')).toBe(true);
   });
 
   it('directly resolves evidence for a specific axis conclusion node (NATAL_PROMISE)', () => {
