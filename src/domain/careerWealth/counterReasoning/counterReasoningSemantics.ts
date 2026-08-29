@@ -32,6 +32,11 @@ export const COUNTER_REASONING_OUTCOME_RULES: readonly OutcomeSemanticRule[] = [
 /**
  * Resolves the semantic classification of a reasoning graph edge type.
  * Note: MANIFESTS and ACTIVATES represent activation/manifestation and do not prove specific polarity outcomes on their own.
+ *
+ * Contract Note on Negative Outcomes (CW-07A):
+ * A generic CHALLENGE edge supports a negative proposition (e.g. DELAY, LOSS, OBSTACLE) only at the
+ * generic friction/challenge level unless the evidence itself is outcome-specific.
+ * Full fine-grained outcome-tag alignment is deferred to CW-07B.
  */
 export function resolveEdgeSemantic(edgeType: ReasoningEdgeType): CounterReasoningEdgeSemantic {
   switch (edgeType) {
@@ -53,31 +58,16 @@ export function resolveEdgeSemantic(edgeType: ReasoningEdgeType): CounterReasoni
   }
 }
 
+const OUTCOME_POLARITY_MAP: ReadonlyMap<CounterReasoningOutcome, CounterReasoningOutcomePolarity> = new Map(
+  COUNTER_REASONING_OUTCOME_RULES.map((rule) => [rule.outcome, rule.polarity])
+);
+
 /**
  * Resolves the outcome polarity (POSITIVE, NEGATIVE, or NEUTRAL) of an asserted outcome.
+ * Single source of truth: derives directly from COUNTER_REASONING_OUTCOME_RULES.
  */
 export function resolveOutcomePolarity(
   outcome: CounterReasoningOutcome
 ): CounterReasoningOutcomePolarity {
-  switch (outcome) {
-    case 'SUPPORT':
-    case 'PROMOTION':
-    case 'GROWTH':
-    case 'STABILITY':
-    case 'MANIFESTATION':
-    case 'EMPLOYMENT':
-    case 'LEADERSHIP':
-    case 'BUSINESS':
-    case 'TECHNICAL_SPECIALIZATION':
-      return 'POSITIVE';
-    case 'CHALLENGE':
-    case 'DELAY':
-    case 'OBSTACLE':
-    case 'LOSS':
-    case 'VOLATILITY':
-      return 'NEGATIVE';
-    case 'UNKNOWN':
-    default:
-      return 'NEUTRAL';
-  }
+  return OUTCOME_POLARITY_MAP.get(outcome) ?? 'NEUTRAL';
 }

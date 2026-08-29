@@ -8,11 +8,13 @@ import type {
 import { evaluatePropositionFactor } from './counterReasoningFactorEvaluator';
 
 export interface EvaluateCounterArgumentParams {
-  readonly supportingEvidenceIds: readonly string[];
-  readonly challengingEvidenceIds: readonly string[];
   readonly claim: CounterReasoningClaim;
+  readonly factors: readonly CounterReasoningFactor[];
   readonly context?: CounterReasoningContext;
-  readonly factors?: readonly CounterReasoningFactor[];
+  /** @deprecated Retained for backward compatibility; factor evaluation now uses proposition semantics directly on factors. */
+  readonly supportingEvidenceIds?: readonly string[];
+  /** @deprecated Retained for backward compatibility; factor evaluation now uses proposition semantics directly on factors. */
+  readonly challengingEvidenceIds?: readonly string[];
 }
 
 export interface EvaluateCounterArgumentResult {

@@ -208,5 +208,25 @@ describe('counterArgumentEvaluator (CW-07)', () => {
       expect(res.disposition).toBe('PARTIALLY_CONFIRMED');
       expect(res.rebuttal).toContain('present active qualification or friction');
     });
+
+    it('works with only { claim, factors } without deprecated evidence arrays (Issue #3)', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_1',
+          edgeType: 'SUPPORTS',
+          explanation: '10th lord strong',
+          relation: 'SUPPORT'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        claim: neutralClaim,
+        factors
+      });
+
+      expect(res.disposition).toBe('CONFIRMED');
+      expect(res.evaluatedFactors.length).toBe(1);
+      expect(res.rebuttal).toContain('confirm FINAL_SYNTHESIS');
+    });
   });
 });

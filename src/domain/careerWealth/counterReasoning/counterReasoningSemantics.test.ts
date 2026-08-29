@@ -26,7 +26,7 @@ describe('counterReasoningSemantics (CW-07)', () => {
     });
 
     it('returns NEUTRAL for unrecognized or fallback edge types', () => {
-      expect(resolveEdgeSemantic('UNKNOWN_EDGE' as any)).toBe('NEUTRAL');
+      expect(resolveEdgeSemantic('UNKNOWN_EDGE' as unknown as ReasoningEdgeType)).toBe('NEUTRAL');
     });
   });
 
@@ -65,20 +65,43 @@ describe('counterReasoningSemantics (CW-07)', () => {
 
     it('maps UNKNOWN and default outcomes to NEUTRAL', () => {
       expect(resolveOutcomePolarity('UNKNOWN')).toBe('NEUTRAL');
-      expect(resolveOutcomePolarity('CUSTOM_UNRECOGNIZED' as any)).toBe('NEUTRAL');
+      expect(resolveOutcomePolarity('CUSTOM_UNRECOGNIZED' as unknown as CounterReasoningOutcome)).toBe('NEUTRAL');
     });
   });
 
-  describe('COUNTER_REASONING_OUTCOME_RULES', () => {
-    it('contains definitions for all standard CounterReasoningOutcome members', () => {
-      expect(COUNTER_REASONING_OUTCOME_RULES.length).toBeGreaterThanOrEqual(15);
-      const outcomesInRules = COUNTER_REASONING_OUTCOME_RULES.map((r) => r.outcome);
-      expect(outcomesInRules).toContain('SUPPORT');
-      expect(outcomesInRules).toContain('DELAY');
-      expect(outcomesInRules).toContain('CHALLENGE');
-      expect(outcomesInRules).toContain('PROMOTION');
-      expect(outcomesInRules).toContain('LOSS');
-      expect(outcomesInRules).toContain('UNKNOWN');
+  describe('COUNTER_REASONING_OUTCOME_RULES (Single Source of Truth)', () => {
+    const allOutcomes: CounterReasoningOutcome[] = [
+      'SUPPORT',
+      'CHALLENGE',
+      'DELAY',
+      'OBSTACLE',
+      'PROMOTION',
+      'GROWTH',
+      'LOSS',
+      'STABILITY',
+      'VOLATILITY',
+      'MANIFESTATION',
+      'EMPLOYMENT',
+      'LEADERSHIP',
+      'BUSINESS',
+      'TECHNICAL_SPECIALIZATION',
+      'UNKNOWN'
+    ];
+
+    it('asserts every CounterReasoningOutcome member has exactly one entry in the table', () => {
+      expect(COUNTER_REASONING_OUTCOME_RULES.length).toBe(allOutcomes.length);
+      for (const outcome of allOutcomes) {
+        const matches = COUNTER_REASONING_OUTCOME_RULES.filter((r) => r.outcome === outcome);
+        expect(matches.length).toBe(1);
+      }
+    });
+
+    it('asserts resolveOutcomePolarity agrees with the table for all members', () => {
+      for (const outcome of allOutcomes) {
+        const rule = COUNTER_REASONING_OUTCOME_RULES.find((r) => r.outcome === outcome);
+        expect(rule).toBeDefined();
+        expect(resolveOutcomePolarity(outcome)).toBe(rule!.polarity);
+      }
     });
   });
 });
