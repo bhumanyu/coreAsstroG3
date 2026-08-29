@@ -101,16 +101,11 @@ function calculateWealthEvidenceSourceCount(input: {
     count += 1;
   }
 
+  // One timing source = one count
   if (
-    input.dimTiming?.dashaEffect &&
-    input.dimTiming.dashaEffect !== 'INSUFFICIENT_DATA'
-  ) {
-    count += 1;
-  }
-
-  if (
-    input.dimTiming?.factors &&
-    input.dimTiming.factors.length > 0
+    input.dimTiming &&
+    (input.dimTiming.dashaEffect !== 'INSUFFICIENT_DATA' ||
+      (input.dimTiming.factors && input.dimTiming.factors.length > 0))
   ) {
     count += 1;
   }
@@ -246,6 +241,12 @@ export function synthesizeWealthFinal(
     dimNatalEv.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
     dimNatalR.forEach((id: string) => { dimRuleIdSet.add(id); ruleIdSet.add(id); });
 
+    /*
+     * Wealth synthesis currently models timing and activation at the dimension level
+     * without a standalone CareerDashaSynthesis object. It intentionally supplies
+     * activationConfidence: undefined and dashaEffectConsistent / dashaHierarchyRolesConsistent: undefined
+     * (CW-05D framework with unavailable Dasha-consistency axis).
+     */
     const dimConfidenceBreakdown = calculateFinalConfidenceV2({
       natalPromise: dimNatal,
       natalEvidenceCount: dimNatalEv.length,

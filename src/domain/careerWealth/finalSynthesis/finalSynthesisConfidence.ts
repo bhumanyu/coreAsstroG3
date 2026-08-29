@@ -8,13 +8,13 @@ import {
 } from './finalConfidenceModel';
 
 /**
- * CW-05D compatibility wrapper.
+ * CW-05D migration alias.
  *
- * New code should prefer calculateFinalConfidenceV2()
- * with the complete FinalConfidenceInput.
+ * The legacy positional API was intentionally removed, and all callers must
+ * now pass a structured FinalConfidenceInput object.
  *
- * This wrapper exists temporarily so older callers can
- * migrate without changing semantics elsewhere.
+ * New code should prefer calculateFinalConfidenceV2() directly to access
+ * full diagnostics and confidence breakdowns.
  */
 export function calculateFinalConfidence(
   input: FinalConfidenceInput

@@ -81,7 +81,7 @@ describe('CW-05D Final Confidence Model', () => {
     });
 
     expect(result.final).toBe('MEDIUM');
-    expect(result.contradictionLevel).toBe('HIGH');
+    expect(result.contradictionLevel).toBe('MEDIUM');
   });
 
   it('caps confidence when CW-05C Dasha consistency fails', () => {
@@ -110,6 +110,33 @@ describe('CW-05D Final Confidence Model', () => {
     expect(result.final).toBe('MEDIUM');
     expect(result.dashaConsistency).toBe('INCONSISTENT');
     expect(result.consistencyCapApplied).toBe(true);
+  });
+
+  it('does not treat aligned challenge signals as contradiction', () => {
+    const result = calculateFinalConfidenceV2({
+      natalPromise: 'STRONG',
+      natalEvidenceCount: 2,
+
+      activationStatus: 'CHALLENGE',
+      activationConfidence: 'HIGH',
+
+      dashaEffectConsistent: true,
+      dashaHierarchyRolesConsistent: true,
+
+      timingStatus: 'CHALLENGE',
+      timingConfidence: 0.85,
+
+      divisionalStatus: 'CONFIRMS',
+
+      manifestationConfidences: ['HIGH'],
+
+      manifestationStatuses: ['CHALLENGED'],
+
+      evidenceSourceCount: 5
+    });
+
+    expect(result.contradictionLevel).toBe('NONE');
+    expect(result.final).toBe('HIGH');
   });
 
   it('does not let strong secondary evidence override weak natal promise', () => {
@@ -219,6 +246,7 @@ describe('CW-05D Final Confidence Model', () => {
      * the current situation is challenging.
      */
     expect(result.final).toBe('HIGH');
+    expect(result.contradictionLevel).toBe('NONE');
   });
 
   it('does not count many manifestations as many independent evidence sources', () => {

@@ -7,7 +7,10 @@ import type {
   ManifestationSummary,
   SynthesisAxisStatus
 } from './careerWealthFinalSynthesisTypes';
-import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
+import type {
+  CareerDashaSynthesis,
+  CareerDashaEffect
+} from '../../career/careerDasha/careerDashaSynthesisTypes';
 import type { CareerTimingSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
 import type { DomainEvidence } from '../../interpretation/DomainEvidence';
 import type { CareerManifestationSynthesis } from '../../career/manifestation/careerManifestationSynthesisTypes';
@@ -71,16 +74,21 @@ function calculateCareerEvidenceSourceCount(input: {
     count += 1;
   }
 
+  const dashaEffect =
+    input.dashaSynthesis?.combined?.combinedEffect ??
+    (input.dashaSynthesis as { readonly combinedEffect?: CareerDashaEffect } | undefined)?.combinedEffect;
+
   if (
-    input.dashaSynthesis?.factors &&
-    input.dashaSynthesis.factors.length > 0
+    input.dashaSynthesis &&
+    dashaEffect !== undefined &&
+    dashaEffect !== 'INSUFFICIENT_DATA'
   ) {
     count += 1;
   }
 
   if (
-    input.timingSynthesis?.factors &&
-    input.timingSynthesis.factors.length > 0
+    input.timingSynthesis &&
+    input.timingSynthesis.overallEffect !== 'INSUFFICIENT_DATA'
   ) {
     count += 1;
   }
