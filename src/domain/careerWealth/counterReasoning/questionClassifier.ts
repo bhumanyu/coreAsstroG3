@@ -1,10 +1,13 @@
 import type { CounterReasoningQuestionType } from './counterReasoningTypes';
 
 /**
- * Classifies a user counter-reasoning or challenge question into a CounterReasoningQuestionType.
+ * Classifies a user counter-reasoning or challenge question into a canonical CounterReasoningQuestionType.
  */
 export function classifyQuestion(question: string): CounterReasoningQuestionType {
   const normalized = question.trim().toLowerCase();
+  if (!normalized) {
+    return 'UNKNOWN';
+  }
 
   // 1. What-if / Counterfactual queries (must be detectable for engine short-circuit)
   if (
@@ -50,7 +53,17 @@ export function classifyQuestion(question: string): CounterReasoningQuestionType
     return 'TIMING_CHALLENGE';
   }
 
-  // 5. Why Not / Negative inquiries
+  // 5. Manifestation challenges (career role, industry role, asset stream, concrete manifestation)
+  if (
+    /\b(manifestation|concrete role|career role|industry role|asset stream|wealth stream|concrete career|concrete wealth)\b/.test(normalized) ||
+    normalized.includes('career manifestation') ||
+    normalized.includes('wealth manifestation')
+  ) {
+    return 'MANIFESTATION_CHALLENGE';
+  }
+
+
+  // 6. Why Not / Negative inquiries
   const hasWhy =
     normalized.startsWith('why') ||
     normalized.includes('why ') ||
@@ -87,11 +100,12 @@ export function classifyQuestion(question: string): CounterReasoningQuestionType
     return 'WHY_NOT';
   }
 
-  // 6. Positive Why inquiries
+  // 7. Positive Why inquiries
   if (hasWhy) {
     return 'WHY';
   }
 
-  // 7. General Challenge fallback
+  // 8. General Challenge fallback
   return 'GENERAL_CHALLENGE';
 }
+

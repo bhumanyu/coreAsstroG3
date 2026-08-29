@@ -45,8 +45,19 @@ describe('questionClassifier (CW-07)', () => {
     expect(classifyQuestion('How come the 10th house is prominent?')).toBe('WHY');
   });
 
+  it('classifies MANIFESTATION_CHALLENGE questions', () => {
+    expect(classifyQuestion('What is my concrete career manifestation?')).toBe('MANIFESTATION_CHALLENGE');
+    expect(classifyQuestion('Why does my wealth stream manifest slowly?')).toBe('MANIFESTATION_CHALLENGE');
+    expect(classifyQuestion('Does chart show concrete industry role?')).toBe('MANIFESTATION_CHALLENGE');
+  });
+
   it('falls back to GENERAL_CHALLENGE for generic queries', () => {
     expect(classifyQuestion('Are there any challenges in my chart?')).toBe('GENERAL_CHALLENGE');
     expect(classifyQuestion('What are the main obstacles?')).toBe('GENERAL_CHALLENGE');
+  });
+
+  it('returns UNKNOWN for empty question', () => {
+    expect(classifyQuestion('')).toBe('UNKNOWN');
+    expect(classifyQuestion('   ')).toBe('UNKNOWN');
   });
 });

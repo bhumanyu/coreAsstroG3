@@ -34,18 +34,24 @@ export function applyHierarchyGuardrails(
   const primaryIds = new Set(context?.primaryEvidenceIds ?? []);
   const hasSupportingPrimary = supportingEvidenceIds.some((id) => primaryIds.has(id));
   const natalStatus = context?.natalPromiseStatus;
-  const isNatalStrong =
-    natalStatus === 'VERY_STRONG' || natalStatus === 'STRONG' || natalStatus === 'MODERATE';
+  const isStrongNatal = natalStatus === 'VERY_STRONG' || natalStatus === 'STRONG';
+  const isModerateNatal = natalStatus === 'MODERATE';
 
-  if (challengingEvidenceIds.length > 0 && (hasSupportingPrimary || isNatalStrong)) {
-    reasons.push(
-      'CW-01A: Natal promise establishes foundational capacity which cannot be negated by secondary timing or divisional factors.'
-    );
-    reasons.push('CW-01A: Primary natal evidence is protected against categorical reversal.');
-  } else if (claim.targetSubjectKey !== 'NATAL_PROMISE' && challengingEvidenceIds.length > 0) {
-    reasons.push(
-      'CW-01A: Secondary axis challenges modulate manifestation timing without overturning foundational chart potential.'
-    );
+  if (challengingEvidenceIds.length > 0) {
+    if (isStrongNatal || hasSupportingPrimary) {
+      reasons.push(
+        'CW-01A: Secondary evidence cannot automatically reverse the primary natal direction, but may activate, delay, modify, qualify, or constrain manifestation.'
+      );
+      reasons.push('CW-01A: Primary natal evidence is protected against categorical reversal.');
+    } else if (isModerateNatal) {
+      reasons.push(
+        'CW-01A: Primary direction exists but is qualified; secondary factors modulate timing and manifestation.'
+      );
+    } else if (claim.targetSubjectKey !== 'NATAL_PROMISE') {
+      reasons.push(
+        'CW-01A: Secondary axis challenges modulate manifestation timing without overturning foundational chart potential.'
+      );
+    }
   }
 
   const guardrailApplied = reasons.length > 0;
@@ -56,3 +62,4 @@ export function applyHierarchyGuardrails(
     allowed: true
   };
 }
+

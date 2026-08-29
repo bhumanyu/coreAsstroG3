@@ -1,4 +1,5 @@
 import type { ReasoningNodeDomain, ReasoningNode } from '../reasoningTrace/reasoningNode';
+import type { ReasoningEdgeType } from '../reasoningTrace/reasoningEdge';
 import type { ReasoningTraceGraph } from '../reasoningTrace/reasoningTraceGraph';
 import type { CareerWealthFinalSynthesis } from '../finalSynthesis/careerWealthFinalSynthesisTypes';
 
@@ -8,12 +9,15 @@ export type CounterReasoningQuestionType =
   | 'DASHA_CHALLENGE'
   | 'DIVISIONAL_CHALLENGE'
   | 'TIMING_CHALLENGE'
+  | 'MANIFESTATION_CHALLENGE'
   | 'WHAT_IF'
-  | 'GENERAL_CHALLENGE';
+  | 'GENERAL_CHALLENGE'
+  | 'UNKNOWN';
 
 export type CounterReasoningDisposition =
   | 'CONFIRMED'
   | 'PARTIALLY_CONFIRMED'
+  | 'REJECTED'
   | 'INSUFFICIENT_EVIDENCE'
   | 'UNSUPPORTED_CLAIM';
 
@@ -23,6 +27,16 @@ export interface CounterReasoningClaim {
   readonly questionType: CounterReasoningQuestionType;
   readonly targetSubjectKey: string;
   readonly polarity?: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly assertedPolarity: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly assertedOutcome?: string;
+  readonly subjectQualifier?: string;
+}
+
+export interface CounterReasoningFactor {
+  readonly evidenceId: string;
+  readonly edgeType: ReasoningEdgeType;
+  readonly explanation: string;
+  readonly relation: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
 }
 
 export interface CounterReasoningEvidenceResolution {
@@ -30,6 +44,7 @@ export interface CounterReasoningEvidenceResolution {
   readonly challengingEvidenceIds: readonly string[];
   readonly supportingNodes?: readonly ReasoningNode[];
   readonly challengingNodes?: readonly ReasoningNode[];
+  readonly factors: readonly CounterReasoningFactor[];
 }
 
 export interface CounterReasoningContext {
@@ -51,3 +66,4 @@ export interface CounterReasoningOutput {
   readonly guardrailApplied: boolean;
   readonly guardrailReasons: readonly string[];
 }
+
