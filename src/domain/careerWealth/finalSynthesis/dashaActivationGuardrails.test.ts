@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Planet } from '../../../types';
+import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
 import { resolveDashaActivationGuardrail } from './dashaActivationGuardrails';
 import { createMockCareerDashaSynthesis } from '../../timing/careerWealthTiming/__testUtils__/mockDasha';
 
@@ -13,11 +14,20 @@ describe('dashaActivationGuardrails (CW-05 boundary)', () => {
     expect(result1.strength).toBeUndefined();
     expect(result1.summary).toBeUndefined();
     expect(result1.hierarchy).toBeUndefined();
+    expect(result1.consistency).toEqual({
+      effectConsistent: false,
+      hierarchyRolesConsistent: false
+    });
 
-    const result2 = resolveDashaActivationGuardrail({} as any);
+    // Intentionally testing malformed runtime input
+    const result2 = resolveDashaActivationGuardrail({} as unknown as CareerDashaSynthesis);
     expect(result2.effect).toBe('INSUFFICIENT_DATA');
     expect(result2.status).toBe('INSUFFICIENT_DATA');
     expect(result2.hierarchyConsistent).toBe(false);
+    expect(result2.consistency).toEqual({
+      effectConsistent: false,
+      hierarchyRolesConsistent: false
+    });
   });
 
   it('strong MD challenge remains dominant when AD also challenges', () => {
@@ -28,13 +38,16 @@ describe('dashaActivationGuardrails (CW-05 boundary)', () => {
       mdEffect: 'STRONGLY_CHALLENGES',
       adEffect: 'CHALLENGES',
       pdEffect: 'SUPPORTS',
-      combinedEffect: 'CHALLENGES'
+      combinedEffect: 'STRONGLY_CHALLENGES'
     });
 
     const result = resolveDashaActivationGuardrail(dasha);
 
     expect(result.effect).toBe('STRONGLY_CHALLENGES');
     expect(result.status).toBe('CHALLENGE');
+    expect(result.hierarchyConsistent).toBe(true);
+    expect(result.consistency?.effectConsistent).toBe(true);
+    expect(result.consistency?.hierarchyRolesConsistent).toBe(true);
   });
 
   it('detects an inconsistent supplied combinedEffect', () => {
@@ -53,6 +66,42 @@ describe('dashaActivationGuardrails (CW-05 boundary)', () => {
     expect(result.effect).toBe('CHALLENGES');
     expect(result.status).toBe('CHALLENGE');
     expect(result.hierarchyConsistent).toBe(false);
+    expect(result.consistency?.effectConsistent).toBe(false);
+    expect(result.consistency?.hierarchyRolesConsistent).toBe(true);
+    expect(result.summary).toContain('CW-05 recomputed the activation');
+  });
+
+  it('detects non-canonical MD/AD/PD hierarchy roles', () => {
+    const dasha = createMockCareerDashaSynthesis({
+      mdPlanet: Planet.JUPITER,
+      adPlanet: Planet.SUN,
+      pdPlanet: Planet.MARS,
+      mdEffect: 'SUPPORTS',
+      adEffect: 'SUPPORTS',
+      pdEffect: 'SUPPORTS',
+      combinedEffect: 'SUPPORTS'
+    });
+
+    // Intentionally testing runtime-corruption of hierarchy roles
+    const corruptedDasha = {
+      ...dasha,
+      combined: {
+        ...dasha.combined,
+        hierarchy: {
+          mdRole: 'MODIFIER',
+          adRole: 'PRIMARY',
+          pdRole: 'REFINEMENT'
+        }
+      }
+    } as unknown as CareerDashaSynthesis;
+
+    const result = resolveDashaActivationGuardrail(corruptedDasha);
+
+    expect(result.effect).toBe('SUPPORTS');
+    expect(result.status).toBe('SUPPORT');
+    expect(result.hierarchyConsistent).toBe(false);
+    expect(result.consistency?.effectConsistent).toBe(true);
+    expect(result.consistency?.hierarchyRolesConsistent).toBe(false);
     expect(result.summary).toContain('CW-05 recomputed the activation');
   });
 

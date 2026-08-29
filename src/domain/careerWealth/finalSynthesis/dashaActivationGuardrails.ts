@@ -18,6 +18,10 @@ export interface DashaActivationGuardrailResult {
   readonly summary?: string;
   readonly hierarchy?: FinalSynthesisActivationHierarchy;
   readonly hierarchyConsistent: boolean;
+  readonly consistency?: {
+    readonly effectConsistent: boolean;
+    readonly hierarchyRolesConsistent: boolean;
+  };
 }
 
 function mapCareerDashaEffectToAxisStatus(effect: CareerDashaEffect): SynthesisAxisStatus {
@@ -118,6 +122,14 @@ function buildHierarchySummary(
   return summary;
 }
 
+function isCanonicalHierarchy(combined: CareerDashaPeriodSynthesis): boolean {
+  return (
+    combined.hierarchy?.mdRole === 'PRIMARY' &&
+    combined.hierarchy?.adRole === 'MODIFIER' &&
+    combined.hierarchy?.pdRole === 'REFINEMENT'
+  );
+}
+
 /**
  * Resolves Dasha activation at the CW-05 final synthesis boundary.
  * Recomputes the canonical activation effect via CW-02 resolveCombinedCareerDashaEffect
@@ -134,7 +146,11 @@ export function resolveDashaActivationGuardrail(
       strength: undefined,
       summary: undefined,
       hierarchy: undefined,
-      hierarchyConsistent: false
+      hierarchyConsistent: false,
+      consistency: Object.freeze({
+        effectConsistent: false,
+        hierarchyRolesConsistent: false
+      })
     });
   }
 
@@ -147,7 +163,9 @@ export function resolveDashaActivationGuardrail(
   );
 
   const status = mapCareerDashaEffectToAxisStatus(resolvedEffect);
-  const hierarchyConsistent = resolvedEffect === combined.combinedEffect;
+  const effectConsistent = resolvedEffect === combined.combinedEffect;
+  const hierarchyRolesConsistent = isCanonicalHierarchy(combined);
+  const hierarchyConsistent = effectConsistent && hierarchyRolesConsistent;
 
   const hierarchy: FinalSynthesisActivationHierarchy = Object.freeze({
     md: Object.freeze({
@@ -175,6 +193,10 @@ export function resolveDashaActivationGuardrail(
     strength,
     summary,
     hierarchy,
-    hierarchyConsistent
+    hierarchyConsistent,
+    consistency: Object.freeze({
+      effectConsistent,
+      hierarchyRolesConsistent
+    })
   });
 }
