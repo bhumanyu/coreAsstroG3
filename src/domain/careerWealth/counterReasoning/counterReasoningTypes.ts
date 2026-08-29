@@ -21,6 +21,23 @@ export type CounterReasoningDisposition =
   | 'INSUFFICIENT_EVIDENCE'
   | 'UNSUPPORTED_CLAIM';
 
+export type CounterReasoningOutcome =
+  | 'SUPPORT'
+  | 'CHALLENGE'
+  | 'DELAY'
+  | 'OBSTACLE'
+  | 'PROMOTION'
+  | 'GROWTH'
+  | 'LOSS'
+  | 'STABILITY'
+  | 'VOLATILITY'
+  | 'MANIFESTATION'
+  | 'EMPLOYMENT'
+  | 'LEADERSHIP'
+  | 'BUSINESS'
+  | 'TECHNICAL_SPECIALIZATION'
+  | 'UNKNOWN';
+
 export interface CounterReasoningClaim {
   readonly domain: ReasoningNodeDomain;
   readonly question: string;
@@ -28,15 +45,53 @@ export interface CounterReasoningClaim {
   readonly targetSubjectKey: string;
   readonly polarity?: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly assertedPolarity: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly assertedOutcome?: string;
+  readonly assertedOutcome?: CounterReasoningOutcome;
   readonly subjectQualifier?: string;
 }
+
+export type CounterReasoningRelation = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+
+export type CounterReasoningAlignment = 'ALIGNS' | 'OPPOSES' | 'NEUTRAL';
 
 export interface CounterReasoningFactor {
   readonly evidenceId: string;
   readonly edgeType: ReasoningEdgeType;
   readonly explanation: string;
-  readonly relation: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+  readonly relation: CounterReasoningRelation;
+}
+
+export interface EvaluatedCounterReasoningFactor {
+  readonly evidenceId: string;
+  readonly edgeType: ReasoningEdgeType;
+  readonly explanation: string;
+  readonly relation: CounterReasoningRelation;
+  readonly alignment: CounterReasoningAlignment;
+  readonly reason?: string;
+}
+
+export type CounterReasoningEdgeSemantic =
+  | 'SUPPORT'
+  | 'CHALLENGE'
+  | 'ACTIVATION'
+  | 'MODIFICATION'
+  | 'CONFIRMATION'
+  | 'NEUTRAL';
+
+export type CounterReasoningOutcomePolarity = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+
+export type CounterReasoningPropositionAlignment =
+  | 'SUPPORTS_PROPOSITION'
+  | 'OPPOSES_PROPOSITION'
+  | 'NEUTRAL';
+
+export interface CounterReasoningPropositionFactor {
+  readonly evidenceId: string;
+  readonly edgeType: ReasoningEdgeType;
+  readonly explanation: string;
+  readonly relation: CounterReasoningRelation;
+  readonly edgeSemantic: CounterReasoningEdgeSemantic;
+  readonly propositionAlignment: CounterReasoningPropositionAlignment;
+  readonly reason?: string;
 }
 
 export interface CounterReasoningEvidenceResolution {
@@ -62,6 +117,7 @@ export interface CounterReasoningOutput {
   readonly conclusionChanged: false;
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
+  readonly evaluatedFactors: readonly CounterReasoningPropositionFactor[];
   readonly rebuttal: string;
   readonly guardrailApplied: boolean;
   readonly guardrailReasons: readonly string[];

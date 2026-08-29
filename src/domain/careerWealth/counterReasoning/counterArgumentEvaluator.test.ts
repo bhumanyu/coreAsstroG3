@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { evaluateCounterArgument } from './counterArgumentEvaluator';
-import type { CounterReasoningClaim } from './counterReasoningTypes';
+import type { CounterReasoningClaim, CounterReasoningFactor } from './counterReasoningTypes';
 
 describe('counterArgumentEvaluator (CW-07)', () => {
   const neutralClaim: CounterReasoningClaim = {
@@ -13,7 +13,7 @@ describe('counterArgumentEvaluator (CW-07)', () => {
     assertedOutcome: 'SUPPORT'
   };
 
-  const challengeClaim: CounterReasoningClaim = {
+  const delayClaim: CounterReasoningClaim = {
     domain: 'CAREER',
     question: 'Is my current Dasha causing delays?',
     questionType: 'DASHA_CHALLENGE',
@@ -23,81 +23,190 @@ describe('counterArgumentEvaluator (CW-07)', () => {
     assertedOutcome: 'DELAY'
   };
 
-  it('evaluates to CONFIRMED when supporting evidence exists and zero challenges for neutral/support claim', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: ['EV_1', 'EV_2'],
-      challengingEvidenceIds: [],
-      claim: neutralClaim
+  describe('Spec Section 25 Matrix Evaluation', () => {
+    it('SUPPORTS-only => CONFIRMED for positive claim', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_1',
+          edgeType: 'SUPPORTS',
+          explanation: '10th lord strong',
+          relation: 'SUPPORT'
+        },
+        {
+          evidenceId: 'EV_2',
+          edgeType: 'SUPPORTS',
+          explanation: 'Jupiter aspect',
+          relation: 'SUPPORT'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: ['EV_1', 'EV_2'],
+        challengingEvidenceIds: [],
+        factors,
+        claim: neutralClaim
+      });
+
+      expect(res.disposition).toBe('CONFIRMED');
+      expect(res.evaluatedFactors.length).toBe(2);
+      expect(res.rebuttal).toContain('confirm FINAL_SYNTHESIS');
     });
 
-    expect(res.disposition).toBe('CONFIRMED');
-    expect(res.rebuttal).toContain('confirm FINAL_SYNTHESIS');
+    it('CHALLENGES-only => REJECTED for positive claim', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_2',
+          edgeType: 'CHALLENGES',
+          explanation: 'Saturn debility',
+          relation: 'CHALLENGE'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: ['EV_2'],
+        factors,
+        claim: neutralClaim
+      });
+
+      expect(res.disposition).toBe('REJECTED');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('OPPOSES_PROPOSITION');
+      expect(res.rebuttal).toContain('No supportive astrological evidence was found');
+    });
+
+    it('both SUPPORTS and CHALLENGES => PARTIALLY_CONFIRMED for positive claim', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_1',
+          edgeType: 'SUPPORTS',
+          explanation: '10th lord exalted',
+          relation: 'SUPPORT'
+        },
+        {
+          evidenceId: 'EV_2',
+          edgeType: 'CHALLENGES',
+          explanation: 'Rahu affliction',
+          relation: 'CHALLENGE'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: ['EV_1'],
+        challengingEvidenceIds: ['EV_2'],
+        factors,
+        claim: neutralClaim
+      });
+
+      expect(res.disposition).toBe('PARTIALLY_CONFIRMED');
+      expect(res.rebuttal).toContain('present active qualification or friction');
+    });
+
+    it('ACTIVATES-only => INSUFFICIENT_EVIDENCE for positive claim', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_DASHA_1',
+          edgeType: 'ACTIVATES',
+          explanation: 'Dasha activation',
+          relation: 'SUPPORT'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: ['EV_DASHA_1'],
+        challengingEvidenceIds: [],
+        factors,
+        claim: neutralClaim
+      });
+
+      expect(res.disposition).toBe('INSUFFICIENT_EVIDENCE');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('NEUTRAL');
+      expect(res.rebuttal).toContain('No direct confirming or opposing astrological factors were identified');
+    });
+
+    it('evaluates to INSUFFICIENT_EVIDENCE when neither supporting nor challenging evidence exists (empty factors)', () => {
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        factors: [],
+        claim: neutralClaim
+      });
+
+      expect(res.disposition).toBe('INSUFFICIENT_EVIDENCE');
+      expect(res.evaluatedFactors).toEqual([]);
+      expect(res.rebuttal).toContain('No direct astrological evidence was identified');
+    });
   });
 
-  it('evaluates to PARTIALLY_CONFIRMED when both supporting and challenging evidence exist for neutral/support claim', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: ['EV_1'],
-      challengingEvidenceIds: ['EV_2'],
-      claim: neutralClaim
+  describe('Negative-polarity (DELAY) claim evaluation', () => {
+    it('ACTIVATES-only on DELAY assertion => INSUFFICIENT_EVIDENCE (ACTIVATES does not prove delays)', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_DASHA_1',
+          edgeType: 'ACTIVATES',
+          explanation: 'Dasha is active',
+          relation: 'SUPPORT'
+        }
+      ];
+
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: ['EV_DASHA_1'],
+        challengingEvidenceIds: [],
+        factors,
+        claim: delayClaim
+      });
+
+      expect(res.disposition).toBe('INSUFFICIENT_EVIDENCE');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('NEUTRAL');
+      expect(res.rebuttal).toContain('No direct confirming or opposing astrological factors');
     });
 
-    expect(res.disposition).toBe('PARTIALLY_CONFIRMED');
-    expect(res.rebuttal).toContain('present active friction or qualification');
-  });
+    it('CHALLENGES edges on DELAY assertion => CONFIRMED', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_DASHA_CHALLENGE_1',
+          edgeType: 'CHALLENGES',
+          explanation: 'Saturn transit retards career progress',
+          relation: 'CHALLENGE'
+        }
+      ];
 
-  it('evaluates to REJECTED when only challenging evidence exists for neutral/support proposition', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: [],
-      challengingEvidenceIds: ['EV_2'],
-      claim: neutralClaim
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: ['EV_DASHA_CHALLENGE_1'],
+        factors,
+        claim: delayClaim
+      });
+
+      expect(res.disposition).toBe('CONFIRMED');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('SUPPORTS_PROPOSITION');
+      expect(res.rebuttal).toContain('confirm DASHA_ACTIVATION');
     });
 
-    expect(res.disposition).toBe('REJECTED');
-    expect(res.rebuttal).toContain('No supportive astrological evidence was found');
-  });
+    it('mixed SUPPORTS and CHALLENGES on DELAY assertion => PARTIALLY_CONFIRMED', () => {
+      const factors: CounterReasoningFactor[] = [
+        {
+          evidenceId: 'EV_DASHA_1',
+          edgeType: 'SUPPORTS',
+          explanation: 'Benefic aspect',
+          relation: 'SUPPORT'
+        },
+        {
+          evidenceId: 'EV_DASHA_CHALLENGE_1',
+          edgeType: 'CHALLENGES',
+          explanation: 'Malefic aspect',
+          relation: 'CHALLENGE'
+        }
+      ];
 
-  it('evaluates to INSUFFICIENT_EVIDENCE when neither supporting nor challenging evidence exists', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: [],
-      challengingEvidenceIds: [],
-      claim: neutralClaim
+      const res = evaluateCounterArgument({
+        supportingEvidenceIds: ['EV_DASHA_1'],
+        challengingEvidenceIds: ['EV_DASHA_CHALLENGE_1'],
+        factors,
+        claim: delayClaim
+      });
+
+      expect(res.disposition).toBe('PARTIALLY_CONFIRMED');
+      expect(res.rebuttal).toContain('present active qualification or friction');
     });
-
-    expect(res.disposition).toBe('INSUFFICIENT_EVIDENCE');
-    expect(res.rebuttal).toContain('No direct astrological evidence was identified');
-  });
-
-  it('evaluates CHALLENGE assertion with only ACTIVATES/SUPPORTS to INSUFFICIENT_EVIDENCE', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: ['EV_DASHA_1'],
-      challengingEvidenceIds: [],
-      claim: challengeClaim
-    });
-
-    expect(res.disposition).toBe('INSUFFICIENT_EVIDENCE');
-    expect(res.rebuttal).toContain('No astrological challenge or delay factors were identified');
-  });
-
-  it('evaluates CHALLENGE assertion with CHALLENGES edges to CONFIRMED', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: [],
-      challengingEvidenceIds: ['EV_DASHA_CHALLENGE_1'],
-      claim: challengeClaim
-    });
-
-    expect(res.disposition).toBe('CONFIRMED');
-    expect(res.rebuttal).toContain('confirm challenges or delays');
-  });
-
-  it('evaluates CHALLENGE assertion with mixed edges to PARTIALLY_CONFIRMED', () => {
-    const res = evaluateCounterArgument({
-      supportingEvidenceIds: ['EV_DASHA_1'],
-      challengingEvidenceIds: ['EV_DASHA_CHALLENGE_1'],
-      claim: challengeClaim
-    });
-
-    expect(res.disposition).toBe('PARTIALLY_CONFIRMED');
-    expect(res.rebuttal).toContain('friction or delay');
   });
 });
-
