@@ -83,11 +83,18 @@ import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
 import { synthesizeWealthTiming, type WealthTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeWealthManifestations } from './manifestation/wealthManifestationSynthesis';
+import type { WealthManifestationSynthesis } from './manifestation/wealthManifestationTypes';
 import { synthesizeWealthFinal } from '../careerWealth/finalSynthesis/wealthFinalSynthesis';
+import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import {
   ReasoningTraceBuilder,
   validateEvidenceNodes,
   validateReasoningTrace,
+  mapAxisStatusToEdgeType,
+  mapActivationStatusToEdgeType,
+  mapDivisionalRelationshipToEdgeType,
+  mapManifestationStatusToEdgeType,
+  mapPromiseStatusToEdgeType,
   type ReasoningEdgeType,
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
@@ -642,28 +649,28 @@ export function buildWealthReasoningTraceGraph(params: {
   const natalNodeId = traceBuilder.addConclusionNode({
     axis: 'NATAL',
     subjectKey: 'NATAL_PROMISE',
-    label: `Natal Wealth Promise: ${params.overallStatus ?? 'UNKNOWN'}`
+    label: `Natal Wealth Promise: ${params.wealthFinalSynthesis.promiseStatus ?? params.overallStatus ?? 'UNKNOWN'}`
   });
   const dashaNodeId = traceBuilder.addConclusionNode({
     axis: 'DASHA',
     subjectKey: 'DASHA_ACTIVATION',
-    label: `Wealth Dasha Activation: ${(params.wealthTimingSynthesis as any)?.timingStatus ?? (params.wealthTimingSynthesis ? getWealthOverallEffect(params.wealthTimingSynthesis) : 'UNKNOWN')}`
+    label: `Wealth Dasha Activation: ${params.wealthFinalSynthesis.activationStatus ?? 'UNKNOWN'}`
   });
   const timingNodeId = traceBuilder.addConclusionNode({
     axis: 'TIMING',
     subjectKey: 'TIMING_TRIGGER',
-    label: `Wealth Timing Trigger: ${(params.wealthTimingSynthesis as any)?.timingStatus ?? (params.wealthTimingSynthesis ? getWealthOverallEffect(params.wealthTimingSynthesis) : 'UNKNOWN')}`
+    label: `Wealth Timing Trigger: ${params.wealthFinalSynthesis.timingStatus ?? 'UNKNOWN'}`
   });
   const divisionalNodeId = traceBuilder.addConclusionNode({
     axis: 'DIVISIONAL',
     subjectKey: 'D2_CONFIRMATION',
-    label: `D2 Relationship: ${params.d2Relationship ?? 'NEUTRAL'}`
+    label: `D2 Relationship: ${params.wealthFinalSynthesis.divisionalStatus ?? params.d2Relationship ?? 'NEUTRAL'}`
   });
   const manifestationNodeId = traceBuilder.addConclusionNode({
     type: 'MANIFESTATION',
     axis: 'MANIFESTATION',
     subjectKey: 'WEALTH_MANIFESTATION',
-    label: `Wealth Manifestations: ${params.wealthManifestationSynthesis ? 'Synthesized' : 'None'}`
+    label: `Wealth Manifestations: ${params.wealthFinalSynthesis.manifestationStatus ?? (params.wealthManifestationSynthesis ? 'Synthesized' : 'None')}`
   });
   const finalNodeId = traceBuilder.addConclusionNode({
     type: 'SYNTHESIS',
@@ -718,8 +725,8 @@ export function buildWealthReasoningTraceGraph(params: {
     }
   }
 
-  // Natal -> Final
-  const natalEdgeType = resolveWealthNatalStrengthToEdgeType(params.overallStatus);
+  // Natal -> Final: derived from params.wealthFinalSynthesis.promiseStatus
+  const natalEdgeType = mapPromiseStatusToEdgeType(params.wealthFinalSynthesis.promiseStatus ?? params.overallStatus);
   if (natalEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: natalNodeId,
@@ -729,9 +736,8 @@ export function buildWealthReasoningTraceGraph(params: {
     });
   }
 
-  // Dasha -> Final
-  const wealthTimingStatus = (params.wealthTimingSynthesis as any)?.timingStatus ?? (params.wealthTimingSynthesis ? getWealthOverallEffect(params.wealthTimingSynthesis) : undefined);
-  const dashaEdgeType = resolveTimingStatusToEdgeType(wealthTimingStatus);
+  // Dasha -> Final: derived from params.wealthFinalSynthesis.activationStatus
+  const dashaEdgeType = mapActivationStatusToEdgeType(params.wealthFinalSynthesis.activationStatus);
   if (dashaEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: dashaNodeId,
@@ -741,8 +747,8 @@ export function buildWealthReasoningTraceGraph(params: {
     });
   }
 
-  // Timing -> Final
-  const timingEdgeType = resolveTimingStatusToEdgeType(wealthTimingStatus);
+  // Timing -> Final: derived from params.wealthFinalSynthesis.timingStatus
+  const timingEdgeType = mapAxisStatusToEdgeType(params.wealthFinalSynthesis.timingStatus);
   if (timingEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: timingNodeId,
@@ -752,8 +758,8 @@ export function buildWealthReasoningTraceGraph(params: {
     });
   }
 
-  // Divisional -> Final
-  const d2EdgeType = resolveDivisionalRelationshipToEdgeType(params.d2Relationship);
+  // Divisional -> Final: derived from params.wealthFinalSynthesis.divisionalStatus
+  const d2EdgeType = mapDivisionalRelationshipToEdgeType(params.wealthFinalSynthesis.divisionalStatus ?? params.d2Relationship);
   if (d2EdgeType) {
     traceBuilder.addEdge({
       fromNodeId: divisionalNodeId,
@@ -763,64 +769,21 @@ export function buildWealthReasoningTraceGraph(params: {
     });
   }
 
-  // Manifestation -> Final
-  traceBuilder.addEdge({
-    fromNodeId: manifestationNodeId,
-    toNodeId: finalNodeId,
-    type: 'MANIFESTS',
-    explanation: 'Synthesized wealth manifestations qualify final wealth outcome'
-  });
+  // Manifestation -> Final: derived from params.wealthFinalSynthesis.manifestationStatus
+  const manifestationEdgeType = mapManifestationStatusToEdgeType(params.wealthFinalSynthesis.manifestationStatus);
+  if (manifestationEdgeType) {
+    traceBuilder.addEdge({
+      fromNodeId: manifestationNodeId,
+      toNodeId: finalNodeId,
+      type: manifestationEdgeType,
+      explanation: 'Synthesized wealth manifestations qualify final wealth outcome'
+    });
+  }
 
   const graph = traceBuilder.build();
   validateReasoningTrace(graph);
   validateEvidenceNodes(graph, new Set(params.evidence.map((e) => e.id)));
   return graph;
-}
-
-function getWealthOverallEffect(s: WealthTimingSynthesis): string | undefined {
-  if ((s as any).timingStatus) return (s as any).timingStatus;
-  if (s.dimensions) {
-    const effects = Object.values(s.dimensions).map((d) => d.overallEffect);
-    if (effects.some((e) => e === 'ACTIVATES')) return 'ACTIVATES';
-    if (effects.some((e) => e === 'CHALLENGES')) return 'CHALLENGES';
-    if (effects.some((e) => e === 'MODIFIES')) return 'MODIFIES';
-  }
-  return undefined;
-}
-
-function resolveWealthNatalStrengthToEdgeType(strength: WealthDimensionStatus | string | undefined): 'SUPPORTS' | 'CHALLENGES' | undefined {
-  if (!strength) return undefined;
-  const upper = strength.toUpperCase();
-  if (upper === 'STRONG' || upper === 'VERY_STRONG' || upper === 'EXCELLENT' || upper === 'GOOD' || upper === 'MODERATE') {
-    return 'SUPPORTS';
-  }
-  if (upper === 'CHALLENGED' || upper === 'POOR' || upper === 'WEAK' || upper === 'VERY_WEAK' || upper === 'LIMITED') {
-    return 'CHALLENGES';
-  }
-  return undefined;
-}
-
-function resolveTimingStatusToEdgeType(status: string | undefined): 'ACTIVATES' | 'CHALLENGES' | 'MODIFIES' | undefined {
-  if (!status) return undefined;
-  const upper = status.toUpperCase();
-  if (upper === 'ACTIVE' || upper === 'ACTIVATES' || upper === 'SUPPORT' || upper === 'SUPPORTS' || upper === 'SUPPORTIVE') {
-    return 'ACTIVATES';
-  }
-  if (upper === 'INACTIVE' || upper === 'CHALLENGE' || upper === 'CHALLENGES' || upper === 'CHALLENGING') {
-    return 'CHALLENGES';
-  }
-  if (upper === 'PARTIAL' || upper === 'MODIFIES' || upper === 'MIXED') {
-    return 'MODIFIES';
-  }
-  return undefined;
-}
-
-function resolveDivisionalRelationshipToEdgeType(rel: VargaRelationship | string | undefined): 'CONFIRMS' | 'CHALLENGES' | undefined {
-  if (!rel) return undefined;
-  const upper = rel.toUpperCase();
-  if (upper === 'CONFLICTING') return 'CHALLENGES';
-  if (upper === 'CONFIRMS' || upper === 'PARTIALLY_CONFIRMS') return 'CONFIRMS';
-  return undefined;
 }
 
 export function evaluateD2Relationship(

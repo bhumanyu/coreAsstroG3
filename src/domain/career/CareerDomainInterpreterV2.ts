@@ -61,7 +61,8 @@ import {
 } from './careerManifestations';
 import {
   buildCareerDashaSynthesis,
-  type D10CareerContext
+  type D10CareerContext,
+  type CareerDashaSynthesis
 } from './careerDasha';
 import { getCareerDashaEvidencePriority } from './careerDasha/careerDashaRules';
 import {
@@ -83,11 +84,18 @@ import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
 import { synthesizeCareerTransit, synthesizeCareerTiming, type CareerTimingSynthesis } from '../timing/careerWealthTiming';
 import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
+import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
+import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import {
   ReasoningTraceBuilder,
   validateEvidenceNodes,
   validateReasoningTrace,
+  mapAxisStatusToEdgeType,
+  mapActivationStatusToEdgeType,
+  mapDivisionalRelationshipToEdgeType,
+  mapManifestationStatusToEdgeType,
+  mapPromiseStatusToEdgeType,
   type ReasoningEdgeType,
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
@@ -591,28 +599,28 @@ export function buildCareerReasoningTraceGraph(params: {
   const natalNodeId = traceBuilder.addConclusionNode({
     axis: 'NATAL',
     subjectKey: 'NATAL_PROMISE',
-    label: `Natal Career Promise: ${params.natalStrength ?? 'UNKNOWN'}`
+    label: `Natal Career Promise: ${params.careerFinalSynthesis.promiseStatus ?? params.natalStrength ?? 'UNKNOWN'}`
   });
   const dashaNodeId = traceBuilder.addConclusionNode({
     axis: 'DASHA',
     subjectKey: 'DASHA_ACTIVATION',
-    label: `Career Dasha Activation: ${params.careerDashaSynthesis?.overallActivation ?? 'UNKNOWN'}`
+    label: `Career Dasha Activation: ${params.careerFinalSynthesis.activationStatus ?? params.careerDashaSynthesis?.combined?.combinedEffect ?? 'UNKNOWN'}`
   });
   const timingNodeId = traceBuilder.addConclusionNode({
     axis: 'TIMING',
     subjectKey: 'TIMING_TRIGGER',
-    label: `Career Timing Trigger: ${params.careerTimingSynthesis?.overallEffect ?? (params.careerTimingSynthesis as any)?.timingStatus ?? 'UNKNOWN'}`
+    label: `Career Timing Trigger: ${params.careerFinalSynthesis.timingStatus ?? params.careerTimingSynthesis?.overallEffect ?? 'UNKNOWN'}`
   });
   const divisionalNodeId = traceBuilder.addConclusionNode({
     axis: 'DIVISIONAL',
     subjectKey: 'D10_CONFIRMATION',
-    label: `D10 Relationship: ${params.d10Relationship ?? 'NEUTRAL'}`
+    label: `D10 Relationship: ${params.careerFinalSynthesis.divisionalStatus ?? params.d10Relationship ?? 'NEUTRAL'}`
   });
   const manifestationNodeId = traceBuilder.addConclusionNode({
     type: 'MANIFESTATION',
     axis: 'MANIFESTATION',
     subjectKey: 'CAREER_MANIFESTATION',
-    label: `Career Manifestations: ${params.careerManifestationSynthesis?.length ?? 0} synthesized`
+    label: `Career Manifestations: ${params.careerFinalSynthesis.manifestationStatus ?? (params.careerManifestationSynthesis?.length ? `${params.careerManifestationSynthesis.length} synthesized` : 'None')}`
   });
   const finalNodeId = traceBuilder.addConclusionNode({
     type: 'SYNTHESIS',
@@ -667,8 +675,8 @@ export function buildCareerReasoningTraceGraph(params: {
     }
   }
 
-  // Natal -> Final
-  const natalEdgeType = resolveCareerNatalStrengthToEdgeType(params.natalStrength);
+  // Natal -> Final: derived from params.careerFinalSynthesis.promiseStatus (falling back to natalStrength if unpopulated)
+  const natalEdgeType = mapPromiseStatusToEdgeType(params.careerFinalSynthesis.promiseStatus ?? params.natalStrength);
   if (natalEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: natalNodeId,
@@ -678,8 +686,8 @@ export function buildCareerReasoningTraceGraph(params: {
     });
   }
 
-  // Dasha -> Final
-  const dashaEdgeType = resolveCareerDashaActivationToEdgeType(params.careerDashaSynthesis?.overallActivation);
+  // Dasha -> Final: derived from params.careerFinalSynthesis.activationStatus
+  const dashaEdgeType = mapActivationStatusToEdgeType(params.careerFinalSynthesis.activationStatus);
   if (dashaEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: dashaNodeId,
@@ -689,9 +697,8 @@ export function buildCareerReasoningTraceGraph(params: {
     });
   }
 
-  // Timing -> Final
-  const careerTimingStatus = (params.careerTimingSynthesis as any)?.timingStatus ?? params.careerTimingSynthesis?.overallEffect ?? params.careerTimingSynthesis?.transitEffect;
-  const timingEdgeType = resolveTimingStatusToEdgeType(careerTimingStatus);
+  // Timing -> Final: derived from params.careerFinalSynthesis.timingStatus
+  const timingEdgeType = mapAxisStatusToEdgeType(params.careerFinalSynthesis.timingStatus);
   if (timingEdgeType) {
     traceBuilder.addEdge({
       fromNodeId: timingNodeId,
@@ -701,8 +708,8 @@ export function buildCareerReasoningTraceGraph(params: {
     });
   }
 
-  // Divisional -> Final
-  const d10EdgeType = resolveDivisionalRelationshipToEdgeType(params.d10Relationship);
+  // Divisional -> Final: derived from params.careerFinalSynthesis.divisionalStatus
+  const d10EdgeType = mapDivisionalRelationshipToEdgeType(params.careerFinalSynthesis.divisionalStatus ?? params.d10Relationship);
   if (d10EdgeType) {
     traceBuilder.addEdge({
       fromNodeId: divisionalNodeId,
@@ -712,62 +719,21 @@ export function buildCareerReasoningTraceGraph(params: {
     });
   }
 
-  // Manifestation -> Final
-  traceBuilder.addEdge({
-    fromNodeId: manifestationNodeId,
-    toNodeId: finalNodeId,
-    type: 'MANIFESTS',
-    explanation: 'Synthesized career manifestations qualify final career outcome'
-  });
+  // Manifestation -> Final: derived from params.careerFinalSynthesis.manifestationStatus
+  const manifestationEdgeType = mapManifestationStatusToEdgeType(params.careerFinalSynthesis.manifestationStatus);
+  if (manifestationEdgeType) {
+    traceBuilder.addEdge({
+      fromNodeId: manifestationNodeId,
+      toNodeId: finalNodeId,
+      type: manifestationEdgeType,
+      explanation: 'Synthesized career manifestations qualify final career outcome'
+    });
+  }
 
   const graph = traceBuilder.build();
   validateReasoningTrace(graph);
   validateEvidenceNodes(graph, new Set(params.evidence.map((e) => e.id)));
   return graph;
-}
-
-function resolveCareerNatalStrengthToEdgeType(strength: DomainStrength | string | undefined): 'SUPPORTS' | 'CHALLENGES' | undefined {
-  if (!strength) return undefined;
-  const upper = strength.toUpperCase();
-  if (upper === 'STRONG' || upper === 'VERY_STRONG' || upper === 'EXCELLENT' || upper === 'GOOD' || upper === 'MODERATE') {
-    return 'SUPPORTS';
-  }
-  if (upper === 'CHALLENGED' || upper === 'POOR' || upper === 'WEAK' || upper === 'VERY_WEAK' || upper === 'LIMITED') {
-    return 'CHALLENGES';
-  }
-  return undefined;
-}
-
-function resolveCareerDashaActivationToEdgeType(activation: string | undefined): 'ACTIVATES' | 'CHALLENGES' | 'MODIFIES' | undefined {
-  if (!activation) return undefined;
-  const upper = activation.toUpperCase();
-  if (upper === 'ACTIVE') return 'ACTIVATES';
-  if (upper === 'INACTIVE') return 'CHALLENGES';
-  if (upper === 'PARTIAL') return 'MODIFIES';
-  return undefined;
-}
-
-function resolveTimingStatusToEdgeType(status: string | undefined): 'ACTIVATES' | 'CHALLENGES' | 'MODIFIES' | undefined {
-  if (!status) return undefined;
-  const upper = status.toUpperCase();
-  if (upper === 'ACTIVE' || upper === 'ACTIVATES' || upper === 'SUPPORT' || upper === 'SUPPORTS' || upper === 'SUPPORTIVE') {
-    return 'ACTIVATES';
-  }
-  if (upper === 'INACTIVE' || upper === 'CHALLENGE' || upper === 'CHALLENGES' || upper === 'CHALLENGING') {
-    return 'CHALLENGES';
-  }
-  if (upper === 'PARTIAL' || upper === 'MODIFIES' || upper === 'MIXED') {
-    return 'MODIFIES';
-  }
-  return undefined;
-}
-
-function resolveDivisionalRelationshipToEdgeType(rel: VargaRelationship | string | undefined): 'CONFIRMS' | 'CHALLENGES' | undefined {
-  if (!rel) return undefined;
-  const upper = rel.toUpperCase();
-  if (upper === 'CONFLICTING') return 'CHALLENGES';
-  if (upper === 'CONFIRMS' || upper === 'PARTIALLY_CONFIRMS') return 'CONFIRMS';
-  return undefined;
 }
 
 export function buildCareerTimingStatement(
