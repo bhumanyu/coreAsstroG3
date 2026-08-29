@@ -11,11 +11,17 @@ import type {
 import type { WealthDimension } from '../../wealth/wealthTypes';
 import type { DomainStrength } from '../../reasoning/reasoningTypes';
 import type { VargaRelationship } from '../../interpretation/DomainInterpretationTypes';
+import type { WealthTransitDimensionSynthesis } from '../../timing/careerWealthTiming/careerWealthTimingTypes';
+import type { WealthDimensionManifestationSynthesis } from '../../wealth/manifestation/wealthManifestationTypes';
+import type { DomainEvidence } from '../../interpretation/DomainEvidence';
 import {
   enforceWealthNatalCeiling,
   enforceWealthDimensionIsolation
 } from './finalSynthesisGuardrails';
-import { calculateFinalConfidence } from './finalSynthesisConfidence';
+import {
+  calculateFinalConfidenceV2,
+  type FinalDomainStatusForConfidence
+} from './finalConfidenceModel';
 
 const WEALTH_DIMENSIONS: readonly WealthDimension[] = [
   'ACCUMULATION',
@@ -81,6 +87,46 @@ function mapManifestationStatus(status: string | undefined): FinalDomainStatus {
     default:
       return 'INSUFFICIENT_DATA';
   }
+}
+
+function calculateWealthEvidenceSourceCount(input: {
+  readonly natalEvidenceIds: readonly string[];
+  readonly dimTiming?: WealthTransitDimensionSynthesis;
+  readonly d2Synthesis?: readonly DomainEvidence[];
+  readonly dimManifestation?: WealthDimensionManifestationSynthesis;
+}): number {
+  let count = 0;
+
+  if (input.natalEvidenceIds.length > 0) {
+    count += 1;
+  }
+
+  if (
+    input.dimTiming?.dashaEffect &&
+    input.dimTiming.dashaEffect !== 'INSUFFICIENT_DATA'
+  ) {
+    count += 1;
+  }
+
+  if (
+    input.dimTiming?.factors &&
+    input.dimTiming.factors.length > 0
+  ) {
+    count += 1;
+  }
+
+  if (
+    input.d2Synthesis &&
+    input.d2Synthesis.length > 0
+  ) {
+    count += 1;
+  }
+
+  if (input.dimManifestation) {
+    count += 1;
+  }
+
+  return count;
 }
 
 export function synthesizeWealthFinal(
@@ -183,17 +229,6 @@ export function synthesizeWealthFinal(
 
     const dimFinalStatus = enforceWealthNatalCeiling(dimNatal, candidate);
 
-    const dimSupportingCount = dimManifestation?.status === 'STRONGLY_SUPPORTED' || dimManifestation?.status === 'SUPPORTED' ? 1 : 0;
-    const dimChallengingCount = dimManifestation?.status === 'CHALLENGED' ? 1 : 0;
-    const dimPrimaryCount = (dimNatal !== 'UNDETERMINED' ? 1 : 0) + (dimManifestation ? 1 : 0);
-
-    const dimConfidence: FinalDomainConfidence = calculateFinalConfidence(
-      dimPrimaryCount,
-      dimSupportingCount,
-      dimChallengingCount,
-      isD2Confirmed
-    );
-
     const dimEvidenceIdSet = new Set<string>();
     const dimRuleIdSet = new Set<string>();
 
@@ -210,6 +245,28 @@ export function synthesizeWealthFinal(
 
     dimNatalEv.forEach((id: string) => { dimEvidenceIdSet.add(id); evidenceIdSet.add(id); });
     dimNatalR.forEach((id: string) => { dimRuleIdSet.add(id); ruleIdSet.add(id); });
+
+    const dimConfidenceBreakdown = calculateFinalConfidenceV2({
+      natalPromise: dimNatal,
+      natalEvidenceCount: dimNatalEv.length,
+      activationStatus,
+      activationConfidence: undefined,
+      dashaEffectConsistent: undefined,
+      dashaHierarchyRolesConsistent: undefined,
+      timingStatus,
+      timingConfidence: dimTiming?.confidence,
+      divisionalStatus,
+      manifestationConfidences: dimManifestation ? [dimManifestation.confidence] : [],
+      manifestationStatuses: dimManifestation ? [mapManifestationStatus(dimManifestation.status)] : [],
+      evidenceSourceCount: calculateWealthEvidenceSourceCount({
+        natalEvidenceIds: dimNatalEv,
+        dimTiming,
+        d2Synthesis,
+        dimManifestation
+      })
+    });
+
+    const dimConfidence: FinalDomainConfidence = dimConfidenceBreakdown.final;
 
     if (dimManifestation) {
       manifestationSummaryList.push({
@@ -258,6 +315,7 @@ export function synthesizeWealthFinal(
       divisionalStatus,
       manifestationStatus,
       confidence: dimConfidence,
+      confidenceBreakdown: Object.freeze(dimConfidenceBreakdown),
       primaryPromise: dimNatal,
       dashaEffect,
       timingEffect,

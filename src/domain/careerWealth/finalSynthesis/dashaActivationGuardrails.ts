@@ -18,7 +18,7 @@ export interface DashaActivationGuardrailResult {
   readonly summary?: string;
   readonly hierarchy?: FinalSynthesisActivationHierarchy;
   readonly hierarchyConsistent: boolean;
-  readonly consistency?: {
+  readonly consistency: {
     readonly effectConsistent: boolean;
     readonly hierarchyRolesConsistent: boolean;
   };

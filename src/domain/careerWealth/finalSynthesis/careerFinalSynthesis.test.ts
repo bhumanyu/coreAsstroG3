@@ -113,8 +113,40 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       combinedScore: 2.0,
       mdPlanet: Planet.JUPITER,
       adPlanet: Planet.SUN,
-      pdPlanet: Planet.MARS
+      pdPlanet: Planet.MARS,
+      factors: [
+        {
+          id: 'D-1',
+          planet: Planet.JUPITER,
+          period: 'MD',
+          category: 'FUNCTIONAL_ROLE',
+          direction: 'SUPPORT',
+          weight: 2.0,
+          statement: 'Jupiter functional role',
+          evidenceIds: ['E-JUP-1']
+        }
+      ]
     });
+
+    const mockTiming: CareerTimingSynthesis = {
+      natalPromise: 'STRONG',
+      dashaEffect: 'SUPPORTS',
+      transitEffect: 'SUPPORTS',
+      overallEffect: 'ACTIVATES',
+      confidence: 0.9,
+      factors: [
+        {
+          id: 'T-1',
+          planet: Planet.SATURN,
+          category: 'CAREER_HOUSE_TRANSIT',
+          direction: 'SUPPORT',
+          weight: 1.5,
+          statement: 'Saturn 10H transit',
+          natalEvidenceIds: ['E-SAT-1']
+        }
+      ],
+      summary: 'Timing activates'
+    };
 
     const mockManifestations: CareerManifestationSynthesis[] = [
       {
@@ -145,8 +177,24 @@ describe('synthesizeCareerFinal (CW-05)', () => {
 
     const input: CareerFinalSynthesisInput = {
       natalPromise: 'VERY_STRONG',
+      natalEvidenceIds: ['NATAL-1', 'NATAL-2'],
       dashaSynthesis: mockDasha,
+      timingSynthesis: mockTiming,
       manifestationSynthesis: mockManifestations,
+      d10Synthesis: [
+        createDomainEvidence({
+          id: 'D10-1',
+          ruleId: 'D10-R-1',
+          sourceType: 'VARGA',
+          domain: 'CAREER',
+          role: 'CONFIRMATION',
+          phase: 'VARGA_CONFIRMATION',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          statement: 'D10 confirms dignity',
+          priority: 1
+        })
+      ],
       d10Relationship: 'CONFIRMS'
     };
 
@@ -625,6 +673,285 @@ describe('synthesizeCareerFinal (CW-05)', () => {
       expect(result.activationSummary).toContain('CW-05 recomputed the activation');
       // Downgrade applies because activationStatus is genuinely CHALLENGE
       expect(result.finalStatus).toBe('MODERATE');
+    });
+  });
+
+  describe('CW-05D Final Confidence Integration & Two-Axis Independence', () => {
+    it('(a) STRONG natal + Dasha CHALLENGE + D10 CONFLICTS + high-quality coverage yields a qualified finalStatus with MEDIUM/HIGH confidence', () => {
+      const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+        combinedEffect: 'CHALLENGES',
+        combinedConfidence: 'HIGH',
+        combinedScore: -2.0,
+        mdPlanet: Planet.SATURN,
+        adPlanet: Planet.RAHU,
+        pdPlanet: Planet.KETU,
+        mdEffect: 'CHALLENGES',
+        adEffect: 'CHALLENGES',
+        pdEffect: 'CHALLENGES',
+        factors: [
+          {
+            id: 'D-CHALLENGE-1',
+            planet: Planet.SATURN,
+            period: 'MD',
+            category: 'FUNCTIONAL_ROLE',
+            direction: 'CHALLENGE',
+            weight: 2.0,
+            statement: 'Saturn functional challenge',
+            evidenceIds: ['E-SAT-D']
+          }
+        ]
+      });
+
+      const mockTiming: CareerTimingSynthesis = {
+        natalPromise: 'STRONG',
+        dashaEffect: 'CHALLENGES',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'MODIFIES',
+        confidence: 0.85,
+        factors: [
+          {
+            id: 'T-FACT-1',
+            planet: Planet.JUPITER,
+            category: 'CAREER_HOUSE_TRANSIT',
+            direction: 'SUPPORT',
+            weight: 1.5,
+            statement: 'Jupiter transit',
+            natalEvidenceIds: ['E-JUP-T']
+          }
+        ],
+        summary: 'Timing mixed'
+      };
+
+      const mockManifestations: CareerManifestationSynthesis[] = [
+        {
+          reasoningVersion: 'CW-04',
+          mode: 'LEADERSHIP',
+          status: 'STRONGLY_SUPPORTED',
+          confidence: 'HIGH',
+          natalSupport: 'SUPPORT',
+          dashaSupport: 'CHALLENGE',
+          transitSupport: 'SUPPORT',
+          d10Support: 'CHALLENGE',
+          factors: [],
+          summary: 'Manifestation'
+        }
+      ];
+
+      const input: CareerFinalSynthesisInput = {
+        natalPromise: 'STRONG',
+        natalEvidenceIds: ['NATAL-1', 'NATAL-2'],
+        dashaSynthesis: mockDasha,
+        timingSynthesis: mockTiming,
+        manifestationSynthesis: mockManifestations,
+        d10Synthesis: [
+          createDomainEvidence({
+            id: 'D10-1',
+            ruleId: 'D10-R-1',
+            sourceType: 'VARGA',
+            domain: 'CAREER',
+            role: 'CONFIRMATION',
+            phase: 'VARGA_CONFIRMATION',
+            polarity: 'CHALLENGING',
+            strength: 'STRONG',
+            statement: 'D10 conflicts',
+            priority: 1
+          })
+        ],
+        d10Relationship: 'CONFLICTS'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Both D10 conflict and Dasha challenge downgrade STRONG -> MODERATE / MIXED
+      expect(result.finalStatus).toBe('MIXED');
+      // Confidence is determined on its own axis (medium because of divisional contradiction)
+      expect(result.confidence).toBe('MEDIUM');
+      expect(result.confidenceBreakdown).toBeDefined();
+      expect(result.confidenceBreakdown?.contradictionLevel).toBe('HIGH');
+    });
+
+    it('(b) WEAK natal + strong supportive secondaries yields CHALLENGED finalStatus with HIGH confidence', () => {
+      const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+        combinedEffect: 'SUPPORTS',
+        combinedConfidence: 'HIGH',
+        combinedScore: 2.5,
+        mdPlanet: Planet.JUPITER,
+        adPlanet: Planet.SUN,
+        pdPlanet: Planet.MARS,
+        mdEffect: 'SUPPORTS',
+        adEffect: 'SUPPORTS',
+        pdEffect: 'SUPPORTS',
+        factors: [
+          {
+            id: 'D-SUPP-1',
+            planet: Planet.JUPITER,
+            period: 'MD',
+            category: 'FUNCTIONAL_ROLE',
+            direction: 'SUPPORT',
+            weight: 2.0,
+            statement: 'Jupiter support',
+            evidenceIds: ['E-JUP']
+          }
+        ]
+      });
+
+      const mockTiming: CareerTimingSynthesis = {
+        natalPromise: 'WEAK',
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'ACTIVATES',
+        confidence: 0.9,
+        factors: [
+          {
+            id: 'T-1',
+            planet: Planet.JUPITER,
+            category: 'CAREER_HOUSE_TRANSIT',
+            direction: 'SUPPORT',
+            weight: 1.5,
+            statement: 'Jupiter transit',
+            natalEvidenceIds: ['E-10H']
+          }
+        ],
+        summary: 'Timing activates'
+      };
+
+      const mockManifestations: CareerManifestationSynthesis[] = [
+        {
+          reasoningVersion: 'CW-04',
+          mode: 'LEADERSHIP',
+          status: 'STRONGLY_SUPPORTED',
+          confidence: 'HIGH',
+          natalSupport: 'SUPPORT',
+          dashaSupport: 'SUPPORT',
+          transitSupport: 'SUPPORT',
+          d10Support: 'SUPPORT',
+          factors: [],
+          summary: 'Manifestation strong'
+        }
+      ];
+
+      const input: CareerFinalSynthesisInput = {
+        natalPromise: 'WEAK',
+        natalEvidenceIds: ['NATAL-1', 'NATAL-2'],
+        dashaSynthesis: mockDasha,
+        timingSynthesis: mockTiming,
+        manifestationSynthesis: mockManifestations,
+        d10Synthesis: [
+          createDomainEvidence({
+            id: 'D10-1',
+            ruleId: 'D10-R-1',
+            sourceType: 'VARGA',
+            domain: 'CAREER',
+            role: 'CONFIRMATION',
+            phase: 'VARGA_CONFIRMATION',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'D10 confirms',
+            priority: 1
+          })
+        ],
+        d10Relationship: 'CONFIRMS'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Weak natal ceiling forces CHALLENGED
+      expect(result.finalStatus).toBe('CHALLENGED');
+      // High-quality multi-source evidence ensures HIGH confidence in the conclusion
+      expect(result.confidence).toBe('HIGH');
+      expect(result.confidenceBreakdown?.final).toBe('HIGH');
+    });
+
+    it('(c) Dasha consistency failure caps confidence but leaves activationStatus unchanged', () => {
+      const mockDasha: CareerDashaSynthesis = createMockCareerDashaSynthesis({
+        combinedEffect: 'SUPPORTS', // Stale effect inconsistent with CHALLENGING sub-periods
+        combinedConfidence: 'HIGH',
+        combinedScore: -2.0,
+        mdPlanet: Planet.SATURN,
+        adPlanet: Planet.MARS,
+        pdPlanet: Planet.RAHU,
+        mdEffect: 'CHALLENGES',
+        adEffect: 'CHALLENGES',
+        pdEffect: 'CHALLENGES',
+        factors: [
+          {
+            id: 'D-1',
+            planet: Planet.SATURN,
+            period: 'MD',
+            category: 'FUNCTIONAL_ROLE',
+            direction: 'CHALLENGE',
+            weight: 2.0,
+            statement: 'Saturn challenge',
+            evidenceIds: ['E-SAT']
+          }
+        ]
+      });
+
+      const mockTiming: CareerTimingSynthesis = {
+        natalPromise: 'STRONG',
+        dashaEffect: 'CHALLENGES',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'MODIFIES',
+        confidence: 0.9,
+        factors: [
+          {
+            id: 'T-1',
+            planet: Planet.JUPITER,
+            category: 'CAREER_HOUSE_TRANSIT',
+            direction: 'SUPPORT',
+            weight: 1.5,
+            statement: 'Jupiter transit',
+            natalEvidenceIds: ['E-10H']
+          }
+        ],
+        summary: 'Timing mixed'
+      };
+
+      const mockManifestations: CareerManifestationSynthesis[] = [
+        {
+          reasoningVersion: 'CW-04',
+          mode: 'LEADERSHIP',
+          status: 'STRONGLY_SUPPORTED',
+          confidence: 'HIGH',
+          natalSupport: 'SUPPORT',
+          dashaSupport: 'CHALLENGE',
+          transitSupport: 'SUPPORT',
+          d10Support: 'SUPPORT',
+          factors: [],
+          summary: 'Manifestation strong'
+        }
+      ];
+
+      const input: CareerFinalSynthesisInput = {
+        natalPromise: 'STRONG',
+        natalEvidenceIds: ['NATAL-1', 'NATAL-2'],
+        dashaSynthesis: mockDasha,
+        timingSynthesis: mockTiming,
+        manifestationSynthesis: mockManifestations,
+        d10Synthesis: [
+          createDomainEvidence({
+            id: 'D10-1',
+            ruleId: 'D10-R-1',
+            sourceType: 'VARGA',
+            domain: 'CAREER',
+            role: 'CONFIRMATION',
+            phase: 'VARGA_CONFIRMATION',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'D10 confirms',
+            priority: 1
+          })
+        ],
+        d10Relationship: 'CONFIRMS'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Activation status is recomputed to CHALLENGE
+      expect(result.activationStatus).toBe('CHALLENGE');
+      // Consistency failure caps confidence to MEDIUM
+      expect(result.confidenceBreakdown?.consistencyCapApplied).toBe(true);
+      expect(result.confidence).toBe('MEDIUM');
     });
   });
 });
