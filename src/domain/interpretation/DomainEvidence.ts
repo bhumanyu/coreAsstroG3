@@ -8,6 +8,7 @@ import type {
   EvidenceStrength
 } from './DomainInterpretationTypes';
 import type { Planet } from '../../types';
+import type { EvidenceProvenance } from '../careerWealth/provenance';
 
 export interface DomainEvidence {
   readonly id: string;
@@ -23,6 +24,7 @@ export interface DomainEvidence {
   readonly ruleId?: string;
   readonly relatedEvidenceIds: readonly string[];
   readonly notes?: string;
+  readonly provenance?: EvidenceProvenance;
   readonly timing?: {
     readonly period: 'MD' | 'AD' | 'PD';
     readonly level?: 'MD' | 'AD' | 'PD';
@@ -56,6 +58,7 @@ export function createDomainEvidence(
     ]),
     ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
     ...(evidence.notes ? { notes: evidence.notes } : {}),
+    ...(evidence.provenance ? { provenance: evidence.provenance } : {}),
     ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {}),
     ...(evidence.evidenceFamily ? { evidenceFamily: evidence.evidenceFamily } : {}),
     ...(evidence.dimension ? { dimension: evidence.dimension } : {}),
