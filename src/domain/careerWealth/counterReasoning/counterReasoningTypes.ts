@@ -61,6 +61,12 @@ export type CounterReasoningPropositionAlignment =
   | 'OPPOSES_PROPOSITION'
   | 'NEUTRAL';
 
+/**
+ * @deprecated 'DENY' is kept for legacy-compatibility only.
+ * The canonical model is assertionMode ∈ {'AFFIRM', 'QUESTION'} combined with assertionPolarity ∈ {'POSITIVE', 'NEGATED'},
+ * where legacy DENY ≡ AFFIRM + NEGATED.
+ * The resolver emits only 'AFFIRM' or 'QUESTION' alongside assertionPolarity.
+ */
 export type CounterReasoningAssertionMode = 'AFFIRM' | 'DENY' | 'QUESTION';
 export type CounterReasoningAssertionPolarity = 'POSITIVE' | 'NEGATED';
 

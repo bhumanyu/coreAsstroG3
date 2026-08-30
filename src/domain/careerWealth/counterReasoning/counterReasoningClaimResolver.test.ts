@@ -69,6 +69,39 @@ describe('counterReasoningClaimResolver (CW-07B)', () => {
       expect(exclPos.assertionPolarity).toBe('POSITIVE');
     });
 
+    it('asserts that resolver output for all sample sentences is never DENY', () => {
+      const sampleSentences = [
+        'Why is my career not stable?',
+        'My Dasha does not cause delays.',
+        'My Dasha causes delays.',
+        'Is my current Dasha causing delays?',
+        "Isn't my Dasha causing delays?",
+        "Doesn't Saturn cause obstacles?",
+        "Won't this period cause loss?",
+        "Can't this Dasha produce promotion?",
+        'My chart cannot produce loss.',
+        "This dasha won't cause delays.",
+        "There aren't any obstacles in career.",
+        "I don't have wealth issues.",
+        'Does Jupiter support my wealth?',
+        'Why is career strong?',
+        'Career is stable and growing.'
+      ];
+
+      for (const sentence of sampleSentences) {
+        const mode = resolveAssertionMode(sentence);
+        const modeAndPolarity = resolveAssertionModeAndPolarity(sentence);
+        const claim = resolveClaim({ domain: 'CAREER', question: sentence });
+
+        expect(mode).not.toBe('DENY');
+        expect(['AFFIRM', 'QUESTION']).toContain(mode);
+        expect(modeAndPolarity.assertionMode).not.toBe('DENY');
+        expect(['AFFIRM', 'QUESTION']).toContain(modeAndPolarity.assertionMode);
+        expect(claim.assertionMode).not.toBe('DENY');
+        expect(['AFFIRM', 'QUESTION']).toContain(claim.assertionMode);
+      }
+    });
+
     it('asserts documented deterministic lexical boundaries (known limitations pinned)', () => {
       // Known lexical boundary 1: compound proposition contains "not" in one clause
       // Pure regex classifies the entire string as NEGATED

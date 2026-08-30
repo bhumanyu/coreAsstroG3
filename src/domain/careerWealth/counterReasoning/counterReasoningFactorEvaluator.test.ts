@@ -320,6 +320,22 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
       expect(result.outcomeMatch).toBe('UNSPECIFIED');
       expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
     });
+
+    it('evaluates MANIFESTS + matching outcomeSemantics => NEUTRAL (intentional current behavior / documented gap, not a bug)', () => {
+      const factor: CounterReasoningFactor = {
+        evidenceId: 'EV_MANIFESTATION_1',
+        edgeType: 'MANIFESTS',
+        explanation: '10th lord manifests executive role in career domain',
+        relation: 'SUPPORT',
+        outcomeSemantics: ['MANIFESTATION']
+      };
+
+      const result = evaluatePropositionFactor(factor, manifestationClaim);
+      expect(result.edgeType).toBe('MANIFESTS');
+      expect(result.outcomeMatch).toBe('EXACT');
+      expect(result.propositionAlignment).toBe('NEUTRAL');
+      expect(result.reason).toContain('indicates domain manifestation; manifestation outcome semantics are a known remaining CW-07B gap');
+    });
   });
 
   describe('Semantic Truth-Table Test Suite', () => {
