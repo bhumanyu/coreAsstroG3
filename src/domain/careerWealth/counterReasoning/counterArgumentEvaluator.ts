@@ -3,7 +3,7 @@ import type {
   CounterReasoningContext,
   CounterReasoningDisposition,
   CounterReasoningFactor,
-  CounterReasoningPropositionFactor
+  EvaluatedCounterReasoningFactor
 } from './counterReasoningTypes';
 import { evaluatePropositionFactor } from './counterReasoningFactorEvaluator';
 
@@ -20,14 +20,26 @@ export interface EvaluateCounterArgumentParams {
 export interface EvaluateCounterArgumentResult {
   readonly disposition: CounterReasoningDisposition;
   readonly rebuttal: string;
-  readonly evaluatedFactors: readonly CounterReasoningPropositionFactor[];
+  readonly evaluatedFactors: readonly EvaluatedCounterReasoningFactor[];
+}
+
+/**
+ * Deterministic factor comparator: sorts by evidenceId, then edgeType.
+ */
+export function compareFactors(
+  a: EvaluatedCounterReasoningFactor,
+  b: EvaluatedCounterReasoningFactor
+): number {
+  const idCmp = a.evidenceId.localeCompare(b.evidenceId);
+  if (idCmp !== 0) return idCmp;
+  return a.edgeType.localeCompare(b.edgeType);
 }
 
 /**
  * Evaluates counter-arguments using deterministic semantic factor evaluation.
  *
- * Rules (CW-07 Spec Section 19):
- * 1. Each graph factor is mapped to a CounterReasoningPropositionFactor based on edge semantics and claim outcome polarity.
+ * Rules:
+ * 1. Each graph factor is mapped to an EvaluatedCounterReasoningFactor based on edge semantics, outcome matching, and assertion mode.
  * 2. Factors are deterministically sorted by evidenceId then edgeType.
  * 3. Dispositions are derived strictly from the presence (not magnitude) of supporting and opposing proposition factors:
  *    - SUPPORTS_PROPOSITION > 0 && OPPOSES_PROPOSITION === 0 -> CONFIRMED
@@ -52,11 +64,7 @@ export function evaluateCounterArgument(
   // Evaluate each factor against the proposition and sort deterministically
   const evaluatedFactors = factors
     .map((factor) => evaluatePropositionFactor(factor, claim))
-    .sort((a, b) => {
-      const idCmp = a.evidenceId.localeCompare(b.evidenceId);
-      if (idCmp !== 0) return idCmp;
-      return a.edgeType.localeCompare(b.edgeType);
-    });
+    .sort(compareFactors);
 
   let supportsCount = 0;
   let opposesCount = 0;
@@ -99,5 +107,6 @@ export function evaluateCounterArgument(
     evaluatedFactors
   };
 }
+
 
 

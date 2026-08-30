@@ -10,7 +10,9 @@ describe('counterReasoningGuardrails (CW-07)', () => {
     targetSubjectKey: 'DASHA_ACTIVATION',
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
-    assertedOutcome: 'CHALLENGE'
+    assertedOutcome: 'CHALLENGE',
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   it('applies strong primary protection guardrails when natal is STRONG', () => {

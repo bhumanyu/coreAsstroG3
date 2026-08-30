@@ -65,7 +65,8 @@ export function resolveEvidence(
         evidenceId,
         edgeType: edge.type as ReasoningEdgeType,
         explanation: edge.explanation,
-        relation
+        relation,
+        outcomeSemantics: edge.outcomeSemantics
       });
     }
 

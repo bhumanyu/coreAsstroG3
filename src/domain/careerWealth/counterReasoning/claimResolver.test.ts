@@ -1,7 +1,54 @@
 import { describe, expect, it } from 'vitest';
-import { resolveClaim } from './claimResolver';
+import {
+  resolveAssertionMode,
+  resolveAssertionPolarity,
+  resolveAssertionModeAndPolarity,
+  resolveClaim
+} from './claimResolver';
 
-describe('claimResolver (CW-07)', () => {
+describe('claimResolver (CW-07 / CW-07B)', () => {
+  describe('resolveAssertionMode and resolveAssertionPolarity', () => {
+    it('correctly resolves the four spec sentences', () => {
+      // 1. Interrogative question with negative word -> QUESTION (stance), NEGATED (polarity)
+      expect(resolveAssertionMode('Why is my career not stable?')).toBe('QUESTION');
+      expect(resolveAssertionPolarity('Why is my career not stable?')).toBe('NEGATED');
+
+      // 2. Declarative denial -> AFFIRM (stance), NEGATED (polarity)
+      expect(resolveAssertionMode('My Dasha does not cause delays.')).toBe('AFFIRM');
+      expect(resolveAssertionPolarity('My Dasha does not cause delays.')).toBe('NEGATED');
+
+      // 3. Declarative affirmation -> AFFIRM (stance), POSITIVE (polarity)
+      expect(resolveAssertionMode('My Dasha causes delays.')).toBe('AFFIRM');
+      expect(resolveAssertionPolarity('My Dasha causes delays.')).toBe('POSITIVE');
+
+      // 4. Interrogative question -> QUESTION (stance), POSITIVE (polarity)
+      expect(resolveAssertionMode('Is my current Dasha causing delays?')).toBe('QUESTION');
+      expect(resolveAssertionPolarity('Is my current Dasha causing delays?')).toBe('POSITIVE');
+    });
+
+    it('identifies interrogative starters as QUESTION', () => {
+      expect(resolveAssertionMode('How will my career develop')).toBe('QUESTION');
+      expect(resolveAssertionMode('Does Jupiter support my wealth')).toBe('QUESTION');
+      expect(resolveAssertionMode('Can Saturn delay my promotion')).toBe('QUESTION');
+      expect(resolveAssertionMode('Will I receive wealth in this dasha')).toBe('QUESTION');
+      expect(resolveAssertionMode('Should I expect obstacles')).toBe('QUESTION');
+    });
+
+    it('identifies various negative declarative contractions as NEGATED polarity with AFFIRM mode', () => {
+      expect(resolveAssertionMode('My chart cannot produce loss.')).toBe('AFFIRM');
+      expect(resolveAssertionPolarity('My chart cannot produce loss.')).toBe('NEGATED');
+
+      expect(resolveAssertionMode("This dasha won't cause delays.")).toBe('AFFIRM');
+      expect(resolveAssertionPolarity("This dasha won't cause delays.")).toBe('NEGATED');
+
+      expect(resolveAssertionMode("There aren't any obstacles in career.")).toBe('AFFIRM');
+      expect(resolveAssertionPolarity("There aren't any obstacles in career.")).toBe('NEGATED');
+
+      expect(resolveAssertionMode("I don't have wealth issues.")).toBe('AFFIRM');
+      expect(resolveAssertionPolarity("I don't have wealth issues.")).toBe('NEGATED');
+    });
+  });
+
   it('resolves explicit targetSubjectKey and questionType if provided', () => {
     const claim = resolveClaim({
       domain: 'CAREER',
@@ -15,7 +62,9 @@ describe('claimResolver (CW-07)', () => {
     expect(claim.targetSubjectKey).toBe('D10_CONFIRMATION');
     expect(claim.assertedPolarity).toBe('CHALLENGE');
     expect(claim.polarity).toBe('CHALLENGE');
+    expect(claim.assertionMode).toBe('QUESTION');
   });
+
 
   it('maps D10 queries to D10_CONFIRMATION for CAREER and D2 queries to D2_CONFIRMATION for WEALTH only when explicit', () => {
     const careerExplicitD10 = resolveClaim({
