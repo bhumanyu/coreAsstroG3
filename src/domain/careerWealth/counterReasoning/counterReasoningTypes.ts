@@ -3,6 +3,8 @@ import type { ReasoningEdgeType } from '../reasoningTrace/reasoningEdge';
 import type { ReasoningTraceGraph } from '../reasoningTrace/reasoningTraceGraph';
 import type { CareerWealthFinalSynthesis } from '../finalSynthesis/careerWealthFinalSynthesisTypes';
 
+export type CounterReasoningDomain = ReasoningNodeDomain;
+
 export type CounterReasoningQuestionType =
   | 'WHY'
   | 'WHY_NOT'
@@ -22,52 +24,29 @@ export type CounterReasoningDisposition =
   | 'UNSUPPORTED_CLAIM';
 
 export type CounterReasoningOutcome =
-  | 'SUPPORT'
-  | 'CHALLENGE'
   | 'DELAY'
   | 'OBSTACLE'
+  | 'LOSS'
+  | 'VOLATILITY'
+  | 'CHALLENGE'
   | 'PROMOTION'
   | 'GROWTH'
-  | 'LOSS'
   | 'STABILITY'
-  | 'VOLATILITY'
   | 'MANIFESTATION'
   | 'EMPLOYMENT'
   | 'LEADERSHIP'
   | 'BUSINESS'
   | 'TECHNICAL_SPECIALIZATION'
+  | 'SUPPORT'
   | 'UNKNOWN';
 
-export interface CounterReasoningClaim {
-  readonly domain: ReasoningNodeDomain;
-  readonly question: string;
-  readonly questionType: CounterReasoningQuestionType;
-  readonly targetSubjectKey: string;
-  readonly polarity?: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly assertedPolarity: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly assertedOutcome?: CounterReasoningOutcome;
-  readonly subjectQualifier?: string;
-}
+export type CounterReasoningOutcomePolarity = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+
+export type CounterReasoningPolarity = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
 
 export type CounterReasoningRelation = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
 
 export type CounterReasoningAlignment = 'ALIGNS' | 'OPPOSES' | 'NEUTRAL';
-
-export interface CounterReasoningFactor {
-  readonly evidenceId: string;
-  readonly edgeType: ReasoningEdgeType;
-  readonly explanation: string;
-  readonly relation: CounterReasoningRelation;
-}
-
-export interface EvaluatedCounterReasoningFactor {
-  readonly evidenceId: string;
-  readonly edgeType: ReasoningEdgeType;
-  readonly explanation: string;
-  readonly relation: CounterReasoningRelation;
-  readonly alignment: CounterReasoningAlignment;
-  readonly reason?: string;
-}
 
 export type CounterReasoningEdgeSemantic =
   | 'SUPPORT'
@@ -77,22 +56,48 @@ export type CounterReasoningEdgeSemantic =
   | 'CONFIRMATION'
   | 'NEUTRAL';
 
-export type CounterReasoningOutcomePolarity = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
-
 export type CounterReasoningPropositionAlignment =
   | 'SUPPORTS_PROPOSITION'
   | 'OPPOSES_PROPOSITION'
   | 'NEUTRAL';
 
-export interface CounterReasoningPropositionFactor {
+export type CounterReasoningAssertionMode = 'AFFIRM' | 'DENY' | 'QUESTION';
+
+export type OutcomeMatch = 'EXACT' | 'ABSENT' | 'UNSPECIFIED';
+
+export interface CounterReasoningClaim {
+  readonly domain: ReasoningNodeDomain;
+  readonly question: string;
+  readonly questionType: CounterReasoningQuestionType;
+  readonly targetSubjectKey: string;
+  readonly polarity?: CounterReasoningPolarity;
+  readonly assertedPolarity: CounterReasoningPolarity;
+  readonly assertedOutcome?: CounterReasoningOutcome;
+  readonly assertionMode: CounterReasoningAssertionMode;
+  readonly subjectQualifier?: string;
+}
+
+export interface CounterReasoningFactor {
+  readonly evidenceId: string;
+  readonly edgeType: ReasoningEdgeType;
+  readonly explanation: string;
+  readonly relation: CounterReasoningRelation;
+  readonly outcomeSemantics?: readonly CounterReasoningOutcome[];
+}
+
+export interface EvaluatedCounterReasoningFactor {
   readonly evidenceId: string;
   readonly edgeType: ReasoningEdgeType;
   readonly explanation: string;
   readonly relation: CounterReasoningRelation;
   readonly edgeSemantic: CounterReasoningEdgeSemantic;
+  readonly outcomeMatch: OutcomeMatch;
   readonly propositionAlignment: CounterReasoningPropositionAlignment;
+  readonly alignment?: CounterReasoningAlignment;
   readonly reason?: string;
 }
+
+export type CounterReasoningPropositionFactor = EvaluatedCounterReasoningFactor;
 
 export interface CounterReasoningEvidenceResolution {
   readonly supportingEvidenceIds: readonly string[];
@@ -111,15 +116,20 @@ export interface CounterReasoningContext {
   readonly secondaryEvidenceIds?: readonly string[];
 }
 
-export interface CounterReasoningOutput {
+export interface CounterReasoningResult {
   readonly claim: CounterReasoningClaim;
   readonly disposition: CounterReasoningDisposition;
   readonly conclusionChanged: false;
+  readonly originalConclusion?: string;
+  readonly assertionMode: CounterReasoningAssertionMode;
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
-  readonly evaluatedFactors: readonly CounterReasoningPropositionFactor[];
+  readonly evaluatedFactors: readonly EvaluatedCounterReasoningFactor[];
   readonly rebuttal: string;
   readonly guardrailApplied: boolean;
   readonly guardrailReasons: readonly string[];
 }
+
+export type CounterReasoningOutput = CounterReasoningResult;
+
 

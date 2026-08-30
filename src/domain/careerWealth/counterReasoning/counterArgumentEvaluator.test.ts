@@ -10,7 +10,8 @@ describe('counterArgumentEvaluator (CW-07)', () => {
     targetSubjectKey: 'FINAL_SYNTHESIS',
     polarity: 'NEUTRAL',
     assertedPolarity: 'NEUTRAL',
-    assertedOutcome: 'SUPPORT'
+    assertedOutcome: 'SUPPORT',
+    assertionMode: 'QUESTION'
   };
 
   const delayClaim: CounterReasoningClaim = {
@@ -20,7 +21,8 @@ describe('counterArgumentEvaluator (CW-07)', () => {
     targetSubjectKey: 'DASHA_ACTIVATION',
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
-    assertedOutcome: 'DELAY'
+    assertedOutcome: 'DELAY',
+    assertionMode: 'QUESTION'
   };
 
   describe('Spec Section 25 Matrix Evaluation', () => {

@@ -1,7 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { resolveClaim } from './claimResolver';
+import { resolveAssertionMode, resolveClaim } from './claimResolver';
 
-describe('claimResolver (CW-07)', () => {
+describe('claimResolver (CW-07 / CW-07B)', () => {
+  describe('resolveAssertionMode', () => {
+    it('correctly resolves the four spec sentences', () => {
+      // 1. Interrogative question with negative word -> QUESTION (interrogative first!)
+      expect(resolveAssertionMode('Why is my career not stable?')).toBe('QUESTION');
+
+      // 2. Declarative denial -> DENY
+      expect(resolveAssertionMode('My Dasha does not cause delays.')).toBe('DENY');
+
+      // 3. Declarative affirmation -> AFFIRM
+      expect(resolveAssertionMode('My Dasha causes delays.')).toBe('AFFIRM');
+
+      // 4. Interrogative question -> QUESTION
+      expect(resolveAssertionMode('Is my current Dasha causing delays?')).toBe('QUESTION');
+    });
+
+    it('identifies interrogative starters as QUESTION', () => {
+      expect(resolveAssertionMode('How will my career develop')).toBe('QUESTION');
+      expect(resolveAssertionMode('Does Jupiter support my wealth')).toBe('QUESTION');
+      expect(resolveAssertionMode('Can Saturn delay my promotion')).toBe('QUESTION');
+      expect(resolveAssertionMode('Will I receive wealth in this dasha')).toBe('QUESTION');
+      expect(resolveAssertionMode('Should I expect obstacles')).toBe('QUESTION');
+    });
+
+    it('identifies various negative declarative contractions as DENY', () => {
+      expect(resolveAssertionMode('My chart cannot produce loss.')).toBe('DENY');
+      expect(resolveAssertionMode("This dasha won't cause delays.")).toBe('DENY');
+      expect(resolveAssertionMode("There aren't any obstacles in career.")).toBe('DENY');
+      expect(resolveAssertionMode("I don't have wealth issues.")).toBe('DENY');
+    });
+  });
+
   it('resolves explicit targetSubjectKey and questionType if provided', () => {
     const claim = resolveClaim({
       domain: 'CAREER',
@@ -15,7 +46,9 @@ describe('claimResolver (CW-07)', () => {
     expect(claim.targetSubjectKey).toBe('D10_CONFIRMATION');
     expect(claim.assertedPolarity).toBe('CHALLENGE');
     expect(claim.polarity).toBe('CHALLENGE');
+    expect(claim.assertionMode).toBe('QUESTION');
   });
+
 
   it('maps D10 queries to D10_CONFIRMATION for CAREER and D2 queries to D2_CONFIRMATION for WEALTH only when explicit', () => {
     const careerExplicitD10 = resolveClaim({

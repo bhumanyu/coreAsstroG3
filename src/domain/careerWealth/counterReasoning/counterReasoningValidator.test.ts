@@ -10,10 +10,12 @@ describe('counterReasoningValidator (CW-07)', () => {
       questionType: 'WHY',
       targetSubjectKey: 'FINAL_SYNTHESIS',
       polarity: 'SUPPORT',
-      assertedPolarity: 'SUPPORT'
+      assertedPolarity: 'SUPPORT',
+      assertionMode: 'QUESTION'
     },
     disposition: 'CONFIRMED',
     conclusionChanged: false,
+    assertionMode: 'QUESTION',
     supportingEvidenceIds: ['EV_1', 'EV_2'],
     challengingEvidenceIds: ['EV_3'],
     evaluatedFactors: [],

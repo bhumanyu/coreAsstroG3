@@ -64,12 +64,19 @@ export function evaluateCounterReasoning(
     targetSubjectKey: options?.targetSubjectKey
   });
 
+  const originalConclusion =
+    context.natalPromiseStatus ??
+    context.finalSynthesis?.promiseStatus ??
+    context.finalSynthesis?.status;
+
   // Short-circuit 1: WHAT_IF counterfactuals are unsupported in deterministic mode
   if (claim.questionType === 'WHAT_IF') {
     const output: CounterReasoningOutput = {
       claim,
       disposition: 'UNSUPPORTED_CLAIM',
       conclusionChanged: false,
+      originalConclusion,
+      assertionMode: claim.assertionMode,
       supportingEvidenceIds: [],
       challengingEvidenceIds: [],
       evaluatedFactors: [],
@@ -88,6 +95,8 @@ export function evaluateCounterReasoning(
       claim,
       disposition: 'UNSUPPORTED_CLAIM',
       conclusionChanged: false,
+      originalConclusion,
+      assertionMode: claim.assertionMode,
       supportingEvidenceIds: [],
       challengingEvidenceIds: [],
       evaluatedFactors: [],
@@ -111,7 +120,6 @@ export function evaluateCounterReasoning(
     factors: evidenceRes.factors
   });
 
-
   // Apply CW-01A hierarchy and protection guardrails
   const guardrailRes = applyHierarchyGuardrails({
     disposition: evalRes.disposition,
@@ -125,6 +133,8 @@ export function evaluateCounterReasoning(
     claim,
     disposition: evalRes.disposition,
     conclusionChanged: false,
+    originalConclusion,
+    assertionMode: claim.assertionMode,
     supportingEvidenceIds: evidenceRes.supportingEvidenceIds,
     challengingEvidenceIds: evidenceRes.challengingEvidenceIds,
     evaluatedFactors: evalRes.evaluatedFactors,

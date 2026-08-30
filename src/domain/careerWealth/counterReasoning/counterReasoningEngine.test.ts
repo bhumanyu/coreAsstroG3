@@ -166,6 +166,8 @@ describe('counterReasoningEngine (CW-07)', () => {
 
     expect(result.disposition).toBe('PARTIALLY_CONFIRMED');
     expect(result.conclusionChanged).toBe(false);
+    expect(result.originalConclusion).toBe('STRONG');
+    expect(result.assertionMode).toBe('QUESTION');
     expect(result.supportingEvidenceIds).toEqual(['EV_DASHA_1', 'EV_NATAL_1']);
     expect(result.challengingEvidenceIds).toEqual(['EV_NATAL_2']);
     expect(result.guardrailApplied).toBe(true);

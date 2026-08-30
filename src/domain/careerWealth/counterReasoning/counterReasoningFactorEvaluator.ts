@@ -1,12 +1,15 @@
 import type {
   CounterReasoningClaim,
   CounterReasoningFactor,
-  CounterReasoningPropositionFactor,
   EvaluatedCounterReasoningFactor,
   CounterReasoningAlignment,
   CounterReasoningPropositionAlignment
 } from './counterReasoningTypes';
 import { resolveEdgeSemantic, resolveOutcomePolarity } from './counterReasoningSemantics';
+import { matchFactorOutcome } from './counterReasoningOutcomeMatcher';
+import { applyAssertionMode } from './counterReasoningAssertionSemantics';
+
+export { resolveEdgeSemantic } from './counterReasoningSemantics';
 
 /**
  * Evaluates the RAW DOMAIN RELATION of a single factor against the claim's asserted outcome.
@@ -15,53 +18,51 @@ import { resolveEdgeSemantic, resolveOutcomePolarity } from './counterReasoningS
  * - Returns ALIGNS, OPPOSES, or NEUTRAL based on whether the factor's intrinsic astrological nature
  *   directly aligns with or opposes the domain outcome.
  * - This evaluates raw domain directionality WITHOUT proposition-level polarity inversion.
- * - For proposition-aware evaluation (which inverts polarity when the proposition itself is negative,
- *   e.g. asking about DELAY/LOSS), use evaluatePropositionFactor() instead.
- *
- * Rules (CW-07 Spec Section 10):
- * 1. Missing or UNKNOWN asserted outcome -> NEUTRAL alignment.
- * 2. ACTIVATION or MODIFICATION edge semantics represent domain activation/modulation
- *    and do not prove or disprove a specific outcome -> NEUTRAL alignment.
- * 3. MANIFESTS edge type: CW-07A treats MANIFESTS as NEUTRAL for proposition alignment; outcome-specific manifestation alignment is deferred to CW-07B.
- * 4. Otherwise:
- *    - factor.relation === 'SUPPORT' -> ALIGNS
- *    - factor.relation === 'CHALLENGE' -> OPPOSES
- *    - otherwise -> NEUTRAL
  */
 export function evaluateFactorRelation(
   factor: CounterReasoningFactor,
   claim: CounterReasoningClaim
 ): EvaluatedCounterReasoningFactor {
+  const outcomeMatch = matchFactorOutcome(factor, claim);
+  const edgeSemantic = resolveEdgeSemantic(factor.edgeType);
+
   if (!claim.assertedOutcome || claim.assertedOutcome === 'UNKNOWN') {
     return {
       evidenceId: factor.evidenceId,
       edgeType: factor.edgeType,
       explanation: factor.explanation,
       relation: factor.relation,
+      edgeSemantic,
+      outcomeMatch,
+      propositionAlignment: 'NEUTRAL',
       alignment: 'NEUTRAL',
       reason: 'No specific outcome asserted to align or oppose.'
     };
   }
 
   if (factor.edgeType === 'MANIFESTS') {
-    // Note (CW-07A): MANIFESTS indicates domain manifestation; outcome-specific MANIFESTS handling is deferred to CW-07B.
     return {
       evidenceId: factor.evidenceId,
       edgeType: factor.edgeType,
       explanation: factor.explanation,
       relation: factor.relation,
+      edgeSemantic,
+      outcomeMatch,
+      propositionAlignment: 'NEUTRAL',
       alignment: 'NEUTRAL',
       reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
     };
   }
 
-  const edgeSemantic = resolveEdgeSemantic(factor.edgeType);
   if (edgeSemantic === 'ACTIVATION' || edgeSemantic === 'MODIFICATION') {
     return {
       evidenceId: factor.evidenceId,
       edgeType: factor.edgeType,
       explanation: factor.explanation,
       relation: factor.relation,
+      edgeSemantic,
+      outcomeMatch,
+      propositionAlignment: 'NEUTRAL',
       alignment: 'NEUTRAL',
       reason: `${factor.edgeType} indicates domain activation or modulation; this relationship alone does not establish the asserted outcome.`
     };
@@ -86,6 +87,9 @@ export function evaluateFactorRelation(
     edgeType: factor.edgeType,
     explanation: factor.explanation,
     relation: factor.relation,
+    edgeSemantic,
+    outcomeMatch,
+    propositionAlignment: alignment === 'ALIGNS' ? 'SUPPORTS_PROPOSITION' : alignment === 'OPPOSES' ? 'OPPOSES_PROPOSITION' : 'NEUTRAL',
     alignment,
     reason
   };
@@ -93,39 +97,29 @@ export function evaluateFactorRelation(
 
 /**
  * @deprecated Use evaluateFactorRelation or evaluatePropositionFactor instead.
- * - evaluateFactorRelation: evaluates raw astrological/domain relation semantics (ALIGNS/OPPOSES/NEUTRAL).
- * - evaluatePropositionFactor: evaluates user-proposition semantics with polarity awareness (SUPPORTS_PROPOSITION/OPPOSES_PROPOSITION/NEUTRAL).
  */
 export const evaluateFactor = evaluateFactorRelation;
 
 /**
  * Evaluates a factor with respect to the USER'S PROPOSITION (PROPOSITION SEMANTICS),
- * taking into account the asserted outcome's polarity (CW-07 Spec Section 14-15 with polarity correction).
+ * integrating outcome matching, edge semantics, polarity, and assertion mode.
  *
- * CW-07A: negative polarity establishes only generic negative proposition support; factor-specific outcome matching (DELAY != OBSTACLE != LOSS != VOLATILITY) is deferred to CW-07B.
- *
- * Contract:
- * - Returns SUPPORTS_PROPOSITION, OPPOSES_PROPOSITION, or NEUTRAL.
- * - Polarity inversion:
- *   - When the user asks a negative proposition (e.g. DELAY, OBSTACLE, CHALLENGE, LOSS):
- *     A CHALLENGE edge in the graph represents friction/obstacle, which SUPPORTS_PROPOSITION.
- *     A SUPPORT / CONFIRMS edge in the graph represents strength/smoothness, which OPPOSES_PROPOSITION.
- *   - When the user asks a positive proposition (e.g. SUPPORT, GROWTH, PROMOTION, STABILITY, MANIFESTATION):
- *     A SUPPORT / CONFIRMS edge in the graph SUPPORTS_PROPOSITION.
- *     A CHALLENGE edge in the graph OPPOSES_PROPOSITION.
- * - Special edge semantics:
- *   - ACTIVATES / MODIFIES: Domain activation/modulation is NEUTRAL with respect to specific outcomes.
- *   - MANIFESTS: Resolves to NEUTRAL in CW-07A even when assertedOutcome is MANIFESTATION.
- *
- * Note: full proposition-reversal via claim polarity for negated propositions (assertionMode: 'DENY')
- * is deferred to CW-07B since claimResolver does not yet parse explicit deny/affirm modes.
+ * Evaluation Order (Critical):
+ * a. Compute outcomeMatch = matchFactorOutcome(factor, claim).
+ * b. If assertedOutcome is undefined or 'UNKNOWN' -> NEUTRAL.
+ * c. If edgeType is 'ACTIVATES' or 'MODIFIES' -> NEUTRAL.
+ * d. If edgeType is 'MANIFESTS' -> NEUTRAL.
+ * e. If outcomeMatch === 'ABSENT' -> NEUTRAL ('Factor has explicit outcome semantics, but not the asserted outcome.').
+ * f. Otherwise compute baseAlignment from relation & polarity, apply assertion mode, and set reason.
  */
 export function evaluatePropositionFactor(
   factor: CounterReasoningFactor,
   claim: CounterReasoningClaim
-): CounterReasoningPropositionFactor {
+): EvaluatedCounterReasoningFactor {
+  const outcomeMatch = matchFactorOutcome(factor, claim);
   const edgeSemantic = resolveEdgeSemantic(factor.edgeType);
 
+  // a & b. Missing or UNKNOWN asserted outcome
   if (!claim.assertedOutcome || claim.assertedOutcome === 'UNKNOWN') {
     return {
       evidenceId: factor.evidenceId,
@@ -133,69 +127,101 @@ export function evaluatePropositionFactor(
       explanation: factor.explanation,
       relation: factor.relation,
       edgeSemantic,
+      outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      reason: 'No specific asserted outcome to determine proposition alignment.'
+      alignment: 'NEUTRAL',
+      reason: 'No specific asserted outcome is available.'
     };
   }
 
-  // Handle MANIFESTS edge specifically
+  // c. ACTIVATES or MODIFIES edge semantics
+  if (edgeSemantic === 'ACTIVATION' || edgeSemantic === 'MODIFICATION' || factor.edgeType === 'ACTIVATES' || factor.edgeType === 'MODIFIES') {
+    return {
+      evidenceId: factor.evidenceId,
+      edgeType: factor.edgeType,
+      explanation: factor.explanation,
+      relation: factor.relation,
+      edgeSemantic,
+      outcomeMatch,
+      propositionAlignment: 'NEUTRAL',
+      alignment: 'NEUTRAL',
+      reason: `${factor.edgeType} indicates domain activation or modulation; this relationship alone does not establish the asserted outcome.`
+    };
+  }
+
+  // d. MANIFESTS edge type
   if (factor.edgeType === 'MANIFESTS') {
-    // Note (CW-07A): MANIFESTS edge with assertedOutcome 'MANIFESTATION' yields NEUTRAL in CW-07A.
-    // Outcome-specific MANIFESTS handling is deferred to CW-07B.
     return {
       evidenceId: factor.evidenceId,
       edgeType: factor.edgeType,
       explanation: factor.explanation,
       relation: factor.relation,
       edgeSemantic,
+      outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      reason: `${factor.edgeType} indicates domain manifestation. This relationship alone does not establish the asserted outcome.`
+      alignment: 'NEUTRAL',
+      reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
     };
   }
 
-  if (edgeSemantic === 'ACTIVATION' || edgeSemantic === 'MODIFICATION') {
+  // e. Outcome semantics explicit but mismatching (ABSENT)
+  if (outcomeMatch === 'ABSENT') {
     return {
       evidenceId: factor.evidenceId,
       edgeType: factor.edgeType,
       explanation: factor.explanation,
       relation: factor.relation,
       edgeSemantic,
+      outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      reason: `${factor.edgeType} indicates domain activation or modulation. This relationship alone does not establish the asserted outcome.`
+      alignment: 'NEUTRAL',
+      reason: 'Factor has explicit outcome semantics, but not the asserted outcome.'
     };
   }
 
+  // f. EXACT or UNSPECIFIED -> compute baseAlignment from relation and polarity
   const polarity = resolveOutcomePolarity(claim.assertedOutcome);
-  let propositionAlignment: CounterReasoningPropositionAlignment = 'NEUTRAL';
+  let baseAlignment: CounterReasoningPropositionAlignment = 'NEUTRAL';
   let reason: string;
 
   if (polarity === 'NEGATIVE') {
-    // Note (CW-07A): A CHALLENGE-relation factor currently supports ANY negative proposition (DELAY/LOSS/OBSTACLE/VOLATILITY)
-    // because polarity is coarse-grained; outcome-specific evidence semantics (e.g. factor.outcomes = ['DELAY'] distinguishing
-    // DELAY from LOSS) are deferred to CW-07B.
     if (factor.relation === 'CHALLENGE') {
-      propositionAlignment = 'SUPPORTS_PROPOSITION';
-      reason = 'Factor indicates challenge or friction, which supports the negative proposition.';
+      baseAlignment = 'SUPPORTS_PROPOSITION';
+      reason = outcomeMatch === 'EXACT'
+        ? 'Factor explicitly matches the asserted outcome.'
+        : 'Factor indicates challenge or friction, which supports the negative proposition.';
     } else if (factor.relation === 'SUPPORT') {
-      propositionAlignment = 'OPPOSES_PROPOSITION';
-      reason = 'Factor indicates supportive activation, which opposes the negative proposition.';
+      baseAlignment = 'OPPOSES_PROPOSITION';
+      reason = outcomeMatch === 'EXACT'
+        ? 'Factor explicitly matches the asserted outcome.'
+        : 'Factor indicates supportive activation, which opposes the negative proposition.';
     } else {
-      propositionAlignment = 'NEUTRAL';
-      reason = 'Factor is neutral with respect to the negative proposition.';
+      baseAlignment = 'NEUTRAL';
+      reason = outcomeMatch === 'EXACT'
+        ? 'Factor explicitly matches the asserted outcome.'
+        : 'Factor is neutral with respect to the negative proposition.';
     }
   } else {
     // POSITIVE or NEUTRAL polarity
     if (factor.relation === 'SUPPORT') {
-      propositionAlignment = 'SUPPORTS_PROPOSITION';
-      reason = 'Factor supports the positive proposition.';
+      baseAlignment = 'SUPPORTS_PROPOSITION';
+      reason = outcomeMatch === 'EXACT'
+        ? 'Factor explicitly matches the asserted outcome.'
+        : 'Factor supports the positive proposition.';
     } else if (factor.relation === 'CHALLENGE') {
-      propositionAlignment = 'OPPOSES_PROPOSITION';
-      reason = 'Factor challenges or opposes the positive proposition.';
+      baseAlignment = 'OPPOSES_PROPOSITION';
+      reason = outcomeMatch === 'EXACT'
+        ? 'Factor explicitly matches the asserted outcome.'
+        : 'Factor challenges or opposes the positive proposition.';
     } else {
-      propositionAlignment = 'NEUTRAL';
-      reason = 'Factor is neutral with respect to the proposition.';
+      baseAlignment = 'NEUTRAL';
+      reason = outcomeMatch === 'EXACT'
+        ? 'Factor explicitly matches the asserted outcome.'
+        : 'Factor is neutral with respect to the proposition.';
     }
   }
+
+  const finalAlignment = applyAssertionMode(baseAlignment, claim.assertionMode);
 
   return {
     evidenceId: factor.evidenceId,
@@ -203,7 +229,10 @@ export function evaluatePropositionFactor(
     explanation: factor.explanation,
     relation: factor.relation,
     edgeSemantic,
-    propositionAlignment,
+    outcomeMatch,
+    propositionAlignment: finalAlignment,
+    alignment: finalAlignment === 'SUPPORTS_PROPOSITION' ? 'ALIGNS' : finalAlignment === 'OPPOSES_PROPOSITION' ? 'OPPOSES' : 'NEUTRAL',
     reason
   };
 }
+

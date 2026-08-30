@@ -12,7 +12,7 @@ import type {
 } from './counterReasoningTypes';
 import type { ReasoningEdgeType } from '../reasoningTrace/reasoningEdge';
 
-describe('counterReasoningFactorEvaluator (CW-07)', () => {
+describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
   const positiveClaim: CounterReasoningClaim = {
     domain: 'CAREER',
     question: 'Why is career strong?',
@@ -20,7 +20,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     targetSubjectKey: 'FINAL_SYNTHESIS',
     polarity: 'NEUTRAL',
     assertedPolarity: 'NEUTRAL',
-    assertedOutcome: 'SUPPORT'
+    assertedOutcome: 'SUPPORT',
+    assertionMode: 'QUESTION'
   };
 
   const manifestationClaim: CounterReasoningClaim = {
@@ -30,7 +31,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     targetSubjectKey: 'CAREER_MANIFESTATION',
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
-    assertedOutcome: 'MANIFESTATION'
+    assertedOutcome: 'MANIFESTATION',
+    assertionMode: 'QUESTION'
   };
 
   const delayClaim: CounterReasoningClaim = {
@@ -40,7 +42,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     targetSubjectKey: 'DASHA_ACTIVATION',
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
-    assertedOutcome: 'DELAY'
+    assertedOutcome: 'DELAY',
+    assertionMode: 'QUESTION'
   };
 
   const lossClaim: CounterReasoningClaim = {
@@ -50,7 +53,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     targetSubjectKey: 'DASHA_ACTIVATION',
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
-    assertedOutcome: 'LOSS'
+    assertedOutcome: 'LOSS',
+    assertionMode: 'QUESTION'
   };
 
   const unknownOutcomeClaim: CounterReasoningClaim = {
@@ -60,7 +64,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     targetSubjectKey: 'FINAL_SYNTHESIS',
     polarity: 'NEUTRAL',
     assertedPolarity: 'NEUTRAL',
-    assertedOutcome: 'UNKNOWN'
+    assertedOutcome: 'UNKNOWN',
+    assertionMode: 'QUESTION'
   };
 
   describe('evaluateFactorRelation (Raw Domain Relation)', () => {
@@ -77,7 +82,7 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       expect(result.evidenceId).toBe('EV_1');
     });
 
-    it('deprecated evaluateFactor alias works identically to evaluateFactorRelation (Issue #4)', () => {
+    it('deprecated evaluateFactor alias works identically to evaluateFactorRelation', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_1',
         edgeType: 'SUPPORTS',
@@ -101,7 +106,7 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       expect(result.alignment).toBe('OPPOSES');
     });
 
-    it('returns NEUTRAL when edgeType is ACTIVATES (Spec Test 22 principle)', () => {
+    it('returns NEUTRAL when edgeType is ACTIVATES', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_RAHU',
         edgeType: 'ACTIVATES',
@@ -126,7 +131,7 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       expect(result.alignment).toBe('NEUTRAL');
     });
 
-    it('returns NEUTRAL for MANIFESTS with both generic and MANIFESTATION outcomes (Issue #6)', () => {
+    it('returns NEUTRAL for MANIFESTS with both generic and MANIFESTATION outcomes', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_MAN',
         edgeType: 'MANIFESTS',
@@ -155,8 +160,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     });
   });
 
-  describe('evaluatePropositionFactor (Spec Sections 14-15 & Polarity-Aware Golden Rules)', () => {
-    it('Spec Test 22: ACTIVATES does not prove DELAY => propositionAlignment: NEUTRAL', () => {
+  describe('evaluatePropositionFactor with Outcome Matching and Assertion Mode', () => {
+    it('ACTIVATES does not prove DELAY => propositionAlignment: NEUTRAL', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_DASHA_RAHU',
         edgeType: 'ACTIVATES',
@@ -167,10 +172,11 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       const result = evaluatePropositionFactor(factor, delayClaim);
       expect(result.edgeSemantic).toBe('ACTIVATION');
       expect(result.propositionAlignment).toBe('NEUTRAL');
-      expect(result.reason).toContain('This relationship alone does not establish the asserted outcome');
+      expect(result.outcomeMatch).toBe('UNSPECIFIED');
+      expect(result.reason).toContain('does not establish the asserted outcome');
     });
 
-    it('Spec Test 23: SUPPORTS + positive proposition => propositionAlignment: SUPPORTS_PROPOSITION', () => {
+    it('SUPPORTS + positive proposition => propositionAlignment: SUPPORTS_PROPOSITION', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_10TH_EXALTED',
         edgeType: 'SUPPORTS',
@@ -181,10 +187,11 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       const result = evaluatePropositionFactor(factor, positiveClaim);
       expect(result.edgeSemantic).toBe('SUPPORT');
       expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
+      expect(result.outcomeMatch).toBe('UNSPECIFIED');
       expect(result.relation).toBe('SUPPORT');
     });
 
-    it('Concern #15: CONFIRMS + positive proposition => propositionAlignment: SUPPORTS_PROPOSITION (first-class positive)', () => {
+    it('CONFIRMS + positive proposition => propositionAlignment: SUPPORTS_PROPOSITION', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_D10_CONFIRM',
         edgeType: 'CONFIRMS',
@@ -198,130 +205,102 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
       expect(result.relation).toBe('SUPPORT');
     });
 
-    it('Issue #6 Contract: MANIFESTS + generic SUPPORT outcome -> NEUTRAL', () => {
-      const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_CAREER_ROLE',
-        edgeType: 'MANIFESTS',
-        explanation: 'Manifests management role',
-        relation: 'SUPPORT'
-      };
-
-      const result = evaluatePropositionFactor(factor, positiveClaim);
-      expect(result.edgeSemantic).toBe('NEUTRAL');
-      expect(result.propositionAlignment).toBe('NEUTRAL');
-      expect(result.reason).toContain('does not establish the asserted outcome');
-    });
-
-    it('Issue #6 Contract: MANIFESTS + assertedOutcome=MANIFESTATION -> NEUTRAL (outcome-specific MANIFESTS handling deferred to CW-07B)', () => {
-      const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_CAREER_ROLE',
-        edgeType: 'MANIFESTS',
-        explanation: 'Manifests management role',
-        relation: 'SUPPORT'
-      };
-
-      const result = evaluatePropositionFactor(factor, manifestationClaim);
-      expect(result.edgeSemantic).toBe('NEUTRAL');
-      expect(result.propositionAlignment).toBe('NEUTRAL');
-      expect(result.reason).toContain('does not establish the asserted outcome');
-    });
-
-    it('Spec Test 24: CHALLENGES + positive proposition => propositionAlignment: OPPOSES_PROPOSITION', () => {
-      const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_SATURN_AFFLICTION',
-        edgeType: 'CHALLENGES',
-        explanation: 'Saturn creates friction',
-        relation: 'CHALLENGE'
-      };
-
-      const result = evaluatePropositionFactor(factor, positiveClaim);
-      expect(result.edgeSemantic).toBe('CHALLENGE');
-      expect(result.propositionAlignment).toBe('OPPOSES_PROPOSITION');
-      expect(result.relation).toBe('CHALLENGE');
-    });
-
-    it('Negative-polarity proposition (DELAY): CHALLENGES edge SUPPORTS the delay proposition', () => {
+    it('EXACT outcome match evaluates proposition directly', () => {
       const factor: CounterReasoningFactor = {
         evidenceId: 'EV_SATURN_DELAY',
         edgeType: 'CHALLENGES',
-        explanation: 'Saturn transit slows career momentum',
-        relation: 'CHALLENGE'
+        explanation: 'Saturn delay pattern',
+        relation: 'CHALLENGE',
+        outcomeSemantics: ['DELAY']
       };
 
       const result = evaluatePropositionFactor(factor, delayClaim);
-      expect(result.edgeSemantic).toBe('CHALLENGE');
+      expect(result.outcomeMatch).toBe('EXACT');
       expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
-      expect(result.reason).toContain('supports the negative proposition');
+      expect(result.reason).toBe('Factor explicitly matches the asserted outcome.');
     });
 
-    it('Negative-polarity proposition (DELAY): SUPPORTS edge OPPOSES the delay proposition', () => {
+    it('ABSENT outcome match yields NEUTRAL even if relation is CHALLENGE', () => {
       const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_JUPITER_SUPPORT',
-        edgeType: 'SUPPORTS',
-        explanation: 'Jupiter trine promotes smooth progress',
-        relation: 'SUPPORT'
-      };
-
-      const result = evaluatePropositionFactor(factor, delayClaim);
-      expect(result.edgeSemantic).toBe('SUPPORT');
-      expect(result.propositionAlignment).toBe('OPPOSES_PROPOSITION');
-      expect(result.reason).toContain('opposes the negative proposition');
-    });
-
-    it('Negative-polarity proposition (LOSS): ACTIVATES edge returns NEUTRAL', () => {
-      const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_VENUS_ACTIVE',
-        edgeType: 'ACTIVATES',
-        explanation: 'Venus dasha activates 2nd house',
-        relation: 'SUPPORT'
-      };
-
-      const result = evaluatePropositionFactor(factor, lossClaim);
-      expect(result.edgeSemantic).toBe('ACTIVATION');
-      expect(result.propositionAlignment).toBe('NEUTRAL');
-    });
-
-    it('Returns NEUTRAL for UNKNOWN outcome or missing assertedOutcome', () => {
-      const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_TEST',
-        edgeType: 'SUPPORTS',
-        explanation: 'Some support',
-        relation: 'SUPPORT'
-      };
-
-      const result = evaluatePropositionFactor(factor, unknownOutcomeClaim);
-      expect(result.propositionAlignment).toBe('NEUTRAL');
-    });
-
-    it('CW-07A treats all NEGATIVE outcomes as one coarse class (outcome-specificity deferred to CW-07B)', () => {
-      const negativeOutcomes: CounterReasoningOutcome[] = ['LOSS', 'OBSTACLE', 'DELAY', 'VOLATILITY'];
-
-      const factor: CounterReasoningFactor = {
-        evidenceId: 'EV_GENERIC_CHALLENGE',
+        evidenceId: 'EV_LOSS_FACTOR',
         edgeType: 'CHALLENGES',
-        explanation: 'Generic chart friction factor',
-        relation: 'CHALLENGE'
+        explanation: 'Creates loss',
+        relation: 'CHALLENGE',
+        outcomeSemantics: ['LOSS']
       };
 
-      negativeOutcomes.forEach((outcome) => {
-        const claim: CounterReasoningClaim = {
-          domain: 'CAREER',
-          question: `Will this cause ${outcome}?`,
-          questionType: 'WHY',
-          targetSubjectKey: 'CAREER_OUTCOME',
-          polarity: 'CHALLENGE',
-          assertedPolarity: 'CHALLENGE',
-          assertedOutcome: outcome
-        };
+      // Claim is asking about DELAY, but factor is about LOSS
+      const result = evaluatePropositionFactor(factor, delayClaim);
+      expect(result.outcomeMatch).toBe('ABSENT');
+      expect(result.propositionAlignment).toBe('NEUTRAL');
+      expect(result.reason).toBe('Factor has explicit outcome semantics, but not the asserted outcome.');
+    });
 
-        const result = evaluatePropositionFactor(factor, claim);
-        expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
-        expect(result.edgeSemantic).toBe('CHALLENGE');
-      });
+    it('DENY assertion mode inverts proposition alignment', () => {
+      const denyDelayClaim: CounterReasoningClaim = {
+        ...delayClaim,
+        question: 'My Dasha does not cause delays.',
+        assertionMode: 'DENY'
+      };
+
+      const factor: CounterReasoningFactor = {
+        evidenceId: 'EV_SATURN_DELAY',
+        edgeType: 'CHALLENGES',
+        explanation: 'Saturn delay pattern',
+        relation: 'CHALLENGE',
+        outcomeSemantics: ['DELAY']
+      };
+
+      // When the factor supports DELAY, but user DENIES delay ("does not cause delays"),
+      // the factor OPPOSES the user's denial proposition!
+      const result = evaluatePropositionFactor(factor, denyDelayClaim);
+      expect(result.outcomeMatch).toBe('EXACT');
+      expect(result.propositionAlignment).toBe('OPPOSES_PROPOSITION');
+    });
+
+    it('DENY + ABSENT stays NEUTRAL (never flips to SUPPORTS_PROPOSITION)', () => {
+      const denyDelayClaim: CounterReasoningClaim = {
+        ...delayClaim,
+        question: 'My Dasha does not cause delays.',
+        assertionMode: 'DENY'
+      };
+
+      const factor: CounterReasoningFactor = {
+        evidenceId: 'EV_LOSS_FACTOR',
+        edgeType: 'CHALLENGES',
+        explanation: 'Creates loss',
+        relation: 'CHALLENGE',
+        outcomeSemantics: ['LOSS']
+      };
+
+      const result = evaluatePropositionFactor(factor, denyDelayClaim);
+      expect(result.outcomeMatch).toBe('ABSENT');
+      expect(result.propositionAlignment).toBe('NEUTRAL');
+      expect(result.reason).toBe('Factor has explicit outcome semantics, but not the asserted outcome.');
+    });
+
+    it('AFFIRM assertion mode preserves base alignment', () => {
+      const affirmDelayClaim: CounterReasoningClaim = {
+        ...delayClaim,
+        question: 'My Dasha causes delays.',
+        assertionMode: 'AFFIRM'
+      };
+
+      const factor: CounterReasoningFactor = {
+        evidenceId: 'EV_SATURN_DELAY',
+        edgeType: 'CHALLENGES',
+        explanation: 'Saturn delay pattern',
+        relation: 'CHALLENGE',
+        outcomeSemantics: ['DELAY']
+      };
+
+      const result = evaluatePropositionFactor(factor, affirmDelayClaim);
+      expect(result.outcomeMatch).toBe('EXACT');
+      expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
     });
   });
 
-  describe('Semantic Truth-Table Test Suite (CW-07A Issue #15)', () => {
+  describe('Semantic Truth-Table Test Suite', () => {
     interface TruthTableRow {
       readonly edgeType: ReasoningEdgeType;
       readonly assertedOutcome: CounterReasoningOutcome;
@@ -350,7 +329,8 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
           targetSubjectKey: 'TEST_TARGET',
           polarity: 'NEUTRAL',
           assertedPolarity: 'NEUTRAL',
-          assertedOutcome
+          assertedOutcome,
+          assertionMode: 'QUESTION'
         };
 
         const factor: CounterReasoningFactor = {
@@ -366,3 +346,4 @@ describe('counterReasoningFactorEvaluator (CW-07)', () => {
     });
   });
 });
+
