@@ -1,3 +1,5 @@
+import type { CounterReasoningOutcome } from '../counterReasoning/counterReasoningTypes';
+
 export type ReasoningEdgeType =
   | 'SUPPORTS'
   | 'CHALLENGES'
@@ -13,4 +15,5 @@ export interface ReasoningEdge {
   readonly toNodeId: string;
   readonly type: ReasoningEdgeType;
   readonly explanation: string;
+  readonly outcomeSemantics?: readonly CounterReasoningOutcome[];
 }

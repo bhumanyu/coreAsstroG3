@@ -10,7 +10,8 @@ describe('counterReasoningOutcomeMatcher', () => {
     targetSubjectKey: 'DASHA_ACTIVATION',
     assertedPolarity: 'CHALLENGE',
     assertedOutcome: 'DELAY',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   const baseFactor: CounterReasoningFactor = {
@@ -90,5 +91,17 @@ describe('counterReasoningOutcomeMatcher', () => {
     expect(
       matchFactorOutcome(delayFactor, { ...baseClaim, assertedOutcome: 'VOLATILITY' })
     ).toBe('ABSENT');
+  });
+
+  it('Legacy CW-07A generic factors remain operational when outcome metadata is absent.', () => {
+    const legacyFactor: CounterReasoningFactor = {
+      evidenceId: 'ev-legacy',
+      edgeType: 'CHALLENGES',
+      explanation: 'Generic planetary challenge',
+      relation: 'CHALLENGE',
+      outcomeSemantics: undefined
+    };
+
+    expect(matchFactorOutcome(legacyFactor, baseClaim)).toBe('UNSPECIFIED');
   });
 });

@@ -1,6 +1,16 @@
+/**
+ * Deterministic lexical boundary:
+ * Compound propositions (e.g. "My career is not stable but I am getting promotion.")
+ * and embedded belief negation (e.g. "I don't think my career is weak.") are NOT
+ * semantically decomposed. They are handled purely lexically and may be classified
+ * as NEGATED. Resolving these multi-clause or belief-embedded structures correctly
+ * is out of scope for CW-07B (requires full semantic NLP, while CW-07B uses deterministic regex).
+ */
+
 import type { ReasoningNodeDomain } from '../reasoningTrace/reasoningNode';
 import type {
   CounterReasoningAssertionMode,
+  CounterReasoningAssertionPolarity,
   CounterReasoningClaim,
   CounterReasoningOutcome,
   CounterReasoningPolarity,
@@ -15,13 +25,30 @@ export interface ResolveClaimParams {
   readonly targetSubjectKey?: string;
 }
 
+export interface AssertionResolution {
+  readonly assertionMode: CounterReasoningAssertionMode;
+  readonly assertionPolarity: CounterReasoningAssertionPolarity;
+}
+
+/**
+ * Deterministically resolves the assertion polarity (POSITIVE vs NEGATED).
+ * Runs independently of assertion mode.
+ * Matches explicit negation tokens (not, n't, cannot, won't, is not, does not, etc.).
+ */
+export function resolveAssertionPolarity(question: string): CounterReasoningAssertionPolarity {
+  const trimmed = question.trim();
+  const hasNegation =
+    /\b(not|cannot|won't|does not|do not|did not|is not|are not|will not|should not|would not|could not|has not|have not|had not|was not|were not)\b|n't\b/i.test(
+      trimmed
+    );
+  return hasNegation ? 'NEGATED' : 'POSITIVE';
+}
+
 /**
  * Deterministically resolves the assertion mode of a proposition/question:
  * 1. Interrogative FIRST:
- *    - Ends with '?' OR starts with why/how/does/do/did/is/are/will/can/could/would/should/was/were/has/have/had/am -> 'QUESTION'
- * 2. THEN explicit declarative denial:
- *    - does not / do not / did not / will not / cannot / can't / won't / is not / are not / shouldn't / wouldn't / couldn't / hasn't / haven't / isn't / aren't / don't / doesn't / didn't -> 'DENY'
- * 3. Else -> 'AFFIRM'
+ *    - Ends with '?' OR starts with why/how/does/do/did/is/are/will/can/could/would/should/was/were/has/have/had/am (including contracted negatives isn't/doesn't/won't/can't/aren't) -> 'QUESTION'
+ * 2. Otherwise -> 'AFFIRM'
  */
 export function resolveAssertionMode(question: string): CounterReasoningAssertionMode {
   const trimmed = question.trim();
@@ -29,21 +56,24 @@ export function resolveAssertionMode(question: string): CounterReasoningAssertio
   // Interrogative detection first (e.g. "Why is my career not stable?" -> QUESTION)
   if (
     trimmed.endsWith('?') ||
-    /^(why|how|does|do|did|is|are|will|can|could|would|should|was|were|has|have|had|am)\b/i.test(trimmed)
+    /^(why|how|does|do|did|is|are|will|can|could|would|should|was|were|has|have|had|am|isn't|aren't|doesn't|don't|didn't|won't|can't|couldn't|wouldn't|shouldn't|hasn't|haven't|hadn't|wasn't|weren't)\b/i.test(
+      trimmed
+    )
   ) {
     return 'QUESTION';
   }
 
-  // Explicit declarative denial detection
-  if (
-    /\b(does not|do not|did not|will not|cannot|can't|won't|is not|are not|should not|would not|could not|has not|have not|had not|was not|were not|isn't|aren't|don't|doesn't|didn't|shouldn't|wouldn't|couldn't|hasn't|haven't|hadn't|wasn't|weren't)\b/i.test(
-      trimmed
-    )
-  ) {
-    return 'DENY';
-  }
-
   return 'AFFIRM';
+}
+
+/**
+ * Resolves both assertion mode and assertion polarity together.
+ */
+export function resolveAssertionModeAndPolarity(question: string): AssertionResolution {
+  return {
+    assertionMode: resolveAssertionMode(question),
+    assertionPolarity: resolveAssertionPolarity(question)
+  };
 }
 
 /**
@@ -57,7 +87,7 @@ export function resolveAssertionMode(question: string): CounterReasoningAssertio
 export function resolveClaim(params: ResolveClaimParams): CounterReasoningClaim {
   const { domain, question } = params;
   const questionType = params.questionType ?? classifyQuestion(question);
-  const assertionMode = resolveAssertionMode(question);
+  const { assertionMode, assertionPolarity } = resolveAssertionModeAndPolarity(question);
 
   let targetSubjectKey = params.targetSubjectKey;
 
@@ -163,6 +193,7 @@ export function resolveClaim(params: ResolveClaimParams): CounterReasoningClaim 
     polarity: assertedPolarity,
     assertedPolarity,
     assertedOutcome,
-    assertionMode
+    assertionMode,
+    assertionPolarity
   };
 }

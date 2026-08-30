@@ -11,7 +11,8 @@ describe('counterArgumentEvaluator (CW-07)', () => {
     polarity: 'NEUTRAL',
     assertedPolarity: 'NEUTRAL',
     assertedOutcome: 'SUPPORT',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   const delayClaim: CounterReasoningClaim = {
@@ -22,7 +23,8 @@ describe('counterArgumentEvaluator (CW-07)', () => {
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
     assertedOutcome: 'DELAY',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   describe('Spec Section 25 Matrix Evaluation', () => {

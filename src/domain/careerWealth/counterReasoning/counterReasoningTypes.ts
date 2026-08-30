@@ -62,6 +62,7 @@ export type CounterReasoningPropositionAlignment =
   | 'NEUTRAL';
 
 export type CounterReasoningAssertionMode = 'AFFIRM' | 'DENY' | 'QUESTION';
+export type CounterReasoningAssertionPolarity = 'POSITIVE' | 'NEGATED';
 
 export type OutcomeMatch = 'EXACT' | 'ABSENT' | 'UNSPECIFIED';
 
@@ -74,6 +75,7 @@ export interface CounterReasoningClaim {
   readonly assertedPolarity: CounterReasoningPolarity;
   readonly assertedOutcome?: CounterReasoningOutcome;
   readonly assertionMode: CounterReasoningAssertionMode;
+  readonly assertionPolarity: CounterReasoningAssertionPolarity;
   readonly subjectQualifier?: string;
 }
 
@@ -85,6 +87,17 @@ export interface CounterReasoningFactor {
   readonly outcomeSemantics?: readonly CounterReasoningOutcome[];
 }
 
+export interface EvaluatedFactorRelation {
+  readonly evidenceId: string;
+  readonly edgeType: ReasoningEdgeType;
+  readonly explanation: string;
+  readonly relation: CounterReasoningRelation;
+  readonly edgeSemantic: CounterReasoningEdgeSemantic;
+  readonly outcomeMatch: OutcomeMatch;
+  readonly alignment: CounterReasoningAlignment;
+  readonly reason?: string;
+}
+
 export interface EvaluatedCounterReasoningFactor {
   readonly evidenceId: string;
   readonly edgeType: ReasoningEdgeType;
@@ -93,7 +106,12 @@ export interface EvaluatedCounterReasoningFactor {
   readonly edgeSemantic: CounterReasoningEdgeSemantic;
   readonly outcomeMatch: OutcomeMatch;
   readonly propositionAlignment: CounterReasoningPropositionAlignment;
-  readonly alignment?: CounterReasoningAlignment;
+  /**
+   * Raw domain relation alignment (for trace introspection only).
+   * Note: propositionAlignment is derived from it and is the single authoritative field consumed downstream.
+   * Design note: Avoid confusing raw domain relation (relationAlignment=ALIGNS) with proposition alignment (e.g. propositionAlignment=OPPOSES_PROPOSITION under negative assertion or negative polarity). Downstream evaluation consumes ONLY propositionAlignment.
+   */
+  readonly relationAlignment?: CounterReasoningAlignment;
   readonly reason?: string;
 }
 

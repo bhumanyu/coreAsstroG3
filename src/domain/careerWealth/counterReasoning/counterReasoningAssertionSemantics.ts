@@ -1,5 +1,6 @@
 import type {
   CounterReasoningAssertionMode,
+  CounterReasoningAssertionPolarity,
   CounterReasoningPropositionAlignment
 } from './counterReasoningTypes';
 
@@ -21,24 +22,36 @@ export function invertPropositionAlignment(
 }
 
 /**
- * Applies the user's assertion mode to a base proposition alignment:
- * - AFFIRM: preserves base alignment.
- * - DENY: inverts proposition alignment (SUPPORTS <-> OPPOSES, NEUTRAL stays NEUTRAL).
- * - QUESTION: preserves base alignment (evidence may still answer the question; does NOT force NEUTRAL).
- * - default: returns NEUTRAL.
+ * Applies assertion mode and assertion polarity to a base proposition alignment:
+ * - The two dimensions are orthogonal:
+ *   - assertionMode = stance ('AFFIRM' | 'DENY' | 'QUESTION')
+ *   - assertionPolarity = proposition formulation ('POSITIVE' | 'NEGATED')
+ * - Inversion is driven by assertionPolarity (or legacy DENY mode):
+ *   - If assertionPolarity === 'NEGATED' (or legacy mode === 'DENY') -> invert via invertPropositionAlignment.
+ *   - Otherwise keeps the base alignment.
+ * - assertionMode (AFFIRM/DENY/QUESTION) does NOT by itself invert; QUESTION still allows evidence to answer (never forces NEUTRAL).
+ * - Backward-compat: Treat legacy DENY as equivalent to NEGATED if a caller passes mode='DENY' without polarity.
+ */
+export function applyAssertion(
+  alignment: CounterReasoningPropositionAlignment,
+  mode: CounterReasoningAssertionMode,
+  polarity: CounterReasoningAssertionPolarity = 'POSITIVE'
+): CounterReasoningPropositionAlignment {
+  const isNegated = polarity === 'NEGATED' || mode === 'DENY';
+  if (isNegated) {
+    return invertPropositionAlignment(alignment);
+  }
+  return alignment;
+}
+
+/**
+ * Backward-compatible wrapper for applyAssertion.
+ * Delegates to polarity-aware logic, treating legacy DENY mode as NEGATED.
  */
 export function applyAssertionMode(
   alignment: CounterReasoningPropositionAlignment,
   mode: CounterReasoningAssertionMode
 ): CounterReasoningPropositionAlignment {
-  switch (mode) {
-    case 'AFFIRM':
-      return alignment;
-    case 'DENY':
-      return invertPropositionAlignment(alignment);
-    case 'QUESTION':
-      return alignment;
-    default:
-      return 'NEUTRAL';
-  }
+  return applyAssertion(alignment, mode, mode === 'DENY' ? 'NEGATED' : 'POSITIVE');
 }
+

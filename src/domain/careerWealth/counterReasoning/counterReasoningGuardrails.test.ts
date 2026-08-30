@@ -11,7 +11,8 @@ describe('counterReasoningGuardrails (CW-07)', () => {
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
     assertedOutcome: 'CHALLENGE',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   it('applies strong primary protection guardrails when natal is STRONG', () => {

@@ -21,7 +21,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
     polarity: 'NEUTRAL',
     assertedPolarity: 'NEUTRAL',
     assertedOutcome: 'SUPPORT',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   const manifestationClaim: CounterReasoningClaim = {
@@ -32,7 +33,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
     assertedOutcome: 'MANIFESTATION',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   const delayClaim: CounterReasoningClaim = {
@@ -43,7 +45,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
     assertedOutcome: 'DELAY',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   const lossClaim: CounterReasoningClaim = {
@@ -54,7 +57,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
     polarity: 'CHALLENGE',
     assertedPolarity: 'CHALLENGE',
     assertedOutcome: 'LOSS',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   const unknownOutcomeClaim: CounterReasoningClaim = {
@@ -65,7 +69,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
     polarity: 'NEUTRAL',
     assertedPolarity: 'NEUTRAL',
     assertedOutcome: 'UNKNOWN',
-    assertionMode: 'QUESTION'
+    assertionMode: 'QUESTION',
+    assertionPolarity: 'POSITIVE'
   };
 
   describe('evaluateFactorRelation (Raw Domain Relation)', () => {
@@ -240,7 +245,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
       const denyDelayClaim: CounterReasoningClaim = {
         ...delayClaim,
         question: 'My Dasha does not cause delays.',
-        assertionMode: 'DENY'
+        assertionMode: 'DENY',
+        assertionPolarity: 'NEGATED'
       };
 
       const factor: CounterReasoningFactor = {
@@ -262,7 +268,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
       const denyDelayClaim: CounterReasoningClaim = {
         ...delayClaim,
         question: 'My Dasha does not cause delays.',
-        assertionMode: 'DENY'
+        assertionMode: 'DENY',
+        assertionPolarity: 'NEGATED'
       };
 
       const factor: CounterReasoningFactor = {
@@ -283,7 +290,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
       const affirmDelayClaim: CounterReasoningClaim = {
         ...delayClaim,
         question: 'My Dasha causes delays.',
-        assertionMode: 'AFFIRM'
+        assertionMode: 'AFFIRM',
+        assertionPolarity: 'POSITIVE'
       };
 
       const factor: CounterReasoningFactor = {
@@ -296,6 +304,20 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
 
       const result = evaluatePropositionFactor(factor, affirmDelayClaim);
       expect(result.outcomeMatch).toBe('EXACT');
+      expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
+    });
+
+    it('Legacy CW-07A generic factors remain operational when outcome metadata is absent.', () => {
+      const legacyFactor: CounterReasoningFactor = {
+        evidenceId: 'EV_GENERIC_CHALLENGE',
+        edgeType: 'CHALLENGES',
+        explanation: 'Generic planetary challenge',
+        relation: 'CHALLENGE',
+        outcomeSemantics: undefined
+      };
+
+      const result = evaluatePropositionFactor(legacyFactor, delayClaim);
+      expect(result.outcomeMatch).toBe('UNSPECIFIED');
       expect(result.propositionAlignment).toBe('SUPPORTS_PROPOSITION');
     });
   });
@@ -330,7 +352,8 @@ describe('counterReasoningFactorEvaluator (CW-07 / CW-07B)', () => {
           polarity: 'NEUTRAL',
           assertedPolarity: 'NEUTRAL',
           assertedOutcome,
-          assertionMode: 'QUESTION'
+          assertionMode: 'QUESTION',
+          assertionPolarity: 'POSITIVE'
         };
 
         const factor: CounterReasoningFactor = {

@@ -2,27 +2,28 @@ import type {
   CounterReasoningClaim,
   CounterReasoningFactor,
   EvaluatedCounterReasoningFactor,
+  EvaluatedFactorRelation,
   CounterReasoningAlignment,
   CounterReasoningPropositionAlignment
 } from './counterReasoningTypes';
 import { resolveEdgeSemantic, resolveOutcomePolarity } from './counterReasoningSemantics';
 import { matchFactorOutcome } from './counterReasoningOutcomeMatcher';
-import { applyAssertionMode } from './counterReasoningAssertionSemantics';
+import { applyAssertion } from './counterReasoningAssertionSemantics';
 
 export { resolveEdgeSemantic } from './counterReasoningSemantics';
 
 /**
  * Evaluates the RAW DOMAIN RELATION of a single factor against the claim's asserted outcome.
  *
- * Contract:
- * - Returns ALIGNS, OPPOSES, or NEUTRAL based on whether the factor's intrinsic astrological nature
- *   directly aligns with or opposes the domain outcome.
- * - This evaluates raw domain directionality WITHOUT proposition-level polarity inversion.
+ * Contract (Issue #13 & #14 API Separation):
+ * - Returns ONLY raw domain semantics (ALIGNS | OPPOSES | NEUTRAL) on `alignment`.
+ * - Does NOT return propositionAlignment (which is exclusively computed by evaluatePropositionFactor).
+ * - This evaluates raw domain directionality WITHOUT user assertion or polarity inversion.
  */
 export function evaluateFactorRelation(
   factor: CounterReasoningFactor,
   claim: CounterReasoningClaim
-): EvaluatedCounterReasoningFactor {
+): EvaluatedFactorRelation {
   const outcomeMatch = matchFactorOutcome(factor, claim);
   const edgeSemantic = resolveEdgeSemantic(factor.edgeType);
 
@@ -34,7 +35,6 @@ export function evaluateFactorRelation(
       relation: factor.relation,
       edgeSemantic,
       outcomeMatch,
-      propositionAlignment: 'NEUTRAL',
       alignment: 'NEUTRAL',
       reason: 'No specific outcome asserted to align or oppose.'
     };
@@ -48,7 +48,6 @@ export function evaluateFactorRelation(
       relation: factor.relation,
       edgeSemantic,
       outcomeMatch,
-      propositionAlignment: 'NEUTRAL',
       alignment: 'NEUTRAL',
       reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
     };
@@ -62,7 +61,6 @@ export function evaluateFactorRelation(
       relation: factor.relation,
       edgeSemantic,
       outcomeMatch,
-      propositionAlignment: 'NEUTRAL',
       alignment: 'NEUTRAL',
       reason: `${factor.edgeType} indicates domain activation or modulation; this relationship alone does not establish the asserted outcome.`
     };
@@ -89,7 +87,6 @@ export function evaluateFactorRelation(
     relation: factor.relation,
     edgeSemantic,
     outcomeMatch,
-    propositionAlignment: alignment === 'ALIGNS' ? 'SUPPORTS_PROPOSITION' : alignment === 'OPPOSES' ? 'OPPOSES_PROPOSITION' : 'NEUTRAL',
     alignment,
     reason
   };
@@ -102,7 +99,12 @@ export const evaluateFactor = evaluateFactorRelation;
 
 /**
  * Evaluates a factor with respect to the USER'S PROPOSITION (PROPOSITION SEMANTICS),
- * integrating outcome matching, edge semantics, polarity, and assertion mode.
+ * integrating outcome matching, edge semantics, polarity, and assertion mode/polarity.
+ *
+ * Design note (Issue #13 & #14):
+ * - `propositionAlignment` is the single authoritative field consumed by downstream evaluators.
+ * - `relationAlignment` captures the raw domain relation purely for trace introspection.
+ * - Downstream evaluation (disposition calculation) NEVER relies on raw alignment.
  *
  * Evaluation Order (Critical):
  * a. Compute outcomeMatch = matchFactorOutcome(factor, claim).
@@ -110,7 +112,7 @@ export const evaluateFactor = evaluateFactorRelation;
  * c. If edgeType is 'ACTIVATES' or 'MODIFIES' -> NEUTRAL.
  * d. If edgeType is 'MANIFESTS' -> NEUTRAL.
  * e. If outcomeMatch === 'ABSENT' -> NEUTRAL ('Factor has explicit outcome semantics, but not the asserted outcome.').
- * f. Otherwise compute baseAlignment from relation & polarity, apply assertion mode, and set reason.
+ * f. Otherwise compute baseAlignment from relation & polarity, apply assertion mode & polarity, and set reason.
  */
 export function evaluatePropositionFactor(
   factor: CounterReasoningFactor,
@@ -129,7 +131,7 @@ export function evaluatePropositionFactor(
       edgeSemantic,
       outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      alignment: 'NEUTRAL',
+      relationAlignment: 'NEUTRAL',
       reason: 'No specific asserted outcome is available.'
     };
   }
@@ -144,7 +146,7 @@ export function evaluatePropositionFactor(
       edgeSemantic,
       outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      alignment: 'NEUTRAL',
+      relationAlignment: 'NEUTRAL',
       reason: `${factor.edgeType} indicates domain activation or modulation; this relationship alone does not establish the asserted outcome.`
     };
   }
@@ -159,7 +161,7 @@ export function evaluatePropositionFactor(
       edgeSemantic,
       outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      alignment: 'NEUTRAL',
+      relationAlignment: 'NEUTRAL',
       reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
     };
   }
@@ -174,7 +176,7 @@ export function evaluatePropositionFactor(
       edgeSemantic,
       outcomeMatch,
       propositionAlignment: 'NEUTRAL',
-      alignment: 'NEUTRAL',
+      relationAlignment: factor.relation === 'SUPPORT' ? 'ALIGNS' : factor.relation === 'CHALLENGE' ? 'OPPOSES' : 'NEUTRAL',
       reason: 'Factor has explicit outcome semantics, but not the asserted outcome.'
     };
   }
@@ -221,7 +223,7 @@ export function evaluatePropositionFactor(
     }
   }
 
-  const finalAlignment = applyAssertionMode(baseAlignment, claim.assertionMode);
+  const finalAlignment = applyAssertion(baseAlignment, claim.assertionMode, claim.assertionPolarity);
 
   return {
     evidenceId: factor.evidenceId,
@@ -231,8 +233,9 @@ export function evaluatePropositionFactor(
     edgeSemantic,
     outcomeMatch,
     propositionAlignment: finalAlignment,
-    alignment: finalAlignment === 'SUPPORTS_PROPOSITION' ? 'ALIGNS' : finalAlignment === 'OPPOSES_PROPOSITION' ? 'OPPOSES' : 'NEUTRAL',
+    relationAlignment: factor.relation === 'SUPPORT' ? 'ALIGNS' : factor.relation === 'CHALLENGE' ? 'OPPOSES' : 'NEUTRAL',
     reason
   };
 }
+
 

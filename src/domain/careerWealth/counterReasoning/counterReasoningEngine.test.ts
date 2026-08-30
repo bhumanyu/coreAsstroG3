@@ -448,5 +448,177 @@ describe('counterReasoningEngine (CW-07)', () => {
     expect(whatIf.disposition).toBe('UNSUPPORTED_CLAIM');
     expect(whatIf.conclusionChanged).toBe(false);
   });
+
+  describe('End-to-End Resolver -> Evaluator -> Disposition (Issue #1 Negated Semantics & Outcome Matching)', () => {
+    const delayGraph: ReasoningTraceGraph = {
+      traceId: 'CW-TRACE-DELAY',
+      nodes: [
+        {
+          nodeId: 'node_ev_saturn',
+          type: 'EVIDENCE',
+          domain: 'CAREER',
+          axis: 'DASHA',
+          evidenceId: 'EV_SATURN_DELAY',
+          subjectKey: 'RULE_SATURN_DELAY',
+          label: 'Saturn Delay'
+        },
+        {
+          nodeId: 'node_dasha_activation',
+          type: 'CONCLUSION',
+          domain: 'CAREER',
+          axis: 'DASHA',
+          subjectKey: 'DASHA_ACTIVATION',
+          label: 'Dasha Activation'
+        }
+      ],
+      edges: [
+        {
+          edgeId: 'e_saturn_delay',
+          fromNodeId: 'node_ev_saturn',
+          toNodeId: 'node_dasha_activation',
+          type: 'CHALLENGES',
+          explanation: 'Saturn transit produces delay',
+          outcomeSemantics: ['DELAY']
+        }
+      ]
+    };
+
+    const delayContext = buildCounterReasoningContext({
+      domain: 'CAREER',
+      graph: delayGraph,
+      finalSynthesis: {
+        reasoningVersion: 'CW-05',
+        domain: 'CAREER',
+        status: 'STRONG',
+        finalStatus: 'STRONG',
+        confidence: 'HIGH',
+        promiseStatus: 'STRONG',
+        activationStatus: 'CHALLENGE',
+        timingStatus: 'NEUTRAL',
+        divisionalStatus: 'UNAVAILABLE',
+        manifestationStatus: 'INSUFFICIENT_DATA',
+        primaryPromise: 'STRONG',
+        manifestationSummary: [],
+        strongestAreas: [],
+        challengedAreas: [],
+        dashaEffect: 'Challenged',
+        timingEffect: 'Neutral',
+        divisionalEffect: 'Unavailable',
+        keySupport: [],
+        keyChallenges: [],
+        summary: 'Career active',
+        ruleIds: ['RULE_SATURN_DELAY'],
+        evidenceIds: ['EV_SATURN_DELAY'],
+        natalEvidenceIds: [],
+        natalRuleIds: []
+      }
+    });
+
+    it('evaluates declarative negation: "My Dasha does not cause delays." -> REJECTED', () => {
+      const res = evaluateCounterReasoning('My Dasha does not cause delays.', delayContext);
+
+      expect(res.claim.assertionPolarity).toBe('NEGATED');
+      expect(res.claim.assertedOutcome).toBe('DELAY');
+      expect(res.evaluatedFactors.length).toBe(1);
+      expect(res.evaluatedFactors[0].outcomeMatch).toBe('EXACT');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('OPPOSES_PROPOSITION');
+      expect(res.disposition).toBe('REJECTED');
+      expect(res.conclusionChanged).toBe(false);
+    });
+
+    it('evaluates negated question: "Isn\'t my Dasha causing delays?" -> REJECTED (proves negated-question gap closed)', () => {
+      const res = evaluateCounterReasoning("Isn't my Dasha causing delays?", delayContext);
+
+      expect(res.claim.assertionMode).toBe('QUESTION');
+      expect(res.claim.assertionPolarity).toBe('NEGATED');
+      expect(res.claim.assertedOutcome).toBe('DELAY');
+      expect(res.evaluatedFactors.length).toBe(1);
+      expect(res.evaluatedFactors[0].outcomeMatch).toBe('EXACT');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('OPPOSES_PROPOSITION');
+      expect(res.disposition).toBe('REJECTED');
+      expect(res.conclusionChanged).toBe(false);
+    });
+
+    it('evaluates positive question: "Does my Dasha cause delays?" -> CONFIRMED', () => {
+      const res = evaluateCounterReasoning('Does my Dasha cause delays?', delayContext);
+
+      expect(res.claim.assertionMode).toBe('QUESTION');
+      expect(res.claim.assertionPolarity).toBe('POSITIVE');
+      expect(res.claim.assertedOutcome).toBe('DELAY');
+      expect(res.evaluatedFactors.length).toBe(1);
+      expect(res.evaluatedFactors[0].outcomeMatch).toBe('EXACT');
+      expect(res.evaluatedFactors[0].propositionAlignment).toBe('SUPPORTS_PROPOSITION');
+      expect(res.disposition).toBe('CONFIRMED');
+      expect(res.conclusionChanged).toBe(false);
+    });
+  });
+
+  describe('originalConclusion fallback matrix', () => {
+    const minimalGraph: ReasoningTraceGraph = {
+      traceId: 'CW-TRACE-MIN',
+      nodes: [
+        {
+          nodeId: 'node_target',
+          type: 'CONCLUSION',
+          domain: 'CAREER',
+          axis: 'NATAL',
+          subjectKey: 'NATAL_PROMISE',
+          label: 'Natal Promise'
+        }
+      ],
+      edges: []
+    };
+
+    it('(a) uses natalPromiseStatus when provided', () => {
+      const ctx = buildCounterReasoningContext({
+        domain: 'CAREER',
+        graph: minimalGraph
+      });
+      const ctxWithNatal = { ...ctx, natalPromiseStatus: 'PROMISED' };
+      const res = evaluateCounterReasoning('Why is career promised?', ctxWithNatal, {
+        targetSubjectKey: 'NATAL_PROMISE'
+      });
+      expect(res.originalConclusion).toBe('PROMISED');
+      expect(res.conclusionChanged).toBe(false);
+    });
+
+    it('(b) falls back to finalSynthesis.promiseStatus when natalPromiseStatus is undefined', () => {
+      const ctx = {
+        domain: 'CAREER' as const,
+        graph: minimalGraph,
+        finalSynthesis: { promiseStatus: 'PROMISE_STRONG' } as any
+      };
+      const res = evaluateCounterReasoning('Why is career promised?', ctx, {
+        targetSubjectKey: 'NATAL_PROMISE'
+      });
+      expect(res.originalConclusion).toBe('PROMISE_STRONG');
+      expect(res.conclusionChanged).toBe(false);
+    });
+
+    it('(c) falls back to finalSynthesis.status when promiseStatus is absent', () => {
+      const ctx = {
+        domain: 'CAREER' as const,
+        graph: minimalGraph,
+        finalSynthesis: { status: 'SYNTHESIS_MODERATE' } as any
+      };
+      const res = evaluateCounterReasoning('Why is career promised?', ctx, {
+        targetSubjectKey: 'NATAL_PROMISE'
+      });
+      expect(res.originalConclusion).toBe('SYNTHESIS_MODERATE');
+      expect(res.conclusionChanged).toBe(false);
+    });
+
+    it('(d) evaluates to undefined explicitly when no conclusion fields exist', () => {
+      const ctx = {
+        domain: 'CAREER' as const,
+        graph: minimalGraph
+      };
+      const res = evaluateCounterReasoning('Why is career promised?', ctx, {
+        targetSubjectKey: 'NATAL_PROMISE'
+      });
+      expect(res.originalConclusion).toBeUndefined();
+      expect(res.conclusionChanged).toBe(false);
+    });
+  });
 });
 

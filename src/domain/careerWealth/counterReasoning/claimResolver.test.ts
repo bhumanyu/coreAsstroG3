@@ -1,20 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { resolveAssertionMode, resolveClaim } from './claimResolver';
+import {
+  resolveAssertionMode,
+  resolveAssertionPolarity,
+  resolveAssertionModeAndPolarity,
+  resolveClaim
+} from './claimResolver';
 
 describe('claimResolver (CW-07 / CW-07B)', () => {
-  describe('resolveAssertionMode', () => {
+  describe('resolveAssertionMode and resolveAssertionPolarity', () => {
     it('correctly resolves the four spec sentences', () => {
-      // 1. Interrogative question with negative word -> QUESTION (interrogative first!)
+      // 1. Interrogative question with negative word -> QUESTION (stance), NEGATED (polarity)
       expect(resolveAssertionMode('Why is my career not stable?')).toBe('QUESTION');
+      expect(resolveAssertionPolarity('Why is my career not stable?')).toBe('NEGATED');
 
-      // 2. Declarative denial -> DENY
-      expect(resolveAssertionMode('My Dasha does not cause delays.')).toBe('DENY');
+      // 2. Declarative denial -> AFFIRM (stance), NEGATED (polarity)
+      expect(resolveAssertionMode('My Dasha does not cause delays.')).toBe('AFFIRM');
+      expect(resolveAssertionPolarity('My Dasha does not cause delays.')).toBe('NEGATED');
 
-      // 3. Declarative affirmation -> AFFIRM
+      // 3. Declarative affirmation -> AFFIRM (stance), POSITIVE (polarity)
       expect(resolveAssertionMode('My Dasha causes delays.')).toBe('AFFIRM');
+      expect(resolveAssertionPolarity('My Dasha causes delays.')).toBe('POSITIVE');
 
-      // 4. Interrogative question -> QUESTION
+      // 4. Interrogative question -> QUESTION (stance), POSITIVE (polarity)
       expect(resolveAssertionMode('Is my current Dasha causing delays?')).toBe('QUESTION');
+      expect(resolveAssertionPolarity('Is my current Dasha causing delays?')).toBe('POSITIVE');
     });
 
     it('identifies interrogative starters as QUESTION', () => {
@@ -25,11 +34,18 @@ describe('claimResolver (CW-07 / CW-07B)', () => {
       expect(resolveAssertionMode('Should I expect obstacles')).toBe('QUESTION');
     });
 
-    it('identifies various negative declarative contractions as DENY', () => {
-      expect(resolveAssertionMode('My chart cannot produce loss.')).toBe('DENY');
-      expect(resolveAssertionMode("This dasha won't cause delays.")).toBe('DENY');
-      expect(resolveAssertionMode("There aren't any obstacles in career.")).toBe('DENY');
-      expect(resolveAssertionMode("I don't have wealth issues.")).toBe('DENY');
+    it('identifies various negative declarative contractions as NEGATED polarity with AFFIRM mode', () => {
+      expect(resolveAssertionMode('My chart cannot produce loss.')).toBe('AFFIRM');
+      expect(resolveAssertionPolarity('My chart cannot produce loss.')).toBe('NEGATED');
+
+      expect(resolveAssertionMode("This dasha won't cause delays.")).toBe('AFFIRM');
+      expect(resolveAssertionPolarity("This dasha won't cause delays.")).toBe('NEGATED');
+
+      expect(resolveAssertionMode("There aren't any obstacles in career.")).toBe('AFFIRM');
+      expect(resolveAssertionPolarity("There aren't any obstacles in career.")).toBe('NEGATED');
+
+      expect(resolveAssertionMode("I don't have wealth issues.")).toBe('AFFIRM');
+      expect(resolveAssertionPolarity("I don't have wealth issues.")).toBe('NEGATED');
     });
   });
 

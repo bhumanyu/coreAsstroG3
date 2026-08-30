@@ -11,7 +11,8 @@ describe('counterReasoningValidator (CW-07)', () => {
       targetSubjectKey: 'FINAL_SYNTHESIS',
       polarity: 'SUPPORT',
       assertedPolarity: 'SUPPORT',
-      assertionMode: 'QUESTION'
+      assertionMode: 'QUESTION',
+      assertionPolarity: 'POSITIVE'
     },
     disposition: 'CONFIRMED',
     conclusionChanged: false,
