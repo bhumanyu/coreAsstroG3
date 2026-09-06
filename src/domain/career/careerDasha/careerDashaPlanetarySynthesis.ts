@@ -28,11 +28,11 @@ import {
   classifyFunctionalRole,
   classifyOwnership,
   classifyPlacement,
-  isCareerLinked,
   CW09_PLANETARY_WEIGHTS
 } from './careerDashaPlanetaryRules';
 import {
   buildCareerRelevance,
+  classifyPlanetStrengthLevel,
   deriveCareerDashaImpact,
   mapHouseToContributionCategory
 } from './careerDashaRules';
@@ -139,16 +139,14 @@ export function synthesizeCareerDashaPlanetary(
 
   const planet = activation.planet;
 
-  const careerLinked = isCareerLinked(
-    activation,
-    housePortfolio
-  );
-
+  // P1 #2: Single authoritative linkage.
+  // Set careerLinked directly from relevance.careerLinked.
   const relevance = buildCareerRelevance(
     activation,
     housePortfolio,
     d10?.available
   );
+  const careerLinked = relevance.careerLinked;
 
   const impact = deriveCareerDashaImpact(
     relevance,
@@ -177,6 +175,16 @@ export function synthesizeCareerDashaPlanetary(
 
     const firstHouse = options.houses?.[0];
     const contributionCategory = firstHouse ? mapHouseToContributionCategory(firstHouse) : undefined;
+    const evidenceDirection =
+      direction === 'SUPPORT' ? 'SUPPORTING' : direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL';
+    const role =
+      direction === 'CHALLENGE'
+        ? 'QUALIFYING'
+        : period === 'MD'
+          ? 'PRIMARY'
+          : period === 'AD'
+            ? 'MODIFIER'
+            : 'REFINEMENT';
 
     factors.push({
       id: [
@@ -193,6 +201,8 @@ export function synthesizeCareerDashaPlanetary(
       direction,
       weight,
       statement,
+      role,
+      evidenceDirection,
       ...(contributionCategory ? { contributionCategory } : {}),
       ...(options.houses ? { houses: options.houses } : {}),
       ...(options.planets ? { planets: options.planets } : {}),
@@ -360,20 +370,12 @@ export function synthesizeCareerDashaPlanetary(
   }
 
   /*
-   * 7. STRENGTH
+   * 7. STRENGTH (P1 #6: Centralized strength classification)
    */
   if (activation.strength) {
-    const strength = activation.strength;
-    const isStrong =
-      strength.meetsMinimum === true ||
-      (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum >= 100) ||
-      (strength.totalRupa !== undefined && strength.totalRupa >= 6.0);
+    const strengthLevel = classifyPlanetStrengthLevel(activation.strength);
 
-    const isWeak =
-      strength.meetsMinimum === false ||
-      (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum < 80);
-
-    if (isStrong) {
+    if (strengthLevel === 'STRONG') {
       addFactor(
         'PLANETARY_STRENGTH',
         'STRONG',
@@ -385,7 +387,7 @@ export function synthesizeCareerDashaPlanetary(
           ruleId: 'CW09_STRENGTH_STRONG'
         }
       );
-    } else if (isWeak) {
+    } else if (strengthLevel === 'WEAK') {
       addFactor(
         'PLANETARY_STRENGTH',
         'WEAK',
