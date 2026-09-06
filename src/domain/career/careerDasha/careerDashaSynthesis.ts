@@ -54,408 +54,57 @@ import {
   resolveCombinedCareerDashaEffect
 } from './careerDashaScoring';
 import type { InterpretationConfidence } from '../../../engine/planetInterpretation/planetInterpretationTypes';
+import { synthesizeCareerDashaPlanetary } from './careerDashaPlanetarySynthesis';
 
 export function synthesizeCareerDashaPlanet(
   input: CareerDashaPlanetInput
 ): CareerDashaPlanetSynthesis {
-  const { period, activation, housePortfolio, d10, start, end } = input;
-  const planet = activation.planet;
+  const planetary = synthesizeCareerDashaPlanetary({
+    period: input.period,
+    activation: input.activation,
+    housePortfolio: input.housePortfolio ?? getCareerHousePortfolio(),
+    confidence: input.confidence,
+    start: input.start,
+    end: input.end,
+    d10: input.d10
+      ? {
+          planet: input.activation.planet,
+          available: input.d10.available ?? (input.d10.relationship !== 'UNAVAILABLE'),
+          relationship: input.d10.relationship as any,
+          statement: input.d10.statement
+        }
+      : undefined
+  });
 
-  // P1 #2: Single authoritative linkage.
-  // CareerRelevance.careerLinked is the sole definition.
-  const relevance = buildCareerRelevance(activation, housePortfolio, d10?.available);
-  const careerLinked = relevance.careerLinked;
-  const factors: CareerDashaFactor[] = [];
-
-  const addFactor = (
-    category: CareerFactorCategory,
-    suffix: string,
-    direction: CareerFactorDirection,
-    weight: number,
-    statement: string,
-    houses?: readonly number[],
-    evidenceIds?: readonly string[],
-    meta?: Record<string, unknown>,
-    ruleIdOverride?: string
-  ) => {
-    const firstHouse = houses?.[0];
-    const contributionCategory = firstHouse ? mapHouseToContributionCategory(firstHouse) : undefined;
-    const ruleId = ruleIdOverride ?? `CAREER_DASHA_${category}_${suffix}`;
-    const evidenceDirection =
-      direction === 'SUPPORT' ? 'SUPPORTING' : direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL';
-    const role =
-      direction === 'CHALLENGE'
-        ? 'QUALIFYING'
-        : period === 'MD'
-          ? 'PRIMARY'
-          : period === 'AD'
-            ? 'MODIFIER'
-            : 'REFINEMENT';
-
-    factors.push({
-      id: `CAREER_DASHA_${period}_${planet.toUpperCase()}_${category}_${suffix}`,
-      period,
-      planet,
-      category,
-      direction,
-      weight,
-      statement,
-      ruleId,
-      role,
-      evidenceDirection,
-      ...(contributionCategory ? { contributionCategory } : {}),
-      ...(houses ? { houses } : {}),
-      ...(evidenceIds ? { evidenceIds } : {}),
-      ...(meta ? { meta } : {})
-    });
-  };
-
-  // 1. House Ownership
-  for (const house of activation.ownedHouses || []) {
-    const cls = classifyCareerHouseOwnership(house, housePortfolio);
-    if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-      addFactor(
-        'HOUSE_OWNERSHIP',
-        String(house),
-        cls.direction,
-        cls.weight,
-        `${planet} owns house ${house} (${cls.direction.toLowerCase()} for career).`,
-        [house],
-        undefined,
-        undefined,
-        `CAREER_DASHA_HOUSE_OWNERSHIP_${house}`
-      );
-    }
-  }
-
-  // 2. House Placement
-  if (activation.house !== undefined) {
-    const house = activation.house;
-    const cls = classifyCareerHousePlacement(house, housePortfolio);
-    if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-      addFactor(
-        'HOUSE_PLACEMENT',
-        String(house),
-        cls.direction,
-        cls.weight,
-        `${planet} is placed in house ${house} (${cls.direction.toLowerCase()} for career).`,
-        [house],
-        undefined,
-        undefined,
-        `CAREER_DASHA_HOUSE_PLACEMENT_${house}`
-      );
-    }
-  }
-
-  // 3. Functional Role (Strictly gated on career linkage per CW-09 convergence)
-  if (careerLinked) {
-    for (const role of activation.functionalRoles || []) {
-      const cls = classifyCareerFunctionalRole(role, activation, housePortfolio);
-      if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-        addFactor(
-          'FUNCTIONAL_ROLE',
-          role,
-          cls.direction,
-          cls.weight,
-          `${planet} acts as ${role.replace(/_/g, ' ')} (${cls.direction.toLowerCase()}).`,
-          undefined,
-          undefined,
-          undefined,
-          `CAREER_DASHA_FUNCTIONAL_ROLE_${role}`
-        );
-      }
-    }
-  }
-
-  // 4. Functional Nature (Strictly gated on career linkage per CW-09 convergence)
-  if (careerLinked && activation.functionalNature) {
-    const cls = classifyCareerFunctionalNature(activation.functionalNature, activation, housePortfolio);
-    if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-      addFactor(
-        'FUNCTIONAL_NATURE',
-        activation.functionalNature,
-        cls.direction,
-        cls.weight,
-        `${planet} operates as a functional ${activation.functionalNature.toLowerCase()} graha.`,
-        undefined,
-        undefined,
-        undefined,
-        `CAREER_DASHA_FUNCTIONAL_NATURE_${activation.functionalNature}`
-      );
-    }
-  }
-
-  // 5. Dignity
-  const digRaw = typeof activation.dignity === 'string' ? activation.dignity : undefined;
-  if (digRaw) {
-    const digUpper = digRaw.toUpperCase();
-    let direction: CareerFactorDirection = 'NEUTRAL';
-    let weight = 0;
-    if (
-      digUpper.includes('EXALTED') ||
-      digUpper.includes('MOOLATRIKONA') ||
-      digUpper.includes('OWN')
-    ) {
-      direction = 'SUPPORT';
-      weight = 2.0;
-    } else if (digUpper.includes('FRIEND')) {
-      direction = 'SUPPORT';
-      weight = 1.0;
-    } else if (digUpper.includes('DEBILITATED')) {
-      direction = 'CHALLENGE';
-      weight = 2.0;
-    } else if (digUpper.includes('ENEMY')) {
-      direction = 'CHALLENGE';
-      weight = 1.0;
-    }
-
-    if (direction !== 'NEUTRAL' || weight > 0) {
-      addFactor(
-        'DIGNITY',
-        digUpper.replace(/\s+/g, '_'),
-        direction,
-        weight,
-        `${planet} holds ${digRaw} dignity (${direction.toLowerCase()}).`,
-        undefined,
-        undefined,
-        undefined,
-        `CAREER_DASHA_DIGNITY_${digUpper.replace(/\s+/g, '_')}`
-      );
-    }
-  }
-
-  // 6. State
-  const stRaw =
-    typeof activation.state === 'string'
-      ? (activation.state as string)
-      : activation.state?.condition
-        ? String(activation.state.condition)
-        : undefined;
-  if (stRaw) {
-    const stUpper = stRaw.toUpperCase();
-    let direction: CareerFactorDirection = 'NEUTRAL';
-    let weight = 0;
-    if (stUpper.includes('COMBUST') || stUpper.includes('DEFEAT')) {
-      direction = 'CHALLENGE';
-      weight = 1.5;
-    } else if (stUpper.includes('VICTORY') || stUpper.includes('EXALTED')) {
-      direction = 'SUPPORT';
-      weight = 1.5;
-    } else if (stUpper.includes('RETROGRADE')) {
-      direction = 'NEUTRAL';
-      weight = 0.5;
-    }
-
-    if (direction !== 'NEUTRAL' || weight > 0) {
-      addFactor(
-        'STATE',
-        stUpper.replace(/\s+/g, '_'),
-        direction,
-        weight,
-        `${planet} is in ${stRaw} state (${direction.toLowerCase()}).`,
-        undefined,
-        undefined,
-        undefined,
-        `CAREER_DASHA_STATE_${stUpper.replace(/\s+/g, '_')}`
-      );
-    }
-  }
-
-  // 7. Strength
-  if (activation.strength) {
-    const cls = classifyPlanetStrengthDirection(activation.strength);
-    if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-      addFactor(
-        'STRENGTH',
-        'SHADBALA',
-        cls.direction,
-        cls.weight,
-        `${planet} shadbala strength is ${activation.strength.shadbalaStatus || 'evaluated'} (${cls.direction.toLowerCase()}).`,
-        undefined,
-        undefined,
-        undefined,
-        'CAREER_DASHA_STRENGTH_SHADBALA'
-      );
-    }
-  }
-
-  // 8. Aspects
-  if (activation.castAspects) {
-    for (let i = 0; i < activation.castAspects.length; i++) {
-      const asp = activation.castAspects[i];
-      if (
-        asp.targetHouse !== undefined &&
-        (housePortfolio.primary.includes(asp.targetHouse) ||
-          housePortfolio.supporting.includes(asp.targetHouse))
-      ) {
-        const isPrimary = housePortfolio.primary.includes(asp.targetHouse);
-        addFactor(
-          'ASPECT',
-          `CAST_${asp.targetHouse}`,
-          'SUPPORT',
-          isPrimary ? 1.5 : 1.0,
-          `${planet} casts aspect on house ${asp.targetHouse}.`,
-          [asp.targetHouse],
-          undefined,
-          undefined,
-          `CAREER_DASHA_ASPECT_CAST_${asp.targetHouse}`
-        );
-      }
-    }
-  }
-
-  // 9. Yoga (Gated on career linkage)
-  if (careerLinked && activation.yogaParticipation) {
-    for (const yoga of activation.yogaParticipation) {
-      const cls = classifyCareerYoga(yoga, activation, housePortfolio);
-      if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-        addFactor(
-          'YOGA',
-          yoga.yogaType || 'YOGA',
-          cls.direction,
-          cls.weight,
-          `${planet} participates in yoga ${yoga.yogaType} (${cls.direction.toLowerCase()}).`,
-          undefined,
-          undefined,
-          undefined,
-          `CAREER_DASHA_YOGA_${yoga.yogaType || 'YOGA'}`
-        );
-      }
-    }
-  }
-
-  // 10. Karaka (Derived from career karaka infrastructure with strict career linkage)
-  if (careerLinked) {
-    const karaka = resolveCareerKarakaRelevance(planet, activation, housePortfolio);
-    if (karaka) {
-      addFactor(
-        'KARAKA',
-        'ROLE',
-        karaka.direction,
-        karaka.weight,
-        `${planet} acts as ${karaka.karakaTitle}: ${karaka.traitDescription}`,
-        undefined,
-        undefined,
-        undefined,
-        'CAREER_DASHA_KARAKA_ROLE'
-      );
-    }
-  }
-
-  // 11. D10 Confirmation
-  if (d10 && d10.relationship && d10.relationship !== 'UNAVAILABLE') {
-    let direction: CareerFactorDirection = 'NEUTRAL';
-    let weight = 0;
-    if (d10.relationship === 'CONFIRMS') {
-      direction = 'SUPPORT';
-      weight = 1.5;
-    } else if (d10.relationship === 'PARTIALLY_CONFIRMS') {
-      direction = 'SUPPORT';
-      weight = 1.0;
-    } else if (d10.relationship === 'MODIFIES') {
-      direction = 'NEUTRAL';
-      weight = 0;
-    } else if (d10.relationship === 'CONFLICTS') {
-      direction = 'CHALLENGE';
-      weight = 1.5;
-    }
-
-    if (direction !== 'NEUTRAL' || weight > 0) {
-      addFactor(
-        'D10',
-        d10.relationship,
-        direction,
-        weight,
-        `D10 divisional chart ${d10.relationship.toLowerCase().replace(/_/g, ' ')} (${direction.toLowerCase()}).`,
-        undefined,
-        undefined,
-        undefined,
-        `CAREER_DASHA_D10_${d10.relationship}`
-      );
-    }
-  }
-
-  const d10Effect: 'SUPPORTS' | 'CHALLENGES' | 'NEUTRAL' =
-    d10?.relationship === 'CONFIRMS' || d10?.relationship === 'PARTIALLY_CONFIRMS'
-      ? 'SUPPORTS'
-      : d10?.relationship === 'CONFLICTS'
-        ? 'CHALLENGES'
-        : 'NEUTRAL';
-
-  const activatedHousesSet = new Set<number>();
-  for (const h of activation.ownedHouses || []) {
-    if (housePortfolio.primary.includes(h) || housePortfolio.supporting.includes(h)) {
-      activatedHousesSet.add(h);
-    }
-  }
-  if (
-    activation.house !== undefined &&
-    (housePortfolio.primary.includes(activation.house) || housePortfolio.supporting.includes(activation.house))
-  ) {
-    activatedHousesSet.add(activation.house);
-  }
-  const activatedCareerHouses = Object.freeze(Array.from(activatedHousesSet).sort((a, b) => a - b));
-
-  const impact = deriveCareerDashaImpact(relevance, activation.strength, planet);
-
-  let supportScore = 0;
-  let challengeScore = 0;
-  let netScore = 0;
-  let effect: CareerDashaPlanetSynthesis['effect'] = 'DOES_NOT_ACTIVATE';
-
-  if (careerLinked) {
-    const scoreResult = calculateFactorScore(factors);
-    supportScore = scoreResult.support;
-    challengeScore = scoreResult.challenge;
-    netScore = Math.round((supportScore - challengeScore) * 100) / 100;
-    effect = resolveCareerDashaEffect(supportScore, challengeScore, factors);
-  }
-
-  const resolvedConfidence: InterpretationConfidence =
-    input.confidence ??
-    (activation as any).confidence ??
-    (activation.strength?.meetsMinimum ||
-    (activation.strength?.totalRupa !== undefined && activation.strength.totalRupa >= 5) ||
-    (activation.strength as any)?.level === 'STRONG' ||
-    (activation.strength as any)?.score !== undefined
-      ? 'HIGH'
-      : 'MEDIUM');
-
-  const supportingFactorIds = Object.freeze(
-    factors.filter((f) => f.direction === 'SUPPORT').map((f) => f.id)
-  );
-  const challengingFactorIds = Object.freeze(
-    factors.filter((f) => f.direction === 'CHALLENGE').map((f) => f.id)
-  );
-  const neutralFactorIds = Object.freeze(
-    factors.filter((f) => f.direction === 'NEUTRAL').map((f) => f.id)
-  );
-
-  const summary = `${period} Lord ${planet} ${effect.toLowerCase().replace(/_/g, ' ')} career manifestation (${supportScore.toFixed(1)} support vs ${challengeScore.toFixed(1)} challenge).`;
+  const factors = planetary.factors as readonly CareerDashaFactor[];
+  const supportingFactorIds = planetary.supportingFactorIds ?? planetary.supportingEvidenceIds;
+  const challengingFactorIds = planetary.challengingFactorIds ?? planetary.challengingEvidenceIds;
+  const neutralFactorIds = planetary.neutralFactorIds ?? planetary.neutralEvidenceIds;
 
   return Object.freeze({
-    period,
-    planet,
-    effect,
-    confidence: resolvedConfidence,
-    supportScore,
-    challengeScore,
-    netScore,
-    careerLinked,
-    relevance,
-    impact,
-    factors: Object.freeze(factors),
+    period: planetary.period,
+    planet: planetary.planet,
+    effect: planetary.effect,
+    confidence: planetary.confidence,
+    supportScore: planetary.supportScore,
+    challengeScore: planetary.challengeScore,
+    netScore: planetary.netScore,
+    careerLinked: planetary.careerLinked,
+    relevance: planetary.relevance,
+    impact: planetary.impact,
+    factors,
     supportingFactorIds,
     challengingFactorIds,
     neutralFactorIds,
     supportingEvidenceIds: supportingFactorIds,
     challengingEvidenceIds: challengingFactorIds,
     neutralEvidenceIds: neutralFactorIds,
-    activatedCareerHouses,
-    d10Effect,
-    summary,
-    ...(start ? { start } : {}),
-    ...(end ? { end } : {})
+    qualifyingEvidenceIds: challengingFactorIds,
+    activatedCareerHouses: planetary.activatedCareerHouses,
+    d10Effect: planetary.d10Effect,
+    summary: planetary.summary,
+    ...(input.start ? { start: input.start } : {}),
+    ...(input.end ? { end: input.end } : {})
   });
 }
 
@@ -506,13 +155,29 @@ export function synthesizeCareerDashaPeriods(
   const adScore = effectScore(ad.effect);
   const pdScore = effectScore(pd.effect);
 
-  const combinedScore = Math.round(((mdScore * 1.0 + adScore * 0.6 + pdScore * 0.3) / 1.9) * 100) / 100;
-  const combinedEffect = resolveCombinedCareerDashaEffect(md, ad, pd, combinedScore);
-  const combinedConfidence = combineCareerDashaConfidence(md.confidence, ad.confidence, pd.confidence);
+  let relScore = 0;
+  if (mdAdRelationship.careerImpact === 'SUPPORTIVE') {
+    relScore = mdAdRelationship.evidence.some((e) => e.ruleId === 'CAREER_DASHA_DUAL_10_ACTIVATION') ? 1.5 : 1.0;
+  } else if (mdAdRelationship.careerImpact === 'CONFLICTING') {
+    relScore = -1.0;
+  }
+
+  const relWeight = 0.25;
+  const combinedScore =
+    Math.round(
+      ((mdScore * 1.0 + adScore * 0.6 + pdScore * 0.3 + relScore * relWeight) /
+        (1.9 + relWeight)) *
+        100
+    ) / 100;
+
+  const combinedEffect = resolveCombinedCareerDashaEffect(md, ad, pd, combinedScore, relationships);
+  const combinedConfidence = combineCareerDashaConfidence(md.confidence, ad.confidence, pd.confidence, relationships);
 
   let summary: string;
   if (md.effect === 'DOES_NOT_ACTIVATE' && (ad.effect === 'SUPPORTS' || ad.effect === 'STRONGLY_SUPPORTS')) {
     summary = `The ${md.planet} Mahadasha does not establish a primary Career theme; ${ad.planet} Antardasha provides temporary sub-period activation.`;
+  } else if (mdAdRelationship.careerImpact === 'CONFLICTING' && (md.effect === 'SUPPORTS' || md.effect === 'STRONGLY_SUPPORTS')) {
+    summary = `Career Dasha timing is active but constrained by ${md.planet}-${ad.planet} conflicting relationship (${combinedEffect.toLowerCase().replace(/_/g, ' ')}) with ${md.planet} Mahadasha (Primary) and ${ad.planet} Antardasha (Modifier).`;
   } else {
     summary = `Career Dasha timing is ${combinedEffect.toLowerCase().replace(/_/g, ' ')} with ${md.planet} Mahadasha (Primary), ${ad.planet} Antardasha (Modifier), and ${pd.planet} Pratyantardasha (Refinement).`;
   }
@@ -641,7 +306,7 @@ export function buildCareerDashaSynthesis(
         activation: mdAct,
         housePortfolio: portfolio,
         d10: d10Context,
-        confidence: mdInterp?.confidence,
+        confidence: mdInterp?.confidence ?? current.confidence,
         start: mdInterp?.start,
         end: mdInterp?.end
       })
@@ -653,7 +318,7 @@ export function buildCareerDashaSynthesis(
         activation: adAct,
         housePortfolio: portfolio,
         d10: d10Context,
-        confidence: adInterp?.confidence,
+        confidence: adInterp?.confidence ?? current.confidence,
         start: adInterp?.start,
         end: adInterp?.end
       })
@@ -665,7 +330,7 @@ export function buildCareerDashaSynthesis(
         activation: pdAct,
         housePortfolio: portfolio,
         d10: d10Context,
-        confidence: pdInterp?.confidence,
+        confidence: pdInterp?.confidence ?? current.confidence,
         start: pdInterp?.start,
         end: pdInterp?.end
       })

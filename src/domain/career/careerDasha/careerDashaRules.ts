@@ -852,10 +852,18 @@ export function buildDashaPlanetRelationship(
     Array.from(new Set(sourceHouses.filter((h) => targetHouses.includes(h)))).sort((a, b) => a - b)
   );
 
-  const bothActivate10 = sourceHouses.includes(10) && targetHouses.includes(10);
+  const sharedHouses = pairInterp?.sharedHouses ?? careerHouseOverlap;
+  const combinedHouseSet =
+    pairInterp?.combinedHouseSet ??
+    Array.from(new Set([...sourceHouses, ...targetHouses])).sort((a, b) => a - b);
+
+  const bothActivate10 =
+    (sourceHouses.includes(10) && targetHouses.includes(10)) ||
+    (pairInterp?.sharedHouses !== undefined && pairInterp.sharedHouses.includes(10));
   const one10OneSupporting =
     (sourceHouses.includes(10) && targetHouses.some((h) => portfolio.supporting.includes(h))) ||
-    (targetHouses.includes(10) && sourceHouses.some((h) => portfolio.supporting.includes(h)));
+    (targetHouses.includes(10) && sourceHouses.some((h) => portfolio.supporting.includes(h))) ||
+    (sharedHouses.includes(10) && sharedHouses.some((h) => portfolio.supporting.includes(h)));
 
   // (c) Career relevance of each planet
   const sourceLinked =
@@ -887,7 +895,28 @@ export function buildDashaPlanetRelationship(
   let careerImpact: DashaRelationshipCareerImpact = 'NEUTRAL';
   let functionalInteraction = '';
 
-  if (neitherLinked) {
+  const hasSupportivePairEvidence = pairInterp?.relationshipEvidence?.some(
+    (e) =>
+      (e as any).effect === 'SUPPORTS' ||
+      (e as any).polarity === 'POSITIVE' ||
+      (e as any).nature === 'BENEFIC' ||
+      (e as any).impact === 'SUPPORTIVE'
+  );
+  const hasConflictingPairEvidence = pairInterp?.relationshipEvidence?.some(
+    (e) =>
+      (e as any).effect === 'CHALLENGES' ||
+      (e as any).polarity === 'NEGATIVE' ||
+      (e as any).nature === 'MALEFIC' ||
+      (e as any).impact === 'CONFLICTING'
+  );
+
+  if (hasSupportivePairEvidence) {
+    careerImpact = 'SUPPORTIVE';
+    functionalInteraction = 'Pair relationship evidence establishes supportive career coordination between periods.';
+  } else if (hasConflictingPairEvidence) {
+    careerImpact = 'CONFLICTING';
+    functionalInteraction = 'Pair relationship evidence establishes conflicting career friction between periods.';
+  } else if (neitherLinked) {
     careerImpact = 'NEUTRAL';
     functionalInteraction = 'Neither period lord establishes direct career linkage.';
   } else if (relationshipType === 'FRIEND') {
@@ -922,11 +951,6 @@ export function buildDashaPlanetRelationship(
       functionalInteraction = 'Independent operation without major career conflict or synergy.';
     }
   }
-
-  const sharedHouses = pairInterp?.sharedHouses ?? careerHouseOverlap;
-  const combinedHouseSet =
-    pairInterp?.combinedHouseSet ??
-    Array.from(new Set([...sourceHouses, ...targetHouses])).sort((a, b) => a - b);
 
   const evidence: CareerDashaFactor[] = [
     {

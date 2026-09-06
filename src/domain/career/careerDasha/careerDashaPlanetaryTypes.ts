@@ -7,8 +7,12 @@ import type {
   CareerRelevance,
   CareerDashaImpact,
   EvidenceDirection,
-  EvidenceRole
+  EvidenceRole,
+  PeriodRole,
+  FactorQualification
 } from './careerDashaSynthesisTypes';
+
+export type { PeriodRole, FactorQualification };
 
 export type CareerDashaPlanetaryPeriod = 'MD' | 'AD' | 'PD';
 
@@ -63,6 +67,8 @@ export interface CareerDashaPlanetaryEvidence {
   readonly direction: CareerDashaPlanetaryDirection;
   readonly weight: number;
   readonly role?: EvidenceRole;
+  readonly periodRole?: PeriodRole;
+  readonly qualification?: FactorQualification;
   readonly evidenceDirection?: EvidenceDirection;
   readonly contributionCategory?: CareerContributionCategory;
   readonly houses?: readonly number[];
@@ -87,6 +93,7 @@ export interface CareerDashaD10PlanetContext {
     | 'MODIFIES'
     | 'CONFLICTS'
     | 'UNAVAILABLE';
+  readonly statement?: string;
 }
 
 export interface CareerDashaPlanetaryInput {

@@ -104,11 +104,14 @@ export type EvidenceDirection =
   | 'SUPPORTING'
   | 'CHALLENGING';
 
+export type PeriodRole = 'PRIMARY' | 'MODIFIER' | 'REFINEMENT';
+
+export type FactorQualification = 'NONE' | 'QUALIFYING';
+
 export type EvidenceRole =
   | 'PRIMARY'
   | 'SUPPORTING'
   | 'QUALIFYING'
-  | 'TERTIARY'
   | 'MODIFIER'
   | 'CONFIRMATION'
   | 'TIMING'
@@ -161,6 +164,8 @@ export interface CareerDashaFactor {
   readonly statement: string;
   readonly ruleId?: string;
   readonly role?: EvidenceRole;
+  readonly periodRole?: PeriodRole;
+  readonly qualification?: FactorQualification;
   readonly evidenceDirection?: EvidenceDirection;
   readonly contributionCategory?: CareerContributionCategory;
   readonly candidateContributionCategories?: readonly CareerContributionCategory[];

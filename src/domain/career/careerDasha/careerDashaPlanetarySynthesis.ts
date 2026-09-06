@@ -177,14 +177,15 @@ export function synthesizeCareerDashaPlanetary(
     const contributionCategory = firstHouse ? mapHouseToContributionCategory(firstHouse) : undefined;
     const evidenceDirection =
       direction === 'SUPPORT' ? 'SUPPORTING' : direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL';
-    const role =
-      direction === 'CHALLENGE'
-        ? 'QUALIFYING'
-        : period === 'MD'
-          ? 'PRIMARY'
-          : period === 'AD'
-            ? 'MODIFIER'
-            : 'REFINEMENT';
+    const periodRole =
+      period === 'MD'
+        ? 'PRIMARY'
+        : period === 'AD'
+          ? 'MODIFIER'
+          : 'REFINEMENT';
+    const qualification =
+      direction === 'CHALLENGE' ? 'QUALIFYING' : 'NONE';
+    const role = periodRole;
 
     factors.push({
       id: [
@@ -202,6 +203,8 @@ export function synthesizeCareerDashaPlanetary(
       weight,
       statement,
       role,
+      periodRole,
+      qualification,
       evidenceDirection,
       ...(contributionCategory ? { contributionCategory } : {}),
       ...(options.houses ? { houses: options.houses } : {}),
@@ -213,7 +216,7 @@ export function synthesizeCareerDashaPlanetary(
   /*
    * 1. HOUSE OWNERSHIP
    */
-  for (const house of activation.ownedHouses) {
+  for (const house of activation.ownedHouses || []) {
     const result = classifyOwnership(house, housePortfolio);
 
     if (result.direction !== 'NEUTRAL') {
@@ -262,7 +265,7 @@ export function synthesizeCareerDashaPlanetary(
    * but never establishes participation or score weight for a non-linked planet.
    */
   if (careerLinked) {
-    for (const role of activation.functionalRoles) {
+    for (const role of activation.functionalRoles || []) {
       const result = classifyFunctionalRole(role);
 
       if (result.direction !== 'NEUTRAL') {
@@ -405,7 +408,7 @@ export function synthesizeCareerDashaPlanetary(
   /*
    * 8. CAST ASPECTS
    */
-  for (const aspect of activation.castAspects) {
+  for (const aspect of activation.castAspects || []) {
     const targetHouse = aspect.targetHouse;
 
     if (targetHouse === undefined) {
@@ -448,7 +451,7 @@ export function synthesizeCareerDashaPlanetary(
    * It is retained as neutral unless a dedicated career rule establishes
    * directional meaning.
    */
-  for (const aspect of activation.receivedAspects) {
+  for (const aspect of activation.receivedAspects || []) {
     if (aspect.sourceHouse !== undefined) {
       const sourceHouse = aspect.sourceHouse;
 
@@ -478,7 +481,7 @@ export function synthesizeCareerDashaPlanetary(
    * Note: DashaYogaReference does not include participatingHouses.
    * Yoga factors are attached when the planet itself is career-linked and the yoga is active.
    */
-  for (const yoga of activation.yogaParticipation) {
+  for (const yoga of activation.yogaParticipation || []) {
     if (yoga.finalStatus === 'CANCELLED') {
       continue;
     }
@@ -510,7 +513,7 @@ export function synthesizeCareerDashaPlanetary(
   /*
    * 11. D10 PLANETARY CONFIRMATION
    */
-  if (d10?.available) {
+  if (d10 && (d10.available || (d10.available === undefined && d10.relationship !== 'UNAVAILABLE'))) {
     switch (d10.relationship) {
       case 'CONFIRMS':
         addFactor(
@@ -518,7 +521,7 @@ export function synthesizeCareerDashaPlanetary(
           'CONFIRMS',
           'SUPPORT',
           CW09_PLANETARY_WEIGHTS.D10_CONFIRMATION,
-          `D10 confirms the career role of ${planet}.`,
+          (d10 as any).statement ?? `D10 confirms the career role of ${planet}.`,
           {
             category: 'D10',
             planets: [planet],
@@ -533,7 +536,7 @@ export function synthesizeCareerDashaPlanetary(
           'PARTIAL',
           'SUPPORT',
           CW09_PLANETARY_WEIGHTS.D10_PARTIAL,
-          `D10 partially confirms the career role of ${planet}.`,
+          (d10 as any).statement ?? `D10 partially confirms the career role of ${planet}.`,
           {
             category: 'D10',
             planets: [planet],
@@ -548,7 +551,7 @@ export function synthesizeCareerDashaPlanetary(
           'CONFLICTS',
           'CHALLENGE',
           CW09_PLANETARY_WEIGHTS.D10_CONFLICT,
-          `D10 conflicts with the career role of ${planet}.`,
+          (d10 as any).statement ?? `D10 conflicts with the career role of ${planet}.`,
           {
             category: 'D10',
             planets: [planet],
@@ -607,7 +610,7 @@ export function synthesizeCareerDashaPlanetary(
     Array.from(
       new Set(
         [
-          ...activation.ownedHouses,
+          ...(activation.ownedHouses || []),
           activation.house
         ].filter(
           (house) =>
@@ -660,6 +663,7 @@ export function synthesizeCareerDashaPlanetary(
     supportingEvidenceIds,
     challengingEvidenceIds,
     neutralEvidenceIds,
+    qualifyingEvidenceIds: challengingEvidenceIds,
     supportingFactorIds: supportingEvidenceIds,
     challengingFactorIds: challengingEvidenceIds,
     neutralFactorIds: neutralEvidenceIds,
