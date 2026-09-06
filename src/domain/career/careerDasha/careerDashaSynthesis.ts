@@ -1,3 +1,16 @@
+/**
+ * Career Dasha Synthesis (Legacy Production Path).
+ *
+ * ARCHITECTURAL DESIGN NOTE / INTEGRATION AUDIT:
+ * - Production Status: This module (`synthesizeCareerDashaPlanet`) is currently the legacy
+ *   authoritative production synthesis path utilized by higher-level interpreters.
+ * - Linkage & Scoring Note: This legacy path derives overall effect directly from aggregate
+ *   evidence scores without an upfront career-linkage gating stage.
+ * - Convergence Plan: The CW-09 module (`careerDashaPlanetarySynthesis.ts`) establishes the
+ *   new standard with strict linkage gating (separating participation from direction modulation).
+ *   Production consumers will converge to the CW-09 synthesis path in a coordinated migration.
+ */
+
 import { Planet } from '../../../types';
 import type {
   DashaPlanetActivation,

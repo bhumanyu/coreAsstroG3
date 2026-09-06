@@ -201,7 +201,7 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
     expect(synthesis.confidence).toBe('LOW');
   });
 
-  it('8. returns INSUFFICIENT_DATA when factors.length === 0', () => {
+  it('8. returns INSUFFICIENT_DATA when factors.length === 0 for a career-linked planet', () => {
     const activation = createActivation({
       planet: Planet.RAHU,
       house: 4,
@@ -210,7 +210,10 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
       functionalNature: FunctionalNature.NEUTRAL,
       dignity: undefined,
       state: undefined,
-      strength: undefined
+      strength: undefined,
+      receivedAspects: [
+        { targetHouse: 10, aspectingPlanet: Planet.SATURN, aspectType: 'MUTUAL', weight: 0.1 } as any
+      ]
     });
 
     const synthesis = synthesizeCareerDashaPlanetary({
@@ -219,6 +222,7 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
       housePortfolio: CAREER_HOUSE_PORTFOLIO
     });
 
+    expect(synthesis.careerLinked).toBe(true);
     expect(synthesis.factors.length).toBe(0);
     expect(synthesis.effect).toBe('INSUFFICIENT_DATA');
   });
@@ -315,12 +319,14 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
     expect(effectScore('INSUFFICIENT_DATA')).toBe(0);
   });
 
-  it('13. Yogakaraka role alone does not establish career linkage without career house involvement', () => {
+  it('13. Yogakaraka role alone does not establish career linkage and leaks zero score weight', () => {
     const activation = createActivation({
       planet: Planet.VENUS,
       house: 5,
       ownedHouses: [4, 9], // Not in primary (10) or supporting (2, 6, 7, 11)
-      functionalRoles: [FunctionalRole.YOGAKARAKA]
+      functionalRoles: [FunctionalRole.YOGAKARAKA],
+      functionalNature: FunctionalNature.BENEFIC,
+      strength: undefined
     });
 
     const synthesis = synthesizeCareerDashaPlanetary({
@@ -331,6 +337,11 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
 
     expect(synthesis.careerLinked).toBe(false);
     expect(synthesis.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(synthesis.confidence).toBe('LOW');
+    expect(synthesis.supportScore).toBe(0);
+    expect(synthesis.challengeScore).toBe(0);
+    expect(synthesis.netScore).toBe(0);
+    expect(synthesis.factors.some((f) => f.source === 'FUNCTIONAL_ROLE')).toBe(false);
   });
 
   it('14. neutral evidence does not inflate confidence to MEDIUM', () => {
@@ -437,5 +448,140 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
     expect(synthesis.supportScore).toBe(0);
     expect(synthesis.challengeScore).toBe(0);
     expect(synthesis.effect).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('18. functional malefic nature does not leak challenge score into non-linked planet', () => {
+    const activation = createActivation({
+      planet: Planet.MARS,
+      house: 3,
+      ownedHouses: [3, 9],
+      functionalRoles: [FunctionalRole.MARAKA_LORD],
+      functionalNature: FunctionalNature.MALEFIC,
+      strength: undefined
+    });
+
+    const synthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    expect(synthesis.careerLinked).toBe(false);
+    expect(synthesis.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(synthesis.challengeScore).toBe(0);
+    expect(synthesis.supportScore).toBe(0);
+    expect(synthesis.netScore).toBe(0);
+    expect(synthesis.factors.some((f) => f.source === 'FUNCTIONAL_ROLE')).toBe(false);
+  });
+
+  it('19. validates monotonic relative ordering across tier activations without freezing constant values', () => {
+    // 1. Strong career linkage tier
+    const strongActivation = createActivation({
+      planet: Planet.SATURN,
+      house: 10,
+      ownedHouses: [10, 11],
+      dignity: 'EXALTED',
+      functionalRoles: [FunctionalRole.YOGAKARAKA],
+      functionalNature: FunctionalNature.BENEFIC
+    });
+
+    // 2. Moderate career linkage tier
+    const moderateActivation = createActivation({
+      planet: Planet.VENUS,
+      house: 5,
+      ownedHouses: [11],
+      dignity: 'NEUTRAL',
+      functionalRoles: [],
+      functionalNature: FunctionalNature.NEUTRAL
+    });
+
+    // 3. Mixed career tier (support from H10, but challenged by debilitation and combustion)
+    const mixedActivation = createActivation({
+      planet: Planet.SUN,
+      house: 8,
+      ownedHouses: [10],
+      dignity: 'DEBILITATED',
+      state: 'COMBUST' as any,
+      functionalRoles: [],
+      functionalNature: FunctionalNature.NEUTRAL
+    });
+
+    // 4. Weak / Challenging career tier (occupies supporting house but severely challenged by H8/H12 ownership, debilitation, weak strength, and malefic nature)
+    const weakActivation = createActivation({
+      planet: Planet.MARS,
+      house: 6,
+      ownedHouses: [8, 12],
+      dignity: 'DEBILITATED',
+      state: 'COMBUST' as any,
+      strength: {
+        availability: 'AVAILABLE',
+        meetsMinimum: false,
+        percentageOfMinimum: 50
+      } as any,
+      functionalRoles: [FunctionalRole.DUSTHANA_LORD],
+      functionalNature: FunctionalNature.MALEFIC
+    });
+
+    // 5. Non-linked tier (no career houses owned, occupied, or aspected)
+    const nonLinkedActivation = createActivation({
+      planet: Planet.JUPITER,
+      house: 3,
+      ownedHouses: [3, 9],
+      dignity: 'NEUTRAL',
+      functionalRoles: [FunctionalRole.YOGAKARAKA],
+      functionalNature: FunctionalNature.BENEFIC,
+      strength: undefined
+    });
+
+    const strongSynthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation: strongActivation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    const moderateSynthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation: moderateActivation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    const mixedSynthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation: mixedActivation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    const weakSynthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation: weakActivation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    const nonLinkedSynthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation: nonLinkedActivation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    // Net score monotonic ordering: strong > moderate > mixed > weak
+    expect(strongSynthesis.netScore).toBeGreaterThan(moderateSynthesis.netScore);
+    expect(moderateSynthesis.netScore).toBeGreaterThan(mixedSynthesis.netScore);
+    expect(mixedSynthesis.netScore).toBeGreaterThan(weakSynthesis.netScore);
+
+    // Effect monotonic ordering: strong >= moderate >= mixed >= weak
+    expect(effectScore(strongSynthesis.effect)).toBeGreaterThanOrEqual(effectScore(moderateSynthesis.effect));
+    expect(effectScore(moderateSynthesis.effect)).toBeGreaterThanOrEqual(effectScore(mixedSynthesis.effect));
+    expect(effectScore(mixedSynthesis.effect)).toBeGreaterThanOrEqual(effectScore(weakSynthesis.effect));
+
+    // Specific expected directional effects per tier definition
+    expect(strongSynthesis.effect).toBe('STRONGLY_SUPPORTS');
+    expect(weakSynthesis.effect).toBe('STRONGLY_CHALLENGES');
+
+    // Non-linked tier validation: linkage gate prevents score leakage and activation
+    expect(nonLinkedSynthesis.careerLinked).toBe(false);
+    expect(nonLinkedSynthesis.effect).toBe('DOES_NOT_ACTIVATE');
+    expect(nonLinkedSynthesis.supportScore).toBe(0);
+    expect(nonLinkedSynthesis.challengeScore).toBe(0);
+    expect(nonLinkedSynthesis.netScore).toBe(0);
   });
 });

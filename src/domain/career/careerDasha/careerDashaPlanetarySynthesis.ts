@@ -1,3 +1,20 @@
+/**
+ * CW-09 Career Dasha Planetary Synthesis.
+ *
+ * ARCHITECTURAL DESIGN NOTE / INTEGRATION STATUS:
+ * - Authoritative Target: This module (`synthesizeCareerDashaPlanetary`) defines the
+ *   authoritative CW-09 model with strict separation between career linkage gating
+ *   and directional score modulation (e.g. functional roles/nature only modulate scores
+ *   when career linkage is established via house ownership, placement, or aspects).
+ * - Production Integration Plan: The legacy synthesis path (`synthesizeCareerDashaPlanet` in
+ *   `careerDashaSynthesis.ts`) is currently retained in production to avoid silent breaking
+ *   changes across existing consumers. As part of the planned convergence milestone,
+ *   production callers will transition to `synthesizeCareerDashaPlanetary`, or legacy
+ *   callers will adopt the explicit linkage gate. Until full convergence, note that
+ *   the legacy path computes effect directly from score totals without the strict CW-09
+ *   linkage gate.
+ */
+
 import type { InterpretationConfidence } from '../../../engine/planetInterpretation/planetInterpretationTypes';
 import { FunctionalNature } from '../../../engine/functionalNature/functionalNature';
 import type {
@@ -46,12 +63,12 @@ function resolveEffect(
   factors: readonly CareerDashaPlanetaryEvidence[],
   careerLinked: boolean
 ): CareerDashaPlanetaryEffect {
-  if (factors.length === 0) {
-    return 'INSUFFICIENT_DATA';
-  }
-
   if (!careerLinked) {
     return 'DOES_NOT_ACTIVATE';
+  }
+
+  if (factors.length === 0) {
+    return 'INSUFFICIENT_DATA';
   }
 
   const total = supportScore + challengeScore;
@@ -116,6 +133,11 @@ export function synthesizeCareerDashaPlanetary(
   } = input;
 
   const planet = activation.planet;
+
+  const careerLinked = isCareerLinked(
+    activation,
+    housePortfolio
+  );
 
   const factors: CareerDashaPlanetaryEvidence[] = [];
 
@@ -198,28 +220,36 @@ export function synthesizeCareerDashaPlanetary(
 
   /*
    * 3. FUNCTIONAL ROLE
+   *
+   * Gated on career linkage: functional role modulates direction for a career-linked planet,
+   * but never establishes participation or score weight for a non-linked planet.
    */
-  for (const role of activation.functionalRoles) {
-    const result = classifyFunctionalRole(role);
+  if (careerLinked) {
+    for (const role of activation.functionalRoles) {
+      const result = classifyFunctionalRole(role);
 
-    if (result.direction !== 'NEUTRAL') {
-      addFactor(
-        'FUNCTIONAL_ROLE',
-        String(role),
-        result.direction,
-        result.weight,
-        `${planet} has functional role ${String(role)}.`,
-        {
-          ruleId: `CW09_FUNCTIONAL_ROLE_${String(role)}`
-        }
-      );
+      if (result.direction !== 'NEUTRAL') {
+        addFactor(
+          'FUNCTIONAL_ROLE',
+          String(role),
+          result.direction,
+          result.weight,
+          `${planet} has functional role ${String(role)}.`,
+          {
+            ruleId: `CW09_FUNCTIONAL_ROLE_${String(role)}`
+          }
+        );
+      }
     }
   }
 
   /*
    * 4. FUNCTIONAL NATURE
+   *
+   * Gated on career linkage: functional nature modulates direction for a career-linked planet,
+   * but never establishes participation or score weight for a non-linked planet.
    */
-  if (activation.functionalNature) {
+  if (careerLinked && activation.functionalNature) {
     const nature = activation.functionalNature;
 
     if (nature === FunctionalNature.BENEFIC) {
@@ -409,11 +439,6 @@ export function synthesizeCareerDashaPlanetary(
    * Note: DashaYogaReference does not include participatingHouses.
    * Yoga factors are attached when the planet itself is career-linked and the yoga is active.
    */
-  const careerLinked = isCareerLinked(
-    activation,
-    housePortfolio
-  );
-
   for (const yoga of activation.yogaParticipation) {
     if (yoga.finalStatus === 'CANCELLED') {
       continue;
