@@ -57,7 +57,7 @@ function resolveEffect(
   const total = supportScore + challengeScore;
 
   if (total <= 0) {
-    return 'DOES_NOT_ACTIVATE';
+    return 'INSUFFICIENT_DATA';
   }
 
   const supportRatio = supportScore / total;
@@ -85,7 +85,7 @@ function resolveEffect(
 function resolveConfidence(
   explicitConfidence: CareerDashaPlanetaryInput['confidence'],
   careerLinked: boolean,
-  factorCount: number
+  directionalFactorCount: number
 ): InterpretationConfidence {
   if (explicitConfidence) {
     return explicitConfidence;
@@ -95,7 +95,7 @@ function resolveConfidence(
     return 'LOW';
   }
 
-  if (factorCount >= 5) {
+  if (directionalFactorCount >= 5) {
     return 'MEDIUM';
   }
 
@@ -504,16 +504,16 @@ export function synthesizeCareerDashaPlanetary(
     return a.id.localeCompare(b.id);
   });
 
+  const supportingFactors = factors.filter((factor) => factor.direction === 'SUPPORT');
+  const challengingFactors = factors.filter((factor) => factor.direction === 'CHALLENGE');
+  const neutralFactors = factors.filter((factor) => factor.direction === 'NEUTRAL');
+
   const supportScore = roundScore(
-    factors
-      .filter((factor) => factor.direction === 'SUPPORT')
-      .reduce((sum, factor) => sum + factor.weight, 0)
+    supportingFactors.reduce((sum, factor) => sum + factor.weight, 0)
   );
 
   const challengeScore = roundScore(
-    factors
-      .filter((factor) => factor.direction === 'CHALLENGE')
-      .reduce((sum, factor) => sum + factor.weight, 0)
+    challengingFactors.reduce((sum, factor) => sum + factor.weight, 0)
   );
 
   const netScore = roundScore(
@@ -527,10 +527,12 @@ export function synthesizeCareerDashaPlanetary(
     careerLinked
   );
 
+  const directionalFactorCount = supportingFactors.length + challengingFactors.length;
+
   const resolvedConfidence = resolveConfidence(
     confidence,
     careerLinked,
-    factors.length
+    directionalFactorCount
   );
 
   const activatedCareerHouses = Object.freeze(
@@ -549,21 +551,15 @@ export function synthesizeCareerDashaPlanetary(
   );
 
   const supportingEvidenceIds = Object.freeze(
-    factors
-      .filter((factor) => factor.direction === 'SUPPORT')
-      .map((factor) => factor.id)
+    supportingFactors.map((factor) => factor.id)
   );
 
   const challengingEvidenceIds = Object.freeze(
-    factors
-      .filter((factor) => factor.direction === 'CHALLENGE')
-      .map((factor) => factor.id)
+    challengingFactors.map((factor) => factor.id)
   );
 
   const neutralEvidenceIds = Object.freeze(
-    factors
-      .filter((factor) => factor.direction === 'NEUTRAL')
-      .map((factor) => factor.id)
+    neutralFactors.map((factor) => factor.id)
   );
 
   const d10Effect =

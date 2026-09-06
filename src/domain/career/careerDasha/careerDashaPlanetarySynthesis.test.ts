@@ -314,4 +314,128 @@ describe('CW-09: Career Dasha Planetary Synthesis', () => {
     expect(effectScore('DOES_NOT_ACTIVATE')).toBe(0);
     expect(effectScore('INSUFFICIENT_DATA')).toBe(0);
   });
+
+  it('13. Yogakaraka role alone does not establish career linkage without career house involvement', () => {
+    const activation = createActivation({
+      planet: Planet.VENUS,
+      house: 5,
+      ownedHouses: [4, 9], // Not in primary (10) or supporting (2, 6, 7, 11)
+      functionalRoles: [FunctionalRole.YOGAKARAKA]
+    });
+
+    const synthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    expect(synthesis.careerLinked).toBe(false);
+    expect(synthesis.effect).toBe('DOES_NOT_ACTIVATE');
+  });
+
+  it('14. neutral evidence does not inflate confidence to MEDIUM', () => {
+    const activation = createActivation({
+      planet: Planet.MERCURY,
+      house: 10,
+      ownedHouses: [10],
+      // Only 2 directional factors (house 10 placement + house 10 ownership)
+      // plus neutral factors
+      receivedAspects: [
+        { aspectingPlanet: Planet.JUPITER, aspectType: 'MUTUAL', weight: 0.1 } as any,
+        { aspectingPlanet: Planet.VENUS, aspectType: 'MUTUAL', weight: 0.1 } as any,
+        { aspectingPlanet: Planet.SATURN, aspectType: 'MUTUAL', weight: 0.1 } as any
+      ]
+    });
+
+    const synthesis = synthesizeCareerDashaPlanetary({
+      period: 'AD',
+      activation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    // Total factors might be 5+ including neutral aspects, but directional factor count is < 5
+    expect(synthesis.confidence).toBe('LOW');
+  });
+
+  it('15. D10 confirmation strictly requires isD10Vargottama and ignores generic isVargottama', () => {
+    const mockHoroscopeGenericOnly = {
+      divisionalInterpretation: {
+        d10: {
+          planets: {
+            [Planet.MARS]: {
+              house: 3,
+              sign: Sign.GEMINI,
+              dignity: 'NEUTRAL'
+            }
+          }
+        },
+        d1Comparisons: {
+          [Planet.MARS]: {
+            isVargottama: true // Generic flag, NOT isD10Vargottama
+          } as any
+        }
+      }
+    };
+
+    const d10Context = buildCareerDashaD10PlanetContext(
+      mockHoroscopeGenericOnly,
+      Planet.MARS
+    );
+
+    expect(d10Context.isVargottama).toBe(false);
+    expect(d10Context.relationship).toBe('MODIFIES');
+  });
+
+  it('16. D10 dignity normalizes whitespace and casing for debilitation', () => {
+    const mockHoroscopeDebilitated = {
+      divisionalInterpretation: {
+        d10: {
+          planets: {
+            [Planet.JUPITER]: {
+              house: 10,
+              sign: Sign.CAPRICORN,
+              dignity: ' debilitated ' // Non-standard whitespace/casing
+            }
+          }
+        }
+      }
+    };
+
+    const d10Context = buildCareerDashaD10PlanetContext(
+      mockHoroscopeDebilitated,
+      Planet.JUPITER
+    );
+
+    // Tenth house in D10 normally CONFIRMS, but debilitation drops it to PARTIALLY_CONFIRMS
+    expect(d10Context.isD10TenthHouse).toBe(true);
+    expect(d10Context.relationship).toBe('PARTIALLY_CONFIRMS');
+  });
+
+  it('17. returns INSUFFICIENT_DATA when career-linked planet has only zero/neutral scores', () => {
+    // A planet linked through received aspect to house 10 with 0 support and 0 challenge
+    const activation = createActivation({
+      planet: Planet.RAHU,
+      house: 4,
+      ownedHouses: [],
+      functionalRoles: [],
+      functionalNature: FunctionalNature.NEUTRAL,
+      dignity: undefined,
+      state: undefined,
+      strength: undefined,
+      receivedAspects: [
+        { targetHouse: 10, aspectingPlanet: Planet.SATURN, aspectType: 'MUTUAL', weight: 0.1 } as any
+      ]
+    });
+
+    const synthesis = synthesizeCareerDashaPlanetary({
+      period: 'MD',
+      activation,
+      housePortfolio: CAREER_HOUSE_PORTFOLIO
+    });
+
+    expect(synthesis.careerLinked).toBe(true);
+    expect(synthesis.supportScore).toBe(0);
+    expect(synthesis.challengeScore).toBe(0);
+    expect(synthesis.effect).toBe('INSUFFICIENT_DATA');
+  });
 });

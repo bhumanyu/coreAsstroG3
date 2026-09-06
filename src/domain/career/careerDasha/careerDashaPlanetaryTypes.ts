@@ -97,6 +97,10 @@ export interface CareerDashaPlanetarySynthesis {
 
   readonly careerLinked: boolean;
 
+  /**
+   * Distinct list of primary and supporting career houses directly owned or occupied
+   * by the Dasha planet in the natal chart (distinct from aspect-based or D10 linkage).
+   */
   readonly activatedCareerHouses: readonly number[];
 
   readonly factors: readonly CareerDashaPlanetaryEvidence[];

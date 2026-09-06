@@ -5,6 +5,13 @@ import {
   type CareerHousePortfolio
 } from '../careerTypes';
 
+/**
+ * CW-09 Planetary Scoring Weights.
+ *
+ * NOTE: These weights represent deterministic engine-policy configuration values
+ * calibrated for relative balance in career dasha scoring, rather than
+ * astrologically or astronomically proven physical constants.
+ */
 export const CW09_PLANETARY_WEIGHTS = Object.freeze({
   HOUSE_OWNERSHIP_PRIMARY: 2.5,
   HOUSE_OWNERSHIP_SUPPORTING: 1.5,
@@ -153,23 +160,29 @@ export function classifyFunctionalRole(
   }
 }
 
+export function normalizeDignity(dignity?: string): string {
+  if (!dignity) {
+    return '';
+  }
+  return dignity
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_');
+}
+
 export function classifyDignity(
   dignity?: string
 ): {
   direction: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   weight: number;
 } {
-  if (!dignity) {
+  const normalized = normalizeDignity(dignity);
+  if (!normalized) {
     return {
       direction: 'NEUTRAL',
       weight: 0
     };
   }
-
-  const normalized = dignity
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, '_');
 
   if (
     normalized === 'EXALTED' ||
@@ -266,6 +279,7 @@ export function isCareerLinked(
     return true;
   }
 
-  // Functional role presence alone does NOT establish career linkage unless the role is career-relevant
-  return activation.functionalRoles.includes(FunctionalRole.YOGAKARAKA);
+  // In CW-09 policy, functional role alone (including Yogakaraka) does NOT establish career linkage;
+  // linkage strictly requires owning, occupying, or casting/receiving aspects to primary or supporting career houses.
+  return false;
 }
