@@ -228,7 +228,7 @@ export function isCareerLinked(
   portfolio: CareerHousePortfolio
 ): boolean {
   if (
-    activation.ownedHouses.some(
+    activation.ownedHouses?.some(
       (house) =>
         portfolio.primary.includes(house) ||
         portfolio.supporting.includes(house)
@@ -238,14 +238,17 @@ export function isCareerLinked(
   }
 
   if (
-    portfolio.primary.includes(activation.house) ||
-    portfolio.supporting.includes(activation.house)
+    activation.house !== undefined &&
+    (
+      portfolio.primary.includes(activation.house) ||
+      portfolio.supporting.includes(activation.house)
+    )
   ) {
     return true;
   }
 
   if (
-    activation.castAspects.some(
+    activation.castAspects?.some(
       (aspect) =>
         aspect.targetHouse !== undefined &&
         (
@@ -258,7 +261,7 @@ export function isCareerLinked(
   }
 
   if (
-    activation.receivedAspects.some(
+    activation.receivedAspects?.some(
       (aspect) =>
         (
           aspect.sourceHouse !== undefined &&
@@ -274,6 +277,16 @@ export function isCareerLinked(
             portfolio.supporting.includes(aspect.targetHouse)
           )
         )
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    activation.yogaParticipation?.some(
+      (yoga) =>
+        yoga.finalStatus !== 'CANCELLED' &&
+        isCareerRelevantYoga(yoga, activation, portfolio)
     )
   ) {
     return true;
