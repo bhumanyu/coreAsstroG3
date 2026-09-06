@@ -45,7 +45,6 @@ import {
   mapHouseToContributionCategory,
   buildDashaPlanetRelationship
 } from './careerDashaRules';
-import { isCareerLinked } from './careerDashaPlanetaryRules';
 import { getCareerHousePortfolio } from '../careerTypes';
 import {
   calculateFactorScore,
@@ -61,7 +60,11 @@ export function synthesizeCareerDashaPlanet(
 ): CareerDashaPlanetSynthesis {
   const { period, activation, housePortfolio, d10, start, end } = input;
   const planet = activation.planet;
-  const careerLinked = isCareerLinked(activation, housePortfolio);
+
+  // P1 #2: Single authoritative linkage.
+  // CareerRelevance.careerLinked is the sole definition.
+  const relevance = buildCareerRelevance(activation, housePortfolio, d10?.available);
+  const careerLinked = relevance.careerLinked;
   const factors: CareerDashaFactor[] = [];
 
   const addFactor = (
@@ -78,6 +81,16 @@ export function synthesizeCareerDashaPlanet(
     const firstHouse = houses?.[0];
     const contributionCategory = firstHouse ? mapHouseToContributionCategory(firstHouse) : undefined;
     const ruleId = ruleIdOverride ?? `CAREER_DASHA_${category}_${suffix}`;
+    const evidenceDirection =
+      direction === 'SUPPORT' ? 'SUPPORTING' : direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL';
+    const role =
+      direction === 'CHALLENGE'
+        ? 'QUALIFYING'
+        : period === 'MD'
+          ? 'PRIMARY'
+          : period === 'AD'
+            ? 'MODIFIER'
+            : 'REFINEMENT';
 
     factors.push({
       id: `CAREER_DASHA_${period}_${planet.toUpperCase()}_${category}_${suffix}`,
@@ -88,6 +101,8 @@ export function synthesizeCareerDashaPlanet(
       weight,
       statement,
       ruleId,
+      role,
+      evidenceDirection,
       ...(contributionCategory ? { contributionCategory } : {}),
       ...(houses ? { houses } : {}),
       ...(evidenceIds ? { evidenceIds } : {}),
@@ -381,7 +396,6 @@ export function synthesizeCareerDashaPlanet(
   }
   const activatedCareerHouses = Object.freeze(Array.from(activatedHousesSet).sort((a, b) => a - b));
 
-  const relevance = buildCareerRelevance(activation, housePortfolio, d10?.available);
   const impact = deriveCareerDashaImpact(relevance, activation.strength, planet);
 
   let supportScore = 0;
@@ -470,9 +484,22 @@ export function synthesizeCareerDashaPeriods(
     pdRole: 'REFINEMENT' as const
   });
 
-  const mdAdRelationship = buildDashaPlanetRelationship(md.planet, ad.planet, 'MD', 'AD', pairInterp);
-  const mdPdRelationship = buildDashaPlanetRelationship(md.planet, pd.planet, 'MD', 'PD');
-  const adPdRelationship = buildDashaPlanetRelationship(ad.planet, pd.planet, 'AD', 'PD');
+  const mdAdRelationship = buildDashaPlanetRelationship(md.planet, ad.planet, 'MD', 'AD', {
+    pairInterp,
+    sourceSynthesis: md,
+    targetSynthesis: ad,
+    portfolio: getCareerHousePortfolio()
+  });
+  const mdPdRelationship = buildDashaPlanetRelationship(md.planet, pd.planet, 'MD', 'PD', {
+    sourceSynthesis: md,
+    targetSynthesis: pd,
+    portfolio: getCareerHousePortfolio()
+  });
+  const adPdRelationship = buildDashaPlanetRelationship(ad.planet, pd.planet, 'AD', 'PD', {
+    sourceSynthesis: ad,
+    targetSynthesis: pd,
+    portfolio: getCareerHousePortfolio()
+  });
   const relationships = Object.freeze([mdAdRelationship, mdPdRelationship, adPdRelationship]);
 
   const mdScore = effectScore(md.effect);

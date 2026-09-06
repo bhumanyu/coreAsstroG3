@@ -5,7 +5,9 @@ import type { CareerHousePortfolio } from '../careerTypes';
 import type {
   CareerContributionCategory,
   CareerRelevance,
-  CareerDashaImpact
+  CareerDashaImpact,
+  EvidenceDirection,
+  EvidenceRole
 } from './careerDashaSynthesisTypes';
 
 export type CareerDashaPlanetaryPeriod = 'MD' | 'AD' | 'PD';
@@ -60,6 +62,8 @@ export interface CareerDashaPlanetaryEvidence {
   readonly statement: string;
   readonly direction: CareerDashaPlanetaryDirection;
   readonly weight: number;
+  readonly role?: EvidenceRole;
+  readonly evidenceDirection?: EvidenceDirection;
   readonly contributionCategory?: CareerContributionCategory;
   readonly houses?: readonly number[];
   readonly planets?: readonly Planet[];

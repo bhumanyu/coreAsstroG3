@@ -99,6 +99,17 @@ export interface CareerDashaImpact {
   readonly statement: string;
 }
 
+export type EvidenceDirection = CareerFactorDirection;
+
+export type EvidenceRole =
+  | 'PRIMARY'
+  | 'SUPPORTING'
+  | 'QUALIFYING'
+  | 'TERTIARY'
+  | 'MODIFIER'
+  | 'CONFIRMATION'
+  | 'TIMING';
+
 /**
  * Relationship between Dasha period lords (spec §8–9).
  */
@@ -128,6 +139,9 @@ export interface DashaPlanetRelationship {
   readonly careerImpact: DashaRelationshipCareerImpact;
   readonly sharedHouses?: readonly number[];
   readonly combinedHouseSet?: readonly number[];
+  readonly careerHouseOverlap?: readonly number[];
+  readonly relevanceSummary?: string;
+  readonly functionalInteraction?: string;
   readonly evidence: readonly CareerDashaFactor[];
   readonly ruleId: string;
   readonly summary: string;
@@ -142,10 +156,14 @@ export interface CareerDashaFactor {
   readonly weight: number;
   readonly statement: string;
   readonly ruleId?: string;
+  readonly role?: EvidenceRole;
+  readonly evidenceDirection?: EvidenceDirection;
   readonly contributionCategory?: CareerContributionCategory;
+  readonly candidateContributionCategories?: readonly CareerContributionCategory[];
   readonly houses?: readonly number[];
   readonly planets?: readonly Planet[];
   readonly evidenceIds?: readonly string[];
+  readonly derivedFromIds?: readonly string[];
   readonly meta?: Record<string, unknown>;
 }
 

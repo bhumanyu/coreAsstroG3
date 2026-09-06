@@ -132,6 +132,19 @@ export function classifyCareerFunctionalRole(
     case FunctionalRole.DUSTHANA_LORD:
     case FunctionalRole.MARAKA_LORD:
     case FunctionalRole.BADHAKA_LORD: {
+      const port = portfolio ?? getCareerHousePortfolio();
+      const ownsPrimary = activation?.ownedHouses?.some((h) => port.primary.includes(h));
+      const occupiesPrimary = activation?.house !== undefined && port.primary.includes(activation.house);
+      const isYogakaraka = activation?.functionalRoles?.includes(FunctionalRole.YOGAKARAKA);
+
+      // P1 #5: Subordinate functional-role authority.
+      // Direct primary career-house linkage (ownership or placement in house 10) or Yogakaraka status
+      // takes strict precedence over secondary functional dusthana/maraka/badhaka lordships.
+      // Modifiers are subordinated to a minor neutral qualification (weight: 0.25) so direct career-house
+      // linkage evidence (weight 2.25 - 2.5) strictly overpowers secondary functional roles.
+      if (ownsPrimary || occupiesPrimary || isYogakaraka) {
+        return { direction: 'NEUTRAL', weight: 0.25 };
+      }
       return { direction: 'CHALLENGE', weight: 0.5 };
     }
     default:
@@ -339,39 +352,119 @@ export function resolveCareerKarakaRelevance(
   };
 }
 
+export interface ContributionCategoryContext {
+  readonly planet?: Planet;
+  readonly functionalRoles?: readonly FunctionalRole[];
+  readonly functionalNature?: FunctionalNature;
+  readonly relevanceLevel?: 'HIGH' | 'MODERATE' | 'LOW' | 'NONE';
+  readonly strengthLevel?: 'STRONG' | 'MODERATE' | 'AVERAGE' | 'WEAK' | 'UNKNOWN';
+}
+
+/**
+ * Returns candidate semantic career contribution categories for a house,
+ * refined by contextual planetary and role significations (spec §17, P2 #9).
+ */
+export function getCandidateContributionCategories(
+  house: number,
+  context?: ContributionCategoryContext
+): readonly CareerContributionCategory[] {
+  switch (house) {
+    case 1:
+      return Object.freeze([
+        CareerContributionCategory.AUTHORITY,
+        CareerContributionCategory.LEADERSHIP
+      ]);
+    case 2:
+      // House 2 can map to VOCAL/COMMUNICATION if driven by Mercury or 3rd lord, or STABILITY/GAINS for Jupiter/2nd lord
+      if (
+        context?.planet === Planet.MERCURY ||
+        context?.functionalRoles?.includes(FunctionalRole.THIRD_LORD)
+      ) {
+        return Object.freeze([
+          CareerContributionCategory.COMMUNICATION,
+          CareerContributionCategory.STABILITY,
+          CareerContributionCategory.GAINS
+        ]);
+      }
+      return Object.freeze([
+        CareerContributionCategory.STABILITY,
+        CareerContributionCategory.GAINS,
+        CareerContributionCategory.COMMUNICATION
+      ]);
+    case 3:
+      return Object.freeze([
+        CareerContributionCategory.COMMUNICATION,
+        CareerContributionCategory.SKILL
+      ]);
+    case 4:
+      return Object.freeze([
+        CareerContributionCategory.INSTITUTIONAL,
+        CareerContributionCategory.STABILITY
+      ]);
+    case 5:
+      return Object.freeze([
+        CareerContributionCategory.CREATIVE_COUNSEL,
+        CareerContributionCategory.ADVISORY
+      ]);
+    case 6:
+      return Object.freeze([
+        CareerContributionCategory.SERVICE,
+        CareerContributionCategory.SKILL
+      ]);
+    case 7:
+      return Object.freeze([
+        CareerContributionCategory.PARTNERSHIP,
+        CareerContributionCategory.NETWORK
+      ]);
+    case 8:
+      return Object.freeze([
+        CareerContributionCategory.TRANSFORMATION,
+        CareerContributionCategory.RESEARCH
+      ]);
+    case 9:
+      return Object.freeze([
+        CareerContributionCategory.ADVISORY,
+        CareerContributionCategory.LEADERSHIP
+      ]);
+    case 10:
+      if (context?.planet === Planet.SUN) {
+        return Object.freeze([
+          CareerContributionCategory.LEADERSHIP,
+          CareerContributionCategory.CAREER_STATUS,
+          CareerContributionCategory.AUTHORITY
+        ]);
+      }
+      return Object.freeze([
+        CareerContributionCategory.CAREER_STATUS,
+        CareerContributionCategory.LEADERSHIP,
+        CareerContributionCategory.AUTHORITY
+      ]);
+    case 11:
+      return Object.freeze([
+        CareerContributionCategory.GAINS,
+        CareerContributionCategory.NETWORK
+      ]);
+    case 12:
+      return Object.freeze([
+        CareerContributionCategory.FOREIGN,
+        CareerContributionCategory.TRANSITION
+      ]);
+    default:
+      return Object.freeze([CareerContributionCategory.CAREER_STATUS]);
+  }
+}
+
 /**
  * Maps a house to its semantic career contribution category (spec §17).
  * Reuses existing CoreAstro placement evaluator vocabulary.
+ * Fully backward compatible: without context, returns the primary static category.
  */
-export function mapHouseToContributionCategory(house: number): CareerContributionCategory {
-  switch (house) {
-    case 1:
-      return CareerContributionCategory.AUTHORITY;
-    case 2:
-      return CareerContributionCategory.STABILITY;
-    case 3:
-      return CareerContributionCategory.COMMUNICATION;
-    case 4:
-      return CareerContributionCategory.INSTITUTIONAL;
-    case 5:
-      return CareerContributionCategory.CREATIVE_COUNSEL;
-    case 6:
-      return CareerContributionCategory.SERVICE;
-    case 7:
-      return CareerContributionCategory.PARTNERSHIP;
-    case 8:
-      return CareerContributionCategory.TRANSFORMATION;
-    case 9:
-      return CareerContributionCategory.ADVISORY;
-    case 10:
-      return CareerContributionCategory.CAREER_STATUS;
-    case 11:
-      return CareerContributionCategory.GAINS;
-    case 12:
-      return CareerContributionCategory.FOREIGN;
-    default:
-      return CareerContributionCategory.CAREER_STATUS;
-  }
+export function mapHouseToContributionCategory(
+  house: number,
+  context?: ContributionCategoryContext
+): CareerContributionCategory {
+  const candidates = getCandidateContributionCategories(house, context);
+  return candidates[0] ?? CareerContributionCategory.CAREER_STATUS;
 }
 
 /**
@@ -446,9 +539,9 @@ export function buildCareerRelevance(
     });
   }
 
-  // 5. Owns Supporting Career Houses (6th, 2nd, 11th, Lagna/1st)
+  // 5. Owns Supporting Career Houses (6th, 2nd, 11th)
   for (const h of activation.ownedHouses || []) {
-    if (portfolio.supporting.includes(h) || h === 1) {
+    if (portfolio.supporting.includes(h)) {
       evidence.push({
         factor: `OWNS_CAREER_SUPPORTING_HOUSE_${h}`,
         source: 'HOUSE_OWNERSHIP',
@@ -461,8 +554,8 @@ export function buildCareerRelevance(
     }
   }
 
-  // 6. Occupies Supporting Career Houses (6th, 2nd, 11th, Lagna/1st)
-  if (activation.house !== undefined && (portfolio.supporting.includes(activation.house) || activation.house === 1)) {
+  // 6. Occupies Supporting Career Houses (6th, 2nd, 11th)
+  if (activation.house !== undefined && portfolio.supporting.includes(activation.house)) {
     evidence.push({
       factor: `OCCUPIES_CAREER_SUPPORTING_HOUSE_${activation.house}`,
       source: 'HOUSE_PLACEMENT',
@@ -489,6 +582,30 @@ export function buildCareerRelevance(
     }
   }
 
+  // 7b. Receives Aspect from Supporting Career Houses
+  for (const aspect of activation.receivedAspects || []) {
+    const src = aspect.sourceHouse;
+    const tgt = aspect.targetHouse;
+    const supportingHouse =
+      src !== undefined && portfolio.supporting.includes(src)
+        ? src
+        : tgt !== undefined && portfolio.supporting.includes(tgt)
+          ? tgt
+          : undefined;
+
+    if (supportingHouse !== undefined) {
+      evidence.push({
+        factor: `RECEIVES_ASPECT_FROM_CAREER_SUPPORTING_HOUSE_${supportingHouse}`,
+        source: 'ASPECT',
+        strength: 'WEAK',
+        explanationKey: `CAREER_RELEVANCE_RECEIVED_ASPECT_H${supportingHouse}`,
+        ruleId: `CAREER_DASHA_REL_RECEIVED_ASPECT_H${supportingHouse}`,
+        houses: [supportingHouse],
+        planets: [planet]
+      });
+    }
+  }
+
   // 8. Career Yoga Participation
   if (activation.yogaParticipation) {
     for (const yoga of activation.yogaParticipation) {
@@ -505,14 +622,19 @@ export function buildCareerRelevance(
     }
   }
 
-  const linked = isCareerLinked(activation, portfolio) || evidence.length > 0;
+  // P1 #2: Authoritative single linkage definition.
+  // isCareerLinked is the sole predicate that determines linkage;
+  // careerLinked === false implies no positive relevance evidence, and vice versa.
+  const linked = isCareerLinked(activation, portfolio);
 
   // Calculate relevance score
   let score = 0;
-  for (const item of evidence) {
-    if (item.strength === 'STRONG') score += 2.5;
-    else if (item.strength === 'MODERATE') score += 1.5;
-    else score += 1.0;
+  if (linked) {
+    for (const item of evidence) {
+      if (item.strength === 'STRONG') score += 2.5;
+      else if (item.strength === 'MODERATE') score += 1.5;
+      else score += 1.0;
+    }
   }
   score = Math.round(score * 100) / 100;
 
@@ -531,13 +653,61 @@ export function buildCareerRelevance(
     careerLinked: linked,
     relevanceScore: score,
     relevanceLevel,
-    evidence: Object.freeze(evidence),
+    evidence: Object.freeze(linked ? evidence : []),
     d10ReferenceAvailable: d10Available
   });
 }
 
 /**
- * Derives Career Dasha Impact by combining Planetary Strength and Career Relevance (spec §14).
+ * Authoritative planetary strength level classifier (spec §14, P1 #6).
+ * Centralizes Shadbala threshold classification across CW-09 so thresholds
+ * are never reinterpreted in multiple places.
+ */
+export function classifyPlanetStrengthLevel(
+  strength?: PlanetStrengthInterpretation
+): 'STRONG' | 'MODERATE' | 'AVERAGE' | 'WEAK' | 'UNKNOWN' {
+  if (!strength || strength.availability === 'UNAVAILABLE') {
+    return 'UNKNOWN';
+  }
+
+  const rawLevel = (strength as any).level;
+  if (rawLevel === 'STRONG') return 'STRONG';
+  if (rawLevel === 'MODERATE') return 'MODERATE';
+  if (rawLevel === 'AVERAGE') return 'AVERAGE';
+  if (rawLevel === 'WEAK') return 'WEAK';
+
+  const score = (strength as any).score;
+  if (typeof score === 'number') {
+    if (score >= 60) return 'STRONG';
+    if (score < 40) return 'WEAK';
+    return 'AVERAGE';
+  }
+
+  const meetsMin = strength.meetsMinimum;
+  const pct = strength.percentageOfMinimum;
+  const rupa = strength.totalRupa;
+
+  if (meetsMin === false || (pct !== undefined && pct < 80)) {
+    return 'WEAK';
+  }
+
+  if (
+    (pct !== undefined && pct >= 100) ||
+    (rupa !== undefined && rupa >= 6.0) ||
+    meetsMin === true
+  ) {
+    return 'STRONG';
+  }
+
+  if (pct !== undefined && pct >= 80) {
+    return 'MODERATE';
+  }
+
+  return 'UNKNOWN';
+}
+
+/**
+ * Derives Career Dasha Impact by combining Planetary Strength and Career Relevance (spec §14, P1 #6, P2 #11).
  * Ensures strong-but-non-relevant planets yield negligible/low career activation,
  * and moderate-but-highly-relevant planets yield strong career activation.
  */
@@ -546,71 +716,51 @@ export function deriveCareerDashaImpact(
   strength?: PlanetStrengthInterpretation,
   planet: Planet = Planet.SUN
 ): CareerDashaImpact {
-  let strengthLevel: 'STRONG' | 'MODERATE' | 'AVERAGE' | 'WEAK' | 'UNKNOWN' = 'UNKNOWN';
-
-  if (strength) {
-    const rawLevel = (strength as any).level;
-    if (rawLevel === 'AVERAGE') {
-      strengthLevel = 'AVERAGE';
-    } else if (rawLevel === 'MODERATE') {
-      strengthLevel = 'MODERATE';
-    } else if (rawLevel === 'STRONG') {
-      strengthLevel = 'STRONG';
-    } else if (rawLevel === 'WEAK') {
-      strengthLevel = 'WEAK';
-    } else if ((strength as any).score !== undefined) {
-      const s = (strength as any).score;
-      if (s >= 60) strengthLevel = 'STRONG';
-      else if (s < 40) strengthLevel = 'WEAK';
-      else strengthLevel = 'AVERAGE';
-    } else {
-      const isStrong =
-        (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum >= 110) ||
-        (strength.totalRupa !== undefined && strength.totalRupa >= 6.5);
-
-      const isWeak =
-        strength.meetsMinimum === false ||
-        (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum < 80);
-
-      if (isStrong) {
-        strengthLevel = 'STRONG';
-      } else if (isWeak) {
-        strengthLevel = 'WEAK';
-      } else {
-        strengthLevel = 'MODERATE';
-      }
-    }
-  }
-
+  const strengthLevel = classifyPlanetStrengthLevel(strength);
   const relLevel = relevance.relevanceLevel;
   let overallImpact: 'HIGH' | 'MODERATE' | 'LOW' | 'NEGLIGIBLE' = 'NEGLIGIBLE';
   let statement = '';
 
   if (!relevance.careerLinked || relLevel === 'NONE') {
     overallImpact = 'NEGLIGIBLE';
-    statement = `${planet} possesses ${strengthLevel === 'UNKNOWN' ? 'unassessed' : strengthLevel.toLowerCase()} strength but has no direct career relevance in this chart; professional activation does not trigger.`;
+    statement = `${planet} demonstrates ${strengthLevel === 'UNKNOWN' ? 'unassessed' : strengthLevel.toLowerCase()} capacity with no career linkage; professional activation does not trigger.`;
   } else if (relLevel === 'LOW') {
     overallImpact = strengthLevel === 'STRONG' ? 'LOW' : (strengthLevel === 'WEAK' ? 'NEGLIGIBLE' : 'LOW');
-    statement = `${planet} has ${strengthLevel.toLowerCase()} strength with low career relevance; limited professional activation.`;
+    statement = `${planet} demonstrates ${strengthLevel.toLowerCase()} strength with low career relevance; baseline career activation is limited.`;
   } else if (relLevel === 'MODERATE') {
     if (strengthLevel === 'STRONG') {
       overallImpact = 'HIGH';
-      statement = `${planet} combines strong planetary strength with moderate career relevance to deliver significant professional momentum.`;
+      statement = `${planet} combines strong planetary capacity with moderate career relevance, providing supportive professional capacity.`;
     } else if (strengthLevel === 'WEAK') {
       overallImpact = 'LOW';
-      statement = `${planet} has moderate career relevance but weak planetary strength, limiting execution.`;
+      statement = `${planet} shows moderate career relevance but weak planetary strength, constraining execution.`;
     } else {
       overallImpact = 'MODERATE';
-      statement = `${planet} has moderate career relevance and moderate strength for steady career progression.`;
+      statement = `${planet} shows moderate career relevance and ${strengthLevel.toLowerCase()} strength for steady professional progression.`;
     }
   } else {
     // HIGH relevance
-    if (strengthLevel === 'STRONG' || strengthLevel === 'MODERATE' || strengthLevel === 'AVERAGE' || strengthLevel === 'UNKNOWN') {
+    if (strengthLevel === 'STRONG') {
       overallImpact = 'HIGH';
-      statement = `${planet} has high career relevance with solid strength, driving major professional developments.`;
-    } else {
+      statement = `${planet} combines strong planetary capacity with high career relevance, providing structured professional support.`;
+    } else if (strengthLevel === 'MODERATE') {
+      overallImpact = relevance.relevanceScore >= 4.5 ? 'HIGH' : 'MODERATE';
+      statement = `${planet} combines moderate planetary capacity with high career relevance, supporting consistent professional engagement.`;
+    } else if (strengthLevel === 'AVERAGE') {
+      // P2 #11: AVERAGE strength does NOT produce HIGH impact without exceptional relevance evidence (score >= 5.0)
+      const exceptionalRelevance = relevance.relevanceScore >= 5.0;
+      overallImpact = exceptionalRelevance ? 'HIGH' : 'MODERATE';
+      statement = exceptionalRelevance
+        ? `${planet} possesses exceptional career relevance that elevates average planetary capacity to high professional impact.`
+        : `${planet} demonstrates average planetary capacity with high career relevance, providing moderate professional baseline support.`;
+    } else if (strengthLevel === 'UNKNOWN') {
+      // P2 #11: UNKNOWN strength produces MODERATE, not HIGH
       overallImpact = 'MODERATE';
-      statement = `${planet} possesses high career relevance but is constrained by weak planetary strength.`;
+      statement = `${planet} demonstrates unassessed planetary capacity with high career relevance; professional impact is estimated as moderate.`;
+    } else {
+      // WEAK
+      overallImpact = 'MODERATE';
+      statement = `${planet} possesses high career relevance but execution is constrained to moderate impact by weak planetary capacity.`;
     }
   }
 
@@ -622,17 +772,55 @@ export function deriveCareerDashaImpact(
   });
 }
 
+export interface DashaPlanetRelationshipContext {
+  readonly pairInterp?: DashaPairInterpretation;
+  readonly sourceSynthesis?: {
+    readonly activatedCareerHouses?: readonly number[];
+    readonly careerLinked?: boolean;
+    readonly relevance?: CareerRelevance;
+    readonly impact?: CareerDashaImpact;
+    readonly effect?: string;
+  };
+  readonly targetSynthesis?: {
+    readonly activatedCareerHouses?: readonly number[];
+    readonly careerLinked?: boolean;
+    readonly relevance?: CareerRelevance;
+    readonly impact?: CareerDashaImpact;
+    readonly effect?: string;
+  };
+  readonly sourceActivation?: DashaPlanetActivation;
+  readonly targetActivation?: DashaPlanetActivation;
+  readonly portfolio?: CareerHousePortfolio;
+}
+
 /**
- * Models MD↔AD, MD↔PD, AD↔PD career relationships (spec §8–9).
- * Consumes DashaPairInterpretation and calculateNaturalRelationship without recomputing raw aspects.
+ * Models MD↔AD, MD↔PD, AD↔PD career relationships (spec §8–9, P1 #4).
+ * Combines:
+ * (a) natural relationship via calculateNaturalRelationship,
+ * (b) career-house overlap (house 10 and supporting houses),
+ * (c) career relevance of each planet, and
+ * (d) functional interaction (e.g. natural friend who is a functional malefic in a challenging house produces qualified support, not pure support).
  */
 export function buildDashaPlanetRelationship(
   sourcePlanet: Planet,
   targetPlanet: Planet,
   sourcePeriod: CareerDashaPeriod,
   targetPeriod: CareerDashaPeriod,
-  pairInterp?: DashaPairInterpretation
+  pairInterpOrContext?: DashaPairInterpretation | DashaPlanetRelationshipContext
 ): DashaPlanetRelationship {
+  const pairInterp: DashaPairInterpretation | undefined =
+    pairInterpOrContext && 'sharedHouses' in pairInterpOrContext
+      ? (pairInterpOrContext as DashaPairInterpretation)
+      : (pairInterpOrContext as DashaPlanetRelationshipContext)?.pairInterp;
+
+  const context: DashaPlanetRelationshipContext | undefined =
+    pairInterpOrContext && !('sharedHouses' in pairInterpOrContext)
+      ? (pairInterpOrContext as DashaPlanetRelationshipContext)
+      : undefined;
+
+  const portfolio = context?.portfolio ?? getCareerHousePortfolio();
+
+  // (a) Natural relationship
   const rel = calculateNaturalRelationship(sourcePlanet, targetPlanet);
   const relationshipType: DashaRelationshipType =
     rel === Relationship.FRIEND
@@ -641,17 +829,104 @@ export function buildDashaPlanetRelationship(
         ? 'ENEMY'
         : 'NEUTRAL';
 
+  // (b) Career-house overlap
+  const sourceHouses: readonly number[] =
+    context?.sourceSynthesis?.activatedCareerHouses ??
+    (context?.sourceActivation
+      ? [
+          ...(context.sourceActivation.ownedHouses || []),
+          ...(context.sourceActivation.house !== undefined ? [context.sourceActivation.house] : [])
+        ].filter((h) => portfolio.primary.includes(h) || portfolio.supporting.includes(h))
+      : []);
+
+  const targetHouses: readonly number[] =
+    context?.targetSynthesis?.activatedCareerHouses ??
+    (context?.targetActivation
+      ? [
+          ...(context.targetActivation.ownedHouses || []),
+          ...(context.targetActivation.house !== undefined ? [context.targetActivation.house] : [])
+        ].filter((h) => portfolio.primary.includes(h) || portfolio.supporting.includes(h))
+      : []);
+
+  const careerHouseOverlap = Object.freeze(
+    Array.from(new Set(sourceHouses.filter((h) => targetHouses.includes(h)))).sort((a, b) => a - b)
+  );
+
+  const bothActivate10 = sourceHouses.includes(10) && targetHouses.includes(10);
+  const one10OneSupporting =
+    (sourceHouses.includes(10) && targetHouses.some((h) => portfolio.supporting.includes(h))) ||
+    (targetHouses.includes(10) && sourceHouses.some((h) => portfolio.supporting.includes(h)));
+
+  // (c) Career relevance of each planet
+  const sourceLinked =
+    context?.sourceSynthesis?.careerLinked ??
+    (context?.sourceActivation ? isCareerLinked(context.sourceActivation, portfolio) : true);
+  const targetLinked =
+    context?.targetSynthesis?.careerLinked ??
+    (context?.targetActivation ? isCareerLinked(context.targetActivation, portfolio) : true);
+
+  const bothLinked = sourceLinked && targetLinked;
+  const neitherLinked = !sourceLinked && !targetLinked;
+
+  // (d) Functional interaction
+  const sourceIsFunctionalMalefic =
+    context?.sourceActivation?.functionalNature === FunctionalNature.MALEFIC ||
+    context?.sourceActivation?.functionalRoles?.includes(FunctionalRole.DUSTHANA_LORD);
+  const targetIsFunctionalMalefic =
+    context?.targetActivation?.functionalNature === FunctionalNature.MALEFIC ||
+    context?.targetActivation?.functionalRoles?.includes(FunctionalRole.DUSTHANA_LORD);
+  const sourceInDusthana =
+    context?.sourceActivation?.house !== undefined && [6, 8, 12].includes(context.sourceActivation.house);
+  const targetInDusthana =
+    context?.targetActivation?.house !== undefined && [6, 8, 12].includes(context.targetActivation.house);
+
+  const hasChallengingFunctionalTaint =
+    (sourceIsFunctionalMalefic && sourceInDusthana) ||
+    (targetIsFunctionalMalefic && targetInDusthana);
+
   let careerImpact: DashaRelationshipCareerImpact = 'NEUTRAL';
-  if (relationshipType === 'FRIEND') {
-    careerImpact = 'SUPPORTIVE';
-  } else if (relationshipType === 'ENEMY') {
-    careerImpact = 'CONFLICTING';
-  } else {
+  let functionalInteraction = '';
+
+  if (neitherLinked) {
     careerImpact = 'NEUTRAL';
+    functionalInteraction = 'Neither period lord establishes direct career linkage.';
+  } else if (relationshipType === 'FRIEND') {
+    if (hasChallengingFunctionalTaint) {
+      careerImpact = 'MIXED';
+      functionalInteraction = 'Natural friendship is tempered by functional malefic lordship in a dusthana house, yielding qualified support.';
+    } else if (bothActivate10 || one10OneSupporting || bothLinked) {
+      careerImpact = 'SUPPORTIVE';
+      functionalInteraction = 'Natural friendship reinforces mutual career-house activation.';
+    } else {
+      careerImpact = 'SUPPORTIVE';
+      functionalInteraction = 'Natural friendship provides harmonious coordination.';
+    }
+  } else if (relationshipType === 'ENEMY') {
+    if (bothActivate10) {
+      careerImpact = 'MIXED';
+      functionalInteraction = 'Natural enmity creates friction, but mutual activation of house 10 forces career engagement.';
+    } else {
+      careerImpact = 'CONFLICTING';
+      functionalInteraction = 'Natural enmity creates conflicting directional pull between periods.';
+    }
+  } else {
+    // NEUTRAL natural relationship
+    if (bothActivate10 || one10OneSupporting) {
+      careerImpact = 'SUPPORTIVE';
+      functionalInteraction = 'Neutral natural disposition coordinated by shared career-house focus.';
+    } else if (hasChallengingFunctionalTaint) {
+      careerImpact = 'CONFLICTING';
+      functionalInteraction = 'Neutral disposition compromised by challenging functional dusthana placements.';
+    } else {
+      careerImpact = 'NEUTRAL';
+      functionalInteraction = 'Independent operation without major career conflict or synergy.';
+    }
   }
 
-  const sharedHouses = pairInterp?.sharedHouses ?? [];
-  const combinedHouseSet = pairInterp?.combinedHouseSet ?? [];
+  const sharedHouses = pairInterp?.sharedHouses ?? careerHouseOverlap;
+  const combinedHouseSet =
+    pairInterp?.combinedHouseSet ??
+    Array.from(new Set([...sourceHouses, ...targetHouses])).sort((a, b) => a - b);
 
   const evidence: CareerDashaFactor[] = [
     {
@@ -661,14 +936,47 @@ export function buildDashaPlanetRelationship(
       category: 'RELATIONSHIP',
       direction: careerImpact === 'SUPPORTIVE' ? 'SUPPORT' : (careerImpact === 'CONFLICTING' ? 'CHALLENGE' : 'NEUTRAL'),
       weight: careerImpact === 'SUPPORTIVE' || careerImpact === 'CONFLICTING' ? 1.0 : 0.5,
-      statement: `${sourcePeriod} Lord ${sourcePlanet} and ${targetPeriod} Lord ${targetPlanet} share a natural ${relationshipType.toLowerCase()} relationship (${careerImpact.toLowerCase()} for career coordination).`,
+      statement: `${sourcePeriod} Lord ${sourcePlanet} and ${targetPeriod} Lord ${targetPlanet} share a natural ${relationshipType.toLowerCase()} relationship (${careerImpact.toLowerCase()} for career coordination). ${functionalInteraction}`.trim(),
       ruleId: `CAREER_DASHA_RELATIONSHIP_${sourcePlanet}_${targetPlanet}`,
       planets: [sourcePlanet, targetPlanet],
       houses: sharedHouses.length > 0 ? sharedHouses : undefined
     }
   ];
 
-  const summary = `${sourcePeriod} Lord ${sourcePlanet} and ${targetPeriod} Lord ${targetPlanet} have a ${relationshipType.toLowerCase()} relationship with ${careerImpact.toLowerCase()} career impact.`;
+  if (bothActivate10) {
+    evidence.push({
+      id: `CAREER_DASHA_OVERLAP_10_${sourcePeriod}_${targetPeriod}_${sourcePlanet}_${targetPlanet}`,
+      period: sourcePeriod,
+      planet: sourcePlanet,
+      category: 'CAREER_HOUSE_RULE',
+      direction: 'SUPPORT',
+      weight: 1.0,
+      statement: `Both ${sourcePeriod} Lord ${sourcePlanet} and ${targetPeriod} Lord ${targetPlanet} directly activate primary career house 10.`,
+      ruleId: 'CAREER_DASHA_DUAL_10_ACTIVATION',
+      planets: [sourcePlanet, targetPlanet],
+      houses: [10]
+    });
+  } else if (one10OneSupporting) {
+    evidence.push({
+      id: `CAREER_DASHA_OVERLAP_SUPPORT_${sourcePeriod}_${targetPeriod}_${sourcePlanet}_${targetPlanet}`,
+      period: sourcePeriod,
+      planet: sourcePlanet,
+      category: 'CAREER_HOUSE_RULE',
+      direction: 'SUPPORT',
+      weight: 0.75,
+      statement: `${sourcePeriod} Lord ${sourcePlanet} and ${targetPeriod} Lord ${targetPlanet} coordinate house 10 with supporting career houses.`,
+      ruleId: 'CAREER_DASHA_PRIMARY_SUPPORTING_COORDINATION',
+      planets: [sourcePlanet, targetPlanet]
+    });
+  }
+
+  const relevanceSummary = bothLinked
+    ? 'Both period lords possess career linkage.'
+    : !sourceLinked && !targetLinked
+      ? 'Neither period lord is career-linked.'
+      : `${sourceLinked ? sourcePlanet : targetPlanet} is career-linked while ${sourceLinked ? targetPlanet : sourcePlanet} operates without primary career linkage.`;
+
+  const summary = `${sourcePeriod} Lord ${sourcePlanet} and ${targetPeriod} Lord ${targetPlanet} have a ${relationshipType.toLowerCase()} relationship with ${careerImpact.toLowerCase()} career impact. ${functionalInteraction}`.trim();
 
   return Object.freeze({
     sourcePlanet,
@@ -683,6 +991,9 @@ export function buildDashaPlanetRelationship(
     careerImpact,
     sharedHouses: Object.freeze(sharedHouses),
     combinedHouseSet: Object.freeze(combinedHouseSet),
+    careerHouseOverlap,
+    relevanceSummary,
+    functionalInteraction,
     evidence: Object.freeze(evidence),
     ruleId: `CAREER_DASHA_RELATIONSHIP_${sourcePlanet}_${targetPlanet}`,
     summary
