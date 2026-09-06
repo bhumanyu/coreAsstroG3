@@ -46,6 +46,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 4.0,
       challengeScore: 0,
       netScore: 4.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -62,6 +63,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 2.0,
       challengeScore: 0,
       netScore: 2.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -78,6 +80,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -118,6 +121,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Sun MD activates authority and leadership.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha strongly supports leadership.'
     };
 
@@ -173,6 +179,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 0,
       challengeScore: 3.0,
       netScore: -3.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -189,6 +196,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 0,
       challengeScore: 1.5,
       netScore: -1.5,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -205,6 +213,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 0,
       challengeScore: 1.0,
       netScore: -1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -246,6 +255,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Saturn MD challenges independence.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha restricts autonomous enterprise.'
     };
 
@@ -271,6 +283,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 4.0,
       challengeScore: 0,
       netScore: 4.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -287,6 +300,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 2.0,
       challengeScore: 0,
       netScore: 2.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -303,6 +317,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -343,6 +358,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Mercury MD activates commercial enterprise.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha supports business enterprise.'
     };
 
@@ -405,6 +423,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 0,
       challengeScore: 3.0,
       netScore: -3.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -421,6 +440,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 0,
       challengeScore: 1.0,
       netScore: -1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -437,6 +457,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 0,
       challengeScore: 0.5,
       netScore: -0.5,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -477,6 +498,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Sun MD challenges leadership authority.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha restricts leadership.'
     };
 
@@ -532,6 +556,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 4.0,
       challengeScore: 0,
       netScore: 4.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -548,6 +573,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 2.0,
       challengeScore: 0,
       netScore: 2.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -564,6 +590,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -604,6 +631,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Sun MD activates authority.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha supports leadership.'
     };
 
@@ -651,6 +681,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 4.0,
       challengeScore: 0,
       netScore: 4.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -667,6 +698,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 2.0,
       challengeScore: 0,
       netScore: 2.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -683,6 +715,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -723,6 +756,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Sun MD activates leadership.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha supports leadership.'
     };
 
@@ -822,6 +858,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -838,6 +875,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -854,6 +892,7 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
       supportScore: 1.0,
       challengeScore: 0,
       netScore: 1.0,
+      careerLinked: true,
       factors: [],
       supportingFactorIds: [],
       challengingFactorIds: [],
@@ -895,6 +934,9 @@ describe('careerManifestationSynthesis (CW-04A)', () => {
           statement: 'Venus MD activates 2nd and 4th houses.'
         }
       ],
+      primaryEvidence: [],
+      supportingEvidence: [],
+      qualifyingEvidence: [],
       summary: 'Dasha is active.'
     };
 

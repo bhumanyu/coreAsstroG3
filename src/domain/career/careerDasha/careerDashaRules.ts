@@ -46,16 +46,19 @@ export const CAREER_DASHA_PERIOD_PRIORITY: Readonly<Record<CareerDashaPeriod, nu
 export const CAREER_DASHA_CATEGORY_PRIORITY: Readonly<Record<CareerFactorCategory, number>> = Object.freeze({
   HOUSE_OWNERSHIP: 8,
   HOUSE_PLACEMENT: 8,
+  CAREER_HOUSE_RULE: 8,
   D10: 8,
   STRENGTH: 8,
+  DASHA_ACTIVATION: 6,
   YOGA: 5,
   DIGNITY: 5,
   STATE: 5,
   KARAKA: 5,
+  RELATIONSHIP: 4,
   FUNCTIONAL_ROLE: 3,
   FUNCTIONAL_NATURE: 3,
   ASPECT: 3,
-  RELATIONSHIP: 4
+  RECEIVED_ASPECT: 3
 });
 
 export function getCareerDashaEvidencePriority(
@@ -129,15 +132,6 @@ export function classifyCareerFunctionalRole(
     case FunctionalRole.DUSTHANA_LORD:
     case FunctionalRole.MARAKA_LORD:
     case FunctionalRole.BADHAKA_LORD: {
-      const port = portfolio ?? getCareerHousePortfolio();
-      const hasCareerLink =
-        activation?.ownedHouses?.some((h) => port.primary.includes(h) || port.supporting.includes(h)) ||
-        (activation?.house !== undefined && (port.primary.includes(activation.house) || port.supporting.includes(activation.house))) ||
-        activation?.functionalRoles?.includes(FunctionalRole.YOGAKARAKA);
-
-      if (hasCareerLink) {
-        return { direction: 'NEUTRAL', weight: 0.25 };
-      }
       return { direction: 'CHALLENGE', weight: 0.5 };
     }
     default:
@@ -161,8 +155,7 @@ export function classifyCareerFunctionalNature(
       const port = portfolio ?? getCareerHousePortfolio();
       const isCareerAligned =
         activation?.functionalRoles?.includes(FunctionalRole.YOGAKARAKA) ||
-        activation?.ownedHouses?.some((h) => port.primary.includes(h)) ||
-        (activation?.house !== undefined && port.primary.includes(activation.house));
+        activation?.ownedHouses?.some((h) => port.primary.includes(h));
 
       if (isCareerAligned) {
         return { direction: 'NEUTRAL', weight: 0.25 };
@@ -553,28 +546,39 @@ export function deriveCareerDashaImpact(
   strength?: PlanetStrengthInterpretation,
   planet: Planet = Planet.SUN
 ): CareerDashaImpact {
-  let strengthLevel: 'STRONG' | 'MODERATE' | 'WEAK' | 'UNKNOWN' = 'UNKNOWN';
+  let strengthLevel: 'STRONG' | 'MODERATE' | 'AVERAGE' | 'WEAK' | 'UNKNOWN' = 'UNKNOWN';
 
   if (strength) {
-    const isStrong =
-      strength.meetsMinimum === true ||
-      (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum >= 100) ||
-      (strength.totalRupa !== undefined && strength.totalRupa >= 6.0) ||
-      (strength as any).level === 'STRONG' ||
-      ((strength as any).score !== undefined && (strength as any).score >= 60);
-
-    const isWeak =
-      strength.meetsMinimum === false ||
-      (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum < 80) ||
-      (strength as any).level === 'WEAK' ||
-      ((strength as any).score !== undefined && (strength as any).score < 40);
-
-    if (isStrong) {
-      strengthLevel = 'STRONG';
-    } else if (isWeak) {
-      strengthLevel = 'WEAK';
-    } else {
+    const rawLevel = (strength as any).level;
+    if (rawLevel === 'AVERAGE') {
+      strengthLevel = 'AVERAGE';
+    } else if (rawLevel === 'MODERATE') {
       strengthLevel = 'MODERATE';
+    } else if (rawLevel === 'STRONG') {
+      strengthLevel = 'STRONG';
+    } else if (rawLevel === 'WEAK') {
+      strengthLevel = 'WEAK';
+    } else if ((strength as any).score !== undefined) {
+      const s = (strength as any).score;
+      if (s >= 60) strengthLevel = 'STRONG';
+      else if (s < 40) strengthLevel = 'WEAK';
+      else strengthLevel = 'AVERAGE';
+    } else {
+      const isStrong =
+        (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum >= 110) ||
+        (strength.totalRupa !== undefined && strength.totalRupa >= 6.5);
+
+      const isWeak =
+        strength.meetsMinimum === false ||
+        (strength.percentageOfMinimum !== undefined && strength.percentageOfMinimum < 80);
+
+      if (isStrong) {
+        strengthLevel = 'STRONG';
+      } else if (isWeak) {
+        strengthLevel = 'WEAK';
+      } else {
+        strengthLevel = 'MODERATE';
+      }
     }
   }
 
@@ -601,7 +605,7 @@ export function deriveCareerDashaImpact(
     }
   } else {
     // HIGH relevance
-    if (strengthLevel === 'STRONG' || strengthLevel === 'MODERATE' || strengthLevel === 'UNKNOWN') {
+    if (strengthLevel === 'STRONG' || strengthLevel === 'MODERATE' || strengthLevel === 'AVERAGE' || strengthLevel === 'UNKNOWN') {
       overallImpact = 'HIGH';
       statement = `${planet} has high career relevance with solid strength, driving major professional developments.`;
     } else {
