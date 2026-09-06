@@ -5,12 +5,12 @@ import { FunctionalRole } from '../../../engine/functionalNature/functionalRoleT
 import { FunctionalNature } from '../../../engine/functionalNature/functionalNature';
 import {
   buildCareerDashaSynthesis,
-  getCareerHousePortfolio,
   classifyCareerHouseOwnership,
   scoreCareerDashaPlanet,
   isCareerRelevantYoga,
   type D10CareerContext
 } from './index';
+import { getCareerHousePortfolio } from '../careerTypes';
 
 describe('Career Dasha Synthesis', () => {
   const mockD10Context: D10CareerContext = {

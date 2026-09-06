@@ -6,9 +6,8 @@ import { analyzeTransits } from '../../../engine/transitAnalysis';
 import { correlateDashaAndTransit, type DashaState } from '../../../engine/dashaTransitCorrelation';
 import type { DomainStrength } from '../../interpretation/DomainInterpretationTypes';
 import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
-import { getCareerHousePortfolio } from '../../career/careerDasha/careerDashaRules';
 import { CAREER_KARAKA_DEFINITIONS } from '../../../engine/themeInterpretation/rules/career/careerPlanetRules';
-import { classifyCareerHouse } from '../../career/careerTypes';
+import { classifyCareerHouse, getCareerHousePortfolio } from '../../career/careerTypes';
 import type {
   CareerTransitFactor,
   CareerTransitSynthesis,

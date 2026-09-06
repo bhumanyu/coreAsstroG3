@@ -47,6 +47,10 @@ export const CAREER_HOUSE_PORTFOLIO: CareerHousePortfolio = Object.freeze({
   secondary: Object.freeze([])
 });
 
+export function getCareerHousePortfolio(): CareerHousePortfolio {
+  return CAREER_HOUSE_PORTFOLIO;
+}
+
 export type CareerHouseDirection = 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
 
 export function classifyCareerHouse(

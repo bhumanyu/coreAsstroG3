@@ -24,9 +24,9 @@ import {
   classifyCareerHousePlacement,
   classifyCareerYoga,
   classifyPlanetStrengthDirection,
-  getCareerHousePortfolio,
   resolveCareerKarakaRelevance
 } from './careerDashaRules';
+import { getCareerHousePortfolio } from '../careerTypes';
 import {
   calculateFactorScore,
   combineCareerDashaConfidence,
