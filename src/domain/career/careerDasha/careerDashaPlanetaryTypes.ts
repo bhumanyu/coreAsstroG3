@@ -2,6 +2,11 @@ import type { Planet } from '../../../types';
 import type { InterpretationConfidence } from '../../../engine/planetInterpretation/planetInterpretationTypes';
 import type { DashaPlanetActivation } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { CareerHousePortfolio } from '../careerTypes';
+import type {
+  CareerContributionCategory,
+  CareerRelevance,
+  CareerDashaImpact
+} from './careerDashaSynthesisTypes';
 
 export type CareerDashaPlanetaryPeriod = 'MD' | 'AD' | 'PD';
 
@@ -48,13 +53,19 @@ export type CareerDashaPlanetaryEvidenceSource =
 
 export interface CareerDashaPlanetaryEvidence {
   readonly id: string;
+  readonly period?: CareerDashaPlanetaryPeriod;
+  readonly planet?: Planet;
   readonly source: CareerDashaPlanetaryEvidenceSource;
+  readonly category?: CareerDashaPlanetaryFactorCategory;
   readonly statement: string;
   readonly direction: CareerDashaPlanetaryDirection;
   readonly weight: number;
+  readonly contributionCategory?: CareerContributionCategory;
   readonly houses?: readonly number[];
   readonly planets?: readonly Planet[];
   readonly ruleId?: string;
+  readonly evidenceIds?: readonly string[];
+  readonly meta?: Record<string, unknown>;
 }
 
 export interface CareerDashaD10PlanetContext {
@@ -96,6 +107,8 @@ export interface CareerDashaPlanetarySynthesis {
   readonly netScore: number;
 
   readonly careerLinked: boolean;
+  readonly relevance?: CareerRelevance;
+  readonly impact?: CareerDashaImpact;
 
   /**
    * Distinct list of primary and supporting career houses directly owned or occupied
@@ -109,6 +122,10 @@ export interface CareerDashaPlanetarySynthesis {
   readonly challengingEvidenceIds: readonly string[];
   readonly neutralEvidenceIds: readonly string[];
 
+  readonly supportingFactorIds?: readonly string[];
+  readonly challengingFactorIds?: readonly string[];
+  readonly neutralFactorIds?: readonly string[];
+
   readonly d10Effect:
     | 'SUPPORTS'
     | 'CHALLENGES'
@@ -119,3 +136,4 @@ export interface CareerDashaPlanetarySynthesis {
   readonly start?: string;
   readonly end?: string;
 }
+

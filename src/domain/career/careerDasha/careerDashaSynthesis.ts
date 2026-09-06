@@ -1,14 +1,14 @@
 /**
- * Career Dasha Synthesis (Legacy Production Path).
+ * Career Dasha Synthesis.
  *
- * ARCHITECTURAL DESIGN NOTE / INTEGRATION AUDIT:
- * - Production Status: This module (`synthesizeCareerDashaPlanet`) is currently the legacy
- *   authoritative production synthesis path utilized by higher-level interpreters.
- * - Linkage & Scoring Note: This legacy path derives overall effect directly from aggregate
- *   evidence scores without an upfront career-linkage gating stage.
- * - Convergence Plan: The CW-09 module (`careerDashaPlanetarySynthesis.ts`) establishes the
- *   new standard with strict linkage gating (separating participation from direction modulation).
- *   Production consumers will converge to the CW-09 synthesis path in a coordinated migration.
+ * CW-09 Authoritative Convergence:
+ * - Single deterministic scoring and evidence pipeline utilizing strict career linkage gating
+ * - Career relevance evidence model preserving provenance (spec §6)
+ * - Separation of planetary strength and career relevance (spec §14)
+ * - MD↔AD / MD↔PD / AD↔PD relationship modeling (spec §8–9)
+ * - Partitioned evidence arrays: primaryEvidence (MD), supportingEvidence (AD), qualifyingEvidence (afflicted/conflicting) (spec §11–12)
+ * - Semantic career contribution categories (spec §17)
+ * - Standardized stable rule IDs across all factors (spec §19)
  */
 
 import { Planet } from '../../../types';
@@ -16,7 +16,8 @@ import type {
   DashaPlanetActivation,
   DashaMahadashaInterpretation,
   DashaAntardashaInterpretation,
-  DashaPratyantardashaInterpretation
+  DashaPratyantardashaInterpretation,
+  DashaPairInterpretation
 } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type {
   BuildCareerDashaSynthesisParams,
@@ -28,7 +29,8 @@ import type {
   CareerDashaSynthesis,
   CareerFactorCategory,
   CareerFactorDirection,
-  D10CareerContext
+  D10CareerContext,
+  DashaPlanetRelationship
 } from './careerDashaSynthesisTypes';
 import {
   classifyCareerFunctionalNature,
@@ -37,8 +39,13 @@ import {
   classifyCareerHousePlacement,
   classifyCareerYoga,
   classifyPlanetStrengthDirection,
-  resolveCareerKarakaRelevance
+  resolveCareerKarakaRelevance,
+  buildCareerRelevance,
+  deriveCareerDashaImpact,
+  mapHouseToContributionCategory,
+  buildDashaPlanetRelationship
 } from './careerDashaRules';
+import { isCareerLinked } from './careerDashaPlanetaryRules';
 import { getCareerHousePortfolio } from '../careerTypes';
 import {
   calculateFactorScore,
@@ -54,6 +61,7 @@ export function synthesizeCareerDashaPlanet(
 ): CareerDashaPlanetSynthesis {
   const { period, activation, housePortfolio, d10, start, end } = input;
   const planet = activation.planet;
+  const careerLinked = isCareerLinked(activation, housePortfolio);
   const factors: CareerDashaFactor[] = [];
 
   const addFactor = (
@@ -64,8 +72,13 @@ export function synthesizeCareerDashaPlanet(
     statement: string,
     houses?: readonly number[],
     evidenceIds?: readonly string[],
-    meta?: Record<string, unknown>
+    meta?: Record<string, unknown>,
+    ruleIdOverride?: string
   ) => {
+    const firstHouse = houses?.[0];
+    const contributionCategory = firstHouse ? mapHouseToContributionCategory(firstHouse) : undefined;
+    const ruleId = ruleIdOverride ?? `CAREER_DASHA_${category}_${suffix}`;
+
     factors.push({
       id: `CAREER_DASHA_${period}_${planet.toUpperCase()}_${category}_${suffix}`,
       period,
@@ -74,6 +87,8 @@ export function synthesizeCareerDashaPlanet(
       direction,
       weight,
       statement,
+      ruleId,
+      ...(contributionCategory ? { contributionCategory } : {}),
       ...(houses ? { houses } : {}),
       ...(evidenceIds ? { evidenceIds } : {}),
       ...(meta ? { meta } : {})
@@ -90,7 +105,10 @@ export function synthesizeCareerDashaPlanet(
         cls.direction,
         cls.weight,
         `${planet} owns house ${house} (${cls.direction.toLowerCase()} for career).`,
-        [house]
+        [house],
+        undefined,
+        undefined,
+        `CAREER_DASHA_HOUSE_OWNERSHIP_${house}`
       );
     }
   }
@@ -106,27 +124,36 @@ export function synthesizeCareerDashaPlanet(
         cls.direction,
         cls.weight,
         `${planet} is placed in house ${house} (${cls.direction.toLowerCase()} for career).`,
-        [house]
+        [house],
+        undefined,
+        undefined,
+        `CAREER_DASHA_HOUSE_PLACEMENT_${house}`
       );
     }
   }
 
-  // 3. Functional Role (contextualized with activation and portfolio)
-  for (const role of activation.functionalRoles || []) {
-    const cls = classifyCareerFunctionalRole(role, activation, housePortfolio);
-    if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
-      addFactor(
-        'FUNCTIONAL_ROLE',
-        role,
-        cls.direction,
-        cls.weight,
-        `${planet} acts as ${role.replace(/_/g, ' ')} (${cls.direction.toLowerCase()}).`
-      );
+  // 3. Functional Role (Strictly gated on career linkage per CW-09 convergence)
+  if (careerLinked) {
+    for (const role of activation.functionalRoles || []) {
+      const cls = classifyCareerFunctionalRole(role, activation, housePortfolio);
+      if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
+        addFactor(
+          'FUNCTIONAL_ROLE',
+          role,
+          cls.direction,
+          cls.weight,
+          `${planet} acts as ${role.replace(/_/g, ' ')} (${cls.direction.toLowerCase()}).`,
+          undefined,
+          undefined,
+          undefined,
+          `CAREER_DASHA_FUNCTIONAL_ROLE_${role}`
+        );
+      }
     }
   }
 
-  // 4. Functional Nature (contextualized modifier)
-  if (activation.functionalNature) {
+  // 4. Functional Nature (Strictly gated on career linkage per CW-09 convergence)
+  if (careerLinked && activation.functionalNature) {
     const cls = classifyCareerFunctionalNature(activation.functionalNature, activation, housePortfolio);
     if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
       addFactor(
@@ -134,7 +161,11 @@ export function synthesizeCareerDashaPlanet(
         activation.functionalNature,
         cls.direction,
         cls.weight,
-        `${planet} operates as a functional ${activation.functionalNature.toLowerCase()} graha.`
+        `${planet} operates as a functional ${activation.functionalNature.toLowerCase()} graha.`,
+        undefined,
+        undefined,
+        undefined,
+        `CAREER_DASHA_FUNCTIONAL_NATURE_${activation.functionalNature}`
       );
     }
   }
@@ -169,7 +200,11 @@ export function synthesizeCareerDashaPlanet(
         digUpper.replace(/\s+/g, '_'),
         direction,
         weight,
-        `${planet} holds ${digRaw} dignity (${direction.toLowerCase()}).`
+        `${planet} holds ${digRaw} dignity (${direction.toLowerCase()}).`,
+        undefined,
+        undefined,
+        undefined,
+        `CAREER_DASHA_DIGNITY_${digUpper.replace(/\s+/g, '_')}`
       );
     }
   }
@@ -202,7 +237,11 @@ export function synthesizeCareerDashaPlanet(
         stUpper.replace(/\s+/g, '_'),
         direction,
         weight,
-        `${planet} is in ${stRaw} state (${direction.toLowerCase()}).`
+        `${planet} is in ${stRaw} state (${direction.toLowerCase()}).`,
+        undefined,
+        undefined,
+        undefined,
+        `CAREER_DASHA_STATE_${stUpper.replace(/\s+/g, '_')}`
       );
     }
   }
@@ -216,7 +255,11 @@ export function synthesizeCareerDashaPlanet(
         'SHADBALA',
         cls.direction,
         cls.weight,
-        `${planet} shadbala strength is ${activation.strength.shadbalaStatus || 'evaluated'} (${cls.direction.toLowerCase()}).`
+        `${planet} shadbala strength is ${activation.strength.shadbalaStatus || 'evaluated'} (${cls.direction.toLowerCase()}).`,
+        undefined,
+        undefined,
+        undefined,
+        'CAREER_DASHA_STRENGTH_SHADBALA'
       );
     }
   }
@@ -237,14 +280,17 @@ export function synthesizeCareerDashaPlanet(
           'SUPPORT',
           isPrimary ? 1.5 : 1.0,
           `${planet} casts aspect on house ${asp.targetHouse}.`,
-          [asp.targetHouse]
+          [asp.targetHouse],
+          undefined,
+          undefined,
+          `CAREER_DASHA_ASPECT_CAST_${asp.targetHouse}`
         );
       }
     }
   }
 
-  // 9. Yoga (Career relevance checked)
-  if (activation.yogaParticipation) {
+  // 9. Yoga (Gated on career linkage)
+  if (careerLinked && activation.yogaParticipation) {
     for (const yoga of activation.yogaParticipation) {
       const cls = classifyCareerYoga(yoga, activation, housePortfolio);
       if (cls.direction !== 'NEUTRAL' || cls.weight > 0) {
@@ -253,27 +299,35 @@ export function synthesizeCareerDashaPlanet(
           yoga.yogaType || 'YOGA',
           cls.direction,
           cls.weight,
-          `${planet} participates in yoga ${yoga.yogaType} (${cls.direction.toLowerCase()}).`
+          `${planet} participates in yoga ${yoga.yogaType} (${cls.direction.toLowerCase()}).`,
+          undefined,
+          undefined,
+          undefined,
+          `CAREER_DASHA_YOGA_${yoga.yogaType || 'YOGA'}`
         );
       }
     }
   }
 
   // 10. Karaka (Derived from career karaka infrastructure with strict career linkage)
-  const karaka = resolveCareerKarakaRelevance(planet, activation, housePortfolio);
-  if (karaka) {
-    addFactor(
-      'KARAKA',
-      'ROLE',
-      karaka.direction,
-      karaka.weight,
-      `${planet} acts as ${karaka.karakaTitle}: ${karaka.traitDescription}`
-    );
+  if (careerLinked) {
+    const karaka = resolveCareerKarakaRelevance(planet, activation, housePortfolio);
+    if (karaka) {
+      addFactor(
+        'KARAKA',
+        'ROLE',
+        karaka.direction,
+        karaka.weight,
+        `${planet} acts as ${karaka.karakaTitle}: ${karaka.traitDescription}`,
+        undefined,
+        undefined,
+        undefined,
+        'CAREER_DASHA_KARAKA_ROLE'
+      );
+    }
   }
 
   // 11. D10 Confirmation
-  // TODO: Deferred synthesis - in a future milestone, expand D10 planetary placement/lagnamsha synthesis
-  // rather than using chart-level relationship confirmation only.
   if (d10 && d10.relationship && d10.relationship !== 'UNAVAILABLE') {
     let direction: CareerFactorDirection = 'NEUTRAL';
     let weight = 0;
@@ -297,7 +351,11 @@ export function synthesizeCareerDashaPlanet(
         d10.relationship,
         direction,
         weight,
-        `D10 divisional chart ${d10.relationship.toLowerCase().replace(/_/g, ' ')} (${direction.toLowerCase()}).`
+        `D10 divisional chart ${d10.relationship.toLowerCase().replace(/_/g, ' ')} (${direction.toLowerCase()}).`,
+        undefined,
+        undefined,
+        undefined,
+        `CAREER_DASHA_D10_${d10.relationship}`
       );
     }
   }
@@ -323,9 +381,22 @@ export function synthesizeCareerDashaPlanet(
   }
   const activatedCareerHouses = Object.freeze(Array.from(activatedHousesSet).sort((a, b) => a - b));
 
-  const { support: supportScore, challenge: challengeScore } = calculateFactorScore(factors);
-  const netScore = Math.round((supportScore - challengeScore) * 100) / 100;
-  const effect = resolveCareerDashaEffect(supportScore, challengeScore, factors);
+  const relevance = buildCareerRelevance(activation, housePortfolio, d10?.available);
+  const impact = deriveCareerDashaImpact(relevance, activation.strength, planet);
+
+  let supportScore = 0;
+  let challengeScore = 0;
+  let netScore = 0;
+  let effect: CareerDashaPlanetSynthesis['effect'] = 'DOES_NOT_ACTIVATE';
+
+  if (careerLinked) {
+    const scoreResult = calculateFactorScore(factors);
+    supportScore = scoreResult.support;
+    challengeScore = scoreResult.challenge;
+    netScore = Math.round((supportScore - challengeScore) * 100) / 100;
+    effect = resolveCareerDashaEffect(supportScore, challengeScore, factors);
+  }
+
   const resolvedConfidence: InterpretationConfidence =
     input.confidence ??
     (activation as any).confidence ??
@@ -356,10 +427,16 @@ export function synthesizeCareerDashaPlanet(
     supportScore,
     challengeScore,
     netScore,
+    careerLinked,
+    relevance,
+    impact,
     factors: Object.freeze(factors),
     supportingFactorIds,
     challengingFactorIds,
     neutralFactorIds,
+    supportingEvidenceIds: supportingFactorIds,
+    challengingEvidenceIds: challengingFactorIds,
+    neutralEvidenceIds: neutralFactorIds,
     activatedCareerHouses,
     d10Effect,
     summary,
@@ -384,13 +461,19 @@ export function scoreCareerDashaPlanet(
 export function synthesizeCareerDashaPeriods(
   md: CareerDashaPlanetSynthesis,
   ad: CareerDashaPlanetSynthesis,
-  pd: CareerDashaPlanetSynthesis
+  pd: CareerDashaPlanetSynthesis,
+  pairInterp?: DashaPairInterpretation
 ): CareerDashaPeriodSynthesis {
   const hierarchy = Object.freeze({
     mdRole: 'PRIMARY' as const,
     adRole: 'MODIFIER' as const,
     pdRole: 'REFINEMENT' as const
   });
+
+  const mdAdRelationship = buildDashaPlanetRelationship(md.planet, ad.planet, 'MD', 'AD', pairInterp);
+  const mdPdRelationship = buildDashaPlanetRelationship(md.planet, pd.planet, 'MD', 'PD');
+  const adPdRelationship = buildDashaPlanetRelationship(ad.planet, pd.planet, 'AD', 'PD');
+  const relationships = Object.freeze([mdAdRelationship, mdPdRelationship, adPdRelationship]);
 
   const mdScore = effectScore(md.effect);
   const adScore = effectScore(ad.effect);
@@ -412,6 +495,10 @@ export function synthesizeCareerDashaPeriods(
     md,
     ad,
     pd,
+    relationships,
+    mdAdRelationship,
+    mdPdRelationship,
+    adPdRelationship,
     combinedEffect,
     combinedConfidence,
     combinedScore,
@@ -452,10 +539,14 @@ export function buildCareerDashaSynthesis(
       supportScore: 0,
       challengeScore: 0,
       netScore: 0,
+      careerLinked: false,
       factors: Object.freeze([]),
       supportingFactorIds: Object.freeze([]),
       challengingFactorIds: Object.freeze([]),
       neutralFactorIds: Object.freeze([]),
+      supportingEvidenceIds: Object.freeze([]),
+      challengingEvidenceIds: Object.freeze([]),
+      neutralEvidenceIds: Object.freeze([]),
       activatedCareerHouses: Object.freeze([]),
       d10Effect: 'NEUTRAL',
       summary: `${period} timing data is insufficient.`
@@ -497,6 +588,11 @@ export function buildCareerDashaSynthesis(
       pd: pdFallback,
       combined,
       factors: Object.freeze([]),
+      primaryEvidence: Object.freeze([]),
+      supportingEvidence: Object.freeze([]),
+      qualifyingEvidence: Object.freeze([]),
+      tertiaryEvidence: Object.freeze([]),
+      relationships: Object.freeze([]),
       summary: 'Insufficient dasha timing data to evaluate Career Dasha synthesis.'
     });
   }
@@ -548,8 +644,13 @@ export function buildCareerDashaSynthesis(
       })
     : fallbackPlanet('PD');
 
-  const combined = synthesizeCareerDashaPeriods(md, ad, pd);
+  const combined = synthesizeCareerDashaPeriods(md, ad, pd, params.pairInterpretation);
   const allFactors = Object.freeze([...md.factors, ...ad.factors, ...pd.factors]);
+
+  const primaryEvidence = Object.freeze([...md.factors]);
+  const supportingEvidence = Object.freeze([...ad.factors]);
+  const tertiaryEvidence = Object.freeze([...pd.factors]);
+  const qualifyingEvidence = Object.freeze(allFactors.filter((f) => f.direction === 'CHALLENGE'));
 
   const timing = Object.freeze({
     md: Object.freeze({
@@ -582,6 +683,12 @@ export function buildCareerDashaSynthesis(
     pd,
     combined,
     factors: allFactors,
+    primaryEvidence,
+    supportingEvidence,
+    qualifyingEvidence,
+    tertiaryEvidence,
+    relationships: combined.relationships,
     summary: combined.summary
   });
 }
+

@@ -82,7 +82,7 @@ describe('Career Dasha Synthesis', () => {
   it('scores a challenging planet synthesis correctly', () => {
     const rahuActivation: DashaPlanetActivation = {
       planet: Planet.RAHU,
-      house: 8,
+      house: 10,
       sign: 'SCORPIO' as any,
       ownedHouses: [8, 12],
       functionalRoles: [FunctionalRole.MARAKA_LORD],
@@ -335,4 +335,252 @@ describe('Career Dasha Synthesis', () => {
       expect(isCareerRelevantYoga(yoga, activation)).toBe(false);
     });
   });
+
+  describe('Evidence Partitioning & Relationships (CW-09 Convergence)', () => {
+    it('partitions primary, supporting, qualifying, and tertiary evidence accurately', () => {
+      const mdAct = createMockActivation(Planet.JUPITER, [10], FunctionalRole.YOGAKARAKA);
+      const adAct = createMockActivation(Planet.SATURN, [6], FunctionalRole.TRIKONA_LORD);
+      const pdAct = createMockActivation(Planet.MERCURY, [2], FunctionalRole.KENDRA_LORD);
+
+      const mockDashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: mdAct, start: '2020-01-01', end: '2036-01-01' },
+          antardasha: { natal: adAct, start: '2025-01-01', end: '2027-01-01' },
+          pratyantardasha: { natal: pdAct, start: '2026-01-01', end: '2026-06-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({
+        dashaInterpretation: mockDashaInterp,
+        d10Context: mockD10Context
+      });
+
+      expect(synthesis.primaryEvidence).toBeDefined();
+      expect(synthesis.supportingEvidence).toBeDefined();
+      expect(synthesis.tertiaryEvidence).toBeDefined();
+      expect(synthesis.qualifyingEvidence).toBeDefined();
+
+      expect(synthesis.primaryEvidence?.length).toBe(mdAct ? synthesis.md.factors.length : 0);
+      expect(synthesis.supportingEvidence?.length).toBe(adAct ? synthesis.ad.factors.length : 0);
+      expect(synthesis.tertiaryEvidence?.length).toBe(pdAct ? synthesis.pd.factors.length : 0);
+
+      // Verify all primary evidence belongs to MD period
+      for (const factor of synthesis.primaryEvidence ?? []) {
+        expect(factor.period).toBe('MD');
+        expect(factor.planet).toBe('JUPITER');
+        expect(factor.ruleId).toBeDefined();
+      }
+
+      // Verify all supporting evidence belongs to AD period
+      for (const factor of synthesis.supportingEvidence ?? []) {
+        expect(factor.period).toBe('AD');
+        expect(factor.planet).toBe('SATURN');
+      }
+
+      // Verify relationships modeling
+      expect(synthesis.relationships).toBeDefined();
+      expect(synthesis.relationships?.length).toBe(3);
+      expect(synthesis.relationships?.[0].fromPeriod).toBe('MD');
+      expect(synthesis.relationships?.[0].toPeriod).toBe('AD');
+      expect(synthesis.relationships?.[0].fromPlanet).toBe('JUPITER');
+      expect(synthesis.relationships?.[0].toPlanet).toBe('SATURN');
+    });
+
+    it('models separation of planetary strength and career relevance (spec §14)', () => {
+      // Planet with high strength but ZERO career relevance
+      const strongUnlinkedAct: DashaPlanetActivation = {
+        planet: Planet.MARS,
+        house: 4,
+        sign: 'ARIES' as any,
+        ownedHouses: [4, 5],
+        functionalRoles: [FunctionalRole.TRIKONA_LORD],
+        functionalNature: FunctionalNature.BENEFIC,
+        strength: {
+          score: 95,
+          level: 'STRONG',
+          rawShadbala: 1.8,
+          meetsMinimum: true
+        } as any,
+        dignity: 'EXALTED',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const unlinkedSynthesis = scoreCareerDashaPlanet('MD', strongUnlinkedAct);
+      expect(unlinkedSynthesis.careerLinked).toBe(false);
+      expect(unlinkedSynthesis.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(unlinkedSynthesis.relevance?.relevanceLevel).toBe('NONE');
+      expect(unlinkedSynthesis.impact?.overallImpact).toBe('NEGLIGIBLE');
+      expect(unlinkedSynthesis.relevance?.relevanceScore).toBe(0);
+
+      // Planet with moderate strength but HIGH career relevance (owns 10th house)
+      const moderateLinkedAct: DashaPlanetActivation = {
+        planet: Planet.SUN,
+        house: 10,
+        sign: 'LEO' as any,
+        ownedHouses: [10],
+        functionalRoles: [FunctionalRole.KENDRA_LORD],
+        functionalNature: FunctionalNature.BENEFIC,
+        strength: {
+          score: 55,
+          level: 'AVERAGE',
+          rawShadbala: 1.0,
+          meetsMinimum: true
+        } as any,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const linkedSynthesis = scoreCareerDashaPlanet('MD', moderateLinkedAct);
+      expect(linkedSynthesis.careerLinked).toBe(true);
+      expect(linkedSynthesis.relevance?.relevanceLevel).toBe('HIGH');
+      expect(linkedSynthesis.relevance?.relevanceScore).toBeGreaterThan(0);
+      expect(linkedSynthesis.impact?.relevanceLevel).toBe('HIGH');
+      expect(linkedSynthesis.impact?.strengthLevel).toBe('AVERAGE');
+    });
+
+    it('Golden Case A: Pure Support (10th lord exalted, high relevance, strong impact)', () => {
+      const saturnAct = createMockActivation(Planet.SATURN, [10, 11], FunctionalRole.YOGAKARAKA);
+      const synthesis = scoreCareerDashaPlanet('MD', saturnAct, mockD10Context);
+
+      expect(synthesis.careerLinked).toBe(true);
+      expect(synthesis.effect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.relevance?.relevanceLevel).toBe('HIGH');
+      expect(synthesis.relevance?.evidence.some((e) => e.houses?.includes(10))).toBe(true);
+      expect(synthesis.impact?.overallImpact).toBe('HIGH');
+    });
+
+    it('Golden Case B: Unlinked MD with Linked AD (hierarchy preserved)', () => {
+      const unlinkedMd: DashaPlanetActivation = {
+        planet: Planet.MOON,
+        house: 4,
+        sign: 'CANCER' as any,
+        ownedHouses: [4],
+        functionalRoles: [],
+        functionalNature: FunctionalNature.NEUTRAL,
+        strength: undefined,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const linkedAd = createMockActivation(Planet.SUN, [10], FunctionalRole.KENDRA_LORD);
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: unlinkedMd, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: linkedAd, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: linkedAd, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({
+        dashaInterpretation: dashaInterp
+      });
+
+      expect(synthesis.md.careerLinked).toBe(false);
+      expect(synthesis.md.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(synthesis.ad.careerLinked).toBe(true);
+      expect(synthesis.ad.effect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.combined.summary).toContain('does not establish a primary Career theme');
+    });
+
+    it('Golden Case C: Mixed / Afflicted (10th lord debilitated in 8th house)', () => {
+      const afflictedAct: DashaPlanetActivation = {
+        planet: Planet.MARS,
+        house: 8,
+        sign: 'CANCER' as any,
+        ownedHouses: [10, 3],
+        functionalRoles: [FunctionalRole.MARAKA_LORD],
+        functionalNature: FunctionalNature.MALEFIC,
+        strength: {
+          score: 25,
+          level: 'WEAK',
+          rawShadbala: 0.6,
+          meetsMinimum: false
+        } as any,
+        dignity: 'DEBILITATED',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const synthesis = scoreCareerDashaPlanet('MD', afflictedAct);
+      expect(synthesis.careerLinked).toBe(true);
+      expect(synthesis.challengeScore).toBeGreaterThan(0);
+      expect(synthesis.qualifyingEvidenceIds || synthesis.challengingFactorIds).toBeDefined();
+      expect(synthesis.impact?.overallImpact).toBe('MODERATE');
+    });
+
+    it('Golden Case D: D10 Confirming vs Conflicting modulation', () => {
+      const act = createMockActivation(Planet.JUPITER, [10], FunctionalRole.KENDRA_LORD);
+
+      const confirmsSynth = scoreCareerDashaPlanet('MD', act, {
+        relationship: 'CONFIRMS',
+        available: true,
+        statement: 'D10 confirms'
+      });
+      expect(confirmsSynth.d10Effect).toBe('SUPPORTS');
+      expect(confirmsSynth.supportScore).toBeGreaterThan(0);
+
+      const conflictsSynth = scoreCareerDashaPlanet('MD', act, {
+        relationship: 'CONFLICTS',
+        available: true,
+        statement: 'D10 conflicts'
+      });
+      expect(conflictsSynth.d10Effect).toBe('CHALLENGES');
+      expect(conflictsSynth.challengeScore).toBeGreaterThan(0);
+    });
+
+    it('Golden Case E: Semantic contribution category mapping for multi-house activation', () => {
+      const multiHouseAct: DashaPlanetActivation = {
+        planet: Planet.SATURN,
+        house: 10,
+        sign: 'CAPRICORN' as any,
+        ownedHouses: [10, 11],
+        functionalRoles: [FunctionalRole.YOGAKARAKA],
+        functionalNature: FunctionalNature.BENEFIC,
+        strength: {
+          score: 80,
+          level: 'STRONG',
+          rawShadbala: 1.4,
+          meetsMinimum: true
+        } as any,
+        dignity: 'OWN_SIGN',
+        castAspects: [{ targetHouse: 2 } as any],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const synthesis = scoreCareerDashaPlanet('MD', multiHouseAct);
+      const h10Factor = synthesis.factors.find((f) => f.houses?.includes(10) && f.category === 'HOUSE_OWNERSHIP');
+      const h11Factor = synthesis.factors.find((f) => f.houses?.includes(11) && f.category === 'HOUSE_OWNERSHIP');
+
+      expect(h10Factor?.contributionCategory).toBe('CAREER_STATUS');
+      expect(h11Factor?.contributionCategory).toBe('GAINS');
+    });
+  });
 });
+

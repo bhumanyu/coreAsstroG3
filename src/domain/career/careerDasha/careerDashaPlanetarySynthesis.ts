@@ -31,6 +31,11 @@ import {
   isCareerLinked,
   CW09_PLANETARY_WEIGHTS
 } from './careerDashaPlanetaryRules';
+import {
+  buildCareerRelevance,
+  deriveCareerDashaImpact,
+  mapHouseToContributionCategory
+} from './careerDashaRules';
 
 const CATEGORY_ORDER: Readonly<Record<CareerDashaPlanetaryEvidence['source'], number>> = Object.freeze({
   DASHA_ACTIVATION: 1,
@@ -139,6 +144,18 @@ export function synthesizeCareerDashaPlanetary(
     housePortfolio
   );
 
+  const relevance = buildCareerRelevance(
+    activation,
+    housePortfolio,
+    d10?.available
+  );
+
+  const impact = deriveCareerDashaImpact(
+    relevance,
+    activation.strength,
+    planet
+  );
+
   const factors: CareerDashaPlanetaryEvidence[] = [];
 
   const addFactor = (
@@ -148,6 +165,7 @@ export function synthesizeCareerDashaPlanetary(
     weight: number,
     statement: string,
     options: {
+      category?: CareerDashaPlanetaryEvidence['category'];
       houses?: readonly number[];
       planets?: readonly typeof planet[];
       ruleId?: string;
@@ -157,6 +175,9 @@ export function synthesizeCareerDashaPlanetary(
       return;
     }
 
+    const firstHouse = options.houses?.[0];
+    const contributionCategory = firstHouse ? mapHouseToContributionCategory(firstHouse) : undefined;
+
     factors.push({
       id: [
         'CW09',
@@ -165,10 +186,14 @@ export function synthesizeCareerDashaPlanetary(
         normalizeIdPart(source),
         normalizeIdPart(suffix)
       ].join('_'),
+      period,
+      planet,
       source,
+      category: options.category,
       direction,
       weight,
       statement,
+      ...(contributionCategory ? { contributionCategory } : {}),
       ...(options.houses ? { houses: options.houses } : {}),
       ...(options.planets ? { planets: options.planets } : {}),
       ...(options.ruleId ? { ruleId: options.ruleId } : {})
@@ -189,6 +214,7 @@ export function synthesizeCareerDashaPlanetary(
         result.weight,
         `${planet} owns career-relevant house ${house}.`,
         {
+          category: 'HOUSE_OWNERSHIP',
           houses: [house],
           ruleId: `CW09_HOUSE_OWNERSHIP_${house}`
         }
@@ -212,6 +238,7 @@ export function synthesizeCareerDashaPlanetary(
       placementResult.weight,
       `${planet} is placed in career-relevant house ${activation.house}.`,
       {
+        category: 'HOUSE_PLACEMENT',
         houses: [activation.house],
         ruleId: `CW09_HOUSE_PLACEMENT_${activation.house}`
       }
@@ -236,6 +263,7 @@ export function synthesizeCareerDashaPlanetary(
           result.weight,
           `${planet} has functional role ${String(role)}.`,
           {
+            category: 'FUNCTIONAL_ROLE',
             ruleId: `CW09_FUNCTIONAL_ROLE_${String(role)}`
           }
         );
@@ -260,6 +288,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.FUNCTIONAL_BENEFIC,
         `${planet} has functional benefic nature.`,
         {
+          category: 'FUNCTIONAL_NATURE',
           ruleId: 'CW09_FUNCTIONAL_NATURE_BENEFIC'
         }
       );
@@ -271,6 +300,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.FUNCTIONAL_MALEFIC,
         `${planet} has functional malefic nature.`,
         {
+          category: 'FUNCTIONAL_NATURE',
           ruleId: 'CW09_FUNCTIONAL_NATURE_MALEFIC'
         }
       );
@@ -290,6 +320,7 @@ export function synthesizeCareerDashaPlanetary(
       dignityResult.weight,
       `${planet} has ${activation.dignity} dignity.`,
       {
+        category: 'DIGNITY',
         ruleId: `CW09_DIGNITY_${normalizeIdPart(
           activation.dignity ?? 'UNKNOWN'
         )}`
@@ -321,6 +352,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.COMBUST,
         `${planet} is in ${state} state.`,
         {
+          category: 'STATE',
           ruleId: `CW09_STATE_${normalizeIdPart(normalized)}`
         }
       );
@@ -349,6 +381,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.STRENGTH_STRONG,
         `${planet} has strong planetary strength.`,
         {
+          category: 'STRENGTH',
           ruleId: 'CW09_STRENGTH_STRONG'
         }
       );
@@ -360,6 +393,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.STRENGTH_WEAK,
         `${planet} has weak planetary strength.`,
         {
+          category: 'STRENGTH',
           ruleId: 'CW09_STRENGTH_WEAK'
         }
       );
@@ -384,6 +418,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.CAREER_ASPECT_PRIMARY,
         `${planet} casts an aspect to career primary house ${targetHouse}.`,
         {
+          category: 'ASPECT',
           houses: [targetHouse],
           ruleId: `CW09_ASPECT_CAST_H${targetHouse}`
         }
@@ -396,6 +431,7 @@ export function synthesizeCareerDashaPlanetary(
         CW09_PLANETARY_WEIGHTS.CAREER_ASPECT_SUPPORTING,
         `${planet} casts an aspect to career supporting house ${targetHouse}.`,
         {
+          category: 'ASPECT',
           houses: [targetHouse],
           ruleId: `CW09_ASPECT_CAST_H${targetHouse}`
         }
@@ -425,6 +461,7 @@ export function synthesizeCareerDashaPlanetary(
           0.1,
           `${planet} receives an aspect connected with career house ${sourceHouse}.`,
           {
+            category: 'RECEIVED_ASPECT',
             houses: [sourceHouse],
             ruleId: `CW09_ASPECT_RECEIVED_H${sourceHouse}`
           }
@@ -462,6 +499,7 @@ export function synthesizeCareerDashaPlanetary(
       weight,
       `${planet} participates in career-relevant ${yoga.yogaType}.`,
       {
+        category: 'YOGA',
         ruleId: `CW09_YOGA_${normalizeIdPart(yoga.yogaType)}`
       }
     );
@@ -480,6 +518,7 @@ export function synthesizeCareerDashaPlanetary(
           CW09_PLANETARY_WEIGHTS.D10_CONFIRMATION,
           `D10 confirms the career role of ${planet}.`,
           {
+            category: 'D10',
             planets: [planet],
             ruleId: 'CW09_D10_PLANET_CONFIRMS'
           }
@@ -494,6 +533,7 @@ export function synthesizeCareerDashaPlanetary(
           CW09_PLANETARY_WEIGHTS.D10_PARTIAL,
           `D10 partially confirms the career role of ${planet}.`,
           {
+            category: 'D10',
             planets: [planet],
             ruleId: 'CW09_D10_PLANET_PARTIAL'
           }
@@ -508,6 +548,7 @@ export function synthesizeCareerDashaPlanetary(
           CW09_PLANETARY_WEIGHTS.D10_CONFLICT,
           `D10 conflicts with the career role of ${planet}.`,
           {
+            category: 'D10',
             planets: [planet],
             ruleId: 'CW09_D10_PLANET_CONFLICTS'
           }
@@ -610,14 +651,20 @@ export function synthesizeCareerDashaPlanetary(
     challengeScore,
     netScore,
     careerLinked,
+    relevance,
+    impact,
     activatedCareerHouses,
     factors: Object.freeze(factors),
     supportingEvidenceIds,
     challengingEvidenceIds,
     neutralEvidenceIds,
+    supportingFactorIds: supportingEvidenceIds,
+    challengingFactorIds: challengingEvidenceIds,
+    neutralFactorIds: neutralEvidenceIds,
     d10Effect,
     summary,
     ...(start ? { start } : {}),
     ...(end ? { end } : {})
   });
 }
+
