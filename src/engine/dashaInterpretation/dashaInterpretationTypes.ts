@@ -62,6 +62,7 @@ export interface DashaYogaReference {
   readonly strength?: YogaStrengthLevel;
   readonly finalStatus?: 'PRESENT' | 'WEAKENED' | 'STRONG' | 'CANCELLED';
   readonly relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT';
+  readonly houses?: readonly number[];
 }
 
 export interface DashaPlanetActivation {

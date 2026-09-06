@@ -118,6 +118,7 @@ function buildActivation(
   );
 
   const yogaParticipation: DashaYogaReference[] = [];
+  const seenYogaIds = new Set<string>();
   for (const y of input.yogas.yogas ?? []) {
     if (y.planets.includes(planet)) {
       const rawRel = (y as any).relationship ?? (y as any).participantRelationships?.[planet];
@@ -125,13 +126,35 @@ function buildActivation(
       if (rawRel === 'HOUSE_LORD' || rawRel === 'OCCUPANT' || rawRel === 'PLANET') {
         relationship = rawRel;
       }
+
+      const validHouses: readonly number[] = (y.houses || []).filter(
+        (h): h is number => typeof h === 'number'
+      );
+      const planetsList = (y.planets || []).map(p => String(p));
+      const rawRuleId = y.evidence?.[0]?.ruleId;
+      const baseYogaId = rawRuleId ?? `${y.type}_H${validHouses.join('-')}_P${planetsList.join('-')}`;
+
+      let yogaId = baseYogaId;
+      if (seenYogaIds.has(yogaId)) {
+        if (rawRuleId && (validHouses.length > 0 || planetsList.length > 0)) {
+          yogaId = `${rawRuleId}_H${validHouses.join('-')}_P${planetsList.join('-')}`;
+        }
+        let counter = 2;
+        const disambiguationBase = yogaId;
+        while (seenYogaIds.has(yogaId)) {
+          yogaId = `${disambiguationBase}_${counter++}`;
+        }
+      }
+      seenYogaIds.add(yogaId);
+
       yogaParticipation.push(
         Object.freeze({
           yogaType: y.type,
-          yogaId: y.type,
+          yogaId,
           strength: y.assessment?.strength,
           finalStatus: y.assessment?.finalStatus,
-          relationship
+          relationship,
+          ...(validHouses.length > 0 ? { houses: Object.freeze([...validHouses]) } : {})
         })
       );
     }
@@ -298,12 +321,21 @@ function buildActivation(
 
   // YOGA
   for (const yRef of yogaParticipation) {
+    const yogaRuleId = yRef.yogaId
+      ? (yRef.yogaId === yRef.yogaType
+          ? `DASHA_LORD_YOGA_${yRef.yogaType}`
+          : yRef.yogaId.startsWith(`${yRef.yogaType}_`)
+            ? `DASHA_LORD_YOGA_${yRef.yogaId}`
+            : `DASHA_LORD_YOGA_${yRef.yogaType}_${yRef.yogaId}`)
+      : `DASHA_LORD_YOGA_${yRef.yogaType}`;
+
     evidence.push(
       Object.freeze({
-        ruleId: `DASHA_LORD_YOGA_${yRef.yogaType}`,
+        ruleId: yogaRuleId,
         type: 'YOGA',
         level,
         planets: Object.freeze([planet]),
+        ...(yRef.houses && yRef.houses.length > 0 ? { houses: Object.freeze([...yRef.houses]) } : {}),
         statement: `Dasha lord ${planet} participates in ${yRef.yogaType} yoga (status: ${yRef.finalStatus ?? 'PRESENT'}).`,
         effect: 'NEUTRAL',
         source: 'Yoga Engine'
