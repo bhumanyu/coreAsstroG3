@@ -99,7 +99,10 @@ export interface CareerDashaImpact {
   readonly statement: string;
 }
 
-export type EvidenceDirection = CareerFactorDirection;
+export type EvidenceDirection =
+  | CareerFactorDirection
+  | 'SUPPORTING'
+  | 'CHALLENGING';
 
 export type EvidenceRole =
   | 'PRIMARY'
@@ -108,7 +111,8 @@ export type EvidenceRole =
   | 'TERTIARY'
   | 'MODIFIER'
   | 'CONFIRMATION'
-  | 'TIMING';
+  | 'TIMING'
+  | 'REFINEMENT';
 
 /**
  * Relationship between Dasha period lords (spec §8–9).

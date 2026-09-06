@@ -666,7 +666,7 @@ export function buildCareerRelevance(
 export function classifyPlanetStrengthLevel(
   strength?: PlanetStrengthInterpretation
 ): 'STRONG' | 'MODERATE' | 'AVERAGE' | 'WEAK' | 'UNKNOWN' {
-  if (!strength || strength.availability === 'UNAVAILABLE') {
+  if (!strength || (strength as any).availability === 'UNAVAILABLE') {
     return 'UNKNOWN';
   }
 
