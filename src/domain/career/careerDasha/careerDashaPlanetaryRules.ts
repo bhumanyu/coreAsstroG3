@@ -4,6 +4,7 @@ import {
   classifyCareerHouse,
   type CareerHousePortfolio
 } from '../careerTypes';
+import { isCareerRelevantYoga } from './careerDashaRules';
 
 /**
  * CW-09 Planetary Scoring Weights.

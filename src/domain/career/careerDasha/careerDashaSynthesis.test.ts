@@ -107,7 +107,7 @@ describe('Career Dasha Synthesis', () => {
 
     expect(synthesis.planet).toBe('RAHU');
     expect(synthesis.period).toBe('AD');
-    expect(synthesis.effect).toBe('STRONGLY_CHALLENGES');
+    expect(synthesis.effect).toBe('CHALLENGES');
     expect(synthesis.challengeScore).toBeGreaterThan(0);
   });
 

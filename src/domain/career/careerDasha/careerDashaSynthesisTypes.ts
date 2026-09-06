@@ -94,7 +94,7 @@ export interface CareerRelevance {
  */
 export interface CareerDashaImpact {
   readonly relevanceLevel: 'HIGH' | 'MODERATE' | 'LOW' | 'NONE';
-  readonly strengthLevel: 'STRONG' | 'MODERATE' | 'WEAK' | 'UNKNOWN';
+  readonly strengthLevel: 'STRONG' | 'MODERATE' | 'AVERAGE' | 'WEAK' | 'UNKNOWN';
   readonly overallImpact: 'HIGH' | 'MODERATE' | 'LOW' | 'NEGLIGIBLE';
   readonly statement: string;
 }
@@ -198,6 +198,7 @@ export interface CareerDashaPlanetSynthesis {
   readonly supportingEvidenceIds?: readonly string[];
   readonly challengingEvidenceIds?: readonly string[];
   readonly neutralEvidenceIds?: readonly string[];
+  readonly qualifyingEvidenceIds?: readonly string[];
   readonly activatedCareerHouses: readonly number[];
   readonly d10Effect: 'SUPPORTS' | 'CHALLENGES' | 'NEUTRAL';
   readonly summary: string;

@@ -101,6 +101,7 @@ export function createMockCareerDashaSynthesis(options?: {
     supportScore: 2.5,
     challengeScore: 0,
     netScore: 2.5,
+    careerLinked: true,
     factors,
     supportingFactorIds: factors.filter((f) => f.direction === 'SUPPORT').map((f) => f.id),
     challengingFactorIds: factors.filter((f) => f.direction === 'CHALLENGE').map((f) => f.id),
@@ -118,6 +119,7 @@ export function createMockCareerDashaSynthesis(options?: {
     supportScore: 1.5,
     challengeScore: 0,
     netScore: 1.5,
+    careerLinked: true,
     factors: [],
     supportingFactorIds: [],
     challengingFactorIds: [],
@@ -135,6 +137,7 @@ export function createMockCareerDashaSynthesis(options?: {
     supportScore: 1.0,
     challengeScore: 0,
     netScore: 1.0,
+    careerLinked: true,
     factors: [],
     supportingFactorIds: [],
     challengingFactorIds: [],
@@ -166,6 +169,9 @@ export function createMockCareerDashaSynthesis(options?: {
       summary: `Combined effect ${combinedEffect}`
     },
     factors,
+    primaryEvidence: [],
+    supportingEvidence: [],
+    qualifyingEvidence: [],
     summary: `Summary ${combinedEffect}`
   };
 }
