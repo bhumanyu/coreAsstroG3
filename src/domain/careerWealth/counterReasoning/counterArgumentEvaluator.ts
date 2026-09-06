@@ -66,6 +66,9 @@ export function evaluateCounterArgument(
     .map((factor) => evaluatePropositionFactor(factor, claim))
     .sort(compareFactors);
 
+  // Disposition site:
+  // propositionAlignment is authoritative and exclusively determines the disposition decision.
+  // Raw domain relation (relationAlignment) is trace-only and is NEVER read by disposition logic.
   let supportsCount = 0;
   let opposesCount = 0;
 

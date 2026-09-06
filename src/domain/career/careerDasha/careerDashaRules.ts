@@ -2,7 +2,8 @@ import { Planet } from '../../../types';
 import {
   CAREER_PRIMARY_HOUSES,
   CAREER_SUPPORTING_HOUSES,
-  CAREER_CHALLENGING_HOUSES
+  CAREER_CHALLENGING_HOUSES,
+  getCareerHousePortfolio
 } from '../careerTypes';
 import { FunctionalRole } from '../../../engine/functionalNature/functionalRoleTypes';
 import { FunctionalNature } from '../../../engine/functionalNature/functionalNature';
@@ -52,15 +53,6 @@ export function getCareerDashaEvidencePriority(
   const periodBase = CAREER_DASHA_PERIOD_PRIORITY[period] ?? 20;
   const catOffset = CAREER_DASHA_CATEGORY_PRIORITY[category] ?? 0;
   return periodBase + catOffset;
-}
-
-export function getCareerHousePortfolio(): CareerHousePortfolio {
-  return {
-    primary: Object.freeze(Array.from(CAREER_PRIMARY_HOUSES)),
-    supporting: Object.freeze(Array.from(CAREER_SUPPORTING_HOUSES)),
-    challenging: Object.freeze(Array.from(CAREER_CHALLENGING_HOUSES)),
-    secondary: Object.freeze([])
-  };
 }
 
 export function classifyCareerHouseOwnership(

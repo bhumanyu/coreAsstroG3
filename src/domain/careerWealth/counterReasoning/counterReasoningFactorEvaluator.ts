@@ -1,3 +1,9 @@
+/**
+ * Known remaining CW-07B items / Documented gaps:
+ * - MANIFESTS edge semantics: MANIFESTS remains NEUTRAL regardless of outcomeSemantics (Option A).
+ *   Manifestation outcome-specific handling is a documented gap and deferred to future work.
+ */
+
 import type {
   CounterReasoningClaim,
   CounterReasoningFactor,
@@ -49,7 +55,7 @@ export function evaluateFactorRelation(
       edgeSemantic,
       outcomeMatch,
       alignment: 'NEUTRAL',
-      reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
+      reason: `${factor.edgeType} indicates domain manifestation; manifestation outcome semantics are a known remaining CW-07B gap and this relationship alone does not establish the asserted outcome.`
     };
   }
 
@@ -151,7 +157,7 @@ export function evaluatePropositionFactor(
     };
   }
 
-  // d. MANIFESTS edge type
+  // d. MANIFESTS edge type (remains NEUTRAL regardless of outcomeSemantics - documented gap)
   if (factor.edgeType === 'MANIFESTS') {
     return {
       evidenceId: factor.evidenceId,
@@ -162,7 +168,7 @@ export function evaluatePropositionFactor(
       outcomeMatch,
       propositionAlignment: 'NEUTRAL',
       relationAlignment: 'NEUTRAL',
-      reason: `${factor.edgeType} indicates domain manifestation; this relationship alone does not establish the asserted outcome.`
+      reason: `${factor.edgeType} indicates domain manifestation; manifestation outcome semantics are a known remaining CW-07B gap and this relationship alone does not establish the asserted outcome.`
     };
   }
 

@@ -284,5 +284,41 @@ describe('counterArgumentEvaluator (CW-07)', () => {
       expect(res.evaluatedFactors[0].propositionAlignment).toBe('SUPPORTS_PROPOSITION');
       expect(res.evaluatedFactors[0].edgeSemantic).toBe('CHALLENGE');
     });
+
+    it('provably decides disposition strictly on propositionAlignment when relationAlignment differs under a NEGATED claim', () => {
+      const negatedPositiveClaim: CounterReasoningClaim = {
+        domain: 'CAREER',
+        question: 'Why is career not strong?',
+        questionType: 'WHY_NOT',
+        targetSubjectKey: 'FINAL_SYNTHESIS',
+        polarity: 'NEUTRAL',
+        assertedPolarity: 'NEUTRAL',
+        assertedOutcome: 'SUPPORT',
+        assertionMode: 'QUESTION',
+        assertionPolarity: 'NEGATED'
+      };
+
+      const factor: CounterReasoningFactor = {
+        evidenceId: 'EV_STRONG_10TH',
+        edgeType: 'SUPPORTS',
+        explanation: '10th lord is exalted and strongly placed',
+        relation: 'SUPPORT'
+      };
+
+      const res = evaluateCounterArgument({
+        claim: negatedPositiveClaim,
+        factors: [factor]
+      });
+
+      const evaluatedFactor = res.evaluatedFactors[0];
+      // Raw relationAlignment is ALIGNS (supportive chart evidence)
+      expect(evaluatedFactor.relationAlignment).toBe('ALIGNS');
+      // Under NEGATED claim, propositionAlignment inverts to OPPOSES_PROPOSITION
+      expect(evaluatedFactor.propositionAlignment).toBe('OPPOSES_PROPOSITION');
+
+      // Disposition MUST follow propositionAlignment (REJECTED), NOT relationAlignment (CONFIRMED)
+      expect(res.disposition).toBe('REJECTED');
+      expect(res.rebuttal).toContain('No supportive astrological evidence was found for FINAL_SYNTHESIS; 1 counter-factor(s) challenge this proposition.');
+    });
   });
 });

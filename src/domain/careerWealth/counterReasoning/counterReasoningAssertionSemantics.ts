@@ -30,13 +30,14 @@ export function invertPropositionAlignment(
  *   - If assertionPolarity === 'NEGATED' (or legacy mode === 'DENY') -> invert via invertPropositionAlignment.
  *   - Otherwise keeps the base alignment.
  * - assertionMode (AFFIRM/DENY/QUESTION) does NOT by itself invert; QUESTION still allows evidence to answer (never forces NEUTRAL).
- * - Backward-compat: Treat legacy DENY as equivalent to NEGATED if a caller passes mode='DENY' without polarity.
+ * - Backward-compat: Treat legacy DENY as normalized to NEGATED if a caller passes mode='DENY' without polarity (slated for future removal).
  */
 export function applyAssertion(
   alignment: CounterReasoningPropositionAlignment,
   mode: CounterReasoningAssertionMode,
   polarity: CounterReasoningAssertionPolarity = 'POSITIVE'
 ): CounterReasoningPropositionAlignment {
+  // Legacy DENY is normalized to NEGATED for backward compatibility (slated for future removal)
   const isNegated = polarity === 'NEGATED' || mode === 'DENY';
   if (isNegated) {
     return invertPropositionAlignment(alignment);
