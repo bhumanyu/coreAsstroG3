@@ -73,8 +73,8 @@ describe('Career Dasha Synthesis', () => {
     expect(synthesis.factors.length).toBeGreaterThan(0);
 
     const factorIds = synthesis.factors.map((f) => f.id);
-    expect(factorIds).toContain('CAREER_DASHA_MD_SATURN_FUNCTIONAL_ROLE_YOGAKARAKA');
-    expect(factorIds).toContain('CAREER_DASHA_MD_SATURN_DIGNITY_EXALTED');
+    expect(factorIds).toContain('CW09_MD_SATURN_FUNCTIONAL_ROLE_YOGAKARAKA');
+    expect(factorIds).toContain('CW09_MD_SATURN_PLANETARY_DIGNITY_EXALTED');
     expect(synthesis.factors[0].period).toBe('MD');
     expect(synthesis.factors[0].planet).toBe('SATURN');
   });
@@ -580,6 +580,323 @@ describe('Career Dasha Synthesis', () => {
 
       expect(h10Factor?.contributionCategory).toBe('CAREER_STATUS');
       expect(h11Factor?.contributionCategory).toBe('GAINS');
+    });
+  });
+
+  describe('P4: Golden Hierarchy Tests', () => {
+    it('MD challenge + AD support -> combined is dominated/bounded by MD (not flipped to supportive)', () => {
+      const challengingMdAct: DashaPlanetActivation = {
+        planet: Planet.MARS,
+        house: 10,
+        sign: 'CANCER' as any,
+        ownedHouses: [8, 12],
+        functionalRoles: [FunctionalRole.MARAKA_LORD],
+        functionalNature: FunctionalNature.MALEFIC,
+        strength: { score: 25, level: 'WEAK', rawShadbala: 0.6, meetsMinimum: false } as any,
+        dignity: 'DEBILITATED',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const supportiveAdAct = createMockActivation(Planet.JUPITER, [10], FunctionalRole.YOGAKARAKA);
+
+      const neutralPdAct: DashaPlanetActivation = {
+        planet: Planet.VENUS,
+        house: 7,
+        sign: 'LIBRA' as any,
+        ownedHouses: [7],
+        functionalRoles: [],
+        functionalNature: FunctionalNature.NEUTRAL,
+        strength: undefined,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: challengingMdAct, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: supportiveAdAct, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: neutralPdAct, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({ dashaInterpretation: dashaInterp });
+
+      expect(synthesis.combined.hierarchy.mdRole).toBe('PRIMARY');
+      expect(synthesis.combined.hierarchy.adRole).toBe('MODIFIER');
+      expect(synthesis.md.effect).toMatch(/CHALLENGES/);
+      expect(synthesis.ad.effect).toMatch(/SUPPORTS/);
+
+      // Bounded by MD: cannot flip to pure SUPPORTS or STRONGLY_SUPPORTS
+      expect(synthesis.combined.combinedEffect).not.toBe('SUPPORTS');
+      expect(synthesis.combined.combinedEffect).not.toBe('STRONGLY_SUPPORTS');
+      expect(['MIXED', 'CHALLENGES', 'STRONGLY_CHALLENGES']).toContain(synthesis.combined.combinedEffect);
+    });
+
+    it('Strong MD + Weak AD -> MD dominant, AD modifies slightly', () => {
+      const strongMdAct = createMockActivation(Planet.SATURN, [10, 11], FunctionalRole.YOGAKARAKA);
+
+      const weakAdAct: DashaPlanetActivation = {
+        planet: Planet.MERCURY,
+        house: 3,
+        sign: 'GEMINI' as any,
+        ownedHouses: [3],
+        functionalRoles: [FunctionalRole.THIRD_LORD],
+        functionalNature: FunctionalNature.NEUTRAL,
+        strength: { score: 40, level: 'WEAK', rawShadbala: 0.8, meetsMinimum: false } as any,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const pdAct = createMockActivation(Planet.VENUS, [2], FunctionalRole.TRIKONA_LORD);
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: strongMdAct, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: weakAdAct, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: pdAct, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({ dashaInterpretation: dashaInterp });
+
+      expect(synthesis.md.effect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.combined.hierarchy.mdRole).toBe('PRIMARY');
+      expect(['STRONGLY_SUPPORTS', 'SUPPORTS']).toContain(synthesis.combined.combinedEffect);
+      expect(synthesis.combined.combinedScore).toBeGreaterThan(0.5);
+    });
+
+    it('Weak MD + Strong AD -> sub-period activation without MD base (MIXED, cannot produce full support)', () => {
+      const unlinkedMdAct: DashaPlanetActivation = {
+        planet: Planet.MOON,
+        house: 4,
+        sign: 'CANCER' as any,
+        ownedHouses: [4],
+        functionalRoles: [],
+        functionalNature: FunctionalNature.NEUTRAL,
+        strength: undefined,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const strongAdAct = createMockActivation(Planet.SATURN, [10, 11], FunctionalRole.YOGAKARAKA);
+      const pdAct = createMockActivation(Planet.VENUS, [2], FunctionalRole.TRIKONA_LORD);
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: unlinkedMdAct, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: strongAdAct, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: pdAct, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({ dashaInterpretation: dashaInterp });
+
+      expect(synthesis.md.effect).toBe('DOES_NOT_ACTIVATE');
+      expect(synthesis.ad.effect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.combined.combinedEffect).toBe('MIXED');
+      expect(synthesis.combined.summary).toContain('does not establish a primary Career theme');
+      expect(synthesis.combined.summary).toContain('temporary sub-period activation');
+    });
+
+    it('PD cannot overturn an MD+AD direction (refinement role respected)', () => {
+      const mdAct = createMockActivation(Planet.SATURN, [10, 11], FunctionalRole.YOGAKARAKA);
+      const adAct = createMockActivation(Planet.JUPITER, [10, 9], FunctionalRole.KENDRA_LORD);
+
+      const challengingPdAct: DashaPlanetActivation = {
+        planet: Planet.MARS,
+        house: 10,
+        sign: 'CANCER' as any,
+        ownedHouses: [8, 12],
+        functionalRoles: [FunctionalRole.DUSTHANA_LORD],
+        functionalNature: FunctionalNature.MALEFIC,
+        strength: { score: 20, level: 'WEAK', rawShadbala: 0.5, meetsMinimum: false } as any,
+        dignity: 'DEBILITATED',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: mdAct, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: adAct, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: challengingPdAct, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({ dashaInterpretation: dashaInterp });
+
+      expect(synthesis.combined.hierarchy.pdRole).toBe('REFINEMENT');
+      expect(synthesis.md.effect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.ad.effect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.pd.effect).toMatch(/CHALLENGES/);
+
+      // PD refinement cannot flip supportive MD+AD into CHALLENGES or STRONGLY_CHALLENGES
+      expect(synthesis.combined.combinedEffect).not.toBe('CHALLENGES');
+      expect(synthesis.combined.combinedEffect).not.toBe('STRONGLY_CHALLENGES');
+      expect(['STRONGLY_SUPPORTS', 'SUPPORTS', 'MIXED']).toContain(synthesis.combined.combinedEffect);
+    });
+  });
+
+  describe('P5: Relationship Semantics Tests', () => {
+    it('Sun MD + Saturn AD (natural ENEMY) yields active but constrained result (MIXED/qualified)', () => {
+      const sunMdAct: DashaPlanetActivation = {
+        planet: Planet.SUN,
+        house: 10,
+        sign: 'LEO' as any,
+        ownedHouses: [10],
+        functionalRoles: [FunctionalRole.KENDRA_LORD],
+        functionalNature: FunctionalNature.BENEFIC,
+        strength: { score: 75, level: 'STRONG', rawShadbala: 1.3, meetsMinimum: true } as any,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const saturnAdAct: DashaPlanetActivation = {
+        planet: Planet.SATURN,
+        house: 6,
+        sign: 'AQUARIUS' as any,
+        ownedHouses: [6],
+        functionalRoles: [],
+        functionalNature: FunctionalNature.NEUTRAL,
+        strength: { score: 70, level: 'STRONG', rawShadbala: 1.2, meetsMinimum: true } as any,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const pdAct = createMockActivation(Planet.MERCURY, [2, 11], FunctionalRole.KENDRA_LORD);
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: sunMdAct, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: saturnAdAct, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: pdAct, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({ dashaInterpretation: dashaInterp });
+
+      const mdAdRel = synthesis.combined.relationships?.find(
+        (r) => r.sourcePlanet === Planet.SUN && r.targetPlanet === Planet.SATURN
+      );
+      expect(mdAdRel).toBeDefined();
+      expect(mdAdRel?.relationshipType).toBe('ENEMY');
+      expect(mdAdRel?.careerImpact).toBe('CONFLICTING');
+
+      // Assert evidence includes relationship provenance
+      expect(mdAdRel?.evidence.length).toBeGreaterThan(0);
+      const relEvidence = mdAdRel?.evidence.find((e) => e.ruleId?.includes('SUN_SATURN'));
+      expect(relEvidence).toBeDefined();
+      expect(relEvidence?.planets).toEqual([Planet.SUN, Planet.SATURN]);
+      expect(relEvidence?.direction).toBe('CHALLENGE');
+
+      // Combined effect is constrained to MIXED
+      expect(synthesis.combined.combinedEffect).toBe('MIXED');
+      expect(synthesis.combined.summary).toContain('active but constrained by SUN-SATURN conflicting relationship');
+    });
+
+    it('Sun MD + Mars AD (natural FRIEND) produces reinforced support with relationship provenance', () => {
+      const sunMdAct: DashaPlanetActivation = {
+        planet: Planet.SUN,
+        house: 10,
+        sign: 'LEO' as any,
+        ownedHouses: [10],
+        functionalRoles: [FunctionalRole.KENDRA_LORD],
+        functionalNature: FunctionalNature.BENEFIC,
+        strength: { score: 80, level: 'STRONG', rawShadbala: 1.4, meetsMinimum: true } as any,
+        dignity: 'OWN_SIGN',
+        castAspects: [],
+        receivedAspects: [],
+        yogaParticipation: [],
+        houseEvidence: [],
+        evidence: []
+      };
+
+      const marsAdAct = createMockActivation(Planet.MARS, [10, 1], FunctionalRole.YOGAKARAKA);
+      const pdAct = createMockActivation(Planet.JUPITER, [9], FunctionalRole.TRIKONA_LORD);
+
+      const dashaInterp: any = {
+        current: {
+          at: '2026-09-01T00:00:00.000Z',
+          status: 'AVAILABLE',
+          mahadasha: { natal: sunMdAct, start: '2020-01-01', end: '2030-01-01' },
+          antardasha: { natal: marsAdAct, start: '2025-01-01', end: '2026-06-01' },
+          pratyantardasha: { natal: pdAct, start: '2026-01-01', end: '2026-03-01' },
+          evidence: [],
+          confidence: 'HIGH'
+        }
+      };
+
+      const synthesis = buildCareerDashaSynthesis({ dashaInterpretation: dashaInterp });
+
+      const mdAdRel = synthesis.combined.relationships?.find(
+        (r) => r.sourcePlanet === Planet.SUN && r.targetPlanet === Planet.MARS
+      );
+      expect(mdAdRel).toBeDefined();
+      expect(mdAdRel?.relationshipType).toBe('FRIEND');
+      expect(mdAdRel?.careerImpact).toBe('SUPPORTIVE');
+
+      // Assert evidence includes relationship provenance
+      expect(mdAdRel?.evidence.length).toBeGreaterThan(0);
+      const friendEvidence = mdAdRel?.evidence.find((e) => e.ruleId?.includes('SUN_MARS'));
+      expect(friendEvidence).toBeDefined();
+      expect(friendEvidence?.planets).toEqual([Planet.SUN, Planet.MARS]);
+      expect(friendEvidence?.direction).toBe('SUPPORT');
+
+      // Dual 10th activation evidence
+      const dual10Evidence = mdAdRel?.evidence.find((e) => e.ruleId === 'CAREER_DASHA_DUAL_10_ACTIVATION');
+      expect(dual10Evidence).toBeDefined();
+      expect(dual10Evidence?.planets).toEqual([Planet.SUN, Planet.MARS]);
+
+      // Reinforced support
+      expect(synthesis.combined.combinedEffect).toBe('STRONGLY_SUPPORTS');
+      expect(synthesis.combined.combinedScore).toBeGreaterThan(0.7);
     });
   });
 });

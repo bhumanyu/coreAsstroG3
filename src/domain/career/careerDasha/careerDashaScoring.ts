@@ -2,7 +2,8 @@ import type { InterpretationConfidence } from '../../../engine/planetInterpretat
 import type {
   CareerDashaEffect,
   CareerDashaFactor,
-  CareerDashaPlanetSynthesis
+  CareerDashaPlanetSynthesis,
+  DashaPlanetRelationship
 } from './careerDashaSynthesisTypes';
 
 export function effectScore(effect: CareerDashaEffect): number {
@@ -81,7 +82,8 @@ export function resolveCombinedCareerDashaEffect(
   md: CareerDashaPlanetSynthesis,
   ad: CareerDashaPlanetSynthesis,
   pd: CareerDashaPlanetSynthesis,
-  _combinedScore?: number
+  _combinedScore?: number,
+  relationships?: readonly DashaPlanetRelationship[]
 ): CareerDashaEffect {
   if (
     md.effect === 'INSUFFICIENT_DATA' ||
@@ -100,125 +102,163 @@ export function resolveCombinedCareerDashaEffect(
   }
 
   // ISSUE 9: Structural hierarchy (MD base -> AD allowed transitions -> PD refinement)
+  let baseEffect: CareerDashaEffect;
   switch (md.effect) {
     case 'STRONGLY_SUPPORTS': {
       if (ad.effect === 'STRONGLY_SUPPORTS') {
         if (pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'SUPPORTS';
+          baseEffect = 'SUPPORTS';
+        } else {
+          baseEffect = 'STRONGLY_SUPPORTS';
         }
-        return 'STRONGLY_SUPPORTS';
-      }
-      if (ad.effect === 'SUPPORTS') {
+      } else if (ad.effect === 'SUPPORTS') {
         if (pd.effect === 'CHALLENGES' || pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'SUPPORTS';
+          baseEffect = 'SUPPORTS';
+        } else {
+          baseEffect = 'STRONGLY_SUPPORTS';
         }
-        return 'STRONGLY_SUPPORTS';
-      }
-      if (ad.effect === 'MIXED' || ad.effect === 'DOES_NOT_ACTIVATE') {
+      } else if (ad.effect === 'MIXED' || ad.effect === 'DOES_NOT_ACTIVATE') {
         if (pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'MIXED';
+          baseEffect = 'MIXED';
+        } else {
+          baseEffect = 'SUPPORTS';
         }
-        return 'SUPPORTS';
+      } else {
+        // ad.effect is CHALLENGES or STRONGLY_CHALLENGES
+        baseEffect = 'MIXED';
       }
-      // ad.effect is CHALLENGES or STRONGLY_CHALLENGES
-      return 'MIXED';
+      break;
     }
     case 'SUPPORTS': {
       if (ad.effect === 'STRONGLY_SUPPORTS') {
         if (pd.effect === 'STRONGLY_CHALLENGES' || pd.effect === 'CHALLENGES') {
-          return 'SUPPORTS';
+          baseEffect = 'SUPPORTS';
+        } else {
+          baseEffect = 'STRONGLY_SUPPORTS';
         }
-        return 'STRONGLY_SUPPORTS';
-      }
-      if (ad.effect === 'SUPPORTS') {
+      } else if (ad.effect === 'SUPPORTS') {
         if (pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'MIXED';
+          baseEffect = 'MIXED';
+        } else {
+          baseEffect = 'SUPPORTS';
         }
-        return 'SUPPORTS';
-      }
-      if (ad.effect === 'MIXED' || ad.effect === 'DOES_NOT_ACTIVATE') {
+      } else if (ad.effect === 'MIXED' || ad.effect === 'DOES_NOT_ACTIVATE') {
         if (pd.effect === 'CHALLENGES' || pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'MIXED';
+          baseEffect = 'MIXED';
+        } else {
+          baseEffect = 'SUPPORTS';
         }
-        return 'SUPPORTS';
-      }
-      if (ad.effect === 'CHALLENGES') {
-        return 'MIXED';
-      }
-      if (ad.effect === 'STRONGLY_CHALLENGES') {
+      } else if (ad.effect === 'CHALLENGES') {
+        baseEffect = 'MIXED';
+      } else if (ad.effect === 'STRONGLY_CHALLENGES') {
         if (pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'CHALLENGES';
+          baseEffect = 'CHALLENGES';
+        } else {
+          baseEffect = 'MIXED';
         }
-        return 'MIXED';
+      } else {
+        baseEffect = 'SUPPORTS';
       }
-      return 'SUPPORTS';
+      break;
     }
     case 'MIXED': {
       if (ad.effect === 'STRONGLY_SUPPORTS' || ad.effect === 'SUPPORTS') {
         if (pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'MIXED';
+          baseEffect = 'MIXED';
+        } else {
+          baseEffect = 'SUPPORTS';
         }
-        return 'SUPPORTS';
-      }
-      if (ad.effect === 'STRONGLY_CHALLENGES' || ad.effect === 'CHALLENGES') {
+      } else if (ad.effect === 'STRONGLY_CHALLENGES' || ad.effect === 'CHALLENGES') {
         if (pd.effect === 'STRONGLY_SUPPORTS') {
-          return 'MIXED';
+          baseEffect = 'MIXED';
+        } else {
+          baseEffect = 'CHALLENGES';
         }
-        return 'CHALLENGES';
+      } else if (pd.effect === 'STRONGLY_SUPPORTS') {
+        baseEffect = 'SUPPORTS';
+      } else if (pd.effect === 'STRONGLY_CHALLENGES') {
+        baseEffect = 'CHALLENGES';
+      } else {
+        baseEffect = 'MIXED';
       }
-      if (pd.effect === 'STRONGLY_SUPPORTS') {
-        return 'SUPPORTS';
-      }
-      if (pd.effect === 'STRONGLY_CHALLENGES') {
-        return 'CHALLENGES';
-      }
-      return 'MIXED';
+      break;
     }
     case 'CHALLENGES': {
       if (ad.effect === 'STRONGLY_SUPPORTS' || ad.effect === 'SUPPORTS') {
-        return 'MIXED';
-      }
-      if (ad.effect === 'STRONGLY_CHALLENGES') {
-        return 'STRONGLY_CHALLENGES';
-      }
-      if (ad.effect === 'CHALLENGES') {
+        baseEffect = 'MIXED';
+      } else if (ad.effect === 'STRONGLY_CHALLENGES') {
+        baseEffect = 'STRONGLY_CHALLENGES';
+      } else if (ad.effect === 'CHALLENGES') {
         if (pd.effect === 'STRONGLY_CHALLENGES') {
-          return 'STRONGLY_CHALLENGES';
+          baseEffect = 'STRONGLY_CHALLENGES';
+        } else {
+          baseEffect = 'CHALLENGES';
         }
-        return 'CHALLENGES';
+      } else if (pd.effect === 'STRONGLY_SUPPORTS') {
+        baseEffect = 'MIXED';
+      } else if (pd.effect === 'STRONGLY_CHALLENGES') {
+        baseEffect = 'STRONGLY_CHALLENGES';
+      } else {
+        baseEffect = 'CHALLENGES';
       }
-      if (pd.effect === 'STRONGLY_SUPPORTS') {
-        return 'MIXED';
-      }
-      if (pd.effect === 'STRONGLY_CHALLENGES') {
-        return 'STRONGLY_CHALLENGES';
-      }
-      return 'CHALLENGES';
+      break;
     }
     case 'STRONGLY_CHALLENGES': {
       if (ad.effect === 'STRONGLY_SUPPORTS') {
-        return 'MIXED';
+        baseEffect = 'MIXED';
+      } else if (ad.effect === 'SUPPORTS') {
+        baseEffect = 'CHALLENGES';
+      } else if (ad.effect === 'CHALLENGES' || ad.effect === 'STRONGLY_CHALLENGES') {
+        baseEffect = 'STRONGLY_CHALLENGES';
+      } else if (pd.effect === 'STRONGLY_SUPPORTS') {
+        baseEffect = 'CHALLENGES';
+      } else {
+        baseEffect = 'STRONGLY_CHALLENGES';
       }
-      if (ad.effect === 'SUPPORTS') {
-        return 'CHALLENGES';
-      }
-      if (ad.effect === 'CHALLENGES' || ad.effect === 'STRONGLY_CHALLENGES') {
-        return 'STRONGLY_CHALLENGES';
-      }
-      if (pd.effect === 'STRONGLY_SUPPORTS') {
-        return 'CHALLENGES';
-      }
-      return 'STRONGLY_CHALLENGES';
+      break;
     }
     default:
-      return 'DOES_NOT_ACTIVATE';
+      baseEffect = 'DOES_NOT_ACTIVATE';
+      break;
   }
+
+  const mdAdRel = relationships?.find(
+    (r) =>
+      (r.sourcePeriod === 'MD' && r.targetPeriod === 'AD') ||
+      (r.fromPeriod === 'MD' && r.toPeriod === 'AD')
+  );
+
+  if (!mdAdRel) {
+    return baseEffect;
+  }
+
+  if (mdAdRel.careerImpact === 'CONFLICTING') {
+    // A conflicting MD<->AD relationship constrains supportive effects without overturning MD dominance
+    if (baseEffect === 'STRONGLY_SUPPORTS' || baseEffect === 'SUPPORTS') {
+      return 'MIXED';
+    }
+    return baseEffect;
+  }
+
+  if (mdAdRel.careerImpact === 'SUPPORTIVE') {
+    // A supportive MD<->AD relationship reinforces active career effects, especially with shared house 10
+    const hasShared10 =
+      mdAdRel.sharedHouses?.includes(10) ||
+      mdAdRel.evidence.some((e) => e.ruleId === 'CAREER_DASHA_DUAL_10_ACTIVATION');
+    if (baseEffect === 'SUPPORTS' && hasShared10 && (md.effect === 'SUPPORTS' || md.effect === 'STRONGLY_SUPPORTS')) {
+      return 'STRONGLY_SUPPORTS';
+    }
+    return baseEffect;
+  }
+
+  return baseEffect;
 }
 
 export function combineCareerDashaConfidence(
   mdConf: InterpretationConfidence,
   adConf: InterpretationConfidence,
-  pdConf: InterpretationConfidence
+  pdConf: InterpretationConfidence,
+  relationships?: readonly DashaPlanetRelationship[]
 ): InterpretationConfidence {
   const confToScore = (c: InterpretationConfidence): number => {
     switch (c) {
@@ -232,7 +272,19 @@ export function combineCareerDashaConfidence(
     }
   };
 
-  const weighted = (confToScore(mdConf) * 1.0 + confToScore(adConf) * 0.6 + confToScore(pdConf) * 0.3) / 1.9;
+  const mdAdRel = relationships?.find(
+    (r) =>
+      (r.sourcePeriod === 'MD' && r.targetPeriod === 'AD') ||
+      (r.fromPeriod === 'MD' && r.toPeriod === 'AD')
+  );
+
+  let weighted = (confToScore(mdConf) * 1.0 + confToScore(adConf) * 0.6 + confToScore(pdConf) * 0.3) / 1.9;
+  if (mdAdRel?.careerImpact === 'CONFLICTING') {
+    weighted -= 0.25;
+  } else if (mdAdRel?.careerImpact === 'SUPPORTIVE' && mdAdRel.sharedHouses?.includes(10)) {
+    weighted += 0.1;
+  }
+
   if (weighted >= 2.5) return 'HIGH';
   if (weighted >= 1.7) return 'MEDIUM';
   return 'LOW';
