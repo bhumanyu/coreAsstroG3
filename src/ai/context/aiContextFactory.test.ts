@@ -1292,5 +1292,128 @@ describe('AI Context Factory', () => {
         pd: { effect: 'CHALLENGES', role: 'REFINEMENT' }
       });
     });
+
+    it('should not throw conflicting evidence id when Pratyantardasha lord participates in multiple same-type yogas', () => {
+      // Reproduce scenario where Pratyantardasha lord (e.g. SUN) participates in multiple same-type yogas (e.g. RAJA_YOGA)
+      const canonicalYogaId1 = 'RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=1,5';
+      const canonicalYogaId2 = 'RAJA_YOGA|CATEGORY=RAJA|PLANETS=MARS,SUN|HOUSES=1,9';
+
+      const pdYogaEvidence1 = {
+        ruleId: `DASHA_LORD_YOGA:${canonicalYogaId1}`,
+        type: 'YOGA' as const,
+        level: 'PRATYANTARDASHA' as const,
+        planets: [Planet.SUN],
+        houses: [1, 5],
+        statement: 'Dasha lord SUN participates in RAJA_YOGA yoga (status: STRONG).',
+        effect: 'NEUTRAL' as const,
+        source: 'Yoga Engine'
+      };
+
+      const pdYogaEvidence2 = {
+        ruleId: `DASHA_LORD_YOGA:${canonicalYogaId2}`,
+        type: 'YOGA' as const,
+        level: 'PRATYANTARDASHA' as const,
+        planets: [Planet.SUN],
+        houses: [1, 9],
+        statement: 'Dasha lord SUN participates in RAJA_YOGA yoga (status: PRESENT).',
+        effect: 'NEUTRAL' as const,
+        source: 'Yoga Engine'
+      };
+
+      const currentWithMultipleYogas = {
+        ...horoscope.dashaInterpretation!.current!,
+        pratyantardasha: {
+          ...horoscope.dashaInterpretation!.current!.pratyantardasha!,
+          planet: Planet.SUN,
+          natal: {
+            ...horoscope.dashaInterpretation!.current!.pratyantardasha!.natal,
+            planet: Planet.SUN,
+            yogaParticipation: [
+              {
+                yogaType: 'RAJA_YOGA' as any,
+                yogaId: canonicalYogaId1,
+                finalStatus: 'STRONG' as const,
+                relationship: 'PLANET' as const,
+                houses: [1, 5]
+              },
+              {
+                yogaType: 'RAJA_YOGA' as any,
+                yogaId: canonicalYogaId2,
+                finalStatus: 'PRESENT' as const,
+                relationship: 'PLANET' as const,
+                houses: [1, 9]
+              }
+            ],
+            evidence: [pdYogaEvidence1, pdYogaEvidence2]
+          }
+        }
+      };
+
+      // 1. Direct buildDashaEvidence verification
+      expect(() => buildDashaEvidence(currentWithMultipleYogas as any)).not.toThrow();
+      const dashaEvidence = buildDashaEvidence(currentWithMultipleYogas as any);
+      const yogaEvs = dashaEvidence.filter(
+        e => e.dashaLevel === 'PRATYANTARDASHA' && e.id.includes('DASHA_LORD_YOGA')
+      );
+      expect(yogaEvs.length).toBe(2);
+      expect(yogaEvs[0].id).not.toBe(yogaEvs[1].id);
+
+      // 2. End-to-end buildAiContext verification
+      const horoscopeWithPdYogas = {
+        ...horoscope,
+        dashaInterpretation: {
+          ...horoscope.dashaInterpretation!,
+          current: currentWithMultipleYogas as any
+        }
+      };
+
+      let aiCtx: any;
+      expect(() => {
+        aiCtx = buildAiContext(horoscopeWithPdYogas);
+      }).not.toThrow();
+
+      const contextYogaEvs = aiCtx.evidence.filter(
+        (e: any) => e.dashaLevel === 'PRATYANTARDASHA' && e.id.includes('DASHA_LORD_YOGA')
+      );
+      expect(contextYogaEvs.length).toBe(2);
+      expect(contextYogaEvs[0].id).not.toBe(contextYogaEvs[1].id);
+    });
+
+    it('preserves fail-loud invariant when genuinely conflicting evidence IDs are encountered', () => {
+      const conflictingEvidence1 = {
+        ruleId: 'CONFLICTING_RULE',
+        type: 'YOGA' as const,
+        level: 'PRATYANTARDASHA' as const,
+        planets: [Planet.SUN],
+        houses: [1],
+        statement: 'Statement A',
+        effect: 'NEUTRAL' as const,
+        source: 'Yoga Engine'
+      };
+      const conflictingEvidence2 = {
+        ruleId: 'CONFLICTING_RULE',
+        type: 'YOGA' as const,
+        level: 'PRATYANTARDASHA' as const,
+        planets: [Planet.SUN],
+        houses: [1],
+        statement: 'Statement B (conflicting)',
+        effect: 'NEUTRAL' as const,
+        source: 'Yoga Engine'
+      };
+      const currentConflicting = {
+        ...horoscope.dashaInterpretation!.current!,
+        pratyantardasha: {
+          ...horoscope.dashaInterpretation!.current!.pratyantardasha!,
+          natal: {
+            ...horoscope.dashaInterpretation!.current!.pratyantardasha!.natal,
+            evidence: [conflictingEvidence1, conflictingEvidence2]
+          }
+        }
+      };
+
+      expect(() => buildDashaEvidence(currentConflicting as any)).toThrow(
+        /Cannot build AiContext: conflicting evidence id/
+      );
+    });
   });
 });

@@ -30,6 +30,90 @@ import {
   ActiveDashaInterpretation,
   DashaBirthAnchor
 } from './dashaInterpretationTypes';
+import { YogaResult, YogaStrengthLevel } from '../yoga/yogaTypes';
+
+export type YogaFinalStatus = 'PRESENT' | 'WEAKENED' | 'STRONG' | 'CANCELLED';
+
+const FINAL_STATUS_PRECEDENCE: Record<YogaFinalStatus, number> = {
+  CANCELLED: 4,
+  WEAKENED: 3,
+  PRESENT: 2,
+  STRONG: 1
+};
+
+/**
+ * Reconciles two finalStatus values using conservative (cancellation-dominant) precedence:
+ * CANCELLED > WEAKENED > PRESENT > STRONG.
+ *
+ * Rationale: In Vedic dasha synthesis, any astrological condition that invalidates or weakens
+ * a yoga (e.g. bhanga, combustion, planetary war, dusthana placement) must take precedence
+ * over an optimistic status to prevent false promises in activation outcomes.
+ */
+export function mergeYogaFinalStatus(
+  a?: YogaFinalStatus,
+  b?: YogaFinalStatus
+): YogaFinalStatus | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  const rankA = FINAL_STATUS_PRECEDENCE[a] ?? 0;
+  const rankB = FINAL_STATUS_PRECEDENCE[b] ?? 0;
+  return rankA >= rankB ? a : b;
+}
+
+const YOGA_STRENGTH_LEVEL_RANK: Record<YogaStrengthLevel, number> = {
+  [YogaStrengthLevel.VERY_STRONG]: 5,
+  [YogaStrengthLevel.STRONG]: 4,
+  [YogaStrengthLevel.MODERATE]: 3,
+  [YogaStrengthLevel.WEAK]: 2,
+  [YogaStrengthLevel.VERY_WEAK]: 1
+};
+
+/**
+ * Reconciles two YogaStrengthLevel values by retaining the higher strength level.
+ * If one is undefined, the defined value is retained.
+ */
+export function mergeYogaStrength(
+  a?: YogaStrengthLevel,
+  b?: YogaStrengthLevel
+): YogaStrengthLevel | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  const rankA = YOGA_STRENGTH_LEVEL_RANK[a] ?? 0;
+  const rankB = YOGA_STRENGTH_LEVEL_RANK[b] ?? 0;
+  return rankA >= rankB ? a : b;
+}
+
+const RELATIONSHIP_PRECEDENCE: Record<'PLANET' | 'HOUSE_LORD' | 'OCCUPANT', number> = {
+  PLANET: 3,
+  HOUSE_LORD: 2,
+  OCCUPANT: 1
+};
+
+export function mergeRelationship(
+  a: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT',
+  b: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT'
+): 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' {
+  const rankA = RELATIONSHIP_PRECEDENCE[a] ?? 0;
+  const rankB = RELATIONSHIP_PRECEDENCE[b] ?? 0;
+  return rankA >= rankB ? a : b;
+}
+
+/**
+ * Builds a deterministic, order-independent canonical fingerprint for a yoga result.
+ * Builds an ID purely from the yoga's semantic identity:
+ * `type`, `category`, sorted participating `planets`, and sorted `houses` (filtering out undefined).
+ * Format: `${type}|CATEGORY=${category}|PLANETS=${sortedPlanets.join(',')}|HOUSES=${sortedHouses.join(',')}`
+ * e.g. `RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=5,10`
+ */
+export function computeCanonicalYogaId(y: YogaResult): string {
+  const sortedPlanets = Array.from(
+    new Set((y.planets ?? []).filter((p): p is Planet => Boolean(p)))
+  ).sort();
+  const sortedHouses = Array.from(
+    new Set((y.houses ?? []).filter((h): h is number => typeof h === 'number'))
+  ).sort((a, b) => a - b);
+  return `${y.type}|CATEGORY=${y.category}|PLANETS=${sortedPlanets.join(',')}|HOUSES=${sortedHouses.join(',')}`;
+}
 
 function combineInterpretationConfidence(
   ...levels: InterpretationConfidence[]
@@ -117,7 +201,7 @@ function buildActivation(
     (input.natalGrahaDrishti.aspects ?? []).filter(a => a.targetPlanet === planet)
   );
 
-  const yogaParticipation: DashaYogaReference[] = [];
+  const yogaMap = new Map<string, DashaYogaReference>();
   for (const y of input.yogas.yogas ?? []) {
     if (y.planets.includes(planet)) {
       const rawRel = (y as any).relationship ?? (y as any).participantRelationships?.[planet];
@@ -125,17 +209,49 @@ function buildActivation(
       if (rawRel === 'HOUSE_LORD' || rawRel === 'OCCUPANT' || rawRel === 'PLANET') {
         relationship = rawRel;
       }
-      yogaParticipation.push(
-        Object.freeze({
-          yogaType: y.type,
-          yogaId: y.type,
-          strength: y.assessment?.strength,
-          finalStatus: y.assessment?.finalStatus,
-          relationship
-        })
+
+      const validHouses: readonly number[] = (y.houses || []).filter(
+        (h): h is number => typeof h === 'number'
       );
+      const canonicalYogaId = computeCanonicalYogaId(y);
+
+      const existing = yogaMap.get(canonicalYogaId);
+      if (existing) {
+        // Reconcile and merge duplicate yoga assessment deterministically:
+        // finalStatus uses conservative precedence (CANCELLED > WEAKENED > PRESENT > STRONG)
+        // strength retains the higher strength level.
+        const mergedStatus = mergeYogaFinalStatus(existing.finalStatus, y.assessment?.finalStatus);
+        const mergedStrength = mergeYogaStrength(existing.strength, y.assessment?.strength);
+        const mergedRel = mergeRelationship(existing.relationship, relationship);
+
+        yogaMap.set(
+          canonicalYogaId,
+          Object.freeze({
+            ...existing,
+            strength: mergedStrength,
+            finalStatus: mergedStatus,
+            relationship: mergedRel
+          })
+        );
+      } else {
+        yogaMap.set(
+          canonicalYogaId,
+          Object.freeze({
+            yogaType: y.type,
+            yogaId: canonicalYogaId,
+            strength: y.assessment?.strength,
+            finalStatus: y.assessment?.finalStatus,
+            relationship,
+            ...(validHouses.length > 0 ? { houses: Object.freeze([...validHouses]) } : {})
+          })
+        );
+      }
     }
   }
+
+  const yogaParticipation: DashaYogaReference[] = Array.from(yogaMap.values()).sort((a, b) =>
+    a.yogaId.localeCompare(b.yogaId)
+  );
 
   const evidence: DashaInterpretationEvidence[] = [];
 
@@ -298,12 +414,15 @@ function buildActivation(
 
   // YOGA
   for (const yRef of yogaParticipation) {
+    const yogaRuleId = `DASHA_LORD_YOGA:${yRef.yogaId}`;
+
     evidence.push(
       Object.freeze({
-        ruleId: `DASHA_LORD_YOGA_${yRef.yogaType}`,
+        ruleId: yogaRuleId,
         type: 'YOGA',
         level,
         planets: Object.freeze([planet]),
+        ...(yRef.houses && yRef.houses.length > 0 ? { houses: Object.freeze([...yRef.houses]) } : {}),
         statement: `Dasha lord ${planet} participates in ${yRef.yogaType} yoga (status: ${yRef.finalStatus ?? 'PRESENT'}).`,
         effect: 'NEUTRAL',
         source: 'Yoga Engine'

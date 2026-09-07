@@ -58,10 +58,11 @@ export interface DashaInterpretationEvidence {
 
 export interface DashaYogaReference {
   readonly yogaType: YogaType;
-  readonly yogaId?: string;
+  readonly yogaId: string;
   readonly strength?: YogaStrengthLevel;
   readonly finalStatus?: 'PRESENT' | 'WEAKENED' | 'STRONG' | 'CANCELLED';
   readonly relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT';
+  readonly houses?: readonly number[];
 }
 
 export interface DashaPlanetActivation {
