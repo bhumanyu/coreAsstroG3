@@ -134,10 +134,10 @@ export interface LifeAnalysisDomainSummaryViewModel {
 }
 
 export interface LifeAnalysisCareerDetailViewModel {
-  readonly natalPromise: DomainStrength;
+  readonly natalPromise: DomainStrength | 'UNAVAILABLE';
   readonly d10Relationship: VargaRelationship;
-  readonly currentDashaEffect: TimingActivationEffect;
-  readonly currentTransitEffect: TransitTriggerEffect;
+  readonly currentDashaEffect?: TimingActivationEffect | 'UNAVAILABLE' | string;
+  readonly currentTransitEffect?: TransitTriggerEffect | 'UNAVAILABLE' | string;
   readonly currentActivation?: string;
   readonly currentPressure?: string;
   readonly dominantManifestations?: readonly string[];
@@ -146,48 +146,48 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly statement?: string;
   readonly promiseHeadline?: string;
   readonly promiseStatement?: string;
-  readonly status?: DomainStrength;
+  readonly status?: DomainStrength | 'UNAVAILABLE';
   readonly capacityLevel?: string;
   readonly actionableTakeaways?: readonly string[];
   readonly d10Statement?: string;
   readonly qualifications?: readonly LifeAnalysisQualification[];
   readonly timing?: CareerTimingProduct;
-  readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
+  readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL' | 'UNAVAILABLE';
   readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesis[];
   readonly finalSynthesis?: CareerWealthFinalSynthesis;
 }
 
 export interface LifeAnalysisWealthDetailViewModel {
-  readonly natalPromise: DomainStrength;
+  readonly natalPromise: DomainStrength | 'UNAVAILABLE';
   readonly d2Relationship: VargaRelationship;
-  readonly currentDashaEffect: TimingActivationEffect;
-  readonly currentTransitEffect: TransitTriggerEffect;
-  readonly overallStatus: WealthDimensionStatus;
-  readonly accumulationStatus: WealthDimensionStatus;
-  readonly gainsStatus: WealthDimensionStatus;
-  readonly fortuneStatus: WealthDimensionStatus;
-  readonly speculationStatus: WealthDimensionStatus;
+  readonly currentDashaEffect?: TimingActivationEffect | 'UNAVAILABLE' | string;
+  readonly currentTransitEffect?: TransitTriggerEffect | 'UNAVAILABLE' | string;
+  readonly overallStatus: WealthDimensionStatus | 'UNAVAILABLE';
+  readonly accumulationStatus: WealthDimensionStatus | 'UNAVAILABLE';
+  readonly gainsStatus: WealthDimensionStatus | 'UNAVAILABLE';
+  readonly fortuneStatus: WealthDimensionStatus | 'UNAVAILABLE';
+  readonly speculationStatus: WealthDimensionStatus | 'UNAVAILABLE';
   readonly dominantManifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;
   readonly promiseHeadline?: string;
   readonly promiseStatement?: string;
-  readonly status?: DomainStrength;
-  readonly accumulation?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
-  readonly gains?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
-  readonly fortune?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
-  readonly speculation?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
+  readonly status?: DomainStrength | 'UNAVAILABLE';
+  readonly accumulation?: { readonly status?: WealthDimensionStatus | 'UNAVAILABLE'; readonly statement?: string };
+  readonly gains?: { readonly status?: WealthDimensionStatus | 'UNAVAILABLE'; readonly statement?: string };
+  readonly fortune?: { readonly status?: WealthDimensionStatus | 'UNAVAILABLE'; readonly statement?: string };
+  readonly speculation?: { readonly status?: WealthDimensionStatus | 'UNAVAILABLE'; readonly statement?: string };
   readonly d2Statement?: string;
   readonly qualifications?: readonly LifeAnalysisQualification[];
   readonly timing?: WealthTimingProduct;
   readonly dimensionTiming?: {
-    readonly accumulation: TimingActivationEffect;
-    readonly gains: TimingActivationEffect;
-    readonly fortune: TimingActivationEffect;
-    readonly speculation: TimingActivationEffect;
+    readonly accumulation: TimingActivationEffect | 'UNAVAILABLE';
+    readonly gains: TimingActivationEffect | 'UNAVAILABLE';
+    readonly fortune: TimingActivationEffect | 'UNAVAILABLE';
+    readonly speculation: TimingActivationEffect | 'UNAVAILABLE';
   };
-  readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
+  readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL' | 'UNAVAILABLE';
   readonly dashaHierarchy?: DashaWealthHierarchySynthesis;
   readonly manifestationSynthesis?: WealthManifestationSynthesis;
   readonly finalSynthesis?: CareerWealthFinalSynthesis;

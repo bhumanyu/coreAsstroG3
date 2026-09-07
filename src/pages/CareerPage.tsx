@@ -8,6 +8,11 @@ import type {
   TransitTriggerEffect,
   ConfidenceLevel
 } from '../product/life-analysis/lifeAnalysisTypes';
+import type {
+  PromiseStrength,
+  ActivationEffect,
+  TransitEffect
+} from '../product/analysis';
 import type { ProductAnalysisState } from '../app/AppState';
 import { selectCareer } from '../product/analysis/productAnalysisSelectors';
 import { PageHeading } from '../components/layout/PageHeading';
@@ -71,8 +76,8 @@ export const CareerPage: React.FC<CareerPageProps> = ({
           domain: 'CAREER' as const,
           displayName: 'Career & Professional Life',
           status: 'SUPPORTED' as const,
-          strength: (careerFromAggregate.promise.strength as any) || 'STRONG',
-          confidence: (careerFromAggregate.promise.confidence as ConfidenceLevel) || 'HIGH',
+          strength: (careerFromAggregate.promise.strength as DomainStrength) || 'UNAVAILABLE',
+          confidence: (careerFromAggregate.promise.confidence as ConfidenceLevel) || 'MEDIUM',
           conclusion: careerFromAggregate.promise.statement || '',
           headline: careerFromAggregate.promise.headline,
           statement: careerFromAggregate.promise.statement,
@@ -85,20 +90,20 @@ export const CareerPage: React.FC<CareerPageProps> = ({
   const careerDetail = legacyAnalysis?.careerDetail ?? (
     careerFromAggregate
       ? {
-          natalPromise: (careerFromAggregate.promise.strength as DomainStrength) || 'STRONG',
-          d10Relationship: (careerFromAggregate.d10.relationship === 'UNAVAILABLE' ? 'CONFIRMS' : careerFromAggregate.d10.relationship) as VargaRelationship,
-          currentDashaEffect: (careerFromAggregate.activation.dasha.periods[0]?.effect as TimingActivationEffect) || 'ACTIVATES',
-          currentTransitEffect: (careerFromAggregate.activation.transit.effect as TransitTriggerEffect) || 'TRIGGER',
+          natalPromise: (careerFromAggregate.promise.strength as DomainStrength | 'UNAVAILABLE') || 'UNAVAILABLE',
+          d10Relationship: careerFromAggregate.d10.relationship as VargaRelationship,
+          currentDashaEffect: (careerFromAggregate.activation.dasha.periods[0]?.effect as ActivationEffect) || 'UNAVAILABLE',
+          currentTransitEffect: (careerFromAggregate.activation.transit.effect as TransitEffect) || 'UNAVAILABLE',
           promiseHeadline: careerFromAggregate.promise.headline,
           promiseStatement: careerFromAggregate.promise.statement,
           headline: careerFromAggregate.promise.headline,
           statement: careerFromAggregate.promise.statement,
-          status: (careerFromAggregate.promise.strength as DomainStrength) || 'STRONG',
+          status: (careerFromAggregate.promise.strength as DomainStrength | 'UNAVAILABLE') || 'UNAVAILABLE',
           capacityLevel: 'BALANCED',
           manifestations: careerFromAggregate.promise.dominantManifestations,
           d10Statement: careerFromAggregate.d10.statement,
           timing: {
-            status: 'AVAILABLE' as const,
+            status: careerFromAggregate.activation.dasha.status === 'AVAILABLE' ? ('AVAILABLE' as const) : ('UNAVAILABLE' as const),
             currentActivation: careerFromAggregate.activation.dasha.currentActivation,
             currentPressure: careerFromAggregate.activation.dasha.currentPressure,
             transitEffect: careerFromAggregate.activation.transit.effect as TransitTriggerEffect,

@@ -206,36 +206,34 @@ function mapMethodology(birth: BirthDetails): ProductMethodology {
 function mapChartSummary(horoscope: Horoscope): ProductChartSummary {
   const ascSign =
     horoscope.rasiChart?.ascendantSign ??
-    horoscope.ascendant?.sign ??
-    'ARIES';
+    horoscope.ascendant?.sign;
 
   const rawAscLong =
     horoscope.rasiChart?.ascendantLongitude ??
-    horoscope.ascendant?.longitude ??
-    0;
-  const ascendantDegree = rawAscLong % 30;
+    horoscope.ascendant?.longitude;
+  const ascendantDegree = typeof rawAscLong === 'number' ? rawAscLong % 30 : undefined;
 
   const sunSign =
     horoscope.planetFacts?.[Planet.SUN]?.sign ??
-    horoscope.planetFacts?.[Planet.SUN]?.position?.sign ??
-    'ARIES';
+    horoscope.planetFacts?.[Planet.SUN]?.position?.sign;
 
   const moonSign =
     horoscope.planetFacts?.[Planet.MOON]?.sign ??
-    horoscope.planetFacts?.[Planet.MOON]?.position?.sign ??
-    'ARIES';
+    horoscope.planetFacts?.[Planet.MOON]?.position?.sign;
 
   const moonNakshatra =
     horoscope.planetFacts?.[Planet.MOON]?.nakshatraResult?.nakshatra ??
-    horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata?.name ??
-    'Ashwini';
+    horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata?.name;
+
+  const isAvailable = Boolean(ascSign && sunSign && moonSign);
 
   return {
-    ascendantSign: String(ascSign),
+    ascendantSign: ascSign ? String(ascSign) : 'UNAVAILABLE',
     ascendantDegree,
-    moonSign: String(moonSign),
-    sunSign: String(sunSign),
-    moonNakshatra: String(moonNakshatra)
+    moonSign: moonSign ? String(moonSign) : 'UNAVAILABLE',
+    sunSign: sunSign ? String(sunSign) : 'UNAVAILABLE',
+    moonNakshatra: moonNakshatra ? String(moonNakshatra) : 'UNAVAILABLE',
+    isAvailable
   };
 }
 
@@ -251,7 +249,7 @@ function mapDashaPeriods(
       planet: md.planet ? String(md.planet) : undefined,
       role: 'PRIMARY',
       direction: mapDirection(md.effect),
-      effect: md.effect || 'NEUTRAL',
+      effect: md.effect || 'UNAVAILABLE',
       evidenceIds: Array.isArray(md.evidenceIds) ? [...md.evidenceIds] : [],
       statement: md.statement,
       start: 'start' in md ? md.start : undefined,
@@ -266,7 +264,7 @@ function mapDashaPeriods(
       planet: ad.planet ? String(ad.planet) : undefined,
       role: 'MODIFIER',
       direction: mapDirection(ad.effect),
-      effect: ad.effect || 'NEUTRAL',
+      effect: ad.effect || 'UNAVAILABLE',
       evidenceIds: Array.isArray(ad.evidenceIds) ? [...ad.evidenceIds] : [],
       statement: ad.statement,
       start: 'start' in ad ? ad.start : undefined,
@@ -281,7 +279,7 @@ function mapDashaPeriods(
       planet: pd.planet ? String(pd.planet) : undefined,
       role: 'REFINEMENT',
       direction: mapDirection(pd.effect),
-      effect: pd.effect || 'NEUTRAL',
+      effect: pd.effect || 'UNAVAILABLE',
       evidenceIds: Array.isArray(pd.evidenceIds) ? [...pd.evidenceIds] : [],
       statement: pd.statement,
       start: 'start' in pd ? pd.start : undefined,
@@ -378,7 +376,7 @@ function mapCareer(
         ? String(detail.status)
         : detail?.natalPromise
         ? String(detail.natalPromise)
-        : 'AVERAGE',
+        : 'UNAVAILABLE',
       confidence: mapConfidence(summary?.confidence),
       headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
       statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
@@ -408,7 +406,7 @@ function mapCareer(
       },
       transit: {
         status: (detail?.timing?.transitEffect || detail?.currentTransitEffect) ? 'AVAILABLE' : 'UNAVAILABLE',
-        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : (detail?.currentTransitEffect ? String(detail.currentTransitEffect) : 'NEUTRAL'),
+        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : (detail?.currentTransitEffect ? String(detail.currentTransitEffect) : 'UNAVAILABLE'),
         statement: detail?.timing?.transitStatement
       }
     },
@@ -459,7 +457,7 @@ function mapWealth(
         ? String(detail.overallStatus)
         : detail?.natalPromise
         ? String(detail.natalPromise)
-        : 'AVERAGE',
+        : 'UNAVAILABLE',
       promise: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion || '',
       confidence: mapConfidence(summary?.confidence),
       headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
@@ -467,19 +465,19 @@ function mapWealth(
     },
     dimensions: {
       accumulation: {
-        status: accumulationStatus ? String(accumulationStatus) : 'AVERAGE',
+        status: accumulationStatus ? String(accumulationStatus) : 'UNAVAILABLE',
         statement: accumulationStatement
       },
       gains: {
-        status: gainsStatus ? String(gainsStatus) : 'AVERAGE',
+        status: gainsStatus ? String(gainsStatus) : 'UNAVAILABLE',
         statement: gainsStatement
       },
       fortune: {
-        status: fortuneStatus ? String(fortuneStatus) : 'AVERAGE',
+        status: fortuneStatus ? String(fortuneStatus) : 'UNAVAILABLE',
         statement: fortuneStatement
       },
       speculation: {
-        status: speculationStatus ? String(speculationStatus) : 'AVERAGE',
+        status: speculationStatus ? String(speculationStatus) : 'UNAVAILABLE',
         statement: speculationStatement
       }
     },
@@ -503,7 +501,7 @@ function mapWealth(
       },
       transit: {
         status: (detail?.timing?.transitEffect || detail?.currentTransitEffect) ? 'AVAILABLE' : 'UNAVAILABLE',
-        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : (detail?.currentTransitEffect ? String(detail.currentTransitEffect) : 'NEUTRAL'),
+        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : (detail?.currentTransitEffect ? String(detail.currentTransitEffect) : 'UNAVAILABLE'),
         statement: detail?.timing?.transitStatement
       }
     },
@@ -668,10 +666,12 @@ export function buildFailedProductAnalysis(
     birth,
     methodology,
     chart: {
-      ascendantSign: 'ARIES',
-      ascendantDegree: 0,
-      moonSign: 'ARIES',
-      sunSign: 'ARIES'
+      ascendantSign: 'UNAVAILABLE',
+      ascendantDegree: undefined,
+      moonSign: 'UNAVAILABLE',
+      sunSign: 'UNAVAILABLE',
+      moonNakshatra: 'UNAVAILABLE',
+      isAvailable: false
     },
     career: {
       promise: {

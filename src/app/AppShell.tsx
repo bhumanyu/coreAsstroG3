@@ -1,14 +1,4 @@
-/**
- * TRANSITIONAL CONTRACT NOTE:
- * AppShell delegates product execution directly to AppController.analyze (P-UI-02).
- * Horoscope calculation (`calculateHoroscope`) and dasha-timing view-model derivation
- * (`buildDashaTimingViewModel`) remain here transitionally to support research views
- * and dasha timing tabs until page-level extraction is complete.
- */
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { calculateHoroscope } from '../engine/astroEngine';
-import { buildDashaTimingViewModel } from '../product/dasha-timing';
 import { Header } from '../components/Header';
 import { BirthContext, buildBirthContext } from './birthContext';
 import { BirthFormModal, PRESET_PROFILES } from '../components/BirthFormModal';
@@ -21,25 +11,6 @@ export const AppShell: React.FC = () => {
   const [state, setState] = useState<AppState>(INITIAL_APP_STATE);
 
   const controller = useMemo(() => createAppController(setState), []);
-
-  // Primary Astronomical & Astrological State Derivation
-  const horoscope = useMemo(() => {
-    return calculateHoroscope(state.birthDetails);
-  }, [state.birthDetails]);
-
-  // Dasha Timing ViewModel Derivation
-  const dashaTimingViewModel = useMemo(() => {
-    const careerTiming =
-      state.lifeAnalysisState.status === 'READY'
-        ? state.lifeAnalysisState.analysis?.careerDetail?.timing
-        : undefined;
-    const wealthTiming =
-      state.lifeAnalysisState.status === 'READY'
-        ? state.lifeAnalysisState.analysis?.wealthDetail?.timing
-        : undefined;
-
-    return buildDashaTimingViewModel(horoscope, careerTiming, wealthTiming);
-  }, [horoscope, state.lifeAnalysisState]);
 
   useEffect(() => {
     void controller.analyze(state.birthDetails);
@@ -83,8 +54,8 @@ export const AppShell: React.FC = () => {
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <ProductPageRouter
           state={state}
-          horoscope={horoscope}
-          dashaTimingViewModel={dashaTimingViewModel}
+          horoscope={state.horoscope}
+          dashaTimingViewModel={state.dashaTimingViewModel}
           lifeAnalysisState={state.lifeAnalysisState}
           onNavigate={controller.navigate}
           onRetry={handleLifeAnalysisRetry}

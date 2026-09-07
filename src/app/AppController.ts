@@ -3,6 +3,8 @@ import type { AppState } from './AppState';
 import type { BirthDetails } from '../types';
 import type { AppPage } from './navigation/navigationTypes';
 import { ProductAnalysisService } from '../product/analysis';
+import { calculateHoroscope } from '../engine/astroEngine';
+import { buildDashaTimingViewModel } from '../product/dasha-timing';
 
 export interface AppController {
   navigate: (page: AppPage) => void;
@@ -48,6 +50,14 @@ export function createAppController(
       }
 
       const pipelineState = service.lastPipelineState;
+      const horoscope = service.lastHoroscope ?? calculateHoroscope(birthDetails);
+      const dashaTimingViewModel = horoscope
+        ? buildDashaTimingViewModel(
+            horoscope,
+            pipelineState?.analysis?.careerDetail?.timing,
+            pipelineState?.analysis?.wealthDetail?.timing
+          )
+        : undefined;
 
       if (analysis.status === 'ERROR') {
         const errorMsg =
@@ -58,23 +68,29 @@ export function createAppController(
           productAnalysis: {
             status: 'ERROR',
             analysis,
-            error: errorMsg
+            error: errorMsg,
+            horoscope
           },
           lifeAnalysisState: pipelineState ?? {
             status: 'ERROR',
             errorMessage: errorMsg
-          }
+          },
+          horoscope,
+          dashaTimingViewModel
         }));
       } else {
         setState((prev) => ({
           ...prev,
           productAnalysis: {
             status: 'READY',
-            analysis
+            analysis,
+            horoscope
           },
           lifeAnalysisState: pipelineState ?? {
             status: 'READY'
-          }
+          },
+          horoscope,
+          dashaTimingViewModel
         }));
       }
     }

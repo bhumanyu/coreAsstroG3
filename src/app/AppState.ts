@@ -2,12 +2,15 @@ import type { BirthDetails } from '../types';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from './navigation/navigationTypes';
+import type { Horoscope } from '../engine/astroEngine';
+import type { DashaTimingViewModel } from '../product/dasha-timing';
 import { PRESET_PROFILES } from '../components/BirthFormModal';
 
 export interface ProductAnalysisState {
   readonly status: 'IDLE' | 'LOADING' | 'READY' | 'ERROR';
   readonly analysis?: ProductAnalysis;
   readonly error?: string;
+  readonly horoscope?: Horoscope;
 }
 
 export const INITIAL_PRODUCT_ANALYSIS_STATE: ProductAnalysisState = {
@@ -27,6 +30,14 @@ export interface AppState {
    * and backward-compatible test assertions.
    */
   readonly lifeAnalysisState: LifeAnalysisProductState;
+  /**
+   * Sourced directly from single ProductAnalysis pipeline
+   */
+  readonly horoscope?: Horoscope;
+  /**
+   * Sourced directly from single ProductAnalysis pipeline
+   */
+  readonly dashaTimingViewModel?: DashaTimingViewModel;
 }
 
 export const INITIAL_APP_STATE: AppState = {

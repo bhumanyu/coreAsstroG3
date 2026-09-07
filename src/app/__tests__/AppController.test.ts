@@ -18,9 +18,9 @@ const mockProductAnalysis: ProductAnalysis = {
   },
   methodology: {
     zodiacSystem: 'SIDEREAL',
-    houseSystem: 'PLACIDUS',
-    ayanamsa: 'LAHIRI',
-    calculationEngine: 'CoreAstro'
+    houseSystem: 'WHOLE_SIGN',
+    ayanamsa: 'Lahiri',
+    calculationEngine: 'ASTRO_CORE_V1'
   },
   birth: {
     name: 'Test',

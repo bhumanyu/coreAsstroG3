@@ -52,12 +52,47 @@ export interface ProductMethodology {
   readonly vargaRules?: string;
 }
 
+export type PromiseStrength =
+  | 'VERY_STRONG'
+  | 'STRONG'
+  | 'MODERATE'
+  | 'WEAK'
+  | 'VERY_WEAK'
+  | 'UNAVAILABLE';
+
+export type ConclusionStatus =
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'LIMITED'
+  | 'UNAVAILABLE';
+
+export type ActivationEffect =
+  | 'ACTIVATES'
+  | 'PARTIALLY_ACTIVATES'
+  | 'DOES_NOT_ACTIVATE'
+  | 'CHALLENGES'
+  | 'UNKNOWN'
+  | 'INSUFFICIENT_DATA'
+  | 'UNAVAILABLE';
+
+export type TransitEffect =
+  | 'TRIGGER'
+  | 'MODIFIER'
+  | 'CHALLENGE'
+  | 'NO_MATERIAL_TRIGGER'
+  | 'UNKNOWN'
+  | 'INSUFFICIENT_DATA'
+  | 'UNAVAILABLE';
+
 export interface ProductChartSummary {
-  readonly ascendantSign: string;
-  readonly ascendantDegree: number;
-  readonly moonSign: string;
-  readonly sunSign: string;
+  readonly ascendantSign?: string;
+  readonly ascendantDegree?: number;
+  readonly moonSign?: string;
+  readonly sunSign?: string;
   readonly moonNakshatra?: string;
+  readonly isAvailable?: boolean;
 }
 
 export interface ProductEvidence {
@@ -72,7 +107,7 @@ export interface ProductEvidence {
 }
 
 export interface CareerPromiseProduct {
-  readonly strength: string;
+  readonly strength: PromiseStrength | string;
   readonly confidence: ProductConfidence;
   readonly headline?: string;
   readonly statement?: string;
@@ -99,7 +134,7 @@ export interface ProductDashaPeriod {
   readonly planet?: string;
   readonly role: ProductEvidenceRole;
   readonly direction: ProductDirection;
-  readonly effect: string;
+  readonly effect: ActivationEffect | string;
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
   readonly start?: string;
@@ -108,7 +143,7 @@ export interface ProductDashaPeriod {
 
 export interface TransitProductResult {
   readonly status: ProductAvailability;
-  readonly effect: string;
+  readonly effect: TransitEffect | string;
   readonly statement?: string;
 }
 
@@ -142,18 +177,18 @@ export interface CareerProductAnalysis {
 }
 
 export interface WealthOverallProduct {
-  readonly status: string;
-  readonly promise: string;
+  readonly status: ConclusionStatus | string;
+  readonly promise: PromiseStrength | string;
   readonly confidence: ProductConfidence;
   readonly headline?: string;
   readonly statement?: string;
 }
 
 export interface WealthDimensionsProduct {
-  readonly accumulation: { readonly status: string; readonly statement?: string };
-  readonly gains: { readonly status: string; readonly statement?: string };
-  readonly fortune: { readonly status: string; readonly statement?: string };
-  readonly speculation: { readonly status: string; readonly statement?: string };
+  readonly accumulation: { readonly status: ConclusionStatus | string; readonly statement?: string };
+  readonly gains: { readonly status: ConclusionStatus | string; readonly statement?: string };
+  readonly fortune: { readonly status: ConclusionStatus | string; readonly statement?: string };
+  readonly speculation: { readonly status: ConclusionStatus | string; readonly statement?: string };
 }
 
 export interface D2ProductResult {
