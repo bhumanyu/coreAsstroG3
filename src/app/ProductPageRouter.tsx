@@ -1,3 +1,11 @@
+/**
+ * ARCHITECTURAL CONSTRAINT:
+ * Do NOT expand ProductPageRouter.tsx further. It is already approaching monolith territory.
+ * Future page wiring, views, or secondary concerns must be extracted into per-page
+ * modules/components rather than adding new branches or inline markup here.
+ * Do not add new routing responsibilities in this file.
+ */
+
 import React from 'react';
 import { Compass, Sun, Moon, Sparkles, ArrowLeft, FlaskConical } from 'lucide-react';
 import type { AppState } from './AppState';

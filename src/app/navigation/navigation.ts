@@ -123,3 +123,27 @@ export function mapLegacyPageToAppPage(legacy: LegacyPage | string): AppPage {
       return 'overview';
   }
 }
+
+export function mapAppPageToLegacyTab(page: AppPage): AppTab | undefined {
+  switch (page) {
+    case 'overview':
+      return 'life-analysis';
+    case 'dasha':
+      return 'dasha-timing';
+    case 'detailed':
+      return 'report';
+    case 'horoscope':
+    case 'planets':
+    case 'transit':
+    case 'divisional':
+    case 'nakshatras':
+    case 'relationships':
+    case 'validator':
+      return page;
+    case 'career':
+    case 'wealth':
+    case 'reasoning':
+    default:
+      return undefined;
+  }
+}

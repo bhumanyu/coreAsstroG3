@@ -1,8 +1,20 @@
+/**
+ * TRANSITIONAL CONTRACT NOTE:
+ * AppShell currently and intentionally still owns horoscope calculation (`calculateHoroscope`),
+ * dasha-timing view-model derivation (`buildDashaTimingViewModel`), and life-analysis product
+ * execution (`runLifeAnalysisProduct`, lines ~17-81).
+ *
+ * This orchestration/data responsibility is TRANSITIONAL and must be removed/relocated in
+ * P-UI-02 (Canonical ProductAnalysis aggregate). It is documented here so this boundary
+ * is not mistaken for a permanent design.
+ */
+
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { calculateHoroscope } from '../engine/astroEngine';
 import { buildDashaTimingViewModel } from '../product/dasha-timing';
 import { runLifeAnalysisProduct } from '../product/life-analysis/lifeAnalysisProductService';
-import { Header, BirthContext } from '../components/Header';
+import { Header } from '../components/Header';
+import { BirthContext, buildBirthContext } from './birthContext';
 import { BirthFormModal, PRESET_PROFILES } from '../components/BirthFormModal';
 import { ProductPageRouter } from './ProductPageRouter';
 import { AppFooter } from './AppFooter';
@@ -100,42 +112,9 @@ export const AppShell: React.FC = () => {
     }));
   };
 
-  // Derive presentational birth context for Header
+  // Derive presentational birth context for Header using shared mapper
   const birthContext: BirthContext = useMemo(() => {
-    const b = state.birthDetails;
-    const tz = b.timeZone || 'UTC';
-    const isoClean =
-      b.dateTimeStr &&
-      (b.dateTimeStr.includes('Z') ||
-        b.dateTimeStr.includes('+') ||
-        (b.dateTimeStr.length > 10 && b.dateTimeStr.slice(10).includes('-')))
-        ? b.dateTimeStr
-        : b.dateTimeStr
-          ? b.dateTimeStr + 'Z'
-          : new Date().toISOString();
-
-    const formattedDate = new Date(isoClean).toLocaleString('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: tz
-    });
-
-    const zoneLabel =
-      {
-        UTC: 'UTC',
-        'Asia/Kolkata': 'IST',
-        'America/New_York': 'EST',
-        'Europe/London': 'GMT',
-        'Asia/Tokyo': 'JST'
-      }[tz] || tz;
-
-    return {
-      name: (b as any).name || 'Birth Chart',
-      placeOfBirth: (b as any).placeOfBirth,
-      formattedDate,
-      zoneLabel,
-      ayanamsa: b.ayanamsa
-    };
+    return buildBirthContext(state.birthDetails);
   }, [state.birthDetails]);
 
   return (

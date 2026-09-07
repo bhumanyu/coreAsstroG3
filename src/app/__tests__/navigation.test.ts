@@ -4,9 +4,11 @@ import {
   RESEARCH_NAVIGATION,
   isProductPage,
   isResearchPage,
-  mapLegacyPageToAppPage
+  mapLegacyPageToAppPage,
+  mapAppPageToLegacyTab
 } from '../navigation/navigation';
 import type { ProductPage, ResearchPage } from '../navigation/navigationTypes';
+import type { AppTab } from '../../types/appTabs';
 
 describe('Navigation Configuration', () => {
   it('defines PRODUCT_NAVIGATION in the exact specified order', () => {
@@ -119,5 +121,51 @@ describe('Navigation Configuration', () => {
 
     // Fallback for unknown
     expect(mapLegacyPageToAppPage('unknown-invalid')).toBe('overview');
+  });
+
+  it('maps AppPage to legacy AppTab correctly with mapAppPageToLegacyTab', () => {
+    // Product pages with legacy mappings
+    expect(mapAppPageToLegacyTab('overview')).toBe('life-analysis');
+    expect(mapAppPageToLegacyTab('dasha')).toBe('dasha-timing');
+    expect(mapAppPageToLegacyTab('detailed')).toBe('report');
+
+    // Research pages map 1:1
+    expect(mapAppPageToLegacyTab('horoscope')).toBe('horoscope');
+    expect(mapAppPageToLegacyTab('planets')).toBe('planets');
+    expect(mapAppPageToLegacyTab('transit')).toBe('transit');
+    expect(mapAppPageToLegacyTab('divisional')).toBe('divisional');
+    expect(mapAppPageToLegacyTab('nakshatras')).toBe('nakshatras');
+    expect(mapAppPageToLegacyTab('relationships')).toBe('relationships');
+    expect(mapAppPageToLegacyTab('validator')).toBe('validator');
+
+    // Product-only pages with NO legacy equivalent return undefined
+    expect(mapAppPageToLegacyTab('career')).toBeUndefined();
+    expect(mapAppPageToLegacyTab('wealth')).toBeUndefined();
+    expect(mapAppPageToLegacyTab('reasoning')).toBeUndefined();
+
+    // Unknown page strings return undefined
+    expect(mapAppPageToLegacyTab('unknown' as any)).toBeUndefined();
+  });
+
+  it('preserves round-trip consistency between legacy tabs and AppPage', () => {
+    const legacyTabs: AppTab[] = [
+      'life-analysis',
+      'dasha-timing',
+      'report',
+      'horoscope',
+      'planets',
+      'transit',
+      'divisional',
+      'nakshatras',
+      'relationships',
+      'validator'
+    ];
+
+    // Every legacy tab must map to an AppPage and map back to the identical legacy tab
+    legacyTabs.forEach((legacyTab) => {
+      const appPage = mapLegacyPageToAppPage(legacyTab);
+      const backToLegacy = mapAppPageToLegacyTab(appPage);
+      expect(backToLegacy).toBe(legacyTab);
+    });
   });
 });

@@ -80,6 +80,14 @@ describe('Header Component', () => {
 
     expect(screen.getByText('Birth Chart')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Detailed Analysis' }));
-    expect(handleTabChange).toHaveBeenCalledWith('detailed');
+    expect(handleTabChange).toHaveBeenCalledWith('report');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Overview' }));
+    expect(handleTabChange).toHaveBeenCalledWith('life-analysis');
+
+    handleTabChange.mockClear();
+    // Clicking a product-only page without legacy equivalent should not invoke legacy setActiveTab
+    fireEvent.click(screen.getByRole('button', { name: 'Career' }));
+    expect(handleTabChange).not.toHaveBeenCalled();
   });
 });

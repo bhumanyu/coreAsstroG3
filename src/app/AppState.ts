@@ -4,10 +4,10 @@ import type { AppPage } from './navigation/navigationTypes';
 import { PRESET_PROFILES } from '../components/BirthFormModal';
 
 export interface AppState {
-  activePage: AppPage;
-  birthDetails: BirthDetails;
-  isBirthFormOpen: boolean;
-  lifeAnalysisState: LifeAnalysisProductState;
+  readonly activePage: AppPage;
+  readonly birthDetails: BirthDetails;
+  readonly isBirthFormOpen: boolean;
+  readonly lifeAnalysisState: LifeAnalysisProductState;
 }
 
 export const INITIAL_APP_STATE: AppState = {

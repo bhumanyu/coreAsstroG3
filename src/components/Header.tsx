@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { Compass, Sparkles, Calendar, MapPin, RefreshCw, Menu, X } from 'lucide-react';
 import type { AppPage } from '../app/navigation/navigationTypes';
-import { PRODUCT_NAVIGATION, RESEARCH_NAVIGATION, mapLegacyPageToAppPage } from '../app/navigation/navigation';
+import {
+  PRODUCT_NAVIGATION,
+  RESEARCH_NAVIGATION,
+  mapLegacyPageToAppPage,
+  mapAppPageToLegacyTab
+} from '../app/navigation/navigation';
 import type { BirthDetails } from '../types';
 import type { AppTab } from '../types/appTabs';
+import { BirthContext, buildBirthContext } from '../app/birthContext';
 
-export interface BirthContext {
-  name?: string;
-  placeOfBirth?: string;
-  formattedDate?: string;
-  zoneLabel?: string;
-  ayanamsa?: string;
-}
+export type { BirthContext };
 
 export interface HeaderProps {
   activePage?: AppPage;
@@ -229,7 +229,10 @@ export const Header: React.FC<HeaderProps> = ({
       propOnNavigate(page);
     }
     if (setActiveTab) {
-      setActiveTab(page as AppTab);
+      const legacyTab = mapAppPageToLegacyTab(page);
+      if (legacyTab) {
+        setActiveTab(legacyTab);
+      }
     }
   };
 
@@ -237,39 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
   const resolvedBirthContext: BirthContext | undefined = React.useMemo(() => {
     if (propBirthContext) return propBirthContext;
     if (!birthDetails) return undefined;
-
-    const tz = birthDetails.timeZone || 'UTC';
-    const isoClean =
-      birthDetails.dateTimeStr &&
-      (birthDetails.dateTimeStr.includes('Z') ||
-        birthDetails.dateTimeStr.includes('+') ||
-        (birthDetails.dateTimeStr.length > 10 && birthDetails.dateTimeStr.slice(10).includes('-')))
-        ? birthDetails.dateTimeStr
-        : birthDetails.dateTimeStr
-          ? birthDetails.dateTimeStr + 'Z'
-          : new Date().toISOString();
-    const formattedDate = new Date(isoClean).toLocaleString('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-      timeZone: tz
-    });
-
-    const zoneLabel =
-      {
-        UTC: 'UTC',
-        'Asia/Kolkata': 'IST',
-        'America/New_York': 'EST',
-        'Europe/London': 'GMT',
-        'Asia/Tokyo': 'JST'
-      }[tz] || tz;
-
-    return {
-      name: (birthDetails as any).name || 'Birth Chart',
-      placeOfBirth: (birthDetails as any).placeOfBirth,
-      formattedDate,
-      zoneLabel,
-      ayanamsa: birthDetails.ayanamsa
-    };
+    return buildBirthContext(birthDetails);
   }, [propBirthContext, birthDetails]);
 
   return (
