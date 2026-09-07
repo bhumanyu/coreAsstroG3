@@ -64,7 +64,7 @@ describe('LifeAnalysisPage', () => {
     careerDetail: {
       natalPromise: 'STRONG',
       d10Relationship: 'CONFIRMS',
-      currentDashaEffect: 'SUPPORT',
+      currentDashaEffect: 'ACTIVATES',
       currentTransitEffect: 'TRIGGER',
       headline: 'Executive Leadership & Strategic Endeavors',
       statement: 'Natal 10th house lord is prominently placed in Kendra with supportive Dasamsa alignment.',
@@ -73,7 +73,7 @@ describe('LifeAnalysisPage', () => {
     wealthDetail: {
       natalPromise: 'MODERATE',
       d2Relationship: 'CONFIRMS',
-      currentDashaEffect: 'SUPPORT',
+      currentDashaEffect: 'ACTIVATES',
       currentTransitEffect: 'MODIFIER',
       overallStatus: 'SUPPORTED',
       accumulationStatus: 'STRONGLY_SUPPORTED',

@@ -55,7 +55,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   const sampleViewModel: LifeAnalysisViewModel = {
     status: 'READY',
     overall: {
-      status: 'STRONG',
+      status: 'STRONGLY_SUPPORTED',
       headline: 'Dominant Life Direction',
       statement: 'Natal indicators show sustained executive trajectory.',
       strongestDomainNames: ['CAREER'],
@@ -66,7 +66,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       {
         domain: 'CAREER',
         displayName: 'Career & Vocation',
-        status: 'STRONG',
+        status: 'STRONGLY_SUPPORTED',
         strength: 'STRONG',
         confidence: 'HIGH',
         headline: 'Executive Trajectory',
@@ -78,9 +78,9 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       {
         domain: 'WEALTH',
         displayName: 'Wealth & Prosperity',
-        status: 'MODERATE',
+        status: 'SUPPORTED',
         strength: 'MODERATE',
-        confidence: 'MEDIUM',
+        confidence: 'MODERATE',
         headline: 'Stable Wealth Accumulation',
         statement: 'Solid 2nd house foundation.',
         conclusion: 'Solid 2nd house foundation.',
@@ -92,8 +92,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       status: 'STRONG',
       natalPromise: 'STRONG',
       d10Relationship: 'CONFIRMS',
-      currentDashaEffect: 'STRONG_SUPPORT',
-      currentTransitEffect: 'FAVORABLE',
+      currentDashaEffect: 'ACTIVATES',
+      currentTransitEffect: 'TRIGGER',
       promiseHeadline: 'Executive Trajectory',
       promiseStatement: 'High vocational promise across 10th lord and Lagna.',
       capacityLevel: 'LEADERSHIP',
@@ -104,27 +104,27 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
         mahadasha: {
           period: 'MD',
           planet: Planet.JUPITER,
-          effect: 'STRONG_SUPPORT',
+          effect: 'ACTIVATES',
           evidenceIds: ['ev_md_1'],
           statement: 'Jupiter Mahadasha establishes primary career elevation.'
         },
         antardasha: {
           period: 'AD',
           planet: Planet.SATURN,
-          effect: 'MODERATE_CHALLENGE',
+          effect: 'CHALLENGES',
           evidenceIds: ['ev_ad_1'],
           statement: 'Saturn Antardasha introduces structural discipline.'
         },
         pratyantardasha: {
           period: 'PD',
           planet: Planet.MERCURY,
-          effect: 'SUPPORTIVE',
+          effect: 'ACTIVATES',
           evidenceIds: ['ev_pd_1'],
           statement: 'Mercury Pratyantardasha triggers communication gains.'
         },
         currentActivation: 'Jupiter / Saturn',
         currentPressure: 'High structural demands',
-        transitEffect: 'FAVORABLE',
+        transitEffect: 'TRIGGER',
         transitStatement: 'Saturn transits natal 3rd house.'
       },
       qualifications: [
@@ -138,26 +138,26 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     },
     wealthDetail: {
       status: 'MODERATE',
-      overallStatus: 'MODERATE',
+      overallStatus: 'SUPPORTED',
       natalPromise: 'MODERATE',
-      accumulationStatus: 'STRONG',
-      gainsStatus: 'MODERATE',
-      fortuneStatus: 'STRONG',
-      speculationStatus: 'MODERATE',
+      accumulationStatus: 'STRONGLY_SUPPORTED',
+      gainsStatus: 'SUPPORTED',
+      fortuneStatus: 'STRONGLY_SUPPORTED',
+      speculationStatus: 'SUPPORTED',
       d2Relationship: 'CONFIRMS',
-      currentDashaEffect: 'SUPPORTIVE',
-      currentTransitEffect: 'NEUTRAL',
+      currentDashaEffect: 'ACTIVATES',
+      currentTransitEffect: 'NO_MATERIAL_TRIGGER',
       promiseHeadline: 'Stable Accumulation',
       promiseStatement: 'Consistent growth with steady savings.',
-      accumulation: { status: 'STRONG', statement: '2nd lord exalted.' },
-      gains: { status: 'MODERATE', statement: '11th lord neutral.' },
-      fortune: { status: 'STRONG', statement: '9th lord well-placed.' },
-      speculation: { status: 'MODERATE', statement: '5th house stable.' },
+      accumulation: { status: 'STRONGLY_SUPPORTED', statement: '2nd lord exalted.' },
+      gains: { status: 'SUPPORTED', statement: '11th lord neutral.' },
+      fortune: { status: 'STRONGLY_SUPPORTED', statement: '9th lord well-placed.' },
+      speculation: { status: 'SUPPORTED', statement: '5th house stable.' },
       d2Statement: 'Hora D2 confirms liquid capital accumulation.',
       timing: {
         status: 'AVAILABLE',
         currentActivation: 'Jupiter dasha brings steady financial inflow.',
-        transitEffect: 'NEUTRAL',
+        transitEffect: 'NO_MATERIAL_TRIGGER',
         transitStatement: 'Transits neutral for wealth.'
       },
       qualifications: []

@@ -87,25 +87,25 @@ export const CareerPage: React.FC<CareerPageProps> = ({
       ? {
           natalPromise: (careerFromAggregate.promise.strength as DomainStrength) || 'STRONG',
           d10Relationship: (careerFromAggregate.d10.relationship === 'UNAVAILABLE' ? 'CONFIRMS' : careerFromAggregate.d10.relationship) as VargaRelationship,
-          currentDashaEffect: (careerFromAggregate.timing.dashaPeriods[0]?.effect as TimingActivationEffect) || 'SUPPORTIVE',
-          currentTransitEffect: (careerFromAggregate.timing.transitEffect as TransitTriggerEffect) || 'NEUTRAL',
+          currentDashaEffect: (careerFromAggregate.activation.dasha.periods[0]?.effect as TimingActivationEffect) || 'ACTIVATES',
+          currentTransitEffect: (careerFromAggregate.activation.transit.effect as TransitTriggerEffect) || 'TRIGGER',
           promiseHeadline: careerFromAggregate.promise.headline,
           promiseStatement: careerFromAggregate.promise.statement,
           headline: careerFromAggregate.promise.headline,
           statement: careerFromAggregate.promise.statement,
           status: (careerFromAggregate.promise.strength as DomainStrength) || 'STRONG',
           capacityLevel: 'BALANCED',
-          manifestations: careerFromAggregate.manifestations,
+          manifestations: careerFromAggregate.promise.dominantManifestations,
           d10Statement: careerFromAggregate.d10.statement,
           timing: {
             status: 'AVAILABLE' as const,
-            currentActivation: careerFromAggregate.timing.currentActivation,
-            currentPressure: careerFromAggregate.timing.currentPressure,
-            transitEffect: careerFromAggregate.timing.transitEffect as TransitTriggerEffect,
-            transitStatement: careerFromAggregate.timing.transitStatement
+            currentActivation: careerFromAggregate.activation.dasha.currentActivation,
+            currentPressure: careerFromAggregate.activation.dasha.currentPressure,
+            transitEffect: careerFromAggregate.activation.transit.effect as TransitTriggerEffect,
+            transitStatement: careerFromAggregate.activation.transit.statement
           },
           qualifications: careerFromAggregate.qualifications,
-          actionableTakeaways: careerFromAggregate.takeaways
+          actionableTakeaways: undefined
         }
       : undefined
   );

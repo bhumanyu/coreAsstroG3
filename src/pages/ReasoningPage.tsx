@@ -2,12 +2,13 @@ import React from 'react';
 import { Sparkles, BrainCircuit, CheckCircle2, ShieldCheck, Cpu } from 'lucide-react';
 import { PageHeading } from '../components/layout/PageHeading';
 import type { ProductAnalysisState } from '../app/AppState';
+import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectReasoning, selectAi } from '../product/analysis/productAnalysisSelectors';
 import { LifeAnalysisLoading } from '../components/lifeAnalysis/LifeAnalysisLoading';
 
 export interface ReasoningPageProps {
   readonly productAnalysisState?: ProductAnalysisState;
-  readonly onNavigate?: (page: string) => void;
+  readonly onNavigate?: (page: AppPage) => void;
 }
 
 export const ReasoningPage: React.FC<ReasoningPageProps> = ({
