@@ -14,7 +14,7 @@
 import type { BirthDetails, Horoscope } from '../../types';
 import { Planet } from '../../types';
 import type { LifeAnalysisViewModel } from '../life-analysis/lifeAnalysisTypes';
-import type { AiExplanationResult } from '../../domain/ai/aiExplanationTypes';
+import type { AiExplanationResult } from '../../ai';
 import type {
   ProductAnalysis,
   ProductAnalysisStatus,
@@ -222,7 +222,8 @@ function mapChartSummary(horoscope: Horoscope): ProductChartSummary {
 
   const moonNakshatra =
     horoscope.planetFacts?.[Planet.MOON]?.nakshatraResult?.nakshatra ??
-    horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata?.nakshatraName ??
+    horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata?.name ??
+    (horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata as any)?.nakshatraName ??
     'Ashwini';
 
   return {
@@ -366,17 +367,27 @@ function mapCareer(
       ? explicitEvidence
       : viewModel.careerWhy?.factors
       ? mapEvidenceItems(viewModel.careerWhy.factors, 'CAREER')
+      : viewModel.careerWhy?.evidence
+      ? mapEvidenceItems(viewModel.careerWhy.evidence, 'CAREER')
       : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'CAREER'), 'CAREER');
 
   const dashaPeriods = mapDashaPeriods(detail?.timing as any);
 
   return {
     promise: {
-      strength: detail?.status ? String(detail.status) : 'AVERAGE',
+      strength: detail?.status
+        ? String(detail.status)
+        : detail?.natalPromise
+        ? String(detail.natalPromise)
+        : 'AVERAGE',
       confidence: mapConfidence(summary?.confidence),
-      headline: detail?.promiseHeadline || summary?.headline,
-      statement: detail?.promiseStatement || summary?.statement,
-      dominantManifestations: detail?.manifestations ? [...detail.manifestations] : []
+      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
+      dominantManifestations: detail?.dominantManifestations
+        ? [...detail.dominantManifestations]
+        : detail?.manifestations
+        ? [...detail.manifestations]
+        : []
     },
     expression: detail
       ? {
@@ -391,22 +402,22 @@ function mapCareer(
     },
     activation: {
       dasha: {
-        status: dashaPeriods.length > 0 ? 'AVAILABLE' : 'UNAVAILABLE',
+        status: (dashaPeriods.length > 0 || detail?.timing?.status === 'AVAILABLE' || Boolean(detail?.timing?.currentActivation)) ? 'AVAILABLE' : 'UNAVAILABLE',
         periods: dashaPeriods,
-        currentActivation: detail?.timing?.currentActivation,
-        currentPressure: detail?.timing?.currentPressure
+        currentActivation: detail?.timing?.currentActivation || detail?.currentActivation,
+        currentPressure: detail?.timing?.currentPressure || detail?.currentPressure
       },
       transit: {
-        status: detail?.timing?.transitEffect ? 'AVAILABLE' : 'UNAVAILABLE',
-        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : 'NEUTRAL',
+        status: (detail?.timing?.transitEffect || detail?.currentTransitEffect) ? 'AVAILABLE' : 'UNAVAILABLE',
+        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : (detail?.currentTransitEffect ? String(detail.currentTransitEffect) : 'NEUTRAL'),
         statement: detail?.timing?.transitStatement
       }
     },
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
     synthesis: {
-      headline: detail?.promiseHeadline || summary?.headline,
-      statement: detail?.promiseStatement || summary?.statement
+      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion
     }
   };
 }
@@ -423,34 +434,54 @@ function mapWealth(
       ? explicitEvidence
       : viewModel.wealthWhy?.factors
       ? mapEvidenceItems(viewModel.wealthWhy.factors, 'WEALTH')
+      : viewModel.wealthWhy?.evidence
+      ? mapEvidenceItems(viewModel.wealthWhy.evidence, 'WEALTH')
       : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'WEALTH'), 'WEALTH');
 
   const dashaPeriods = mapDashaPeriods(detail?.timing as any);
 
+  const accumulationStatus = detail?.accumulation?.status ?? detail?.accumulationStatus;
+  const accumulationStatement = detail?.accumulation?.statement;
+
+  const gainsStatus = detail?.gains?.status ?? detail?.gainsStatus;
+  const gainsStatement = detail?.gains?.statement;
+
+  const fortuneStatus = detail?.fortune?.status ?? detail?.fortuneStatus;
+  const fortuneStatement = detail?.fortune?.statement;
+
+  const speculationStatus = detail?.speculation?.status ?? detail?.speculationStatus;
+  const speculationStatement = detail?.speculation?.statement;
+
   return {
     overall: {
-      status: detail?.status ? String(detail.status) : 'AVERAGE',
-      promise: detail?.promiseStatement || summary?.statement || '',
+      status: detail?.status
+        ? String(detail.status)
+        : detail?.overallStatus
+        ? String(detail.overallStatus)
+        : detail?.natalPromise
+        ? String(detail.natalPromise)
+        : 'AVERAGE',
+      promise: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion || '',
       confidence: mapConfidence(summary?.confidence),
-      headline: detail?.promiseHeadline || summary?.headline,
-      statement: detail?.promiseStatement || summary?.statement
+      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion
     },
     dimensions: {
       accumulation: {
-        status: detail?.accumulation?.status ? String(detail.accumulation.status) : 'AVERAGE',
-        statement: detail?.accumulation?.statement
+        status: accumulationStatus ? String(accumulationStatus) : 'AVERAGE',
+        statement: accumulationStatement
       },
       gains: {
-        status: detail?.gains?.status ? String(detail.gains.status) : 'AVERAGE',
-        statement: detail?.gains?.statement
+        status: gainsStatus ? String(gainsStatus) : 'AVERAGE',
+        statement: gainsStatement
       },
       fortune: {
-        status: detail?.fortune?.status ? String(detail.fortune.status) : 'AVERAGE',
-        statement: detail?.fortune?.statement
+        status: fortuneStatus ? String(fortuneStatus) : 'AVERAGE',
+        statement: fortuneStatement
       },
       speculation: {
-        status: detail?.speculation?.status ? String(detail.speculation.status) : 'AVERAGE',
-        statement: detail?.speculation?.statement
+        status: speculationStatus ? String(speculationStatus) : 'AVERAGE',
+        statement: speculationStatement
       }
     },
     d2: {
@@ -459,27 +490,35 @@ function mapWealth(
     },
     activation: {
       dasha: {
-        status: dashaPeriods.length > 0 ? 'AVAILABLE' : 'UNAVAILABLE',
+        status:
+          (dashaPeriods.length > 0 ||
+            detail?.timing?.status === 'AVAILABLE' ||
+            Boolean(detail?.timing?.currentActivation) ||
+            Boolean(detail?.currentDashaEffect) ||
+            Boolean(detail?.timing) ||
+            Boolean(viewModel.careerDetail?.timing?.currentActivation))
+            ? 'AVAILABLE'
+            : 'UNAVAILABLE',
         periods: dashaPeriods,
-        statement: detail?.timing?.currentActivation
+        statement: detail?.timing?.currentActivation || (detail?.currentDashaEffect ? String(detail.currentDashaEffect) : undefined)
       },
       transit: {
-        status: detail?.timing?.transitEffect ? 'AVAILABLE' : 'UNAVAILABLE',
-        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : 'NEUTRAL',
+        status: (detail?.timing?.transitEffect || detail?.currentTransitEffect) ? 'AVAILABLE' : 'UNAVAILABLE',
+        effect: detail?.timing?.transitEffect ? String(detail.timing.transitEffect) : (detail?.currentTransitEffect ? String(detail.currentTransitEffect) : 'NEUTRAL'),
         statement: detail?.timing?.transitStatement
       }
     },
-    speculativeRisk: detail?.speculation
+    speculativeRisk: speculationStatus
       ? {
-          level: mapSpeculativeRisk(detail.speculation.status ? String(detail.speculation.status) : undefined),
-          description: detail.speculation.statement
+          level: mapSpeculativeRisk(String(speculationStatus)),
+          description: speculationStatement
         }
       : undefined,
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
     synthesis: {
-      headline: detail?.promiseHeadline || summary?.headline,
-      statement: detail?.promiseStatement || summary?.statement
+      headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
+      statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion
     }
   };
 }
@@ -566,7 +605,10 @@ function mapReasoning(
   return {
     nodes,
     primaryConclusions,
-    unresolvedQuestions: aiExplanation?.unresolvedQuestions ? [...aiExplanation.unresolvedQuestions] : []
+    unresolvedQuestions:
+      aiExplanation && aiExplanation.kind === 'SUCCESS' && aiExplanation.unresolvedQuestions
+        ? [...aiExplanation.unresolvedQuestions]
+        : []
   };
 }
 
@@ -577,22 +619,29 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
     };
   }
 
+  if (aiExplanation.kind === 'ERROR') {
+    return {
+      status: 'FAILED',
+      error: aiExplanation.message
+    };
+  }
+
   const status =
     aiExplanation.status === 'SUCCESS'
       ? 'AVAILABLE'
-      : aiExplanation.status === 'ERROR'
-      ? 'FAILED'
+      : aiExplanation.status === 'PARTIAL'
+      ? 'PARTIAL'
       : 'UNAVAILABLE';
 
   return {
-    status,
+    status: status as any,
     explanation: aiExplanation.conclusion,
     conclusion: aiExplanation.conclusion,
     providerInfo: {
       name: aiExplanation.providerName,
       mode: aiExplanation.routingMode
     },
-    error: aiExplanation.status === 'ERROR' ? aiExplanation.conclusion : undefined
+    error: undefined
   };
 }
 

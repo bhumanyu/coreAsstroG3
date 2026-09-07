@@ -133,7 +133,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       qualifications: []
     },
     evidence: []
-  };
+  } as unknown as LifeAnalysisViewModel;
 
   const sampleInputEvidence: ProductEvidence = {
     id: 'ev_career_gold_101',
