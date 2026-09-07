@@ -188,3 +188,5 @@ export function selectDashaHierarchy(analysis: ProductAnalysis): readonly Produc
 
   return hierarchy;
 }
+
+export * from './overviewViewModel';

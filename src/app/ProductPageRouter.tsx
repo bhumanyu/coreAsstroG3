@@ -12,6 +12,7 @@ import type { AppState } from './AppState';
 import type { AppPage, ResearchPage } from './navigation/navigationTypes';
 import { RESEARCH_NAVIGATION, mapLegacyPageToAppPage } from './navigation/navigation';
 import { LifeAnalysisPage } from '../components/lifeAnalysis/LifeAnalysisPage';
+import { OverviewPage } from '../pages/OverviewPage';
 import { DashaTimingPage } from '../components/dashaTiming';
 import { FullNatalReportView } from '../components/fullNatalReport/FullNatalReportView';
 import { CareerPage } from '../pages/CareerPage';
@@ -104,13 +105,18 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   onNavigate,
   onRetry
 }) => {
+  const effectiveLifeAnalysisState: LifeAnalysisProductState =
+    lifeAnalysisState ?? state.lifeAnalysisState ?? { status: 'LOADING' };
+
   switch (state.activePage) {
     case 'overview':
       return (
-        <LifeAnalysisPage
-          state={lifeAnalysisState}
+        <OverviewPage
+          analysis={state.productAnalysis?.analysis}
+          status={state.productAnalysis?.status}
+          errorMessage={state.productAnalysis?.error}
+          onNavigate={onNavigate}
           onRetry={onRetry}
-          onNavigateToDashaTiming={() => onNavigate('dasha')}
         />
       );
 
@@ -386,7 +392,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
     default:
       return (
         <LifeAnalysisPage
-          state={lifeAnalysisState}
+          state={effectiveLifeAnalysisState}
           onRetry={onRetry}
           onNavigateToDashaTiming={() => onNavigate('dasha')}
         />

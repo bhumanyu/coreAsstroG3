@@ -1,8 +1,7 @@
-import type { BirthDetails } from '../types';
+import type { BirthDetails, Horoscope } from '../types';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysis } from '../product/analysis';
 import type { AppPage } from './navigation/navigationTypes';
-import type { Horoscope } from '../engine/astroEngine';
 import type { DashaTimingViewModel } from '../product/dasha-timing';
 import { PRESET_PROFILES } from '../components/BirthFormModal';
 
