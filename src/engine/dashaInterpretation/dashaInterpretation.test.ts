@@ -32,7 +32,13 @@ import { analyzePlanetInterpretation } from '../planetInterpretation/planetInter
 import { analyzeHouseInterpretation } from '../houseInterpretation/houseInterpretation';
 import { analyzePlanets } from '../planetAnalysis';
 import { analyzeHouses } from '../houseAnalysis';
-import { analyzeDashaInterpretation, analyzeActiveDasha, computeCanonicalYogaId } from './dashaInterpretation';
+import {
+  analyzeDashaInterpretation,
+  analyzeActiveDasha,
+  computeCanonicalYogaId,
+  mergeYogaFinalStatus,
+  mergeYogaStrength
+} from './dashaInterpretation';
 import { DashaInterpretationInput } from './dashaInterpretationTypes';
 import { calculateHoroscope } from '../astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
@@ -583,6 +589,96 @@ describe('dashaInterpretation Engine', () => {
     // Second identical yoga is deduplicated
     expect(sunMD.natal.yogaParticipation.length).toBe(1);
     expect(sunMD.natal.evidence.filter(e => e.type === 'YOGA').length).toBe(1);
+  });
+
+  it('shouldFollowConservativePrecedenceCancelledOverWeakenedOverPresentOverStrong', () => {
+    expect(mergeYogaFinalStatus('STRONG', 'CANCELLED')).toBe('CANCELLED');
+    expect(mergeYogaFinalStatus('CANCELLED', 'STRONG')).toBe('CANCELLED');
+    expect(mergeYogaFinalStatus('STRONG', 'WEAKENED')).toBe('WEAKENED');
+    expect(mergeYogaFinalStatus('WEAKENED', 'STRONG')).toBe('WEAKENED');
+    expect(mergeYogaFinalStatus('PRESENT', 'WEAKENED')).toBe('WEAKENED');
+    expect(mergeYogaFinalStatus('WEAKENED', 'PRESENT')).toBe('WEAKENED');
+    expect(mergeYogaFinalStatus('STRONG', 'PRESENT')).toBe('PRESENT');
+    expect(mergeYogaFinalStatus('PRESENT', 'STRONG')).toBe('PRESENT');
+    expect(mergeYogaFinalStatus(undefined, 'STRONG')).toBe('STRONG');
+    expect(mergeYogaFinalStatus('STRONG', undefined)).toBe('STRONG');
+
+    expect(mergeYogaStrength(YogaStrengthLevel.STRONG, YogaStrengthLevel.VERY_STRONG)).toBe(
+      YogaStrengthLevel.VERY_STRONG
+    );
+    expect(mergeYogaStrength(YogaStrengthLevel.WEAK, YogaStrengthLevel.MODERATE)).toBe(
+      YogaStrengthLevel.MODERATE
+    );
+    expect(mergeYogaStrength(undefined, YogaStrengthLevel.STRONG)).toBe(YogaStrengthLevel.STRONG);
+    expect(mergeYogaStrength(YogaStrengthLevel.STRONG, undefined)).toBe(YogaStrengthLevel.STRONG);
+  });
+
+  it('shouldDeterministicallyMergeYogaFinalStatusAndStrengthRegardlessOfArrayOrder', () => {
+    // Two fingerprint-identical RAJA_YOGA records with conflicting finalStatus and strength
+    const yogaStrong = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [{ ruleId: 'ruleFormation' } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const yogaCancelled = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.JUPITER, Planet.SUN], // Note: reversed array order produces same canonical id
+      houses: [5, 1], // reversed houses produce same canonical id
+      evidence: [{ ruleId: 'ruleBhangaCancellation' } as any],
+      assessment: {
+        formationPresent: false,
+        strength: YogaStrengthLevel.MODERATE,
+        finalStatus: 'CANCELLED' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    // Run 1: [yogaStrong, yogaCancelled]
+    const report1 = analyzeDashaInterpretation(
+      createDashaFixture({ yogas: [yogaStrong, yogaCancelled] })
+    );
+    const sunMD1 = report1.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+    // Run 2: [yogaCancelled, yogaStrong] (reversed input array)
+    const report2 = analyzeDashaInterpretation(
+      createDashaFixture({ yogas: [yogaCancelled, yogaStrong] })
+    );
+    const sunMD2 = report2.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+    // Deduplicated to single record
+    expect(sunMD1.natal.yogaParticipation.length).toBe(1);
+    expect(sunMD2.natal.yogaParticipation.length).toBe(1);
+
+    // Assert surviving status is IDENTICAL in both orderings and adheres to CANCELLED > STRONG precedence
+    expect(sunMD1.natal.yogaParticipation[0].finalStatus).toBe('CANCELLED');
+    expect(sunMD2.natal.yogaParticipation[0].finalStatus).toBe('CANCELLED');
+
+    // Assert surviving strength is IDENTICAL in both orderings and keeps higher strength (STRONG > MODERATE)
+    expect(sunMD1.natal.yogaParticipation[0].strength).toBe(YogaStrengthLevel.STRONG);
+    expect(sunMD2.natal.yogaParticipation[0].strength).toBe(YogaStrengthLevel.STRONG);
+
+    // Assert yogaId and YOGA-evidence ruleId remain unique, identical, and order-independent
+    expect(sunMD1.natal.yogaParticipation[0].yogaId).toBe('RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=1,5');
+    expect(sunMD1.natal.yogaParticipation[0].yogaId).toBe(sunMD2.natal.yogaParticipation[0].yogaId);
+
+    const yogaEv1 = sunMD1.natal.evidence.filter(e => e.type === 'YOGA');
+    const yogaEv2 = sunMD2.natal.evidence.filter(e => e.type === 'YOGA');
+    expect(yogaEv1.length).toBe(1);
+    expect(yogaEv2.length).toBe(1);
+    expect(yogaEv1[0].ruleId).toBe(`DASHA_LORD_YOGA:${sunMD1.natal.yogaParticipation[0].yogaId}`);
+    expect(yogaEv1[0].ruleId).toBe(yogaEv2[0].ruleId);
   });
 
   it('shouldPreserveHouseDomains', () => {
