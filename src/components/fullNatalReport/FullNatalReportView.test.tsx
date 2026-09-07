@@ -45,14 +45,12 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
   // Case 3: Existing app tabs still present
   it('3. App renders existing navigation tabs along with Detailed Analysis tab', () => {
     render(<App />);
-    expect(screen.getByText('Detailed Analysis')).toBeInTheDocument();
-    expect(screen.getByText('Horoscope & Charts')).toBeInTheDocument();
-    expect(screen.getByText('Planetary Facts & Dignity')).toBeInTheDocument();
-    expect(screen.getByText('Gochara Transits (PR-037)')).toBeInTheDocument();
-    expect(screen.getByText('Divisional Vargas (D1, D3, D9, D10)')).toBeInTheDocument();
-    expect(screen.getByText('27 Nakshatras Wheel')).toBeInTheDocument();
-    expect(screen.getByText('Natural Relationships')).toBeInTheDocument();
-    expect(screen.getByText('Golden Vector Test Suite')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Career' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wealth' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dasha & Timing' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Why This Result?' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Detailed Analysis' })).toBeInTheDocument();
   });
 
   // Case 4: Birth Information

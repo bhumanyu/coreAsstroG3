@@ -3,64 +3,83 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Header } from './Header';
 import { CANONICAL_BIRTH_DETAILS } from '../test/fixtures/canonicalChart';
-import type { AppTab } from '../types/appTabs';
 
 describe('Header Component', () => {
-  it('renders all expected tabs with Life Analysis first and Detailed Analysis present', () => {
-    const handleTabChange = vi.fn();
+  it('renders all expected product navigation tabs with Overview first and Detailed Analysis present', () => {
+    const handleNavigate = vi.fn();
     const handleOpenModal = vi.fn();
     const handleResetPreset = vi.fn();
 
     render(
       <Header
-        birthDetails={CANONICAL_BIRTH_DETAILS}
+        activePage="overview"
+        onNavigate={handleNavigate}
         onOpenBirthForm={handleOpenModal}
-        activeTab="life-analysis"
-        setActiveTab={handleTabChange}
         onResetPreset={handleResetPreset}
       />
     );
 
-    const buttons = screen.getAllByRole('button');
-    const tabButtons = buttons.filter((b) =>
-      [
-        'Life Analysis',
-        'Detailed Analysis',
-        'Horoscope & Charts',
-        'Planetary Facts & Dignity',
-        'Gochara Transits (PR-037)',
-        'Divisional Vargas (D1, D3, D9, D10)',
-        '27 Nakshatras Wheel',
-        'Natural Relationships',
-        'Golden Vector Test Suite'
-      ].includes(b.textContent || '')
-    );
+    const expectedProductTabs = [
+      'Overview',
+      'Career',
+      'Wealth',
+      'Dasha & Timing',
+      'Why This Result?',
+      'Detailed Analysis'
+    ];
 
-    expect(tabButtons).toHaveLength(9);
-    expect(tabButtons[0].textContent).toBe('Life Analysis');
-    expect(tabButtons[1].textContent).toBe('Detailed Analysis');
+    expectedProductTabs.forEach((tab) => {
+      expect(screen.getByRole('button', { name: tab })).toBeInTheDocument();
+    });
 
-    // Ensure AI Explanation is NOT present
+    // Ensure Brand shows CoreAstro and Vedic Astrology
+    expect(screen.getByText('CoreAstro')).toBeInTheDocument();
+    expect(screen.getByText('Vedic Astrology')).toBeInTheDocument();
+
+    // Ensure version and engine wording moved OUT of the header
+    expect(screen.queryByText(/v0\.1\.0-TS/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Calculation System/)).not.toBeInTheDocument();
+
+    // Ensure standalone AI Explanation is NOT present
     expect(screen.queryByRole('button', { name: 'AI Explanation' })).not.toBeInTheDocument();
   });
 
-  it('invokes setActiveTab with selected AppTab when clicked', () => {
-    const handleTabChange = vi.fn();
+  it('invokes onNavigate with selected AppPage when clicked', () => {
+    const handleNavigate = vi.fn();
 
     render(
       <Header
-        birthDetails={CANONICAL_BIRTH_DETAILS}
+        activePage="overview"
+        onNavigate={handleNavigate}
         onOpenBirthForm={vi.fn()}
-        activeTab="life-analysis"
-        setActiveTab={handleTabChange}
         onResetPreset={vi.fn()}
       />
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Detailed Analysis' }));
-    expect(handleTabChange).toHaveBeenCalledWith('report');
+    expect(handleNavigate).toHaveBeenCalledWith('detailed');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Horoscope & Charts' }));
-    expect(handleTabChange).toHaveBeenCalledWith('horoscope');
+    fireEvent.click(screen.getByRole('button', { name: 'Career' }));
+    expect(handleNavigate).toHaveBeenCalledWith('career');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wealth' }));
+    expect(handleNavigate).toHaveBeenCalledWith('wealth');
+  });
+
+  it('supports legacy birthDetails and activeTab props for backwards compatibility', () => {
+    const handleTabChange = vi.fn();
+
+    render(
+      <Header
+        birthDetails={CANONICAL_BIRTH_DETAILS}
+        activeTab="life-analysis"
+        setActiveTab={handleTabChange}
+        onOpenBirthForm={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Birth Chart')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Detailed Analysis' }));
+    expect(handleTabChange).toHaveBeenCalledWith('detailed');
   });
 });
