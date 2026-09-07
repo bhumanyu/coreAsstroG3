@@ -118,7 +118,7 @@ export function deriveProductAnalysisStatus(
 export function mapDirection(val?: string): ProductDirection {
   if (!val) return 'NEUTRAL';
   const u = val.toUpperCase();
-  if (u.includes('SUPPORT') || u.includes('BENEFIC') || u.includes('FAVORABLE') || u.includes('STRONG') || u.includes('HIGH')) {
+  if (u.includes('SUPPORT') || u.includes('BENEFIC') || u.includes('FAVORABLE') || u.includes('STRONG') || u.includes('HIGH') || u.includes('ACTIVATE')) {
     return 'SUPPORT';
   }
   if (u.includes('CHALLENGE') || u.includes('MALEFIC') || u.includes('OBSTACLE') || u.includes('DIFFICULT') || u.includes('WEAK')) {

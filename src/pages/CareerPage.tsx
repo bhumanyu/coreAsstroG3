@@ -3,6 +3,7 @@ import { Briefcase } from 'lucide-react';
 import type {
   LifeAnalysisProductState,
   DomainStrength,
+  SynthesisDomainStrength,
   VargaRelationship,
   TimingActivationEffect,
   TransitTriggerEffect,
@@ -70,13 +71,29 @@ export const CareerPage: React.FC<CareerPageProps> = ({
 
   const careerFromAggregate = aggregateAnalysis ? selectCareer(aggregateAnalysis) : undefined;
 
+  const mapToSynthesisStrength = (s: string | undefined): SynthesisDomainStrength => {
+    switch (s) {
+      case 'VERY_STRONG':
+        return 'VERY_STRONG';
+      case 'STRONG':
+        return 'STRONG';
+      case 'MODERATE':
+        return 'MODERATE';
+      case 'WEAK':
+      case 'VERY_WEAK':
+        return 'WEAK';
+      default:
+        return 'MODERATE';
+    }
+  };
+
   const careerSummary = legacyAnalysis?.domains.find((d) => d.domain === 'CAREER') ?? (
     careerFromAggregate
       ? {
           domain: 'CAREER' as const,
           displayName: 'Career & Professional Life',
           status: 'SUPPORTED' as const,
-          strength: (careerFromAggregate.promise.strength as DomainStrength) || 'UNAVAILABLE',
+          strength: mapToSynthesisStrength(careerFromAggregate.promise.strength),
           confidence: (careerFromAggregate.promise.confidence as ConfidenceLevel) || 'MEDIUM',
           conclusion: careerFromAggregate.promise.statement || '',
           headline: careerFromAggregate.promise.headline,

@@ -104,11 +104,14 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   onNavigate,
   onRetry
 }) => {
+  const effectiveLifeAnalysisState: LifeAnalysisProductState =
+    lifeAnalysisState ?? state.lifeAnalysisState ?? { status: 'LOADING' };
+
   switch (state.activePage) {
     case 'overview':
       return (
         <LifeAnalysisPage
-          state={lifeAnalysisState}
+          state={effectiveLifeAnalysisState}
           onRetry={onRetry}
           onNavigateToDashaTiming={() => onNavigate('dasha')}
         />
@@ -386,7 +389,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
     default:
       return (
         <LifeAnalysisPage
-          state={lifeAnalysisState}
+          state={effectiveLifeAnalysisState}
           onRetry={onRetry}
           onNavigateToDashaTiming={() => onNavigate('dasha')}
         />

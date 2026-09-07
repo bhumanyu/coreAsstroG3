@@ -3,6 +3,7 @@ import { Coins } from 'lucide-react';
 import type {
   LifeAnalysisProductState,
   DomainStrength,
+  SynthesisDomainStrength,
   VargaRelationship,
   TimingActivationEffect,
   TransitTriggerEffect,
@@ -74,13 +75,29 @@ export const WealthPage: React.FC<WealthPageProps> = ({
 
   const wealthFromAggregate = aggregateAnalysis ? selectWealth(aggregateAnalysis) : undefined;
 
+  const mapToSynthesisStrength = (s: string | undefined): SynthesisDomainStrength => {
+    switch (s) {
+      case 'VERY_STRONG':
+        return 'VERY_STRONG';
+      case 'STRONG':
+        return 'STRONG';
+      case 'MODERATE':
+        return 'MODERATE';
+      case 'WEAK':
+      case 'VERY_WEAK':
+        return 'WEAK';
+      default:
+        return 'MODERATE';
+    }
+  };
+
   const wealthSummary: LifeAnalysisDomainSummaryViewModel | undefined = legacyAnalysis?.domains.find((d) => d.domain === 'WEALTH') ?? (
     wealthFromAggregate
       ? {
           domain: 'WEALTH' as const,
           displayName: 'Wealth & Assets',
           status: 'SUPPORTED' as const,
-          strength: (wealthFromAggregate.overall.promise as DomainStrength) || 'UNAVAILABLE',
+          strength: mapToSynthesisStrength(wealthFromAggregate.overall.promise),
           confidence: (wealthFromAggregate.overall.confidence as ConfidenceLevel) || 'MEDIUM',
           conclusion: wealthFromAggregate.overall.statement || '',
           headline: wealthFromAggregate.overall.headline,
