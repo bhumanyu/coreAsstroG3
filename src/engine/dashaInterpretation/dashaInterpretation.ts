@@ -30,6 +30,24 @@ import {
   ActiveDashaInterpretation,
   DashaBirthAnchor
 } from './dashaInterpretationTypes';
+import { YogaResult } from '../yoga/yogaTypes';
+
+/**
+ * Builds a deterministic, order-independent canonical fingerprint for a yoga result.
+ * Builds an ID purely from the yoga's semantic identity:
+ * `type`, `category`, sorted participating `planets`, and sorted `houses` (filtering out undefined).
+ * Format: `${type}|CATEGORY=${category}|PLANETS=${sortedPlanets.join(',')}|HOUSES=${sortedHouses.join(',')}`
+ * e.g. `RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=5,10`
+ */
+export function computeCanonicalYogaId(y: YogaResult): string {
+  const sortedPlanets = Array.from(
+    new Set((y.planets ?? []).filter((p): p is Planet => Boolean(p)))
+  ).sort();
+  const sortedHouses = Array.from(
+    new Set((y.houses ?? []).filter((h): h is number => typeof h === 'number'))
+  ).sort((a, b) => a - b);
+  return `${y.type}|CATEGORY=${y.category}|PLANETS=${sortedPlanets.join(',')}|HOUSES=${sortedHouses.join(',')}`;
+}
 
 function combineInterpretationConfidence(
   ...levels: InterpretationConfidence[]
@@ -130,27 +148,20 @@ function buildActivation(
       const validHouses: readonly number[] = (y.houses || []).filter(
         (h): h is number => typeof h === 'number'
       );
-      const planetsList = (y.planets || []).map(p => String(p));
-      const rawRuleId = y.evidence?.[0]?.ruleId;
-      const baseYogaId = rawRuleId ?? `${y.type}_H${validHouses.join('-')}_P${planetsList.join('-')}`;
+      const canonicalYogaId = computeCanonicalYogaId(y);
 
-      let yogaId = baseYogaId;
-      if (seenYogaIds.has(yogaId)) {
-        if (rawRuleId && (validHouses.length > 0 || planetsList.length > 0)) {
-          yogaId = `${rawRuleId}_H${validHouses.join('-')}_P${planetsList.join('-')}`;
-        }
-        let counter = 2;
-        const disambiguationBase = yogaId;
-        while (seenYogaIds.has(yogaId)) {
-          yogaId = `${disambiguationBase}_${counter++}`;
-        }
+      // Collision guard for genuinely-identical fingerprints (true duplicates):
+      // If two records produce the exact same canonical fingerprint, they represent the same
+      // semantic yoga instance. Deduplicate by skipping subsequent identical occurrences.
+      if (seenYogaIds.has(canonicalYogaId)) {
+        continue;
       }
-      seenYogaIds.add(yogaId);
+      seenYogaIds.add(canonicalYogaId);
 
       yogaParticipation.push(
         Object.freeze({
           yogaType: y.type,
-          yogaId,
+          yogaId: canonicalYogaId,
           strength: y.assessment?.strength,
           finalStatus: y.assessment?.finalStatus,
           relationship,
@@ -321,13 +332,7 @@ function buildActivation(
 
   // YOGA
   for (const yRef of yogaParticipation) {
-    const yogaRuleId = yRef.yogaId
-      ? (yRef.yogaId === yRef.yogaType
-          ? `DASHA_LORD_YOGA_${yRef.yogaType}`
-          : yRef.yogaId.startsWith(`${yRef.yogaType}_`)
-            ? `DASHA_LORD_YOGA_${yRef.yogaId}`
-            : `DASHA_LORD_YOGA_${yRef.yogaType}_${yRef.yogaId}`)
-      : `DASHA_LORD_YOGA_${yRef.yogaType}`;
+    const yogaRuleId = `DASHA_LORD_YOGA:${yRef.yogaId}`;
 
     evidence.push(
       Object.freeze({

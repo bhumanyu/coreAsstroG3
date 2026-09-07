@@ -32,7 +32,7 @@ import { analyzePlanetInterpretation } from '../planetInterpretation/planetInter
 import { analyzeHouseInterpretation } from '../houseInterpretation/houseInterpretation';
 import { analyzePlanets } from '../planetAnalysis';
 import { analyzeHouses } from '../houseAnalysis';
-import { analyzeDashaInterpretation, analyzeActiveDasha } from './dashaInterpretation';
+import { analyzeDashaInterpretation, analyzeActiveDasha, computeCanonicalYogaId } from './dashaInterpretation';
 import { DashaInterpretationInput } from './dashaInterpretationTypes';
 import { calculateHoroscope } from '../astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
@@ -459,6 +459,130 @@ describe('dashaInterpretation Engine', () => {
     const saturnMD = report.mahadashas.find(md => md.planet === Planet.SATURN)!;
     expect(saturnMD.natal.yogaParticipation.length).toBe(1);
     expect(saturnMD.natal.yogaParticipation[0].finalStatus).toBe('CANCELLED');
+  });
+
+  it('shouldComputeDeterministicOrderIndependentCanonicalYogaFingerprint', () => {
+    const y1 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      planets: [Planet.JUPITER, Planet.SUN],
+      houses: [5, 10],
+      evidence: []
+    } as any;
+
+    const y2 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [10, 5],
+      evidence: []
+    } as any;
+
+    expect(computeCanonicalYogaId(y1)).toBe('RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=5,10');
+    expect(computeCanonicalYogaId(y2)).toBe('RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=5,10');
+    expect(computeCanonicalYogaId(y1)).toBe(computeCanonicalYogaId(y2));
+  });
+
+  it('shouldGenerateDeterministicCanonicalYogaIdsAndUniqueRuleIds', () => {
+    // Two RAJA_YOGA YogaResults on the same planet (SUN) with the same detecting rule but different finalStatus
+    const yoga1 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [{ ruleId: 'rajaKendraTrikonaLordRule' } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const yoga2 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.MARS],
+      houses: [1, 9],
+      evidence: [{ ruleId: 'rajaKendraTrikonaLordRule' } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.MODERATE,
+        finalStatus: 'PRESENT' as const,
+        confidence: 'MEDIUM' as const
+      }
+    };
+
+    const input1 = createDashaFixture({ yogas: [yoga1, yoga2] });
+    const report1 = analyzeDashaInterpretation(input1);
+    const sunMD1 = report1.mahadashas.find(md => md.planet === Planet.SUN)!;
+    const yogaPart1 = sunMD1.natal.yogaParticipation;
+
+    // (a) Unique yogaIds matching participation length
+    expect(yogaPart1.length).toBe(2);
+    expect(new Set(yogaPart1.map(y => y.yogaId)).size).toBe(yogaPart1.length);
+    expect(yogaPart1[0].yogaId).toBe('RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=1,5');
+    expect(yogaPart1[1].yogaId).toBe('RAJA_YOGA|CATEGORY=RAJA|PLANETS=MARS,SUN|HOUSES=1,9');
+
+    // (b) YOGA-type evidence ruleIds are all unique and follow fixed namespace
+    const yogaEv1 = sunMD1.natal.evidence.filter(e => e.type === 'YOGA');
+    expect(yogaEv1.length).toBe(2);
+    expect(new Set(yogaEv1.map(e => e.ruleId)).size).toBe(yogaEv1.length);
+    expect(yogaEv1[0].ruleId).toBe(`DASHA_LORD_YOGA:${yogaPart1[0].yogaId}`);
+    expect(yogaEv1[1].ruleId).toBe(`DASHA_LORD_YOGA:${yogaPart1[1].yogaId}`);
+
+    // Assert stability: reversing the input yoga array yields the SAME set of yogaIds (not swapped suffixes)
+    const input2 = createDashaFixture({ yogas: [yoga2, yoga1] });
+    const report2 = analyzeDashaInterpretation(input2);
+    const sunMD2 = report2.mahadashas.find(md => md.planet === Planet.SUN)!;
+    const yogaPart2 = sunMD2.natal.yogaParticipation;
+
+    expect(new Set(yogaPart1.map(y => y.yogaId))).toEqual(new Set(yogaPart2.map(y => y.yogaId)));
+    const yogaEv2 = sunMD2.natal.evidence.filter(e => e.type === 'YOGA');
+    expect(new Set(yogaEv1.map(e => e.ruleId))).toEqual(new Set(yogaEv2.map(e => e.ruleId)));
+  });
+
+  it('shouldDeduplicateGenuinelyIdenticalCanonicalYogaFingerprints', () => {
+    // Two duplicate records producing the exact same canonical fingerprint
+    const yoga1 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [{ ruleId: 'ruleA' } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const yogaDuplicate = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.JUPITER, Planet.SUN],
+      houses: [5, 1],
+      evidence: [{ ruleId: 'ruleB' } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const input = createDashaFixture({ yogas: [yoga1, yogaDuplicate] });
+    const report = analyzeDashaInterpretation(input);
+    const sunMD = report.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+    // Second identical yoga is deduplicated
+    expect(sunMD.natal.yogaParticipation.length).toBe(1);
+    expect(sunMD.natal.evidence.filter(e => e.type === 'YOGA').length).toBe(1);
   });
 
   it('shouldPreserveHouseDomains', () => {
