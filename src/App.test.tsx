@@ -50,7 +50,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValue(readyProductState);
   });
 
-  it('1. Default landing: renders on Life Analysis tab and displays Unified Life Domain Analysis heading', async () => {
+  it('1. Default landing: renders on Overview tab and displays Unified Life Domain Analysis heading', async () => {
     render(<App />);
 
     await waitFor(() => {
@@ -58,13 +58,15 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
   });
 
-  it('2. Navigation tabs: Life Analysis and Detailed Analysis buttons exist, while standalone AI Explanation button is NOT present', async () => {
+  it('2. Navigation tabs: Overview and Detailed Analysis buttons exist, while standalone AI Explanation button is NOT present', async () => {
     render(<App />);
 
-    // Life Analysis tab button
-    expect(screen.getByRole('button', { name: 'Life Analysis' })).toBeInTheDocument();
-
-    // Detailed Analysis tab button (renamed from Full Natal Analysis)
+    // Product navigation tab buttons
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Career' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wealth' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dasha & Timing' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Why This Result?' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Detailed Analysis' })).toBeInTheDocument();
 
     // Standalone AI Explanation button should NOT be present
@@ -267,8 +269,32 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.getByText('Statement from Chart B - Fresh Selection')).toBeInTheDocument();
   });
 
-  it('8. Tab routing: navigating to Detailed Analysis, Horoscope, Planets, Transit, Divisional tabs renders cleanly', async () => {
+  it('8. Tab routing: navigating to Product and Research pages renders cleanly', async () => {
     render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
+    });
+
+    // Click Career tab
+    const careerTab = screen.getByRole('button', { name: 'Career' });
+    fireEvent.click(careerTab);
+    expect(screen.getByText('Career & Professional Trajectory')).toBeInTheDocument();
+
+    // Click Wealth tab
+    const wealthTab = screen.getByRole('button', { name: 'Wealth' });
+    fireEvent.click(wealthTab);
+    expect(screen.getByText('Wealth & Financial Prosperity')).toBeInTheDocument();
+
+    // Click Why This Result? tab
+    const reasoningTab = screen.getByRole('button', { name: 'Why This Result?' });
+    fireEvent.click(reasoningTab);
+    expect(screen.getByText('Astrological Reasoning & Evidence Trace')).toBeInTheDocument();
+
+    // Click Dasha & Timing tab
+    const dashaTab = screen.getByRole('button', { name: 'Dasha & Timing' });
+    fireEvent.click(dashaTab);
+    expect(screen.getByText(/Vimshottari Dasha/i)).toBeInTheDocument();
 
     // Click Detailed Analysis tab
     const detailedAnalysisTab = screen.getByRole('button', { name: 'Detailed Analysis' });
@@ -277,24 +303,27 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     // Verify FullNatalReportView content renders
     expect(screen.getByText('Methodology & Engine Scope')).toBeInTheDocument();
 
-    // Click Horoscope & Charts tab
-    const horoscopeTab = screen.getByRole('button', { name: 'Horoscope & Charts' });
-    fireEvent.click(horoscopeTab);
+    // In Detailed Analysis, the Research Tools panel is present
+    expect(screen.getByText('Research & Classical Inspection Tools')).toBeInTheDocument();
+
+    // Click Horoscope & Charts research tool from the panel
+    const horoscopeBtn = screen.getByRole('button', { name: 'Horoscope & Charts' });
+    fireEvent.click(horoscopeBtn);
     expect(screen.getByText('Rasi Birth Chart (D1)')).toBeInTheDocument();
 
-    // Click Planetary Facts tab
-    const planetsTab = screen.getByRole('button', { name: 'Planetary Facts & Dignity' });
-    fireEvent.click(planetsTab);
+    // Click Planets & Dignity research tool from the panel
+    const planetsBtn = screen.getByRole('button', { name: 'Planets & Dignity' });
+    fireEvent.click(planetsBtn);
     expect(screen.getByText('Planetary Facts & Dignity Analysis')).toBeInTheDocument();
 
-    // Click Gochara Transits tab
-    const transitTab = screen.getByRole('button', { name: 'Gochara Transits (PR-037)' });
-    fireEvent.click(transitTab);
+    // Click Transit Analysis research tool from the panel
+    const transitBtn = screen.getByRole('button', { name: 'Transit Analysis' });
+    fireEvent.click(transitBtn);
     expect(screen.getByText('Vedic Planetary Gochara (Transit Analysis)')).toBeInTheDocument();
 
-    // Click Divisional Vargas tab
-    const divisionalTab = screen.getByRole('button', { name: 'Divisional Vargas (D1, D3, D9, D10)' });
-    fireEvent.click(divisionalTab);
+    // Click Divisional Vargas research tool from the panel
+    const divisionalBtn = screen.getByRole('button', { name: 'Divisional Vargas' });
+    fireEvent.click(divisionalBtn);
     expect(screen.getByText('Divisional Vargas Inspection (D1, D3, D9, D10)')).toBeInTheDocument();
   });
 });
