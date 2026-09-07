@@ -20,6 +20,11 @@ import {
   createDomainConclusion
 } from '../../domain/interpretation';
 import { createAiRequest } from '../api/createAiRequest';
+import { YogaType, YogaCategory, YogaStrength, YogaStrengthLevel } from '../../engine/yoga/yogaTypes';
+import {
+  analyzeDashaInterpretation,
+  analyzeActiveDasha
+} from '../../engine/dashaInterpretation/dashaInterpretation';
 
 describe('AI Context Factory', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -1414,6 +1419,137 @@ describe('AI Context Factory', () => {
       expect(() => buildDashaEvidence(currentConflicting as any)).toThrow(
         /Cannot build AiContext: conflicting evidence id/
       );
+    });
+
+    it('full-path integration regression: yoga engine -> dasha interpretation -> dasha evidence -> AI-context projection', () => {
+      const activeDate = CANONICAL_BIRTH_DETAILS.dateTimeStr;
+      const initialActive = analyzeActiveDasha(
+        {
+          vimshottari: horoscope.vimshottari,
+          planetInterpretation: horoscope.planetInterpretation,
+          houseInterpretation: horoscope.houseInterpretation,
+          functionalRoles: horoscope.functionalRoles,
+          natalGrahaDrishti: (horoscope.natalGrahaDrishti ?? { aspects: [] }) as any,
+          yogas: { yogas: [] },
+          planetAnalysis: horoscope.planetAnalysis,
+          planetaryStrength: horoscope.planetaryStrength
+        },
+        activeDate
+      )!;
+      expect(initialActive).not.toBeNull();
+      const mdLord = initialActive.mahadasha.planet;
+      const otherPlanet = mdLord === Planet.JUPITER ? Planet.SUN : Planet.JUPITER;
+
+      // Two same-fingerprint RAJA_YOGA records with conflicting finalStatus and strength
+      const sameFingerprintYoga1 = {
+        type: YogaType.RAJA_YOGA,
+        category: YogaCategory.RAJA,
+        strength: YogaStrength.STRONG,
+        planets: [mdLord, otherPlanet],
+        houses: [1, 5],
+        evidence: [
+          { ruleId: 'rajaKendraTrikonaRule', evidenceType: 'FORMATION' as const }
+        ] as any,
+        assessment: {
+          formationPresent: true,
+          strength: YogaStrengthLevel.VERY_STRONG,
+          finalStatus: 'STRONG' as const,
+          confidence: 'HIGH' as const,
+          supportingFactors: [],
+          weakeningFactors: [],
+          cancellationFactors: []
+        }
+      };
+
+      const sameFingerprintYoga2 = {
+        type: YogaType.RAJA_YOGA,
+        category: YogaCategory.RAJA,
+        strength: YogaStrength.STRONG,
+        planets: [otherPlanet, mdLord], // reversed order produces same canonical id
+        houses: [5, 1], // reversed houses produce same canonical id
+        evidence: [
+          { ruleId: 'rajaBhangaCombustionRule', evidenceType: 'CANCELLATION' as const }
+        ] as any,
+        assessment: {
+          formationPresent: false,
+          strength: YogaStrengthLevel.MODERATE,
+          finalStatus: 'CANCELLED' as const,
+          confidence: 'HIGH' as const,
+          supportingFactors: [],
+          weakeningFactors: [],
+          cancellationFactors: []
+        }
+      };
+
+      const dashaInput = {
+        vimshottari: horoscope.vimshottari,
+        planetInterpretation: horoscope.planetInterpretation,
+        houseInterpretation: horoscope.houseInterpretation,
+        functionalRoles: horoscope.functionalRoles,
+        natalGrahaDrishti: (horoscope.natalGrahaDrishti ?? { aspects: [] }) as any,
+        yogas: { yogas: [sameFingerprintYoga1, sameFingerprintYoga2] },
+        planetAnalysis: horoscope.planetAnalysis,
+        planetaryStrength: horoscope.planetaryStrength
+      };
+
+      const dashaReport = analyzeDashaInterpretation(dashaInput);
+      const activeDasha = analyzeActiveDasha(dashaInput, activeDate)!;
+      expect(activeDasha).not.toBeNull();
+
+      const fullHoroscope = {
+        ...horoscope,
+        yogas: { yogas: [sameFingerprintYoga1, sameFingerprintYoga2] },
+        dashaInterpretation: {
+          ...dashaReport,
+          current: activeDasha
+        }
+      };
+
+      // 1. Direct buildDashaEvidence does not throw conflicting-evidence-id
+      expect(() => buildDashaEvidence(activeDasha)).not.toThrow();
+
+      // 2. buildAiContext does not throw conflicting-evidence-id
+      let aiContext: any;
+      expect(() => {
+        aiContext = buildAiContext(fullHoroscope);
+      }).not.toThrow();
+
+      // 3. Merged yoga participation verification in AI Context and Active Dasha
+      expect(activeDasha.mahadasha.natal.yogaParticipation.length).toBe(1);
+      const mdYogaPart = aiContext.dasha?.interpretation?.mahadasha?.yogaParticipation;
+      expect(mdYogaPart).toBeDefined();
+      expect(mdYogaPart.length).toBe(1);
+
+      const mergedYoga = mdYogaPart[0];
+      // Option-A contract: cancellation-dominant status, highest intrinsic strength
+      expect(mergedYoga.finalStatus).toBe('CANCELLED');
+      expect(mergedYoga.strength).toBe(YogaStrengthLevel.VERY_STRONG);
+
+      // Provenance retention: contributingRuleIds unioned, deduped, and sorted
+      const expectedRuleIds = ['rajaBhangaCombustionRule', 'rajaKendraTrikonaRule'].sort();
+      expect(mergedYoga.contributingRuleIds).toEqual(expectedRuleIds);
+      expect(mergedYoga.provenance).toBeDefined();
+      expect(mergedYoga.provenance?.contributingRuleIds).toEqual(expectedRuleIds);
+      expect(mergedYoga.provenance?.formationRuleIds).toEqual(['rajaKendraTrikonaRule']);
+      expect(mergedYoga.provenance?.cancellationRuleIds).toEqual(['rajaBhangaCombustionRule']);
+
+      // 4. Emitted AI evidence: exactly 1 merged evidence per participating dasha level (no duplicate conflicting IDs)
+      const mdYogaEvs = aiContext.evidence.filter(
+        (e: any) => e.source === 'DASHA' && e.dashaLevel === 'MAHADASHA' && e.ruleId?.startsWith('DASHA_LORD_YOGA')
+      );
+      expect(mdYogaEvs.length).toBe(1);
+      expect(mdYogaEvs[0].statement).toContain('(status: CANCELLED)');
+      expect(mdYogaEvs[0].derivedFromIds).toEqual(expectedRuleIds);
+
+      // Verify every projected dasha yoga evidence item has the merged provenance
+      const allDashaYogaEvs = aiContext.evidence.filter(
+        (e: any) => e.source === 'DASHA' && e.ruleId?.startsWith('DASHA_LORD_YOGA')
+      );
+      expect(allDashaYogaEvs.length).toBeGreaterThanOrEqual(1);
+      for (const ev of allDashaYogaEvs) {
+        expect(ev.statement).toContain('(status: CANCELLED)');
+        expect(ev.derivedFromIds).toEqual(expectedRuleIds);
+      }
     });
   });
 });

@@ -26,6 +26,7 @@ import {
   DashaInterpretationEvidence,
   DashaInterpretationSummary,
   DashaYogaReference,
+  DashaYogaProvenance,
   DashaPairInterpretation,
   ActiveDashaInterpretation,
   DashaBirthAnchor
@@ -45,9 +46,14 @@ const FINAL_STATUS_PRECEDENCE: Record<YogaFinalStatus, number> = {
  * Reconciles two finalStatus values using conservative (cancellation-dominant) precedence:
  * CANCELLED > WEAKENED > PRESENT > STRONG.
  *
- * Rationale: In Vedic dasha synthesis, any astrological condition that invalidates or weakens
- * a yoga (e.g. bhanga, combustion, planetary war, dusthana placement) must take precedence
- * over an optimistic status to prevent false promises in activation outcomes.
+ * Semantic Contract (Option A - Information Preservation):
+ * - `finalStatus` tracks OPERATIONAL VALIDITY. 'CANCELLED' indicates the yoga is invalidated
+ *   (e.g. by bhanga, combustion, planetary defeat, or debilitating placement).
+ * - `strength` tracks INTRINSIC FORMATION STRENGTH (independent of operational validity).
+ * - Therefore, a merged state of finalStatus = 'CANCELLED' together with strength = 'VERY_STRONG'
+ *   is fully legitimate and semantically means "strongly-formed but invalidated."
+ * - Downstream consumers that evaluate whether a yoga is functionally operative or produces
+ *   benefic activation MUST gate on `finalStatus !== 'CANCELLED'`.
  */
 export function mergeYogaFinalStatus(
   a?: YogaFinalStatus,
@@ -70,7 +76,13 @@ const YOGA_STRENGTH_LEVEL_RANK: Record<YogaStrengthLevel, number> = {
 
 /**
  * Reconciles two YogaStrengthLevel values by retaining the higher strength level.
- * If one is undefined, the defined value is retained.
+ *
+ * Semantic Contract (Option A - Information Preservation):
+ * - Reflects intrinsic formational strength of the yoga upon initial constitution.
+ * - Retaining the highest detected formational strength preserves the combination's
+ *   inherent structural magnitude even when other records indicate subsequent cancellation.
+ * - This value does NOT denote operational usability; downstream consumers MUST check
+ *   `finalStatus !== 'CANCELLED'` before applying this strength to dasha effects.
  */
 export function mergeYogaStrength(
   a?: YogaStrengthLevel,
@@ -83,25 +95,40 @@ export function mergeYogaStrength(
   return rankA >= rankB ? a : b;
 }
 
-const RELATIONSHIP_PRECEDENCE: Record<'PLANET' | 'HOUSE_LORD' | 'OCCUPANT', number> = {
-  PLANET: 3,
-  HOUSE_LORD: 2,
-  OCCUPANT: 1
-};
+export type DashaYogaRelationship = 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' | 'MIXED';
 
+/**
+ * Reconciles two DashaYogaRelationship values across duplicate yoga records.
+ *
+ * Domain Rationale:
+ * Relationship mode (direct planetary participant, house lord, or house occupant) is a
+ * qualitative semantic classification of a graha's role in the yoga, rather than an
+ * ordinal scale of strength. When duplicate records share the exact same relationship,
+ * that specific mode is preserved. When distinct relationships are detected across records
+ * (e.g. one detection marks direct 'PLANET' participation while another marks 'OCCUPANT'
+ * or 'HOUSE_LORD'), they resolve symmetrically to 'MIXED'. This accurately reflects
+ * multi-modal participation without imposing an arbitrary or ungrounded hierarchy.
+ * The operation is strictly commutative: mergeRelationship(a, b) === mergeRelationship(b, a).
+ */
 export function mergeRelationship(
-  a: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT',
-  b: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT'
-): 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' {
-  const rankA = RELATIONSHIP_PRECEDENCE[a] ?? 0;
-  const rankB = RELATIONSHIP_PRECEDENCE[b] ?? 0;
-  return rankA >= rankB ? a : b;
+  a: DashaYogaRelationship,
+  b: DashaYogaRelationship
+): DashaYogaRelationship {
+  if (a === b) return a;
+  return 'MIXED';
 }
 
 /**
  * Builds a deterministic, order-independent canonical fingerprint for a yoga result.
- * Builds an ID purely from the yoga's semantic identity:
- * `type`, `category`, sorted participating `planets`, and sorted `houses` (filtering out undefined).
+ *
+ * Semantic Identity Contract:
+ * Identifies a semantic yoga INSTANCE (type + category + participating planets + houses),
+ * NOT a detection rule or an individual evaluator observation.
+ * Two records sharing this fingerprint represent the same underlying astrological yoga combination
+ * (e.g. evaluated under different criteria, rules, or cancellation checks) and are deterministically
+ * merged into a single DashaYogaReference. This canonical identity is fundamental to Dasha
+ * deduplication, reconciliation, and evidence stability across the engine.
+ *
  * Format: `${type}|CATEGORY=${category}|PLANETS=${sortedPlanets.join(',')}|HOUSES=${sortedHouses.join(',')}`
  * e.g. `RAJA_YOGA|CATEGORY=RAJA|PLANETS=JUPITER,SUN|HOUSES=5,10`
  */
@@ -113,6 +140,60 @@ export function computeCanonicalYogaId(y: YogaResult): string {
     new Set((y.houses ?? []).filter((h): h is number => typeof h === 'number'))
   ).sort((a, b) => a - b);
   return `${y.type}|CATEGORY=${y.category}|PLANETS=${sortedPlanets.join(',')}|HOUSES=${sortedHouses.join(',')}`;
+}
+
+interface ExtractedYogaProvenance {
+  readonly ruleIds: readonly string[];
+  readonly formationRuleIds: readonly string[];
+  readonly cancellationRuleIds: readonly string[];
+}
+
+function extractYogaProvenance(y: YogaResult): ExtractedYogaProvenance {
+  const allRuleIds = new Set<string>();
+  const formationRuleIds = new Set<string>();
+  const cancellationRuleIds = new Set<string>();
+
+  for (const ev of y.evidence ?? []) {
+    if (ev.ruleId) {
+      allRuleIds.add(ev.ruleId);
+      if (ev.evidenceType === 'FORMATION') {
+        formationRuleIds.add(ev.ruleId);
+      } else if (ev.evidenceType === 'CANCELLATION') {
+        cancellationRuleIds.add(ev.ruleId);
+      }
+    }
+  }
+
+  return {
+    ruleIds: Object.freeze(Array.from(allRuleIds).sort()),
+    formationRuleIds: Object.freeze(Array.from(formationRuleIds).sort()),
+    cancellationRuleIds: Object.freeze(Array.from(cancellationRuleIds).sort())
+  };
+}
+
+function mergeSortedStrings(
+  a?: readonly string[],
+  b?: readonly string[]
+): readonly string[] | undefined {
+  if (!a && !b) return undefined;
+  const set = new Set<string>();
+  if (a) for (const s of a) set.add(s);
+  if (b) for (const s of b) set.add(s);
+  if (set.size === 0) return undefined;
+  return Object.freeze(Array.from(set).sort());
+}
+
+function buildStructuredProvenance(
+  ruleIds?: readonly string[],
+  formationRuleIds?: readonly string[],
+  cancellationRuleIds?: readonly string[]
+): DashaYogaProvenance | undefined {
+  if (!ruleIds || ruleIds.length === 0) return undefined;
+  return Object.freeze({
+    contributingRuleIds: ruleIds,
+    ...(formationRuleIds && formationRuleIds.length > 0 ? { formationRuleIds } : {}),
+    ...(cancellationRuleIds && cancellationRuleIds.length > 0 ? { cancellationRuleIds } : {})
+  });
 }
 
 function combineInterpretationConfidence(
@@ -204,9 +285,14 @@ function buildActivation(
   const yogaMap = new Map<string, DashaYogaReference>();
   for (const y of input.yogas.yogas ?? []) {
     if (y.planets.includes(planet)) {
-      const rawRel = (y as any).relationship ?? (y as any).participantRelationships?.[planet];
-      let relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' = 'PLANET';
-      if (rawRel === 'HOUSE_LORD' || rawRel === 'OCCUPANT' || rawRel === 'PLANET') {
+      const rawRel = y.relationship ?? y.participantRelationships?.[planet];
+      let relationship: DashaYogaRelationship = 'PLANET';
+      if (
+        rawRel === 'HOUSE_LORD' ||
+        rawRel === 'OCCUPANT' ||
+        rawRel === 'MIXED' ||
+        rawRel === 'PLANET'
+      ) {
         relationship = rawRel;
       }
 
@@ -215,14 +301,42 @@ function buildActivation(
       );
       const canonicalYogaId = computeCanonicalYogaId(y);
 
+      const prov = extractYogaProvenance(y);
+      const contributingRuleIds = prov.ruleIds.length > 0 ? prov.ruleIds : undefined;
+      const structuredProv = buildStructuredProvenance(
+        contributingRuleIds,
+        prov.formationRuleIds,
+        prov.cancellationRuleIds
+      );
+
       const existing = yogaMap.get(canonicalYogaId);
       if (existing) {
         // Reconcile and merge duplicate yoga assessment deterministically:
         // finalStatus uses conservative precedence (CANCELLED > WEAKENED > PRESENT > STRONG)
-        // strength retains the higher strength level.
+        // strength retains the higher strength level (Option A: intrinsic formational strength).
+        // relationship resolves identical values directly and different values to 'MIXED'.
         const mergedStatus = mergeYogaFinalStatus(existing.finalStatus, y.assessment?.finalStatus);
         const mergedStrength = mergeYogaStrength(existing.strength, y.assessment?.strength);
         const mergedRel = mergeRelationship(existing.relationship, relationship);
+
+        const mergedRuleIds = mergeSortedStrings(existing.contributingRuleIds, prov.ruleIds);
+        const mergedFormationRuleIds = mergeSortedStrings(
+          existing.provenance?.formationRuleIds,
+          prov.formationRuleIds
+        );
+        const mergedCancellationRuleIds = mergeSortedStrings(
+          existing.provenance?.cancellationRuleIds,
+          prov.cancellationRuleIds
+        );
+        const mergedStructuredProv = buildStructuredProvenance(
+          mergedRuleIds,
+          mergedFormationRuleIds,
+          mergedCancellationRuleIds
+        );
+
+        const combinedHouses = Array.from(
+          new Set([...(existing.houses ?? []), ...validHouses])
+        ).sort((a, b) => a - b);
 
         yogaMap.set(
           canonicalYogaId,
@@ -230,7 +344,10 @@ function buildActivation(
             ...existing,
             strength: mergedStrength,
             finalStatus: mergedStatus,
-            relationship: mergedRel
+            relationship: mergedRel,
+            ...(combinedHouses.length > 0 ? { houses: Object.freeze(combinedHouses) } : {}),
+            ...(mergedRuleIds ? { contributingRuleIds: mergedRuleIds } : {}),
+            ...(mergedStructuredProv ? { provenance: mergedStructuredProv } : {})
           })
         );
       } else {
@@ -242,7 +359,9 @@ function buildActivation(
             strength: y.assessment?.strength,
             finalStatus: y.assessment?.finalStatus,
             relationship,
-            ...(validHouses.length > 0 ? { houses: Object.freeze([...validHouses]) } : {})
+            ...(validHouses.length > 0 ? { houses: Object.freeze([...validHouses]) } : {}),
+            ...(contributingRuleIds ? { contributingRuleIds } : {}),
+            ...(structuredProv ? { provenance: structuredProv } : {})
           })
         );
       }
@@ -425,7 +544,17 @@ function buildActivation(
         ...(yRef.houses && yRef.houses.length > 0 ? { houses: Object.freeze([...yRef.houses]) } : {}),
         statement: `Dasha lord ${planet} participates in ${yRef.yogaType} yoga (status: ${yRef.finalStatus ?? 'PRESENT'}).`,
         effect: 'NEUTRAL',
-        source: 'Yoga Engine'
+        source: 'Yoga Engine',
+        ...(yRef.contributingRuleIds && yRef.contributingRuleIds.length > 0
+          ? {
+              contributingRuleIds: Object.freeze([...yRef.contributingRuleIds]),
+              derivedFromIds: Object.freeze([...yRef.contributingRuleIds]),
+              meta: Object.freeze({
+                contributingRuleIds: Object.freeze([...yRef.contributingRuleIds]),
+                ...(yRef.provenance ? { provenance: yRef.provenance } : {})
+              })
+            }
+          : {})
       })
     );
   }

@@ -54,15 +54,59 @@ export interface DashaInterpretationEvidence {
   readonly statement: string;
   readonly effect: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
   readonly source: string;
+  /** Contributing source rule IDs that led to this evidence item (e.g. from merged yogas). */
+  readonly contributingRuleIds?: readonly string[];
+  /** Alias for contributingRuleIds for downstream evidence traceability conventions. */
+  readonly derivedFromIds?: readonly string[];
+  /** Extensible metadata payload. */
+  readonly meta?: Readonly<Record<string, unknown>>;
 }
 
+/**
+ * Structured provenance capturing contributing source records from the yoga engine.
+ */
+export interface DashaYogaProvenance {
+  readonly contributingRuleIds: readonly string[];
+  readonly formationRuleIds?: readonly string[];
+  readonly cancellationRuleIds?: readonly string[];
+}
+
+/**
+ * Semantic representation of a yoga participating in a dasha lord's activation.
+ *
+ * Semantic Contract (Option A - Information Preservation):
+ * - `strength`: Reflects the intrinsic/formational strength of the yoga upon initial
+ *   formation (independent of operational validity).
+ * - `finalStatus`: Reflects operational validity. 'CANCELLED' indicates that the yoga
+ *   is invalidated (e.g. by bhanga, combustion, or planetary affliction).
+ * - 'CANCELLED' + 'VERY_STRONG' is a legitimate combination meaning "strongly-formed but
+ *   invalidated."
+ * - Downstream consumers evaluating yoga effectiveness MUST gate on `finalStatus !== 'CANCELLED'`.
+ */
 export interface DashaYogaReference {
   readonly yogaType: YogaType;
   readonly yogaId: string;
+  /**
+   * Intrinsic/formational strength of the yoga (independent of validity).
+   * Downstream consumers MUST gate on `finalStatus !== 'CANCELLED'` before utilizing this strength.
+   */
   readonly strength?: YogaStrengthLevel;
+  /**
+   * Operational validity of the yoga. 'CANCELLED' indicates the yoga is invalidated.
+   * Legitimate combinations include CANCELLED + VERY_STRONG (strongly formed but invalidated).
+   */
   readonly finalStatus?: 'PRESENT' | 'WEAKENED' | 'STRONG' | 'CANCELLED';
-  readonly relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT';
+  /**
+   * Planetary participation mode in the yoga. If contributing records indicate multiple
+   * distinct relationship roles (e.g. both direct planetary and lordship/occupancy),
+   * this resolves to 'MIXED'.
+   */
+  readonly relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' | 'MIXED';
   readonly houses?: readonly number[];
+  /** Contributing rule IDs from all merged source records, deduplicated and sorted. */
+  readonly contributingRuleIds?: readonly string[];
+  /** Optional structured provenance distinguishing formation and cancellation source rules. */
+  readonly provenance?: DashaYogaProvenance;
 }
 
 export interface DashaPlanetActivation {

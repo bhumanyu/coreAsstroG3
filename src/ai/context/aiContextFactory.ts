@@ -1119,6 +1119,13 @@ function isEvidenceEqual(a: AiEvidence, b: AiEvidence): boolean {
     if (aTimingHouses[i] !== bTimingHouses[i]) return false;
   }
 
+  const aDerived = a.derivedFromIds || [];
+  const bDerived = b.derivedFromIds || [];
+  if (aDerived.length !== bDerived.length) return false;
+  for (let i = 0; i < aDerived.length; i++) {
+    if (aDerived[i] !== bDerived[i]) return false;
+  }
+
   return true;
 }
 
@@ -1303,7 +1310,10 @@ export function projectDashaEvidenceToAi(e: DashaInterpretationEvidence): AiEvid
     priority: 'TIMING',
     dimension: 'TIMING',
     ...(dashaLevel ? { dashaLevel } : {}),
-    ...(timingPlanet ? { timingPlanet } : {})
+    ...(timingPlanet ? { timingPlanet } : {}),
+    ...(e.derivedFromIds && e.derivedFromIds.length > 0
+      ? { derivedFromIds: Object.freeze([...e.derivedFromIds]) }
+      : {})
   };
 }
 

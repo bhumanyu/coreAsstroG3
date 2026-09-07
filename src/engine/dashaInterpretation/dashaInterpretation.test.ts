@@ -37,7 +37,8 @@ import {
   analyzeActiveDasha,
   computeCanonicalYogaId,
   mergeYogaFinalStatus,
-  mergeYogaStrength
+  mergeYogaStrength,
+  mergeRelationship
 } from './dashaInterpretation';
 import { DashaInterpretationInput } from './dashaInterpretationTypes';
 import { calculateHoroscope } from '../astroEngine';
@@ -679,6 +680,281 @@ describe('dashaInterpretation Engine', () => {
     expect(yogaEv2.length).toBe(1);
     expect(yogaEv1[0].ruleId).toBe(`DASHA_LORD_YOGA:${sunMD1.natal.yogaParticipation[0].yogaId}`);
     expect(yogaEv1[0].ruleId).toBe(yogaEv2[0].ruleId);
+  });
+
+  it('shouldDeterministicallyMergeThreeOrMoreDuplicatesAcrossStatusPermutations', () => {
+    // 3 duplicate records with STRONG, WEAKENED, CANCELLED
+    const mkYoga = (status: 'STRONG' | 'WEAKENED' | 'CANCELLED', ruleId: string) => ({
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [{ ruleId } as any],
+      assessment: {
+        formationPresent: status !== 'CANCELLED',
+        strength: YogaStrengthLevel.MODERATE,
+        finalStatus: status,
+        confidence: 'HIGH' as const
+      }
+    });
+
+    const yogaStrong = mkYoga('STRONG', 'ruleStrong');
+    const yogaWeakened = mkYoga('WEAKENED', 'ruleWeakened');
+    const yogaCancelled = mkYoga('CANCELLED', 'ruleCancelled');
+
+    // Test multiple orderings of all 3
+    const permutations = [
+      [yogaStrong, yogaWeakened, yogaCancelled],
+      [yogaCancelled, yogaStrong, yogaWeakened],
+      [yogaWeakened, yogaCancelled, yogaStrong],
+      [yogaStrong, yogaCancelled, yogaWeakened],
+      [yogaWeakened, yogaStrong, yogaCancelled],
+      [yogaCancelled, yogaWeakened, yogaStrong]
+    ];
+
+    for (const perm of permutations) {
+      const report = analyzeDashaInterpretation(createDashaFixture({ yogas: perm }));
+      const sunMD = report.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+      expect(sunMD.natal.yogaParticipation.length).toBe(1);
+      // CANCELLED must dominate across all permutations
+      expect(sunMD.natal.yogaParticipation[0].finalStatus).toBe('CANCELLED');
+    }
+  });
+
+  it('shouldDeterministicallyMergeThreeOrMoreDuplicatesAcrossStrengthPermutations', () => {
+    const mkStrengthYoga = (strLevel: YogaStrengthLevel, ruleId: string) => ({
+      type: YogaType.DHANA_YOGA,
+      category: YogaCategory.DHANA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.MERCURY],
+      houses: [2, 11],
+      evidence: [{ ruleId } as any],
+      assessment: {
+        formationPresent: true,
+        strength: strLevel,
+        finalStatus: 'PRESENT' as const,
+        confidence: 'HIGH' as const
+      }
+    });
+
+    const yogaVeryWeak = mkStrengthYoga(YogaStrengthLevel.VERY_WEAK, 'ruleVeryWeak');
+    const yogaVeryStrong = mkStrengthYoga(YogaStrengthLevel.VERY_STRONG, 'ruleVeryStrong');
+    const yogaModerate = mkStrengthYoga(YogaStrengthLevel.MODERATE, 'ruleModerate');
+
+    const permutations = [
+      [yogaVeryWeak, yogaVeryStrong, yogaModerate],
+      [yogaModerate, yogaVeryWeak, yogaVeryStrong],
+      [yogaVeryStrong, yogaModerate, yogaVeryWeak],
+      [yogaVeryWeak, yogaModerate, yogaVeryStrong],
+      [yogaModerate, yogaVeryStrong, yogaVeryWeak],
+      [yogaVeryStrong, yogaVeryWeak, yogaModerate]
+    ];
+
+    for (const perm of permutations) {
+      const report = analyzeDashaInterpretation(createDashaFixture({ yogas: perm }));
+      const sunMD = report.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+      expect(sunMD.natal.yogaParticipation.length).toBe(1);
+      // VERY_STRONG must win across all permutations
+      expect(sunMD.natal.yogaParticipation[0].strength).toBe(YogaStrengthLevel.VERY_STRONG);
+    }
+  });
+
+  it('shouldPreserveOptionAContractMergingStrongVeryStrongWithCancelledWeak', () => {
+    // Contract: strength reflects intrinsic formation potency, finalStatus reflects operational validity.
+    // A strongly formed yoga that was later cancelled must retain strength=VERY_STRONG and finalStatus=CANCELLED.
+    const yogaFormedVeryStrong = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [{ ruleId: 'rajaKendraTrikonaFormation', evidenceType: 'FORMATION' } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.VERY_STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const yogaAfflictedCancelled = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.JUPITER, Planet.SUN],
+      houses: [5, 1],
+      evidence: [{ ruleId: 'rajaBhangaCombustionCancellation', evidenceType: 'CANCELLATION' } as any],
+      assessment: {
+        formationPresent: false,
+        strength: YogaStrengthLevel.WEAK,
+        finalStatus: 'CANCELLED' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    // Ordering 1: [formed, cancelled]
+    const report1 = analyzeDashaInterpretation(
+      createDashaFixture({ yogas: [yogaFormedVeryStrong, yogaAfflictedCancelled] })
+    );
+    const sunMD1 = report1.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+    // Ordering 2: [cancelled, formed]
+    const report2 = analyzeDashaInterpretation(
+      createDashaFixture({ yogas: [yogaAfflictedCancelled, yogaFormedVeryStrong] })
+    );
+    const sunMD2 = report2.mahadashas.find(md => md.planet === Planet.SUN)!;
+
+    for (const sunMD of [sunMD1, sunMD2]) {
+      expect(sunMD.natal.yogaParticipation.length).toBe(1);
+      const ref = sunMD.natal.yogaParticipation[0];
+      // Legitimate Option-A pairing: CANCELLED + VERY_STRONG
+      expect(ref.finalStatus).toBe('CANCELLED');
+      expect(ref.strength).toBe(YogaStrengthLevel.VERY_STRONG);
+    }
+  });
+
+  it('shouldDeterministicallyReconcileRelationshipModesIdenticalAndMixed', () => {
+    // Unit tests for mergeRelationship
+    expect(mergeRelationship('PLANET', 'PLANET')).toBe('PLANET');
+    expect(mergeRelationship('HOUSE_LORD', 'HOUSE_LORD')).toBe('HOUSE_LORD');
+    expect(mergeRelationship('OCCUPANT', 'OCCUPANT')).toBe('OCCUPANT');
+    expect(mergeRelationship('PLANET', 'HOUSE_LORD')).toBe('MIXED');
+    expect(mergeRelationship('HOUSE_LORD', 'PLANET')).toBe('MIXED');
+    expect(mergeRelationship('OCCUPANT', 'PLANET')).toBe('MIXED');
+    expect(mergeRelationship('MIXED', 'OCCUPANT')).toBe('MIXED');
+
+    const mkRelYoga = (relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT', ruleId: string) => ({
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.MARS],
+      houses: [1, 10],
+      relationship,
+      evidence: [{ ruleId } as any],
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    });
+
+    // 1. Identical relationships retain that specific relationship
+    const reportIdentical = analyzeDashaInterpretation(
+      createDashaFixture({
+        yogas: [
+          mkRelYoga('HOUSE_LORD', 'rule1'),
+          mkRelYoga('HOUSE_LORD', 'rule2')
+        ]
+      })
+    );
+    const sunIdentical = reportIdentical.mahadashas.find(md => md.planet === Planet.SUN)!;
+    expect(sunIdentical.natal.yogaParticipation[0].relationship).toBe('HOUSE_LORD');
+
+    // 2. Differing relationships across 3 permutations resolve order-independently to 'MIXED'
+    const yogaPlanet = mkRelYoga('PLANET', 'rulePlanet');
+    const yogaLord = mkRelYoga('HOUSE_LORD', 'ruleLord');
+    const yogaOccupant = mkRelYoga('OCCUPANT', 'ruleOccupant');
+
+    const relPermutations = [
+      [yogaPlanet, yogaLord, yogaOccupant],
+      [yogaOccupant, yogaPlanet, yogaLord],
+      [yogaLord, yogaOccupant, yogaPlanet]
+    ];
+
+    for (const perm of relPermutations) {
+      const report = analyzeDashaInterpretation(createDashaFixture({ yogas: perm }));
+      const sunMD = report.mahadashas.find(md => md.planet === Planet.SUN)!;
+      expect(sunMD.natal.yogaParticipation.length).toBe(1);
+      expect(sunMD.natal.yogaParticipation[0].relationship).toBe('MIXED');
+    }
+  });
+
+  it('shouldRetainProvenanceAndContributingRuleIdsFromAllMergedRecords', () => {
+    const yoga1 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [
+        { ruleId: 'rajaFormationBeta', evidenceType: 'FORMATION' as const },
+        { ruleId: 'sharedSupportingFactor', evidenceType: 'SUPPORTING' as const }
+      ] as any,
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.STRONG,
+        finalStatus: 'STRONG' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const yoga2 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.JUPITER, Planet.SUN],
+      houses: [5, 1],
+      evidence: [
+        { ruleId: 'rajaFormationAlpha', evidenceType: 'FORMATION' as const },
+        { ruleId: 'rajaFormationBeta', evidenceType: 'FORMATION' as const } // Duplicate ruleId
+      ] as any,
+      assessment: {
+        formationPresent: true,
+        strength: YogaStrengthLevel.MODERATE,
+        finalStatus: 'PRESENT' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const yoga3 = {
+      type: YogaType.RAJA_YOGA,
+      category: YogaCategory.RAJA,
+      strength: YogaStrength.STRONG,
+      planets: [Planet.SUN, Planet.JUPITER],
+      houses: [1, 5],
+      evidence: [
+        { ruleId: 'rajaBhangaCancellation', evidenceType: 'CANCELLATION' as const }
+      ] as any,
+      assessment: {
+        formationPresent: false,
+        strength: YogaStrengthLevel.WEAK,
+        finalStatus: 'CANCELLED' as const,
+        confidence: 'HIGH' as const
+      }
+    };
+
+    const report = analyzeDashaInterpretation(
+      createDashaFixture({ yogas: [yoga1, yoga2, yoga3] })
+    );
+    const sunMD = report.mahadashas.find(md => md.planet === Planet.SUN)!;
+    expect(sunMD.natal.yogaParticipation.length).toBe(1);
+
+    const ref = sunMD.natal.yogaParticipation[0];
+    const expectedRules = [
+      'rajaBhangaCancellation',
+      'rajaFormationAlpha',
+      'rajaFormationBeta',
+      'sharedSupportingFactor'
+    ].sort();
+
+    // Union, deduped, and sorted
+    expect(ref.contributingRuleIds).toEqual(expectedRules);
+    expect(ref.provenance).toBeDefined();
+    expect(ref.provenance?.contributingRuleIds).toEqual(expectedRules);
+    expect(ref.provenance?.formationRuleIds).toEqual(['rajaFormationAlpha', 'rajaFormationBeta'].sort());
+    expect(ref.provenance?.cancellationRuleIds).toEqual(['rajaBhangaCancellation']);
+
+    // Check emitted YOGA evidence
+    const yogaEvidence = sunMD.natal.evidence.find(e => e.type === 'YOGA')!;
+    expect(yogaEvidence).toBeDefined();
+    expect(yogaEvidence.contributingRuleIds).toEqual(expectedRules);
+    expect(yogaEvidence.derivedFromIds).toEqual(expectedRules);
+    expect((yogaEvidence.meta as any)?.contributingRuleIds).toEqual(expectedRules);
+    expect((yogaEvidence.meta as any)?.provenance).toEqual(ref.provenance);
   });
 
   it('shouldPreserveHouseDomains', () => {

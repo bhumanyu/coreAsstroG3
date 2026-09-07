@@ -116,6 +116,15 @@ export interface YogaResult {
   readonly weakeningFactors?: readonly YogaModifier[];
   readonly cancellationFactors?: readonly YogaModifier[];
   readonly classicalReference?: string;
+  /**
+   * Relationship mode of participants in this yoga, e.g. direct planetary formation,
+   * house lordship, or occupancy.
+   */
+  readonly relationship?: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' | 'MIXED';
+  /**
+   * Per-planet participant relationship mapping if planets have distinct roles.
+   */
+  readonly participantRelationships?: Readonly<Partial<Record<Planet, 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' | 'MIXED'>>>;
 }
 
 export interface YogaAnalysisReport {

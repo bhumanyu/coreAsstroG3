@@ -616,6 +616,7 @@ export interface AiEvidence {
   readonly timingHouses?: readonly number[];
   readonly timingReason?: string;
   readonly timingRelevanceType?: string;
+  readonly derivedFromIds?: readonly string[];
 }
 
 export interface AiContextSource {
