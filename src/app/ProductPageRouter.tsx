@@ -125,6 +125,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       return (
         <CareerPage
           state={lifeAnalysisState}
+          productAnalysisState={state.productAnalysis}
           onRetry={onRetry}
           onNavigate={onNavigate}
         />
@@ -134,6 +135,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       return (
         <WealthPage
           state={lifeAnalysisState}
+          productAnalysisState={state.productAnalysis}
           onRetry={onRetry}
           onNavigate={onNavigate}
         />
@@ -148,7 +150,12 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       );
 
     case 'reasoning':
-      return <ReasoningPage />;
+      return (
+        <ReasoningPage
+          productAnalysisState={state.productAnalysis}
+          onNavigate={onNavigate}
+        />
+      );
 
     case 'detailed':
       return (

@@ -1,6 +1,15 @@
 import React from 'react';
 import { Briefcase } from 'lucide-react';
-import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
+import type {
+  LifeAnalysisProductState,
+  DomainStrength,
+  VargaRelationship,
+  TimingActivationEffect,
+  TransitTriggerEffect,
+  ConfidenceLevel
+} from '../product/life-analysis/lifeAnalysisTypes';
+import type { ProductAnalysisState } from '../app/AppState';
+import { selectCareer } from '../product/analysis/productAnalysisSelectors';
 import { PageHeading } from '../components/layout/PageHeading';
 import { CareerAnalysisCard } from '../components/lifeAnalysis/CareerAnalysisCard';
 import { LifeAnalysisLoading } from '../components/lifeAnalysis/LifeAnalysisLoading';
@@ -9,29 +18,42 @@ import { EmptyState } from '../components/fullNatalReport/EmptyState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 
 export interface CareerPageProps {
-  readonly state: LifeAnalysisProductState;
+  readonly state?: LifeAnalysisProductState;
+  readonly productAnalysisState?: ProductAnalysisState;
   readonly onRetry?: () => void;
   readonly onNavigate?: (page: AppPage) => void;
 }
 
 export const CareerPage: React.FC<CareerPageProps> = ({
   state,
+  productAnalysisState,
   onRetry
 }) => {
-  if (state.status === 'LOADING') {
+  const isLoading =
+    productAnalysisState?.status === 'LOADING' ||
+    (!productAnalysisState && state?.status === 'LOADING');
+
+  if (isLoading) {
     return <LifeAnalysisLoading />;
   }
 
-  if (state.status === 'ERROR' && !state.analysis) {
+  const isError =
+    (productAnalysisState?.status === 'ERROR' && !productAnalysisState.analysis && !state?.analysis) ||
+    (!productAnalysisState && state?.status === 'ERROR' && !state?.analysis);
+
+  if (isError) {
     return (
       <LifeAnalysisError
-        message={state.errorMessage}
+        message={productAnalysisState?.error || state?.errorMessage}
         onRetry={onRetry}
       />
     );
   }
 
-  if (!state.analysis) {
+  const legacyAnalysis = state?.analysis;
+  const aggregateAnalysis = productAnalysisState?.analysis;
+
+  if (!legacyAnalysis && !aggregateAnalysis) {
     return (
       <EmptyState
         title="Career Analysis Unavailable"
@@ -41,8 +63,52 @@ export const CareerPage: React.FC<CareerPageProps> = ({
     );
   }
 
-  const { analysis } = state;
-  const careerSummary = analysis.domains.find((d) => d.domain === 'CAREER');
+  const careerFromAggregate = aggregateAnalysis ? selectCareer(aggregateAnalysis) : undefined;
+
+  const careerSummary = legacyAnalysis?.domains.find((d) => d.domain === 'CAREER') ?? (
+    careerFromAggregate
+      ? {
+          domain: 'CAREER' as const,
+          displayName: 'Career & Professional Life',
+          status: 'SUPPORTED' as const,
+          strength: (careerFromAggregate.promise.strength as any) || 'STRONG',
+          confidence: (careerFromAggregate.promise.confidence as ConfidenceLevel) || 'HIGH',
+          conclusion: careerFromAggregate.promise.statement || '',
+          headline: careerFromAggregate.promise.headline,
+          statement: careerFromAggregate.promise.statement,
+          supportingEvidenceCount: careerFromAggregate.evidence.length,
+          challengingEvidenceCount: 0
+        }
+      : undefined
+  );
+
+  const careerDetail = legacyAnalysis?.careerDetail ?? (
+    careerFromAggregate
+      ? {
+          natalPromise: (careerFromAggregate.promise.strength as DomainStrength) || 'STRONG',
+          d10Relationship: (careerFromAggregate.d10.relationship === 'UNAVAILABLE' ? 'CONFIRMS' : careerFromAggregate.d10.relationship) as VargaRelationship,
+          currentDashaEffect: (careerFromAggregate.timing.dashaPeriods[0]?.effect as TimingActivationEffect) || 'SUPPORTIVE',
+          currentTransitEffect: (careerFromAggregate.timing.transitEffect as TransitTriggerEffect) || 'NEUTRAL',
+          promiseHeadline: careerFromAggregate.promise.headline,
+          promiseStatement: careerFromAggregate.promise.statement,
+          headline: careerFromAggregate.promise.headline,
+          statement: careerFromAggregate.promise.statement,
+          status: (careerFromAggregate.promise.strength as DomainStrength) || 'STRONG',
+          capacityLevel: 'BALANCED',
+          manifestations: careerFromAggregate.manifestations,
+          d10Statement: careerFromAggregate.d10.statement,
+          timing: {
+            status: 'AVAILABLE' as const,
+            currentActivation: careerFromAggregate.timing.currentActivation,
+            currentPressure: careerFromAggregate.timing.currentPressure,
+            transitEffect: careerFromAggregate.timing.transitEffect as TransitTriggerEffect,
+            transitStatement: careerFromAggregate.timing.transitStatement
+          },
+          qualifications: careerFromAggregate.qualifications,
+          actionableTakeaways: careerFromAggregate.takeaways
+        }
+      : undefined
+  );
 
   return (
     <div className="space-y-6 pb-12">
@@ -53,9 +119,9 @@ export const CareerPage: React.FC<CareerPageProps> = ({
       />
 
       <CareerAnalysisCard
-        detail={analysis.careerDetail}
+        detail={careerDetail}
         summary={careerSummary}
-        why={analysis.careerWhy}
+        why={legacyAnalysis?.careerWhy}
       />
     </div>
   );

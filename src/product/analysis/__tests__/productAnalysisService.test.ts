@@ -36,58 +36,94 @@ describe('ProductAnalysisService (P-UI-02)', () => {
   } as unknown as Horoscope;
 
   const sampleViewModel: LifeAnalysisViewModel = {
+    status: 'READY',
     overall: {
-      status: 'STRONG',
+      status: 'STRONGLY_SUPPORTED',
       headline: 'Harmonious Life Expression',
-      statement: 'Natal chart indicates balanced vocational and financial capacity.'
+      statement: 'Natal chart indicates balanced vocational and financial capacity.',
+      strongestDomainNames: ['CAREER', 'WEALTH'],
+      challengedDomainNames: []
     },
+    strongestDomains: [],
     domains: [
       {
         domain: 'CAREER',
-        status: 'STRONG',
+        displayName: 'Career & Vocation',
+        status: 'STRONGLY_SUPPORTED',
+        strength: 'STRONG',
         confidence: 'HIGH',
         headline: 'Analytical Vocations',
-        statement: 'Strong 10th lord and Mercury influence.'
+        statement: 'Strong 10th lord and Mercury influence.',
+        conclusion: 'Strong vocational foundation.',
+        supportingEvidenceCount: 2,
+        challengingEvidenceCount: 0
       },
       {
         domain: 'WEALTH',
-        status: 'STRONG',
+        displayName: 'Wealth & Prosperity',
+        status: 'STRONGLY_SUPPORTED',
+        strength: 'STRONG',
         confidence: 'HIGH',
         headline: 'Sound Asset Growth',
-        statement: 'Well-supported 2nd house.'
+        statement: 'Well-supported 2nd house.',
+        conclusion: 'Consistent accumulation capacity.',
+        supportingEvidenceCount: 2,
+        challengingEvidenceCount: 0
       }
     ],
     careerDetail: {
       status: 'STRONG',
+      natalPromise: 'STRONG',
+      d10Relationship: 'CONFIRMS',
+      currentDashaEffect: 'ACTIVATES',
+      currentTransitEffect: 'TRIGGER',
       promiseHeadline: 'Analytical Vocations',
       promiseStatement: 'Strong vocational foundation.',
       capacityLevel: 'BALANCED',
       manifestations: ['Consulting', 'Data Architecture'],
-      d10Relationship: 'CONFIRMS' as any,
       d10Statement: 'Dasamsa confirms Mercury placement.',
       timing: {
+        status: 'AVAILABLE',
         currentActivation: 'Mercury / Venus',
-        transitEffect: 'FAVORABLE' as any
+        transitEffect: 'TRIGGER'
       },
       qualifications: [],
       actionableTakeaways: ['Deepen specialized expertise']
     },
     wealthDetail: {
       status: 'STRONG',
+      overallStatus: 'STRONGLY_SUPPORTED',
+      natalPromise: 'STRONG',
+      accumulationStatus: 'STRONGLY_SUPPORTED',
+      gainsStatus: 'STRONGLY_SUPPORTED',
+      fortuneStatus: 'STRONGLY_SUPPORTED',
+      speculationStatus: 'SUPPORTED',
       promiseHeadline: 'Sound Asset Growth',
       promiseStatement: 'Consistent accumulation capacity.',
-      accumulation: { status: 'STRONG' },
-      gains: { status: 'STRONG' },
-      fortune: { status: 'STRONG' },
-      speculation: { status: 'MODERATE' },
-      d2Relationship: 'CONFIRMS' as any,
+      accumulation: { status: 'STRONGLY_SUPPORTED' },
+      gains: { status: 'STRONGLY_SUPPORTED' },
+      fortune: { status: 'STRONGLY_SUPPORTED' },
+      speculation: { status: 'SUPPORTED' },
+      d2Relationship: 'CONFIRMS',
+      currentDashaEffect: 'ACTIVATES',
+      currentTransitEffect: 'NO_MATERIAL_TRIGGER',
       timing: {
-        transitEffect: 'NEUTRAL' as any
+        status: 'AVAILABLE',
+        transitEffect: 'NO_MATERIAL_TRIGGER'
       },
       qualifications: []
     },
+    sharedTiming: [],
+    conflicts: [],
+    confidence: 'HIGH',
+    completeness: { overall: 'COMPLETE', label: 'Complete' },
+    why: {
+      integrity: { status: 'VALID', totalReferenced: 0, resolved: 0, unresolved: 0, unresolvedIds: [] },
+      evidence: [],
+      grouped: { primary: [], supporting: [], challenging: [], conflicting: [], modifiers: [], confirmations: [], timing: [] }
+    },
     evidence: []
-  } as unknown as LifeAnalysisViewModel;
+  };
 
   const readyPipelineState: LifeAnalysisProductState = {
     status: 'READY',

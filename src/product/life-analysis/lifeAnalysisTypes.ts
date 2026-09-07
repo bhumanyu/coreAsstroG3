@@ -36,16 +36,39 @@ export * from './lifeAnalysisEvidenceTypes';
 export * from './dasha/dashaInterpretationProductTypes';
 export * from './dashaHierarchyTypes';
 
+export type {
+  DomainId,
+  DomainStrength,
+  VargaRelationship,
+  TimingActivationEffect,
+  TransitTriggerEffect,
+  ConfidenceLevel
+};
+export type {
+  LifeAnalysisStatus,
+  SynthesisDomainStrength,
+  CrossDomainConflictType,
+  CrossDomainSeverity,
+  LifeAnalysisConfidence
+};
+export type { WealthDimensionStatus };
+
 export type LifeAnalysisActiveDashaViewModel = DashaInterpretationProduct;
 
 export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR';
 
 export type TimingAvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE';
 
+export interface LifeAnalysisQualification {
+  readonly type: string;
+  readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  readonly description: string;
+}
+
 export interface CareerPeriodTimingProduct {
   readonly period?: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
-  readonly effect: TimingActivationEffect | string;
+  readonly effect: TimingActivationEffect;
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
   readonly start?: string;
@@ -60,19 +83,19 @@ export interface CareerTimingProduct {
   readonly pratyantardasha?: CareerPeriodTimingProduct;
   readonly currentActivation?: string;
   readonly currentPressure?: string;
-  readonly transitEffect?: TransitTriggerEffect | string;
+  readonly transitEffect?: TransitTriggerEffect;
   readonly transitStatement?: string;
 }
 
 export interface WealthPeriodTimingProduct {
   readonly period?: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
-  readonly effect?: TimingActivationEffect | string;
+  readonly effect?: TimingActivationEffect;
   readonly dimensions: {
-    readonly accumulation: TimingActivationEffect | string;
-    readonly gains: TimingActivationEffect | string;
-    readonly fortune: TimingActivationEffect | string;
-    readonly speculation: TimingActivationEffect | string;
+    readonly accumulation: TimingActivationEffect;
+    readonly gains: TimingActivationEffect;
+    readonly fortune: TimingActivationEffect;
+    readonly speculation: TimingActivationEffect;
   };
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
@@ -85,12 +108,12 @@ export interface WealthTimingProduct {
   readonly antardasha?: WealthPeriodTimingProduct;
   readonly pratyantardasha?: WealthPeriodTimingProduct;
   readonly currentActivation?: string;
-  readonly transitEffect?: TransitTriggerEffect | string;
+  readonly transitEffect?: TransitTriggerEffect;
   readonly transitStatement?: string;
 }
 
 export interface LifeAnalysisOverallViewModel {
-  readonly status: LifeAnalysisStatus | string;
+  readonly status: LifeAnalysisStatus;
   readonly statement: string;
   readonly headline?: string;
   readonly strongestDomainNames: readonly string[];
@@ -100,9 +123,9 @@ export interface LifeAnalysisOverallViewModel {
 export interface LifeAnalysisDomainSummaryViewModel {
   readonly domain: 'CAREER' | 'WEALTH' | DomainId;
   readonly displayName: string;
-  readonly status: LifeAnalysisStatus | string;
+  readonly status: LifeAnalysisStatus;
   readonly strength: SynthesisDomainStrength;
-  readonly confidence: ConfidenceLevel | string;
+  readonly confidence: ConfidenceLevel;
   readonly conclusion: string;
   readonly headline?: string;
   readonly statement?: string;
@@ -113,8 +136,8 @@ export interface LifeAnalysisDomainSummaryViewModel {
 export interface LifeAnalysisCareerDetailViewModel {
   readonly natalPromise: DomainStrength;
   readonly d10Relationship: VargaRelationship;
-  readonly currentDashaEffect: TimingActivationEffect | string;
-  readonly currentTransitEffect: TransitTriggerEffect | string;
+  readonly currentDashaEffect: TimingActivationEffect;
+  readonly currentTransitEffect: TransitTriggerEffect;
   readonly currentActivation?: string;
   readonly currentPressure?: string;
   readonly dominantManifestations?: readonly string[];
@@ -123,11 +146,11 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly statement?: string;
   readonly promiseHeadline?: string;
   readonly promiseStatement?: string;
-  readonly status?: string;
+  readonly status?: DomainStrength;
   readonly capacityLevel?: string;
   readonly actionableTakeaways?: readonly string[];
   readonly d10Statement?: string;
-  readonly qualifications?: readonly any[];
+  readonly qualifications?: readonly LifeAnalysisQualification[];
   readonly timing?: CareerTimingProduct;
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
   readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
@@ -138,31 +161,31 @@ export interface LifeAnalysisCareerDetailViewModel {
 export interface LifeAnalysisWealthDetailViewModel {
   readonly natalPromise: DomainStrength;
   readonly d2Relationship: VargaRelationship;
-  readonly currentDashaEffect: TimingActivationEffect | string;
-  readonly currentTransitEffect: TransitTriggerEffect | string;
-  readonly overallStatus: WealthDimensionStatus | string;
-  readonly accumulationStatus: WealthDimensionStatus | string;
-  readonly gainsStatus: WealthDimensionStatus | string;
-  readonly fortuneStatus: WealthDimensionStatus | string;
-  readonly speculationStatus: WealthDimensionStatus | string;
+  readonly currentDashaEffect: TimingActivationEffect;
+  readonly currentTransitEffect: TransitTriggerEffect;
+  readonly overallStatus: WealthDimensionStatus;
+  readonly accumulationStatus: WealthDimensionStatus;
+  readonly gainsStatus: WealthDimensionStatus;
+  readonly fortuneStatus: WealthDimensionStatus;
+  readonly speculationStatus: WealthDimensionStatus;
   readonly dominantManifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;
   readonly promiseHeadline?: string;
   readonly promiseStatement?: string;
-  readonly status?: string;
-  readonly accumulation?: { readonly status?: string; readonly statement?: string };
-  readonly gains?: { readonly status?: string; readonly statement?: string };
-  readonly fortune?: { readonly status?: string; readonly statement?: string };
-  readonly speculation?: { readonly status?: string; readonly statement?: string };
+  readonly status?: DomainStrength;
+  readonly accumulation?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
+  readonly gains?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
+  readonly fortune?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
+  readonly speculation?: { readonly status?: WealthDimensionStatus; readonly statement?: string };
   readonly d2Statement?: string;
-  readonly qualifications?: readonly any[];
+  readonly qualifications?: readonly LifeAnalysisQualification[];
   readonly timing?: WealthTimingProduct;
   readonly dimensionTiming?: {
-    readonly accumulation: TimingActivationEffect | string;
-    readonly gains: TimingActivationEffect | string;
-    readonly fortune: TimingActivationEffect | string;
-    readonly speculation: TimingActivationEffect | string;
+    readonly accumulation: TimingActivationEffect;
+    readonly gains: TimingActivationEffect;
+    readonly fortune: TimingActivationEffect;
+    readonly speculation: TimingActivationEffect;
   };
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
   readonly dashaHierarchy?: DashaWealthHierarchySynthesis;

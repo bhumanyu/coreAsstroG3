@@ -2,15 +2,14 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from './App';
-import * as lifeAnalysisProductService from './product/life-analysis/lifeAnalysisProductService';
+import { ProductAnalysisService, mapProductAnalysis } from './product/analysis';
+import type { ProductAnalysis } from './product/analysis/productAnalysisTypes';
 import { STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from './integration/stage1/stage1GoldenFixture';
 import { buildLifeAnalysis } from './domain/synthesis';
 import { buildLifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisMapper';
 import type { LifeAnalysisProductState, LifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisTypes';
-
-vi.mock('./product/life-analysis/lifeAnalysisProductService', () => ({
-  runLifeAnalysisProduct: vi.fn()
-}));
+import { calculateHoroscope } from './engine/astroEngine';
+import { PRESET_PROFILES } from './components/BirthFormModal';
 
 describe('App - Life Analysis UI Integration & Navigation', () => {
   const sampleSynthesis = buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]);
@@ -45,9 +44,24 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     }
   };
 
+  const defaultHoroscope = calculateHoroscope(PRESET_PROFILES[0].details);
+  const readyProductAnalysis: ProductAnalysis = mapProductAnalysis({
+    birthDetails: PRESET_PROFILES[0].details,
+    horoscope: defaultHoroscope,
+    lifeAnalysisViewModel: sampleViewModel,
+    aiExplanation: readyProductState.aiExplanation
+  });
+
+  let mockLastPipelineState: LifeAnalysisProductState | undefined;
+  let mockAnalyze: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValue(readyProductState);
+    mockLastPipelineState = readyProductState;
+    mockAnalyze = vi.spyOn(ProductAnalysisService.prototype, 'analyze').mockImplementation(async function (this: any) {
+      this._lastPipelineState = mockLastPipelineState;
+      return readyProductAnalysis;
+    });
   });
 
   it('1. Default landing: renders on Overview tab and displays Unified Life Domain Analysis heading', async () => {
@@ -61,6 +75,10 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
   it('2. Navigation tabs: Overview and Detailed Analysis buttons exist, while standalone AI Explanation button is NOT present', async () => {
     render(<App />);
 
+    await waitFor(() => {
+      expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
+    });
+
     // Product navigation tab buttons
     expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Career' })).toBeInTheDocument();
@@ -73,24 +91,24 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.queryByRole('button', { name: 'AI Explanation' })).not.toBeInTheDocument();
   });
 
-  it('3. Invocations: runLifeAnalysisProduct is called on mount with includeAiExplanation: true', async () => {
+  it('3. Invocations: ProductAnalysisService.analyze is called on mount with birth details', async () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(lifeAnalysisProductService.runLifeAnalysisProduct).toHaveBeenCalledWith(
+      expect(mockAnalyze).toHaveBeenCalledWith(
         expect.objectContaining({
-          includeAiExplanation: true,
-          horoscope: expect.any(Object)
+          name: expect.any(String),
+          dateTimeStr: expect.any(String)
         })
       );
     });
   });
 
-  it('4. Chart change: changing birth details recalculates and invokes runLifeAnalysisProduct with new horoscope', async () => {
+  it('4. Chart change: changing birth details recalculates and invokes ProductAnalysisService.analyze with new birth details', async () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(lifeAnalysisProductService.runLifeAnalysisProduct).toHaveBeenCalledTimes(1);
+      expect(mockAnalyze).toHaveBeenCalledTimes(1);
     });
 
     // Open birth form modal
@@ -106,16 +124,16 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     fireEvent.click(calcBtn);
 
     await waitFor(() => {
-      const calls = vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mock.calls;
+      const calls = mockAnalyze.mock.calls;
       expect(calls).toHaveLength(2);
-      expect(calls[0][0].horoscope).not.toEqual(calls[1][0].horoscope);
-      expect(calls[0][0].horoscope.birthDetails.latitude).not.toEqual(calls[1][0].horoscope.birthDetails.latitude);
+      expect(calls[0][0]).not.toEqual(calls[1][0]);
+      expect(calls[1][0].latitude).toBe(28.6139);
     });
   });
 
   it('5. Stale-result protection: ignores result A when result B was triggered before A resolves', async () => {
-    let resolveFirstRequest!: (value: LifeAnalysisProductState) => void;
-    const firstPromise = new Promise<LifeAnalysisProductState>((resolve) => {
+    let resolveFirstRequest!: (value: ProductAnalysis) => void;
+    const firstPromise = new Promise<ProductAnalysis>((resolve) => {
       resolveFirstRequest = resolve;
     });
 
@@ -130,11 +148,22 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       status: 'READY',
       analysis: secondViewModel
     };
+    const secondProductAnalysis: ProductAnalysis = {
+      ...readyProductAnalysis,
+      analysisId: 'chart-b-analysis'
+    };
 
     // First call hangs
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockReturnValueOnce(firstPromise);
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      const res = await firstPromise;
+      this._lastPipelineState = mockLastPipelineState;
+      return res;
+    });
     // Second call resolves immediately
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce(secondProductState);
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      this._lastPipelineState = secondProductState;
+      return secondProductAnalysis;
+    });
 
     render(<App />);
 
@@ -161,9 +190,13 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
         statement: 'Stale Statement from Chart A - Should Be Discarded'
       }
     };
-    resolveFirstRequest({
+    mockLastPipelineState = {
       status: 'READY',
       analysis: staleViewModel
+    };
+    resolveFirstRequest({
+      ...readyProductAnalysis,
+      analysisId: 'chart-a-stale'
     });
 
     // Wait a tick and verify stale text did NOT overwrite Chart B
@@ -172,13 +205,27 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.getByText('Statement from Chart B - Fresh Result')).toBeInTheDocument();
   });
 
-  it('6. Retry handler: retrying from an ERROR state re-invokes runLifeAnalysisProduct', async () => {
-    const errorState: LifeAnalysisProductState = {
+  it('6. Retry handler: retrying from an ERROR state re-invokes ProductAnalysisService.analyze', async () => {
+    const errorAnalysis: ProductAnalysis = {
+      ...readyProductAnalysis,
       status: 'ERROR',
-      errorMessage: 'Calculation engine temporarily failed'
+      warnings: [
+        {
+          domain: 'ALL',
+          code: 'ERR_1',
+          severity: 'ERROR',
+          message: 'Calculation engine temporarily failed'
+        }
+      ]
     };
 
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce(errorState);
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      this._lastPipelineState = {
+        status: 'ERROR',
+        errorMessage: 'Calculation engine temporarily failed'
+      };
+      return errorAnalysis;
+    });
 
     render(<App />);
 
@@ -188,24 +235,41 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     // Setup success for retry
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce(readyProductState);
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      this._lastPipelineState = readyProductState;
+      return readyProductAnalysis;
+    });
 
     const retryBtn = screen.getByRole('button', { name: /retry analysis/i });
     fireEvent.click(retryBtn);
 
     await waitFor(() => {
-      expect(lifeAnalysisProductService.runLifeAnalysisProduct).toHaveBeenCalledTimes(2);
+      expect(mockAnalyze).toHaveBeenCalledTimes(2);
       expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
     });
   });
 
   it('7. Stale retry protection: late-resolving retry on Chart A does not overwrite newer Chart B', async () => {
-    const errorState: LifeAnalysisProductState = {
+    const errorAnalysis: ProductAnalysis = {
+      ...readyProductAnalysis,
       status: 'ERROR',
-      errorMessage: 'First attempt error'
+      warnings: [
+        {
+          domain: 'ALL',
+          code: 'ERR_1',
+          severity: 'ERROR',
+          message: 'First attempt error'
+        }
+      ]
     };
 
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce(errorState);
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      this._lastPipelineState = {
+        status: 'ERROR',
+        errorMessage: 'First attempt error'
+      };
+      return errorAnalysis;
+    });
 
     render(<App />);
 
@@ -213,13 +277,17 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       expect(screen.getByText('Life Analysis Computation Error')).toBeInTheDocument();
     });
 
-    let resolveRetryPromise!: (value: LifeAnalysisProductState) => void;
-    const retryPromise = new Promise<LifeAnalysisProductState>((resolve) => {
+    let resolveRetryPromise!: (value: ProductAnalysis) => void;
+    const retryPromise = new Promise<ProductAnalysis>((resolve) => {
       resolveRetryPromise = resolve;
     });
 
     // When retry button clicked, hang the retry request
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockReturnValueOnce(retryPromise);
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      const res = await retryPromise;
+      this._lastPipelineState = mockLastPipelineState;
+      return res;
+    });
 
     const retryBtn = screen.getByRole('button', { name: /retry analysis/i });
     fireEvent.click(retryBtn);
@@ -232,9 +300,17 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
         statement: 'Statement from Chart B - Fresh Selection'
       }
     };
-    vi.mocked(lifeAnalysisProductService.runLifeAnalysisProduct).mockResolvedValueOnce({
-      status: 'READY',
-      analysis: chartBViewModel
+    const chartBProductAnalysis: ProductAnalysis = {
+      ...readyProductAnalysis,
+      analysisId: 'chart-b-analysis-2'
+    };
+
+    mockAnalyze.mockImplementationOnce(async function (this: any) {
+      this._lastPipelineState = {
+        status: 'READY',
+        analysis: chartBViewModel
+      };
+      return chartBProductAnalysis;
     });
 
     const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
@@ -252,16 +328,19 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     // Now late retry on Chart A resolves
-    const staleRetryViewModel: LifeAnalysisViewModel = {
-      ...sampleViewModel,
-      overall: {
-        ...sampleViewModel.overall,
-        statement: 'Late Retry Result Chart A - Should Be Discarded'
+    mockLastPipelineState = {
+      status: 'READY',
+      analysis: {
+        ...sampleViewModel,
+        overall: {
+          ...sampleViewModel.overall,
+          statement: 'Late Retry Result Chart A - Should Be Discarded'
+        }
       }
     };
     resolveRetryPromise({
-      status: 'READY',
-      analysis: staleRetryViewModel
+      ...readyProductAnalysis,
+      analysisId: 'chart-a-stale-retry'
     });
 
     await new Promise((r) => setTimeout(r, 50));
@@ -269,27 +348,29 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.getByText('Statement from Chart B - Fresh Selection')).toBeInTheDocument();
   });
 
-  it('8. Tab routing: navigating to Product and Research pages renders cleanly', async () => {
+  it('8. Tab routing: navigating to Product and Research pages renders cleanly and consumes aggregate', async () => {
     render(<App />);
 
     await waitFor(() => {
       expect(screen.getByText('Unified Life Domain Analysis')).toBeInTheDocument();
     });
 
-    // Click Career tab
+    // Click Career tab - asserts career page renders from aggregate
     const careerTab = screen.getByRole('button', { name: 'Career' });
     fireEvent.click(careerTab);
     expect(screen.getByText('Career & Professional Trajectory')).toBeInTheDocument();
 
-    // Click Wealth tab
+    // Click Wealth tab - asserts wealth page renders from aggregate
     const wealthTab = screen.getByRole('button', { name: 'Wealth' });
     fireEvent.click(wealthTab);
     expect(screen.getByText('Wealth & Financial Prosperity')).toBeInTheDocument();
 
-    // Click Why This Result? tab
+    // Click Why This Result? tab - asserts reasoning page renders from aggregate
     const reasoningTab = screen.getByRole('button', { name: 'Why This Result?' });
     fireEvent.click(reasoningTab);
     expect(screen.getByText('Astrological Reasoning & Evidence Trace')).toBeInTheDocument();
+    expect(screen.getByText('Rules Applied')).toBeInTheDocument();
+    expect(screen.getByText('Total Evidence')).toBeInTheDocument();
 
     // Click Dasha & Timing tab
     const dashaTab = screen.getByRole('button', { name: 'Dasha & Timing' });
