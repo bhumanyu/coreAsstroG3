@@ -37,9 +37,15 @@ export interface AnalyzeOptions {
 }
 
 export class ProductAnalysisService {
+  private _lastPipelineState?: LifeAnalysisProductState;
+
   constructor(
     private readonly deps: ProductAnalysisDependencies = defaultProductAnalysisDependencies
   ) {}
+
+  get lastPipelineState(): LifeAnalysisProductState | undefined {
+    return this._lastPipelineState;
+  }
 
   /**
    * Executes full product analysis for given birth details.
@@ -54,6 +60,7 @@ export class ProductAnalysisService {
         horoscope,
         includeAiExplanation: options?.includeAiExplanation ?? true
       });
+      this._lastPipelineState = pipelineState;
 
       if (pipelineState.status === 'ERROR' || !pipelineState.analysis) {
         return buildFailedProductAnalysis(

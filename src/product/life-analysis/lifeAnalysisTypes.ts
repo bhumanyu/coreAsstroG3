@@ -43,7 +43,7 @@ export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR
 export type TimingAvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE';
 
 export interface CareerPeriodTimingProduct {
-  readonly period: 'MD' | 'AD' | 'PD';
+  readonly period?: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect | string;
   readonly evidenceIds: readonly string[];
@@ -53,15 +53,19 @@ export interface CareerPeriodTimingProduct {
 }
 
 export interface CareerTimingProduct {
-  readonly status: TimingAvailabilityStatus;
+  readonly status?: TimingAvailabilityStatus;
   readonly asOf?: string;
   readonly mahadasha?: CareerPeriodTimingProduct;
   readonly antardasha?: CareerPeriodTimingProduct;
   readonly pratyantardasha?: CareerPeriodTimingProduct;
+  readonly currentActivation?: string;
+  readonly currentPressure?: string;
+  readonly transitEffect?: TransitTriggerEffect | string;
+  readonly transitStatement?: string;
 }
 
 export interface WealthPeriodTimingProduct {
-  readonly period: 'MD' | 'AD' | 'PD';
+  readonly period?: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
   readonly effect?: TimingActivationEffect | string;
   readonly dimensions: {
@@ -75,16 +79,20 @@ export interface WealthPeriodTimingProduct {
 }
 
 export interface WealthTimingProduct {
-  readonly status: TimingAvailabilityStatus;
+  readonly status?: TimingAvailabilityStatus;
   readonly asOf?: string;
   readonly mahadasha?: WealthPeriodTimingProduct;
   readonly antardasha?: WealthPeriodTimingProduct;
   readonly pratyantardasha?: WealthPeriodTimingProduct;
+  readonly currentActivation?: string;
+  readonly transitEffect?: TransitTriggerEffect | string;
+  readonly transitStatement?: string;
 }
 
 export interface LifeAnalysisOverallViewModel {
-  readonly status: LifeAnalysisStatus;
+  readonly status: LifeAnalysisStatus | string;
   readonly statement: string;
+  readonly headline?: string;
   readonly strongestDomainNames: readonly string[];
   readonly challengedDomainNames: readonly string[];
 }
@@ -94,8 +102,10 @@ export interface LifeAnalysisDomainSummaryViewModel {
   readonly displayName: string;
   readonly status: LifeAnalysisStatus | string;
   readonly strength: SynthesisDomainStrength;
-  readonly confidence: ConfidenceLevel;
+  readonly confidence: ConfidenceLevel | string;
   readonly conclusion: string;
+  readonly headline?: string;
+  readonly statement?: string;
   readonly supportingEvidenceCount: number;
   readonly challengingEvidenceCount: number;
 }
@@ -108,8 +118,16 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly currentActivation?: string;
   readonly currentPressure?: string;
   readonly dominantManifestations?: readonly string[];
+  readonly manifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;
+  readonly promiseHeadline?: string;
+  readonly promiseStatement?: string;
+  readonly status?: string;
+  readonly capacityLevel?: string;
+  readonly actionableTakeaways?: readonly string[];
+  readonly d10Statement?: string;
+  readonly qualifications?: readonly any[];
   readonly timing?: CareerTimingProduct;
   readonly currentTimingEffect?: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL';
   readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
@@ -130,6 +148,15 @@ export interface LifeAnalysisWealthDetailViewModel {
   readonly dominantManifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;
+  readonly promiseHeadline?: string;
+  readonly promiseStatement?: string;
+  readonly status?: string;
+  readonly accumulation?: { readonly status?: string; readonly statement?: string };
+  readonly gains?: { readonly status?: string; readonly statement?: string };
+  readonly fortune?: { readonly status?: string; readonly statement?: string };
+  readonly speculation?: { readonly status?: string; readonly statement?: string };
+  readonly d2Statement?: string;
+  readonly qualifications?: readonly any[];
   readonly timing?: WealthTimingProduct;
   readonly dimensionTiming?: {
     readonly accumulation: TimingActivationEffect | string;

@@ -87,7 +87,7 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       qualifications: []
     },
     evidence: []
-  };
+  } as unknown as LifeAnalysisViewModel;
 
   const readyPipelineState: LifeAnalysisProductState = {
     status: 'READY',

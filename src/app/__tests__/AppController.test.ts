@@ -93,6 +93,7 @@ describe('AppController', () => {
       activePage: 'overview',
       birthDetails: INITIAL_APP_STATE.birthDetails,
       isBirthFormOpen: true,
+      productAnalysis: { status: 'IDLE' },
       lifeAnalysisState: { status: 'LOADING' }
     };
 
@@ -100,6 +101,7 @@ describe('AppController', () => {
     expect(nextState.activePage).toBe('detailed');
     expect(nextState.birthDetails).toBe(previousState.birthDetails);
     expect(nextState.isBirthFormOpen).toBe(true);
+    expect(nextState.productAnalysis).toBe(previousState.productAnalysis);
     expect(nextState.lifeAnalysisState).toBe(previousState.lifeAnalysisState);
   });
 });
