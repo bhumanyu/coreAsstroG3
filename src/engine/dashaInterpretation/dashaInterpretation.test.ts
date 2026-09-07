@@ -941,20 +941,20 @@ describe('dashaInterpretation Engine', () => {
       'sharedSupportingFactor'
     ].sort();
 
-    // Union, deduped, and sorted
-    expect(ref.contributingRuleIds).toEqual(expectedRules);
+    // Union, deduped, and sorted in structured provenance
     expect(ref.provenance).toBeDefined();
     expect(ref.provenance?.contributingRuleIds).toEqual(expectedRules);
     expect(ref.provenance?.formationRuleIds).toEqual(['rajaFormationAlpha', 'rajaFormationBeta'].sort());
     expect(ref.provenance?.cancellationRuleIds).toEqual(['rajaBhangaCancellation']);
 
-    // Check emitted YOGA evidence
+    // Check emitted YOGA evidence carries provenance directly
     const yogaEvidence = sunMD.natal.evidence.find(e => e.type === 'YOGA')!;
     expect(yogaEvidence).toBeDefined();
-    expect(yogaEvidence.contributingRuleIds).toEqual(expectedRules);
-    expect(yogaEvidence.derivedFromIds).toEqual(expectedRules);
-    expect((yogaEvidence.meta as any)?.contributingRuleIds).toEqual(expectedRules);
-    expect((yogaEvidence.meta as any)?.provenance).toEqual(ref.provenance);
+    expect(yogaEvidence.provenance).toEqual(ref.provenance);
+    expect((yogaEvidence as any).contributingRuleIds).toBeUndefined();
+    expect((yogaEvidence as any).derivedFromIds).toBeUndefined();
+    expect((yogaEvidence.meta as any)?.contributingRuleIds).toBeUndefined();
+    expect((yogaEvidence.meta as any)?.provenance).toBeUndefined();
   });
 
   it('shouldPreserveHouseDomains', () => {

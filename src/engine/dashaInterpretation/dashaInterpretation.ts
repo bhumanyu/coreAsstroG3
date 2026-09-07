@@ -319,7 +319,10 @@ function buildActivation(
         const mergedStrength = mergeYogaStrength(existing.strength, y.assessment?.strength);
         const mergedRel = mergeRelationship(existing.relationship, relationship);
 
-        const mergedRuleIds = mergeSortedStrings(existing.contributingRuleIds, prov.ruleIds);
+        const mergedRuleIds = mergeSortedStrings(
+          existing.provenance?.contributingRuleIds,
+          prov.ruleIds
+        );
         const mergedFormationRuleIds = mergeSortedStrings(
           existing.provenance?.formationRuleIds,
           prov.formationRuleIds
@@ -346,7 +349,6 @@ function buildActivation(
             finalStatus: mergedStatus,
             relationship: mergedRel,
             ...(combinedHouses.length > 0 ? { houses: Object.freeze(combinedHouses) } : {}),
-            ...(mergedRuleIds ? { contributingRuleIds: mergedRuleIds } : {}),
             ...(mergedStructuredProv ? { provenance: mergedStructuredProv } : {})
           })
         );
@@ -360,7 +362,6 @@ function buildActivation(
             finalStatus: y.assessment?.finalStatus,
             relationship,
             ...(validHouses.length > 0 ? { houses: Object.freeze([...validHouses]) } : {}),
-            ...(contributingRuleIds ? { contributingRuleIds } : {}),
             ...(structuredProv ? { provenance: structuredProv } : {})
           })
         );
@@ -545,16 +546,7 @@ function buildActivation(
         statement: `Dasha lord ${planet} participates in ${yRef.yogaType} yoga (status: ${yRef.finalStatus ?? 'PRESENT'}).`,
         effect: 'NEUTRAL',
         source: 'Yoga Engine',
-        ...(yRef.contributingRuleIds && yRef.contributingRuleIds.length > 0
-          ? {
-              contributingRuleIds: Object.freeze([...yRef.contributingRuleIds]),
-              derivedFromIds: Object.freeze([...yRef.contributingRuleIds]),
-              meta: Object.freeze({
-                contributingRuleIds: Object.freeze([...yRef.contributingRuleIds]),
-                ...(yRef.provenance ? { provenance: yRef.provenance } : {})
-              })
-            }
-          : {})
+        ...(yRef.provenance ? { provenance: yRef.provenance } : {})
       })
     );
   }

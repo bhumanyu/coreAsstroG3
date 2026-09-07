@@ -1311,8 +1311,8 @@ export function projectDashaEvidenceToAi(e: DashaInterpretationEvidence): AiEvid
     dimension: 'TIMING',
     ...(dashaLevel ? { dashaLevel } : {}),
     ...(timingPlanet ? { timingPlanet } : {}),
-    ...(e.derivedFromIds && e.derivedFromIds.length > 0
-      ? { derivedFromIds: Object.freeze([...e.derivedFromIds]) }
+    ...(e.provenance?.contributingRuleIds && e.provenance.contributingRuleIds.length > 0
+      ? { derivedFromIds: Object.freeze([...e.provenance.contributingRuleIds]) }
       : {})
   };
 }

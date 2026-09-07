@@ -54,10 +54,8 @@ export interface DashaInterpretationEvidence {
   readonly statement: string;
   readonly effect: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
   readonly source: string;
-  /** Contributing source rule IDs that led to this evidence item (e.g. from merged yogas). */
-  readonly contributingRuleIds?: readonly string[];
-  /** Alias for contributingRuleIds for downstream evidence traceability conventions. */
-  readonly derivedFromIds?: readonly string[];
+  /** Structured provenance capturing contributing source records (e.g. from merged yogas). */
+  readonly provenance?: DashaYogaProvenance;
   /** Extensible metadata payload. */
   readonly meta?: Readonly<Record<string, unknown>>;
 }
@@ -103,9 +101,7 @@ export interface DashaYogaReference {
    */
   readonly relationship: 'PLANET' | 'HOUSE_LORD' | 'OCCUPANT' | 'MIXED';
   readonly houses?: readonly number[];
-  /** Contributing rule IDs from all merged source records, deduplicated and sorted. */
-  readonly contributingRuleIds?: readonly string[];
-  /** Optional structured provenance distinguishing formation and cancellation source rules. */
+  /** Structured provenance distinguishing contributing, formation, and cancellation source rules. */
   readonly provenance?: DashaYogaProvenance;
 }
 

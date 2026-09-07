@@ -1525,9 +1525,8 @@ describe('AI Context Factory', () => {
       expect(mergedYoga.finalStatus).toBe('CANCELLED');
       expect(mergedYoga.strength).toBe(YogaStrengthLevel.VERY_STRONG);
 
-      // Provenance retention: contributingRuleIds unioned, deduped, and sorted
+      // Provenance retention: contributingRuleIds unioned, deduped, and sorted in structured provenance
       const expectedRuleIds = ['rajaBhangaCombustionRule', 'rajaKendraTrikonaRule'].sort();
-      expect(mergedYoga.contributingRuleIds).toEqual(expectedRuleIds);
       expect(mergedYoga.provenance).toBeDefined();
       expect(mergedYoga.provenance?.contributingRuleIds).toEqual(expectedRuleIds);
       expect(mergedYoga.provenance?.formationRuleIds).toEqual(['rajaKendraTrikonaRule']);
