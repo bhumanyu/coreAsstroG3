@@ -27,7 +27,9 @@ import type {
   LifeAnalysisEvidenceViewModel,
   LifeAnalysisCompletenessViewModel,
   LifeAnalysisCareerDetailViewModel,
-  LifeAnalysisWealthDetailViewModel
+  LifeAnalysisWealthDetailViewModel,
+  LifeAnalysisStatus,
+  WealthDimensionStatus
 } from './lifeAnalysisTypes';
 import { buildDashaInterpretationProduct } from './dasha/buildDashaInterpretationProduct';
 import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';

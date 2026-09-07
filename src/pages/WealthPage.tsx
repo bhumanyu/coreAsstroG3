@@ -7,7 +7,9 @@ import type {
   TimingActivationEffect,
   TransitTriggerEffect,
   ConfidenceLevel,
-  WealthDimensionStatus
+  WealthDimensionStatus,
+  LifeAnalysisDomainSummaryViewModel,
+  LifeAnalysisWealthDetailViewModel
 } from '../product/life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysisState } from '../app/AppState';
 import { selectWealth } from '../product/analysis/productAnalysisSelectors';

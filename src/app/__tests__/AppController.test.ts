@@ -16,26 +16,33 @@ const mockProductAnalysis: ProductAnalysis = {
     sunSign: 'PISCES',
     moonNakshatra: 'Rohini'
   },
+  methodology: {
+    zodiacSystem: 'SIDEREAL',
+    houseSystem: 'PLACIDUS',
+    ayanamsa: 'LAHIRI',
+    calculationEngine: 'CoreAstro'
+  },
   birth: {
     name: 'Test',
-    dateOfBirth: '2000-01-01',
-    timeOfBirth: '12:00',
     placeOfBirth: 'New York',
+    dateTime: '2000-01-01T12:00:00Z',
     latitude: 40.7,
     longitude: -74.0,
-    timezone: -5
+    timezone: '-5',
+    ayanamsa: 'Lahiri'
   },
   career: {
     promise: { strength: 'STRONG', confidence: 'HIGH' },
-    manifestations: [],
     d10: { relationship: 'CONFIRMS' },
-    timing: { dashaPeriods: [] },
+    activation: {
+      dasha: { status: 'AVAILABLE', periods: [] },
+      transit: { status: 'AVAILABLE', effect: 'NEUTRAL' }
+    },
     qualifications: [],
-    takeaways: [],
     evidence: []
   },
   wealth: {
-    overall: { strength: 'STRONG', confidence: 'HIGH' },
+    overall: { status: 'SUPPORTED', promise: 'STRONG', confidence: 'HIGH' },
     dimensions: {
       accumulation: { status: 'STRONG' },
       gains: { status: 'STRONG' },
@@ -43,22 +50,20 @@ const mockProductAnalysis: ProductAnalysis = {
       speculation: { status: 'MODERATE' }
     },
     d2: { relationship: 'CONFIRMS' },
-    speculativeRisk: { score: 0, level: 'LOW' },
-    timing: { dashaPeriods: [] },
+    activation: {
+      dasha: { status: 'AVAILABLE', periods: [] },
+      transit: { status: 'AVAILABLE', effect: 'NEUTRAL' }
+    },
+    speculativeRisk: { level: 'LOW' },
     qualifications: [],
     evidence: []
   },
   dasha: {
-    current: {},
-    allPeriods: []
+    current: {}
   },
   reasoning: {
-    rulesAppliedCount: 10,
-    totalEvidenceCount: 5,
-    conflictCount: 0,
-    integrityStatus: 'VALID',
-    provenanceIntegrity: true,
-    engineMode: 'DETERMINISTIC_LOCAL'
+    nodes: [],
+    primaryConclusions: []
   },
   ai: {
     status: 'UNAVAILABLE'
