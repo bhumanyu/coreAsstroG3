@@ -173,7 +173,7 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
       natalPromise: 'STRONG' as const,
       d10Relationship: 'CONFIRMS' as const,
       currentDashaEffect: 'ACTIVATES' as const,
-      currentTransitEffect: 'TRIGGERING' as const,
+      currentTransitEffect: 'TRIGGER' as const,
       dominantManifestations: ['LEADERSHIP' as const, 'MANAGEMENT' as const],
       manifestationSynthesis: mockCareerManifestations
     };
@@ -196,7 +196,7 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
       natalPromise: 'STRONG' as const,
       d10Relationship: 'CONFIRMS' as const,
       currentDashaEffect: 'ACTIVATES' as const,
-      currentTransitEffect: 'TRIGGERING' as const,
+      currentTransitEffect: 'TRIGGER' as const,
       dominantManifestations: ['LEADERSHIP' as const, 'MANAGEMENT' as const],
       manifestationSynthesis: undefined
     };
@@ -217,7 +217,7 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
       natalPromise: 'STRONG' as const,
       d2Relationship: 'CONFIRMS' as const,
       currentDashaEffect: 'ACTIVATES' as const,
-      currentTransitEffect: 'TRIGGERING' as const,
+      currentTransitEffect: 'TRIGGER' as const,
       accumulationStatus: 'SUPPORTED' as const,
       gainsStatus: 'SUPPORTED' as const,
       fortuneStatus: 'SUPPORTED' as const,

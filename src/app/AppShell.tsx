@@ -1,24 +1,20 @@
 /**
  * TRANSITIONAL CONTRACT NOTE:
- * AppShell currently and intentionally still owns horoscope calculation (`calculateHoroscope`),
- * dasha-timing view-model derivation (`buildDashaTimingViewModel`), and life-analysis product
- * execution (`runLifeAnalysisProduct`, lines ~17-81).
- *
- * This orchestration/data responsibility is TRANSITIONAL and must be removed/relocated in
- * P-UI-02 (Canonical ProductAnalysis aggregate). It is documented here so this boundary
- * is not mistaken for a permanent design.
+ * AppShell delegates product execution directly to AppController.analyze (P-UI-02).
+ * Horoscope calculation (`calculateHoroscope`) and dasha-timing view-model derivation
+ * (`buildDashaTimingViewModel`) remain here transitionally to support research views
+ * and dasha timing tabs until page-level extraction is complete.
  */
 
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { calculateHoroscope } from '../engine/astroEngine';
 import { buildDashaTimingViewModel } from '../product/dasha-timing';
-import { runLifeAnalysisProduct } from '../product/life-analysis/lifeAnalysisProductService';
 import { Header } from '../components/Header';
 import { BirthContext, buildBirthContext } from './birthContext';
 import { BirthFormModal, PRESET_PROFILES } from '../components/BirthFormModal';
 import { ProductPageRouter } from './ProductPageRouter';
 import { AppFooter } from './AppFooter';
-import { AppState, INITIAL_APP_STATE, BirthDetails, LifeAnalysisProductState } from './AppState';
+import { AppState, INITIAL_APP_STATE, BirthDetails } from './AppState';
 import { createAppController } from './AppController';
 
 export const AppShell: React.FC = () => {
@@ -45,55 +41,12 @@ export const AppShell: React.FC = () => {
     return buildDashaTimingViewModel(horoscope, careerTiming, wealthTiming);
   }, [horoscope, state.lifeAnalysisState]);
 
-  // Request ID ref to prevent race conditions / stale results
-  const lifeAnalysisRequestId = useRef(0);
-
-  const executeLifeAnalysis = useCallback(() => {
-    const requestId = ++lifeAnalysisRequestId.current;
-
-    setState((prev) => ({
-      ...prev,
-      lifeAnalysisState: { status: 'LOADING' }
-    }));
-
-    void runLifeAnalysisProduct({
-      horoscope,
-      includeAiExplanation: true
-    })
-      .then((result: LifeAnalysisProductState) => {
-        if (requestId !== lifeAnalysisRequestId.current) {
-          return;
-        }
-
-        setState((prev) => ({
-          ...prev,
-          lifeAnalysisState: result
-        }));
-      })
-      .catch((error: unknown) => {
-        if (requestId !== lifeAnalysisRequestId.current) {
-          return;
-        }
-
-        setState((prev) => ({
-          ...prev,
-          lifeAnalysisState: {
-            status: 'ERROR',
-            errorMessage:
-              error instanceof Error
-                ? error.message
-                : String(error)
-          }
-        }));
-      });
-  }, [horoscope]);
-
   useEffect(() => {
-    executeLifeAnalysis();
-  }, [executeLifeAnalysis]);
+    void controller.analyze(state.birthDetails);
+  }, [controller, state.birthDetails]);
 
   const handleLifeAnalysisRetry = () => {
-    executeLifeAnalysis();
+    void controller.analyze(state.birthDetails);
   };
 
   const handleResetPreset = () => {

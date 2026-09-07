@@ -13,7 +13,12 @@
 
 import type { BirthDetails, Horoscope } from '../../types';
 import { Planet } from '../../types';
-import type { LifeAnalysisViewModel } from '../life-analysis/lifeAnalysisTypes';
+import type {
+  LifeAnalysisViewModel,
+  CareerTimingProduct,
+  WealthTimingProduct,
+  LifeAnalysisQualification
+} from '../life-analysis/lifeAnalysisTypes';
 import type { AiExplanationResult } from '../../ai';
 import type {
   ProductAnalysis,
@@ -54,10 +59,10 @@ export interface ProductAnalysisMapperInput {
  * Guaranteed to produce distinct IDs for different births.
  */
 export function createAnalysisId(birth: BirthDetails, asOf: string): string {
-  const cleanDate = (birth.dateTimeStr || '').replace(/[^0-9]/g, '');
-  const lat = Math.round(Number(birth.latitude || 0) * 1000);
-  const lon = Math.round(Number(birth.longitude || 0) * 1000);
-  const ayanamsa = String(birth.ayanamsa || 'LAHIRI').toLowerCase();
+  const cleanDate = (birth?.dateTimeStr || '').replace(/[^0-9]/g, '');
+  const lat = Math.round(Number(birth?.latitude || 0) * 1000);
+  const lon = Math.round(Number(birth?.longitude || 0) * 1000);
+  const ayanamsa = String(birth?.ayanamsa || 'LAHIRI').toLowerCase();
   const asOfClean = asOf.replace(/[^0-9]/g, '');
   return `pa_${cleanDate}_${lat}_${lon}_${ayanamsa}_${asOfClean}`;
 }
@@ -223,7 +228,6 @@ function mapChartSummary(horoscope: Horoscope): ProductChartSummary {
   const moonNakshatra =
     horoscope.planetFacts?.[Planet.MOON]?.nakshatraResult?.nakshatra ??
     horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata?.name ??
-    (horoscope.planetFacts?.[Planet.MOON]?.nakshatraMetadata as any)?.nakshatraName ??
     'Ashwini';
 
   return {
@@ -236,12 +240,7 @@ function mapChartSummary(horoscope: Horoscope): ProductChartSummary {
 }
 
 function mapDashaPeriods(
-  timing?: {
-    mahadasha?: any;
-    antardasha?: any;
-    pratyantardasha?: any;
-    currentActivation?: string;
-  }
+  timing?: CareerTimingProduct | WealthTimingProduct
 ): readonly ProductDashaPeriod[] {
   const periods: ProductDashaPeriod[] = [];
 
@@ -255,8 +254,8 @@ function mapDashaPeriods(
       effect: md.effect || 'NEUTRAL',
       evidenceIds: Array.isArray(md.evidenceIds) ? [...md.evidenceIds] : [],
       statement: md.statement,
-      start: md.start,
-      end: md.end
+      start: 'start' in md ? md.start : undefined,
+      end: 'end' in md ? md.end : undefined
     });
   }
 
@@ -270,8 +269,8 @@ function mapDashaPeriods(
       effect: ad.effect || 'NEUTRAL',
       evidenceIds: Array.isArray(ad.evidenceIds) ? [...ad.evidenceIds] : [],
       statement: ad.statement,
-      start: ad.start,
-      end: ad.end
+      start: 'start' in ad ? ad.start : undefined,
+      end: 'end' in ad ? ad.end : undefined
     });
   }
 
@@ -285,15 +284,15 @@ function mapDashaPeriods(
       effect: pd.effect || 'NEUTRAL',
       evidenceIds: Array.isArray(pd.evidenceIds) ? [...pd.evidenceIds] : [],
       statement: pd.statement,
-      start: pd.start,
-      end: pd.end
+      start: 'start' in pd ? pd.start : undefined,
+      end: 'end' in pd ? pd.end : undefined
     });
   }
 
   return periods;
 }
 
-function mapQualifications(raw?: readonly any[]): readonly ProductQualification[] {
+function mapQualifications(raw?: readonly LifeAnalysisQualification[]): readonly ProductQualification[] {
   if (!raw || !Array.isArray(raw)) return [];
   return raw.map((q) => ({
     type: String(q.type || 'GENERAL'),
@@ -371,7 +370,7 @@ function mapCareer(
       ? mapEvidenceItems(viewModel.careerWhy.evidence, 'CAREER')
       : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'CAREER'), 'CAREER');
 
-  const dashaPeriods = mapDashaPeriods(detail?.timing as any);
+  const dashaPeriods = mapDashaPeriods(detail?.timing);
 
   return {
     promise: {
@@ -438,7 +437,7 @@ function mapWealth(
       ? mapEvidenceItems(viewModel.wealthWhy.evidence, 'WEALTH')
       : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'WEALTH'), 'WEALTH');
 
-  const dashaPeriods = mapDashaPeriods(detail?.timing as any);
+  const dashaPeriods = mapDashaPeriods(detail?.timing);
 
   const accumulationStatus = detail?.accumulation?.status ?? detail?.accumulationStatus;
   const accumulationStatement = detail?.accumulation?.statement;
@@ -626,15 +625,13 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
     };
   }
 
-  const status =
-    aiExplanation.status === 'SUCCESS'
+  const status: AiProductState['status'] =
+    aiExplanation.status === 'SUCCESS' || aiExplanation.status === 'PARTIAL'
       ? 'AVAILABLE'
-      : aiExplanation.status === 'PARTIAL'
-      ? 'PARTIAL'
       : 'UNAVAILABLE';
 
   return {
-    status: status as any,
+    status,
     explanation: aiExplanation.conclusion,
     conclusion: aiExplanation.conclusion,
     providerInfo: {

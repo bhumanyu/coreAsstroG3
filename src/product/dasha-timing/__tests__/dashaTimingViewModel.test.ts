@@ -272,7 +272,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       mahadasha: {
         period: 'MD',
         planet: Planet.JUPITER,
-        effect: 'SUPPORT',
+        effect: 'ACTIVATES',
         evidenceIds: [unresolvableEvidenceId]
       }
     };
@@ -361,12 +361,12 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       mahadasha: {
         period: 'MD',
         planet: Planet.JUPITER,
-        effect: 'SUPPORT',
+        effect: 'ACTIVATES',
         dimensions: {
-          accumulation: 'SUPPORT',
-          gains: 'SUPPORT',
-          fortune: 'SUPPORT',
-          speculation: 'SUPPORT'
+          accumulation: 'ACTIVATES',
+          gains: 'ACTIVATES',
+          fortune: 'ACTIVATES',
+          speculation: 'ACTIVATES'
         },
         evidenceIds: [unresolvableWealthEvidenceId]
       }

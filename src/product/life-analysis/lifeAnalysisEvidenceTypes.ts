@@ -104,5 +104,5 @@ export interface WhyExperienceViewModel {
   readonly integrity: EvidenceIntegrityViewModel;
   readonly evidence: readonly EvidenceDetailViewModel[];
   readonly grouped: GroupedEvidenceViewModel;
-  readonly factors?: readonly any[];
+  readonly factors?: readonly EvidenceDetailViewModel[];
 }

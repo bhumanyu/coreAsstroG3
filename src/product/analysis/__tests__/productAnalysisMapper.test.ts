@@ -53,49 +53,70 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   } as unknown as Horoscope;
 
   const sampleViewModel: LifeAnalysisViewModel = {
+    status: 'READY',
     overall: {
       status: 'STRONG',
       headline: 'Dominant Life Direction',
-      statement: 'Natal indicators show sustained executive trajectory.'
+      statement: 'Natal indicators show sustained executive trajectory.',
+      strongestDomainNames: ['CAREER'],
+      challengedDomainNames: []
     },
+    strongestDomains: [],
     domains: [
       {
         domain: 'CAREER',
+        displayName: 'Career & Vocation',
         status: 'STRONG',
+        strength: 'STRONG',
         confidence: 'HIGH',
         headline: 'Executive Trajectory',
-        statement: 'High vocational promise.'
+        statement: 'High vocational promise.',
+        conclusion: 'High vocational promise across 10th lord and Lagna.',
+        supportingEvidenceCount: 2,
+        challengingEvidenceCount: 0
       },
       {
         domain: 'WEALTH',
+        displayName: 'Wealth & Prosperity',
         status: 'MODERATE',
+        strength: 'MODERATE',
         confidence: 'MEDIUM',
         headline: 'Stable Wealth Accumulation',
-        statement: 'Solid 2nd house foundation.'
+        statement: 'Solid 2nd house foundation.',
+        conclusion: 'Solid 2nd house foundation.',
+        supportingEvidenceCount: 1,
+        challengingEvidenceCount: 0
       }
     ],
     careerDetail: {
       status: 'STRONG',
+      natalPromise: 'STRONG',
+      d10Relationship: 'CONFIRMS',
+      currentDashaEffect: 'STRONG_SUPPORT',
+      currentTransitEffect: 'FAVORABLE',
       promiseHeadline: 'Executive Trajectory',
       promiseStatement: 'High vocational promise across 10th lord and Lagna.',
       capacityLevel: 'LEADERSHIP',
       manifestations: ['Corporate Leadership', 'Strategic Direction'],
-      d10Relationship: 'CONFIRMS' as any,
       d10Statement: 'Dasamsa confirms strong 10th house status.',
       timing: {
+        status: 'AVAILABLE',
         mahadasha: {
+          period: 'MD',
           planet: Planet.JUPITER,
           effect: 'STRONG_SUPPORT',
           evidenceIds: ['ev_md_1'],
           statement: 'Jupiter Mahadasha establishes primary career elevation.'
         },
         antardasha: {
+          period: 'AD',
           planet: Planet.SATURN,
           effect: 'MODERATE_CHALLENGE',
           evidenceIds: ['ev_ad_1'],
           statement: 'Saturn Antardasha introduces structural discipline.'
         },
         pratyantardasha: {
+          period: 'PD',
           planet: Planet.MERCURY,
           effect: 'SUPPORTIVE',
           evidenceIds: ['ev_pd_1'],
@@ -103,7 +124,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
         },
         currentActivation: 'Jupiter / Saturn',
         currentPressure: 'High structural demands',
-        transitEffect: 'FAVORABLE' as any,
+        transitEffect: 'FAVORABLE',
         transitStatement: 'Saturn transits natal 3rd house.'
       },
       qualifications: [
@@ -117,23 +138,41 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     },
     wealthDetail: {
       status: 'MODERATE',
+      overallStatus: 'MODERATE',
+      natalPromise: 'MODERATE',
+      accumulationStatus: 'STRONG',
+      gainsStatus: 'MODERATE',
+      fortuneStatus: 'STRONG',
+      speculationStatus: 'MODERATE',
+      d2Relationship: 'CONFIRMS',
+      currentDashaEffect: 'SUPPORTIVE',
+      currentTransitEffect: 'NEUTRAL',
       promiseHeadline: 'Stable Accumulation',
       promiseStatement: 'Consistent growth with steady savings.',
       accumulation: { status: 'STRONG', statement: '2nd lord exalted.' },
       gains: { status: 'MODERATE', statement: '11th lord neutral.' },
       fortune: { status: 'STRONG', statement: '9th lord well-placed.' },
       speculation: { status: 'MODERATE', statement: '5th house stable.' },
-      d2Relationship: 'CONFIRMS' as any,
       d2Statement: 'Hora D2 confirms liquid capital accumulation.',
       timing: {
+        status: 'AVAILABLE',
         currentActivation: 'Jupiter dasha brings steady financial inflow.',
-        transitEffect: 'NEUTRAL' as any,
+        transitEffect: 'NEUTRAL',
         transitStatement: 'Transits neutral for wealth.'
       },
       qualifications: []
     },
+    sharedTiming: [],
+    conflicts: [],
+    confidence: 'HIGH',
+    completeness: { overall: 'COMPLETE', label: 'Complete' },
+    why: {
+      integrity: { status: 'VALID', totalReferenced: 0, resolved: 0, unresolved: 0, unresolvedIds: [] },
+      evidence: [],
+      grouped: { primary: [], supporting: [], challenging: [], conflicting: [], modifiers: [], confirmations: [], timing: [] }
+    },
     evidence: []
-  } as unknown as LifeAnalysisViewModel;
+  };
 
   const sampleInputEvidence: ProductEvidence = {
     id: 'ev_career_gold_101',
@@ -183,7 +222,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       lifeAnalysisViewModel: sampleViewModel
     });
     expect(analysis.career.d10.relationship).toBe('CONFIRMS');
-    expect((analysis.career.d10 as any).percentage).toBeUndefined();
+    expect('percentage' in analysis.career.d10).toBe(false);
   });
 
   it('3. D2 relationship and speculative risk mapping', () => {
