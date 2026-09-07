@@ -26,6 +26,10 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
     ? selectAi(productAnalysisState.analysis)
     : undefined;
 
+  const totalEvidenceCount =
+    (productAnalysisState?.analysis?.career?.evidence?.length ?? 0) +
+    (productAnalysisState?.analysis?.wealth?.evidence?.length ?? 0);
+
   return (
     <div className="space-y-6 pb-12">
       <PageHeading
@@ -37,21 +41,21 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
       {reasoning && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl mx-auto">
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
-            <span className="text-xs text-slate-400 block mb-1">Reasoning Nodes</span>
+            <span className="text-xs text-slate-400 block mb-1">Rules Applied</span>
             <span className="text-xl font-bold font-mono-code text-indigo-400">
               {reasoning.nodes.length}
+            </span>
+          </div>
+          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
+            <span className="text-xs text-slate-400 block mb-1">Total Evidence</span>
+            <span className="text-xl font-bold font-mono-code text-indigo-400">
+              {totalEvidenceCount}
             </span>
           </div>
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
             <span className="text-xs text-slate-400 block mb-1">Primary Conclusions</span>
             <span className="text-xl font-bold font-mono-code text-indigo-400">
               {reasoning.primaryConclusions.length}
-            </span>
-          </div>
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
-            <span className="text-xs text-slate-400 block mb-1">Open Questions</span>
-            <span className="text-xl font-bold font-mono-code text-indigo-400">
-              {reasoning.unresolvedQuestions?.length ?? 0}
             </span>
           </div>
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">

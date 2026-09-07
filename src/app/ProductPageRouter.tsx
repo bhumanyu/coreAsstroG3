@@ -24,6 +24,7 @@ import { NakshatraExplorer } from '../components/NakshatraExplorer';
 import { RelationshipMatrix } from '../components/RelationshipMatrix';
 import { EngineValidator } from '../components/EngineValidator';
 import { GocharaTransitView } from '../components/GocharaTransitView';
+import { LifeAnalysisLoading } from '../components/lifeAnalysis/LifeAnalysisLoading';
 import { DignityStatus, ChartType, Planet } from '../types';
 import type { calculateHoroscope } from '../engine/astroEngine';
 import type { buildDashaTimingViewModel } from '../product/dasha-timing';
@@ -31,9 +32,9 @@ import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnal
 
 export interface ProductPageRouterProps {
   readonly state: AppState;
-  readonly horoscope: ReturnType<typeof calculateHoroscope>;
-  readonly dashaTimingViewModel: ReturnType<typeof buildDashaTimingViewModel>;
-  readonly lifeAnalysisState: LifeAnalysisProductState;
+  readonly horoscope?: ReturnType<typeof calculateHoroscope>;
+  readonly dashaTimingViewModel?: ReturnType<typeof buildDashaTimingViewModel>;
+  readonly lifeAnalysisState?: LifeAnalysisProductState;
   readonly onNavigate: (page: AppPage) => void;
   readonly onRetry: () => void;
 }
@@ -103,14 +104,6 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   onNavigate,
   onRetry
 }) => {
-  // Exalted & Combust Summary Count for Horoscope research view
-  const exaltedPlanets = Object.values(horoscope.planetFacts).filter(
-    (f) => f.dignity.status === DignityStatus.EXALTED
-  );
-  const combustPlanets = Object.values(horoscope.planetFacts).filter(
-    (f) => f.state.condition !== 'NORMAL'
-  );
-
   switch (state.activePage) {
     case 'overview':
       return (
@@ -124,7 +117,6 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
     case 'career':
       return (
         <CareerPage
-          state={lifeAnalysisState}
           productAnalysisState={state.productAnalysis}
           onRetry={onRetry}
           onNavigate={onNavigate}
@@ -134,7 +126,6 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
     case 'wealth':
       return (
         <WealthPage
-          state={lifeAnalysisState}
           productAnalysisState={state.productAnalysis}
           onRetry={onRetry}
           onNavigate={onNavigate}
@@ -142,6 +133,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       );
 
     case 'dasha':
+      if (!dashaTimingViewModel) {
+        return <LifeAnalysisLoading />;
+      }
       return (
         <DashaTimingPage
           viewModel={dashaTimingViewModel}
@@ -158,6 +152,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       );
 
     case 'detailed':
+      if (!horoscope) {
+        return <LifeAnalysisLoading />;
+      }
       return (
         <div className="space-y-6">
           <ResearchToolsPanel
@@ -171,7 +168,16 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
         </div>
       );
 
-    case 'horoscope':
+    case 'horoscope': {
+      if (!horoscope) {
+        return <LifeAnalysisLoading />;
+      }
+      const exaltedPlanets = Object.values(horoscope.planetFacts).filter(
+        (f) => f.dignity.status === DignityStatus.EXALTED
+      );
+      const combustPlanets = Object.values(horoscope.planetFacts).filter(
+        (f) => f.state.condition !== 'NORMAL'
+      );
       return (
         <div className="space-y-6">
           <ResearchPageHeader
@@ -276,8 +282,12 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
           <PlanetFactsTable planetFacts={horoscope.planetFacts} />
         </div>
       );
+    }
 
     case 'planets':
+      if (!horoscope) {
+        return <LifeAnalysisLoading />;
+      }
       return (
         <div className="space-y-6">
           <ResearchPageHeader
@@ -293,6 +303,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       );
 
     case 'transit':
+      if (!horoscope) {
+        return <LifeAnalysisLoading />;
+      }
       return (
         <div className="space-y-6">
           <ResearchPageHeader
@@ -308,6 +321,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       );
 
     case 'divisional':
+      if (!horoscope) {
+        return <LifeAnalysisLoading />;
+      }
       return (
         <div className="space-y-6">
           <ResearchPageHeader

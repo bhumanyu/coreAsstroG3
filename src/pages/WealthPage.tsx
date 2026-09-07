@@ -11,6 +11,12 @@ import type {
   LifeAnalysisDomainSummaryViewModel,
   LifeAnalysisWealthDetailViewModel
 } from '../product/life-analysis/lifeAnalysisTypes';
+import type {
+  PromiseStrength,
+  ActivationEffect,
+  TransitEffect,
+  ConclusionStatus
+} from '../product/analysis';
 import type { ProductAnalysisState } from '../app/AppState';
 import { selectWealth } from '../product/analysis/productAnalysisSelectors';
 import { PageHeading } from '../components/layout/PageHeading';
@@ -74,8 +80,8 @@ export const WealthPage: React.FC<WealthPageProps> = ({
           domain: 'WEALTH' as const,
           displayName: 'Wealth & Assets',
           status: 'SUPPORTED' as const,
-          strength: (wealthFromAggregate.overall.promise as any) || 'STRONG',
-          confidence: (wealthFromAggregate.overall.confidence as ConfidenceLevel) || 'HIGH',
+          strength: (wealthFromAggregate.overall.promise as DomainStrength) || 'UNAVAILABLE',
+          confidence: (wealthFromAggregate.overall.confidence as ConfidenceLevel) || 'MEDIUM',
           conclusion: wealthFromAggregate.overall.statement || '',
           headline: wealthFromAggregate.overall.headline,
           statement: wealthFromAggregate.overall.statement,
@@ -88,39 +94,39 @@ export const WealthPage: React.FC<WealthPageProps> = ({
   const wealthDetail: LifeAnalysisWealthDetailViewModel | undefined = legacyAnalysis?.wealthDetail ?? (
     wealthFromAggregate
       ? {
-          natalPromise: (wealthFromAggregate.overall.promise as DomainStrength) || 'STRONG',
-          d2Relationship: (wealthFromAggregate.d2.relationship === 'UNAVAILABLE' ? 'CONFIRMS' : wealthFromAggregate.d2.relationship) as VargaRelationship,
-          currentDashaEffect: (wealthFromAggregate.activation.dasha.periods[0]?.effect as TimingActivationEffect) || 'ACTIVATES',
-          currentTransitEffect: (wealthFromAggregate.activation.transit.effect as TransitTriggerEffect) || 'TRIGGER',
-          overallStatus: (wealthFromAggregate.overall.status as WealthDimensionStatus) || 'SUPPORTED',
-          accumulationStatus: (wealthFromAggregate.dimensions.accumulation.status as WealthDimensionStatus) || 'SUPPORTED',
-          gainsStatus: (wealthFromAggregate.dimensions.gains.status as WealthDimensionStatus) || 'SUPPORTED',
-          fortuneStatus: (wealthFromAggregate.dimensions.fortune.status as WealthDimensionStatus) || 'SUPPORTED',
-          speculationStatus: (wealthFromAggregate.dimensions.speculation.status as WealthDimensionStatus) || 'CHALLENGED',
+          natalPromise: (wealthFromAggregate.overall.promise as DomainStrength | 'UNAVAILABLE') || 'UNAVAILABLE',
+          d2Relationship: wealthFromAggregate.d2.relationship as VargaRelationship,
+          currentDashaEffect: (wealthFromAggregate.activation.dasha.periods[0]?.effect as ActivationEffect) || 'UNAVAILABLE',
+          currentTransitEffect: (wealthFromAggregate.activation.transit.effect as TransitEffect) || 'UNAVAILABLE',
+          overallStatus: (wealthFromAggregate.overall.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
+          accumulationStatus: (wealthFromAggregate.dimensions.accumulation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
+          gainsStatus: (wealthFromAggregate.dimensions.gains.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
+          fortuneStatus: (wealthFromAggregate.dimensions.fortune.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
+          speculationStatus: (wealthFromAggregate.dimensions.speculation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
           promiseHeadline: wealthFromAggregate.overall.headline,
           promiseStatement: wealthFromAggregate.overall.statement,
           headline: wealthFromAggregate.overall.headline,
           statement: wealthFromAggregate.overall.statement,
-          status: (wealthFromAggregate.overall.promise as DomainStrength) || 'STRONG',
+          status: (wealthFromAggregate.overall.promise as DomainStrength | 'UNAVAILABLE') || 'UNAVAILABLE',
           accumulation: {
-            status: (wealthFromAggregate.dimensions.accumulation.status as WealthDimensionStatus) || 'SUPPORTED',
+            status: (wealthFromAggregate.dimensions.accumulation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
             statement: wealthFromAggregate.dimensions.accumulation.statement
           },
           gains: {
-            status: (wealthFromAggregate.dimensions.gains.status as WealthDimensionStatus) || 'SUPPORTED',
+            status: (wealthFromAggregate.dimensions.gains.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
             statement: wealthFromAggregate.dimensions.gains.statement
           },
           fortune: {
-            status: (wealthFromAggregate.dimensions.fortune.status as WealthDimensionStatus) || 'SUPPORTED',
+            status: (wealthFromAggregate.dimensions.fortune.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
             statement: wealthFromAggregate.dimensions.fortune.statement
           },
           speculation: {
-            status: (wealthFromAggregate.dimensions.speculation.status as WealthDimensionStatus) || 'CHALLENGED',
+            status: (wealthFromAggregate.dimensions.speculation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
             statement: wealthFromAggregate.dimensions.speculation.statement
           },
           d2Statement: wealthFromAggregate.d2.statement,
           timing: {
-            status: 'AVAILABLE' as const,
+            status: wealthFromAggregate.activation.dasha.status === 'AVAILABLE' ? ('AVAILABLE' as const) : ('UNAVAILABLE' as const),
             transitEffect: wealthFromAggregate.activation.transit.effect as TransitTriggerEffect,
             transitStatement: wealthFromAggregate.activation.transit.statement
           },

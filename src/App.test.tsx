@@ -60,6 +60,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     mockLastPipelineState = readyProductState;
     mockAnalyze = vi.spyOn(ProductAnalysisService.prototype, 'analyze').mockImplementation(async function (this: any) {
       this._lastPipelineState = mockLastPipelineState;
+      this._lastHoroscope = defaultHoroscope;
       return readyProductAnalysis;
     });
   });

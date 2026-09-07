@@ -38,6 +38,7 @@ export interface AnalyzeOptions {
 
 export class ProductAnalysisService {
   private _lastPipelineState?: LifeAnalysisProductState;
+  private _lastHoroscope?: Horoscope;
 
   constructor(
     private readonly deps: ProductAnalysisDependencies = defaultProductAnalysisDependencies
@@ -45,6 +46,10 @@ export class ProductAnalysisService {
 
   get lastPipelineState(): LifeAnalysisProductState | undefined {
     return this._lastPipelineState;
+  }
+
+  get lastHoroscope(): Horoscope | undefined {
+    return this._lastHoroscope;
   }
 
   /**
@@ -56,6 +61,7 @@ export class ProductAnalysisService {
   ): Promise<ProductAnalysis> {
     try {
       const horoscope = this.deps.calculateHoroscope(birthDetails);
+      this._lastHoroscope = horoscope;
       const pipelineState = await this.deps.runPipeline({
         horoscope,
         includeAiExplanation: options?.includeAiExplanation ?? true
