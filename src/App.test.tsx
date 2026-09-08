@@ -151,7 +151,14 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     };
     const secondProductAnalysis: ProductAnalysis = {
       ...readyProductAnalysis,
-      analysisId: 'chart-b-analysis'
+      analysisId: 'chart-b-analysis',
+      career: {
+        ...readyProductAnalysis.career,
+        synthesis: {
+          ...readyProductAnalysis.career.synthesis,
+          statement: 'Statement from Chart B - Fresh Result'
+        }
+      }
     };
 
     // First call hangs
@@ -231,7 +238,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Life Analysis Computation Error')).toBeInTheDocument();
+      expect(screen.getByText('Overview Computation Error')).toBeInTheDocument();
       expect(screen.getByText('Calculation engine temporarily failed')).toBeInTheDocument();
     });
 
@@ -241,7 +248,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       return readyProductAnalysis;
     });
 
-    const retryBtn = screen.getByRole('button', { name: /retry analysis/i });
+    const retryBtn = screen.getByRole('button', { name: /recalculate analysis|retry analysis/i });
     fireEvent.click(retryBtn);
 
     await waitFor(() => {
@@ -275,7 +282,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText('Life Analysis Computation Error')).toBeInTheDocument();
+      expect(screen.getByText('Overview Computation Error')).toBeInTheDocument();
     });
 
     let resolveRetryPromise!: (value: ProductAnalysis) => void;
@@ -290,7 +297,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       return res;
     });
 
-    const retryBtn = screen.getByRole('button', { name: /retry analysis/i });
+    const retryBtn = screen.getByRole('button', { name: /recalculate analysis|retry analysis/i });
     fireEvent.click(retryBtn);
 
     // While retry is pending, user changes chart to Chart B
@@ -303,7 +310,14 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     };
     const chartBProductAnalysis: ProductAnalysis = {
       ...readyProductAnalysis,
-      analysisId: 'chart-b-analysis-2'
+      analysisId: 'chart-b-analysis-2',
+      career: {
+        ...readyProductAnalysis.career,
+        synthesis: {
+          ...readyProductAnalysis.career.synthesis,
+          statement: 'Statement from Chart B - Fresh Selection'
+        }
+      }
     };
 
     mockAnalyze.mockImplementationOnce(async function (this: any) {

@@ -64,7 +64,21 @@ const PeriodCard: React.FC<{ period: WealthDashaPeriodViewModel }> = ({ period }
 };
 
 export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha }) => {
-  const isAvailable = dasha.status === 'AVAILABLE';
+  const isUnavailable = dasha.status === 'UNAVAILABLE';
+  const isPartial = dasha.status === 'PARTIAL';
+  const isAvailable = dasha.status === 'AVAILABLE' || dasha.status === 'PARTIAL';
+
+  const badgeLabel = isPartial
+    ? 'Partial Window'
+    : isAvailable
+      ? 'Active Window'
+      : 'Unavailable';
+
+  const badgeClass = isPartial
+    ? 'bg-amber-950/60 border-amber-800/80 text-amber-300'
+    : isAvailable
+      ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
+      : 'bg-slate-800/60 border-slate-700/80 text-slate-400';
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -81,13 +95,9 @@ export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha })
 
         <div>
           <span
-            className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${
-              isAvailable
-                ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
-                : 'bg-slate-800/60 border-slate-700/80 text-slate-400'
-            }`}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${badgeClass}`}
           >
-            {isAvailable ? 'Active Window' : 'Unavailable'}
+            {badgeLabel}
           </span>
         </div>
       </div>
