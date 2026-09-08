@@ -59,6 +59,24 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
               effect: 'ACTIVATES',
               evidenceIds: ['ev_md_1'],
               statement: 'Jupiter Mahadasha establishes primary career elevation.'
+            },
+            {
+              level: 'AD',
+              planet: 'Saturn',
+              role: 'MODIFIER',
+              direction: 'CHALLENGE',
+              effect: 'CHALLENGES',
+              evidenceIds: ['ev_ad_1'],
+              statement: 'Saturn Antardasha introduces structural discipline and tests.'
+            },
+            {
+              level: 'PD',
+              planet: 'Mercury',
+              role: 'REFINEMENT',
+              direction: 'SUPPORT',
+              effect: 'ACTIVATES',
+              evidenceIds: ['ev_pd_1'],
+              statement: 'Mercury Pratyantardasha refines vocational communications.'
             }
           ]
         },
