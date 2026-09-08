@@ -118,7 +118,6 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       ['CONFLICTS', 'Conflicts']
     ])('renders %s relationship badge correctly', (relationship, expectedBadge) => {
       const d10: CareerD10ViewModel = {
-        available: true,
         relationship,
         statement: `Dasamsa ${expectedBadge.toLowerCase()} vocational elevation.`
       };
@@ -132,7 +131,6 @@ describe('Career Section Components Suite (P-UI-04)', () => {
 
     it('renders unavailable state for UNAVAILABLE D10 relationship', () => {
       const d10: CareerD10ViewModel = {
-        available: false,
         relationship: 'UNAVAILABLE',
         statement: 'D10 harmonic data unavailable'
       };
@@ -147,7 +145,6 @@ describe('Career Section Components Suite (P-UI-04)', () => {
   describe('CareerDashaSection', () => {
     it('renders separate MD, AD, PD period cards with planets and roles', () => {
       const dasha: CareerDashaViewModel = {
-        available: true,
         status: 'AVAILABLE',
         currentActivation: 'High-leverage vocational period actively engaged.',
         periods: [
@@ -202,7 +199,6 @@ describe('Career Section Components Suite (P-UI-04)', () => {
 
     it('renders clean unavailable state when dasha timing is unavailable', () => {
       const dasha: CareerDashaViewModel = {
-        available: false,
         status: 'UNAVAILABLE',
         periods: []
       };
@@ -218,7 +214,6 @@ describe('Career Section Components Suite (P-UI-04)', () => {
   describe('CareerTransitSection', () => {
     it('renders transit effect and statement when available', () => {
       const transit: CareerTransitViewModel = {
-        available: true,
         status: 'AVAILABLE',
         effect: 'TRIGGER',
         statement: 'Saturn transits natal 3rd house triggering initiative.'
@@ -235,7 +230,6 @@ describe('Career Section Components Suite (P-UI-04)', () => {
 
     it('renders unavailable state when transit status is UNAVAILABLE', () => {
       const transit: CareerTransitViewModel = {
-        available: false,
         status: 'UNAVAILABLE',
         effect: 'UNAVAILABLE',
         statement: 'Transit calculations unavailable'
@@ -252,13 +246,11 @@ describe('Career Section Components Suite (P-UI-04)', () => {
     it('renders qualification cards with type, severity, and description', () => {
       const qualifications: CareerQualificationViewModel[] = [
         {
-          id: 'comb_1',
           type: 'COMBUSTION',
           severity: 'LOW',
           description: 'Mercury combust by 8 degrees.'
         },
         {
-          id: 'deb_1',
           type: 'DEBILITATION',
           severity: 'HIGH',
           description: 'Venus debilitated in Virgo.'
@@ -324,6 +316,7 @@ describe('Career Section Components Suite (P-UI-04)', () => {
         headline: 'Unified Career Synthesis',
         statement: 'Broad alignment across 10th house, Dasamsa, and active timing windows.',
         confidence: 'HIGH',
+        integratedSynthesisAvailable: true,
         primaryEvidenceCount: 2,
         supportingEvidenceCount: 3,
         challengingEvidenceCount: 1
@@ -341,13 +334,36 @@ describe('Career Section Components Suite (P-UI-04)', () => {
       expect(
         screen.getByText('Broad alignment across 10th house, Dasamsa, and active timing windows.')
       ).toBeInTheDocument();
-      expect(screen.getByText('2 Primary')).toBeInTheDocument();
-      expect(screen.getByText('3 Supporting')).toBeInTheDocument();
-      expect(screen.getByText('1 Challenging')).toBeInTheDocument();
+      expect(screen.getByText('2 Primary Drivers')).toBeInTheDocument();
+      expect(screen.getByText('3 Supporting Factors')).toBeInTheDocument();
+      expect(screen.getByText('1 Challenging Factors')).toBeInTheDocument();
 
       const btn = screen.getByRole('button', { name: /trace full evidential reasoning/i });
       fireEvent.click(btn);
       expect(onOpenReasoning).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders honest fallback title and subtitle when integratedSynthesisAvailable is false', () => {
+      const conclusion: CareerConclusionViewModel = {
+        headline: 'Natal Trajectory',
+        statement: 'Strong 10th house promise without multi-engine synthesis.',
+        confidence: 'MEDIUM',
+        integratedSynthesisAvailable: false,
+        primaryEvidenceCount: 1,
+        supportingEvidenceCount: 2,
+        challengingEvidenceCount: 0
+      };
+
+      render(<CareerConclusionSection conclusion={conclusion} />);
+
+      expect(screen.getByText('Career Conclusion')).toBeInTheDocument();
+      expect(
+        screen.getByText('Natal promise and available activation evidence indicate…')
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Integrated Vocational Synthesis')).not.toBeInTheDocument();
+      expect(screen.getByText('1 Primary Drivers')).toBeInTheDocument();
+      expect(screen.getByText('2 Supporting Factors')).toBeInTheDocument();
+      expect(screen.getByText('0 Challenging Factors')).toBeInTheDocument();
     });
   });
 });

@@ -13,6 +13,12 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
   onOpenReasoning
 }) => {
   const formattedConfidence = formatConfidence(conclusion.confidence);
+  const title = conclusion.integratedSynthesisAvailable
+    ? 'Integrated Vocational Synthesis'
+    : 'Career Conclusion';
+  const subtitle = conclusion.integratedSynthesisAvailable
+    ? 'Unified conclusion synthesizing promise, divisional validation, and timing'
+    : 'Natal promise and available activation evidence indicate…';
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -22,8 +28,8 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
             <Sparkles className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Integrated Vocational Synthesis</h2>
-            <p className="text-xs text-slate-400">Unified conclusion synthesizing promise, divisional validation, and timing</p>
+            <h2 className="text-base font-semibold text-slate-100">{title}</h2>
+            <p className="text-xs text-slate-400">{subtitle}</p>
           </div>
         </div>
 
@@ -47,13 +53,13 @@ export const CareerConclusionSection: React.FC<CareerConclusionSectionProps> = (
       <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800/60">
         <div className="flex flex-wrap items-center gap-3 text-xs font-mono-code">
           <span className="text-purple-300 bg-purple-950/40 px-2.5 py-1 rounded-lg border border-purple-800/60">
-            {conclusion.primaryEvidenceCount} Primary
+            {conclusion.primaryEvidenceCount} Primary Drivers
           </span>
           <span className="text-emerald-300 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-800/60">
-            {conclusion.supportingEvidenceCount} Supporting
+            {conclusion.supportingEvidenceCount} Supporting Factors
           </span>
           <span className="text-rose-300 bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-800/60">
-            {conclusion.challengingEvidenceCount} Challenging
+            {conclusion.challengingEvidenceCount} Challenging Factors
           </span>
         </div>
 

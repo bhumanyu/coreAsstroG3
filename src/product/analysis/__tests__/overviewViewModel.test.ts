@@ -12,7 +12,7 @@ import type { ProductEvidence, ProductAnalysis } from '../productAnalysisTypes';
 import { createProductAnalysis } from './testHelpers';
 
 describe('OverviewViewModel & Selectors (P-UI-03)', () => {
-  it('(1) maps career strength from promise.strength and wealth from overall.status', () => {
+  it('(1) maps career strength from promise.strength and wealth from overall.promise / status', () => {
     const analysis = createProductAnalysis({
       career: {
         ...createProductAnalysis().career,
@@ -36,10 +36,12 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     const vm = selectOverviewViewModel(analysis);
 
     expect(vm.career.strength).toBe('VERY_STRONG');
+    expect(vm.career.status).toBe('VERY_STRONG');
     expect(vm.career.confidence).toBe('HIGH');
     expect(vm.career.summary).toBe('Exceptional executive promise.');
 
-    expect(vm.wealth.strength).toBe('STRONGLY_SUPPORTED');
+    expect(vm.wealth.strength).toBe('STRONG');
+    expect(vm.wealth.status).toBe('STRONGLY_SUPPORTED');
     expect(vm.wealth.confidence).toBe('HIGH');
     expect(vm.wealth.summary).toBe('Solid wealth indicators.');
   });

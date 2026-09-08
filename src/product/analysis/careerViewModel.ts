@@ -45,7 +45,6 @@ export interface CareerExpressionViewModel {
 }
 
 export interface CareerD10ViewModel {
-  readonly available: boolean;
   readonly relationship: 'CONFIRMS' | 'PARTIALLY_CONFIRMS' | 'MODIFIES' | 'CONFLICTS' | 'UNAVAILABLE' | string;
   readonly statement?: string;
 }
@@ -63,7 +62,6 @@ export interface CareerDashaPeriodViewModel {
 }
 
 export interface CareerDashaViewModel {
-  readonly available: boolean;
   readonly status: ProductAvailability;
   readonly currentActivation?: string;
   readonly currentPressure?: string;
@@ -74,14 +72,12 @@ export interface CareerDashaViewModel {
 }
 
 export interface CareerTransitViewModel {
-  readonly available: boolean;
   readonly status: ProductAvailability;
   readonly effect: TransitEffect | string;
   readonly statement?: string;
 }
 
 export interface CareerQualificationViewModel {
-  readonly id: string;
   readonly type: string;
   readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
   readonly description: string;
@@ -102,8 +98,23 @@ export interface CareerConclusionViewModel {
   readonly headline?: string;
   readonly statement?: string;
   readonly confidence: ProductConfidence;
+  readonly integratedSynthesisAvailable: boolean;
+  /**
+   * Count of evidence items on the role dimension where role is PRIMARY.
+   * Note: Role and direction are orthogonal dimensions. A PRIMARY item that
+   * also has direction CHALLENGE will be counted in both primaryEvidenceCount
+   * and challengingEvidenceCount.
+   */
   readonly primaryEvidenceCount: number;
+  /**
+   * Count of evidence items on the direction dimension where direction is SUPPORT.
+   * Note: Orthogonal to primaryEvidenceCount.
+   */
   readonly supportingEvidenceCount: number;
+  /**
+   * Count of evidence items on the direction dimension where direction is CHALLENGE.
+   * Note: Orthogonal to primaryEvidenceCount.
+   */
   readonly challengingEvidenceCount: number;
 }
 
@@ -168,7 +179,6 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   };
 
   const d10: CareerD10ViewModel = {
-    available: career.d10.relationship !== 'UNAVAILABLE',
     relationship: career.d10.relationship,
     statement: career.d10.statement
   };
@@ -191,7 +201,6 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   }));
 
   const dasha: CareerDashaViewModel = {
-    available: career.activation.dasha.status === 'AVAILABLE',
     status: career.activation.dasha.status,
     currentActivation: career.activation.dasha.currentActivation,
     currentPressure: career.activation.dasha.currentPressure,
@@ -202,15 +211,13 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
   };
 
   const transit: CareerTransitViewModel = {
-    available: career.activation.transit.status === 'AVAILABLE',
     status: career.activation.transit.status,
     effect: career.activation.transit.effect,
     statement: career.activation.transit.statement
   };
 
   const qualifications: CareerQualificationViewModel[] = (career.qualifications ?? []).map(
-    (q, idx) => ({
-      id: `${q.type}_${idx}`,
+    (q) => ({
       type: q.type,
       severity: q.severity,
       description: q.description
@@ -232,6 +239,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
     headline: career.synthesis?.headline ?? career.promise.headline,
     statement: career.synthesis?.statement ?? career.promise.statement,
     confidence: career.promise.confidence,
+    integratedSynthesisAvailable: Boolean(career.synthesis),
     primaryEvidenceCount: evidence.filter((e) => e.role === 'PRIMARY').length,
     supportingEvidenceCount: evidence.filter((e) => e.direction === 'SUPPORT').length,
     challengingEvidenceCount: evidence.filter((e) => e.direction === 'CHALLENGE').length

@@ -10,7 +10,7 @@ export interface CareerD10SectionProps {
 export const CareerD10Section: React.FC<CareerD10SectionProps> = ({ d10 }) => {
   const formattedRelationship = formatD10Relationship(d10.relationship);
   const badgeClass = getD10RelationshipBadgeClass(d10.relationship);
-  const isAvailable = d10.available && d10.relationship !== 'UNAVAILABLE';
+  const isAvailable = d10.relationship !== 'UNAVAILABLE';
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
