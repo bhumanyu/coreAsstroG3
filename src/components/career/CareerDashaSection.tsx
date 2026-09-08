@@ -64,7 +64,7 @@ const PeriodCard: React.FC<{ period: CareerDashaPeriodViewModel }> = ({ period }
 };
 
 export const CareerDashaSection: React.FC<CareerDashaSectionProps> = ({ dasha }) => {
-  const isAvailable = dasha.available && dasha.status !== 'UNAVAILABLE';
+  const isAvailable = dasha.status === 'AVAILABLE';
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -101,8 +101,8 @@ export const CareerDashaSection: React.FC<CareerDashaSectionProps> = ({ dasha })
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-            {dasha.periods.map((period) => (
-              <PeriodCard key={`${period.level}-${period.planet || 'unknown'}`} period={period} />
+            {dasha.periods.map((period, idx) => (
+              <PeriodCard key={`${period.level}-${period.planet || 'unknown'}-${idx}`} period={period} />
             ))}
           </div>
         </div>

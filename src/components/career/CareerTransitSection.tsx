@@ -8,7 +8,7 @@ export interface CareerTransitSectionProps {
 }
 
 export const CareerTransitSection: React.FC<CareerTransitSectionProps> = ({ transit }) => {
-  const isAvailable = transit.available && transit.status !== 'UNAVAILABLE';
+  const isAvailable = transit.status === 'AVAILABLE';
   const formattedEffect = formatTransitEffect(transit.effect);
 
   return (

@@ -32,16 +32,15 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(vm2.promise.manifestations).toEqual([]);
   });
 
-  it('3. D10 relationship preserved: preserves relationship value and available flag', () => {
+  it('3. D10 relationship preserved: preserves relationship value and statement', () => {
     const analysis = createProductAnalysis();
     const vm = selectCareerViewModel(analysis);
 
     expect(vm.d10.relationship).toBe('CONFIRMS');
-    expect(vm.d10.available).toBe(true);
     expect(vm.d10.statement).toBe('Dasamsa confirms strong 10th house status.');
   });
 
-  it('4. UNAVAILABLE D10 → available:false: marks unavailable without strength coercion', () => {
+  it('4. UNAVAILABLE D10: preserves UNAVAILABLE relationship without strength coercion', () => {
     const analysis = createProductAnalysis({
       career: {
         ...createProductAnalysis().career,
@@ -54,7 +53,6 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     const vm = selectCareerViewModel(analysis);
 
     expect(vm.d10.relationship).toBe('UNAVAILABLE');
-    expect(vm.d10.available).toBe(false);
     expect(vm.d10.statement).toBe('D10 divisional assessment unavailable');
   });
 
@@ -127,7 +125,7 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
     expect(vm.dasha.pd?.direction).toBe('SUPPORT');
   });
 
-  it('8. unavailable dasha: preserves UNAVAILABLE status and marks available:false', () => {
+  it('8. unavailable dasha: preserves UNAVAILABLE status', () => {
     const defaultAnalysis = createProductAnalysis();
     const analysis = createProductAnalysis({
       career: {
@@ -144,10 +142,9 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
 
     const vm = selectCareerViewModel(analysis);
     expect(vm.dasha.status).toBe('UNAVAILABLE');
-    expect(vm.dasha.available).toBe(false);
   });
 
-  it('9. unavailable transit: preserves UNAVAILABLE status and marks available:false', () => {
+  it('9. unavailable transit: preserves UNAVAILABLE status', () => {
     const defaultAnalysis = createProductAnalysis();
     const analysis = createProductAnalysis({
       career: {
@@ -165,7 +162,6 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
 
     const vm = selectCareerViewModel(analysis);
     expect(vm.transit.status).toBe('UNAVAILABLE');
-    expect(vm.transit.available).toBe(false);
     expect(vm.transit.effect).toBe('UNAVAILABLE');
   });
 
@@ -206,5 +202,37 @@ describe('CareerViewModel pure projection selectors (P-UI-04)', () => {
 
     expect(vm.evidence[0].derivedFromIds).toEqual(['ev_mars_exalted']);
     expect(vm.evidence[1].derivedFromIds).toEqual([]);
+  });
+
+  it('13. defensive dasha hierarchy: asserts exactly one MD, one AD, and one PD in normal fixture', () => {
+    const analysis = createProductAnalysis();
+    const vm = selectCareerViewModel(analysis);
+
+    const mdCount = vm.dasha.periods.filter((p) => p.level === 'MD').length;
+    const adCount = vm.dasha.periods.filter((p) => p.level === 'AD').length;
+    const pdCount = vm.dasha.periods.filter((p) => p.level === 'PD').length;
+
+    expect(mdCount).toBe(1);
+    expect(adCount).toBe(1);
+    expect(pdCount).toBe(1);
+    expect(vm.dasha.md).toBeDefined();
+    expect(vm.dasha.ad).toBeDefined();
+    expect(vm.dasha.pd).toBeDefined();
+  });
+
+  it('14. anti-overclaim: falls back to promise when synthesis is undefined and marks integratedSynthesisAvailable:false', () => {
+    const base = createProductAnalysis();
+    const analysisWithoutSynthesis = createProductAnalysis({
+      career: {
+        ...base.career,
+        synthesis: undefined
+      }
+    });
+
+    const vm = selectCareerViewModel(analysisWithoutSynthesis);
+
+    expect(vm.conclusion.statement).toBe(base.career.promise.statement);
+    expect(vm.conclusion.headline).toBe(base.career.promise.headline);
+    expect(vm.conclusion.integratedSynthesisAvailable).toBe(false);
   });
 });

@@ -7,7 +7,6 @@
 
 import React, { useMemo } from 'react';
 import type { ProductAnalysisState } from '../app/AppState';
-import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectCareerViewModel } from '../product/analysis/careerViewModel';
 import {
@@ -26,7 +25,6 @@ import {
 } from '../components/career';
 
 export interface CareerPageProps {
-  readonly state?: LifeAnalysisProductState;
   readonly productAnalysisState?: ProductAnalysisState;
   readonly onRetry?: () => void;
   readonly onNavigate?: (page: AppPage) => void;

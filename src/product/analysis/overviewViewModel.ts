@@ -33,6 +33,7 @@ export interface OverviewChart {
 export interface OverviewDomain {
   readonly name: string;
   readonly strength: string;
+  readonly status?: string;
   readonly confidence: ProductConfidence;
   readonly summary: string;
   readonly topEvidence: readonly ProductEvidence[];
@@ -202,6 +203,7 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   const careerDomain: OverviewDomain = {
     name: 'Career & Professional Life',
     strength: analysis.career.promise.strength,
+    status: analysis.career.promise.strength,
     confidence: analysis.career.promise.confidence,
     summary:
       analysis.career.promise.statement ??
@@ -212,7 +214,8 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
 
   const wealthDomain: OverviewDomain = {
     name: 'Wealth & Financial Assets',
-    strength: analysis.wealth.overall.status,
+    strength: analysis.wealth.overall.promise,
+    status: analysis.wealth.overall.status,
     confidence: analysis.wealth.overall.confidence,
     summary:
       analysis.wealth.overall.statement ??

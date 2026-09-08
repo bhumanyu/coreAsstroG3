@@ -20,7 +20,7 @@ export const CareerHero: React.FC<CareerHeroProps> = ({ hero }) => {
       <PageHeading
         eyebrow="Life Domain Analysis"
         title="Career & Professional Trajectory"
-        description="Comprehensive evaluation of vocational capacity, Dasamsa (D10) divisional alignment, active dasha timing, and transit triggers."
+        description="Career analysis from natal promise, available divisional confirmation, planetary timing, and transit evidence."
       >
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-mono-code">
