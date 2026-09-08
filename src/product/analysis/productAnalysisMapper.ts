@@ -40,7 +40,8 @@ import type {
   D2ProductResult,
   SpeculativeRiskProduct,
   ProductQualification,
-  ProductConfidence
+  ProductConfidence,
+  ConclusionStatus
 } from './productAnalysisTypes';
 
 export interface ProductAnalysisMapperInput {
@@ -352,6 +353,20 @@ function mapEvidenceItems(
   });
 }
 
+/**
+ * Normalizes a domain status signal into canonical ConclusionStatus.
+ */
+export function mapConclusionStatus(val?: string): ConclusionStatus {
+  if (!val) return 'UNAVAILABLE';
+  const u = val.trim().toUpperCase();
+  if (u === 'STRONGLY_SUPPORTED' || u === 'VERY_STRONG') return 'STRONGLY_SUPPORTED';
+  if (u === 'SUPPORTED' || u === 'STRONG') return 'SUPPORTED';
+  if (u === 'MIXED' || u === 'MODERATE') return 'MIXED';
+  if (u === 'CHALLENGED') return 'CHALLENGED';
+  if (u === 'LIMITED' || u === 'WEAK' || u === 'VERY_WEAK') return 'LIMITED';
+  return 'UNAVAILABLE';
+}
+
 function mapCareer(
   viewModel: LifeAnalysisViewModel,
   explicitEvidence?: readonly ProductEvidence[]
@@ -370,8 +385,19 @@ function mapCareer(
 
   const dashaPeriods = mapDashaPeriods(detail?.timing);
 
+  const rawStatus =
+    summary?.status ??
+    detail?.finalSynthesis?.finalStatus ??
+    detail?.finalSynthesis?.status ??
+    detail?.status;
+  const careerStatus: ConclusionStatus = mapConclusionStatus(
+    rawStatus ? String(rawStatus) : undefined
+  );
+
   return {
+    status: careerStatus,
     promise: {
+      status: careerStatus,
       strength: detail?.status
         ? String(detail.status)
         : detail?.natalPromise
@@ -674,7 +700,9 @@ export function buildFailedProductAnalysis(
       isAvailable: false
     },
     career: {
+      status: 'UNAVAILABLE',
       promise: {
+        status: 'UNAVAILABLE',
         strength: 'UNAVAILABLE',
         confidence: 'LOW',
         statement: message

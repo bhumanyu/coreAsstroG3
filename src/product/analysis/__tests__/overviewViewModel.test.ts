@@ -16,7 +16,9 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     const analysis = createProductAnalysis({
       career: {
         ...createProductAnalysis().career,
+        status: 'STRONGLY_SUPPORTED',
         promise: {
+          status: 'STRONGLY_SUPPORTED',
           strength: 'VERY_STRONG',
           confidence: 'HIGH',
           statement: 'Exceptional executive promise.'
@@ -36,7 +38,7 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     const vm = selectOverviewViewModel(analysis);
 
     expect(vm.career.strength).toBe('VERY_STRONG');
-    expect(vm.career.status).toBe('VERY_STRONG');
+    expect(vm.career.status).toBe('STRONGLY_SUPPORTED');
     expect(vm.career.confidence).toBe('HIGH');
     expect(vm.career.summary).toBe('Exceptional executive promise.');
 
@@ -46,10 +48,31 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
     expect(vm.wealth.summary).toBe('Solid wealth indicators.');
   });
 
-  it('(2) MD/AD/PD hierarchy preserved via dasha.current -> md/ad/pd with correct levels', () => {
+  it('(1b) career status is undefined when not provided, avoiding conflation with strength', () => {
+    const base = createProductAnalysis();
+    const analysis = {
+      ...base,
+      career: {
+        ...base.career,
+        status: undefined,
+        promise: {
+          ...base.career.promise,
+          status: undefined,
+          strength: 'VERY_STRONG'
+        }
+      }
+    };
+
+    const vm = selectOverviewViewModel(analysis);
+    expect(vm.career.strength).toBe('VERY_STRONG');
+    expect(vm.career.status).toBeUndefined();
+  });
+
+  it('(2) MD/AD/PD hierarchy preserved via dasha.current -> md/ad/pd with correct levels and AVAILABLE status', () => {
     const analysis = createProductAnalysis();
     const vm = selectOverviewViewModel(analysis);
 
+    expect(vm.dasha.status).toBe('AVAILABLE');
     expect(vm.dasha.availability).toBe(true);
     expect(vm.dasha.currentPeriodLabel).toBe('Jupiter → Saturn → Mercury');
 
@@ -70,6 +93,48 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
 
     // Hierarchy preservation
     expect(vm.dasha.periods.map((p) => p.level)).toEqual(['MD', 'AD', 'PD']);
+  });
+
+  it('(2b) derives PARTIAL dasha status when some but not all periods are present', () => {
+    const base = createProductAnalysis();
+    const partialAnalysis: ProductAnalysis = {
+      ...base,
+      dasha: {
+        ...base.dasha,
+        current: {
+          mahadasha: base.dasha.current.mahadasha,
+          antardasha: base.dasha.current.antardasha,
+          pratyantardasha: undefined
+        }
+      }
+    };
+
+    const vm = selectOverviewViewModel(partialAnalysis);
+    expect(vm.dasha.status).toBe('PARTIAL');
+    expect(vm.dasha.availability).toBe(true);
+    expect(vm.dasha.currentPeriodLabel).toBe('Jupiter → Saturn');
+    expect(vm.dasha.periods).toHaveLength(2);
+  });
+
+  it('(2c) derives UNAVAILABLE dasha status when no periods are present', () => {
+    const base = createProductAnalysis();
+    const unavailAnalysis: ProductAnalysis = {
+      ...base,
+      dasha: {
+        ...base.dasha,
+        current: {
+          mahadasha: undefined,
+          antardasha: undefined,
+          pratyantardasha: undefined
+        }
+      }
+    };
+
+    const vm = selectOverviewViewModel(unavailAnalysis);
+    expect(vm.dasha.status).toBe('UNAVAILABLE');
+    expect(vm.dasha.availability).toBe(false);
+    expect(vm.dasha.currentPeriodLabel).toBe('Timing Unavailable');
+    expect(vm.dasha.periods).toHaveLength(0);
   });
 
   it('(3) evidence direction and role preserved through selectTopEvidence with real literals', () => {
