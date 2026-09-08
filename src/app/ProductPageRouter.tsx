@@ -153,6 +153,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       return (
         <ReasoningPage
           productAnalysisState={state.productAnalysis}
+          onRetry={onRetry}
           onNavigate={onNavigate}
         />
       );

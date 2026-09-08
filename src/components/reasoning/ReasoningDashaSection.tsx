@@ -1,19 +1,21 @@
 import React from 'react';
 import type {
-  WealthDashaViewModel,
-  WealthDashaPeriodViewModel
-} from '../../product/analysis/wealthViewModel';
+  ReasoningDashaViewModel,
+  ReasoningDashaPeriodViewModel
+} from '../../product/analysis/reasoningViewModel';
 import {
   formatEvidenceRole,
   formatDirection,
   formatActivationEffect,
+  formatAvailability,
   getDirectionBadgeClass,
-  getEvidenceRoleBadgeClass
-} from './wealthFormat';
+  getEvidenceRoleBadgeClass,
+  getAvailabilityBadgeClass
+} from './reasoningFormat';
 import { Clock, AlertCircle } from 'lucide-react';
 
-export interface WealthDashaSectionProps {
-  readonly dasha: WealthDashaViewModel;
+export interface ReasoningDashaSectionProps {
+  readonly dasha: ReasoningDashaViewModel;
 }
 
 const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
@@ -22,7 +24,7 @@ const LEVEL_LABELS: Record<'MD' | 'AD' | 'PD', string> = {
   PD: 'Pratyantardasha (PD)'
 };
 
-const PeriodCard: React.FC<{ period: WealthDashaPeriodViewModel }> = ({ period }) => {
+const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ period }) => {
   const roleLabel = formatEvidenceRole(period.role);
   const directionLabel = formatDirection(period.direction);
   const effectLabel = formatActivationEffect(period.effect);
@@ -59,26 +61,23 @@ const PeriodCard: React.FC<{ period: WealthDashaPeriodViewModel }> = ({ period }
           {period.statement}
         </p>
       )}
+
+      {(period.start || period.end) && (
+        <div className="text-[10px] font-mono-code text-slate-400 pt-1">
+          <span>
+            {period.start ?? ''} {period.end ? `→ ${period.end}` : ''}
+          </span>
+        </div>
+      )}
     </div>
   );
 };
 
-export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha }) => {
-  const isUnavailable = dasha.status === 'UNAVAILABLE';
-  const isPartial = dasha.status === 'PARTIAL';
-  const isAvailable = dasha.status === 'AVAILABLE' || dasha.status === 'PARTIAL';
-
-  const badgeLabel = isPartial
-    ? 'Partial Window'
-    : isAvailable
-      ? 'Active Window'
-      : 'Unavailable';
-
-  const badgeClass = isPartial
-    ? 'bg-amber-950/60 border-amber-800/80 text-amber-300'
-    : isAvailable
-      ? 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300'
-      : 'bg-slate-800/60 border-slate-700/80 text-slate-400';
+export const ReasoningDashaSection: React.FC<ReasoningDashaSectionProps> = ({ dasha }) => {
+  // CRITICAL: Render available cards for both AVAILABLE and PARTIAL. Only treat UNAVAILABLE as empty.
+  const isAvailableOrPartial = dasha.status === 'AVAILABLE' || dasha.status === 'PARTIAL';
+  const hasPeriods = dasha.periods && dasha.periods.length > 0;
+  const badgeClass = getAvailabilityBadgeClass(dasha.status);
 
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -88,8 +87,8 @@ export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha })
             <Clock className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Wealth Timing & Vimshottari Dasha Hierarchy</h2>
-            <p className="text-xs text-slate-400">Chronological activation via Mahadasha, Antardasha, and Pratyantardasha levels</p>
+            <h2 className="text-base font-semibold text-slate-100">Chronological Vimshottari Dasha Activation</h2>
+            <p className="text-xs text-slate-400">Temporal activation hierarchy via Mahadasha, Antardasha, and Pratyantardasha</p>
           </div>
         </div>
 
@@ -97,30 +96,28 @@ export const WealthDashaSection: React.FC<WealthDashaSectionProps> = ({ dasha })
           <span
             className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${badgeClass}`}
           >
-            {badgeLabel}
+            {formatAvailability(dasha.status)}
           </span>
         </div>
       </div>
 
-      {isAvailable && dasha.periods.length > 0 ? (
-        <div className="space-y-3">
-          {dasha.currentActivation && (
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              {dasha.currentActivation}
-            </p>
-          )}
+      {dasha.currentActivation && (
+        <p className="text-xs text-slate-300 leading-relaxed font-sans">
+          {dasha.currentActivation}
+        </p>
+      )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-            {dasha.periods.map((period, idx) => (
-              <PeriodCard key={`${period.level}-${period.planet || 'unknown'}-${idx}`} period={period} />
-            ))}
-          </div>
+      {isAvailableOrPartial && hasPeriods ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {dasha.periods.map((period, idx) => (
+            <PeriodCard key={`${period.level}_${period.planet ?? idx}`} period={period} />
+          ))}
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-4 rounded-xl border border-slate-800/60">
+        <div className="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/40 p-3 rounded-xl border border-slate-800/60">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
           <span>
-            Vimshottari dasha timing calculations are currently unavailable for this wealth analysis.
+            Dasha timing periods are unavailable for this calculation.
           </span>
         </div>
       )}

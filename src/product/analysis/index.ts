@@ -5,4 +5,5 @@ export * from './productAnalysisSelectors';
 export * from './overviewViewModel';
 export * from './careerViewModel';
 export * from './wealthViewModel';
+export * from './reasoningViewModel';
 export * from './AnalysisEmptyState';

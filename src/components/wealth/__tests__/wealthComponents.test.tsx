@@ -204,6 +204,7 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
       render(<WealthDashaSection dasha={dasha} />);
 
       expect(screen.getByText('Wealth Timing & Vimshottari Dasha Hierarchy')).toBeInTheDocument();
+      expect(screen.getByText('Active Window')).toBeInTheDocument();
       expect(screen.getByText('Jupiter MD with Saturn AD active.')).toBeInTheDocument();
       expect(screen.getByText('Jupiter')).toBeInTheDocument();
       expect(screen.getByText('Saturn')).toBeInTheDocument();
@@ -211,6 +212,41 @@ describe('Wealth Section Components Suite (P-UI-05)', () => {
       expect(screen.getByText('Mahadasha (MD)')).toBeInTheDocument();
       expect(screen.getByText('Antardasha (AD)')).toBeInTheDocument();
       expect(screen.getByText('Pratyantardasha (PD)')).toBeInTheDocument();
+    });
+
+    it('renders partial wealth dasha timing as partial rather than unavailable', () => {
+      const dasha: WealthDashaViewModel = {
+        status: 'PARTIAL',
+        currentActivation: 'Jupiter MD with Saturn AD active.',
+        periods: [
+          {
+            level: 'MD',
+            planet: 'Jupiter',
+            role: 'PRIMARY',
+            direction: 'SUPPORT',
+            effect: 'ACTIVATES',
+            evidenceIds: ['ev_md'],
+            statement: 'Jupiter Mahadasha establishes expansion.'
+          },
+          {
+            level: 'AD',
+            planet: 'Saturn',
+            role: 'MODIFIER',
+            direction: 'CHALLENGE',
+            effect: 'CHALLENGES',
+            evidenceIds: ['ev_ad'],
+            statement: 'Saturn Antardasha consolidates assets.'
+          }
+        ]
+      };
+
+      render(<WealthDashaSection dasha={dasha} />);
+
+      expect(screen.getByText('Partial Window')).toBeInTheDocument();
+      expect(screen.queryByText('Unavailable')).not.toBeInTheDocument();
+      expect(screen.getByText('Jupiter')).toBeInTheDocument();
+      expect(screen.getByText('Saturn')).toBeInTheDocument();
+      expect(screen.queryByText('Pratyantardasha (PD)')).not.toBeInTheDocument();
     });
 
     it('renders unavailable fallback when dasha status is UNAVAILABLE', () => {
