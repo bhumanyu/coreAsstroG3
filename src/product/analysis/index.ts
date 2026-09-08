@@ -4,4 +4,5 @@ export * from './productAnalysisService';
 export * from './productAnalysisSelectors';
 export * from './overviewViewModel';
 export * from './careerViewModel';
+export * from './wealthViewModel';
 export * from './AnalysisEmptyState';

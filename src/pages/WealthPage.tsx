@@ -1,169 +1,92 @@
-import React from 'react';
-import { Coins } from 'lucide-react';
-import type {
-  LifeAnalysisProductState,
-  DomainStrength,
-  SynthesisDomainStrength,
-  VargaRelationship,
-  TimingActivationEffect,
-  TransitTriggerEffect,
-  ConfidenceLevel,
-  WealthDimensionStatus,
-  LifeAnalysisDomainSummaryViewModel,
-  LifeAnalysisWealthDetailViewModel
-} from '../product/life-analysis/lifeAnalysisTypes';
-import type {
-  PromiseStrength,
-  ActivationEffect,
-  TransitEffect,
-  ConclusionStatus
-} from '../product/analysis';
+/**
+ * Wealth Page (P-UI-05)
+ *
+ * Pure presentation projection over canonical ProductAnalysis aggregate.
+ * Does NOT perform any astrology/domain/D2/Dasha/transit/AI calculations.
+ */
+
+import React, { useMemo } from 'react';
 import type { ProductAnalysisState } from '../app/AppState';
-import { selectWealth } from '../product/analysis/productAnalysisSelectors';
-import { PageHeading } from '../components/layout/PageHeading';
-import { WealthAnalysisCard } from '../components/lifeAnalysis/WealthAnalysisCard';
-import { LifeAnalysisLoading } from '../components/lifeAnalysis/LifeAnalysisLoading';
-import { LifeAnalysisError } from '../components/lifeAnalysis/LifeAnalysisError';
-import { EmptyState } from '../components/fullNatalReport/EmptyState';
 import type { AppPage } from '../app/navigation/navigationTypes';
+import { selectWealthViewModel } from '../product/analysis/wealthViewModel';
+import {
+  WealthHero,
+  WealthOverallSection,
+  WealthDimensionsSection,
+  WealthD2Section,
+  WealthDashaSection,
+  WealthTransitSection,
+  WealthSpeculativeRiskSection,
+  WealthQualificationsSection,
+  WealthEvidenceSection,
+  WealthConclusionSection,
+  WealthLoadingState,
+  WealthUnavailableState,
+  WealthErrorState
+} from '../components/wealth';
 
 export interface WealthPageProps {
-  readonly state?: LifeAnalysisProductState;
   readonly productAnalysisState?: ProductAnalysisState;
   readonly onRetry?: () => void;
   readonly onNavigate?: (page: AppPage) => void;
 }
 
 export const WealthPage: React.FC<WealthPageProps> = ({
-  state,
   productAnalysisState,
-  onRetry
+  onRetry,
+  onNavigate
 }) => {
-  const isLoading =
-    productAnalysisState?.status === 'LOADING' ||
-    (!productAnalysisState && state?.status === 'LOADING');
+  const status = productAnalysisState?.status;
+  const analysis = productAnalysisState?.analysis;
+  const errorMessage = productAnalysisState?.error;
 
-  if (isLoading) {
-    return <LifeAnalysisLoading />;
-  }
-
-  const isError =
-    (productAnalysisState?.status === 'ERROR' && !productAnalysisState.analysis && !state?.analysis) ||
-    (!productAnalysisState && state?.status === 'ERROR' && !state?.analysis);
-
-  if (isError) {
-    return (
-      <LifeAnalysisError
-        message={productAnalysisState?.error || state?.errorMessage}
-        onRetry={onRetry}
-      />
-    );
-  }
-
-  const legacyAnalysis = state?.analysis;
-  const aggregateAnalysis = productAnalysisState?.analysis;
-
-  if (!legacyAnalysis && !aggregateAnalysis) {
-    return (
-      <EmptyState
-        title="Wealth Analysis Unavailable"
-        message="No wealth analysis could be calculated for the current chart."
-        icon={<Coins className="w-5 h-5 text-indigo-400" aria-hidden="true" />}
-      />
-    );
-  }
-
-  const wealthFromAggregate = aggregateAnalysis ? selectWealth(aggregateAnalysis) : undefined;
-
-  const mapToSynthesisStrength = (s: string | undefined): SynthesisDomainStrength => {
-    switch (s) {
-      case 'VERY_STRONG':
-        return 'VERY_STRONG';
-      case 'STRONG':
-        return 'STRONG';
-      case 'MODERATE':
-        return 'MODERATE';
-      case 'WEAK':
-      case 'VERY_WEAK':
-        return 'WEAK';
-      default:
-        return 'MODERATE';
-    }
-  };
-
-  const wealthSummary: LifeAnalysisDomainSummaryViewModel | undefined = legacyAnalysis?.domains.find((d) => d.domain === 'WEALTH') ?? (
-    wealthFromAggregate
-      ? {
-          domain: 'WEALTH' as const,
-          displayName: 'Wealth & Assets',
-          status: 'SUPPORTED' as const,
-          strength: mapToSynthesisStrength(wealthFromAggregate.overall.promise),
-          confidence: (wealthFromAggregate.overall.confidence as ConfidenceLevel) || 'MEDIUM',
-          conclusion: wealthFromAggregate.overall.statement || '',
-          headline: wealthFromAggregate.overall.headline,
-          statement: wealthFromAggregate.overall.statement,
-          supportingEvidenceCount: wealthFromAggregate.evidence.length,
-          challengingEvidenceCount: 0
-        }
-      : undefined
+  const viewModel = useMemo(
+    () => (analysis ? selectWealthViewModel(analysis) : undefined),
+    [analysis]
   );
 
-  const wealthDetail: LifeAnalysisWealthDetailViewModel | undefined = legacyAnalysis?.wealthDetail ?? (
-    wealthFromAggregate
-      ? {
-          natalPromise: (wealthFromAggregate.overall.promise as DomainStrength | 'UNAVAILABLE') || 'UNAVAILABLE',
-          d2Relationship: wealthFromAggregate.d2.relationship as VargaRelationship,
-          currentDashaEffect: (wealthFromAggregate.activation.dasha.periods[0]?.effect as ActivationEffect) || 'UNAVAILABLE',
-          currentTransitEffect: (wealthFromAggregate.activation.transit.effect as TransitEffect) || 'UNAVAILABLE',
-          overallStatus: (wealthFromAggregate.overall.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-          accumulationStatus: (wealthFromAggregate.dimensions.accumulation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-          gainsStatus: (wealthFromAggregate.dimensions.gains.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-          fortuneStatus: (wealthFromAggregate.dimensions.fortune.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-          speculationStatus: (wealthFromAggregate.dimensions.speculation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-          promiseHeadline: wealthFromAggregate.overall.headline,
-          promiseStatement: wealthFromAggregate.overall.statement,
-          headline: wealthFromAggregate.overall.headline,
-          statement: wealthFromAggregate.overall.statement,
-          status: (wealthFromAggregate.overall.promise as DomainStrength | 'UNAVAILABLE') || 'UNAVAILABLE',
-          accumulation: {
-            status: (wealthFromAggregate.dimensions.accumulation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-            statement: wealthFromAggregate.dimensions.accumulation.statement
-          },
-          gains: {
-            status: (wealthFromAggregate.dimensions.gains.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-            statement: wealthFromAggregate.dimensions.gains.statement
-          },
-          fortune: {
-            status: (wealthFromAggregate.dimensions.fortune.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-            statement: wealthFromAggregate.dimensions.fortune.statement
-          },
-          speculation: {
-            status: (wealthFromAggregate.dimensions.speculation.status as WealthDimensionStatus | 'UNAVAILABLE') || 'UNAVAILABLE',
-            statement: wealthFromAggregate.dimensions.speculation.statement
-          },
-          d2Statement: wealthFromAggregate.d2.statement,
-          timing: {
-            status: wealthFromAggregate.activation.dasha.status === 'AVAILABLE' ? ('AVAILABLE' as const) : ('UNAVAILABLE' as const),
-            transitEffect: wealthFromAggregate.activation.transit.effect as TransitTriggerEffect,
-            transitStatement: wealthFromAggregate.activation.transit.statement
-          },
-          qualifications: wealthFromAggregate.qualifications as any
-        }
-      : undefined
-  );
+  // 1. Error state when no analysis is available
+  if (status === 'ERROR' && !analysis) {
+    return <WealthErrorState errorMessage={errorMessage} onRetry={onRetry} />;
+  }
 
+  // 2. Loading state when calculation is actively running or idle
+  if (status === 'LOADING' || (status === 'IDLE' && !analysis)) {
+    return <WealthLoadingState />;
+  }
+
+  // 3. Unavailable state when no analysis can be projected
+  if (!analysis || !viewModel) {
+    return <WealthUnavailableState onRetry={onRetry} />;
+  }
+
+  // 4. Render pure presentation sections in spec order
   return (
-    <div className="space-y-6 pb-12">
-      <PageHeading
-        eyebrow="Life Domain Analysis"
-        title="Wealth & Financial Prosperity"
-        description="Classical evaluation of 2nd house (accumulation), 11th house (gains), Dhana yoga formations, and financial manifestation potential."
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <WealthHero hero={viewModel.hero} />
+
+      <WealthOverallSection overall={viewModel.overall} />
+
+      <WealthDimensionsSection dimensions={viewModel.dimensions} />
+
+      <WealthD2Section d2={viewModel.d2} />
+
+      <WealthDashaSection dasha={viewModel.dasha} />
+
+      <WealthTransitSection transit={viewModel.transit} />
+
+      <WealthSpeculativeRiskSection speculativeRisk={viewModel.speculativeRisk} />
+
+      <WealthQualificationsSection qualifications={viewModel.qualifications} />
+
+      <WealthEvidenceSection
+        evidence={viewModel.evidence}
+        onOpenReasoning={() => onNavigate?.('reasoning')}
       />
 
-      <WealthAnalysisCard
-        detail={wealthDetail}
-        summary={wealthSummary}
-        why={legacyAnalysis?.wealthWhy}
+      <WealthConclusionSection
+        conclusion={viewModel.conclusion}
+        onOpenReasoning={() => onNavigate?.('reasoning')}
       />
     </div>
   );
