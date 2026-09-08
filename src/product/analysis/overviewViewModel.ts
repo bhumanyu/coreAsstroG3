@@ -72,6 +72,7 @@ export interface OverviewViewModel {
   readonly dasha: OverviewDasha;
   readonly findings: readonly OverviewFinding[];
   readonly qualifications: readonly OverviewQualification[];
+  readonly totalEvidenceCount: number;
   readonly warnings: readonly ProductWarning[];
 }
 
@@ -250,6 +251,7 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
     dasha,
     findings: selectOverviewFindings(analysis, 5),
     qualifications: selectOverviewQualifications(analysis),
+    totalEvidenceCount: selectAllEvidence(analysis).length,
     warnings: analysis.warnings
   };
 }

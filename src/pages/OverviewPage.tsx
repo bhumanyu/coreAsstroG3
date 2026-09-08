@@ -89,7 +89,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       {/* Evidence & Transparent Reasoning Provenance Teaser */}
       <EvidencePreview
         onOpenReasoning={() => onNavigate?.('reasoning')}
-        totalEvidenceCount={viewModel.findings.length}
+        totalEvidenceCount={viewModel.totalEvidenceCount}
       />
     </div>
   );
