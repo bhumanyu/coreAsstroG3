@@ -40,7 +40,7 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
       <PageHeading
         eyebrow="Explainable Astrological Intelligence"
         title={hero.title}
-        description="Deterministic reasoning hierarchy, divisional alignment, chronological dasha timing, and evidentiary provenance."
+        description="Deterministic evidence framework, divisional alignment, chronological dasha timing, and evidentiary provenance."
       >
         <div className="flex flex-wrap items-center gap-2">
           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${statusBadgeClass}`}>
@@ -110,8 +110,8 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-mono-code uppercase text-slate-400 block">Total Evaluated Rules</span>
-            <span className="text-xl font-bold text-slate-100">{hero.evidenceCount} Rules</span>
+            <span className="text-[11px] font-mono-code uppercase text-slate-400 block">Total Evidence Items</span>
+            <span className="text-xl font-bold text-slate-100">{hero.evidenceCount} Evidence Items</span>
           </div>
           <div className="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
             <HelpCircle className="w-5 h-5" aria-hidden="true" />

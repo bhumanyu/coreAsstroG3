@@ -19,16 +19,23 @@ export const ReasoningAISection: React.FC<ReasoningAISectionProps> = ({ ai }) =>
             <BrainCircuit className="w-5 h-5" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Explanatory Astrological Intelligence</h2>
-            <p className="text-xs text-slate-400">Rule-grounded narrative commentary and classical text concordance</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold text-slate-100">AI Explanation</h2>
+              <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-mono-code font-medium bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-md">
+                Derived from deterministic evidence
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">Rule-grounded narrative commentary and classical text concordance</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono-code bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded-lg">
-            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{ai.routingMode || 'Deterministic Commentary'}</span>
-          </span>
+          {ai.routingMode && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono-code bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded-lg">
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{ai.routingMode}</span>
+            </span>
+          )}
           {ai.providerName && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono-code bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg">
               <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />

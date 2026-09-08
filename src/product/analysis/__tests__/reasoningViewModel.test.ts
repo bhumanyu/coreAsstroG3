@@ -278,4 +278,183 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     const vmWithoutAi = selectReasoningViewModel(analysisWithoutAi, 'CAREER');
     expect(vmWithoutAi.ai).toBeUndefined();
   });
+
+  it('9. Non-causal chain interpretation: chain layers represent parallel contributing evidence layers rather than a causal sequence', () => {
+    const analysis = createProductAnalysis();
+    const vm = selectReasoningViewModel(analysis, 'CAREER');
+
+    // Chain contains distinct evidence layer types
+    const layerTypes = vm.chain.map((node) => node.type);
+    expect(layerTypes).toContain('PROMISE');
+    expect(layerTypes).toContain('VARGA');
+    expect(layerTypes).toContain('ACTIVATION');
+    expect(layerTypes).toContain('TRANSIT');
+    expect(layerTypes).toContain('SYNTHESIS');
+
+    // Each node provides independent layer statements
+    expect(vm.chain.find((n) => n.type === 'PROMISE')?.label).toBe('Natal Vocational Promise');
+    expect(vm.chain.find((n) => n.type === 'VARGA')?.label).toBe('Dasamsa (D10) Varga Alignment');
+    expect(vm.chain.find((n) => n.type === 'ACTIVATION')?.label).toBe('Vimshottari Dasha Activation');
+    expect(vm.chain.find((n) => n.type === 'TRANSIT')?.label).toBe('Gochara Transit Triggers');
+    expect(vm.chain.find((n) => n.type === 'SYNTHESIS')?.label).toBe('Integrated Vocational Conclusion');
+  });
+
+  it('10. Unique evidence count: evidenceCount is based on unique IDs and does not double-count items across multiple groups or duplicate raw items', () => {
+    const duplicateEvidence: ProductEvidence[] = [
+      {
+        id: 'ev_unique_1',
+        title: 'Primary Factor 1',
+        statement: 'Statement 1',
+        direction: 'CHALLENGE',
+        role: 'PRIMARY',
+        source: 'CORE'
+      },
+      {
+        id: 'ev_unique_2',
+        title: 'Modifying Factor 2',
+        statement: 'Statement 2',
+        direction: 'SUPPORT',
+        role: 'MODIFIER',
+        source: 'CORE'
+      },
+      // Duplicate of ev_unique_1 in raw array
+      {
+        id: 'ev_unique_1',
+        title: 'Primary Factor 1 Duplicate',
+        statement: 'Statement 1',
+        direction: 'CHALLENGE',
+        role: 'PRIMARY',
+        source: 'CORE'
+      }
+    ];
+
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        evidence: duplicateEvidence
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysis, 'CAREER');
+
+    // Total unique evidence items is 2, not 3
+    expect(vm.hero.evidenceCount).toBe(2);
+    expect(vm.conclusion.evidenceCount).toBe(2);
+    expect(vm.allEvidence).toHaveLength(2);
+
+    // Sum of group item counts is greater because items belong to role groups and direction groups simultaneously
+    const groups = vm.evidenceGroups;
+    const totalGroupItems = groups.reduce((acc, g) => acc + g.items.length, 0);
+    expect(totalGroupItems).toBe(4); // PRIMARY (1) + MODIFIER (1) + SUPPORTING (1) + CHALLENGING (1) = 4
+    expect(vm.hero.evidenceCount).toBeLessThan(totalGroupItems);
+    expect(vm.hero.evidenceCount).toBe(new Set(duplicateEvidence.map((e) => e.id)).size);
+  });
+
+  it('11. Orthogonal dimensions: preserves PRIMARY role with CHALLENGING direction without mutation and maps to both groups', () => {
+    const mixedEvidence: ProductEvidence[] = [
+      {
+        id: 'ev_mixed_1',
+        title: 'Adverse 10th Lord Placement',
+        statement: '10th lord in 8th house creates structural career challenges.',
+        direction: 'CHALLENGE',
+        role: 'PRIMARY',
+        source: 'CORE_RULES',
+        ruleId: 'RULE_10TH_IN_8TH'
+      }
+    ];
+
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        evidence: mixedEvidence
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysis, 'CAREER');
+    expect(vm.allEvidence[0].role).toBe('PRIMARY');
+    expect(vm.allEvidence[0].direction).toBe('CHALLENGE');
+
+    // Appears in PRIMARY group
+    const primaryGroup = vm.evidenceGroups.find((g) => g.id === 'PRIMARY');
+    expect(primaryGroup?.items.some((i) => i.id === 'ev_mixed_1')).toBe(true);
+
+    // Also appears in CHALLENGING group
+    const challengingGroup = vm.evidenceGroups.find((g) => g.id === 'CHALLENGING');
+    expect(challengingGroup?.items.some((i) => i.id === 'ev_mixed_1')).toBe(true);
+  });
+
+  it('12. Provenance is not validation: provenance availability confirms rule metadata trace without modifying deterministic verdict', () => {
+    const analysisWithProvenance = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        status: 'UNFAVORABLE',
+        promise: {
+          status: 'UNFAVORABLE',
+          confidence: 'LOW',
+          strength: 'WEAK',
+          statement: 'Challenging career indicators.'
+        },
+        evidence: [
+          {
+            id: 'ev_prov_1',
+            title: 'Debilitated Ruler',
+            statement: 'Ruler debilitated.',
+            direction: 'CHALLENGE',
+            role: 'PRIMARY',
+            source: 'SHADBALA_RULES',
+            ruleId: 'RULE_DEBILITATED_RULER',
+            derivedFromIds: ['shadbala_sun']
+          }
+        ]
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysisWithProvenance, 'CAREER');
+
+    // Provenance is available and traceable
+    expect(vm.conclusion.provenanceAvailable).toBe(true);
+    expect(vm.allEvidence[0].provenance.isAvailable).toBe(true);
+    expect(vm.allEvidence[0].provenance.ruleId).toBe('RULE_DEBILITATED_RULER');
+    expect(vm.allEvidence[0].provenance.derivedFromIds).toEqual(['shadbala_sun']);
+
+    // Verdict, confidence, and strength are unaffected by whether provenance is verified
+    expect(vm.conclusion.status).toBe('UNFAVORABLE');
+    expect(vm.conclusion.confidence).toBe('LOW');
+    expect(vm.conclusion.strength).toBe('WEAK');
+  });
+
+  it('13. AI explanation remains descriptive: AI commentary does not modify deterministic verdict status, confidence, strength, or evidence counts', () => {
+    const baseAnalysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        promise: {
+          status: 'SUPPORTED',
+          confidence: 'HIGH',
+          strength: 'STRONG',
+          statement: 'Promising trajectory.'
+        }
+      },
+      ai: {
+        status: 'AVAILABLE',
+        conclusion: 'Expansive professional horizon described by planetary periods.',
+        explanation: 'Parasara Classical commentary.',
+        providerInfo: {
+          name: 'Gemini 1.5 Pro',
+          mode: 'Deterministic Commentary'
+        }
+      }
+    });
+
+    const vmWithAi = selectReasoningViewModel(baseAnalysis, 'CAREER');
+
+    // AI is projected
+    expect(vmWithAi.ai?.available).toBe(true);
+    expect(vmWithAi.ai?.statement).toBe('Expansive professional horizon described by planetary periods.');
+
+    // Deterministic metrics are unchanged
+    expect(vmWithAi.conclusion.status).toBe('SUPPORTED');
+    expect(vmWithAi.conclusion.confidence).toBe('HIGH');
+    expect(vmWithAi.conclusion.strength).toBe('STRONG');
+    expect(vmWithAi.conclusion.evidenceCount).toBe(vmWithAi.allEvidence.length);
+  });
 });
