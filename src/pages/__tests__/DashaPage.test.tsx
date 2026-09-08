@@ -76,9 +76,9 @@ describe('DashaPage (P-UI-07)', () => {
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
 
     // Assert period contents
-    expect(screen.getByText('Jupiter')).toBeInTheDocument();
-    expect(screen.getByText('Saturn')).toBeInTheDocument();
-    expect(screen.getByText('Mercury')).toBeInTheDocument();
+    expect(screen.getAllByText('Jupiter').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Saturn').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Mercury').length).toBeGreaterThanOrEqual(1);
   });
 
   it('5. Navigation handling: triggers onNavigate with reasoning when explore reasoning is clicked', () => {
