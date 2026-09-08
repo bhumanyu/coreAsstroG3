@@ -33,13 +33,13 @@ export const DashaQualificationSection: React.FC<DashaQualificationSectionProps>
 
       {qualifications.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {qualifications.map((q) => {
+          {qualifications.map((q, index) => {
             const severityLabel = formatSeverity(q.severity);
             const severityClass = getSeverityBadgeClass(q.severity);
 
             return (
               <div
-                key={q.id}
+                key={`${q.title}-${index}`}
                 className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2"
               >
                 <div className="flex items-center justify-between gap-2">

@@ -129,7 +129,7 @@ describe('DashaViewModel pure projection selectors (P-UI-07)', () => {
     expect(vm.evidence.total).toBe(distinctIds.size);
   });
 
-  it('7. Qualifications combine career and wealth with severity preserved', () => {
+  it('7. Qualifications combine career and wealth with severity preserved and no fabricated id', () => {
     const defaultAnalysis = createProductAnalysis();
     const vm = selectDashaViewModel(defaultAnalysis);
 
@@ -138,6 +138,11 @@ describe('DashaViewModel pure projection selectors (P-UI-07)', () => {
     expect(combustionQual).toBeDefined();
     expect(combustionQual?.severity).toBe('LOW');
     expect(combustionQual?.statement).toBe('Mercury combust by 8 degrees.');
+
+    // Assert qualifications do NOT expose fabricated id
+    for (const qual of vm.qualifications) {
+      expect('id' in qual).toBe(false);
+    }
   });
 
   it('8. Warnings are mapped to string messages', () => {
@@ -150,5 +155,50 @@ describe('DashaViewModel pure projection selectors (P-UI-07)', () => {
     };
     const vm = selectDashaViewModel(analysis);
     expect(vm.warnings).toContain('Birth time accuracy ±15 min.');
+  });
+
+  it('9. Hero does NOT expose natal chart sign context fields', () => {
+    const defaultAnalysis = createProductAnalysis();
+    const vm = selectDashaViewModel(defaultAnalysis);
+
+    expect('ascendantSign' in vm.hero).toBe(false);
+    expect('moonSign' in vm.hero).toBe(false);
+    expect('sunSign' in vm.hero).toBe(false);
+    expect('moonNakshatra' in vm.hero).toBe(false);
+  });
+
+  it('10. Transit projects career and wealth independently without bias', () => {
+    const defaultAnalysis = createProductAnalysis();
+    const vm = selectDashaViewModel(defaultAnalysis);
+
+    // Both career and wealth transits are projected independently
+    expect(vm.transit.career).toBeDefined();
+    expect(vm.transit.wealth).toBeDefined();
+    expect(vm.transit.career.status).toBe(defaultAnalysis.career.activation.transit.status);
+    expect(vm.transit.career.effect).toBe(defaultAnalysis.career.activation.transit.effect);
+    expect(vm.transit.wealth.status).toBe(defaultAnalysis.wealth.activation.transit.status);
+    expect(vm.transit.wealth.effect).toBe(defaultAnalysis.wealth.activation.transit.effect);
+  });
+
+  it('11. Missing domain transit maps strictly to UNAVAILABLE without default coercion', () => {
+    const defaultAnalysis = createProductAnalysis();
+    const analysis: ProductAnalysis = {
+      ...defaultAnalysis,
+      career: {
+        ...defaultAnalysis.career,
+        activation: {
+          ...defaultAnalysis.career.activation,
+          // @ts-expect-error simulation of missing transit
+          transit: undefined
+        }
+      }
+    };
+
+    const vm = selectDashaViewModel(analysis);
+    expect(vm.transit.career.status).toBe('UNAVAILABLE');
+    expect(vm.transit.career.effect).toBe('UNAVAILABLE');
+    expect(vm.transit.career.statement).toBeUndefined();
+    // Wealth transit remains unaffected
+    expect(vm.transit.wealth.status).toBe(defaultAnalysis.wealth.activation.transit.status);
   });
 });

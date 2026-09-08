@@ -15,7 +15,8 @@ import type {
   ProductEvidenceRole,
   ProductDashaPeriod,
   ProductWarning,
-  TransitEffect
+  TransitEffect,
+  TransitProductResult
 } from './productAnalysisTypes';
 import { selectDashaHierarchy, selectAllEvidence } from './productAnalysisSelectors';
 
@@ -41,10 +42,6 @@ export interface DashaHeroViewModel {
   readonly mdPlanet: string | null;
   readonly adPlanet: string | null;
   readonly pdPlanet: string | null;
-  readonly ascendantSign?: string;
-  readonly moonSign?: string;
-  readonly sunSign?: string;
-  readonly moonNakshatra?: string;
   readonly warnings?: readonly ProductWarning[];
 }
 
@@ -55,14 +52,18 @@ export interface DashaDomainActivationViewModel {
   readonly currentPressure?: string;
 }
 
-export interface DashaTransitViewModel {
+export interface DashaDomainTransitViewModel {
   readonly status: ProductAvailability;
   readonly effect: TransitEffect | string;
   readonly statement?: string;
 }
 
+export interface DashaTransitViewModel {
+  readonly career: DashaDomainTransitViewModel;
+  readonly wealth: DashaDomainTransitViewModel;
+}
+
 export interface DashaQualificationViewModel {
-  readonly id: string;
   readonly title: string;
   readonly statement: string;
   readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -101,6 +102,21 @@ export function mapDashaPeriod(period: ProductDashaPeriod): DashaPeriodViewModel
     available: true,
     effect: period.effect,
     evidenceIds: period.evidenceIds ?? []
+  };
+}
+
+export function mapDomainTransit(transit?: TransitProductResult): DashaDomainTransitViewModel {
+  if (!transit) {
+    return {
+      status: 'UNAVAILABLE',
+      effect: 'UNAVAILABLE',
+      statement: undefined
+    };
+  }
+  return {
+    status: transit.status ?? 'UNAVAILABLE',
+    effect: transit.effect ?? 'UNAVAILABLE',
+    statement: transit.statement
   };
 }
 
@@ -150,10 +166,6 @@ export function selectDashaViewModel(analysis: ProductAnalysis): DashaViewModel 
     mdPlanet,
     adPlanet,
     pdPlanet,
-    ascendantSign: analysis.chart.ascendantSign,
-    moonSign: analysis.chart.moonSign,
-    sunSign: analysis.chart.sunSign,
-    moonNakshatra: analysis.chart.moonNakshatra,
     warnings: analysis.warnings
   };
 
@@ -174,14 +186,10 @@ export function selectDashaViewModel(analysis: ProductAnalysis): DashaViewModel 
     statement: wealthDasha.statement
   };
 
-  // 5. Transit timing:
-  // Surfacing wealth transit (analysis.wealth.activation.transit) as primary transit context per spec,
-  // noting that career transit (analysis.career.activation.transit) also exists in the canonical aggregate.
-  const transitSource = analysis.wealth.activation.transit;
+  // 5. Transit timing: project career and wealth transits independently
   const transit: DashaTransitViewModel = {
-    status: transitSource.status,
-    effect: transitSource.effect,
-    statement: transitSource.statement
+    career: mapDomainTransit(analysis.career?.activation?.transit),
+    wealth: mapDomainTransit(analysis.wealth?.activation?.transit)
   };
 
   // 6. Evidence: combine career + wealth evidence, dedupe by id, group by ProductEvidenceRole
@@ -211,8 +219,7 @@ export function selectDashaViewModel(analysis: ProductAnalysis): DashaViewModel 
   const careerQuals = analysis.career.qualifications ?? [];
   const wealthQuals = analysis.wealth.qualifications ?? [];
   const combinedQuals = [...careerQuals, ...wealthQuals];
-  const qualifications: readonly DashaQualificationViewModel[] = combinedQuals.map((q, idx) => ({
-    id: `${q.type}-${idx}`,
+  const qualifications: readonly DashaQualificationViewModel[] = combinedQuals.map((q) => ({
     title: q.type,
     statement: q.description,
     severity: q.severity

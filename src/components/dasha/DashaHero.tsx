@@ -2,17 +2,13 @@ import React from 'react';
 import { PageHeading } from '../layout/PageHeading';
 import type { DashaHeroViewModel } from '../../product/analysis/dashaViewModel';
 import { formatAvailability, getAvailabilityBadgeClass } from './dashaFormat';
-import { Clock, Moon, Sun, Star, Compass, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export interface DashaHeroProps {
   readonly hero: DashaHeroViewModel;
 }
 
 export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
-  const ascendant = hero.ascendantSign || 'Unavailable';
-  const moon = hero.moonSign || 'Unavailable';
-  const sun = hero.sunSign || 'Unavailable';
-  const nakshatra = hero.moonNakshatra || 'Unavailable';
   const warnings = hero.warnings || [];
 
   const mdPlanet = hero.mdPlanet || 'Unavailable';
@@ -25,9 +21,9 @@ export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
   return (
     <div className="space-y-4">
       <PageHeading
-        eyebrow="Vimshottari Dasha & Timing"
+        eyebrow="Planetary Period Timing"
         title="Dasha & Planetary Timing"
-        description="Chronological activation hierarchy (Mahadasha, Antardasha, Pratyantardasha) synthesized with domain activations and transit triggers."
+        description="Chronological Vimshottari Dasha activation hierarchy (Mahadasha, Antardasha, Pratyantardasha) synthesized with domain activations and transit triggers."
       >
         <div className="flex items-center gap-2">
           <div
@@ -90,44 +86,6 @@ export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
             {hero.summary}
           </p>
         )}
-      </div>
-
-      {/* Astrological Chart Context Chips */}
-      <div
-        aria-label="Natal Chart Sign Positions"
-        className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 pb-2"
-      >
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Compass className="w-4 h-4 text-indigo-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Ascendant</span>
-            <span className="font-semibold text-slate-200">{ascendant}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Moon className="w-4 h-4 text-sky-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Moon Sign</span>
-            <span className="font-semibold text-slate-200">{moon}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Sun className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Sun Sign</span>
-            <span className="font-semibold text-slate-200">{sun}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Star className="w-4 h-4 text-purple-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Nakshatra</span>
-            <span className="font-semibold text-slate-200">{nakshatra}</span>
-          </div>
-        </div>
       </div>
     </div>
   );

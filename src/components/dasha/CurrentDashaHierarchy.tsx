@@ -19,7 +19,10 @@ export const CurrentDashaHierarchy: React.FC<CurrentDashaHierarchyProps> = ({
   const availabilityClass = getAvailabilityBadgeClass(availability);
 
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
+    <div
+      data-testid="current-dasha-hierarchy"
+      className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4"
+    >
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
