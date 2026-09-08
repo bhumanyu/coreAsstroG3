@@ -7,6 +7,7 @@ import {
   deriveOverallConfidence,
   EVIDENCE_ROLE_PRIORITY
 } from '../overviewViewModel';
+import { selectAllEvidence } from '../productAnalysisSelectors';
 import type { ProductEvidence, ProductAnalysis } from '../productAnalysisTypes';
 import { createProductAnalysis } from './testHelpers';
 
@@ -273,5 +274,41 @@ describe('OverviewViewModel & Selectors (P-UI-03)', () => {
       }
     };
     expect(deriveOverallConfidence(threeUnavail)).toBe('LOW');
+  });
+
+  it('totalEvidenceCount reflects complete evidence index and is not capped by findings limit', () => {
+    // Override with career & wealth evidence exceeding 5 items total
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        evidence: [
+          { id: 'c1', title: 'C1', statement: 'C1', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' },
+          { id: 'c2', title: 'C2', statement: 'C2', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' },
+          { id: 'c3', title: 'C3', statement: 'C3', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' },
+          { id: 'c4', title: 'C4', statement: 'C4', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' }
+        ]
+      },
+      wealth: {
+        ...createProductAnalysis().wealth,
+        evidence: [
+          { id: 'w1', title: 'W1', statement: 'W1', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' },
+          { id: 'w2', title: 'W2', statement: 'W2', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' },
+          { id: 'w3', title: 'W3', statement: 'W3', direction: 'SUPPORT', role: 'PRIMARY', source: 'TEST' }
+        ]
+      }
+    });
+
+    const vm = selectOverviewViewModel(analysis);
+    const allEvidence = selectAllEvidence(analysis);
+
+    // Total evidence count matches selectAllEvidence length (4 + 3 = 7)
+    expect(vm.totalEvidenceCount).toBe(allEvidence.length);
+    expect(vm.totalEvidenceCount).toBe(7);
+
+    // Findings are capped at 5
+    expect(vm.findings.length).toBe(5);
+
+    // Specifically verify totalEvidenceCount is strictly greater than findings.length
+    expect(vm.totalEvidenceCount).toBeGreaterThan(vm.findings.length);
   });
 });

@@ -157,6 +157,16 @@ describe('Overview Component Library (P-UI-03)', () => {
       fireEvent.click(btn);
       expect(onOpenReasoning).toHaveBeenCalledTimes(1);
     });
+
+    it('renders correct badge count for larger evidence indexes', () => {
+      render(
+        <EvidencePreview
+          totalEvidenceCount={14}
+        />
+      );
+
+      expect(screen.getByText('14 rules indexed')).toBeInTheDocument();
+    });
   });
 
   describe('States: Empty, Loading, Error', () => {
