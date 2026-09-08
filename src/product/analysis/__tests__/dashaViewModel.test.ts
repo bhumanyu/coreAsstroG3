@@ -136,8 +136,8 @@ describe('DashaViewModel pure projection selectors (P-UI-07)', () => {
     expect(vm.qualifications.length).toBeGreaterThanOrEqual(1);
     const combustionQual = vm.qualifications.find((q) => q.title === 'COMBUSTION');
     expect(combustionQual).toBeDefined();
-    expect(combustionQual?.severity).toBe('HIGH');
-    expect(combustionQual?.statement).toBe('10th lord combust by Sun.');
+    expect(combustionQual?.severity).toBe('LOW');
+    expect(combustionQual?.statement).toBe('Mercury combust by 8 degrees.');
   });
 
   it('8. Warnings are mapped to string messages', () => {

@@ -29,7 +29,7 @@ export const CurrentDashaHierarchy: React.FC<CurrentDashaHierarchyProps> = ({
           <div>
             <h2 className="text-base font-semibold text-slate-100">Current Dasha Hierarchy</h2>
             <p className="text-xs text-slate-400">
-              Vimshottari Dasha sequence from primary Mahadasha ruler down to active Pratyantardasha refinement
+              Planetary period sequence from primary Mahadasha ruler down to active Pratyantardasha refinement
             </p>
           </div>
         </div>
