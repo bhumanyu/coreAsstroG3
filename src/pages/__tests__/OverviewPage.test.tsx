@@ -71,8 +71,8 @@ describe('OverviewPage (P-UI-03)', () => {
     expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
     expect(screen.getByText('COMBUSTION')).toBeInTheDocument();
 
-    // Evidence index badge uses totalEvidenceCount (2 career + 1 wealth = 3 rules indexed)
-    expect(screen.getByText('3 rules indexed')).toBeInTheDocument();
+    // Evidence index badge uses totalEvidenceCount (2 career + 1 wealth = 3 evidence items indexed)
+    expect(screen.getByText('3 evidence items indexed')).toBeInTheDocument();
   });
 
   it('renders MD/AD/PD hierarchy and role labels as text', () => {
