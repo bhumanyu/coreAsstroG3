@@ -383,9 +383,9 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     // Click Why This Result? tab - asserts reasoning page renders from aggregate
     const reasoningTab = screen.getByRole('button', { name: 'Why This Result?' });
     fireEvent.click(reasoningTab);
-    expect(screen.getByText('Astrological Reasoning & Evidence Trace')).toBeInTheDocument();
-    expect(screen.getByText('Rules Applied')).toBeInTheDocument();
-    expect(screen.getByText('Total Evidence')).toBeInTheDocument();
+    expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
+    expect(screen.getByText('Deterministic Evidence Framework')).toBeInTheDocument();
+    expect(screen.getByText('Total Evidence Items')).toBeInTheDocument();
 
     // Click Dasha & Timing tab
     const dashaTab = screen.getByRole('button', { name: 'Dasha & Timing' });

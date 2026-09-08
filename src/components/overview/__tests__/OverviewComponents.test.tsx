@@ -168,8 +168,8 @@ describe('Overview Component Library (P-UI-03)', () => {
         />
       );
 
-      expect(screen.getByText('Deterministic Reasoning Hierarchy & Evidence Trace')).toBeInTheDocument();
-      expect(screen.getByText('5 rules indexed')).toBeInTheDocument();
+      expect(screen.getByText('Deterministic Evidence Framework & Evidence Trace')).toBeInTheDocument();
+      expect(screen.getByText('5 evidence items indexed')).toBeInTheDocument();
 
       const btn = screen.getByRole('button', { name: /explore reasoning graph/i });
       fireEvent.click(btn);
@@ -183,7 +183,7 @@ describe('Overview Component Library (P-UI-03)', () => {
         />
       );
 
-      expect(screen.getByText('14 rules indexed')).toBeInTheDocument();
+      expect(screen.getByText('14 evidence items indexed')).toBeInTheDocument();
     });
   });
 

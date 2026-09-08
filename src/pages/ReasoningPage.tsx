@@ -120,7 +120,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
           </div>
 
           <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-            {viewModel.allEvidence.length} Total Rules
+            {viewModel.allEvidence.length} Total Evidence Items
           </span>
         </div>
 

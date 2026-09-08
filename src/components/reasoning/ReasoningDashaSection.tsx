@@ -44,7 +44,7 @@ const PeriodCard: React.FC<{ period: ReasoningDashaPeriodViewModel }> = ({ perio
 
       <div className="flex items-baseline justify-between">
         <span className="text-base font-bold text-slate-100 font-sans">
-          {period.planet || 'Unknown Planet'}
+          {period.planet ?? 'Unavailable'}
         </span>
         <div className="flex items-center gap-1.5">
           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${directionClass}`}>

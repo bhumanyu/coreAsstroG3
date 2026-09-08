@@ -16,7 +16,7 @@ export const ReasoningSummary: React.FC<ReasoningSummaryProps> = ({
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Total Rules</span>
+          <span className="text-[10px] font-mono-code uppercase text-slate-400 block">Total Evidence</span>
           <span className="text-lg font-bold text-slate-100">{evidenceCount}</span>
         </div>
         <HelpCircle className="w-5 h-5 text-indigo-400" aria-hidden="true" />

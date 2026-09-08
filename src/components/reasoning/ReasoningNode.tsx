@@ -1,12 +1,29 @@
 import React from 'react';
 import type { ReasoningChainNodeViewModel } from '../../product/analysis/reasoningViewModel';
 import { formatDirection, getDirectionBadgeClass } from './reasoningFormat';
-import { GitCommit } from 'lucide-react';
+import { GitCommit, Star, Layers, Clock, Compass, BrainCircuit } from 'lucide-react';
 
 export interface ReasoningNodeProps {
   readonly node: ReasoningChainNodeViewModel;
   readonly stepNumber?: number;
 }
+
+const getNodeIcon = (type: string) => {
+  switch (type) {
+    case 'PROMISE':
+      return <Star className="w-4 h-4 text-amber-400" aria-hidden="true" />;
+    case 'VARGA':
+      return <Layers className="w-4 h-4 text-indigo-400" aria-hidden="true" />;
+    case 'ACTIVATION':
+      return <Clock className="w-4 h-4 text-sky-400" aria-hidden="true" />;
+    case 'TRANSIT':
+      return <Compass className="w-4 h-4 text-teal-400" aria-hidden="true" />;
+    case 'SYNTHESIS':
+      return <BrainCircuit className="w-4 h-4 text-purple-400" aria-hidden="true" />;
+    default:
+      return <GitCommit className="w-4 h-4 text-indigo-300" aria-hidden="true" />;
+  }
+};
 
 export const ReasoningNode: React.FC<ReasoningNodeProps> = ({ node, stepNumber }) => {
   const directionBadgeClass = getDirectionBadgeClass(node.direction);
@@ -16,7 +33,7 @@ export const ReasoningNode: React.FC<ReasoningNodeProps> = ({ node, stepNumber }
     <div className="relative flex items-start gap-4 p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700/80 transition-colors">
       <div className="flex flex-col items-center shrink-0">
         <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-xs font-mono-code font-bold text-indigo-300">
-          {stepNumber !== undefined ? String(stepNumber).padStart(2, '0') : <GitCommit className="w-4 h-4" />}
+          {stepNumber !== undefined ? String(stepNumber).padStart(2, '0') : getNodeIcon(node.type)}
         </div>
       </div>
 

@@ -22,11 +22,11 @@ export const EvidencePreview: React.FC<EvidencePreviewProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-slate-100">
-              Deterministic Reasoning Hierarchy & Evidence Trace
+              Deterministic Evidence Framework & Evidence Trace
             </h3>
             {totalEvidenceCount !== undefined && totalEvidenceCount > 0 && (
               <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-code font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
-                {totalEvidenceCount} rules indexed
+                {totalEvidenceCount} evidence items indexed
               </span>
             )}
           </div>

@@ -69,7 +69,7 @@ export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclu
         <div className="flex flex-wrap items-center gap-3 text-xs font-mono-code">
           <span className="flex items-center gap-1.5 text-slate-300 bg-slate-800/60 px-2.5 py-1 rounded-lg border border-slate-700/80">
             <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden="true" />
-            {conclusion.evidenceCount} Rules Evaluated
+            {conclusion.evidenceCount} Evidence Items
           </span>
           <span className="flex items-center gap-1.5 text-emerald-300 bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-800/60">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
@@ -84,7 +84,7 @@ export const ReasoningConclusion: React.FC<ReasoningConclusionProps> = ({ conclu
         {conclusion.provenanceAvailable && (
           <div className="flex items-center gap-1.5 text-xs text-teal-400 bg-teal-950/40 px-2.5 py-1 rounded-lg border border-teal-800/60 font-mono-code">
             <Database className="w-3.5 h-3.5 text-teal-400" aria-hidden="true" />
-            <span>Rule Provenance Verified</span>
+            <span>Rule Provenance Available</span>
           </div>
         )}
       </div>

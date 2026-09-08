@@ -67,7 +67,7 @@ describe('ReasoningPage (P-UI-06)', () => {
     expect(screen.getAllByText('High Confidence').length).toBeGreaterThanOrEqual(1);
 
     // Chain
-    expect(screen.getByText('Deterministic Reasoning Hierarchy')).toBeInTheDocument();
+    expect(screen.getByText('Deterministic Evidence Framework')).toBeInTheDocument();
 
     // Evidence Groups
     expect(screen.getByText('Evidentiary Reasoning Groups')).toBeInTheDocument();

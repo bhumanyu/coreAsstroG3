@@ -245,10 +245,21 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
   const confidence = career.promise.confidence;
   const strength = career.promise.strength;
 
-  const allEvidence = (career.evidence ?? []).map(mapEvidence);
-  const evidenceCount = allEvidence.length;
-  const supportingEvidenceCount = allEvidence.filter((e) => e.direction === 'SUPPORT').length;
-  const challengingEvidenceCount = allEvidence.filter((e) => e.direction === 'CHALLENGE').length;
+  const rawEvidence = career.evidence ?? [];
+  const uniqueEvidenceMap = new Map<string, ReasoningEvidenceViewModel>();
+  for (const raw of rawEvidence) {
+    if (!uniqueEvidenceMap.has(raw.id)) {
+      uniqueEvidenceMap.set(raw.id, mapEvidence(raw));
+    }
+  }
+  const allEvidence = Array.from(uniqueEvidenceMap.values());
+  const evidenceCount = new Set(rawEvidence.map((e) => e.id)).size;
+  const supportingEvidenceCount = new Set(
+    allEvidence.filter((e) => e.direction === 'SUPPORT').map((e) => e.id)
+  ).size;
+  const challengingEvidenceCount = new Set(
+    allEvidence.filter((e) => e.direction === 'CHALLENGE').map((e) => e.id)
+  ).size;
   const provenanceAvailable = allEvidence.some((e) => e.provenance.isAvailable);
 
   const hero: ReasoningHeroViewModel = {
@@ -432,10 +443,21 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
   const confidence = wealth.overall.confidence;
   const strength = wealth.overall.promise;
 
-  const allEvidence = (wealth.evidence ?? []).map(mapEvidence);
-  const evidenceCount = allEvidence.length;
-  const supportingEvidenceCount = allEvidence.filter((e) => e.direction === 'SUPPORT').length;
-  const challengingEvidenceCount = allEvidence.filter((e) => e.direction === 'CHALLENGE').length;
+  const rawEvidence = wealth.evidence ?? [];
+  const uniqueEvidenceMap = new Map<string, ReasoningEvidenceViewModel>();
+  for (const raw of rawEvidence) {
+    if (!uniqueEvidenceMap.has(raw.id)) {
+      uniqueEvidenceMap.set(raw.id, mapEvidence(raw));
+    }
+  }
+  const allEvidence = Array.from(uniqueEvidenceMap.values());
+  const evidenceCount = new Set(rawEvidence.map((e) => e.id)).size;
+  const supportingEvidenceCount = new Set(
+    allEvidence.filter((e) => e.direction === 'SUPPORT').map((e) => e.id)
+  ).size;
+  const challengingEvidenceCount = new Set(
+    allEvidence.filter((e) => e.direction === 'CHALLENGE').map((e) => e.id)
+  ).size;
   const provenanceAvailable = allEvidence.some((e) => e.provenance.isAvailable);
 
   const hero: ReasoningHeroViewModel = {

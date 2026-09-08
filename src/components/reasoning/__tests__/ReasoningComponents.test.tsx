@@ -66,7 +66,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Taurus')).toBeInTheDocument();
       expect(screen.getByText('Leo')).toBeInTheDocument();
       expect(screen.getByText('Rohini')).toBeInTheDocument();
-      expect(screen.getByText('5 Rules')).toBeInTheDocument();
+      expect(screen.getByText('5 Evidence Items')).toBeInTheDocument();
       expect(screen.getByText('4 Factors')).toBeInTheDocument();
       expect(screen.getByText('1 Factors')).toBeInTheDocument();
       expect(screen.getByText('1 Notice')).toBeInTheDocument();
@@ -94,8 +94,9 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
 
       render(<ReasoningChain chain={chain} />);
 
-      expect(screen.getByText('Deterministic Reasoning Hierarchy')).toBeInTheDocument();
-      expect(screen.getByText('2 Decision Stages')).toBeInTheDocument();
+      expect(screen.getByText('Deterministic Evidence Framework')).toBeInTheDocument();
+      expect(screen.getByText('The evidence layers contributing to this conclusion')).toBeInTheDocument();
+      expect(screen.getByText('2 Evidence Layers')).toBeInTheDocument();
       expect(screen.getByText('Natal Vocational Promise')).toBeInTheDocument();
       expect(screen.getByText('Dasamsa Alignment')).toBeInTheDocument();
       expect(screen.getByText('Strong 10th lord placement.')).toBeInTheDocument();
@@ -362,10 +363,10 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(
         screen.getByText('Strong 10th lord and D10 alignment indicate corporate leadership.')
       ).toBeInTheDocument();
-      expect(screen.getByText('6 Rules Evaluated')).toBeInTheDocument();
+      expect(screen.getByText('6 Evidence Items')).toBeInTheDocument();
       expect(screen.getByText('5 Supporting')).toBeInTheDocument();
       expect(screen.getByText('1 Challenging')).toBeInTheDocument();
-      expect(screen.getByText('Rule Provenance Verified')).toBeInTheDocument();
+      expect(screen.getByText('Rule Provenance Available')).toBeInTheDocument();
     });
   });
 
@@ -382,12 +383,30 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
 
       render(<ReasoningAISection ai={ai} />);
 
-      expect(screen.getByText('Explanatory Astrological Intelligence')).toBeInTheDocument();
+      expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+      expect(screen.getByText('Derived from deterministic evidence')).toBeInTheDocument();
       expect(screen.getByText('Deterministic Commentary')).toBeInTheDocument();
       expect(screen.getByText('Gemini 1.5 Pro')).toBeInTheDocument();
       expect(
         screen.getByText('Benefic planets aspecting the 10th cusp produce notable governance power.')
       ).toBeInTheDocument();
+    });
+
+    it('does not render Deterministic Commentary fallback when routingMode is missing or empty', () => {
+      const ai: ReasoningAiViewModel = {
+        available: true,
+        status: 'AVAILABLE',
+        statement: 'Benefic planets aspecting the 10th cusp produce notable governance power.',
+        explanation: 'Classical text Brihat Parasara Hora Sastra indicates Ruchaka Yoga.',
+        providerName: 'Gemini 1.5 Pro'
+      };
+
+      render(<ReasoningAISection ai={ai} />);
+
+      expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+      expect(screen.getByText('Derived from deterministic evidence')).toBeInTheDocument();
+      expect(screen.queryByText('Deterministic Commentary')).not.toBeInTheDocument();
+      expect(screen.getByText('Gemini 1.5 Pro')).toBeInTheDocument();
     });
 
     it('renders nothing when AI is unavailable or undefined', () => {
