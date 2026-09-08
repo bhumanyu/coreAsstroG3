@@ -13,7 +13,7 @@ import type { AppPage, ResearchPage } from './navigation/navigationTypes';
 import { RESEARCH_NAVIGATION, mapLegacyPageToAppPage } from './navigation/navigation';
 import { LifeAnalysisPage } from '../components/lifeAnalysis/LifeAnalysisPage';
 import { OverviewPage } from '../pages/OverviewPage';
-import { DashaTimingPage } from '../components/dashaTiming';
+import { DashaPage } from '../pages/DashaPage';
 import { FullNatalReportView } from '../components/fullNatalReport/FullNatalReportView';
 import { CareerPage } from '../pages/CareerPage';
 import { WealthPage } from '../pages/WealthPage';
@@ -139,13 +139,11 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
       );
 
     case 'dasha':
-      if (!dashaTimingViewModel) {
-        return <LifeAnalysisLoading />;
-      }
       return (
-        <DashaTimingPage
-          viewModel={dashaTimingViewModel}
-          onSelectTab={(tab) => onNavigate(mapLegacyPageToAppPage(tab))}
+        <DashaPage
+          productAnalysisState={state.productAnalysis}
+          onRetry={onRetry}
+          onNavigate={onNavigate}
         />
       );
 
