@@ -26,11 +26,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       currentPeriodLabel: 'Jupiter → Saturn → Mercury',
       mdPlanet: 'Jupiter',
       adPlanet: 'Saturn',
-      pdPlanet: 'Mercury',
-      ascendantSign: 'Capricorn',
-      moonSign: 'Leo',
-      sunSign: 'Aries',
-      moonNakshatra: 'Magha'
+      pdPlanet: 'Mercury'
     };
 
     render(<DashaHero hero={hero} />);
@@ -39,7 +35,6 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(screen.getByText('Jupiter')).toBeInTheDocument();
     expect(screen.getByText('Saturn')).toBeInTheDocument();
     expect(screen.getByText('Mercury')).toBeInTheDocument();
-    expect(screen.getByText('Capricorn')).toBeInTheDocument();
     expect(screen.getByText('Available')).toBeInTheDocument();
   });
 
@@ -61,21 +56,28 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(unavailElements.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('3. TransitTimingSection: renders and asserts the "timing or trigger context" copy', () => {
+  it('3. TransitTimingSection: renders both career and wealth domain blocks and asserts context copy', () => {
     const transit: DashaTransitViewModel = {
-      status: 'AVAILABLE',
-      effect: 'TRIGGER',
-      statement: 'Jupiter transit activates natal 10th house potential.'
+      career: {
+        status: 'AVAILABLE',
+        effect: 'TRIGGER',
+        statement: 'Jupiter transit activates natal 10th house potential.'
+      },
+      wealth: {
+        status: 'UNAVAILABLE',
+        effect: 'UNAVAILABLE',
+        statement: undefined
+      }
     };
 
     render(<TransitTimingSection transit={transit} />);
 
     expect(screen.getByText('Transit Timing')).toBeInTheDocument();
+    expect(screen.getByText('Career')).toBeInTheDocument();
+    expect(screen.getByText('Wealth')).toBeInTheDocument();
     expect(screen.getByText('Trigger')).toBeInTheDocument();
     expect(screen.getByText('Jupiter transit activates natal 10th house potential.')).toBeInTheDocument();
-    expect(
-      screen.getByText(/timing or trigger context/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/timing or trigger context/i)).toBeInTheDocument();
   });
 
   it('4. CurrentDashaHierarchy: renders hierarchy with cards and independent role/direction', () => {

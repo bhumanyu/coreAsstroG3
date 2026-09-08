@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { DashaPage } from '../DashaPage';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 
@@ -75,10 +75,15 @@ describe('DashaPage (P-UI-07)', () => {
     expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
 
-    // Assert period contents
-    expect(screen.getAllByText('Jupiter').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Saturn').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Mercury').length).toBeGreaterThanOrEqual(1);
+    // Assert period contents scoped strictly to the Current Dasha Hierarchy region
+    const hierarchySection = screen.getByTestId('current-dasha-hierarchy');
+    const hierarchyWithin = within(hierarchySection);
+    expect(hierarchyWithin.getByText('Jupiter')).toBeInTheDocument();
+    expect(hierarchyWithin.getByText('Saturn')).toBeInTheDocument();
+    expect(hierarchyWithin.getByText('Mercury')).toBeInTheDocument();
+    expect(hierarchyWithin.getByText('Mahadasha (MD)')).toBeInTheDocument();
+    expect(hierarchyWithin.getByText('Antardasha (AD)')).toBeInTheDocument();
+    expect(hierarchyWithin.getByText('Pratyantardasha (PD)')).toBeInTheDocument();
   });
 
   it('5. Navigation handling: triggers onNavigate with reasoning when explore reasoning is clicked', () => {

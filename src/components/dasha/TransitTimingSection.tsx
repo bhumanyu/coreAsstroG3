@@ -1,22 +1,74 @@
 import React from 'react';
-import type { DashaTransitViewModel } from '../../product/analysis/dashaViewModel';
+import type {
+  DashaTransitViewModel,
+  DashaDomainTransitViewModel
+} from '../../product/analysis/dashaViewModel';
 import {
   formatAvailability,
   formatTransitEffect,
   getAvailabilityBadgeClass
 } from './dashaFormat';
-import { Compass, Info } from 'lucide-react';
+import { Compass, Info, Briefcase, Coins } from 'lucide-react';
 
 export interface TransitTimingSectionProps {
   readonly transit: DashaTransitViewModel;
 }
 
-export const TransitTimingSection: React.FC<TransitTimingSectionProps> = ({ transit }) => {
+interface DomainTransitBlockProps {
+  readonly label: string;
+  readonly transit: DashaDomainTransitViewModel;
+  readonly icon: React.ReactNode;
+}
+
+const DomainTransitBlock: React.FC<DomainTransitBlockProps> = ({ label, transit, icon }) => {
   const isAvailable = transit.status !== 'UNAVAILABLE';
   const availabilityLabel = formatAvailability(transit.status);
   const availabilityClass = getAvailabilityBadgeClass(transit.status);
   const effectLabel = formatTransitEffect(transit.effect);
 
+  return (
+    <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400">{icon}</span>
+            <h3 className="text-sm font-semibold text-slate-200">{label}</h3>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${availabilityClass}`}
+            >
+              {availabilityLabel}
+            </span>
+            {isAvailable && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase border bg-sky-950/60 border-sky-800/80 text-sky-300">
+                {effectLabel}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {isAvailable ? (
+          transit.statement ? (
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              {transit.statement}
+            </p>
+          ) : (
+            <p className="text-xs text-slate-400 italic">
+              Transit trigger active with neutral baseline manifestation.
+            </p>
+          )
+        ) : (
+          <p className="text-xs text-slate-400 italic">
+            Transit timing data currently unavailable for {label.toLowerCase()}.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const TransitTimingSection: React.FC<TransitTimingSectionProps> = ({ transit }) => {
   return (
     <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-4">
       {/* Section Header */}
@@ -32,39 +84,21 @@ export const TransitTimingSection: React.FC<TransitTimingSectionProps> = ({ tran
             </p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span
-            className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase tracking-wider border ${availabilityClass}`}
-          >
-            {availabilityLabel}
-          </span>
-        </div>
       </div>
 
-      {/* Transit State Card */}
-      {isAvailable ? (
-        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
-            <span className="text-[11px] font-mono-code font-bold uppercase tracking-wider text-slate-400">
-              Transit Effect
-            </span>
-            <span className="px-2.5 py-0.5 rounded text-xs font-semibold uppercase border bg-sky-950/60 border-sky-800/80 text-sky-300">
-              {effectLabel}
-            </span>
-          </div>
-
-          {transit.statement && (
-            <p className="text-xs text-slate-300 leading-relaxed font-sans">
-              {transit.statement}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="p-6 rounded-xl bg-slate-950/40 border border-slate-800/60 text-center text-xs text-slate-400">
-          Transit timing data currently unavailable for chart date.
-        </div>
-      )}
+      {/* Domain Transit Blocks: Career and Wealth */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DomainTransitBlock
+          label="Career"
+          transit={transit.career}
+          icon={<Briefcase className="w-4 h-4 text-indigo-400" aria-hidden="true" />}
+        />
+        <DomainTransitBlock
+          label="Wealth"
+          transit={transit.wealth}
+          icon={<Coins className="w-4 h-4 text-emerald-400" aria-hidden="true" />}
+        />
+      </div>
 
       {/* Methodological Context Callout */}
       <div className="flex items-start gap-2 text-xs text-slate-400 bg-slate-950/40 p-3.5 rounded-xl border border-slate-800/60">
