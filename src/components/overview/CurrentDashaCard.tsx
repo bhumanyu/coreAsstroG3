@@ -113,6 +113,11 @@ export const CurrentDashaCard: React.FC<CurrentDashaCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {dasha.status === 'PARTIAL' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono-code font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-300">
+              Partial
+            </span>
+          )}
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium font-mono-code bg-purple-500/10 border border-purple-500/20 text-purple-300">
             <Sparkles className="w-3 h-3 text-purple-400" aria-hidden="true" />
             <span>{dasha.currentPeriodLabel}</span>

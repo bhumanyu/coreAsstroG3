@@ -11,7 +11,7 @@ export type ProductAnalysisStatus = ProductStatus;
 
 export type ProductConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
 
-export type ProductAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'CONDITIONAL';
+export type ProductAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'CONDITIONAL' | 'PARTIAL';
 
 export type ProductDirection = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
 
@@ -107,6 +107,7 @@ export interface ProductEvidence {
 }
 
 export interface CareerPromiseProduct {
+  readonly status?: ConclusionStatus | string;
   readonly strength: PromiseStrength | string;
   readonly confidence: ProductConfidence;
   readonly headline?: string;
@@ -164,6 +165,7 @@ export interface ProductQualification {
 }
 
 export interface CareerProductAnalysis {
+  readonly status?: ConclusionStatus | string;
   readonly promise: CareerPromiseProduct;
   readonly expression?: CareerExpressionProduct;
   readonly d10: D10ProductResult;

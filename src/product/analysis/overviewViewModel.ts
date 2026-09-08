@@ -13,7 +13,8 @@ import type {
   ProductEvidenceRole,
   ProductEvidence,
   ProductDashaPeriod,
-  ProductWarning
+  ProductWarning,
+  ProductAvailability
 } from './productAnalysisTypes';
 import { selectDashaHierarchy, selectAllEvidence } from './productAnalysisSelectors';
 
@@ -45,6 +46,7 @@ export interface OverviewDasha {
   readonly pd?: ProductDashaPeriod;
   readonly periods: readonly ProductDashaPeriod[];
   readonly summary?: string;
+  readonly status: ProductAvailability;
   readonly availability: boolean;
   readonly currentPeriodLabel: string;
 }
@@ -113,6 +115,10 @@ export function selectTopEvidence(
 
 /**
  * Derives overall synthesis confidence based on availability completeness.
+ *
+ * NOTE: This measures "ANALYSIS COMPLETENESS" (availability signals of sub-analyses
+ * such as dasha, varga, and transit), NOT astrological truth or certainty.
+ *
  * Checks the 5 canonical availability signals:
  * 1. career.activation.dasha.status === 'UNAVAILABLE'
  * 2. career.d10.relationship === 'UNAVAILABLE'
@@ -203,7 +209,7 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   const careerDomain: OverviewDomain = {
     name: 'Career & Professional Life',
     strength: analysis.career.promise.strength,
-    status: analysis.career.promise.strength,
+    status: analysis.career.status ?? analysis.career.promise.status,
     confidence: analysis.career.promise.confidence,
     summary:
       analysis.career.promise.statement ??
@@ -228,7 +234,15 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
   const ad = analysis.dasha.current.antardasha;
   const pd = analysis.dasha.current.pratyantardasha;
   const periods = selectDashaHierarchy(analysis);
-  const availability = Boolean(md || ad || pd);
+
+  const presentCount = [md, ad, pd].filter(Boolean).length;
+  const status: ProductAvailability =
+    presentCount === 3
+      ? 'AVAILABLE'
+      : presentCount === 0
+      ? 'UNAVAILABLE'
+      : 'PARTIAL';
+  const availability = status !== 'UNAVAILABLE';
 
   const planetParts = [md?.planet, ad?.planet, pd?.planet].filter(
     (p): p is string => typeof p === 'string' && p.trim().length > 0
@@ -242,6 +256,7 @@ export function selectOverviewViewModel(analysis: ProductAnalysis): OverviewView
     pd,
     periods,
     summary: analysis.dasha.summary,
+    status,
     availability,
     currentPeriodLabel
   };

@@ -96,6 +96,7 @@ describe('Overview Component Library (P-UI-03)', () => {
         <CurrentDashaCard
           dasha={{
             periods: [],
+            status: 'UNAVAILABLE',
             availability: false,
             currentPeriodLabel: 'Timing Unavailable'
           }}
@@ -104,6 +105,23 @@ describe('Overview Component Library (P-UI-03)', () => {
 
       expect(screen.getAllByText('Timing Unavailable').length).toBeGreaterThan(0);
       expect(screen.getAllByText('Unavailable').length).toBe(3);
+    });
+
+    it('renders Partial badge when dasha status is PARTIAL', () => {
+      render(
+        <CurrentDashaCard
+          dasha={{
+            periods: [vm.dasha.periods[0]],
+            md: vm.dasha.md,
+            status: 'PARTIAL',
+            availability: true,
+            currentPeriodLabel: 'Jupiter'
+          }}
+        />
+      );
+
+      expect(screen.getByText('Partial')).toBeInTheDocument();
+      expect(screen.getAllByText('Jupiter').length).toBeGreaterThan(0);
     });
   });
 

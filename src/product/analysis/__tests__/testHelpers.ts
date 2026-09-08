@@ -32,7 +32,9 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       isAvailable: true
     },
     career: {
+      status: 'SUPPORTED',
       promise: {
+        status: 'SUPPORTED',
         strength: 'STRONG',
         confidence: 'HIGH',
         headline: 'Executive Trajectory',
