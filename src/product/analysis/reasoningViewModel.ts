@@ -139,6 +139,22 @@ export interface ReasoningAiViewModel {
   readonly routingMode?: string;
 }
 
+export interface ReasoningDomainOverviewItem {
+  readonly domain: ReasoningDomain;
+  readonly title: string;
+  readonly status: ConclusionStatus | ProductStatus | string;
+  readonly strength: PromiseStrength | string;
+  readonly confidence: ProductConfidence | string;
+  readonly availability: ProductAvailability;
+  readonly headline?: string;
+  readonly statement?: string;
+}
+
+export interface ReasoningOverviewViewModel {
+  readonly career: ReasoningDomainOverviewItem;
+  readonly wealth: ReasoningDomainOverviewItem;
+}
+
 export interface ReasoningViewModel {
   readonly domain: ReasoningDomain;
   readonly hero: ReasoningHeroViewModel;
@@ -188,40 +204,29 @@ export function mapEvidence(e: ProductEvidence): ReasoningEvidenceViewModel {
 }
 
 /**
- * Groups evidence by role (PRIMARY, MODIFIER, REFINEMENT) and direction (SUPPORTING=SUPPORT, CHALLENGING=CHALLENGE).
+ * Groups evidence primarily by canonical ROLE:
+ * PRIMARY, SUPPORTING, CHALLENGING, MODIFIER, REFINEMENT, CONFLICTING, NEUTRAL.
  * A catch-all "OTHER" group ensures zero evidence loss (no item left ungrouped).
  * Empty groups are filtered out.
  */
 export function buildEvidenceGroups(
   evidence: readonly ReasoningEvidenceViewModel[]
 ): readonly ReasoningEvidenceGroupViewModel[] {
-  const groups: ReasoningEvidenceGroupViewModel[] = [
-    {
-      id: 'PRIMARY',
-      title: 'Primary Drivers',
-      items: evidence.filter((e) => e.role === 'PRIMARY')
-    },
-    {
-      id: 'MODIFIER',
-      title: 'Modifying Factors',
-      items: evidence.filter((e) => e.role === 'MODIFIER')
-    },
-    {
-      id: 'REFINEMENT',
-      title: 'Refining Influences',
-      items: evidence.filter((e) => e.role === 'REFINEMENT')
-    },
-    {
-      id: 'SUPPORTING',
-      title: 'Supporting Evidence',
-      items: evidence.filter((e) => e.direction === 'SUPPORT')
-    },
-    {
-      id: 'CHALLENGING',
-      title: 'Challenging Factors',
-      items: evidence.filter((e) => e.direction === 'CHALLENGE')
-    }
+  const roleGroups: { id: string; title: string; role: ProductEvidenceRole }[] = [
+    { id: 'PRIMARY', title: 'Primary Drivers', role: 'PRIMARY' },
+    { id: 'SUPPORTING', title: 'Supporting Factors', role: 'SUPPORTING' },
+    { id: 'CHALLENGING', title: 'Challenging Factors', role: 'CHALLENGING' },
+    { id: 'MODIFIER', title: 'Modifying Factors', role: 'MODIFIER' },
+    { id: 'REFINEMENT', title: 'Refining Influences', role: 'REFINEMENT' },
+    { id: 'CONFLICTING', title: 'Conflicting Factors', role: 'CONFLICTING' },
+    { id: 'NEUTRAL', title: 'Neutral Factors', role: 'NEUTRAL' }
   ];
+
+  const groups: ReasoningEvidenceGroupViewModel[] = roleGroups.map(({ id, title, role }) => ({
+    id,
+    title,
+    items: evidence.filter((e) => e.role === role)
+  }));
 
   const coveredIds = new Set(groups.flatMap((g) => g.items.map((i) => i.id)));
   const otherItems = evidence.filter((e) => !coveredIds.has(e.id));
@@ -406,12 +411,13 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     }
   ];
 
+  const isCareerAiAvailable = analysis.ai?.status === 'AVAILABLE';
   const ai: ReasoningAiViewModel | undefined = analysis.ai
     ? {
-        available: analysis.ai.status === 'AVAILABLE',
+        available: isCareerAiAvailable,
         status: analysis.ai.status,
-        statement: analysis.ai.conclusion,
-        explanation: analysis.ai.explanation,
+        statement: isCareerAiAvailable ? analysis.ai.conclusion : undefined,
+        explanation: isCareerAiAvailable ? analysis.ai.explanation : undefined,
         providerName: analysis.ai.providerInfo?.name,
         routingMode: analysis.ai.providerInfo?.mode
       }
@@ -602,12 +608,13 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     }
   ];
 
+  const isWealthAiAvailable = analysis.ai?.status === 'AVAILABLE';
   const ai: ReasoningAiViewModel | undefined = analysis.ai
     ? {
-        available: analysis.ai.status === 'AVAILABLE',
+        available: isWealthAiAvailable,
         status: analysis.ai.status,
-        statement: analysis.ai.conclusion,
-        explanation: analysis.ai.explanation,
+        statement: isWealthAiAvailable ? analysis.ai.conclusion : undefined,
+        explanation: isWealthAiAvailable ? analysis.ai.explanation : undefined,
         providerName: analysis.ai.providerInfo?.name,
         routingMode: analysis.ai.providerInfo?.mode
       }
@@ -642,4 +649,88 @@ export function selectReasoningViewModel(
     return buildWealthReasoningViewModel(analysis);
   }
   return buildCareerReasoningViewModel(analysis);
+}
+
+/**
+ * Combined selector for Unified Overall Conclusion panel (spec §26, §50).
+ * Projects side-by-side Career and Wealth conclusions independently.
+ * Keeps PromiseStrength, ConclusionStatus, ProductConfidence, and Availability as four separate fields.
+ * If a domain is UNAVAILABLE, renders "Unavailable" — never fabricates.
+ */
+export function selectReasoningOverview(analysis: ProductAnalysis): ReasoningOverviewViewModel {
+  const careerVm = selectReasoningViewModel(analysis, 'CAREER');
+  const wealthVm = selectReasoningViewModel(analysis, 'WEALTH');
+
+  const careerRawStatus = analysis.career?.status ?? analysis.career?.promise?.status;
+  const careerStrength = analysis.career?.promise?.strength ?? 'UNAVAILABLE';
+  const careerConfidence = analysis.career?.promise?.confidence ?? 'LOW';
+  const careerAvail = (analysis.career as { readonly availability?: string } | undefined)?.availability;
+  const isCareerUnavailable =
+    !analysis.career ||
+    careerRawStatus === 'UNAVAILABLE' ||
+    careerStrength === 'UNAVAILABLE' ||
+    careerAvail === 'UNAVAILABLE';
+  const careerStatus = isCareerUnavailable ? 'UNAVAILABLE' : (careerRawStatus ?? 'UNAVAILABLE');
+  const careerAvailability: ProductAvailability = isCareerUnavailable
+    ? 'UNAVAILABLE'
+    : careerRawStatus === 'PARTIAL'
+      ? 'PARTIAL'
+      : 'AVAILABLE';
+
+  const wealthRawStatus = analysis.wealth?.overall?.status;
+  const wealthStrength = analysis.wealth?.overall?.promise ?? 'UNAVAILABLE';
+  const wealthConfidence = analysis.wealth?.overall?.confidence ?? 'LOW';
+  const wealthAvail = (analysis.wealth as { readonly availability?: string } | undefined)?.availability;
+  const isWealthUnavailable =
+    !analysis.wealth ||
+    wealthRawStatus === 'UNAVAILABLE' ||
+    wealthStrength === 'UNAVAILABLE' ||
+    wealthAvail === 'UNAVAILABLE';
+  const wealthStatus = isWealthUnavailable ? 'UNAVAILABLE' : (wealthRawStatus ?? 'UNAVAILABLE');
+  const wealthAvailability: ProductAvailability = isWealthUnavailable
+    ? 'UNAVAILABLE'
+    : wealthRawStatus === 'PARTIAL'
+      ? 'PARTIAL'
+      : 'AVAILABLE';
+
+  return {
+    career: {
+      domain: 'CAREER',
+      title: 'Career & Life Path',
+      status: careerStatus,
+      strength: careerStrength,
+      confidence: isCareerUnavailable ? 'UNAVAILABLE' : careerConfidence,
+      availability: careerAvailability,
+      headline: isCareerUnavailable ? undefined : careerVm.conclusion.headline,
+      statement: isCareerUnavailable ? undefined : careerVm.conclusion.statement
+    },
+    wealth: {
+      domain: 'WEALTH',
+      title: 'Wealth & Financial Potential',
+      status: wealthStatus,
+      strength: wealthStrength,
+      confidence: isWealthUnavailable ? 'UNAVAILABLE' : wealthConfidence,
+      availability: wealthAvailability,
+      headline: isWealthUnavailable ? undefined : wealthVm.conclusion.headline,
+      statement: isWealthUnavailable ? undefined : wealthVm.conclusion.statement
+    }
+  };
+}
+
+/**
+ * Deduplicates evidence items across Career and Wealth domains by evidence ID (§39).
+ * Guarantees zero evidence loss while avoiding duplicate counting.
+ */
+export function selectDedupedEvidence(
+  analysis: ProductAnalysis
+): readonly ReasoningEvidenceViewModel[] {
+  const map = new Map<string, ReasoningEvidenceViewModel>();
+  const careerEvidence = analysis.career?.evidence ?? [];
+  const wealthEvidence = analysis.wealth?.evidence ?? [];
+  for (const raw of [...careerEvidence, ...wealthEvidence]) {
+    if (!map.has(raw.id)) {
+      map.set(raw.id, mapEvidence(raw));
+    }
+  }
+  return Array.from(map.values());
 }

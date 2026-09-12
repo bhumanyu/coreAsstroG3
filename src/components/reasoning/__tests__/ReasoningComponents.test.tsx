@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   ReasoningHero,
+  ReasoningOverallConclusion,
   ReasoningChain,
   ReasoningEvidenceGroup,
   ReasoningEvidenceCard,
@@ -19,6 +20,7 @@ import {
 } from '../index';
 import type {
   ReasoningHeroViewModel,
+  ReasoningOverviewViewModel,
   ReasoningChainNodeViewModel,
   ReasoningEvidenceViewModel,
   ReasoningEvidenceGroupViewModel,
@@ -70,6 +72,85 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('4 Factors')).toBeInTheDocument();
       expect(screen.getByText('1 Factors')).toBeInTheDocument();
       expect(screen.getByText('1 Notice')).toBeInTheDocument();
+    });
+  });
+
+  describe('ReasoningOverallConclusion', () => {
+    it('renders both Career and Wealth conclusions side by side with status, strength, confidence (§26, §50)', () => {
+      const overview: ReasoningOverviewViewModel = {
+        career: {
+          domain: 'CAREER',
+          title: 'Career & Life Path',
+          availability: 'AVAILABLE',
+          status: 'FAVORABLE',
+          strength: 'STRONG',
+          confidence: 'HIGH',
+          headline: 'High Career Potential',
+          statement: 'Deterministic rules indicate career success.'
+        },
+        wealth: {
+          domain: 'WEALTH',
+          title: 'Wealth & Financial Potential',
+          availability: 'AVAILABLE',
+          status: 'MIXED',
+          strength: 'MODERATE',
+          confidence: 'MEDIUM',
+          headline: 'Balanced Wealth Outlook',
+          statement: 'Financial indicators show balanced inflows and expenditures.'
+        }
+      };
+
+      render(
+        <ReasoningOverallConclusion
+          overview={overview}
+          selectedDomain="CAREER"
+        />
+      );
+
+      expect(screen.getByText('Overall Conclusion')).toBeInTheDocument();
+      expect(screen.getByText('Career Domain')).toBeInTheDocument();
+      expect(screen.getByText('Wealth Domain')).toBeInTheDocument();
+
+      expect(screen.getByText('High Career Potential')).toBeInTheDocument();
+      expect(screen.getByText('Balanced Wealth Outlook')).toBeInTheDocument();
+      expect(screen.getByText('Deterministic rules indicate career success.')).toBeInTheDocument();
+      expect(screen.getByText('Financial indicators show balanced inflows and expenditures.')).toBeInTheDocument();
+    });
+
+    it('renders partial availability when a domain is UNAVAILABLE without fabricating (§32)', () => {
+      const overview: ReasoningOverviewViewModel = {
+        career: {
+          domain: 'CAREER',
+          title: 'Career & Life Path',
+          availability: 'AVAILABLE',
+          status: 'FAVORABLE',
+          strength: 'STRONG',
+          confidence: 'HIGH',
+          headline: 'High Career Potential',
+          statement: 'Career trajectory is confirmed.'
+        },
+        wealth: {
+          domain: 'WEALTH',
+          title: 'Wealth & Financial Potential',
+          availability: 'UNAVAILABLE',
+          status: 'UNFAVORABLE',
+          strength: 'WEAK',
+          confidence: 'LOW',
+          headline: 'Wealth Analysis Unavailable',
+          statement: 'Wealth analysis data is not available for this profile.'
+        }
+      };
+
+      render(
+        <ReasoningOverallConclusion
+          overview={overview}
+          selectedDomain="CAREER"
+        />
+      );
+
+      expect(screen.getByText('High Career Potential')).toBeInTheDocument();
+      expect(screen.getByText('Wealth Analysis Unavailable')).toBeInTheDocument();
+      expect(screen.getByText('Wealth analysis data is not available for this profile.')).toBeInTheDocument();
     });
   });
 
@@ -132,6 +213,21 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Rule: RULE_RUCHAKA_YOGA')).toBeInTheDocument();
       expect(screen.getByText('Derived from: ev_mars_capricorn')).toBeInTheDocument();
       expect(screen.getByText('Source: CAREER_ENGINE')).toBeInTheDocument();
+    });
+
+    it('renders neutral text when ruleId and derivedFromIds are absent instead of null (§22, §40)', () => {
+      render(
+        <ReasoningProvenance
+          provenance={{
+            derivedFromIds: [],
+            source: 'SYSTEM',
+            isAvailable: false
+          }}
+        />
+      );
+
+      expect(screen.getByText('Rule: Not specified')).toBeInTheDocument();
+      expect(screen.getByText('Derived from: Direct evidence')).toBeInTheDocument();
     });
   });
 
@@ -409,9 +505,39 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Gemini 1.5 Pro')).toBeInTheDocument();
     });
 
-    it('renders nothing when AI is unavailable or undefined', () => {
-      const { container } = render(<ReasoningAISection ai={undefined} />);
-      expect(container.firstChild).toBeNull();
+    it('renders fallback state when AI is undefined (§28, §46)', () => {
+      render(<ReasoningAISection ai={undefined} />);
+      expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+      expect(screen.getByText('Unavailable')).toBeInTheDocument();
+      expect(
+        screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
+      ).toBeInTheDocument();
+    });
+
+    it('renders fallback state when AI status is ERROR or PARTIAL (§28, §46)', () => {
+      const { rerender } = render(
+        <ReasoningAISection
+          ai={{
+            available: false,
+            status: 'ERROR'
+          }}
+        />
+      );
+      expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+      expect(screen.getByText('Error')).toBeInTheDocument();
+      expect(
+        screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
+      ).toBeInTheDocument();
+
+      rerender(
+        <ReasoningAISection
+          ai={{
+            available: false,
+            status: 'PARTIAL'
+          }}
+        />
+      );
+      expect(screen.getByText('Partial')).toBeInTheDocument();
     });
   });
 
