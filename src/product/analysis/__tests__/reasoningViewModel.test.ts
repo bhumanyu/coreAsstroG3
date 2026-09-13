@@ -24,10 +24,10 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.hero.title).toBe('Career & Vocational Reasoning');
     expect(vm.hero.confidence).toBe('HIGH');
     expect(vm.hero.strength).toBe('STRONG');
-    expect(vm.hero.ascendantSign).toBe('Capricorn');
-    expect(vm.hero.moonSign).toBe('Leo');
-    expect(vm.hero.sunSign).toBe('Capricorn');
-    expect(vm.hero.moonNakshatra).toBe('Magha');
+    expect('ascendantSign' in vm.hero).toBe(false);
+    expect('moonSign' in vm.hero).toBe(false);
+    expect('sunSign' in vm.hero).toBe(false);
+    expect('moonNakshatra' in vm.hero).toBe(false);
 
     // D10 varga
     expect(vm.d10.chart).toBe('D10');
@@ -55,13 +55,26 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.conclusion.confidence).toBe('HIGH');
     expect(vm.conclusion.strength).toBe('STRONG');
 
-    // Chain
+    // Chain - canonical semantic fields without fabricated direction
     expect(vm.chain).toHaveLength(5);
     expect(vm.chain[0].type).toBe('PROMISE');
+    expect(vm.chain[0].promiseStrength).toBe('STRONG');
+    expect(vm.chain[0].direction).toBeUndefined();
+
     expect(vm.chain[1].type).toBe('VARGA');
+    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
+    expect(vm.chain[1].direction).toBeUndefined();
+
     expect(vm.chain[2].type).toBe('ACTIVATION');
+    expect(vm.chain[2].dashaDirection).toBe('SUPPORT');
+    expect(vm.chain[2].direction).toBe('SUPPORT');
+
     expect(vm.chain[3].type).toBe('TRANSIT');
+    expect(vm.chain[3].transitEffect).toBe('TRIGGER');
+    expect(vm.chain[3].direction).toBeUndefined();
+
     expect(vm.chain[4].type).toBe('SYNTHESIS');
+    expect(vm.chain[4].direction).toBeUndefined();
   });
 
   it('2. selector maps all Wealth fields correctly', () => {
@@ -85,6 +98,26 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     // Dasha & Transit
     expect(vm.dasha.status).toBe('AVAILABLE');
     expect(vm.transit.status).toBe('AVAILABLE');
+
+    // Wealth chain - canonical semantic fields without fabricated direction
+    expect(vm.chain).toHaveLength(5);
+    expect(vm.chain[0].type).toBe('PROMISE');
+    expect(vm.chain[0].promiseStrength).toBe('MODERATE');
+    expect(vm.chain[0].direction).toBeUndefined();
+
+    expect(vm.chain[1].type).toBe('VARGA');
+    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
+    expect(vm.chain[1].direction).toBeUndefined();
+
+    expect(vm.chain[2].type).toBe('ACTIVATION');
+    expect(vm.chain[2].dashaDirection).toBeUndefined();
+
+    expect(vm.chain[3].type).toBe('TRANSIT');
+    expect(vm.chain[3].transitEffect).toBe('NO_MATERIAL_TRIGGER');
+    expect(vm.chain[3].direction).toBeUndefined();
+
+    expect(vm.chain[4].type).toBe('SYNTHESIS');
+    expect(vm.chain[4].direction).toBeUndefined();
   });
 
   it('3. mapEvidence preserves all fields and provenance without mutation', () => {
@@ -415,7 +448,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.allEvidence[0].provenance.derivedFromIds).toEqual(['shadbala_sun']);
 
     // Verdict, confidence, and strength are unaffected by whether provenance is verified
-    expect(vm.conclusion.status).toBe('UNFAVORABLE');
+    expect(vm.conclusion.status).toBe('CHALLENGED');
     expect(vm.conclusion.confidence).toBe('LOW');
     expect(vm.conclusion.strength).toBe('WEAK');
   });
@@ -481,7 +514,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
 
     // Career is available with correct metrics
     expect(overview.career.availability).toBe('AVAILABLE');
-    expect(overview.career.status).toBe('FAVORABLE');
+    expect(overview.career.status).toBe('STRONGLY_SUPPORTED');
     expect(overview.career.confidence).toBe('HIGH');
     expect(overview.career.strength).toBe('STRONG');
     expect(overview.career.headline).toBe('Strong Career Outlook');
@@ -489,7 +522,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     // Wealth is explicitly UNAVAILABLE, never fabricating a verdict or headline
     expect(overview.wealth.availability).toBe('UNAVAILABLE');
     expect(overview.wealth.status).toBe('UNAVAILABLE');
-    expect(overview.wealth.confidence).toBe('UNAVAILABLE');
+    expect(overview.wealth.confidence).toBe('LOW');
     expect(overview.wealth.headline).toBeUndefined();
     expect(overview.wealth.statement).toBeUndefined();
   });
@@ -674,5 +707,84 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     const vm = selectReasoningViewModel(analysis, 'CAREER');
     expect(vm.dasha?.periods.map((p) => p.level)).toEqual(['MD', 'AD', 'PD']);
     expect(vm.dasha?.periods.map((p) => p.planet)).toEqual(['Jupiter', 'Saturn', 'Mercury']);
+  });
+
+  it('20. Missing/undefined domain prose leaves node.statement undefined without fabricating fallback prose (P1)', () => {
+    const analysisWithoutProse = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        promise: {
+          status: 'SUPPORTED',
+          confidence: 'HIGH',
+          strength: 'STRONG',
+          statement: undefined as any
+        },
+        d10: {
+          relationship: 'UNAVAILABLE',
+          statement: undefined
+        },
+        activation: {
+          dasha: {
+            status: 'UNAVAILABLE',
+            periods: []
+          },
+          transit: {
+            status: 'UNAVAILABLE',
+            statement: undefined,
+            effect: 'UNAVAILABLE' as any
+          }
+        },
+        synthesis: undefined
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysisWithoutProse, 'CAREER');
+    const promiseNode = vm.chain.find((n) => n.type === 'PROMISE');
+    const vargaNode = vm.chain.find((n) => n.type === 'VARGA');
+    const transitNode = vm.chain.find((n) => n.type === 'TRANSIT');
+
+    expect(promiseNode?.statement).toBeUndefined();
+    expect(vargaNode?.statement).toBeUndefined();
+    expect(transitNode?.statement).toBeUndefined();
+  });
+
+  it('21. selectDedupedEvidence delegates to selectAllEvidence with zero evidence loss (§39)', () => {
+    const analysis = createProductAnalysis();
+    const deduped = selectDedupedEvidence(analysis);
+
+    // Each item in career and wealth evidence should appear in the deduped array
+    const careerIds = analysis.career.evidence.map((e) => e.id);
+    const wealthIds = analysis.wealth.evidence.map((e) => e.id);
+    const expectedUniqueIds = new Set([...careerIds, ...wealthIds]);
+
+    expect(deduped.length).toBe(expectedUniqueIds.size);
+    for (const id of expectedUniqueIds) {
+      expect(deduped.some((e) => e.id === id)).toBe(true);
+    }
+  });
+
+  it('22. selectReasoningOverview produces strictly typed ConclusionStatus, PromiseStrength, ProductConfidence, ProductAvailability', () => {
+    const analysis = createProductAnalysis();
+    const overview = selectReasoningOverview(analysis);
+
+    // Valid ConclusionStatus values
+    const validStatuses = ['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'UNAVAILABLE'];
+    expect(validStatuses).toContain(overview.career.status);
+    expect(validStatuses).toContain(overview.wealth.status);
+
+    // Valid PromiseStrength values
+    const validStrengths = ['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNAVAILABLE'];
+    expect(validStrengths).toContain(overview.career.strength);
+    expect(validStrengths).toContain(overview.wealth.strength);
+
+    // Valid ProductConfidence values
+    const validConfidences = ['HIGH', 'MEDIUM', 'LOW', 'UNAVAILABLE'];
+    expect(validConfidences).toContain(overview.career.confidence);
+    expect(validConfidences).toContain(overview.wealth.confidence);
+
+    // Valid ProductAvailability values
+    const validAvailabilities = ['AVAILABLE', 'PARTIAL', 'CONDITIONAL', 'UNAVAILABLE'];
+    expect(validAvailabilities).toContain(overview.career.availability);
+    expect(validAvailabilities).toContain(overview.wealth.availability);
   });
 });

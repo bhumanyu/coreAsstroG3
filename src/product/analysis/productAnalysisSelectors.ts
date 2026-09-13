@@ -175,10 +175,26 @@ export function selectEvidenceByIds(
 }
 
 /**
- * Returns the current active dasha periods ordered by hierarchy: MD -> AD -> PD.
+ * Returns the active dasha periods ordered by hierarchy: MD -> AD -> PD.
+ * If a domain ('CAREER' | 'WEALTH') is provided, returns that domain's dasha periods sorted MD -> AD -> PD.
+ * Otherwise, returns the current active dasha periods from analysis.dasha.current.
  * Filters out periods that are undefined.
  */
-export function selectDashaHierarchy(analysis: ProductAnalysis): readonly ProductDashaPeriod[] {
+export function selectDashaHierarchy(
+  analysis: ProductAnalysis,
+  domain?: 'CAREER' | 'WEALTH'
+): readonly ProductDashaPeriod[] {
+  if (domain === 'CAREER' && analysis.career?.activation?.dasha?.periods) {
+    const raw = analysis.career.activation.dasha.periods;
+    const order: Record<string, number> = { MD: 0, AD: 1, PD: 2 };
+    return [...raw].sort((a, b) => (order[a.level] ?? 99) - (order[b.level] ?? 99));
+  }
+  if (domain === 'WEALTH' && analysis.wealth?.activation?.dasha?.periods) {
+    const raw = analysis.wealth.activation.dasha.periods;
+    const order: Record<string, number> = { MD: 0, AD: 1, PD: 2 };
+    return [...raw].sort((a, b) => (order[a.level] ?? 99) - (order[b.level] ?? 99));
+  }
+
   const hierarchy: ProductDashaPeriod[] = [];
   const { current } = analysis.dasha;
 

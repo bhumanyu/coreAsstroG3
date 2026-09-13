@@ -214,7 +214,7 @@ export const ReasoningOverallConclusion: React.FC<ReasoningOverallConclusionProp
           <div>
             <h2 className="text-base font-semibold text-slate-100">Overall Conclusion</h2>
             <p className="text-xs text-slate-400">
-              Cross-domain synthesis comparing Career vocational strength and Wealth financial potential
+              Side-by-side summary of existing Career and Wealth domain conclusions
             </p>
           </div>
         </div>
