@@ -51,7 +51,7 @@ describe('ReasoningPage (P-UI-06)', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('4. Rendered sections: renders all sections from canonical ProductAnalysis', () => {
+  it('4. Rendered sections: renders both Career and Wealth sections simultaneously from canonical ProductAnalysis', () => {
     const analysis = createProductAnalysis();
     render(
       <ReasoningPage
@@ -62,33 +62,33 @@ describe('ReasoningPage (P-UI-06)', () => {
       />
     );
 
-    // Hero
+    // Cross-Domain Evidence Framework
+    expect(screen.getByText('Cross-Domain Evidence Framework')).toBeInTheDocument();
+
+    // Career Section
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
-    expect(screen.getAllByText('High Confidence').length).toBeGreaterThanOrEqual(1);
-
-    // Chain
-    expect(screen.getByText('Deterministic Evidence Framework')).toBeInTheDocument();
-
-    // Evidence Groups
-    expect(screen.getByText('Evidentiary Reasoning Groups')).toBeInTheDocument();
-
-    // Varga
     expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
 
-    // Dasha
-    expect(screen.getByText('Chronological Vimshottari Dasha Activation')).toBeInTheDocument();
+    // Wealth Section
+    expect(screen.getByText('Wealth & Asset Accumulation Reasoning')).toBeInTheDocument();
+    expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
 
-    // Transit
-    expect(screen.getByText('Gochara (Transit) Triggers')).toBeInTheDocument();
+    // Transits for both domains rendered simultaneously
+    const transitHeadings = screen.getAllByText('Gochara (Transit) Triggers');
+    expect(transitHeadings.length).toBe(2);
+
+    // Dasha for both domains rendered simultaneously
+    const dashaHeadings = screen.getAllByText('Chronological Vimshottari Dasha Activation');
+    expect(dashaHeadings.length).toBe(2);
 
     // Qualifications
-    expect(screen.getByText('Reasoning Qualifications & Caveats')).toBeInTheDocument();
+    expect(screen.getAllByText('Reasoning Qualifications & Caveats').length).toBe(2);
 
-    // Conclusion
-    expect(screen.getByText('Synthesized Astrological Verdict')).toBeInTheDocument();
+    // Synthesized Verdicts
+    expect(screen.getAllByText('Synthesized Astrological Verdict').length).toBe(2);
   });
 
-  it('5. Domain switching: switches between Career and Wealth reasoning domains', () => {
+  it('5. Domain switching: sets active view focus and scrolls without unmounting either domain', () => {
     const analysis = createProductAnalysis();
     render(
       <ReasoningPage
@@ -99,16 +99,23 @@ describe('ReasoningPage (P-UI-06)', () => {
       />
     );
 
-    // Initially in Career Reasoning
+    // Both Career and Wealth are in the document initially
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
+    expect(screen.getByText('Wealth & Asset Accumulation Reasoning')).toBeInTheDocument();
     expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
 
-    // Click Wealth Reasoning tab
+    // Click Wealth Reasoning button
     const wealthTab = screen.getByRole('button', { name: /wealth reasoning/i });
     fireEvent.click(wealthTab);
 
-    // Now in Wealth Reasoning
+    // Active View indicator updates
+    expect(screen.getByText('WEALTH')).toBeInTheDocument();
+
+    // Both domains STILL exist in the document (not gated)
+    expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
     expect(screen.getByText('Wealth & Asset Accumulation Reasoning')).toBeInTheDocument();
+    expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
     expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
   });
 
@@ -175,12 +182,74 @@ describe('ReasoningPage (P-UI-06)', () => {
     );
 
     // AI Section shows fallback
-    expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+    expect(screen.getAllByText('AI Explanation').length).toBeGreaterThanOrEqual(1);
     expect(
-      screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
-    ).toBeInTheDocument();
+      screen.getAllByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.').length
+    ).toBeGreaterThanOrEqual(1);
 
     // Deterministic verdict is still rendered above
-    expect(screen.getByText('Synthesized Astrological Verdict')).toBeInTheDocument();
+    expect(screen.getAllByText('Synthesized Astrological Verdict').length).toBe(2);
+  });
+
+  it('9. Cross-domain evidence deduplication: displays deduplicated evidence framework count', () => {
+    const analysis = createProductAnalysis();
+    render(
+      <ReasoningPage
+        productAnalysisState={{
+          status: 'READY',
+          analysis
+        }}
+      />
+    );
+
+    const crossDomainHeading = screen.getByText('Cross-Domain Evidence Framework');
+    expect(crossDomainHeading).toBeInTheDocument();
+
+    // Deduplicated count badge is present
+    expect(screen.getAllByText(/evidence items/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('10. Domain independence: preserves independent transits and vargas for Career and Wealth', () => {
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        activation: {
+          ...createProductAnalysis().career.activation,
+          transit: {
+            status: 'AVAILABLE',
+            effect: 'TRIGGER',
+            statement: 'Career transit trigger: Saturn in 10th'
+          }
+        }
+      },
+      wealth: {
+        ...createProductAnalysis().wealth,
+        activation: {
+          ...createProductAnalysis().wealth.activation,
+          transit: {
+            status: 'AVAILABLE',
+            effect: 'MODIFIER',
+            statement: 'Wealth transit modifier: Jupiter in 2nd'
+          }
+        }
+      }
+    });
+
+    render(
+      <ReasoningPage
+        productAnalysisState={{
+          status: 'READY',
+          analysis
+        }}
+      />
+    );
+
+    // Both unique transit statements render independently
+    expect(screen.getAllByText('Career transit trigger: Saturn in 10th').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Wealth transit modifier: Jupiter in 2nd').length).toBeGreaterThanOrEqual(1);
+
+    // D10 and D2 divisional confirmations render independently
+    expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
   });
 });

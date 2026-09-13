@@ -257,7 +257,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       );
 
       expect(screen.getByText('Rule: Not specified')).toBeInTheDocument();
-      expect(screen.getByText('Derived from: Direct evidence')).toBeInTheDocument();
+      expect(screen.getByText('Derived from: Not specified')).toBeInTheDocument();
     });
   });
 

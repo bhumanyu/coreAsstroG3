@@ -33,7 +33,7 @@ export const ReasoningProvenance: React.FC<ReasoningProvenanceProps> = ({ proven
       ) : (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-900/60 border border-slate-800 text-slate-400">
           <GitFork className="w-3 h-3 text-slate-500 shrink-0" aria-hidden="true" />
-          <span>Derived from: Direct evidence</span>
+          <span>Derived from: Not specified</span>
         </span>
       )}
 

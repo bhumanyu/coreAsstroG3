@@ -70,7 +70,7 @@ export interface ReasoningDashaPeriodViewModel {
   readonly planet?: string;
   readonly role: ProductEvidenceRole;
   readonly direction: ProductDirection;
-  readonly effect: ActivationEffect | string;
+  readonly effect: ActivationEffect;
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
   readonly start?: string;
@@ -95,7 +95,7 @@ export interface ReasoningVargaViewModel {
 
 export interface ReasoningTransitViewModel {
   readonly status: ProductAvailability;
-  readonly effect: TransitEffect | string;
+  readonly effect: TransitEffect;
   readonly statement?: string;
 }
 
@@ -121,11 +121,11 @@ export interface ReasoningConclusionViewModel {
 export interface ReasoningChainNodeViewModel {
   readonly id: string;
   readonly label: string;
-  readonly type: 'PROMISE' | 'VARGA' | 'ACTIVATION' | 'TRANSIT' | 'SYNTHESIS' | 'EVIDENCE' | string;
+  readonly type: 'PROMISE' | 'VARGA' | 'ACTIVATION' | 'TRANSIT' | 'SYNTHESIS' | 'EVIDENCE';
   readonly direction?: ProductDirection;
   readonly promiseStrength?: PromiseStrength;
   readonly vargaRelationship?: VargaRelationship;
-  readonly transitEffect?: TransitEffect | string;
+  readonly transitEffect?: TransitEffect;
   readonly dashaDirection?: ProductDirection;
   readonly availability?: ProductAvailability;
   readonly statement?: string;
@@ -157,6 +157,14 @@ export interface ReasoningOverviewViewModel {
   readonly wealth: ReasoningDomainOverviewItem;
 }
 
+export interface UnifiedReasoningViewModel {
+  readonly career: ReasoningViewModel;
+  readonly wealth: ReasoningViewModel;
+  readonly overview: ReasoningOverviewViewModel;
+  readonly dedupedEvidence: readonly ReasoningEvidenceViewModel[];
+  readonly dedupedEvidenceGroups: readonly ReasoningEvidenceGroupViewModel[];
+}
+
 export interface ReasoningViewModel {
   readonly domain: ReasoningDomain;
   readonly hero: ReasoningHeroViewModel;
@@ -164,7 +172,7 @@ export interface ReasoningViewModel {
   readonly evidenceGroups: readonly ReasoningEvidenceGroupViewModel[];
   readonly allEvidence: readonly ReasoningEvidenceViewModel[];
   readonly varga: ReasoningVargaViewModel;
-  readonly d10: ReasoningVargaViewModel;
+  readonly d10?: ReasoningVargaViewModel;
   readonly d2?: ReasoningVargaViewModel;
   readonly dasha: ReasoningDashaViewModel;
   readonly transit: ReasoningTransitViewModel;
@@ -203,6 +211,36 @@ export function mapEvidence(e: ProductEvidence): ReasoningEvidenceViewModel {
       isAvailable: provenanceAvailable
     }
   };
+}
+
+function normalizeActivationEffect(effect?: string): ActivationEffect {
+  switch (effect) {
+    case 'ACTIVATES':
+    case 'PARTIALLY_ACTIVATES':
+    case 'DOES_NOT_ACTIVATE':
+    case 'CHALLENGES':
+    case 'UNKNOWN':
+    case 'INSUFFICIENT_DATA':
+    case 'UNAVAILABLE':
+      return effect;
+    default:
+      return 'UNAVAILABLE';
+  }
+}
+
+function normalizeTransitEffect(effect?: string): TransitEffect {
+  switch (effect) {
+    case 'TRIGGER':
+    case 'MODIFIER':
+    case 'CHALLENGE':
+    case 'NO_MATERIAL_TRIGGER':
+    case 'UNKNOWN':
+    case 'INSUFFICIENT_DATA':
+    case 'UNAVAILABLE':
+      return effect;
+    default:
+      return 'UNAVAILABLE';
+  }
 }
 
 /**
@@ -308,7 +346,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     planet: p.planet,
     role: p.role,
     direction: p.direction,
-    effect: p.effect,
+    effect: normalizeActivationEffect(p.effect),
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,
@@ -327,7 +365,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
 
   const transit: ReasoningTransitViewModel = {
     status: career.activation.transit.status,
-    effect: career.activation.transit.effect,
+    effect: normalizeTransitEffect(career.activation.transit.effect),
     statement: career.activation.transit.statement
   };
 
@@ -384,7 +422,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
       id: 'node_career_transit',
       label: 'Gochara Transit Triggers',
       type: 'TRANSIT',
-      transitEffect: career.activation.transit.effect,
+      transitEffect: normalizeTransitEffect(career.activation.transit.effect),
       statement: career.activation.transit.statement
     },
     {
@@ -491,7 +529,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     planet: p.planet,
     role: p.role,
     direction: p.direction,
-    effect: p.effect,
+    effect: normalizeActivationEffect(p.effect),
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,
@@ -509,7 +547,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
 
   const transit: ReasoningTransitViewModel = {
     status: wealth.activation.transit.status,
-    effect: wealth.activation.transit.effect,
+    effect: normalizeTransitEffect(wealth.activation.transit.effect),
     statement: wealth.activation.transit.statement
   };
 
@@ -566,7 +604,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
       id: 'node_wealth_transit',
       label: 'Gochara Wealth Transits',
       type: 'TRANSIT',
-      transitEffect: wealth.activation.transit.effect,
+      transitEffect: normalizeTransitEffect(wealth.activation.transit.effect),
       statement: wealth.activation.transit.statement
     },
     {
@@ -598,7 +636,6 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     evidenceGroups: buildEvidenceGroups(allEvidence),
     allEvidence,
     varga: d2,
-    d10: d2,
     d2,
     dasha,
     transit,
@@ -712,4 +749,27 @@ export function selectDedupedEvidence(
 ): readonly ReasoningEvidenceViewModel[] {
   const canonicalEvidence = selectAllEvidence(analysis);
   return canonicalEvidence.map(mapEvidence);
+}
+
+/**
+ * Top-level unified selector for P-UI-08.
+ * Returns Career and Wealth view models, unified overview, and cross-domain deduped evidence.
+ * Pure composition of existing builders without re-deriving any semantics.
+ */
+export function selectUnifiedReasoningViewModel(
+  analysis: ProductAnalysis
+): UnifiedReasoningViewModel {
+  const career = buildCareerReasoningViewModel(analysis);
+  const wealth = buildWealthReasoningViewModel(analysis);
+  const overview = selectReasoningOverview(analysis);
+  const dedupedEvidence = selectDedupedEvidence(analysis);
+  const dedupedEvidenceGroups = buildEvidenceGroups(dedupedEvidence);
+
+  return {
+    career,
+    wealth,
+    overview,
+    dedupedEvidence,
+    dedupedEvidenceGroups
+  };
 }

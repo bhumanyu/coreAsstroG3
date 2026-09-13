@@ -3,6 +3,7 @@ import {
   selectReasoningViewModel,
   selectReasoningOverview,
   selectDedupedEvidence,
+  selectUnifiedReasoningViewModel,
   buildEvidenceGroups,
   mapEvidence
 } from '../reasoningViewModel';
@@ -30,9 +31,9 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect('moonNakshatra' in vm.hero).toBe(false);
 
     // D10 varga
-    expect(vm.d10.chart).toBe('D10');
-    expect(vm.d10.relationship).toBe('CONFIRMS');
-    expect(vm.d10.statement).toBe('Dasamsa confirms strong 10th house status.');
+    expect(vm.d10?.chart).toBe('D10');
+    expect(vm.d10?.relationship).toBe('CONFIRMS');
+    expect(vm.d10?.statement).toBe('Dasamsa confirms strong 10th house status.');
 
     // Dasha
     expect(vm.dasha.status).toBe('AVAILABLE');
@@ -290,8 +291,8 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     });
 
     const vm = selectReasoningViewModel(unavailableD10Analysis, 'CAREER');
-    expect(vm.d10.relationship).toBe('UNAVAILABLE');
-    expect(vm.d10.statement).toBeUndefined();
+    expect(vm.d10?.relationship).toBe('UNAVAILABLE');
+    expect(vm.d10?.statement).toBeUndefined();
   });
 
   it('8. optional AI commentary is projected when present and undefined when absent', () => {
@@ -786,5 +787,65 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     const validAvailabilities = ['AVAILABLE', 'PARTIAL', 'CONDITIONAL', 'UNAVAILABLE'];
     expect(validAvailabilities).toContain(overview.career.availability);
     expect(validAvailabilities).toContain(overview.wealth.availability);
+  });
+
+  it('23. selectUnifiedReasoningViewModel composes Career, Wealth, Overview, and Deduped Evidence (§P-UI-08)', () => {
+    const analysis = createProductAnalysis();
+    const unified = selectUnifiedReasoningViewModel(analysis);
+
+    // Career and Wealth view models are built and available simultaneously
+    expect(unified.career.domain).toBe('CAREER');
+    expect(unified.wealth.domain).toBe('WEALTH');
+
+    // Career carries D10 and Wealth carries D2
+    expect(unified.career.varga.chart).toBe('D10');
+    expect(unified.career.d10?.chart).toBe('D10');
+    expect(unified.wealth.varga.chart).toBe('D2');
+    expect(unified.wealth.d2?.chart).toBe('D2');
+
+    // Overview is composed
+    expect(unified.overview.career.domain).toBe('CAREER');
+    expect(unified.overview.wealth.domain).toBe('WEALTH');
+
+    // Deduped evidence is composed without evidence loss
+    const careerIds = analysis.career.evidence.map((e) => e.id);
+    const wealthIds = analysis.wealth.evidence.map((e) => e.id);
+    const expectedUniqueIds = new Set([...careerIds, ...wealthIds]);
+    expect(unified.dedupedEvidence.length).toBe(expectedUniqueIds.size);
+    expect(unified.dedupedEvidenceGroups.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('24. selectUnifiedReasoningViewModel preserves independent transits and commentary without cross-contamination', () => {
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        activation: {
+          ...createProductAnalysis().career.activation,
+          transit: {
+            status: 'AVAILABLE',
+            effect: 'TRIGGER',
+            statement: 'Saturn transit 10th house career activation'
+          }
+        }
+      },
+      wealth: {
+        ...createProductAnalysis().wealth,
+        activation: {
+          ...createProductAnalysis().wealth.activation,
+          transit: {
+            status: 'AVAILABLE',
+            effect: 'MODIFIER',
+            statement: 'Jupiter transit 2nd house wealth modification'
+          }
+        }
+      }
+    });
+
+    const unified = selectUnifiedReasoningViewModel(analysis);
+
+    expect(unified.career.transit.statement).toBe('Saturn transit 10th house career activation');
+    expect(unified.career.transit.effect).toBe('TRIGGER');
+    expect(unified.wealth.transit.statement).toBe('Jupiter transit 2nd house wealth modification');
+    expect(unified.wealth.transit.effect).toBe('MODIFIER');
   });
 });

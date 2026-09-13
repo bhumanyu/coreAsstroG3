@@ -384,8 +384,8 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     const reasoningTab = screen.getByRole('button', { name: 'Why This Result?' });
     fireEvent.click(reasoningTab);
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
-    expect(screen.getByText('Deterministic Evidence Framework')).toBeInTheDocument();
-    expect(screen.getByText('Total Evidence Items')).toBeInTheDocument();
+    expect(screen.getAllByText('Deterministic Evidence Framework').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Total Evidence Items').length).toBeGreaterThanOrEqual(1);
 
     // Click Dasha & Timing tab
     const dashaTab = screen.getByRole('button', { name: 'Dasha & Timing' });
