@@ -105,8 +105,8 @@ export function interpretCareerV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
-  const legacyCareer = interpretCareerTheme(horoscope);
-  const rawEvidence = legacyCareer.evidence;
+  const themeInterpretation = interpretCareerTheme(horoscope);
+  const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
   const evidence = linkCareerEvidence(rawMappedEvidence);
 
@@ -145,7 +145,7 @@ export function interpretCareerV2(
     statement: buildCareerNatalStatement(
       supportingEvidence,
       challengingEvidence,
-      legacyCareer.conclusion?.summary
+      themeInterpretation.conclusion?.summary
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
@@ -218,7 +218,7 @@ export function interpretCareerV2(
   const d10Evidence = evidence.filter((item) => item.source === 'D10');
   const d10Relationship = evaluateD10Relationship(
     rawEvidence,
-    legacyCareer.metadata?.vargaConfirmationStatus,
+    themeInterpretation.metadata?.vargaConfirmationStatus,
     d10Evidence,
     natalPromiseEvidenceIds
   );
@@ -350,7 +350,7 @@ export function interpretCareerV2(
       dashaActivation,
       transitTrigger,
       vargaConfirmations,
-      legacyCareer.conclusion?.summary,
+      themeInterpretation.conclusion?.summary,
       d10Relationship,
       {
         timingActivations,

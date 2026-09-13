@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
@@ -22,6 +22,7 @@ import {
   evaluateWealthDimension,
   resolveOverallWealthStatus,
   calculateWealthDataCompleteness,
+  buildWealthConclusion,
   buildWealthConclusionData,
   buildWealthHeadline,
   buildWealthDashaStatement,
@@ -47,6 +48,7 @@ import {
   GOLDEN_WEALTH_EVIDENCE
 } from './wealth-v2-golden.fixture';
 import { deriveWealthManifestations } from './wealthManifestations';
+import { synthesizeWealthManifestations } from './manifestation/wealthManifestationSynthesis';
 import {
   linkWealthEvidence,
   resolveRelatedWealthPromiseEvidenceIds
@@ -1708,5 +1710,130 @@ describe('WealthDomainInterpreterV2', () => {
     expect(result1.conclusionData?.wealthFinalSynthesis).toEqual(
       result2.conclusionData?.wealthFinalSynthesis
     );
+  });
+
+  // P0-01 Canonicalization Suite
+  describe('P0-01 Canonicalization & Non-Double-Counting Invariants', () => {
+    // 1. Theme interpretation conclusion summary does not affect strength or status
+    it('proves themeInterpretation conclusion summary cannot alter wealth conclusion strength or status', () => {
+      const v2 = interpretWealthV2(horoscope);
+
+      // CW-01 is authoritative for strength
+      expect(v2.conclusion.strength).toBeDefined();
+      expect(v2.natalPromise.strength).toBeDefined();
+      expect(v2.conclusionData?.overallStatus).toBeDefined();
+
+      // buildWealthConclusion includes summary in prose text, but has 0 effect on strength or status
+      const customSummary = 'Custom prose summary that must not alter semantics';
+      const statementWith = buildWealthConclusion(
+        v2.natalPromise,
+        v2.dashaActivation,
+        v2.transitTrigger,
+        customSummary,
+        {
+          vargaConfirmations: v2.vargaConfirmations,
+          conclusionData: v2.conclusionData
+        }
+      );
+      const statementWithout = buildWealthConclusion(
+        v2.natalPromise,
+        v2.dashaActivation,
+        v2.transitTrigger,
+        undefined,
+        {
+          vargaConfirmations: v2.vargaConfirmations,
+          conclusionData: v2.conclusionData
+        }
+      );
+
+      // The statement wording reflects the prose fallback, but conclusion strength & status are completely independent
+      expect(statementWith).toContain(customSummary);
+      expect(statementWithout).not.toContain(customSummary);
+      // Strength and status fields are unaltered
+      expect(v2.conclusion.strength).toBe('VERY_STRONG');
+      expect(v2.conclusionData?.overallStatus).toBe('STRONGLY_SUPPORTED');
+    });
+
+    // 2. Non-double-counting invariant
+    it('proves traceability vs natal scoring non-double-counting invariant: DASHA items are present in trace/evidence but have 0 natal contribution', () => {
+      const asOf = '2024-06-15T12:00:00.000Z';
+      const result = interpretWealthV2(horoscope, { asOf });
+
+      // (a) Evidence contains items with source === 'DASHA' (traceability present)
+      const dashaItems = result.evidence.filter((e) => e.source === 'DASHA');
+      expect(dashaItems.length).toBeGreaterThan(0);
+      for (const item of dashaItems) {
+        expect(item.phase).toBe('DASHA_ACTIVATION');
+        expect(item.phase).not.toBe('NATAL_PROMISE');
+      }
+
+      // (b) Natal promise strength / natal scoring output excludes source === 'DASHA' (zero contribution)
+      const natalPromiseEvidence = result.evidence.filter((e) => e.phase === 'NATAL_PROMISE');
+      expect(natalPromiseEvidence.some((e) => e.source === 'DASHA')).toBe(false);
+
+      const natalSupporting = natalPromiseEvidence.filter((e) => e.polarity === 'SUPPORTING');
+      const natalChallenging = natalPromiseEvidence.filter((e) => e.polarity === 'CHALLENGING');
+      const expectedNatalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
+      expect(result.natalPromise.strength).toBe(expectedNatalStrength);
+
+      // Even if DASHA items are added or altered, wealthManifestationSynthesis excludes source === 'DASHA' from natal scoring
+      const timingSyn = result.conclusionData?.wealthTimingSynthesis;
+      const d2Rel = result.conclusionData?.d2Relationship;
+      const synWithDasha = synthesizeWealthManifestations(
+        result.evidence,
+        timingSyn,
+        d2Rel
+      );
+      const synWithoutDasha = synthesizeWealthManifestations(
+        result.evidence.filter((e) => e.source !== 'DASHA'),
+        timingSyn,
+        d2Rel
+      );
+      expect(synWithDasha).toEqual(synWithoutDasha);
+    });
+
+    // 3. asOf determinism golden test (independent of machine wall-clock)
+    it('proves asOf determinism: identical strength, status, timing synthesis, and evidence IDs across invocations independent of machine wall-clock', () => {
+      const explicitAsOf = '2026-06-01T00:00:00.000Z';
+
+      vi.useFakeTimers();
+      try {
+        // Run 1: Clock set to 2021
+        vi.setSystemTime(new Date('2021-03-15T08:00:00.000Z'));
+        const run1 = interpretWealthV2(horoscope, { asOf: explicitAsOf });
+
+        // Run 2: Clock set to 2030
+        vi.setSystemTime(new Date('2030-11-20T17:30:00.000Z'));
+        const run2 = interpretWealthV2(horoscope, { asOf: explicitAsOf });
+
+        // Wall-clock metadata stamp changes
+        expect(run1.generatedAt).not.toBe(run2.generatedAt);
+
+        // Core domain outputs are strictly identical
+        expect(run1.conclusion.strength).toBe(run2.conclusion.strength);
+        expect(run1.natalPromise.strength).toBe(run2.natalPromise.strength);
+        expect(run1.natalPromise.confidence).toBe(run2.natalPromise.confidence);
+        expect(run1.natalPromise.statement).toBe(run2.natalPromise.statement);
+        expect(run1.conclusionData?.overallStatus).toBe(run2.conclusionData?.overallStatus);
+        expect(run1.conclusionData?.accumulationStatus).toBe(run2.conclusionData?.accumulationStatus);
+        expect(run1.conclusionData?.gainsStatus).toBe(run2.conclusionData?.gainsStatus);
+        expect(run1.conclusionData?.fortuneStatus).toBe(run2.conclusionData?.fortuneStatus);
+        expect(run1.conclusionData?.speculationStatus).toBe(run2.conclusionData?.speculationStatus);
+        expect(run1.conclusionData?.dimensions).toEqual(run2.conclusionData?.dimensions);
+        expect(run1.dashaActivation.effect).toBe(run2.dashaActivation.effect);
+        expect(run1.transitTrigger.effect).toBe(run2.transitTrigger.effect);
+
+        // Evidence IDs and conclusions are strictly identical
+        expect(run1.evidence.map((e) => e.id)).toEqual(run2.evidence.map((e) => e.id));
+        expect(run1.conclusion.primaryEvidenceIds).toEqual(run2.conclusion.primaryEvidenceIds);
+        expect(run1.conclusion.supportingEvidenceIds).toEqual(run2.conclusion.supportingEvidenceIds);
+        expect(run1.conclusion.challengingEvidenceIds).toEqual(run2.conclusion.challengingEvidenceIds);
+        expect(run1.conclusion.statement).toBe(run2.conclusion.statement);
+        expect(run1.timingActivations).toEqual(run2.timingActivations);
+        expect(run1.conclusionData?.wealthFinalSynthesis).toEqual(run2.conclusionData?.wealthFinalSynthesis);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

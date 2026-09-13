@@ -104,8 +104,8 @@ export function interpretWealthV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
-  const legacyWealth = interpretWealthTheme(horoscope);
-  const rawEvidence = legacyWealth.evidence;
+  const themeInterpretation = interpretWealthTheme(horoscope);
+  const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildWealthEvidence(rawEvidence);
   const evidence = linkWealthEvidence(rawMappedEvidence);
 
@@ -128,7 +128,7 @@ export function interpretWealthV2(
     d2Evidence,
     natalPromiseEvidenceIds,
     rawEvidence,
-    legacyWealth.metadata?.vargaConfirmationStatus
+    themeInterpretation.metadata?.vargaConfirmationStatus
   );
 
   // Dasha Timing & Multi-dimension evaluation
@@ -191,7 +191,7 @@ export function interpretWealthV2(
     statement: buildWealthNatalStatement(
       supportingEvidence,
       challengingEvidence,
-      legacyWealth.conclusion?.summary
+      themeInterpretation.conclusion?.summary
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
@@ -355,7 +355,7 @@ export function interpretWealthV2(
       natalPromise,
       dashaActivation,
       transitTrigger,
-      legacyWealth.conclusion?.summary,
+      themeInterpretation.conclusion?.summary,
       {
         vargaConfirmations,
         conclusionData
