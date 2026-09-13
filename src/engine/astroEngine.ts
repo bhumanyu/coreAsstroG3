@@ -330,7 +330,9 @@ export function calculateHoroscope(
     asOf = asOfParam;
   }
 
-  const resolvedAsOf = asOf ? (typeof asOf === 'string' ? new Date(asOf) : asOf) : undefined;
+  const resolvedAsOf = asOf
+    ? (typeof asOf === 'string' ? new Date(asOf) : asOf)
+    : (birthDetails.dateTimeStr ? new Date(birthDetails.dateTimeStr) : undefined);
 
   const positions = customPositions || generatePlanetaryPositions(birthDetails);
   const ascendantLong = calculateAscendant(birthDetails);

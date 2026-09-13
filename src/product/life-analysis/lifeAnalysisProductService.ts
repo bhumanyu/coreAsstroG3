@@ -18,7 +18,7 @@ import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 
 export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
-  readonly context: AnalysisContext;
+  readonly context?: AnalysisContext;
   readonly router?: AiRouter;
   readonly includeAiExplanation?: boolean;
 }
@@ -38,9 +38,9 @@ export async function runLifeAnalysisProduct(
   options: RunLifeAnalysisProductOptions
 ): Promise<LifeAnalysisProductState> {
   try {
-    const domainOptions: DomainReasoningOptions = {
-      context: options.context
-    };
+    const domainOptions: DomainReasoningOptions | undefined = options.context
+      ? { context: options.context }
+      : undefined;
 
     // Compute Career, Wealth, and LifeAnalysis exactly once
     const career = interpretCareerV2(options.horoscope, domainOptions);

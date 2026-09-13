@@ -1327,9 +1327,13 @@ describe('AI Context Factory', () => {
 
       const currentWithMultipleYogas = {
         ...horoscope.dashaInterpretation!.current!,
+        evidence: (horoscope.dashaInterpretation!.current!.evidence || [])
+          .filter((e: any) => e.level !== 'PRATYANTARDASHA')
+          .concat([pdYogaEvidence1, pdYogaEvidence2]),
         pratyantardasha: {
           ...horoscope.dashaInterpretation!.current!.pratyantardasha!,
           planet: Planet.SUN,
+          evidence: [pdYogaEvidence1, pdYogaEvidence2],
           natal: {
             ...horoscope.dashaInterpretation!.current!.pratyantardasha!.natal,
             planet: Planet.SUN,
