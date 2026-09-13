@@ -144,6 +144,9 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
     expect(productEvidenceIds.length).toBeGreaterThan(0);
 
     for (const id of productEvidenceIds) {
+      if (!contextEvidenceIds.has(id)) {
+        console.error('MISSING ID:', id);
+      }
       expect(contextEvidenceIds.has(id)).toBe(true);
     }
   });
