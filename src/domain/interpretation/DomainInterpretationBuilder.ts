@@ -4,6 +4,7 @@ import type {
   DomainConclusionData,
   DomainDataCompleteness
 } from './DomainInterpretation';
+import { type Clock, systemClock } from '../../core/analysis/Clock';
 import type { DomainEvidence } from './DomainEvidence';
 import type { NatalPromise } from './NatalPromise';
 import type { DashaActivation } from './DashaActivation';
@@ -35,7 +36,8 @@ export interface DomainInterpretationParts {
 }
 
 export interface BuildDomainInterpretationOptions {
-  readonly clock?: () => string;
+  readonly asOf?: string;
+  readonly clock?: Clock | (() => string);
 }
 
 export function buildDomainInterpretation(
@@ -44,11 +46,17 @@ export function buildDomainInterpretation(
 ): DomainInterpretation {
   validateDomainInterpretationParts(parts);
 
-  const timestamp = options?.clock ? options.clock() : new Date().toISOString();
+  const clock = options?.clock;
+  const timestamp = clock
+    ? typeof clock === 'function'
+      ? clock()
+      : clock.now()
+    : systemClock.now();
 
   return Object.freeze({
     domain: parts.domain,
     version: 'V2' as const,
+    asOf: options?.asOf ?? '',
     evidence: Object.freeze([
       ...parts.evidence
     ]),

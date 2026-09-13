@@ -8,6 +8,8 @@ import type { ProductAnalysisService } from '../../product/analysis';
 const mockProductAnalysis: ProductAnalysis = {
   analysisId: 'mock-1',
   asOf: '2026-01-01',
+  engineVersion: 'ASTRO_CORE_V1',
+  rulesVersion: 'PARASHARA_CLASSICAL_RULES_V2',
   status: 'READY',
   chart: {
     ascendantSign: 'ARIES',
@@ -20,7 +22,10 @@ const mockProductAnalysis: ProductAnalysis = {
     zodiacSystem: 'SIDEREAL',
     houseSystem: 'WHOLE_SIGN',
     ayanamsa: 'Lahiri',
-    calculationEngine: 'ASTRO_CORE_V1'
+    calculationEngine: 'ASTRO_CORE_V1',
+    rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+    vargaRules: 'PARASHARA_D10_D2',
+    dashaSystem: 'VIMSHOTTARI'
   },
   birth: {
     name: 'Test',

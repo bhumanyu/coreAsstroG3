@@ -100,13 +100,14 @@ import {
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
+import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
-  const legacyCareer = interpretCareerTheme(horoscope);
-  const rawEvidence = legacyCareer.evidence;
+  const themeInterpretation = interpretCareerTheme(horoscope);
+  const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
   const evidence = linkCareerEvidence(rawMappedEvidence);
 
@@ -145,7 +146,7 @@ export function interpretCareerV2(
     statement: buildCareerNatalStatement(
       supportingEvidence,
       challengingEvidence,
-      legacyCareer.conclusion?.summary
+      themeInterpretation.conclusion?.summary
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
@@ -218,7 +219,7 @@ export function interpretCareerV2(
   const d10Evidence = evidence.filter((item) => item.source === 'D10');
   const d10Relationship = evaluateD10Relationship(
     rawEvidence,
-    legacyCareer.metadata?.vargaConfirmationStatus,
+    themeInterpretation.metadata?.vargaConfirmationStatus,
     d10Evidence,
     natalPromiseEvidenceIds
   );
@@ -272,8 +273,8 @@ export function interpretCareerV2(
     d10Context
   });
 
-  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
-  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+  const context = options?.context;
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
 
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
@@ -350,7 +351,7 @@ export function interpretCareerV2(
       dashaActivation,
       transitTrigger,
       vargaConfirmations,
-      legacyCareer.conclusion?.summary,
+      themeInterpretation.conclusion?.summary,
       d10Relationship,
       {
         timingActivations,
@@ -417,6 +418,8 @@ export function interpretCareerV2(
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01'
+  }, {
+    asOf: context?.asOf ?? ''
   });
 }
 

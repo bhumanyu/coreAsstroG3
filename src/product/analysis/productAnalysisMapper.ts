@@ -12,6 +12,7 @@
  */
 
 import type { BirthDetails, Horoscope } from '../../types';
+import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import { Planet } from '../../types';
 import type {
   LifeAnalysisViewModel,
@@ -48,6 +49,7 @@ export interface ProductAnalysisMapperInput {
   readonly birthDetails: BirthDetails;
   readonly horoscope: Horoscope;
   readonly lifeAnalysisViewModel: LifeAnalysisViewModel;
+  readonly context?: AnalysisContext;
   readonly aiExplanation?: AiExplanationResult;
   readonly asOf?: string;
   readonly warnings?: readonly ProductWarning[];
@@ -193,14 +195,15 @@ function mapBirth(birth: BirthDetails): ProductBirth {
   };
 }
 
-function mapMethodology(birth: BirthDetails): ProductMethodology {
+export function mapMethodology(birth: BirthDetails): ProductMethodology {
   return {
     zodiacSystem: 'SIDEREAL',
     houseSystem: 'WHOLE_SIGN',
     ayanamsa: String(birth.ayanamsa),
     calculationEngine: 'ASTRO_CORE_V1',
     rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
-    vargaRules: 'PARASHARA_D10_D2'
+    vargaRules: 'PARASHARA_D10_D2',
+    dashaSystem: 'VIMSHOTTARI'
   };
 }
 
@@ -690,9 +693,14 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
 export function buildFailedProductAnalysis(
   birthDetails: BirthDetails,
   error: unknown,
-  asOf?: string
+  contextOrAsOf?: AnalysisContext | string
 ): ProductAnalysis {
-  const resolvedAsOf = asOf ?? new Date().toISOString();
+  const isContext = typeof contextOrAsOf === 'object' && contextOrAsOf !== null && 'asOf' in contextOrAsOf;
+  const context = isContext ? (contextOrAsOf as AnalysisContext) : undefined;
+  const resolvedAsOf = context ? context.asOf : (typeof contextOrAsOf === 'string' ? contextOrAsOf : '');
+  const methodology = context ? context.methodology : mapMethodology(birthDetails);
+  const engineVersion = context ? context.engineVersion : (methodology.calculationEngine || 'ASTRO_CORE_V1');
+  const rulesVersion = context ? context.rulesVersion : (methodology.rulesEngine || 'PARASHARA_CLASSICAL_RULES_V2');
   const message = getErrorMessage(error);
   const warning: ProductWarning = {
     code: 'ANALYSIS_FAILED',
@@ -702,11 +710,12 @@ export function buildFailedProductAnalysis(
   };
 
   const birth = mapBirth(birthDetails);
-  const methodology = mapMethodology(birthDetails);
 
   return {
     analysisId: createAnalysisId(birthDetails, resolvedAsOf),
     asOf: resolvedAsOf,
+    engineVersion,
+    rulesVersion,
     status: 'ERROR',
     birth,
     methodology,
@@ -791,12 +800,14 @@ export function buildFailedProductAnalysis(
  * Maps computational engine results and view models into canonical ProductAnalysis.
  */
 export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAnalysis {
-  const asOf = input.asOf || input.horoscope.dashaInterpretation?.current?.at || input.horoscope.dashaInterpretation?.at || new Date().toISOString();
+  const asOf = input.context?.asOf || input.asOf || input.horoscope.dashaInterpretation?.current?.at || input.horoscope.dashaInterpretation?.at || '';
   const analysisId = createAnalysisId(input.birthDetails, asOf);
   const warnings = input.warnings || [];
 
   const birth = mapBirth(input.birthDetails);
-  const methodology = mapMethodology(input.birthDetails);
+  const methodology = input.context?.methodology ?? mapMethodology(input.birthDetails);
+  const engineVersion = input.context?.engineVersion ?? methodology.calculationEngine ?? 'ASTRO_CORE_V1';
+  const rulesVersion = input.context?.rulesVersion ?? methodology.rulesEngine ?? 'PARASHARA_CLASSICAL_RULES_V2';
   const chart = mapChartSummary(input.horoscope);
 
   const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence);
@@ -811,6 +822,8 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
   return {
     analysisId,
     asOf,
+    engineVersion,
+    rulesVersion,
     status,
     birth,
     methodology,

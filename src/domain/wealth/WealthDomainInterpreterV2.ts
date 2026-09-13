@@ -99,13 +99,14 @@ import {
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
+import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretWealthV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
-  const legacyWealth = interpretWealthTheme(horoscope);
-  const rawEvidence = legacyWealth.evidence;
+  const themeInterpretation = interpretWealthTheme(horoscope);
+  const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildWealthEvidence(rawEvidence);
   const evidence = linkWealthEvidence(rawMappedEvidence);
 
@@ -128,7 +129,7 @@ export function interpretWealthV2(
     d2Evidence,
     natalPromiseEvidenceIds,
     rawEvidence,
-    legacyWealth.metadata?.vargaConfirmationStatus
+    themeInterpretation.metadata?.vargaConfirmationStatus
   );
 
   // Dasha Timing & Multi-dimension evaluation
@@ -191,7 +192,7 @@ export function interpretWealthV2(
     statement: buildWealthNatalStatement(
       supportingEvidence,
       challengingEvidence,
-      legacyWealth.conclusion?.summary
+      themeInterpretation.conclusion?.summary
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
@@ -355,7 +356,7 @@ export function interpretWealthV2(
       natalPromise,
       dashaActivation,
       transitTrigger,
-      legacyWealth.conclusion?.summary,
+      themeInterpretation.conclusion?.summary,
       {
         vargaConfirmations,
         conclusionData
@@ -374,8 +375,8 @@ export function interpretWealthV2(
     { dimension: 'SPECULATION' as WealthDimension, effect: cw01Result.dimensionResults.SPECULATION.timingEffect as TimingActivationEffect }
   ]);
 
-  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
-  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+  const context = options?.context;
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
 
   const natalPromises: Partial<Record<WealthDimension, DomainStrength>> = {
     ACCUMULATION: cw01Result.dimensionResults.ACCUMULATION.natalStrength,
@@ -497,6 +498,8 @@ export function interpretWealthV2(
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01'
+  }, {
+    asOf: context?.asOf ?? ''
   });
 }
 

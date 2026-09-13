@@ -1,8 +1,22 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Planet } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+function makeContext(asOf?: string) {
+  return createAnalysisContext({ asOf, methodology: testMethodology });
+}
 import {
   interpretCareerV2,
   resolveCareerConclusionStrength,
@@ -16,6 +30,7 @@ import {
   calculateCareerDataCompleteness,
   buildCareerConclusionData,
   buildCareerHeadline,
+  buildCareerConclusion,
   resolveCurrentActivation,
   resolveCurrentPressure,
   buildCareerDashaStatement,
@@ -42,6 +57,7 @@ import {
 import {
   deriveCareerManifestations
 } from './careerManifestations';
+import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import {
   linkCareerEvidence,
@@ -1440,8 +1456,9 @@ describe('CareerDomainInterpreterV2', () => {
   // 18. End-to-end CW-04 Career Manifestation Pipeline Test
   it('CW-04 end-to-end pipeline: produces deterministic career manifestation synthesis with explicit asOf date', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const result1 = interpretCareerV2(horoscope, { asOf });
-    const result2 = interpretCareerV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result1 = interpretCareerV2(horoscope, { context });
+    const result2 = interpretCareerV2(horoscope, { context });
 
     // Verify presence and reasoning version
     const manifestations = result1.conclusionData?.careerManifestationSynthesis;
@@ -1513,8 +1530,9 @@ describe('CareerDomainInterpreterV2', () => {
   // End-to-end CW-05 Career Final Synthesis Pipeline Test
   it('CW-05 end-to-end pipeline: produces deterministic career final synthesis with multi-axis evaluation and provenance', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const result1 = interpretCareerV2(horoscope, { asOf });
-    const result2 = interpretCareerV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result1 = interpretCareerV2(horoscope, { context });
+    const result2 = interpretCareerV2(horoscope, { context });
 
     const finalSynthesis = result1.conclusionData?.careerFinalSynthesis;
     expect(finalSynthesis).toBeDefined();
@@ -1558,5 +1576,138 @@ describe('CareerDomainInterpreterV2', () => {
     expect(result1.conclusionData?.careerFinalSynthesis).toEqual(
       result2.conclusionData?.careerFinalSynthesis
     );
+  });
+
+  // P0-01 Canonicalization Suite
+  describe('P0-01 Canonicalization & Non-Double-Counting Invariants', () => {
+    // 1. Theme interpretation conclusion summary is inert fallback prose and does not alter strength/status
+    it('proves themeInterpretation conclusion summary is inert fallback prose and cannot change conclusion strength or status', () => {
+      const v2 = interpretCareerV2(horoscope);
+
+      // CW-01 is authoritative for strength
+      expect(v2.conclusion.strength).toBeDefined();
+      expect(v2.natalPromise.strength).toBeDefined();
+      expect(v2.conclusionData?.natalStatus).toBe(v2.natalPromise.strength);
+
+      // Verify directly on buildCareerConclusion: passing different summary strings or undefined never alters conclusion strength or status
+      const customSummary = 'Completely arbitrary custom summary string';
+      const careerConclusionData = v2.conclusionData as CareerConclusionData | undefined;
+      const statementWithSummary = buildCareerConclusion(
+        v2.natalPromise,
+        v2.dashaActivation,
+        v2.transitTrigger,
+        v2.vargaConfirmations,
+        customSummary,
+        careerConclusionData?.d10Relationship,
+        {
+          timingActivations: v2.timingActivations,
+          conflicts: v2.conflicts,
+          manifestations: v2.manifestations,
+          conclusionData: careerConclusionData
+        }
+      );
+      const statementWithoutSummary = buildCareerConclusion(
+        v2.natalPromise,
+        v2.dashaActivation,
+        v2.transitTrigger,
+        v2.vargaConfirmations,
+        undefined,
+        careerConclusionData?.d10Relationship,
+        {
+          timingActivations: v2.timingActivations,
+          conflicts: v2.conflicts,
+          manifestations: v2.manifestations,
+          conclusionData: careerConclusionData
+        }
+      );
+
+      // Because extra.conclusionData.headline is non-empty, summary is not even present in the statement
+      expect(statementWithSummary).toBe(statementWithoutSummary);
+      expect(statementWithSummary).not.toContain(customSummary);
+    });
+
+    // 2. Non-double-counting invariant (lines 295-300)
+    it('proves traceability vs natal scoring non-double-counting invariant: DASHA items are present in trace/mergedEvidence but have 0 natal contribution', () => {
+      const asOf = '2024-06-15T12:00:00.000Z';
+      const context = makeContext(asOf);
+      const result = interpretCareerV2(horoscope, { context });
+
+      // (a) mergedEvidence contains items with source === 'DASHA' (traceability present)
+      const dashaItems = result.evidence.filter((e) => e.source === 'DASHA');
+      expect(dashaItems.length).toBeGreaterThan(0);
+      for (const item of dashaItems) {
+        expect(item.phase).toBe('DASHA_ACTIVATION');
+        expect(item.phase).not.toBe('NATAL_PROMISE');
+      }
+
+      // (b) Natal promise strength / natal scoring output excludes source === 'DASHA' (zero contribution)
+      const natalPromiseEvidence = result.evidence.filter((e) => e.phase === 'NATAL_PROMISE');
+      expect(natalPromiseEvidence.some((e) => e.source === 'DASHA')).toBe(false);
+
+      const natalSupporting = natalPromiseEvidence.filter((e) => e.polarity === 'SUPPORTING');
+      const natalChallenging = natalPromiseEvidence.filter((e) => e.polarity === 'CHALLENGING');
+      const expectedNatalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
+      expect(result.natalPromise.strength).toBe(expectedNatalStrength);
+
+      // Even if DASHA items are added or altered, careerManifestationSynthesis excludes source === 'DASHA' from natal scoring
+      const dashaSyn = result.conclusionData?.careerDashaSynthesis;
+      const timingSyn = result.conclusionData?.careerTimingSynthesis;
+      const synWithDasha = synthesizeCareerManifestations(
+        result.evidence,
+        dashaSyn,
+        timingSyn,
+        horoscope
+      );
+      const synWithoutDasha = synthesizeCareerManifestations(
+        result.evidence.filter((e) => e.source !== 'DASHA'),
+        dashaSyn,
+        timingSyn,
+        horoscope
+      );
+      expect(synWithDasha).toEqual(synWithoutDasha);
+    });
+
+    // 3. asOf determinism golden test (independent of machine wall-clock)
+    it('proves asOf determinism: identical strength, status, timing synthesis, and evidence IDs across invocations independent of machine wall-clock', () => {
+      const explicitAsOf = '2026-06-01T00:00:00.000Z';
+
+      vi.useFakeTimers();
+      try {
+        const context = makeContext(explicitAsOf);
+        // Run 1: Clock set to 2021
+        vi.setSystemTime(new Date('2021-03-15T08:00:00.000Z'));
+        const run1 = interpretCareerV2(horoscope, { context });
+
+        // Run 2: Clock set to 2030
+        vi.setSystemTime(new Date('2030-11-20T17:30:00.000Z'));
+        const run2 = interpretCareerV2(horoscope, { context });
+
+        // Wall-clock metadata stamp changes
+        expect(run1.generatedAt).not.toBe(run2.generatedAt);
+
+        // Core domain outputs are strictly identical
+        expect(run1.conclusion.strength).toBe(run2.conclusion.strength);
+        expect(run1.natalPromise.strength).toBe(run2.natalPromise.strength);
+        expect(run1.natalPromise.confidence).toBe(run2.natalPromise.confidence);
+        expect(run1.natalPromise.statement).toBe(run2.natalPromise.statement);
+        expect(run1.conclusionData?.natalStatus).toBe(run2.conclusionData?.natalStatus);
+        expect(run1.conclusionData?.overallStatus).toBe(run2.conclusionData?.overallStatus);
+        expect(run1.dashaActivation.effect).toBe(run2.dashaActivation.effect);
+        expect(run1.transitTrigger.effect).toBe(run2.transitTrigger.effect);
+        expect(run1.conclusionData?.currentActivation).toBe(run2.conclusionData?.currentActivation);
+        expect(run1.conclusionData?.currentPressure).toBe(run2.conclusionData?.currentPressure);
+
+        // Evidence IDs and conclusions are strictly identical
+        expect(run1.evidence.map((e) => e.id)).toEqual(run2.evidence.map((e) => e.id));
+        expect(run1.conclusion.primaryEvidenceIds).toEqual(run2.conclusion.primaryEvidenceIds);
+        expect(run1.conclusion.supportingEvidenceIds).toEqual(run2.conclusion.supportingEvidenceIds);
+        expect(run1.conclusion.challengingEvidenceIds).toEqual(run2.conclusion.challengingEvidenceIds);
+        expect(run1.conclusion.statement).toBe(run2.conclusion.statement);
+        expect(run1.timingActivations).toEqual(run2.timingActivations);
+        expect(run1.conclusionData?.careerFinalSynthesis).toEqual(run2.conclusionData?.careerFinalSynthesis);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

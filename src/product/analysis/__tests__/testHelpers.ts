@@ -7,6 +7,8 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
   const defaultAnalysis: ProductAnalysis = {
     analysisId: 'pa_test_123',
     asOf: '2026-01-15T08:30:00.000Z',
+    engineVersion: 'ASTRO_CORE_V1',
+    rulesVersion: 'PARASHARA_CLASSICAL_RULES_V2',
     status: 'READY',
     birth: {
       name: 'Test Chart',
@@ -21,7 +23,10 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       zodiacSystem: 'SIDEREAL',
       houseSystem: 'PLACIDUS',
       ayanamsa: 'LAHIRI',
-      calculationEngine: 'SWISSEPH'
+      calculationEngine: 'SWISSEPH',
+      rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+      vargaRules: 'PARASHARA_D10_D2',
+      dashaSystem: 'VIMSHOTTARI'
     },
     chart: {
       ascendantSign: 'Capricorn',

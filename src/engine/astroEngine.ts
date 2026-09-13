@@ -330,7 +330,9 @@ export function calculateHoroscope(
     asOf = asOfParam;
   }
 
-  const resolvedAsOf = asOf ?? new Date();
+  const resolvedAsOf = asOf
+    ? (typeof asOf === 'string' ? new Date(asOf) : asOf)
+    : (birthDetails.dateTimeStr ? new Date(birthDetails.dateTimeStr) : undefined);
 
   const positions = customPositions || generatePlanetaryPositions(birthDetails);
   const ascendantLong = calculateAscendant(birthDetails);
@@ -478,10 +480,12 @@ export function calculateHoroscope(
 
   const rawDashaInterpretation = analyzeDashaInterpretation(dashaInterpretationInput);
   let activeDasha = null;
-  try {
-    activeDasha = analyzeActiveDasha(dashaInterpretationInput, resolvedAsOf);
-  } catch {
-    activeDasha = null;
+  if (resolvedAsOf && !isNaN(resolvedAsOf.getTime())) {
+    try {
+      activeDasha = analyzeActiveDasha(dashaInterpretationInput, resolvedAsOf);
+    } catch {
+      activeDasha = null;
+    }
   }
 
   const dashaInterpretation: DashaInterpretationReport = Object.freeze({

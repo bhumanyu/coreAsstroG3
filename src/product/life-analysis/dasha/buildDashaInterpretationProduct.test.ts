@@ -5,6 +5,7 @@ import { buildDashaInterpretationProduct } from './buildDashaInterpretationProdu
 import { mapActiveDasha } from './activeDashaMapper';
 import { buildLifeAnalysisViewModel } from '../lifeAnalysisMapper';
 import { runLifeAnalysisProduct } from '../lifeAnalysisProductService';
+import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from '../../../integration/stage1/stage1GoldenFixture';
 import { buildLifeAnalysis } from '../../../domain/synthesis';
 import type { ActiveDashaInterpretation } from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
@@ -189,8 +190,21 @@ describe('D03 — Life Analysis Active Dasha Product Layer', () => {
 
   it('Test 11: surfaces deterministic activeDasha across full runLifeAnalysisProduct pipeline matching horoscope.dashaInterpretation.current', async () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const context = createAnalysisContext({
+      asOf: fixedAsOf,
+      methodology: {
+        zodiacSystem: 'SIDEREAL',
+        houseSystem: 'WHOLE_SIGN',
+        ayanamsa: 'LAHIRI',
+        calculationEngine: 'ASTRO_CORE_V1',
+        rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+        vargaRules: 'PARASHARA_D10_D2',
+        dashaSystem: 'VIMSHOTTARI'
+      }
+    });
     const productState = await runLifeAnalysisProduct({
       horoscope,
+      context,
       includeAiExplanation: false
     });
 
