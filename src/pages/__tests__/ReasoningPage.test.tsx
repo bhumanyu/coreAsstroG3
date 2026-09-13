@@ -109,7 +109,7 @@ describe('ReasoningPage (P-UI-06)', () => {
     );
 
     // Initial focus label
-    expect(screen.getByText('All Domains')).toBeInTheDocument();
+    expect(screen.getAllByText('All Domains')[0]).toBeInTheDocument();
 
     // Both Career and Wealth are in the document initially
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('ReasoningPage (P-UI-06)', () => {
     fireEvent.click(wealthTab);
 
     // Active View / Focus indicator updates
-    expect(screen.getByText('Wealth Domain')).toBeInTheDocument();
+    expect(screen.getAllByText('Wealth Domain')[0]).toBeInTheDocument();
 
     // Both domains STILL exist in the document (not gated)
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();

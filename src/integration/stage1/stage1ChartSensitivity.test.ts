@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { runLifeAnalysisProduct } from '../../product/life-analysis/lifeAnalysisProductService';
 import {
   STAGE1_GOLDEN_HOROSCOPE,
+  STAGE1_GOLDEN_CONTEXT,
   createTestHoroscope
 } from './stage1GoldenFixture';
 import type { LifeAnalysisProductState } from '../../product/life-analysis/lifeAnalysisTypes';
@@ -45,10 +46,12 @@ describe('Stage 1 - Life Analysis Chart Sensitivity', () => {
   it('demonstrates chart sensitivity between distinct horoscopes across evidence and chart facts', async () => {
     const resultA = await runLifeAnalysisProduct({
       horoscope: horoscopeA,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
     const resultB = await runLifeAnalysisProduct({
       horoscope: horoscopeB,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -85,10 +88,12 @@ describe('Stage 1 - Life Analysis Chart Sensitivity', () => {
   it('demonstrates career-specific evidence sensitivity across distinct charts', async () => {
     const resultA = await runLifeAnalysisProduct({
       horoscope: horoscopeA,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
     const resultB = await runLifeAnalysisProduct({
       horoscope: horoscopeB,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -103,10 +108,12 @@ describe('Stage 1 - Life Analysis Chart Sensitivity', () => {
   it('demonstrates wealth-specific evidence sensitivity across distinct charts', async () => {
     const resultA = await runLifeAnalysisProduct({
       horoscope: horoscopeA,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
     const resultB = await runLifeAnalysisProduct({
       horoscope: horoscopeB,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 

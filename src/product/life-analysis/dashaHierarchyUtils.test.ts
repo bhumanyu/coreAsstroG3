@@ -12,6 +12,9 @@ import {
   STAGE1_GOLDEN_CAREER,
   STAGE1_GOLDEN_WEALTH
 } from '../../integration/stage1/stage1GoldenFixture';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { buildLifeAnalysis } from '../../domain/synthesis';
 import { resolveLifeAnalysisEvidence } from './lifeAnalysisEvidence';
 import { reasonWithLocalRules } from '../../ai/providers/local/localVedicRulesEngine';
@@ -232,13 +235,26 @@ describe('D07-C: Missing Period Hierarchy Guard Tests', () => {
 
 describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
   it('proves deterministic hierarchy survives AiContext projection and local reasoning engine', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
-      asOf: '2024-06-01T00:00:00.000Z'
+    const asOf = '2024-06-01T00:00:00.000Z';
+    const analysisContext = createAnalysisContext({
+      asOf,
+      methodology: {
+        zodiacSystem: 'SIDEREAL',
+        houseSystem: 'WHOLE_SIGN',
+        ayanamsa: 'LAHIRI',
+        calculationEngine: 'ASTRO_CORE_V1',
+        rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+        vargaRules: 'PARASHARA_D10_D2',
+        dashaSystem: 'VIMSHOTTARI'
+      }
     });
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, asOf);
+    const career = interpretCareerV2(horoscope, { context: analysisContext });
+    const wealth = interpretWealthV2(horoscope, { context: analysisContext });
 
     const context = buildAiContext(horoscope, {
-      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH],
-      lifeAnalysis: buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH])
+      domainInterpretations: [career, wealth],
+      lifeAnalysis: buildLifeAnalysis([career, wealth])
     });
 
     // 1. Assert Career Hierarchy facts in AiContext

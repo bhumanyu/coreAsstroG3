@@ -57,6 +57,8 @@ import type {
   Stage1IntegrationInput
 } from './stage1IntegrationTypes';
 import type { BirthDetails, Horoscope } from '../../types';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import type { AnalysisContext, ProductMethodology } from '../../core/analysis/AnalysisContext';
 
 export function createTestHoroscope(overrideBirthDetails?: Partial<BirthDetails>): Horoscope {
   const details: BirthDetails = {
@@ -83,6 +85,27 @@ export const STAGE1_GOLDEN_INPUT: Stage1IntegrationInput = Object.freeze({
   task: 'CHART_SYNTHESIS',
   requestId: 'stage1-golden-request-001'
 });
+
+export const STAGE1_TEST_METHODOLOGY: ProductMethodology = Object.freeze({
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+});
+
+export function createStage1TestContext(asOf?: string | Date): AnalysisContext {
+  return createAnalysisContext({
+    asOf: asOf ?? '2026-01-01T00:00:00.000Z',
+    methodology: STAGE1_TEST_METHODOLOGY
+  });
+}
+
+export const STAGE1_GOLDEN_CONTEXT: AnalysisContext = Object.freeze(
+  createStage1TestContext('2026-01-01T00:00:00.000Z')
+);
 
 export const STAGE1_GOLDEN_EXPECTATION: Stage1GoldenExpectation = Object.freeze({
   career: Object.freeze({

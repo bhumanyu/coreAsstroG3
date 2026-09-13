@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { runLifeAnalysisProduct } from '../../product/life-analysis/lifeAnalysisProductService';
 import {
-  STAGE1_GOLDEN_HOROSCOPE
+  STAGE1_GOLDEN_HOROSCOPE,
+  STAGE1_GOLDEN_CONTEXT
 } from './stage1GoldenFixture';
 
 describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates full pipeline execution with career and wealth domain contracts', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -30,6 +32,7 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates Career contract fields and why evidence', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -46,6 +49,7 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates Wealth contract with all four dimensions and overallStatus', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -64,6 +68,7 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates overall vs speculation independence as separate keys in wealthDetail', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -76,6 +81,7 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates LOCAL_ONLY execution without AI produces READY status and valid domains', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -87,10 +93,12 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates deterministic repeatability across repeated runs', async () => {
     const resultA = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
     const resultB = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -100,6 +108,7 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates deep immutability of returned product state', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -116,6 +125,7 @@ describe('Stage 1 - Life Analysis Product Validation', () => {
   it('validates golden smoke test for all essential LifeAnalysisViewModel contracts', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 

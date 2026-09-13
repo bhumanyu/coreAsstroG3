@@ -3,13 +3,14 @@ import { runLifeAnalysisProduct } from '../../product/life-analysis/lifeAnalysis
 import { resolveLifeAnalysisEvidence } from '../../product/life-analysis/lifeAnalysisEvidence';
 import { buildAiContext } from '../../ai/context/aiContextFactory';
 import * as aiExplanationModule from '../../ai/product/aiExplanationService';
-import { STAGE1_GOLDEN_HOROSCOPE } from './stage1GoldenFixture';
+import { STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_CONTEXT } from './stage1GoldenFixture';
 import type { LifeAnalysis } from '../../domain/synthesis';
 
 describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () => {
   it('validates core traceability contracts for every career evidence item', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -29,6 +30,7 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
   it('validates rule traceability for evidence items with rules', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -47,6 +49,7 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
   it('validates chart-fact traceability for evidence items with chart facts', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -64,6 +67,7 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
   it('validates related-evidence integrity within careerWhy evidence set', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -129,6 +133,7 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
   it('validates same-evidence-universe between deterministic LifeAnalysis why evidence and AiContext', async () => {
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
@@ -148,6 +153,7 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
 
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: true
     });
 

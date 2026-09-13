@@ -803,6 +803,44 @@ describe('astroEngine', () => {
     expect(wealth?.evidence.length).toBeGreaterThan(0);
     expect(wealth?.metadata).toBeDefined();
   });
+
+  it('guardrail: verifies absence of birth-date fallback and independence of natal fields from analysis asOf', () => {
+    // 1. Without asOf, dasha current is undefined (no fallback to birthDetails.dateTimeStr)
+    const horoscopeWithoutAsOf = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    expect(horoscopeWithoutAsOf.dashaInterpretation?.current).toBeUndefined();
+
+    // 2. With asOf at birth time (1988-05-08T09:30:00+05:30), Moon mahadasha was running
+    const horoscopeAtBirth = calculateHoroscope(
+      CANONICAL_BIRTH_DETAILS,
+      undefined,
+      CANONICAL_BIRTH_DETAILS.dateTimeStr
+    );
+    expect(horoscopeAtBirth.dashaInterpretation?.current).toBeDefined();
+    expect(horoscopeAtBirth.dashaInterpretation?.current?.mahadasha.planet).toBe(Planet.MOON);
+
+    // 3. With explicit asOf distinct from birth time (2024-06-01), Jupiter mahadasha is running
+    const analysisAsOf = '2024-06-01T00:00:00.000Z';
+    const horoscopeWithAsOf = calculateHoroscope(
+      CANONICAL_BIRTH_DETAILS,
+      undefined,
+      analysisAsOf
+    );
+    expect(horoscopeWithAsOf.dashaInterpretation?.current).toBeDefined();
+    expect(horoscopeWithAsOf.dashaInterpretation?.current?.at).toBe(analysisAsOf);
+    expect(horoscopeWithAsOf.dashaInterpretation?.current?.mahadasha.planet).toBe(Planet.JUPITER);
+    expect(horoscopeWithAsOf.dashaInterpretation?.current?.mahadasha.planet).not.toBe(
+      horoscopeAtBirth.dashaInterpretation?.current?.mahadasha.planet
+    );
+
+    // 4. Assert that all natal fields (ascendant, rasi chart, divisional charts, planetary positions)
+    // are completely identical and unaffected by asOf
+    expect(horoscopeWithAsOf.ascendant).toEqual(horoscopeWithoutAsOf.ascendant);
+    expect(horoscopeWithAsOf.rasiChart).toEqual(horoscopeWithoutAsOf.rasiChart);
+    expect(horoscopeWithAsOf.divisionalCharts).toEqual(horoscopeWithoutAsOf.divisionalCharts);
+    expect(horoscopeWithAsOf.planetaryPositions).toEqual(horoscopeWithoutAsOf.planetaryPositions);
+    expect(horoscopeWithAsOf.houseLordship).toEqual(horoscopeWithoutAsOf.houseLordship);
+    expect(horoscopeWithAsOf.functionalRoles).toEqual(horoscopeWithoutAsOf.functionalRoles);
+  });
 });
 
 
