@@ -286,4 +286,71 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     // Underlying deterministic evidence IDs differ across distinct charts
     expect(evidenceIdsA).not.toEqual(evidenceIdsB);
   });
+
+  it('Test 7: executes CW-01 reasoning implicitly, passing asOf to domain interpreters', async () => {
+    const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
+    const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
+    const testAsOf = '2026-06-01T12:00:00.000Z';
+
+    const result = await runLifeAnalysisProduct({
+      horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      includeAiExplanation: false,
+      asOf: testAsOf
+    });
+
+    expect(careerSpy).toHaveBeenCalledWith(
+      STAGE1_GOLDEN_HOROSCOPE,
+      expect.objectContaining({
+        asOf: testAsOf
+      })
+    );
+    expect(careerSpy.mock.calls[0][1]).not.toHaveProperty('strategy');
+    expect(wealthSpy).toHaveBeenCalledWith(
+      STAGE1_GOLDEN_HOROSCOPE,
+      expect.objectContaining({
+        asOf: testAsOf
+      })
+    );
+    expect(wealthSpy.mock.calls[0][1]).not.toHaveProperty('strategy');
+
+    const careerResult = careerSpy.mock.results[0].value;
+    const wealthResult = wealthSpy.mock.results[0].value;
+
+    expect(careerResult.reasoningVersion).toBe('CW-01');
+    expect(wealthResult.reasoningVersion).toBe('CW-01');
+    expect(careerResult.reasoningTrace).toBeDefined();
+    expect(wealthResult.reasoningTrace).toBeDefined();
+
+    // Verify view model contains synthesized CW-01 outputs
+    expect(result.analysis?.careerDetail?.manifestationSynthesis).toBeDefined();
+    expect(result.analysis?.careerDetail?.finalSynthesis).toBeDefined();
+    expect(result.analysis?.wealthDetail?.manifestationSynthesis).toBeDefined();
+    expect(result.analysis?.wealthDetail?.finalSynthesis).toBeDefined();
+
+    careerSpy.mockRestore();
+    wealthSpy.mockRestore();
+  });
+
+  it('Test 8: invariant - pipeline cannot be configured to run LEGACY and always returns CW-01 reasoningVersion', async () => {
+    const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
+    const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
+
+    // Even if an untyped caller attempts to pass strategy: 'LEGACY'
+    const result = await runLifeAnalysisProduct({
+      horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      includeAiExplanation: false,
+      ...({ strategy: 'LEGACY' } as any)
+    });
+
+    const careerResult = careerSpy.mock.results[0].value;
+    const wealthResult = wealthSpy.mock.results[0].value;
+
+    expect(careerResult.reasoningVersion).toBe('CW-01');
+    expect(wealthResult.reasoningVersion).toBe('CW-01');
+    expect(result.analysis?.careerDetail?.finalSynthesis).toBeDefined();
+    expect(result.analysis?.wealthDetail?.finalSynthesis).toBeDefined();
+
+    careerSpy.mockRestore();
+    wealthSpy.mockRestore();
+  });
 });

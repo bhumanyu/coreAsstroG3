@@ -10,19 +10,19 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     asOf: '2024-06-01T00:00:00.000Z'
   });
 
-  it('X1: Legacy path remains default when options is omitted or LEGACY', () => {
-    const legacyResult1 = interpretWealthV2(canonicalHoroscope);
-    const legacyResult2 = interpretWealthV2(canonicalHoroscope, { strategy: 'LEGACY' });
+  it('X1: CW-01 is executed unconditionally when options is omitted', () => {
+    const result = interpretWealthV2(canonicalHoroscope);
 
-    expect(legacyResult1.domain).toBe('WEALTH');
-    expect(legacyResult1.reasoningVersion).toBeUndefined();
-    expect(legacyResult2.domain).toBe('WEALTH');
-    expect(legacyResult2.reasoningVersion).toBeUndefined();
-    expect(legacyResult1.conclusion.strength).toBe(legacyResult2.conclusion.strength);
+    expect(result.domain).toBe('WEALTH');
+    expect(result.reasoningVersion).toBe('CW-01');
+    expect(result.reasoningTrace).toBeDefined();
+    expect(result.reasoningTrace?.primaryPromise).toBeDefined();
+    expect(result.conclusionData?.currentActivation).toBeDefined();
+    expect(result.conclusionData?.currentPressure).toBeDefined();
   });
 
-  it('X2: CW01 strategy returns valid reasoning trace and CW-01 version on canonical chart', () => {
-    const cw01Result = interpretWealthV2(canonicalHoroscope, { strategy: 'CW01' });
+  it('X2: returns valid reasoning trace and CW-01 version on canonical chart', () => {
+    const cw01Result = interpretWealthV2(canonicalHoroscope);
 
     expect(cw01Result.domain).toBe('WEALTH');
     expect(cw01Result.reasoningVersion).toBe('CW-01');

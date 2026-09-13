@@ -1522,7 +1522,7 @@ describe('WealthDomainInterpreterV2', () => {
     // GAINS dimension concrete verification on canonical chart
     const gainsSynthesis = wealthTiming.dimensions.GAINS;
     expect(gainsSynthesis.dashaEffect).toBe('NEUTRAL');
-    expect(gainsSynthesis.natalPromise).toBe('STRONG');
+    expect(gainsSynthesis.natalPromise).toBe('VERY_STRONG');
     expect(gainsSynthesis.overallEffect).toBe('DOES_NOT_ACTIVATE');
   });
 

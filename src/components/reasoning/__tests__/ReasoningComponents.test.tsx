@@ -654,8 +654,8 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Wealth Transit Timing')).toBeInTheDocument();
       expect(screen.getByText('Saturn transiting 10th activates leadership responsibilities.')).toBeInTheDocument();
       expect(screen.getByText('Rahu transiting 2nd brings unpredictable financial fluctuations.')).toBeInTheDocument();
-      expect(screen.getByText('Direct Trigger')).toBeInTheDocument();
-      expect(screen.getByText('Active Friction')).toBeInTheDocument();
+      expect(screen.getByText('Trigger')).toBeInTheDocument();
+      expect(screen.getByText('Challenge')).toBeInTheDocument();
     });
 
     it('renders "Unavailable" when transit status is UNAVAILABLE without shared source', () => {

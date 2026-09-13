@@ -23,6 +23,7 @@ export interface ProductAnalysisDependencies {
   readonly runPipeline: (options: {
     readonly horoscope: Horoscope;
     readonly includeAiExplanation?: boolean;
+    readonly asOf?: Date | string;
   }) => Promise<LifeAnalysisProductState>;
 }
 
@@ -33,7 +34,7 @@ export const defaultProductAnalysisDependencies: ProductAnalysisDependencies = O
 
 export interface AnalyzeOptions {
   readonly includeAiExplanation?: boolean;
-  readonly asOf?: string;
+  readonly asOf?: Date | string;
 }
 
 export class ProductAnalysisService {
@@ -59,12 +60,14 @@ export class ProductAnalysisService {
     birthDetails: BirthDetails,
     options?: AnalyzeOptions
   ): Promise<ProductAnalysis> {
+    const asOfString = options?.asOf ? (options.asOf instanceof Date ? options.asOf.toISOString() : options.asOf) : undefined;
     try {
       const horoscope = this.deps.calculateHoroscope(birthDetails);
       this._lastHoroscope = horoscope;
       const pipelineState = await this.deps.runPipeline({
         horoscope,
-        includeAiExplanation: options?.includeAiExplanation ?? true
+        includeAiExplanation: options?.includeAiExplanation ?? true,
+        ...(options?.asOf ? { asOf: options.asOf } : {})
       });
       this._lastPipelineState = pipelineState;
 
@@ -72,7 +75,7 @@ export class ProductAnalysisService {
         return buildFailedProductAnalysis(
           birthDetails,
           pipelineState.errorMessage || 'Life analysis computation failed.',
-          options?.asOf
+          asOfString
         );
       }
 
@@ -81,10 +84,10 @@ export class ProductAnalysisService {
         horoscope,
         lifeAnalysisViewModel: pipelineState.analysis,
         aiExplanation: pipelineState.aiExplanation,
-        asOf: options?.asOf
+        asOf: asOfString
       });
     } catch (error: unknown) {
-      return buildFailedProductAnalysis(birthDetails, error, options?.asOf);
+      return buildFailedProductAnalysis(birthDetails, error, asOfString);
     }
   }
 }

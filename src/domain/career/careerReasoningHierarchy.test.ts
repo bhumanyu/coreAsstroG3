@@ -12,19 +12,19 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
     asOf: '2024-06-01T00:00:00.000Z'
   });
 
-  it('X1: Legacy path remains default when options is omitted or LEGACY', () => {
-    const legacyResult1 = interpretCareerV2(canonicalHoroscope);
-    const legacyResult2 = interpretCareerV2(canonicalHoroscope, { strategy: 'LEGACY' });
+  it('X1: CW-01 is executed unconditionally when options is omitted', () => {
+    const result = interpretCareerV2(canonicalHoroscope);
 
-    expect(legacyResult1.domain).toBe('CAREER');
-    expect(legacyResult1.reasoningVersion).toBeUndefined();
-    expect(legacyResult2.domain).toBe('CAREER');
-    expect(legacyResult2.reasoningVersion).toBeUndefined();
-    expect(legacyResult1.conclusion.strength).toBe(legacyResult2.conclusion.strength);
+    expect(result.domain).toBe('CAREER');
+    expect(result.reasoningVersion).toBe('CW-01');
+    expect(result.reasoningTrace).toBeDefined();
+    expect(result.reasoningTrace?.primaryPromise).toBeDefined();
+    expect(result.conclusionData?.currentActivation).toBeDefined();
+    expect(result.conclusionData?.currentPressure).toBeDefined();
   });
 
-  it('X2: CW01 strategy returns valid reasoning trace and CW-01 version on canonical chart', () => {
-    const cw01Result = interpretCareerV2(canonicalHoroscope, { strategy: 'CW01' });
+  it('X2: returns valid reasoning trace and CW-01 version on canonical chart', () => {
+    const cw01Result = interpretCareerV2(canonicalHoroscope);
 
     expect(cw01Result.domain).toBe('CAREER');
     expect(cw01Result.reasoningVersion).toBe('CW-01');
@@ -389,7 +389,7 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
         asOf: '2024-06-01T00:00:00.000Z'
       });
-      const result = interpretCareerV2(horoscope, { strategy: 'CW01' });
+      const result = interpretCareerV2(horoscope);
 
       expect(result.manifestations).toBeDefined();
       expect(result.manifestations.length).toBe(7);

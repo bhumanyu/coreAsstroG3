@@ -234,241 +234,32 @@ export function interpretCareerV2(
   });
   const vargaConfirmations: readonly VargaConfirmation[] = [vargaConfirmation];
 
-  // If CW01 strategy is requested, resolve through CW01 reasoning hierarchy
-  if (options?.strategy === 'CW01') {
-    const cw01Result = evaluateCareerReasoningHierarchy({
-      evidence,
-      d10Confirmation: vargaConfirmation,
-      dashaTimings: {
-        md: {
-          level: 'MD',
-          effect: mdActivation.effect,
-          evidenceIds: mdActivation.evidenceIds ?? [],
-          confidence: 1.0
-        },
-        ad: {
-          level: 'AD',
-          effect: adActivation.effect,
-          evidenceIds: adActivation.evidenceIds ?? [],
-          confidence: 1.0
-        },
-        pd: {
-          level: 'PD',
-          effect: pdActivation.effect,
-          evidenceIds: pdActivation.evidenceIds ?? [],
-          confidence: 1.0
-        }
+  // CW-01 reasoning hierarchy is the authoritative production reasoning path
+  const cw01Result = evaluateCareerReasoningHierarchy({
+    evidence,
+    d10Confirmation: vargaConfirmation,
+    dashaTimings: {
+      md: {
+        level: 'MD',
+        effect: mdActivation.effect,
+        evidenceIds: mdActivation.evidenceIds ?? [],
+        confidence: 1.0
       },
-      transitEvidence,
-      rawConflicts: conflicts
-    });
-
-    const d10Context: D10CareerContext = {
-      relationship: d10Relationship,
-      statement: buildD10Statement(d10Evidence, d10Relationship)
-    };
-
-    const careerDashaSynthesis = buildCareerDashaSynthesis({
-      dashaInterpretation: horoscope.dashaInterpretation,
-      d10Context
-    });
-
-    const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
-    const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
-
-    let careerTimingSynthesis: CareerTimingSynthesis;
-    if (asOfDate && !isNaN(asOfDate.getTime())) {
-      const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
-      const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
-      careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
-    } else {
-      careerTimingSynthesis = Object.freeze({
-        natalPromise: cw01Result.natalStrength,
-        dashaEffect: careerDashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA',
-        transitEffect: 'INSUFFICIENT_DATA',
-        overallEffect: 'INSUFFICIENT_DATA',
-        confidence: 0.5,
-        factors: Object.freeze([]),
-        summary: 'Timing calculation unavailable: asOf date not provided.'
-      });
-    }
-    // INVARIANT & ARCHITECTURAL CONTRACT:
-    // (a) Traceability vs. Natal Scoring Non-Double-Counting Invariant:
-    //     These DASHA-sourced evidence items are injected into `mergedEvidence` for traceability and auditability only.
-    //     The manifestation resolver (synthesizeCareerManifestations / resolveManifestation) explicitly excludes
-    //     items with `source === 'DASHA'` from natal scoring and reads dasha contributions directly from the
-    //     separate `careerDashaSynthesis` parameter, guaranteeing zero double-counting of dasha influences.
-    // (b) Strength vs. Priority Distinction:
-    //     `strength` here encodes factor magnitude (derived from `f.weight >= 2.0` -> 'STRONG' vs 'MODERATE')
-    //     while `priority` (derived from `getCareerDashaEvidencePriority`) encodes the MD > AD > PD temporal and
-    //     semantic hierarchy. These two are intentionally distinct orthogonal concepts.
-    // TODO: Architectural note on evidence roles: Dasha factor evidence currently uses a blanket `role: 'MODIFIER'`.
-    //       A period-derived role mapping (e.g. MD -> PRIMARY-equivalent, AD -> MODIFIER, PD -> REFINEMENT)
-    //       can be evaluated if the EvidenceRole union is extended; currently the temporal/semantic hierarchy is cleanly
-    //       governed by the `priority` field without risking cross-engine regressions.
-    const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
-      const priority = getCareerDashaEvidencePriority(f.period, f.category);
-
-      return createDomainEvidence({
-        id: f.id,
-        sourceType: 'DASHA',
-        domain: 'CAREER',
-        role: 'MODIFIER',
-        phase: 'DASHA_ACTIVATION',
-        source: 'DASHA',
-        statement: f.statement,
-        polarity: f.direction === 'SUPPORT' ? 'SUPPORTING' : f.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
-        strength: f.weight >= 2.0 ? 'STRONG' : 'MODERATE',
-        priority,
-        ruleId: f.id,
-        ...(f.houses?.[0] !== undefined ? { house: f.houses[0] } : {})
-      });
-    });
-
-    const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
-
-    const conclusionData = buildCareerConclusionData(
-      cw01Result.natalStrength,
-      d10Relationship,
-      timingActivations,
-      transitTrigger,
-      conflicts,
-      cw01Result.manifestations,
-      cw01Result.supportingEvidenceIds,
-      cw01Result.challengingEvidenceIds
-    );
-
-    const conclusion = createDomainConclusion({
-      domain: 'CAREER',
-      strength: cw01Result.finalStrength,
-      confidence: calculateEvidenceConfidence(evidence, {
-        dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
-        hasVargaConflict,
-        hasPrimaryChallenge
-      }),
-      statement: buildCareerConclusion(
-        natalPromise,
-        dashaActivation,
-        transitTrigger,
-        vargaConfirmations,
-        legacyCareer.conclusion?.summary,
-        d10Relationship,
-        {
-          timingActivations,
-          conflicts,
-          manifestations: cw01Result.manifestations,
-          conclusionData
-        }
-      ),
-      primaryEvidenceIds: cw01Result.primaryEvidenceIds,
-      supportingEvidenceIds: cw01Result.supportingEvidenceIds,
-      challengingEvidenceIds: cw01Result.challengingEvidenceIds,
-      unresolvedQuestions: []
-    });
-
-    const careerManifestationSynthesis = synthesizeCareerManifestations(
-      evidence,
-      careerDashaSynthesis,
-      careerTimingSynthesis,
-      horoscope
-    );
-
-    const careerFinalSynthesis = synthesizeCareerFinal({
-      natalPromise: cw01Result.natalStrength,
-      dashaSynthesis: careerDashaSynthesis,
-      timingSynthesis: careerTimingSynthesis,
-      manifestationSynthesis: careerManifestationSynthesis,
-      d10Synthesis: d10Evidence,
-      d10Relationship,
-      natalEvidenceIds: natalPromiseEvidenceIds,
-      natalRuleIds: natalPromiseEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
-    });
-
-    const reasoningTraceGraph = buildCareerReasoningTraceGraph({
-      evidence: mergedEvidence,
-      natalStrength: cw01Result.natalStrength,
-      careerDashaSynthesis,
-      careerTimingSynthesis,
-      d10Relationship,
-      careerManifestationSynthesis,
-      careerFinalSynthesis
-    });
-
-    return buildDomainInterpretation({
-      domain: 'CAREER',
-      evidence: mergedEvidence,
-      natalPromise,
-      dashaActivation,
-      transitTrigger,
-      vargaConfirmations,
-      manifestations: cw01Result.manifestations,
-      conflicts,
-      conclusion,
-      timingActivations,
-      dataCompleteness,
-      conclusionData: {
-        ...conclusionData,
-        currentActivation: cw01Result.currentActivation,
-        currentPressure: cw01Result.currentPressure,
-        careerDashaSynthesis,
-        careerTimingSynthesis,
-        careerManifestationSynthesis,
-        careerFinalSynthesis,
-        reasoningTraceGraph
+      ad: {
+        level: 'AD',
+        effect: adActivation.effect,
+        evidenceIds: adActivation.evidenceIds ?? [],
+        confidence: 1.0
       },
-      reasoningTrace: cw01Result.reasoningTrace,
-      reasoningVersion: options?.strategy === 'CW01' ? 'CW-01' : undefined
-    });
-  }
-
-  const manifestations = deriveCareerManifestations(evidence, rawEvidence);
-
-  // Conclusion strength logic with D10 downgrade handling and hierarchy preservation
-  const conclusionStrength = resolveCareerConclusionStrength(
-    natalStrength,
-    d10Relationship,
-    conflicts
-  );
-
-  const conclusionData = buildCareerConclusionData(
-    natalStrength,
-    d10Relationship,
-    timingActivations,
-    transitTrigger,
-    conflicts,
-    manifestations,
-    supportingEvidence.map((item) => item.id),
-    challengingEvidence.map((item) => item.id)
-  );
-
-  const conclusion = createDomainConclusion({
-    domain: 'CAREER',
-    strength: conclusionStrength,
-    confidence: calculateEvidenceConfidence(evidence, {
-      dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
-      hasVargaConflict,
-      hasPrimaryChallenge
-    }),
-    statement: buildCareerConclusion(
-      natalPromise,
-      dashaActivation,
-      transitTrigger,
-      vargaConfirmations,
-      legacyCareer.conclusion?.summary,
-      d10Relationship,
-      {
-        timingActivations,
-        conflicts,
-        manifestations,
-        conclusionData
+      pd: {
+        level: 'PD',
+        effect: pdActivation.effect,
+        evidenceIds: pdActivation.evidenceIds ?? [],
+        confidence: 1.0
       }
-    ),
-    primaryEvidenceIds: evidence
-      .filter((item) => item.priority >= 90 || item.role === 'PRIMARY')
-      .map((item) => item.id),
-    supportingEvidenceIds: supportingEvidence.map((item) => item.id),
-    challengingEvidenceIds: challengingEvidence.map((item) => item.id),
-    unresolvedQuestions: []
+    },
+    transitEvidence,
+    rawConflicts: conflicts
   });
 
   const d10Context: D10CareerContext = {
@@ -488,10 +279,10 @@ export function interpretCareerV2(
   if (asOfDate && !isNaN(asOfDate.getTime())) {
     const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
     const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
-    careerTimingSynthesis = synthesizeCareerTiming(natalStrength, careerDashaSynthesis, careerTransitSynthesis);
+    careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
   } else {
     careerTimingSynthesis = Object.freeze({
-      natalPromise: natalStrength,
+      natalPromise: cw01Result.natalStrength,
       dashaEffect: careerDashaSynthesis?.combined?.combinedEffect ?? 'INSUFFICIENT_DATA',
       transitEffect: 'INSUFFICIENT_DATA',
       overallEffect: 'INSUFFICIENT_DATA',
@@ -535,15 +326,54 @@ export function interpretCareerV2(
 
   const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
 
+  const conclusionData = buildCareerConclusionData(
+    cw01Result.natalStrength,
+    d10Relationship,
+    timingActivations,
+    transitTrigger,
+    conflicts,
+    cw01Result.manifestations,
+    cw01Result.supportingEvidenceIds,
+    cw01Result.challengingEvidenceIds
+  );
+
+  const conclusion = createDomainConclusion({
+    domain: 'CAREER',
+    strength: cw01Result.finalStrength,
+    confidence: calculateEvidenceConfidence(evidence, {
+      dataCompleteness: dataCompleteness.primaryFactors === 'COMPLETE' ? 'COMPLETE' : (dataCompleteness.primaryFactors === 'PARTIAL' ? 'PARTIAL' : 'INSUFFICIENT'),
+      hasVargaConflict,
+      hasPrimaryChallenge
+    }),
+    statement: buildCareerConclusion(
+      natalPromise,
+      dashaActivation,
+      transitTrigger,
+      vargaConfirmations,
+      legacyCareer.conclusion?.summary,
+      d10Relationship,
+      {
+        timingActivations,
+        conflicts,
+        manifestations: cw01Result.manifestations,
+        conclusionData
+      }
+    ),
+    primaryEvidenceIds: cw01Result.primaryEvidenceIds,
+    supportingEvidenceIds: cw01Result.supportingEvidenceIds,
+    challengingEvidenceIds: cw01Result.challengingEvidenceIds,
+    unresolvedQuestions: []
+  });
+
   const careerManifestationSynthesis = synthesizeCareerManifestations(
-    mergedEvidence,
+    evidence,
     careerDashaSynthesis,
     careerTimingSynthesis,
     horoscope
   );
 
   const careerFinalSynthesis = synthesizeCareerFinal({
-    natalPromise: natalStrength,
+    natalPromise: cw01Result.natalStrength,
     dashaSynthesis: careerDashaSynthesis,
     timingSynthesis: careerTimingSynthesis,
     manifestationSynthesis: careerManifestationSynthesis,
@@ -555,7 +385,7 @@ export function interpretCareerV2(
 
   const reasoningTraceGraph = buildCareerReasoningTraceGraph({
     evidence: mergedEvidence,
-    natalStrength,
+    natalStrength: cw01Result.natalStrength,
     careerDashaSynthesis,
     careerTimingSynthesis,
     d10Relationship,
@@ -570,19 +400,23 @@ export function interpretCareerV2(
     dashaActivation,
     transitTrigger,
     vargaConfirmations,
-    manifestations,
+    manifestations: cw01Result.manifestations,
     conflicts,
     conclusion,
     timingActivations,
     dataCompleteness,
     conclusionData: {
       ...conclusionData,
+      currentActivation: cw01Result.currentActivation,
+      currentPressure: cw01Result.currentPressure,
       careerDashaSynthesis,
       careerTimingSynthesis,
       careerManifestationSynthesis,
       careerFinalSynthesis,
       reasoningTraceGraph
-    }
+    },
+    reasoningTrace: cw01Result.reasoningTrace,
+    reasoningVersion: 'CW-01'
   });
 }
 

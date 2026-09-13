@@ -117,6 +117,5 @@ export interface ReasoningTrace {
 }
 
 export interface DomainReasoningOptions {
-  readonly strategy?: 'LEGACY' | 'CW01';
   readonly asOf?: Date | string;
 }
