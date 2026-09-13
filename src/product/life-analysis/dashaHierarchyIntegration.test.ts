@@ -2,25 +2,39 @@ import { describe, it, expect } from 'vitest';
 import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
 import { buildDashaTimingViewModel } from '../dasha-timing/buildDashaTimingViewModel';
 import { buildAiContext } from '../../ai/context/aiContextFactory';
-import {
-  STAGE1_GOLDEN_HOROSCOPE,
-  STAGE1_GOLDEN_CAREER,
-  STAGE1_GOLDEN_WEALTH
-} from '../../integration/stage1/stage1GoldenFixture';
+import { calculateHoroscope } from '../../engine/astroEngine';
+import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { buildLifeAnalysis } from '../../domain/synthesis';
 import { resolveLifeAnalysisEvidence } from './lifeAnalysisEvidence';
 
 describe('D07-C: Hierarchy Integration Pipeline Tests', () => {
+  const asOf = '2024-06-01T00:00:00.000Z';
+  const analysisContext = createAnalysisContext({
+    asOf,
+    methodology: {
+      zodiacSystem: 'SIDEREAL',
+      houseSystem: 'WHOLE_SIGN',
+      ayanamsa: 'LAHIRI',
+      calculationEngine: 'ASTRO_CORE_V1',
+      rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+      vargaRules: 'PARASHARA_D10_D2',
+      dashaSystem: 'VIMSHOTTARI'
+    }
+  });
+  const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, asOf);
+  const career = interpretCareerV2(horoscope, { context: analysisContext });
+  const wealth = interpretWealthV2(horoscope, { context: analysisContext });
+
   it('wires career and wealth dasha hierarchy into lifeAnalysisMapper view model', () => {
-    const lifeAnalysis = buildLifeAnalysis([
-      STAGE1_GOLDEN_CAREER,
-      STAGE1_GOLDEN_WEALTH
-    ]);
+    const lifeAnalysis = buildLifeAnalysis([career, wealth]);
 
     const context = buildAiContext(
-      STAGE1_GOLDEN_HOROSCOPE,
+      horoscope,
       {
-        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH],
+        domainInterpretations: [career, wealth],
         lifeAnalysis
       }
     );
@@ -32,8 +46,8 @@ describe('D07-C: Hierarchy Integration Pipeline Tests', () => {
 
     const viewModel = buildLifeAnalysisViewModel(
       lifeAnalysis,
-      STAGE1_GOLDEN_CAREER,
-      STAGE1_GOLDEN_WEALTH,
+      career,
+      wealth,
       evidence
     );
 
@@ -50,9 +64,9 @@ describe('D07-C: Hierarchy Integration Pipeline Tests', () => {
 
   it('populates careerHierarchy and wealthHierarchy in buildDashaTimingViewModel', () => {
     const timingVm = buildDashaTimingViewModel(
-      STAGE1_GOLDEN_HOROSCOPE,
-      STAGE1_GOLDEN_CAREER,
-      STAGE1_GOLDEN_WEALTH
+      horoscope,
+      career,
+      wealth
     );
 
     expect(timingVm.careerHierarchy).toBeDefined();
@@ -62,15 +76,12 @@ describe('D07-C: Hierarchy Integration Pipeline Tests', () => {
   });
 
   it('populates hierarchy facts in buildAiContext and passes all evidence invariants', () => {
-    const lifeAnalysis = buildLifeAnalysis([
-      STAGE1_GOLDEN_CAREER,
-      STAGE1_GOLDEN_WEALTH
-    ]);
+    const lifeAnalysis = buildLifeAnalysis([career, wealth]);
 
     const context = buildAiContext(
-      STAGE1_GOLDEN_HOROSCOPE,
+      horoscope,
       {
-        domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH],
+        domainInterpretations: [career, wealth],
         lifeAnalysis
       }
     );

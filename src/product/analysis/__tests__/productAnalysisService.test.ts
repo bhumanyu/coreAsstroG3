@@ -162,13 +162,23 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     const result = await service.analyze(sampleBirth);
 
     expect(calculateHoroscopeMock).toHaveBeenCalledTimes(1);
-    expect(calculateHoroscopeMock).toHaveBeenCalledWith(sampleBirth);
+    expect(calculateHoroscopeMock).toHaveBeenCalledWith(
+      sampleBirth,
+      undefined,
+      expect.any(String)
+    );
 
     expect(runPipelineMock).toHaveBeenCalledTimes(1);
-    expect(runPipelineMock).toHaveBeenCalledWith({
-      horoscope: sampleHoroscope,
-      includeAiExplanation: true
-    });
+    expect(runPipelineMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        horoscope: sampleHoroscope,
+        includeAiExplanation: true,
+        context: expect.objectContaining({
+          engineVersion: 'ASTRO_CORE_V1',
+          rulesVersion: 'PARASHARA_CLASSICAL_RULES_V2'
+        })
+      })
+    );
 
     expect(result.status).toBe('READY');
     expect(result.career.promise.strength).toBe('STRONG');
@@ -249,10 +259,14 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       includeAiExplanation: false
     });
 
-    expect(runPipelineMock).toHaveBeenCalledWith({
-      horoscope: sampleHoroscope,
-      includeAiExplanation: false,
-      asOf: testAsOf
-    });
+    expect(runPipelineMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        horoscope: sampleHoroscope,
+        includeAiExplanation: false,
+        context: expect.objectContaining({
+          asOf: testAsOf
+        })
+      })
+    );
   });
 });
