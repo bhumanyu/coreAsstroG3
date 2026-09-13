@@ -355,16 +355,34 @@ function mapEvidenceItems(
 
 /**
  * Normalizes a domain status signal into canonical ConclusionStatus.
+ * Exhaustive mapping boundary with no unsafe casting.
  */
 export function mapConclusionStatus(val?: string): ConclusionStatus {
   if (!val) return 'UNAVAILABLE';
   const u = val.trim().toUpperCase();
-  if (u === 'STRONGLY_SUPPORTED' || u === 'VERY_STRONG') return 'STRONGLY_SUPPORTED';
-  if (u === 'SUPPORTED' || u === 'STRONG') return 'SUPPORTED';
-  if (u === 'MIXED' || u === 'MODERATE') return 'MIXED';
-  if (u === 'CHALLENGED') return 'CHALLENGED';
-  if (u === 'LIMITED' || u === 'WEAK' || u === 'VERY_WEAK') return 'LIMITED';
-  return 'UNAVAILABLE';
+  switch (u) {
+    case 'STRONGLY_SUPPORTED':
+    case 'VERY_STRONG':
+    case 'FAVORABLE':
+      return 'STRONGLY_SUPPORTED';
+    case 'SUPPORTED':
+    case 'STRONG':
+      return 'SUPPORTED';
+    case 'MIXED':
+    case 'MODERATE':
+      return 'MIXED';
+    case 'CHALLENGED':
+    case 'UNFAVORABLE':
+      return 'CHALLENGED';
+    case 'LIMITED':
+    case 'WEAK':
+    case 'VERY_WEAK':
+      return 'LIMITED';
+    case 'UNAVAILABLE':
+      return 'UNAVAILABLE';
+    default:
+      return 'UNAVAILABLE';
+  }
 }
 
 function mapCareer(

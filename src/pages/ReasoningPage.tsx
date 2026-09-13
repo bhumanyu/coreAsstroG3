@@ -17,9 +17,9 @@ import {
   ReasoningOverallConclusion,
   ReasoningChain,
   ReasoningEvidenceGroup,
-  ReasoningVargaSection,
+  ReasoningDivisionalComparison,
+  ReasoningTransitComparison,
   ReasoningDashaSection,
-  ReasoningTransitSection,
   ReasoningQualificationSection,
   ReasoningConclusion,
   ReasoningAISection,
@@ -182,8 +182,14 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
         </div>
 
         <div className="hidden sm:flex items-center gap-2 text-xs font-mono-code text-slate-400">
-          <span>Active View:</span>
-          <span className="text-indigo-300 font-bold uppercase">{focusedDomain}</span>
+          <span>Focus:</span>
+          <span className="text-indigo-300 font-bold">
+            {focusedDomain === 'CAREER'
+              ? 'Career Domain'
+              : focusedDomain === 'WEALTH'
+                ? 'Wealth Domain'
+                : 'All Domains'}
+          </span>
         </div>
       </div>
 
@@ -218,6 +224,21 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
         </div>
       </section>
 
+      {/* Side-by-side Divisional Confirmation (§4, P1) */}
+      <ReasoningDivisionalComparison
+        d10={career.d10 ?? career.varga}
+        d2={wealth.d2 ?? wealth.varga}
+      />
+
+      {/* Side-by-side Transit Timing (§4, P1) */}
+      <ReasoningTransitComparison
+        careerTransit={career.transit}
+        wealthTransit={wealth.transit}
+      />
+
+      {/* Overall AI Explanation Section (§11, P1) */}
+      <ReasoningAISection ai={unified.ai ?? career.ai ?? wealth.ai} />
+
       {/* Career Reasoning Section (§2b) */}
       <section
         id="section-career-reasoning"
@@ -233,41 +254,11 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
 
         <ReasoningChain chain={career.chain} />
 
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                <Network className="w-5 h-5" aria-hidden="true" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-slate-100">Evidentiary Reasoning Groups</h3>
-                <p className="text-xs text-slate-400">Categorized career rule drivers, modifications, and directional factors</p>
-              </div>
-            </div>
-
-            <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-              {career.allEvidence.length} Total Evidence Items
-            </span>
-          </div>
-
-          <div className="space-y-6">
-            {career.evidenceGroups.map((group) => (
-              <ReasoningEvidenceGroup key={group.id} group={group} />
-            ))}
-          </div>
-        </div>
-
-        <ReasoningVargaSection varga={career.varga} />
-
         <ReasoningDashaSection dasha={career.dasha} />
-
-        <ReasoningTransitSection transit={career.transit} />
 
         <ReasoningQualificationSection qualifications={career.qualifications} />
 
         <ReasoningConclusion conclusion={career.conclusion} />
-
-        <ReasoningAISection ai={career.ai} />
       </section>
 
       {/* Wealth Reasoning Section (§2b) */}
@@ -285,41 +276,11 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
 
         <ReasoningChain chain={wealth.chain} />
 
-        <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                <Network className="w-5 h-5" aria-hidden="true" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-slate-100">Evidentiary Reasoning Groups</h3>
-                <p className="text-xs text-slate-400">Categorized wealth rule drivers, modifications, and directional factors</p>
-              </div>
-            </div>
-
-            <span className="px-2.5 py-1 rounded-lg text-xs font-mono-code bg-slate-800/60 border border-slate-700/80 text-slate-300">
-              {wealth.allEvidence.length} Total Evidence Items
-            </span>
-          </div>
-
-          <div className="space-y-6">
-            {wealth.evidenceGroups.map((group) => (
-              <ReasoningEvidenceGroup key={group.id} group={group} />
-            ))}
-          </div>
-        </div>
-
-        <ReasoningVargaSection varga={wealth.varga} />
-
         <ReasoningDashaSection dasha={wealth.dasha} />
-
-        <ReasoningTransitSection transit={wealth.transit} />
 
         <ReasoningQualificationSection qualifications={wealth.qualifications} />
 
         <ReasoningConclusion conclusion={wealth.conclusion} />
-
-        <ReasoningAISection ai={wealth.ai} />
       </section>
     </div>
   );

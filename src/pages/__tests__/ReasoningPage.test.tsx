@@ -64,18 +64,27 @@ describe('ReasoningPage (P-UI-06)', () => {
 
     // Cross-Domain Evidence Framework
     expect(screen.getByText('Cross-Domain Evidence Framework')).toBeInTheDocument();
+    // Evidence deduplication: per-domain evidence groups are removed in favor of cross-domain
+    expect(screen.queryByText('Evidentiary Reasoning Groups')).not.toBeInTheDocument();
+
+    // Side-by-side Divisional Confirmation
+    expect(screen.getByText('Divisional Confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
+    expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
+
+    // Side-by-side Transit Timing
+    expect(screen.getByText('Transit Timing')).toBeInTheDocument();
+    expect(screen.getByText('Career Transit Timing')).toBeInTheDocument();
+    expect(screen.getByText('Wealth Transit Timing')).toBeInTheDocument();
+
+    // Single overall AI Explanation at page level
+    expect(screen.getAllByText('AI Explanation').length).toBe(1);
 
     // Career Section
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
-    expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
 
     // Wealth Section
     expect(screen.getByText('Wealth & Asset Accumulation Reasoning')).toBeInTheDocument();
-    expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
-
-    // Transits for both domains rendered simultaneously
-    const transitHeadings = screen.getAllByText('Gochara (Transit) Triggers');
-    expect(transitHeadings.length).toBe(2);
 
     // Dasha for both domains rendered simultaneously
     const dashaHeadings = screen.getAllByText('Chronological Vimshottari Dasha Activation');
@@ -99,6 +108,9 @@ describe('ReasoningPage (P-UI-06)', () => {
       />
     );
 
+    // Initial focus label
+    expect(screen.getByText('All Domains')).toBeInTheDocument();
+
     // Both Career and Wealth are in the document initially
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
     expect(screen.getByText('Wealth & Asset Accumulation Reasoning')).toBeInTheDocument();
@@ -109,8 +121,8 @@ describe('ReasoningPage (P-UI-06)', () => {
     const wealthTab = screen.getByRole('button', { name: /wealth reasoning/i });
     fireEvent.click(wealthTab);
 
-    // Active View indicator updates
-    expect(screen.getByText('WEALTH')).toBeInTheDocument();
+    // Active View / Focus indicator updates
+    expect(screen.getByText('Wealth Domain')).toBeInTheDocument();
 
     // Both domains STILL exist in the document (not gated)
     expect(screen.getByText('Career & Vocational Reasoning')).toBeInTheDocument();
@@ -182,10 +194,10 @@ describe('ReasoningPage (P-UI-06)', () => {
     );
 
     // AI Section shows fallback
-    expect(screen.getAllByText('AI Explanation').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('AI Explanation').length).toBe(1);
     expect(
-      screen.getAllByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.').length
-    ).toBeGreaterThanOrEqual(1);
+      screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
+    ).toBeInTheDocument();
 
     // Deterministic verdict is still rendered above
     expect(screen.getAllByText('Synthesized Astrological Verdict').length).toBe(2);

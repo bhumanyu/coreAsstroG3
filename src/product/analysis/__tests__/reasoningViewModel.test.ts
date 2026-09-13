@@ -848,4 +848,69 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(unified.wealth.transit.statement).toBe('Jupiter transit 2nd house wealth modification');
     expect(unified.wealth.transit.effect).toBe('MODIFIER');
   });
+
+  it('25. selectUnifiedReasoningViewModel exposes top-level ai field from analysis.ai', () => {
+    const analysis = createProductAnalysis({
+      ai: {
+        status: 'AVAILABLE',
+        conclusion: 'Top-level AI explanation conclusion',
+        explanation: 'Detailed commentary on astrological factors',
+        providerInfo: {
+          name: 'Gemini Pro',
+          mode: 'Deterministic Commentary'
+        }
+      }
+    });
+
+    const unified = selectUnifiedReasoningViewModel(analysis);
+    expect(unified.ai).toBeDefined();
+    expect(unified.ai?.available).toBe(true);
+    expect(unified.ai?.status).toBe('AVAILABLE');
+    expect(unified.ai?.statement).toBe('Top-level AI explanation conclusion');
+    expect(unified.ai?.explanation).toBe('Detailed commentary on astrological factors');
+    expect(unified.ai?.providerName).toBe('Gemini Pro');
+    expect(unified.ai?.routingMode).toBe('Deterministic Commentary');
+  });
+
+  it('26. selectReasoningOverview and builders normalize statuses via canonical mapping without unsafe casts', () => {
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        status: 'FAVORABLE' as any
+      },
+      wealth: {
+        ...createProductAnalysis().wealth,
+        overall: {
+          ...createProductAnalysis().wealth.overall,
+          status: 'UNFAVORABLE' as any
+        }
+      }
+    });
+
+    const overview = selectReasoningOverview(analysis);
+    expect(overview.career.status).toBe('STRONGLY_SUPPORTED');
+    expect(overview.wealth.status).toBe('CHALLENGED');
+
+    const vmCareer = selectReasoningViewModel(analysis, 'CAREER');
+    expect(vmCareer.hero.status).toBe('STRONGLY_SUPPORTED');
+
+    const vmWealth = selectReasoningViewModel(analysis, 'WEALTH');
+    expect(vmWealth.hero.status).toBe('CHALLENGED');
+  });
+
+  it('27. handles unavailable AI and unavailable domain statuses gracefully without fabricating', () => {
+    const analysis = createProductAnalysis({
+      ai: undefined,
+      career: {
+        ...createProductAnalysis().career,
+        status: 'UNAVAILABLE'
+      }
+    });
+
+    const unified = selectUnifiedReasoningViewModel(analysis);
+    expect(unified.ai).toBeUndefined();
+    expect(unified.overview.career.status).toBe('UNAVAILABLE');
+    expect(unified.overview.career.headline).toBeUndefined();
+    expect(unified.overview.career.statement).toBeUndefined();
+  });
 });
