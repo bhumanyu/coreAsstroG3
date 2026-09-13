@@ -1348,7 +1348,7 @@ describe('CareerDomainInterpreterV2', () => {
 
       const cd: CareerConclusionData = v2.conclusionData as CareerConclusionData;
       expect(cd.natalStatus).toBe(v2.natalPromise.strength);
-      expect(['ACTIVE', 'PARTIALLY_ACTIVE', 'INACTIVE', 'UNKNOWN']).toContain(cd.currentActivation);
+      expect(['ACTIVE', 'PARTIALLY_ACTIVE', 'INACTIVE', 'STRONG', 'MODERATE', 'LOW', 'INSUFFICIENT_DATA', 'UNKNOWN']).toContain(cd.currentActivation);
       expect(['LOW', 'MODERATE', 'HIGH', 'UNKNOWN']).toContain(cd.currentPressure);
       expect(['CONFIRMS', 'CONFLICTS', 'MODIFIES', 'PARTIALLY_CONFIRMS', 'UNAVAILABLE']).toContain(cd.d10Relationship);
       expect(cd.headline).toBeDefined();

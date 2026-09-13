@@ -690,8 +690,9 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
 export function buildFailedProductAnalysis(
   birthDetails: BirthDetails,
   error: unknown,
-  asOf: string = new Date().toISOString()
+  asOf?: string
 ): ProductAnalysis {
+  const resolvedAsOf = asOf ?? new Date().toISOString();
   const message = getErrorMessage(error);
   const warning: ProductWarning = {
     code: 'ANALYSIS_FAILED',
@@ -704,8 +705,8 @@ export function buildFailedProductAnalysis(
   const methodology = mapMethodology(birthDetails);
 
   return {
-    analysisId: createAnalysisId(birthDetails, asOf),
-    asOf,
+    analysisId: createAnalysisId(birthDetails, resolvedAsOf),
+    asOf: resolvedAsOf,
     status: 'ERROR',
     birth,
     methodology,
@@ -790,7 +791,7 @@ export function buildFailedProductAnalysis(
  * Maps computational engine results and view models into canonical ProductAnalysis.
  */
 export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAnalysis {
-  const asOf = input.asOf || new Date().toISOString();
+  const asOf = input.asOf || input.horoscope.dashaInterpretation?.current?.at || input.horoscope.dashaInterpretation?.at || new Date().toISOString();
   const analysisId = createAnalysisId(input.birthDetails, asOf);
   const warnings = input.warnings || [];
 

@@ -19,7 +19,6 @@ export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
   readonly router?: AiRouter;
   readonly includeAiExplanation?: boolean;
-  readonly strategy?: 'CW01' | 'LEGACY';
   readonly asOf?: Date | string;
 }
 
@@ -38,9 +37,7 @@ export async function runLifeAnalysisProduct(
   options: RunLifeAnalysisProductOptions
 ): Promise<LifeAnalysisProductState> {
   try {
-    const strategy = options.strategy ?? 'CW01';
     const domainOptions: DomainReasoningOptions = {
-      strategy,
       asOf: options.asOf
     };
 

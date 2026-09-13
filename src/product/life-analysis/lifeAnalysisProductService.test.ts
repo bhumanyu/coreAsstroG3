@@ -287,7 +287,7 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     expect(evidenceIdsA).not.toEqual(evidenceIdsB);
   });
 
-  it('Test 7: defaults to CW01 reasoning strategy, passing CW01 and asOf to domain interpreters', async () => {
+  it('Test 7: executes CW-01 reasoning implicitly, passing asOf to domain interpreters', async () => {
     const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
     const testAsOf = '2026-06-01T12:00:00.000Z';
@@ -301,17 +301,17 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     expect(careerSpy).toHaveBeenCalledWith(
       STAGE1_GOLDEN_HOROSCOPE,
       expect.objectContaining({
-        strategy: 'CW01',
         asOf: testAsOf
       })
     );
+    expect(careerSpy.mock.calls[0][1]).not.toHaveProperty('strategy');
     expect(wealthSpy).toHaveBeenCalledWith(
       STAGE1_GOLDEN_HOROSCOPE,
       expect.objectContaining({
-        strategy: 'CW01',
         asOf: testAsOf
       })
     );
+    expect(wealthSpy.mock.calls[0][1]).not.toHaveProperty('strategy');
 
     const careerResult = careerSpy.mock.results[0].value;
     const wealthResult = wealthSpy.mock.results[0].value;
@@ -331,34 +331,24 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     wealthSpy.mockRestore();
   });
 
-  it('Test 8: respects explicit LEGACY strategy option without invoking CW-01 reasoning pipeline', async () => {
+  it('Test 8: invariant - pipeline cannot be configured to run LEGACY and always returns CW-01 reasoningVersion', async () => {
     const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
 
-    await runLifeAnalysisProduct({
+    // Even if an untyped caller attempts to pass strategy: 'LEGACY'
+    const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
       includeAiExplanation: false,
-      strategy: 'LEGACY'
+      ...({ strategy: 'LEGACY' } as any)
     });
-
-    expect(careerSpy).toHaveBeenCalledWith(
-      STAGE1_GOLDEN_HOROSCOPE,
-      expect.objectContaining({
-        strategy: 'LEGACY'
-      })
-    );
-    expect(wealthSpy).toHaveBeenCalledWith(
-      STAGE1_GOLDEN_HOROSCOPE,
-      expect.objectContaining({
-        strategy: 'LEGACY'
-      })
-    );
 
     const careerResult = careerSpy.mock.results[0].value;
     const wealthResult = wealthSpy.mock.results[0].value;
 
-    expect(careerResult.reasoningVersion).toBeUndefined();
-    expect(wealthResult.reasoningVersion).toBeUndefined();
+    expect(careerResult.reasoningVersion).toBe('CW-01');
+    expect(wealthResult.reasoningVersion).toBe('CW-01');
+    expect(result.analysis?.careerDetail?.finalSynthesis).toBeDefined();
+    expect(result.analysis?.wealthDetail?.finalSynthesis).toBeDefined();
 
     careerSpy.mockRestore();
     wealthSpy.mockRestore();

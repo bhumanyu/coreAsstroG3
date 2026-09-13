@@ -233,7 +233,7 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     expect(runPipelineMock).not.toHaveBeenCalled();
   });
 
-  it('5. Forwards strategy and asOf options to runPipeline when provided', async () => {
+  it('5. Forwards asOf option to runPipeline when provided', async () => {
     const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
     const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
 
@@ -245,7 +245,6 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     const service = new ProductAnalysisService(deps);
     const testAsOf = '2026-06-15T12:00:00.000Z';
     await service.analyze(sampleBirth, {
-      strategy: 'CW01',
       asOf: testAsOf,
       includeAiExplanation: false
     });
@@ -253,7 +252,6 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     expect(runPipelineMock).toHaveBeenCalledWith({
       horoscope: sampleHoroscope,
       includeAiExplanation: false,
-      strategy: 'CW01',
       asOf: testAsOf
     });
   });
