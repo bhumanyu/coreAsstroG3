@@ -101,65 +101,12 @@ import {
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
-import { analyzeActiveDasha } from '../../engine/dashaInterpretation/dashaInterpretation';
-
-function resolveEffectiveHoroscope(
-  horoscope: Horoscope,
-  asOfDate?: Date | string
-): Horoscope {
-  if (!asOfDate) {
-    return horoscope;
-  }
-  let activeDasha = horoscope.dashaInterpretation?.current;
-  if (
-    horoscope.vimshottari &&
-    horoscope.planetInterpretation &&
-    horoscope.houseInterpretation &&
-    horoscope.functionalRoles &&
-    horoscope.natalGrahaDrishti &&
-    horoscope.yogas &&
-    horoscope.planetAnalysis &&
-    horoscope.planetaryStrength
-  ) {
-    try {
-      activeDasha = analyzeActiveDasha(
-        {
-          vimshottari: horoscope.vimshottari,
-          planetInterpretation: horoscope.planetInterpretation,
-          houseInterpretation: horoscope.houseInterpretation,
-          functionalRoles: horoscope.functionalRoles,
-          natalGrahaDrishti: horoscope.natalGrahaDrishti,
-          yogas: horoscope.yogas,
-          planetAnalysis: horoscope.planetAnalysis,
-          planetaryStrength: horoscope.planetaryStrength
-        },
-        asOfDate
-      );
-    } catch {
-      activeDasha = horoscope.dashaInterpretation?.current;
-    }
-  }
-  if (activeDasha && activeDasha !== horoscope.dashaInterpretation?.current) {
-    return {
-      ...horoscope,
-      dashaInterpretation: {
-        ...horoscope.dashaInterpretation,
-        current: activeDasha
-      }
-    };
-  }
-  return horoscope;
-}
 
 export function interpretCareerV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
-  const context = options?.context;
-  const asOfDate = context ? analysisAsOfDate(context) : undefined;
-  const effectiveHoroscope = resolveEffectiveHoroscope(horoscope, asOfDate);
-
-  const themeInterpretation = interpretCareerTheme(effectiveHoroscope);
+  const themeInterpretation = interpretCareerTheme(horoscope);
   const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
   const evidence = linkCareerEvidence(rawMappedEvidence);
@@ -322,14 +269,17 @@ export function interpretCareerV2(
   };
 
   const careerDashaSynthesis = buildCareerDashaSynthesis({
-    dashaInterpretation: effectiveHoroscope.dashaInterpretation,
+    dashaInterpretation: horoscope.dashaInterpretation,
     d10Context
   });
 
+  const context = options?.context;
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
+
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = effectiveHoroscope.vimshottari ? getActiveDasha(effectiveHoroscope.vimshottari, asOfDate) : null;
-    const careerTransitSynthesis = synthesizeCareerTransit(effectiveHoroscope, activeDashaState, asOfDate, careerDashaSynthesis);
+    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
     careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
   } else {
     careerTimingSynthesis = Object.freeze({
@@ -420,7 +370,7 @@ export function interpretCareerV2(
     evidence,
     careerDashaSynthesis,
     careerTimingSynthesis,
-    effectiveHoroscope
+    horoscope
   );
 
   const careerFinalSynthesis = synthesizeCareerFinal({
