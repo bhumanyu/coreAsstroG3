@@ -1575,18 +1575,19 @@ describe('CareerDomainInterpreterV2', () => {
 
       // Verify directly on buildCareerConclusion: passing different summary strings or undefined never alters conclusion strength or status
       const customSummary = 'Completely arbitrary custom summary string';
+      const careerConclusionData = v2.conclusionData as CareerConclusionData | undefined;
       const statementWithSummary = buildCareerConclusion(
         v2.natalPromise,
         v2.dashaActivation,
         v2.transitTrigger,
         v2.vargaConfirmations,
         customSummary,
-        v2.conclusionData?.d10Relationship,
+        careerConclusionData?.d10Relationship,
         {
           timingActivations: v2.timingActivations,
           conflicts: v2.conflicts,
           manifestations: v2.manifestations,
-          conclusionData: v2.conclusionData
+          conclusionData: careerConclusionData
         }
       );
       const statementWithoutSummary = buildCareerConclusion(
@@ -1595,12 +1596,12 @@ describe('CareerDomainInterpreterV2', () => {
         v2.transitTrigger,
         v2.vargaConfirmations,
         undefined,
-        v2.conclusionData?.d10Relationship,
+        careerConclusionData?.d10Relationship,
         {
           timingActivations: v2.timingActivations,
           conflicts: v2.conflicts,
           manifestations: v2.manifestations,
-          conclusionData: v2.conclusionData
+          conclusionData: careerConclusionData
         }
       );
 

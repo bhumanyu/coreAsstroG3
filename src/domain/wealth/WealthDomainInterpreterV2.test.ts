@@ -53,6 +53,7 @@ import {
   linkWealthEvidence,
   resolveRelatedWealthPromiseEvidenceIds
 } from './wealthEvidenceLinker';
+import type { WealthConclusionData } from './wealthTypes';
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
@@ -1732,7 +1733,7 @@ describe('WealthDomainInterpreterV2', () => {
         customSummary,
         {
           vargaConfirmations: v2.vargaConfirmations,
-          conclusionData: v2.conclusionData
+          conclusionData: v2.conclusionData as WealthConclusionData | undefined
         }
       );
       const statementWithout = buildWealthConclusion(
@@ -1742,7 +1743,7 @@ describe('WealthDomainInterpreterV2', () => {
         undefined,
         {
           vargaConfirmations: v2.vargaConfirmations,
-          conclusionData: v2.conclusionData
+          conclusionData: v2.conclusionData as WealthConclusionData | undefined
         }
       );
 

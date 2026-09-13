@@ -1,4 +1,5 @@
 import type { Horoscope } from '../../types';
+import { systemClock } from '../../core/analysis/Clock';
 import { buildAiContext, type BuildAiContextOptions } from '../context/aiContextFactory';
 import { createAiRequest } from '../api/createAiRequest';
 import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
@@ -125,7 +126,7 @@ function mapRoutingResultToViewModel(
       routingMode: result.routingMode,
       fallbackUsed: result.fallbackUsed,
       selectionReason: result.selectionReason,
-      generatedAt: new Date().toISOString()
+      generatedAt: systemClock.now()
     });
   }
 
@@ -170,7 +171,7 @@ function mapRoutingResultToViewModel(
     routingMode: result.routingMode,
     fallbackUsed: result.fallbackUsed,
     selectionReason: result.selectionReason,
-    generatedAt: new Date().toISOString()
+    generatedAt: systemClock.now()
   });
 }
 

@@ -43,14 +43,8 @@ export interface ProductBirth {
   readonly ayanamsa: string;
 }
 
-export interface ProductMethodology {
-  readonly zodiacSystem: string;
-  readonly houseSystem: string;
-  readonly ayanamsa: string;
-  readonly calculationEngine: string;
-  readonly rulesEngine?: string;
-  readonly vargaRules?: string;
-}
+import type { ProductMethodology } from '../../core/analysis/AnalysisContext';
+export type { ProductMethodology };
 
 export type PromiseStrength =
   | 'VERY_STRONG'
@@ -270,6 +264,8 @@ export interface AiProductState {
 export interface ProductAnalysis {
   readonly analysisId: string;
   readonly asOf: string;
+  readonly engineVersion: string;
+  readonly rulesVersion: string;
   readonly status: ProductAnalysisStatus;
   readonly birth: ProductBirth;
   readonly methodology: ProductMethodology;

@@ -41,6 +41,8 @@ export type DomainDataCompleteness =
   | (WealthDataCompleteness & { readonly d10?: string })
   | Record<string, any>;
 
+import { systemClock } from '../../core/analysis/Clock';
+
 export interface DomainInterpretation {
   readonly domain: DomainId;
   readonly version: 'V2';
@@ -58,6 +60,7 @@ export interface DomainInterpretation {
   readonly conclusionData?: DomainConclusionData;
   readonly reasoningTrace?: ReasoningTrace;
   readonly reasoningVersion?: 'CW-01' | 'CW-02' | 'CW-03' | 'CW-04' | 'CW-05' | string;
+  readonly asOf: string;
   readonly generatedAt: string;
 }
 
@@ -154,7 +157,8 @@ export function createDomainInterpretation(
           reasoningVersion: interpretation.reasoningVersion
         }
       : {}),
+    asOf: interpretation.asOf ?? '',
     generatedAt:
-      interpretation.generatedAt ?? new Date().toISOString()
+      interpretation.generatedAt ?? systemClock.now()
   });
 }

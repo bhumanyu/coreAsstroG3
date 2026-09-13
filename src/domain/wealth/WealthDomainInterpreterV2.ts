@@ -99,6 +99,8 @@ import {
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
+import { analysisAsOfDate } from '../../core/analysis/analysisTime';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 
 export function interpretWealthV2(
   horoscope: Horoscope,
@@ -374,8 +376,18 @@ export function interpretWealthV2(
     { dimension: 'SPECULATION' as WealthDimension, effect: cw01Result.dimensionResults.SPECULATION.timingEffect as TimingActivationEffect }
   ]);
 
-  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
-  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+  const context = options?.context ?? (options?.asOf ? createAnalysisContext({
+    asOf: options.asOf,
+    methodology: {
+      zodiacSystem: 'SIDEREAL',
+      houseSystem: 'WHOLE_SIGN',
+      ayanamsa: String(horoscope.birthDetails?.ayanamsa ?? 'LAHIRI'),
+      calculationEngine: 'ASTRO_CORE_V1',
+      rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+      vargaRules: 'PARASHARA_D10_D2'
+    }
+  }) : undefined);
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
 
   const natalPromises: Partial<Record<WealthDimension, DomainStrength>> = {
     ACCUMULATION: cw01Result.dimensionResults.ACCUMULATION.natalStrength,
@@ -497,6 +509,8 @@ export function interpretWealthV2(
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01'
+  }, {
+    asOf: context?.asOf ?? ''
   });
 }
 

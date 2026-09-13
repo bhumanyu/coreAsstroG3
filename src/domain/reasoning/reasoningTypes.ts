@@ -1,3 +1,5 @@
+import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+
 export type ReasoningLayer =
   | 'PRIMARY_PROMISE'
   | 'SECONDARY_SUPPORT'
@@ -117,5 +119,6 @@ export interface ReasoningTrace {
 }
 
 export interface DomainReasoningOptions {
+  readonly context?: AnalysisContext;
   readonly asOf?: Date | string;
 }

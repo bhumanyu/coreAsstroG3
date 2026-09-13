@@ -100,6 +100,8 @@ import {
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
+import { analysisAsOfDate } from '../../core/analysis/analysisTime';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
@@ -272,8 +274,18 @@ export function interpretCareerV2(
     d10Context
   });
 
-  const rawAsOf = options?.asOf ?? horoscope.dashaInterpretation?.at;
-  const asOfDate = rawAsOf ? (typeof rawAsOf === 'string' ? new Date(rawAsOf) : rawAsOf) : undefined;
+  const context = options?.context ?? (options?.asOf ? createAnalysisContext({
+    asOf: options.asOf,
+    methodology: {
+      zodiacSystem: 'SIDEREAL',
+      houseSystem: 'WHOLE_SIGN',
+      ayanamsa: String(horoscope.birthDetails?.ayanamsa ?? 'LAHIRI'),
+      calculationEngine: 'ASTRO_CORE_V1',
+      rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+      vargaRules: 'PARASHARA_D10_D2'
+    }
+  }) : undefined);
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
 
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
@@ -417,6 +429,8 @@ export function interpretCareerV2(
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01'
+  }, {
+    asOf: context?.asOf ?? ''
   });
 }
 

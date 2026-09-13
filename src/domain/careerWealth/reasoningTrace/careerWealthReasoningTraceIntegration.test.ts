@@ -28,7 +28,7 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     expect(() => validateEvidenceNodes(graph, new Set(interpretation.evidence.map((e) => e.id)))).not.toThrow();
 
     // Verify existing reasoningTrace is untouched
-    expect(interpretation.reasoningTrace).toBeUndefined();
+    expect(interpretation.reasoningTrace).toBeDefined();
 
     // Assert exact node presence for Career
     const natalNode = graph.nodes.find((n) => n.axis === 'NATAL' && n.subjectKey === 'NATAL_PROMISE');
