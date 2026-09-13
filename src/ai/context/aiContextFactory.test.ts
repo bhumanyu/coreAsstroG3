@@ -27,7 +27,11 @@ import {
 } from '../../engine/dashaInterpretation/dashaInterpretation';
 
 describe('AI Context Factory', () => {
-  const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+  const horoscope = calculateHoroscope(
+    CANONICAL_BIRTH_DETAILS,
+    undefined,
+    CANONICAL_BIRTH_DETAILS.dateTimeStr
+  );
   const context = buildAiContext(horoscope);
 
   it('should include correct schema version and source engine metadata', () => {
