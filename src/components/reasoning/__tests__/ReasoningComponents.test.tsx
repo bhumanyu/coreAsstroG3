@@ -9,8 +9,10 @@ import {
   ReasoningEvidenceCard,
   ReasoningProvenance,
   ReasoningVargaSection,
+  ReasoningDivisionalComparison,
   ReasoningDashaSection,
   ReasoningTransitSection,
+  ReasoningTransitComparison,
   ReasoningQualificationSection,
   ReasoningConclusion,
   ReasoningAISection,
@@ -257,7 +259,7 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       );
 
       expect(screen.getByText('Rule: Not specified')).toBeInTheDocument();
-      expect(screen.getByText('Derived from: Direct evidence')).toBeInTheDocument();
+      expect(screen.getByText('Derived from: Not specified')).toBeInTheDocument();
     });
   });
 
@@ -586,6 +588,82 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
     it('renders ReasoningUnavailableState', () => {
       render(<ReasoningUnavailableState />);
       expect(screen.getByText('Astrological Reasoning Unavailable')).toBeInTheDocument();
+    });
+  });
+
+  describe('ReasoningDivisionalComparison', () => {
+    it('renders D10 and D2 divisional confirmations side by side', () => {
+      const d10: ReasoningVargaViewModel = {
+        chart: 'D10',
+        relationship: 'CONFIRMS',
+        statement: 'D10 Mars strongly confirms vocational promise.'
+      };
+      const d2: ReasoningVargaViewModel = {
+        chart: 'D2',
+        relationship: 'MODIFIES',
+        statement: 'D2 Sun in second modifies accumulation tempo.'
+      };
+
+      render(<ReasoningDivisionalComparison d10={d10} d2={d2} />);
+
+      expect(screen.getByText('Divisional Confirmation')).toBeInTheDocument();
+      expect(screen.getByText('Dasamsa (D10) Divisional Confirmation')).toBeInTheDocument();
+      expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
+      expect(screen.getByText('D10 Mars strongly confirms vocational promise.')).toBeInTheDocument();
+      expect(screen.getByText('D2 Sun in second modifies accumulation tempo.')).toBeInTheDocument();
+      expect(screen.getByText('Confirms')).toBeInTheDocument();
+      expect(screen.getByText('Modifies')).toBeInTheDocument();
+    });
+
+    it('renders "Unavailable" when relationship is UNAVAILABLE and never fabricates', () => {
+      const d10: ReasoningVargaViewModel = {
+        chart: 'D10',
+        relationship: 'UNAVAILABLE'
+      };
+
+      render(<ReasoningDivisionalComparison d10={d10} d2={undefined} />);
+
+      expect(screen.getAllByText('Unavailable').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText(/Dasamsa \(D10\) harmonic data is unavailable/i)).toBeInTheDocument();
+      expect(screen.getByText(/Hora \(D2\) harmonic data is unavailable/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('ReasoningTransitComparison', () => {
+    it('renders Career and Wealth transit timing side by side independently', () => {
+      const careerTransit: ReasoningTransitViewModel = {
+        status: 'AVAILABLE',
+        effect: 'TRIGGER',
+        statement: 'Saturn transiting 10th activates leadership responsibilities.'
+      };
+      const wealthTransit: ReasoningTransitViewModel = {
+        status: 'AVAILABLE',
+        effect: 'CHALLENGE',
+        statement: 'Rahu transiting 2nd brings unpredictable financial fluctuations.'
+      };
+
+      render(
+        <ReasoningTransitComparison
+          careerTransit={careerTransit}
+          wealthTransit={wealthTransit}
+        />
+      );
+
+      expect(screen.getByText('Transit Timing')).toBeInTheDocument();
+      expect(screen.getByText('Career Transit Timing')).toBeInTheDocument();
+      expect(screen.getByText('Wealth Transit Timing')).toBeInTheDocument();
+      expect(screen.getByText('Saturn transiting 10th activates leadership responsibilities.')).toBeInTheDocument();
+      expect(screen.getByText('Rahu transiting 2nd brings unpredictable financial fluctuations.')).toBeInTheDocument();
+      expect(screen.getByText('Direct Trigger')).toBeInTheDocument();
+      expect(screen.getByText('Active Friction')).toBeInTheDocument();
+    });
+
+    it('renders "Unavailable" when transit status is UNAVAILABLE without shared source', () => {
+      render(<ReasoningTransitComparison careerTransit={undefined} wealthTransit={undefined} />);
+
+      expect(screen.getAllByText('Unavailable').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText(/Career planetary transit data is unavailable/i)).toBeInTheDocument();
+      expect(screen.getByText(/Wealth planetary transit data is unavailable/i)).toBeInTheDocument();
     });
   });
 });

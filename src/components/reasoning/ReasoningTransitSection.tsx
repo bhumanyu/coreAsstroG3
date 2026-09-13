@@ -49,7 +49,7 @@ export const ReasoningTransitSection: React.FC<ReasoningTransitSectionProps> = (
             </p>
           ) : (
             <p className="text-xs text-slate-400 italic">
-              No significant material transit triggers active for this period.
+              Transit timing is available; no detailed statement is provided.
             </p>
           )}
         </div>

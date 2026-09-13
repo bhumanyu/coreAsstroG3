@@ -20,7 +20,8 @@ import type {
   TransitEffect,
   ProductEvidence,
   ProductDashaPeriod,
-  D10ProductResult
+  D10ProductResult,
+  AiProductState
 } from './productAnalysisTypes';
 import { selectAllEvidence, selectDashaHierarchy } from './productAnalysisSelectors';
 
@@ -70,7 +71,7 @@ export interface ReasoningDashaPeriodViewModel {
   readonly planet?: string;
   readonly role: ProductEvidenceRole;
   readonly direction: ProductDirection;
-  readonly effect: ActivationEffect | string;
+  readonly effect: ActivationEffect;
   readonly evidenceIds: readonly string[];
   readonly statement?: string;
   readonly start?: string;
@@ -88,20 +89,20 @@ export interface ReasoningDashaViewModel {
 }
 
 export interface ReasoningVargaViewModel {
-  readonly chart: 'D10' | 'D2' | string;
+  readonly chart: 'D10' | 'D2';
   readonly relationship: VargaRelationship;
   readonly statement?: string;
 }
 
 export interface ReasoningTransitViewModel {
   readonly status: ProductAvailability;
-  readonly effect: TransitEffect | string;
+  readonly effect: TransitEffect;
   readonly statement?: string;
 }
 
 export interface ReasoningQualificationViewModel {
   readonly type: string;
-  readonly severity: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  readonly severity: 'LOW' | 'MEDIUM' | 'HIGH';
   readonly description: string;
 }
 
@@ -121,11 +122,11 @@ export interface ReasoningConclusionViewModel {
 export interface ReasoningChainNodeViewModel {
   readonly id: string;
   readonly label: string;
-  readonly type: 'PROMISE' | 'VARGA' | 'ACTIVATION' | 'TRANSIT' | 'SYNTHESIS' | 'EVIDENCE' | string;
+  readonly type: 'PROMISE' | 'VARGA' | 'ACTIVATION' | 'TRANSIT' | 'SYNTHESIS' | 'EVIDENCE';
   readonly direction?: ProductDirection;
   readonly promiseStrength?: PromiseStrength;
   readonly vargaRelationship?: VargaRelationship;
-  readonly transitEffect?: TransitEffect | string;
+  readonly transitEffect?: TransitEffect;
   readonly dashaDirection?: ProductDirection;
   readonly availability?: ProductAvailability;
   readonly statement?: string;
@@ -157,6 +158,15 @@ export interface ReasoningOverviewViewModel {
   readonly wealth: ReasoningDomainOverviewItem;
 }
 
+export interface UnifiedReasoningViewModel {
+  readonly career: ReasoningViewModel;
+  readonly wealth: ReasoningViewModel;
+  readonly overview: ReasoningOverviewViewModel;
+  readonly dedupedEvidence: readonly ReasoningEvidenceViewModel[];
+  readonly dedupedEvidenceGroups: readonly ReasoningEvidenceGroupViewModel[];
+  readonly ai?: ReasoningAiViewModel;
+}
+
 export interface ReasoningViewModel {
   readonly domain: ReasoningDomain;
   readonly hero: ReasoningHeroViewModel;
@@ -164,7 +174,7 @@ export interface ReasoningViewModel {
   readonly evidenceGroups: readonly ReasoningEvidenceGroupViewModel[];
   readonly allEvidence: readonly ReasoningEvidenceViewModel[];
   readonly varga: ReasoningVargaViewModel;
-  readonly d10: ReasoningVargaViewModel;
+  readonly d10?: ReasoningVargaViewModel;
   readonly d2?: ReasoningVargaViewModel;
   readonly dasha: ReasoningDashaViewModel;
   readonly transit: ReasoningTransitViewModel;
@@ -202,6 +212,94 @@ export function mapEvidence(e: ProductEvidence): ReasoningEvidenceViewModel {
       source: e.source,
       isAvailable: provenanceAvailable
     }
+  };
+}
+
+export function normalizeQualificationSeverity(
+  severity?: string
+): 'LOW' | 'MEDIUM' | 'HIGH' {
+  switch (severity?.toUpperCase()) {
+    case 'HIGH':
+      return 'HIGH';
+    case 'LOW':
+      return 'LOW';
+    case 'MEDIUM':
+    default:
+      return 'MEDIUM';
+  }
+}
+
+export function normalizeActivationEffect(effect?: string): ActivationEffect {
+  if (!effect) return 'UNAVAILABLE';
+  switch (effect) {
+    case 'ACTIVATES':
+    case 'PARTIALLY_ACTIVATES':
+    case 'DOES_NOT_ACTIVATE':
+    case 'CHALLENGES':
+    case 'UNKNOWN':
+    case 'INSUFFICIENT_DATA':
+    case 'UNAVAILABLE':
+      return effect;
+    default:
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+        console.warn(
+          `[ReasoningViewModel] Unrecognized ActivationEffect: "${effect}". Surfacing as UNAVAILABLE.`
+        );
+      }
+      return 'UNAVAILABLE';
+  }
+}
+
+export function normalizeTransitEffect(effect?: string): TransitEffect {
+  if (!effect) return 'UNAVAILABLE';
+  switch (effect) {
+    case 'TRIGGER':
+    case 'MODIFIER':
+    case 'CHALLENGE':
+    case 'NO_MATERIAL_TRIGGER':
+    case 'UNKNOWN':
+    case 'INSUFFICIENT_DATA':
+    case 'UNAVAILABLE':
+      return effect;
+    default:
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+        console.warn(
+          `[ReasoningViewModel] Unrecognized TransitEffect: "${effect}". Surfacing as UNAVAILABLE.`
+        );
+      }
+      return 'UNAVAILABLE';
+  }
+}
+
+export function toCanonicalConclusionStatus(status?: string): ConclusionStatus {
+  if (!status) return 'UNAVAILABLE';
+  switch (status) {
+    case 'STRONGLY_SUPPORTED':
+    case 'SUPPORTED':
+    case 'MIXED':
+    case 'CHALLENGED':
+    case 'LIMITED':
+    case 'UNAVAILABLE':
+      return status;
+    case 'FAVORABLE':
+      return 'STRONGLY_SUPPORTED';
+    case 'UNFAVORABLE':
+      return 'CHALLENGED';
+    default:
+      return 'UNAVAILABLE';
+  }
+}
+
+export function mapAi(aiState?: AiProductState): ReasoningAiViewModel | undefined {
+  if (!aiState) return undefined;
+  const isAvailable = aiState.status === 'AVAILABLE';
+  return {
+    available: isAvailable,
+    status: aiState.status,
+    statement: isAvailable ? aiState.conclusion : undefined,
+    explanation: isAvailable ? aiState.explanation : undefined,
+    providerName: aiState.providerInfo?.name,
+    routingMode: aiState.providerInfo?.mode
   };
 }
 
@@ -248,13 +346,10 @@ export function buildEvidenceGroups(
  */
 export function buildCareerReasoningViewModel(analysis: ProductAnalysis): ReasoningViewModel {
   const career = analysis.career;
-  const rawStatus = career.status ?? career.promise.status ?? 'UNAVAILABLE';
-  const status: ConclusionStatus =
-    rawStatus === 'FAVORABLE'
-      ? 'STRONGLY_SUPPORTED'
-      : rawStatus === 'UNFAVORABLE'
-        ? 'CHALLENGED'
-        : (rawStatus as ConclusionStatus);
+  const rawStatus = career.status ?? career.promise.status;
+  const status: ConclusionStatus = toCanonicalConclusionStatus(
+    rawStatus ? String(rawStatus) : undefined
+  );
   const confidence: ProductConfidence = career.promise.confidence;
   const strength: PromiseStrength = career.promise.strength as PromiseStrength;
 
@@ -308,7 +403,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     planet: p.planet,
     role: p.role,
     direction: p.direction,
-    effect: p.effect,
+    effect: normalizeActivationEffect(p.effect),
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,
@@ -327,14 +422,14 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
 
   const transit: ReasoningTransitViewModel = {
     status: career.activation.transit.status,
-    effect: career.activation.transit.effect,
+    effect: normalizeTransitEffect(career.activation.transit.effect),
     statement: career.activation.transit.statement
   };
 
   const qualifications: ReasoningQualificationViewModel[] = (career.qualifications ?? []).map(
     (q) => ({
       type: q.type,
-      severity: q.severity,
+      severity: normalizeQualificationSeverity(q.severity),
       description: q.description
     })
   );
@@ -384,7 +479,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
       id: 'node_career_transit',
       label: 'Gochara Transit Triggers',
       type: 'TRANSIT',
-      transitEffect: career.activation.transit.effect,
+      transitEffect: normalizeTransitEffect(career.activation.transit.effect),
       statement: career.activation.transit.statement
     },
     {
@@ -397,17 +492,7 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     }
   ];
 
-  const isCareerAiAvailable = analysis.ai?.status === 'AVAILABLE';
-  const ai: ReasoningAiViewModel | undefined = analysis.ai
-    ? {
-        available: isCareerAiAvailable,
-        status: analysis.ai.status,
-        statement: isCareerAiAvailable ? analysis.ai.conclusion : undefined,
-        explanation: isCareerAiAvailable ? analysis.ai.explanation : undefined,
-        providerName: analysis.ai.providerInfo?.name,
-        routingMode: analysis.ai.providerInfo?.mode
-      }
-    : undefined;
+  const ai = mapAi(analysis.ai);
 
   return {
     domain: 'CAREER',
@@ -431,13 +516,10 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
  */
 export function buildWealthReasoningViewModel(analysis: ProductAnalysis): ReasoningViewModel {
   const wealth = analysis.wealth;
-  const rawStatus = wealth.overall.status ?? 'UNAVAILABLE';
-  const status: ConclusionStatus =
-    rawStatus === 'FAVORABLE'
-      ? 'STRONGLY_SUPPORTED'
-      : rawStatus === 'UNFAVORABLE'
-        ? 'CHALLENGED'
-        : (rawStatus as ConclusionStatus);
+  const rawStatus = wealth.overall.status;
+  const status: ConclusionStatus = toCanonicalConclusionStatus(
+    rawStatus ? String(rawStatus) : undefined
+  );
   const confidence: ProductConfidence = wealth.overall.confidence;
   const strength: PromiseStrength = wealth.overall.promise as PromiseStrength;
 
@@ -491,7 +573,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     planet: p.planet,
     role: p.role,
     direction: p.direction,
-    effect: p.effect,
+    effect: normalizeActivationEffect(p.effect),
     evidenceIds: p.evidenceIds ?? [],
     statement: p.statement,
     start: p.start,
@@ -509,14 +591,14 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
 
   const transit: ReasoningTransitViewModel = {
     status: wealth.activation.transit.status,
-    effect: wealth.activation.transit.effect,
+    effect: normalizeTransitEffect(wealth.activation.transit.effect),
     statement: wealth.activation.transit.statement
   };
 
   const qualifications: ReasoningQualificationViewModel[] = (wealth.qualifications ?? []).map(
     (q) => ({
       type: q.type,
-      severity: q.severity,
+      severity: normalizeQualificationSeverity(q.severity),
       description: q.description
     })
   );
@@ -566,7 +648,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
       id: 'node_wealth_transit',
       label: 'Gochara Wealth Transits',
       type: 'TRANSIT',
-      transitEffect: wealth.activation.transit.effect,
+      transitEffect: normalizeTransitEffect(wealth.activation.transit.effect),
       statement: wealth.activation.transit.statement
     },
     {
@@ -579,17 +661,7 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     }
   ];
 
-  const isWealthAiAvailable = analysis.ai?.status === 'AVAILABLE';
-  const ai: ReasoningAiViewModel | undefined = analysis.ai
-    ? {
-        available: isWealthAiAvailable,
-        status: analysis.ai.status,
-        statement: isWealthAiAvailable ? analysis.ai.conclusion : undefined,
-        explanation: isWealthAiAvailable ? analysis.ai.explanation : undefined,
-        providerName: analysis.ai.providerInfo?.name,
-        routingMode: analysis.ai.providerInfo?.mode
-      }
-    : undefined;
+  const ai = mapAi(analysis.ai);
 
   return {
     domain: 'WEALTH',
@@ -598,7 +670,6 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     evidenceGroups: buildEvidenceGroups(allEvidence),
     allEvidence,
     varga: d2,
-    d10: d2,
     d2,
     dasha,
     transit,
@@ -643,11 +714,7 @@ export function selectReasoningOverview(analysis: ProductAnalysis): ReasoningOve
     careerAvail === 'UNAVAILABLE';
   const careerStatus: ConclusionStatus = isCareerUnavailable
     ? 'UNAVAILABLE'
-    : careerRawStatus === 'FAVORABLE'
-      ? 'STRONGLY_SUPPORTED'
-      : careerRawStatus === 'UNFAVORABLE'
-        ? 'CHALLENGED'
-        : (careerRawStatus as ConclusionStatus) ?? 'SUPPORTED';
+    : toCanonicalConclusionStatus(careerRawStatus ? String(careerRawStatus) : undefined);
   const careerAvailability: ProductAvailability = isCareerUnavailable
     ? 'UNAVAILABLE'
     : careerRawStatus === 'PARTIAL'
@@ -667,11 +734,7 @@ export function selectReasoningOverview(analysis: ProductAnalysis): ReasoningOve
     (wealthRawConfidence as ProductConfidence) ?? 'LOW';
   const wealthStatus: ConclusionStatus = isWealthUnavailable
     ? 'UNAVAILABLE'
-    : wealthRawStatus === 'FAVORABLE'
-      ? 'STRONGLY_SUPPORTED'
-      : wealthRawStatus === 'UNFAVORABLE'
-        ? 'CHALLENGED'
-        : (wealthRawStatus as ConclusionStatus) ?? 'SUPPORTED';
+    : toCanonicalConclusionStatus(wealthRawStatus ? String(wealthRawStatus) : undefined);
   const wealthAvailability: ProductAvailability = isWealthUnavailable
     ? 'UNAVAILABLE'
     : wealthRawStatus === 'PARTIAL'
@@ -712,4 +775,29 @@ export function selectDedupedEvidence(
 ): readonly ReasoningEvidenceViewModel[] {
   const canonicalEvidence = selectAllEvidence(analysis);
   return canonicalEvidence.map(mapEvidence);
+}
+
+/**
+ * Top-level unified selector for P-UI-08.
+ * Returns Career and Wealth view models, unified overview, and cross-domain deduped evidence.
+ * Pure composition of existing builders without re-deriving any semantics.
+ */
+export function selectUnifiedReasoningViewModel(
+  analysis: ProductAnalysis
+): UnifiedReasoningViewModel {
+  const career = buildCareerReasoningViewModel(analysis);
+  const wealth = buildWealthReasoningViewModel(analysis);
+  const overview = selectReasoningOverview(analysis);
+  const dedupedEvidence = selectDedupedEvidence(analysis);
+  const dedupedEvidenceGroups = buildEvidenceGroups(dedupedEvidence);
+  const ai = mapAi(analysis.ai);
+
+  return {
+    career,
+    wealth,
+    overview,
+    dedupedEvidence,
+    dedupedEvidenceGroups,
+    ai
+  };
 }
