@@ -1,5 +1,6 @@
 import type { Horoscope } from '../../types';
 import type { DomainInterpretation } from '../../domain/interpretation';
+import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
 import type { AiRouter } from '../../ai';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
@@ -18,6 +19,8 @@ export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
   readonly router?: AiRouter;
   readonly includeAiExplanation?: boolean;
+  readonly strategy?: 'CW01' | 'LEGACY';
+  readonly asOf?: Date | string;
 }
 
 /**
@@ -35,9 +38,15 @@ export async function runLifeAnalysisProduct(
   options: RunLifeAnalysisProductOptions
 ): Promise<LifeAnalysisProductState> {
   try {
+    const strategy = options.strategy ?? 'CW01';
+    const domainOptions: DomainReasoningOptions = {
+      strategy,
+      asOf: options.asOf
+    };
+
     // Compute Career, Wealth, and LifeAnalysis exactly once
-    const career = interpretCareerV2(options.horoscope);
-    const wealth = interpretWealthV2(options.horoscope);
+    const career = interpretCareerV2(options.horoscope, domainOptions);
+    const wealth = interpretWealthV2(options.horoscope, domainOptions);
     const domainInterpretations: readonly DomainInterpretation[] = [career, wealth];
     const analysis = buildLifeAnalysis(domainInterpretations);
 

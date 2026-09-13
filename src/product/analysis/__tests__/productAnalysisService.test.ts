@@ -232,4 +232,29 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     expect(result.warnings.some((w) => w.message.includes('Invalid ephemeris parameters'))).toBe(true);
     expect(runPipelineMock).not.toHaveBeenCalled();
   });
+
+  it('5. Forwards strategy and asOf options to runPipeline when provided', async () => {
+    const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
+    const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
+
+    const deps: ProductAnalysisDependencies = {
+      calculateHoroscope: calculateHoroscopeMock,
+      runPipeline: runPipelineMock
+    };
+
+    const service = new ProductAnalysisService(deps);
+    const testAsOf = '2026-06-15T12:00:00.000Z';
+    await service.analyze(sampleBirth, {
+      strategy: 'CW01',
+      asOf: testAsOf,
+      includeAiExplanation: false
+    });
+
+    expect(runPipelineMock).toHaveBeenCalledWith({
+      horoscope: sampleHoroscope,
+      includeAiExplanation: false,
+      strategy: 'CW01',
+      asOf: testAsOf
+    });
+  });
 });

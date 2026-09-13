@@ -23,6 +23,8 @@ export interface ProductAnalysisDependencies {
   readonly runPipeline: (options: {
     readonly horoscope: Horoscope;
     readonly includeAiExplanation?: boolean;
+    readonly strategy?: 'CW01' | 'LEGACY';
+    readonly asOf?: Date | string;
   }) => Promise<LifeAnalysisProductState>;
 }
 
@@ -34,6 +36,7 @@ export const defaultProductAnalysisDependencies: ProductAnalysisDependencies = O
 export interface AnalyzeOptions {
   readonly includeAiExplanation?: boolean;
   readonly asOf?: string;
+  readonly strategy?: 'CW01' | 'LEGACY';
 }
 
 export class ProductAnalysisService {
@@ -64,7 +67,9 @@ export class ProductAnalysisService {
       this._lastHoroscope = horoscope;
       const pipelineState = await this.deps.runPipeline({
         horoscope,
-        includeAiExplanation: options?.includeAiExplanation ?? true
+        includeAiExplanation: options?.includeAiExplanation ?? true,
+        ...(options?.strategy ? { strategy: options.strategy } : {}),
+        ...(options?.asOf ? { asOf: options.asOf } : {})
       });
       this._lastPipelineState = pipelineState;
 
