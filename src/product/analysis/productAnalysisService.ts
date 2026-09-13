@@ -24,9 +24,8 @@ export interface ProductAnalysisDependencies {
   readonly calculateHoroscope: (birthDetails: BirthDetails, customPositionsOrOptions?: any, asOfParam?: string | Date) => Horoscope;
   readonly runPipeline: (options: {
     readonly horoscope: Horoscope;
+    readonly context: AnalysisContext;
     readonly includeAiExplanation?: boolean;
-    readonly asOf?: Date | string;
-    readonly context?: AnalysisContext;
   }) => Promise<LifeAnalysisProductState>;
 }
 
@@ -64,9 +63,12 @@ export class ProductAnalysisService {
     birthDetails: BirthDetails,
     options?: AnalyzeOptions
   ): Promise<ProductAnalysis> {
+    const methodology = mapMethodology(birthDetails);
     const context = options?.context ?? createAnalysisContext({
       asOf: options?.asOf,
-      methodology: mapMethodology(birthDetails)
+      methodology,
+      engineVersion: methodology.calculationEngine,
+      rulesVersion: methodology.rulesEngine
     });
 
     try {
@@ -74,9 +76,8 @@ export class ProductAnalysisService {
       this._lastHoroscope = horoscope;
       const pipelineState = await this.deps.runPipeline({
         horoscope,
-        includeAiExplanation: options?.includeAiExplanation ?? true,
-        asOf: context.asOf,
-        context
+        context,
+        includeAiExplanation: options?.includeAiExplanation ?? true
       });
       this._lastPipelineState = pipelineState;
 

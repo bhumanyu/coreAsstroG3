@@ -202,7 +202,8 @@ export function mapMethodology(birth: BirthDetails): ProductMethodology {
     ayanamsa: String(birth.ayanamsa),
     calculationEngine: 'ASTRO_CORE_V1',
     rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
-    vargaRules: 'PARASHARA_D10_D2'
+    vargaRules: 'PARASHARA_D10_D2',
+    dashaSystem: 'VIMSHOTTARI'
   };
 }
 

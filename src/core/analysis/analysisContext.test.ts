@@ -16,7 +16,8 @@ const mockMethodology: ProductMethodology = Object.freeze({
   ayanamsa: 'LAHIRI',
   calculationEngine: 'ASTRO_CORE_V1',
   rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
-  vargaRules: 'PARASHARA_D10_D2'
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
 });
 
 describe('AnalysisContext and AnalysisContextFactory (P0-02A)', () => {

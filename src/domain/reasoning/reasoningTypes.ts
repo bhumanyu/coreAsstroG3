@@ -119,6 +119,5 @@ export interface ReasoningTrace {
 }
 
 export interface DomainReasoningOptions {
-  readonly context?: AnalysisContext;
-  readonly asOf?: Date | string;
+  readonly context: AnalysisContext;
 }

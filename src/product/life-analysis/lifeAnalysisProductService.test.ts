@@ -17,6 +17,24 @@ import * as registryModule from '../../domain/interpretation/createDefaultDomain
 import type { LifeAnalysis, SharedTimingActivation } from '../../domain/synthesis';
 import type { AiRouter } from '../../ai/routing/AiRouter';
 import type { AiRequest } from '../../ai/types/aiRequestTypes';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+
+function createTestContext(asOf?: string | Date) {
+  return createAnalysisContext({
+    asOf: asOf ?? '2026-01-01T00:00:00.000Z',
+    methodology: testMethodology
+  });
+}
 
 describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
   it('Test 1: guarantees no duplicate calculation across Career, Wealth, and LifeAnalysis in the full P-029 path', async () => {
@@ -27,6 +45,7 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
 
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: createTestContext(),
       includeAiExplanation: true
     });
 
@@ -237,6 +256,7 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
 
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: createTestContext(),
       router: failingRouter,
       includeAiExplanation: true
     });
@@ -266,11 +286,13 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
 
     const resultA = await runLifeAnalysisProduct({
       horoscope: horoscopeA,
+      context: createTestContext(),
       includeAiExplanation: false
     });
 
     const resultB = await runLifeAnalysisProduct({
       horoscope: horoscopeB,
+      context: createTestContext(),
       includeAiExplanation: false
     });
 
@@ -291,24 +313,25 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
     const testAsOf = '2026-06-01T12:00:00.000Z';
+    const testCtx = createTestContext(testAsOf);
 
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
-      includeAiExplanation: false,
-      asOf: testAsOf
+      context: testCtx,
+      includeAiExplanation: false
     });
 
     expect(careerSpy).toHaveBeenCalledWith(
       STAGE1_GOLDEN_HOROSCOPE,
       expect.objectContaining({
-        asOf: testAsOf
+        context: testCtx
       })
     );
     expect(careerSpy.mock.calls[0][1]).not.toHaveProperty('strategy');
     expect(wealthSpy).toHaveBeenCalledWith(
       STAGE1_GOLDEN_HOROSCOPE,
       expect.objectContaining({
-        asOf: testAsOf
+        context: testCtx
       })
     );
     expect(wealthSpy.mock.calls[0][1]).not.toHaveProperty('strategy');
@@ -338,6 +361,7 @@ describe('P-029 LifeAnalysisProductService & AI Integration Contract', () => {
     // Even if an untyped caller attempts to pass strategy: 'LEGACY'
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: createTestContext(),
       includeAiExplanation: false,
       ...({ strategy: 'LEGACY' } as any)
     });

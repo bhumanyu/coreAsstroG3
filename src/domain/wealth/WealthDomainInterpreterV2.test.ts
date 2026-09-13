@@ -2,6 +2,20 @@ import { describe, expect, it, vi } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+function makeContext(asOf?: Date | string) {
+  return createAnalysisContext({ asOf, methodology: testMethodology });
+}
 import {
   interpretWealthV2,
   resolveWealthConclusionStrength,
@@ -1501,7 +1515,8 @@ describe('WealthDomainInterpreterV2', () => {
   // 17. CW-02 -> CW-03 end-to-end timing integration (Concern 9 & Concern 11)
   it('plumbs CW-02 Dasha activations through to CW-03 wealthTimingSynthesis given an explicit asOf date', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = interpretWealthV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result = interpretWealthV2(horoscope, { context });
 
     expect(result.domain).toBe('WEALTH');
     expect(result.conclusionData).toBeDefined();
@@ -1583,8 +1598,9 @@ describe('WealthDomainInterpreterV2', () => {
   // End-to-end CW-04 Wealth Manifestation Pipeline Test
   it('CW-04 end-to-end pipeline: produces deterministic wealth manifestation synthesis with explicit asOf date', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const result1 = interpretWealthV2(horoscope, { asOf });
-    const result2 = interpretWealthV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result1 = interpretWealthV2(horoscope, { context });
+    const result2 = interpretWealthV2(horoscope, { context });
 
     const manifestationSynthesis = result1.conclusionData?.wealthManifestationSynthesis;
     expect(manifestationSynthesis).toBeDefined();
@@ -1642,8 +1658,9 @@ describe('WealthDomainInterpreterV2', () => {
   // End-to-end CW-05 Wealth Final Synthesis Pipeline Test
   it('CW-05 end-to-end pipeline: produces deterministic wealth final synthesis with multi-axis dimensions, riskProfile, and provenance', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const result1 = interpretWealthV2(horoscope, { asOf });
-    const result2 = interpretWealthV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result1 = interpretWealthV2(horoscope, { context });
+    const result2 = interpretWealthV2(horoscope, { context });
 
     const finalSynthesis = result1.conclusionData?.wealthFinalSynthesis;
     expect(finalSynthesis).toBeDefined();
@@ -1758,7 +1775,8 @@ describe('WealthDomainInterpreterV2', () => {
     // 2. Non-double-counting invariant
     it('proves traceability vs natal scoring non-double-counting invariant: DASHA items are present in trace/evidence but have 0 natal contribution', () => {
       const asOf = '2024-06-15T12:00:00.000Z';
-      const result = interpretWealthV2(horoscope, { asOf });
+      const context = makeContext(asOf);
+      const result = interpretWealthV2(horoscope, { context });
 
       // (a) Evidence contains items with source === 'DASHA' (traceability present)
       const dashaItems = result.evidence.filter((e) => e.source === 'DASHA');
@@ -1799,13 +1817,14 @@ describe('WealthDomainInterpreterV2', () => {
 
       vi.useFakeTimers();
       try {
+        const context = makeContext(explicitAsOf);
         // Run 1: Clock set to 2021
         vi.setSystemTime(new Date('2021-03-15T08:00:00.000Z'));
-        const run1 = interpretWealthV2(horoscope, { asOf: explicitAsOf });
+        const run1 = interpretWealthV2(horoscope, { context });
 
         // Run 2: Clock set to 2030
         vi.setSystemTime(new Date('2030-11-20T17:30:00.000Z'));
-        const run2 = interpretWealthV2(horoscope, { asOf: explicitAsOf });
+        const run2 = interpretWealthV2(horoscope, { context });
 
         // Wall-clock metadata stamp changes
         expect(run1.generatedAt).not.toBe(run2.generatedAt);

@@ -1,5 +1,9 @@
 import type { AnalysisContext, ProductMethodology } from './AnalysisContext';
 
+/**
+ * Active runtime engine and rules versions. These serve as the single sanctioned
+ * default fallback when not explicitly supplied in the methodology or input context.
+ */
 export const DEFAULT_ENGINE_VERSION = 'ASTRO_CORE_V1';
 export const DEFAULT_RULES_VERSION = 'PARASHARA_CLASSICAL_RULES_V2';
 

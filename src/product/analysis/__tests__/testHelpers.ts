@@ -23,7 +23,10 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       zodiacSystem: 'SIDEREAL',
       houseSystem: 'PLACIDUS',
       ayanamsa: 'LAHIRI',
-      calculationEngine: 'SWISSEPH'
+      calculationEngine: 'SWISSEPH',
+      rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+      vargaRules: 'PARASHARA_D10_D2',
+      dashaSystem: 'VIMSHOTTARI'
     },
     chart: {
       ascendantSign: 'Capricorn',

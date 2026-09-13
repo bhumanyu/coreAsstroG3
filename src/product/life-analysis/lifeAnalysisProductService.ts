@@ -15,14 +15,12 @@ import type {
 } from './lifeAnalysisTypes';
 import { deepFreeze } from '../../ai/context/deepFreeze';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
-import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 
 export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
+  readonly context: AnalysisContext;
   readonly router?: AiRouter;
   readonly includeAiExplanation?: boolean;
-  readonly asOf?: Date | string;
-  readonly context?: AnalysisContext;
 }
 
 /**
@@ -40,21 +38,8 @@ export async function runLifeAnalysisProduct(
   options: RunLifeAnalysisProductOptions
 ): Promise<LifeAnalysisProductState> {
   try {
-    const context = options.context ?? createAnalysisContext({
-      asOf: options.asOf,
-      methodology: {
-        zodiacSystem: 'SIDEREAL',
-        houseSystem: 'WHOLE_SIGN',
-        ayanamsa: String(options.horoscope.birthDetails?.ayanamsa ?? 'LAHIRI'),
-        calculationEngine: 'ASTRO_CORE_V1',
-        rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
-        vargaRules: 'PARASHARA_D10_D2'
-      }
-    });
-
     const domainOptions: DomainReasoningOptions = {
-      context,
-      asOf: context.asOf
+      context: options.context
     };
 
     // Compute Career, Wealth, and LifeAnalysis exactly once

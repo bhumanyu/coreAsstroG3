@@ -14,6 +14,21 @@ import {
 import { mapEvidenceSource } from './domainPresentationUtils';
 import { resolveRuleMetadata } from './lifeAnalysisEvidenceRules';
 import { runLifeAnalysisProduct } from './lifeAnalysisProductService';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+const defaultTestContext = createAnalysisContext({
+  asOf: '2026-01-01T00:00:00.000Z',
+  methodology: testMethodology
+});
 import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
 import { buildAiContext } from '../../ai/context/aiContextFactory';
 import {
@@ -307,6 +322,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
 
     const productResult = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: defaultTestContext,
       includeAiExplanation: false,
       router: mockRouter
     });
@@ -326,6 +342,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
 
     const productResult = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
+      context: defaultTestContext,
       includeAiExplanation: true,
       router: failingRouter
     });

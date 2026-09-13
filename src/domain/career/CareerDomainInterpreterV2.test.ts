@@ -3,6 +3,20 @@ import { Planet } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+function makeContext(asOf?: string) {
+  return createAnalysisContext({ asOf, methodology: testMethodology });
+}
 import {
   interpretCareerV2,
   resolveCareerConclusionStrength,
@@ -1442,8 +1456,9 @@ describe('CareerDomainInterpreterV2', () => {
   // 18. End-to-end CW-04 Career Manifestation Pipeline Test
   it('CW-04 end-to-end pipeline: produces deterministic career manifestation synthesis with explicit asOf date', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const result1 = interpretCareerV2(horoscope, { asOf });
-    const result2 = interpretCareerV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result1 = interpretCareerV2(horoscope, { context });
+    const result2 = interpretCareerV2(horoscope, { context });
 
     // Verify presence and reasoning version
     const manifestations = result1.conclusionData?.careerManifestationSynthesis;
@@ -1515,8 +1530,9 @@ describe('CareerDomainInterpreterV2', () => {
   // End-to-end CW-05 Career Final Synthesis Pipeline Test
   it('CW-05 end-to-end pipeline: produces deterministic career final synthesis with multi-axis evaluation and provenance', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const result1 = interpretCareerV2(horoscope, { asOf });
-    const result2 = interpretCareerV2(horoscope, { asOf });
+    const context = makeContext(asOf);
+    const result1 = interpretCareerV2(horoscope, { context });
+    const result2 = interpretCareerV2(horoscope, { context });
 
     const finalSynthesis = result1.conclusionData?.careerFinalSynthesis;
     expect(finalSynthesis).toBeDefined();
@@ -1613,7 +1629,8 @@ describe('CareerDomainInterpreterV2', () => {
     // 2. Non-double-counting invariant (lines 295-300)
     it('proves traceability vs natal scoring non-double-counting invariant: DASHA items are present in trace/mergedEvidence but have 0 natal contribution', () => {
       const asOf = '2024-06-15T12:00:00.000Z';
-      const result = interpretCareerV2(horoscope, { asOf });
+      const context = makeContext(asOf);
+      const result = interpretCareerV2(horoscope, { context });
 
       // (a) mergedEvidence contains items with source === 'DASHA' (traceability present)
       const dashaItems = result.evidence.filter((e) => e.source === 'DASHA');
@@ -1656,13 +1673,14 @@ describe('CareerDomainInterpreterV2', () => {
 
       vi.useFakeTimers();
       try {
+        const context = makeContext(explicitAsOf);
         // Run 1: Clock set to 2021
         vi.setSystemTime(new Date('2021-03-15T08:00:00.000Z'));
-        const run1 = interpretCareerV2(horoscope, { asOf: explicitAsOf });
+        const run1 = interpretCareerV2(horoscope, { context });
 
         // Run 2: Clock set to 2030
         vi.setSystemTime(new Date('2030-11-20T17:30:00.000Z'));
-        const run2 = interpretCareerV2(horoscope, { asOf: explicitAsOf });
+        const run2 = interpretCareerV2(horoscope, { context });
 
         // Wall-clock metadata stamp changes
         expect(run1.generatedAt).not.toBe(run2.generatedAt);
