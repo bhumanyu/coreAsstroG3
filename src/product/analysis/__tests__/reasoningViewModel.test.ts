@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   selectReasoningViewModel,
+  selectReasoningOverview,
+  selectDedupedEvidence,
   buildEvidenceGroups,
   mapEvidence
 } from '../reasoningViewModel';
@@ -22,10 +24,10 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.hero.title).toBe('Career & Vocational Reasoning');
     expect(vm.hero.confidence).toBe('HIGH');
     expect(vm.hero.strength).toBe('STRONG');
-    expect(vm.hero.ascendantSign).toBe('Capricorn');
-    expect(vm.hero.moonSign).toBe('Leo');
-    expect(vm.hero.sunSign).toBe('Capricorn');
-    expect(vm.hero.moonNakshatra).toBe('Magha');
+    expect('ascendantSign' in vm.hero).toBe(false);
+    expect('moonSign' in vm.hero).toBe(false);
+    expect('sunSign' in vm.hero).toBe(false);
+    expect('moonNakshatra' in vm.hero).toBe(false);
 
     // D10 varga
     expect(vm.d10.chart).toBe('D10');
@@ -53,13 +55,26 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.conclusion.confidence).toBe('HIGH');
     expect(vm.conclusion.strength).toBe('STRONG');
 
-    // Chain
+    // Chain - canonical semantic fields without fabricated direction
     expect(vm.chain).toHaveLength(5);
     expect(vm.chain[0].type).toBe('PROMISE');
+    expect(vm.chain[0].promiseStrength).toBe('STRONG');
+    expect(vm.chain[0].direction).toBeUndefined();
+
     expect(vm.chain[1].type).toBe('VARGA');
+    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
+    expect(vm.chain[1].direction).toBeUndefined();
+
     expect(vm.chain[2].type).toBe('ACTIVATION');
+    expect(vm.chain[2].dashaDirection).toBe('SUPPORT');
+    expect(vm.chain[2].direction).toBe('SUPPORT');
+
     expect(vm.chain[3].type).toBe('TRANSIT');
+    expect(vm.chain[3].transitEffect).toBe('TRIGGER');
+    expect(vm.chain[3].direction).toBeUndefined();
+
     expect(vm.chain[4].type).toBe('SYNTHESIS');
+    expect(vm.chain[4].direction).toBeUndefined();
   });
 
   it('2. selector maps all Wealth fields correctly', () => {
@@ -83,6 +98,26 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     // Dasha & Transit
     expect(vm.dasha.status).toBe('AVAILABLE');
     expect(vm.transit.status).toBe('AVAILABLE');
+
+    // Wealth chain - canonical semantic fields without fabricated direction
+    expect(vm.chain).toHaveLength(5);
+    expect(vm.chain[0].type).toBe('PROMISE');
+    expect(vm.chain[0].promiseStrength).toBe('MODERATE');
+    expect(vm.chain[0].direction).toBeUndefined();
+
+    expect(vm.chain[1].type).toBe('VARGA');
+    expect(vm.chain[1].vargaRelationship).toBe('CONFIRMS');
+    expect(vm.chain[1].direction).toBeUndefined();
+
+    expect(vm.chain[2].type).toBe('ACTIVATION');
+    expect(vm.chain[2].dashaDirection).toBeUndefined();
+
+    expect(vm.chain[3].type).toBe('TRANSIT');
+    expect(vm.chain[3].transitEffect).toBe('NO_MATERIAL_TRIGGER');
+    expect(vm.chain[3].direction).toBeUndefined();
+
+    expect(vm.chain[4].type).toBe('SYNTHESIS');
+    expect(vm.chain[4].direction).toBeUndefined();
   });
 
   it('3. mapEvidence preserves all fields and provenance without mutation', () => {
@@ -160,30 +195,24 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     const mappedEvidence = evidenceList.map(mapEvidence);
     const groups = buildEvidenceGroups(mappedEvidence);
 
-    // Assert that primary driver is in PRIMARY and SUPPORTING
+    // Assert that primary driver is in PRIMARY
     const primaryGroup = groups.find((g) => g.id === 'PRIMARY');
     expect(primaryGroup?.items.some((i) => i.id === 'ev_primary_support')).toBe(true);
 
-    const supportingGroup = groups.find((g) => g.id === 'SUPPORTING');
-    expect(supportingGroup?.items.some((i) => i.id === 'ev_primary_support')).toBe(true);
-
-    // Assert modifying challenge is in MODIFIER and CHALLENGING
+    // Assert modifying challenge is in MODIFIER
     const modifierGroup = groups.find((g) => g.id === 'MODIFIER');
     expect(modifierGroup?.items.some((i) => i.id === 'ev_modifier_challenge')).toBe(true);
-
-    const challengingGroup = groups.find((g) => g.id === 'CHALLENGING');
-    expect(challengingGroup?.items.some((i) => i.id === 'ev_modifier_challenge')).toBe(true);
 
     // Assert refinement is in REFINEMENT
     const refinementGroup = groups.find((g) => g.id === 'REFINEMENT');
     expect(refinementGroup?.items.some((i) => i.id === 'ev_refinement_neutral')).toBe(true);
 
-    // Assert that unclassified neutral and conflicting items were caught in OTHER
-    const otherGroup = groups.find((g) => g.id === 'OTHER');
-    expect(otherGroup).toBeDefined();
-    expect(otherGroup?.title).toBe('Additional Factors');
-    expect(otherGroup?.items.some((i) => i.id === 'ev_unclassified_neutral')).toBe(true);
-    expect(otherGroup?.items.some((i) => i.id === 'ev_conflicting_item')).toBe(true);
+    // Assert neutral and conflicting items are in their respective role groups
+    const neutralGroup = groups.find((g) => g.id === 'NEUTRAL');
+    expect(neutralGroup?.items.some((i) => i.id === 'ev_unclassified_neutral')).toBe(true);
+
+    const conflictingGroup = groups.find((g) => g.id === 'CONFLICTING');
+    expect(conflictingGroup?.items.some((i) => i.id === 'ev_conflicting_item')).toBe(true);
 
     // ZERO EVIDENCE LOSS: Every item in mappedEvidence appears in at least one group
     const allGroupedIds = new Set(groups.flatMap((g) => g.items.map((i) => i.id)));
@@ -205,10 +234,10 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     ];
     const groups = buildEvidenceGroups(evidenceList.map(mapEvidence));
 
-    // Only PRIMARY and SUPPORTING should exist; MODIFIER, REFINEMENT, CHALLENGING, OTHER should be absent
+    // Only PRIMARY should exist; SUPPORTING, MODIFIER, REFINEMENT, CHALLENGING, CONFLICTING, NEUTRAL, OTHER should be absent
     const groupIds = groups.map((g) => g.id);
-    expect(groupIds).toContain('PRIMARY');
-    expect(groupIds).toContain('SUPPORTING');
+    expect(groupIds).toEqual(['PRIMARY']);
+    expect(groupIds).not.toContain('SUPPORTING');
     expect(groupIds).not.toContain('MODIFIER');
     expect(groupIds).not.toContain('REFINEMENT');
     expect(groupIds).not.toContain('CHALLENGING');
@@ -342,15 +371,15 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.conclusion.evidenceCount).toBe(2);
     expect(vm.allEvidence).toHaveLength(2);
 
-    // Sum of group item counts is greater because items belong to role groups and direction groups simultaneously
+    // Sum of group item counts equals unique items since each item belongs to exactly one role-based group
     const groups = vm.evidenceGroups;
     const totalGroupItems = groups.reduce((acc, g) => acc + g.items.length, 0);
-    expect(totalGroupItems).toBe(4); // PRIMARY (1) + MODIFIER (1) + SUPPORTING (1) + CHALLENGING (1) = 4
-    expect(vm.hero.evidenceCount).toBeLessThan(totalGroupItems);
+    expect(totalGroupItems).toBe(2); // PRIMARY (1) + MODIFIER (1) = 2
+    expect(vm.hero.evidenceCount).toBe(totalGroupItems);
     expect(vm.hero.evidenceCount).toBe(new Set(duplicateEvidence.map((e) => e.id)).size);
   });
 
-  it('11. Orthogonal dimensions: preserves PRIMARY role with CHALLENGING direction without mutation and maps to both groups', () => {
+  it('11. Orthogonal dimensions: preserves PRIMARY role with CHALLENGING direction without mutation and maps to its role group', () => {
     const mixedEvidence: ProductEvidence[] = [
       {
         id: 'ev_mixed_1',
@@ -374,13 +403,14 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.allEvidence[0].role).toBe('PRIMARY');
     expect(vm.allEvidence[0].direction).toBe('CHALLENGE');
 
-    // Appears in PRIMARY group
+    // Appears in PRIMARY group based on canonical role
     const primaryGroup = vm.evidenceGroups.find((g) => g.id === 'PRIMARY');
     expect(primaryGroup?.items.some((i) => i.id === 'ev_mixed_1')).toBe(true);
 
-    // Also appears in CHALLENGING group
-    const challengingGroup = vm.evidenceGroups.find((g) => g.id === 'CHALLENGING');
-    expect(challengingGroup?.items.some((i) => i.id === 'ev_mixed_1')).toBe(true);
+    // Direction is preserved on the item itself rather than splitting into multiple groups
+    expect(primaryGroup?.items[0].direction).toBe('CHALLENGE');
+    const challengingRoleGroup = vm.evidenceGroups.find((g) => g.id === 'CHALLENGING');
+    expect(challengingRoleGroup).toBeUndefined();
   });
 
   it('12. Provenance is not validation: provenance availability confirms rule metadata trace without modifying deterministic verdict', () => {
@@ -418,7 +448,7 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vm.allEvidence[0].provenance.derivedFromIds).toEqual(['shadbala_sun']);
 
     // Verdict, confidence, and strength are unaffected by whether provenance is verified
-    expect(vm.conclusion.status).toBe('UNFAVORABLE');
+    expect(vm.conclusion.status).toBe('CHALLENGED');
     expect(vm.conclusion.confidence).toBe('LOW');
     expect(vm.conclusion.strength).toBe('WEAK');
   });
@@ -456,5 +486,305 @@ describe('ReasoningViewModel pure projection selectors (P-UI-06)', () => {
     expect(vmWithAi.conclusion.confidence).toBe('HIGH');
     expect(vmWithAi.conclusion.strength).toBe('STRONG');
     expect(vmWithAi.conclusion.evidenceCount).toBe(vmWithAi.allEvidence.length);
+  });
+
+  it('14. selectReasoningOverview projects both Career and Wealth conclusions, including Career-available / Wealth-UNAVAILABLE partial case (§32, §50)', () => {
+    const analysisPartial = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        status: 'FAVORABLE',
+        promise: {
+          status: 'SUPPORTED',
+          confidence: 'HIGH',
+          strength: 'STRONG',
+          statement: 'Promising trajectory.'
+        }
+      },
+      wealth: {
+        ...createProductAnalysis().wealth,
+        overall: {
+          status: 'UNAVAILABLE',
+          promise: 'UNAVAILABLE',
+          confidence: 'LOW'
+        }
+      }
+    });
+
+    const overview = selectReasoningOverview(analysisPartial);
+
+    // Career is available with correct metrics
+    expect(overview.career.availability).toBe('AVAILABLE');
+    expect(overview.career.status).toBe('STRONGLY_SUPPORTED');
+    expect(overview.career.confidence).toBe('HIGH');
+    expect(overview.career.strength).toBe('STRONG');
+    expect(overview.career.headline).toBe('Strong Career Outlook');
+
+    // Wealth is explicitly UNAVAILABLE, never fabricating a verdict or headline
+    expect(overview.wealth.availability).toBe('UNAVAILABLE');
+    expect(overview.wealth.status).toBe('UNAVAILABLE');
+    expect(overview.wealth.confidence).toBe('LOW');
+    expect(overview.wealth.headline).toBeUndefined();
+    expect(overview.wealth.statement).toBeUndefined();
+  });
+
+  it('15. Promise vs conclusion vs confidence preserved separately for a fixture with promise=STRONG, status=MIXED, confidence=HIGH (§37)', () => {
+    const complexAnalysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        status: 'MIXED',
+        promise: {
+          status: 'SUPPORTED',
+          confidence: 'HIGH',
+          strength: 'STRONG',
+          statement: 'Strong vocational promise counterbalanced by active friction.'
+        }
+      }
+    });
+
+    const vm = selectReasoningViewModel(complexAnalysis, 'CAREER');
+
+    // Separate fields preserved
+    expect(vm.hero.strength).toBe('STRONG');
+    expect(vm.hero.status).toBe('MIXED');
+    expect(vm.hero.confidence).toBe('HIGH');
+    expect(vm.conclusion.strength).toBe('STRONG');
+    expect(vm.conclusion.status).toBe('MIXED');
+    expect(vm.conclusion.confidence).toBe('HIGH');
+  });
+
+  it('16. Evidence direction and role independence: direction=CHALLENGE + role=PRIMARY and direction=SUPPORT + role=MODIFIER are preserved (§38)', () => {
+    const mixedEvidence: ProductEvidence[] = [
+      {
+        id: 'ev_pri_chal',
+        title: 'Primary Challenge',
+        statement: 'Debilitated 10th lord acts as primary obstacle.',
+        direction: 'CHALLENGE',
+        role: 'PRIMARY',
+        source: 'CAREER_ENGINE'
+      },
+      {
+        id: 'ev_mod_sup',
+        title: 'Modifying Support',
+        statement: 'Benefic aspect modifies the impediment favorably.',
+        direction: 'SUPPORT',
+        role: 'MODIFIER',
+        source: 'CAREER_ENGINE'
+      }
+    ];
+
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        evidence: mixedEvidence
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysis, 'CAREER');
+    const primaryGroup = vm.evidenceGroups.find((g) => g.id === 'PRIMARY');
+    const modifierGroup = vm.evidenceGroups.find((g) => g.id === 'MODIFIER');
+
+    expect(primaryGroup?.items[0].id).toBe('ev_pri_chal');
+    expect(primaryGroup?.items[0].direction).toBe('CHALLENGE');
+    expect(primaryGroup?.items[0].role).toBe('PRIMARY');
+
+    expect(modifierGroup?.items[0].id).toBe('ev_mod_sup');
+    expect(modifierGroup?.items[0].direction).toBe('SUPPORT');
+    expect(modifierGroup?.items[0].role).toBe('MODIFIER');
+  });
+
+  it('17. selectDedupedEvidence deduplicates evidence by ID across career and wealth without loss (§39)', () => {
+    const sharedEvidence: ProductEvidence = {
+      id: 'ev_shared_jupiter',
+      title: 'Exalted Jupiter in 1st',
+      statement: 'Jupiter provides blessing to both career and wealth.',
+      direction: 'SUPPORT',
+      role: 'PRIMARY',
+      source: 'CORE'
+    };
+
+    const careerOnlyEvidence: ProductEvidence = {
+      id: 'ev_career_mars',
+      title: 'Mars in 10th',
+      statement: 'Mars strengthens executive leadership.',
+      direction: 'SUPPORT',
+      role: 'SUPPORTING',
+      source: 'CAREER'
+    };
+
+    const wealthOnlyEvidence: ProductEvidence = {
+      id: 'ev_wealth_venus',
+      title: 'Venus in 2nd',
+      statement: 'Venus enhances financial accumulation.',
+      direction: 'SUPPORT',
+      role: 'SUPPORTING',
+      source: 'WEALTH'
+    };
+
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        evidence: [sharedEvidence, careerOnlyEvidence]
+      },
+      wealth: {
+        ...createProductAnalysis().wealth,
+        evidence: [sharedEvidence, wealthOnlyEvidence]
+      }
+    });
+
+    const deduped = selectDedupedEvidence(analysis);
+    expect(deduped).toHaveLength(3);
+    expect(deduped.map((e) => e.id)).toEqual(['ev_shared_jupiter', 'ev_career_mars', 'ev_wealth_venus']);
+  });
+
+  it('18. D10/D2 handles CONFIRMS, PARTIALLY_CONFIRMS, MODIFIES, CONFLICTS, and UNAVAILABLE without fabricated statements (§42, §43)', () => {
+    const relationships = ['CONFIRMS', 'PARTIALLY_CONFIRMS', 'MODIFIES', 'CONFLICTS', 'UNAVAILABLE'] as const;
+
+    for (const rel of relationships) {
+      const analysis = createProductAnalysis({
+        career: {
+          ...createProductAnalysis().career,
+          d10: {
+            relationship: rel,
+            statement: rel === 'UNAVAILABLE' ? undefined : `${rel} career trajectory.`
+          }
+        }
+      });
+
+      const vm = selectReasoningViewModel(analysis, 'CAREER');
+      expect(vm.varga?.relationship).toBe(rel);
+      if (rel === 'UNAVAILABLE') {
+        expect(vm.varga?.statement).toBeUndefined();
+      } else {
+        expect(vm.varga?.statement).toBe(`${rel} career trajectory.`);
+      }
+    }
+  });
+
+  it('19. Dasha MD -> AD -> PD chronological order is strictly preserved (§41)', () => {
+    const periods: ProductDashaPeriod[] = [
+      {
+        level: 'MD',
+        planet: 'Jupiter',
+        role: 'PRIMARY',
+        direction: 'SUPPORT',
+        effect: 'ACTIVATES',
+        evidenceIds: [],
+        statement: 'Jupiter MD'
+      },
+      {
+        level: 'AD',
+        planet: 'Saturn',
+        role: 'MODIFIER',
+        direction: 'CHALLENGE',
+        effect: 'DELAYS',
+        evidenceIds: [],
+        statement: 'Saturn AD'
+      },
+      {
+        level: 'PD',
+        planet: 'Mercury',
+        role: 'REFINEMENT',
+        direction: 'SUPPORT',
+        effect: 'FACILITATES',
+        evidenceIds: [],
+        statement: 'Mercury PD'
+      }
+    ];
+
+    const analysis = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        activation: {
+          ...createProductAnalysis().career.activation,
+          dasha: {
+            status: 'AVAILABLE',
+            periods
+          }
+        }
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysis, 'CAREER');
+    expect(vm.dasha?.periods.map((p) => p.level)).toEqual(['MD', 'AD', 'PD']);
+    expect(vm.dasha?.periods.map((p) => p.planet)).toEqual(['Jupiter', 'Saturn', 'Mercury']);
+  });
+
+  it('20. Missing/undefined domain prose leaves node.statement undefined without fabricating fallback prose (P1)', () => {
+    const analysisWithoutProse = createProductAnalysis({
+      career: {
+        ...createProductAnalysis().career,
+        promise: {
+          status: 'SUPPORTED',
+          confidence: 'HIGH',
+          strength: 'STRONG',
+          statement: undefined as any
+        },
+        d10: {
+          relationship: 'UNAVAILABLE',
+          statement: undefined
+        },
+        activation: {
+          dasha: {
+            status: 'UNAVAILABLE',
+            periods: []
+          },
+          transit: {
+            status: 'UNAVAILABLE',
+            statement: undefined,
+            effect: 'UNAVAILABLE' as any
+          }
+        },
+        synthesis: undefined
+      }
+    });
+
+    const vm = selectReasoningViewModel(analysisWithoutProse, 'CAREER');
+    const promiseNode = vm.chain.find((n) => n.type === 'PROMISE');
+    const vargaNode = vm.chain.find((n) => n.type === 'VARGA');
+    const transitNode = vm.chain.find((n) => n.type === 'TRANSIT');
+
+    expect(promiseNode?.statement).toBeUndefined();
+    expect(vargaNode?.statement).toBeUndefined();
+    expect(transitNode?.statement).toBeUndefined();
+  });
+
+  it('21. selectDedupedEvidence delegates to selectAllEvidence with zero evidence loss (§39)', () => {
+    const analysis = createProductAnalysis();
+    const deduped = selectDedupedEvidence(analysis);
+
+    // Each item in career and wealth evidence should appear in the deduped array
+    const careerIds = analysis.career.evidence.map((e) => e.id);
+    const wealthIds = analysis.wealth.evidence.map((e) => e.id);
+    const expectedUniqueIds = new Set([...careerIds, ...wealthIds]);
+
+    expect(deduped.length).toBe(expectedUniqueIds.size);
+    for (const id of expectedUniqueIds) {
+      expect(deduped.some((e) => e.id === id)).toBe(true);
+    }
+  });
+
+  it('22. selectReasoningOverview produces strictly typed ConclusionStatus, PromiseStrength, ProductConfidence, ProductAvailability', () => {
+    const analysis = createProductAnalysis();
+    const overview = selectReasoningOverview(analysis);
+
+    // Valid ConclusionStatus values
+    const validStatuses = ['STRONGLY_SUPPORTED', 'SUPPORTED', 'MIXED', 'CHALLENGED', 'UNAVAILABLE'];
+    expect(validStatuses).toContain(overview.career.status);
+    expect(validStatuses).toContain(overview.wealth.status);
+
+    // Valid PromiseStrength values
+    const validStrengths = ['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNAVAILABLE'];
+    expect(validStrengths).toContain(overview.career.strength);
+    expect(validStrengths).toContain(overview.wealth.strength);
+
+    // Valid ProductConfidence values
+    const validConfidences = ['HIGH', 'MEDIUM', 'LOW', 'UNAVAILABLE'];
+    expect(validConfidences).toContain(overview.career.confidence);
+    expect(validConfidences).toContain(overview.wealth.confidence);
+
+    // Valid ProductAvailability values
+    const validAvailabilities = ['AVAILABLE', 'PARTIAL', 'CONDITIONAL', 'UNAVAILABLE'];
+    expect(validAvailabilities).toContain(overview.career.availability);
+    expect(validAvailabilities).toContain(overview.wealth.availability);
   });
 });

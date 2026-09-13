@@ -10,10 +10,12 @@ import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import {
   selectReasoningViewModel,
+  selectReasoningOverview,
   type ReasoningDomain
 } from '../product/analysis/reasoningViewModel';
 import {
   ReasoningHero,
+  ReasoningOverallConclusion,
   ReasoningChain,
   ReasoningEvidenceGroup,
   ReasoningVargaSection,
@@ -26,7 +28,7 @@ import {
   ReasoningUnavailableState,
   ReasoningErrorState
 } from '../components/reasoning';
-import { Network, Briefcase, Coins } from 'lucide-react';
+import { Network, Briefcase, Coins, Compass, Clock, Layers } from 'lucide-react';
 
 export interface ReasoningPageProps {
   readonly productAnalysisState?: ProductAnalysisState;
@@ -36,7 +38,8 @@ export interface ReasoningPageProps {
 
 export const ReasoningPage: React.FC<ReasoningPageProps> = ({
   productAnalysisState,
-  onRetry
+  onRetry,
+  onNavigate
 }) => {
   const [selectedDomain, setSelectedDomain] = useState<ReasoningDomain>('CAREER');
 
@@ -47,6 +50,11 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
   const viewModel = useMemo(
     () => (analysis ? selectReasoningViewModel(analysis, selectedDomain) : undefined),
     [analysis, selectedDomain]
+  );
+
+  const overview = useMemo(
+    () => (analysis ? selectReasoningOverview(analysis) : undefined),
+    [analysis]
   );
 
   // 1. Error state when no analysis is available
@@ -60,18 +68,71 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
   }
 
   // 3. Unavailable state when no analysis can be projected
-  if (!analysis || !viewModel) {
+  if (!analysis || !viewModel || !overview) {
     return <ReasoningUnavailableState onRetry={onRetry} />;
   }
 
   // 4. Render pure presentation sections
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Navigation Controls / Related Links (§34, §35) */}
+      {onNavigate && (
+        <div
+          id="reasoning-navigation-controls"
+          className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs"
+        >
+          <div className="flex items-center gap-2 text-slate-400">
+            <Compass className="w-4 h-4 text-indigo-400 shrink-0" aria-hidden="true" />
+            <span className="font-medium text-slate-300">Exploration Links:</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              id="nav-link-career"
+              onClick={() => onNavigate('career')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors font-medium"
+            >
+              <Briefcase className="w-3.5 h-3.5 text-blue-400" aria-hidden="true" />
+              <span>View detailed Career analysis</span>
+            </button>
+
+            <button
+              type="button"
+              id="nav-link-dasha"
+              onClick={() => onNavigate('dasha')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors font-medium"
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
+              <span>View Dasha & Timing</span>
+            </button>
+
+            <button
+              type="button"
+              id="nav-link-detailed"
+              onClick={() => onNavigate('detailed')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-colors font-medium"
+            >
+              <Layers className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
+              <span>View Detailed Analysis</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Overall Conclusion (spec §26, §50) */}
+      <ReasoningOverallConclusion
+        overview={overview}
+        selectedDomain={selectedDomain}
+        onSelectDomain={setSelectedDomain}
+      />
+
       {/* Domain Switcher */}
       <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
         <div className="flex items-center gap-2">
           <button
             type="button"
+            id="domain-switcher-career"
             onClick={() => setSelectedDomain('CAREER')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
               selectedDomain === 'CAREER'
@@ -84,6 +145,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
           </button>
           <button
             type="button"
+            id="domain-switcher-wealth"
             onClick={() => setSelectedDomain('WEALTH')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
               selectedDomain === 'WEALTH'
@@ -141,7 +203,7 @@ export const ReasoningPage: React.FC<ReasoningPageProps> = ({
 
       <ReasoningConclusion conclusion={viewModel.conclusion} />
 
-      {viewModel.ai && <ReasoningAISection ai={viewModel.ai} />}
+      <ReasoningAISection ai={viewModel.ai} />
     </div>
   );
 };

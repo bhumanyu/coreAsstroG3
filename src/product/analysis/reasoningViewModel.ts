@@ -9,7 +9,6 @@
 
 import type {
   ProductAnalysis,
-  ProductStatus,
   ProductConfidence,
   ProductDirection,
   ProductEvidenceRole,
@@ -20,8 +19,10 @@ import type {
   ActivationEffect,
   TransitEffect,
   ProductEvidence,
+  ProductDashaPeriod,
   D10ProductResult
 } from './productAnalysisTypes';
+import { selectAllEvidence, selectDashaHierarchy } from './productAnalysisSelectors';
 
 export type ReasoningDomain = 'CAREER' | 'WEALTH';
 
@@ -30,13 +31,9 @@ export type VargaRelationship = D10ProductResult['relationship'];
 export interface ReasoningHeroViewModel {
   readonly domain: ReasoningDomain;
   readonly title: string;
-  readonly status: ConclusionStatus | ProductStatus | string;
-  readonly strength: PromiseStrength | string;
+  readonly status: ConclusionStatus;
+  readonly strength: PromiseStrength;
   readonly confidence: ProductConfidence;
-  readonly ascendantSign?: string;
-  readonly moonSign?: string;
-  readonly sunSign?: string;
-  readonly moonNakshatra?: string;
   readonly evidenceCount: number;
   readonly supportingEvidenceCount: number;
   readonly challengingEvidenceCount: number;
@@ -111,8 +108,8 @@ export interface ReasoningQualificationViewModel {
 export interface ReasoningConclusionViewModel {
   readonly headline?: string;
   readonly statement?: string;
-  readonly status: ConclusionStatus | ProductStatus | string;
-  readonly strength: PromiseStrength | string;
+  readonly status: ConclusionStatus;
+  readonly strength: PromiseStrength;
   readonly confidence: ProductConfidence;
   readonly integratedSynthesisAvailable: boolean;
   readonly evidenceCount: number;
@@ -125,8 +122,13 @@ export interface ReasoningChainNodeViewModel {
   readonly id: string;
   readonly label: string;
   readonly type: 'PROMISE' | 'VARGA' | 'ACTIVATION' | 'TRANSIT' | 'SYNTHESIS' | 'EVIDENCE' | string;
-  readonly direction: ProductDirection;
-  readonly statement: string;
+  readonly direction?: ProductDirection;
+  readonly promiseStrength?: PromiseStrength;
+  readonly vargaRelationship?: VargaRelationship;
+  readonly transitEffect?: TransitEffect | string;
+  readonly dashaDirection?: ProductDirection;
+  readonly availability?: ProductAvailability;
+  readonly statement?: string;
   readonly stepNumber?: number;
 }
 
@@ -137,6 +139,22 @@ export interface ReasoningAiViewModel {
   readonly explanation?: string;
   readonly providerName?: string;
   readonly routingMode?: string;
+}
+
+export interface ReasoningDomainOverviewItem {
+  readonly domain: ReasoningDomain;
+  readonly title: string;
+  readonly status: ConclusionStatus;
+  readonly strength: PromiseStrength;
+  readonly confidence: ProductConfidence;
+  readonly availability: ProductAvailability;
+  readonly headline?: string;
+  readonly statement?: string;
+}
+
+export interface ReasoningOverviewViewModel {
+  readonly career: ReasoningDomainOverviewItem;
+  readonly wealth: ReasoningDomainOverviewItem;
 }
 
 export interface ReasoningViewModel {
@@ -188,40 +206,29 @@ export function mapEvidence(e: ProductEvidence): ReasoningEvidenceViewModel {
 }
 
 /**
- * Groups evidence by role (PRIMARY, MODIFIER, REFINEMENT) and direction (SUPPORTING=SUPPORT, CHALLENGING=CHALLENGE).
+ * Groups evidence primarily by canonical ROLE:
+ * PRIMARY, SUPPORTING, CHALLENGING, MODIFIER, REFINEMENT, CONFLICTING, NEUTRAL.
  * A catch-all "OTHER" group ensures zero evidence loss (no item left ungrouped).
  * Empty groups are filtered out.
  */
 export function buildEvidenceGroups(
   evidence: readonly ReasoningEvidenceViewModel[]
 ): readonly ReasoningEvidenceGroupViewModel[] {
-  const groups: ReasoningEvidenceGroupViewModel[] = [
-    {
-      id: 'PRIMARY',
-      title: 'Primary Drivers',
-      items: evidence.filter((e) => e.role === 'PRIMARY')
-    },
-    {
-      id: 'MODIFIER',
-      title: 'Modifying Factors',
-      items: evidence.filter((e) => e.role === 'MODIFIER')
-    },
-    {
-      id: 'REFINEMENT',
-      title: 'Refining Influences',
-      items: evidence.filter((e) => e.role === 'REFINEMENT')
-    },
-    {
-      id: 'SUPPORTING',
-      title: 'Supporting Evidence',
-      items: evidence.filter((e) => e.direction === 'SUPPORT')
-    },
-    {
-      id: 'CHALLENGING',
-      title: 'Challenging Factors',
-      items: evidence.filter((e) => e.direction === 'CHALLENGE')
-    }
+  const roleGroups: { id: string; title: string; role: ProductEvidenceRole }[] = [
+    { id: 'PRIMARY', title: 'Primary Drivers', role: 'PRIMARY' },
+    { id: 'SUPPORTING', title: 'Supporting Factors', role: 'SUPPORTING' },
+    { id: 'CHALLENGING', title: 'Challenging Factors', role: 'CHALLENGING' },
+    { id: 'MODIFIER', title: 'Modifying Factors', role: 'MODIFIER' },
+    { id: 'REFINEMENT', title: 'Refining Influences', role: 'REFINEMENT' },
+    { id: 'CONFLICTING', title: 'Conflicting Factors', role: 'CONFLICTING' },
+    { id: 'NEUTRAL', title: 'Neutral Factors', role: 'NEUTRAL' }
   ];
+
+  const groups: ReasoningEvidenceGroupViewModel[] = roleGroups.map(({ id, title, role }) => ({
+    id,
+    title,
+    items: evidence.filter((e) => e.role === role)
+  }));
 
   const coveredIds = new Set(groups.flatMap((g) => g.items.map((i) => i.id)));
   const otherItems = evidence.filter((e) => !coveredIds.has(e.id));
@@ -241,9 +248,15 @@ export function buildEvidenceGroups(
  */
 export function buildCareerReasoningViewModel(analysis: ProductAnalysis): ReasoningViewModel {
   const career = analysis.career;
-  const status = career.status ?? career.promise.status ?? 'UNAVAILABLE';
-  const confidence = career.promise.confidence;
-  const strength = career.promise.strength;
+  const rawStatus = career.status ?? career.promise.status ?? 'UNAVAILABLE';
+  const status: ConclusionStatus =
+    rawStatus === 'FAVORABLE'
+      ? 'STRONGLY_SUPPORTED'
+      : rawStatus === 'UNFAVORABLE'
+        ? 'CHALLENGED'
+        : (rawStatus as ConclusionStatus);
+  const confidence: ProductConfidence = career.promise.confidence;
+  const strength: PromiseStrength = career.promise.strength as PromiseStrength;
 
   const rawEvidence = career.evidence ?? [];
   const uniqueEvidenceMap = new Map<string, ReasoningEvidenceViewModel>();
@@ -268,10 +281,6 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     status,
     strength,
     confidence,
-    ascendantSign: analysis.chart.ascendantSign,
-    moonSign: analysis.chart.moonSign,
-    sunSign: analysis.chart.sunSign,
-    moonNakshatra: analysis.chart.moonNakshatra,
     evidenceCount,
     supportingEvidenceCount,
     challengingEvidenceCount,
@@ -291,12 +300,10 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     statement: d10Statement
   };
 
-  const rawPeriods = career.activation.dasha.periods ?? [];
-  const sortedPeriods = [...rawPeriods].sort(
-    (a, b) => (DASHA_LEVEL_ORDER[a.level] ?? 99) - (DASHA_LEVEL_ORDER[b.level] ?? 99)
-  );
+  const rawPeriods = selectDashaHierarchy(analysis, 'CAREER');
+  const mdPeriod = rawPeriods.find((p) => p.level === 'MD');
 
-  const periods: ReasoningDashaPeriodViewModel[] = sortedPeriods.map((p) => ({
+  const periods: ReasoningDashaPeriodViewModel[] = rawPeriods.map((p) => ({
     level: p.level,
     planet: p.planet,
     role: p.role,
@@ -345,73 +352,58 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
     provenanceAvailable
   };
 
+  const mdDirection = mdPeriod?.direction;
+
   const chain: ReasoningChainNodeViewModel[] = [
     {
       id: 'node_career_promise',
       label: 'Natal Vocational Promise',
       type: 'PROMISE',
-      direction: career.promise.strength === 'WEAK' ? 'CHALLENGE' : 'SUPPORT',
-      statement:
-        career.promise.statement ||
-        'Career promise evaluated from natal 10th house, Lagna, and lord strength.'
+      promiseStrength: strength,
+      statement: career.promise.statement
     },
     {
       id: 'node_career_d10',
       label: 'Dasamsa (D10) Varga Alignment',
       type: 'VARGA',
-      direction:
-        career.d10.relationship === 'CONFIRMS'
-          ? 'SUPPORT'
-          : career.d10.relationship === 'CONFLICTS'
-            ? 'CHALLENGE'
-            : 'NEUTRAL',
-      statement:
-        career.d10.statement ||
-        'Dasamsa relationship evaluated against D1 vocational indicators.'
+      vargaRelationship: d10Relationship,
+      statement: d10Statement
     },
     {
       id: 'node_career_dasha',
       label: 'Vimshottari Dasha Activation',
       type: 'ACTIVATION',
-      direction:
-        career.activation.dasha.status === 'AVAILABLE' || career.activation.dasha.status === 'PARTIAL'
-          ? 'SUPPORT'
-          : 'NEUTRAL',
+      dashaDirection: mdDirection,
+      direction: mdDirection,
+      availability: career.activation.dasha.status,
       statement:
         career.activation.dasha.currentActivation ||
-        (periods[0]?.statement ?? 'Planetary timing activation hierarchy.')
+        periods[0]?.statement
     },
     {
       id: 'node_career_transit',
       label: 'Gochara Transit Triggers',
       type: 'TRANSIT',
-      direction:
-        career.activation.transit.effect === 'CHALLENGE'
-          ? 'CHALLENGE'
-          : career.activation.transit.effect === 'TRIGGER'
-            ? 'SUPPORT'
-            : 'NEUTRAL',
-      statement:
-        career.activation.transit.statement || 'Planetary transits interacting with vocational axes.'
+      transitEffect: career.activation.transit.effect,
+      statement: career.activation.transit.statement
     },
     {
       id: 'node_career_conclusion',
       label: 'Integrated Vocational Conclusion',
       type: 'SYNTHESIS',
-      direction: 'SUPPORT',
       statement:
         career.synthesis?.statement ??
-        career.promise.statement ??
-        'Synthesized vocational reasoning verdict.'
+        career.promise.statement
     }
   ];
 
+  const isCareerAiAvailable = analysis.ai?.status === 'AVAILABLE';
   const ai: ReasoningAiViewModel | undefined = analysis.ai
     ? {
-        available: analysis.ai.status === 'AVAILABLE',
+        available: isCareerAiAvailable,
         status: analysis.ai.status,
-        statement: analysis.ai.conclusion,
-        explanation: analysis.ai.explanation,
+        statement: isCareerAiAvailable ? analysis.ai.conclusion : undefined,
+        explanation: isCareerAiAvailable ? analysis.ai.explanation : undefined,
         providerName: analysis.ai.providerInfo?.name,
         routingMode: analysis.ai.providerInfo?.mode
       }
@@ -439,9 +431,15 @@ export function buildCareerReasoningViewModel(analysis: ProductAnalysis): Reason
  */
 export function buildWealthReasoningViewModel(analysis: ProductAnalysis): ReasoningViewModel {
   const wealth = analysis.wealth;
-  const status = wealth.overall.status ?? 'UNAVAILABLE';
-  const confidence = wealth.overall.confidence;
-  const strength = wealth.overall.promise;
+  const rawStatus = wealth.overall.status ?? 'UNAVAILABLE';
+  const status: ConclusionStatus =
+    rawStatus === 'FAVORABLE'
+      ? 'STRONGLY_SUPPORTED'
+      : rawStatus === 'UNFAVORABLE'
+        ? 'CHALLENGED'
+        : (rawStatus as ConclusionStatus);
+  const confidence: ProductConfidence = wealth.overall.confidence;
+  const strength: PromiseStrength = wealth.overall.promise as PromiseStrength;
 
   const rawEvidence = wealth.evidence ?? [];
   const uniqueEvidenceMap = new Map<string, ReasoningEvidenceViewModel>();
@@ -466,10 +464,6 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     status,
     strength,
     confidence,
-    ascendantSign: analysis.chart.ascendantSign,
-    moonSign: analysis.chart.moonSign,
-    sunSign: analysis.chart.sunSign,
-    moonNakshatra: analysis.chart.moonNakshatra,
     evidenceCount,
     supportingEvidenceCount,
     challengingEvidenceCount,
@@ -489,12 +483,10 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     statement: d2Statement
   };
 
-  const rawPeriods = wealth.activation.dasha.periods ?? [];
-  const sortedPeriods = [...rawPeriods].sort(
-    (a, b) => (DASHA_LEVEL_ORDER[a.level] ?? 99) - (DASHA_LEVEL_ORDER[b.level] ?? 99)
-  );
+  const rawPeriods = selectDashaHierarchy(analysis, 'WEALTH');
+  const mdPeriod = rawPeriods.find((p) => p.level === 'MD');
 
-  const periods: ReasoningDashaPeriodViewModel[] = sortedPeriods.map((p) => ({
+  const periods: ReasoningDashaPeriodViewModel[] = rawPeriods.map((p) => ({
     level: p.level,
     planet: p.planet,
     role: p.role,
@@ -542,72 +534,58 @@ export function buildWealthReasoningViewModel(analysis: ProductAnalysis): Reason
     provenanceAvailable
   };
 
+  const mdDirection = mdPeriod?.direction;
+
   const chain: ReasoningChainNodeViewModel[] = [
     {
       id: 'node_wealth_promise',
       label: 'Natal Wealth Promise',
       type: 'PROMISE',
-      direction: wealth.overall.promise === 'WEAK' ? 'CHALLENGE' : 'SUPPORT',
-      statement:
-        wealth.overall.statement ||
-        'Wealth potential evaluated across 2nd, 11th, and 9th house indicators.'
+      promiseStrength: strength,
+      statement: wealth.overall.statement
     },
     {
       id: 'node_wealth_d2',
       label: 'Hora (D2) Varga Confirmation',
       type: 'VARGA',
-      direction:
-        wealth.d2.relationship === 'CONFIRMS'
-          ? 'SUPPORT'
-          : wealth.d2.relationship === 'CONFLICTS'
-            ? 'CHALLENGE'
-            : 'NEUTRAL',
-      statement:
-        wealth.d2.statement || 'Hora relationship evaluated against natal financial indicators.'
+      vargaRelationship: d2Relationship,
+      statement: d2Statement
     },
     {
       id: 'node_wealth_dasha',
       label: 'Temporal Wealth Activation',
       type: 'ACTIVATION',
-      direction:
-        wealth.activation.dasha.status === 'AVAILABLE' || wealth.activation.dasha.status === 'PARTIAL'
-          ? 'SUPPORT'
-          : 'NEUTRAL',
+      dashaDirection: mdDirection,
+      direction: mdDirection,
+      availability: wealth.activation.dasha.status,
       statement:
         wealth.activation.dasha.statement ||
-        (periods[0]?.statement ?? 'Planetary timing activation hierarchy.')
+        periods[0]?.statement
     },
     {
       id: 'node_wealth_transit',
       label: 'Gochara Wealth Transits',
       type: 'TRANSIT',
-      direction:
-        wealth.activation.transit.effect === 'CHALLENGE'
-          ? 'CHALLENGE'
-          : wealth.activation.transit.effect === 'TRIGGER'
-            ? 'SUPPORT'
-            : 'NEUTRAL',
-      statement:
-        wealth.activation.transit.statement || 'Planetary transits affecting financial houses.'
+      transitEffect: wealth.activation.transit.effect,
+      statement: wealth.activation.transit.statement
     },
     {
       id: 'node_wealth_conclusion',
       label: 'Integrated Financial Verdict',
       type: 'SYNTHESIS',
-      direction: 'SUPPORT',
       statement:
         wealth.synthesis?.statement ??
-        wealth.overall.statement ??
-        'Synthesized wealth reasoning verdict.'
+        wealth.overall.statement
     }
   ];
 
+  const isWealthAiAvailable = analysis.ai?.status === 'AVAILABLE';
   const ai: ReasoningAiViewModel | undefined = analysis.ai
     ? {
-        available: analysis.ai.status === 'AVAILABLE',
+        available: isWealthAiAvailable,
         status: analysis.ai.status,
-        statement: analysis.ai.conclusion,
-        explanation: analysis.ai.explanation,
+        statement: isWealthAiAvailable ? analysis.ai.conclusion : undefined,
+        explanation: isWealthAiAvailable ? analysis.ai.explanation : undefined,
         providerName: analysis.ai.providerInfo?.name,
         routingMode: analysis.ai.providerInfo?.mode
       }
@@ -642,4 +620,96 @@ export function selectReasoningViewModel(
     return buildWealthReasoningViewModel(analysis);
   }
   return buildCareerReasoningViewModel(analysis);
+}
+
+/**
+ * Combined selector for Unified Overall Conclusion panel (spec §26, §50).
+ * Projects side-by-side Career and Wealth conclusions independently.
+ * Keeps PromiseStrength, ConclusionStatus, ProductConfidence, and Availability as four separate fields.
+ * If a domain is UNAVAILABLE, renders "Unavailable" — never fabricates.
+ */
+export function selectReasoningOverview(analysis: ProductAnalysis): ReasoningOverviewViewModel {
+  const careerVm = selectReasoningViewModel(analysis, 'CAREER');
+  const wealthVm = selectReasoningViewModel(analysis, 'WEALTH');
+
+  const careerRawStatus = analysis.career?.status ?? analysis.career?.promise?.status;
+  const careerStrength = (analysis.career?.promise?.strength as PromiseStrength) ?? 'UNAVAILABLE';
+  const careerConfidence = (analysis.career?.promise?.confidence as ProductConfidence) ?? 'LOW';
+  const careerAvail = (analysis.career as { readonly availability?: string } | undefined)?.availability;
+  const isCareerUnavailable =
+    !analysis.career ||
+    careerRawStatus === 'UNAVAILABLE' ||
+    careerStrength === 'UNAVAILABLE' ||
+    careerAvail === 'UNAVAILABLE';
+  const careerStatus: ConclusionStatus = isCareerUnavailable
+    ? 'UNAVAILABLE'
+    : careerRawStatus === 'FAVORABLE'
+      ? 'STRONGLY_SUPPORTED'
+      : careerRawStatus === 'UNFAVORABLE'
+        ? 'CHALLENGED'
+        : (careerRawStatus as ConclusionStatus) ?? 'SUPPORTED';
+  const careerAvailability: ProductAvailability = isCareerUnavailable
+    ? 'UNAVAILABLE'
+    : careerRawStatus === 'PARTIAL'
+      ? 'PARTIAL'
+      : 'AVAILABLE';
+
+  const wealthRawStatus = analysis.wealth?.overall?.status;
+  const wealthStrength = (analysis.wealth?.overall?.promise as PromiseStrength) ?? 'UNAVAILABLE';
+  const wealthRawConfidence = analysis.wealth?.overall?.confidence;
+  const wealthAvail = (analysis.wealth as { readonly availability?: string } | undefined)?.availability;
+  const isWealthUnavailable =
+    !analysis.wealth ||
+    wealthRawStatus === 'UNAVAILABLE' ||
+    wealthStrength === 'UNAVAILABLE' ||
+    wealthAvail === 'UNAVAILABLE';
+  const wealthConfidence: ProductConfidence =
+    (wealthRawConfidence as ProductConfidence) ?? 'LOW';
+  const wealthStatus: ConclusionStatus = isWealthUnavailable
+    ? 'UNAVAILABLE'
+    : wealthRawStatus === 'FAVORABLE'
+      ? 'STRONGLY_SUPPORTED'
+      : wealthRawStatus === 'UNFAVORABLE'
+        ? 'CHALLENGED'
+        : (wealthRawStatus as ConclusionStatus) ?? 'SUPPORTED';
+  const wealthAvailability: ProductAvailability = isWealthUnavailable
+    ? 'UNAVAILABLE'
+    : wealthRawStatus === 'PARTIAL'
+      ? 'PARTIAL'
+      : 'AVAILABLE';
+
+  return {
+    career: {
+      domain: 'CAREER',
+      title: 'Career & Life Path',
+      status: careerStatus,
+      strength: careerStrength,
+      confidence: careerConfidence,
+      availability: careerAvailability,
+      headline: isCareerUnavailable ? undefined : careerVm.conclusion.headline,
+      statement: isCareerUnavailable ? undefined : careerVm.conclusion.statement
+    },
+    wealth: {
+      domain: 'WEALTH',
+      title: 'Wealth & Financial Potential',
+      status: wealthStatus,
+      strength: wealthStrength,
+      confidence: wealthConfidence,
+      availability: wealthAvailability,
+      headline: isWealthUnavailable ? undefined : wealthVm.conclusion.headline,
+      statement: isWealthUnavailable ? undefined : wealthVm.conclusion.statement
+    }
+  };
+}
+
+/**
+ * Deduplicates evidence items across Career and Wealth domains by evidence ID (§39).
+ * Guarantees zero evidence loss while avoiding duplicate counting.
+ * Delegates to selectAllEvidence from productAnalysisSelectors.ts.
+ */
+export function selectDedupedEvidence(
+  analysis: ProductAnalysis
+): readonly ReasoningEvidenceViewModel[] {
+  const canonicalEvidence = selectAllEvidence(analysis);
+  return canonicalEvidence.map(mapEvidence);
 }

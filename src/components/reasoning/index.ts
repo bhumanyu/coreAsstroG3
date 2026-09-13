@@ -1,5 +1,6 @@
 export * from './reasoningFormat';
 export * from './ReasoningHero';
+export * from './ReasoningOverallConclusion';
 export * from './ReasoningChain';
 export * from './ReasoningNode';
 export * from './ReasoningEvidenceCard';

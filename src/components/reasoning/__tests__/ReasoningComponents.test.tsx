@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import {
   ReasoningHero,
+  ReasoningOverallConclusion,
   ReasoningChain,
   ReasoningEvidenceGroup,
   ReasoningEvidenceCard,
@@ -19,6 +20,7 @@ import {
 } from '../index';
 import type {
   ReasoningHeroViewModel,
+  ReasoningOverviewViewModel,
   ReasoningChainNodeViewModel,
   ReasoningEvidenceViewModel,
   ReasoningEvidenceGroupViewModel,
@@ -32,17 +34,13 @@ import type {
 
 describe('Reasoning Section Components Suite (P-UI-06)', () => {
   describe('ReasoningHero', () => {
-    it('renders title, signs, status, confidence, and metric counts', () => {
+    it('renders title, status, confidence, and metric counts without legacy sign fields', () => {
       const hero: ReasoningHeroViewModel = {
         domain: 'CAREER',
         title: 'Career & Vocational Reasoning',
         status: 'STRONGLY_SUPPORTED',
         strength: 'STRONG',
         confidence: 'HIGH',
-        ascendantSign: 'Aries',
-        moonSign: 'Taurus',
-        sunSign: 'Leo',
-        moonNakshatra: 'Rohini',
         evidenceCount: 5,
         supportingEvidenceCount: 4,
         challengingEvidenceCount: 1,
@@ -62,10 +60,8 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Strongly Supported')).toBeInTheDocument();
       expect(screen.getByText('Strong')).toBeInTheDocument();
       expect(screen.getByText('High Confidence')).toBeInTheDocument();
-      expect(screen.getByText('Aries')).toBeInTheDocument();
-      expect(screen.getByText('Taurus')).toBeInTheDocument();
-      expect(screen.getByText('Leo')).toBeInTheDocument();
-      expect(screen.getByText('Rohini')).toBeInTheDocument();
+      expect(screen.queryByText('Aries')).not.toBeInTheDocument();
+      expect(screen.queryByText('Ascendant')).not.toBeInTheDocument();
       expect(screen.getByText('5 Evidence Items')).toBeInTheDocument();
       expect(screen.getByText('4 Factors')).toBeInTheDocument();
       expect(screen.getByText('1 Factors')).toBeInTheDocument();
@@ -73,22 +69,124 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
     });
   });
 
+  describe('ReasoningOverallConclusion', () => {
+    it('renders both Career and Wealth conclusions side by side with status, strength, confidence (§26, §50)', () => {
+      const overview: ReasoningOverviewViewModel = {
+        career: {
+          domain: 'CAREER',
+          title: 'Career & Life Path',
+          availability: 'AVAILABLE',
+          status: 'STRONGLY_SUPPORTED',
+          strength: 'STRONG',
+          confidence: 'HIGH',
+          headline: 'High Career Potential',
+          statement: 'Deterministic rules indicate career success.'
+        },
+        wealth: {
+          domain: 'WEALTH',
+          title: 'Wealth & Financial Potential',
+          availability: 'AVAILABLE',
+          status: 'MIXED',
+          strength: 'MODERATE',
+          confidence: 'MEDIUM',
+          headline: 'Balanced Wealth Outlook',
+          statement: 'Financial indicators show balanced inflows and expenditures.'
+        }
+      };
+
+      render(
+        <ReasoningOverallConclusion
+          overview={overview}
+          selectedDomain="CAREER"
+        />
+      );
+
+      expect(screen.getByText('Overall Conclusion')).toBeInTheDocument();
+      expect(
+        screen.getByText('Side-by-side summary of existing Career and Wealth domain conclusions')
+      ).toBeInTheDocument();
+      expect(screen.getByText('Career Domain')).toBeInTheDocument();
+      expect(screen.getByText('Wealth Domain')).toBeInTheDocument();
+
+      expect(screen.getByText('High Career Potential')).toBeInTheDocument();
+      expect(screen.getByText('Balanced Wealth Outlook')).toBeInTheDocument();
+      expect(screen.getByText('Deterministic rules indicate career success.')).toBeInTheDocument();
+      expect(screen.getByText('Financial indicators show balanced inflows and expenditures.')).toBeInTheDocument();
+    });
+
+    it('renders partial availability when a domain is UNAVAILABLE without fabricating (§32)', () => {
+      const overview: ReasoningOverviewViewModel = {
+        career: {
+          domain: 'CAREER',
+          title: 'Career & Life Path',
+          availability: 'AVAILABLE',
+          status: 'STRONGLY_SUPPORTED',
+          strength: 'STRONG',
+          confidence: 'HIGH',
+          headline: 'High Career Potential',
+          statement: 'Career trajectory is confirmed.'
+        },
+        wealth: {
+          domain: 'WEALTH',
+          title: 'Wealth & Financial Potential',
+          availability: 'UNAVAILABLE',
+          status: 'CHALLENGED',
+          strength: 'WEAK',
+          confidence: 'LOW',
+          headline: 'Wealth Analysis Unavailable',
+          statement: 'Wealth analysis data is not available for this profile.'
+        }
+      };
+
+      render(
+        <ReasoningOverallConclusion
+          overview={overview}
+          selectedDomain="CAREER"
+        />
+      );
+
+      expect(screen.getByText('High Career Potential')).toBeInTheDocument();
+      expect(screen.getByText('Wealth Analysis Unavailable')).toBeInTheDocument();
+      expect(screen.getByText('Wealth analysis data is not available for this profile.')).toBeInTheDocument();
+    });
+  });
+
   describe('ReasoningChain & ReasoningNode', () => {
-    it('renders sequential reasoning chain nodes with directions and statements', () => {
+    it('renders sequential reasoning chain nodes with canonical semantic badges instead of fabricated direction', () => {
       const chain: ReasoningChainNodeViewModel[] = [
         {
           id: 'node_1',
           label: 'Natal Vocational Promise',
           type: 'PROMISE',
-          direction: 'SUPPORT',
+          promiseStrength: 'STRONG',
           statement: 'Strong 10th lord placement.'
         },
         {
           id: 'node_2',
           label: 'Dasamsa Alignment',
           type: 'VARGA',
-          direction: 'SUPPORT',
+          vargaRelationship: 'CONFIRMS',
           statement: 'D10 confirms status.'
+        },
+        {
+          id: 'node_3',
+          label: 'Vimshottari Dasha Activation',
+          type: 'ACTIVATION',
+          dashaDirection: 'SUPPORT',
+          statement: 'Jupiter MD provides primary activation.'
+        },
+        {
+          id: 'node_4',
+          label: 'Gochara Transit Triggers',
+          type: 'TRANSIT',
+          transitEffect: 'TRIGGER',
+          statement: 'Jupiter transit activates 10th house.'
+        },
+        {
+          id: 'node_5',
+          label: 'Integrated Vocational Conclusion',
+          type: 'SYNTHESIS'
+          // no statement, no direction - should not fabricate
         }
       ];
 
@@ -96,11 +194,24 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
 
       expect(screen.getByText('Deterministic Evidence Framework')).toBeInTheDocument();
       expect(screen.getByText('The evidence layers contributing to this conclusion')).toBeInTheDocument();
-      expect(screen.getByText('2 Evidence Layers')).toBeInTheDocument();
-      expect(screen.getByText('Natal Vocational Promise')).toBeInTheDocument();
-      expect(screen.getByText('Dasamsa Alignment')).toBeInTheDocument();
-      expect(screen.getByText('Strong 10th lord placement.')).toBeInTheDocument();
-      expect(screen.getByText('D10 confirms status.')).toBeInTheDocument();
+      expect(screen.getByText('5 Evidence Layers')).toBeInTheDocument();
+
+      // Promise node displays promise strength
+      expect(screen.getByText('Strong')).toBeInTheDocument();
+
+      // D10 relationship = CONFIRMS is displayed as Confirms, not SUPPORT
+      expect(screen.getByText('Confirms')).toBeInTheDocument();
+
+      // Transit effect = TRIGGER is displayed as Trigger, not SUPPORT
+      expect(screen.getByText('Trigger')).toBeInTheDocument();
+
+      // Dasha node renders canonical MD direction
+      expect(screen.getByText('Supporting')).toBeInTheDocument();
+      expect(screen.getByText('Jupiter MD provides primary activation.')).toBeInTheDocument();
+
+      // Synthesis node with no statement renders without fabricating prose
+      expect(screen.getByText('Integrated Vocational Conclusion')).toBeInTheDocument();
+      expect(screen.queryByText('Synthesized verdict.')).not.toBeInTheDocument();
     });
   });
 
@@ -132,6 +243,21 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Rule: RULE_RUCHAKA_YOGA')).toBeInTheDocument();
       expect(screen.getByText('Derived from: ev_mars_capricorn')).toBeInTheDocument();
       expect(screen.getByText('Source: CAREER_ENGINE')).toBeInTheDocument();
+    });
+
+    it('renders neutral text when ruleId and derivedFromIds are absent instead of null (§22, §40)', () => {
+      render(
+        <ReasoningProvenance
+          provenance={{
+            derivedFromIds: [],
+            source: 'SYSTEM',
+            isAvailable: false
+          }}
+        />
+      );
+
+      expect(screen.getByText('Rule: Not specified')).toBeInTheDocument();
+      expect(screen.getByText('Derived from: Direct evidence')).toBeInTheDocument();
     });
   });
 
@@ -409,9 +535,39 @@ describe('Reasoning Section Components Suite (P-UI-06)', () => {
       expect(screen.getByText('Gemini 1.5 Pro')).toBeInTheDocument();
     });
 
-    it('renders nothing when AI is unavailable or undefined', () => {
-      const { container } = render(<ReasoningAISection ai={undefined} />);
-      expect(container.firstChild).toBeNull();
+    it('renders fallback state when AI is undefined (§28, §46)', () => {
+      render(<ReasoningAISection ai={undefined} />);
+      expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+      expect(screen.getByText('Unavailable')).toBeInTheDocument();
+      expect(
+        screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
+      ).toBeInTheDocument();
+    });
+
+    it('renders fallback state when AI status is ERROR or PARTIAL (§28, §46)', () => {
+      const { rerender } = render(
+        <ReasoningAISection
+          ai={{
+            available: false,
+            status: 'ERROR'
+          }}
+        />
+      );
+      expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+      expect(screen.getByText('Error')).toBeInTheDocument();
+      expect(
+        screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
+      ).toBeInTheDocument();
+
+      rerender(
+        <ReasoningAISection
+          ai={{
+            available: false,
+            status: 'PARTIAL'
+          }}
+        />
+      );
+      expect(screen.getByText('Partial')).toBeInTheDocument();
     });
   });
 

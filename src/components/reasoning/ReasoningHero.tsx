@@ -9,10 +9,6 @@ import {
   getPromiseStrengthBadgeClass
 } from './reasoningFormat';
 import {
-  Compass,
-  Moon,
-  Sun,
-  Star,
   AlertTriangle,
   ShieldCheck,
   BrainCircuit,
@@ -26,10 +22,6 @@ export interface ReasoningHeroProps {
 }
 
 export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
-  const ascendant = hero.ascendantSign || 'Unavailable';
-  const moon = hero.moonSign || 'Unavailable';
-  const sun = hero.sunSign || 'Unavailable';
-  const nakshatra = hero.moonNakshatra || 'Unavailable';
   const warnings = hero.warnings || [];
 
   const statusBadgeClass = getConclusionStatusBadgeClass(hero.status);
@@ -67,44 +59,6 @@ export const ReasoningHero: React.FC<ReasoningHeroProps> = ({ hero }) => {
           )}
         </div>
       </PageHeading>
-
-      {/* Natal Chart Sign Positions */}
-      <div
-        aria-label="Natal Chart Sign Positions"
-        className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 pb-2"
-      >
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Compass className="w-4 h-4 text-indigo-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Ascendant</span>
-            <span className="font-semibold text-slate-200">{ascendant}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Moon className="w-4 h-4 text-sky-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Moon Sign</span>
-            <span className="font-semibold text-slate-200">{moon}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Sun className="w-4 h-4 text-amber-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Sun Sign</span>
-            <span className="font-semibold text-slate-200">{sun}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300">
-          <Star className="w-4 h-4 text-purple-400 shrink-0" aria-hidden="true" />
-          <div className="truncate">
-            <span className="text-slate-400 block text-[10px] uppercase font-mono-code">Nakshatra</span>
-            <span className="font-semibold text-slate-200">{nakshatra}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Evidentiary Metrics Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

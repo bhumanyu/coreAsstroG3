@@ -111,4 +111,76 @@ describe('ReasoningPage (P-UI-06)', () => {
     expect(screen.getByText('Wealth & Asset Accumulation Reasoning')).toBeInTheDocument();
     expect(screen.getByText('Hora (D2) Divisional Confirmation')).toBeInTheDocument();
   });
+
+  it('6. Unified Overall Conclusion: displays both Career and Wealth side by side regardless of domain (§26, §50)', () => {
+    const analysis = createProductAnalysis();
+    render(
+      <ReasoningPage
+        productAnalysisState={{
+          status: 'READY',
+          analysis
+        }}
+      />
+    );
+
+    expect(screen.getByText('Overall Conclusion')).toBeInTheDocument();
+    expect(screen.getByText('Career Domain')).toBeInTheDocument();
+    expect(screen.getByText('Wealth Domain')).toBeInTheDocument();
+  });
+
+  it('7. Wire navigation: renders related view links and calls onNavigate without recalculating (§34, §35)', () => {
+    const analysis = createProductAnalysis();
+    const onNavigate = vi.fn();
+
+    render(
+      <ReasoningPage
+        productAnalysisState={{
+          status: 'READY',
+          analysis
+        }}
+        onNavigate={onNavigate}
+      />
+    );
+
+    const careerLink = screen.getByRole('button', { name: /view detailed career analysis/i });
+    const dashaLink = screen.getByRole('button', { name: /view dasha & timing/i });
+    const detailedLink = screen.getByRole('button', { name: /view detailed analysis/i });
+
+    fireEvent.click(careerLink);
+    expect(onNavigate).toHaveBeenCalledWith('career');
+
+    fireEvent.click(dashaLink);
+    expect(onNavigate).toHaveBeenCalledWith('dasha');
+
+    fireEvent.click(detailedLink);
+    expect(onNavigate).toHaveBeenCalledWith('detailed');
+  });
+
+  it('8. AI fallback: renders AI section fallback without dropping deterministic verdict when AI is unavailable (§28, §29, §46)', () => {
+    const analysis = createProductAnalysis({
+      ai: {
+        status: 'UNAVAILABLE',
+        conclusion: undefined,
+        explanation: undefined
+      }
+    });
+
+    render(
+      <ReasoningPage
+        productAnalysisState={{
+          status: 'READY',
+          analysis
+        }}
+      />
+    );
+
+    // AI Section shows fallback
+    expect(screen.getByText('AI Explanation')).toBeInTheDocument();
+    expect(
+      screen.getByText('AI explanation is currently unavailable. The deterministic conclusion remains available above.')
+    ).toBeInTheDocument();
+
+    // Deterministic verdict is still rendered above
+    expect(screen.getByText('Synthesized Astrological Verdict')).toBeInTheDocument();
+  });
 });
