@@ -121,6 +121,8 @@ export function analyzeNatalGrahaDrishti(
  * Validates and normalizes natal graha drishti input.
  * Returns NatalGrahaDrishtiReport if valid, or undefined when invalid or missing.
  * Missing evidence is preserved as undefined and must not be synthesized as empty aspects.
+ * Note: Performs shallow structural validation (checks object and aspects is array);
+ * does not validate individual aspect records.
  */
 export function normalizeNatalGrahaDrishti(
   input: unknown

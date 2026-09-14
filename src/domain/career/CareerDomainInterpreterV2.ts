@@ -182,7 +182,7 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const currentDasha = effectiveDashaInterpretation?.current ?? horoscope.dashaInterpretation?.current;
+  const currentDasha = effectiveDashaInterpretation?.current;
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
   const pdPlanet = currentDasha?.pratyantardasha?.planet;

@@ -242,7 +242,7 @@ export function interpretWealthV2(
     : [];
 
   // Multi-period timing (MD / AD / PD)
-  const currentDasha = effectiveDashaInterpretation?.current ?? horoscope.dashaInterpretation?.current;
+  const currentDasha = effectiveDashaInterpretation?.current;
 
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
