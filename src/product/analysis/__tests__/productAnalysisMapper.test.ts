@@ -8,8 +8,10 @@ import {
   buildFailedProductAnalysis,
   mapD10Relationship,
   mapD2Relationship,
-  mapSpeculativeRisk
+  mapSpeculativeRisk,
+  mapMethodology
 } from '../productAnalysisMapper';
+import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import {
   selectCareer,
   selectWealth,
@@ -185,12 +187,18 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     derivedFromIds: ['ev_astronomy_mars_capricorn', 'ev_house_1_kendra']
   };
 
+  const sampleContext = createAnalysisContext({
+    asOf: '2026-01-15T08:30:00.000Z',
+    methodology: mapMethodology(sampleBirth)
+  });
+
   it('1. MANDATORY evidence-provenance preservation: deep-equals input ProductEvidence', () => {
     const analysis = mapProductAnalysis({
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
       lifeAnalysisViewModel: sampleViewModel,
-      careerEvidence: [sampleInputEvidence]
+      careerEvidence: [sampleInputEvidence],
+      context: sampleContext
     });
 
     expect(analysis.career.evidence).toHaveLength(1);
@@ -219,7 +227,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     const analysis = mapProductAnalysis({
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
-      lifeAnalysisViewModel: sampleViewModel
+      lifeAnalysisViewModel: sampleViewModel,
+      context: sampleContext
     });
     expect(analysis.career.d10.relationship).toBe('CONFIRMS');
     expect('percentage' in analysis.career.d10).toBe(false);
@@ -241,7 +250,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     const analysis = mapProductAnalysis({
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
-      lifeAnalysisViewModel: sampleViewModel
+      lifeAnalysisViewModel: sampleViewModel,
+      context: sampleContext
     });
 
     const { periods } = analysis.career.activation.dasha;
@@ -272,7 +282,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     const readyAnalysis = mapProductAnalysis({
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
-      lifeAnalysisViewModel: sampleViewModel
+      lifeAnalysisViewModel: sampleViewModel,
+      context: sampleContext
     });
     expect(readyAnalysis.status).toBe('READY');
     expect(deriveOverallStatus(readyAnalysis)).toBe('READY');
@@ -287,7 +298,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
       lifeAnalysisViewModel: sampleViewModel,
-      warnings: [warning]
+      warnings: [warning],
+      context: sampleContext
     });
     expect(partialAnalysis.status).toBe('PARTIAL');
 
@@ -301,7 +313,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
       lifeAnalysisViewModel: sampleViewModel,
-      warnings: [errorWarning]
+      warnings: [errorWarning],
+      context: sampleContext
     });
     expect(errorAnalysis.status).toBe('ERROR');
   });
@@ -328,7 +341,8 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
       birthDetails: sampleBirth,
       horoscope: sampleHoroscope,
       lifeAnalysisViewModel: sampleViewModel,
-      careerEvidence: [sampleInputEvidence]
+      careerEvidence: [sampleInputEvidence],
+      context: sampleContext
     });
 
     expect(selectCareer(analysis)).toBe(analysis.career);
@@ -352,7 +366,7 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   });
 
   it('8. buildFailedProductAnalysis returns clean fallback without throwing', () => {
-    const failed = buildFailedProductAnalysis(sampleBirth, new Error('Computational crash'));
+    const failed = buildFailedProductAnalysis(sampleBirth, new Error('Computational crash'), sampleContext);
     expect(failed.status).toBe('ERROR');
     expect(failed.warnings).toHaveLength(1);
     expect(failed.warnings[0].severity).toBe('ERROR');

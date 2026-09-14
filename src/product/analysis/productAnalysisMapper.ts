@@ -49,9 +49,8 @@ export interface ProductAnalysisMapperInput {
   readonly birthDetails: BirthDetails;
   readonly horoscope: Horoscope;
   readonly lifeAnalysisViewModel: LifeAnalysisViewModel;
-  readonly context?: AnalysisContext;
+  readonly context: AnalysisContext;
   readonly aiExplanation?: AiExplanationResult;
-  readonly asOf?: string;
   readonly warnings?: readonly ProductWarning[];
   readonly careerEvidence?: readonly ProductEvidence[];
   readonly wealthEvidence?: readonly ProductEvidence[];
@@ -693,14 +692,12 @@ function mapAiState(aiExplanation?: AiExplanationResult): AiProductState {
 export function buildFailedProductAnalysis(
   birthDetails: BirthDetails,
   error: unknown,
-  contextOrAsOf?: AnalysisContext | string
+  context: AnalysisContext
 ): ProductAnalysis {
-  const isContext = typeof contextOrAsOf === 'object' && contextOrAsOf !== null && 'asOf' in contextOrAsOf;
-  const context = isContext ? (contextOrAsOf as AnalysisContext) : undefined;
-  const resolvedAsOf = context ? context.asOf : (typeof contextOrAsOf === 'string' ? contextOrAsOf : '');
-  const methodology = context ? context.methodology : mapMethodology(birthDetails);
-  const engineVersion = context ? context.engineVersion : (methodology.calculationEngine || 'ASTRO_CORE_V1');
-  const rulesVersion = context ? context.rulesVersion : (methodology.rulesEngine || 'PARASHARA_CLASSICAL_RULES_V2');
+  const resolvedAsOf = context.asOf;
+  const methodology = context.methodology;
+  const engineVersion = context.engineVersion;
+  const rulesVersion = context.rulesVersion;
   const message = getErrorMessage(error);
   const warning: ProductWarning = {
     code: 'ANALYSIS_FAILED',
@@ -800,14 +797,14 @@ export function buildFailedProductAnalysis(
  * Maps computational engine results and view models into canonical ProductAnalysis.
  */
 export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAnalysis {
-  const asOf = input.context?.asOf || input.asOf || input.horoscope.dashaInterpretation?.current?.at || input.horoscope.dashaInterpretation?.at || '';
+  const asOf = input.context.asOf;
   const analysisId = createAnalysisId(input.birthDetails, asOf);
   const warnings = input.warnings || [];
 
   const birth = mapBirth(input.birthDetails);
-  const methodology = input.context?.methodology ?? mapMethodology(input.birthDetails);
-  const engineVersion = input.context?.engineVersion ?? methodology.calculationEngine ?? 'ASTRO_CORE_V1';
-  const rulesVersion = input.context?.rulesVersion ?? methodology.rulesEngine ?? 'PARASHARA_CLASSICAL_RULES_V2';
+  const methodology = input.context.methodology;
+  const engineVersion = input.context.engineVersion;
+  const rulesVersion = input.context.rulesVersion;
   const chart = mapChartSummary(input.horoscope);
 
   const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence);
