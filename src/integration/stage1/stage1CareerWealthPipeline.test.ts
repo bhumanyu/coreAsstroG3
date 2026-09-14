@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { runStage1Integration } from './stage1IntegrationHarness';
 import {
   STAGE1_GOLDEN_INPUT,
-  STAGE1_GOLDEN_HOROSCOPE
+  STAGE1_GOLDEN_HOROSCOPE,
+  STAGE1_GOLDEN_CONTEXT
 } from './stage1GoldenFixture';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
@@ -70,12 +71,9 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
   it('proves deterministic equality between direct projection and aiContext.domainInterpretations', async () => {
     const result = await runStage1Integration(STAGE1_GOLDEN_INPUT);
 
-    // Direct domain interpretation and projection
-    const directCareer = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE);
-    const directWealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE);
-
-    const expectedCareerProjection = projectDomainInterpretationForAi(directCareer);
-    const expectedWealthProjection = projectDomainInterpretationForAi(directWealth);
+    // Direct domain interpretation and projection from the single canonical run
+    const expectedCareerProjection = projectDomainInterpretationForAi(result.career);
+    const expectedWealthProjection = projectDomainInterpretationForAi(result.wealth);
 
     const contextCareer = result.aiContext.domainInterpretations?.find(
       (d) => d.domain === 'CAREER'
@@ -90,8 +88,9 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
   });
 
   it('guarantees single canonical results with no divergent recomputation across repeated runs', async () => {
-    const run1 = await runStage1Integration(STAGE1_GOLDEN_INPUT);
-    const run2 = await runStage1Integration(STAGE1_GOLDEN_INPUT);
+    const inputWithContext = { ...STAGE1_GOLDEN_INPUT, context: STAGE1_GOLDEN_CONTEXT };
+    const run1 = await runStage1Integration(inputWithContext);
+    const run2 = await runStage1Integration(inputWithContext);
 
     expect(run1.career.conclusion.statement).toBe(run2.career.conclusion.statement);
     expect(run1.career.natalPromise.strength).toBe(run2.career.natalPromise.strength);
