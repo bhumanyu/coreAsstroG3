@@ -2,7 +2,8 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from './App';
-import { ProductAnalysisService, mapProductAnalysis } from './product/analysis';
+import { ProductAnalysisService, mapProductAnalysis, mapMethodology } from './product/analysis';
+import { createAnalysisContext } from './core/analysis/analysisContextFactory';
 import type { ProductAnalysis } from './product/analysis/productAnalysisTypes';
 import { STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from './integration/stage1/stage1GoldenFixture';
 import { buildLifeAnalysis } from './domain/synthesis';
@@ -45,11 +46,16 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
   };
 
   const defaultHoroscope = calculateHoroscope(PRESET_PROFILES[0].details);
+  const sampleContext = createAnalysisContext({
+    asOf: '2026-01-01T00:00:00.000Z',
+    methodology: mapMethodology(PRESET_PROFILES[0].details)
+  });
   const readyProductAnalysis: ProductAnalysis = mapProductAnalysis({
     birthDetails: PRESET_PROFILES[0].details,
     horoscope: defaultHoroscope,
     lifeAnalysisViewModel: sampleViewModel,
-    aiExplanation: readyProductState.aiExplanation
+    aiExplanation: readyProductState.aiExplanation,
+    context: sampleContext
   });
 
   let mockLastPipelineState: LifeAnalysisProductState | undefined;
