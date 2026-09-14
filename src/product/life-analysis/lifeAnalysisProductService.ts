@@ -15,6 +15,7 @@ import type {
 } from './lifeAnalysisTypes';
 import { deepFreeze } from '../../ai/context/deepFreeze';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 
 export interface RunLifeAnalysisProductOptions {
   readonly horoscope: Horoscope;
@@ -38,8 +39,10 @@ export async function runLifeAnalysisProduct(
   options: RunLifeAnalysisProductOptions
 ): Promise<LifeAnalysisProductState> {
   try {
+    const temporalState = resolveAnalysisTemporalState(options.horoscope, options.context);
     const domainOptions: DomainReasoningOptions = {
-      context: options.context
+      context: options.context,
+      temporalState
     };
 
     // Compute Career, Wealth, and LifeAnalysis exactly once
@@ -63,7 +66,7 @@ export async function runLifeAnalysisProduct(
       career,
       wealth,
       resolvedEvidence,
-      options.horoscope.dashaInterpretation?.current
+      temporalState.dashaInterpretation?.current
     );
 
     const deterministicStatus: LifeAnalysisProductStatus =

@@ -3,6 +3,9 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
+import type { Horoscope } from '../../types';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -80,6 +83,12 @@ import { createMockActiveDashaState } from '../timing/careerWealthTiming/__testU
 
 describe('WealthDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+  function makeDomainOptions(asOf?: Date | string, targetHoroscope: Horoscope = horoscope): DomainReasoningOptions {
+    const context = makeContext(asOf);
+    const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
+    return { context, temporalState };
+  }
 
   // 1. Core integration & legacy preservation
   it('preserves existing wealth conclusion summary and version V2', () => {
@@ -1516,8 +1525,8 @@ describe('WealthDomainInterpreterV2', () => {
   // 17. CW-02 -> CW-03 end-to-end timing integration (Concern 9 & Concern 11)
   it('plumbs CW-02 Dasha activations through to CW-03 wealthTimingSynthesis given an explicit asOf date', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const context = makeContext(asOf);
-    const result = interpretWealthV2(horoscope, { context });
+    const domainOptions = makeDomainOptions(asOf);
+    const result = interpretWealthV2(horoscope, domainOptions);
 
     expect(result.domain).toBe('WEALTH');
     expect(result.conclusionData).toBeDefined();
@@ -1599,9 +1608,9 @@ describe('WealthDomainInterpreterV2', () => {
   // End-to-end CW-04 Wealth Manifestation Pipeline Test
   it('CW-04 end-to-end pipeline: produces deterministic wealth manifestation synthesis with explicit asOf date', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const context = makeContext(asOf);
-    const result1 = interpretWealthV2(horoscope, { context });
-    const result2 = interpretWealthV2(horoscope, { context });
+    const domainOptions = makeDomainOptions(asOf);
+    const result1 = interpretWealthV2(horoscope, domainOptions);
+    const result2 = interpretWealthV2(horoscope, domainOptions);
 
     const manifestationSynthesis = result1.conclusionData?.wealthManifestationSynthesis;
     expect(manifestationSynthesis).toBeDefined();
@@ -1659,9 +1668,9 @@ describe('WealthDomainInterpreterV2', () => {
   // End-to-end CW-05 Wealth Final Synthesis Pipeline Test
   it('CW-05 end-to-end pipeline: produces deterministic wealth final synthesis with multi-axis dimensions, riskProfile, and provenance', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const context = makeContext(asOf);
-    const result1 = interpretWealthV2(horoscope, { context });
-    const result2 = interpretWealthV2(horoscope, { context });
+    const domainOptions = makeDomainOptions(asOf);
+    const result1 = interpretWealthV2(horoscope, domainOptions);
+    const result2 = interpretWealthV2(horoscope, domainOptions);
 
     const finalSynthesis = result1.conclusionData?.wealthFinalSynthesis;
     expect(finalSynthesis).toBeDefined();
@@ -1776,8 +1785,8 @@ describe('WealthDomainInterpreterV2', () => {
     // 2. Non-double-counting invariant
     it('proves traceability vs natal scoring non-double-counting invariant: DASHA items are present in trace/evidence but have 0 natal contribution', () => {
       const asOf = '2024-06-15T12:00:00.000Z';
-      const context = makeContext(asOf);
-      const result = interpretWealthV2(horoscope, { context });
+      const domainOptions = makeDomainOptions(asOf);
+      const result = interpretWealthV2(horoscope, domainOptions);
 
       // (a) Evidence contains items with source === 'DASHA' (traceability present)
       const dashaItems = result.evidence.filter((e) => e.source === 'DASHA');
@@ -1818,14 +1827,14 @@ describe('WealthDomainInterpreterV2', () => {
 
       vi.useFakeTimers();
       try {
-        const context = makeContext(explicitAsOf);
+        const domainOptions = makeDomainOptions(explicitAsOf);
         // Run 1: Clock set to 2021
         vi.setSystemTime(new Date('2021-03-15T08:00:00.000Z'));
-        const run1 = interpretWealthV2(horoscope, { context });
+        const run1 = interpretWealthV2(horoscope, domainOptions);
 
         // Run 2: Clock set to 2030
         vi.setSystemTime(new Date('2030-11-20T17:30:00.000Z'));
-        const run2 = interpretWealthV2(horoscope, { context });
+        const run2 = interpretWealthV2(horoscope, domainOptions);
 
         // Wall-clock metadata stamp changes
         expect(run1.generatedAt).not.toBe(run2.generatedAt);
@@ -1879,11 +1888,11 @@ describe('WealthDomainInterpreterV2', () => {
       const asOfT1 = '2000-01-01T00:00:00.000Z'; // Canonical chart has Mars Mahadasha
       const asOfT2 = '2024-06-15T00:00:00.000Z'; // Canonical chart has Jupiter Mahadasha
 
-      const context1 = makeContext(asOfT1);
-      const context2 = makeContext(asOfT2);
+      const domainOptions1 = makeDomainOptions(asOfT1, horoscopeWithStaleDasha);
+      const domainOptions2 = makeDomainOptions(asOfT2, horoscopeWithStaleDasha);
 
-      const run1 = interpretWealthV2(horoscopeWithStaleDasha, { context: context1 });
-      const run2 = interpretWealthV2(horoscopeWithStaleDasha, { context: context2 });
+      const run1 = interpretWealthV2(horoscopeWithStaleDasha, domainOptions1);
+      const run2 = interpretWealthV2(horoscopeWithStaleDasha, domainOptions2);
 
       // Neither run should have used the stale embedded MOON period
       const md1 = run1.periodTimingActivations?.find((t) => t.period === 'MD')?.planet;

@@ -101,7 +101,6 @@ import {
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
-import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
@@ -109,7 +108,6 @@ export function interpretCareerV2(
 ): DomainInterpretation {
   const context = options?.context;
   const asOfDate = context ? analysisAsOfDate(context) : undefined;
-  const effectiveDashaInterpretation = resolveDashaInterpretationForAsOf(horoscope, asOfDate);
 
   const themeInterpretation = interpretCareerTheme(horoscope);
   const rawEvidence = themeInterpretation.evidence;
@@ -182,7 +180,8 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const currentDasha = effectiveDashaInterpretation?.current;
+  const activeDashaReport = options?.temporalState?.dashaInterpretation ?? horoscope.dashaInterpretation;
+  const currentDasha = activeDashaReport?.current;
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
   const pdPlanet = currentDasha?.pratyantardasha?.planet;
@@ -274,7 +273,7 @@ export function interpretCareerV2(
   };
 
   const careerDashaSynthesis = buildCareerDashaSynthesis({
-    dashaInterpretation: effectiveDashaInterpretation,
+    dashaInterpretation: activeDashaReport,
     d10Context
   });
 
