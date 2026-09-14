@@ -7,12 +7,32 @@ import { validateReasoningTrace, validateEvidenceNodes } from './reasoningTraceV
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import type { CareerWealthFinalSynthesis } from '../finalSynthesis/careerWealthFinalSynthesisTypes';
+import type { Horoscope } from '../../../types';
+import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../../reasoning/reasoningTypes';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+
+function makeOptions(horoscope: Horoscope): DomainReasoningOptions {
+  const context = createAnalysisContext({ methodology: testMethodology });
+  const temporalState = resolveAnalysisTemporalState(horoscope, context);
+  return { context, temporalState };
+}
 
 describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
   const dummyHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
   it('populates valid reasoningTraceGraph on Career domain interpretation conclusionData with exact node requirements', () => {
-    const interpretation = interpretCareerV2(dummyHoroscope);
+    const interpretation = interpretCareerV2(dummyHoroscope, makeOptions(dummyHoroscope));
     const conclusionData = interpretation.conclusionData as {
       reasoningTraceGraph?: ReasoningTraceGraph;
       careerFinalSynthesis?: CareerWealthFinalSynthesis;
@@ -81,7 +101,7 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
   });
 
   it('populates valid reasoningTraceGraph on Wealth domain interpretation conclusionData with exact node requirements', () => {
-    const interpretation = interpretWealthV2(dummyHoroscope);
+    const interpretation = interpretWealthV2(dummyHoroscope, makeOptions(dummyHoroscope));
     const conclusionData = interpretation.conclusionData as {
       reasoningTraceGraph?: ReasoningTraceGraph;
       wealthFinalSynthesis?: CareerWealthFinalSynthesis;
@@ -381,15 +401,15 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
   });
 
   it('guarantees full-pipeline deterministic graph outputs across multiple runs', () => {
-    const firstCareer = interpretCareerV2(dummyHoroscope);
-    const secondCareer = interpretCareerV2(dummyHoroscope);
+    const firstCareer = interpretCareerV2(dummyHoroscope, makeOptions(dummyHoroscope));
+    const secondCareer = interpretCareerV2(dummyHoroscope, makeOptions(dummyHoroscope));
 
     const firstCareerGraph = (firstCareer.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
     const secondCareerGraph = (secondCareer.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
     expect(firstCareerGraph).toEqual(secondCareerGraph);
 
-    const firstWealth = interpretWealthV2(dummyHoroscope);
-    const secondWealth = interpretWealthV2(dummyHoroscope);
+    const firstWealth = interpretWealthV2(dummyHoroscope, makeOptions(dummyHoroscope));
+    const secondWealth = interpretWealthV2(dummyHoroscope, makeOptions(dummyHoroscope));
 
     const firstWealthGraph = (firstWealth.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;
     const secondWealthGraph = (secondWealth.conclusionData as { reasoningTraceGraph?: ReasoningTraceGraph }).reasoningTraceGraph;

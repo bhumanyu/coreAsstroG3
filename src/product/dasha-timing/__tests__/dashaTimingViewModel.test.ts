@@ -20,6 +20,25 @@ import {
 import { Planet } from '../../../types';
 import type { Horoscope } from '../../../types';
 import type { CareerTimingProduct, WealthTimingProduct } from '../dashaTimingTypes';
+import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../../../domain/reasoning/reasoningTypes';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+
+function makeDomainOptions(targetHoroscope: Horoscope, asOf: string = '2024-06-01T00:00:00.000Z'): DomainReasoningOptions {
+  const context = createAnalysisContext({ asOf, methodology: testMethodology });
+  const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
+  return { context, temporalState };
+}
 
 describe('Dasha & Timing Product View Model & Selectors', () => {
   const fixedAsOf = '2024-06-01T00:00:00.000Z';
@@ -96,8 +115,8 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
   it('Test 4: preserves planet-consistency between career/wealth timing and active dasha', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
-    const careerInterp = interpretCareerV2(horoscope);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
+    const wealthInterp = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
 
     const viewModel = buildDashaTimingViewModel(
       horoscope,
@@ -120,8 +139,8 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
   it('Test 5: preserves all four wealth dimensions (accumulation, gains, fortune, speculation) across periods', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
-    const careerInterp = interpretCareerV2(horoscope);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
+    const wealthInterp = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
 
     const viewModel = buildDashaTimingViewModel(
       horoscope,
@@ -155,8 +174,8 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
   it('Test 6: propagates asOf cleanly and deterministically', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
-    const careerInterp = interpretCareerV2(horoscope);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
+    const wealthInterp = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
 
     const viewModel = buildDashaTimingViewModel(
       horoscope,
@@ -182,8 +201,8 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
   it('Test 8: selectors extract correct sub-structures from DashaTimingViewModel', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
-    const careerInterp = interpretCareerV2(horoscope);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
+    const wealthInterp = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
 
     const viewModel = buildDashaTimingViewModel(
       horoscope,
@@ -205,8 +224,8 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
   it('Test 9: resolves Career and Wealth timing evidence through canonical evidence ids', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
-    const careerInterp = interpretCareerV2(horoscope);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
+    const wealthInterp = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
 
     const model = buildDashaTimingViewModel(
       horoscope,
@@ -303,8 +322,8 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
   it('Test 11: is completely deterministic across multiple invocations on identical inputs', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
-    const careerInterp = interpretCareerV2(horoscope);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
+    const wealthInterp = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
 
     const model1 = buildDashaTimingViewModel(
       horoscope,

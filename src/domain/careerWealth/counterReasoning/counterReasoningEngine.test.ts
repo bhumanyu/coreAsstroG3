@@ -9,6 +9,26 @@ import { interpretCareerV2 } from '../../career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../wealth/WealthDomainInterpreterV2';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
+import type { Horoscope } from '../../../types';
+import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../../reasoning/reasoningTypes';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+
+function makeOptions(horoscope: Horoscope): DomainReasoningOptions {
+  const context = createAnalysisContext({ methodology: testMethodology });
+  const temporalState = resolveAnalysisTemporalState(horoscope, context);
+  return { context, temporalState };
+}
 
 describe('counterReasoningEngine (CW-07)', () => {
   const sampleGraph: ReasoningTraceGraph = {
@@ -371,7 +391,7 @@ describe('counterReasoningEngine (CW-07)', () => {
 
   it('integrates end-to-end with real Career interpretation on canonical fixture', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-    const careerInterp = interpretCareerV2(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, makeOptions(horoscope));
     const conclusionData = careerInterp.conclusionData as {
       reasoningTraceGraph?: ReasoningTraceGraph;
       careerFinalSynthesis?: CareerWealthFinalSynthesis;
@@ -412,7 +432,7 @@ describe('counterReasoningEngine (CW-07)', () => {
 
   it('integrates end-to-end with real Wealth interpretation on canonical fixture', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-    const wealthInterp = interpretWealthV2(horoscope);
+    const wealthInterp = interpretWealthV2(horoscope, makeOptions(horoscope));
     const conclusionData = wealthInterp.conclusionData as {
       reasoningTraceGraph?: ReasoningTraceGraph;
       wealthFinalSynthesis?: CareerWealthFinalSynthesis;

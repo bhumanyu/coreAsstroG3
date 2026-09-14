@@ -8,7 +8,7 @@ import { createDomainEvidence, type DomainEvidence } from '../interpretation/Dom
 import { mapEvidenceSource } from '../../product/life-analysis/domainPresentationUtils';
 import { interpretCareerV2 } from '../career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../wealth/WealthDomainInterpreterV2';
-import { STAGE1_GOLDEN_HOROSCOPE } from '../../integration/stage1/stage1GoldenFixture';
+import { STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS } from '../../integration/stage1/stage1GoldenFixture';
 import { GOLDEN_CAREER_EVIDENCE } from '../career/career-v2-golden.fixture';
 import { GOLDEN_WEALTH_EVIDENCE } from '../wealth/wealth-v2-golden.fixture';
 
@@ -206,8 +206,8 @@ describe('EvidenceSourceType Contract & Mapping (P-031)', () => {
 
   describe('Interpreter Invariant Testing', () => {
     it('every deterministic domain evidence item produced by Career and Wealth interpreters on STAGE1_GOLDEN_HOROSCOPE has a valid sourceType', () => {
-      const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE);
-      const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE);
+      const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS);
+      const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS);
 
       expect(career.evidence.length).toBeGreaterThan(0);
       for (const item of career.evidence) {

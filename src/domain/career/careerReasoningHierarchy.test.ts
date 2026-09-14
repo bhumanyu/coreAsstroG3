@@ -1,19 +1,38 @@
 import { describe, it, expect } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
-import { Planet } from '../../types';
+import { Planet, type Horoscope } from '../../types';
 import { interpretCareerV2 } from './CareerDomainInterpreterV2';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
 import { createVargaConfirmation } from '../interpretation/VargaConfirmation';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+
+function makeOptions(horoscope: Horoscope, asOf: string = '2024-06-01T00:00:00.000Z'): DomainReasoningOptions {
+  const context = createAnalysisContext({ asOf, methodology: testMethodology });
+  const temporalState = resolveAnalysisTemporalState(horoscope, context);
+  return { context, temporalState };
+}
 
 describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)', () => {
   const canonicalHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
     asOf: '2024-06-01T00:00:00.000Z'
   });
 
-  it('X1: CW-01 is executed unconditionally when options is omitted', () => {
-    const result = interpretCareerV2(canonicalHoroscope);
+  it('X1: CW-01 is executed unconditionally with options', () => {
+    const result = interpretCareerV2(canonicalHoroscope, makeOptions(canonicalHoroscope));
 
     expect(result.domain).toBe('CAREER');
     expect(result.reasoningVersion).toBe('CW-01');
@@ -24,7 +43,7 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
   });
 
   it('X2: returns valid reasoning trace and CW-01 version on canonical chart', () => {
-    const cw01Result = interpretCareerV2(canonicalHoroscope);
+    const cw01Result = interpretCareerV2(canonicalHoroscope, makeOptions(canonicalHoroscope));
 
     expect(cw01Result.domain).toBe('CAREER');
     expect(cw01Result.reasoningVersion).toBe('CW-01');
@@ -389,7 +408,7 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
         asOf: '2024-06-01T00:00:00.000Z'
       });
-      const result = interpretCareerV2(horoscope);
+      const result = interpretCareerV2(horoscope, makeOptions(horoscope));
 
       expect(result.manifestations).toBeDefined();
       expect(result.manifestations.length).toBe(7);

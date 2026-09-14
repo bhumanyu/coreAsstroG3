@@ -104,10 +104,10 @@ import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretCareerV2(
   horoscope: Horoscope,
-  options?: DomainReasoningOptions
+  options: DomainReasoningOptions
 ): DomainInterpretation {
-  const context = options?.context;
-  const asOfDate = context ? analysisAsOfDate(context) : undefined;
+  const context = options.context;
+  const asOfDate = analysisAsOfDate(context);
 
   const themeInterpretation = interpretCareerTheme(horoscope);
   const rawEvidence = themeInterpretation.evidence;
@@ -180,7 +180,7 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const activeDashaReport = options?.temporalState?.dashaInterpretation ?? horoscope.dashaInterpretation;
+  const activeDashaReport = options.temporalState.dashaInterpretation;
   const currentDasha = activeDashaReport?.current;
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
@@ -420,7 +420,7 @@ export function interpretCareerV2(
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01'
   }, {
-    asOf: context?.asOf ?? ''
+    asOf: context.asOf
   });
 }
 

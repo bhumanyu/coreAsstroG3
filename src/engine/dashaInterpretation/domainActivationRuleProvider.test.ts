@@ -39,6 +39,26 @@ import {
   evaluateWealthPeriodTimingActivation
 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { projectDomainInterpretationForAi } from '../../domain/interpretation';
+import type { Horoscope } from '../../types';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
+
+const testMethodology = {
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: 'ASTRO_CORE_V1',
+  rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+};
+
+function makeDomainOptions(targetHoroscope: Horoscope, asOf: string = '2024-06-01T00:00:00.000Z'): DomainReasoningOptions {
+  const context = createAnalysisContext({ asOf, methodology: testMethodology });
+  const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
+  return { context, temporalState };
+}
 
 describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activation', () => {
   const FIXED_AS_OF = '2024-06-01T00:00:00.000Z';
@@ -184,7 +204,7 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, FIXED_AS_OF);
 
     it('MD/AD/PD career activation reaches evaluateCareerTimingActivation', () => {
-      const careerV2 = interpretCareerV2(horoscope);
+      const careerV2 = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
       expect(careerV2.domain).toBe('CAREER');
       expect(careerV2.evidence.length).toBeGreaterThan(0);
 
@@ -208,7 +228,7 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
     });
 
     it('MD/AD/PD wealth activation reaches evaluateWealthPeriodTimingActivation with all 4 dimensions independent', () => {
-      const wealthV2 = interpretWealthV2(horoscope);
+      const wealthV2 = interpretWealthV2(horoscope, makeDomainOptions(horoscope));
       expect(wealthV2.domain).toBe('WEALTH');
       expect(wealthV2.evidence.length).toBeGreaterThan(0);
 
@@ -292,19 +312,26 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
 
     it('natal-promise strength is identical whether or not dasha timing is supplied', () => {
       const horoscopeWithDasha = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, FIXED_AS_OF);
-      const careerWithDasha = interpretCareerV2(horoscopeWithDasha);
-      const wealthWithDasha = interpretWealthV2(horoscopeWithDasha);
+      const optionsWithDasha = makeDomainOptions(horoscopeWithDasha);
+      const careerWithDasha = interpretCareerV2(horoscopeWithDasha, optionsWithDasha);
+      const wealthWithDasha = interpretWealthV2(horoscopeWithDasha, optionsWithDasha);
 
       // Interpret using baseline chart without active dasha context
       const baselineHoroscope = {
         ...horoscopeWithDasha,
-        dashaInterpretation: {
-          ...horoscopeWithDasha.dashaInterpretation,
-          current: undefined
+        vimshottari: undefined,
+        dashaInterpretation: undefined
+      };
+      const baselineContext = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: testMethodology });
+      const baselineOptions: DomainReasoningOptions = {
+        context: baselineContext,
+        temporalState: {
+          asOf: baselineContext.asOf,
+          dashaInterpretation: undefined
         }
       };
-      const careerWithoutDasha = interpretCareerV2(baselineHoroscope as any);
-      const wealthWithoutDasha = interpretWealthV2(baselineHoroscope as any);
+      const careerWithoutDasha = interpretCareerV2(baselineHoroscope as any, baselineOptions);
+      const wealthWithoutDasha = interpretWealthV2(baselineHoroscope as any, baselineOptions);
 
       // Natal promise conclusions must be invariant
       expect(careerWithDasha.natalPromise.strength).toBe(
@@ -316,7 +343,7 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
     });
 
     it('all projected AI evidence IDs resolve in context evidence', () => {
-      const careerV2 = interpretCareerV2(horoscope);
+      const careerV2 = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
       const aiCareer = projectDomainInterpretationForAi(careerV2);
 
       const allEvidenceIds = new Set(careerV2.evidence.map((e) => e.id));
