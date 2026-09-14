@@ -101,11 +101,52 @@ import {
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
+import { analyzeActiveDasha, analyzeDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretation';
+import type { DashaInterpretationInput, DashaInterpretationReport } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
+
+function resolveDashaInterpretationForAsOf(
+  horoscope: Horoscope,
+  asOfDate?: Date
+): DashaInterpretationReport | undefined {
+  if (horoscope.dashaInterpretation?.current) {
+    return horoscope.dashaInterpretation;
+  }
+  if (!asOfDate || isNaN(asOfDate.getTime())) {
+    return horoscope.dashaInterpretation;
+  }
+  try {
+    const input: DashaInterpretationInput = {
+      vimshottari: horoscope.vimshottari,
+      planetInterpretation: horoscope.planetInterpretation,
+      houseInterpretation: horoscope.houseInterpretation,
+      functionalRoles: horoscope.functionalRoles,
+      natalGrahaDrishti: horoscope.natalGrahaDrishti,
+      yogas: horoscope.yogas,
+      planetAnalysis: horoscope.planetAnalysis,
+      ...(horoscope.planetaryStrength ? { planetaryStrength: horoscope.planetaryStrength } : {})
+    };
+    const activeDasha = analyzeActiveDasha(input, asOfDate);
+    if (activeDasha) {
+      return Object.freeze({
+        ...(horoscope.dashaInterpretation ?? analyzeDashaInterpretation(input)),
+        current: activeDasha,
+        activePeriods: activeDasha
+      });
+    }
+  } catch {
+    // fallback to existing dashaInterpretation
+  }
+  return horoscope.dashaInterpretation;
+}
 
 export function interpretCareerV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
+  const context = options?.context;
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
+  const effectiveDashaInterpretation = resolveDashaInterpretationForAsOf(horoscope, asOfDate);
+
   const themeInterpretation = interpretCareerTheme(horoscope);
   const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
@@ -177,7 +218,7 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const currentDasha = horoscope.dashaInterpretation?.current;
+  const currentDasha = effectiveDashaInterpretation?.current ?? horoscope.dashaInterpretation?.current;
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
   const pdPlanet = currentDasha?.pratyantardasha?.planet;
@@ -269,12 +310,9 @@ export function interpretCareerV2(
   };
 
   const careerDashaSynthesis = buildCareerDashaSynthesis({
-    dashaInterpretation: horoscope.dashaInterpretation,
+    dashaInterpretation: effectiveDashaInterpretation,
     d10Context
   });
-
-  const context = options?.context;
-  const asOfDate = context ? analysisAsOfDate(context) : undefined;
 
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {

@@ -6,6 +6,7 @@ import {
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import {
   buildDomainInterpretation,
+  createDomainEvidence,
   createNatalPromise,
   createDashaActivation,
   createTransitTrigger,
@@ -100,11 +101,52 @@ import {
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
+import { analyzeActiveDasha, analyzeDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretation';
+import type { DashaInterpretationInput, DashaInterpretationReport } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
+
+function resolveDashaInterpretationForAsOf(
+  horoscope: Horoscope,
+  asOfDate?: Date
+): DashaInterpretationReport | undefined {
+  if (horoscope.dashaInterpretation?.current) {
+    return horoscope.dashaInterpretation;
+  }
+  if (!asOfDate || isNaN(asOfDate.getTime())) {
+    return horoscope.dashaInterpretation;
+  }
+  try {
+    const input: DashaInterpretationInput = {
+      vimshottari: horoscope.vimshottari,
+      planetInterpretation: horoscope.planetInterpretation,
+      houseInterpretation: horoscope.houseInterpretation,
+      functionalRoles: horoscope.functionalRoles,
+      natalGrahaDrishti: horoscope.natalGrahaDrishti,
+      yogas: horoscope.yogas,
+      planetAnalysis: horoscope.planetAnalysis,
+      ...(horoscope.planetaryStrength ? { planetaryStrength: horoscope.planetaryStrength } : {})
+    };
+    const activeDasha = analyzeActiveDasha(input, asOfDate);
+    if (activeDasha) {
+      return Object.freeze({
+        ...(horoscope.dashaInterpretation ?? analyzeDashaInterpretation(input)),
+        current: activeDasha,
+        activePeriods: activeDasha
+      });
+    }
+  } catch {
+    // fallback to existing dashaInterpretation
+  }
+  return horoscope.dashaInterpretation;
+}
 
 export function interpretWealthV2(
   horoscope: Horoscope,
   options?: DomainReasoningOptions
 ): DomainInterpretation {
+  const context = options?.context;
+  const asOfDate = context ? analysisAsOfDate(context) : undefined;
+  const effectiveDashaInterpretation = resolveDashaInterpretationForAsOf(horoscope, asOfDate);
+
   const themeInterpretation = interpretWealthTheme(horoscope);
   const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildWealthEvidence(rawEvidence);
@@ -236,7 +278,7 @@ export function interpretWealthV2(
     : [];
 
   // Multi-period timing (MD / AD / PD)
-  const currentDasha = horoscope.dashaInterpretation?.current;
+  const currentDasha = effectiveDashaInterpretation?.current ?? horoscope.dashaInterpretation?.current;
 
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
@@ -382,9 +424,6 @@ export function interpretWealthV2(
     SPECULATION: cw01Result.dimensionResults.SPECULATION.natalStrength
   };
 
-  const context = options?.context;
-  const asOfDate = context ? analysisAsOfDate(context) : undefined;
-
   let wealthTimingSynthesis: WealthTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
     const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
@@ -465,8 +504,52 @@ export function interpretWealthV2(
     natalRuleIds: natalEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
   });
 
+  // INVARIANT & ARCHITECTURAL CONTRACT:
+  // (a) Traceability vs. Natal Scoring Non-Double-Counting Invariant:
+  //     These DASHA-sourced evidence items are injected into `mergedEvidence` for traceability and auditability only.
+  //     The manifestation resolver (synthesizeWealthManifestations) explicitly excludes
+  //     items with `source === 'DASHA'` from natal scoring and reads dasha contributions directly from the
+  //     separate `wealthTimingSynthesis` parameter, guaranteeing zero double-counting of dasha influences.
+  const dashaFactorsEvidence: readonly DomainEvidence[] = currentDasha ? (() => {
+    const factors: DomainEvidence[] = [];
+    const periods: Array<{ level: 'MD' | 'AD' | 'PD'; planet?: Planet; periodTiming?: WealthPeriodTimingActivation }> = [
+      { level: 'MD', planet: mdPlanet, periodTiming: mdPeriodTiming },
+      { level: 'AD', planet: adPlanet, periodTiming: adPeriodTiming },
+      { level: 'PD', planet: pdPlanet, periodTiming: pdPeriodTiming }
+    ];
+
+    for (const p of periods) {
+      if (!p.planet) continue;
+      const effect = p.periodTiming?.effect ?? 'ACTIVATES';
+      const polarity = effect === 'CHALLENGES' ? 'CHALLENGING' : effect === 'ACTIVATES' || effect === 'PARTIALLY_ACTIVATES' ? 'SUPPORTING' : 'NEUTRAL';
+      const priority = p.level === 'MD' ? 90 : p.level === 'AD' ? 60 : 30;
+
+      factors.push(
+        createDomainEvidence({
+          id: `WEALTH_DASHA_${p.level}_${p.planet}`,
+          sourceType: 'DASHA',
+          domain: 'WEALTH',
+          role: 'MODIFIER',
+          phase: 'DASHA_ACTIVATION',
+          source: 'DASHA',
+          statement: p.periodTiming?.statement || `Active ${p.level} period lord ${p.planet} activates natal wealth potential.`,
+          polarity,
+          strength: p.level === 'MD' ? 'STRONG' : 'MODERATE',
+          priority,
+          ruleId: `WEALTH_DASHA_TIMING_001:${p.level}:${p.planet}`,
+          relatedEvidenceIds: p.periodTiming?.activatedPromiseEvidenceIds ?? [],
+          timing: { period: p.level, planet: p.planet },
+          evidenceFamily: 'DASHA'
+        })
+      );
+    }
+    return Object.freeze(factors);
+  })() : Object.freeze([]);
+
+  const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
+
   const reasoningTraceGraph = buildWealthReasoningTraceGraph({
-    evidence,
+    evidence: mergedEvidence,
     overallStatus,
     wealthTimingSynthesis,
     d2Relationship,
@@ -476,7 +559,7 @@ export function interpretWealthV2(
 
   return buildDomainInterpretation({
     domain: 'WEALTH',
-    evidence,
+    evidence: mergedEvidence,
     natalPromise,
     dashaActivation,
     transitTrigger,
