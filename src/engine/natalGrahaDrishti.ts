@@ -116,3 +116,22 @@ export function analyzeNatalGrahaDrishti(
     summary: []
   }) as any;
 }
+
+/**
+ * Validates and normalizes natal graha drishti input.
+ * Returns NatalGrahaDrishtiReport if valid, or undefined when invalid or missing.
+ * Missing evidence is preserved as undefined and must not be synthesized as empty aspects.
+ */
+export function normalizeNatalGrahaDrishti(
+  input: unknown
+): NatalGrahaDrishtiReport | undefined {
+  if (!input || typeof input !== 'object') {
+    return undefined;
+  }
+  const candidate = input as Partial<NatalGrahaDrishtiReport>;
+  if (!Array.isArray(candidate.aspects)) {
+    return undefined;
+  }
+  return candidate as NatalGrahaDrishtiReport;
+}
+

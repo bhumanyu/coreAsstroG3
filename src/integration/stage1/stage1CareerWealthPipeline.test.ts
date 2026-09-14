@@ -92,6 +92,11 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
     const run1 = await runStage1Integration(inputWithContext);
     const run2 = await runStage1Integration(inputWithContext);
 
+    // Full structural equality across repeated runs
+    expect(run1.career).toEqual(run2.career);
+    expect(run1.wealth).toEqual(run2.wealth);
+    expect(run1.lifeAnalysis).toEqual(run2.lifeAnalysis);
+
     expect(run1.career.conclusion.statement).toBe(run2.career.conclusion.statement);
     expect(run1.career.natalPromise.strength).toBe(run2.career.natalPromise.strength);
     expect(run1.wealth.conclusion.statement).toBe(run2.wealth.conclusion.statement);

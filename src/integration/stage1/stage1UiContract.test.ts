@@ -11,6 +11,7 @@ import {
 } from './stage1GoldenFixture';
 import { assertStage1Traceability } from './stage1Traceability';
 import { projectDomainInterpretationForAi } from '../../domain/interpretation/DomainInterpretationAiProjection';
+import { buildLifeAnalysis } from '../../domain/synthesis';
 import type { Stage1IntegrationResult } from './stage1IntegrationTypes';
 
 describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
@@ -124,6 +125,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
         horoscope: STAGE1_GOLDEN_INPUT.horoscope!,
         career: incompleteCareer,
         wealth: incompleteWealth,
+        lifeAnalysis: buildLifeAnalysis([incompleteCareer, incompleteWealth]),
         aiContext: {} as any,
         aiRequest: {} as any,
         routingResult: {} as any,
@@ -205,6 +207,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
         horoscope: STAGE1_GOLDEN_INPUT.horoscope!,
         career: STAGE1_GOLDEN_CAREER,
         wealth: speculationChallengedWealth,
+        lifeAnalysis: buildLifeAnalysis([STAGE1_GOLDEN_CAREER, speculationChallengedWealth]),
         aiContext: {} as any,
         aiRequest: {} as any,
         routingResult: {} as any,

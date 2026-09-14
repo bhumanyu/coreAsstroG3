@@ -9,6 +9,7 @@ import type {
   AiExplanationEvidence
 } from '../../ai/product/aiExplanationTypes';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import type { LifeAnalysis } from '../../domain/synthesis';
 
 export interface Stage1IntegrationInput {
   readonly horoscope?: Horoscope;
@@ -23,6 +24,7 @@ export interface Stage1IntegrationResult {
   readonly horoscope: Horoscope;
   readonly career: DomainInterpretation;
   readonly wealth: DomainInterpretation;
+  readonly lifeAnalysis: LifeAnalysis;
   readonly aiContext: AiContext;
   readonly aiRequest: AiRequest;
   readonly routingResult: AiRoutingResult;

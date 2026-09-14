@@ -212,7 +212,7 @@ export interface DashaInterpretationInput {
   readonly planetInterpretation: PlanetInterpretationReport;
   readonly houseInterpretation: HouseInterpretationReport;
   readonly functionalRoles: FunctionalRoleAnalysisReport;
-  readonly natalGrahaDrishti: NatalGrahaDrishtiReport;
+  readonly natalGrahaDrishti?: NatalGrahaDrishtiReport;
   readonly yogas: YogaAnalysisReport;
   readonly planetAnalysis: PlanetAnalysisReport;
   readonly planetaryStrength?: PlanetaryStrengthReport;
