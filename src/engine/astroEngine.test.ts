@@ -836,8 +836,8 @@ describe('astroEngine', () => {
     // are completely identical and unaffected by asOf
     expect(horoscopeWithAsOf.ascendant).toEqual(horoscopeWithoutAsOf.ascendant);
     expect(horoscopeWithAsOf.rasiChart).toEqual(horoscopeWithoutAsOf.rasiChart);
-    expect(horoscopeWithAsOf.divisionalCharts).toEqual(horoscopeWithoutAsOf.divisionalCharts);
-    expect(horoscopeWithAsOf.planetaryPositions).toEqual(horoscopeWithoutAsOf.planetaryPositions);
+    expect(horoscopeWithAsOf.charts).toEqual(horoscopeWithoutAsOf.charts);
+    expect(horoscopeWithAsOf.planetFacts).toEqual(horoscopeWithoutAsOf.planetFacts);
     expect(horoscopeWithAsOf.houseLordship).toEqual(horoscopeWithoutAsOf.houseLordship);
     expect(horoscopeWithAsOf.functionalRoles).toEqual(horoscopeWithoutAsOf.functionalRoles);
   });
