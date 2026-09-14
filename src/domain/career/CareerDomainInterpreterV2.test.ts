@@ -68,6 +68,7 @@ import {
   type ThemeInterpretationEvidence,
   type ThemeTransitEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
+import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 
 describe('CareerDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -1708,6 +1709,48 @@ describe('CareerDomainInterpreterV2', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    // 4. Temporal variation test: different asOf dates produce dasha activation reflecting respective asOf
+    it('proves two different AnalysisContext.asOf values produce Dasha activation reflecting respective asOf even when horoscope has populated dashaInterpretation.current', () => {
+      // Obtain a valid historical ActiveDashaInterpretation for 1990 (canonical chart Moon Mahadasha)
+      const staleCurrent = resolveDashaInterpretationForAsOf(
+        horoscope,
+        new Date('1990-01-01T00:00:00.000Z')
+      )?.current;
+      expect(staleCurrent).toBeDefined();
+      expect(staleCurrent?.mahadasha.planet).toBe(Planet.MOON);
+
+      const horoscopeWithStaleDasha = {
+        ...horoscope,
+        dashaInterpretation: {
+          ...horoscope.dashaInterpretation,
+          current: staleCurrent,
+          activePeriods: staleCurrent
+        }
+      };
+
+      const asOfT1 = '2000-01-01T00:00:00.000Z'; // Canonical chart has Mars Mahadasha
+      const asOfT2 = '2024-06-15T00:00:00.000Z'; // Canonical chart has Jupiter Mahadasha
+
+      const context1 = makeContext(asOfT1);
+      const context2 = makeContext(asOfT2);
+
+      const run1 = interpretCareerV2(horoscopeWithStaleDasha, { context: context1 });
+      const run2 = interpretCareerV2(horoscopeWithStaleDasha, { context: context2 });
+
+      // Neither run should have used the stale embedded MOON period
+      const md1 = run1.timingActivations?.find((t) => t.period === 'MD')?.planet;
+      const md2 = run2.timingActivations?.find((t) => t.period === 'MD')?.planet;
+
+      expect(md1).not.toBe(Planet.MOON);
+      expect(md2).not.toBe(Planet.MOON);
+
+      expect(md1).toBe(Planet.MARS);
+      expect(md2).toBe(Planet.JUPITER);
+
+      // The two runs must reflect their respective asOf timing
+      expect(run1.timingActivations).not.toEqual(run2.timingActivations);
     });
   });
 });
