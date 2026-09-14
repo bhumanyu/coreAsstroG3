@@ -1,4 +1,4 @@
-import type { Horoscope, Planet } from '../../types';
+import type { Horoscope, Planet, NatalGrahaDrishtiReport } from '../../types';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import {
   CareerEvidenceFamily,
@@ -120,7 +120,7 @@ function resolveDashaInterpretationForAsOf(
       planetInterpretation: horoscope.planetInterpretation,
       houseInterpretation: horoscope.houseInterpretation,
       functionalRoles: horoscope.functionalRoles,
-      natalGrahaDrishti: horoscope.natalGrahaDrishti,
+      natalGrahaDrishti: (horoscope.natalGrahaDrishti as NatalGrahaDrishtiReport) ?? { aspects: [] },
       yogas: horoscope.yogas,
       planetAnalysis: horoscope.planetAnalysis,
       ...(horoscope.planetaryStrength ? { planetaryStrength: horoscope.planetaryStrength } : {})

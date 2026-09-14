@@ -4,7 +4,9 @@ import { resolveLifeAnalysisEvidence } from '../../product/life-analysis/lifeAna
 import { buildAiContext } from '../../ai/context/aiContextFactory';
 import * as aiExplanationModule from '../../ai/product/aiExplanationService';
 import { STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_CONTEXT } from './stage1GoldenFixture';
-import type { LifeAnalysis } from '../../domain/synthesis';
+import { buildLifeAnalysis, type LifeAnalysis } from '../../domain/synthesis';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 
 describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () => {
   it('validates core traceability contracts for every career evidence item', async () => {
@@ -131,13 +133,22 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
   });
 
   it('validates same-evidence-universe between deterministic LifeAnalysis why evidence and AiContext', async () => {
+    const domainOptions = { context: STAGE1_GOLDEN_CONTEXT };
+    const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, domainOptions);
+    const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, domainOptions);
+    const domainInterpretations = [career, wealth];
+    const lifeAnalysis = buildLifeAnalysis(domainInterpretations);
+
     const result = await runLifeAnalysisProduct({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
       context: STAGE1_GOLDEN_CONTEXT,
       includeAiExplanation: false
     });
 
-    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE);
+    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE, {
+      domainInterpretations,
+      lifeAnalysis
+    });
     const contextEvidenceIds = new Set(aiContext.evidence.map((e) => e.id));
 
     const productEvidenceIds = result.analysis?.why?.evidence.map((e) => e.id) ?? [];

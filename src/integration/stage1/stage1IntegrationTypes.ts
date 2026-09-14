@@ -8,6 +8,7 @@ import type {
   AiExplanationResult,
   AiExplanationEvidence
 } from '../../ai/product/aiExplanationTypes';
+import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 
 export interface Stage1IntegrationInput {
   readonly horoscope?: Horoscope;
@@ -15,6 +16,7 @@ export interface Stage1IntegrationInput {
   readonly task: AiTask;
   readonly requestId?: string;
   readonly router?: AiRouter;
+  readonly context?: AnalysisContext;
 }
 
 export interface Stage1IntegrationResult {
