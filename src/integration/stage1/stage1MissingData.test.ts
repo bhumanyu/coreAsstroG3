@@ -4,10 +4,12 @@ import { buildLifeAnalysis } from '../../domain/synthesis';
 import {
   createTestHoroscope,
   STAGE1_GOLDEN_WEALTH,
+  STAGE1_GOLDEN_CONTEXT,
   buildHighPressureCareerInterpretation,
   buildIncompleteCareerInterpretation
 } from './stage1GoldenFixture';
 import type { Horoscope } from '../../types';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 
 describe('Stage 1 - Missing Data & Conflict Resolution Invariants', () => {
   it('evaluates D10 relationship as UNAVAILABLE when D10 divisional data is missing', () => {
@@ -26,7 +28,11 @@ describe('Stage 1 - Missing Data & Conflict Resolution Invariants', () => {
         : undefined
     };
 
-    const career = interpretCareerV2(missingD10Horoscope);
+    const options = {
+      context: STAGE1_GOLDEN_CONTEXT,
+      temporalState: resolveAnalysisTemporalState(missingD10Horoscope, STAGE1_GOLDEN_CONTEXT)
+    };
+    const career = interpretCareerV2(missingD10Horoscope, options);
     const d10Conf = career.vargaConfirmations.find((v) => v.varga === 'D10');
 
     expect(d10Conf).toBeDefined();
@@ -47,7 +53,11 @@ describe('Stage 1 - Missing Data & Conflict Resolution Invariants', () => {
       }
     };
 
-    const career = interpretCareerV2(missingTimingHoroscope);
+    const options = {
+      context: STAGE1_GOLDEN_CONTEXT,
+      temporalState: resolveAnalysisTemporalState(missingTimingHoroscope, STAGE1_GOLDEN_CONTEXT)
+    };
+    const career = interpretCareerV2(missingTimingHoroscope, options);
 
     expect(['INSUFFICIENT_DATA', 'DOES_NOT_ACTIVATE']).toContain(
       career.dashaActivation.effect

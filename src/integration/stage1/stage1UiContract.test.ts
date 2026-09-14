@@ -129,6 +129,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
         aiContext: {} as any,
         aiRequest: {} as any,
         routingResult: {} as any,
+        temporalState: {} as any,
         explanation: {
           kind: 'SUCCESS',
           requestId: 'incomplete-test-request',
@@ -211,6 +212,7 @@ describe('Stage-1 Presentation ViewModel & Master End-to-End Suite', () => {
         aiContext: {} as any,
         aiRequest: {} as any,
         routingResult: {} as any,
+        temporalState: {} as any,
         explanation: {
           kind: 'SUCCESS',
           requestId: 'wealth-separation-test',

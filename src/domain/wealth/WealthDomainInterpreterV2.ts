@@ -104,12 +104,15 @@ import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretWealthV2(
   horoscope: Horoscope,
-  options?: DomainReasoningOptions
+  options: DomainReasoningOptions
 ): DomainInterpretation {
-  const context = options?.context;
-  const asOfDate = context ? analysisAsOfDate(context) : undefined;
+  const context = options.context;
+  const asOfDate = analysisAsOfDate(context);
 
-  const themeInterpretation = interpretWealthTheme(horoscope);
+  const themeInterpretation = interpretWealthTheme({
+    horoscope,
+    dashaInterpretation: options.temporalState.dashaInterpretation
+  });
   const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildWealthEvidence(rawEvidence);
   const evidence = linkWealthEvidence(rawMappedEvidence);
@@ -240,7 +243,7 @@ export function interpretWealthV2(
     : [];
 
   // Multi-period timing (MD / AD / PD)
-  const activeDashaReport = options?.temporalState?.dashaInterpretation ?? horoscope.dashaInterpretation;
+  const activeDashaReport = options.temporalState.dashaInterpretation;
   const currentDasha = activeDashaReport?.current;
 
   const mdPlanet = currentDasha?.mahadasha?.planet;
@@ -545,7 +548,7 @@ export function interpretWealthV2(
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01'
   }, {
-    asOf: context?.asOf ?? ''
+    asOf: context.asOf
   });
 }
 

@@ -93,7 +93,7 @@ describe('WealthDomainInterpreterV2', () => {
   // 1. Core integration & legacy preservation
   it('preserves existing wealth conclusion summary and version V2', () => {
     const legacy = interpretWealthTheme(horoscope);
-    const v2 = interpretWealthV2(horoscope);
+    const v2 = interpretWealthV2(horoscope, makeDomainOptions());
 
     expect(v2.domain).toBe('WEALTH');
     expect(v2.version).toBe('V2');
@@ -1333,7 +1333,7 @@ describe('WealthDomainInterpreterV2', () => {
   // 13. Traceability invariant
   describe('Evidence Traceability Invariant', () => {
     it('guarantees every evidence ID referenced anywhere exists in result.evidence', () => {
-      const v2 = interpretWealthV2(horoscope);
+      const v2 = interpretWealthV2(horoscope, makeDomainOptions());
       const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
 
       for (const id of v2.conclusion.supportingEvidenceIds) {
@@ -1384,7 +1384,7 @@ describe('WealthDomainInterpreterV2', () => {
   // 14. AI Projection
   describe('AI Projection', () => {
     it('projects domain interpretation cleanly for AI', () => {
-      const v2 = interpretWealthV2(horoscope);
+      const v2 = interpretWealthV2(horoscope, makeDomainOptions());
       const projection = projectDomainInterpretationForAi(v2);
 
       expect(projection.domain).toBe('WEALTH');
@@ -1744,7 +1744,7 @@ describe('WealthDomainInterpreterV2', () => {
   describe('P0-01 Canonicalization & Non-Double-Counting Invariants', () => {
     // 1. Theme interpretation conclusion summary does not affect strength or status
     it('proves themeInterpretation conclusion summary cannot alter wealth conclusion strength or status', () => {
-      const v2 = interpretWealthV2(horoscope);
+      const v2 = interpretWealthV2(horoscope, makeDomainOptions());
 
       // CW-01 is authoritative for strength
       expect(v2.conclusion.strength).toBeDefined();

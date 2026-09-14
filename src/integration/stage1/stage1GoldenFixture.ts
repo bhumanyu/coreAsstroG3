@@ -1,6 +1,8 @@
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
 import {
   interpretWealthV2,
   buildWealthConclusionData,
@@ -72,20 +74,6 @@ export const STAGE1_GOLDEN_HOROSCOPE = Object.freeze(
   calculateHoroscope(CANONICAL_BIRTH_DETAILS)
 );
 
-export const STAGE1_GOLDEN_CAREER = Object.freeze(
-  interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE)
-);
-
-export const STAGE1_GOLDEN_WEALTH = Object.freeze(
-  interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE)
-);
-
-export const STAGE1_GOLDEN_INPUT: Stage1IntegrationInput = Object.freeze({
-  horoscope: STAGE1_GOLDEN_HOROSCOPE,
-  task: 'CHART_SYNTHESIS',
-  requestId: 'stage1-golden-request-001'
-});
-
 export const STAGE1_TEST_METHODOLOGY: ProductMethodology = Object.freeze({
   zodiacSystem: 'SIDEREAL',
   houseSystem: 'WHOLE_SIGN',
@@ -106,6 +94,25 @@ export function createStage1TestContext(asOf?: string | Date): AnalysisContext {
 export const STAGE1_GOLDEN_CONTEXT: AnalysisContext = Object.freeze(
   createStage1TestContext('2026-01-01T00:00:00.000Z')
 );
+
+export const STAGE1_GOLDEN_OPTIONS: DomainReasoningOptions = Object.freeze({
+  context: STAGE1_GOLDEN_CONTEXT,
+  temporalState: resolveAnalysisTemporalState(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_CONTEXT)
+});
+
+export const STAGE1_GOLDEN_CAREER = Object.freeze(
+  interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS)
+);
+
+export const STAGE1_GOLDEN_WEALTH = Object.freeze(
+  interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS)
+);
+
+export const STAGE1_GOLDEN_INPUT: Stage1IntegrationInput = Object.freeze({
+  horoscope: STAGE1_GOLDEN_HOROSCOPE,
+  task: 'CHART_SYNTHESIS',
+  requestId: 'stage1-golden-request-001'
+});
 
 export const STAGE1_GOLDEN_EXPECTATION: Stage1GoldenExpectation = Object.freeze({
   career: Object.freeze({

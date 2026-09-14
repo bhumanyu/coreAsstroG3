@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Planet } from '../../types';
+import { Planet, type Horoscope } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
@@ -84,7 +84,7 @@ describe('CareerDomainInterpreterV2', () => {
 
   // 1. Core integration & legacy preservation
   it('preserves existing career conclusion and version V2', () => {
-    const v2 = interpretCareerV2(horoscope);
+    const v2 = interpretCareerV2(horoscope, makeDomainOptions());
 
     expect(v2.domain).toBe('CAREER');
     expect(v2.version).toBe('V2');
@@ -1159,7 +1159,7 @@ describe('CareerDomainInterpreterV2', () => {
   // 12. Full Traceability Invariant (§34)
   describe('Evidence Traceability Invariant', () => {
     it('guarantees every evidence ID referenced anywhere in the interpretation exists in result.evidence', () => {
-      const v2 = interpretCareerV2(horoscope);
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
 
       // 1. Conclusion supporting IDs
@@ -1233,7 +1233,7 @@ describe('CareerDomainInterpreterV2', () => {
   // 13. AI Projection (§24, §35)
   describe('AI Projection', () => {
     it('projects domain interpretation cleanly for AI without raw horoscope and without unknown evidence IDs', () => {
-      const v2 = interpretCareerV2(horoscope);
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       const projection = projectDomainInterpretationForAi(v2);
 
       expect(projection.domain).toBe('CAREER');
@@ -1369,7 +1369,7 @@ describe('CareerDomainInterpreterV2', () => {
   // 16. Structured CareerConclusionData & Traceability (P1-6 & P1-7)
   describe('Structured CareerConclusionData and evidence traceability', () => {
     it('constructs structured CareerConclusionData and preserves strict evidence traceability', () => {
-      const v2 = interpretCareerV2(horoscope);
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       expect(v2.conclusionData).toBeDefined();
 
       const cd: CareerConclusionData = v2.conclusionData as CareerConclusionData;
@@ -1592,7 +1592,7 @@ describe('CareerDomainInterpreterV2', () => {
   describe('P0-01 Canonicalization & Non-Double-Counting Invariants', () => {
     // 1. Theme interpretation conclusion summary is inert fallback prose and does not alter strength/status
     it('proves themeInterpretation conclusion summary is inert fallback prose and cannot change conclusion strength or status', () => {
-      const v2 = interpretCareerV2(horoscope);
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
 
       // CW-01 is authoritative for strength
       expect(v2.conclusion.strength).toBeDefined();
