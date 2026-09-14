@@ -9,6 +9,7 @@ import type {
   AiExplanationEvidence
 } from '../../ai/product/aiExplanationTypes';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { LifeAnalysis } from '../../domain/synthesis';
 
 export interface Stage1IntegrationInput {
@@ -29,6 +30,7 @@ export interface Stage1IntegrationResult {
   readonly aiRequest: AiRequest;
   readonly routingResult: AiRoutingResult;
   readonly explanation: AiExplanationResult;
+  readonly temporalState: AnalysisTemporalState;
 }
 
 export interface Stage1GoldenExpectation {

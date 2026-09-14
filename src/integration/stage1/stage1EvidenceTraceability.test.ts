@@ -7,6 +7,7 @@ import { STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_CONTEXT } from './stage1GoldenFi
 import { buildLifeAnalysis, type LifeAnalysis } from '../../domain/synthesis';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 
 describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () => {
   it('validates core traceability contracts for every career evidence item', async () => {
@@ -136,7 +137,8 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
     // Note: This is a consistency test, not a production-object-identity test, because
     // runLifeAnalysisProduct returns a LifeAnalysisViewModel and does not expose raw
     // domainInterpretations or lifeAnalysis on its result.
-    const domainOptions = { context: STAGE1_GOLDEN_CONTEXT };
+    const temporalState = resolveAnalysisTemporalState(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_CONTEXT);
+    const domainOptions = { context: STAGE1_GOLDEN_CONTEXT, temporalState };
     const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, domainOptions);
     const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, domainOptions);
     const domainInterpretations = [career, wealth];

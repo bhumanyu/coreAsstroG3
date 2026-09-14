@@ -17,6 +17,9 @@ const testMethodology = {
 function makeContext(asOf?: string) {
   return createAnalysisContext({ asOf, methodology: testMethodology });
 }
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
+
 import {
   interpretCareerV2,
   resolveCareerConclusionStrength,
@@ -72,6 +75,12 @@ import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretat
 
 describe('CareerDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+  function makeDomainOptions(asOf?: string, targetHoroscope: Horoscope = horoscope): DomainReasoningOptions {
+    const context = makeContext(asOf);
+    const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
+    return { context, temporalState };
+  }
 
   // 1. Core integration & legacy preservation
   it('preserves existing career conclusion and version V2', () => {
@@ -1457,9 +1466,9 @@ describe('CareerDomainInterpreterV2', () => {
   // 18. End-to-end CW-04 Career Manifestation Pipeline Test
   it('CW-04 end-to-end pipeline: produces deterministic career manifestation synthesis with explicit asOf date', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const context = makeContext(asOf);
-    const result1 = interpretCareerV2(horoscope, { context });
-    const result2 = interpretCareerV2(horoscope, { context });
+    const domainOptions = makeDomainOptions(asOf);
+    const result1 = interpretCareerV2(horoscope, domainOptions);
+    const result2 = interpretCareerV2(horoscope, domainOptions);
 
     // Verify presence and reasoning version
     const manifestations = result1.conclusionData?.careerManifestationSynthesis;
@@ -1531,9 +1540,9 @@ describe('CareerDomainInterpreterV2', () => {
   // End-to-end CW-05 Career Final Synthesis Pipeline Test
   it('CW-05 end-to-end pipeline: produces deterministic career final synthesis with multi-axis evaluation and provenance', () => {
     const asOf = '2024-06-15T12:00:00.000Z';
-    const context = makeContext(asOf);
-    const result1 = interpretCareerV2(horoscope, { context });
-    const result2 = interpretCareerV2(horoscope, { context });
+    const domainOptions = makeDomainOptions(asOf);
+    const result1 = interpretCareerV2(horoscope, domainOptions);
+    const result2 = interpretCareerV2(horoscope, domainOptions);
 
     const finalSynthesis = result1.conclusionData?.careerFinalSynthesis;
     expect(finalSynthesis).toBeDefined();
@@ -1630,8 +1639,8 @@ describe('CareerDomainInterpreterV2', () => {
     // 2. Non-double-counting invariant (lines 295-300)
     it('proves traceability vs natal scoring non-double-counting invariant: DASHA items are present in trace/mergedEvidence but have 0 natal contribution', () => {
       const asOf = '2024-06-15T12:00:00.000Z';
-      const context = makeContext(asOf);
-      const result = interpretCareerV2(horoscope, { context });
+      const domainOptions = makeDomainOptions(asOf);
+      const result = interpretCareerV2(horoscope, domainOptions);
 
       // (a) mergedEvidence contains items with source === 'DASHA' (traceability present)
       const dashaItems = result.evidence.filter((e) => e.source === 'DASHA');
@@ -1674,14 +1683,14 @@ describe('CareerDomainInterpreterV2', () => {
 
       vi.useFakeTimers();
       try {
-        const context = makeContext(explicitAsOf);
+        const domainOptions = makeDomainOptions(explicitAsOf);
         // Run 1: Clock set to 2021
         vi.setSystemTime(new Date('2021-03-15T08:00:00.000Z'));
-        const run1 = interpretCareerV2(horoscope, { context });
+        const run1 = interpretCareerV2(horoscope, domainOptions);
 
         // Run 2: Clock set to 2030
         vi.setSystemTime(new Date('2030-11-20T17:30:00.000Z'));
-        const run2 = interpretCareerV2(horoscope, { context });
+        const run2 = interpretCareerV2(horoscope, domainOptions);
 
         // Wall-clock metadata stamp changes
         expect(run1.generatedAt).not.toBe(run2.generatedAt);
@@ -1733,11 +1742,11 @@ describe('CareerDomainInterpreterV2', () => {
       const asOfT1 = '2000-01-01T00:00:00.000Z'; // Canonical chart has Mars Mahadasha
       const asOfT2 = '2024-06-15T00:00:00.000Z'; // Canonical chart has Jupiter Mahadasha
 
-      const context1 = makeContext(asOfT1);
-      const context2 = makeContext(asOfT2);
+      const domainOptions1 = makeDomainOptions(asOfT1, horoscopeWithStaleDasha);
+      const domainOptions2 = makeDomainOptions(asOfT2, horoscopeWithStaleDasha);
 
-      const run1 = interpretCareerV2(horoscopeWithStaleDasha, { context: context1 });
-      const run2 = interpretCareerV2(horoscopeWithStaleDasha, { context: context2 });
+      const run1 = interpretCareerV2(horoscopeWithStaleDasha, domainOptions1);
+      const run2 = interpretCareerV2(horoscopeWithStaleDasha, domainOptions2);
 
       // Neither run should have used the stale embedded MOON period
       const md1 = run1.timingActivations?.find((t) => t.period === 'MD')?.planet;

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { runStage1Integration } from './stage1IntegrationHarness';
 import {
   STAGE1_GOLDEN_INPUT,
@@ -88,20 +88,26 @@ describe('Stage-1 Career & Wealth Pipeline Integration', () => {
   });
 
   it('guarantees single canonical results with no divergent recomputation across repeated runs', async () => {
-    const inputWithContext = { ...STAGE1_GOLDEN_INPUT, context: STAGE1_GOLDEN_CONTEXT };
-    const run1 = await runStage1Integration(inputWithContext);
-    const run2 = await runStage1Integration(inputWithContext);
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      const inputWithContext = { ...STAGE1_GOLDEN_INPUT, context: STAGE1_GOLDEN_CONTEXT };
+      const run1 = await runStage1Integration(inputWithContext);
+      const run2 = await runStage1Integration(inputWithContext);
 
-    // Full structural equality across repeated runs
-    expect(run1.career).toEqual(run2.career);
-    expect(run1.wealth).toEqual(run2.wealth);
-    expect(run1.lifeAnalysis).toEqual(run2.lifeAnalysis);
+      // Full structural equality across repeated runs
+      expect(run1.career).toEqual(run2.career);
+      expect(run1.wealth).toEqual(run2.wealth);
+      expect(run1.lifeAnalysis).toEqual(run2.lifeAnalysis);
 
-    expect(run1.career.conclusion.statement).toBe(run2.career.conclusion.statement);
-    expect(run1.career.natalPromise.strength).toBe(run2.career.natalPromise.strength);
-    expect(run1.wealth.conclusion.statement).toBe(run2.wealth.conclusion.statement);
-    expect(run1.wealth.natalPromise.strength).toBe(run2.wealth.natalPromise.strength);
+      expect(run1.career.conclusion.statement).toBe(run2.career.conclusion.statement);
+      expect(run1.career.natalPromise.strength).toBe(run2.career.natalPromise.strength);
+      expect(run1.wealth.conclusion.statement).toBe(run2.wealth.conclusion.statement);
+      expect(run1.wealth.natalPromise.strength).toBe(run2.wealth.natalPromise.strength);
 
-    expect(run1.aiContext.domainInterpretations).toEqual(run2.aiContext.domainInterpretations);
+      expect(run1.aiContext.domainInterpretations).toEqual(run2.aiContext.domainInterpretations);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

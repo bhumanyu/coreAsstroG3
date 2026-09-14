@@ -1,4 +1,5 @@
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 
 export type ReasoningLayer =
   | 'PRIMARY_PROMISE'
@@ -120,4 +121,5 @@ export interface ReasoningTrace {
 
 export interface DomainReasoningOptions {
   readonly context: AnalysisContext;
+  readonly temporalState: AnalysisTemporalState;
 }

@@ -14,6 +14,7 @@ import {
   DEFAULT_ENGINE_VERSION,
   DEFAULT_RULES_VERSION
 } from '../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
 import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
 import type {
@@ -56,7 +57,8 @@ export async function runStage1Integration(
     input.horoscope ??
     calculateHoroscope(birthDetails, undefined, context.asOf);
 
-  const domainOptions: DomainReasoningOptions = { context };
+  const temporalState = resolveAnalysisTemporalState(horoscope, context);
+  const domainOptions: DomainReasoningOptions = { context, temporalState };
   const career = interpretCareerV2(horoscope, domainOptions);
   const wealth = interpretWealthV2(horoscope, domainOptions);
   const lifeAnalysis = buildLifeAnalysis([career, wealth]);
@@ -97,7 +99,8 @@ export async function runStage1Integration(
     aiContext,
     aiRequest,
     routingResult,
-    explanation
+    explanation,
+    temporalState
   });
 }
 

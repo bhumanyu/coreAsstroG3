@@ -7,6 +7,7 @@ import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 import { buildLifeAnalysis } from '../../domain/synthesis';
 import { resolveLifeAnalysisEvidence } from './lifeAnalysisEvidence';
 
@@ -25,8 +26,10 @@ describe('D07-C: Hierarchy Integration Pipeline Tests', () => {
     }
   });
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, asOf);
-  const career = interpretCareerV2(horoscope, { context: analysisContext });
-  const wealth = interpretWealthV2(horoscope, { context: analysisContext });
+  const temporalState = resolveAnalysisTemporalState(horoscope, analysisContext);
+  const domainOptions = { context: analysisContext, temporalState };
+  const career = interpretCareerV2(horoscope, domainOptions);
+  const wealth = interpretWealthV2(horoscope, domainOptions);
 
   it('wires career and wealth dasha hierarchy into lifeAnalysisMapper view model', () => {
     const lifeAnalysis = buildLifeAnalysis([career, wealth]);
