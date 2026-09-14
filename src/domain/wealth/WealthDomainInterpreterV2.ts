@@ -109,7 +109,10 @@ export function interpretWealthV2(
   const context = options.context;
   const asOfDate = analysisAsOfDate(context);
 
-  const themeInterpretation = interpretWealthTheme(horoscope);
+  const themeInterpretation = interpretWealthTheme({
+    horoscope,
+    dashaInterpretation: options.temporalState.dashaInterpretation
+  });
   const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildWealthEvidence(rawEvidence);
   const evidence = linkWealthEvidence(rawMappedEvidence);

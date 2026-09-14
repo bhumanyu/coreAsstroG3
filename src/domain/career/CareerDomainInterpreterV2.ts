@@ -109,7 +109,10 @@ export function interpretCareerV2(
   const context = options.context;
   const asOfDate = analysisAsOfDate(context);
 
-  const themeInterpretation = interpretCareerTheme(horoscope);
+  const themeInterpretation = interpretCareerTheme({
+    horoscope,
+    dashaInterpretation: options.temporalState.dashaInterpretation
+  });
   const rawEvidence = themeInterpretation.evidence;
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
   const evidence = linkCareerEvidence(rawMappedEvidence);

@@ -190,23 +190,24 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
 
     // 5. Assert career uses JUPITER from temporalState and never KETU from stale horoscope
     const careerConclusion = career.conclusionData as any;
-    expect(careerConclusion.dashaInterpretation?.current?.mahadasha?.planet).toBe(Planet.JUPITER);
-    expect(careerConclusion.dashaInterpretation?.current?.mahadasha?.planet).not.toBe(Planet.KETU);
-    expect(careerConclusion.dashaTimings?.mahadasha).toBeDefined();
+    expect(careerConclusion.careerDashaSynthesis?.md?.planet).toBe(Planet.JUPITER);
+    expect(careerConclusion.careerDashaSynthesis?.md?.planet).not.toBe(Planet.KETU);
 
-    // If career dashaSynthesis factors exist, verify they reference JUPITER, not KETU
-    if (career.dashaSynthesis?.factors) {
-      const factorPlanets = career.dashaSynthesis.factors.map((f: any) => f.planet);
+    if (careerConclusion.careerDashaSynthesis?.factors?.length > 0) {
+      const factorPlanets = careerConclusion.careerDashaSynthesis.factors.map((f: any) => f.planet);
       expect(factorPlanets).toContain(Planet.JUPITER);
       expect(factorPlanets).not.toContain(Planet.KETU);
     }
 
     // 6. Assert wealth uses JUPITER from temporalState and never KETU from stale horoscope
-    const wealthConclusion = wealth.conclusionData as any;
-    expect(wealthConclusion.dashaInterpretation?.current?.mahadasha?.planet).toBe(Planet.JUPITER);
-    expect(wealthConclusion.dashaInterpretation?.current?.mahadasha?.planet).not.toBe(Planet.KETU);
-    const mdTiming = wealthConclusion.periodTimingActivations?.find((p: any) => p.period === 'MD');
+    const mdTiming = wealth.periodTimingActivations?.find((p) => p.period === 'MD');
     expect(mdTiming?.planet).toBe(Planet.JUPITER);
     expect(mdTiming?.planet).not.toBe(Planet.KETU);
+
+    const wealthDashaEvidencePlanets = wealth.evidence
+      .filter((e) => e.sourceType === 'DASHA')
+      .map((e) => e.timing?.planet);
+    expect(wealthDashaEvidencePlanets).toContain(Planet.JUPITER);
+    expect(wealthDashaEvidencePlanets).not.toContain(Planet.KETU);
   });
 });
