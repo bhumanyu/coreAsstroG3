@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { BirthDetails } from '../../../types';
+import type { BirthDetails, Horoscope } from '../../../types';
 import { AyanamsaType } from '../../../types';
 import {
   ProductAnalysisService,
-  createProductAnalysisService
+  createProductAnalysisService,
+  type ProductAnalysisDependencies
 } from '../productAnalysisService';
 import { mapProductAnalysis, createAnalysisId, mapMethodology } from '../productAnalysisMapper';
+import type { AnalysisContext } from '../../../core/analysis/AnalysisContext';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { runLifeAnalysisProduct } from '../../life-analysis/lifeAnalysisProductService';
@@ -69,8 +71,21 @@ describe('ProductAnalysis Temporal Determinism Regression (Invariants 3, 4, 5, 7
   });
 
   it('2. Same birth, different asOf: natal invariants are identical, timing fields differ', async () => {
-    const asOf1 = '2020-01-01T00:00:00.000Z';
-    const asOf2 = '2030-01-01T00:00:00.000Z';
+    const baseHoroscope = calculateHoroscope(sampleBirth);
+    const mahadashas = baseHoroscope.vimshottari?.mahadashas ?? [];
+    expect(mahadashas.length).toBeGreaterThan(0);
+
+    const firstMd = mahadashas[0];
+    const antardashas = firstMd.antardashas ?? [];
+    expect(antardashas.length).toBeGreaterThan(1);
+
+    // Pick the boundary between first and second Antardasha
+    const firstAd = antardashas[0];
+    const boundaryTime = new Date(firstAd.end).getTime();
+
+    // 1 hour before and 1 hour after boundary
+    const asOf1 = new Date(boundaryTime - 3600 * 1000).toISOString();
+    const asOf2 = new Date(boundaryTime + 3600 * 1000).toISOString();
     const service = new ProductAnalysisService();
 
     const result1 = await service.analyze(sampleBirth, { asOf: asOf1, includeAiExplanation: false });
@@ -80,10 +95,15 @@ describe('ProductAnalysis Temporal Determinism Regression (Invariants 3, 4, 5, 7
     expect(result1.asOf).toBe(asOf1);
     expect(result2.asOf).toBe(asOf2);
 
-    // Temporal timing fields differ
+    // Temporal timing fields differ across known period boundary
     expect(result1.asOf).not.toBe(result2.asOf);
     expect(result1.analysisId).not.toBe(result2.analysisId);
-    expect(result1.dasha).not.toEqual(result2.dasha);
+
+    // Deterministic temporal-variation: active Dasha differs across known Antardasha boundary
+    const dasha1Sig = `${result1.dasha.current.mahadasha?.planet}-${result1.dasha.current.antardasha?.planet}-${result1.dasha.current.pratyantardasha?.planet}`;
+    const dasha2Sig = `${result2.dasha.current.mahadasha?.planet}-${result2.dasha.current.antardasha?.planet}-${result2.dasha.current.pratyantardasha?.planet}`;
+    expect(dasha1Sig).not.toEqual(dasha2Sig);
+    expect(result1.dasha.current.antardasha?.planet).not.toBe(result2.dasha.current.antardasha?.planet);
 
     // Invariants 3 & 4: Natal promise & chart structure remain strictly identical
     expect(result1.birth).toEqual(result2.birth);
@@ -146,5 +166,46 @@ describe('ProductAnalysis Temporal Determinism Regression (Invariants 3, 4, 5, 7
     expect(analysis.methodology).toEqual(context.methodology);
     expect(analysis.engineVersion).toBe('CUSTOM_TEST_ENGINE_V1');
     expect(analysis.rulesVersion).toBe('CUSTOM_TEST_RULES_V1');
+  });
+
+  it('4. Context object identity: passes the exact caller-provided AnalysisContext reference into runPipeline', async () => {
+    const contextPassedIntoAnalyze = createAnalysisContext({
+      asOf: '2027-04-10T10:00:00.000Z',
+      methodology: mapMethodology(sampleBirth),
+      engineVersion: 'IDENTITY_TEST_ENGINE_V1',
+      rulesVersion: 'IDENTITY_TEST_RULES_V1'
+    });
+
+    let capturedInput: {
+      readonly horoscope: Horoscope;
+      readonly context: AnalysisContext;
+      readonly includeAiExplanation?: boolean;
+    } | undefined;
+
+    const mockRunPipeline = vi.fn().mockImplementation(async (options: {
+      readonly horoscope: Horoscope;
+      readonly context: AnalysisContext;
+      readonly includeAiExplanation?: boolean;
+    }) => {
+      capturedInput = options;
+      return runLifeAnalysisProduct(options);
+    });
+
+    const deps: ProductAnalysisDependencies = {
+      calculateHoroscope,
+      runPipeline: mockRunPipeline
+    };
+
+    const service = new ProductAnalysisService(deps);
+    const result = await service.analyze(sampleBirth, { context: contextPassedIntoAnalyze });
+
+    expect(mockRunPipeline).toHaveBeenCalledTimes(1);
+    expect(capturedInput).toBeDefined();
+
+    // Exact reference identity (.toBe): proves the canonical immutable context flows by reference
+    expect(capturedInput!.context).toBe(contextPassedIntoAnalyze);
+    expect(result.asOf).toBe(contextPassedIntoAnalyze.asOf);
+    expect(result.engineVersion).toBe('IDENTITY_TEST_ENGINE_V1');
+    expect(result.rulesVersion).toBe('IDENTITY_TEST_RULES_V1');
   });
 });

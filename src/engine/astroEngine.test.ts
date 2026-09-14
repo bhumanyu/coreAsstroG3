@@ -834,6 +834,7 @@ describe('astroEngine', () => {
 
     // 4. Assert that all natal fields (ascendant, rasi chart, divisional charts, planetary positions)
     // are completely identical and unaffected by asOf
+    expect(horoscopeWithAsOf.positions).toEqual(horoscopeWithoutAsOf.positions);
     expect(horoscopeWithAsOf.ascendant).toEqual(horoscopeWithoutAsOf.ascendant);
     expect(horoscopeWithAsOf.rasiChart).toEqual(horoscopeWithoutAsOf.rasiChart);
     expect(horoscopeWithAsOf.charts).toEqual(horoscopeWithoutAsOf.charts);
