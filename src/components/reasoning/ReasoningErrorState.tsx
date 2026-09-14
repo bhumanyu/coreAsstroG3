@@ -17,7 +17,7 @@ export const ReasoningErrorState: React.FC<ReasoningErrorStateProps> = ({
         title="Reasoning Computation Error"
         message={
           errorMessage ||
-          'An error occurred while compiling the astrological reasoning graph. Please verify birth details and retry.'
+          'An error occurred while compiling astrological reasoning. Please verify birth details and retry.'
         }
         icon={<AlertTriangle className="w-6 h-6 text-rose-400" aria-hidden="true" />}
         onRetry={onRetry}

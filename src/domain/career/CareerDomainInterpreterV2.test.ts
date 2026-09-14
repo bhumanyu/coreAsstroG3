@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Planet } from '../../types';
+import { Planet, type Horoscope } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
