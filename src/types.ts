@@ -941,7 +941,7 @@ export interface Horoscope {
   vimshottari?: any;
   houseLordship?: any;
   yogas?: any;
-  natalGrahaDrishti?: NatalGrahaDrishti;
+  natalGrahaDrishti?: NatalGrahaDrishtiReport;
   planetAnalysis?: any;
   houseAnalysis?: any;
   functionalNatureIntegration?: any;

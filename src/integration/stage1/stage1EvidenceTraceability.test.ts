@@ -133,6 +133,9 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
   });
 
   it('validates same-evidence-universe between deterministic LifeAnalysis why evidence and AiContext', async () => {
+    // Note: This is a consistency test, not a production-object-identity test, because
+    // runLifeAnalysisProduct returns a LifeAnalysisViewModel and does not expose raw
+    // domainInterpretations or lifeAnalysis on its result.
     const domainOptions = { context: STAGE1_GOLDEN_CONTEXT };
     const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, domainOptions);
     const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, domainOptions);

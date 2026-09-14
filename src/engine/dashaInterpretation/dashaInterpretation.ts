@@ -276,10 +276,10 @@ function buildActivation(
   const strength = pInterp.strength;
 
   const castAspects = Object.freeze(
-    (input.natalGrahaDrishti.aspects ?? []).filter(a => a.sourcePlanet === planet)
+    (input.natalGrahaDrishti?.aspects ?? []).filter(a => a.sourcePlanet === planet)
   );
   const receivedAspects = Object.freeze(
-    (input.natalGrahaDrishti.aspects ?? []).filter(a => a.targetPlanet === planet)
+    (input.natalGrahaDrishti?.aspects ?? []).filter(a => a.targetPlanet === planet)
   );
 
   const yogaMap = new Map<string, DashaYogaReference>();
@@ -765,8 +765,8 @@ export function validateDashaInterpretationInput(input: DashaInterpretationInput
   if (!input.functionalRoles) {
     throw new TypeError('Functional roles analysis report is required.');
   }
-  if (!input.natalGrahaDrishti) {
-    throw new TypeError('Natal graha drishti report is required.');
+  if (input.natalGrahaDrishti !== undefined && !input.natalGrahaDrishti) {
+    throw new TypeError('Natal graha drishti report must not be null.');
   }
   if (!input.yogas) {
     throw new TypeError('Yoga analysis report is required.');

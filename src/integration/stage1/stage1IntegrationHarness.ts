@@ -31,6 +31,11 @@ import type {
  * The resulting domain interpretations and synthesized LifeAnalysis are passed directly into
  * buildAiContext and runAiExplanation, reusing precomputed results across AiContext and AiExplanation
  * without duplicate or divergent recomputation.
+ *
+ * ARCHITECTURAL BOUNDARY (Task 4 Fencing):
+ * This harness and its internal createAnalysisContext(...) fallback are strictly integration
+ * and test infrastructure only and MUST NOT be used as a production context factory.
+ * Production context creation belongs solely in ProductAnalysisService.
  */
 export async function runStage1Integration(
   input: Stage1IntegrationInput
@@ -38,6 +43,7 @@ export async function runStage1Integration(
   const birthDetails =
     input.birthDetails ?? input.horoscope?.birthDetails ?? CANONICAL_BIRTH_DETAILS;
 
+  // Internal test fallback context: strictly integration/test infrastructure, never for production.
   const context: AnalysisContext =
     input.context ??
     createAnalysisContext({
@@ -87,6 +93,7 @@ export async function runStage1Integration(
     horoscope,
     career,
     wealth,
+    lifeAnalysis,
     aiContext,
     aiRequest,
     routingResult,

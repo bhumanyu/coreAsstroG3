@@ -1,4 +1,4 @@
-import type { Horoscope, Planet, NatalGrahaDrishtiReport } from '../../types';
+import type { Horoscope, Planet } from '../../types';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import {
   CareerEvidenceFamily,
@@ -101,43 +101,7 @@ import {
 } from '../careerWealth/reasoningTrace';
 import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
-import { analyzeActiveDasha, analyzeDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretation';
-import type { DashaInterpretationInput, DashaInterpretationReport } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
-
-function resolveDashaInterpretationForAsOf(
-  horoscope: Horoscope,
-  asOfDate?: Date
-): DashaInterpretationReport | undefined {
-  if (horoscope.dashaInterpretation?.current) {
-    return horoscope.dashaInterpretation;
-  }
-  if (!asOfDate || isNaN(asOfDate.getTime())) {
-    return horoscope.dashaInterpretation;
-  }
-  try {
-    const input: DashaInterpretationInput = {
-      vimshottari: horoscope.vimshottari,
-      planetInterpretation: horoscope.planetInterpretation,
-      houseInterpretation: horoscope.houseInterpretation,
-      functionalRoles: horoscope.functionalRoles,
-      natalGrahaDrishti: (horoscope.natalGrahaDrishti as NatalGrahaDrishtiReport) ?? { aspects: [] },
-      yogas: horoscope.yogas,
-      planetAnalysis: horoscope.planetAnalysis,
-      ...(horoscope.planetaryStrength ? { planetaryStrength: horoscope.planetaryStrength } : {})
-    };
-    const activeDasha = analyzeActiveDasha(input, asOfDate);
-    if (activeDasha) {
-      return Object.freeze({
-        ...(horoscope.dashaInterpretation ?? analyzeDashaInterpretation(input)),
-        current: activeDasha,
-        activePeriods: activeDasha
-      });
-    }
-  } catch {
-    // fallback to existing dashaInterpretation
-  }
-  return horoscope.dashaInterpretation;
-}
+import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 
 export function interpretCareerV2(
   horoscope: Horoscope,

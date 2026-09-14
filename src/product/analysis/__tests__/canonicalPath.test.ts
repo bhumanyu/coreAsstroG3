@@ -43,14 +43,14 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(careerSpy).toHaveBeenCalledTimes(1);
     expect(wealthSpy).toHaveBeenCalledTimes(1);
 
-    // Verify context was properly passed to the domain interpreters
-    const careerCallArgs = careerSpy.mock.calls[0];
-    expect(careerCallArgs[1]?.context).toBeDefined();
-    expect(careerCallArgs[1]?.context?.asOf).toBe(FIXED_AS_OF);
-
-    const wealthCallArgs = wealthSpy.mock.calls[0];
-    expect(wealthCallArgs[1]?.context).toBeDefined();
-    expect(wealthCallArgs[1]?.context?.asOf).toBe(FIXED_AS_OF);
+    // Verify context was properly passed to the domain interpreters and reference equality holds
+    const careerContext = careerSpy.mock.calls[0][1]?.context;
+    const wealthContext = wealthSpy.mock.calls[0][1]?.context;
+    expect(careerContext).toBeDefined();
+    expect(careerContext?.asOf).toBe(FIXED_AS_OF);
+    expect(wealthContext).toBeDefined();
+    expect(wealthContext?.asOf).toBe(FIXED_AS_OF);
+    expect(careerContext).toBe(wealthContext);
   });
 
   it('invokes interpretCareerV2 and interpretWealthV2 EXACTLY ONCE per chart analysis when AI explanation is disabled', async () => {
@@ -70,5 +70,11 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     // Single invocation guarantee holds regardless of AI explanation flag
     expect(careerSpy).toHaveBeenCalledTimes(1);
     expect(wealthSpy).toHaveBeenCalledTimes(1);
+
+    const careerContext = careerSpy.mock.calls[0][1]?.context;
+    const wealthContext = wealthSpy.mock.calls[0][1]?.context;
+    expect(careerContext).toBeDefined();
+    expect(wealthContext).toBeDefined();
+    expect(careerContext).toBe(wealthContext);
   });
 });
