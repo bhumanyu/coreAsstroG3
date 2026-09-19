@@ -1427,7 +1427,10 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
   const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
-  const asOf = horoscope.dashaInterpretation?.current?.asOf;
+  const asOf =
+    horoscope.dashaInterpretation?.current?.at ??
+    (horoscope.dashaInterpretation?.current as any)?.asOf ??
+    (horoscope.dashaInterpretation as any)?.asOf;
 
   const career = buildCareerFact(horoscope, careerInterpretation, asOf);
   const wealth = buildWealthFact(horoscope, wealthInterpretation, asOf);
