@@ -121,9 +121,9 @@ export interface BuildAiContextOptions {
 /**
  * Product boundary options requiring canonical temporalState and pre-computed domain artifacts.
  */
-export interface ProductAiContextOptions extends BuildAiContextOptions {
-  readonly domainInterpretations?: readonly DomainInterpretation[];
-  readonly lifeAnalysis?: LifeAnalysis;
+export interface ProductAiContextOptions {
+  readonly domainInterpretations: readonly DomainInterpretation[];
+  readonly lifeAnalysis: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
 }
 

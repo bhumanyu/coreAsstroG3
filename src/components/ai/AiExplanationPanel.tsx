@@ -20,6 +20,12 @@ import type {
   AiExplanationViewModel
 } from '../../ai';
 import { AiExplanationEvidenceList } from './AiExplanationEvidenceList';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
+import { buildLifeAnalysis } from '../../domain/synthesis';
 
 interface AiExplanationPanelProps {
   readonly horoscope: Horoscope;
@@ -70,9 +76,21 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
     setResult(null);
 
     try {
+      const context = createAnalysisContext({
+        asOf: birthDetails.dateTimeStr,
+        methodology: mapMethodology(birthDetails)
+      });
+      const temporalState = resolveAnalysisTemporalState(horoscope, context);
+      const career = interpretCareerV2(horoscope, { context, temporalState });
+      const wealth = interpretWealthV2(horoscope, { context, temporalState });
+      const lifeAnalysis = buildLifeAnalysis([career, wealth]);
+
       const nextResult = await runAiExplanation({
         horoscope,
-        task: selectedTask
+        task: selectedTask,
+        domainInterpretations: [career, wealth],
+        lifeAnalysis,
+        temporalState
       });
 
       // Guard against chart change or newer request initiated during in-flight async call

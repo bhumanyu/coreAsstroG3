@@ -1,19 +1,43 @@
 import { describe, expect, it } from 'vitest';
-import { runAiExplanation } from './aiExplanationService';
+import { runAiExplanation, type RunProductAiExplanationOptions } from './aiExplanationService';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import type { Horoscope } from '../../types';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
+import { buildLifeAnalysis } from '../../domain/synthesis';
 
-function createHoroscope(): Horoscope {
-  return calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+function createTestOptions(
+  overrides: Partial<RunProductAiExplanationOptions> = {}
+): RunProductAiExplanationOptions {
+  const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+  const context = createAnalysisContext({
+    asOf: CANONICAL_BIRTH_DETAILS.dateTimeStr,
+    methodology: mapMethodology(CANONICAL_BIRTH_DETAILS)
+  });
+  const temporalState = resolveAnalysisTemporalState(horoscope, context);
+  const career = interpretCareerV2(horoscope, { context, temporalState });
+  const wealth = interpretWealthV2(horoscope, { context, temporalState });
+  const lifeAnalysis = buildLifeAnalysis([career, wealth]);
+
+  return {
+    horoscope,
+    task: 'CHART_SYNTHESIS',
+    domainInterpretations: [career, wealth],
+    lifeAnalysis,
+    temporalState,
+    ...overrides
+  };
 }
 
 describe('runAiExplanation', () => {
   it('builds a local chart synthesis explanation', async () => {
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS'
-    });
+    }));
 
     expect(result.status === 'SUCCESS' || result.status === 'PARTIAL').toBe(true);
 
@@ -27,10 +51,9 @@ describe('runAiExplanation', () => {
   });
 
   it('resolves supporting evidence IDs', async () => {
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS'
-    });
+    }));
 
     if (result.kind === 'ERROR') {
       throw new Error(result.message);
@@ -46,10 +69,9 @@ describe('runAiExplanation', () => {
   });
 
   it('uses local-only routing', async () => {
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'WEALTH_ANALYSIS'
-    });
+    }));
 
     expect(result.status === 'SUCCESS' || result.status === 'PARTIAL').toBe(true);
 
@@ -63,10 +85,10 @@ describe('runAiExplanation', () => {
   it('returns an error result when the context cannot be built', async () => {
     const brokenHoroscope = {} as Horoscope;
 
-    const result = await runAiExplanation({
+    const result = await runAiExplanation(createTestOptions({
       horoscope: brokenHoroscope,
       task: 'CHART_SYNTHESIS'
-    });
+    }));
 
     expect(result.status).toBe('ERROR');
     if (result.status === 'ERROR') {
@@ -99,11 +121,10 @@ describe('runAiExplanation', () => {
       })
     };
 
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS',
       router: mockRouter
-    });
+    }));
 
     expect(result.kind).toBe('ERROR');
     expect(result.status).toBe('ERROR');
@@ -140,11 +161,10 @@ describe('runAiExplanation', () => {
       })
     };
 
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS',
       router: mockRouter
-    });
+    }));
 
     expect(result.kind).toBe('SUCCESS');
     if (result.kind === 'SUCCESS') {
@@ -176,11 +196,10 @@ describe('runAiExplanation', () => {
       })
     };
 
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS',
       router: mockRouter
-    });
+    }));
 
     expect(result.kind).toBe('SUCCESS');
     if (result.kind === 'SUCCESS') {
@@ -203,11 +222,10 @@ describe('runAiExplanation', () => {
       }
     };
 
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS',
       router: mockRouter
-    });
+    }));
 
     expect(result.kind).toBe('ERROR');
     if (result.kind === 'ERROR') {
@@ -235,11 +253,10 @@ describe('runAiExplanation', () => {
       })
     };
 
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS',
       router: mockRouter
-    });
+    }));
 
     expect(result.kind).toBe('ERROR');
     expect(result.status).toBe('ERROR');
@@ -272,11 +289,10 @@ describe('runAiExplanation', () => {
       })
     };
 
-    const result = await runAiExplanation({
-      horoscope: createHoroscope(),
+    const result = await runAiExplanation(createTestOptions({
       task: 'CHART_SYNTHESIS',
       router: mockRouter
-    });
+    }));
 
     expect(result.kind).toBe('ERROR');
     expect(result.status).toBe('ERROR');
