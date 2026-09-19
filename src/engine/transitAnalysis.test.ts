@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateTransit } from './transitEngine';
 import { analyzeTransits, ordinal } from './transitAnalysis';
-import { Planet, Sign, AspectType, TransitCondition, TransitAnalysisInput } from '../types';
+import { Planet, Sign, AspectType, TransitCondition, TransitRelationshipType, TransitAnalysisInput } from '../types';
 
 describe('PR-038 Transit Analysis Engine', () => {
   const atDate = '2026-08-08T12:00:00Z';
@@ -143,7 +143,63 @@ describe('PR-038 Transit Analysis Engine', () => {
   });
 
   describe('PR-038B Natal Planet Contact Conditions', () => {
-    it('shouldDetectTransitOverNatalPlanet', () => {
+    it('detects SAME_SIGN when planets share sign but are not conjunct under default orbs', () => {
+      // Natal 1° Aries (1.0) vs transit 29° Aries (29.0)
+      const transit = calculateTransit({
+        at: atDate,
+        natalMoonLongitude: ariesMoonLong,
+        natalAscendantLongitude: ariesAscLong,
+        transitLongitudes: { [Planet.SATURN]: 29.0 }
+      });
+
+      const report = analyzeTransits({
+        transit,
+        natalPlanetLongitudes: {
+          [Planet.MOON]: 1.0
+        }
+      });
+
+      const saturnResult = report.results![Planet.SATURN]!;
+      expect(saturnResult.conditions).toContain(TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET);
+      expect(saturnResult.conditions).not.toContain(TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET);
+
+      const sameSignEv = saturnResult.evidence!.find(
+        (e: any) => e.condition === TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET
+      );
+      expect(sameSignEv).toBeDefined();
+      expect(sameSignEv!.relationshipType).toBe(TransitRelationshipType.SAME_SIGN);
+      expect(sameSignEv!.angularSeparation).toBeCloseTo(28);
+      expect(sameSignEv!.exactContact).toBe(false);
+    });
+
+    it('detects EXACT_CONTACT when transit and natal have identical longitudes', () => {
+      const transit = calculateTransit({
+        at: atDate,
+        natalMoonLongitude: ariesMoonLong,
+        natalAscendantLongitude: ariesAscLong,
+        transitLongitudes: { [Planet.SATURN]: 15.0 }
+      });
+
+      const report = analyzeTransits({
+        transit,
+        natalPlanetLongitudes: {
+          [Planet.SUN]: 15.0
+        }
+      });
+
+      const saturnResult = report.results![Planet.SATURN]!;
+      expect(saturnResult.conditions).toContain(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
+
+      const exactEv = saturnResult.evidence!.find(
+        (e: any) => e.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
+      );
+      expect(exactEv).toBeDefined();
+      expect(exactEv!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
+      expect(exactEv!.exactContact).toBe(true);
+      expect(exactEv!.angularSeparation).toBeCloseTo(0);
+    });
+
+    it('shouldDetectTransitOverNatalPlanet as exact contact when longitudes are identical', () => {
       const transit = calculateTransit({
         at: atDate,
         natalMoonLongitude: SIGN_LONGITUDES[Sign.PISCES],
@@ -159,14 +215,16 @@ describe('PR-038 Transit Analysis Engine', () => {
       });
 
       const saturnResult = report.results![Planet.SATURN]!;
-      expect(saturnResult.conditions).toContain(TransitCondition.TRANSIT_OVER_NATAL_PLANET);
+      expect(saturnResult.conditions).toContain(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
 
       const overEvidence = saturnResult.evidence!.find(
-        (e: any) => e.condition === TransitCondition.TRANSIT_OVER_NATAL_PLANET
+        (e: any) => e.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
       );
       expect(overEvidence).toBeDefined();
       expect(overEvidence!.natalPlanet).toBe(Planet.MOON);
-      expect(overEvidence!.reason).toContain('Transit SATURN occupies the same sign (PISCES) as natal MOON.');
+      expect(overEvidence!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
+      expect(overEvidence!.exactContact).toBe(true);
+      expect(overEvidence!.reason).toContain('exact contact');
     });
 
     it('shouldDetectTransitAspectToNatalPlanet', () => {
@@ -251,7 +309,7 @@ describe('PR-038 Transit Analysis Engine', () => {
 
       const saturnResult = report.results![Planet.SATURN]!;
       const overEvidences = saturnResult.evidence!.filter(
-        (e: any) => e.condition === TransitCondition.TRANSIT_OVER_NATAL_PLANET && e.natalPlanet === Planet.MOON
+        (e: any) => e.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET && e.natalPlanet === Planet.MOON
       );
       expect(overEvidences.length).toBe(1);
     });
@@ -284,7 +342,7 @@ describe('PR-038 Transit Analysis Engine', () => {
       expect(saturnResult.conditions).toContain(TransitCondition.TRANSIT_ASPECTS_NATAL_PLANET);
 
       expect(jupiterResult.conditions).toContain(TransitCondition.JUPITER_2ND_FROM_MOON);
-      expect(jupiterResult.conditions).toContain(TransitCondition.TRANSIT_OVER_NATAL_PLANET);
+      expect(jupiterResult.conditions).toContain(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
 
       // Total evidence in report equals sum of per-planet evidence
       expect(report.evidence!.length).toBe(saturnResult.evidence!.length + jupiterResult.evidence!.length);

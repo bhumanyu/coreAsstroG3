@@ -164,7 +164,11 @@ export function correlateDashaAndTransit(
 
       const formattedDashaPlanet = formatPlanetName(dashaPlanet);
 
-      if (ev.condition === TransitCondition.TRANSIT_OVER_NATAL_PLANET) {
+      const isNatalPlanetContact =
+        ev.condition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET ||
+        ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET;
+
+      if (isNatalPlanetContact) {
         type =
           dashaLevel === 'MAHADASHA'
             ? DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
@@ -172,9 +176,14 @@ export function correlateDashaAndTransit(
             ? DashaTransitCorrelationType.ANTARDASHA_PLANET_OVER_NATAL_PLANET
             : DashaTransitCorrelationType.PRATYANTARDASHA_PLANET_OVER_NATAL_PLANET;
 
+        transitCondition = ev.condition;
         natalPlanet = ev.natalPlanet;
         const formattedNatalPlanet = natalPlanet ? formatPlanetName(natalPlanet) : '';
-        reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} occupies the same sign as natal ${formattedNatalPlanet}.`;
+        const contactDesc =
+          ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
+            ? 'exactly contacts'
+            : 'is conjunct with';
+        reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} ${contactDesc} natal ${formattedNatalPlanet}.`;
       } else if (ev.condition === TransitCondition.TRANSIT_ASPECTS_NATAL_PLANET) {
         type =
           dashaLevel === 'MAHADASHA'

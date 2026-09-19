@@ -5,12 +5,17 @@ import {
   TransitResult,
   TransitCondition,
   TransitEvidence,
+  TransitRelationshipType,
   TransitAnalysisResult,
   TransitAnalysisInput,
   TransitAnalysisReport
 } from '../types';
 
 import { calculateSign } from './astroEngine';
+import {
+  classifyTransitAngularRelationship,
+  DEFAULT_TRANSIT_GEOMETRY_CONFIG
+} from './transitGeometry';
 
 const VALID_PLANETS = new Set<string>(Object.values(Planet));
 
@@ -46,7 +51,13 @@ function createEvidence(
   aspectType?: AspectType,
   targetSign?: Sign,
   targetHouseFromMoon?: number,
-  targetHouseFromAscendant?: number
+  targetHouseFromAscendant?: number,
+  geometry?: {
+    relationshipType?: TransitRelationshipType;
+    angularSeparation?: number;
+    orb?: number;
+    exactContact?: boolean;
+  }
 ): TransitEvidence {
   const ev: Partial<TransitEvidence> = {
     condition,
@@ -71,7 +82,54 @@ function createEvidence(
   if (targetHouseFromAscendant !== undefined) {
     (ev as { targetHouseFromAscendant?: number }).targetHouseFromAscendant = targetHouseFromAscendant;
   }
+  if (geometry) {
+    if (geometry.relationshipType !== undefined) {
+      ev.relationshipType = geometry.relationshipType;
+    }
+    if (geometry.angularSeparation !== undefined) {
+      ev.angularSeparation = geometry.angularSeparation;
+    }
+    if (geometry.orb !== undefined) {
+      ev.orb = geometry.orb;
+    }
+    if (geometry.exactContact !== undefined) {
+      ev.exactContact = geometry.exactContact;
+    }
+  }
   return Object.freeze(ev as TransitEvidence);
+}
+
+export function getTransitRelationshipCondition(
+  relationship: TransitRelationshipType
+): TransitCondition | undefined {
+  switch (relationship) {
+    case TransitRelationshipType.SAME_SIGN:
+      return TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET;
+    case TransitRelationshipType.CONJUNCTION:
+      return TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET;
+    case TransitRelationshipType.OPPOSITION:
+      return TransitCondition.TRANSIT_OPPOSITION_NATAL_PLANET;
+    case TransitRelationshipType.EXACT_CONTACT:
+      return TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET;
+    case TransitRelationshipType.NONE:
+    default:
+      return undefined;
+  }
+}
+
+function formatRelationshipLabel(relationship: TransitRelationshipType): string {
+  switch (relationship) {
+    case TransitRelationshipType.EXACT_CONTACT:
+      return 'exact contact';
+    case TransitRelationshipType.CONJUNCTION:
+      return 'conjunction';
+    case TransitRelationshipType.OPPOSITION:
+      return 'opposition';
+    case TransitRelationshipType.SAME_SIGN:
+      return 'same sign';
+    default:
+      return relationship;
+  }
 }
 
 function analyzeSaturn(result: TransitResult, evidenceList: TransitEvidence[]): void {
@@ -147,23 +205,43 @@ function analyzeNatalPlanetContacts(
   input: TransitAnalysisInput,
   evidenceList: TransitEvidence[]
 ): void {
-  if (!input.natalPlanetLongitudes || !result.planet) return;
+  if (!input.natalPlanetLongitudes || !result.planet || !result.position) return;
+  if (!Number.isFinite(result.position.longitude)) return;
 
   for (const [natalPlanetKey, natalLong] of Object.entries(input.natalPlanetLongitudes)) {
-    if (natalLong === undefined || natalLong === null) continue;
+    if (natalLong === undefined || natalLong === null || !Number.isFinite(natalLong)) continue;
     const natalPlanet = natalPlanetKey as Planet;
     const natalSign = calculateSign(natalLong);
 
-    // TRANSIT_OVER_NATAL_PLANET
-    if (result.position && natalSign === result.position.sign) {
-      const reason = `Transit ${result.planet} occupies the same sign (${result.position.sign}) as natal ${natalPlanet}.`;
+    const rel = classifyTransitAngularRelationship(
+      result.position.longitude,
+      natalLong,
+      result.position.sign,
+      natalSign,
+      DEFAULT_TRANSIT_GEOMETRY_CONFIG
+    );
+
+    const condition = getTransitRelationshipCondition(rel.relationship);
+    if (condition) {
+      const label = formatRelationshipLabel(rel.relationship);
+      const reason = `Transit ${result.planet} has ${label} (${rel.relationship}) with natal ${natalPlanet} in ${result.position.sign} (angular separation: ${rel.angularSeparation.toFixed(6)}°).`;
       evidenceList.push(
         createEvidence(
-          TransitCondition.TRANSIT_OVER_NATAL_PLANET,
+          condition,
           result.planet,
           reason,
           undefined,
-          natalPlanet
+          natalPlanet,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          {
+            relationshipType: rel.relationship,
+            angularSeparation: rel.angularSeparation,
+            orb: rel.orb,
+            exactContact: rel.exactContact
+          }
         )
       );
     }
@@ -183,7 +261,8 @@ function analyzeNatalPlanetContacts(
               aspect.aspectType,
               aspect.targetSign,
               aspect.targetHouseFromMoon,
-              aspect.targetHouseFromAscendant
+              aspect.targetHouseFromAscendant,
+              { relationshipType: TransitRelationshipType.SPECIAL_ASPECT }
             )
           );
         }
@@ -216,7 +295,7 @@ export function analyzeTransits(input: TransitAnalysisInput): TransitAnalysisRep
     analyzeNatalPlanetContacts(result, input, rawEvidence);
   }
 
-  // Deduplicate evidence using key: [condition, planet, natalPlanet ?? '', aspectType ?? '', targetSign ?? ''].join('|')
+  // Deduplicate evidence using key
   const seenKeys = new Set<string>();
   const deduplicatedEvidence: TransitEvidence[] = [];
 
@@ -226,7 +305,10 @@ export function analyzeTransits(input: TransitAnalysisInput): TransitAnalysisRep
       ev.planet,
       ev.natalPlanet ?? '',
       ev.aspectType ?? '',
-      ev.targetSign ?? ''
+      ev.targetSign ?? '',
+      ev.relationshipType ?? '',
+      ev.angularSeparation ?? '',
+      ev.orb ?? ''
     ].join('|');
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
@@ -241,7 +323,13 @@ export function analyzeTransits(input: TransitAnalysisInput): TransitAnalysisRep
     const planet = result.planet;
     if (!planet) continue;
     const planetEvidence = deduplicatedEvidence.filter((ev) => ev.planet === planet);
-    const conditions = Array.from(new Set(planetEvidence.map((ev) => ev.condition)));
+    const conditions = Array.from(
+      new Set(
+        planetEvidence
+          .map((ev) => ev.condition)
+          .filter((c): c is TransitCondition => Boolean(c))
+      )
+    );
 
     perPlanetResults[planet] = Object.freeze({
       planet,

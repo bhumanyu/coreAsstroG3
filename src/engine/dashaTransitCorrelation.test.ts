@@ -181,7 +181,7 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     expect(report.correlations[0].transitCondition).toBe(TransitCondition.JUPITER_5TH_FROM_MOON);
   });
 
-  it('correlates natal conjunction (TRANSIT_OVER_NATAL_PLANET) with preserved natalPlanet', () => {
+  it('correlates natal conjunction (TRANSIT_CONJUNCTION_NATAL_PLANET or TRANSIT_EXACT_CONTACT_NATAL_PLANET) with preserved natalPlanet', () => {
     const rawTransit = calculateTransit({
       at: atDate,
       natalMoonLongitude: ariesMoonLong,
@@ -203,7 +203,43 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     );
     expect(overEv).toBeDefined();
     expect(overEv!.natalPlanet).toBe(Planet.SUN);
-    expect(overEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn occupies the same sign as natal Sun.');
+    expect(overEv!.transitCondition).toBe(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
+    expect(overEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn exactly contacts natal Sun.');
+  });
+
+  it('regression: transit Saturn 29° Aries vs natal Moon 1° Aries does not correlate as conjunction', () => {
+    const rawTransit = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: 1.0,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 29.0 }
+    });
+    const transitReport = analyzeTransits({
+      transit: rawTransit,
+      natalPlanetLongitudes: { [Planet.MOON]: 1.0 }
+    });
+
+    const report = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReport
+    });
+
+    const overEv = report.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    );
+    expect(overEv).toBeUndefined();
+
+    const conjEv = report.correlations.find(
+      (c) => c.transitCondition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET
+    );
+    expect(conjEv).toBeUndefined();
+
+    // SAME_SIGN condition correlates as standard TRANSIT_CONDITION, not OVER_NATAL_PLANET
+    const sameSignEv = report.correlations.find(
+      (c) => c.transitCondition === TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET
+    );
+    expect(sameSignEv).toBeDefined();
+    expect(sameSignEv!.type).toBe(DashaTransitCorrelationType.MAHADASHA_PLANET_TRANSIT_CONDITION);
   });
 
   it('correlates natal aspect (TRANSIT_ASPECTS_NATAL_PLANET) with preserved aspectType and targetSign', () => {

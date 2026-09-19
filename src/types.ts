@@ -270,18 +270,31 @@ export interface TransitHousePosition {
   transitingPlanets?: Planet[];
 }
 
+export enum TransitRelationshipType {
+  NONE = 'NONE',
+  SAME_SIGN = 'SAME_SIGN',
+  CONJUNCTION = 'CONJUNCTION',
+  OPPOSITION = 'OPPOSITION',
+  SPECIAL_ASPECT = 'SPECIAL_ASPECT',
+  EXACT_CONTACT = 'EXACT_CONTACT'
+}
+
 export interface TransitEvidence {
   ruleId?: string;
   description?: string;
   reason?: string;
-  condition?: any;
+  condition?: TransitCondition;
   planet?: Planet;
   natalPlanet?: Planet;
-  aspectType?: any;
+  aspectType?: AspectType;
   targetSign?: Sign;
   referenceHouse?: number;
   targetHouseFromMoon?: number;
   targetHouseFromAscendant?: number;
+  relationshipType?: TransitRelationshipType;
+  angularSeparation?: number;
+  orb?: number;
+  exactContact?: boolean;
 }
 
 export interface TransitResult {
@@ -307,10 +320,13 @@ export interface TransitAspect {
   targetHouseFromMoon?: number;
   targetHouseFromAscendant?: number;
   targetSign?: Sign;
-  aspectType?: any;
+  aspectType?: AspectType;
   orb?: number;
   exactness?: number;
   description?: string;
+  relationshipType?: TransitRelationshipType;
+  angularSeparation?: number;
+  exactContact?: boolean;
 }
 
 export interface HouseTransitInfo {
@@ -719,7 +735,15 @@ export enum TransitCondition {
   MALEFIC = 'MALEFIC',
   NEUTRAL = 'NEUTRAL',
   TRANSIT_ASPECTS_NATAL_PLANET = 'TRANSIT_ASPECTS_NATAL_PLANET',
+  /**
+   * @deprecated Use TRANSIT_SAME_SIGN_NATAL_PLANET, TRANSIT_CONJUNCTION_NATAL_PLANET,
+   * TRANSIT_OPPOSITION_NATAL_PLANET, or TRANSIT_EXACT_CONTACT_NATAL_PLANET instead.
+   */
   TRANSIT_OVER_NATAL_PLANET = 'TRANSIT_OVER_NATAL_PLANET',
+  TRANSIT_SAME_SIGN_NATAL_PLANET = 'TRANSIT_SAME_SIGN_NATAL_PLANET',
+  TRANSIT_CONJUNCTION_NATAL_PLANET = 'TRANSIT_CONJUNCTION_NATAL_PLANET',
+  TRANSIT_OPPOSITION_NATAL_PLANET = 'TRANSIT_OPPOSITION_NATAL_PLANET',
+  TRANSIT_EXACT_CONTACT_NATAL_PLANET = 'TRANSIT_EXACT_CONTACT_NATAL_PLANET',
   SADE_SATI_RISING = 'SADE_SATI_RISING',
   SADE_SATI_PEAK = 'SADE_SATI_PEAK',
   SADE_SATI_SETTING = 'SADE_SATI_SETTING',
