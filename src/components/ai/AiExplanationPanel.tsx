@@ -25,6 +25,7 @@ import type { LifeAnalysis } from '../../domain/synthesis';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 
 export interface AiExplanationPanelProps {
+  readonly analysisId?: string;
   readonly horoscope: Horoscope;
   readonly career: DomainInterpretation;
   readonly wealth: DomainInterpretation;
@@ -33,6 +34,7 @@ export interface AiExplanationPanelProps {
 }
 
 export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
+  analysisId,
   horoscope,
   career,
   wealth,
@@ -48,6 +50,7 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
 
   const chartKey = useMemo(
     () =>
+      analysisId ??
       [
         temporalState.asOf,
         horoscope.birthDetails?.dateTimeStr ?? '',
@@ -57,7 +60,7 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
         horoscope.birthDetails?.timeZone ?? '',
         horoscope.ascendant?.longitude ?? ''
       ].join('|'),
-    [temporalState.asOf, horoscope]
+    [analysisId, temporalState.asOf, horoscope]
   );
 
   useEffect(() => {

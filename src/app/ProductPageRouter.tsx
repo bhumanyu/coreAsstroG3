@@ -18,6 +18,7 @@ import { FullNatalReportView } from '../components/fullNatalReport/FullNatalRepo
 import { CareerPage } from '../pages/CareerPage';
 import { WealthPage } from '../pages/WealthPage';
 import { ReasoningPage } from '../pages/ReasoningPage';
+import { AiExplanationPage } from '../pages/AiExplanationPage';
 import { KundaliChart } from '../components/KundaliChart';
 import { PlanetFactsTable } from '../components/PlanetFactsTable';
 import { DivisionalChartsView } from '../components/DivisionalChartsView';
@@ -153,6 +154,17 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
           productAnalysisState={state.productAnalysis}
           onRetry={onRetry}
           onNavigate={onNavigate}
+        />
+      );
+
+    case 'ai':
+    case 'ai-explanation':
+      return (
+        <AiExplanationPage
+          state={state}
+          horoscope={horoscope}
+          lifeAnalysisState={effectiveLifeAnalysisState}
+          onRetry={onRetry}
         />
       );
 

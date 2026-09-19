@@ -15,7 +15,7 @@ export type ResearchPage =
   | 'relationships'
   | 'validator';
 
-export type AppPage = ProductPage | ResearchPage;
+export type AppPage = ProductPage | ResearchPage | 'ai' | 'ai-explanation';
 
 export interface ProductNavigationItem {
   readonly id: ProductPage;
