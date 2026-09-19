@@ -5,7 +5,7 @@ import {
   calculateTransitAspects,
   getGrahaDrishtiOffsets
 } from './transitEngine';
-import { calculateCurrentTransitLongitudes } from './transitEphemeris';
+import { calculateCurrentTransitLongitudes, calculateCurrentTransitPositions } from './transitEphemeris';
 import { calculateSign } from './astroEngine';
 import { Planet, Sign, AspectType, TransitInput } from '../types';
 
@@ -250,5 +250,41 @@ describe('PR-037 Gochara Transit Engine', () => {
     expect(Object.keys(transits).length).toBe(9);
     expect(transits[Planet.SUN]).toBeGreaterThanOrEqual(0);
     expect(transits[Planet.SUN]).toBeLessThan(360);
+  });
+
+  it('propagates motion from transitPositions equal to positions[p].motion', () => {
+    const fixedDate = new Date('2026-08-08T12:00:00Z');
+    const positions = calculateCurrentTransitPositions(fixedDate);
+
+    const analysis = calculateTransit({
+      at: fixedDate.toISOString(),
+      natalMoonLongitude: 45.0,
+      natalAscendantLongitude: 270.0,
+      transitPositions: positions
+    });
+
+    for (const planet of Object.values(Planet)) {
+      const result = analysis.results![planet]!;
+      expect(result).toBeDefined();
+      expect(result.position.motion).toBe(positions[planet].motion);
+      expect(result.position.motion).toEqual(positions[planet].motion);
+      expect(result.position.isRetrograde).toBe(positions[planet].motion.retrograde);
+    }
+  });
+
+  it('negative test: longitude-only transit yields position.motion === undefined with no fabricated DIRECT', () => {
+    const analysis = calculateTransit({
+      at: '2026-08-08T12:00:00Z',
+      natalMoonLongitude: 45.0,
+      natalAscendantLongitude: 270.0,
+      transitLongitudes: {
+        [Planet.SATURN]: 100.0
+      }
+    });
+
+    const saturnResult = analysis.results![Planet.SATURN]!;
+    expect(saturnResult).toBeDefined();
+    expect(saturnResult.position.motion).toBeUndefined();
+    expect(saturnResult.position.isRetrograde).toBeUndefined();
   });
 });

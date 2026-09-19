@@ -180,6 +180,12 @@ export enum MotionState {
   STATIONARY = 'STATIONARY'
 }
 
+export interface PlanetMotion {
+  readonly speed: number;
+  readonly retrograde: boolean;
+  readonly stationary: boolean;
+}
+
 export enum LajjitaAdiAvastha {
   LAJJITA = 'LAJJITA',
   GARVITA = 'GARVITA',
@@ -202,12 +208,7 @@ export interface BirthDetails {
 export interface PlanetState {
   planet?: Planet;
   condition: PlanetStateCondition;
-  motion: {
-    state?: MotionState;
-    speed?: number;
-    retrograde: boolean;
-    stationary?: boolean;
-  };
+  motion: PlanetMotion;
   avastha?: LajjitaAdiAvastha;
   combust?: boolean;
 }
@@ -230,11 +231,7 @@ export interface Position {
   sign: Sign;
   house: number;
   signLongitude: number;
-  motion?: {
-    speed: number;
-    retrograde: boolean;
-    stationary: boolean;
-  };
+  motion: PlanetMotion;
 }
 
 export type PlanetaryPositions = Record<Planet, Position>;
@@ -258,6 +255,7 @@ export interface TransitPosition {
   house?: number;
   signLongitude?: number;
   isRetrograde?: boolean;
+  motion?: PlanetMotion;
   nakshatraResult?: any;
 }
 
@@ -508,7 +506,6 @@ export enum ChartType {
   DASAMSA = 'D10'
 }
 export { PlanetStateCondition as PlanetCondition };
-export { MotionState as PlanetMotion };
 export { NaturalRelationship as Relationship };
 export type PlanetFacts = Record<Planet, PlanetFact>;
 export type PlanetPosition = Position;
@@ -808,7 +805,7 @@ export interface TransitInput {
   natalAscendantSign?: Sign;
   natalMoonLongitude?: number;
   natalAscendantLongitude?: number;
-  transitPositions?: any;
+  transitPositions?: Partial<Record<Planet, PlanetPosition>>;
   transitLongitudes?: any;
 }
 

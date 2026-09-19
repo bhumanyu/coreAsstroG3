@@ -7,9 +7,10 @@ import {
   getAyanamsaOffset,
   calculateAscendant,
   generatePlanetaryPositions,
-  calculateHoroscope
+  calculateHoroscope,
+  calculateCombustion
 } from './astroEngine';
-import { Planet, Sign, Nakshatra, Pada, AyanamsaType, BirthDetails, AspectType, ShadbalaComponent, ShadbalaSubcomponent, StrengthComponentStatus, ShadbalaAggregationStatus } from '../types';
+import { Planet, Sign, Nakshatra, Pada, AyanamsaType, BirthDetails, AspectType, ShadbalaComponent, ShadbalaSubcomponent, StrengthComponentStatus, ShadbalaAggregationStatus, ChartType, PlanetMotion } from '../types';
 import { House } from './houseLordship/houseGroups';
 import { FunctionalRole } from './functionalNature/functionalRoleTypes';
 import { CANONICAL_BIRTH_DETAILS } from '../test/fixtures/canonicalChart';
@@ -841,6 +842,75 @@ describe('astroEngine', () => {
     expect(horoscopeWithAsOf.planetFacts).toEqual(horoscopeWithoutAsOf.planetFacts);
     expect(horoscopeWithAsOf.houseLordship).toEqual(horoscopeWithoutAsOf.houseLordship);
     expect(horoscopeWithAsOf.functionalRoles).toEqual(horoscopeWithoutAsOf.functionalRoles);
+  });
+
+  describe('canonical PlanetMotion propagation', () => {
+    it('calculateCombustion preserves the exact motion object reference and values for direct, retrograde, and stationary states', () => {
+      const directMotion: PlanetMotion = { speed: 1.25, retrograde: false, stationary: false };
+      const retroMotion: PlanetMotion = { speed: -0.45, retrograde: true, stationary: false };
+      const stationaryMotion: PlanetMotion = { speed: 0.002, retrograde: false, stationary: true };
+
+      // Normal combust planet (Saturn)
+      const saturnState = calculateCombustion(Planet.SATURN, 100, 105, retroMotion);
+      expect(saturnState.motion).toBe(retroMotion);
+      expect(saturnState.motion.retrograde).toBe(true);
+      expect(saturnState.motion.speed).toBe(-0.45);
+      expect(saturnState.motion.stationary).toBe(false);
+
+      // Sun branch
+      const sunState = calculateCombustion(Planet.SUN, 50, 50, directMotion);
+      expect(sunState.motion).toBe(directMotion);
+      expect(sunState.motion.retrograde).toBe(false);
+      expect(sunState.motion.speed).toBe(1.25);
+      expect(sunState.motion.stationary).toBe(false);
+
+      // Rahu / Ketu branch
+      const rahuState = calculateCombustion(Planet.RAHU, 180, 50, retroMotion);
+      expect(rahuState.motion).toBe(retroMotion);
+      expect(rahuState.motion.retrograde).toBe(true);
+
+      const ketuState = calculateCombustion(Planet.KETU, 0, 50, stationaryMotion);
+      expect(ketuState.motion).toBe(stationaryMotion);
+      expect(ketuState.motion.stationary).toBe(true);
+      expect(ketuState.motion.speed).toBe(0.002);
+    });
+
+    it('production golden test: verifies state.motion matches position.motion for all planets in horoscope', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const saturnFacts = horoscope.planetFacts[Planet.SATURN];
+      expect(saturnFacts).toBeDefined();
+
+      // Saturn is retrograde in the canonical fixture
+      expect(saturnFacts.position.motion.retrograde).toBe(true);
+      expect(saturnFacts.position.motion.speed).toBeLessThan(0);
+      expect(saturnFacts.state.motion).toBe(saturnFacts.position.motion);
+      expect(saturnFacts.state.motion).toEqual(saturnFacts.position.motion);
+      expect(saturnFacts.state.motion.retrograde).toBe(saturnFacts.position.motion.retrograde);
+      expect(saturnFacts.state.motion.speed).toBe(saturnFacts.position.motion.speed);
+      expect(saturnFacts.state.motion.stationary).toBe(saturnFacts.position.motion.stationary);
+
+      // Assert state.motion is identical to position.motion for every planet
+      for (const planet of Object.values(Planet)) {
+        const pf = horoscope.planetFacts[planet];
+        expect(pf.state.motion).toBe(pf.position.motion);
+        expect(pf.state.motion).toEqual(pf.position.motion);
+      }
+    });
+
+    it('divisional regression: charts[RASI].positions[SATURN].motion is identical object to NAVAMSA and DASAMSA while eclipticLongitude differs', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const rasiSaturn = horoscope.charts[ChartType.RASI].positions[Planet.SATURN];
+      const navamsaSaturn = horoscope.charts[ChartType.NAVAMSA].positions[Planet.SATURN];
+      const dasamsaSaturn = horoscope.charts[ChartType.DASAMSA].positions[Planet.SATURN];
+
+      expect(rasiSaturn.motion).toBeDefined();
+      expect(rasiSaturn.motion).toBe(navamsaSaturn.motion);
+      expect(rasiSaturn.motion).toBe(dasamsaSaturn.motion);
+
+      // Ecliptic longitudes in divisional charts must differ according to harmonic mapping
+      expect(rasiSaturn.eclipticLongitude).not.toBe(navamsaSaturn.eclipticLongitude);
+      expect(rasiSaturn.eclipticLongitude).not.toBe(dasamsaSaturn.eclipticLongitude);
+    });
   });
 });
 

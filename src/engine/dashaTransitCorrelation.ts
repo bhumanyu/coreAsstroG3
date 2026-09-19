@@ -175,6 +175,7 @@ export function correlateDashaAndTransit(
 
       const isNatalPlanetContact =
         ev.condition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET ||
+        ev.condition === TransitCondition.TRANSIT_OPPOSITION_NATAL_PLANET ||
         ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET;
 
       if (isNatalPlanetContact) {
@@ -195,6 +196,8 @@ export function correlateDashaAndTransit(
         const contactDesc =
           ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
             ? 'exactly contacts'
+            : ev.condition === TransitCondition.TRANSIT_OPPOSITION_NATAL_PLANET
+            ? 'is in opposition to'
             : 'is conjunct with';
         reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} ${contactDesc} natal ${formattedNatalPlanet}.`;
       } else if (ev.condition === TransitCondition.TRANSIT_ASPECTS_NATAL_PLANET) {

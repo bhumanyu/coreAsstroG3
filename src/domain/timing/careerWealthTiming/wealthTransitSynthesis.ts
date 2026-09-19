@@ -1,7 +1,7 @@
 import { Planet, AyanamsaType, type Horoscope } from '../../../types';
 import type { ActiveDashaState } from '../../../engine/dasha/vimshottari';
 import { calculateTransit } from '../../../engine/transitEngine';
-import { calculateCurrentTransitLongitudes } from '../../../engine/transitEphemeris';
+import { calculateCurrentTransitPositions } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
 import { correlateDashaAndTransit, type DashaState } from '../../../engine/dashaTransitCorrelation';
 import type { DomainStrength } from '../../interpretation/DomainInterpretationTypes';
@@ -120,13 +120,13 @@ export function synthesizeWealthTiming(
   }
 
   const ayanamsa = horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI;
-  const transitLongitudes = calculateCurrentTransitLongitudes(asOf, ayanamsa);
+  const transitPositions = calculateCurrentTransitPositions(asOf, ayanamsa);
 
   const transitInput = {
     at: asOf.toISOString(),
     natalMoonLongitude,
     natalAscendantLongitude,
-    transitLongitudes
+    transitPositions
   };
 
   const transitAnalysis = calculateTransit(transitInput);

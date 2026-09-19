@@ -85,11 +85,16 @@ export { calculateDignity };
 /**
  * Calculates combustion (Asta) condition relative to the Sun.
  */
-export function calculateCombustion(planet: Planet, planetLongitude: number, sunLongitude: number): PlanetState {
+export function calculateCombustion(
+  planet: Planet,
+  planetLongitude: number,
+  sunLongitude: number,
+  motion: PlanetMotion
+): PlanetState {
   if (planet === Planet.SUN) {
     return {
       planet,
-      motion: { speed: 1.0, retrograde: false, stationary: false },
+      motion,
       condition: PlanetCondition.NORMAL
     };
   }
@@ -97,7 +102,7 @@ export function calculateCombustion(planet: Planet, planetLongitude: number, sun
   if (planet === Planet.RAHU || planet === Planet.KETU) {
     return {
       planet,
-      motion: { speed: -0.05, retrograde: true, stationary: false },
+      motion,
       condition: PlanetCondition.NORMAL
     };
   }
@@ -126,7 +131,7 @@ export function calculateCombustion(planet: Planet, planetLongitude: number, sun
 
   return {
     planet,
-    motion: { speed: 1.0, retrograde: false, stationary: false },
+    motion,
     condition
   };
 }
@@ -386,7 +391,8 @@ export function calculateHoroscope(
     const nakshatraMeta = NAKSHATRAS_METADATA.find(n => n.nakshatra === nakshatraRes.nakshatra)!;
 
     const dignity = calculateDignity(planet, sign, signDegree);
-    const state = calculateCombustion(planet, planetLong, sunLong);
+    const motion = pos.motion;
+    const state = calculateCombustion(planet, planetLong, sunLong, motion);
 
     // Calculate house index from Lagna (Whole Sign)
     let house = ((signMeta.number ?? 1) - ascSignNumber + 1);
