@@ -112,17 +112,13 @@ export interface BuildAiContextOptions {
    * Canonical temporal state.
    */
   readonly temporalState?: AnalysisTemporalState;
-  /**
-   * Explicit asOf timestamp.
-   */
-  readonly asOf?: string;
 }
 
 /**
  * Product boundary options requiring canonical temporalState and pre-computed domain artifacts.
  */
 export interface ProductAiContextOptions extends BuildAiContextOptions {
-  readonly domainInterpretations: readonly DomainInterpretation[];
+  readonly domainInterpretations?: readonly DomainInterpretation[];
   readonly lifeAnalysis?: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
 }
@@ -1607,4 +1603,18 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   };
 
   return deepFreeze(context);
+}
+
+/**
+ * Product-facing wrapper requiring canonical temporalState.
+ * Enforces temporalState at compile time and delegates to buildAiContext.
+ */
+export function buildProductAiContext(
+  horoscope: Horoscope,
+  options: ProductAiContextOptions
+): AiContext {
+  if (!options?.temporalState) {
+    throw new Error('buildProductAiContext requires canonical temporalState');
+  }
+  return buildAiContext(horoscope, options);
 }

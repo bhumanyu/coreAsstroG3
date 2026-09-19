@@ -5,7 +5,7 @@ import type { AiRouter } from '../../ai';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysis } from '../../domain/synthesis';
-import { buildAiContext } from '../../ai/context/aiContextFactory';
+import { buildProductAiContext } from '../../ai/context/aiContextFactory';
 import { runAiExplanation } from '../../ai/product/aiExplanationService';
 import { resolveLifeAnalysisEvidence } from './lifeAnalysisEvidence';
 import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
@@ -52,7 +52,7 @@ export async function runLifeAnalysisProduct(
     const analysis = buildLifeAnalysis(domainInterpretations);
 
     // Build AI context without recomputing domain interpretations or life analysis
-    const aiContext = buildAiContext(options.horoscope, {
+    const aiContext = buildProductAiContext(options.horoscope, {
       domainInterpretations,
       lifeAnalysis: analysis,
       temporalState
