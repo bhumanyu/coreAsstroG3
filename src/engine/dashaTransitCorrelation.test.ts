@@ -267,6 +267,41 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     expect(conjEv!.exactContact).toBe(false);
   });
 
+  it('correlates natal planet opposition (TRANSIT_OPPOSITION_NATAL_PLANET) with preserved natalPlanet and geometry metadata', () => {
+    const rawTransitOpp = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: ariesMoonLong,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 192.0 }
+    });
+    const transitReportOpp = analyzeTransits({
+      transit: rawTransitOpp,
+      natalPlanetLongitudes: { [Planet.SUN]: 10.0 },
+      transitGeometry: {
+        conjunctionOrbDegrees: 0,
+        oppositionOrbDegrees: 5,
+        exactContactToleranceDegrees: 1e-6
+      }
+    });
+
+    const reportOpp = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReportOpp
+    });
+
+    const oppEv = reportOpp.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT
+    );
+    expect(oppEv).toBeDefined();
+    expect(oppEv!.transitCondition).toBe(TransitCondition.TRANSIT_OPPOSITION_NATAL_PLANET);
+    expect(oppEv!.natalPlanet).toBe(Planet.SUN);
+    expect(oppEv!.relationshipType).toBe(TransitRelationshipType.OPPOSITION);
+    expect(oppEv!.angularSeparation).toBeCloseTo(178);
+    expect(oppEv!.orb).toBeCloseTo(2);
+    expect(oppEv!.exactContact).toBe(false);
+    expect(oppEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn is in opposition to natal Sun.');
+  });
+
   it('regression: transit Saturn 29° Aries vs natal Moon 1° Aries does not correlate as conjunction', () => {
     const rawTransit = calculateTransit({
       at: atDate,
