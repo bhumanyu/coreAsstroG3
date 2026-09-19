@@ -22,6 +22,7 @@ import type { Horoscope } from '../../../types';
 import type { CareerTimingProduct, WealthTimingProduct } from '../dashaTimingTypes';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import type { AnalysisTemporalState } from '../../../core/analysis/AnalysisTemporalState';
 import type { DomainReasoningOptions } from '../../../domain/reasoning/reasoningTypes';
 
 const testMethodology = {

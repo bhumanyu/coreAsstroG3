@@ -112,10 +112,15 @@ export interface BuildAiContextOptions {
    * Canonical temporal state.
    */
   readonly temporalState?: AnalysisTemporalState;
-  /**
-   * Explicit asOf timestamp.
-   */
-  readonly asOf?: string;
+}
+
+/**
+ * Product boundary options requiring canonical temporalState and pre-computed domain artifacts.
+ */
+export interface ProductAiContextOptions extends BuildAiContextOptions {
+  readonly domainInterpretations?: readonly DomainInterpretation[];
+  readonly lifeAnalysis?: LifeAnalysis;
+  readonly temporalState: AnalysisTemporalState;
 }
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -423,13 +428,10 @@ function mapDashaPairProductToPairFacts(
 }
 
 function buildDashaFacts(
-  horoscope: Horoscope,
+  _horoscope: Horoscope,
   temporalState?: AnalysisTemporalState
 ): DashaFacts {
-  const mahadashas =
-    temporalState?.dashaInterpretation?.mahadashas ||
-    horoscope.vimshottari?.mahadashas ||
-    [];
+  const mahadashas = temporalState?.dashaInterpretation?.mahadashas ?? [];
   // v1: only Mahadasha projection is supported currently
   const periods: DashaPeriodFact[] = mahadashas.map((m: any) => ({
     planet: m.planet,
@@ -439,11 +441,7 @@ function buildDashaFacts(
   }));
 
   let active: ActiveDashaFact | undefined;
-  const current =
-    temporalState?.dashaInterpretation?.current ||
-    horoscope.dashaInterpretation?.current ||
-    horoscope.dashaInterpretation?.activePeriods ||
-    horoscope.fullNatalAnalysis?.currentDasha?.current;
+  const current = temporalState?.dashaInterpretation?.current;
 
   if (current?.mahadasha?.planet) {
     active = {
@@ -453,9 +451,7 @@ function buildDashaFacts(
     };
   }
 
-  const rawCurrent =
-    temporalState?.dashaInterpretation?.current ??
-    horoscope.dashaInterpretation?.current;
+  const rawCurrent = temporalState?.dashaInterpretation?.current;
   const product = mapActiveDasha(rawCurrent);
 
   let interpretation: DashaInterpretationFacts | undefined;
@@ -1438,7 +1434,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
   const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
-  const asOf = options?.temporalState?.asOf ?? options?.asOf;
+  const asOf = options?.temporalState?.asOf;
 
   const career = careerInterpretation ? buildCareerFact(horoscope, careerInterpretation, asOf) : undefined;
   const wealth = wealthInterpretation ? buildWealthFact(horoscope, wealthInterpretation, asOf) : undefined;
@@ -1454,7 +1450,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence + Dasha interpretation evidence
   const domainEvidenceList = buildEvidenceFromDomainInterpretations(rawDomainInterpretations);
   const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);
-  const currentDasha = options?.temporalState?.dashaInterpretation?.current ?? horoscope.dashaInterpretation?.current;
+  const currentDasha = options?.temporalState?.dashaInterpretation?.current;
   const dashaEvidenceList = buildDashaEvidence(currentDasha);
 
   const evidenceMap = new Map<string, AiEvidence>();
@@ -1607,4 +1603,18 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   };
 
   return deepFreeze(context);
+}
+
+/**
+ * Product-facing wrapper requiring canonical temporalState.
+ * Enforces temporalState at compile time and delegates to buildAiContext.
+ */
+export function buildProductAiContext(
+  horoscope: Horoscope,
+  options: ProductAiContextOptions
+): AiContext {
+  if (!options?.temporalState) {
+    throw new Error('buildProductAiContext requires canonical temporalState');
+  }
+  return buildAiContext(horoscope, options);
 }

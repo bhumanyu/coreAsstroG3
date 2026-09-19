@@ -1,6 +1,10 @@
 import type { Horoscope } from '../../types';
 import { systemClock } from '../../core/analysis/Clock';
-import { buildAiContext, type BuildAiContextOptions } from '../context/aiContextFactory';
+import {
+  buildAiContext,
+  buildProductAiContext,
+  type BuildAiContextOptions
+} from '../context/aiContextFactory';
 import { createAiRequest } from '../api/createAiRequest';
 import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
 import type { AiRouter } from '../routing/AiRouter';
@@ -27,10 +31,16 @@ export async function runAiExplanation(
   const requestId = createRequestId();
 
   try {
-    const context = buildAiContext(options.horoscope, {
-      domainInterpretations: options.domainInterpretations,
-      lifeAnalysis: options.lifeAnalysis
-    });
+    const context = options.temporalState
+      ? buildProductAiContext(options.horoscope, {
+          domainInterpretations: options.domainInterpretations,
+          lifeAnalysis: options.lifeAnalysis,
+          temporalState: options.temporalState
+        })
+      : buildAiContext(options.horoscope, {
+          domainInterpretations: options.domainInterpretations,
+          lifeAnalysis: options.lifeAnalysis
+        });
 
     const request = createAiRequest(
       options.task,

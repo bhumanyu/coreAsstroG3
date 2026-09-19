@@ -4,7 +4,7 @@ import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysis } from '../../domain/synthesis';
-import { buildAiContext } from '../../ai/context/aiContextFactory';
+import { buildProductAiContext } from '../../ai/context/aiContextFactory';
 import { createAiRequest } from '../../ai/api/createAiRequest';
 import { createDefaultAiRouter } from '../../ai/routing/createDefaultAiRouter';
 import { runAiExplanation } from '../../ai/product/aiExplanationService';
@@ -63,9 +63,10 @@ export async function runStage1Integration(
   const wealth = interpretWealthV2(horoscope, domainOptions);
   const lifeAnalysis = buildLifeAnalysis([career, wealth]);
 
-  const aiContext = buildAiContext(horoscope, {
+  const aiContext = buildProductAiContext(horoscope, {
     domainInterpretations: [career, wealth],
-    lifeAnalysis
+    lifeAnalysis,
+    temporalState
   });
 
   const router = input.router ?? createDefaultAiRouter();
@@ -88,7 +89,8 @@ export async function runStage1Integration(
     task: input.task,
     router,
     domainInterpretations: [career, wealth],
-    lifeAnalysis
+    lifeAnalysis,
+    temporalState
   });
 
   return Object.freeze({
