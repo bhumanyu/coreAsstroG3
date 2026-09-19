@@ -4,6 +4,7 @@ export {
   normalizeAsOf,
   DEFAULT_ENGINE_VERSION,
   DEFAULT_RULES_VERSION,
+  DEFAULT_METHODOLOGY,
   type CreateAnalysisContextInput
 } from './analysisContextFactory';
 export { analysisAsOfDate, analysisAsOfEpochMs } from './analysisTime';

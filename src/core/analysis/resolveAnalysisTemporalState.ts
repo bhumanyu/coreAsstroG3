@@ -13,6 +13,9 @@ export function resolveAnalysisTemporalState(
   horoscope: Horoscope,
   context: AnalysisContext
 ): AnalysisTemporalState {
+  if (!context.asOf || isNaN(new Date(context.asOf).getTime())) {
+    throw new Error(`[AnalysisTemporalState] Invalid asOf timestamp: "${context.asOf}"`);
+  }
   const asOfDate = analysisAsOfDate(context);
   const dashaInterpretation = resolveDashaInterpretationForAsOf(horoscope, asOfDate);
   if (dashaInterpretation && !Object.isFrozen(dashaInterpretation)) {
