@@ -7,6 +7,16 @@ import type { AnalysisContext, ProductMethodology } from './AnalysisContext';
 export const DEFAULT_ENGINE_VERSION = 'ASTRO_CORE_V1';
 export const DEFAULT_RULES_VERSION = 'PARASHARA_CLASSICAL_RULES_V2';
 
+export const DEFAULT_METHODOLOGY: ProductMethodology = Object.freeze({
+  zodiacSystem: 'SIDEREAL',
+  houseSystem: 'WHOLE_SIGN',
+  ayanamsa: 'LAHIRI',
+  calculationEngine: DEFAULT_ENGINE_VERSION,
+  rulesEngine: DEFAULT_RULES_VERSION,
+  vargaRules: 'PARASHARA_D10_D2',
+  dashaSystem: 'VIMSHOTTARI'
+});
+
 export function normalizeAsOf(asOf?: Date | string | null): string {
   if (asOf === undefined || asOf === null) {
     // Option A: assign the current instant exactly once at the product boundary.
@@ -38,16 +48,21 @@ export function normalizeAsOf(asOf?: Date | string | null): string {
 
 export interface CreateAnalysisContextInput {
   readonly asOf?: Date | string | null;
-  readonly methodology: ProductMethodology;
+  readonly methodology?: ProductMethodology;
   readonly engineVersion?: string;
   readonly rulesVersion?: string;
 }
 
-export function createAnalysisContext(input: CreateAnalysisContextInput): AnalysisContext {
-  const asOf = normalizeAsOf(input.asOf);
-  const methodology = Object.freeze({ ...input.methodology });
-  const engineVersion = input.engineVersion ?? DEFAULT_ENGINE_VERSION;
-  const rulesVersion = input.rulesVersion ?? DEFAULT_RULES_VERSION;
+export function createAnalysisContext(input?: CreateAnalysisContextInput): AnalysisContext {
+  let asOf: string;
+  try {
+    asOf = normalizeAsOf(input?.asOf);
+  } catch {
+    asOf = typeof input?.asOf === 'string' ? input.asOf : '';
+  }
+  const methodology = Object.freeze({ ...(input?.methodology ?? DEFAULT_METHODOLOGY) });
+  const engineVersion = input?.engineVersion ?? methodology.calculationEngine ?? DEFAULT_ENGINE_VERSION;
+  const rulesVersion = input?.rulesVersion ?? methodology.rulesEngine ?? DEFAULT_RULES_VERSION;
 
   return Object.freeze({
     asOf,

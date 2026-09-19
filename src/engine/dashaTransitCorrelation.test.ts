@@ -5,7 +5,7 @@ import {
   correlateDashaAndTransit,
   DashaTransitCorrelationType
 } from './dashaTransitCorrelation';
-import { Planet, Sign, AspectType, TransitCondition } from '../types';
+import { Planet, Sign, AspectType, TransitCondition, TransitRelationshipType } from '../types';
 
 describe('PR-039 Dasha-Transit Correlation Engine', () => {
   const atDate = '2026-08-08T12:00:00Z';
@@ -181,7 +181,7 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     expect(report.correlations[0].transitCondition).toBe(TransitCondition.JUPITER_5TH_FROM_MOON);
   });
 
-  it('correlates natal conjunction (TRANSIT_OVER_NATAL_PLANET) with preserved natalPlanet', () => {
+  it('correlates natal conjunction (TRANSIT_CONJUNCTION_NATAL_PLANET or TRANSIT_EXACT_CONTACT_NATAL_PLANET) with preserved natalPlanet', () => {
     const rawTransit = calculateTransit({
       at: atDate,
       natalMoonLongitude: ariesMoonLong,
@@ -203,7 +203,103 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     );
     expect(overEv).toBeDefined();
     expect(overEv!.natalPlanet).toBe(Planet.SUN);
-    expect(overEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn occupies the same sign as natal Sun.');
+    expect(overEv!.transitCondition).toBe(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
+    expect(overEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn exactly contacts natal Sun.');
+  });
+
+  it('preserves geometry metadata (relationshipType, angularSeparation, orb, exactContact) on emitted DashaTransitEvidence', () => {
+    // 1. Exact contact
+    const rawTransitExact = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: ariesMoonLong,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 15.0 }
+    });
+    const transitReportExact = analyzeTransits({
+      transit: rawTransitExact,
+      natalPlanetLongitudes: { [Planet.SUN]: 15.0 }
+    });
+
+    const reportExact = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReportExact
+    });
+
+    const exactEv = reportExact.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    );
+    expect(exactEv).toBeDefined();
+    expect(exactEv!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
+    expect(exactEv!.angularSeparation).toBeCloseTo(0);
+    expect(exactEv!.orb).toBeCloseTo(0);
+    expect(exactEv!.exactContact).toBe(true);
+
+    // 2. Conjunction with configured orb
+    const rawTransitConj = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: ariesMoonLong,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 13.0 }
+    });
+    const transitReportConj = analyzeTransits({
+      transit: rawTransitConj,
+      natalPlanetLongitudes: { [Planet.SUN]: 10.0 },
+      transitGeometry: {
+        conjunctionOrbDegrees: 5,
+        oppositionOrbDegrees: 0,
+        exactContactToleranceDegrees: 1e-6
+      }
+    });
+
+    const reportConj = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReportConj
+    });
+
+    const conjEv = reportConj.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    );
+    expect(conjEv).toBeDefined();
+    expect(conjEv!.transitCondition).toBe(TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET);
+    expect(conjEv!.relationshipType).toBe(TransitRelationshipType.CONJUNCTION);
+    expect(conjEv!.angularSeparation).toBeCloseTo(3);
+    expect(conjEv!.orb).toBeCloseTo(3);
+    expect(conjEv!.exactContact).toBe(false);
+  });
+
+  it('regression: transit Saturn 29° Aries vs natal Moon 1° Aries does not correlate as conjunction', () => {
+    const rawTransit = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: 1.0,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 29.0 }
+    });
+    const transitReport = analyzeTransits({
+      transit: rawTransit,
+      natalPlanetLongitudes: { [Planet.MOON]: 1.0 }
+    });
+
+    const report = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReport
+    });
+
+    const overEv = report.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    );
+    expect(overEv).toBeUndefined();
+
+    const conjEv = report.correlations.find(
+      (c) => c.transitCondition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET
+    );
+    expect(conjEv).toBeUndefined();
+
+    // SAME_SIGN condition correlates as standard TRANSIT_CONDITION, not OVER_NATAL_PLANET
+    const sameSignEv = report.correlations.find(
+      (c) => c.transitCondition === TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET
+    );
+    expect(sameSignEv).toBeDefined();
+    expect(sameSignEv!.type).toBe(DashaTransitCorrelationType.MAHADASHA_PLANET_TRANSIT_CONDITION);
   });
 
   it('correlates natal aspect (TRANSIT_ASPECTS_NATAL_PLANET) with preserved aspectType and targetSign', () => {

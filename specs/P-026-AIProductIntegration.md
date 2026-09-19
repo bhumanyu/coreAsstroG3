@@ -111,7 +111,7 @@ The canonical product AI path is `buildProductAiContext` → `runAiExplanation`.
 
 The UI/application layer MUST NOT construct `AiRequest` directly from raw `Horoscope` data.
 
-It MUST use `buildAiContext()`.
+It MUST use `buildProductAiContext()`.
 
 No new personal-data fields may be added to `AiContext`.
 
@@ -237,7 +237,7 @@ P-026 does not implement:
 5. User can select Current Dasha.
 6. User can select Life Themes.
 7. User can generate an explanation.
-8. The request is constructed through `buildAiContext()`.
+8. The request is constructed through `buildProductAiContext()`.
 9. The request is constructed through `createAiRequest()`.
 10. Routing uses `LOCAL_ONLY`.
 11. Routing uses `NO_FALLBACK`.

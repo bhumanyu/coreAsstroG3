@@ -11,6 +11,7 @@ import {
   AspectType,
   TransitCondition,
   TransitEvidence,
+  TransitRelationshipType,
   TransitAnalysisResult,
   TransitAnalysisReport
 } from '../types';
@@ -65,6 +66,10 @@ export interface DashaTransitEvidence {
   readonly referenceHouse?: number;
   readonly targetHouseFromMoon?: number;
   readonly targetHouseFromAscendant?: number;
+  readonly relationshipType?: TransitRelationshipType;
+  readonly angularSeparation?: number;
+  readonly orb?: number;
+  readonly exactContact?: boolean;
   readonly reason: string;
   readonly sourceReason?: string;
 }
@@ -153,6 +158,10 @@ export function correlateDashaAndTransit(
       let natalPlanet: Planet | undefined;
       let aspectType: AspectType | undefined;
       let targetSign: Sign | undefined;
+      let relationshipType: TransitRelationshipType | undefined;
+      let angularSeparation: number | undefined;
+      let orb: number | undefined;
+      let exactContact: boolean | undefined;
       let reason: string;
 
       const levelLabel =
@@ -164,7 +173,11 @@ export function correlateDashaAndTransit(
 
       const formattedDashaPlanet = formatPlanetName(dashaPlanet);
 
-      if (ev.condition === TransitCondition.TRANSIT_OVER_NATAL_PLANET) {
+      const isNatalPlanetContact =
+        ev.condition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET ||
+        ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET;
+
+      if (isNatalPlanetContact) {
         type =
           dashaLevel === 'MAHADASHA'
             ? DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
@@ -172,9 +185,18 @@ export function correlateDashaAndTransit(
             ? DashaTransitCorrelationType.ANTARDASHA_PLANET_OVER_NATAL_PLANET
             : DashaTransitCorrelationType.PRATYANTARDASHA_PLANET_OVER_NATAL_PLANET;
 
+        transitCondition = ev.condition;
         natalPlanet = ev.natalPlanet;
+        relationshipType = ev.relationshipType;
+        angularSeparation = ev.angularSeparation;
+        orb = ev.orb;
+        exactContact = ev.exactContact;
         const formattedNatalPlanet = natalPlanet ? formatPlanetName(natalPlanet) : '';
-        reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} occupies the same sign as natal ${formattedNatalPlanet}.`;
+        const contactDesc =
+          ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
+            ? 'exactly contacts'
+            : 'is conjunct with';
+        reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} ${contactDesc} natal ${formattedNatalPlanet}.`;
       } else if (ev.condition === TransitCondition.TRANSIT_ASPECTS_NATAL_PLANET) {
         type =
           dashaLevel === 'MAHADASHA'
@@ -186,6 +208,10 @@ export function correlateDashaAndTransit(
         natalPlanet = ev.natalPlanet;
         aspectType = ev.aspectType;
         targetSign = ev.targetSign;
+        relationshipType = ev.relationshipType;
+        angularSeparation = ev.angularSeparation;
+        orb = ev.orb;
+        exactContact = ev.exactContact;
         const formattedNatalPlanet = natalPlanet ? formatPlanetName(natalPlanet) : '';
         reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} casts aspect on natal ${formattedNatalPlanet}.`;
       } else {
@@ -226,6 +252,10 @@ export function correlateDashaAndTransit(
         ...((ev as any).referenceHouse !== undefined ? { referenceHouse: (ev as any).referenceHouse } : {}),
         ...((ev as any).targetHouseFromMoon !== undefined ? { targetHouseFromMoon: (ev as any).targetHouseFromMoon } : {}),
         ...((ev as any).targetHouseFromAscendant !== undefined ? { targetHouseFromAscendant: (ev as any).targetHouseFromAscendant } : {}),
+        ...(relationshipType !== undefined ? { relationshipType } : {}),
+        ...(angularSeparation !== undefined ? { angularSeparation } : {}),
+        ...(orb !== undefined ? { orb } : {}),
+        ...(exactContact !== undefined ? { exactContact } : {}),
         reason,
         sourceReason: ev.reason
       });
