@@ -21,8 +21,11 @@ export class WealthDomainInterpreter implements DomainInterpreter {
 
   interpret(horoscope: Horoscope, options?: DomainReasoningOptions): DomainInterpretation {
     const opts = options ?? (() => {
+      const asOf =
+        horoscope.dashaInterpretation?.current?.at ??
+        (horoscope.dashaInterpretation as any)?.asOf;
       const context = createAnalysisContext({
-        asOf: horoscope.dashaInterpretation?.asOf,
+        asOf,
         methodology: DEFAULT_METHODOLOGY
       });
       const temporalState = resolveAnalysisTemporalState(horoscope, context);
