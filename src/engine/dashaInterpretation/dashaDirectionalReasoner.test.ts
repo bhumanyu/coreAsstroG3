@@ -193,7 +193,7 @@ describe('Dasha Directional Reasoner & Domain Synthesis', () => {
         state: {
           condition: PlanetStateCondition.COMBUST,
           combust: true,
-          motion: { retrograde: false }
+          motion: { speed: 1.0, retrograde: false, stationary: false }
         },
         strength: {
           availability: 'AVAILABLE',

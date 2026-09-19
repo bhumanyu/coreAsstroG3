@@ -2,6 +2,7 @@ import {
   Planet,
   Sign,
   AspectType,
+  PlanetMotion,
   TransitAspect,
   TransitInput,
   TransitPosition,
@@ -112,7 +113,7 @@ export function calculateTransit(input: TransitInput): TransitAnalysis {
     throw new Error('TransitInput must not be null or undefined.');
   }
 
-  const { at, natalMoonLongitude, natalAscendantLongitude, transitLongitudes } = input;
+  const { at, natalMoonLongitude, natalAscendantLongitude, transitPositions, transitLongitudes } = input;
 
   if (at === undefined || at === null) {
     throw new Error('at must be a valid date/time.');
@@ -129,14 +130,27 @@ export function calculateTransit(input: TransitInput): TransitAnalysis {
   if (!Number.isFinite(natalAscendantLongitude)) {
     throw new Error('natalAscendantLongitude is required and must be a finite number.');
   }
-  if (!transitLongitudes || Object.keys(transitLongitudes).length === 0) {
+
+  const hasPositions = Boolean(transitPositions && Object.keys(transitPositions).length > 0);
+  const hasLongitudes = Boolean(transitLongitudes && Object.keys(transitLongitudes).length > 0);
+
+  if (!hasPositions && !hasLongitudes) {
     throw new Error('transitLongitudes must not be empty.');
   }
 
   const VALID_PLANETS = new Set<string>(Object.values(Planet));
-  for (const key of Object.keys(transitLongitudes)) {
-    if (!VALID_PLANETS.has(key)) {
-      throw new Error('Unknown transit planet: ' + key);
+  if (transitPositions) {
+    for (const key of Object.keys(transitPositions)) {
+      if (!VALID_PLANETS.has(key)) {
+        throw new Error('Unknown transit planet: ' + key);
+      }
+    }
+  }
+  if (transitLongitudes) {
+    for (const key of Object.keys(transitLongitudes)) {
+      if (!VALID_PLANETS.has(key)) {
+        throw new Error('Unknown transit planet: ' + key);
+      }
     }
   }
 
@@ -145,11 +159,28 @@ export function calculateTransit(input: TransitInput): TransitAnalysis {
 
   const results: Partial<Record<Planet, TransitResult>> = {};
 
-  for (const [planetKey, rawLong] of Object.entries(transitLongitudes)) {
-    if (rawLong === undefined || rawLong === null || typeof rawLong !== 'number' || !Number.isFinite(rawLong)) {
-      throw new Error('Transit longitude for planet ' + planetKey + ' must be a finite number.');
+  const planetKeys = new Set<Planet>([
+    ...(transitPositions ? (Object.keys(transitPositions) as Planet[]) : []),
+    ...(transitLongitudes ? (Object.keys(transitLongitudes) as Planet[]) : [])
+  ]);
+
+  for (const planet of planetKeys) {
+    const suppliedPosition = transitPositions?.[planet];
+    let rawLong: number | undefined;
+    let motion: PlanetMotion | undefined;
+
+    if (suppliedPosition) {
+      rawLong = suppliedPosition.eclipticLongitude ?? suppliedPosition.longitude;
+      motion = suppliedPosition.motion;
+    } else if (transitLongitudes && planet in transitLongitudes) {
+      rawLong = transitLongitudes[planet];
+      motion = undefined;
     }
-    const planet = planetKey as Planet;
+
+    if (rawLong === undefined || rawLong === null || typeof rawLong !== 'number' || !Number.isFinite(rawLong)) {
+      throw new Error('Transit longitude for planet ' + planet + ' must be a finite number.');
+    }
+
     const longitude = normalizeDegree(rawLong);
     const sign = calculateSign(longitude);
     const signMeta = SIGNS_METADATA[sign];
@@ -160,6 +191,7 @@ export function calculateTransit(input: TransitInput): TransitAnalysis {
       longitude,
       sign,
       signNumber: signMeta.number,
+      ...(motion ? { motion, isRetrograde: motion.retrograde } : {}),
       nakshatraResult: Object.freeze(nakshatraRes)
     });
 
