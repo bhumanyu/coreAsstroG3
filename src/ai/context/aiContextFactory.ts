@@ -71,8 +71,6 @@ import {
   type DashaPairProduct
 } from '../../product/life-analysis/dasha/activeDashaMapper';
 import {
-  createDefaultDomainInterpreterRegistry,
-  interpretDomain,
   projectDomainInterpretationForAi,
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
@@ -92,6 +90,7 @@ import {
   projectLifeAnalysisForAi,
   type LifeAnalysis
 } from '../../domain/synthesis';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import { deepFreeze } from './deepFreeze';
 
 /**
@@ -109,6 +108,14 @@ export interface BuildAiContextOptions {
    * When provided, this bypasses synthesis from domain interpretations.
    */
   readonly lifeAnalysis?: LifeAnalysis;
+  /**
+   * Canonical temporal state.
+   */
+  readonly temporalState?: AnalysisTemporalState;
+  /**
+   * Explicit asOf timestamp.
+   */
+  readonly asOf?: string;
 }
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -415,8 +422,14 @@ function mapDashaPairProductToPairFacts(
   };
 }
 
-function buildDashaFacts(horoscope: Horoscope): DashaFacts {
-  const mahadashas = horoscope.vimshottari?.mahadashas || [];
+function buildDashaFacts(
+  horoscope: Horoscope,
+  temporalState?: AnalysisTemporalState
+): DashaFacts {
+  const mahadashas =
+    temporalState?.dashaInterpretation?.mahadashas ||
+    horoscope.vimshottari?.mahadashas ||
+    [];
   // v1: only Mahadasha projection is supported currently
   const periods: DashaPeriodFact[] = mahadashas.map((m: any) => ({
     planet: m.planet,
@@ -427,6 +440,7 @@ function buildDashaFacts(horoscope: Horoscope): DashaFacts {
 
   let active: ActiveDashaFact | undefined;
   const current =
+    temporalState?.dashaInterpretation?.current ||
     horoscope.dashaInterpretation?.current ||
     horoscope.dashaInterpretation?.activePeriods ||
     horoscope.fullNatalAnalysis?.currentDasha?.current;
@@ -439,13 +453,16 @@ function buildDashaFacts(horoscope: Horoscope): DashaFacts {
     };
   }
 
-  const product = mapActiveDasha(horoscope.dashaInterpretation?.current);
+  const rawCurrent =
+    temporalState?.dashaInterpretation?.current ??
+    horoscope.dashaInterpretation?.current;
+  const product = mapActiveDasha(rawCurrent);
 
   let interpretation: DashaInterpretationFacts | undefined;
   let asOf: string | undefined;
 
   if (product && product.status === 'AVAILABLE') {
-    asOf = product.at;
+    asOf = temporalState?.asOf ?? product.at;
     const topLevelEvidenceIds = (product.evidence || []).map(
       (e) => projectDashaEvidenceToAi(e).id
     );
@@ -1410,41 +1427,35 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const planets = buildPlanetFacts(horoscope);
   const houses = buildHouseFacts(horoscope);
   const yogas = buildYogaFacts(horoscope);
-  const dasha = buildDashaFacts(horoscope);
+  const dasha = buildDashaFacts(horoscope, options?.temporalState);
   const divisional = buildDivisionalFacts(horoscope);
   const lifeThemes = buildLifeThemeFacts(horoscope);
 
-  // Use pre-computed domain interpretations if provided, otherwise resolve once from registry
+  // If domainInterpretations are not supplied, do NOT recompute — treat it as a contract violation:
+  // yield UNAVAILABLE domain projections rather than independently interpreting.
   const rawDomainInterpretations: readonly DomainInterpretation[] =
-    options?.domainInterpretations && options.domainInterpretations.length > 0
-      ? options.domainInterpretations
-      : [
-          interpretDomain({ horoscope, domain: 'CAREER' }),
-          interpretDomain({ horoscope, domain: 'WEALTH' })
-        ];
+    options?.domainInterpretations ?? [];
 
   const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
   const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
-  const asOf =
-    horoscope.dashaInterpretation?.current?.at ??
-    (horoscope.dashaInterpretation?.current as any)?.asOf ??
-    (horoscope.dashaInterpretation as any)?.asOf;
+  const asOf = options?.temporalState?.asOf ?? options?.asOf;
 
-  const career = buildCareerFact(horoscope, careerInterpretation, asOf);
-  const wealth = buildWealthFact(horoscope, wealthInterpretation, asOf);
+  const career = careerInterpretation ? buildCareerFact(horoscope, careerInterpretation, asOf) : undefined;
+  const wealth = wealthInterpretation ? buildWealthFact(horoscope, wealthInterpretation, asOf) : undefined;
 
   const domainInterpretations: readonly DomainInterpretationAiProjection[] =
     rawDomainInterpretations.map(projectDomainInterpretationForAi);
 
-  const lifeAnalysisValue: LifeAnalysis =
-    options?.lifeAnalysis ?? synthesizeLifeAnalysis(rawDomainInterpretations);
+  const lifeAnalysisValue: LifeAnalysis | undefined =
+    options?.lifeAnalysis ?? (rawDomainInterpretations.length > 0 ? synthesizeLifeAnalysis(rawDomainInterpretations) : undefined);
 
-  const projectedLifeAnalysis = projectLifeAnalysisForAi(lifeAnalysisValue);
+  const projectedLifeAnalysis = lifeAnalysisValue ? projectLifeAnalysisForAi(lifeAnalysisValue) : undefined;
 
   // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence + Dasha interpretation evidence
   const domainEvidenceList = buildEvidenceFromDomainInterpretations(rawDomainInterpretations);
   const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);
-  const dashaEvidenceList = buildDashaEvidence(horoscope.dashaInterpretation?.current);
+  const currentDasha = options?.temporalState?.dashaInterpretation?.current ?? horoscope.dashaInterpretation?.current;
+  const dashaEvidenceList = buildDashaEvidence(currentDasha);
 
   const evidenceMap = new Map<string, AiEvidence>();
   for (const item of domainEvidenceList) {

@@ -1458,6 +1458,7 @@ describe('CareerDomainInterpreterV2', () => {
     const serviceResult = interpretDomain({
       horoscope,
       domain: 'CAREER',
+      options: makeDomainOptions(),
       registry
     });
     expect(serviceResult.domain).toBe('CAREER');

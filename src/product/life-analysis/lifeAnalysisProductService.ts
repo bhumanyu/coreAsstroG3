@@ -54,7 +54,8 @@ export async function runLifeAnalysisProduct(
     // Build AI context without recomputing domain interpretations or life analysis
     const aiContext = buildAiContext(options.horoscope, {
       domainInterpretations,
-      lifeAnalysis: analysis
+      lifeAnalysis: analysis,
+      temporalState
     });
     const resolvedEvidence = resolveLifeAnalysisEvidence(
       analysis,
@@ -75,7 +76,8 @@ export async function runLifeAnalysisProduct(
     if (options.includeAiExplanation === false) {
       return deepFreeze({
         status: deterministicStatus,
-        analysis: viewModel
+        analysis: viewModel,
+        temporalState
       });
     }
 
@@ -91,7 +93,8 @@ export async function runLifeAnalysisProduct(
     return deepFreeze({
       status: deterministicStatus,
       analysis: viewModel,
-      aiExplanation
+      aiExplanation,
+      temporalState
     });
   } catch (error) {
     return deepFreeze({

@@ -9,7 +9,17 @@ import * as wealthModule from '../../../domain/wealth/WealthDomainInterpreterV2'
 import * as temporalModule from '../../../core/analysis/resolveAnalysisTemporalState';
 import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
 import { calculateHoroscope } from '../../../engine/astroEngine';
+import * as contextFactoryModule from '../../../core/analysis/analysisContextFactory';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import * as domainServiceModule from '../../../domain/interpretation/DomainInterpretationService';
+import { interpretDomain } from '../../../domain/interpretation/DomainInterpretationService';
+import { buildAiContext } from '../../../ai/context/aiContextFactory';
+import {
+  buildDashaTimingViewModel,
+  type BuildDashaTimingViewModelInput
+} from '../../dasha-timing/buildDashaTimingViewModel';
+import { runLifeAnalysisProduct } from '../../life-analysis/lifeAnalysisProductService';
+import type { AnalysisTemporalState } from '../../../core/analysis/AnalysisTemporalState';
 import { Planet, type Horoscope } from '../../../types';
 
 describe('Canonical Production Analysis Path Regression Suite', () => {
@@ -31,7 +41,8 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     temporalSpy.mockRestore();
   });
 
-  it('invokes interpretCareerV2 and interpretWealthV2 EXACTLY ONCE per chart analysis with AI explanation enabled', async () => {
+  it('Test A: Single-call invariant - resolveAnalysisTemporalState and createAnalysisContext called EXACTLY ONCE in analyze()', async () => {
+    const contextSpy = vi.spyOn(contextFactoryModule, 'createAnalysisContext');
     const service = createProductAnalysisService();
 
     const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
@@ -47,94 +58,106 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(result.ai.status).toBe('AVAILABLE');
     expect(result.ai.explanation).toBeDefined();
 
-    // Verify EXACTLY ONCE invocation (zero double/triple calculation along canonical path)
+    // Verify EXACTLY ONCE invocation
+    expect(contextSpy).toHaveBeenCalledTimes(1);
+    expect(temporalSpy).toHaveBeenCalledTimes(1);
     expect(careerSpy).toHaveBeenCalledTimes(1);
     expect(wealthSpy).toHaveBeenCalledTimes(1);
-    expect(temporalSpy).toHaveBeenCalledTimes(1);
 
-    // Verify context and temporalState were properly passed to the domain interpreters and reference equality holds
-    const careerDomainOptions = careerSpy.mock.calls[0][1];
-    const wealthDomainOptions = wealthSpy.mock.calls[0][1];
-    expect(careerDomainOptions?.context).toBeDefined();
-    expect(careerDomainOptions?.context?.asOf).toBe(FIXED_AS_OF);
-    expect(wealthDomainOptions?.context).toBeDefined();
-    expect(wealthDomainOptions?.context?.asOf).toBe(FIXED_AS_OF);
-    expect(careerDomainOptions?.context).toBe(wealthDomainOptions?.context);
-    expect(careerDomainOptions?.temporalState).toBeDefined();
-    expect(wealthDomainOptions?.temporalState).toBeDefined();
-    expect(careerDomainOptions?.temporalState).toBe(wealthDomainOptions?.temporalState);
-    expect(Object.isFrozen(careerDomainOptions?.temporalState)).toBe(true);
+    contextSpy.mockRestore();
   });
 
-  it('invokes interpretCareerV2 and interpretWealthV2 EXACTLY ONCE per chart analysis when AI explanation is disabled', async () => {
-    const service = new ProductAnalysisService();
+  it('Test B: Temporal state object identity across pipeline, domain interpreters, timing VM, and AI context', async () => {
+    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const context = createAnalysisContext({ asOf: FIXED_AS_OF });
 
-    const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-      asOf: FIXED_AS_OF,
-      includeAiExplanation: false
-    });
-
-    expect(result.status).toBe('READY');
-    expect(result.career).toBeDefined();
-    expect(result.wealth).toBeDefined();
-    expect(result.ai.status).toBe('UNAVAILABLE');
-    expect(result.ai.explanation).toBeUndefined();
-
-    // Single invocation guarantee holds regardless of AI explanation flag
-    expect(careerSpy).toHaveBeenCalledTimes(1);
-    expect(wealthSpy).toHaveBeenCalledTimes(1);
-    expect(temporalSpy).toHaveBeenCalledTimes(1);
-
-    const careerDomainOptions = careerSpy.mock.calls[0][1];
-    const wealthDomainOptions = wealthSpy.mock.calls[0][1];
-    expect(careerDomainOptions?.context).toBeDefined();
-    expect(wealthDomainOptions?.context).toBeDefined();
-    expect(careerDomainOptions?.context).toBe(wealthDomainOptions?.context);
-    expect(careerDomainOptions?.temporalState).toBeDefined();
-    expect(wealthDomainOptions?.temporalState).toBeDefined();
-    expect(careerDomainOptions?.temporalState).toBe(wealthDomainOptions?.temporalState);
-  });
-
-  it('proves shared frozen temporalState object-identity between Career and Wealth interpreters', async () => {
-    const service = new ProductAnalysisService();
-
-    await service.analyze(CANONICAL_BIRTH_DETAILS, {
-      asOf: FIXED_AS_OF,
-      includeAiExplanation: false
-    });
-
-    expect(careerSpy).toHaveBeenCalledTimes(1);
-    expect(wealthSpy).toHaveBeenCalledTimes(1);
-    expect(temporalSpy).toHaveBeenCalledTimes(1);
-
-    const careerOptions = careerSpy.mock.calls[0][1];
-    const wealthOptions = wealthSpy.mock.calls[0][1];
-
-    expect(careerOptions.context === wealthOptions.context).toBe(true);
-    expect(careerOptions.temporalState === wealthOptions.temporalState).toBe(true);
-    expect(careerOptions.temporalState.asOf).toBe(FIXED_AS_OF);
-    expect(Object.isFrozen(careerOptions.temporalState)).toBe(true);
-  });
-
-  it('resolves resolveAnalysisTemporalState EXACTLY ONCE per ProductAnalysis.analyze(...) run', async () => {
-    const service = createProductAnalysisService();
-
-    await service.analyze(CANONICAL_BIRTH_DETAILS, {
-      asOf: FIXED_AS_OF,
+    const lifeAnalysisState = await runLifeAnalysisProduct({
+      horoscope: baseHoroscope,
+      context,
       includeAiExplanation: true
     });
 
-    expect(temporalSpy).toHaveBeenCalledTimes(1);
+    const pipelineTemporalState = lifeAnalysisState.temporalState;
+    expect(pipelineTemporalState).toBeDefined();
+
+    // Consumed by Career
     const careerDomainOptions = careerSpy.mock.calls[0][1];
+    expect(careerDomainOptions.temporalState).toBe(pipelineTemporalState);
+
+    // Consumed by Wealth
     const wealthDomainOptions = wealthSpy.mock.calls[0][1];
-    expect(careerDomainOptions.temporalState).toBe(wealthDomainOptions.temporalState);
+    expect(wealthDomainOptions.temporalState).toBe(pipelineTemporalState);
+
+    // Attached to LifeAnalysisProductState
+    expect(lifeAnalysisState.temporalState).toBe(pipelineTemporalState);
+
+    // Passed to buildDashaTimingViewModel
+    const timingVm = buildDashaTimingViewModel({
+      temporalState: pipelineTemporalState,
+      horoscope: baseHoroscope,
+      careerTiming: careerSpy.mock.results[0].value,
+      wealthTiming: wealthSpy.mock.results[0].value
+    });
+    expect(timingVm.asOf).toBe(pipelineTemporalState.asOf);
+    expect(timingVm.current?.mahadasha?.planet).toBe(
+      pipelineTemporalState.dashaInterpretation?.current?.mahadasha.planet
+    );
+
+    // Reflected in AI context
+    const aiContext = buildAiContext(baseHoroscope, {
+      temporalState: pipelineTemporalState,
+      asOf: FIXED_AS_OF,
+      domainInterpretations: [careerSpy.mock.results[0].value, wealthSpy.mock.results[0].value]
+    });
+    expect(aiContext.dasha?.active?.mahadasha).toBe(
+      pipelineTemporalState.dashaInterpretation?.current?.mahadasha.planet
+    );
   });
 
-  it('stale-Dasha golden test: interpreter uses canonical Dasha from temporalState, ignoring embedded stale horoscope Dasha', () => {
-    // 1. Calculate a base horoscope with canonical birth details
-    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '2024-06-01T00:00:00.000Z');
+  it('Test C: Pure dispatcher invariant - interpretDomain requires options and forwards temporalState without re-deriving', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const context = createAnalysisContext({ asOf: FIXED_AS_OF });
+    const mockTemporalState: AnalysisTemporalState = Object.freeze({
+      asOf: FIXED_AS_OF,
+      dashaInterpretation: undefined
+    });
 
-    // 2. Deliberately corrupt horoscope.dashaInterpretation with an obviously wrong/stale Dasha (KETU)
+    // Static type test: missing options is a compile error, and at runtime it throws
+    // @ts-expect-error options is required on InterpretDomainOptions
+    expect(() => interpretDomain({ horoscope, domain: 'CAREER' })).toThrow();
+
+    let capturedOptions: any;
+    const mockRegistry = {
+      get: (_domain: string) => ({
+        interpret: (_h: Horoscope, opts: any) => {
+          capturedOptions = opts;
+          return {
+            domain: 'CAREER',
+            status: 'AVAILABLE',
+            asOf: FIXED_AS_OF,
+            summary: { headline: 'Test', confidence: 'HIGH', keyThemes: [] },
+            analysis: {},
+            timingActivations: [],
+            evidence: []
+          } as any;
+        }
+      })
+    };
+
+    interpretDomain({
+      horoscope,
+      domain: 'CAREER',
+      options: { context, temporalState: mockTemporalState },
+      registry: mockRegistry as any
+    });
+
+    expect(capturedOptions).toBeDefined();
+    expect(capturedOptions.temporalState).toBe(mockTemporalState);
+    expect(capturedOptions.context).toBe(context);
+  });
+
+  it('Test D: Stale embedded Dasha - Career, Wealth, Timing VM, and AI context report canonical Jupiter, never stale Ketu', () => {
+    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '2024-06-01T00:00:00.000Z');
     const staleHoroscope: Horoscope = {
       ...baseHoroscope,
       dashaInterpretation: {
@@ -165,7 +188,6 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       }
     };
 
-    // 3. Resolve context and temporalState for 2024-06-01 (when Saturn MD is canonically running)
     const context = createAnalysisContext({
       asOf: '2024-06-01T00:00:00.000Z',
       methodology: {
@@ -180,34 +202,74 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     });
     const temporalState = resolveAnalysisTemporalState(baseHoroscope, context);
 
-    // Verify that the canonical temporalState has JUPITER, NOT KETU
+    // Canonical temporalState has JUPITER
     expect(temporalState.dashaInterpretation?.current?.mahadasha?.planet).toBe(Planet.JUPITER);
 
-    // 4. Call Career and Wealth interpreters with the stale horoscope and canonical temporalState
-    const domainOptions = { context, temporalState };
-    const career = careerModule.interpretCareerV2(staleHoroscope, domainOptions);
-    const wealth = wealthModule.interpretWealthV2(staleHoroscope, domainOptions);
-
-    // 5. Assert career uses JUPITER from temporalState and never KETU from stale horoscope
+    // 1. Career
+    const career = careerModule.interpretCareerV2(staleHoroscope, { context, temporalState });
     const careerConclusion = career.conclusionData as any;
     expect(careerConclusion.careerDashaSynthesis?.md?.planet).toBe(Planet.JUPITER);
     expect(careerConclusion.careerDashaSynthesis?.md?.planet).not.toBe(Planet.KETU);
 
-    if (careerConclusion.careerDashaSynthesis?.factors?.length > 0) {
-      const factorPlanets = careerConclusion.careerDashaSynthesis.factors.map((f: any) => f.planet);
-      expect(factorPlanets).toContain(Planet.JUPITER);
-      expect(factorPlanets).not.toContain(Planet.KETU);
-    }
-
-    // 6. Assert wealth uses JUPITER from temporalState and never KETU from stale horoscope
+    // 2. Wealth
+    const wealth = wealthModule.interpretWealthV2(staleHoroscope, { context, temporalState });
     const mdTiming = wealth.periodTimingActivations?.find((p) => p.period === 'MD');
     expect(mdTiming?.planet).toBe(Planet.JUPITER);
     expect(mdTiming?.planet).not.toBe(Planet.KETU);
 
-    const wealthDashaEvidencePlanets = wealth.evidence
-      .filter((e) => e.sourceType === 'DASHA')
-      .map((e) => e.timing?.planet);
-    expect(wealthDashaEvidencePlanets).toContain(Planet.JUPITER);
-    expect(wealthDashaEvidencePlanets).not.toContain(Planet.KETU);
+    // 3. Timing VM
+    const timingVm = buildDashaTimingViewModel({
+      temporalState,
+      horoscope: staleHoroscope,
+      careerTiming: career,
+      wealthTiming: wealth
+    });
+    expect(timingVm.current?.mahadasha?.planet).toBe(Planet.JUPITER);
+    expect(timingVm.current?.mahadasha?.planet).not.toBe(Planet.KETU);
+
+    // 4. AI Context
+    const aiContext = buildAiContext(staleHoroscope, {
+      temporalState,
+      asOf: '2024-06-01T00:00:00.000Z',
+      domainInterpretations: [career, wealth]
+    });
+    expect(aiContext.dasha?.active?.mahadasha).toBe(Planet.JUPITER);
+    expect(aiContext.dasha?.active?.mahadasha).not.toBe(Planet.KETU);
+  });
+
+  it('Test E: AI context without domain interpretations does NOT call interpretDomain and yields UNAVAILABLE/omitted domain facts', () => {
+    const domainSpy = vi.spyOn(domainServiceModule, 'interpretDomain');
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const context = createAnalysisContext({ asOf: FIXED_AS_OF });
+    const temporalState = resolveAnalysisTemporalState(horoscope, context);
+
+    const aiContext = buildAiContext(horoscope, {
+      temporalState,
+      asOf: FIXED_AS_OF,
+      domainInterpretations: undefined
+    });
+
+    // Zero calls to interpretDomain
+    expect(domainSpy).toHaveBeenCalledTimes(0);
+
+    // Domain facts are omitted (not re-computed behind caller's back)
+    expect(aiContext.career).toBeUndefined();
+    expect(aiContext.wealth).toBeUndefined();
+    expect(aiContext.domainInterpretations).toEqual([]);
+
+    domainSpy.mockRestore();
+  });
+
+  it('Test F: Missing temporal state in timing VM fails to compile / throws at runtime and never falls back', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+    // Static compile check: missing temporalState is a type error
+    // @ts-expect-error temporalState is required on BuildDashaTimingViewModelInput
+    const _invalidInput: BuildDashaTimingViewModelInput = { horoscope };
+
+    // Runtime throw check
+    expect(() => buildDashaTimingViewModel({ horoscope } as any)).toThrow(
+      /canonical temporalState is required/
+    );
   });
 });

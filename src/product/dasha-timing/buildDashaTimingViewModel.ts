@@ -30,13 +30,6 @@ import type {
 } from './dashaTimingTypes';
 
 /**
- * Options for building the Dasha & Timing product view model.
- */
-export interface BuildDashaTimingViewModelOptions {
-  readonly asOf?: string;
-}
-
-/**
  * Input structure for building the Dasha & Timing product view model.
  */
 export interface BuildDashaTimingViewModelInput {
@@ -44,7 +37,6 @@ export interface BuildDashaTimingViewModelInput {
   readonly horoscope?: Horoscope;
   readonly careerTiming?: CareerTimingProduct | DomainInterpretation;
   readonly wealthTiming?: WealthTimingProduct | DomainInterpretation;
-  readonly options?: BuildDashaTimingViewModelOptions;
 }
 
 /**
@@ -53,78 +45,42 @@ export interface BuildDashaTimingViewModelInput {
  *
  * Invariants:
  * - Deterministic: Never computes or recalculates Vimshottari or Active Dasha.
+ * - Sourced strictly and exclusively from canonical temporalState.
  * - Reuses D03 Active Dasha Mapper (mapActiveDasha) and D05 Domain Timing Adapters.
  * - Does not call Date constructor anywhere; `asOf` is propagated from upstream.
  * - Free of internal engine or raw ASTRO data types.
  */
 export function buildDashaTimingViewModel(
   input: BuildDashaTimingViewModelInput
-): DashaTimingViewModel;
-export function buildDashaTimingViewModel(
-  temporalStateOrInput: BuildDashaTimingViewModelInput | AnalysisTemporalState | Horoscope,
-  careerTiming?: CareerTimingProduct | DomainInterpretation,
-  wealthTiming?: WealthTimingProduct | DomainInterpretation,
-  options?: BuildDashaTimingViewModelOptions
-): DashaTimingViewModel;
-export function buildDashaTimingViewModel(
-  firstArg: BuildDashaTimingViewModelInput | AnalysisTemporalState | Horoscope,
-  careerTimingArg?: CareerTimingProduct | DomainInterpretation,
-  wealthTimingArg?: WealthTimingProduct | DomainInterpretation,
-  optionsArg?: BuildDashaTimingViewModelOptions
 ): DashaTimingViewModel {
-  let temporalState: AnalysisTemporalState;
-  let horoscope: Horoscope | undefined;
-  let careerTiming: CareerTimingProduct | DomainInterpretation | undefined;
-  let wealthTiming: WealthTimingProduct | DomainInterpretation | undefined;
-  let options: BuildDashaTimingViewModelOptions | undefined;
-
-  if ('temporalState' in firstArg && firstArg.temporalState) {
-    temporalState = firstArg.temporalState;
-    horoscope = firstArg.horoscope;
-    careerTiming = firstArg.careerTiming;
-    wealthTiming = firstArg.wealthTiming;
-    options = firstArg.options;
-  } else if ('asOf' in firstArg && !('birthDetails' in firstArg)) {
-    temporalState = firstArg as AnalysisTemporalState;
-    careerTiming = careerTimingArg;
-    wealthTiming = wealthTimingArg;
-    options = optionsArg;
-  } else {
-    // Fallback for legacy calls passing (horoscope, careerTiming, wealthTiming, options)
-    const legacyHoro = firstArg as Horoscope;
-    horoscope = legacyHoro;
-    temporalState = {
-      asOf: optionsArg?.asOf ?? legacyHoro.dashaInterpretation?.current?.at ?? '',
-      dashaInterpretation: legacyHoro.dashaInterpretation
-    };
-    careerTiming = careerTimingArg;
-    wealthTiming = wealthTimingArg;
-    options = optionsArg;
+  const { temporalState, horoscope, careerTiming, wealthTiming } = input;
+  if (!temporalState) {
+    throw new Error('buildDashaTimingViewModel: canonical temporalState is required');
   }
+  const asOf = temporalState.asOf;
 
-  const asOf = options?.asOf ?? temporalState.asOf;
-
-  // 1. Resolve Timeline from deterministic temporalState and horoscope fallbacks
+  // 1. Resolve Timeline from deterministic temporalState
   const rawMahadashas: readonly VimshottariMahadashaPeriod[] | undefined =
-    temporalState.dashaInterpretation?.mahadashas ??
-    horoscope?.vimshottari?.mahadashas ??
-    horoscope?.fullNatalAnalysis?.vimshottari?.mahadashas;
+    temporalState.dashaInterpretation?.mahadashas;
 
   const rawAnchor =
-    temporalState.dashaInterpretation?.birthAnchor ??
-    horoscope?.vimshottari?.birthAnchor ??
-    horoscope?.fullNatalAnalysis?.vimshottari?.birthAnchor;
+    temporalState.dashaInterpretation?.birthAnchor;
 
   let birthAnchor: DashaBirthAnchorProduct | undefined;
   if (rawAnchor && rawAnchor.nakshatra && rawAnchor.nakshatraLord) {
+    const extendedAnchor = rawAnchor as Partial<{
+      balanceYears: number;
+      balanceMonths: number;
+      balanceDays: number;
+    }>;
     birthAnchor = {
       nakshatra: String(rawAnchor.nakshatra),
       nakshatraLord: rawAnchor.nakshatraLord,
       nakshatraProgress: rawAnchor.nakshatraProgress,
       remainingFraction: rawAnchor.remainingFraction,
-      balanceYears: rawAnchor.balanceYears,
-      balanceMonths: rawAnchor.balanceMonths,
-      balanceDays: rawAnchor.balanceDays
+      balanceYears: extendedAnchor.balanceYears,
+      balanceMonths: extendedAnchor.balanceMonths,
+      balanceDays: extendedAnchor.balanceDays
     };
   }
 

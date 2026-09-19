@@ -85,8 +85,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     const temporalState = makeTemporalState(horoscope, fixedAsOf);
     const viewModel = buildDashaTimingViewModel({
       temporalState,
-      horoscope,
-      options: { asOf: fixedAsOf }
+      horoscope
     });
 
     expect(viewModel.availability).toBe('AVAILABLE');
@@ -121,8 +120,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     const expectedInterpretation = mapActiveDasha(temporalState.dashaInterpretation?.current);
     const viewModel = buildDashaTimingViewModel({
       temporalState,
-      horoscope,
-      options: { asOf: fixedAsOf }
+      horoscope
     });
 
     expect(viewModel.interpretation).toBeDefined();
@@ -144,8 +142,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     expect(viewModel.career).toBeDefined();
@@ -170,8 +167,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     const mdDims = viewModel.wealth?.mahadasha?.dimensions;
@@ -207,8 +203,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     expect(viewModel.asOf).toBe(fixedAsOf);
@@ -217,12 +212,18 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
   });
 
   it('Test 7: handles partial availability when timeline is present but active dasha is out of range', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: outOfRangeAsOf });
-    const temporalState = makeTemporalState(horoscope, outOfRangeAsOf);
+    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const temporalState: AnalysisTemporalState = {
+      asOf: outOfRangeAsOf,
+      dashaInterpretation: {
+        ...(baseHoroscope.dashaInterpretation as any),
+        current: undefined,
+        activePeriods: undefined
+      }
+    };
     const viewModel = buildDashaTimingViewModel({
       temporalState,
-      horoscope,
-      options: { asOf: outOfRangeAsOf }
+      horoscope: baseHoroscope
     });
 
     expect(viewModel.timeline.availability).toBe('AVAILABLE');
@@ -241,8 +242,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     expect(selectCurrentMahadasha(viewModel)).toEqual(viewModel.current?.mahadasha);
@@ -266,8 +266,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     expect(model.evidence).toBeDefined();
@@ -336,8 +335,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     const model = buildDashaTimingViewModel({
       temporalState,
       horoscope,
-      careerTiming: mockCareerTiming,
-      options: { asOf: fixedAsOf }
+      careerTiming: mockCareerTiming
     });
 
     // 1. Assert NO fabricated evidence with template text exists
@@ -367,16 +365,14 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     const model2 = buildDashaTimingViewModel({
       temporalState: domainOptions.temporalState,
       horoscope,
       careerTiming: careerInterp,
-      wealthTiming: wealthInterp,
-      options: { asOf: fixedAsOf }
+      wealthTiming: wealthInterp
     });
 
     expect(model1).toEqual(model2);
@@ -407,13 +403,11 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
     const model1 = buildDashaTimingViewModel({
       temporalState: temporalBefore,
-      horoscope: horoscopeBefore,
-      options: { asOf: beforeInstant }
+      horoscope: horoscopeBefore
     });
     const model2 = buildDashaTimingViewModel({
       temporalState: temporalAfter,
-      horoscope: horoscopeAfter,
-      options: { asOf: afterInstant }
+      horoscope: horoscopeAfter
     });
 
     expect(model1.current?.antardasha?.planet).toBeDefined();
@@ -446,8 +440,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     const model = buildDashaTimingViewModel({
       temporalState,
       horoscope,
-      wealthTiming: mockWealthTiming,
-      options: { asOf: fixedAsOf }
+      wealthTiming: mockWealthTiming
     });
 
     // 1. Assert NO fabricated evidence with template text exists
@@ -504,8 +497,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
 
     const viewModel = buildDashaTimingViewModel({
       temporalState: canonicalTemporalState,
-      horoscope: corruptedHoroscope,
-      options: { asOf: fixedAsOf }
+      horoscope: corruptedHoroscope
     });
 
     // The current MD should match canonicalTemporalState (JUPITER), NOT corruptedHoroscope (KETU)
