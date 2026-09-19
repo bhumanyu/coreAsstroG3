@@ -11,6 +11,7 @@ import {
   AspectType,
   TransitCondition,
   TransitEvidence,
+  TransitRelationshipType,
   TransitAnalysisResult,
   TransitAnalysisReport
 } from '../types';
@@ -65,6 +66,10 @@ export interface DashaTransitEvidence {
   readonly referenceHouse?: number;
   readonly targetHouseFromMoon?: number;
   readonly targetHouseFromAscendant?: number;
+  readonly relationshipType?: TransitRelationshipType;
+  readonly angularSeparation?: number;
+  readonly orb?: number;
+  readonly exactContact?: boolean;
   readonly reason: string;
   readonly sourceReason?: string;
 }
@@ -153,6 +158,10 @@ export function correlateDashaAndTransit(
       let natalPlanet: Planet | undefined;
       let aspectType: AspectType | undefined;
       let targetSign: Sign | undefined;
+      let relationshipType: TransitRelationshipType | undefined;
+      let angularSeparation: number | undefined;
+      let orb: number | undefined;
+      let exactContact: boolean | undefined;
       let reason: string;
 
       const levelLabel =
@@ -178,6 +187,10 @@ export function correlateDashaAndTransit(
 
         transitCondition = ev.condition;
         natalPlanet = ev.natalPlanet;
+        relationshipType = ev.relationshipType;
+        angularSeparation = ev.angularSeparation;
+        orb = ev.orb;
+        exactContact = ev.exactContact;
         const formattedNatalPlanet = natalPlanet ? formatPlanetName(natalPlanet) : '';
         const contactDesc =
           ev.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
@@ -195,6 +208,10 @@ export function correlateDashaAndTransit(
         natalPlanet = ev.natalPlanet;
         aspectType = ev.aspectType;
         targetSign = ev.targetSign;
+        relationshipType = ev.relationshipType;
+        angularSeparation = ev.angularSeparation;
+        orb = ev.orb;
+        exactContact = ev.exactContact;
         const formattedNatalPlanet = natalPlanet ? formatPlanetName(natalPlanet) : '';
         reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} casts aspect on natal ${formattedNatalPlanet}.`;
       } else {
@@ -235,6 +252,10 @@ export function correlateDashaAndTransit(
         ...((ev as any).referenceHouse !== undefined ? { referenceHouse: (ev as any).referenceHouse } : {}),
         ...((ev as any).targetHouseFromMoon !== undefined ? { targetHouseFromMoon: (ev as any).targetHouseFromMoon } : {}),
         ...((ev as any).targetHouseFromAscendant !== undefined ? { targetHouseFromAscendant: (ev as any).targetHouseFromAscendant } : {}),
+        ...(relationshipType !== undefined ? { relationshipType } : {}),
+        ...(angularSeparation !== undefined ? { angularSeparation } : {}),
+        ...(orb !== undefined ? { orb } : {}),
+        ...(exactContact !== undefined ? { exactContact } : {}),
         reason,
         sourceReason: ev.reason
       });

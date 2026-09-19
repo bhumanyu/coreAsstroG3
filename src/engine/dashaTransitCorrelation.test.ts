@@ -5,7 +5,7 @@ import {
   correlateDashaAndTransit,
   DashaTransitCorrelationType
 } from './dashaTransitCorrelation';
-import { Planet, Sign, AspectType, TransitCondition } from '../types';
+import { Planet, Sign, AspectType, TransitCondition, TransitRelationshipType } from '../types';
 
 describe('PR-039 Dasha-Transit Correlation Engine', () => {
   const atDate = '2026-08-08T12:00:00Z';
@@ -205,6 +205,66 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     expect(overEv!.natalPlanet).toBe(Planet.SUN);
     expect(overEv!.transitCondition).toBe(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
     expect(overEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn exactly contacts natal Sun.');
+  });
+
+  it('preserves geometry metadata (relationshipType, angularSeparation, orb, exactContact) on emitted DashaTransitEvidence', () => {
+    // 1. Exact contact
+    const rawTransitExact = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: ariesMoonLong,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 15.0 }
+    });
+    const transitReportExact = analyzeTransits({
+      transit: rawTransitExact,
+      natalPlanetLongitudes: { [Planet.SUN]: 15.0 }
+    });
+
+    const reportExact = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReportExact
+    });
+
+    const exactEv = reportExact.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    );
+    expect(exactEv).toBeDefined();
+    expect(exactEv!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
+    expect(exactEv!.angularSeparation).toBeCloseTo(0);
+    expect(exactEv!.orb).toBeCloseTo(0);
+    expect(exactEv!.exactContact).toBe(true);
+
+    // 2. Conjunction with configured orb
+    const rawTransitConj = calculateTransit({
+      at: atDate,
+      natalMoonLongitude: ariesMoonLong,
+      natalAscendantLongitude: ariesAscLong,
+      transitLongitudes: { [Planet.SATURN]: 13.0 }
+    });
+    const transitReportConj = analyzeTransits({
+      transit: rawTransitConj,
+      natalPlanetLongitudes: { [Planet.SUN]: 10.0 },
+      transitGeometry: {
+        conjunctionOrbDegrees: 5,
+        oppositionOrbDegrees: 0,
+        exactContactToleranceDegrees: 1e-6
+      }
+    });
+
+    const reportConj = correlateDashaAndTransit({
+      dasha: { mahadashaPlanet: Planet.SATURN },
+      transit: transitReportConj
+    });
+
+    const conjEv = reportConj.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    );
+    expect(conjEv).toBeDefined();
+    expect(conjEv!.transitCondition).toBe(TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET);
+    expect(conjEv!.relationshipType).toBe(TransitRelationshipType.CONJUNCTION);
+    expect(conjEv!.angularSeparation).toBeCloseTo(3);
+    expect(conjEv!.orb).toBeCloseTo(3);
+    expect(conjEv!.exactContact).toBe(false);
   });
 
   it('regression: transit Saturn 29° Aries vs natal Moon 1° Aries does not correlate as conjunction', () => {

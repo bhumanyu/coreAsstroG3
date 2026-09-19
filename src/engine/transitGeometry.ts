@@ -1,10 +1,4 @@
-import { Sign, TransitRelationshipType } from '../types';
-
-export interface TransitGeometryConfig {
-  readonly conjunctionOrbDegrees: number;
-  readonly oppositionOrbDegrees: number;
-  readonly exactContactToleranceDegrees: number;
-}
+import { Sign, TransitGeometryConfig, TransitRelationshipType } from '../types';
 
 export const DEFAULT_TRANSIT_GEOMETRY_CONFIG: TransitGeometryConfig = Object.freeze({
   conjunctionOrbDegrees: 0,
@@ -41,7 +35,7 @@ export function normalizeAngularDistance(a: number, b: number): number {
 export interface TransitAngularRelationship {
   readonly relationship: TransitRelationshipType;
   readonly angularSeparation: number;
-  readonly orb: number;
+  readonly orb?: number;
   readonly exactContact: boolean;
 }
 
@@ -103,7 +97,6 @@ export function classifyTransitAngularRelationship(
     return Object.freeze({
       relationship: TransitRelationshipType.SAME_SIGN,
       angularSeparation,
-      orb: angularSeparation,
       exactContact: false
     });
   }
@@ -111,7 +104,6 @@ export function classifyTransitAngularRelationship(
   return Object.freeze({
     relationship: TransitRelationshipType.NONE,
     angularSeparation,
-    orb: angularSeparation,
     exactContact: false
   });
 }

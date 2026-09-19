@@ -270,6 +270,12 @@ export interface TransitHousePosition {
   transitingPlanets?: Planet[];
 }
 
+export interface TransitGeometryConfig {
+  readonly conjunctionOrbDegrees: number;
+  readonly oppositionOrbDegrees: number;
+  readonly exactContactToleranceDegrees: number;
+}
+
 export enum TransitRelationshipType {
   NONE = 'NONE',
   SAME_SIGN = 'SAME_SIGN',
@@ -778,6 +784,12 @@ export interface TransitAnalysisInput {
   natalAscendantSign?: Sign;
   transitPositions?: any;
   natalPlanetLongitudes?: Partial<Record<Planet, number>>;
+  /**
+   * Optional geometry configuration for angular aspect and contact classification.
+   * When omitted, production defaults to exact-only geometry.
+   * Sourcing this from AnalysisContext.methodology is a deferred follow-up.
+   */
+  transitGeometry?: TransitGeometryConfig;
 }
 
 export interface TransitAnalysisReport {

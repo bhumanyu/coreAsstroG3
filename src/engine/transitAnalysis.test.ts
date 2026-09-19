@@ -199,6 +199,58 @@ describe('PR-038 Transit Analysis Engine', () => {
       expect(exactEv!.angularSeparation).toBeCloseTo(0);
     });
 
+    it('configures transitGeometry via TransitAnalysisInput turning same-sign 3°-apart pair into conjunction', () => {
+      // natal 10° Aries (10.0), transit 13° Aries (13.0)
+      const transit = calculateTransit({
+        at: atDate,
+        natalMoonLongitude: ariesMoonLong,
+        natalAscendantLongitude: ariesAscLong,
+        transitLongitudes: { [Planet.SATURN]: 13.0 }
+      });
+
+      // Default input (no transitGeometry) yields TRANSIT_SAME_SIGN_NATAL_PLANET without orb
+      const defaultReport = analyzeTransits({
+        transit,
+        natalPlanetLongitudes: {
+          [Planet.SUN]: 10.0
+        }
+      });
+      const defaultSaturnResult = defaultReport.results![Planet.SATURN]!;
+      expect(defaultSaturnResult.conditions).toContain(TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET);
+      expect(defaultSaturnResult.conditions).not.toContain(TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET);
+      const defaultEvidence = defaultSaturnResult.evidence!.find(
+        (e: any) => e.condition === TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET
+      );
+      expect(defaultEvidence).toBeDefined();
+      expect(defaultEvidence!.relationshipType).toBe(TransitRelationshipType.SAME_SIGN);
+      expect(defaultEvidence!.orb).toBeUndefined();
+
+      // Explicit transitGeometry config with conjunctionOrbDegrees = 5 turns it into TRANSIT_CONJUNCTION_NATAL_PLANET with real orb
+      const configuredReport = analyzeTransits({
+        transit,
+        natalPlanetLongitudes: {
+          [Planet.SUN]: 10.0
+        },
+        transitGeometry: {
+          conjunctionOrbDegrees: 5,
+          oppositionOrbDegrees: 0,
+          exactContactToleranceDegrees: 1e-6
+        }
+      });
+      const configuredSaturnResult = configuredReport.results![Planet.SATURN]!;
+      expect(configuredSaturnResult.conditions).toContain(TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET);
+      expect(configuredSaturnResult.conditions).not.toContain(TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET);
+
+      const conjEvidence = configuredSaturnResult.evidence!.find(
+        (e: any) => e.condition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET
+      );
+      expect(conjEvidence).toBeDefined();
+      expect(conjEvidence!.relationshipType).toBe(TransitRelationshipType.CONJUNCTION);
+      expect(conjEvidence!.angularSeparation).toBeCloseTo(3);
+      expect(conjEvidence!.orb).toBeCloseTo(3);
+      expect(conjEvidence!.exactContact).toBe(false);
+    });
+
     it('shouldDetectTransitOverNatalPlanet as exact contact when longitudes are identical', () => {
       const transit = calculateTransit({
         at: atDate,

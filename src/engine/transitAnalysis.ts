@@ -208,6 +208,8 @@ function analyzeNatalPlanetContacts(
   if (!input.natalPlanetLongitudes || !result.planet || !result.position) return;
   if (!Number.isFinite(result.position.longitude)) return;
 
+  const geometryConfig = input.transitGeometry ?? DEFAULT_TRANSIT_GEOMETRY_CONFIG;
+
   for (const [natalPlanetKey, natalLong] of Object.entries(input.natalPlanetLongitudes)) {
     if (natalLong === undefined || natalLong === null || !Number.isFinite(natalLong)) continue;
     const natalPlanet = natalPlanetKey as Planet;
@@ -218,7 +220,7 @@ function analyzeNatalPlanetContacts(
       natalLong,
       result.position.sign,
       natalSign,
-      DEFAULT_TRANSIT_GEOMETRY_CONFIG
+      geometryConfig
     );
 
     const condition = getTransitRelationshipCondition(rel.relationship);

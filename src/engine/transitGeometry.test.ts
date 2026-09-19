@@ -108,7 +108,7 @@ describe('PR-038B Transit Geometry Engine', () => {
       expect(rel.relationship).toBe(TransitRelationshipType.SAME_SIGN);
       expect(rel.exactContact).toBe(false);
       expect(rel.angularSeparation).toBeCloseTo(28);
-      expect(rel.orb).toBeCloseTo(28);
+      expect(rel.orb).toBeUndefined();
     });
 
     it('returns NONE when signs differ and no geometric aspect matches', () => {
@@ -123,6 +123,7 @@ describe('PR-038B Transit Geometry Engine', () => {
       expect(rel.relationship).toBe(TransitRelationshipType.NONE);
       expect(rel.exactContact).toBe(false);
       expect(rel.angularSeparation).toBeCloseTo(30);
+      expect(rel.orb).toBeUndefined();
     });
 
     it('handles 359° and 1° wraparound correctly', () => {
@@ -207,6 +208,27 @@ describe('PR-038B Transit Geometry Engine', () => {
       );
       expect(rel.relationship).toBe(TransitRelationshipType.CONJUNCTION);
       expect(rel.angularSeparation).toBeCloseTo(2);
+      expect(rel.orb).toBeCloseTo(2);
+    });
+
+    it('honors non-zero conjunctionOrbDegrees producing CONJUNCTION with real orb', () => {
+      const config = {
+        conjunctionOrbDegrees: 8.5,
+        oppositionOrbDegrees: 0,
+        exactContactToleranceDegrees: 1e-6
+      };
+      // 5° Aries (5) vs 11° Aries (11) -> 6° separation <= 8.5° orb
+      const rel = classifyTransitAngularRelationship(
+        5,
+        11,
+        Sign.ARIES,
+        Sign.ARIES,
+        config
+      );
+      expect(rel.relationship).toBe(TransitRelationshipType.CONJUNCTION);
+      expect(rel.angularSeparation).toBeCloseTo(6);
+      expect(rel.orb).toBeCloseTo(6);
+      expect(rel.exactContact).toBe(false);
     });
 
     it('provides deterministic results for identical inputs', () => {
