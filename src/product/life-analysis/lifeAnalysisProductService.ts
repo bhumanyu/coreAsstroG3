@@ -87,7 +87,8 @@ export async function runLifeAnalysisProduct(
       task: 'LIFE_ANALYSIS_EXPLANATION',
       router: options.router,
       domainInterpretations,
-      lifeAnalysis: analysis
+      lifeAnalysis: analysis,
+      temporalState
     });
 
     return deepFreeze({

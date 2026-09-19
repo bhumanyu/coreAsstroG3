@@ -27,9 +27,12 @@ export async function runAiExplanation(
   const requestId = createRequestId();
 
   try {
+    const asOf = options.temporalState?.asOf ?? options.asOf;
     const context = buildAiContext(options.horoscope, {
       domainInterpretations: options.domainInterpretations,
-      lifeAnalysis: options.lifeAnalysis
+      lifeAnalysis: options.lifeAnalysis,
+      temporalState: options.temporalState,
+      ...(asOf ? { asOf } : {})
     });
 
     const request = createAiRequest(

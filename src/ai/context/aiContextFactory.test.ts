@@ -25,6 +25,11 @@ import {
   analyzeDashaInterpretation,
   analyzeActiveDasha
 } from '../../engine/dashaInterpretation/dashaInterpretation';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
+import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
 
 describe('AI Context Factory', () => {
   const horoscope = calculateHoroscope(
@@ -32,7 +37,17 @@ describe('AI Context Factory', () => {
     undefined,
     CANONICAL_BIRTH_DETAILS.dateTimeStr
   );
-  const context = buildAiContext(horoscope);
+  const analysisContext = createAnalysisContext({
+    asOf: CANONICAL_BIRTH_DETAILS.dateTimeStr,
+    methodology: mapMethodology(CANONICAL_BIRTH_DETAILS)
+  });
+  const temporalState = resolveAnalysisTemporalState(horoscope, analysisContext);
+  const career = interpretCareerV2(horoscope, { context: analysisContext, temporalState });
+  const wealth = interpretWealthV2(horoscope, { context: analysisContext, temporalState });
+  const context = buildAiContext(horoscope, {
+    domainInterpretations: [career, wealth],
+    temporalState
+  });
 
   it('should include correct schema version and source engine metadata', () => {
     expect(context.schemaVersion).toBe(AI_CONTEXT_SCHEMA_VERSION);
@@ -199,7 +214,7 @@ describe('AI Context Factory', () => {
     expect(context.dasha.periods.length).toBeGreaterThan(0);
   });
 
-  it('should project active dasha periods when available from engine', () => {
+  it('should project active dasha periods when available from temporalState and omit when absent', () => {
     const horoscopeWithActive = {
       ...horoscope,
       dashaInterpretation: {
@@ -211,11 +226,21 @@ describe('AI Context Factory', () => {
         }
       }
     } as any;
-    const activeContext = buildAiContext(horoscopeWithActive);
+    const activeContext = buildAiContext(horoscopeWithActive, {
+      temporalState: {
+        dashaInterpretation: horoscopeWithActive.dashaInterpretation
+      } as any
+    });
     expect(activeContext.dasha.active).toBeDefined();
     expect(activeContext.dasha.active?.mahadasha).toBe(Planet.MARS);
     expect(activeContext.dasha.active?.antardasha).toBe(Planet.JUPITER);
     expect(activeContext.dasha.active?.pratyantardasha).toBe(Planet.SATURN);
+
+    // Legacy low-level caller without temporalState: omits active dasha, never falls back to embedded horoscope
+    const legacyContext = buildAiContext(horoscopeWithActive);
+    expect(legacyContext.dasha.active).toBeUndefined();
+    expect(legacyContext.dasha.interpretation).toBeUndefined();
+    expect(legacyContext.dasha.periods).toHaveLength(0);
   });
 
   it('should project career and wealth evidence items with matching engine IDs and enriched metadata', () => {
@@ -429,7 +454,10 @@ describe('AI Context Factory', () => {
   });
 
   it('should be a pure, deterministic factory producing equal output for identical input', () => {
-    const context2 = buildAiContext(horoscope);
+    const context2 = buildAiContext(horoscope, {
+      domainInterpretations: [career, wealth],
+      temporalState
+    });
     expect(context).toEqual(context2);
   });
 
@@ -511,7 +539,10 @@ describe('AI Context Factory', () => {
   });
 
   it('should project enriched domain interpretations for AI including vargas, conflicts, and manifestations', () => {
-    const aiContext = buildAiContext(horoscope);
+    const aiContext = buildAiContext(horoscope, {
+      domainInterpretations: [career, wealth],
+      temporalState
+    });
     expect(aiContext.domainInterpretations).toBeDefined();
     expect(aiContext.domainInterpretations?.length).toBeGreaterThanOrEqual(2);
 
@@ -810,7 +841,11 @@ describe('AI Context Factory', () => {
         }
       } as any;
 
-      const partialContext = buildAiContext(partialHoroscope);
+      const partialContext = buildAiContext(partialHoroscope, {
+        temporalState: {
+          dashaInterpretation: partialHoroscope.dashaInterpretation
+        } as any
+      });
       expect(partialContext.dasha.interpretation).toBeDefined();
       expect(partialContext.dasha.interpretation?.mahadasha).toBeDefined();
       expect(partialContext.dasha.interpretation?.mahadasha?.planet).toBe(Planet.SUN);
@@ -1382,7 +1417,11 @@ describe('AI Context Factory', () => {
 
       let aiCtx: any;
       expect(() => {
-        aiCtx = buildAiContext(horoscopeWithPdYogas);
+        aiCtx = buildAiContext(horoscopeWithPdYogas, {
+          temporalState: {
+            dashaInterpretation: horoscopeWithPdYogas.dashaInterpretation
+          } as any
+        });
       }).not.toThrow();
 
       const contextYogaEvs = aiCtx.evidence.filter(
@@ -1519,7 +1558,11 @@ describe('AI Context Factory', () => {
       // 2. buildAiContext does not throw conflicting-evidence-id
       let aiContext: any;
       expect(() => {
-        aiContext = buildAiContext(fullHoroscope);
+        aiContext = buildAiContext(fullHoroscope, {
+          temporalState: {
+            dashaInterpretation: fullHoroscope.dashaInterpretation
+          } as any
+        });
       }).not.toThrow();
 
       // 3. Merged yoga participation verification in AI Context and Active Dasha

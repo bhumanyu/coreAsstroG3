@@ -3,6 +3,11 @@ import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import { Planet, Sign } from '../../../types';
 import { buildAiContext } from '../../context/aiContextFactory';
+import { interpretCareerV2 } from '../../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../../domain/wealth/WealthDomainInterpreterV2';
+import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import { mapMethodology } from '../../../product/analysis/productAnalysisMapper';
 import { reasonWithLocalRules, TASK_DOMAIN } from './localVedicRulesEngine';
 import {
   CAREER_RULES,
@@ -16,7 +21,17 @@ import type { LocalRuleDefinition } from './localVedicRulesTypes';
 
 describe('localVedicRulesEngine', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-  const context = buildAiContext(horoscope);
+  const analysisContext = createAnalysisContext({
+    asOf: CANONICAL_BIRTH_DETAILS.dateTimeStr,
+    methodology: mapMethodology(CANONICAL_BIRTH_DETAILS)
+  });
+  const temporalState = resolveAnalysisTemporalState(horoscope, analysisContext);
+  const career = interpretCareerV2(horoscope, { context: analysisContext, temporalState });
+  const wealth = interpretWealthV2(horoscope, { context: analysisContext, temporalState });
+  const context = buildAiContext(horoscope, {
+    domainInterpretations: [career, wealth],
+    temporalState
+  });
 
   it('should have an exhaustive TASK_DOMAIN mapping for all seven tasks', () => {
     const tasks: readonly AiTask[] = [
