@@ -4,6 +4,7 @@ import type {
   VimshottariAntardashaPeriod
 } from '../../types';
 import type { DomainInterpretation } from '../../domain/interpretation';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import {
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
@@ -29,10 +30,13 @@ import type {
 } from './dashaTimingTypes';
 
 /**
- * Options for building the Dasha & Timing product view model.
+ * Input structure for building the Dasha & Timing product view model.
  */
-export interface BuildDashaTimingViewModelOptions {
-  readonly asOf?: string;
+export interface BuildDashaTimingViewModelInput {
+  readonly temporalState: AnalysisTemporalState;
+  readonly horoscope?: Horoscope;
+  readonly careerTiming?: CareerTimingProduct | DomainInterpretation;
+  readonly wealthTiming?: WealthTimingProduct | DomainInterpretation;
 }
 
 /**
@@ -41,41 +45,42 @@ export interface BuildDashaTimingViewModelOptions {
  *
  * Invariants:
  * - Deterministic: Never computes or recalculates Vimshottari or Active Dasha.
+ * - Sourced strictly and exclusively from canonical temporalState.
  * - Reuses D03 Active Dasha Mapper (mapActiveDasha) and D05 Domain Timing Adapters.
  * - Does not call Date constructor anywhere; `asOf` is propagated from upstream.
  * - Free of internal engine or raw ASTRO data types.
  */
 export function buildDashaTimingViewModel(
-  horoscope: Horoscope,
-  careerTiming?: CareerTimingProduct | DomainInterpretation,
-  wealthTiming?: WealthTimingProduct | DomainInterpretation,
-  options?: BuildDashaTimingViewModelOptions
+  input: BuildDashaTimingViewModelInput
 ): DashaTimingViewModel {
-  const asOf = options?.asOf ?? horoscope.dashaInterpretation?.current?.at;
+  const { temporalState, horoscope, careerTiming, wealthTiming } = input;
+  if (!temporalState) {
+    throw new Error('buildDashaTimingViewModel: canonical temporalState is required');
+  }
+  const asOf = temporalState.asOf;
 
-  // 1. Resolve Timeline from deterministic horoscope
-  // TODO(D01): Once upstream canonically consolidates to horoscope.dashaInterpretation,
-  // the fallbacks to vimshottari/fullNatalAnalysis can be removed.
+  // 1. Resolve Timeline from deterministic temporalState
   const rawMahadashas: readonly VimshottariMahadashaPeriod[] | undefined =
-    horoscope.dashaInterpretation?.mahadashas ??
-    horoscope.vimshottari?.mahadashas ??
-    horoscope.fullNatalAnalysis?.vimshottari?.mahadashas;
+    temporalState.dashaInterpretation?.mahadashas;
 
   const rawAnchor =
-    horoscope.dashaInterpretation?.birthAnchor ??
-    horoscope.vimshottari?.birthAnchor ??
-    horoscope.fullNatalAnalysis?.vimshottari?.birthAnchor;
+    temporalState.dashaInterpretation?.birthAnchor;
 
   let birthAnchor: DashaBirthAnchorProduct | undefined;
   if (rawAnchor && rawAnchor.nakshatra && rawAnchor.nakshatraLord) {
+    const extendedAnchor = rawAnchor as Partial<{
+      balanceYears: number;
+      balanceMonths: number;
+      balanceDays: number;
+    }>;
     birthAnchor = {
       nakshatra: String(rawAnchor.nakshatra),
       nakshatraLord: rawAnchor.nakshatraLord,
       nakshatraProgress: rawAnchor.nakshatraProgress,
       remainingFraction: rawAnchor.remainingFraction,
-      balanceYears: rawAnchor.balanceYears,
-      balanceMonths: rawAnchor.balanceMonths,
-      balanceDays: rawAnchor.balanceDays
+      balanceYears: extendedAnchor.balanceYears,
+      balanceMonths: extendedAnchor.balanceMonths,
+      balanceDays: extendedAnchor.balanceDays
     };
   }
 
@@ -101,7 +106,7 @@ export function buildDashaTimingViewModel(
   const timelineAvailability = hasTimeline ? 'AVAILABLE' : 'UNAVAILABLE';
 
   // 2. Resolve Active Dasha Interpretation via D03 mapActiveDasha
-  const rawCurrent = horoscope.dashaInterpretation?.current;
+  const rawCurrent = temporalState.dashaInterpretation?.current;
   const interpretation = mapActiveDasha(rawCurrent);
 
   let current: DashaCurrentPeriodsProduct | undefined;
@@ -230,7 +235,7 @@ export function buildDashaTimingViewModel(
     }
   }
 
-  if (horoscope.themeInterpretationV2?.career?.evidence && Array.isArray(horoscope.themeInterpretationV2.career.evidence)) {
+  if (horoscope && horoscope.themeInterpretationV2?.career?.evidence && Array.isArray(horoscope.themeInterpretationV2.career.evidence)) {
     for (const item of horoscope.themeInterpretationV2.career.evidence) {
       const id = item.id;
       if (id && !evidenceMap.has(id)) {
@@ -275,7 +280,7 @@ export function buildDashaTimingViewModel(
     }
   }
 
-  if (horoscope.themeInterpretationV2?.wealth?.evidence && Array.isArray(horoscope.themeInterpretationV2.wealth.evidence)) {
+  if (horoscope && horoscope.themeInterpretationV2?.wealth?.evidence && Array.isArray(horoscope.themeInterpretationV2.wealth.evidence)) {
     for (const item of horoscope.themeInterpretationV2.wealth.evidence) {
       const id = item.id;
       if (id && !evidenceMap.has(id)) {

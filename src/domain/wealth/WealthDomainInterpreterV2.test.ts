@@ -1507,8 +1507,9 @@ describe('WealthDomainInterpreterV2', () => {
     const interpreter = new WealthDomainInterpreter();
     expect(interpreter.domain).toBe('WEALTH');
 
-    const result = interpreter.interpret(horoscope);
+    const result = interpreter.interpret(horoscope, makeDomainOptions());
     expect(result.domain).toBe('WEALTH');
+
 
     const registry = createDefaultDomainInterpreterRegistry();
     expect(registry.has('WEALTH')).toBe(true);
@@ -1516,6 +1517,7 @@ describe('WealthDomainInterpreterV2', () => {
     const serviceResult = interpretDomain({
       horoscope,
       domain: 'WEALTH',
+      options: makeDomainOptions(),
       registry
     });
     expect(serviceResult.domain).toBe('WEALTH');

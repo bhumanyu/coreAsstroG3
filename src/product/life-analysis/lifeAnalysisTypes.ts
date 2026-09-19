@@ -19,6 +19,7 @@ import type { CareerManifestationSynthesis } from '../../domain/career/manifesta
 import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { AiExplanationResult } from '../../ai';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
 import type {
   DashaInterpretationProduct,
@@ -252,4 +253,5 @@ export interface LifeAnalysisProductState {
   readonly analysis?: LifeAnalysisViewModel;
   readonly aiExplanation?: AiExplanationResult;
   readonly errorMessage?: string;
+  readonly temporalState?: AnalysisTemporalState;
 }

@@ -3,7 +3,6 @@ import { indexDashaPeriodActivations } from './dashaHierarchyUtils';
 import { synthesizeCareerDashaHierarchy } from './dashaCareerHierarchy';
 import { synthesizeWealthDashaHierarchy } from './dashaWealthHierarchy';
 import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
-import { buildDashaTimingViewModel } from '../dasha-timing/buildDashaTimingViewModel';
 import { buildAiContext } from '../../ai/context/aiContextFactory';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';

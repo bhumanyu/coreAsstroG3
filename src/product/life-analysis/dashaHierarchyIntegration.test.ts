@@ -66,11 +66,12 @@ describe('D07-C: Hierarchy Integration Pipeline Tests', () => {
   });
 
   it('populates careerHierarchy and wealthHierarchy in buildDashaTimingViewModel', () => {
-    const timingVm = buildDashaTimingViewModel(
+    const timingVm = buildDashaTimingViewModel({
+      temporalState,
       horoscope,
-      career,
-      wealth
-    );
+      careerTiming: career,
+      wealthTiming: wealth
+    });
 
     expect(timingVm.careerHierarchy).toBeDefined();
     expect(timingVm.careerHierarchy?.overallEffect).toBeDefined();
