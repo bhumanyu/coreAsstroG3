@@ -112,6 +112,10 @@ export interface BuildAiContextOptions {
    * Canonical temporal state.
    */
   readonly temporalState?: AnalysisTemporalState;
+  /**
+   * Explicit analysis timestamp (ISO string).
+   */
+  readonly asOf?: string;
 }
 
 /**
@@ -1434,7 +1438,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
   const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
-  const asOf = options?.temporalState?.asOf;
+  const asOf = options?.temporalState?.asOf ?? options?.asOf;
 
   const career = careerInterpretation ? buildCareerFact(horoscope, careerInterpretation, asOf) : undefined;
   const wealth = wealthInterpretation ? buildWealthFact(horoscope, wealthInterpretation, asOf) : undefined;
