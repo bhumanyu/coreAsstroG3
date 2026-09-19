@@ -16,6 +16,7 @@ import * as domainServiceModule from '../../../domain/interpretation/DomainInter
 import { interpretDomain } from '../../../domain/interpretation/DomainInterpretationService';
 import * as aiContextFactoryModule from '../../../ai/context/aiContextFactory';
 import { buildAiContext } from '../../../ai/context/aiContextFactory';
+import * as aiExplanationServiceModule from '../../../ai/product/aiExplanationService';
 import { runAiExplanation } from '../../../ai/product/aiExplanationService';
 import {
   buildDashaTimingViewModel,
@@ -31,17 +32,20 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
   let careerSpy: ReturnType<typeof vi.spyOn>;
   let wealthSpy: ReturnType<typeof vi.spyOn>;
   let temporalSpy: ReturnType<typeof vi.spyOn>;
+  let aiExplanationSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
     temporalSpy = vi.spyOn(temporalModule, 'resolveAnalysisTemporalState');
+    aiExplanationSpy = vi.spyOn(aiExplanationServiceModule, 'runAiExplanation');
   });
 
   afterEach(() => {
     careerSpy.mockRestore();
     wealthSpy.mockRestore();
     temporalSpy.mockRestore();
+    aiExplanationSpy.mockRestore();
   });
 
   it('Test A: Single-call invariant - resolveAnalysisTemporalState and createAnalysisContext called EXACTLY ONCE in analyze()', async () => {
@@ -66,6 +70,13 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(temporalSpy).toHaveBeenCalledTimes(1);
     expect(careerSpy).toHaveBeenCalledTimes(1);
     expect(wealthSpy).toHaveBeenCalledTimes(1);
+    expect(aiExplanationSpy).toHaveBeenCalledTimes(1);
+
+    // Verify SAME temporalState instance reaches Career, Wealth, and AI call
+    const canonicalTemporalState = temporalSpy.mock.results[0].value;
+    expect(careerSpy.mock.calls[0][1].temporalState).toBe(canonicalTemporalState);
+    expect(wealthSpy.mock.calls[0][1].temporalState).toBe(canonicalTemporalState);
+    expect(aiExplanationSpy.mock.calls[0][0].temporalState).toBe(canonicalTemporalState);
 
     contextSpy.mockRestore();
   });

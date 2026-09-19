@@ -5,14 +5,16 @@ import type {
   DomainStrength,
   VargaRelationship,
   TimingActivationEffect,
-  TransitTriggerEffect
+  TransitTriggerEffect,
+  DomainInterpretation
 } from '../../domain/interpretation';
 import type {
   LifeAnalysisStatus,
   SynthesisDomainStrength,
   CrossDomainConflictType,
   CrossDomainSeverity,
-  LifeAnalysisConfidence
+  LifeAnalysisConfidence,
+  LifeAnalysis
 } from '../../domain/synthesis';
 import type { WealthDimensionStatus } from '../../domain/wealth/wealthTypes';
 import type { CareerManifestationSynthesis } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
@@ -43,14 +45,16 @@ export type {
   VargaRelationship,
   TimingActivationEffect,
   TransitTriggerEffect,
-  ConfidenceLevel
+  ConfidenceLevel,
+  DomainInterpretation
 };
 export type {
   LifeAnalysisStatus,
   SynthesisDomainStrength,
   CrossDomainConflictType,
   CrossDomainSeverity,
-  LifeAnalysisConfidence
+  LifeAnalysisConfidence,
+  LifeAnalysis
 };
 export type { WealthDimensionStatus };
 
@@ -254,4 +258,7 @@ export interface LifeAnalysisProductState {
   readonly aiExplanation?: AiExplanationResult;
   readonly errorMessage?: string;
   readonly temporalState?: AnalysisTemporalState;
+  readonly career?: DomainInterpretation;
+  readonly wealth?: DomainInterpretation;
+  readonly lifeAnalysis?: LifeAnalysis;
 }

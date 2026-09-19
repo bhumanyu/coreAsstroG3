@@ -5,8 +5,16 @@ import { AiExplanationPanel } from './AiExplanationPanel';
 import * as aiModule from '../../ai';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
-import type { BirthDetails, Horoscope } from '../../types';
+import { Planet, type BirthDetails, type Horoscope } from '../../types';
 import type { AiExplanationViewModel, AiExplanationErrorViewModel } from '../../ai';
+import type { DomainInterpretation } from '../../domain/interpretation';
+import { createDomainInterpretation } from '../../domain/interpretation';
+import type { LifeAnalysis } from '../../domain/synthesis';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
+import * as careerModule from '../../domain/career/CareerDomainInterpreterV2';
+import * as wealthModule from '../../domain/wealth/WealthDomainInterpreterV2';
+import * as temporalModule from '../../core/analysis/resolveAnalysisTemporalState';
+import * as synthesisModule from '../../domain/synthesis';
 
 vi.mock('../../ai', async () => {
   const actual = await vi.importActual<typeof import('../../ai')>('../../ai');
@@ -20,6 +28,53 @@ describe('AiExplanationPanel', () => {
   const birthDetails: BirthDetails = CANONICAL_BIRTH_DETAILS;
   const horoscope: Horoscope = calculateHoroscope(birthDetails);
 
+  const mockCareer: DomainInterpretation = createDomainInterpretation({
+    domain: 'CAREER',
+    natalPromise: {
+      status: 'SUPPORTED',
+      score: 80,
+      summary: 'Career natal promise',
+      findings: []
+    } as any,
+    asOf: birthDetails.dateTimeStr,
+    generatedAt: '2026-01-01T00:00:00.000Z'
+  });
+
+  const mockWealth: DomainInterpretation = createDomainInterpretation({
+    domain: 'WEALTH',
+    natalPromise: {
+      status: 'SUPPORTED',
+      score: 75,
+      summary: 'Wealth natal promise',
+      findings: []
+    } as any,
+    asOf: birthDetails.dateTimeStr,
+    generatedAt: '2026-01-01T00:00:00.000Z'
+  });
+
+  const mockLifeAnalysis: LifeAnalysis = {
+    domains: [],
+    strongestDomains: [],
+    challengedDomains: [],
+    sharedTiming: [],
+    conflicts: [],
+    conclusion: { status: 'SUPPORTED', statement: 'Life is supported', summaryPoints: [] },
+    dataCompleteness: { career: 'AVAILABLE', wealth: 'AVAILABLE', timing: 'AVAILABLE', overall: 'COMPLETE' },
+    confidence: 'HIGH',
+    evidenceIds: []
+  };
+
+  const mockTemporalState: AnalysisTemporalState = {
+    asOf: birthDetails.dateTimeStr,
+    dashaInterpretation: {
+      asOf: birthDetails.dateTimeStr,
+      current: {
+        planet: Planet.JUPITER,
+        level: 'MAHADASHA'
+      }
+    } as any
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -28,7 +83,10 @@ describe('AiExplanationPanel', () => {
     render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -47,7 +105,10 @@ describe('AiExplanationPanel', () => {
     render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -85,7 +146,10 @@ describe('AiExplanationPanel', () => {
     render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -117,7 +181,10 @@ describe('AiExplanationPanel', () => {
     render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -175,7 +242,10 @@ describe('AiExplanationPanel', () => {
     render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -245,7 +315,10 @@ describe('AiExplanationPanel', () => {
     render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -305,7 +378,10 @@ describe('AiExplanationPanel', () => {
     const { rerender } = render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -323,11 +399,18 @@ describe('AiExplanationPanel', () => {
       dateTimeStr: '2020-05-15T12:00:00Z'
     };
     const newHoroscope = calculateHoroscope(newBirthDetails);
+    const newTemporalState: AnalysisTemporalState = {
+      ...mockTemporalState,
+      asOf: newBirthDetails.dateTimeStr
+    };
 
     rerender(
       <AiExplanationPanel
         horoscope={newHoroscope}
-        birthDetails={newBirthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={newTemporalState}
       />
     );
 
@@ -362,7 +445,10 @@ describe('AiExplanationPanel', () => {
     const { rerender } = render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -386,7 +472,10 @@ describe('AiExplanationPanel', () => {
     rerender(
       <AiExplanationPanel
         horoscope={newLocationHoroscope}
-        birthDetails={newLocationDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -408,7 +497,10 @@ describe('AiExplanationPanel', () => {
     const { rerender } = render(
       <AiExplanationPanel
         horoscope={horoscope}
-        birthDetails={birthDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
       />
     );
 
@@ -428,11 +520,18 @@ describe('AiExplanationPanel', () => {
       dateTimeStr: '2021-08-20T10:30:00Z'
     };
     const chartBHoroscope = calculateHoroscope(chartBDetails);
+    const chartBTemporalState: AnalysisTemporalState = {
+      ...mockTemporalState,
+      asOf: chartBDetails.dateTimeStr
+    };
 
     rerender(
       <AiExplanationPanel
         horoscope={chartBHoroscope}
-        birthDetails={chartBDetails}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={chartBTemporalState}
       />
     );
 
@@ -470,5 +569,177 @@ describe('AiExplanationPanel', () => {
     expect(
       screen.queryByText('Stale Chart A explanation that should be ignored')
     ).not.toBeInTheDocument();
+  });
+
+  it('regression: does not recompute deterministic pipeline (no resolveAnalysisTemporalState, interpretCareerV2, interpretWealthV2, buildLifeAnalysis calls)', async () => {
+    const temporalSpy = vi.spyOn(temporalModule, 'resolveAnalysisTemporalState');
+    const careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
+    const wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
+    const synthesisSpy = vi.spyOn(synthesisModule, 'buildLifeAnalysis');
+
+    vi.mocked(aiModule.runAiExplanation).mockResolvedValueOnce({
+      kind: 'SUCCESS',
+      requestId: 'test-no-recompute',
+      task: 'CHART_SYNTHESIS',
+      status: 'SUCCESS',
+      conclusion: 'No recompute explanation',
+      supportingEvidence: [],
+      challengingEvidence: [],
+      unresolvedQuestions: [],
+      warnings: [],
+      triggeredRuleIds: [],
+      providerId: 'local-vedic-rules',
+      providerName: 'Local Vedic Rules Provider',
+      providerKind: 'LOCAL_RULES',
+      routingMode: 'LOCAL_ONLY',
+      fallbackUsed: false,
+      selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
+      generatedAt: '2026-01-01T00:00:00.000Z'
+    });
+
+    render(
+      <AiExplanationPanel
+        horoscope={horoscope}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
+      />
+    );
+
+    const generateBtn = screen.getByRole('button', {
+      name: /generate explanation/i
+    });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(aiModule.runAiExplanation).toHaveBeenCalledTimes(1);
+    });
+
+    expect(temporalSpy).not.toHaveBeenCalled();
+    expect(careerSpy).not.toHaveBeenCalled();
+    expect(wealthSpy).not.toHaveBeenCalled();
+    expect(synthesisSpy).not.toHaveBeenCalled();
+
+    temporalSpy.mockRestore();
+    careerSpy.mockRestore();
+    wealthSpy.mockRestore();
+    synthesisSpy.mockRestore();
+  });
+
+  it('regression: preserves object identity when passing canonical artifacts to runAiExplanation', async () => {
+    vi.mocked(aiModule.runAiExplanation).mockResolvedValueOnce({
+      kind: 'SUCCESS',
+      requestId: 'test-identity',
+      task: 'CHART_SYNTHESIS',
+      status: 'SUCCESS',
+      conclusion: 'Identity preserved',
+      supportingEvidence: [],
+      challengingEvidence: [],
+      unresolvedQuestions: [],
+      warnings: [],
+      triggeredRuleIds: [],
+      providerId: 'local-vedic-rules',
+      providerName: 'Local Vedic Rules Provider',
+      providerKind: 'LOCAL_RULES',
+      routingMode: 'LOCAL_ONLY',
+      fallbackUsed: false,
+      selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
+      generatedAt: '2026-01-01T00:00:00.000Z'
+    });
+
+    render(
+      <AiExplanationPanel
+        horoscope={horoscope}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={mockTemporalState}
+      />
+    );
+
+    const generateBtn = screen.getByRole('button', {
+      name: /generate explanation/i
+    });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(aiModule.runAiExplanation).toHaveBeenCalledTimes(1);
+    });
+
+    const callArgs = vi.mocked(aiModule.runAiExplanation).mock.calls[0][0];
+    expect(callArgs.temporalState).toBe(mockTemporalState);
+    expect(callArgs.domainInterpretations[0]).toBe(mockCareer);
+    expect(callArgs.domainInterpretations[1]).toBe(mockWealth);
+    expect(callArgs.lifeAnalysis).toBe(mockLifeAnalysis);
+  });
+
+  it('regression: stale-dasha uses passed canonical temporalState dasha rather than falling back to stale horoscope dasha', async () => {
+    vi.mocked(aiModule.runAiExplanation).mockResolvedValueOnce({
+      kind: 'SUCCESS',
+      requestId: 'test-stale-dasha',
+      task: 'DASHA_ANALYSIS',
+      status: 'SUCCESS',
+      conclusion: 'Jupiter Dasha explanation',
+      supportingEvidence: [],
+      challengingEvidence: [],
+      unresolvedQuestions: [],
+      warnings: [],
+      triggeredRuleIds: [],
+      providerId: 'local-vedic-rules',
+      providerName: 'Local Vedic Rules Provider',
+      providerKind: 'LOCAL_RULES',
+      routingMode: 'LOCAL_ONLY',
+      fallbackUsed: false,
+      selectionReason: 'ONLY_ELIGIBLE_PROVIDER',
+      generatedAt: '2026-01-01T00:00:00.000Z'
+    });
+
+    // Horoscope has KETU as current dasha planet
+    const testHoroscope: Horoscope = {
+      ...horoscope,
+      dashaInterpretation: {
+        current: {
+          planet: Planet.KETU,
+          level: 'MAHADASHA'
+        }
+      } as any
+    };
+
+    // TemporalState has JUPITER as current dasha planet
+    const testTemporalState: AnalysisTemporalState = {
+      ...mockTemporalState,
+      dashaInterpretation: {
+        asOf: '2026-01-01T00:00:00.000Z',
+        current: {
+          planet: Planet.JUPITER,
+          level: 'MAHADASHA'
+        }
+      } as any
+    };
+
+    render(
+      <AiExplanationPanel
+        horoscope={testHoroscope}
+        career={mockCareer}
+        wealth={mockWealth}
+        lifeAnalysis={mockLifeAnalysis}
+        temporalState={testTemporalState}
+      />
+    );
+
+    const generateBtn = screen.getByRole('button', {
+      name: /generate explanation/i
+    });
+    fireEvent.click(generateBtn);
+
+    await waitFor(() => {
+      expect(aiModule.runAiExplanation).toHaveBeenCalledTimes(1);
+    });
+
+    const callArgs = vi.mocked(aiModule.runAiExplanation).mock.calls[0][0];
+    const capturedPlanet = (callArgs.temporalState.dashaInterpretation as any)?.current?.planet;
+    expect(capturedPlanet).toBe(Planet.JUPITER);
+    expect(capturedPlanet).not.toBe(Planet.KETU);
   });
 });

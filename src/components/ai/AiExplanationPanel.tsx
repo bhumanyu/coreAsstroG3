@@ -9,7 +9,7 @@ import {
   Sparkles,
   TriangleAlert
 } from 'lucide-react';
-import type { BirthDetails, Horoscope } from '../../types';
+import type { Horoscope } from '../../types';
 import type { AiTask } from '../../ai/types/aiRequestTypes';
 import {
   AI_EXPLANATION_TASKS,
@@ -20,21 +20,24 @@ import type {
   AiExplanationViewModel
 } from '../../ai';
 import { AiExplanationEvidenceList } from './AiExplanationEvidenceList';
-import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
-import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
-import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
-import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
-import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
-import { buildLifeAnalysis } from '../../domain/synthesis';
+import type { DomainInterpretation } from '../../domain/interpretation';
+import type { LifeAnalysis } from '../../domain/synthesis';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 
-interface AiExplanationPanelProps {
+export interface AiExplanationPanelProps {
   readonly horoscope: Horoscope;
-  readonly birthDetails: BirthDetails;
+  readonly career: DomainInterpretation;
+  readonly wealth: DomainInterpretation;
+  readonly lifeAnalysis: LifeAnalysis;
+  readonly temporalState: AnalysisTemporalState;
 }
 
 export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
   horoscope,
-  birthDetails
+  career,
+  wealth,
+  lifeAnalysis,
+  temporalState
 }) => {
   const [selectedTask, setSelectedTask] = useState<AiTask>('CHART_SYNTHESIS');
   const [result, setResult] = useState<AiExplanationResult | null>(null);
@@ -46,19 +49,15 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
   const chartKey = useMemo(
     () =>
       [
-        birthDetails.dateTimeStr,
-        birthDetails.timeZone,
-        birthDetails.ayanamsa,
-        birthDetails.latitude,
-        birthDetails.longitude
+        temporalState.asOf,
+        horoscope.birthDetails?.dateTimeStr ?? '',
+        horoscope.birthDetails?.latitude ?? '',
+        horoscope.birthDetails?.longitude ?? '',
+        horoscope.birthDetails?.ayanamsa ?? '',
+        horoscope.birthDetails?.timeZone ?? '',
+        horoscope.ascendant?.longitude ?? ''
       ].join('|'),
-    [
-      birthDetails.dateTimeStr,
-      birthDetails.timeZone,
-      birthDetails.ayanamsa,
-      birthDetails.latitude,
-      birthDetails.longitude
-    ]
+    [temporalState.asOf, horoscope]
   );
 
   useEffect(() => {
@@ -76,15 +75,6 @@ export const AiExplanationPanel: React.FC<AiExplanationPanelProps> = ({
     setResult(null);
 
     try {
-      const context = createAnalysisContext({
-        asOf: birthDetails.dateTimeStr,
-        methodology: mapMethodology(birthDetails)
-      });
-      const temporalState = resolveAnalysisTemporalState(horoscope, context);
-      const career = interpretCareerV2(horoscope, { context, temporalState });
-      const wealth = interpretWealthV2(horoscope, { context, temporalState });
-      const lifeAnalysis = buildLifeAnalysis([career, wealth]);
-
       const nextResult = await runAiExplanation({
         horoscope,
         task: selectedTask,
