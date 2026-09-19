@@ -4,7 +4,8 @@ import { buildAiContext } from '../../ai/context/aiContextFactory';
 import {
   STAGE1_GOLDEN_HOROSCOPE,
   STAGE1_GOLDEN_CAREER,
-  STAGE1_GOLDEN_WEALTH
+  STAGE1_GOLDEN_WEALTH,
+  STAGE1_GOLDEN_OPTIONS
 } from './stage1GoldenFixture';
 import { buildLifeAnalysis } from '../../domain/synthesis';
 import { AiRouter } from '../../ai/routing/AiRouter';
@@ -17,7 +18,10 @@ describe('Stage-1 AI Explanation Service Integration', () => {
   it('successfully generates AI explanation through local provider and routing pipeline', async () => {
     const explanation = await runAiExplanation({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
-      task: 'CHART_SYNTHESIS'
+      task: 'CHART_SYNTHESIS',
+      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH],
+      lifeAnalysis: buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]),
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState!
     });
 
     expect(explanation.kind).toBe('SUCCESS');
@@ -92,6 +96,9 @@ describe('Stage-1 AI Explanation Service Integration', () => {
     const explanation = await runAiExplanation({
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
       task: 'CHART_SYNTHESIS',
+      domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH],
+      lifeAnalysis: buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]),
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState!,
       router: mockRouter
     });
 
@@ -150,6 +157,7 @@ describe('Stage-1 AI Explanation Service Integration', () => {
       task: 'LIFE_ANALYSIS_EXPLANATION',
       domainInterpretations,
       lifeAnalysis,
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState!,
       router: mockRouter
     });
 
@@ -177,7 +185,8 @@ describe('Stage-1 AI Explanation Service Integration', () => {
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
       task: 'LIFE_ANALYSIS_EXPLANATION',
       domainInterpretations,
-      lifeAnalysis
+      lifeAnalysis,
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState!
     });
 
     expect(result.kind).toBe('SUCCESS');
@@ -200,7 +209,8 @@ describe('Stage-1 AI Explanation Service Integration', () => {
       horoscope: STAGE1_GOLDEN_HOROSCOPE,
       task: 'LIFE_ANALYSIS_EXPLANATION',
       domainInterpretations,
-      lifeAnalysis
+      lifeAnalysis,
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState!
     });
 
     expect(result.kind).toBe('SUCCESS');
@@ -216,7 +226,8 @@ describe('Stage-1 AI Explanation Service Integration', () => {
       // Rebuild the same context to get the canonical evidence universe
       const canonicalContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE, {
         domainInterpretations,
-        lifeAnalysis
+        lifeAnalysis,
+        temporalState: STAGE1_GOLDEN_OPTIONS.temporalState!
       });
       const canonicalEvidenceMap = new Map(canonicalContext.evidence.map((e) => [e.id, e]));
 

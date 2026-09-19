@@ -1,5 +1,8 @@
 export { runAiExplanation } from './aiExplanationService';
-export type { RunAiExplanationOptions } from './aiExplanationService';
+export type {
+  RunAiExplanationOptions,
+  RunProductAiExplanationOptions
+} from './aiExplanationService';
 
 export {
   AI_EXPLANATION_TASKS,

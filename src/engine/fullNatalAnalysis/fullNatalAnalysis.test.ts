@@ -517,8 +517,13 @@ describe('P-21 FullNatalAnalysis Engine', () => {
 
     it('populates aiContext dasha.active matching current MD/AD/PD (aiContext wiring)', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf1 });
-      const aiContext = buildAiContext(horoscope);
       const current = horoscope.dashaInterpretation?.current!;
+      const aiContext = buildAiContext(horoscope, {
+        temporalState: {
+          asOf: fixedAsOf1,
+          dashaInterpretation: horoscope.dashaInterpretation
+        }
+      });
 
       expect(aiContext.dasha.active).toBeDefined();
       expect(aiContext.dasha.active?.mahadasha).toBe(current.mahadasha.planet);

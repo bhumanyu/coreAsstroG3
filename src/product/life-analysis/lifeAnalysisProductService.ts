@@ -77,7 +77,10 @@ export async function runLifeAnalysisProduct(
       return deepFreeze({
         status: deterministicStatus,
         analysis: viewModel,
-        temporalState
+        temporalState,
+        career,
+        wealth,
+        lifeAnalysis: analysis
       });
     }
 
@@ -95,7 +98,10 @@ export async function runLifeAnalysisProduct(
       status: deterministicStatus,
       analysis: viewModel,
       aiExplanation,
-      temporalState
+      temporalState,
+      career,
+      wealth,
+      lifeAnalysis: analysis
     });
   } catch (error) {
     return deepFreeze({

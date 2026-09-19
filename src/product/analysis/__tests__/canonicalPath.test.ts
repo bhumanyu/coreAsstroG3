@@ -16,6 +16,7 @@ import * as domainServiceModule from '../../../domain/interpretation/DomainInter
 import { interpretDomain } from '../../../domain/interpretation/DomainInterpretationService';
 import * as aiContextFactoryModule from '../../../ai/context/aiContextFactory';
 import { buildAiContext } from '../../../ai/context/aiContextFactory';
+import * as aiExplanationServiceModule from '../../../ai/product/aiExplanationService';
 import { runAiExplanation } from '../../../ai/product/aiExplanationService';
 import {
   buildDashaTimingViewModel,
@@ -31,17 +32,20 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
   let careerSpy: ReturnType<typeof vi.spyOn>;
   let wealthSpy: ReturnType<typeof vi.spyOn>;
   let temporalSpy: ReturnType<typeof vi.spyOn>;
+  let aiExplanationSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
     temporalSpy = vi.spyOn(temporalModule, 'resolveAnalysisTemporalState');
+    aiExplanationSpy = vi.spyOn(aiExplanationServiceModule, 'runAiExplanation');
   });
 
   afterEach(() => {
     careerSpy.mockRestore();
     wealthSpy.mockRestore();
     temporalSpy.mockRestore();
+    aiExplanationSpy.mockRestore();
   });
 
   it('Test A: Single-call invariant - resolveAnalysisTemporalState and createAnalysisContext called EXACTLY ONCE in analyze()', async () => {
@@ -66,6 +70,13 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(temporalSpy).toHaveBeenCalledTimes(1);
     expect(careerSpy).toHaveBeenCalledTimes(1);
     expect(wealthSpy).toHaveBeenCalledTimes(1);
+    expect(aiExplanationSpy).toHaveBeenCalledTimes(1);
+
+    // Verify SAME temporalState instance reaches Career, Wealth, and AI call
+    const canonicalTemporalState = temporalSpy.mock.results[0].value;
+    expect(careerSpy.mock.calls[0][1].temporalState).toBe(canonicalTemporalState);
+    expect(wealthSpy.mock.calls[0][1].temporalState).toBe(canonicalTemporalState);
+    expect(aiExplanationSpy.mock.calls[0][0].temporalState).toBe(canonicalTemporalState);
 
     contextSpy.mockRestore();
   });
@@ -280,7 +291,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
   });
 
   it('Test G: Full product path (ProductAnalysisService.analyze with includeAiExplanation: true) with stale embedded Dasha uses canonical Jupiter and never stale Ketu', async () => {
-    const buildAiContextSpy = vi.spyOn(aiContextFactoryModule, 'buildAiContext');
+    const buildProductAiContextSpy = vi.spyOn(aiContextFactoryModule, 'buildProductAiContext');
     const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '2024-06-01T00:00:00.000Z');
     const staleHoroscope: Horoscope = {
       ...baseHoroscope,
@@ -325,9 +336,9 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(result.ai.status).toBe('AVAILABLE');
     expect(result.ai.explanation).toBeDefined();
 
-    // Verify buildAiContext consumed temporalState and never Ketu
-    expect(buildAiContextSpy).toHaveBeenCalled();
-    const lastCall = buildAiContextSpy.mock.calls[buildAiContextSpy.mock.calls.length - 1];
+    // Verify buildProductAiContext consumed temporalState and never Ketu
+    expect(buildProductAiContextSpy).toHaveBeenCalled();
+    const lastCall = buildProductAiContextSpy.mock.calls[buildProductAiContextSpy.mock.calls.length - 1];
     const passedOptions = lastCall[1];
     expect(passedOptions?.temporalState).toBeDefined();
     expect(passedOptions?.temporalState?.dashaInterpretation?.current?.mahadasha.planet).toBe(Planet.JUPITER);
@@ -336,7 +347,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     // AI explanation conclusion must not refer to Ketu Mahadasha
     expect(result.ai.explanation).not.toMatch(/Ketu Mahadasha/i);
 
-    buildAiContextSpy.mockRestore();
+    buildProductAiContextSpy.mockRestore();
   });
 
   it('Test H: Canonical path with stale embedded Dasha: buildDashaFacts/buildAiContext return canonical Dasha (JUPITER) and never stale value', () => {
@@ -377,8 +388,8 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(aiContextWithoutTemporal.dasha?.periods).toHaveLength(0);
   });
 
-  it('Test I: runAiExplanation forwards temporalState: buildAiContext receives exact temporalState object', async () => {
-    const buildAiContextSpy = vi.spyOn(aiContextFactoryModule, 'buildAiContext');
+  it('Test I: runAiExplanation forwards temporalState: buildProductAiContext receives exact temporalState object', async () => {
+    const buildProductAiContextSpy = vi.spyOn(aiContextFactoryModule, 'buildProductAiContext');
     const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, FIXED_AS_OF);
     const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
     const temporalState = resolveAnalysisTemporalState(baseHoroscope, context);
@@ -391,10 +402,11 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       lifeAnalysis: {} as any
     });
 
-    expect(buildAiContextSpy).toHaveBeenCalled();
-    const passedOptions = buildAiContextSpy.mock.calls.find((c) => c[0] === baseHoroscope)?.[1];
-    expect(passedOptions?.temporalState).toBe(temporalState);
+    expect(buildProductAiContextSpy).toHaveBeenCalled();
+    const passedProductOptions = buildProductAiContextSpy.mock.calls.find((c) => c[0] === baseHoroscope)?.[1];
+    expect(passedProductOptions?.temporalState).toBe(temporalState);
+    expect(passedProductOptions?.domainInterpretations).toEqual([]);
 
-    buildAiContextSpy.mockRestore();
+    buildProductAiContextSpy.mockRestore();
   });
 });

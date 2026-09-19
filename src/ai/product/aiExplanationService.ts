@@ -1,16 +1,15 @@
 import type { Horoscope } from '../../types';
 import { systemClock } from '../../core/analysis/Clock';
-import {
-  buildAiContext,
-  buildProductAiContext,
-  type BuildAiContextOptions
-} from '../context/aiContextFactory';
+import { buildProductAiContext } from '../context/aiContextFactory';
 import { createAiRequest } from '../api/createAiRequest';
 import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
 import type { AiRouter } from '../routing/AiRouter';
 import type { AiTask } from '../types/aiRequestTypes';
 import type { AiRoutingResult } from '../routing/aiRoutingTypes';
 import type { AiEvidence } from '../types/aiContextTypes';
+import type { DomainInterpretation } from '../../domain/interpretation';
+import type { LifeAnalysis } from '../../domain/synthesis';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import {
   isAiExplanationStructuredOutput,
   type AiExplanationResult,
@@ -19,28 +18,28 @@ import {
   type AiExplanationStructuredOutput
 } from './aiExplanationTypes';
 
-export interface RunAiExplanationOptions extends BuildAiContextOptions {
+export interface RunProductAiExplanationOptions {
   readonly horoscope: Horoscope;
   readonly task: AiTask;
+  readonly domainInterpretations: readonly DomainInterpretation[];
+  readonly lifeAnalysis: LifeAnalysis;
+  readonly temporalState: AnalysisTemporalState;
   readonly router?: AiRouter;
 }
 
+export type RunAiExplanationOptions = RunProductAiExplanationOptions;
+
 export async function runAiExplanation(
-  options: RunAiExplanationOptions
+  options: RunProductAiExplanationOptions
 ): Promise<AiExplanationResult> {
   const requestId = createRequestId();
 
   try {
-    const context = options.temporalState
-      ? buildProductAiContext(options.horoscope, {
-          domainInterpretations: options.domainInterpretations,
-          lifeAnalysis: options.lifeAnalysis,
-          temporalState: options.temporalState
-        })
-      : buildAiContext(options.horoscope, {
-          domainInterpretations: options.domainInterpretations,
-          lifeAnalysis: options.lifeAnalysis
-        });
+    const context = buildProductAiContext(options.horoscope, {
+      domainInterpretations: options.domainInterpretations,
+      lifeAnalysis: options.lifeAnalysis,
+      temporalState: options.temporalState
+    });
 
     const request = createAiRequest(
       options.task,
