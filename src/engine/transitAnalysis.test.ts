@@ -251,7 +251,7 @@ describe('PR-038 Transit Analysis Engine', () => {
       expect(conjEvidence!.exactContact).toBe(false);
     });
 
-    it('shouldDetectTransitOverNatalPlanet as exact contact when longitudes are identical', () => {
+    it('detects transit natal planet contact as exact contact when longitudes are identical', () => {
       const transit = calculateTransit({
         at: atDate,
         natalMoonLongitude: SIGN_LONGITUDES[Sign.PISCES],
@@ -269,14 +269,14 @@ describe('PR-038 Transit Analysis Engine', () => {
       const saturnResult = report.results![Planet.SATURN]!;
       expect(saturnResult.conditions).toContain(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
 
-      const overEvidence = saturnResult.evidence!.find(
+      const contactEvidence = saturnResult.evidence!.find(
         (e: any) => e.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET
       );
-      expect(overEvidence).toBeDefined();
-      expect(overEvidence!.natalPlanet).toBe(Planet.MOON);
-      expect(overEvidence!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
-      expect(overEvidence!.exactContact).toBe(true);
-      expect(overEvidence!.reason).toContain('exact contact');
+      expect(contactEvidence).toBeDefined();
+      expect(contactEvidence!.natalPlanet).toBe(Planet.MOON);
+      expect(contactEvidence!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
+      expect(contactEvidence!.exactContact).toBe(true);
+      expect(contactEvidence!.reason).toContain('exact contact');
     });
 
     it('shouldDetectTransitAspectToNatalPlanet', () => {
@@ -360,10 +360,10 @@ describe('PR-038 Transit Analysis Engine', () => {
       });
 
       const saturnResult = report.results![Planet.SATURN]!;
-      const overEvidences = saturnResult.evidence!.filter(
+      const contactEvidences = saturnResult.evidence!.filter(
         (e: any) => e.condition === TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET && e.natalPlanet === Planet.MOON
       );
-      expect(overEvidences.length).toBe(1);
+      expect(contactEvidences.length).toBe(1);
     });
 
     it('should perform multi-planet aggregate analysis grouping evidence per planet', () => {
@@ -380,7 +380,7 @@ describe('PR-038 Transit Analysis Engine', () => {
       const report = analyzeTransits({
         transit,
         natalPlanetLongitudes: {
-          [Planet.SUN]: SIGN_LONGITUDES[Sign.TAURUS] // Transit Jupiter over natal Sun & transit Saturn 3rd aspect on Taurus (natal Sun)
+          [Planet.SUN]: SIGN_LONGITUDES[Sign.TAURUS] // Transit Jupiter contacts natal Sun & transit Saturn 3rd aspect on Taurus (natal Sun)
         }
       });
 

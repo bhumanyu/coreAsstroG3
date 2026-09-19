@@ -181,7 +181,7 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     expect(report.correlations[0].transitCondition).toBe(TransitCondition.JUPITER_5TH_FROM_MOON);
   });
 
-  it('correlates natal conjunction (TRANSIT_CONJUNCTION_NATAL_PLANET or TRANSIT_EXACT_CONTACT_NATAL_PLANET) with preserved natalPlanet', () => {
+  it('correlates natal planet contact (TRANSIT_CONJUNCTION_NATAL_PLANET or TRANSIT_EXACT_CONTACT_NATAL_PLANET) with preserved natalPlanet', () => {
     const rawTransit = calculateTransit({
       at: atDate,
       natalMoonLongitude: ariesMoonLong,
@@ -198,13 +198,13 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
       transit: transitReport
     });
 
-    const overEv = report.correlations.find(
-      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    const contactEv = report.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT
     );
-    expect(overEv).toBeDefined();
-    expect(overEv!.natalPlanet).toBe(Planet.SUN);
-    expect(overEv!.transitCondition).toBe(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
-    expect(overEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn exactly contacts natal Sun.');
+    expect(contactEv).toBeDefined();
+    expect(contactEv!.natalPlanet).toBe(Planet.SUN);
+    expect(contactEv!.transitCondition).toBe(TransitCondition.TRANSIT_EXACT_CONTACT_NATAL_PLANET);
+    expect(contactEv!.reason).toContain('Saturn Mahadasha is active while transiting Saturn exactly contacts natal Sun.');
   });
 
   it('preserves geometry metadata (relationshipType, angularSeparation, orb, exactContact) on emitted DashaTransitEvidence', () => {
@@ -226,7 +226,7 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     });
 
     const exactEv = reportExact.correlations.find(
-      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT
     );
     expect(exactEv).toBeDefined();
     expect(exactEv!.relationshipType).toBe(TransitRelationshipType.EXACT_CONTACT);
@@ -257,7 +257,7 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
     });
 
     const conjEv = reportConj.correlations.find(
-      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT
     );
     expect(conjEv).toBeDefined();
     expect(conjEv!.transitCondition).toBe(TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET);
@@ -284,17 +284,17 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
       transit: transitReport
     });
 
-    const overEv = report.correlations.find(
-      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+    const contactEv = report.correlations.find(
+      (c) => c.type === DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT
     );
-    expect(overEv).toBeUndefined();
+    expect(contactEv).toBeUndefined();
 
     const conjEv = report.correlations.find(
       (c) => c.transitCondition === TransitCondition.TRANSIT_CONJUNCTION_NATAL_PLANET
     );
     expect(conjEv).toBeUndefined();
 
-    // SAME_SIGN condition correlates as standard TRANSIT_CONDITION, not OVER_NATAL_PLANET
+    // SAME_SIGN condition correlates as standard TRANSIT_CONDITION, not NATAL_PLANET_CONTACT
     const sameSignEv = report.correlations.find(
       (c) => c.transitCondition === TransitCondition.TRANSIT_SAME_SIGN_NATAL_PLANET
     );
@@ -389,11 +389,11 @@ describe('PR-039 Dasha-Transit Correlation Engine', () => {
       transit: transitReport
     });
 
-    // Should have Sade Sati Peak and Transit Over Natal Sun
+    // Should have Sade Sati Peak and Transit Contact with Natal Sun
     expect(report.correlations.length).toBeGreaterThanOrEqual(2);
     const types = report.correlations.map((c) => c.type);
     expect(types).toContain(DashaTransitCorrelationType.MAHADASHA_PLANET_TRANSIT_CONDITION);
-    expect(types).toContain(DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET);
+    expect(types).toContain(DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT);
   });
 
   it('works smoothly when optional antardasha/pratyantardasha are absent', () => {

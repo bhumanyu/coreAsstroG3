@@ -442,7 +442,7 @@ natalSign === transitSign
 being treated as:
 
 ```text
-TRANSIT_OVER_NATAL_PLANET
+TRANSIT_NATAL_PLANET_CONTACT
 ```
 
 This is incorrect if the intended meaning is conjunction.

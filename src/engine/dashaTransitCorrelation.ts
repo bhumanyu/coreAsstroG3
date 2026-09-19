@@ -42,9 +42,9 @@ export enum DashaTransitCorrelationType {
   ANTARDASHA_PLANET_TRANSIT_CONDITION = 'ANTARDASHA_PLANET_TRANSIT_CONDITION',
   PRATYANTARDASHA_PLANET_TRANSIT_CONDITION = 'PRATYANTARDASHA_PLANET_TRANSIT_CONDITION',
 
-  MAHADASHA_PLANET_OVER_NATAL_PLANET = 'MAHADASHA_PLANET_OVER_NATAL_PLANET',
-  ANTARDASHA_PLANET_OVER_NATAL_PLANET = 'ANTARDASHA_PLANET_OVER_NATAL_PLANET',
-  PRATYANTARDASHA_PLANET_OVER_NATAL_PLANET = 'PRATYANTARDASHA_PLANET_OVER_NATAL_PLANET',
+  MAHADASHA_PLANET_NATAL_PLANET_CONTACT = 'MAHADASHA_PLANET_NATAL_PLANET_CONTACT',
+  ANTARDASHA_PLANET_NATAL_PLANET_CONTACT = 'ANTARDASHA_PLANET_NATAL_PLANET_CONTACT',
+  PRATYANTARDASHA_PLANET_NATAL_PLANET_CONTACT = 'PRATYANTARDASHA_PLANET_NATAL_PLANET_CONTACT',
 
   MAHADASHA_PLANET_ASPECTS_NATAL_PLANET = 'MAHADASHA_PLANET_ASPECTS_NATAL_PLANET',
   ANTARDASHA_PLANET_ASPECTS_NATAL_PLANET = 'ANTARDASHA_PLANET_ASPECTS_NATAL_PLANET',
@@ -180,10 +180,10 @@ export function correlateDashaAndTransit(
       if (isNatalPlanetContact) {
         type =
           dashaLevel === 'MAHADASHA'
-            ? DashaTransitCorrelationType.MAHADASHA_PLANET_OVER_NATAL_PLANET
+            ? DashaTransitCorrelationType.MAHADASHA_PLANET_NATAL_PLANET_CONTACT
             : dashaLevel === 'ANTARDASHA'
-            ? DashaTransitCorrelationType.ANTARDASHA_PLANET_OVER_NATAL_PLANET
-            : DashaTransitCorrelationType.PRATYANTARDASHA_PLANET_OVER_NATAL_PLANET;
+            ? DashaTransitCorrelationType.ANTARDASHA_PLANET_NATAL_PLANET_CONTACT
+            : DashaTransitCorrelationType.PRATYANTARDASHA_PLANET_NATAL_PLANET_CONTACT;
 
         transitCondition = ev.condition;
         natalPlanet = ev.natalPlanet;
@@ -223,6 +223,11 @@ export function correlateDashaAndTransit(
             : DashaTransitCorrelationType.PRATYANTARDASHA_PLANET_TRANSIT_CONDITION;
 
         transitCondition = ev.condition;
+        natalPlanet = ev.natalPlanet;
+        relationshipType = ev.relationshipType;
+        angularSeparation = ev.angularSeparation;
+        orb = ev.orb;
+        exactContact = ev.exactContact;
         reason = `${formattedDashaPlanet} ${levelLabel} is active while transiting ${formattedDashaPlanet} shows ${transitCondition}.`;
       }
 

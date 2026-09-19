@@ -200,7 +200,7 @@ describe('CW-03 Career Transit Synthesis', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
     // In mockHoroscope, natal Sun is at 45° (Taurus) and natal Mercury is at 50° (Taurus).
     // On 2026-06-01, transiting Sun is in Taurus (~45°), so transit Sun contacts natal Sun and natal Mercury.
-    // Setting Mahadasha lord to Sun ensures MAHADASHA_PLANET_OVER_NATAL_PLANET fires with target natal Sun / Mercury.
+    // Setting Mahadasha lord to Sun ensures MAHADASHA_PLANET_NATAL_PLANET_CONTACT fires with target natal Sun / Mercury.
     const activeDasha = createMockActiveDashaState({
       mdPlanet: Planet.SUN,
       adPlanet: Planet.JUPITER
@@ -210,14 +210,14 @@ describe('CW-03 Career Transit Synthesis', () => {
     const dashaFactors = result.factors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
     expect(dashaFactors.length).toBeGreaterThan(0);
 
-    const sunOverNatalFactor = dashaFactors.find(
+    const sunContactNatalFactor = dashaFactors.find(
       (df) => df.dashaPlanet === Planet.SUN && df.targetPlanet !== undefined
     );
-    expect(sunOverNatalFactor).toBeDefined();
-    expect(sunOverNatalFactor!.dashaPlanet).toBe(Planet.SUN);
-    expect(sunOverNatalFactor!.transitingPlanet).toBe(Planet.SUN);
-    expect(sunOverNatalFactor!.planet).toBe(Planet.SUN);
-    expect([Planet.SUN, Planet.MERCURY]).toContain(sunOverNatalFactor!.targetPlanet);
+    expect(sunContactNatalFactor).toBeDefined();
+    expect(sunContactNatalFactor!.dashaPlanet).toBe(Planet.SUN);
+    expect(sunContactNatalFactor!.transitingPlanet).toBe(Planet.SUN);
+    expect(sunContactNatalFactor!.planet).toBe(Planet.SUN);
+    expect([Planet.SUN, Planet.MERCURY]).toContain(sunContactNatalFactor!.targetPlanet);
   });
 
   it('strictly satisfies the planet invariant across all factor categories', () => {
