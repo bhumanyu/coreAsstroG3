@@ -4,7 +4,7 @@ import type { BirthDetails } from '../types';
 import type { AppPage } from './navigation/navigationTypes';
 import { ProductAnalysisService } from '../product/analysis';
 import { calculateHoroscope } from '../engine/astroEngine';
-import { buildDashaTimingViewModel } from '../product/dasha-timing';
+import { buildDashaTimingViewModel, type DashaTimingViewModel } from '../product/dasha-timing';
 import { createAnalysisContext } from '../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../core/analysis/resolveAnalysisTemporalState';
 import { mapMethodology } from '../product/analysis/productAnalysisMapper';
@@ -54,7 +54,7 @@ export function createAppController(
 
       const pipelineState = service.lastPipelineState;
       const horoscope = service.lastHoroscope ?? calculateHoroscope(birthDetails);
-      let dashaTimingViewModel;
+      let dashaTimingViewModel: DashaTimingViewModel | undefined;
       if (horoscope) {
         const context = createAnalysisContext({
           asOf: analysis.asOf,

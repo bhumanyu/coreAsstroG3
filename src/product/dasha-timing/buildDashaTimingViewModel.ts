@@ -279,7 +279,7 @@ export function buildDashaTimingViewModel(
     }
   }
 
-  if (horoscope.themeInterpretationV2?.career?.evidence && Array.isArray(horoscope.themeInterpretationV2.career.evidence)) {
+  if (horoscope && horoscope.themeInterpretationV2?.career?.evidence && Array.isArray(horoscope.themeInterpretationV2.career.evidence)) {
     for (const item of horoscope.themeInterpretationV2.career.evidence) {
       const id = item.id;
       if (id && !evidenceMap.has(id)) {
@@ -324,7 +324,7 @@ export function buildDashaTimingViewModel(
     }
   }
 
-  if (horoscope.themeInterpretationV2?.wealth?.evidence && Array.isArray(horoscope.themeInterpretationV2.wealth.evidence)) {
+  if (horoscope && horoscope.themeInterpretationV2?.wealth?.evidence && Array.isArray(horoscope.themeInterpretationV2.wealth.evidence)) {
     for (const item of horoscope.themeInterpretationV2.wealth.evidence) {
       const id = item.id;
       if (id && !evidenceMap.has(id)) {

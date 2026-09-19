@@ -37,14 +37,25 @@ export function interpretDomain(
   const reasoningOptions: DomainReasoningOptions =
     options.options ??
     (() => {
+      const asOf =
+        options.horoscope.dashaInterpretation?.current?.at ??
+        (options.horoscope.dashaInterpretation?.current as any)?.asOf ??
+        (options.horoscope.dashaInterpretation as any)?.asOf ??
+        options.horoscope.birthDetails?.dateTimeStr;
       const context =
         options.context ??
         createAnalysisContext({
+          asOf,
           methodology: CANONICAL_METHODOLOGY
         });
       const temporalState =
         options.temporalState ??
-        resolveAnalysisTemporalState(options.horoscope, context);
+        (options.horoscope.dashaInterpretation
+          ? Object.freeze({
+              asOf: context.asOf,
+              dashaInterpretation: options.horoscope.dashaInterpretation
+            })
+          : resolveAnalysisTemporalState(options.horoscope, context));
       return { context, temporalState };
     })();
 

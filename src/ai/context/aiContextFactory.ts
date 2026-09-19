@@ -72,6 +72,7 @@ import {
 } from '../../product/life-analysis/dasha/activeDashaMapper';
 import {
   createDefaultDomainInterpreterRegistry,
+  interpretDomain,
   projectDomainInterpretationForAi,
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
@@ -1417,13 +1418,10 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const rawDomainInterpretations: readonly DomainInterpretation[] =
     options?.domainInterpretations && options.domainInterpretations.length > 0
       ? options.domainInterpretations
-      : (() => {
-          const registry = createDefaultDomainInterpreterRegistry();
-          return [
-            registry.get('CAREER').interpret(horoscope),
-            registry.get('WEALTH').interpret(horoscope)
-          ];
-        })();
+      : [
+          interpretDomain({ horoscope, domain: 'CAREER' }),
+          interpretDomain({ horoscope, domain: 'WEALTH' })
+        ];
 
   const careerInterpretation = rawDomainInterpretations.find((d) => d.domain === 'CAREER');
   const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
