@@ -1448,8 +1448,9 @@ describe('CareerDomainInterpreterV2', () => {
     const interpreter = new CareerDomainInterpreter();
     expect(interpreter.domain).toBe('CAREER');
 
-    const result = interpreter.interpret(horoscope);
+    const result = interpreter.interpret(horoscope, makeDomainOptions());
     expect(result.domain).toBe('CAREER');
+
 
     const registry = createDefaultDomainInterpreterRegistry();
     expect(registry.has('CAREER')).toBe(true);

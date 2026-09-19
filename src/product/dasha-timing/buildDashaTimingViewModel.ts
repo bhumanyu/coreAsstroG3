@@ -4,6 +4,7 @@ import type {
   VimshottariAntardashaPeriod
 } from '../../types';
 import type { DomainInterpretation } from '../../domain/interpretation';
+import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import {
   buildNormalizedCareerTiming,
   buildNormalizedWealthTiming,
@@ -36,6 +37,17 @@ export interface BuildDashaTimingViewModelOptions {
 }
 
 /**
+ * Input structure for building the Dasha & Timing product view model.
+ */
+export interface BuildDashaTimingViewModelInput {
+  readonly temporalState: AnalysisTemporalState;
+  readonly horoscope?: Horoscope;
+  readonly careerTiming?: CareerTimingProduct | DomainInterpretation;
+  readonly wealthTiming?: WealthTimingProduct | DomainInterpretation;
+  readonly options?: BuildDashaTimingViewModelOptions;
+}
+
+/**
  * Builds a dedicated, pure product-layer DashaTimingViewModel from upstream
  * deterministic horoscope and domain timing outputs.
  *
@@ -46,25 +58,62 @@ export interface BuildDashaTimingViewModelOptions {
  * - Free of internal engine or raw ASTRO data types.
  */
 export function buildDashaTimingViewModel(
-  horoscope: Horoscope,
+  input: BuildDashaTimingViewModelInput
+): DashaTimingViewModel;
+export function buildDashaTimingViewModel(
+  temporalStateOrInput: BuildDashaTimingViewModelInput | AnalysisTemporalState | Horoscope,
   careerTiming?: CareerTimingProduct | DomainInterpretation,
   wealthTiming?: WealthTimingProduct | DomainInterpretation,
   options?: BuildDashaTimingViewModelOptions
+): DashaTimingViewModel;
+export function buildDashaTimingViewModel(
+  firstArg: BuildDashaTimingViewModelInput | AnalysisTemporalState | Horoscope,
+  careerTimingArg?: CareerTimingProduct | DomainInterpretation,
+  wealthTimingArg?: WealthTimingProduct | DomainInterpretation,
+  optionsArg?: BuildDashaTimingViewModelOptions
 ): DashaTimingViewModel {
-  const asOf = options?.asOf ?? horoscope.dashaInterpretation?.current?.at;
+  let temporalState: AnalysisTemporalState;
+  let horoscope: Horoscope | undefined;
+  let careerTiming: CareerTimingProduct | DomainInterpretation | undefined;
+  let wealthTiming: WealthTimingProduct | DomainInterpretation | undefined;
+  let options: BuildDashaTimingViewModelOptions | undefined;
 
-  // 1. Resolve Timeline from deterministic horoscope
-  // TODO(D01): Once upstream canonically consolidates to horoscope.dashaInterpretation,
-  // the fallbacks to vimshottari/fullNatalAnalysis can be removed.
+  if ('temporalState' in firstArg && firstArg.temporalState) {
+    temporalState = firstArg.temporalState;
+    horoscope = firstArg.horoscope;
+    careerTiming = firstArg.careerTiming;
+    wealthTiming = firstArg.wealthTiming;
+    options = firstArg.options;
+  } else if ('asOf' in firstArg && !('birthDetails' in firstArg)) {
+    temporalState = firstArg as AnalysisTemporalState;
+    careerTiming = careerTimingArg;
+    wealthTiming = wealthTimingArg;
+    options = optionsArg;
+  } else {
+    // Fallback for legacy calls passing (horoscope, careerTiming, wealthTiming, options)
+    const legacyHoro = firstArg as Horoscope;
+    horoscope = legacyHoro;
+    temporalState = {
+      asOf: optionsArg?.asOf ?? legacyHoro.dashaInterpretation?.current?.at ?? '',
+      dashaInterpretation: legacyHoro.dashaInterpretation
+    };
+    careerTiming = careerTimingArg;
+    wealthTiming = wealthTimingArg;
+    options = optionsArg;
+  }
+
+  const asOf = options?.asOf ?? temporalState.asOf;
+
+  // 1. Resolve Timeline from deterministic temporalState and horoscope fallbacks
   const rawMahadashas: readonly VimshottariMahadashaPeriod[] | undefined =
-    horoscope.dashaInterpretation?.mahadashas ??
-    horoscope.vimshottari?.mahadashas ??
-    horoscope.fullNatalAnalysis?.vimshottari?.mahadashas;
+    temporalState.dashaInterpretation?.mahadashas ??
+    horoscope?.vimshottari?.mahadashas ??
+    horoscope?.fullNatalAnalysis?.vimshottari?.mahadashas;
 
   const rawAnchor =
-    horoscope.dashaInterpretation?.birthAnchor ??
-    horoscope.vimshottari?.birthAnchor ??
-    horoscope.fullNatalAnalysis?.vimshottari?.birthAnchor;
+    temporalState.dashaInterpretation?.birthAnchor ??
+    horoscope?.vimshottari?.birthAnchor ??
+    horoscope?.fullNatalAnalysis?.vimshottari?.birthAnchor;
 
   let birthAnchor: DashaBirthAnchorProduct | undefined;
   if (rawAnchor && rawAnchor.nakshatra && rawAnchor.nakshatraLord) {
@@ -101,7 +150,7 @@ export function buildDashaTimingViewModel(
   const timelineAvailability = hasTimeline ? 'AVAILABLE' : 'UNAVAILABLE';
 
   // 2. Resolve Active Dasha Interpretation via D03 mapActiveDasha
-  const rawCurrent = horoscope.dashaInterpretation?.current;
+  const rawCurrent = temporalState.dashaInterpretation?.current;
   const interpretation = mapActiveDasha(rawCurrent);
 
   let current: DashaCurrentPeriodsProduct | undefined;

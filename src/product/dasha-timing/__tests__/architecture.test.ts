@@ -55,7 +55,7 @@ describe('Dasha & Timing Product Architecture Constraints', () => {
     const productFile = path.resolve(currentDir, '../buildDashaTimingViewModel.ts');
     const content = fs.readFileSync(productFile, 'utf8');
 
-    expect(content).toMatch(/asOf = options\?\.asOf \?\? horoscope\.dashaInterpretation\?\.current\?\.at/);
+    expect(content).toMatch(/asOf = options\?\.asOf \?\? temporalState\.asOf/);
     expect(content).not.toMatch(/new Date\(\)/);
   });
 });

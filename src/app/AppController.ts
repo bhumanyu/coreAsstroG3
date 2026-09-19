@@ -5,6 +5,9 @@ import type { AppPage } from './navigation/navigationTypes';
 import { ProductAnalysisService } from '../product/analysis';
 import { calculateHoroscope } from '../engine/astroEngine';
 import { buildDashaTimingViewModel } from '../product/dasha-timing';
+import { createAnalysisContext } from '../core/analysis/analysisContextFactory';
+import { resolveAnalysisTemporalState } from '../core/analysis/resolveAnalysisTemporalState';
+import { mapMethodology } from '../product/analysis/productAnalysisMapper';
 
 export interface AppController {
   navigate: (page: AppPage) => void;
@@ -51,13 +54,22 @@ export function createAppController(
 
       const pipelineState = service.lastPipelineState;
       const horoscope = service.lastHoroscope ?? calculateHoroscope(birthDetails);
-      const dashaTimingViewModel = horoscope
-        ? buildDashaTimingViewModel(
-            horoscope,
-            pipelineState?.analysis?.careerDetail?.timing,
-            pipelineState?.analysis?.wealthDetail?.timing
-          )
-        : undefined;
+      let dashaTimingViewModel;
+      if (horoscope) {
+        const context = createAnalysisContext({
+          asOf: analysis.asOf,
+          methodology: mapMethodology(birthDetails),
+          engineVersion: analysis.engineVersion,
+          rulesVersion: analysis.rulesVersion
+        });
+        const temporalState = resolveAnalysisTemporalState(horoscope, context);
+        dashaTimingViewModel = buildDashaTimingViewModel({
+          temporalState,
+          horoscope,
+          careerTiming: pipelineState?.analysis?.careerDetail?.timing,
+          wealthTiming: pipelineState?.analysis?.wealthDetail?.timing
+        });
+      }
 
       if (analysis.status === 'ERROR') {
         const errorMsg =

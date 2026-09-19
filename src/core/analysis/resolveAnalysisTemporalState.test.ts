@@ -75,4 +75,33 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
       state2.dashaInterpretation?.current?.mahadasha.planet
     );
   });
+
+  it('throws canonical error when context has empty string or invalid asOf date', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+    const emptyContext = createAnalysisContext({ asOf: '', methodology: testMethodology });
+    expect(() => resolveAnalysisTemporalState(horoscope, emptyContext)).toThrow(
+      /\[AnalysisTemporalState\] Invalid asOf timestamp: ""/
+    );
+
+    const invalidContext = createAnalysisContext({ asOf: 'not-a-valid-date', methodology: testMethodology });
+    expect(() => resolveAnalysisTemporalState(horoscope, invalidContext)).toThrow(
+      /\[AnalysisTemporalState\] Invalid asOf timestamp: "not-a-valid-date"/
+    );
+  });
+
+  it('succeeds and produces a valid ISO string when context asOf is undefined', () => {
+    const context = createAnalysisContext({ methodology: testMethodology });
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+    const state = resolveAnalysisTemporalState(horoscope, context);
+
+    expect(state.asOf).toBeDefined();
+    expect(typeof state.asOf).toBe('string');
+    expect(new Date(state.asOf).toISOString()).toBe(state.asOf);
+    expect(Object.isFrozen(state)).toBe(true);
+    if (state.dashaInterpretation) {
+      expect(Object.isFrozen(state.dashaInterpretation)).toBe(true);
+    }
+  });
 });
