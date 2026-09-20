@@ -152,6 +152,63 @@ describe('careerHouseRules', () => {
         dimension: 'NATAL_STRUCTURE'
       });
     });
+
+    it('preserves lord-in-house detection from house occupants when planet house is unavailable', () => {
+      const context: ThemeInterpretationContext = {
+        horoscope: {
+          planetFacts: {
+            MARS: { house: 5 } as any
+          },
+          bhavaFacts: {
+            6: {
+              lord: 'SATURN' as any,
+              occupants: []
+            } as any,
+
+            10: {
+              lord: 'MARS' as any,
+              occupants: ['SATURN' as any]
+            } as any
+          }
+        } as any,
+
+        houseInterpretation: {
+          houses: {
+            6: {
+              house: 6,
+              occupants: { planets: [] },
+              summary: {
+                supportingFactors: [],
+                challengingFactors: []
+              }
+            },
+
+            10: {
+              house: 10,
+              occupants: {
+                planets: ['SATURN' as any]
+              },
+              summary: {
+                supportingFactors: [],
+                challengingFactors: []
+              }
+            }
+          }
+        } as any,
+
+        natalGrahaDrishti: {
+          aspects: []
+        }
+      };
+
+      const rule = careerHouseRules.find(
+        (r) => r.id === 'CAREER_6H_10H_LINK_001'
+      )!;
+
+      const result = rule.evaluate(context);
+
+      expect(result.triggered).toBe(true);
+    });
   });
 
   describe('CAREER_10H_11H_LINK_001 regression', () => {

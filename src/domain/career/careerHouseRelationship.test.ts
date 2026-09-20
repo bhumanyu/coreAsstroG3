@@ -476,4 +476,69 @@ describe('Career house relationship semantics', () => {
       Object.isFrozen(relationships)
     ).toBe(true);
   });
+
+  it('preserves lord-in-house detection from house occupants when planet house is unavailable', () => {
+    const context: CareerHouseRelationshipContext = {
+      getHouseLord: (house) => {
+        if (house === 6) {
+          return 'SATURN' as Planet;
+        }
+
+        if (house === 10) {
+          return 'MARS' as Planet;
+        }
+
+        return undefined;
+      },
+
+      getPlanetHouse: (planet) => {
+        if (planet === 'SATURN') {
+          return undefined;
+        }
+
+        if (planet === 'MARS') {
+          return 5;
+        }
+
+        return undefined;
+      },
+
+      getHouseOccupants: (house) => {
+        if (house === 10) {
+          return ['SATURN' as Planet];
+        }
+
+        return [];
+      },
+
+      lordAspectsLord: () => false,
+
+      lordAspectsHouse: () => false
+    };
+
+    const relationships =
+      detectCareerHouseRelationships(
+        context,
+        6,
+        10
+      );
+
+    expect(
+      relationships.some(
+        (item) => item.type === 'LORD_IN_HOUSE'
+      )
+    ).toBe(true);
+
+    const lordInHouse = relationships.find(
+      (item) => item.type === 'LORD_IN_HOUSE'
+    );
+
+    expect(lordInHouse).toMatchObject({
+      type: 'LORD_IN_HOUSE',
+      houseA: 6,
+      houseB: 10,
+      lordA: 'SATURN',
+      lordB: 'MARS'
+    });
+  });
 });
