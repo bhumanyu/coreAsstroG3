@@ -89,9 +89,11 @@ Final Career Conclusion
 
 ---
 
-## Existing manifestation mapping
+## Career manifestation vocabulary
 
-Existing Career manifestation modes are:
+### Declared CareerManifestationMode vocabulary
+
+The type currently declares 11 possible modes:
 
 - LEADERSHIP
 - MANAGEMENT
@@ -104,6 +106,21 @@ Existing Career manifestation modes are:
 - SPECIALIZATION
 - EMPLOYMENT
 - ENTREPRENEURSHIP
+
+### Currently mapped manifestation modes
+
+The current CAREER_MANIFESTATION_RULES implementation maps only:
+
+- LEADERSHIP
+- MANAGEMENT
+- TECHNICAL_SPECIALIZATION
+- SERVICE_EMPLOYMENT
+- AUTHORITY
+- INDEPENDENT_WORK
+- BUSINESS_ENTREPRENEURSHIP
+
+The remaining declared union members are not treated as implemented
+manifestation mappings by C1.
 
 The existing manifestation rule mapping remains authoritative for C1.
 

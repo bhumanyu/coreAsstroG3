@@ -64,6 +64,16 @@ describe('CW-R1 C1 — Career semantic source registry', () => {
     });
   });
 
+  it('enforces exact ownership for critical structural boundaries', () => {
+    expect(
+      getCareerSemanticSource('CAREER_10H_STRONG_001')
+    ).toMatchObject({
+      ruleId: 'CAREER_10H_STRONG_001',
+      ownership: ['STRUCTURAL', 'CONDITION'],
+      status: 'EXISTING'
+    });
+  });
+
   it('returns undefined for an unknown rule', () => {
     expect(
       getCareerSemanticSource('CAREER_UNKNOWN_RULE_999')
@@ -110,7 +120,7 @@ describe('CW-R1 C1 — Career semantic source registry', () => {
       'CAREER_D10_CONFIRMATION_001'
     );
 
-    expect(source?.ownership).toContain('QUALIFICATION');
+    expect(source?.ownership).toEqual(['QUALIFICATION']);
     expect(source?.status).toBe('EXISTING');
   });
 
@@ -119,8 +129,7 @@ describe('CW-R1 C1 — Career semantic source registry', () => {
       'CAREER_DASHA_TIMING_001'
     );
 
-    expect(source?.ownership).toContain('TIMING');
-    expect(source?.ownership).not.toContain('STRUCTURAL');
+    expect(source?.ownership).toEqual(['TIMING']);
   });
 
   it('identifies Yoga as qualification/confirmation', () => {
@@ -128,7 +137,7 @@ describe('CW-R1 C1 — Career semantic source registry', () => {
       'CAREER_YOGA_CONFIRMATION_001'
     );
 
-    expect(source?.ownership).toContain('QUALIFICATION');
+    expect(source?.ownership).toEqual(['RELEVANCE', 'QUALIFICATION']);
   });
 
   it('does not expose mutable registry state', () => {

@@ -40,6 +40,12 @@ export interface CareerSemanticSource {
   readonly ownership: readonly CareerSemanticOwnership[];
   readonly currentMeaning: string;
   readonly status: CareerSemanticImplementationStatus;
+  /**
+   * Architectural guardrail/documentation only.
+   *
+   * This list is not a runtime dependency validator.
+   * Future implementation PRs must respect this ownership boundary.
+   */
   readonly mustNotBeDuplicatedBy: readonly string[];
 }
 

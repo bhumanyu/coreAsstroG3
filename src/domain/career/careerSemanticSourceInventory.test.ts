@@ -74,6 +74,20 @@ describe('CW-R1 C1 — Career semantic source inventory', () => {
     ]);
   });
 
+  it('contains no duplicate rule ids across Career rule producers', () => {
+    const actualIds = [
+      ...ruleIds(careerHouseRules),
+      ...ruleIds(careerLordRules),
+      ...ruleIds(careerPlanetRules),
+      ...ruleIds(careerAspectRules),
+      ...ruleIds(careerYogaRules),
+      ...ruleIds(careerVargaRules),
+      ...ruleIds(careerDashaRules)
+    ];
+
+    expect(new Set(actualIds).size).toBe(actualIds.length);
+  });
+
   it('ensures every audited rule is backed by an actual rule source', () => {
     const actualIds = [
       ...ruleIds(careerHouseRules),
