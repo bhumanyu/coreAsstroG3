@@ -17,6 +17,10 @@ import {
   resolveNatalPromise
 } from '../reasoning/reasoningConclusion';
 import {
+  deduplicateReasoningEvidence,
+  canonicalToWeighted
+} from '../reasoning/deduplicateEvidence';
+import {
   resolveDashaHierarchy,
   type DashaTimingEvidence
 } from '../reasoning/dashaHierarchy';
@@ -77,7 +81,12 @@ export function evaluateWealthDimension(
   });
 
   const weighted = classifyReasoningEvidence(dimEvidence);
-  const natalPromise = resolveNatalPromise(weighted);
+
+  // Deduplicate evidence by canonical identity for dimension evaluation
+  const deduplicatedDimEvidence = deduplicateReasoningEvidence(weighted);
+  const deduplicatedDimWeighted = canonicalToWeighted(deduplicatedDimEvidence);
+
+  const natalPromise = resolveNatalPromise(deduplicatedDimWeighted);
 
   const mdTiming: DashaTimingEvidence = dashaTimings?.md ?? {
     level: 'MD',
@@ -198,8 +207,14 @@ export function evaluateWealthReasoningHierarchy(params: {
 
   // 1. Classify evidence into reasoning layers and build trace
   const weightedEvidence = classifyReasoningEvidence(evidence);
-  const reasoningTrace = buildReasoningTrace(weightedEvidence);
-  const layerSummaries = summarizeLayers(weightedEvidence);
+
+  // Deduplicate evidence by canonical identity to ensure the same semantic fact
+  // contributes once regardless of how many representations/layers reference it
+  const deduplicatedEvidence = deduplicateReasoningEvidence(weightedEvidence);
+  const deduplicatedWeighted = canonicalToWeighted(deduplicatedEvidence);
+
+  const reasoningTrace = buildReasoningTrace(deduplicatedWeighted);
+  const layerSummaries = summarizeLayers(deduplicatedWeighted);
 
   // 2. Evaluate 4 dimensions independently
   const accumulationResult = evaluateWealthDimension('ACCUMULATION', evidence, dashaTimings);
@@ -216,7 +231,7 @@ export function evaluateWealthReasoningHierarchy(params: {
 
   // 3. Resolve Natal Promise (Overall)
   // Excludes speculation from weakening core accumulation/gains
-  const natalPromiseResult = resolveNatalPromise(weightedEvidence);
+  const natalPromiseResult = resolveNatalPromise(deduplicatedWeighted);
 
   // 4. D2 Varga Confirmation is explicitly UNAVAILABLE (per CW-01 §22)
   const vargaDirection: ReasoningDirection = 'UNAVAILABLE';
@@ -300,19 +315,19 @@ export function evaluateWealthReasoningHierarchy(params: {
   });
 
   // Collect evidence IDs
-  const primaryEvidenceIds = weightedEvidence
+  const primaryEvidenceIds = deduplicatedWeighted
     .filter((e) => e.layer === 'PRIMARY_PROMISE')
     .map((e) => e.evidenceId);
 
-  const supportingEvidenceIds = weightedEvidence
+  const supportingEvidenceIds = deduplicatedWeighted
     .filter((e) => e.direction === 'SUPPORT')
     .map((e) => e.evidenceId);
 
-  const challengingEvidenceIds = weightedEvidence
+  const challengingEvidenceIds = deduplicatedWeighted
     .filter((e) => e.direction === 'CHALLENGE')
     .map((e) => e.evidenceId);
 
-  const unresolvedEvidenceIds = weightedEvidence
+  const unresolvedEvidenceIds = deduplicatedWeighted
     .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
     .map((e) => e.evidenceId);
 

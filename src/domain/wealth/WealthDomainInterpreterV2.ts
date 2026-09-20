@@ -4,8 +4,10 @@ import {
   WealthEvidenceFamily,
   type WealthEvidence
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import { mapDashaInterpretationToActiveDashaState } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
-import type { ActiveDashaTimingContext } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import {
+  mapDashaInterpretationToActiveDashaTimingContext,
+  type ActiveDashaTimingContext
+} from '../../core/analysis';
 import {
   buildDomainInterpretation,
   createDomainEvidence,
@@ -393,7 +395,7 @@ export function interpretWealthV2(
 
   let wealthTimingSynthesis: WealthTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = mapDashaInterpretationToActiveDashaState(options.temporalState.dashaInterpretation);
+    const activeDashaState = mapDashaInterpretationToActiveDashaTimingContext(options.temporalState.dashaInterpretation);
     const mapActivationToEffect = (eff: string): 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' => {
       if (eff === 'ACTIVATES' || eff === 'PARTIALLY_ACTIVATES') return 'SUPPORTS';
       if (eff === 'CHALLENGES') return 'CHALLENGES';

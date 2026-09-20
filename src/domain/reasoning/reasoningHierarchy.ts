@@ -11,6 +11,7 @@ import {
   EVIDENCE_STRENGTH_WEIGHTS,
   REASONING_LAYER_WEIGHTS
 } from './reasoningWeights';
+import { buildEvidenceIdentityKey } from '../careerWealth/provenance/evidenceIdentity';
 
 export function resolveLayer(
   evidence: DomainEvidence
@@ -112,7 +113,39 @@ export function classifyReasoningEvidence(
       const layerWeight =
         REASONING_LAYER_WEIGHTS[layer] ?? 1.0;
 
+      // Derive identity key from provenance if available, otherwise from evidence fields
+      let identityKey: string;
+      if (item.provenance) {
+        identityKey = buildEvidenceIdentityKey({
+          domain: item.provenance.domain,
+          axis: item.provenance.axis,
+          source: item.provenance.source,
+          ruleId: item.provenance.ruleId,
+          subjectKey: item.planet ? item.planet : (item.house ? `HOUSE_${item.house}` : 'UNKNOWN'),
+          objectKey: undefined
+        });
+      } else if (item.ruleId) {
+        // Fallback: construct identity key from available fields
+        identityKey = buildEvidenceIdentityKey({
+          domain: item.domain === 'CAREER' ? 'CAREER' : 'WEALTH',
+          axis: item.phase === 'NATAL_PROMISE' ? 'NATAL' :
+            item.phase === 'DASHA_ACTIVATION' ? 'DASHA' :
+              item.phase === 'TRANSIT_TRIGGER' ? 'TIMING' : 'NATAL',
+          source: item.source === 'D1' ? 'D1' :
+            item.source === 'D10' ? 'D10' :
+              item.source === 'D2' ? 'D2' :
+                item.source === 'DASHA' ? 'DASHA' : 'D1',
+          ruleId: item.ruleId,
+          subjectKey: item.planet ? item.planet : (item.house ? `HOUSE_${item.house}` : 'UNKNOWN'),
+          objectKey: undefined
+        });
+      } else {
+        // Ultimate fallback: use evidenceId as identity
+        identityKey = item.id;
+      }
+
       return Object.freeze({
+        identityKey,
         evidenceId: item.id,
         ...(item.ruleId ? { ruleId: item.ruleId } : {}),
         layer,

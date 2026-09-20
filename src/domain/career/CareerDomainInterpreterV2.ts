@@ -4,8 +4,10 @@ import {
   CareerEvidenceFamily,
   type ThemeInterpretationEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
-import { mapDashaInterpretationToActiveDashaState } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
-import type { ActiveDashaTimingContext } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import {
+  mapDashaInterpretationToActiveDashaTimingContext,
+  type ActiveDashaTimingContext
+} from '../../core/analysis';
 import {
   buildDomainInterpretation,
   createDomainEvidence,
@@ -283,7 +285,7 @@ export function interpretCareerV2(
 
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = mapDashaInterpretationToActiveDashaState(options.temporalState.dashaInterpretation);
+    const activeDashaState = mapDashaInterpretationToActiveDashaTimingContext(options.temporalState.dashaInterpretation);
     const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
     careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
   } else {

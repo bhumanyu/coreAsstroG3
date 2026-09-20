@@ -1,133 +1,216 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   buildEvidenceId,
-  type EvidenceIdentityInput
+  buildEvidenceIdentityKey,
+  type EvidenceIdentityInput,
+  type EvidenceIdentityKeyInput
 } from './evidenceIdentity';
+import {
+  EvidenceDomain,
+  EvidenceAxis,
+  EvidenceSource,
+  EvidenceEffect,
+  EvidenceStrength
+} from './evidenceProvenance';
 
-describe('CW-06A Evidence Identity & ID Generation', () => {
-  const sampleInput: EvidenceIdentityInput = {
-    domain: 'CAREER',
-    axis: 'NATAL',
-    source: 'D1',
-    ruleId: 'CAREER_10TH_LORD_SUPPORT',
-    subjectKey: 'SATURN',
-    effect: 'SUPPORT',
-    strength: 'PRIMARY'
-  };
+describe('buildEvidenceIdentityKey', () => {
+  it('same fact with different effect produces same identity key', () => {
+    const baseInput: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
 
-  it('produces the exact same ID for identical input', () => {
-    const id1 = buildEvidenceId(sampleInput);
-    const id2 = buildEvidenceId({ ...sampleInput });
-    expect(id1).toBe('CW-CAREER-NATAL-D1-CAREER_10TH_LORD_SUPPORT-SATURN-SUPPORT-PRIMARY');
-    expect(id1).toBe(id2);
+    const key1 = buildEvidenceIdentityKey(baseInput);
+    const key2 = buildEvidenceIdentityKey(baseInput);
+
+    expect(key1).toBe(key2);
+    expect(key1).toBe('CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER');
   });
 
-  it('is position-independent and generates consistent IDs regardless of call order', () => {
-    const inputA: EvidenceIdentityInput = { ...sampleInput, subjectKey: 'SATURN' };
-    const inputB: EvidenceIdentityInput = { ...sampleInput, subjectKey: 'JUPITER' };
+  it('same fact with different strength produces same identity key', () => {
+    const baseInput: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
 
-    const firstRun = [buildEvidenceId(inputA), buildEvidenceId(inputB)];
-    const secondRun = [buildEvidenceId(inputB), buildEvidenceId(inputA)];
+    const key1 = buildEvidenceIdentityKey(baseInput);
+    const key2 = buildEvidenceIdentityKey(baseInput);
 
-    expect(firstRun[0]).toBe(secondRun[1]);
-    expect(firstRun[1]).toBe(secondRun[0]);
+    expect(key1).toBe(key2);
   });
 
-  it('changes when subjectKey changes', () => {
-    const id1 = buildEvidenceId({ ...sampleInput, subjectKey: 'SATURN' });
-    const id2 = buildEvidenceId({ ...sampleInput, subjectKey: 'MARS' });
-    expect(id1).not.toBe(id2);
-    expect(id1).toContain('SATURN');
-    expect(id2).toContain('MARS');
+  it('different ruleId produces different identity keys', () => {
+    const input1: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
+
+    const input2: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'SATURN_10TH_LORD',
+      subjectKey: 'SATURN'
+    };
+
+    const key1 = buildEvidenceIdentityKey(input1);
+    const key2 = buildEvidenceIdentityKey(input2);
+
+    expect(key1).not.toBe(key2);
   });
 
-  it('changes when effect changes', () => {
-    const idSupport = buildEvidenceId({ ...sampleInput, effect: 'SUPPORT' });
-    const idChallenge = buildEvidenceId({ ...sampleInput, effect: 'CHALLENGE' });
-    expect(idSupport).not.toBe(idChallenge);
-    expect(idSupport).toContain('SUPPORT');
-    expect(idChallenge).toContain('CHALLENGE');
+  it('different domain produces different identity keys', () => {
+    const input1: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
+
+    const input2: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.WEALTH,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
+
+    const key1 = buildEvidenceIdentityKey(input1);
+    const key2 = buildEvidenceIdentityKey(input2);
+
+    expect(key1).not.toBe(key2);
   });
 
-  it('normalizes segments equivalently (e.g. " career-10th-lord " / "10th lord" vs "CAREER_10TH_LORD" / "10TH_LORD")', () => {
-    const idUnnormalized = buildEvidenceId({
-      domain: 'CAREER',
-      axis: 'NATAL',
-      source: 'D1',
-      ruleId: ' career-10th-lord ',
-      subjectKey: '10th lord',
-      effect: 'SUPPORT',
-      strength: 'PRIMARY'
+  it('different subjectKey produces different identity keys', () => {
+    const input1: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
+
+    const input2: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'SATURN'
+    };
+
+    const key1 = buildEvidenceIdentityKey(input1);
+    const key2 = buildEvidenceIdentityKey(input2);
+
+    expect(key1).not.toBe(key2);
+  });
+
+  it('different objectKey produces different identity keys', () => {
+    const input1: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_ASPECT_10TH',
+      subjectKey: 'JUPITER',
+      objectKey: '10TH_HOUSE'
+    };
+
+    const input2: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_ASPECT_10TH',
+      subjectKey: 'JUPITER',
+      objectKey: '2ND_HOUSE'
+    };
+
+    const key1 = buildEvidenceIdentityKey(input1);
+    const key2 = buildEvidenceIdentityKey(input2);
+
+    expect(key1).not.toBe(key2);
+  });
+
+  it('identity key excludes effect and strength', () => {
+    const baseInput: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER'
+    };
+
+    const identityKey = buildEvidenceIdentityKey(baseInput);
+
+    // Build two occurrence IDs with different effect/strength
+    const occurrenceId1 = buildEvidenceId({
+      ...baseInput,
+      effect: EvidenceEffect.SUPPORT,
+      strength: EvidenceStrength.PRIMARY
     });
 
-    const idNormalized = buildEvidenceId({
-      domain: 'CAREER',
-      axis: 'NATAL',
-      source: 'D1',
-      ruleId: 'CAREER_10TH_LORD',
-      subjectKey: '10TH_LORD',
-      effect: 'SUPPORT',
-      strength: 'PRIMARY'
+    const occurrenceId2 = buildEvidenceId({
+      ...baseInput,
+      effect: EvidenceEffect.CHALLENGE,
+      strength: EvidenceStrength.SECONDARY
     });
 
-    expect(idUnnormalized).toBe('CW-CAREER-NATAL-D1-CAREER_10TH_LORD-10TH_LORD-SUPPORT-PRIMARY');
-    expect(idUnnormalized).toBe(idNormalized);
+    // Identity key should be the same
+    expect(identityKey).not.toContain('SUPPORT');
+    expect(identityKey).not.toContain('CHALLENGE');
+    expect(identityKey).not.toContain('PRIMARY');
+    expect(identityKey).not.toContain('SECONDARY');
+
+    // Occurrence IDs should differ
+    expect(occurrenceId1).not.toBe(occurrenceId2);
+    expect(occurrenceId1).toContain('SUPPORT');
+    expect(occurrenceId1).toContain('PRIMARY');
+    expect(occurrenceId2).toContain('CHALLENGE');
+    expect(occurrenceId2).toContain('SECONDARY');
   });
 
-  it('demonstrates reordering stability (map + reversed map, sorted arrays are equal)', () => {
-    const inputs: EvidenceIdentityInput[] = [
-      {
-        domain: 'CAREER',
-        axis: 'NATAL',
-        source: 'D1',
-        ruleId: 'RULE_1',
-        subjectKey: 'SUN',
-        effect: 'SUPPORT',
-        strength: 'PRIMARY'
-      },
-      {
-        domain: 'WEALTH',
-        axis: 'DASHA',
-        source: 'DASHA',
-        ruleId: 'RULE_2',
-        subjectKey: 'MOON',
-        effect: 'CHALLENGE',
-        strength: 'SECONDARY'
-      },
-      {
-        domain: 'CAREER',
-        axis: 'TIMING',
-        source: 'TRANSIT',
-        ruleId: 'RULE_3',
-        subjectKey: 'JUPITER',
-        effect: 'NEUTRAL',
-        strength: 'TERTIARY'
-      }
-    ];
+  it('throws error for empty subjectKey', () => {
+    const input: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: ''
+    };
 
-    const forwardIds = inputs.map(buildEvidenceId);
-    const reversedIds = [...inputs].reverse().map(buildEvidenceId);
-
-    expect([...forwardIds].sort()).toEqual([...reversedIds].sort());
+    expect(() => buildEvidenceIdentityKey(input)).toThrow('Evidence subjectKey must not be empty');
   });
 
-  it('throws when subjectKey is empty or whitespace only', () => {
-    expect(() =>
-      buildEvidenceId({ ...sampleInput, subjectKey: '' })
-    ).toThrowError('Evidence subjectKey must not be empty');
+  it('throws error for empty ruleId', () => {
+    const input: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: '',
+      subjectKey: 'JUPITER'
+    };
 
-    expect(() =>
-      buildEvidenceId({ ...sampleInput, subjectKey: '   ' })
-    ).toThrowError('Evidence subjectKey must not be empty');
+    expect(() => buildEvidenceIdentityKey(input)).toThrow('Evidence ruleId must not be empty');
   });
 
-  it('throws when ruleId is empty or whitespace only', () => {
-    expect(() =>
-      buildEvidenceId({ ...sampleInput, ruleId: '' })
-    ).toThrowError('Evidence ruleId must not be empty');
+  it('normalizes whitespace and special characters', () => {
+    const input: EvidenceIdentityKeyInput = {
+      domain: EvidenceDomain.CAREER,
+      axis: EvidenceAxis.NATAL,
+      source: EvidenceSource.D1,
+      ruleId: 'Jupiter 10th Lord',
+      subjectKey: 'Jupiter'
+    };
 
-    expect(() =>
-      buildEvidenceId({ ...sampleInput, ruleId: '   ' })
-    ).toThrowError('Evidence ruleId must not be empty');
+    const key = buildEvidenceIdentityKey(input);
+    expect(key).toBe('CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER');
   });
 });

@@ -11,3 +11,7 @@ export { analysisAsOfDate, analysisAsOfEpochMs } from './analysisTime';
 export { type Clock, systemClock } from './Clock';
 export type { AnalysisTemporalState } from './AnalysisTemporalState';
 export { resolveAnalysisTemporalState } from './resolveAnalysisTemporalState';
+export {
+  mapDashaInterpretationToActiveDashaTimingContext,
+  type ActiveDashaTimingContext
+} from './mapDashaInterpretationToActiveDashaTimingContext';

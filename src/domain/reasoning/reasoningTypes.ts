@@ -59,6 +59,7 @@ export type EvidenceStrength =
   | 'WEAK';
 
 export interface WeightedReasoningEvidence {
+  readonly identityKey: string;
   readonly evidenceId: string;
   readonly ruleId?: string;
   readonly layer: ReasoningLayer;

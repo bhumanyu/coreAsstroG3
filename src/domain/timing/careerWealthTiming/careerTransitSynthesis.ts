@@ -1,5 +1,5 @@
 import { Planet, AyanamsaType, type Horoscope } from '../../../types';
-import type { ActiveDashaTimingContext } from '../../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import type { ActiveDashaTimingContext } from '../../../core/analysis';
 import { calculateTransit } from '../../../engine/transitEngine';
 import { calculateCurrentTransitPositions } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
