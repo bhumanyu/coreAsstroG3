@@ -119,6 +119,22 @@ export interface CareerHouseRelationshipContext {
   ) => boolean;
 }
 
+function isPlanetInHouse(
+  context: CareerHouseRelationshipContext,
+  planet: Planet,
+  house: number
+): boolean {
+  const planetHouse = context.getPlanetHouse(planet);
+
+  if (planetHouse !== undefined) {
+    return planetHouse === house;
+  }
+
+  return context
+    .getHouseOccupants(house)
+    .includes(planet);
+}
+
 export function detectCareerHouseRelationships(
   context: CareerHouseRelationshipContext,
   houseA: number,
@@ -151,8 +167,8 @@ export function detectCareerHouseRelationships(
   const lordAHouse = context.getPlanetHouse(lordA);
   const lordBHouse = context.getPlanetHouse(lordB);
 
-  const lordAInB = lordAHouse === houseB;
-  const lordBInA = lordBHouse === houseA;
+  const lordAInB = isPlanetInHouse(context, lordA, houseB);
+  const lordBInA = isPlanetInHouse(context, lordB, houseA);
 
   /*
    * 2. Mutual placement / exchange
@@ -283,10 +299,17 @@ export function detectCareerHouseRelationships(
   }
 
   return Object.freeze(
-    [...unique.values()].sort(
-      (a, b) =>
+    [...unique.values()].sort((a, b) => {
+      const priorityDifference =
         CAREER_HOUSE_RELATIONSHIP_PRIORITY[b.type] -
-        CAREER_HOUSE_RELATIONSHIP_PRIORITY[a.type]
-    )
+        CAREER_HOUSE_RELATIONSHIP_PRIORITY[a.type];
+
+      if (priorityDifference !== 0) {
+        return priorityDifference;
+      }
+
+      return careerHouseRelationshipKey(a)
+        .localeCompare(careerHouseRelationshipKey(b));
+    })
   );
 }
