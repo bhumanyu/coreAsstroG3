@@ -133,10 +133,17 @@ function isPlanetAvailableForExpression(
     planetContext.condition !== 'UNAVAILABLE';
 }
 
-function hasStructuralSupport(context: CareerExpressionContext): boolean {
+function hasCareerStructuralContext(context: CareerExpressionContext): boolean {
   return context.structuralDirection === 'SUPPORT' ||
     context.structuralDirection === 'MIXED' ||
     context.structuralDirection === 'CHALLENGE';
+}
+
+function hasCareerStructuralSupport(context: CareerExpressionContext): boolean {
+  return (
+    context.structuralDirection === 'SUPPORT' ||
+    context.structuralDirection === 'MIXED'
+  ) && context.structuralPrimarySupport > 0;
 }
 
 function getPlanetContext(
@@ -159,7 +166,7 @@ function createTechnicalSpecializationEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Mercury/Mars relevant + 6H or 10H
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -214,7 +221,7 @@ function createServiceEmploymentEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Saturn + 6H + 10H
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -247,7 +254,7 @@ function createEmploymentEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + 6H + 10H (no Saturn requirement)
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -282,7 +289,7 @@ function createManagementEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Jupiter + 10H
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -317,7 +324,7 @@ function createLeadershipEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Sun + 10H + additional structural signal
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -353,7 +360,7 @@ function createAuthorityEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Sun or Saturn + 10H
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -402,7 +409,7 @@ function createSpecializationEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Mercury + specialized house context
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -440,7 +447,7 @@ function createPublicInstitutionalEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Jupiter + 10H + government/institutional context
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -475,7 +482,7 @@ function createIndependentWorkEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Mercury/Venus + 11H
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -520,8 +527,8 @@ function createIndependentWorkEvidence(
 function createEntrepreneurshipEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
-  // Prerequisites: structural support + Mars/Jupiter + 11H + business structure
-  if (!hasStructuralSupport(context)) {
+  // Prerequisites: structural support + Mars/Jupiter + 11H + business house (2H/7H/11H) + supporting condition
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
@@ -540,16 +547,15 @@ function createEntrepreneurshipEvidence(
     return undefined;
   }
 
-  // Multi-factor evidence: need multiple planets OR single planet with 2H/7H + strong condition
-  const hasMultiplePlanets = businessPlanets.length >= 2;
-  const hasWealthHouse = businessPlanets.some(p =>
-    hasHouseInSet(p.relatedHouses, new Set<number>([2, 7]))
+  // Multi-factor evidence: need business house (2H/7H/11H) AND supporting condition
+  const hasBusinessHouse = businessPlanets.some(p =>
+    hasHouseInSet(p.relatedHouses, new Set<number>([2, 7, 11]))
   );
-  const hasStrongCondition = businessPlanets.some(p =>
+  const hasSupportingCondition = businessPlanets.some(p =>
     p.condition === 'STRONG' || p.condition === 'MODERATE'
   );
 
-  if (!hasMultiplePlanets && !(hasWealthHouse && hasStrongCondition)) {
+  if (!hasBusinessHouse || !hasSupportingCondition) {
     return undefined;
   }
 
@@ -560,7 +566,7 @@ function createEntrepreneurshipEvidence(
     id: CAREER_EXPRESSION_RULE_IDS.ENTREPRENEURSHIP,
     mode: 'ENTREPRENEURSHIP',
     role: 'PLANETARY',
-    statement: `Entrepreneurship indicated by ${involvedPlanets.join(', ')} in 11H with business structure.`,
+    statement: `Entrepreneurship indicated by ${involvedPlanets.join(', ')} in 11H with business house and supporting condition.`,
     weight: 2,
     planets: Object.freeze(involvedPlanets),
     houses: Object.freeze(Array.from(new Set(involvedHouses)))
@@ -571,7 +577,7 @@ function createBusinessEntrepreneurshipEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
   // Prerequisites: structural support + Mars/Jupiter + 7H + 11H + strong business structure
-  if (!hasStructuralSupport(context)) {
+  if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 

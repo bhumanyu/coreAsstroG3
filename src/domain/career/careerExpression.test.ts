@@ -797,7 +797,7 @@ describe('Career Expression (C8)', () => {
   });
 
   describe('Entrepreneurship multi-factor requirements', () => {
-    it('single planet should yield CONDITIONAL or UNAVAILABLE for ENTREPRENEURSHIP', () => {
+    it('single planet without business house should yield UNAVAILABLE for ENTREPRENEURSHIP', () => {
       const context: CareerExpressionContext = {
         structuralDirection: 'SUPPORT',
         structuralStrength: 'STRONG',
@@ -822,7 +822,58 @@ describe('Career Expression (C8)', () => {
       expect(entrepreneurshipExpr).toBeUndefined();
     });
 
-    it('insufficient business structure should yield CONDITIONAL for BUSINESS_ENTREPRENEURSHIP', () => {
+    it('single planet with business house and strong condition should yield ENTREPRENEURSHIP', () => {
+      const context: CareerExpressionContext = {
+        structuralDirection: 'SUPPORT',
+        structuralStrength: 'STRONG',
+        structuralPrimarySupport: 3,
+        structuralPrimaryChallenge: 0,
+        relevantPlanets: Object.freeze([
+          {
+            planet: Planet.MARS,
+            relevance: 'PRIMARY' as CareerPlanetRelevance,
+            roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
+            effect: 'SUPPORT' as CareerPlanetEffect,
+            condition: 'STRONG' as CareerPlanetaryCondition,
+            relatedHouses: Object.freeze([11, 2]),
+            relatedPlanets: Object.freeze([])
+          }
+        ])
+      };
+
+      const result = resolveCareerExpression(context);
+
+      const entrepreneurshipExpr = result.expressions.find(e => e.mode === 'ENTREPRENEURSHIP');
+      expect(entrepreneurshipExpr).toBeDefined();
+      expect(entrepreneurshipExpr?.direction).toBe('SUPPORTED');
+    });
+
+    it('single planet with business house but weak condition should yield UNAVAILABLE for ENTREPRENEURSHIP', () => {
+      const context: CareerExpressionContext = {
+        structuralDirection: 'SUPPORT',
+        structuralStrength: 'STRONG',
+        structuralPrimarySupport: 3,
+        structuralPrimaryChallenge: 0,
+        relevantPlanets: Object.freeze([
+          {
+            planet: Planet.MARS,
+            relevance: 'PRIMARY' as CareerPlanetRelevance,
+            roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
+            effect: 'SUPPORT' as CareerPlanetEffect,
+            condition: 'WEAK' as CareerPlanetaryCondition,
+            relatedHouses: Object.freeze([11, 2]),
+            relatedPlanets: Object.freeze([])
+          }
+        ])
+      };
+
+      const result = resolveCareerExpression(context);
+
+      const entrepreneurshipExpr = result.expressions.find(e => e.mode === 'ENTREPRENEURSHIP');
+      expect(entrepreneurshipExpr).toBeUndefined();
+    });
+
+    it('insufficient business structure should yield UNAVAILABLE for BUSINESS_ENTREPRENEURSHIP', () => {
       const context: CareerExpressionContext = {
         structuralDirection: 'SUPPORT',
         structuralStrength: 'STRONG',
