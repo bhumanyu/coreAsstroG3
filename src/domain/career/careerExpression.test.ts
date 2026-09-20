@@ -59,7 +59,7 @@ describe('Career Expression (C8)', () => {
 
       expect(result.expressions).toEqual(Object.freeze([]));
       expect(result.primaryExpression).toBeUndefined();
-      expect(result.statement).toContain('UNAVAILABLE');
+      expect(result.statement).toContain('unavailable');
     });
 
     it('should return no expression from secondary planetary evidence alone', () => {
@@ -883,7 +883,7 @@ describe('Career Expression (C8)', () => {
       expect(result.primaryExpression?.mode).toBe('LEADERSHIP');
     });
 
-    it('should return undefined on ties (no invented winner)', () => {
+    it('should select the higher semantic hierarchy when expressions differ', () => {
       const context: CareerExpressionContext = {
         structuralDirection: 'SUPPORT',
         structuralStrength: 'STRONG',
@@ -917,6 +917,7 @@ describe('Career Expression (C8)', () => {
       // Since they're at different hierarchy levels, the higher one should win
       // This test verifies the hierarchy is respected
       expect(result.primaryExpression).toBeDefined();
+      expect(result.primaryExpression?.mode).toBe('MANAGEMENT');
     });
   });
 

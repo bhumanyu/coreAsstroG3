@@ -87,7 +87,7 @@ export interface CareerExpressionContext {
 
 // Rule Infrastructure
 
-const CAREER_EXPRESSION_RULE_IDS = Object.freeze({
+export const CAREER_EXPRESSION_RULE_IDS = Object.freeze({
   TECHNICAL_SPECIALIZATION: 'CAREER.EXPRESSION.TECHNICAL_SPECIALIZATION',
   SERVICE_EMPLOYMENT: 'CAREER.EXPRESSION.SERVICE_EMPLOYMENT',
   EMPLOYMENT: 'CAREER.EXPRESSION.EMPLOYMENT',
@@ -135,12 +135,8 @@ function isPlanetAvailableForExpression(
 
 function hasStructuralSupport(context: CareerExpressionContext): boolean {
   return context.structuralDirection === 'SUPPORT' ||
-    context.structuralDirection === 'MIXED';
-}
-
-function hasAnyStructuralEvidence(context: CareerExpressionContext): boolean {
-  return context.structuralPrimarySupport > 0 ||
-    context.structuralPrimaryChallenge > 0;
+    context.structuralDirection === 'MIXED' ||
+    context.structuralDirection === 'CHALLENGE';
 }
 
 function getPlanetContext(
@@ -148,39 +144,6 @@ function getPlanetContext(
   planet: Planet
 ): CareerExpressionPlanetContext | undefined {
   return context.relevantPlanets.find(p => p.planet === planet);
-}
-
-function getPlanetCondition(
-  context: CareerExpressionContext,
-  planet: Planet
-): CareerPlanetaryCondition {
-  const planetContext = getPlanetContext(context, planet);
-  if (!planetContext || !isPlanetAvailableForExpression(planetContext)) {
-    return 'UNAVAILABLE';
-  }
-  return planetContext.condition;
-}
-
-function getPlanetRelevance(
-  context: CareerExpressionContext,
-  planet: Planet
-): CareerPlanetRelevance {
-  const planetContext = getPlanetContext(context, planet);
-  if (!planetContext) {
-    return 'NEUTRAL';
-  }
-  return planetContext.relevance;
-}
-
-function getPlanetRelatedHouses(
-  context: CareerExpressionContext,
-  planet: Planet
-): readonly number[] {
-  const planetContext = getPlanetContext(context, planet);
-  if (!planetContext) {
-    return Object.freeze([]);
-  }
-  return planetContext.relatedHouses;
 }
 
 function hasHouseInSet(
@@ -577,7 +540,8 @@ function createEntrepreneurshipEvidence(
     return undefined;
   }
 
-  // Multi-factor evidence: need 2H (wealth) or 7H (partnership) or strong condition
+  // Multi-factor evidence: need multiple planets OR single planet with 2H/7H + strong condition
+  const hasMultiplePlanets = businessPlanets.length >= 2;
   const hasWealthHouse = businessPlanets.some(p =>
     hasHouseInSet(p.relatedHouses, new Set<number>([2, 7]))
   );
@@ -585,7 +549,7 @@ function createEntrepreneurshipEvidence(
     p.condition === 'STRONG' || p.condition === 'MODERATE'
   );
 
-  if (!hasWealthHouse && !hasStrongCondition) {
+  if (!hasMultiplePlanets && !(hasWealthHouse && hasStrongCondition)) {
     return undefined;
   }
 
@@ -739,9 +703,14 @@ function resolveDirection(
     return 'UNAVAILABLE';
   }
 
-  const hasStructuralEvidence = evidence.some(e => e.role === 'STRUCTURAL');
+  // Use C4 structural context instead of checking evidence role
+  // Structural prerequisite exists in context, not in the evidence object itself
+  const hasUsableCareerStructure = (
+    context.structuralDirection === 'SUPPORT' ||
+    context.structuralDirection === 'MIXED'
+  ) && context.structuralPrimarySupport > 0;
 
-  if (!hasStructuralEvidence) {
+  if (!hasUsableCareerStructure) {
     return 'CONDITIONAL';
   }
 
@@ -842,8 +811,8 @@ function resolveStrength(
   return 'MODERATE';
 }
 
-// Deduplicate evidence by planet identity
-function deduplicateEvidence(
+// Deduplicate evidence by planet identity within a single mode
+function deduplicateEvidenceByMode(
   evidence: readonly CareerExpressionEvidence[]
 ): readonly CareerExpressionEvidence[] {
   const seenPlanets = new Set<Planet>();
@@ -953,6 +922,10 @@ export function resolveCareerExpression(
     });
   }
 
+  // Challenge-only structure may yield expressions but never SUPPORTED
+  const isChallengeOnly = context.structuralPrimaryChallenge > 0 && context.structuralPrimarySupport === 0;
+
+  // No structural evidence at all (neither support nor challenge)
   if (context.structuralPrimarySupport === 0 && context.structuralPrimaryChallenge === 0) {
     return Object.freeze({
       expressions: Object.freeze([]),
@@ -961,32 +934,36 @@ export function resolveCareerExpression(
     });
   }
 
-  // Challenge-only structure may yield expressions but never SUPPORTED
-  const isChallengeOnly = context.structuralPrimaryChallenge > 0 && context.structuralPrimarySupport === 0;
-
   // Evaluate all rules
   const allEvidence: CareerExpressionEvidence[] = [];
   for (const rule of CAREER_EXPRESSION_RULES) {
     const evidence = rule.evaluate(context);
     if (evidence) {
-      allEvidence.push(evidence);
+      // Filter out evidence from Rahu and Ketu (they have no manifestation mapping)
+      const hasRahuKetu = evidence.planets.some(p => p === Planet.RAHU || p === Planet.KETU);
+      if (!hasRahuKetu) {
+        allEvidence.push(evidence);
+      }
     }
   }
 
-  // Deduplicate evidence
-  const deduplicatedEvidence = deduplicateEvidence(allEvidence);
-
-  // Group evidence by mode
+  // Group evidence by mode first
   const evidenceByMode = new Map<CareerManifestationMode, CareerExpressionEvidence[]>();
-  for (const evidence of deduplicatedEvidence) {
+  for (const evidence of allEvidence) {
     const existing = evidenceByMode.get(evidence.mode) ?? [];
     evidenceByMode.set(evidence.mode, [...existing, evidence]);
   }
 
+  // Deduplicate evidence within each mode (not globally)
+  const deduplicatedEvidenceByMode = new Map<CareerManifestationMode, readonly CareerExpressionEvidence[]>();
+  for (const [mode, modeEvidence] of Array.from(evidenceByMode.entries())) {
+    deduplicatedEvidenceByMode.set(mode, deduplicateEvidenceByMode(modeEvidence));
+  }
+
   // Create expressions for each mode
   const expressions: CareerExpression[] = [];
-  for (const [mode, modeEvidence] of Array.from(evidenceByMode.entries())) {
-    const expression = createExpression(mode, Object.freeze(modeEvidence), context);
+  for (const [mode, modeEvidence] of Array.from(deduplicatedEvidenceByMode.entries())) {
+    const expression = createExpression(mode, modeEvidence, context);
     expressions.push(expression);
   }
 
