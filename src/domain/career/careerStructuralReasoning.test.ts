@@ -483,6 +483,9 @@ describe('CareerStructuralReasoning', () => {
       .toBe('MODIFIER');
   });
 
+  // Synthetic semantic input intentionally verifies that
+  // structural role and effect remain independent dimensions.
+  // C3 would normally derive this combination differently.
   it('preserves challenging role with support effect', () => {
     const result =
       resolveCareerStructuralReasoning([
@@ -559,7 +562,7 @@ describe('CareerStructuralReasoning', () => {
       .toHaveLength(0);
   });
 
-  it('uses secondary evidence when primary is absent', () => {
+  it('returns UNAVAILABLE when only secondary evidence is present', () => {
     const result =
       resolveCareerStructuralReasoning([
         semantic({
@@ -574,13 +577,146 @@ describe('CareerStructuralReasoning', () => {
       ]);
 
     expect(result.direction)
-      .toBe('SUPPORT');
+      .toBe('UNAVAILABLE');
+
+    expect(result.strength)
+      .toBe('UNDETERMINED');
 
     expect(result.primarySupport)
       .toBe(0);
 
     expect(result.supportingSupport)
       .toBe(2);
+  });
+
+  it('does not establish Career direction from secondary structure alone', () => {
+    const result =
+      resolveCareerStructuralReasoning([
+        semantic({
+          relationship: relationship({
+            houseA: 6,
+            houseB: 11
+          }),
+          relevance: 'SUPPORTING',
+          effect: 'SUPPORT',
+          strength: 'STRONG'
+        })
+      ]);
+
+    expect(result.direction)
+      .toBe('UNAVAILABLE');
+
+    expect(result.strength)
+      .toBe('UNDETERMINED');
+
+    expect(result.supportingSupport)
+      .toBe(3);
+
+    expect(result.primarySupport)
+      .toBe(0);
+  });
+
+  it('retains secondary challenge without creating primary challenge', () => {
+    const result =
+      resolveCareerStructuralReasoning([
+        semantic({
+          relationship: relationship({
+            houseA: 8,
+            houseB: 12
+          }),
+          relevance: 'CHALLENGING',
+          effect: 'CHALLENGE',
+          strength: 'STRONG'
+        })
+      ]);
+
+    expect(result.direction)
+      .toBe('UNAVAILABLE');
+
+    expect(result.strength)
+      .toBe('UNDETERMINED');
+
+    expect(result.challengingChallenge)
+      .toBe(3);
+
+    expect(result.primaryChallenge)
+      .toBe(0);
+  });
+
+  it('derives structural strength from primary structure only', () => {
+    const result =
+      resolveCareerStructuralReasoning([
+        semantic({
+          relationship: relationship({
+            houseA: 10,
+            houseB: 6
+          }),
+          relevance: 'PRIMARY',
+          effect: 'SUPPORT',
+          strength: 'MODERATE'
+        }),
+
+        semantic({
+          relationship: relationship({
+            houseA: 8,
+            houseB: 12
+          }),
+          relevance: 'CHALLENGING',
+          effect: 'CHALLENGE',
+          strength: 'STRONG'
+        }),
+
+        semantic({
+          relationship: relationship({
+            houseA: 6,
+            houseB: 8
+          }),
+          relevance: 'MIXED',
+          effect: 'MIXED',
+          strength: 'STRONG'
+        })
+      ]);
+
+    expect(result.direction)
+      .toBe('SUPPORT');
+
+    expect(result.strength)
+      .toBe('VERY_STRONG');
+
+    expect(result.primarySupport)
+      .toBe(2);
+
+    expect(result.primaryChallenge)
+      .toBe(0);
+  });
+
+  it('deduplicates duplicate relationships before aggregation', () => {
+    const duplicateRelationship = relationship({
+      houseA: 10,
+      houseB: 6
+    });
+
+    const result =
+      resolveCareerStructuralReasoning([
+        semantic({
+          relationship: duplicateRelationship,
+          relevance: 'PRIMARY',
+          effect: 'SUPPORT',
+          strength: 'STRONG'
+        }),
+        semantic({
+          relationship: duplicateRelationship,
+          relevance: 'PRIMARY',
+          effect: 'SUPPORT',
+          strength: 'STRONG'
+        })
+      ]);
+
+    expect(result.evidence)
+      .toHaveLength(1);
+
+    expect(result.primarySupport)
+      .toBe(3);
   });
 
   it('creates descriptive structural statement', () => {
@@ -645,6 +781,9 @@ describe('CareerStructuralReasoning', () => {
       .toHaveLength(1);
   });
 
+  // Synthetic semantic input intentionally verifies that
+  // structural role and effect remain independent dimensions.
+  // C3 would normally derive this combination differently.
   it('detects conflict only when primary has both support and challenge', () => {
     const result =
       resolveCareerStructuralReasoning([

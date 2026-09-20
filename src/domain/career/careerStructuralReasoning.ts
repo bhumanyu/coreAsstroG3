@@ -149,7 +149,7 @@ function createStructuralEvidence(
 
   const weight =
     CAREER_STRUCTURAL_STRENGTH_WEIGHT[
-      semantic.strength
+    semantic.strength
     ];
 
   const relationshipKey =
@@ -265,35 +265,7 @@ function resolveStructuralDirection(
     primarySupport === 0 &&
     primaryChallenge === 0
   ) {
-    const secondarySupport =
-      totals.supportingSupport +
-      totals.challengingSupport;
-
-    const secondaryChallenge =
-      totals.supportingChallenge +
-      totals.challengingChallenge;
-
-    if (
-      secondarySupport === 0 &&
-      secondaryChallenge === 0 &&
-      totals.mixedWeight === 0
-    ) {
-      return 'UNAVAILABLE';
-    }
-
-    if (
-      secondarySupport > secondaryChallenge
-    ) {
-      return 'SUPPORT';
-    }
-
-    if (
-      secondaryChallenge > secondarySupport
-    ) {
-      return 'CHALLENGE';
-    }
-
-    return 'MIXED';
+    return 'UNAVAILABLE';
   }
 
   if (
@@ -363,6 +335,13 @@ function resolveStructuralStrength(
   return 'UNDETERMINED';
 }
 
+/**
+ * C4 only surfaces conflict internal to the primary
+ * structural layer.
+ *
+ * Cross-layer conflict resolution belongs to the
+ * canonical reasoning/conflict-resolution stage.
+ */
 function detectStructuralConflicts(
   evidence: readonly CareerStructuralEvidence[]
 ): readonly CareerStructuralConflict[] {
@@ -467,8 +446,24 @@ function createStructuralStatement(
 export function resolveCareerStructuralReasoning(
   semantics: readonly CareerHouseRelationshipSemantic[]
 ): CareerStructuralReasoning {
+  const deduplicatedSemantics = Object.freeze(
+    semantics.filter(
+      (semantic, index, self) =>
+        index ===
+        self.findIndex(
+          (s) =>
+            careerHouseRelationshipKey(
+              s.relationship
+            ) ===
+            careerHouseRelationshipKey(
+              semantic.relationship
+            )
+        )
+    )
+  );
+
   const evidence = Object.freeze(
-    semantics.map(
+    deduplicatedSemantics.map(
       createStructuralEvidence
     )
   );
