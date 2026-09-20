@@ -1,9 +1,7 @@
 import type { Planet } from '../../types';
 
 import {
-  CAREER_CHALLENGING_HOUSES,
-  CAREER_PRIMARY_HOUSES,
-  CAREER_SUPPORTING_HOUSES
+  classifyCareerHouse
 } from './careerTypes';
 
 import type {
@@ -14,6 +12,13 @@ import type {
 import {
   careerHouseRelationshipKey
 } from './careerHouseRelationship';
+
+export type CareerLordRole =
+  | 'PRIMARY_LORD'
+  | 'SUPPORTING_LORD'
+  | 'CHALLENGING_LORD'
+  | 'NEUTRAL_LORD'
+  | 'SHARED_LORD';
 
 export type CareerLordRelationshipEffect =
   | 'SUPPORT'
@@ -38,6 +43,8 @@ export interface CareerLordRelationshipSemantic {
   readonly relationshipType: CareerHouseRelationshipType;
   readonly lordA?: Planet;
   readonly lordB?: Planet;
+  readonly lordARole: CareerLordRole;
+  readonly lordBRole: CareerLordRole;
   readonly relevance: CareerLordRelationshipRelevance;
   readonly effect: CareerLordRelationshipEffect;
   readonly strength: CareerLordRelationshipSemanticStrength;
@@ -59,22 +66,32 @@ const CAREER_LORD_RELATIONSHIP_STRENGTH: Readonly<
   HOUSE_ASPECT: 'WEAK'
 });
 
-function classifyCareerHouse(
-  house: number
-): CareerLordRelationshipRelevance {
-  if (CAREER_PRIMARY_HOUSES.has(house)) {
-    return 'PRIMARY';
+function mapHouseDirectionToLordRole(
+  direction: 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL'
+): CareerLordRole {
+  switch (direction) {
+    case 'PRIMARY':
+      return 'PRIMARY_LORD';
+    case 'SUPPORTING':
+      return 'SUPPORTING_LORD';
+    case 'CHALLENGING':
+      return 'CHALLENGING_LORD';
+    case 'NEUTRAL':
+      return 'NEUTRAL_LORD';
+  }
+}
+
+function resolveLordRole(
+  relationship: CareerHouseRelationship,
+  isLordA: boolean
+): CareerLordRole {
+  if (relationship.type === 'COMMON_LORD') {
+    return 'SHARED_LORD';
   }
 
-  if (CAREER_SUPPORTING_HOUSES.has(house)) {
-    return 'SUPPORTING';
-  }
-
-  if (CAREER_CHALLENGING_HOUSES.has(house)) {
-    return 'CHALLENGING';
-  }
-
-  return 'NEUTRAL';
+  const house = isLordA ? relationship.houseA : relationship.houseB;
+  const houseDirection = classifyCareerHouse(house);
+  return mapHouseDirectionToLordRole(houseDirection);
 }
 
 function resolveRelevance(
@@ -179,11 +196,15 @@ function resolveStrength(
 function createStatement(
   relationship: CareerHouseRelationship,
   relevance: CareerLordRelationshipRelevance,
-  effect: CareerLordRelationshipEffect
+  effect: CareerLordRelationshipEffect,
+  lordARole: CareerLordRole,
+  lordBRole: CareerLordRole
 ): string {
   return [
     `Career lord relationship between houses ${relationship.houseA} and ${relationship.houseB}.`,
     relationship.reason,
+    `Lord A role: ${lordARole}.`,
+    `Lord B role: ${lordBRole}.`,
     `Career relevance: ${relevance}.`,
     `Effect: ${effect}.`
   ].join(' ');
@@ -207,7 +228,7 @@ function deduplicateRelationships(
   }
 
   return Object.freeze(
-    Array.from(unique.values())
+    [...unique.values()]
   );
 }
 
@@ -228,11 +249,16 @@ export function interpretCareerLordRelationship(
     relationship.type
   );
 
+  const lordARole = resolveLordRole(relationship, true);
+  const lordBRole = resolveLordRole(relationship, false);
+
   return Object.freeze({
     relationship,
     relationshipType: relationship.type,
     lordA: relationship.lordA,
     lordB: relationship.lordB,
+    lordARole,
+    lordBRole,
     relevance,
     effect,
     strength,
@@ -240,7 +266,9 @@ export function interpretCareerLordRelationship(
     statement: createStatement(
       relationship,
       relevance,
-      effect
+      effect,
+      lordARole,
+      lordBRole
     )
   });
 }

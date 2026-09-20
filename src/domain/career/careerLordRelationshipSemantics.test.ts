@@ -406,6 +406,21 @@ describe('Career Lord Relationship Semantics', () => {
       expect(result.lordA).toBeUndefined();
       expect(result.lordB).toBeUndefined();
     });
+
+    it('assigns lord roles based on house classification', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Lord placement.'
+        })
+      );
+
+      expect(result.lordARole).toBe('PRIMARY_LORD');
+      expect(result.lordBRole).toBe('SUPPORTING_LORD');
+    });
   });
 
   describe('Relationship identity preservation', () => {
@@ -585,6 +600,129 @@ describe('Career Lord Relationship Semantics', () => {
     });
   });
 
+  describe('Lord role preservation', () => {
+    it('preserves lord-direction: 10L → 6H yields PRIMARY_LORD → SUPPORTING_LORD', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 10 (SATURN) placed in house 6.'
+        })
+      );
+
+      expect(result.lordARole).toBe('PRIMARY_LORD');
+      expect(result.lordBRole).toBe('SUPPORTING_LORD');
+    });
+
+    it('preserves lord-direction: 6L → 10H yields SUPPORTING_LORD → PRIMARY_LORD', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 6,
+          houseB: 10,
+          lordA: Planet.MERCURY,
+          lordB: Planet.SATURN,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 6 (MERCURY) placed in house 10.'
+        })
+      );
+
+      expect(result.lordARole).toBe('SUPPORTING_LORD');
+      expect(result.lordBRole).toBe('PRIMARY_LORD');
+    });
+
+    it('lord roles differ by orientation even when house-level relevance/effect are same', () => {
+      const result1 = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Test relationship.'
+        })
+      );
+
+      const result2 = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 6,
+          houseB: 10,
+          lordA: Planet.MERCURY,
+          lordB: Planet.SATURN,
+          reason: 'Test relationship.'
+        })
+      );
+
+      expect(result1.relevance).toBe(result2.relevance);
+      expect(result1.effect).toBe(result2.effect);
+      expect(result1.lordARole).not.toBe(result2.lordARole);
+      expect(result1.lordBRole).not.toBe(result2.lordBRole);
+    });
+
+    it('COMMON_LORD relationship uses SHARED_LORD role', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'COMMON_LORD',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.SATURN,
+          reason: 'Single planet rules both houses.'
+        })
+      );
+
+      expect(result.lordARole).toBe('SHARED_LORD');
+      expect(result.lordBRole).toBe('SHARED_LORD');
+    });
+
+    it('distinguishes LORD_ASPECT vs LORD_CONJUNCTION for same house pair', () => {
+      const aspectResult = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'LORD_ASPECT',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Lords aspect each other.'
+        })
+      );
+
+      const conjunctionResult = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'LORD_CONJUNCTION',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Lords are conjunct.'
+        })
+      );
+
+      expect(aspectResult.relationshipType).toBe('LORD_ASPECT');
+      expect(conjunctionResult.relationshipType).toBe('LORD_CONJUNCTION');
+      expect(aspectResult.lordARole).toBe(conjunctionResult.lordARole);
+      expect(aspectResult.lordBRole).toBe(conjunctionResult.lordBRole);
+    });
+
+    it('EXCHANGE relationship has STRONG strength and proper lord roles', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'EXCHANGE',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Sign exchange between lords.'
+        })
+      );
+
+      expect(result.strength).toBe('STRONG');
+      expect(result.lordARole).toBe('PRIMARY_LORD');
+      expect(result.lordBRole).toBe('SUPPORTING_LORD');
+    });
+  });
+
   describe('Statement generation', () => {
     it('generates statement with required components', () => {
       const result = interpretCareerLordRelationship(
@@ -596,6 +734,8 @@ describe('Career Lord Relationship Semantics', () => {
       );
 
       expect(result.statement).toContain('Career lord relationship');
+      expect(result.statement).toContain('Lord A role: PRIMARY_LORD');
+      expect(result.statement).toContain('Lord B role: SUPPORTING_LORD');
       expect(result.statement).toContain('Career relevance: PRIMARY');
       expect(result.statement).toContain('Effect: SUPPORT');
     });
