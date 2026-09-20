@@ -140,4 +140,84 @@ describe('CW-01 Reasoning Hierarchy', () => {
     expect(summaries[0].weightedSupport).toBeGreaterThan(summaries[0].weightedChallenge);
     expect(summaries[0].direction).toBe('SUPPORT');
   });
+
+  it('evidence lacking planet/house/provenance falls back to occurrence id as identity key', () => {
+    const ev1 = createDomainEvidence({
+      id: 'CUSTOM_ID_1',
+      sourceType: 'HOUSE',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Test evidence without planet/house',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const ev2 = createDomainEvidence({
+      id: 'CUSTOM_ID_2',
+      sourceType: 'HOUSE',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Another test evidence without planet/house',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const weighted = classifyReasoningEvidence([ev1, ev2]);
+
+    // Both should fall back to their occurrence ids as identity keys
+    expect(weighted).toHaveLength(2);
+    expect(weighted[0].identityKey).toBe('CUSTOM_ID_1');
+    expect(weighted[1].identityKey).toBe('CUSTOM_ID_2');
+  });
+
+  it('evidence with planet+house encodes objectKey as HOUSE_{house} to distinguish Jupiter->10th from Jupiter->2nd', () => {
+    const evJupiter10th = createDomainEvidence({
+      id: 'EV_JUP_10',
+      sourceType: 'HOUSE',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: 'JUPITER',
+      house: 10,
+      ruleId: 'JUPITER_HOUSE_RULE',
+      statement: 'Jupiter in 10th house',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const evJupiter2nd = createDomainEvidence({
+      id: 'EV_JUP_2',
+      sourceType: 'HOUSE',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: 'JUPITER',
+      house: 2,
+      ruleId: 'JUPITER_HOUSE_RULE',
+      statement: 'Jupiter in 2nd house',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const weighted = classifyReasoningEvidence([evJupiter10th, evJupiter2nd]);
+
+    // Should produce different identity keys (subject=JUPITER, object=HOUSE_10 vs HOUSE_2)
+    expect(weighted).toHaveLength(2);
+    expect(weighted[0].identityKey).not.toBe(weighted[1].identityKey);
+    // Both should have subjectKey=JUPITER but different objectKeys
+    expect(weighted[0].identityKey).toContain('JUPITER');
+    expect(weighted[1].identityKey).toContain('JUPITER');
+    expect(weighted[0].identityKey).toContain('HOUSE_10');
+    expect(weighted[1].identityKey).toContain('HOUSE_2');
+  });
 });

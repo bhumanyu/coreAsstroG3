@@ -112,6 +112,96 @@ describe('deduplicateReasoningEvidence', () => {
 
       expect(result).toHaveLength(2);
     });
+
+    it('cross-layer duplicate: same identity as PRIMARY_PROMISE and SECONDARY_SUPPORT collapses to one canonical', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const inputPrimaryFirst = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          layer: 'PRIMARY_PROMISE'
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          layer: 'SECONDARY_SUPPORT'
+        })
+      ];
+
+      const inputSecondaryFirst = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          layer: 'SECONDARY_SUPPORT'
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          layer: 'PRIMARY_PROMISE'
+        })
+      ];
+
+      const resultPrimaryFirst = deduplicateReasoningEvidence(inputPrimaryFirst);
+      const resultSecondaryFirst = deduplicateReasoningEvidence(inputSecondaryFirst);
+
+      // Both should collapse to one canonical record
+      expect(resultPrimaryFirst).toHaveLength(1);
+      expect(resultSecondaryFirst).toHaveLength(1);
+
+      // Both should have both layers in the layers array
+      expect(resultPrimaryFirst[0].layers).toContain('PRIMARY_PROMISE');
+      expect(resultPrimaryFirst[0].layers).toContain('SECONDARY_SUPPORT');
+      expect(resultPrimaryFirst[0].layers).toHaveLength(2);
+
+      expect(resultSecondaryFirst[0].layers).toContain('PRIMARY_PROMISE');
+      expect(resultSecondaryFirst[0].layers).toContain('SECONDARY_SUPPORT');
+      expect(resultSecondaryFirst[0].layers).toHaveLength(2);
+
+      // Canonical layer should be deterministically PRIMARY_PROMISE (higher precedence)
+      expect(resultPrimaryFirst[0].layer).toBe('PRIMARY_PROMISE');
+      expect(resultSecondaryFirst[0].layer).toBe('PRIMARY_PROMISE');
+
+      // Reordering inputs should yield identical output
+      expect(resultPrimaryFirst).toEqual(resultSecondaryFirst);
+    });
+
+    it('objectKey distinction: Jupiter->10th and Jupiter->2nd produce different identity keys (not deduplicated)', () => {
+      const identityKey10th = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-HOUSE_10';
+      const identityKey2nd = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-HOUSE_2';
+
+      const input = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-HOUSE_10-SUPPORT-STRONG', {
+          identityKey: identityKey10th
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-HOUSE_2-SUPPORT-STRONG', {
+          identityKey: identityKey2nd
+        })
+      ];
+
+      const result = deduplicateReasoningEvidence(input);
+
+      // Should NOT be deduplicated - they are different semantic facts
+      expect(result).toHaveLength(2);
+      expect(result[0].identityKey).toBe(identityKey10th);
+      expect(result[1].identityKey).toBe(identityKey2nd);
+    });
+
+    it('rows lacking planet/house use occurrence id as identity key (not collapsed)', () => {
+      // When evidence lacks both planet and house, it should fall back to item.id
+      // This ensures distinct rows with missing semantic info are not incorrectly collapsed
+      const input = [
+        createWeightedEvidence('CUSTOM_ID_1', {
+          identityKey: 'CUSTOM_ID_1' // Fallback to occurrence id
+        }),
+        createWeightedEvidence('CUSTOM_ID_2', {
+          identityKey: 'CUSTOM_ID_2' // Fallback to occurrence id
+        })
+      ];
+
+      const result = deduplicateReasoningEvidence(input);
+
+      // Should NOT be deduplicated - they have different occurrence ids
+      expect(result).toHaveLength(2);
+      expect(result[0].identityKey).toBe('CUSTOM_ID_1');
+      expect(result[1].identityKey).toBe('CUSTOM_ID_2');
+    });
   });
 
   describe('direction merge logic', () => {
@@ -225,6 +315,44 @@ describe('deduplicateReasoningEvidence', () => {
       expect(result).toHaveLength(1);
       expect(result[0].weight).toBe(7.5); // Max single occurrence, not 22.5
       expect(result[0].occurrenceCount).toBe(3);
+    });
+
+    it('same semantic fact with 1 vs 3 occurrences yields identical canonical weight (Test O unit-level)', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const singleOccurrence = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          weight: 7.5
+        })
+      ];
+
+      const tripleOccurrence = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          weight: 7.5
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          weight: 7.5
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          weight: 7.5
+        })
+      ];
+
+      const resultSingle = deduplicateReasoningEvidence(singleOccurrence);
+      const resultTriple = deduplicateReasoningEvidence(tripleOccurrence);
+
+      // Both should produce identical canonical weight (max single-occurrence weight)
+      expect(resultSingle[0].weight).toBe(7.5);
+      expect(resultTriple[0].weight).toBe(7.5);
+      expect(resultSingle[0].weight).toBe(resultTriple[0].weight);
+
+      // Triple should have higher occurrence count
+      expect(resultSingle[0].occurrenceCount).toBe(1);
+      expect(resultTriple[0].occurrenceCount).toBe(3);
     });
   });
 
