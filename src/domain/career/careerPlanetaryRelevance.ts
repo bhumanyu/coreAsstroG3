@@ -69,10 +69,15 @@ export interface CareerPlanetaryRelevanceContext {
   readonly aspectsCareerHouse: readonly number[];
   readonly careerRelationshipPlanets: readonly Planet[];
   readonly careerYogaParticipation: boolean;
+  // Authoritative upstream-methodology override that is OR-combined with
+  // CAREER_NATURAL_KARAKAS; either source independently marks the planet as a NATURAL_KARAKA.
   readonly naturalCareerKaraka: boolean;
   readonly explicitCareerRelevant: boolean;
 }
 
+// Built-in canonical karaka set. The naturalCareerKaraka boolean is an authoritative
+// upstream-methodology override that is OR-combined with this set, so either source
+// independently marks the planet as a NATURAL_KARAKA.
 const CAREER_NATURAL_KARAKAS: ReadonlySet<Planet> = new Set([Planet.SATURN]);
 
 function deduplicate<T>(values: readonly T[]): readonly T[] {
@@ -247,10 +252,16 @@ export function interpretCareerPlanetaryRelevance(
     }
   }
 
-  if (aspectsCareerHouse.length > 0) {
+  const careerAspectHouses = aspectsCareerHouse.filter(
+    (house) =>
+      CAREER_PRIMARY_HOUSES.has(house) ||
+      CAREER_SUPPORTING_HOUSES.has(house) ||
+      CAREER_CHALLENGING_HOUSES.has(house)
+  );
+  if (careerAspectHouses.length > 0) {
     roles.push('HOUSE_ASPECTOR');
     reasons.push('CAREER_HOUSE_ASPECT');
-    relatedHouses.push(...aspectsCareerHouse);
+    relatedHouses.push(...careerAspectHouses);
   }
 
   if (careerRelationshipPlanets.length > 0) {
@@ -268,6 +279,8 @@ export function interpretCareerPlanetaryRelevance(
     reasons.push('NATURAL_KARAKA');
   }
 
+  // TODO: A later evidence/provenance layer should carry the originating rule id
+  // so EXPLICIT_RULE evidence is traceable.
   if (explicitCareerRelevant) {
     reasons.push('EXPLICIT_RULE');
   }

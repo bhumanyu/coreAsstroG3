@@ -276,6 +276,22 @@ describe('Career Planetary Relevance', () => {
       expect(result.relevance).toBe('NEUTRAL');
       expect(result.roles).not.toContain('HOUSE_ASPECTOR');
     });
+
+    it('mixed aspect array (non-career + career) keeps HOUSE_ASPECTOR and filters relatedHouses', () => {
+      const result = interpretCareerPlanetaryRelevance(
+        createContext({
+          planet: Planet.JUPITER,
+          ruledHouses: [],
+          aspectsCareerHouse: [3, 10]
+        })
+      );
+
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.roles).toContain('HOUSE_ASPECTOR');
+      expect(result.reasons).toContain('CAREER_HOUSE_ASPECT');
+      expect(result.relatedHouses).toContain(10);
+      expect(result.relatedHouses).not.toContain(3);
+    });
   });
 
   describe('Group G: Relationship Participation', () => {
