@@ -610,8 +610,6 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     });
 
     it('Test Q: Duplicate-invariance - [ev] vs [ev, dup1, dup2] yields identical finalStrength and natalStrength', () => {
-      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
-
       const ev = createDomainEvidence({
         id: 'EV_JUPITER_SUPPORT',
         sourceType: 'HOUSE',
@@ -660,19 +658,12 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
         priority: 95
       });
 
-      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
-      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
-
       const resultSingle = evaluateCareerReasoningHierarchy({
-        evidence: [ev],
-        context,
-        temporalState
+        evidence: [ev]
       });
 
       const resultTriple = evaluateCareerReasoningHierarchy({
-        evidence: [ev, dup1, dup2],
-        context,
-        temporalState
+        evidence: [ev, dup1, dup2]
       });
 
       // Duplicate-invariance: finalStrength and natalStrength should be identical
@@ -682,8 +673,6 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     });
 
     it('Test R: Duplicate-invariance for wealth - [ev] vs [ev, dup1, dup2] yields identical finalStrength and natalStrength', () => {
-      const identityKey = 'CW-WEALTH-NATAL-D1-TEST_RULE-JUPITER';
-
       const ev = createDomainEvidence({
         id: 'EV_JUPITER_WEALTH',
         sourceType: 'HOUSE',
@@ -732,19 +721,12 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
         priority: 95
       });
 
-      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
-      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
-
       const resultSingle = evaluateWealthReasoningHierarchy({
-        evidence: [ev],
-        context,
-        temporalState
+        evidence: [ev]
       });
 
       const resultTriple = evaluateWealthReasoningHierarchy({
-        evidence: [ev, dup1, dup2],
-        context,
-        temporalState
+        evidence: [ev, dup1, dup2]
       });
 
       // Duplicate-invariance: finalStrength and natalStrength should be identical
@@ -786,17 +768,23 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
         priority: 95
       });
 
-      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
-      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
-
       const result = evaluateCareerReasoningHierarchy({
-        evidence: [evSupport, evChallenge],
-        context,
-        temporalState
+        evidence: [evSupport, evChallenge]
       });
 
       // Direction should be MIXED, not whichever appeared first
       expect(result.natalDirection).toBe('MIXED');
+
+      // Verify the SUPPORT+CHALLENGE pair with same semantic identity collapses to exactly one canonical record
+      expect(result.reasoningTrace.primaryPromise).toBeDefined();
+      expect(result.reasoningTrace.primaryPromise.length).toBeGreaterThan(0);
+      const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+      // evidenceId should be the canonical identityKey, not an occurrence ID
+      expect(canonicalEvidence.evidenceId).toBe(canonicalEvidence.identityKey);
+      // sourceIds should contain the distinct occurrence IDs
+      expect(canonicalEvidence.sourceIds).toBeDefined();
+      expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT');
+      expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_CHALLENGE');
     });
 
     it('Test T: Reasoning-trace identity - deduplicated evidence carries canonical evidenceId in reasoningTrace', () => {
@@ -832,26 +820,20 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
         priority: 95
       });
 
-      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
-      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
-
       const result = evaluateCareerReasoningHierarchy({
-        evidence: [ev1, ev2],
-        context,
-        temporalState
+        evidence: [ev1, ev2]
       });
 
       // reasoningTrace should carry canonical evidenceId (identityKey)
       expect(result.reasoningTrace.primaryPromise).toBeDefined();
-      if (result.reasoningTrace.primaryPromise.length > 0) {
-        const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
-        // evidenceId should be the canonical identityKey, not an occurrence ID
-        expect(canonicalEvidence.evidenceId).toBe(canonicalEvidence.identityKey);
-        // sourceIds should contain the distinct occurrence IDs
-        expect(canonicalEvidence.sourceIds).toBeDefined();
-        expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT');
-        expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT_DUP');
-      }
+      expect(result.reasoningTrace.primaryPromise.length).toBeGreaterThan(0);
+      const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+      // evidenceId should be the canonical identityKey, not an occurrence ID
+      expect(canonicalEvidence.evidenceId).toBe(canonicalEvidence.identityKey);
+      // sourceIds should contain the distinct occurrence IDs
+      expect(canonicalEvidence.sourceIds).toBeDefined();
+      expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT');
+      expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT_DUP');
     });
   });
 });

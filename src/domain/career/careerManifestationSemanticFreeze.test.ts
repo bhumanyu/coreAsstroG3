@@ -1,0 +1,56 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  CAREER_MANIFESTATION_RULES
+} from './careerReasoningRules';
+
+describe('CW-R1 C1 — Career manifestation semantic freeze', () => {
+  it('keeps the existing manifestation rule mapping', () => {
+    expect(CAREER_MANIFESTATION_RULES).toEqual({
+      LEADERSHIP: [
+        'CAREER_10H_STRONG_001',
+        'CAREER_10L_DIGNITY_001',
+        'CAREER_SUN_RELEVANCE_001',
+        'CAREER_JUPITER_RELEVANCE_001',
+        'CAREER_YOGA_CONFIRMATION_001'
+      ],
+
+      MANAGEMENT: [
+        'CAREER_10H_STRONG_001',
+        'CAREER_SATURN_RELEVANCE_001',
+        'CAREER_10H_11H_LINK_001'
+      ],
+
+      TECHNICAL_SPECIALIZATION: [
+        'CAREER_MERCURY_RELEVANCE_001',
+        'CAREER_MARS_RELEVANCE_001'
+      ],
+
+      SERVICE_EMPLOYMENT: [
+        'CAREER_6H_SERVICE_001',
+        'CAREER_6L_10L_LINK_001',
+        'CAREER_6H_10H_LINK_001',
+        'CAREER_SATURN_RELEVANCE_001'
+      ],
+
+      AUTHORITY: [
+        'CAREER_10H_STRONG_001',
+        'CAREER_SUN_RELEVANCE_001',
+        'CAREER_10L_DIGNITY_001'
+      ],
+
+      INDEPENDENT_WORK: [
+        'CAREER_11H_GAINS_001',
+        'CAREER_10L_11L_LINK_001',
+        'CAREER_10H_11H_LINK_001'
+      ],
+
+      BUSINESS_ENTREPRENEURSHIP: [
+        'CAREER_11H_GAINS_001',
+        'CAREER_10H_11H_LINK_001',
+        'CAREER_10L_11L_LINK_001',
+        'CAREER_2H_WEALTH_001'
+      ]
+    });
+  });
+});
