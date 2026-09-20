@@ -14,3 +14,4 @@ export * from './careerStructuralReasoning';
 export * from './careerLordRelationshipSemantics';
 export * from './careerPlanetaryRelevance';
 export * from './careerPlanetaryCondition';
+export * from './careerExpression';
