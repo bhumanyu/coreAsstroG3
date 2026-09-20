@@ -690,7 +690,7 @@ describe('CareerStructuralReasoning', () => {
       .toBe(0);
   });
 
-  it('deduplicates duplicate relationships before aggregation', () => {
+  it('deduplicates identical semantic instances before aggregation', () => {
     const duplicateRelationship = relationship({
       houseA: 10,
       houseB: 6
@@ -702,13 +702,15 @@ describe('CareerStructuralReasoning', () => {
           relationship: duplicateRelationship,
           relevance: 'PRIMARY',
           effect: 'SUPPORT',
-          strength: 'STRONG'
+          strength: 'STRONG',
+          conditional: false
         }),
         semantic({
           relationship: duplicateRelationship,
           relevance: 'PRIMARY',
           effect: 'SUPPORT',
-          strength: 'STRONG'
+          strength: 'STRONG',
+          conditional: false
         })
       ]);
 
@@ -836,5 +838,34 @@ describe('CareerStructuralReasoning', () => {
 
     expect(result.conflicts[0].ratio)
       .toBe(0.5);
+  });
+
+  it('does not discard conflicting semantics for the same relationship', () => {
+    const relationshipValue = relationship({
+      houseA: 10,
+      houseB: 6
+    });
+
+    const result =
+      resolveCareerStructuralReasoning([
+        semantic({
+          relationship: relationshipValue,
+          relevance: 'PRIMARY',
+          effect: 'SUPPORT',
+          strength: 'STRONG',
+          conditional: false
+        }),
+
+        semantic({
+          relationship: relationshipValue,
+          relevance: 'PRIMARY',
+          effect: 'CHALLENGE',
+          strength: 'MODERATE',
+          conditional: false
+        })
+      ]);
+
+    expect(result.evidence)
+      .toHaveLength(2);
   });
 });
