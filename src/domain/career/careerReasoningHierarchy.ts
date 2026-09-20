@@ -248,22 +248,38 @@ export function evaluateCareerReasoningHierarchy(params: {
     conflicts: conflictRes.conflicts
   });
 
-  // Collect evidence IDs
-  const primaryEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.layer === 'PRIMARY_PROMISE')
-    .map((e) => e.evidenceId);
+  // Collect evidence IDs from deduplicated canonical evidence sourceIds
+  const primaryEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.layer === 'PRIMARY_PROMISE')
+        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+    )
+  );
 
-  const supportingEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.direction === 'SUPPORT')
-    .map((e) => e.evidenceId);
+  const supportingEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'SUPPORT')
+        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+    )
+  );
 
-  const challengingEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.direction === 'CHALLENGE')
-    .map((e) => e.evidenceId);
+  const challengingEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'CHALLENGE')
+        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+    )
+  );
 
-  const unresolvedEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
-    .map((e) => e.evidenceId);
+  const unresolvedEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
+        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+    )
+  );
 
   // Derive manifestations
   const manifestations = deriveCareerReasoningManifestations(evidence);

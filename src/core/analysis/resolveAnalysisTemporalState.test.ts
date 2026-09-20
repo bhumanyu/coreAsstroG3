@@ -134,7 +134,7 @@ describe('resolveAnalysisTemporalState Unit Test Suite', () => {
     const initialEmbeddedDasha = horoscope.dashaInterpretation;
 
     // Resolve with an asOf far outside the Vimshottari timeline (cannot produce active dasha)
-    const futureAsOf = '2100-01-01T00:00:00.000Z';
+    const futureAsOf = '2200-01-01T00:00:00.000Z';
     const context = createAnalysisContext({ asOf: futureAsOf, methodology: testMethodology });
     const temporalState = resolveAnalysisTemporalState(horoscope, context);
 

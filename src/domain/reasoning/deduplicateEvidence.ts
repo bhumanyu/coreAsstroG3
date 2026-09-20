@@ -193,7 +193,7 @@ export function canonicalToWeighted(
     canonical.map((item) =>
       Object.freeze({
         identityKey: item.identityKey,
-        evidenceId: item.evidenceId,
+        evidenceId: (item.sourceIds && item.sourceIds.length > 0) ? item.sourceIds[0] : item.evidenceId,
         ruleId: item.ruleId,
         layer: item.layer,
         direction: item.direction,
