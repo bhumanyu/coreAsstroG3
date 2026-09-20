@@ -20,6 +20,7 @@ import {
   Chart,
   Horoscope
 } from '../types';
+import { assertValidBirthDetails } from '../core/validation/birthDetailsValidation';
 import {
   SIGNS_METADATA,
   SIGNS_ORDER,
@@ -343,6 +344,9 @@ export function calculateHoroscope(
   customPositionsOrOptions?: Record<Planet, PlanetPosition> | CalculateHoroscopeOptions,
   asOfParam?: string | Date
 ): Horoscope {
+  // Validate birth details at engine boundary to prevent invalid input from reaching deterministic engine
+  assertValidBirthDetails(birthDetails);
+
   let customPositions: Record<Planet, PlanetPosition> | undefined;
   let asOf: string | Date | undefined;
 
