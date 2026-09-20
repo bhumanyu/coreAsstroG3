@@ -100,7 +100,7 @@ export function deduplicateReasoningEvidence(
     let mergedStrength: EvidenceStrength = 'WEAK';
     let maxWeight = 0;
     let maxPriority = 0;
-    const sourceIds: string[] = [];
+    const sourceIds: Set<string> = new Set();
     const layers: Set<ReasoningLayer> = new Set();
     let statement = '';
     let statementEvidenceId = '';
@@ -125,8 +125,8 @@ export function deduplicateReasoningEvidence(
         maxPriority = item.priority;
       }
 
-      // Accumulate source IDs
-      sourceIds.push(item.evidenceId);
+      // Accumulate source IDs (distinct occurrence IDs)
+      sourceIds.add(item.evidenceId);
 
       // Accumulate layers
       layers.add(item.layer);
@@ -167,7 +167,8 @@ export function deduplicateReasoningEvidence(
       statement,
       relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds).sort((a, b) => a.localeCompare(b))),
       occurrenceCount: group.length,
-      sourceIds: Object.freeze([...sourceIds].sort((a, b) => a.localeCompare(b))),
+      // sourceIds = distinct occurrence IDs; occurrenceCount = total occurrences (including duplicates)
+      sourceIds: Object.freeze(Array.from(sourceIds).sort((a, b) => a.localeCompare(b))),
       layers: Object.freeze(REASONING_LAYER_PRECEDENCE.filter(l => layers.has(l)))
     });
 
@@ -201,7 +202,9 @@ export function canonicalToWeighted(
         priority: item.priority,
         weight: item.weight,
         statement: item.statement,
-        relatedEvidenceIds: item.relatedEvidenceIds
+        relatedEvidenceIds: item.relatedEvidenceIds,
+        sourceIds: item.sourceIds,
+        occurrenceCount: item.occurrenceCount
       })
     )
   );

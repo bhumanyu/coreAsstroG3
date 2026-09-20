@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Planet } from '../../types';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
 import {
   classifyReasoningEvidence,
@@ -184,7 +185,7 @@ describe('CW-01 Reasoning Hierarchy', () => {
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
       source: 'D1',
-      planet: 'JUPITER',
+      planet: Planet.JUPITER,
       house: 10,
       ruleId: 'JUPITER_HOUSE_RULE',
       statement: 'Jupiter in 10th house',
@@ -200,7 +201,7 @@ describe('CW-01 Reasoning Hierarchy', () => {
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE',
       source: 'D1',
-      planet: 'JUPITER',
+      planet: Planet.JUPITER,
       house: 2,
       ruleId: 'JUPITER_HOUSE_RULE',
       statement: 'Jupiter in 2nd house',

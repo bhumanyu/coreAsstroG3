@@ -314,22 +314,39 @@ export function evaluateWealthReasoningHierarchy(params: {
     conflicts: conflictRes.conflicts
   });
 
-  // Collect evidence IDs
-  const primaryEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.layer === 'PRIMARY_PROMISE')
-    .map((e) => e.evidenceId);
+  // Collect canonical evidence IDs (identityKey) for reasoning-facing ID lists
+  // sourceIds remain available in reasoningTrace for occurrence-level provenance
+  const primaryEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.layer === 'PRIMARY_PROMISE')
+        .map((e) => e.evidenceId)
+    )
+  );
 
-  const supportingEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.direction === 'SUPPORT')
-    .map((e) => e.evidenceId);
+  const supportingEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'SUPPORT')
+        .map((e) => e.evidenceId)
+    )
+  );
 
-  const challengingEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.direction === 'CHALLENGE')
-    .map((e) => e.evidenceId);
+  const challengingEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'CHALLENGE')
+        .map((e) => e.evidenceId)
+    )
+  );
 
-  const unresolvedEvidenceIds = deduplicatedWeighted
-    .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
-    .map((e) => e.evidenceId);
+  const unresolvedEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
+        .map((e) => e.evidenceId)
+    )
+  );
 
   // Derive manifestations
   const manifestations = deriveWealthReasoningManifestations(evidence);

@@ -1,12 +1,24 @@
 import { describe, it, expect } from 'vitest';
-import { Planet } from '../../types';
-import type { DashaInterpretationReport } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
+import { Planet, DashaSystem } from '../../types';
+import type {
+  DashaInterpretationReport,
+  DashaPlanetActivation
+} from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { mapDashaInterpretationToActiveDashaTimingContext } from './mapDashaInterpretationToActiveDashaTimingContext';
+
+const mockNatal = (planet: Planet): DashaPlanetActivation =>
+  ({
+    planet,
+    period: 'MAHADASHA',
+    strength: { availability: 'AVAILABLE' },
+    activation: 'ACTIVE',
+    confidence: 'HIGH'
+  }) as unknown as DashaPlanetActivation;
 
 describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
   it('complete Dasha report returns correct planet values', () => {
     const report: DashaInterpretationReport = {
-      system: 'VIMSHOTTARI',
+      system: DashaSystem.VIMSHOTTARI,
       birthAnchor: {
         nakshatra: 'Ashwini',
         nakshatraLord: Planet.KETU,
@@ -20,13 +32,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.JUPITER,
           start: '2020-01-01T00:00:00.000Z',
           end: '2036-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.JUPITER,
-            period: 'MAHADASHA',
-            strength: 'STRONG',
-            activation: 'ACTIVE',
-            confidence: 'HIGH'
-          },
+          natal: mockNatal(Planet.JUPITER),
           antardashas: [],
           evidence: [],
           confidence: 'HIGH'
@@ -35,13 +41,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.SATURN,
           start: '2025-01-01T00:00:00.000Z',
           end: '2027-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.SATURN,
-            period: 'ANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.SATURN),
           pratyantardashas: [],
           evidence: [],
           confidence: 'MEDIUM'
@@ -50,13 +50,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.MERCURY,
           start: '2026-05-01T00:00:00.000Z',
           end: '2026-08-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.MERCURY,
-            period: 'PRATYANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.MERCURY),
           evidence: [],
           confidence: 'MEDIUM'
         },
@@ -81,7 +75,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
 
   it('report with current: undefined returns null', () => {
     const report: DashaInterpretationReport = {
-      system: 'VIMSHOTTARI',
+      system: DashaSystem.VIMSHOTTARI,
       birthAnchor: {
         nakshatra: 'Ashwini',
         nakshatraLord: Planet.KETU,
@@ -99,7 +93,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
 
   it('incomplete report missing mahadasha planet returns null', () => {
     const report: DashaInterpretationReport = {
-      system: 'VIMSHOTTARI',
+      system: DashaSystem.VIMSHOTTARI,
       birthAnchor: {
         nakshatra: 'Ashwini',
         nakshatraLord: Planet.KETU,
@@ -113,13 +107,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: undefined as unknown as Planet,
           start: '2020-01-01T00:00:00.000Z',
           end: '2036-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.JUPITER,
-            period: 'MAHADASHA',
-            strength: 'STRONG',
-            activation: 'ACTIVE',
-            confidence: 'HIGH'
-          },
+          natal: mockNatal(Planet.JUPITER),
           antardashas: [],
           evidence: [],
           confidence: 'HIGH'
@@ -128,13 +116,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.SATURN,
           start: '2025-01-01T00:00:00.000Z',
           end: '2027-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.SATURN,
-            period: 'ANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.SATURN),
           pratyantardashas: [],
           evidence: [],
           confidence: 'MEDIUM'
@@ -143,13 +125,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.MERCURY,
           start: '2026-05-01T00:00:00.000Z',
           end: '2026-08-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.MERCURY,
-            period: 'PRATYANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.MERCURY),
           evidence: [],
           confidence: 'MEDIUM'
         },
@@ -165,7 +141,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
 
   it('incomplete report missing antardasha planet returns null', () => {
     const report: DashaInterpretationReport = {
-      system: 'VIMSHOTTARI',
+      system: DashaSystem.VIMSHOTTARI,
       birthAnchor: {
         nakshatra: 'Ashwini',
         nakshatraLord: Planet.KETU,
@@ -179,13 +155,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.JUPITER,
           start: '2020-01-01T00:00:00.000Z',
           end: '2036-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.JUPITER,
-            period: 'MAHADASHA',
-            strength: 'STRONG',
-            activation: 'ACTIVE',
-            confidence: 'HIGH'
-          },
+          natal: mockNatal(Planet.JUPITER),
           antardashas: [],
           evidence: [],
           confidence: 'HIGH'
@@ -194,13 +164,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: undefined as unknown as Planet,
           start: '2025-01-01T00:00:00.000Z',
           end: '2027-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.SATURN,
-            period: 'ANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.SATURN),
           pratyantardashas: [],
           evidence: [],
           confidence: 'MEDIUM'
@@ -209,13 +173,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.MERCURY,
           start: '2026-05-01T00:00:00.000Z',
           end: '2026-08-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.MERCURY,
-            period: 'PRATYANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.MERCURY),
           evidence: [],
           confidence: 'MEDIUM'
         },
@@ -231,7 +189,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
 
   it('incomplete report missing pratyantardasha planet returns null', () => {
     const report: DashaInterpretationReport = {
-      system: 'VIMSHOTTARI',
+      system: DashaSystem.VIMSHOTTARI,
       birthAnchor: {
         nakshatra: 'Ashwini',
         nakshatraLord: Planet.KETU,
@@ -245,13 +203,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.JUPITER,
           start: '2020-01-01T00:00:00.000Z',
           end: '2036-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.JUPITER,
-            period: 'MAHADASHA',
-            strength: 'STRONG',
-            activation: 'ACTIVE',
-            confidence: 'HIGH'
-          },
+          natal: mockNatal(Planet.JUPITER),
           antardashas: [],
           evidence: [],
           confidence: 'HIGH'
@@ -260,13 +212,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.SATURN,
           start: '2025-01-01T00:00:00.000Z',
           end: '2027-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.SATURN,
-            period: 'ANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.SATURN),
           pratyantardashas: [],
           evidence: [],
           confidence: 'MEDIUM'
@@ -275,13 +221,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: undefined as unknown as Planet,
           start: '2026-05-01T00:00:00.000Z',
           end: '2026-08-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.MERCURY,
-            period: 'PRATYANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.MERCURY),
           evidence: [],
           confidence: 'MEDIUM'
         },
@@ -297,7 +237,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
 
   it('no-mutation: source report remains unchanged after mapping', () => {
     const report: DashaInterpretationReport = {
-      system: 'VIMSHOTTARI',
+      system: DashaSystem.VIMSHOTTARI,
       birthAnchor: {
         nakshatra: 'Ashwini',
         nakshatraLord: Planet.KETU,
@@ -311,13 +251,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.JUPITER,
           start: '2020-01-01T00:00:00.000Z',
           end: '2036-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.JUPITER,
-            period: 'MAHADASHA',
-            strength: 'STRONG',
-            activation: 'ACTIVE',
-            confidence: 'HIGH'
-          },
+          natal: mockNatal(Planet.JUPITER),
           antardashas: [],
           evidence: [],
           confidence: 'HIGH'
@@ -326,13 +260,7 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
           planet: Planet.SATURN,
           start: '2025-01-01T00:00:00.000Z',
           end: '2027-01-01T00:00:00.000Z',
-          natal: {
-            planet: Planet.SATURN,
-            period: 'ANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          natal: mockNatal(Planet.SATURN),
           pratyantardashas: [],
           evidence: [],
           confidence: 'MEDIUM'
@@ -340,14 +268,8 @@ describe('mapDashaInterpretationToActiveDashaTimingContext', () => {
         pratyantardasha: {
           planet: Planet.MERCURY,
           start: '2026-05-01T00:00:00.000Z',
-          end: '2026-08-01T00:00.000Z',
-          natal: {
-            planet: Planet.MERCURY,
-            period: 'PRATYANTARDASHA',
-            strength: 'MODERATE',
-            activation: 'ACTIVE',
-            confidence: 'MEDIUM'
-          },
+          end: '2026-08-01T00:00:00.000Z',
+          natal: mockNatal(Planet.MERCURY),
           evidence: [],
           confidence: 'MEDIUM'
         },

@@ -69,6 +69,8 @@ export interface WeightedReasoningEvidence {
   readonly weight: number;
   readonly statement: string;
   readonly relatedEvidenceIds: readonly string[];
+  readonly sourceIds?: readonly string[];
+  readonly occurrenceCount?: number;
 }
 
 export interface LayerSummary {
