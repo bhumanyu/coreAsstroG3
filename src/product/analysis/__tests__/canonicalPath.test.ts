@@ -27,6 +27,10 @@ import { runLifeAnalysisProduct } from '../../life-analysis/lifeAnalysisProductS
 import type { AnalysisTemporalState } from '../../../core/analysis/AnalysisTemporalState';
 import { Planet, type Horoscope } from '../../../types';
 import type { AiContext } from '../../../ai/types/aiContextTypes';
+import { createDomainEvidence } from '../../../domain/interpretation/DomainEvidence';
+import { evaluateCareerReasoningHierarchy } from '../../../domain/career/careerReasoningHierarchy';
+import { evaluateWealthReasoningHierarchy } from '../../../domain/wealth/wealthReasoningHierarchy';
+import { classifyReasoningEvidence } from '../../../domain/reasoning/reasoningHierarchy';
 
 describe('Canonical Production Analysis Path Regression Suite', () => {
   const FIXED_AS_OF = '2026-01-01T00:00:00.000Z';
@@ -603,6 +607,251 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       expect(result.status).toBe('READY');
       expect(result.career).toBeDefined();
       expect(result.wealth).toBeDefined();
+    });
+
+    it('Test Q: Duplicate-invariance - [ev] vs [ev, dup1, dup2] yields identical finalStrength and natalStrength', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const ev = createDomainEvidence({
+        id: 'EV_JUPITER_SUPPORT',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports career',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const dup1 = createDomainEvidence({
+        id: 'EV_JUPITER_SUPPORT_DUP1',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports career',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const dup2 = createDomainEvidence({
+        id: 'EV_JUPITER_SUPPORT_DUP2',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports career',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
+      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
+
+      const resultSingle = evaluateCareerReasoningHierarchy({
+        evidence: [ev],
+        context,
+        temporalState
+      });
+
+      const resultTriple = evaluateCareerReasoningHierarchy({
+        evidence: [ev, dup1, dup2],
+        context,
+        temporalState
+      });
+
+      // Duplicate-invariance: finalStrength and natalStrength should be identical
+      expect(resultSingle.finalStrength).toBe(resultTriple.finalStrength);
+      expect(resultSingle.natalStrength).toBe(resultTriple.natalStrength);
+      expect(resultSingle.natalDirection).toBe(resultTriple.natalDirection);
+    });
+
+    it('Test R: Duplicate-invariance for wealth - [ev] vs [ev, dup1, dup2] yields identical finalStrength and natalStrength', () => {
+      const identityKey = 'CW-WEALTH-NATAL-D1-TEST_RULE-JUPITER';
+
+      const ev = createDomainEvidence({
+        id: 'EV_JUPITER_WEALTH',
+        sourceType: 'HOUSE',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 2,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports wealth',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const dup1 = createDomainEvidence({
+        id: 'EV_JUPITER_WEALTH_DUP1',
+        sourceType: 'HOUSE',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 2,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports wealth',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const dup2 = createDomainEvidence({
+        id: 'EV_JUPITER_WEALTH_DUP2',
+        sourceType: 'HOUSE',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 2,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports wealth',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
+      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
+
+      const resultSingle = evaluateWealthReasoningHierarchy({
+        evidence: [ev],
+        context,
+        temporalState
+      });
+
+      const resultTriple = evaluateWealthReasoningHierarchy({
+        evidence: [ev, dup1, dup2],
+        context,
+        temporalState
+      });
+
+      // Duplicate-invariance: finalStrength and natalStrength should be identical
+      expect(resultSingle.finalStrength).toBe(resultTriple.finalStrength);
+      expect(resultSingle.natalStrength).toBe(resultTriple.natalStrength);
+      expect(resultSingle.natalDirection).toBe(resultTriple.natalDirection);
+    });
+
+    it('Test S: SUPPORT + CHALLENGE with same identity -> MIXED direction at production boundary', () => {
+      const evSupport = createDomainEvidence({
+        id: 'EV_JUPITER_SUPPORT',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports career',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const evChallenge = createDomainEvidence({
+        id: 'EV_JUPITER_CHALLENGE',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter challenges career',
+        polarity: 'CHALLENGING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
+      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
+
+      const result = evaluateCareerReasoningHierarchy({
+        evidence: [evSupport, evChallenge],
+        context,
+        temporalState
+      });
+
+      // Direction should be MIXED, not whichever appeared first
+      expect(result.natalDirection).toBe('MIXED');
+    });
+
+    it('Test T: Reasoning-trace identity - deduplicated evidence carries canonical evidenceId in reasoningTrace', () => {
+      const ev1 = createDomainEvidence({
+        id: 'EV_JUPITER_SUPPORT',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports career',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const ev2 = createDomainEvidence({
+        id: 'EV_JUPITER_SUPPORT_DUP',
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        planet: Planet.JUPITER,
+        house: 10,
+        ruleId: 'TEST_RULE',
+        statement: 'Jupiter supports career',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 95
+      });
+
+      const context = createAnalysisContext({ asOf: FIXED_AS_OF, methodology: mapMethodology(CANONICAL_BIRTH_DETAILS) });
+      const temporalState = resolveAnalysisTemporalState(calculateHoroscope(CANONICAL_BIRTH_DETAILS), context);
+
+      const result = evaluateCareerReasoningHierarchy({
+        evidence: [ev1, ev2],
+        context,
+        temporalState
+      });
+
+      // reasoningTrace should carry canonical evidenceId (identityKey)
+      expect(result.reasoningTrace.primaryPromise).toBeDefined();
+      if (result.reasoningTrace.primaryPromise.length > 0) {
+        const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+        // evidenceId should be the canonical identityKey, not an occurrence ID
+        expect(canonicalEvidence.evidenceId).toBe(canonicalEvidence.identityKey);
+        // sourceIds should contain the distinct occurrence IDs
+        expect(canonicalEvidence.sourceIds).toBeDefined();
+        expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT');
+        expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_SUPPORT_DUP');
+      }
     });
   });
 });

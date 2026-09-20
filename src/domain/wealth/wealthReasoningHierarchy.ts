@@ -314,12 +314,13 @@ export function evaluateWealthReasoningHierarchy(params: {
     conflicts: conflictRes.conflicts
   });
 
-  // Collect evidence IDs from deduplicated canonical evidence sourceIds
+  // Collect canonical evidence IDs (identityKey) for reasoning-facing ID lists
+  // sourceIds remain available in reasoningTrace for occurrence-level provenance
   const primaryEvidenceIds = Array.from(
     new Set(
       deduplicatedEvidence
         .filter((e) => e.layer === 'PRIMARY_PROMISE')
-        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+        .map((e) => e.evidenceId)
     )
   );
 
@@ -327,7 +328,7 @@ export function evaluateWealthReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'SUPPORT')
-        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+        .map((e) => e.evidenceId)
     )
   );
 
@@ -335,7 +336,7 @@ export function evaluateWealthReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'CHALLENGE')
-        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+        .map((e) => e.evidenceId)
     )
   );
 
@@ -343,7 +344,7 @@ export function evaluateWealthReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
-        .flatMap((e) => (e.sourceIds && e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId]))
+        .map((e) => e.evidenceId)
     )
   );
 

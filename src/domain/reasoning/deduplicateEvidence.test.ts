@@ -525,5 +525,107 @@ describe('deduplicateReasoningEvidence', () => {
 
       expect(result).toHaveLength(2);
     });
+
+    it('one occurrence vs three identical occurrences: identical canonical except occurrenceCount, sourceIds is distinct set', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const singleOccurrence = [
+        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+          identityKey,
+          weight: 7.5
+        })
+      ];
+
+      const tripleOccurrence = [
+        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+          identityKey,
+          weight: 7.5
+        }),
+        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+          identityKey,
+          weight: 7.5
+        }),
+        createWeightedEvidence('EV_JUPITER_SUPPORT', {
+          identityKey,
+          weight: 7.5
+        })
+      ];
+
+      const resultSingle = deduplicateReasoningEvidence(singleOccurrence);
+      const resultTriple = deduplicateReasoningEvidence(tripleOccurrence);
+
+      // Both should have identical canonical fields except occurrenceCount
+      expect(resultSingle[0].evidenceId).toBe(resultTriple[0].evidenceId);
+      expect(resultSingle[0].identityKey).toBe(resultTriple[0].identityKey);
+      expect(resultSingle[0].weight).toBe(resultTriple[0].weight);
+      expect(resultSingle[0].direction).toBe(resultTriple[0].direction);
+      expect(resultSingle[0].strength).toBe(resultTriple[0].strength);
+
+      // Single has occurrenceCount=1, triple has occurrenceCount=3
+      expect(resultSingle[0].occurrenceCount).toBe(1);
+      expect(resultTriple[0].occurrenceCount).toBe(3);
+
+      // sourceIds is the DISTINCT set: single has 1, triple has 1 (all same ID)
+      expect(resultSingle[0].sourceIds).toHaveLength(1);
+      expect(resultTriple[0].sourceIds).toHaveLength(1);
+      expect(resultSingle[0].sourceIds).toEqual(['EV_JUPITER_SUPPORT']);
+      expect(resultTriple[0].sourceIds).toEqual(['EV_JUPITER_SUPPORT']);
+
+      // Weight is max single-occurrence weight, never summed
+      expect(resultSingle[0].weight).toBe(7.5);
+      expect(resultTriple[0].weight).toBe(7.5);
+    });
+
+    it('three occurrences with distinct IDs: sourceIds is distinct set of 3, occurrenceCount=3', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const input = [
+        createWeightedEvidence('EV_JUPITER_SUPPORT_1', {
+          identityKey,
+          weight: 7.5
+        }),
+        createWeightedEvidence('EV_JUPITER_SUPPORT_2', {
+          identityKey,
+          weight: 7.5
+        }),
+        createWeightedEvidence('EV_JUPITER_SUPPORT_3', {
+          identityKey,
+          weight: 7.5
+        })
+      ];
+
+      const result = deduplicateReasoningEvidence(input);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].occurrenceCount).toBe(3);
+      expect(result[0].sourceIds).toHaveLength(3);
+      expect(result[0].sourceIds).toEqual(['EV_JUPITER_SUPPORT_1', 'EV_JUPITER_SUPPORT_2', 'EV_JUPITER_SUPPORT_3']);
+      expect(result[0].weight).toBe(7.5); // Max single-occurrence weight
+    });
+
+    it('cross-layer duplicate identity: PRIMARY_PROMISE + SECONDARY_SUPPORT same identity -> one canonical, evidenceId === identityKey', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const input = [
+        createWeightedEvidence('EV_JUPITER_PRIMARY', {
+          identityKey,
+          layer: 'PRIMARY_PROMISE'
+        }),
+        createWeightedEvidence('EV_JUPITER_SECONDARY', {
+          identityKey,
+          layer: 'SECONDARY_SUPPORT'
+        })
+      ];
+
+      const result = deduplicateReasoningEvidence(input);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].evidenceId).toBe(identityKey);
+      expect(result[0].identityKey).toBe(identityKey);
+      expect(result[0].evidenceId).toBe(result[0].identityKey);
+      expect(result[0].layers).toContain('PRIMARY_PROMISE');
+      expect(result[0].layers).toContain('SECONDARY_SUPPORT');
+      expect(result[0].layer).toBe('PRIMARY_PROMISE'); // Deterministic canonical layer
+    });
   });
 });
