@@ -19,13 +19,13 @@ export type CareerHouseRelationshipRelevance =
   | 'PRIMARY'
   | 'SUPPORTING'
   | 'CHALLENGING'
+  | 'MIXED'
   | 'NEUTRAL';
 
 export type CareerHouseRelationshipSemanticStrength =
   | 'STRONG'
   | 'MODERATE'
-  | 'WEAK'
-  | 'CONDITIONAL';
+  | 'WEAK';
 
 export interface CareerHouseRelationshipSemantic {
   readonly relationship: CareerHouseRelationship;
@@ -74,22 +74,38 @@ function resolveRelevance(
   const categoryA = classifyCareerHouse(houseA);
   const categoryB = classifyCareerHouse(houseB);
 
-  if (
-    categoryA === 'PRIMARY' ||
-    categoryB === 'PRIMARY'
-  ) {
+  const categories = new Set([
+    categoryA,
+    categoryB
+  ]);
+
+  if (categories.has('PRIMARY')) {
     return 'PRIMARY';
   }
 
   if (
-    categoryA === 'CHALLENGING' ||
+    categoryA === 'SUPPORTING' &&
+    categoryB === 'CHALLENGING'
+  ) {
+    return 'MIXED';
+  }
+
+  if (
+    categoryA === 'CHALLENGING' &&
+    categoryB === 'SUPPORTING'
+  ) {
+    return 'MIXED';
+  }
+
+  if (
+    categoryA === 'CHALLENGING' &&
     categoryB === 'CHALLENGING'
   ) {
     return 'CHALLENGING';
   }
 
   if (
-    categoryA === 'SUPPORTING' ||
+    categoryA === 'SUPPORTING' &&
     categoryB === 'SUPPORTING'
   ) {
     return 'SUPPORTING';

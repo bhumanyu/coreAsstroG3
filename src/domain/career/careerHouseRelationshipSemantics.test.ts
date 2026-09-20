@@ -26,7 +26,7 @@ function relationship(
     lordB: 'MARS' as Planet,
     lordAHouse: 10,
     lordBHouse: 5,
-    reason: 'Lord of house 6 placed in house 10.',
+    reason: 'Test relationship.',
     ...overrides
   };
 }
@@ -119,7 +119,7 @@ describe('Career house relationship semantics', () => {
         })
       );
 
-    expect(result.relevance).toBe('CHALLENGING');
+    expect(result.relevance).toBe('MIXED');
     expect(result.effect).toBe('MIXED');
   });
 
@@ -322,7 +322,7 @@ describe('Career house relationship semantics', () => {
         })
       );
 
-    expect(result.relevance).toBe('CHALLENGING');
+    expect(result.relevance).toBe('MIXED');
     expect(result.effect).toBe('MIXED');
   });
 
@@ -359,7 +359,7 @@ describe('Career house relationship semantics', () => {
         })
       );
 
-    expect(result.relevance).toBe('CHALLENGING');
+    expect(result.relevance).toBe('MIXED');
     expect(result.effect).toBe('MIXED');
   });
 
@@ -372,7 +372,7 @@ describe('Career house relationship semantics', () => {
         })
       );
 
-    expect(result.relevance).toBe('CHALLENGING');
+    expect(result.relevance).toBe('MIXED');
     expect(result.effect).toBe('MIXED');
   });
 });
