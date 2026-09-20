@@ -85,6 +85,13 @@ export interface CareerStructuralReasoning {
   readonly statement: string;
 }
 
+/**
+ * C3 relationship strength determines evidence weight.
+ *
+ * C4 structural strength describes dominance of the aggregate
+ * primary structure and is therefore intentionally independent
+ * from any single relationship's semantic strength.
+ */
 const CAREER_STRUCTURAL_STRENGTH_WEIGHT: Readonly<
   Record<CareerHouseRelationshipSemanticStrength, number>
 > = Object.freeze({
@@ -92,6 +99,34 @@ const CAREER_STRUCTURAL_STRENGTH_WEIGHT: Readonly<
   MODERATE: 2,
   WEAK: 1
 });
+
+function careerStructuralSemanticKey(
+  semantic: CareerHouseRelationshipSemantic
+): string {
+  return [
+    careerHouseRelationshipKey(semantic.relationship),
+    semantic.relevance,
+    semantic.effect,
+    semantic.strength,
+    semantic.conditional
+  ].join(':');
+}
+
+function deduplicateSemantics(
+  semantics: readonly CareerHouseRelationshipSemantic[]
+): readonly CareerHouseRelationshipSemantic[] {
+  const unique = new Map<string, CareerHouseRelationshipSemantic>();
+
+  for (const semantic of semantics) {
+    const key = careerStructuralSemanticKey(semantic);
+
+    if (!unique.has(key)) {
+      unique.set(key, semantic);
+    }
+  }
+
+  return Object.freeze([...unique.values()]);
+}
 
 function resolveDirection(
   effect: CareerHouseRelationshipEffect
@@ -152,14 +187,12 @@ function createStructuralEvidence(
     semantic.strength
     ];
 
-  const relationshipKey =
-    careerHouseRelationshipKey(
-      semantic.relationship
-    );
+  const semanticKey =
+    careerStructuralSemanticKey(semantic);
 
   return Object.freeze({
     id:
-      `CAREER_STRUCTURAL:${relationshipKey}`,
+      `CAREER_STRUCTURAL:${semanticKey}`,
 
     relationship:
       semantic.relationship,
@@ -446,21 +479,7 @@ function createStructuralStatement(
 export function resolveCareerStructuralReasoning(
   semantics: readonly CareerHouseRelationshipSemantic[]
 ): CareerStructuralReasoning {
-  const deduplicatedSemantics = Object.freeze(
-    semantics.filter(
-      (semantic, index, self) =>
-        index ===
-        self.findIndex(
-          (s) =>
-            careerHouseRelationshipKey(
-              s.relationship
-            ) ===
-            careerHouseRelationshipKey(
-              semantic.relationship
-            )
-        )
-    )
-  );
+  const deduplicatedSemantics = deduplicateSemantics(semantics);
 
   const evidence = Object.freeze(
     deduplicatedSemantics.map(

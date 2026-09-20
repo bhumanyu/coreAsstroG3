@@ -49,7 +49,10 @@ export interface CareerSemanticSource {
   readonly mustNotBeDuplicatedBy: readonly string[];
 }
 
-const freezeOwnership = (items: CareerSemanticOwnership[]): readonly CareerSemanticOwnership[] => Object.freeze(items);
+const freezeOwnership = (
+  items: CareerSemanticOwnership[]
+): readonly CareerSemanticOwnership[] =>
+  Object.freeze(items);
 
 export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
   Object.freeze([
