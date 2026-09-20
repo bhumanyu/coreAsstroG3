@@ -45,6 +45,10 @@ export function buildThemeInterpretationContext(
 ): ThemeInterpretationContext {
   if ('planetFacts' in input || 'fullNatalAnalysis' in input) {
     const h = input as Horoscope;
+    // LOW-LEVEL/NON-PRODUCT CALLERS ONLY: This raw-horoscope branch reads h.dashaInterpretation directly.
+    // All product-domain callers (Career, Wealth, etc.) must pass an explicit dashaInterpretation
+    // sourced from the canonical AnalysisTemporalState (via resolveAnalysisTemporalState).
+    // This ensures single-point canonical Dasha resolution and prevents stale embedded state usage.
     return Object.freeze({
       horoscope: h,
       planetAnalysis: h.planetAnalysis,

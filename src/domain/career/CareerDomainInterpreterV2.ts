@@ -1,4 +1,5 @@
 import type { Horoscope, Planet } from '../../types';
+import type { DashaInterpretationReport } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import {
   CareerEvidenceFamily,
@@ -99,8 +100,46 @@ import {
   type ReasoningEdgeType,
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
-import { getActiveDasha } from '../../engine/dasha/vimshottari';
+import type { ActiveDashaState } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
+
+/**
+ * Maps from canonical DashaInterpretationReport to ActiveDashaState shape
+ * required by transit synthesis functions. Derived from temporalState.dashaInterpretation
+ * to ensure single-point canonical resolution.
+ */
+function mapDashaInterpretationToActiveDashaState(
+  dashaInterpretation: DashaInterpretationReport | undefined
+): ActiveDashaState | null {
+  if (!dashaInterpretation?.current) {
+    return null;
+  }
+  const { current } = dashaInterpretation;
+  if (!current.mahadasha?.planet || !current.antardasha?.planet || !current.pratyantardasha?.planet) {
+    return null;
+  }
+  // Extract minimal ActiveDashaState shape from interpretation
+  // Transit synthesis only needs planet identity, not full period structures
+  return {
+    mahadasha: {
+      planet: current.mahadasha.planet,
+      start: current.mahadasha.start,
+      end: current.mahadasha.end,
+      antardashas: []
+    } as any,
+    antardasha: {
+      planet: current.antardasha.planet,
+      start: current.antardasha.start,
+      end: current.antardasha.end,
+      pratyantardashas: []
+    } as any,
+    pratyantardasha: {
+      planet: current.pratyantardasha.planet,
+      start: current.pratyantardasha.start,
+      end: current.pratyantardasha.end
+    } as any
+  };
+}
 
 export function interpretCareerV2(
   horoscope: Horoscope,
@@ -282,7 +321,7 @@ export function interpretCareerV2(
 
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const activeDashaState = mapDashaInterpretationToActiveDashaState(options.temporalState.dashaInterpretation);
     const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
     careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
   } else {
@@ -481,14 +520,14 @@ export function buildCareerReasoningTraceGraph(params: {
         e.provenance.axis === 'NATAL'
           ? natalNodeId
           : e.provenance.axis === 'DASHA'
-          ? dashaNodeId
-          : e.provenance.axis === 'TIMING'
-          ? timingNodeId
-          : e.provenance.axis === 'DIVISIONAL'
-          ? divisionalNodeId
-          : e.provenance.axis === 'MANIFESTATION'
-          ? manifestationNodeId
-          : natalNodeId;
+            ? dashaNodeId
+            : e.provenance.axis === 'TIMING'
+              ? timingNodeId
+              : e.provenance.axis === 'DIVISIONAL'
+                ? divisionalNodeId
+                : e.provenance.axis === 'MANIFESTATION'
+                  ? manifestationNodeId
+                  : natalNodeId;
 
       let edgeType: ReasoningEdgeType | undefined;
       if (e.provenance.effect === 'CHALLENGE') {
@@ -739,8 +778,8 @@ export function evaluateD10Relationship(
     const linkedD10 =
       natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
         ? d10Evidence.filter((e) =>
-            e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
-          )
+          e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
+        )
         : d10Evidence;
 
     if (linkedD10.length > 0) {
