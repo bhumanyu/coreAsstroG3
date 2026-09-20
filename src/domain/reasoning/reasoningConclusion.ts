@@ -28,7 +28,7 @@ function sum(
   direction: 'SUPPORT' | 'CHALLENGE'
 ): number {
   return evidence
-    .filter((item) => item.direction === direction)
+    .filter((item) => item.direction === direction || item.direction === 'MIXED')
     .reduce((total, item) => total + item.weight, 0);
 }
 
