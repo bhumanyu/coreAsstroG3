@@ -18,6 +18,10 @@ import {
   resolveNatalPromise
 } from '../reasoning/reasoningConclusion';
 import {
+  deduplicateReasoningEvidence,
+  canonicalToWeighted
+} from '../reasoning/deduplicateEvidence';
+import {
   resolveDashaHierarchy,
   type DashaTimingEvidence
 } from '../reasoning/dashaHierarchy';
@@ -140,11 +144,17 @@ export function evaluateCareerReasoningHierarchy(params: {
 
   // 1. Classify evidence into reasoning layers and build trace
   const weightedEvidence = classifyReasoningEvidence(evidence);
-  const reasoningTrace = buildReasoningTrace(weightedEvidence);
-  const layerSummaries = summarizeLayers(weightedEvidence);
+
+  // Deduplicate evidence by canonical identity to ensure the same semantic fact
+  // contributes once regardless of how many representations/layers reference it
+  const deduplicatedEvidence = deduplicateReasoningEvidence(weightedEvidence);
+  const deduplicatedWeighted = canonicalToWeighted(deduplicatedEvidence);
+
+  const reasoningTrace = buildReasoningTrace(deduplicatedWeighted);
+  const layerSummaries = summarizeLayers(deduplicatedWeighted);
 
   // 2. Resolve Natal Promise
-  const natalPromiseResult = resolveNatalPromise(weightedEvidence);
+  const natalPromiseResult = resolveNatalPromise(deduplicatedWeighted);
 
   // 3. Resolve D10 Varga Direction
   let vargaDirection: ReasoningDirection = 'UNAVAILABLE';
@@ -239,19 +249,19 @@ export function evaluateCareerReasoningHierarchy(params: {
   });
 
   // Collect evidence IDs
-  const primaryEvidenceIds = weightedEvidence
+  const primaryEvidenceIds = deduplicatedWeighted
     .filter((e) => e.layer === 'PRIMARY_PROMISE')
     .map((e) => e.evidenceId);
 
-  const supportingEvidenceIds = weightedEvidence
+  const supportingEvidenceIds = deduplicatedWeighted
     .filter((e) => e.direction === 'SUPPORT')
     .map((e) => e.evidenceId);
 
-  const challengingEvidenceIds = weightedEvidence
+  const challengingEvidenceIds = deduplicatedWeighted
     .filter((e) => e.direction === 'CHALLENGE')
     .map((e) => e.evidenceId);
 
-  const unresolvedEvidenceIds = weightedEvidence
+  const unresolvedEvidenceIds = deduplicatedWeighted
     .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
     .map((e) => e.evidenceId);
 
