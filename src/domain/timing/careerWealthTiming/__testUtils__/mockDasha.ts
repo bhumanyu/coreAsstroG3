@@ -5,7 +5,7 @@ import type {
   AntardashaPeriod,
   PratyantardashaPeriod
 } from '../../../../engine/dasha/vimshottari';
-import type { ActiveDashaTimingContext } from '../../../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import type { ActiveDashaTimingContext } from '../../../../core/analysis';
 import type {
   CareerDashaSynthesis,
   CareerDashaEffect,

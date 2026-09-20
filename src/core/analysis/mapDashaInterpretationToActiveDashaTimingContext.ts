@@ -18,7 +18,7 @@ export interface ActiveDashaTimingContext {
  *
  * Returns null if the dasha interpretation or current period is not available.
  */
-export function mapDashaInterpretationToActiveDashaState(
+export function mapDashaInterpretationToActiveDashaTimingContext(
   dashaInterpretation: DashaInterpretationReport | undefined
 ): ActiveDashaTimingContext | null {
   if (!dashaInterpretation?.current) {
