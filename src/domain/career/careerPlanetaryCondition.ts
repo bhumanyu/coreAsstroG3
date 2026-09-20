@@ -135,15 +135,13 @@ function resolveAfflictionEffect(
 ): 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' {
   switch (affliction) {
     case 'NONE':
-      return 'SUPPORT';
+    case 'UNAVAILABLE':
+      return 'NEUTRAL';
 
     case 'MILD':
     case 'MODERATE':
     case 'SEVERE':
       return 'CHALLENGE';
-
-    case 'UNAVAILABLE':
-      return 'NEUTRAL';
   }
 }
 
@@ -278,10 +276,22 @@ function createConditionFactors(
   };
 }
 
+function hasRequiredConditionData(
+  context: CareerPlanetaryConditionContext
+): boolean {
+  return (
+    context.dataAvailable &&
+    context.dignity !== 'UNAVAILABLE' &&
+    context.affliction !== 'UNAVAILABLE' &&
+    context.combustion !== 'UNAVAILABLE' &&
+    context.motion !== 'UNKNOWN'
+  );
+}
+
 function resolveCondition(
   context: CareerPlanetaryConditionContext
 ): CareerPlanetaryCondition {
-  if (!context.dataAvailable) {
+  if (!hasRequiredConditionData(context)) {
     return 'UNAVAILABLE';
   }
 
@@ -353,30 +363,27 @@ function createConditionStatement(
 
   if (factors.positive.length > 0) {
     parts.push(
-      `Supporting condition factors: ${
-        factors.positive
-          .map(factor => factor.statement)
-          .join(' ')
+      `Supporting condition factors: ${factors.positive
+        .map(factor => factor.statement)
+        .join(' ')
       }`
     );
   }
 
   if (factors.negative.length > 0) {
     parts.push(
-      `Challenging condition factors: ${
-        factors.negative
-          .map(factor => factor.statement)
-          .join(' ')
+      `Challenging condition factors: ${factors.negative
+        .map(factor => factor.statement)
+        .join(' ')
       }`
     );
   }
 
   if (factors.neutral.length > 0) {
     parts.push(
-      `Neutral condition factors: ${
-        factors.neutral
-          .map(factor => factor.statement)
-          .join(' ')
+      `Neutral condition factors: ${factors.neutral
+        .map(factor => factor.statement)
+        .join(' ')
       }`
     );
   }

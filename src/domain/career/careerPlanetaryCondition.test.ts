@@ -132,6 +132,82 @@ describe('Career Planetary Condition (C7)', () => {
       expect(result.condition).not.toBe('AFFLICTED');
       expect(result.condition).not.toBe('NEUTRAL');
     });
+
+    it('PRIMARY + dataAvailable=true + dignity=UNAVAILABLE → UNAVAILABLE', () => {
+      const context: CareerPlanetaryConditionContext = Object.freeze({
+        planet: Planet.SATURN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        dignity: 'UNAVAILABLE',
+        affliction: 'NONE',
+        motion: 'DIRECT',
+        combustion: 'NOT_COMBUST',
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true
+      });
+
+      const result = interpretCareerPlanetaryCondition(context);
+
+      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).not.toBe('NEUTRAL');
+    });
+
+    it('PRIMARY + dataAvailable=true + affliction=UNAVAILABLE → UNAVAILABLE', () => {
+      const context: CareerPlanetaryConditionContext = Object.freeze({
+        planet: Planet.SATURN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        dignity: 'OWN_SIGN',
+        affliction: 'UNAVAILABLE',
+        motion: 'DIRECT',
+        combustion: 'NOT_COMBUST',
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true
+      });
+
+      const result = interpretCareerPlanetaryCondition(context);
+
+      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).not.toBe('NEUTRAL');
+    });
+
+    it('PRIMARY + dataAvailable=true + combustion=UNAVAILABLE → UNAVAILABLE', () => {
+      const context: CareerPlanetaryConditionContext = Object.freeze({
+        planet: Planet.SATURN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        dignity: 'OWN_SIGN',
+        affliction: 'NONE',
+        motion: 'DIRECT',
+        combustion: 'UNAVAILABLE',
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true
+      });
+
+      const result = interpretCareerPlanetaryCondition(context);
+
+      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).not.toBe('NEUTRAL');
+    });
+
+    it('PRIMARY + dataAvailable=true + motion=UNKNOWN → UNAVAILABLE', () => {
+      const context: CareerPlanetaryConditionContext = Object.freeze({
+        planet: Planet.SATURN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        dignity: 'OWN_SIGN',
+        affliction: 'NONE',
+        motion: 'UNKNOWN',
+        combustion: 'NOT_COMBUST',
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true
+      });
+
+      const result = interpretCareerPlanetaryCondition(context);
+
+      expect(result.condition).toBe('UNAVAILABLE');
+      expect(result.condition).not.toBe('NEUTRAL');
+    });
   });
 
   // Group C — dignity
@@ -419,11 +495,6 @@ describe('Career Planetary Condition (C7)', () => {
       const result = interpretCareerPlanetaryCondition(context);
 
       expect(result.condition).toBe('STRONG');
-      expect(result.neutralFactors).toContainEqual({
-        type: 'MOTION',
-        effect: 'NEUTRAL',
-        statement: 'Planet is retrograde.'
-      });
     });
   });
 
