@@ -79,7 +79,7 @@ import { Planet } from '../../types';
 import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 import { synthesizeWealthTiming } from '../timing/careerWealthTiming';
 import { resolveWealthDimensionTransitEffect } from '../timing/careerWealthTiming/wealthTransitRules';
-import { createMockActiveDashaState } from '../timing/careerWealthTiming/__testUtils__/mockDasha';
+import { createMockActiveDashaTimingContext } from '../timing/careerWealthTiming/__testUtils__/mockDasha';
 
 describe('WealthDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -1565,7 +1565,7 @@ describe('WealthDomainInterpreterV2', () => {
     ).toBe('ACTIVATES');
 
     // Direct synthesizer proof with explicit natal promise and dasha effects:
-    const supportiveDashaState = createMockActiveDashaState({
+    const supportiveDashaState = createMockActiveDashaTimingContext({
       mdPlanet: Planet.SATURN,
       adPlanet: Planet.SATURN,
       pdPlanet: Planet.SATURN

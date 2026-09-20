@@ -5,11 +5,11 @@ import { analysisAsOfDate } from './analysisTime';
 import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 
 /**
- * CANONICAL BOUNDARY: Single canonical temporal-resolution point.
+ * CANONICAL BOUNDARY: Single production temporal Dasha resolution orchestration point.
  *
- * This is the ONLY production Dasha resolution point. All product-domain callers
- * (Career, Wealth, AI, etc.) must obtain their Dasha interpretation exclusively
- * through this function. No production code should independently select Dasha
+ * This is the single production *temporal* Dasha resolution/orchestration point for an
+ * AnalysisContext.asOf. Product-domain consumers (Career, Wealth, AI, etc.) must consume
+ * the resulting AnalysisTemporalState rather than independently selecting an active Dasha
  * from horoscope.vimshottari, horoscope.dashaInterpretation, or any other source.
  *
  * Derives asOfDate from context, resolves Dasha interpretation for asOf,

@@ -3,7 +3,7 @@ import { Planet, Sign, AyanamsaType, type Horoscope } from '../../../types';
 import { synthesizeCareerTransit } from './careerTransitSynthesis';
 import { mapTransitEffect } from './careerTransitRules';
 import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
-import { createMockActiveDashaState, createMockCareerDashaSynthesis } from './__testUtils__/mockDasha';
+import { createMockActiveDashaTimingContext, createMockCareerDashaSynthesis } from './__testUtils__/mockDasha';
 
 describe('CW-03 Career Transit Synthesis', () => {
   const mockHoroscope: Horoscope = {
@@ -165,7 +165,7 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('populates explicit source, target, and dasha planet fields on CareerTransitFactors', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = createMockActiveDashaState({
+    const activeDasha = createMockActiveDashaTimingContext({
       mdPlanet: Planet.JUPITER,
       adPlanet: Planet.SATURN,
       pdPlanet: Planet.MERCURY
@@ -201,7 +201,7 @@ describe('CW-03 Career Transit Synthesis', () => {
     // In mockHoroscope, natal Sun is at 45° (Taurus) and natal Mercury is at 50° (Taurus).
     // On 2026-06-01, transiting Sun is in Taurus (~45°), so transit Sun contacts natal Sun and natal Mercury.
     // Setting Mahadasha lord to Sun ensures MAHADASHA_PLANET_NATAL_PLANET_CONTACT fires with target natal Sun / Mercury.
-    const activeDasha = createMockActiveDashaState({
+    const activeDasha = createMockActiveDashaTimingContext({
       mdPlanet: Planet.SUN,
       adPlanet: Planet.JUPITER
     });
@@ -222,7 +222,7 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('strictly satisfies the planet invariant across all factor categories', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = createMockActiveDashaState({
+    const activeDasha = createMockActiveDashaTimingContext({
       mdPlanet: Planet.SUN,
       adPlanet: Planet.JUPITER
     });

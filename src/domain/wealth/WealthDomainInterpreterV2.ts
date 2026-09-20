@@ -1,10 +1,11 @@
 import type { Horoscope, Planet } from '../../types';
-import type { DashaInterpretationReport } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
 import {
   WealthEvidenceFamily,
   type WealthEvidence
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
+import { mapDashaInterpretationToActiveDashaState } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import type { ActiveDashaTimingContext } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
 import {
   buildDomainInterpretation,
   createDomainEvidence,
@@ -100,46 +101,7 @@ import {
   type ReasoningEdgeType,
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
-import type { ActiveDashaState } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
-
-/**
- * Maps from canonical DashaInterpretationReport to ActiveDashaState shape
- * required by transit synthesis functions. Derived from temporalState.dashaInterpretation
- * to ensure single-point canonical resolution.
- */
-function mapDashaInterpretationToActiveDashaState(
-  dashaInterpretation: DashaInterpretationReport | undefined
-): ActiveDashaState | null {
-  if (!dashaInterpretation?.current) {
-    return null;
-  }
-  const { current } = dashaInterpretation;
-  if (!current.mahadasha?.planet || !current.antardasha?.planet || !current.pratyantardasha?.planet) {
-    return null;
-  }
-  // Extract minimal ActiveDashaState shape from interpretation
-  // Transit synthesis only needs planet identity, not full period structures
-  return {
-    mahadasha: {
-      planet: current.mahadasha.planet,
-      start: current.mahadasha.start,
-      end: current.mahadasha.end,
-      antardashas: []
-    } as any,
-    antardasha: {
-      planet: current.antardasha.planet,
-      start: current.antardasha.start,
-      end: current.antardasha.end,
-      pratyantardashas: []
-    } as any,
-    pratyantardasha: {
-      planet: current.pratyantardasha.planet,
-      start: current.pratyantardasha.start,
-      end: current.pratyantardasha.end
-    } as any
-  };
-}
 
 export function interpretWealthV2(
   horoscope: Horoscope,

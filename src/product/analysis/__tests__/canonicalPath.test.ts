@@ -34,12 +34,14 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
   let wealthSpy: ReturnType<typeof vi.spyOn>;
   let temporalSpy: ReturnType<typeof vi.spyOn>;
   let aiExplanationSpy: ReturnType<typeof vi.spyOn>;
+  let resolveDashaSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
     temporalSpy = vi.spyOn(temporalModule, 'resolveAnalysisTemporalState');
     aiExplanationSpy = vi.spyOn(aiExplanationServiceModule, 'runAiExplanation');
+    resolveDashaSpy = vi.spyOn(resolveDashaModule, 'resolveDashaInterpretationForAsOf');
   });
 
   afterEach(() => {
@@ -47,6 +49,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     wealthSpy.mockRestore();
     temporalSpy.mockRestore();
     aiExplanationSpy.mockRestore();
+    resolveDashaSpy.mockRestore();
   });
 
   it('Test A: Single-call invariant - resolveAnalysisTemporalState and createAnalysisContext called EXACTLY ONCE in analyze()', async () => {
@@ -477,7 +480,6 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
   });
 
   it('Test K: Resolver-invocation-count - resolveDashaInterpretationForAsOf called exactly once for full product analysis', async () => {
-    const resolveDashaSpy = vi.spyOn(resolveDashaModule, 'resolveDashaInterpretationForAsOf');
     const service = createProductAnalysisService();
 
     const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
@@ -492,7 +494,5 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
 
     // resolveDashaInterpretationForAsOf should be called exactly once for the entire product analysis
     expect(resolveDashaSpy).toHaveBeenCalledTimes(1);
-
-    resolveDashaSpy.mockRestore();
   });
 });

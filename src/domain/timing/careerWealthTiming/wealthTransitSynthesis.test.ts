@@ -9,7 +9,7 @@ import {
 } from '../../wealth/wealthTypes';
 import { mapWealthDimension } from '../../wealth/wealthEvidenceMapper';
 import { WealthEvidenceFamily } from '../../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import { createMockActiveDashaState } from './__testUtils__/mockDasha';
+import { createMockActiveDashaTimingContext } from './__testUtils__/mockDasha';
 
 describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
   const mockHoroscope: Horoscope = {
@@ -126,7 +126,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
 
   it('produces DASHA_LORD_TRANSIT factors for Wealth with concrete dashaPlanet, transitingPlanet, and targetPlanet', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = createMockActiveDashaState({
+    const activeDasha = createMockActiveDashaTimingContext({
       mdPlanet: Planet.SUN,
       adPlanet: Planet.JUPITER
     });
@@ -151,7 +151,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
 
   it('strictly satisfies the planet invariant across all wealth factor categories', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const activeDasha = createMockActiveDashaState({
+    const activeDasha = createMockActiveDashaTimingContext({
       mdPlanet: Planet.SUN,
       adPlanet: Planet.JUPITER
     });
