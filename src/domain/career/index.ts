@@ -8,3 +8,5 @@ export * from './CareerDomainInterpreterV2';
 export * from './CareerDomainInterpreter';
 export * from './career-v2-golden.fixture';
 export * from './careerDasha';
+export * from './careerHouseRelationship';
+export * from './careerHouseRelationshipSemantics';
