@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
-import type { Horoscope } from '../../types';
+import { Planet, type Horoscope } from '../../types';
 import { interpretWealthV2 } from './WealthDomainInterpreterV2';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
@@ -252,5 +252,56 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     expect(result.dimensionResults.ACCUMULATION.evidenceIds).toContain('EV_ACC_1');
     expect(result.dimensionResults.GAINS.evidenceIds).toContain('EV_GAINS_1');
     expect(result.reasoningTrace.primaryPromise).toHaveLength(2);
+  });
+
+  it('W7: Dimension evidenceIds are canonical (identityKey), not occurrence-level IDs', () => {
+    const ev = createDomainEvidence({
+      id: 'EV_JUPITER_WEALTH',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.JUPITER,
+      house: 2,
+      ruleId: 'TEST_RULE',
+      statement: 'Jupiter supports wealth',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      dimension: 'ACCUMULATION'
+    });
+
+    const dup1 = createDomainEvidence({
+      id: 'EV_JUPITER_WEALTH_DUP1',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.JUPITER,
+      house: 2,
+      ruleId: 'TEST_RULE',
+      statement: 'Jupiter supports wealth',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      dimension: 'ACCUMULATION'
+    });
+
+    const result = evaluateWealthReasoningHierarchy({
+      evidence: [ev, dup1]
+    });
+
+    // Dimension evidenceIds should be canonical (identityKey), not occurrence IDs
+    // The dimension should have exactly 1 canonical evidence ID (the identityKey)
+    expect(result.dimensionResults.ACCUMULATION.evidenceIds).toHaveLength(1);
+    // The canonical evidenceId should match the identityKey from reasoningTrace
+    const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+    expect(result.dimensionResults.ACCUMULATION.evidenceIds[0]).toBe(canonicalEvidence.evidenceId);
+    expect(result.dimensionResults.ACCUMULATION.evidenceIds[0]).toBe(canonicalEvidence.identityKey);
+    // The occurrence IDs should be in sourceIds, not evidenceIds
+    expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_WEALTH');
+    expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_WEALTH_DUP1');
   });
 });

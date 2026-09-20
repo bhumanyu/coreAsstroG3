@@ -88,6 +88,12 @@ export function evaluateWealthDimension(
 
   const natalPromise = resolveNatalPromise(deduplicatedDimWeighted);
 
+  // Collect canonical evidence IDs (identityKey) for dimension result
+  // sourceIds remain available in reasoningTrace for occurrence-level provenance
+  const dimensionEvidenceIds = Array.from(
+    new Set(deduplicatedDimEvidence.map((e) => e.evidenceId))
+  );
+
   const mdTiming: DashaTimingEvidence = dashaTimings?.md ?? {
     level: 'MD',
     effect: 'INSUFFICIENT_DATA',
@@ -114,7 +120,7 @@ export function evaluateWealthDimension(
     natalDirection: natalPromise.direction,
     natalStrength: natalPromise.strength,
     timingEffect: timing.finalEffect,
-    evidenceIds: Object.freeze(dimEvidence.map((e) => e.id))
+    evidenceIds: Object.freeze(dimensionEvidenceIds)
   });
 }
 
