@@ -11,3 +11,4 @@ export * from './careerDasha';
 export * from './careerHouseRelationship';
 export * from './careerHouseRelationshipSemantics';
 export * from './careerStructuralReasoning';
+export * from './careerLordRelationshipSemantics';

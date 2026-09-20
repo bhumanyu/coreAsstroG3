@@ -49,6 +49,11 @@ export interface CareerSemanticSource {
   readonly mustNotBeDuplicatedBy: readonly string[];
 }
 
+const freezeOwnership = (
+  items: CareerSemanticOwnership[]
+): readonly CareerSemanticOwnership[] =>
+  Object.freeze(items);
+
 export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
   Object.freeze([
     /*
@@ -61,7 +66,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_10H_STRONG_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'CONDITION'
       ]),
@@ -78,7 +83,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_10H_AFFLICTION_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'CONDITION'
       ]),
@@ -95,7 +100,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_10H_OCCUPANT_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'RELEVANCE',
         'EXPRESSION'
@@ -118,7 +123,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_6H_SERVICE_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'RELEVANCE',
         'CONDITION',
@@ -132,22 +137,6 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ])
     }),
 
-    Object.freeze({
-      ruleId: 'CAREER_6H_10H_LINK_001',
-      sourceFile:
-        'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
-        'RELATIONSHIP',
-        'RELEVANCE'
-      ]),
-      currentMeaning:
-        'A structural relationship between the 6th and 10th houses is treated as Career support.',
-      status: 'IMPLICIT',
-      mustNotBeDuplicatedBy: Object.freeze([
-        'careerReasoningHierarchy'
-      ])
-    }),
-
     /*
      * -----------------------------------------------------------------------
      * 11TH HOUSE
@@ -158,7 +147,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_11H_GAINS_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'RELEVANCE',
         'CONDITION'
@@ -168,22 +157,6 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       status: 'EXISTING',
       mustNotBeDuplicatedBy: Object.freeze([
         'careerManifestationSynthesis'
-      ])
-    }),
-
-    Object.freeze({
-      ruleId: 'CAREER_10H_11H_LINK_001',
-      sourceFile:
-        'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
-        'RELATIONSHIP',
-        'RELEVANCE'
-      ]),
-      currentMeaning:
-        'A structural relationship between the 10th and 11th houses is treated as direct Career/gains support.',
-      status: 'IMPLICIT',
-      mustNotBeDuplicatedBy: Object.freeze([
-        'careerReasoningHierarchy'
       ])
     }),
 
@@ -197,7 +170,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_2H_WEALTH_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'RELEVANCE',
         'CONDITION'
@@ -212,6 +185,44 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
 
     /*
      * -----------------------------------------------------------------------
+     * HOUSE RELATIONSHIPS
+     * -----------------------------------------------------------------------
+     */
+
+    Object.freeze({
+      ruleId: 'CAREER_6H_10H_LINK_001',
+      sourceFile:
+        'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
+      ownership: freezeOwnership([
+        'RELATIONSHIP',
+        'RELEVANCE'
+      ]),
+      currentMeaning:
+        'A structural relationship between the 6th and 10th houses is treated as Career support.',
+      status: 'IMPLICIT',
+      mustNotBeDuplicatedBy: Object.freeze([
+        'careerReasoningHierarchy'
+      ])
+    }),
+
+    Object.freeze({
+      ruleId: 'CAREER_10H_11H_LINK_001',
+      sourceFile:
+        'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
+      ownership: freezeOwnership([
+        'RELATIONSHIP',
+        'RELEVANCE'
+      ]),
+      currentMeaning:
+        'A structural relationship between the 10th and 11th houses is treated as direct Career/gains support.',
+      status: 'IMPLICIT',
+      mustNotBeDuplicatedBy: Object.freeze([
+        'careerReasoningHierarchy'
+      ])
+    }),
+
+    /*
+     * -----------------------------------------------------------------------
      * LORDSHIP
      * -----------------------------------------------------------------------
      */
@@ -220,7 +231,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_10L_DIGNITY_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerLordRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'STRUCTURAL',
         'CONDITION',
         'RELEVANCE'
@@ -237,7 +248,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_6L_10L_LINK_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerLordRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELATIONSHIP',
         'RELEVANCE'
       ]),
@@ -253,7 +264,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_10L_11L_LINK_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerLordRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELATIONSHIP',
         'RELEVANCE'
       ]),
@@ -275,7 +286,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_SUN_RELEVANCE_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerPlanetRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'CONDITION',
         'EXPRESSION'
@@ -290,7 +301,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_SATURN_RELEVANCE_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerPlanetRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'CONDITION',
         'EXPRESSION'
@@ -305,7 +316,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_MERCURY_RELEVANCE_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerPlanetRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'CONDITION',
         'EXPRESSION'
@@ -320,7 +331,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_MARS_RELEVANCE_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerPlanetRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'CONDITION',
         'EXPRESSION'
@@ -335,7 +346,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_JUPITER_RELEVANCE_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerPlanetRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'CONDITION',
         'EXPRESSION'
@@ -356,7 +367,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_ASPECT_10H_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerAspectRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'CONDITION'
       ]),
@@ -378,7 +389,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_YOGA_CONFIRMATION_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerYogaRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'RELEVANCE',
         'QUALIFICATION'
       ]),
@@ -400,7 +411,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_D10_CONFIRMATION_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerVargaRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'QUALIFICATION'
       ]),
       currentMeaning:
@@ -422,7 +433,7 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
       ruleId: 'CAREER_DASHA_TIMING_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerDashaRules.ts',
-      ownership: Object.freeze([
+      ownership: freezeOwnership([
         'TIMING'
       ]),
       currentMeaning:
