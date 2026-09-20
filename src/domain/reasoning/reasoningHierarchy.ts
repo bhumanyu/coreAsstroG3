@@ -116,29 +116,83 @@ export function classifyReasoningEvidence(
       // Derive identity key from provenance if available, otherwise from evidence fields
       let identityKey: string;
       if (item.provenance) {
-        identityKey = buildEvidenceIdentityKey({
-          domain: item.provenance.domain,
-          axis: item.provenance.axis,
-          source: item.provenance.source,
-          ruleId: item.provenance.ruleId,
-          subjectKey: item.planet ? item.planet : (item.house ? `HOUSE_${item.house}` : 'UNKNOWN'),
-          objectKey: undefined
-        });
+        // Determine subjectKey and objectKey based on planet/house presence
+        let subjectKey: string;
+        let objectKey: string | undefined;
+        if (item.planet && item.house) {
+          subjectKey = item.planet;
+          objectKey = `HOUSE_${item.house}`;
+        } else if (item.planet) {
+          subjectKey = item.planet;
+          objectKey = undefined;
+        } else if (item.house) {
+          subjectKey = `HOUSE_${item.house}`;
+          objectKey = undefined;
+        } else {
+          // Neither planet nor house present - fall back to occurrence id
+          identityKey = item.id;
+          subjectKey = 'UNKNOWN';
+          objectKey = undefined;
+        }
+
+        if (identityKey !== item.id) {
+          identityKey = buildEvidenceIdentityKey({
+            domain: item.provenance.domain,
+            axis: item.provenance.axis,
+            source: item.provenance.source,
+            ruleId: item.provenance.ruleId,
+            subjectKey,
+            objectKey
+          });
+        }
       } else if (item.ruleId) {
-        // Fallback: construct identity key from available fields
-        identityKey = buildEvidenceIdentityKey({
-          domain: item.domain === 'CAREER' ? 'CAREER' : 'WEALTH',
-          axis: item.phase === 'NATAL_PROMISE' ? 'NATAL' :
+        // Determine subjectKey and objectKey based on planet/house presence
+        let subjectKey: string;
+        let objectKey: string | undefined;
+        if (item.planet && item.house) {
+          subjectKey = item.planet;
+          objectKey = `HOUSE_${item.house}`;
+        } else if (item.planet) {
+          subjectKey = item.planet;
+          objectKey = undefined;
+        } else if (item.house) {
+          subjectKey = `HOUSE_${item.house}`;
+          objectKey = undefined;
+        } else {
+          // Neither planet nor house present - fall back to occurrence id
+          identityKey = item.id;
+          subjectKey = 'UNKNOWN';
+          objectKey = undefined;
+        }
+
+        // Only build semantic identity key if we have trustworthy inputs
+        // Require: real subjectKey (planet or house present), source that maps cleanly,
+        // and phase that maps cleanly to known EvidenceAxis values
+        if (identityKey !== item.id) {
+          const axis: 'NATAL' | 'DASHA' | 'TIMING' | null = item.phase === 'NATAL_PROMISE' ? 'NATAL' :
             item.phase === 'DASHA_ACTIVATION' ? 'DASHA' :
-              item.phase === 'TRANSIT_TRIGGER' ? 'TIMING' : 'NATAL',
-          source: item.source === 'D1' ? 'D1' :
+              item.phase === 'TRANSIT_TRIGGER' ? 'TIMING' : null;
+
+          const source: 'D1' | 'D2' | 'D10' | 'DASHA' | 'TRANSIT' | null = item.source === 'D1' ? 'D1' :
             item.source === 'D10' ? 'D10' :
               item.source === 'D2' ? 'D2' :
-                item.source === 'DASHA' ? 'DASHA' : 'D1',
-          ruleId: item.ruleId,
-          subjectKey: item.planet ? item.planet : (item.house ? `HOUSE_${item.house}` : 'UNKNOWN'),
-          objectKey: undefined
-        });
+                item.source === 'DASHA' ? 'DASHA' :
+                  item.source === 'TRANSIT' ? 'TRANSIT' : null;
+
+          if (axis && source) {
+            identityKey = buildEvidenceIdentityKey({
+              domain: item.domain === 'CAREER' ? 'CAREER' : 'WEALTH',
+              axis,
+              source,
+              ruleId: item.ruleId,
+              subjectKey,
+              objectKey
+            });
+          } else {
+            // Missing or unknown semantic information - fall back to occurrence id
+            identityKey = item.id;
+          }
+        }
       } else {
         // Ultimate fallback: use evidenceId as identity
         identityKey = item.id;

@@ -89,6 +89,8 @@ export function deduplicateReasoningEvidence(
     const sourceIds: string[] = [];
     const layers: Set<ReasoningLayer> = new Set();
     let statement = '';
+    let statementEvidenceId = '';
+    let statementWeight = 0;
     const relatedEvidenceIds: Set<string> = new Set();
     let ruleId: string | undefined;
 
@@ -115,9 +117,13 @@ export function deduplicateReasoningEvidence(
       // Accumulate layers
       layers.add(item.layer);
 
-      // Use the first non-empty statement
-      if (!statement && item.statement) {
-        statement = item.statement;
+      // Track statement for deterministic selection (highest weight, tie-break by evidenceId)
+      if (item.statement) {
+        if (!statement || item.weight > statementWeight || (item.weight === statementWeight && item.evidenceId.localeCompare(statementEvidenceId) < 0)) {
+          statement = item.statement;
+          statementEvidenceId = item.evidenceId;
+          statementWeight = item.weight;
+        }
       }
 
       // Accumulate related evidence IDs
@@ -131,8 +137,18 @@ export function deduplicateReasoningEvidence(
       }
     }
 
-    // Get the primary layer (use the first layer in the group)
-    const primaryLayer = group[0].layer;
+    // Select canonical layer deterministically based on fixed precedence
+    // layer = deterministically-chosen canonical layer, layers = full set of all occurrence layers
+    const layerPrecedence: readonly ReasoningLayer[] = [
+      'PRIMARY_PROMISE',
+      'SECONDARY_SUPPORT',
+      'MODIFIER',
+      'YOGA',
+      'VARGA',
+      'DASHA',
+      'TRANSIT'
+    ];
+    const primaryLayer = layerPrecedence.find(l => layers.has(l)) ?? group[0].layer;
 
     const canonicalItem: CanonicalReasoningEvidence = Object.freeze({
       identityKey,
