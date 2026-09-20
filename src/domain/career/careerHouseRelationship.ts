@@ -299,7 +299,7 @@ export function detectCareerHouseRelationships(
   }
 
   return Object.freeze(
-    [...unique.values()].sort((a, b) => {
+    Array.from(unique.values()).sort((a, b) => {
       const priorityDifference =
         CAREER_HOUSE_RELATIONSHIP_PRIORITY[b.type] -
         CAREER_HOUSE_RELATIONSHIP_PRIORITY[a.type];
