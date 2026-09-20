@@ -33,33 +33,18 @@ export interface CanonicalReasoningEvidence {
  * The identity key is based on the semantic fields that define what the evidence
  * represents, excluding direction/strength/layer/prose which can vary across occurrences.
  *
- * For evidence with a ruleId, we derive the key from the ruleId and the evidenceId pattern.
- * The evidenceId format is: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]-<EFFECT>-<STRENGTH>
- * We strip the last two segments (effect, strength) to get the identity key.
- *
- * For evidence without a ruleId or with an unparseable ID, we fall back to using the
- * evidenceId itself as the identity key to ensure no evidence is lost.
+ * For evidence with an identityKey, we use it directly (computed at classification time).
+ * For evidence without an identityKey, we fall back to using the evidenceId itself
+ * to ensure no evidence is lost.
  */
 function deriveIdentityKey(evidence: WeightedReasoningEvidence): string {
-  if (!evidence.ruleId) {
-    // No ruleId - use evidenceId as fallback identity
-    return evidence.evidenceId;
+  // Use the pre-computed identityKey if available
+  if (evidence.identityKey) {
+    return evidence.identityKey;
   }
 
-  // Parse evidenceId to extract semantic fields
-  // Format: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]-<EFFECT>-<STRENGTH>
-  const segments = evidence.evidenceId.split('-');
-
-  // Minimum expected segments: CW, DOMAIN, AXIS, SOURCE, RULE_ID, SUBJECT_KEY, EFFECT, STRENGTH = 8
-  // With optional OBJECT_KEY: 9 segments
-  if (segments.length < 8) {
-    // Unparseable - use evidenceId as fallback
-    return evidence.evidenceId;
-  }
-
-  // Remove the last two segments (effect, strength) to get identity key
-  const identitySegments = segments.slice(0, -2);
-  return identitySegments.join('-');
+  // Fallback to evidenceId for legacy evidence without identityKey
+  return evidence.evidenceId;
 }
 
 /**
@@ -151,7 +136,7 @@ export function deduplicateReasoningEvidence(
 
     const canonicalItem: CanonicalReasoningEvidence = Object.freeze({
       identityKey,
-      evidenceId: group[0].evidenceId, // Use first occurrence's ID as the canonical ID
+      evidenceId: identityKey, // Use identityKey as the canonical ID for determinism
       ruleId,
       layer: primaryLayer,
       direction: mergedDirection,
@@ -186,6 +171,7 @@ export function canonicalToWeighted(
   return Object.freeze(
     canonical.map((item) =>
       Object.freeze({
+        identityKey: item.identityKey,
         evidenceId: item.evidenceId,
         ruleId: item.ruleId,
         layer: item.layer,

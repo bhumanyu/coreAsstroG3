@@ -7,6 +7,7 @@ function createWeightedEvidence(
   overrides: Partial<WeightedReasoningEvidence> = {}
 ): WeightedReasoningEvidence {
   return Object.freeze({
+    identityKey: evidenceId, // For test purposes, use evidenceId as identityKey
     evidenceId,
     ruleId: 'TEST_RULE',
     layer: 'PRIMARY_PROMISE',
@@ -258,6 +259,46 @@ describe('deduplicateReasoningEvidence', () => {
       // Both should be sorted by identity key
       expect(result1[0].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER');
       expect(result1[1].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-SATURN');
+    });
+
+    it('canonical evidenceId is deterministic regardless of occurrence order (SUPPORT-first vs CHALLENGE-first)', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const inputSupportFirst = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          direction: 'SUPPORT'
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-WEAK', {
+          identityKey,
+          direction: 'CHALLENGE',
+          strength: 'WEAK'
+        })
+      ];
+
+      const inputChallengeFirst = [
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-WEAK', {
+          identityKey,
+          direction: 'CHALLENGE',
+          strength: 'WEAK'
+        }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', {
+          identityKey,
+          direction: 'SUPPORT'
+        })
+      ];
+
+      const result1 = deduplicateReasoningEvidence(inputSupportFirst);
+      const result2 = deduplicateReasoningEvidence(inputChallengeFirst);
+
+      // Both should produce identical canonical records
+      expect(result1).toEqual(result2);
+      // The canonical evidenceId should be the identityKey, not dependent on input order
+      expect(result1[0].evidenceId).toBe(identityKey);
+      expect(result2[0].evidenceId).toBe(identityKey);
+      // Direction should be MIXED regardless of order
+      expect(result1[0].direction).toBe('MIXED');
+      expect(result2[0].direction).toBe('MIXED');
     });
   });
 

@@ -12,6 +12,7 @@ export interface EvidenceIdentityInput {
   readonly source: EvidenceSource;
   readonly ruleId: string;
   readonly subjectKey: string;
+  readonly objectKey?: string;
   readonly effect: EvidenceEffect;
   readonly strength: EvidenceStrength;
 }
@@ -35,7 +36,7 @@ function normalizeSegment(value: string): string {
 
 /**
  * Builds a deterministic, human-readable evidence identifier.
- * Format: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>-<EFFECT>-<STRENGTH>
+ * Format: CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]-<EFFECT>-<STRENGTH>
  */
 export function buildEvidenceId(input: EvidenceIdentityInput): string {
   if (!input.subjectKey || !input.subjectKey.trim()) {
@@ -52,10 +53,15 @@ export function buildEvidenceId(input: EvidenceIdentityInput): string {
     input.axis,
     input.source,
     input.ruleId,
-    input.subjectKey,
-    input.effect,
-    input.strength
+    input.subjectKey
   ];
+
+  if (input.objectKey && input.objectKey.trim()) {
+    segments.push(input.objectKey);
+  }
+
+  segments.push(input.effect);
+  segments.push(input.strength);
 
   return segments.map(normalizeSegment).join('-');
 }
