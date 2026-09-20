@@ -114,7 +114,7 @@ export function classifyReasoningEvidence(
         REASONING_LAYER_WEIGHTS[layer] ?? 1.0;
 
       // Derive identity key from provenance if available, otherwise from evidence fields
-      let identityKey: string;
+      let identityKey: string = item.id;
       if (item.provenance) {
         // Determine subjectKey and objectKey based on planet/house presence
         let subjectKey: string;

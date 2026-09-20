@@ -5,20 +5,13 @@ import {
   type EvidenceIdentityInput,
   type EvidenceIdentityKeyInput
 } from './evidenceIdentity';
-import {
-  EvidenceDomain,
-  EvidenceAxis,
-  EvidenceSource,
-  EvidenceEffect,
-  EvidenceStrength
-} from './evidenceProvenance';
 
 describe('buildEvidenceIdentityKey', () => {
   it('same fact with different effect produces same identity key', () => {
     const baseInput: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
@@ -32,9 +25,9 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('same fact with different strength produces same identity key', () => {
     const baseInput: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
@@ -47,17 +40,17 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('different ruleId produces different identity keys', () => {
     const input1: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
 
     const input2: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'SATURN_10TH_LORD',
       subjectKey: 'SATURN'
     };
@@ -70,17 +63,17 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('different domain produces different identity keys', () => {
     const input1: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
 
     const input2: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.WEALTH,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'WEALTH',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
@@ -93,17 +86,17 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('different subjectKey produces different identity keys', () => {
     const input1: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
 
     const input2: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'SATURN'
     };
@@ -116,18 +109,18 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('different objectKey produces different identity keys', () => {
     const input1: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_ASPECT_10TH',
       subjectKey: 'JUPITER',
       objectKey: '10TH_HOUSE'
     };
 
     const input2: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_ASPECT_10TH',
       subjectKey: 'JUPITER',
       objectKey: '2ND_HOUSE'
@@ -141,9 +134,9 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('identity key excludes effect and strength', () => {
     const baseInput: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: 'JUPITER'
     };
@@ -153,14 +146,14 @@ describe('buildEvidenceIdentityKey', () => {
     // Build two occurrence IDs with different effect/strength
     const occurrenceId1 = buildEvidenceId({
       ...baseInput,
-      effect: EvidenceEffect.SUPPORT,
-      strength: EvidenceStrength.PRIMARY
+      effect: 'SUPPORT',
+      strength: 'PRIMARY'
     });
 
     const occurrenceId2 = buildEvidenceId({
       ...baseInput,
-      effect: EvidenceEffect.CHALLENGE,
-      strength: EvidenceStrength.SECONDARY
+      effect: 'CHALLENGE',
+      strength: 'SECONDARY'
     });
 
     // Identity key should be the same
@@ -179,9 +172,9 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('throws error for empty subjectKey', () => {
     const input: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'JUPITER_10TH_LORD',
       subjectKey: ''
     };
@@ -191,9 +184,9 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('throws error for empty ruleId', () => {
     const input: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: '',
       subjectKey: 'JUPITER'
     };
@@ -203,9 +196,9 @@ describe('buildEvidenceIdentityKey', () => {
 
   it('normalizes whitespace and special characters', () => {
     const input: EvidenceIdentityKeyInput = {
-      domain: EvidenceDomain.CAREER,
-      axis: EvidenceAxis.NATAL,
-      source: EvidenceSource.D1,
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
       ruleId: 'Jupiter 10th Lord',
       subjectKey: 'Jupiter'
     };

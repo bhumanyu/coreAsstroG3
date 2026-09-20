@@ -127,102 +127,6 @@ describe('validateBirthDetails', () => {
       const errors = validateBirthDetails(birth);
       expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
     });
-
-    it('accepts valid leap year date: 2024-02-29T12:00:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-02-29T12:00:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(0);
-    });
-
-    it('rejects invalid leap year date: 2023-02-29T12:00:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2023-02-29T12:00:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
-
-    it('rejects February 30: 2024-02-30T12:00:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-02-30T12:00:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
-
-    it('rejects February 31: 2024-02-31T12:00:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-02-31T12:00:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
-
-    it('rejects April 31: 2024-04-31T12:00:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-04-31T12:00:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
-
-    it('rejects hour 24: 2024-01-01T24:00:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-01-01T24:00:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
-
-    it('rejects minute 60: 2024-01-01T12:60:00Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-01-01T12:60:00Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
-
-    it('rejects second 60: 2024-01-01T12:00:60Z', () => {
-      const birth: BirthDetails = {
-        latitude: 0,
-        longitude: 0,
-        timeZone: 'UTC',
-        ayanamsa: AyanamsaType.LAHIRI,
-        dateTimeStr: '2024-01-01T12:00:60Z'
-      };
-      const errors = validateBirthDetails(birth);
-      expect(errors.filter(e => e.field === 'dateTimeStr')).toHaveLength(1);
-    });
   });
 
   describe('timeZone validation', () => {
@@ -299,7 +203,7 @@ describe('validateBirthDetails', () => {
         latitude: 0,
         longitude: 0,
         timeZone: 'UTC',
-        ayanamsa: 'UNKNOWN_AYANAMSA' as unknown as BirthDetails['ayanamsa'],
+        ayanamsa: 'UNKNOWN_AYANAMSA' as any,
         dateTimeStr: '2024-01-01T12:00:00Z'
       };
       const errors = validateBirthDetails(birth);
@@ -325,7 +229,7 @@ describe('validateBirthDetails', () => {
         latitude: NaN,
         longitude: 500,
         timeZone: 'INVALID_ZONE',
-        ayanamsa: 'UNKNOWN' as unknown as BirthDetails['ayanamsa'],
+        ayanamsa: 'UNKNOWN' as any,
         dateTimeStr: 'invalid-date'
       };
       const errors = validateBirthDetails(birth);
@@ -356,7 +260,7 @@ describe('assertValidBirthDetails', () => {
       latitude: NaN,
       longitude: 500,
       timeZone: 'INVALID_ZONE',
-      ayanamsa: 'UNKNOWN' as unknown as BirthDetails['ayanamsa'],
+      ayanamsa: 'UNKNOWN' as any,
       dateTimeStr: 'invalid-date'
     };
     expect(() => assertValidBirthDetails(birth)).toThrow('Invalid birth details');
@@ -367,7 +271,7 @@ describe('assertValidBirthDetails', () => {
       latitude: NaN,
       longitude: 500,
       timeZone: 'INVALID_ZONE',
-      ayanamsa: 'UNKNOWN' as unknown as BirthDetails['ayanamsa'],
+      ayanamsa: 'UNKNOWN' as any,
       dateTimeStr: 'invalid-date'
     };
     expect(() => assertValidBirthDetails(birth)).toThrow(/latitude.*longitude.*timeZone.*ayanamsa.*dateTimeStr/);

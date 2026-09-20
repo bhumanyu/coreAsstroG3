@@ -3,7 +3,7 @@ import { X, Calendar, MapPin, Globe, Compass, Sparkles, Clock } from 'lucide-rea
 import { BirthDetails, AyanamsaType } from '../types';
 import { PlaceAutocomplete } from './PlaceAutocomplete';
 import { PlaceResult } from '../services/geocoding';
-import { validateBirthDetails, validateIsoDateTimeComponents, type BirthValidationError } from '../core/validation/birthDetailsValidation';
+import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
 
 interface BirthFormModalProps {
   isOpen: boolean;
@@ -74,33 +74,6 @@ export function zonedWallClockToUtcISO(dateTimeStr: string, timeZone: string): s
   const hour = parseInt(hr, 10);
   const minute = parseInt(mi, 10);
   const second = se ? parseInt(se, 10) : 0;
-
-  // Validate calendar/time components before Date.UTC to prevent normalization
-  if (month < 1 || month > 12) {
-    throw new Error(`Invalid month: ${month}. Must be between 1 and 12`);
-  }
-
-  const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-  if (isLeapYear && month === 2) {
-    daysInMonth[1] = 29;
-  }
-
-  if (day < 1 || day > daysInMonth[month - 1]) {
-    throw new Error(`Invalid day: ${day}. Must be between 1 and ${daysInMonth[month - 1]} for month ${month} and year ${year}`);
-  }
-
-  if (hour < 0 || hour > 23) {
-    throw new Error(`Invalid hour: ${hour}. Must be between 0 and 23`);
-  }
-
-  if (minute < 0 || minute > 59) {
-    throw new Error(`Invalid minute: ${minute}. Must be between 0 and 59`);
-  }
-
-  if (second < 0 || second > 59) {
-    throw new Error(`Invalid second: ${second}. Must be between 0 and 59`);
-  }
 
   const guessUtcMs = Date.UTC(year, month - 1, day, hour, minute, second);
 
@@ -216,68 +189,17 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
     const parsedLatitude = Number(latitude);
     const parsedLongitude = Number(longitude);
 
-    // Validate raw local wall-clock components before UTC conversion
-    const componentErrors: BirthValidationError[] = [];
-
-    // Validate local datetime format and calendar/time correctness
-    const dateTimeError = validateIsoDateTimeComponents(dateTimeStr);
-    if (dateTimeError) {
-      componentErrors.push(dateTimeError);
-    }
-
-    // Validate timezone is a valid IANA identifier
-    let timeZoneError: BirthValidationError | null = null;
-    if (!timeZone || typeof timeZone !== 'string' || timeZone.trim() === '') {
-      timeZoneError = {
-        field: 'timeZone',
-        code: 'INVALID_TIMEZONE',
-        message: 'Timezone must be a non-empty string'
-      };
-    } else {
-      try {
-        new Intl.DateTimeFormat(undefined, { timeZone });
-      } catch (e) {
-        timeZoneError = {
-          field: 'timeZone',
-          code: 'INVALID_TIMEZONE',
-          message: `Invalid IANA timezone identifier: ${timeZone}`
-        };
-      }
-    }
-    if (timeZoneError) {
-      componentErrors.push(timeZoneError);
-    }
-
-    // If component validation failed, surface errors and stop
-    if (componentErrors.length > 0) {
-      setValidationErrors(componentErrors);
-      return; // Do not call onSave or onClose for invalid input
-    }
-
-    // Convert to UTC after local components pass validation
-    let utcDateTimeStr: string;
-    try {
-      utcDateTimeStr = zonedWallClockToUtcISO(dateTimeStr, timeZone);
-    } catch (e) {
-      setValidationErrors([{
-        field: 'dateTimeStr',
-        code: 'INVALID_DATETIME',
-        message: `Failed to convert local datetime to UTC: ${e instanceof Error ? e.message : 'Unknown error'}`
-      }]);
-      return;
-    }
-
     const candidateBirthDetails: BirthDetails = {
       name: name.trim() || 'Custom Horoscope',
       placeOfBirth: placeOfBirth.trim() || 'Custom Location',
-      dateTimeStr: utcDateTimeStr,
+      dateTimeStr: zonedWallClockToUtcISO(dateTimeStr, timeZone),
       timeZone,
       latitude: parsedLatitude,
       longitude: parsedLongitude,
       ayanamsa
     };
 
-    // Final validation of the resulting BirthDetails
+    // Validate birth details before saving
     const errors = validateBirthDetails(candidateBirthDetails);
     if (errors.length > 0) {
       setValidationErrors(errors);

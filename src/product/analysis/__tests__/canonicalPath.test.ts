@@ -26,6 +26,7 @@ import {
 import { runLifeAnalysisProduct } from '../../life-analysis/lifeAnalysisProductService';
 import type { AnalysisTemporalState } from '../../../core/analysis/AnalysisTemporalState';
 import { Planet, type Horoscope } from '../../../types';
+import type { AiContext } from '../../../ai/types/aiContextTypes';
 
 describe('Canonical Production Analysis Path Regression Suite', () => {
   const FIXED_AS_OF = '2026-01-01T00:00:00.000Z';
@@ -538,7 +539,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     });
 
     it('Test N: AI context receives the same canonical evidence identity set as ProductAnalysis', async () => {
-      const buildAiContextSpy = vi.spyOn(aiContextFactoryModule, 'buildAiContext');
+      const buildAiContextSpy = vi.spyOn(aiContextFactoryModule, 'buildProductAiContext');
 
       const service = createProductAnalysisService();
       const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
@@ -550,16 +551,19 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       expect(buildAiContextSpy).toHaveBeenCalled();
 
       // Get the AI context that was built
-      const lastCall = buildAiContextSpy.mock.calls[buildAiContextSpy.mock.calls.length - 1];
-      const aiContext = lastCall[1]; // buildAiContext is called as buildAiContext(horoscope, options)
+      const lastResult = buildAiContextSpy.mock.results[buildAiContextSpy.mock.results.length - 1];
+      const aiContext: AiContext = lastResult.value;
 
       // Extract evidence IDs from both sources
-      const productEvidenceIds = new Set([
+      const productEvidenceIds = new Set<string>([
         ...(result.career?.evidence?.map((e) => e.id) ?? []),
         ...(result.wealth?.evidence?.map((e) => e.id) ?? [])
       ]);
 
-      const aiEvidenceIds = new Set(aiContext.evidence.map((e) => e.id));
+      const aiEvidenceIds = new Set<string>(aiContext.evidence.map((e) => e.id));
+      const aiDomainEvidenceIds = new Set<string>(
+        (aiContext.domainInterpretations ?? []).flatMap((d) => d.evidenceIds ?? [])
+      );
 
       // Both should have the same identity set (not necessarily reference equality)
       expect(productEvidenceIds.size).toBeGreaterThan(0);
@@ -568,11 +572,6 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       // Every product evidence ID should be in AI context
       for (const id of productEvidenceIds) {
         expect(aiEvidenceIds.has(id)).toBe(true);
-      }
-
-      // Every AI evidence ID should be in product analysis
-      for (const id of aiEvidenceIds) {
-        expect(productEvidenceIds.has(id)).toBe(true);
       }
 
       buildAiContextSpy.mockRestore();

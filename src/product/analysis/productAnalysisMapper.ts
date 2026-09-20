@@ -302,7 +302,7 @@ function mapQualifications(raw?: readonly LifeAnalysisQualification[]): readonly
   }));
 }
 
-function mapEvidenceItems(
+export function mapEvidenceItems(
   rawList?: readonly any[],
   fallbackDomain: string = 'GENERAL'
 ): readonly ProductEvidence[] {

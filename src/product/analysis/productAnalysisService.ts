@@ -16,7 +16,7 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { runLifeAnalysisProduct } from '../life-analysis/lifeAnalysisProductService';
 import type { LifeAnalysisProductState } from '../life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysis } from './productAnalysisTypes';
-import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology } from './productAnalysisMapper';
+import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems } from './productAnalysisMapper';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 
@@ -94,6 +94,12 @@ export class ProductAnalysisService {
         horoscope,
         lifeAnalysisViewModel: pipelineState.analysis,
         aiExplanation: pipelineState.aiExplanation,
+        careerEvidence: pipelineState.career?.evidence
+          ? mapEvidenceItems(pipelineState.career.evidence, 'CAREER')
+          : undefined,
+        wealthEvidence: pipelineState.wealth?.evidence
+          ? mapEvidenceItems(pipelineState.wealth.evidence, 'WEALTH')
+          : undefined,
         context
       });
     } catch (error: unknown) {
