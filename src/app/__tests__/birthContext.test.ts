@@ -30,7 +30,7 @@ describe('buildBirthContext', () => {
     expect(context?.placeOfBirth).toBe('Pataliputra, India');
   });
 
-  it('handles unknown timezone with fallback zone label', () => {
+  it('handles unknown timezone with passthrough zone label (no UTC fallback)', () => {
     const customDetails = {
       ...CANONICAL_BIRTH_DETAILS,
       timeZone: 'Custom/Region'

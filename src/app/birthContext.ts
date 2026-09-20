@@ -13,16 +13,8 @@ export function buildBirthContext(birthDetails?: BirthDetails): BirthContext | u
 export function buildBirthContext(birthDetails?: BirthDetails): BirthContext | undefined {
   if (!birthDetails) return undefined;
 
-  const tz = birthDetails.timeZone || 'UTC';
-  const isoClean =
-    birthDetails.dateTimeStr &&
-    (birthDetails.dateTimeStr.includes('Z') ||
-      birthDetails.dateTimeStr.includes('+') ||
-      (birthDetails.dateTimeStr.length > 10 && birthDetails.dateTimeStr.slice(10).includes('-')))
-      ? birthDetails.dateTimeStr
-      : birthDetails.dateTimeStr
-        ? birthDetails.dateTimeStr + 'Z'
-        : new Date().toISOString();
+  const tz = birthDetails.timeZone;
+  const isoClean = birthDetails.dateTimeStr;
 
   let formattedDate = '';
   try {

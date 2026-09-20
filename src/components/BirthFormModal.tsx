@@ -3,6 +3,7 @@ import { X, Calendar, MapPin, Globe, Compass, Sparkles, Clock } from 'lucide-rea
 import { BirthDetails, AyanamsaType } from '../types';
 import { PlaceAutocomplete } from './PlaceAutocomplete';
 import { PlaceResult } from '../services/geocoding';
+import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
 
 interface BirthFormModalProps {
   isOpen: boolean;
@@ -58,11 +59,13 @@ function getOffsetMs(ms: number, timeZone: string): number {
 }
 
 export function zonedWallClockToUtcISO(dateTimeStr: string, timeZone: string): string {
-  if (!dateTimeStr) return new Date().toISOString();
+  if (!dateTimeStr) {
+    throw new Error('Birth datetime is required');
+  }
 
   const match = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/);
   if (!match) {
-    return new Date(dateTimeStr).toISOString();
+    throw new Error('Invalid datetime format');
   }
   const [, yr, mo, da, hr, mi, se] = match;
   const year = parseInt(yr, 10);
@@ -156,6 +159,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
   const [latitude, setLatitude] = useState(currentDetails.latitude.toString());
   const [longitude, setLongitude] = useState(currentDetails.longitude.toString());
   const [ayanamsa, setAyanamsa] = useState<AyanamsaType>(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
+  const [validationErrors, setValidationErrors] = useState<readonly BirthValidationError[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -172,6 +176,7 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
       setLatitude(currentDetails.latitude.toString());
       setLongitude(currentDetails.longitude.toString());
       setAyanamsa(currentDetails.ayanamsa || AyanamsaType.LAHIRI);
+      setValidationErrors([]); // Clear errors when modal opens
     }
   }, [isOpen]);
 
@@ -179,15 +184,31 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+
+    // Explicit parsing instead of parseFloat || 0
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+
+    const candidateBirthDetails: BirthDetails = {
       name: name.trim() || 'Custom Horoscope',
       placeOfBirth: placeOfBirth.trim() || 'Custom Location',
       dateTimeStr: zonedWallClockToUtcISO(dateTimeStr, timeZone),
       timeZone,
-      latitude: parseFloat(latitude) || 0,
-      longitude: parseFloat(longitude) || 0,
+      latitude: parsedLatitude,
+      longitude: parsedLongitude,
       ayanamsa
-    });
+    };
+
+    // Validate birth details before saving
+    const errors = validateBirthDetails(candidateBirthDetails);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return; // Do not call onSave or onClose for invalid input
+    }
+
+    // Clear errors and proceed with save
+    setValidationErrors([]);
+    onSave(candidateBirthDetails);
     onClose();
   };
 
@@ -310,6 +331,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   required
                   className="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                 />
+                {validationErrors.some(e => e.field === 'dateTimeStr') && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.find(e => e.field === 'dateTimeStr')?.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -331,6 +357,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                     <option value={timeZone}>{timeZone}</option>
                   )}
                 </select>
+                {validationErrors.some(e => e.field === 'timeZone') && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.find(e => e.field === 'timeZone')?.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -350,6 +381,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   placeholder="e.g. 23.1793"
                   className="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                 />
+                {validationErrors.some(e => e.field === 'latitude') && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.find(e => e.field === 'latitude')?.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -366,6 +402,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                   placeholder="e.g. 75.7849"
                   className="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-lg px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
                 />
+                {validationErrors.some(e => e.field === 'longitude') && (
+                  <p className="mt-1 text-xs text-red-400">
+                    {validationErrors.find(e => e.field === 'longitude')?.message}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -385,6 +426,11 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                 <option value={AyanamsaType.TROPICAL}>Tropical (Sayana / Western)</option>
                 <option value={AyanamsaType.FAGAN_BRADLEY}>Fagan-Bradley (Western Sidereal)</option>
               </select>
+              {validationErrors.some(e => e.field === 'ayanamsa') && (
+                <p className="mt-1 text-xs text-red-400">
+                  {validationErrors.find(e => e.field === 'ayanamsa')?.message}
+                </p>
+              )}
             </div>
 
             {/* Submit */}
