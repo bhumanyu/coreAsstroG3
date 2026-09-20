@@ -7,72 +7,83 @@ import {
 import { ThemeInterpretationContext } from '../../themeInterpretationContext';
 import { evaluateHouseStatus } from '../../evaluators/houseEvaluator';
 import { getHouseLord } from '../../themeInterpretationUtils';
+import {
+  detectCareerHouseRelationships,
+  type CareerHouseRelationshipContext,
+  type CareerHouseRelationship
+} from '../../../../domain/career/careerHouseRelationship';
+
+function createCareerHouseRelationshipContext(
+  context: ThemeInterpretationContext
+): CareerHouseRelationshipContext {
+  return {
+    getHouseLord: (house) =>
+      getHouseLord(context, house),
+
+    getHouseOccupants: (house) =>
+      evaluateHouseStatus(context, house).occupants,
+
+    getPlanetHouse: (planet) => {
+      const interpreted =
+        context.planetInterpretation?.planets?.[planet]
+          ?.placement?.house;
+
+      if (interpreted !== undefined) {
+        return interpreted;
+      }
+
+      return context.horoscope?.planetFacts?.[planet]?.house;
+    },
+
+    lordAspectsLord: (source, target) =>
+      (context.natalGrahaDrishti?.aspects ?? []).some(
+        (aspect) =>
+          aspect.sourcePlanet === source &&
+          aspect.targetPlanet === target
+      ),
+
+    lordAspectsHouse: (source, targetHouse) =>
+      (context.natalGrahaDrishti?.aspects ?? []).some(
+        (aspect) =>
+          aspect.sourcePlanet === source &&
+          aspect.targetHouse === targetHouse
+      )
+  };
+}
+
+function getCareerHouseRelationships(
+  context: ThemeInterpretationContext,
+  houseA: number,
+  houseB: number
+): readonly CareerHouseRelationship[] {
+  return detectCareerHouseRelationships(
+    createCareerHouseRelationshipContext(context),
+    houseA,
+    houseB
+  );
+}
 
 function checkHouseLink(
   context: ThemeInterpretationContext,
   hA: number,
   hB: number
 ) {
+  const relationships = getCareerHouseRelationships(
+    context,
+    hA,
+    hB
+  );
+
   const lA = getHouseLord(context, hA);
   const lB = getHouseLord(context, hB);
-  const statusA = evaluateHouseStatus(context, hA);
-  const statusB = evaluateHouseStatus(context, hB);
 
-  let linked = false;
-  let reason = '';
-
-  if (lA && lB && lA === lB) {
-    linked = true;
-    reason = `Single planet (${lA}) rules both house ${hA} and house ${hB}.`;
-  } else {
-    const lAInB = lA && statusB.occupants.includes(lA);
-    const lBInA = lB && statusA.occupants.includes(lB);
-
-    if (lAInB && lBInA) {
-      linked = true;
-      reason = `Sign exchange (Parivartana) between lord of house ${hA} (${lA}) and lord of house ${hB} (${lB}).`;
-    } else if (lAInB) {
-      linked = true;
-      reason = `Lord of house ${hA} (${lA}) placed in house ${hB}.`;
-    } else if (lBInA) {
-      linked = true;
-      reason = `Lord of house ${hB} (${lB}) placed in house ${hA}.`;
-    }
-  }
-
-  if (!linked && lA && lB && lA !== lB) {
-    let houseLA: number | undefined;
-    let houseLB: number | undefined;
-    if (context.planetInterpretation?.planets?.[lA]?.placement?.house) houseLA = context.planetInterpretation.planets[lA].placement.house;
-    else if (context.horoscope?.planetFacts?.[lA]?.house) houseLA = context.horoscope.planetFacts[lA].house;
-
-    if (context.planetInterpretation?.planets?.[lB]?.placement?.house) houseLB = context.planetInterpretation.planets[lB].placement.house;
-    else if (context.horoscope?.planetFacts?.[lB]?.house) houseLB = context.horoscope.planetFacts[lB].house;
-
-    if (houseLA !== undefined && houseLB !== undefined && houseLA === houseLB) {
-      linked = true;
-      reason = `Lords of house ${hA} (${lA}) and house ${hB} (${lB}) are conjunct in house ${houseLA}.`;
-    }
-  }
-
-  if (!linked && lA && lB) {
-    const aspects = context.natalGrahaDrishti?.aspects || [];
-    const lAAspectsLB = aspects.some((a) => a.sourcePlanet === lA && a.targetPlanet === lB);
-    const lBAspectsLA = aspects.some((a) => a.sourcePlanet === lB && a.targetPlanet === lA);
-    if (lAAspectsLB || lBAspectsLA) {
-      linked = true;
-      reason = `Aspectual relationship between lord of house ${hA} (${lA}) and lord of house ${hB} (${lB}).`;
-    } else {
-      const lAAspectsHB = aspects.some((a) => a.sourcePlanet === lA && a.targetHouse === hB);
-      const lBAspectsHA = aspects.some((a) => a.sourcePlanet === lB && a.targetHouse === hA);
-      if (lAAspectsHB || lBAspectsHA) {
-        linked = true;
-        reason = `Aspectual connection between house ${hA} lord and house ${hB}.`;
-      }
-    }
-  }
-
-  return { linked, reason, lA, lB };
+  return {
+    linked: relationships.length > 0,
+    relationships,
+    primaryRelationship: relationships[0],
+    lA,
+    lB
+  };
 }
 
 export const careerHouseRules: readonly ThemeRule[] = Object.freeze([
@@ -279,7 +290,7 @@ export const careerHouseRules: readonly ThemeRule[] = Object.freeze([
           priority: 'SECONDARY',
           strength: 'MODERATE',
           effect: 'SUPPORT',
-          statement: `Connection between 6th house (service/competition) and 10th house (career): ${link.reason}`,
+          statement: `Connection between 6th house (service/competition) and 10th house (career): ${link.primaryRelationship?.reason ?? ''}`,
           houses: [6, 10],
           planets: [link.lA, link.lB].filter((p): p is NonNullable<typeof p> => p !== undefined),
           conditional: false,
@@ -307,7 +318,7 @@ export const careerHouseRules: readonly ThemeRule[] = Object.freeze([
           priority: 'SECONDARY',
           strength: 'STRONG',
           effect: 'SUPPORT',
-          statement: `Direct linkage between 10th house (career) and 11th house (gains): ${link.reason}`,
+          statement: `Direct linkage between 10th house (career) and 11th house (gains): ${link.primaryRelationship?.reason ?? ''}`,
           houses: [10, 11],
           planets: [link.lA, link.lB].filter((p): p is NonNullable<typeof p> => p !== undefined),
           conditional: false,
