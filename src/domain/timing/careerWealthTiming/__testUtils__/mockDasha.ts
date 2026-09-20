@@ -5,6 +5,7 @@ import type {
   AntardashaPeriod,
   PratyantardashaPeriod
 } from '../../../../engine/dasha/vimshottari';
+import type { ActiveDashaTimingContext } from '../../../../core/analysis/mapDashaInterpretationToActiveDashaState';
 import type {
   CareerDashaSynthesis,
   CareerDashaEffect,
@@ -61,6 +62,18 @@ export function createMockActiveDashaState(options?: MockActiveDashaOptions): Ac
     mahadasha,
     antardasha,
     pratyantardasha
+  };
+}
+
+export function createMockActiveDashaTimingContext(options?: MockActiveDashaOptions): ActiveDashaTimingContext {
+  const mdPlanet = options?.mdPlanet ?? Planet.JUPITER;
+  const adPlanet = options?.adPlanet ?? Planet.SATURN;
+  const pdPlanet = options?.pdPlanet ?? Planet.MERCURY;
+
+  return {
+    mahadashaPlanet: mdPlanet,
+    antardashaPlanet: adPlanet,
+    pratyantardashaPlanet: pdPlanet
   };
 }
 

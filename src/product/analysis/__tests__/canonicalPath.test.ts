@@ -9,6 +9,7 @@ import * as careerModule from '../../../domain/career/CareerDomainInterpreterV2'
 import * as wealthModule from '../../../domain/wealth/WealthDomainInterpreterV2';
 import * as temporalModule from '../../../core/analysis/resolveAnalysisTemporalState';
 import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import * as resolveDashaModule from '../../../engine/dashaInterpretation/resolveDashaForAsOf';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import * as contextFactoryModule from '../../../core/analysis/analysisContextFactory';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
@@ -33,12 +34,14 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
   let wealthSpy: ReturnType<typeof vi.spyOn>;
   let temporalSpy: ReturnType<typeof vi.spyOn>;
   let aiExplanationSpy: ReturnType<typeof vi.spyOn>;
+  let resolveDashaSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
     wealthSpy = vi.spyOn(wealthModule, 'interpretWealthV2');
     temporalSpy = vi.spyOn(temporalModule, 'resolveAnalysisTemporalState');
     aiExplanationSpy = vi.spyOn(aiExplanationServiceModule, 'runAiExplanation');
+    resolveDashaSpy = vi.spyOn(resolveDashaModule, 'resolveDashaInterpretationForAsOf');
   });
 
   afterEach(() => {
@@ -46,6 +49,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     wealthSpy.mockRestore();
     temporalSpy.mockRestore();
     aiExplanationSpy.mockRestore();
+    resolveDashaSpy.mockRestore();
   });
 
   it('Test A: Single-call invariant - resolveAnalysisTemporalState and createAnalysisContext called EXACTLY ONCE in analyze()', async () => {
@@ -68,6 +72,7 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     // Verify EXACTLY ONCE invocation
     expect(contextSpy).toHaveBeenCalledTimes(1);
     expect(temporalSpy).toHaveBeenCalledTimes(1);
+    expect(resolveDashaSpy).toHaveBeenCalledTimes(1);
     expect(careerSpy).toHaveBeenCalledTimes(1);
     expect(wealthSpy).toHaveBeenCalledTimes(1);
     expect(aiExplanationSpy).toHaveBeenCalledTimes(1);
@@ -408,5 +413,86 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     expect(passedProductOptions?.domainInterpretations).toEqual([]);
 
     buildProductAiContextSpy.mockRestore();
+  });
+
+  it('Test J: Stale embedded Ketu with canonical Jupiter - Career and Wealth transit synthesis use canonical planet from temporalState', () => {
+    const baseHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, undefined, '2024-06-01T00:00:00.000Z');
+    const staleHoroscope: Horoscope = {
+      ...baseHoroscope,
+      dashaInterpretation: {
+        current: {
+          mahadasha: {
+            planet: Planet.KETU,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2027-01-01T00:00:00.000Z'
+          },
+          antardasha: {
+            planet: Planet.KETU,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2021-01-01T00:00:00.000Z'
+          },
+          pratyantardasha: {
+            planet: Planet.KETU,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2020-02-01T00:00:00.000Z'
+          }
+        } as any,
+        activePeriods: {
+          mahadasha: {
+            planet: Planet.KETU,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2027-01-01T00:00:00.000Z'
+          }
+        } as any
+      }
+    };
+
+    const context = createAnalysisContext({
+      asOf: '2024-06-01T00:00:00.000Z',
+      methodology: {
+        zodiacSystem: 'SIDEREAL',
+        houseSystem: 'WHOLE_SIGN',
+        ayanamsa: 'LAHIRI',
+        calculationEngine: 'ASTRO_CORE_V1',
+        rulesEngine: 'PARASHARA_CLASSICAL_RULES_V2',
+        vargaRules: 'PARASHARA_D10_D2',
+        dashaSystem: 'VIMSHOTTARI'
+      }
+    });
+    const temporalState = resolveAnalysisTemporalState(baseHoroscope, context);
+
+    // Canonical temporalState has JUPITER
+    expect(temporalState.dashaInterpretation?.current?.mahadasha?.planet).toBe(Planet.JUPITER);
+
+    // Career and Wealth should use canonical JUPITER from temporalState, not stale KETU from horoscope
+    const career = careerModule.interpretCareerV2(staleHoroscope, { context, temporalState });
+    const wealth = wealthModule.interpretWealthV2(staleHoroscope, { context, temporalState });
+
+    // Verify Career timing uses canonical JUPITER
+    const careerConclusion = career.conclusionData as any;
+    expect(careerConclusion.careerDashaSynthesis?.md?.planet).toBe(Planet.JUPITER);
+    expect(careerConclusion.careerDashaSynthesis?.md?.planet).not.toBe(Planet.KETU);
+
+    // Verify Wealth timing uses canonical JUPITER
+    const mdTiming = wealth.periodTimingActivations?.find((p) => p.period === 'MD');
+    expect(mdTiming?.planet).toBe(Planet.JUPITER);
+    expect(mdTiming?.planet).not.toBe(Planet.KETU);
+  });
+
+  it('Test K: Resolver-invocation-count - resolveDashaInterpretationForAsOf called exactly once for full product analysis', async () => {
+    const service = createProductAnalysisService();
+
+    const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+      asOf: FIXED_AS_OF,
+      includeAiExplanation: true
+    });
+
+    expect(result.status).toBe('READY');
+    expect(result.career).toBeDefined();
+    expect(result.wealth).toBeDefined();
+    expect(result.ai).toBeDefined();
+
+    // resolveDashaInterpretationForAsOf should be called exactly once for the entire product analysis
+    expect(resolveDashaSpy).toHaveBeenCalledTimes(1);
   });
 });

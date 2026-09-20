@@ -10,12 +10,13 @@ import {
   calculateHoroscope,
   calculateCombustion
 } from './astroEngine';
-import { Planet, Sign, Nakshatra, Pada, AyanamsaType, BirthDetails, AspectType, ShadbalaComponent, ShadbalaSubcomponent, StrengthComponentStatus, ShadbalaAggregationStatus, ChartType, PlanetMotion } from '../types';
+import { Planet, Sign, Nakshatra, Pada, AyanamsaType, BirthDetails, AspectType, ShadbalaComponent, ShadbalaSubcomponent, StrengthComponentStatus, ShadbalaAggregationStatus, ChartType, PlanetMotion, PlanetPosition } from '../types';
 import { House } from './houseLordship/houseGroups';
 import { FunctionalRole } from './functionalNature/functionalRoleTypes';
 import { CANONICAL_BIRTH_DETAILS } from '../test/fixtures/canonicalChart';
 import { YogaType } from './yoga/yogaTypes';
 import { LifeTheme } from './lifeThemes/lifeThemeTypes';
+import { calculateWholeSignHouse } from './chartMath';
 
 describe('astroEngine', () => {
   it('normalizes degrees correctly into [0, 360)', () => {
@@ -910,6 +911,204 @@ describe('astroEngine', () => {
       // Ecliptic longitudes in divisional charts must differ according to harmonic mapping
       expect(rasiSaturn.eclipticLongitude).not.toBe(navamsaSaturn.eclipticLongitude);
       expect(rasiSaturn.eclipticLongitude).not.toBe(dasamsaSaturn.eclipticLongitude);
+    });
+  });
+
+  describe('P0-06 Divisional Chart Positional Metadata Consistency', () => {
+    it('derives D9 sign from D9 longitude and D10 sign from D10 longitude', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d9Chart = horoscope.charts[ChartType.NAVAMSA];
+      const d10Chart = horoscope.charts[ChartType.DASAMSA];
+
+      for (const planet of Object.values(Planet)) {
+        const d9Pos = d9Chart.positions[planet];
+        const d10Pos = d10Chart.positions[planet];
+
+        expect(d9Pos.sign).toBe(calculateSign(d9Pos.eclipticLongitude!));
+        expect(d10Pos.sign).toBe(calculateSign(d10Pos.eclipticLongitude!));
+      }
+    });
+
+    it('derives D9 house and D10 house via calculateWholeSignHouse(chart.ascendantSign, calculateSign(pos.eclipticLongitude))', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d9Chart = horoscope.charts[ChartType.NAVAMSA];
+      const d10Chart = horoscope.charts[ChartType.DASAMSA];
+
+      for (const planet of Object.values(Planet)) {
+        const d9Pos = d9Chart.positions[planet];
+        const d10Pos = d10Chart.positions[planet];
+
+        const expectedD9House = calculateWholeSignHouse(
+          d9Chart.ascendantSign,
+          calculateSign(d9Pos.eclipticLongitude!)
+        );
+        const expectedD10House = calculateWholeSignHouse(
+          d10Chart.ascendantSign,
+          calculateSign(d10Pos.eclipticLongitude!)
+        );
+
+        expect(d9Pos.house).toBe(expectedD9House);
+        expect(d10Pos.house).toBe(expectedD10House);
+      }
+    });
+
+    it('ensures signLongitude equals eclipticLongitude % 30 for D3/D9/D10', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const vargas = [ChartType.DREKKANA, ChartType.NAVAMSA, ChartType.DASAMSA];
+
+      for (const varga of vargas) {
+        const chart = horoscope.charts[varga];
+        for (const planet of Object.values(Planet)) {
+          const pos = chart.positions[planet];
+          expect(pos.signLongitude).toBeCloseTo(pos.eclipticLongitude! % 30, 10);
+        }
+      }
+    });
+
+    it('maintains internally consistent positional metadata in every Varga (RASI/DREKKANA/NAVAMSA/DASAMSA)', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const allVargas = [ChartType.RASI, ChartType.DREKKANA, ChartType.NAVAMSA, ChartType.DASAMSA];
+      const d1Chart = horoscope.charts[ChartType.RASI];
+
+      for (const varga of allVargas) {
+        const chart = horoscope.charts[varga];
+        expect(chart.ascendantSign).toBe(calculateSign(chart.ascendantLongitude));
+
+        for (const planet of Object.values(Planet)) {
+          const pos = chart.positions[planet];
+          const long = pos.eclipticLongitude ?? pos.longitude;
+          expect(long).toBeDefined();
+          expect(pos.sign).toBe(calculateSign(long!));
+          expect(pos.signLongitude).toBeCloseTo(long! % 30, 10);
+
+          if (varga !== ChartType.RASI) {
+            expect(pos.house).toBe(calculateWholeSignHouse(chart.ascendantSign, calculateSign(long!)));
+          } else {
+            expect(pos.house).toBe(d1Chart.positions[planet].house);
+          }
+        }
+      }
+    });
+
+    it('ensures D1 metadata does not leak into D9/D10 (sign/house match divisional derivation, not D1)', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d1Chart = horoscope.charts[ChartType.RASI];
+      const d9Chart = horoscope.charts[ChartType.NAVAMSA];
+      const d10Chart = horoscope.charts[ChartType.DASAMSA];
+
+      let foundD9Diff = false;
+      let foundD10Diff = false;
+
+      for (const planet of Object.values(Planet)) {
+        const d1Pos = d1Chart.positions[planet];
+        const d9Pos = d9Chart.positions[planet];
+        const d10Pos = d10Chart.positions[planet];
+
+        // Positional metadata matches divisional derivation, not D1
+        expect(d9Pos.sign).toBe(calculateSign(d9Pos.eclipticLongitude!));
+        expect(d9Pos.house).toBe(calculateWholeSignHouse(d9Chart.ascendantSign, d9Pos.sign));
+        expect(d10Pos.sign).toBe(calculateSign(d10Pos.eclipticLongitude!));
+        expect(d10Pos.house).toBe(calculateWholeSignHouse(d10Chart.ascendantSign, d10Pos.sign));
+
+        if (d9Pos.sign !== d1Pos.sign || d9Pos.house !== d1Pos.house) {
+          foundD9Diff = true;
+        }
+        if (d10Pos.sign !== d1Pos.sign || d10Pos.house !== d1Pos.house) {
+          foundD10Diff = true;
+        }
+      }
+
+      // Prove that at least one planet has different sign/house in D9 and D10 than in D1,
+      // confirming D1 does not leak into D9/D10
+      expect(foundD9Diff).toBe(true);
+      expect(foundD10Diff).toBe(true);
+    });
+
+    it('protects P0-05: motion is canonical reference from D1 to D3, D9, and D10', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d1Chart = horoscope.charts[ChartType.RASI];
+      const d3Chart = horoscope.charts[ChartType.DREKKANA];
+      const d9Chart = horoscope.charts[ChartType.NAVAMSA];
+      const d10Chart = horoscope.charts[ChartType.DASAMSA];
+
+      for (const planet of Object.values(Planet)) {
+        const d1Motion = d1Chart.positions[planet].motion;
+        expect(d3Chart.positions[planet].motion).toBe(d1Motion);
+        expect(d9Chart.positions[planet].motion).toBe(d1Motion);
+        expect(d10Chart.positions[planet].motion).toBe(d1Motion);
+      }
+    });
+
+    it('confirms distinct divisional longitude transformations exist across planets', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d1Positions = horoscope.charts[ChartType.RASI].positions;
+      const d9Positions = horoscope.charts[ChartType.NAVAMSA].positions;
+      const d10Positions = horoscope.charts[ChartType.DASAMSA].positions;
+
+      let d9LongitudeDiffers = false;
+      let d10LongitudeDiffers = false;
+
+      for (const planet of Object.values(Planet)) {
+        if (d9Positions[planet].eclipticLongitude !== d1Positions[planet].eclipticLongitude) {
+          d9LongitudeDiffers = true;
+        }
+        if (d10Positions[planet].eclipticLongitude !== d1Positions[planet].eclipticLongitude) {
+          d10LongitudeDiffers = true;
+        }
+      }
+
+      expect(d9LongitudeDiffers).toBe(true);
+      expect(d10LongitudeDiffers).toBe(true);
+    });
+
+    it('leaves D1 unchanged and consistent with canonical astronomical positions', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d1Positions = horoscope.charts[ChartType.RASI].positions;
+      const rawPositions = generatePlanetaryPositions(CANONICAL_BIRTH_DETAILS);
+
+      for (const planet of Object.values(Planet)) {
+        // D1 positions must remain the original canonical positions
+        expect(d1Positions[planet].eclipticLongitude).toBe(rawPositions[planet].eclipticLongitude);
+        expect(d1Positions[planet].sign).toBe(rawPositions[planet].sign);
+        expect(d1Positions[planet].signLongitude).toBeCloseTo(rawPositions[planet].signLongitude, 10);
+      }
+    });
+
+    it('enforces object non-aliasing between D1 and D9/D10 positions', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const d1Positions = horoscope.charts[ChartType.RASI].positions;
+      const d9Positions = horoscope.charts[ChartType.NAVAMSA].positions;
+      const d10Positions = horoscope.charts[ChartType.DASAMSA].positions;
+
+      for (const planet of Object.values(Planet)) {
+        expect(d9Positions[planet]).not.toBe(d1Positions[planet]);
+        expect(d10Positions[planet]).not.toBe(d1Positions[planet]);
+      }
+    });
+
+    it('deterministic fixture test: forcing SUN to 15° Aries yields Aries in D1 and non-Aries (Virgo) in D10', () => {
+      const basePositions = generatePlanetaryPositions(CANONICAL_BIRTH_DETAILS);
+      const sunLongitude = 15; // 15° Aries
+      const customPositions: Record<Planet, PlanetPosition> = {
+        ...basePositions,
+        [Planet.SUN]: {
+          ...basePositions[Planet.SUN],
+          longitude: sunLongitude,
+          eclipticLongitude: sunLongitude,
+          siderealLongitude: sunLongitude,
+          sign: Sign.ARIES,
+          signLongitude: 15
+        }
+      };
+
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, customPositions);
+      const d1Sun = horoscope.charts[ChartType.RASI].positions[Planet.SUN];
+      const d10Sun = horoscope.charts[ChartType.DASAMSA].positions[Planet.SUN];
+
+      expect(d1Sun.sign).toBe(Sign.ARIES);
+      expect(d10Sun.sign).not.toBe(Sign.ARIES);
+      expect(d10Sun.sign).toBe(Sign.VIRGO);
+      expect(d10Sun.eclipticLongitude).toBeCloseTo(150, 6);
     });
   });
 });

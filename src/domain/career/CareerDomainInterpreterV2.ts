@@ -4,6 +4,8 @@ import {
   CareerEvidenceFamily,
   type ThemeInterpretationEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
+import { mapDashaInterpretationToActiveDashaState } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import type { ActiveDashaTimingContext } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
 import {
   buildDomainInterpretation,
   createDomainEvidence,
@@ -99,7 +101,6 @@ import {
   type ReasoningEdgeType,
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
-import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretCareerV2(
@@ -282,7 +283,7 @@ export function interpretCareerV2(
 
   let careerTimingSynthesis: CareerTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const activeDashaState = mapDashaInterpretationToActiveDashaState(options.temporalState.dashaInterpretation);
     const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
     careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
   } else {
@@ -481,14 +482,14 @@ export function buildCareerReasoningTraceGraph(params: {
         e.provenance.axis === 'NATAL'
           ? natalNodeId
           : e.provenance.axis === 'DASHA'
-          ? dashaNodeId
-          : e.provenance.axis === 'TIMING'
-          ? timingNodeId
-          : e.provenance.axis === 'DIVISIONAL'
-          ? divisionalNodeId
-          : e.provenance.axis === 'MANIFESTATION'
-          ? manifestationNodeId
-          : natalNodeId;
+            ? dashaNodeId
+            : e.provenance.axis === 'TIMING'
+              ? timingNodeId
+              : e.provenance.axis === 'DIVISIONAL'
+                ? divisionalNodeId
+                : e.provenance.axis === 'MANIFESTATION'
+                  ? manifestationNodeId
+                  : natalNodeId;
 
       let edgeType: ReasoningEdgeType | undefined;
       if (e.provenance.effect === 'CHALLENGE') {
@@ -739,8 +740,8 @@ export function evaluateD10Relationship(
     const linkedD10 =
       natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
         ? d10Evidence.filter((e) =>
-            e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
-          )
+          e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
+        )
         : d10Evidence;
 
     if (linkedD10.length > 0) {

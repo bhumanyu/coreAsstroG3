@@ -4,6 +4,8 @@ import {
   WealthEvidenceFamily,
   type WealthEvidence
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
+import { mapDashaInterpretationToActiveDashaState } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
+import type { ActiveDashaTimingContext } from '../../core/analysis/mapDashaInterpretationToActiveDashaState';
 import {
   buildDomainInterpretation,
   createDomainEvidence,
@@ -99,7 +101,6 @@ import {
   type ReasoningEdgeType,
   type ReasoningTraceGraph
 } from '../careerWealth/reasoningTrace';
-import { getActiveDasha } from '../../engine/dasha/vimshottari';
 import { analysisAsOfDate } from '../../core/analysis/analysisTime';
 
 export function interpretWealthV2(
@@ -230,16 +231,16 @@ export function interpretWealthV2(
 
   const vargaConfirmations: readonly VargaConfirmation[] = d2Evidence.length > 0
     ? [
-        createVargaConfirmation({
-          domain: 'WEALTH',
-          varga: 'D2',
-          relationship: d2Relationship,
-          strength: calculateVargaStrength(evidence, 'D2'),
-          confidence: calculateEvidenceConfidence(d2Evidence),
-          statement: buildD2Statement(d2Evidence, d2Relationship),
-          evidenceIds: d2Evidence.map((item) => item.id)
-        })
-      ]
+      createVargaConfirmation({
+        domain: 'WEALTH',
+        varga: 'D2',
+        relationship: d2Relationship,
+        strength: calculateVargaStrength(evidence, 'D2'),
+        confidence: calculateEvidenceConfidence(d2Evidence),
+        statement: buildD2Statement(d2Evidence, d2Relationship),
+        evidenceIds: d2Evidence.map((item) => item.id)
+      })
+    ]
     : [];
 
   // Multi-period timing (MD / AD / PD)
@@ -392,7 +393,7 @@ export function interpretWealthV2(
 
   let wealthTimingSynthesis: WealthTimingSynthesis;
   if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = horoscope.vimshottari ? getActiveDasha(horoscope.vimshottari, asOfDate) : null;
+    const activeDashaState = mapDashaInterpretationToActiveDashaState(options.temporalState.dashaInterpretation);
     const mapActivationToEffect = (eff: string): 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' => {
       if (eff === 'ACTIVATES' || eff === 'PARTIALLY_ACTIVATES') return 'SUPPORTS';
       if (eff === 'CHALLENGES') return 'CHALLENGES';
@@ -605,14 +606,14 @@ export function buildWealthReasoningTraceGraph(params: {
         e.provenance.axis === 'NATAL'
           ? natalNodeId
           : e.provenance.axis === 'DASHA'
-          ? dashaNodeId
-          : e.provenance.axis === 'TIMING'
-          ? timingNodeId
-          : e.provenance.axis === 'DIVISIONAL'
-          ? divisionalNodeId
-          : e.provenance.axis === 'MANIFESTATION'
-          ? manifestationNodeId
-          : natalNodeId;
+            ? dashaNodeId
+            : e.provenance.axis === 'TIMING'
+              ? timingNodeId
+              : e.provenance.axis === 'DIVISIONAL'
+                ? divisionalNodeId
+                : e.provenance.axis === 'MANIFESTATION'
+                  ? manifestationNodeId
+                  : natalNodeId;
 
       let edgeType: ReasoningEdgeType | undefined;
       if (e.provenance.effect === 'CHALLENGE') {
@@ -717,10 +718,10 @@ export function evaluateD2Relationship(
     const relevantD2 =
       relatedNatalEvidenceIds && relatedNatalEvidenceIds.length > 0
         ? d2Evidence.filter((item) =>
-            item.relatedEvidenceIds.some((id) =>
-              relatedNatalEvidenceIds.includes(id)
-            )
+          item.relatedEvidenceIds.some((id) =>
+            relatedNatalEvidenceIds.includes(id)
           )
+        )
         : d2Evidence;
 
     if (

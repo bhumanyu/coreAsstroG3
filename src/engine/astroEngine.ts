@@ -58,6 +58,7 @@ import { interpretWealthTheme } from './themeInterpretation/wealthThemeInterpret
 import { calculateNakshatra, normalizeDegree } from './nakshatraUtils';
 import {
   calculateSign,
+  calculateWholeSignHouse,
   calculateNaturalRelationship,
   getDivisionalLongitude
 } from './chartMath';
@@ -306,6 +307,29 @@ export function calculateAscendant(birthDetails: BirthDetails): number {
   return normalizeDegree(ascTropicalDeg - ayanamsaShift);
 }
 
+/**
+ * Constructs a divisional position with consistent positional metadata
+ * derived from its own divisional longitude.
+ */
+export function createDivisionalPosition(
+  original: PlanetPosition,
+  divisionalLongitude: number,
+  ascendantSign: Sign
+): PlanetPosition {
+  const sign = calculateSign(divisionalLongitude);
+  return {
+    planet: original.planet,
+    eclipticLongitude: divisionalLongitude,
+    siderealLongitude: divisionalLongitude,
+    longitude: divisionalLongitude,
+    sign,
+    house: calculateWholeSignHouse(ascendantSign, sign),
+    signLongitude: divisionalLongitude % 30,
+    eclipticLatitude: original.eclipticLatitude ?? 0,
+    motion: original.motion
+  };
+}
+
 export interface CalculateHoroscopeOptions {
   customPositions?: Record<Planet, PlanetPosition>;
   asOf?: string | Date;
@@ -344,24 +368,30 @@ export function calculateHoroscope(
   // Generate divisional charts
   const createChart = (type: ChartType): Chart => {
     const chartAsc = getDivisionalLongitude(ascendantLong, type);
-    const chartPositions: Record<Planet, PlanetPosition> = { ...positions };
+    const chartAscendantSign = calculateSign(chartAsc);
+    const chartPositions = {} as Record<Planet, PlanetPosition>;
 
     Object.values(Planet).forEach((p) => {
-      const origPos = positions[p]!;
-      const longVal = origPos.eclipticLongitude ?? origPos.longitude ?? 0;
-      const divLong = getDivisionalLongitude(longVal, type);
-      chartPositions[p] = {
-        ...origPos,
-        eclipticLongitude: divLong,
-        longitude: divLong
-      };
+      const originalPosition = positions[p]!;
+      const originalLongitude = originalPosition.eclipticLongitude ?? originalPosition.longitude ?? 0;
+      const divisionalLongitude = getDivisionalLongitude(originalLongitude, type);
+
+      if (type === ChartType.RASI) {
+        chartPositions[p] = originalPosition;
+      } else {
+        chartPositions[p] = createDivisionalPosition(
+          originalPosition,
+          divisionalLongitude,
+          chartAscendantSign
+        );
+      }
     });
 
     return {
       type,
       chartType: type,
       ascendantLongitude: chartAsc,
-      ascendantSign: calculateSign(chartAsc),
+      ascendantSign: chartAscendantSign,
       positions: chartPositions
     } as any;
   };

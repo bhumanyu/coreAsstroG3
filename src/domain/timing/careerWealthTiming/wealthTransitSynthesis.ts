@@ -1,5 +1,5 @@
 import { Planet, AyanamsaType, type Horoscope } from '../../../types';
-import type { ActiveDashaState } from '../../../engine/dasha/vimshottari';
+import type { ActiveDashaTimingContext } from '../../../core/analysis/mapDashaInterpretationToActiveDashaState';
 import { calculateTransit } from '../../../engine/transitEngine';
 import { calculateCurrentTransitPositions } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
@@ -81,7 +81,7 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
  */
 export function synthesizeWealthTiming(
   horoscope: Horoscope,
-  activeDasha: ActiveDashaState | null,
+  activeDasha: ActiveDashaTimingContext | null,
   asOf: Date,
   natalPromises?: Partial<Record<WealthDimension, DomainStrength>>,
   dashaEffects?: Partial<Record<WealthDimension, 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA'>>
@@ -323,9 +323,9 @@ export function synthesizeWealthTiming(
   // 4. Dasha-Lord Transits for Wealth
   if (activeDasha) {
     const dashaState: DashaState = {
-      mahadashaPlanet: activeDasha.mahadasha.planet,
-      antardashaPlanet: activeDasha.antardasha?.planet,
-      pratyantardashaPlanet: activeDasha.pratyantardasha?.planet
+      mahadashaPlanet: activeDasha.mahadashaPlanet,
+      antardashaPlanet: activeDasha.antardashaPlanet,
+      pratyantardashaPlanet: activeDasha.pratyantardashaPlanet
     };
 
     const correlation = correlateDashaAndTransit({

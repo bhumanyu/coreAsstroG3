@@ -1,5 +1,5 @@
 import { Planet, AyanamsaType, type Horoscope } from '../../../types';
-import type { ActiveDashaState } from '../../../engine/dasha/vimshottari';
+import type { ActiveDashaTimingContext } from '../../../core/analysis/mapDashaInterpretationToActiveDashaState';
 import { calculateTransit } from '../../../engine/transitEngine';
 import { calculateCurrentTransitPositions } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
@@ -76,7 +76,7 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
  */
 export function synthesizeCareerTransit(
   horoscope: Horoscope,
-  activeDasha: ActiveDashaState | null,
+  activeDasha: ActiveDashaTimingContext | null,
   asOf: Date,
   dashaSynthesis?: CareerDashaSynthesis
 ): CareerTransitSynthesis {
@@ -302,9 +302,9 @@ export function synthesizeCareerTransit(
   // 3. Dasha-Lord Transits
   if (activeDasha) {
     const dashaState: DashaState = {
-      mahadashaPlanet: activeDasha.mahadasha.planet,
-      antardashaPlanet: activeDasha.antardasha?.planet,
-      pratyantardashaPlanet: activeDasha.pratyantardasha?.planet
+      mahadashaPlanet: activeDasha.mahadashaPlanet,
+      antardashaPlanet: activeDasha.antardashaPlanet,
+      pratyantardashaPlanet: activeDasha.pratyantardashaPlanet
     };
 
     const correlation = correlateDashaAndTransit({
