@@ -236,7 +236,11 @@ export function interpretCareerPlanetaryRelevance(
   }
 
   if (occupiedHouse !== undefined) {
-    if (CAREER_PRIMARY_HOUSES.has(occupiedHouse)) {
+    if (
+      CAREER_PRIMARY_HOUSES.has(occupiedHouse) ||
+      CAREER_SUPPORTING_HOUSES.has(occupiedHouse) ||
+      CAREER_CHALLENGING_HOUSES.has(occupiedHouse)
+    ) {
       roles.push('HOUSE_OCCUPANT');
       reasons.push('CAREER_HOUSE_OCCUPANCY');
       relatedHouses.push(occupiedHouse);

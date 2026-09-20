@@ -163,7 +163,7 @@ describe('Career Planetary Relevance', () => {
       expect(result.relatedHouses).toContain(10);
     });
 
-    it('planet in 6H does not get HOUSE_OCCUPANT role (only primary houses)', () => {
+    it('planet in 6H gets HOUSE_OCCUPANT role and SUPPORTING relevance', () => {
       const result = interpretCareerPlanetaryRelevance(
         createContext({
           planet: Planet.MERCURY,
@@ -172,11 +172,40 @@ describe('Career Planetary Relevance', () => {
         })
       );
 
-      expect(result.relevance).toBe('NEUTRAL');
-      expect(result.roles).not.toContain('HOUSE_OCCUPANT');
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.roles).toContain('HOUSE_OCCUPANT');
+      expect(result.reasons).toContain('CAREER_HOUSE_OCCUPANCY');
     });
 
-    it('planet in 8H does not get HOUSE_OCCUPANT role (only primary houses)', () => {
+    it('planet in 2H gets HOUSE_OCCUPANT role and SUPPORTING relevance', () => {
+      const result = interpretCareerPlanetaryRelevance(
+        createContext({
+          planet: Planet.JUPITER,
+          ruledHouses: [],
+          occupiedHouse: 2
+        })
+      );
+
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.roles).toContain('HOUSE_OCCUPANT');
+      expect(result.reasons).toContain('CAREER_HOUSE_OCCUPANCY');
+    });
+
+    it('planet in 11H gets HOUSE_OCCUPANT role and SUPPORTING relevance', () => {
+      const result = interpretCareerPlanetaryRelevance(
+        createContext({
+          planet: Planet.JUPITER,
+          ruledHouses: [],
+          occupiedHouse: 11
+        })
+      );
+
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.roles).toContain('HOUSE_OCCUPANT');
+      expect(result.reasons).toContain('CAREER_HOUSE_OCCUPANCY');
+    });
+
+    it('planet in 8H gets HOUSE_OCCUPANT role and SUPPORTING relevance', () => {
       const result = interpretCareerPlanetaryRelevance(
         createContext({
           planet: Planet.MARS,
@@ -185,8 +214,23 @@ describe('Career Planetary Relevance', () => {
         })
       );
 
-      expect(result.relevance).toBe('NEUTRAL');
-      expect(result.roles).not.toContain('HOUSE_OCCUPANT');
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.roles).toContain('HOUSE_OCCUPANT');
+      expect(result.reasons).toContain('CAREER_HOUSE_OCCUPANCY');
+    });
+
+    it('planet in 12H gets HOUSE_OCCUPANT role and SUPPORTING relevance', () => {
+      const result = interpretCareerPlanetaryRelevance(
+        createContext({
+          planet: Planet.SATURN,
+          ruledHouses: [],
+          occupiedHouse: 12
+        })
+      );
+
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.roles).toContain('HOUSE_OCCUPANT');
+      expect(result.reasons).toContain('CAREER_HOUSE_OCCUPANCY');
     });
 
     it('planet in non-career house (3H) gets NEUTRAL relevance', () => {
