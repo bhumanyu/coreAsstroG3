@@ -1,10 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { BirthDetails, AyanamsaType } from '../../types';
 import { createProductAnalysisService } from '../../product/analysis/productAnalysisService';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 
 describe('P0-09 Birth Validation Regression Tests', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   describe('Test A: invalid coordinates never reach the engine', () => {
     it('invalid latitude (NaN) throws validation error before calculation', () => {
       const invalidBirthDetails: BirthDetails = {
@@ -54,8 +57,6 @@ describe('P0-09 Birth Validation Regression Tests', () => {
 
       expect(() => calculateHoroscope(invalidBirthDetails)).toThrow('Invalid birth details');
       expect(() => calculateHoroscope(invalidBirthDetails)).toThrow('dateTimeStr');
-
-      vi.useRealTimers();
     });
 
     it('invalid calendar date throws validation error instead of using current time', () => {
@@ -69,8 +70,6 @@ describe('P0-09 Birth Validation Regression Tests', () => {
 
       expect(() => calculateHoroscope(invalidBirthDetails)).toThrow('Invalid birth details');
       expect(() => calculateHoroscope(invalidBirthDetails)).toThrow('dateTimeStr');
-
-      vi.useRealTimers();
     });
   });
 
