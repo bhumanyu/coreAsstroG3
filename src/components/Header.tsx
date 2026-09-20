@@ -108,11 +108,10 @@ export const ProductNavigation: React.FC<ProductNavigationProps> = ({
             key={item.id}
             onClick={() => onNavigate(item.id)}
             title={item.description}
-            className={`px-4 py-3 text-xs font-medium whitespace-nowrap transition-colors border-b-2 cursor-pointer flex items-center space-x-1.5 ${
-              isActive
+            className={`px-4 py-3 text-xs font-medium whitespace-nowrap transition-colors border-b-2 cursor-pointer flex items-center space-x-1.5 ${isActive
                 ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
                 : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-            }`}
+              }`}
           >
             <span>{item.label}</span>
           </button>
@@ -161,11 +160,10 @@ export const MobileProductNavigation: React.FC<MobileProductNavigationProps> = (
                       onNavigate(item.id);
                       onToggle();
                     }}
-                    className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex flex-col ${
-                      isActive
+                    className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex flex-col ${isActive
                         ? 'bg-indigo-500/10 text-indigo-400 font-semibold'
                         : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span>{item.label}</span>
                     <span className="text-[10px] text-slate-500 font-normal">{item.description}</span>
@@ -189,11 +187,10 @@ export const MobileProductNavigation: React.FC<MobileProductNavigationProps> = (
                       onNavigate(item.id);
                       onToggle();
                     }}
-                    className={`text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${
-                      isActive
+                    className={`text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${isActive
                         ? 'bg-indigo-500/10 text-indigo-400 font-semibold'
                         : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                    }`}
+                      }`}
                   >
                     <span>{item.label}</span>
                   </button>
