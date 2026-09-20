@@ -2,3 +2,22 @@
 build/
 .idea/
 *.iml
+
+# Node.js
+node_modules/
+dist/
+
+# Environment files
+.env
+.env.*
+
+# Editor/OS files
+.DS_Store
+*.log
+
+# Coverage output
+coverage/
+.nyc_output/
+
+# Build artifacts
+*.tsbuildinfo
