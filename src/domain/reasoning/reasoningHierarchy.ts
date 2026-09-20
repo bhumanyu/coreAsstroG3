@@ -119,6 +119,8 @@ export function classifyReasoningEvidence(
         // Determine subjectKey and objectKey based on planet/house presence
         let subjectKey: string;
         let objectKey: string | undefined;
+        const hasSemanticSubject = item.planet || item.house;
+
         if (item.planet && item.house) {
           subjectKey = item.planet;
           objectKey = `HOUSE_${item.house}`;
@@ -135,7 +137,7 @@ export function classifyReasoningEvidence(
           objectKey = undefined;
         }
 
-        if (identityKey !== item.id) {
+        if (hasSemanticSubject) {
           identityKey = buildEvidenceIdentityKey({
             domain: item.provenance.domain,
             axis: item.provenance.axis,
@@ -149,6 +151,8 @@ export function classifyReasoningEvidence(
         // Determine subjectKey and objectKey based on planet/house presence
         let subjectKey: string;
         let objectKey: string | undefined;
+        const hasSemanticSubject = item.planet || item.house;
+
         if (item.planet && item.house) {
           subjectKey = item.planet;
           objectKey = `HOUSE_${item.house}`;
@@ -168,7 +172,7 @@ export function classifyReasoningEvidence(
         // Only build semantic identity key if we have trustworthy inputs
         // Require: real subjectKey (planet or house present), source that maps cleanly,
         // and phase that maps cleanly to known EvidenceAxis values
-        if (identityKey !== item.id) {
+        if (hasSemanticSubject) {
           const axis: 'NATAL' | 'DASHA' | 'TIMING' | null = item.phase === 'NATAL_PROMISE' ? 'NATAL' :
             item.phase === 'DASHA_ACTIVATION' ? 'DASHA' :
               item.phase === 'TRANSIT_TRIGGER' ? 'TIMING' : null;

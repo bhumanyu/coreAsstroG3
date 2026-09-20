@@ -428,6 +428,46 @@ describe('deduplicateReasoningEvidence', () => {
       expect(result1[0].direction).toBe('MIXED');
       expect(result2[0].direction).toBe('MIXED');
     });
+
+    it('sourceIds and relatedEvidenceIds are order-independent (distinct evidenceIds and relatedEvidenceIds, A,B vs B,A)', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
+
+      const inputAB = [
+        createWeightedEvidence('EVIDENCE_A', {
+          identityKey,
+          relatedEvidenceIds: ['REL_1', 'REL_2']
+        }),
+        createWeightedEvidence('EVIDENCE_B', {
+          identityKey,
+          relatedEvidenceIds: ['REL_3', 'REL_4']
+        })
+      ];
+
+      const inputBA = [
+        createWeightedEvidence('EVIDENCE_B', {
+          identityKey,
+          relatedEvidenceIds: ['REL_3', 'REL_4']
+        }),
+        createWeightedEvidence('EVIDENCE_A', {
+          identityKey,
+          relatedEvidenceIds: ['REL_1', 'REL_2']
+        })
+      ];
+
+      const resultAB = deduplicateReasoningEvidence(inputAB);
+      const resultBA = deduplicateReasoningEvidence(inputBA);
+
+      // Both should produce identical canonical records
+      expect(resultAB).toEqual(resultBA);
+
+      // sourceIds should be sorted deterministically
+      expect(resultAB[0].sourceIds).toEqual(['EVIDENCE_A', 'EVIDENCE_B']);
+      expect(resultBA[0].sourceIds).toEqual(['EVIDENCE_A', 'EVIDENCE_B']);
+
+      // relatedEvidenceIds should be sorted deterministically
+      expect(resultAB[0].relatedEvidenceIds).toEqual(['REL_1', 'REL_2', 'REL_3', 'REL_4']);
+      expect(resultBA[0].relatedEvidenceIds).toEqual(['REL_1', 'REL_2', 'REL_3', 'REL_4']);
+    });
   });
 
   describe('mutation-safety', () => {

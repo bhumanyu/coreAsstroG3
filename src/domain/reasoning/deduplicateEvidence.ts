@@ -7,6 +7,20 @@ import type {
 import { mergeEvidenceDirection, mergeEvidenceStrength } from './mergeEvidence';
 
 /**
+ * Fixed precedence order for reasoning layers.
+ * Used for deterministic canonical layer selection and canonicalization of the layers array.
+ */
+const REASONING_LAYER_PRECEDENCE: readonly ReasoningLayer[] = [
+  'PRIMARY_PROMISE',
+  'SECONDARY_SUPPORT',
+  'MODIFIER',
+  'YOGA',
+  'VARGA',
+  'DASHA',
+  'TRANSIT'
+];
+
+/**
  * Canonical evidence record with occurrence metadata.
  * Extends WeightedReasoningEvidence to track how many times the same
  * semantic fact appeared across different layers/representations.
@@ -139,16 +153,7 @@ export function deduplicateReasoningEvidence(
 
     // Select canonical layer deterministically based on fixed precedence
     // layer = deterministically-chosen canonical layer, layers = full set of all occurrence layers
-    const layerPrecedence: readonly ReasoningLayer[] = [
-      'PRIMARY_PROMISE',
-      'SECONDARY_SUPPORT',
-      'MODIFIER',
-      'YOGA',
-      'VARGA',
-      'DASHA',
-      'TRANSIT'
-    ];
-    const primaryLayer = layerPrecedence.find(l => layers.has(l)) ?? group[0].layer;
+    const primaryLayer = REASONING_LAYER_PRECEDENCE.find(l => layers.has(l)) ?? group[0].layer;
 
     const canonicalItem: CanonicalReasoningEvidence = Object.freeze({
       identityKey,
@@ -160,10 +165,10 @@ export function deduplicateReasoningEvidence(
       priority: maxPriority,
       weight: maxWeight,
       statement,
-      relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds)),
+      relatedEvidenceIds: Object.freeze(Array.from(relatedEvidenceIds).sort((a, b) => a.localeCompare(b))),
       occurrenceCount: group.length,
-      sourceIds: Object.freeze(sourceIds),
-      layers: Object.freeze(Array.from(layers))
+      sourceIds: Object.freeze([...sourceIds].sort((a, b) => a.localeCompare(b))),
+      layers: Object.freeze(REASONING_LAYER_PRECEDENCE.filter(l => layers.has(l)))
     });
 
     canonical.push(canonicalItem);

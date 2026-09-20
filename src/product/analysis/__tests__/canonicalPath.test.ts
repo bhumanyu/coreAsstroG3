@@ -578,11 +578,9 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       buildAiContextSpy.mockRestore();
     });
 
-    it('Test O: duplicate-invariance regression - same semantic fact with 1 vs 3 occurrences yields identical final strength', async () => {
-      // This test validates that deduplication ensures the same semantic fact
-      // contributes the same weight regardless of occurrence count
-      // Moved to unit test in deduplicateEvidence.test.ts for proper duplicate injection
-      // This placeholder validates the production path continues to succeed
+    it('Test O: production path remains READY after evidence deduplication', async () => {
+      // Validates the production path continues to succeed after deduplication changes
+      // Real duplicate-invariance regression moved to unit test in deduplicateEvidence.test.ts
       const service = createProductAnalysisService();
       const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         asOf: FIXED_AS_OF,
@@ -594,9 +592,9 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
       expect(result.wealth).toBeDefined();
     });
 
-    it('Test P: SUPPORT + CHALLENGE => MIXED production/dedup assertion end-to-end', async () => {
+    it('Test P: production path remains READY after direction merge logic changes', async () => {
+      // Validates the production path continues to succeed after direction merge changes
       // Unit-level MIXED test exists in deduplicateEvidence.test.ts (SUPPORT-first/CHALLENGE-first)
-      // This placeholder validates the production path continues to succeed
       const service = createProductAnalysisService();
       const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         asOf: FIXED_AS_OF,
