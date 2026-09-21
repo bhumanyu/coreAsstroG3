@@ -60,7 +60,8 @@ export type CareerDashaEvidenceRole =
   | 'PLANETARY_RELEVANCE'
   | 'PLANETARY_CONDITION'
   | 'EXPRESSION'
-  | 'TIMING';
+  | 'TIMING'
+  | 'ACTIVATION';
 
 export interface CareerDashaPlanetContext {
   readonly planet: Planet;

@@ -1,6 +1,5 @@
 import type {
-  CareerPlanetRelevance,
-  CareerPlanetRole
+  CareerPlanetRelevance
 } from '../careerPlanetaryRelevance';
 
 import type {
@@ -8,8 +7,7 @@ import type {
 } from '../careerPlanetaryCondition';
 
 import type {
-  CareerExpression,
-  CareerExpressionDirection
+  CareerExpression
 } from '../careerExpression';
 
 import type {

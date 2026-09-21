@@ -29,6 +29,26 @@ import {
   type DashaTimingEvidence
 } from '../../reasoning/dashaHierarchy';
 
+import type {
+  TimingActivationEffect
+} from '../../reasoning/reasoningTypes';
+
+function toTimingActivationEffect(
+  effect: CareerDashaActivationEffect
+): TimingActivationEffect {
+  // CareerDashaActivationEffect and TimingActivationEffect are semantically identical
+  // This conversion is type-safe since both unions have the exact same values
+  return effect as TimingActivationEffect;
+}
+
+function toCareerDashaActivationEffect(
+  effect: TimingActivationEffect
+): CareerDashaActivationEffect {
+  // TimingActivationEffect and CareerDashaActivationEffect are semantically identical
+  // This conversion is type-safe since both unions have the exact same values
+  return effect as CareerDashaActivationEffect;
+}
+
 export function resolveCareerDashaActivation(
   context: CareerDashaActivationContext
 ): CareerDashaActivationHierarchy {
@@ -203,7 +223,7 @@ function buildActivationEvidence(
   if (!seenKeys.has(activationKey)) {
     evidence.push(Object.freeze({
       id: activationKey,
-      role: 'TIMING',
+      role: 'ACTIVATION',
       statement: `Activation effect: ${effect}, direction: ${direction}, strength: ${strength}.`,
       direction,
       strength
@@ -243,21 +263,21 @@ function resolveCareerDashaHierarchy(
   // Build DashaTimingEvidence for each level
   const mdEvidence: DashaTimingEvidence = Object.freeze({
     level: 'MD',
-    effect: md.effect as any, // CareerDashaActivationEffect maps to TimingActivationEffect
+    effect: toTimingActivationEffect(md.effect),
     evidenceIds: md.evidence.map(e => e.id),
     confidence: 1
   });
 
   const adEvidence: DashaTimingEvidence = Object.freeze({
     level: 'AD',
-    effect: ad.effect as any,
+    effect: toTimingActivationEffect(ad.effect),
     evidenceIds: ad.evidence.map(e => e.id),
     confidence: 1
   });
 
   const pdEvidence: DashaTimingEvidence = Object.freeze({
     level: 'PD',
-    effect: pd.effect as any,
+    effect: toTimingActivationEffect(pd.effect),
     evidenceIds: pd.evidence.map(e => e.id),
     confidence: 1
   });
@@ -266,8 +286,8 @@ function resolveCareerDashaHierarchy(
   const hierarchyResult = resolveDashaHierarchy(mdEvidence, adEvidence, pdEvidence);
 
   // Derive overallDirection and overallStrength from finalEffect + dominantLevel
-  const overallDirection = deriveOverallDirection(hierarchyResult.finalEffect, hierarchyResult.dominantLevel, md, ad, pd);
-  const overallStrength = deriveOverallStrength(hierarchyResult.finalEffect, hierarchyResult.dominantLevel, md, ad, pd);
+  const overallDirection = deriveOverallDirection(hierarchyResult.finalEffect);
+  const overallStrength = deriveOverallStrength(hierarchyResult.dominantLevel, md, ad, pd);
 
   const statement = buildHierarchyStatement(md, ad, pd, hierarchyResult.finalEffect, overallDirection, overallStrength, hierarchyResult.dominantLevel);
 
@@ -275,7 +295,7 @@ function resolveCareerDashaHierarchy(
     md,
     ad,
     pd,
-    overallEffect: hierarchyResult.finalEffect as any,
+    overallEffect: toCareerDashaActivationEffect(hierarchyResult.finalEffect),
     overallDirection,
     overallStrength,
     dominantLevel: hierarchyResult.dominantLevel,
@@ -283,128 +303,10 @@ function resolveCareerDashaHierarchy(
   });
 }
 
-function resolveHierarchyDirection(
-  md: CareerDashaActivation,
-  ad: CareerDashaActivation,
-  pd: CareerDashaActivation
-): CareerDashaActivationDirection {
-  if (md.effect === 'INSUFFICIENT_DATA' && ad.effect === 'INSUFFICIENT_DATA' && pd.effect === 'INSUFFICIENT_DATA') {
-    return 'UNAVAILABLE';
-  }
-
-  const mdSupport = md.direction === 'SUPPORT';
-  const adSupport = ad.direction === 'SUPPORT';
-  const pdSupport = pd.direction === 'SUPPORT';
-
-  const mdChallenge = md.direction === 'CHALLENGE';
-  const adChallenge = ad.direction === 'CHALLENGE';
-  const pdChallenge = pd.direction === 'CHALLENGE';
-
-  if (mdSupport && adSupport && pdSupport) {
-    return 'SUPPORT';
-  }
-
-  if (mdChallenge && adChallenge && pdChallenge) {
-    return 'CHALLENGE';
-  }
-
-  if (mdSupport && adChallenge) {
-    return 'MIXED';
-  }
-
-  if (mdChallenge && adSupport) {
-    return 'MIXED';
-  }
-
-  if (mdSupport && !adChallenge) {
-    return 'SUPPORT';
-  }
-
-  if (mdChallenge && !adSupport) {
-    return 'CHALLENGE';
-  }
-
-  if (adSupport && !mdChallenge) {
-    return 'SUPPORT';
-  }
-
-  if (adChallenge && !mdSupport) {
-    return 'CHALLENGE';
-  }
-
-  return 'NEUTRAL';
-}
-
-function resolveHierarchyStrength(
-  md: CareerDashaActivation,
-  ad: CareerDashaActivation,
-  pd: CareerDashaActivation
-): CareerDashaActivationStrength {
-  if (md.effect === 'INSUFFICIENT_DATA' && ad.effect === 'INSUFFICIENT_DATA' && pd.effect === 'INSUFFICIENT_DATA') {
-    return 'UNDETERMINED';
-  }
-
-  const mdStrength = md.strength;
-  const adStrength = ad.strength;
-  const pdStrength = pd.strength;
-
-  const direction = resolveHierarchyDirection(md, ad, pd);
-
-  if (direction === 'SUPPORT') {
-    if (mdStrength === 'VERY_STRONG' || mdStrength === 'STRONG') {
-      return mdStrength;
-    }
-
-    if (adStrength === 'VERY_STRONG' || adStrength === 'STRONG') {
-      return adStrength;
-    }
-
-    if (mdStrength === 'MODERATE' || adStrength === 'MODERATE') {
-      return 'MODERATE';
-    }
-
-    return 'WEAK';
-  }
-
-  if (direction === 'CHALLENGE') {
-    if (mdStrength === 'VERY_WEAK' || mdStrength === 'WEAK') {
-      return mdStrength;
-    }
-
-    if (adStrength === 'VERY_WEAK' || adStrength === 'WEAK') {
-      return adStrength;
-    }
-
-    if (mdStrength === 'MODERATE' || adStrength === 'MODERATE') {
-      return 'WEAK';
-    }
-
-    return 'VERY_WEAK';
-  }
-
-  if (direction === 'MIXED') {
-    if (mdStrength === 'VERY_STRONG' || mdStrength === 'STRONG' || mdStrength === 'MODERATE') {
-      return 'MODERATE';
-    }
-
-    if (adStrength === 'VERY_STRONG' || adStrength === 'STRONG' || adStrength === 'MODERATE') {
-      return 'MODERATE';
-    }
-
-    return 'WEAK';
-  }
-
-  return 'UNDETERMINED';
-}
-
 function deriveOverallDirection(
-  finalEffect: string,
-  dominantLevel: string,
-  md: CareerDashaActivation,
-  ad: CareerDashaActivation,
-  pd: CareerDashaActivation
+  finalEffect: TimingActivationEffect
 ): CareerDashaActivationDirection {
-  // Derive direction deterministically from finalEffect + dominantLevel
+  // Derive direction deterministically from finalEffect
   // The effect hierarchy is the single source of truth
   if (finalEffect === 'ACTIVATES') {
     return 'SUPPORT';
@@ -422,8 +324,7 @@ function deriveOverallDirection(
 }
 
 function deriveOverallStrength(
-  finalEffect: string,
-  dominantLevel: string,
+  dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE',
   md: CareerDashaActivation,
   ad: CareerDashaActivation,
   pd: CareerDashaActivation
@@ -445,10 +346,10 @@ function buildHierarchyStatement(
   md: CareerDashaActivation,
   ad: CareerDashaActivation,
   pd: CareerDashaActivation,
-  finalEffect: string,
+  finalEffect: TimingActivationEffect,
   overallDirection: CareerDashaActivationDirection,
   overallStrength: CareerDashaActivationStrength,
-  dominantLevel: string
+  dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE'
 ): string {
   const parts = [
     `Career Dasha activation hierarchy.`,
