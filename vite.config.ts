@@ -12,7 +12,7 @@ export default defineConfig({
     allowedHosts: true,
   },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setupTests.ts',
     testTimeout: 20000,

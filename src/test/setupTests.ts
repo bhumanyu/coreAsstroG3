@@ -1,2 +1,2 @@
-// Node environment setup for domain logic tests
-// No DOM testing required for these tests
+// Test setup
+import '@testing-library/jest-dom/vitest';

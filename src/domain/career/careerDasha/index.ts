@@ -3,6 +3,9 @@ export * from './careerDashaRules';
 export * from './careerDashaScoring';
 export * from './careerDashaSynthesis';
 
+export type { CareerDashaTiming } from './careerDashaSynthesisTypes';
+export { resolveCareerDashaEffect } from './careerDashaScoring';
+
 export * from './careerDashaPlanetaryTypes';
 export * from './careerDashaPlanetaryRules';
 export { calculatePlanetaryScores } from './careerDashaPlanetaryScoring';

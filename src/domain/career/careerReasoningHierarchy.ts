@@ -248,13 +248,13 @@ export function evaluateCareerReasoningHierarchy(params: {
     conflicts: conflictRes.conflicts
   });
 
-  // Collect canonical evidence IDs (identityKey) for reasoning-facing ID lists
-  // sourceIds remain available in reasoningTrace for occurrence-level provenance
+  // Collect evidence IDs mapping to sourceIds for evidence traceability
+  // sourceIds point directly to input DomainEvidence items present in result.evidence
   const primaryEvidenceIds = Array.from(
     new Set(
       deduplicatedEvidence
         .filter((e) => e.layer === 'PRIMARY_PROMISE')
-        .map((e) => e.evidenceId)
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
     )
   );
 
@@ -262,7 +262,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'SUPPORT')
-        .map((e) => e.evidenceId)
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
     )
   );
 
@@ -270,7 +270,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'CHALLENGE')
-        .map((e) => e.evidenceId)
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
     )
   );
 
@@ -278,7 +278,7 @@ export function evaluateCareerReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
-        .map((e) => e.evidenceId)
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
     )
   );
 

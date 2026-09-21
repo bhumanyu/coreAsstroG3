@@ -219,7 +219,7 @@ export function resolveCareerD10Qualification(
   );
   evidence.push(qualificationEvidence);
 
-  const expressionQualifications: CareerD10ExpressionQualification[] = Object.freeze([]);
+  const expressionQualifications: readonly CareerD10ExpressionQualification[] = Object.freeze([]);
 
   const statement = createQualificationStatement(
     d10Effect,

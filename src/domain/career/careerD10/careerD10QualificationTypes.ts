@@ -13,7 +13,7 @@ import type {
   CareerPlanetaryCondition
 } from '../careerPlanetaryCondition';
 
-import type { Planet } from '../../types';
+import type { Planet } from '../../../types';
 
 export type CareerD10QualificationEffect =
   | 'QUALIFIES'
