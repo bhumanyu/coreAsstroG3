@@ -8,3 +8,7 @@ export * from './careerDashaPlanetaryRules';
 export { calculatePlanetaryScores } from './careerDashaPlanetaryScoring';
 export * from './careerDashaPlanetarySynthesis';
 export * from './careerDashaD10Context';
+
+export * from './careerDashaActivationTypes';
+export * from './careerDashaActivationRules';
+export * from './careerDashaActivation';
