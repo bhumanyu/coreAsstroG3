@@ -15,3 +15,4 @@ export * from './careerLordRelationshipSemantics';
 export * from './careerPlanetaryRelevance';
 export * from './careerPlanetaryCondition';
 export * from './careerExpression';
+export * from './careerD10';
