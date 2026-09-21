@@ -127,52 +127,181 @@ export function resolveD10Direction(
     return 'UNAVAILABLE';
   }
 
+  // Hierarchical evaluation: PRIMARY > SECONDARY > MODIFIER
+  const primaryDirection = evaluatePrimaryEvidence(context);
+  if (primaryDirection !== 'NEUTRAL') {
+    return primaryDirection;
+  }
+
+  const secondaryDirection = evaluateSecondaryEvidence(context);
+  if (secondaryDirection !== 'NEUTRAL') {
+    return secondaryDirection;
+  }
+
+  const modifierDirection = evaluateModifierEvidence(context);
+  if (modifierDirection !== 'NEUTRAL') {
+    return modifierDirection;
+  }
+
+  return 'NEUTRAL';
+}
+
+function evaluatePrimaryEvidence(
+  context: CareerD10Context
+): CareerD10QualificationDirection {
   let supportCount = 0;
   let challengeCount = 0;
 
+  // Planets in PRIMARY houses
   for (const planet of context.d10Planets) {
-    const direction = resolveD10PlanetDirection(planet);
-
-    if (direction === 'SUPPORT') {
-      supportCount++;
-    } else if (direction === 'CHALLENGE') {
-      challengeCount++;
+    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
+    if (houseRole === 'PRIMARY') {
+      const direction = resolveD10PlanetDirection(planet);
+      if (direction === 'SUPPORT') {
+        supportCount++;
+      } else if (direction === 'CHALLENGE') {
+        challengeCount++;
+      }
+      // NEUTRAL is not counted as either support or challenge
     }
   }
 
+  // PRIMARY house lords and tenants
   for (const house of context.d10Houses) {
     const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
-
     if (houseRole === 'PRIMARY') {
-      if (house.lordCondition === 'STRONG' || house.lordCondition === 'MODERATE') {
+      if (house.lordCondition === 'STRONG') {
         supportCount++;
       } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
         challengeCount++;
       }
-    }
+      // MODERATE is not counted as either support or challenge
 
-    for (const tenantCondition of house.tenantConditions) {
-      if (tenantCondition === 'STRONG' || tenantCondition === 'MODERATE') {
-        supportCount++;
-      } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
-        challengeCount++;
+      // Tenants in PRIMARY houses are PRIMARY evidence
+      for (const tenantCondition of house.tenantConditions) {
+        if (tenantCondition === 'STRONG') {
+          supportCount++;
+        } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
+          challengeCount++;
+        }
+        // MODERATE is not counted as either support or challenge
       }
     }
-  }
-
-  if (supportCount === 0 && challengeCount === 0) {
-    return 'NEUTRAL';
   }
 
   if (supportCount > challengeCount) {
     return 'SUPPORT';
   }
-
   if (challengeCount > supportCount) {
     return 'CHALLENGE';
   }
+  if (supportCount > 0 && challengeCount > 0) {
+    return 'MIXED';
+  }
+  return 'NEUTRAL';
+}
 
-  return 'MIXED';
+function evaluateSecondaryEvidence(
+  context: CareerD10Context
+): CareerD10QualificationDirection {
+  let supportCount = 0;
+  let challengeCount = 0;
+
+  // Planets in SUPPORTING houses
+  for (const planet of context.d10Planets) {
+    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
+    if (houseRole === 'SUPPORTING') {
+      const direction = resolveD10PlanetDirection(planet);
+      if (direction === 'SUPPORT') {
+        supportCount++;
+      } else if (direction === 'CHALLENGE') {
+        challengeCount++;
+      }
+      // NEUTRAL is not counted as either support or challenge
+    }
+  }
+
+  // SUPPORTING house lords and tenants
+  for (const house of context.d10Houses) {
+    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+    if (houseRole === 'SUPPORTING') {
+      if (house.lordCondition === 'STRONG') {
+        supportCount++;
+      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
+        challengeCount++;
+      }
+      // MODERATE is not counted as either support or challenge
+
+      // Tenants in SUPPORTING houses are SECONDARY evidence
+      for (const tenantCondition of house.tenantConditions) {
+        if (tenantCondition === 'STRONG') {
+          supportCount++;
+        } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
+          challengeCount++;
+        }
+        // MODERATE is not counted as either support or challenge
+      }
+    }
+  }
+
+  if (supportCount > challengeCount) {
+    return 'SUPPORT';
+  }
+  if (challengeCount > supportCount) {
+    return 'CHALLENGE';
+  }
+  if (supportCount > 0 && challengeCount > 0) {
+    return 'MIXED';
+  }
+  return 'NEUTRAL';
+}
+
+function evaluateModifierEvidence(
+  context: CareerD10Context
+): CareerD10QualificationDirection {
+  let supportCount = 0;
+  let challengeCount = 0;
+
+  // Planets in non-career houses (MODIFIER)
+  for (const planet of context.d10Planets) {
+    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
+    if (houseRole === 'NEUTRAL' || houseRole === 'CHALLENGING') {
+      const direction = resolveD10PlanetDirection(planet);
+      if (direction === 'SUPPORT') {
+        supportCount++;
+      } else if (direction === 'CHALLENGE') {
+        challengeCount++;
+      }
+      // NEUTRAL is not counted as either support or challenge
+    }
+  }
+
+  // Tenants in NEUTRAL or CHALLENGING houses only (MODIFIER)
+  // Tenants in PRIMARY/SUPPORTING houses are already counted in their respective level evaluations
+  for (const house of context.d10Houses) {
+    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+    if (houseRole === 'NEUTRAL' || houseRole === 'CHALLENGING') {
+      for (const tenantCondition of house.tenantConditions) {
+        if (tenantCondition === 'STRONG') {
+          supportCount++;
+        } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
+          challengeCount++;
+        }
+        // MODERATE is not counted as either support or challenge
+      }
+    }
+  }
+
+  if (supportCount > challengeCount) {
+    return 'SUPPORT';
+  }
+  if (challengeCount > supportCount) {
+    return 'CHALLENGE';
+  }
+  if (supportCount > 0 && challengeCount > 0) {
+    return 'MIXED';
+  }
+  return 'NEUTRAL';
 }
 
 export function resolveD10Effect(

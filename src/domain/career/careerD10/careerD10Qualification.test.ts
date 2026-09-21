@@ -256,41 +256,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
     });
 
-    it('returns SUPPORT when support planets outweigh challenge', () => {
-      const context: CareerD10Context = {
-        natalDirection: 'SUPPORT',
-        natalStrength: 'STRONG',
-        natalPrimarySupport: 5,
-        natalPrimaryChallenge: 2,
-        d10Available: true,
-        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [
-          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
-          { planet: Planet.MARS, condition: 'WEAK', d10House: 8, natalHouse: 1, relatedHouses: [8] }
-        ]
-      };
-      expect(resolveD10Direction(context)).toBe('SUPPORT');
-    });
-
-    it('returns CHALLENGE when challenge planets outweigh support', () => {
-      const context: CareerD10Context = {
-        natalDirection: 'SUPPORT',
-        natalStrength: 'STRONG',
-        natalPrimarySupport: 5,
-        natalPrimaryChallenge: 2,
-        d10Available: true,
-        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }],
-        d10Planets: [
-          { planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'AFFLICTED', d10House: 8, natalHouse: 4, relatedHouses: [8] },
-          { planet: Planet.MARS, condition: 'STRONG', d10House: 6, natalHouse: 1, relatedHouses: [6] }
-        ]
-      };
-      expect(resolveD10Direction(context)).toBe('CHALLENGE');
-    });
-
-    it('returns SUPPORT when PRIMARY STRONG outweighs CHALLENGING weak (semantic hierarchy)', () => {
+    it('PRIMARY evidence overrides SECONDARY/MODIFIER (hierarchical)', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -298,33 +264,132 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [
-          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
-          { house: 12, role: 'CHALLENGING', occupied: true, lord: Planet.MOON, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'WEAK', d10House: 12, natalHouse: 4, relatedHouses: [12] }
+          // Multiple SECONDARY/MODIFIER challenges should not override PRIMARY support
+          { planet: Planet.MOON, condition: 'WEAK', d10House: 8, natalHouse: 4, relatedHouses: [8] },
+          { planet: Planet.MARS, condition: 'WEAK', d10House: 12, natalHouse: 1, relatedHouses: [12] },
+          { planet: Planet.JUPITER, condition: 'WEAK', d10House: 5, natalHouse: 9, relatedHouses: [5] }
         ]
       };
       expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
 
-    it('returns NEUTRAL when no support or challenge planets', () => {
+    it('PRIMARY CHALLENGE overrides SECONDARY/MODIFIER support (hierarchical)', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
         natalPrimarySupport: 5,
         natalPrimaryChallenge: 2,
         d10Available: true,
-        d10Houses: [{ house: 5, role: 'NEUTRAL', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }],
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+        ],
         d10Planets: [
-          { planet: Planet.SUN, condition: 'MODERATE', d10House: 5, natalHouse: 1, relatedHouses: [5] }
+          { planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          // Multiple SECONDARY/MODIFIER supports should not override PRIMARY challenge
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
+          { planet: Planet.MARS, condition: 'STRONG', d10House: 2, natalHouse: 1, relatedHouses: [2] },
+          { planet: Planet.JUPITER, condition: 'STRONG', d10House: 5, natalHouse: 9, relatedHouses: [5] }
+        ]
+      };
+      expect(resolveD10Direction(context)).toBe('CHALLENGE');
+    });
+
+    it('SECONDARY evidence used when PRIMARY is NEUTRAL (hierarchical)', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] },
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+        ]
+      };
+      expect(resolveD10Direction(context)).toBe('SUPPORT');
+    });
+
+    it('MODIFIER evidence used when PRIMARY and SECONDARY are NEUTRAL (hierarchical)', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] },
+          { house: 5, role: 'NEUTRAL', occupied: true, lord: Planet.JUPITER, lordCondition: 'MODERATE', tenants: [Planet.MARS], tenantConditions: ['STRONG'] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ]
+      };
+      expect(resolveD10Direction(context)).toBe('SUPPORT');
+    });
+
+    it('returns NEUTRAL when all levels are NEUTRAL', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] },
+          { house: 5, role: 'NEUTRAL', occupied: true, lord: Planet.JUPITER, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.JUPITER, condition: 'MODERATE', d10House: 5, natalHouse: 9, relatedHouses: [5] }
         ]
       };
       expect(resolveD10Direction(context)).toBe('NEUTRAL');
     });
 
+    it('PRIMARY returns MIXED when equal support and challenge evidence', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'WEAK', d10House: 10, natalHouse: 4, relatedHouses: [10] }
+        ]
+      };
+      expect(resolveD10Direction(context)).toBe('MIXED');
+    });
 
+    it('SECONDARY returns MIXED when equal support and challenge evidence', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] },
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 2, role: 'SUPPORTING', occupied: true, lord: Planet.MARS, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ]
+      };
+      expect(resolveD10Direction(context)).toBe('MIXED');
+    });
   });
 
   describe('resolveD10Effect', () => {

@@ -98,6 +98,24 @@ C10 uses a semantic hierarchy rather than count-based scoring:
 
 This ensures that career-critical evidence outweighs peripheral evidence.
 
+### D10 House Role Semantics
+
+**Intentional Design Decision**: C10 applies the same career house portfolio semantics to D10 houses as used in natal career analysis.
+
+Specifically:
+- D10 house 10 = PRIMARY (career-critical)
+- D10 houses 6, 2, 11 = SUPPORTING (career-supportive)
+- D10 houses 8, 12 = CHALLENGING (career-challenging)
+
+This is explicitly defined in `CAREER_HOUSE_PORTFOLIO` and applied via `classifyCareerHouse()` to D10 house numbers.
+
+**Rationale**: D10 (Dasamsa) is the career-specific divisional chart. Its house semantics directly map to career significance:
+- The 10th house in D10 represents the career manifestation axis itself
+- The supporting houses (6, 2, 11) represent service, resources, and gains in career context
+- The challenging houses (8, 12) represent obstacles and loss in career context
+
+This mapping is intentional and not an accidental borrowing of natal semantics. Future refactoring may create a dedicated D10 house portfolio if astrological justification requires different semantics, but the current design treats D10 house roles as isomorphic to natal career house roles.
+
 ### Deterministic Evidence IDs
 
 Evidence IDs are derived from source evidence rather than sequential counters:
