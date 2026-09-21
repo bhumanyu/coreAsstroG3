@@ -413,6 +413,62 @@ describe('careerD10QualificationRules', () => {
       expect(strengthWithDuplicate).toBe(strengthWithoutDuplicate);
     });
 
+    it('adversarial duplicate test: duplicate counting would change MIXED → SUPPORT', () => {
+      // Test where duplicate Sun facts would flip the result from MIXED to SUPPORT
+      // With deduplication: Sun STRONG + Moon WEAK → MIXED
+      // Without deduplication (if Sun counted twice): Sun STRONG + Sun STRONG + Moon WEAK → SUPPORT
+
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.MOON, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'WEAK', d10House: 10, natalHouse: 4, relatedHouses: [10] }
+        ]
+      };
+
+      const direction = resolveD10Direction(context);
+
+      // With proper deduplication, this should be MIXED (1 STRONG, 1 WEAK)
+      // If Sun were counted twice (lord + planet), it would be SUPPORT (2 STRONG, 1 WEAK)
+      expect(direction).toBe('MIXED');
+    });
+
+    it('tenant and planet position are distinct evidence types', () => {
+      // Test that tenant (MODIFIER) and planet position (PRIMARY) are not deduplicated
+      // Moon as tenant of house 10 (MODIFIER) should be separate from Moon as planet in house 10 (PRIMARY)
+
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [Planet.MOON], tenantConditions: ['STRONG'] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 10, natalHouse: 4, relatedHouses: [10] }
+        ]
+      };
+
+      const direction = resolveD10Direction(context);
+
+      // Moon appears twice: once as tenant (MODIFIER), once as planet (PRIMARY)
+      // Since they have different roles, they should both count
+      // Primary: Sun STRONG, Moon STRONG → SUPPORT
+      // The tenant Moon is MODIFIER and should not override PRIMARY
+      expect(direction).toBe('SUPPORT');
+    });
+
     it('modifier tenants cannot flip decisive PRIMARY direction', () => {
       // PRIMARY 10L STRONG + several WEAK tenants stays SUPPORT-directed
       const context: CareerD10Context = {

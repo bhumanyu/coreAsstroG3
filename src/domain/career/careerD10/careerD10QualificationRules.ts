@@ -28,8 +28,10 @@ import {
   CAREER_HOUSE_PORTFOLIO
 } from '../careerTypes';
 
+import type { Planet } from '../../../types';
+
 interface CanonicalD10Fact {
-  planet: string;
+  planet: Planet;
   house: number;
   condition: CareerPlanetaryCondition;
   role: CareerD10HouseRole | 'MODIFIER';
@@ -39,22 +41,45 @@ interface CanonicalD10Fact {
 function buildCanonicalD10Facts(
   context: CareerD10Context
 ): CanonicalD10Fact[] {
-  const facts: CanonicalD10Fact[] = [];
-  const factKeySet = new Set<string>();
+  const factMap = new Map<string, CanonicalD10Fact>();
 
-  // Helper to add a fact if not already present for this planet/house/role combination
-  function addFact(fact: CanonicalD10Fact) {
-    const key = `${fact.planet}:${fact.house}:${fact.role}`;
-    if (!factKeySet.has(key)) {
-      factKeySet.add(key);
-      facts.push(fact);
+  // Semantic rule: A D10 planet position is canonical.
+  // House-lord and tenant context may enrich that canonical planet fact
+  // rather than create another fact.
+  //
+  // Identity: planet + house + role
+  // - planet position (source: 'planet') is the canonical source
+  // - lord (source: 'lord') and tenant (source: 'tenant') are enrichments
+  // - source is included in key to distinguish different evidence types
+  // - when multiple sources describe the same planet/house/role, we merge deterministically
+
+  function getFactKey(planet: Planet, house: number, role: CareerD10HouseRole | 'MODIFIER'): string {
+    return `${planet}:${house}:${role}`;
+  }
+
+  function mergeOrAddFact(fact: CanonicalD10Fact) {
+    const key = getFactKey(fact.planet, fact.house, fact.role);
+    const existing = factMap.get(key);
+
+    if (!existing) {
+      factMap.set(key, { ...fact });
+      return;
     }
+
+    // Deterministic merge: planet position takes precedence over lord/tenant
+    // If both have the same source, keep the first one (deterministic by processing order)
+    if (fact.source === 'planet' && existing.source !== 'planet') {
+      // Planet position is canonical, replace with it
+      factMap.set(key, { ...fact });
+    }
+    // If existing is planet and new is lord/tenant, keep existing (planet is canonical)
+    // If both are same source, keep existing (first-write-wins is deterministic)
   }
 
   // Process house lords - these are PRIMARY/SUPPORTING based on house role
   for (const house of context.d10Houses) {
     const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
-    addFact({
+    mergeOrAddFact({
       planet: house.lord,
       house: house.house,
       condition: house.lordCondition,
@@ -65,12 +90,11 @@ function buildCanonicalD10Facts(
 
   // Process tenants - these are ALWAYS MODIFIER evidence regardless of house role
   for (const house of context.d10Houses) {
-    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
     for (let i = 0; i < house.tenants.length; i++) {
       const tenant = house.tenants[i];
       const tenantCondition = house.tenantConditions[i];
       // Tenants are always MODIFIER, not the house's role
-      addFact({
+      mergeOrAddFact({
         planet: tenant,
         house: house.house,
         condition: tenantCondition,
@@ -80,24 +104,20 @@ function buildCanonicalD10Facts(
     }
   }
 
-  // Process d10Planets - these may duplicate lord facts, so we check
-  // d10Planets represent planet positions, not tenant relationships
+  // Process d10Planets - these are canonical planet positions
+  // They take precedence over lord/tenant representations
   for (const planet of context.d10Planets) {
     const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
-    // Check if this planet is already represented as lord of this house
-    const key = `${planet.planet}:${planet.d10House}:${houseRole}`;
-    if (!factKeySet.has(key)) {
-      addFact({
-        planet: planet.planet,
-        house: planet.d10House,
-        condition: planet.condition,
-        role: houseRole,
-        source: 'planet'
-      });
-    }
+    mergeOrAddFact({
+      planet: planet.planet,
+      house: planet.d10House,
+      condition: planet.condition,
+      role: houseRole,
+      source: 'planet'
+    });
   }
 
-  return facts;
+  return Array.from(factMap.values());
 }
 
 export function hasNatalCareerPromise(
@@ -229,7 +249,7 @@ function evaluatePrimaryEvidence(
   for (const fact of facts) {
     if (fact.role === 'PRIMARY') {
       const direction = resolveD10PlanetDirection({
-        planet: fact.planet as any,
+        planet: fact.planet,
         condition: fact.condition,
         d10House: fact.house,
         natalHouse: 0,
@@ -267,7 +287,7 @@ function evaluateSecondaryEvidence(
   for (const fact of facts) {
     if (fact.role === 'SUPPORTING') {
       const direction = resolveD10PlanetDirection({
-        planet: fact.planet as any,
+        planet: fact.planet,
         condition: fact.condition,
         d10House: fact.house,
         natalHouse: 0,
@@ -306,7 +326,7 @@ function evaluateModifierEvidence(
     // MODIFIER evidence includes tenants (always MODIFIER) and planets in NEUTRAL/CHALLENGING houses
     if (fact.role === 'MODIFIER' || fact.role === 'NEUTRAL' || fact.role === 'CHALLENGING') {
       const direction = resolveD10PlanetDirection({
-        planet: fact.planet as any,
+        planet: fact.planet,
         condition: fact.condition,
         d10House: fact.house,
         natalHouse: 0,
@@ -553,7 +573,8 @@ export function qualifyNatalCareerWithD10(
   if (natalDirection === 'CHALLENGE') {
     // For CHALLENGE, qualifiedStrength represents the qualified career state
     // D10 cannot strengthen a CHALLENGE into SUPPORT, but may qualify its intensity
-    // We use weakenCareerStrength to reflect that CHALLENGE is being qualified
+    // We use weakenCareerStrength to reflect that CHALLENGE is being qualified toward a less severe state
+    // Note: despite the function name, this is "qualification" not "weakening" by D10
     const qualifiedStrength = weakenCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'CHALLENGE',
@@ -564,7 +585,7 @@ export function qualifyNatalCareerWithD10(
 
   if (natalDirection === 'SUPPORT' && d10Direction === 'SUPPORT') {
     // For SUPPORT + SUPPORT, qualifiedStrength reflects the qualified career state
-    // We use promoteCareerStrength to reflect that SUPPORT is being strengthened
+    // We use promoteCareerStrength to reflect that SUPPORT is being strengthened by D10
     const qualifiedStrength = promoteCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'SUPPORT',
@@ -575,6 +596,7 @@ export function qualifyNatalCareerWithD10(
 
   if (natalDirection === 'SUPPORT' && d10Direction === 'CHALLENGE') {
     // For SUPPORT + CHALLENGE, we weaken the natal strength
+    // Here D10 is actually challenging, so "weaken" is semantically accurate
     const qualifiedStrength = weakenCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'MIXED',
@@ -585,6 +607,7 @@ export function qualifyNatalCareerWithD10(
 
   if (natalDirection === 'MIXED' && d10Direction === 'SUPPORT') {
     // For MIXED + SUPPORT, we promote toward the D10 strength
+    // D10 support resolves the mixed state toward SUPPORT
     const qualifiedStrength = promoteCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'SUPPORT',
@@ -595,6 +618,7 @@ export function qualifyNatalCareerWithD10(
 
   if (natalDirection === 'MIXED' && d10Direction === 'CHALLENGE') {
     // For MIXED + CHALLENGE, we weaken toward the D10 strength
+    // Here D10 is actually challenging, so "weaken" is semantically accurate
     const qualifiedStrength = weakenCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'CHALLENGE',
@@ -629,6 +653,9 @@ export function qualifyNatalCareerWithD10(
   };
 }
 
+// NOTE: promoteCareerStrength is used when D10 is SUPPORTIVE of a natal SUPPORT.
+// The semantic operation is: D10 support strengthens a pre-existing supportive natal state.
+// This is the inverse operation of weakenCareerStrength, applied to supportive contexts.
 function promoteCareerStrength(
   natalStrength: CareerStructuralStrength,
   d10Strength: CareerD10QualificationStrength
@@ -671,6 +698,11 @@ function promoteCareerStrength(
   return 'UNDETERMINED';
 }
 
+// NOTE: The function name weakenCareerStrength is misleading.
+// It is used in contexts where D10 is SUPPORTIVE (e.g., CHALLENGE + SUPPORT).
+// The actual semantic operation is: D10 support qualifies a natal challenge toward a less severe qualified state.
+// This is NOT "weakening" by D10; it's qualification of a pre-existing challenge.
+// A future refactor should rename this to reflect the semantic operation (e.g., qualifyChallengingNatalWithSupportiveD10).
 function weakenCareerStrength(
   natalStrength: CareerStructuralStrength,
   d10Strength: CareerD10QualificationStrength
