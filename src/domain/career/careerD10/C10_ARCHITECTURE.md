@@ -2,7 +2,7 @@
 
 ## Overview
 
-C10 (Career D10 Qualification) is the authoritative D10 qualification layer for the Career Synthesis system. It provides a semantic interpretation of how D10 (Dasamsa) chart evidence qualifies, modifies, or preserves natal career direction and strength.
+C10 (Career D10 Qualification) is the designated authoritative D10 qualification layer for the future Career Synthesis architecture; the current implementation is in the foundation/migration phase. It provides a semantic interpretation of how D10 (Dasamsa) chart evidence qualifies, modifies, or preserves natal career direction and strength.
 
 ## Relationship to Existing D10 Logic
 

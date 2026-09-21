@@ -28,6 +28,78 @@ import {
   CAREER_HOUSE_PORTFOLIO
 } from '../careerTypes';
 
+interface CanonicalD10Fact {
+  planet: string;
+  house: number;
+  condition: CareerPlanetaryCondition;
+  role: CareerD10HouseRole | 'MODIFIER';
+  source: 'lord' | 'tenant' | 'planet';
+}
+
+function buildCanonicalD10Facts(
+  context: CareerD10Context
+): CanonicalD10Fact[] {
+  const facts: CanonicalD10Fact[] = [];
+  const factKeySet = new Set<string>();
+
+  // Helper to add a fact if not already present for this planet/house/role combination
+  function addFact(fact: CanonicalD10Fact) {
+    const key = `${fact.planet}:${fact.house}:${fact.role}`;
+    if (!factKeySet.has(key)) {
+      factKeySet.add(key);
+      facts.push(fact);
+    }
+  }
+
+  // Process house lords - these are PRIMARY/SUPPORTING based on house role
+  for (const house of context.d10Houses) {
+    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+    addFact({
+      planet: house.lord,
+      house: house.house,
+      condition: house.lordCondition,
+      role: houseRole,
+      source: 'lord'
+    });
+  }
+
+  // Process tenants - these are ALWAYS MODIFIER evidence regardless of house role
+  for (const house of context.d10Houses) {
+    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+    for (let i = 0; i < house.tenants.length; i++) {
+      const tenant = house.tenants[i];
+      const tenantCondition = house.tenantConditions[i];
+      // Tenants are always MODIFIER, not the house's role
+      addFact({
+        planet: tenant,
+        house: house.house,
+        condition: tenantCondition,
+        role: 'MODIFIER' as const,
+        source: 'tenant'
+      });
+    }
+  }
+
+  // Process d10Planets - these may duplicate lord facts, so we check
+  // d10Planets represent planet positions, not tenant relationships
+  for (const planet of context.d10Planets) {
+    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
+    // Check if this planet is already represented as lord of this house
+    const key = `${planet.planet}:${planet.d10House}:${houseRole}`;
+    if (!factKeySet.has(key)) {
+      addFact({
+        planet: planet.planet,
+        house: planet.d10House,
+        condition: planet.condition,
+        role: houseRole,
+        source: 'planet'
+      });
+    }
+  }
+
+  return facts;
+}
+
 export function hasNatalCareerPromise(
   natalDirection: CareerStructuralDirection,
   natalStrength: CareerStructuralStrength
@@ -152,40 +224,23 @@ function evaluatePrimaryEvidence(
   let supportCount = 0;
   let challengeCount = 0;
 
-  // Planets in PRIMARY houses
-  for (const planet of context.d10Planets) {
-    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
-    if (houseRole === 'PRIMARY') {
-      const direction = resolveD10PlanetDirection(planet);
+  const facts = buildCanonicalD10Facts(context);
+
+  for (const fact of facts) {
+    if (fact.role === 'PRIMARY') {
+      const direction = resolveD10PlanetDirection({
+        planet: fact.planet as any,
+        condition: fact.condition,
+        d10House: fact.house,
+        natalHouse: 0,
+        relatedHouses: []
+      });
       if (direction === 'SUPPORT') {
         supportCount++;
       } else if (direction === 'CHALLENGE') {
         challengeCount++;
       }
       // NEUTRAL is not counted as either support or challenge
-    }
-  }
-
-  // PRIMARY house lords and tenants
-  for (const house of context.d10Houses) {
-    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
-    if (houseRole === 'PRIMARY') {
-      if (house.lordCondition === 'STRONG') {
-        supportCount++;
-      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
-        challengeCount++;
-      }
-      // MODERATE is not counted as either support or challenge
-
-      // Tenants in PRIMARY houses are PRIMARY evidence
-      for (const tenantCondition of house.tenantConditions) {
-        if (tenantCondition === 'STRONG') {
-          supportCount++;
-        } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
-          challengeCount++;
-        }
-        // MODERATE is not counted as either support or challenge
-      }
     }
   }
 
@@ -207,40 +262,23 @@ function evaluateSecondaryEvidence(
   let supportCount = 0;
   let challengeCount = 0;
 
-  // Planets in SUPPORTING houses
-  for (const planet of context.d10Planets) {
-    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
-    if (houseRole === 'SUPPORTING') {
-      const direction = resolveD10PlanetDirection(planet);
+  const facts = buildCanonicalD10Facts(context);
+
+  for (const fact of facts) {
+    if (fact.role === 'SUPPORTING') {
+      const direction = resolveD10PlanetDirection({
+        planet: fact.planet as any,
+        condition: fact.condition,
+        d10House: fact.house,
+        natalHouse: 0,
+        relatedHouses: []
+      });
       if (direction === 'SUPPORT') {
         supportCount++;
       } else if (direction === 'CHALLENGE') {
         challengeCount++;
       }
       // NEUTRAL is not counted as either support or challenge
-    }
-  }
-
-  // SUPPORTING house lords and tenants
-  for (const house of context.d10Houses) {
-    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
-    if (houseRole === 'SUPPORTING') {
-      if (house.lordCondition === 'STRONG') {
-        supportCount++;
-      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
-        challengeCount++;
-      }
-      // MODERATE is not counted as either support or challenge
-
-      // Tenants in SUPPORTING houses are SECONDARY evidence
-      for (const tenantCondition of house.tenantConditions) {
-        if (tenantCondition === 'STRONG') {
-          supportCount++;
-        } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
-          challengeCount++;
-        }
-        // MODERATE is not counted as either support or challenge
-      }
     }
   }
 
@@ -262,33 +300,24 @@ function evaluateModifierEvidence(
   let supportCount = 0;
   let challengeCount = 0;
 
-  // Planets in non-career houses (MODIFIER)
-  for (const planet of context.d10Planets) {
-    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
-    if (houseRole === 'NEUTRAL' || houseRole === 'CHALLENGING') {
-      const direction = resolveD10PlanetDirection(planet);
+  const facts = buildCanonicalD10Facts(context);
+
+  for (const fact of facts) {
+    // MODIFIER evidence includes tenants (always MODIFIER) and planets in NEUTRAL/CHALLENGING houses
+    if (fact.role === 'MODIFIER' || fact.role === 'NEUTRAL' || fact.role === 'CHALLENGING') {
+      const direction = resolveD10PlanetDirection({
+        planet: fact.planet as any,
+        condition: fact.condition,
+        d10House: fact.house,
+        natalHouse: 0,
+        relatedHouses: []
+      });
       if (direction === 'SUPPORT') {
         supportCount++;
       } else if (direction === 'CHALLENGE') {
         challengeCount++;
       }
       // NEUTRAL is not counted as either support or challenge
-    }
-  }
-
-  // Tenants in NEUTRAL or CHALLENGING houses only (MODIFIER)
-  // Tenants in PRIMARY/SUPPORTING houses are already counted in their respective level evaluations
-  for (const house of context.d10Houses) {
-    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
-    if (houseRole === 'NEUTRAL' || houseRole === 'CHALLENGING') {
-      for (const tenantCondition of house.tenantConditions) {
-        if (tenantCondition === 'STRONG') {
-          supportCount++;
-        } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
-          challengeCount++;
-        }
-        // MODERATE is not counted as either support or challenge
-      }
     }
   }
 
@@ -334,7 +363,7 @@ export function resolveD10Effect(
   }
 
   if (natalDirection === 'CHALLENGE' && d10Direction === 'SUPPORT') {
-    return 'REINFORCES';
+    return 'QUALIFIES';
   }
 
   if (natalDirection === 'CHALLENGE' && d10Direction === 'CHALLENGE') {
@@ -342,7 +371,7 @@ export function resolveD10Effect(
   }
 
   if (natalDirection === 'MIXED' && d10Direction === 'SUPPORT') {
-    return 'REINFORCES';
+    return 'QUALIFIES';
   }
 
   if (natalDirection === 'MIXED' && d10Direction === 'CHALLENGE') {
@@ -380,51 +409,26 @@ export function resolveD10Strength(
   let modifierStrong = 0;
   let modifierWeak = 0;
 
-  for (const house of context.d10Houses) {
-    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+  const facts = buildCanonicalD10Facts(context);
 
-    if (houseRole === 'PRIMARY') {
-      if (house.lordCondition === 'STRONG') {
+  for (const fact of facts) {
+    if (fact.role === 'PRIMARY') {
+      if (fact.condition === 'STRONG') {
         primaryStrong++;
-      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
+      } else if (fact.condition === 'WEAK' || fact.condition === 'AFFLICTED') {
         primaryWeak++;
       }
-    } else if (houseRole === 'SUPPORTING') {
-      if (house.lordCondition === 'STRONG') {
+    } else if (fact.role === 'SUPPORTING') {
+      if (fact.condition === 'STRONG') {
         secondaryStrong++;
-      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
-        secondaryWeak++;
-      }
-    }
-
-    for (const tenantCondition of house.tenantConditions) {
-      if (tenantCondition === 'STRONG') {
-        modifierStrong++;
-      } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
-        modifierWeak++;
-      }
-    }
-  }
-
-  for (const planet of context.d10Planets) {
-    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
-
-    if (houseRole === 'PRIMARY') {
-      if (planet.condition === 'STRONG') {
-        primaryStrong++;
-      } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
-        primaryWeak++;
-      }
-    } else if (houseRole === 'SUPPORTING') {
-      if (planet.condition === 'STRONG') {
-        secondaryStrong++;
-      } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
+      } else if (fact.condition === 'WEAK' || fact.condition === 'AFFLICTED') {
         secondaryWeak++;
       }
     } else {
-      if (planet.condition === 'STRONG') {
+      // MODIFIER, NEUTRAL, or CHALLENGING roles are MODIFIER evidence
+      if (fact.condition === 'STRONG') {
         modifierStrong++;
-      } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
+      } else if (fact.condition === 'WEAK' || fact.condition === 'AFFLICTED') {
         modifierWeak++;
       }
     }
@@ -547,46 +551,61 @@ export function qualifyNatalCareerWithD10(
   }
 
   if (natalDirection === 'CHALLENGE') {
+    // For CHALLENGE, qualifiedStrength represents the qualified career state
+    // D10 cannot strengthen a CHALLENGE into SUPPORT, but may qualify its intensity
+    // We use weakenCareerStrength to reflect that CHALLENGE is being qualified
+    const qualifiedStrength = weakenCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'CHALLENGE',
-      qualifiedStrength: d10Strength,
+      qualifiedStrength,
       natalPromisePreserved: true
     };
   }
 
   if (natalDirection === 'SUPPORT' && d10Direction === 'SUPPORT') {
+    // For SUPPORT + SUPPORT, qualifiedStrength reflects the qualified career state
+    // We use promoteCareerStrength to reflect that SUPPORT is being strengthened
+    const qualifiedStrength = promoteCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'SUPPORT',
-      qualifiedStrength: d10Strength,
+      qualifiedStrength,
       natalPromisePreserved: true
     };
   }
 
   if (natalDirection === 'SUPPORT' && d10Direction === 'CHALLENGE') {
+    // For SUPPORT + CHALLENGE, we weaken the natal strength
+    const qualifiedStrength = weakenCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'MIXED',
-      qualifiedStrength: 'MODERATE',
+      qualifiedStrength,
       natalPromisePreserved: true
     };
   }
 
   if (natalDirection === 'MIXED' && d10Direction === 'SUPPORT') {
+    // For MIXED + SUPPORT, we promote toward the D10 strength
+    const qualifiedStrength = promoteCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'SUPPORT',
-      qualifiedStrength: d10Strength,
+      qualifiedStrength,
       natalPromisePreserved: true
     };
   }
 
   if (natalDirection === 'MIXED' && d10Direction === 'CHALLENGE') {
+    // For MIXED + CHALLENGE, we weaken toward the D10 strength
+    const qualifiedStrength = weakenCareerStrength(natalStrength, d10Strength);
     return {
       qualifiedDirection: 'CHALLENGE',
-      qualifiedStrength: d10Strength,
+      qualifiedStrength,
       natalPromisePreserved: true
     };
   }
 
   if (natalDirection === 'NEUTRAL' && d10Direction === 'SUPPORT') {
+    // For NEUTRAL + SUPPORT, we use the D10 strength as qualified strength
+    // (D10 is creating the qualified state)
     return {
       qualifiedDirection: 'SUPPORT',
       qualifiedStrength: d10Strength,
@@ -595,6 +614,7 @@ export function qualifyNatalCareerWithD10(
   }
 
   if (natalDirection === 'NEUTRAL' && d10Direction === 'CHALLENGE') {
+    // For NEUTRAL + CHALLENGE, we use the D10 strength as qualified strength
     return {
       qualifiedDirection: 'CHALLENGE',
       qualifiedStrength: d10Strength,
@@ -609,7 +629,7 @@ export function qualifyNatalCareerWithD10(
   };
 }
 
-export function promoteCareerStrength(
+function promoteCareerStrength(
   natalStrength: CareerStructuralStrength,
   d10Strength: CareerD10QualificationStrength
 ): CareerD10QualificationStrength {
@@ -651,7 +671,7 @@ export function promoteCareerStrength(
   return 'UNDETERMINED';
 }
 
-export function weakenCareerStrength(
+function weakenCareerStrength(
   natalStrength: CareerStructuralStrength,
   d10Strength: CareerD10QualificationStrength
 ): CareerD10QualificationStrength {

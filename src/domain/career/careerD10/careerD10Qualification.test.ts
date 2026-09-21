@@ -15,9 +15,7 @@ import {
   resolveD10Direction,
   resolveD10Effect,
   resolveD10Strength,
-  qualifyNatalCareerWithD10,
-  promoteCareerStrength,
-  weakenCareerStrength
+  qualifyNatalCareerWithD10
 } from './careerD10QualificationRules';
 
 import type {
@@ -362,7 +360,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [
-          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.MOON, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
@@ -372,7 +371,50 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10Direction(context)).toBe('MIXED');
     });
 
-    it('SECONDARY returns MIXED when equal support and challenge evidence', () => {
+    it('no double counting: 10th lord in d10Planets at same house counts once', () => {
+      // Context where SUN is both the 10th lord AND appears in d10Planets at d10House: 10
+      const contextWithDuplicate: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ]
+      };
+
+      // Context expressing the same fact once (only as lord, plus a different planet to satisfy d10Planets requirement)
+      const contextWithoutDuplicate: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.MOON, condition: 'MODERATE', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+        ]
+      };
+
+      const directionWithDuplicate = resolveD10Direction(contextWithDuplicate);
+      const directionWithoutDuplicate = resolveD10Direction(contextWithoutDuplicate);
+      const strengthWithDuplicate = resolveD10Strength('STRONG', directionWithDuplicate, contextWithDuplicate);
+      const strengthWithoutDuplicate = resolveD10Strength('STRONG', directionWithoutDuplicate, contextWithoutDuplicate);
+
+      // Both should produce the same result since the duplicate is deduped
+      expect(directionWithDuplicate).toBe('SUPPORT');
+      expect(directionWithoutDuplicate).toBe('SUPPORT');
+      expect(strengthWithDuplicate).toBe(strengthWithoutDuplicate);
+    });
+
+    it('modifier tenants cannot flip decisive PRIMARY direction', () => {
+      // PRIMARY 10L STRONG + several WEAK tenants stays SUPPORT-directed
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -380,16 +422,17 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [
-          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] },
-          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
-          { house: 2, role: 'SUPPORTING', occupied: true, lord: Planet.MARS, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [Planet.MOON, Planet.MARS], tenantConditions: ['WEAK', 'WEAK'] }
         ],
         d10Planets: [
-          { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
         ]
       };
-      expect(resolveD10Direction(context)).toBe('MIXED');
+      // Tenants are MODIFIER evidence, should not override PRIMARY support
+      expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
+
+
   });
 
   describe('resolveD10Effect', () => {
@@ -445,7 +488,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10Effect('SUPPORT', 'CHALLENGE', context)).toBe('WEAKENS');
     });
 
-    it('returns REINFORCES when natal CHALLENGE and D10 SUPPORT (preserves natal)', () => {
+    it('returns QUALIFIES when natal CHALLENGE and D10 SUPPORT (preserves natal)', () => {
       const context: CareerD10Context = {
         natalDirection: 'CHALLENGE',
         natalStrength: 'WEAK',
@@ -455,7 +498,7 @@ describe('careerD10QualificationRules', () => {
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
         d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
-      expect(resolveD10Effect('CHALLENGE', 'SUPPORT', context)).toBe('REINFORCES');
+      expect(resolveD10Effect('CHALLENGE', 'SUPPORT', context)).toBe('QUALIFIES');
     });
 
     it('returns CONFLICTS when natal CHALLENGE and D10 CHALLENGE', () => {
@@ -554,7 +597,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('STRONG');
     });
 
-    it('returns STRONG when single SUPPORTING house is STRONG', () => {
+    it('returns MODERATE when single SUPPORTING house is STRONG (deduped lord+planet)', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -568,7 +611,8 @@ describe('careerD10QualificationRules', () => {
           { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] }
         ]
       };
-      expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('STRONG');
+      // With deduplication, this counts as one STRONG secondary evidence, which yields MODERATE
+      expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('MODERATE');
     });
 
     it('returns VERY_WEAK when PRIMARY house lord is WEAK and outweighs strong', () => {
@@ -683,52 +727,73 @@ describe('careerD10QualificationRules', () => {
       };
       const result = qualifyNatalCareerWithD10('SUPPORT', 'STRONG', 'CHALLENGE', 'WEAK', context);
       expect(result.qualifiedDirection).toBe('MIXED');
-      expect(result.qualifiedStrength).toBe('MODERATE');
+      // qualifiedStrength is derived via weakenCareerStrength(STRONG, WEAK) = WEAK
+      expect(result.qualifiedStrength).toBe('WEAK');
       expect(result.natalPromisePreserved).toBe(true);
     });
-  });
 
-  describe('promoteCareerStrength', () => {
-    it('returns VERY_STRONG when D10 strength is VERY_STRONG', () => {
-      expect(promoteCareerStrength('STRONG', 'VERY_STRONG')).toBe('VERY_STRONG');
+    it('does not assign raw d10Strength for CHALLENGE (uses qualifiedStrength derivation)', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'CHALLENGE',
+        natalStrength: 'WEAK',
+        natalPrimarySupport: 2,
+        natalPrimaryChallenge: 5,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+      const result = qualifyNatalCareerWithD10('CHALLENGE', 'WEAK', 'SUPPORT', 'VERY_STRONG', context);
+      // qualifiedStrength should not be VERY_STRONG (the raw d10Strength)
+      // It should be derived via weakenCareerStrength from natal WEAK + D10 VERY_STRONG
+      expect(result.qualifiedStrength).not.toBe('VERY_STRONG');
+      expect(result.qualifiedDirection).toBe('CHALLENGE');
+      expect(result.natalPromisePreserved).toBe(true);
     });
 
-    it('returns VERY_STRONG when natal is VERY_STRONG and D10 is STRONG', () => {
-      expect(promoteCareerStrength('VERY_STRONG', 'STRONG')).toBe('VERY_STRONG');
+    it('qualifiedStrength integration test: CHALLENGE/WEAK + strong D10 does not become VERY_STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'CHALLENGE',
+        natalStrength: 'WEAK',
+        natalPrimarySupport: 2,
+        natalPrimaryChallenge: 5,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+
+      const result = resolveCareerD10Qualification(context);
+
+      // natal is CHALLENGE/WEAK, D10 is VERY_STRONG
+      // qualifiedStrength should reflect the qualified CHALLENGE state, not the raw D10 strength
+      expect(result.natalStrength).toBe('WEAK');
+      expect(result.d10Strength).toBe('VERY_STRONG');
+      expect(result.d10Effect).toBe('QUALIFIES');
+      expect(result.qualifiedDirection).toBe('CHALLENGE');
+      expect(result.qualifiedStrength).not.toBe('VERY_STRONG');
+      expect(result.natalPromisePreserved).toBe(true);
     });
 
-    it('returns STRONG when natal is STRONG and D10 is STRONG', () => {
-      expect(promoteCareerStrength('STRONG', 'STRONG')).toBe('STRONG');
-    });
+    it('qualifiedStrength integration test: SUPPORT/STRONG + D10 STRONG promotes to STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
 
-    it('returns STRONG when natal is VERY_STRONG and D10 is MODERATE', () => {
-      expect(promoteCareerStrength('VERY_STRONG', 'MODERATE')).toBe('STRONG');
-    });
+      const result = resolveCareerD10Qualification(context);
 
-    it('returns STRONG when natal is STRONG and D10 is MODERATE', () => {
-      expect(promoteCareerStrength('STRONG', 'MODERATE')).toBe('STRONG');
-    });
-  });
-
-  describe('weakenCareerStrength', () => {
-    it('returns VERY_WEAK when D10 strength is VERY_WEAK', () => {
-      expect(weakenCareerStrength('STRONG', 'VERY_WEAK')).toBe('VERY_WEAK');
-    });
-
-    it('returns VERY_WEAK when natal is VERY_WEAK and D10 is WEAK', () => {
-      expect(weakenCareerStrength('VERY_WEAK', 'WEAK')).toBe('VERY_WEAK');
-    });
-
-    it('returns WEAK when natal is WEAK and D10 is WEAK', () => {
-      expect(weakenCareerStrength('WEAK', 'WEAK')).toBe('WEAK');
-    });
-
-    it('returns WEAK when natal is VERY_WEAK and D10 is MODERATE', () => {
-      expect(weakenCareerStrength('VERY_WEAK', 'MODERATE')).toBe('WEAK');
-    });
-
-    it('returns WEAK when natal is WEAK and D10 is MODERATE', () => {
-      expect(weakenCareerStrength('WEAK', 'MODERATE')).toBe('WEAK');
+      // natal is SUPPORT/STRONG, D10 is VERY_STRONG
+      // qualifiedStrength should be promoted via promoteCareerStrength
+      expect(result.natalStrength).toBe('STRONG');
+      expect(result.d10Strength).toBe('VERY_STRONG');
+      expect(result.d10Effect).toBe('REINFORCES');
+      expect(result.qualifiedDirection).toBe('SUPPORT');
+      expect(result.qualifiedStrength).toBe('VERY_STRONG');
+      expect(result.natalPromisePreserved).toBe(true);
     });
   });
 });
@@ -1007,7 +1072,7 @@ describe('resolveCareerD10Qualification', () => {
 
       const result = resolveCareerD10Qualification(context);
 
-      expect(result.d10Effect).toBe('REINFORCES');
+      expect(result.d10Effect).toBe('QUALIFIES');
       expect(result.qualifiedDirection).toBe('SUPPORT');
       expect(result.natalPromisePreserved).toBe(true);
     });
