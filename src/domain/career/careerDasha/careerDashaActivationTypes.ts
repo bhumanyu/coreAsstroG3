@@ -98,8 +98,10 @@ export interface CareerDashaActivationHierarchy {
   readonly md: CareerDashaActivation;
   readonly ad: CareerDashaActivation;
   readonly pd: CareerDashaActivation;
-  readonly direction: CareerDashaActivationDirection;
-  readonly strength: CareerDashaActivationStrength;
+  readonly overallEffect: CareerDashaActivationEffect;
+  readonly overallDirection: CareerDashaActivationDirection;
+  readonly overallStrength: CareerDashaActivationStrength;
+  readonly dominantLevel: 'MD' | 'AD' | 'PD' | 'NONE';
   readonly statement: string;
 }
 

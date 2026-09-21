@@ -24,6 +24,11 @@ import {
   resolveCareerDashaPlanetDirection
 } from './careerDashaActivationRules';
 
+import {
+  resolveDashaHierarchy,
+  type DashaTimingEvidence
+} from '../../reasoning/dashaHierarchy';
+
 export function resolveCareerDashaActivation(
   context: CareerDashaActivationContext
 ): CareerDashaActivationHierarchy {
@@ -65,7 +70,7 @@ function resolveLevel(
   const hasCareerPromise = hasEstablishedCareerPromise(structuralDirection, structuralPrimarySupport);
   const planetActivates = doesPlanetActivateCareerPromise(actualPlanetContext, structuralDirection);
   const planetChallenges = doesPlanetChallengeCareerPromise(actualPlanetContext);
-  const isRelevant = isCareerDashaRelevant(actualPlanetContext.relevance, actualPlanetContext.roles);
+  const isRelevant = isCareerDashaRelevant(actualPlanetContext.relevance);
 
   const effect = resolveCareerDashaEffect(
     hasCareerPromise,
@@ -79,8 +84,7 @@ function resolveLevel(
 
   const strength = resolveCareerDashaStrength(
     actualPlanetContext.condition,
-    direction,
-    actualPlanetContext.expressions
+    direction
   );
 
   const evidence = buildActivationEvidence(
@@ -194,6 +198,19 @@ function buildActivationEvidence(
     seenKeys.add(timingKey);
   }
 
+  // Add activation-summary evidence row with effect, direction, and strength
+  const activationKey = `${level}:${planetContext.planet}:ACTIVATION_SUMMARY:activation:${effect}`;
+  if (!seenKeys.has(activationKey)) {
+    evidence.push(Object.freeze({
+      id: activationKey,
+      role: 'TIMING',
+      statement: `Activation effect: ${effect}, direction: ${direction}, strength: ${strength}.`,
+      direction,
+      strength
+    }));
+    seenKeys.add(activationKey);
+  }
+
   return Object.freeze(evidence);
 }
 
@@ -223,16 +240,45 @@ function resolveCareerDashaHierarchy(
   ad: CareerDashaActivation,
   pd: CareerDashaActivation
 ): CareerDashaActivationHierarchy {
-  const direction = resolveHierarchyDirection(md, ad, pd);
-  const strength = resolveHierarchyStrength(md, ad, pd);
-  const statement = buildHierarchyStatement(md, ad, pd, direction, strength);
+  // Build DashaTimingEvidence for each level
+  const mdEvidence: DashaTimingEvidence = Object.freeze({
+    level: 'MD',
+    effect: md.effect as any, // CareerDashaActivationEffect maps to TimingActivationEffect
+    evidenceIds: md.evidence.map(e => e.id),
+    confidence: 1
+  });
+
+  const adEvidence: DashaTimingEvidence = Object.freeze({
+    level: 'AD',
+    effect: ad.effect as any,
+    evidenceIds: ad.evidence.map(e => e.id),
+    confidence: 1
+  });
+
+  const pdEvidence: DashaTimingEvidence = Object.freeze({
+    level: 'PD',
+    effect: pd.effect as any,
+    evidenceIds: pd.evidence.map(e => e.id),
+    confidence: 1
+  });
+
+  // Delegate to canonical hierarchy resolver
+  const hierarchyResult = resolveDashaHierarchy(mdEvidence, adEvidence, pdEvidence);
+
+  // Derive overallDirection and overallStrength from finalEffect + dominantLevel
+  const overallDirection = deriveOverallDirection(hierarchyResult.finalEffect, hierarchyResult.dominantLevel, md, ad, pd);
+  const overallStrength = deriveOverallStrength(hierarchyResult.finalEffect, hierarchyResult.dominantLevel, md, ad, pd);
+
+  const statement = buildHierarchyStatement(md, ad, pd, hierarchyResult.finalEffect, overallDirection, overallStrength, hierarchyResult.dominantLevel);
 
   return Object.freeze({
     md,
     ad,
     pd,
-    direction,
-    strength,
+    overallEffect: hierarchyResult.finalEffect as any,
+    overallDirection,
+    overallStrength,
+    dominantLevel: hierarchyResult.dominantLevel,
     statement
   });
 }
@@ -351,20 +397,68 @@ function resolveHierarchyStrength(
   return 'UNDETERMINED';
 }
 
+function deriveOverallDirection(
+  finalEffect: string,
+  dominantLevel: string,
+  md: CareerDashaActivation,
+  ad: CareerDashaActivation,
+  pd: CareerDashaActivation
+): CareerDashaActivationDirection {
+  // Derive direction deterministically from finalEffect + dominantLevel
+  // The effect hierarchy is the single source of truth
+  if (finalEffect === 'ACTIVATES') {
+    return 'SUPPORT';
+  }
+  if (finalEffect === 'CHALLENGES') {
+    return 'CHALLENGE';
+  }
+  if (finalEffect === 'PARTIALLY_ACTIVATES') {
+    return 'MIXED';
+  }
+  if (finalEffect === 'DOES_NOT_ACTIVATE' || finalEffect === 'UNKNOWN' || finalEffect === 'INSUFFICIENT_DATA') {
+    return 'NEUTRAL';
+  }
+  return 'UNAVAILABLE';
+}
+
+function deriveOverallStrength(
+  finalEffect: string,
+  dominantLevel: string,
+  md: CareerDashaActivation,
+  ad: CareerDashaActivation,
+  pd: CareerDashaActivation
+): CareerDashaActivationStrength {
+  // Take strength from the dominant level
+  if (dominantLevel === 'MD') {
+    return md.strength;
+  }
+  if (dominantLevel === 'AD') {
+    return ad.strength;
+  }
+  if (dominantLevel === 'PD') {
+    return pd.strength;
+  }
+  return 'UNDETERMINED';
+}
+
 function buildHierarchyStatement(
   md: CareerDashaActivation,
   ad: CareerDashaActivation,
   pd: CareerDashaActivation,
-  direction: CareerDashaActivationDirection,
-  strength: CareerDashaActivationStrength
+  finalEffect: string,
+  overallDirection: CareerDashaActivationDirection,
+  overallStrength: CareerDashaActivationStrength,
+  dominantLevel: string
 ): string {
   const parts = [
     `Career Dasha activation hierarchy.`,
     `MD: ${md.planet} (${md.effect}, ${md.direction}, ${md.strength}).`,
     `AD: ${ad.planet} (${ad.effect}, ${ad.direction}, ${ad.strength}).`,
     `PD: ${pd.planet} (${pd.effect}, ${pd.direction}, ${pd.strength}).`,
-    `Hierarchy direction: ${direction}.`,
-    `Hierarchy strength: ${strength}.`
+    `Overall effect: ${finalEffect}.`,
+    `Overall direction: ${overallDirection}.`,
+    `Overall strength: ${overallStrength}.`,
+    `Dominant level: ${dominantLevel}.`
   ];
 
   return parts.join(' ');

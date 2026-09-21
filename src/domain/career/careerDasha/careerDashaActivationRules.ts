@@ -70,8 +70,7 @@ export function resolveCareerDashaPlanetDirection(
 }
 
 export function isCareerDashaRelevant(
-  relevance: CareerPlanetRelevance,
-  roles: readonly CareerPlanetRole[]
+  relevance: CareerPlanetRelevance
 ): boolean {
   return relevance === 'PRIMARY' || relevance === 'SUPPORTING';
 }
@@ -111,7 +110,7 @@ export function doesPlanetActivateCareerPromise(
   planetContext: CareerDashaPlanetContext,
   structuralDirection: CareerStructuralDirection
 ): boolean {
-  if (!isCareerDashaRelevant(planetContext.relevance, planetContext.roles)) {
+  if (!isCareerDashaRelevant(planetContext.relevance)) {
     return false;
   }
 
@@ -135,7 +134,7 @@ export function doesPlanetActivateCareerPromise(
 export function doesPlanetChallengeCareerPromise(
   planetContext: CareerDashaPlanetContext
 ): boolean {
-  if (!isCareerDashaRelevant(planetContext.relevance, planetContext.roles)) {
+  if (!isCareerDashaRelevant(planetContext.relevance)) {
     return false;
   }
 
@@ -167,6 +166,10 @@ export function resolveCareerDashaEffect(
     return 'CHALLENGES';
   }
 
+  // C6→C7→C8→C9 separation of concerns: C9 determines whether an active Dasha planet
+  // ACTIVATES an already-established Career promise. A PRIMARY-relevant planet with STRONG
+  // condition and established structural Career promise should be able to activate even without
+  // a C8 expression object. Expression presence refines but does not gate activation.
   if (expressions.length > 0) {
     const hasSupported = expressions.some(e => e.direction === 'SUPPORTED');
     const hasConditional = expressions.some(e => e.direction === 'CONDITIONAL');
@@ -189,8 +192,7 @@ export function resolveCareerDashaEffect(
 
 export function resolveCareerDashaStrength(
   condition: CareerPlanetaryCondition,
-  direction: CareerDashaActivationDirection,
-  expressions: readonly CareerExpression[]
+  direction: CareerDashaActivationDirection
 ): CareerDashaActivationStrength {
   if (condition === 'UNAVAILABLE') {
     return 'UNDETERMINED';

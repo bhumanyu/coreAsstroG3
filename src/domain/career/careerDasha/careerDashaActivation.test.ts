@@ -262,7 +262,9 @@ describe('Career Dasha Activation', () => {
 
       expect(result.md.effect).toBe('ACTIVATES');
       expect(result.ad.effect).toBe('CHALLENGES');
-      expect(result.direction).toBe('MIXED');
+      expect(result.overallEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.overallDirection).toBe('MIXED');
+      expect(result.dominantLevel).toBe('MD');
     });
   });
 
@@ -293,7 +295,9 @@ describe('Career Dasha Activation', () => {
 
       expect(result.md.effect).toBe('CHALLENGES');
       expect(result.ad.effect).toBe('ACTIVATES');
-      expect(result.direction).toBe('MIXED');
+      expect(result.overallEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.overallDirection).toBe('MIXED');
+      expect(result.dominantLevel).toBe('MD');
     });
   });
 
@@ -323,8 +327,10 @@ describe('Career Dasha Activation', () => {
 
       expect(result.md.effect).toBe('ACTIVATES');
       expect(result.ad.effect).toBe('ACTIVATES');
-      expect(result.direction).toBe('SUPPORT');
-      expect(result.strength).toBe('VERY_STRONG');
+      expect(result.overallEffect).toBe('ACTIVATES');
+      expect(result.overallDirection).toBe('SUPPORT');
+      expect(result.overallStrength).toBe('VERY_STRONG');
+      expect(result.dominantLevel).toBe('MD');
     });
   });
 
@@ -363,7 +369,9 @@ describe('Career Dasha Activation', () => {
       expect(result.md.effect).toBe('ACTIVATES');
       expect(result.ad.effect).toBe('ACTIVATES');
       expect(result.pd.effect).toBe('CHALLENGES');
-      expect(result.direction).toBe('SUPPORT');
+      expect(result.overallEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.overallDirection).toBe('MIXED');
+      expect(result.dominantLevel).toBe('AD');
     });
   });
 
@@ -544,6 +552,127 @@ describe('Career Dasha Activation', () => {
       expect(result1.md.planet).toBe(Planet.SATURN);
       expect(result2.md.planet).toBe(Planet.JUPITER);
       expect(result1.md.effect).not.toBe(result2.md.effect);
+    });
+  });
+
+  describe('Test 16: Canonical hierarchy invariants', () => {
+    it('MD ACTIVATES + AD CHALLENGES → PARTIALLY_ACTIVATES (canonical invariant)', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED')])
+          ),
+          makePlanet(
+            Planet.MARS,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'AFFLICTED',
+            Object.freeze([])
+          )
+        ]),
+        adTiming: makeTiming(Planet.MARS, '2020-01-01', '2022-01-01')
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.effect).toBe('ACTIVATES');
+      expect(result.ad.effect).toBe('CHALLENGES');
+      expect(result.overallEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.dominantLevel).toBe('MD');
+    });
+
+    it('MD CHALLENGES + AD ACTIVATES → PARTIALLY_ACTIVATES (canonical invariant)', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'AFFLICTED',
+            Object.freeze([])
+          ),
+          makePlanet(
+            Planet.JUPITER,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED')])
+          )
+        ]),
+        mdTiming: makeTiming(Planet.SATURN, '2020-01-01', '2025-01-01'),
+        adTiming: makeTiming(Planet.JUPITER, '2020-01-01', '2022-01-01')
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.effect).toBe('CHALLENGES');
+      expect(result.ad.effect).toBe('ACTIVATES');
+      expect(result.overallEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.dominantLevel).toBe('MD');
+    });
+
+    it('MD ACTIVATES + AD ACTIVATES + PD CHALLENGES → PARTIALLY_ACTIVATES with dominantLevel AD (canonical invariant)', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED')])
+          ),
+          makePlanet(
+            Planet.JUPITER,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED')])
+          ),
+          makePlanet(
+            Planet.MARS,
+            'SUPPORTING',
+            Object.freeze(['SUPPORTING_LORD']),
+            'AFFLICTED',
+            Object.freeze([])
+          )
+        ]),
+        adTiming: makeTiming(Planet.JUPITER, '2020-01-01', '2022-01-01'),
+        pdTiming: makeTiming(Planet.MARS, '2020-01-01', '2021-01-01')
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.effect).toBe('ACTIVATES');
+      expect(result.ad.effect).toBe('ACTIVATES');
+      expect(result.pd.effect).toBe('CHALLENGES');
+      expect(result.overallEffect).toBe('PARTIALLY_ACTIVATES');
+      expect(result.dominantLevel).toBe('AD');
+    });
+  });
+
+  describe('Test 17: PRIMARY-relevant STRONG-condition planet activates without C8 expression', () => {
+    it('activates established structural promise even with no C8 expression', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([]) // No C8 expressions
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.effect).toBe('ACTIVATES');
+      expect(result.md.direction).toBe('SUPPORT');
+      expect(result.overallEffect).toBe('ACTIVATES');
     });
   });
 });
