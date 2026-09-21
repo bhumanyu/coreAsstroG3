@@ -60,8 +60,8 @@ describe('careerD10QualificationRules', () => {
       expect(hasNatalCareerPromise('MIXED', 'MODERATE')).toBe(true);
     });
 
-    it('returns false for CHALLENGE natal direction', () => {
-      expect(hasNatalCareerPromise('CHALLENGE', 'WEAK')).toBe(false);
+    it('returns true for CHALLENGE natal direction (CHALLENGE is an established state)', () => {
+      expect(hasNatalCareerPromise('CHALLENGE', 'WEAK')).toBe(true);
     });
   });
 
@@ -74,8 +74,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
       expect(isD10DataAvailable(context)).toBe(false);
     });
@@ -88,8 +87,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(isD10DataAvailable(context)).toBe(false);
     });
@@ -102,8 +100,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
       expect(isD10DataAvailable(context)).toBe(false);
     });
@@ -116,8 +113,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(isD10DataAvailable(context)).toBe(true);
     });
@@ -135,7 +131,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10PlanetDirection(planetContext)).toBe('UNAVAILABLE');
     });
 
-    it('returns CHALLENGE for AFFLICTED condition', () => {
+    it('returns CHALLENGE for AFFLICTED condition in PRIMARY house', () => {
       const planetContext: CareerD10PlanetContext = {
         planet: Planet.SUN,
         condition: 'AFFLICTED',
@@ -146,7 +142,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10PlanetDirection(planetContext)).toBe('CHALLENGE');
     });
 
-    it('returns CHALLENGE for WEAK condition', () => {
+    it('returns CHALLENGE for WEAK condition in PRIMARY house', () => {
       const planetContext: CareerD10PlanetContext = {
         planet: Planet.SUN,
         condition: 'WEAK',
@@ -157,7 +153,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10PlanetDirection(planetContext)).toBe('CHALLENGE');
     });
 
-    it('returns SUPPORT for STRONG condition', () => {
+    it('returns SUPPORT for STRONG condition in PRIMARY house', () => {
       const planetContext: CareerD10PlanetContext = {
         planet: Planet.SUN,
         condition: 'STRONG',
@@ -168,7 +164,7 @@ describe('careerD10QualificationRules', () => {
       expect(resolveD10PlanetDirection(planetContext)).toBe('SUPPORT');
     });
 
-    it('returns NEUTRAL for MODERATE condition', () => {
+    it('returns NEUTRAL for MODERATE condition in PRIMARY house', () => {
       const planetContext: CareerD10PlanetContext = {
         planet: Planet.SUN,
         condition: 'MODERATE',
@@ -177,6 +173,72 @@ describe('careerD10QualificationRules', () => {
         relatedHouses: [10]
       };
       expect(resolveD10PlanetDirection(planetContext)).toBe('NEUTRAL');
+    });
+
+    it('CHALLENGE in SUPPORTING house becomes NEUTRAL (house moderates)', () => {
+      const planetContext: CareerD10PlanetContext = {
+        planet: Planet.SUN,
+        condition: 'WEAK',
+        d10House: 6,
+        natalHouse: 1,
+        relatedHouses: [6]
+      };
+      expect(resolveD10PlanetDirection(planetContext)).toBe('NEUTRAL');
+    });
+
+    it('SUPPORT in SUPPORTING house remains SUPPORT', () => {
+      const planetContext: CareerD10PlanetContext = {
+        planet: Planet.SUN,
+        condition: 'STRONG',
+        d10House: 6,
+        natalHouse: 1,
+        relatedHouses: [6]
+      };
+      expect(resolveD10PlanetDirection(planetContext)).toBe('SUPPORT');
+    });
+
+    it('MODERATE in SUPPORTING house becomes SUPPORT (house amplifies)', () => {
+      const planetContext: CareerD10PlanetContext = {
+        planet: Planet.SUN,
+        condition: 'MODERATE',
+        d10House: 6,
+        natalHouse: 1,
+        relatedHouses: [6]
+      };
+      expect(resolveD10PlanetDirection(planetContext)).toBe('SUPPORT');
+    });
+
+    it('SUPPORT in CHALLENGING house becomes NEUTRAL (house moderates)', () => {
+      const planetContext: CareerD10PlanetContext = {
+        planet: Planet.SUN,
+        condition: 'STRONG',
+        d10House: 8,
+        natalHouse: 1,
+        relatedHouses: [8]
+      };
+      expect(resolveD10PlanetDirection(planetContext)).toBe('NEUTRAL');
+    });
+
+    it('CHALLENGE in CHALLENGING house remains CHALLENGE', () => {
+      const planetContext: CareerD10PlanetContext = {
+        planet: Planet.SUN,
+        condition: 'WEAK',
+        d10House: 8,
+        natalHouse: 1,
+        relatedHouses: [8]
+      };
+      expect(resolveD10PlanetDirection(planetContext)).toBe('CHALLENGE');
+    });
+
+    it('MODERATE in CHALLENGING house becomes CHALLENGE (house amplifies)', () => {
+      const planetContext: CareerD10PlanetContext = {
+        planet: Planet.SUN,
+        condition: 'MODERATE',
+        d10House: 8,
+        natalHouse: 1,
+        relatedHouses: [8]
+      };
+      expect(resolveD10PlanetDirection(planetContext)).toBe('CHALLENGE');
     });
   });
 
@@ -189,8 +251,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
       expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
     });
@@ -207,8 +268,7 @@ describe('careerD10QualificationRules', () => {
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
           { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
           { planet: Planet.MARS, condition: 'WEAK', d10House: 8, natalHouse: 1, relatedHouses: [8] }
-        ],
-        d10Relationships: []
+        ]
       };
       expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
@@ -225,27 +285,28 @@ describe('careerD10QualificationRules', () => {
           { planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] },
           { planet: Planet.MOON, condition: 'AFFLICTED', d10House: 8, natalHouse: 4, relatedHouses: [8] },
           { planet: Planet.MARS, condition: 'STRONG', d10House: 6, natalHouse: 1, relatedHouses: [6] }
-        ],
-        d10Relationships: []
+        ]
       };
       expect(resolveD10Direction(context)).toBe('CHALLENGE');
     });
 
-    it('returns MIXED when support and challenge are equal', () => {
+    it('returns SUPPORT when PRIMARY STRONG outweighs CHALLENGING weak (semantic hierarchy)', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
         natalPrimarySupport: 5,
         natalPrimaryChallenge: 2,
         d10Available: true,
-        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 12, role: 'CHALLENGING', occupied: true, lord: Planet.MOON, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+        ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'WEAK', d10House: 8, natalHouse: 4, relatedHouses: [8] }
-        ],
-        d10Relationships: []
+          { planet: Planet.MOON, condition: 'WEAK', d10House: 12, natalHouse: 4, relatedHouses: [12] }
+        ]
       };
-      expect(resolveD10Direction(context)).toBe('MIXED');
+      expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
 
     it('returns NEUTRAL when no support or challenge planets', () => {
@@ -255,14 +316,15 @@ describe('careerD10QualificationRules', () => {
         natalPrimarySupport: 5,
         natalPrimaryChallenge: 2,
         d10Available: true,
-        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }],
+        d10Houses: [{ house: 5, role: 'NEUTRAL', occupied: true, lord: Planet.SUN, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }],
         d10Planets: [
-          { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] }
-        ],
-        d10Relationships: []
+          { planet: Planet.SUN, condition: 'MODERATE', d10House: 5, natalHouse: 1, relatedHouses: [5] }
+        ]
       };
       expect(resolveD10Direction(context)).toBe('NEUTRAL');
     });
+
+
   });
 
   describe('resolveD10Effect', () => {
@@ -274,8 +336,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
       expect(resolveD10Effect('SUPPORT', 'SUPPORT', context)).toBe('UNAVAILABLE');
     });
@@ -288,8 +349,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 0,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(resolveD10Effect('UNAVAILABLE', 'SUPPORT', context)).toBe('INSUFFICIENT_DATA');
     });
@@ -302,8 +362,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(resolveD10Effect('SUPPORT', 'SUPPORT', context)).toBe('REINFORCES');
     });
@@ -316,8 +375,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(resolveD10Effect('SUPPORT', 'CHALLENGE', context)).toBe('WEAKENS');
     });
@@ -330,8 +388,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 5,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(resolveD10Effect('CHALLENGE', 'SUPPORT', context)).toBe('REINFORCES');
     });
@@ -344,8 +401,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 5,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(resolveD10Effect('CHALLENGE', 'CHALLENGE', context)).toBe('CONFLICTS');
     });
@@ -358,8 +414,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 3,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       expect(resolveD10Effect('NEUTRAL', 'SUPPORT', context)).toBe('QUALIFIES');
     });
@@ -374,13 +429,12 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
       expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('UNDETERMINED');
     });
 
-    it('returns VERY_STRONG when D10 SUPPORT with high strong ratio', () => {
+    it('returns VERY_STRONG when PRIMARY house lord is STRONG and outweighs weak', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -388,21 +442,16 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [
-          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
-          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
-          { house: 2, role: 'SUPPORTING', occupied: true, lord: Planet.MARS, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
         ],
         d10Planets: [
-          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
-          { planet: Planet.MARS, condition: 'STRONG', d10House: 2, natalHouse: 1, relatedHouses: [2] }
-        ],
-        d10Relationships: []
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ]
       };
       expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('VERY_STRONG');
     });
 
-    it('returns STRONG when D10 SUPPORT with moderate strong ratio', () => {
+    it('returns VERY_STRONG when PRIMARY house lord is STRONG with some weak present', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -411,18 +460,70 @@ describe('careerD10QualificationRules', () => {
         d10Available: true,
         d10Houses: [
           { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
-          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'MODERATE', tenants: [], tenantConditions: [] }
+          { house: 8, role: 'CHALLENGING', occupied: true, lord: Planet.MARS, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'MODERATE', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+          { planet: Planet.MARS, condition: 'WEAK', d10House: 8, natalHouse: 1, relatedHouses: [8] }
+        ]
+      };
+      expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('VERY_STRONG');
+    });
+
+    it('returns STRONG when multiple SUPPORTING houses are STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 2, role: 'SUPPORTING', occupied: true, lord: Planet.MARS, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
         ],
-        d10Relationships: []
+        d10Planets: [
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
+          { planet: Planet.MARS, condition: 'STRONG', d10House: 2, natalHouse: 1, relatedHouses: [2] }
+        ]
       };
       expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('STRONG');
     });
 
-    it('returns VERY_WEAK when D10 CHALLENGE with high weak ratio', () => {
+    it('returns STRONG when single SUPPORTING house is STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+        ]
+      };
+      expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('STRONG');
+    });
+
+    it('returns VERY_WEAK when PRIMARY house lord is WEAK and outweighs strong', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ]
+      };
+      expect(resolveD10Strength('STRONG', 'CHALLENGE', context)).toBe('VERY_WEAK');
+    });
+
+    it('returns VERY_WEAK when PRIMARY house lord is WEAK with some strong present', () => {
       const context: CareerD10Context = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -431,15 +532,12 @@ describe('careerD10QualificationRules', () => {
         d10Available: true,
         d10Houses: [
           { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] },
-          { house: 8, role: 'CHALLENGING', occupied: true, lord: Planet.MOON, lordCondition: 'AFFLICTED', tenants: [], tenantConditions: [] },
-          { house: 12, role: 'CHALLENGING', occupied: true, lord: Planet.MARS, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MARS, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] },
-          { planet: Planet.MOON, condition: 'AFFLICTED', d10House: 8, natalHouse: 4, relatedHouses: [8] },
-          { planet: Planet.MARS, condition: 'WEAK', d10House: 12, natalHouse: 1, relatedHouses: [12] }
-        ],
-        d10Relationships: []
+          { planet: Planet.MARS, condition: 'STRONG', d10House: 6, natalHouse: 1, relatedHouses: [6] }
+        ]
       };
       expect(resolveD10Strength('STRONG', 'CHALLENGE', context)).toBe('VERY_WEAK');
     });
@@ -454,8 +552,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 0,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       const result = qualifyNatalCareerWithD10('UNAVAILABLE', 'UNDETERMINED', 'SUPPORT', 'STRONG', context);
       expect(result.qualifiedDirection).toBe('UNAVAILABLE');
@@ -470,8 +567,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
       const result = qualifyNatalCareerWithD10('SUPPORT', 'STRONG', 'UNAVAILABLE', 'UNDETERMINED', context);
       expect(result.qualifiedDirection).toBe('SUPPORT');
@@ -487,8 +583,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 5,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       const result = qualifyNatalCareerWithD10('CHALLENGE', 'WEAK', 'SUPPORT', 'STRONG', context);
       expect(result.qualifiedDirection).toBe('CHALLENGE');
@@ -503,8 +598,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       const result = qualifyNatalCareerWithD10('SUPPORT', 'STRONG', 'SUPPORT', 'STRONG', context);
       expect(result.qualifiedDirection).toBe('SUPPORT');
@@ -520,8 +614,7 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
       const result = qualifyNatalCareerWithD10('SUPPORT', 'STRONG', 'CHALLENGE', 'WEAK', context);
       expect(result.qualifiedDirection).toBe('MIXED');
@@ -547,8 +640,8 @@ describe('careerD10QualificationRules', () => {
       expect(promoteCareerStrength('VERY_STRONG', 'MODERATE')).toBe('STRONG');
     });
 
-    it('returns MODERATE when natal is STRONG and D10 is MODERATE', () => {
-      expect(promoteCareerStrength('STRONG', 'MODERATE')).toBe('MODERATE');
+    it('returns STRONG when natal is STRONG and D10 is MODERATE', () => {
+      expect(promoteCareerStrength('STRONG', 'MODERATE')).toBe('STRONG');
     });
   });
 
@@ -569,8 +662,8 @@ describe('careerD10QualificationRules', () => {
       expect(weakenCareerStrength('VERY_WEAK', 'MODERATE')).toBe('WEAK');
     });
 
-    it('returns MODERATE when natal is WEAK and D10 is MODERATE', () => {
-      expect(weakenCareerStrength('WEAK', 'MODERATE')).toBe('MODERATE');
+    it('returns WEAK when natal is WEAK and D10 is MODERATE', () => {
+      expect(weakenCareerStrength('WEAK', 'MODERATE')).toBe('WEAK');
     });
   });
 });
@@ -585,8 +678,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 3,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -605,8 +697,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 5,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -627,8 +718,7 @@ describe('resolveCareerD10Qualification', () => {
         dashaStrength: 'STRONG' as CareerDashaActivationStrength,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -648,8 +738,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -666,8 +755,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result1 = resolveCareerD10Qualification(context);
@@ -684,8 +772,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -705,8 +792,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -722,8 +808,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -742,8 +827,7 @@ describe('resolveCareerD10Qualification', () => {
         dashaStrength: 'STRONG' as CareerDashaActivationStrength,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -761,8 +845,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -780,8 +863,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'WEAK', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'WEAK', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -799,8 +881,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 3,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -819,8 +900,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 0,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -838,8 +918,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: [],
-        d10Relationships: []
+        d10Planets: []
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -858,8 +937,7 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 4,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
-        d10Relationships: []
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
       };
 
       const result = resolveCareerD10Qualification(context);

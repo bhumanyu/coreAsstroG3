@@ -75,14 +75,6 @@ export interface CareerD10PlanetContext {
   readonly relatedHouses: readonly number[];
 }
 
-export interface CareerD10Relationship {
-  readonly type: 'HOUSE_TO_HOUSE' | 'PLANET_TO_HOUSE' | 'LORD_TO_HOUSE';
-  readonly source: number | Planet;
-  readonly target: number;
-  readonly effect: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
-  readonly statement: string;
-}
-
 export interface CareerD10Context {
   readonly natalDirection: CareerStructuralDirection;
   readonly natalStrength: CareerStructuralStrength;
@@ -94,7 +86,6 @@ export interface CareerD10Context {
   readonly d10Available: boolean;
   readonly d10Houses: readonly CareerD10HouseContext[];
   readonly d10Planets: readonly CareerD10PlanetContext[];
-  readonly d10Relationships: readonly CareerD10Relationship[];
 }
 
 export interface CareerD10Evidence {

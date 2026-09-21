@@ -25,22 +25,16 @@ import {
   qualifyNatalCareerWithD10
 } from './careerD10QualificationRules';
 
-let evidenceCounter = 0;
-
-function generateEvidenceId(base: string): string {
-  evidenceCounter++;
-  return `CAREER_D10_QUAL:${base}:${evidenceCounter}`;
-}
-
 function createEvidence(
   role: 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'MODIFIER',
   direction: 'SUPPORT' | 'CHALLENGE' | 'MIXED' | 'NEUTRAL' | 'UNDETERMINED' | 'UNAVAILABLE',
   weight: number,
   statement: string,
-  source?: string
+  source: string
 ): CareerD10Evidence {
+  const evidenceId = `CAREER_D10_QUAL:${source}:${direction}:${role}`;
   return Object.freeze({
-    id: generateEvidenceId('EVIDENCE'),
+    id: evidenceId,
     role,
     direction,
     weight,
@@ -74,8 +68,6 @@ function createQualificationStatement(
 export function resolveCareerD10Qualification(
   context: CareerD10Context
 ): CareerD10QualificationResult {
-  evidenceCounter = 0;
-
   const evidence: CareerD10Evidence[] = [];
 
   const natalDirection = context.natalDirection;
@@ -90,7 +82,8 @@ export function resolveCareerD10Qualification(
       'PRIMARY',
       'UNAVAILABLE',
       0,
-      'Natal career direction is unavailable; D10 qualification cannot proceed.'
+      'Natal career direction is unavailable; D10 qualification cannot proceed.',
+      'NATAL_DIRECTION_CHECK'
     );
     evidence.push(unavailableEvidence);
 
@@ -117,7 +110,8 @@ export function resolveCareerD10Qualification(
       'PRIMARY',
       'UNDETERMINED',
       0,
-      'Natal career has no promise; D10 cannot create promise where none exists.'
+      'Natal career has no promise; D10 cannot create promise where none exists.',
+      'NATAL_PROMISE_CHECK'
     );
     evidence.push(insufficientEvidence);
 
@@ -144,7 +138,8 @@ export function resolveCareerD10Qualification(
       'PRIMARY',
       'UNAVAILABLE',
       0,
-      'D10 data is unavailable; qualification cannot proceed.'
+      'D10 data is unavailable; qualification cannot proceed.',
+      'D10_DATA_CHECK'
     );
     evidence.push(unavailableEvidence);
 
@@ -157,13 +152,13 @@ export function resolveCareerD10Qualification(
       d10Direction: 'UNAVAILABLE',
       d10Strength: 'UNDETERMINED',
       qualifiedDirection: natalDirection === 'SUPPORT' ? 'SUPPORT' :
-                         natalDirection === 'CHALLENGE' ? 'CHALLENGE' :
-                         natalDirection === 'MIXED' ? 'MIXED' : 'UNAVAILABLE',
+        natalDirection === 'CHALLENGE' ? 'CHALLENGE' :
+          natalDirection === 'MIXED' ? 'MIXED' : 'UNAVAILABLE',
       qualifiedStrength: natalStrength === 'VERY_STRONG' ? 'VERY_STRONG' :
-                         natalStrength === 'STRONG' ? 'STRONG' :
-                         natalStrength === 'MODERATE' ? 'MODERATE' :
-                         natalStrength === 'WEAK' ? 'WEAK' :
-                         natalStrength === 'VERY_WEAK' ? 'VERY_WEAK' : 'UNDETERMINED',
+        natalStrength === 'STRONG' ? 'STRONG' :
+          natalStrength === 'MODERATE' ? 'MODERATE' :
+            natalStrength === 'WEAK' ? 'WEAK' :
+              natalStrength === 'VERY_WEAK' ? 'VERY_WEAK' : 'UNDETERMINED',
       natalPromisePreserved: true,
       dashaPreserved,
       evidence: Object.freeze(evidence),

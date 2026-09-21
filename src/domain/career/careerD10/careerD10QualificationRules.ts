@@ -44,13 +44,13 @@ export function hasNatalCareerPromise(
     return false;
   }
 
-  return natalDirection === 'SUPPORT' || natalDirection === 'MIXED';
+  return natalDirection === 'SUPPORT' || natalDirection === 'MIXED' || natalDirection === 'CHALLENGE';
 }
 
 export function isD10DataAvailable(context: CareerD10Context): boolean {
   return context.d10Available &&
-         context.d10Houses.length > 0 &&
-         context.d10Planets.length > 0;
+    context.d10Houses.length > 0 &&
+    context.d10Planets.length > 0;
 }
 
 export function resolveD10PlanetDirection(
@@ -62,37 +62,62 @@ export function resolveD10PlanetDirection(
     return 'UNAVAILABLE';
   }
 
-  if (condition === 'AFFLICTED') {
-    return 'CHALLENGE';
-  }
-
-  if (condition === 'WEAK') {
-    return 'CHALLENGE';
-  }
-
-  if (condition === 'STRONG') {
-    return 'SUPPORT';
-  }
-
-  if (condition === 'MODERATE') {
-    return 'NEUTRAL';
-  }
-
   const houseRole = classifyCareerHouse(d10House, CAREER_HOUSE_PORTFOLIO);
 
+  let baseDirection: CareerD10QualificationDirection;
+
+  if (condition === 'AFFLICTED') {
+    baseDirection = 'CHALLENGE';
+  } else if (condition === 'WEAK') {
+    baseDirection = 'CHALLENGE';
+  } else if (condition === 'STRONG') {
+    baseDirection = 'SUPPORT';
+  } else if (condition === 'MODERATE') {
+    baseDirection = 'NEUTRAL';
+  } else {
+    baseDirection = 'NEUTRAL';
+  }
+
   if (houseRole === 'PRIMARY') {
-    return condition === 'STRONG' ? 'SUPPORT' : 'NEUTRAL';
+    if (baseDirection === 'SUPPORT') {
+      return 'SUPPORT';
+    }
+    if (baseDirection === 'CHALLENGE') {
+      return 'CHALLENGE';
+    }
+    if (condition === 'MODERATE') {
+      return 'NEUTRAL';
+    }
+    return baseDirection;
   }
 
   if (houseRole === 'SUPPORTING') {
-    return condition === 'STRONG' || condition === 'MODERATE' ? 'SUPPORT' : 'NEUTRAL';
+    if (baseDirection === 'SUPPORT') {
+      return 'SUPPORT';
+    }
+    if (baseDirection === 'CHALLENGE') {
+      return 'NEUTRAL';
+    }
+    if (condition === 'MODERATE') {
+      return 'SUPPORT';
+    }
+    return baseDirection;
   }
 
   if (houseRole === 'CHALLENGING') {
-    return condition === 'WEAK' || condition === 'AFFLICTED' ? 'CHALLENGE' : 'NEUTRAL';
+    if (baseDirection === 'CHALLENGE') {
+      return 'CHALLENGE';
+    }
+    if (baseDirection === 'SUPPORT') {
+      return 'NEUTRAL';
+    }
+    if (condition === 'MODERATE') {
+      return 'CHALLENGE';
+    }
+    return baseDirection;
   }
 
-  return 'NEUTRAL';
+  return baseDirection;
 }
 
 export function resolveD10Direction(
@@ -219,72 +244,122 @@ export function resolveD10Strength(
     return 'UNDETERMINED';
   }
 
-  let strongCount = 0;
-  let moderateCount = 0;
-  let weakCount = 0;
-
-  for (const planet of context.d10Planets) {
-    if (planet.condition === 'STRONG') {
-      strongCount++;
-    } else if (planet.condition === 'MODERATE') {
-      moderateCount++;
-    } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
-      weakCount++;
-    }
-  }
+  let primaryStrong = 0;
+  let primaryWeak = 0;
+  let secondaryStrong = 0;
+  let secondaryWeak = 0;
+  let modifierStrong = 0;
+  let modifierWeak = 0;
 
   for (const house of context.d10Houses) {
-    if (house.lordCondition === 'STRONG') {
-      strongCount++;
-    } else if (house.lordCondition === 'MODERATE') {
-      moderateCount++;
-    } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
-      weakCount++;
+    const houseRole = classifyCareerHouse(house.house, CAREER_HOUSE_PORTFOLIO);
+
+    if (houseRole === 'PRIMARY') {
+      if (house.lordCondition === 'STRONG') {
+        primaryStrong++;
+      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
+        primaryWeak++;
+      }
+    } else if (houseRole === 'SUPPORTING') {
+      if (house.lordCondition === 'STRONG') {
+        secondaryStrong++;
+      } else if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') {
+        secondaryWeak++;
+      }
     }
 
     for (const tenantCondition of house.tenantConditions) {
       if (tenantCondition === 'STRONG') {
-        strongCount++;
-      } else if (tenantCondition === 'MODERATE') {
-        moderateCount++;
+        modifierStrong++;
       } else if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') {
-        weakCount++;
+        modifierWeak++;
       }
     }
   }
 
-  const total = strongCount + moderateCount + weakCount;
+  for (const planet of context.d10Planets) {
+    const houseRole = classifyCareerHouse(planet.d10House, CAREER_HOUSE_PORTFOLIO);
 
-  if (total === 0) {
-    return 'UNDETERMINED';
+    if (houseRole === 'PRIMARY') {
+      if (planet.condition === 'STRONG') {
+        primaryStrong++;
+      } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
+        primaryWeak++;
+      }
+    } else if (houseRole === 'SUPPORTING') {
+      if (planet.condition === 'STRONG') {
+        secondaryStrong++;
+      } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
+        secondaryWeak++;
+      }
+    } else {
+      if (planet.condition === 'STRONG') {
+        modifierStrong++;
+      } else if (planet.condition === 'WEAK' || planet.condition === 'AFFLICTED') {
+        modifierWeak++;
+      }
+    }
   }
 
-  const strongRatio = strongCount / total;
-  const weakRatio = weakCount / total;
-
   if (d10Direction === 'SUPPORT') {
-    if (strongRatio >= 0.6) {
-      return 'VERY_STRONG';
-    }
-    if (strongRatio >= 0.4) {
+    if (primaryStrong >= 1) {
+      if (primaryStrong > primaryWeak) {
+        return 'VERY_STRONG';
+      }
       return 'STRONG';
     }
-    if (strongRatio >= 0.2) {
+
+    if (primaryWeak >= 1 && primaryStrong === 0) {
+      return 'STRONG';
+    }
+
+    if (secondaryStrong >= 2) {
+      return 'STRONG';
+    }
+
+    if (secondaryStrong >= 1) {
       return 'MODERATE';
     }
+
+    if (modifierStrong >= 2) {
+      return 'MODERATE';
+    }
+
+    if (modifierStrong >= 1) {
+      return 'WEAK';
+    }
+
     return 'WEAK';
   }
 
   if (d10Direction === 'CHALLENGE') {
-    if (weakRatio >= 0.6) {
-      return 'VERY_WEAK';
-    }
-    if (weakRatio >= 0.4) {
+    if (primaryWeak >= 1) {
+      if (primaryWeak > primaryStrong) {
+        return 'VERY_WEAK';
+      }
       return 'WEAK';
     }
-    if (weakRatio >= 0.2) {
+
+    if (primaryStrong >= 1 && primaryWeak === 0) {
+      return 'WEAK';
+    }
+
+    if (secondaryWeak >= 2) {
+      return 'WEAK';
+    }
+
+    if (secondaryWeak >= 1) {
       return 'MODERATE';
     }
+
+    if (modifierWeak >= 2) {
+      return 'MODERATE';
+    }
+
+    if (modifierWeak >= 1) {
+      return 'WEAK';
+    }
+
     return 'WEAK';
   }
 
@@ -317,13 +392,13 @@ export function qualifyNatalCareerWithD10(
   if (!isD10DataAvailable(context)) {
     return {
       qualifiedDirection: natalDirection === 'SUPPORT' ? 'SUPPORT' :
-                          natalDirection === 'CHALLENGE' ? 'CHALLENGE' :
-                          natalDirection === 'MIXED' ? 'MIXED' : 'UNAVAILABLE',
+        natalDirection === 'CHALLENGE' ? 'CHALLENGE' :
+          natalDirection === 'MIXED' ? 'MIXED' : 'UNAVAILABLE',
       qualifiedStrength: natalStrength === 'VERY_STRONG' ? 'VERY_STRONG' :
-                         natalStrength === 'STRONG' ? 'STRONG' :
-                         natalStrength === 'MODERATE' ? 'MODERATE' :
-                         natalStrength === 'WEAK' ? 'WEAK' :
-                         natalStrength === 'VERY_WEAK' ? 'VERY_WEAK' : 'UNDETERMINED',
+        natalStrength === 'STRONG' ? 'STRONG' :
+          natalStrength === 'MODERATE' ? 'MODERATE' :
+            natalStrength === 'WEAK' ? 'WEAK' :
+              natalStrength === 'VERY_WEAK' ? 'VERY_WEAK' : 'UNDETERMINED',
       natalPromisePreserved: true
     };
   }
@@ -331,13 +406,13 @@ export function qualifyNatalCareerWithD10(
   if (d10Direction === 'UNAVAILABLE' || d10Direction === 'NEUTRAL') {
     return {
       qualifiedDirection: natalDirection === 'SUPPORT' ? 'SUPPORT' :
-                          natalDirection === 'CHALLENGE' ? 'CHALLENGE' :
-                          natalDirection === 'MIXED' ? 'MIXED' : 'UNAVAILABLE',
+        natalDirection === 'CHALLENGE' ? 'CHALLENGE' :
+          natalDirection === 'MIXED' ? 'MIXED' : 'UNAVAILABLE',
       qualifiedStrength: natalStrength === 'VERY_STRONG' ? 'VERY_STRONG' :
-                         natalStrength === 'STRONG' ? 'STRONG' :
-                         natalStrength === 'MODERATE' ? 'MODERATE' :
-                         natalStrength === 'WEAK' ? 'WEAK' :
-                         natalStrength === 'VERY_WEAK' ? 'VERY_WEAK' : 'UNDETERMINED',
+        natalStrength === 'STRONG' ? 'STRONG' :
+          natalStrength === 'MODERATE' ? 'MODERATE' :
+            natalStrength === 'WEAK' ? 'WEAK' :
+              natalStrength === 'VERY_WEAK' ? 'VERY_WEAK' : 'UNDETERMINED',
       natalPromisePreserved: true
     };
   }
