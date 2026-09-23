@@ -148,6 +148,11 @@ export interface CareerWealthFinalSynthesis {
   readonly manifestationFactors?: readonly any[];
 }
 
+/**
+ * @deprecated Use CareerFinalSynthesisInput from src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts instead.
+ * This type is kept for internal compatibility with the legacy CW-05 synthesis engine.
+ * Re-exports from the canonical C11 boundary will be provided in a future update.
+ */
 export interface CareerFinalSynthesisInput {
   readonly natalPromise: DomainStrength;
   readonly dashaSynthesis?: CareerDashaSynthesis;

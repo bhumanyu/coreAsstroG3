@@ -91,6 +91,25 @@ import { synthesizeCareerManifestations } from './manifestation/careerManifestat
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+
+/**
+ * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
+ *
+ * The canonical type contract for Career Final Synthesis is now defined at:
+ * src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts
+ *
+ * This interpreter currently uses the legacy synthesis implementation from
+ * src/domain/careerWealth/finalSynthesis/careerFinalSynthesis.ts for backward
+ * compatibility and to preserve current runtime behavior.
+ *
+ * The legacy types in careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes.ts
+ * are marked as deprecated and will be migrated to re-export from the canonical C11
+ * boundary in a future update.
+ *
+ * Future migration will rewire this interpreter to use the canonical C11 synthesis
+ * implementation from src/domain/career/careerFinalSynthesis/careerFinalSynthesis.ts
+ * while preserving the existing output shape and runtime behavior.
+ */
 import {
   ReasoningTraceBuilder,
   validateEvidenceNodes,
