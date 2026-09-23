@@ -356,7 +356,9 @@ export function buildGoldenWealthInterpretation(): DomainInterpretation {
     d2Relationship,
     manifestations,
     conflicts,
-    evidence
+    evidence,
+    supportingSourceIds: supportingEvidence.map((e) => e.id),
+    challengingSourceIds: challengingEvidence.map((e) => e.id)
   });
 
   const conclusion = createDomainConclusion({

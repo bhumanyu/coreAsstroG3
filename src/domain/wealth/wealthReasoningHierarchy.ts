@@ -320,13 +320,12 @@ export function evaluateWealthReasoningHierarchy(params: {
     conflicts: conflictRes.conflicts
   });
 
-  // Collect evidence IDs mapping to sourceIds for evidence traceability
-  // sourceIds point directly to input DomainEvidence items present in result.evidence
+  // Collect canonical evidence IDs (semantic identity, equals identityKey after P0-08)
   const primaryEvidenceIds = Array.from(
     new Set(
       deduplicatedEvidence
         .filter((e) => e.layer === 'PRIMARY_PROMISE')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .map((e) => e.evidenceId)
     )
   );
 
@@ -334,7 +333,7 @@ export function evaluateWealthReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'SUPPORT')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .map((e) => e.evidenceId)
     )
   );
 
@@ -342,11 +341,45 @@ export function evaluateWealthReasoningHierarchy(params: {
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'CHALLENGE')
-        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+        .map((e) => e.evidenceId)
     )
   );
 
   const unresolvedEvidenceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
+        .map((e) => e.evidenceId)
+    )
+  );
+
+  // Collect occurrence-level source IDs for provenance traceability
+  // sourceIds point directly to input DomainEvidence items present in result.evidence
+  const primarySourceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.layer === 'PRIMARY_PROMISE')
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+    )
+  );
+
+  const supportingSourceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'SUPPORT')
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+    )
+  );
+
+  const challengingSourceIds = Array.from(
+    new Set(
+      deduplicatedEvidence
+        .filter((e) => e.direction === 'CHALLENGE')
+        .flatMap((e) => e.sourceIds.length > 0 ? e.sourceIds : [e.evidenceId])
+    )
+  );
+
+  const unresolvedSourceIds = Array.from(
     new Set(
       deduplicatedEvidence
         .filter((e) => e.direction === 'NEUTRAL' || e.direction === 'UNAVAILABLE')
@@ -374,6 +407,10 @@ export function evaluateWealthReasoningHierarchy(params: {
     supportingEvidenceIds: Object.freeze(supportingEvidenceIds),
     challengingEvidenceIds: Object.freeze(challengingEvidenceIds),
     unresolvedEvidenceIds: Object.freeze(unresolvedEvidenceIds),
+    primarySourceIds: Object.freeze(primarySourceIds),
+    supportingSourceIds: Object.freeze(supportingSourceIds),
+    challengingSourceIds: Object.freeze(challengingSourceIds),
+    unresolvedSourceIds: Object.freeze(unresolvedSourceIds),
     reasoningTrace,
     manifestations,
     conflicts: rawConflicts,

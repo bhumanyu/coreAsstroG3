@@ -1336,13 +1336,13 @@ describe('WealthDomainInterpreterV2', () => {
       const v2 = interpretWealthV2(horoscope, makeDomainOptions());
       const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
 
-      for (const id of v2.conclusion.supportingEvidenceIds) {
+      for (const id of v2.conclusion.supportingSourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
-      for (const id of v2.conclusion.challengingEvidenceIds) {
+      for (const id of v2.conclusion.challengingSourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
-      for (const id of v2.conclusion.primaryEvidenceIds) {
+      for (const id of v2.conclusion.primarySourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
       for (const id of v2.natalPromise.evidenceIds) {

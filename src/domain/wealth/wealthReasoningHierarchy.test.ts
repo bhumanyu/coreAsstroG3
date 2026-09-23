@@ -304,4 +304,76 @@ describe('Wealth Reasoning Hierarchy (Golden Scenarios W1-W6 & CW-01 Validation)
     expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_WEALTH');
     expect(canonicalEvidence.sourceIds).toContain('EV_JUPITER_WEALTH_DUP1');
   });
+
+  it('W8: Canonical evidence IDs vs occurrence-level source IDs for primary evidence', () => {
+    // Create 3 evidence items with the same identity (same sourceType, ruleId, source, phase, planet)
+    // but different occurrence IDs
+    const ev1 = createDomainEvidence({
+      id: 'EV_JUPITER_WEALTH_1',
+      sourceType: 'PLANET',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.JUPITER,
+      ruleId: 'WEALTH_JUPITER_RELEVANCE_001',
+      statement: 'Jupiter supports wealth accumulation',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      dimension: 'ACCUMULATION'
+    });
+
+    const ev2 = createDomainEvidence({
+      id: 'EV_JUPITER_WEALTH_2',
+      sourceType: 'PLANET',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.JUPITER,
+      ruleId: 'WEALTH_JUPITER_RELEVANCE_001',
+      statement: 'Jupiter supports wealth accumulation',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      dimension: 'ACCUMULATION'
+    });
+
+    const ev3 = createDomainEvidence({
+      id: 'EV_JUPITER_WEALTH_3',
+      sourceType: 'PLANET',
+      domain: 'WEALTH',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.JUPITER,
+      ruleId: 'WEALTH_JUPITER_RELEVANCE_001',
+      statement: 'Jupiter supports wealth accumulation',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95,
+      dimension: 'ACCUMULATION'
+    });
+
+    const result = evaluateWealthReasoningHierarchy({
+      evidence: [ev1, ev2, ev3]
+    });
+
+    // Canonical evidence IDs should be deduplicated to 1 (the identityKey)
+    expect(result.primaryEvidenceIds).toHaveLength(1);
+    // Occurrence-level source IDs should contain all 3 occurrence IDs
+    expect(result.primarySourceIds).toHaveLength(3);
+
+    // The canonical evidenceId should match the identityKey from reasoningTrace
+    const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+    expect(result.primaryEvidenceIds[0]).toBe(canonicalEvidence.evidenceId);
+    expect(result.primaryEvidenceIds[0]).toBe(canonicalEvidence.identityKey);
+
+    // The source IDs should match the occurrence IDs
+    expect(result.primarySourceIds).toEqual(canonicalEvidence.sourceIds);
+    expect(result.primarySourceIds).toContain('EV_JUPITER_WEALTH_1');
+    expect(result.primarySourceIds).toContain('EV_JUPITER_WEALTH_2');
+    expect(result.primarySourceIds).toContain('EV_JUPITER_WEALTH_3');
+  });
 });

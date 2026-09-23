@@ -377,13 +377,18 @@ export function buildSpeculationChallengedWealthInterpretation(): DomainInterpre
     conflicts
   );
 
+  const supportingEvidence = evidence.filter((e) => e.polarity === 'SUPPORTING');
+  const challengingEvidence = evidence.filter((e) => e.polarity === 'CHALLENGING');
+
   const conclusionData = buildWealthConclusionData({
     overallStatus,
     dimensions,
     d2Relationship,
     manifestations,
     conflicts,
-    evidence
+    evidence,
+    supportingSourceIds: supportingEvidence.map((e) => e.id),
+    challengingSourceIds: challengingEvidence.map((e) => e.id)
   });
 
   const conclusion = createDomainConclusion({
@@ -630,13 +635,18 @@ export function buildIncompleteWealthInterpretation(): DomainInterpretation {
   const overallStatus = resolveOverallWealthStatus(dimensions);
   const manifestations = deriveWealthManifestations(evidence);
 
+  const supportingEvidence = evidence.filter((e) => e.polarity === 'SUPPORTING');
+  const challengingEvidence = evidence.filter((e) => e.polarity === 'CHALLENGING');
+
   const conclusionData = buildWealthConclusionData({
     overallStatus,
     dimensions,
     d2Relationship: 'UNAVAILABLE',
     manifestations,
     conflicts: [],
-    evidence
+    evidence,
+    supportingSourceIds: supportingEvidence.map((e) => e.id),
+    challengingSourceIds: challengingEvidence.map((e) => e.id)
   });
 
   const conclusion = createDomainConclusion({

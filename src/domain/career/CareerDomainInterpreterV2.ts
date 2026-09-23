@@ -341,8 +341,8 @@ export function interpretCareerV2(
     transitTrigger,
     conflicts,
     cw01Result.manifestations,
-    cw01Result.supportingEvidenceIds,
-    cw01Result.challengingEvidenceIds
+    cw01Result.supportingSourceIds,
+    cw01Result.challengingSourceIds
   );
 
   const conclusion = createDomainConclusion({
@@ -370,7 +370,11 @@ export function interpretCareerV2(
     primaryEvidenceIds: cw01Result.primaryEvidenceIds,
     supportingEvidenceIds: cw01Result.supportingEvidenceIds,
     challengingEvidenceIds: cw01Result.challengingEvidenceIds,
-    unresolvedQuestions: []
+    unresolvedQuestions: [],
+    primarySourceIds: cw01Result.primarySourceIds,
+    supportingSourceIds: cw01Result.supportingSourceIds,
+    challengingSourceIds: cw01Result.challengingSourceIds,
+    unresolvedSourceIds: cw01Result.unresolvedSourceIds
   });
 
   const careerManifestationSynthesis = synthesizeCareerManifestations(

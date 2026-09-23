@@ -135,6 +135,8 @@ export function buildWealthConclusionData(params: {
   readonly conflicts: readonly DomainConflict[];
   readonly evidence: readonly DomainEvidence[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
+  readonly supportingSourceIds: readonly string[];
+  readonly challengingSourceIds: readonly string[];
 }): WealthConclusionData {
   const {
     overallStatus,
@@ -142,7 +144,9 @@ export function buildWealthConclusionData(params: {
     d2Relationship,
     manifestations,
     evidence,
-    periodTimingActivations
+    periodTimingActivations,
+    supportingSourceIds,
+    challengingSourceIds
   } = params;
 
   const getDim = (dimName: WealthDimension): WealthDimensionInterpretation | undefined =>
@@ -162,9 +166,6 @@ export function buildWealthConclusionData(params: {
   const gainsDashaEffect = gains?.dashaEffect ?? 'DOES_NOT_ACTIVATE';
   const fortuneDashaEffect = fortune?.dashaEffect ?? 'DOES_NOT_ACTIVATE';
   const speculationDashaEffect = speculation?.dashaEffect ?? 'DOES_NOT_ACTIVATE';
-
-  const supporting = evidence.filter((e) => e.polarity === 'SUPPORTING');
-  const challenging = evidence.filter((e) => e.polarity === 'CHALLENGING');
 
   const mainStrengths: string[] = [];
   if (accumulationStatus === 'STRONGLY_SUPPORTED' || accumulationStatus === 'SUPPORTED') {
@@ -195,8 +196,8 @@ export function buildWealthConclusionData(params: {
   const dominantManifestations = highManifestations.length > 0
     ? highManifestations
     : manifestations.length > 0
-    ? [manifestations[0].mode as WealthManifestationMode]
-    : [];
+      ? [manifestations[0].mode as WealthManifestationMode]
+      : [];
 
   const headline = buildWealthHeadline({
     overallStatus,
@@ -221,8 +222,8 @@ export function buildWealthConclusionData(params: {
     speculationDashaEffect,
     dominantManifestations: Object.freeze(dominantManifestations),
     headline,
-    supportingEvidenceIds: Object.freeze(supporting.map((e) => e.id)),
-    challengingEvidenceIds: Object.freeze(challenging.map((e) => e.id)),
+    supportingSourceIds: Object.freeze([...supportingSourceIds]),
+    challengingSourceIds: Object.freeze([...challengingSourceIds]),
     ...(periodTimingActivations
       ? { periodTimingActivations: Object.freeze([...periodTimingActivations]) }
       : {})

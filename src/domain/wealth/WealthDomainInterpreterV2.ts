@@ -352,7 +352,9 @@ export function interpretWealthV2(
     manifestations: cw01Result.manifestations,
     conflicts,
     evidence,
-    periodTimingActivations
+    periodTimingActivations,
+    supportingSourceIds: cw01Result.supportingSourceIds,
+    challengingSourceIds: cw01Result.challengingSourceIds
   });
 
   const conclusion = createDomainConclusion({
@@ -376,7 +378,11 @@ export function interpretWealthV2(
     primaryEvidenceIds: cw01Result.primaryEvidenceIds,
     supportingEvidenceIds: cw01Result.supportingEvidenceIds,
     challengingEvidenceIds: cw01Result.challengingEvidenceIds,
-    unresolvedQuestions: []
+    unresolvedQuestions: [],
+    primarySourceIds: cw01Result.primarySourceIds,
+    supportingSourceIds: cw01Result.supportingSourceIds,
+    challengingSourceIds: cw01Result.challengingSourceIds,
+    unresolvedSourceIds: cw01Result.unresolvedSourceIds
   });
 
   const timingActivations = Object.freeze([

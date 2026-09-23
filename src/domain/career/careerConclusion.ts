@@ -241,32 +241,32 @@ export function buildCareerHeadline(
   const statusStr = natalStatus === 'VERY_STRONG'
     ? 'Exceptionally strong'
     : natalStatus === 'STRONG'
-    ? 'Strong'
-    : natalStatus === 'MODERATE'
-    ? 'Moderate'
-    : natalStatus === 'MIXED'
-    ? 'Mixed'
-    : natalStatus === 'WEAK' || natalStatus === 'VERY_WEAK'
-    ? 'Challenged'
-    : 'Developing';
+      ? 'Strong'
+      : natalStatus === 'MODERATE'
+        ? 'Moderate'
+        : natalStatus === 'MIXED'
+          ? 'Mixed'
+          : natalStatus === 'WEAK' || natalStatus === 'VERY_WEAK'
+            ? 'Challenged'
+            : 'Developing';
 
   const activationStr = currentActivation === 'ACTIVE'
     ? 'active timing support'
     : currentActivation === 'PARTIALLY_ACTIVE'
-    ? 'partial timing activation'
-    : currentActivation === 'INACTIVE'
-    ? 'inactive timing'
-    : 'unconfirmed timing';
+      ? 'partial timing activation'
+      : currentActivation === 'INACTIVE'
+        ? 'inactive timing'
+        : 'unconfirmed timing';
 
   const d10Str = d10Relationship === 'CONFIRMS'
     ? 'confirmed by D10 execution'
     : d10Relationship === 'PARTIALLY_CONFIRMS'
-    ? 'partially confirmed by D10 execution'
-    : d10Relationship === 'CONFLICTS'
-    ? 'with D10 divisional friction'
-    : d10Relationship === 'MODIFIES'
-    ? 'with D10 role specialization'
-    : 'with neutral divisional alignment';
+      ? 'partially confirmed by D10 execution'
+      : d10Relationship === 'CONFLICTS'
+        ? 'with D10 divisional friction'
+        : d10Relationship === 'MODIFIES'
+          ? 'with D10 role specialization'
+          : 'with neutral divisional alignment';
 
   return `${statusStr} natal career promise with ${activationStr}, ${d10Str} and ${currentPressure.toLowerCase()} transit pressure.`;
 }
@@ -278,8 +278,8 @@ export function buildCareerConclusionData(
   transitTrigger: TransitTrigger,
   conflicts: readonly DomainConflict[],
   manifestations: readonly DomainManifestation[],
-  supportingEvidenceIds: readonly string[],
-  challengingEvidenceIds: readonly string[]
+  supportingSourceIds: readonly string[],
+  challengingSourceIds: readonly string[]
 ): CareerConclusionData {
   const currentActivation = resolveCurrentActivation(timingActivations);
   const currentPressure = resolveCurrentPressure(transitTrigger, conflicts);
@@ -291,8 +291,8 @@ export function buildCareerConclusionData(
   const dominantManifestations = highManifestations.length > 0
     ? highManifestations
     : manifestations.length > 0
-    ? [manifestations[0].mode]
-    : [];
+      ? [manifestations[0].mode]
+      : [];
 
   const headline = buildCareerHeadline(
     natalStrength,
@@ -308,8 +308,8 @@ export function buildCareerConclusionData(
     d10Relationship,
     dominantManifestations: Object.freeze(dominantManifestations),
     headline,
-    supportingEvidenceIds: Object.freeze([...supportingEvidenceIds]),
-    challengingEvidenceIds: Object.freeze([...challengingEvidenceIds])
+    supportingSourceIds: Object.freeze([...supportingSourceIds]),
+    challengingSourceIds: Object.freeze([...challengingSourceIds])
   });
 }
 

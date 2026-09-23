@@ -97,6 +97,16 @@ export interface TimingHierarchyResult {
   readonly rationale: string;
 }
 
+/**
+ * Top-level domain reasoning result with canonical evidence IDs and occurrence-level source IDs.
+ *
+ * Canonical evidence IDs (*EvidenceIds) represent semantic identity (evidenceId, which equals identityKey after P0-08).
+ * These are deduplicated - the same semantic fact appears once regardless of how many representations reference it.
+ *
+ * Occurrence-level source IDs (*SourceIds) provide provenance traceability to the original input evidence items.
+ * These map to the sourceIds array in WeightedReasoningEvidence, which contains all occurrence IDs that were
+ * merged into the canonical fact.
+ */
 export interface HierarchicalDomainResult {
   readonly natalDirection: ReasoningDirection;
   readonly natalStrength: DomainStrength;
@@ -110,6 +120,10 @@ export interface HierarchicalDomainResult {
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
   readonly unresolvedEvidenceIds: readonly string[];
+  readonly primarySourceIds: readonly string[];
+  readonly supportingSourceIds: readonly string[];
+  readonly challengingSourceIds: readonly string[];
+  readonly unresolvedSourceIds: readonly string[];
 }
 
 export interface ReasoningTrace {

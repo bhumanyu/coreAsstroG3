@@ -131,8 +131,8 @@ export interface WealthConclusionData {
   readonly speculationDashaEffect: TimingActivationEffect;
   readonly dominantManifestations: readonly WealthManifestationMode[];
   readonly headline: string;
-  readonly supportingEvidenceIds: readonly string[];
-  readonly challengingEvidenceIds: readonly string[];
+  readonly supportingSourceIds: readonly string[];
+  readonly challengingSourceIds: readonly string[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
   readonly wealthTimingSynthesis?: WealthTimingSynthesis;
   readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;

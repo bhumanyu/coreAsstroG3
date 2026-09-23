@@ -111,8 +111,8 @@ export interface CareerConclusionData {
   readonly d10Relationship: VargaRelationship;
   readonly dominantManifestations: readonly ManifestationMode[];
   readonly headline: string;
-  readonly supportingEvidenceIds: readonly string[];
-  readonly challengingEvidenceIds: readonly string[];
+  readonly supportingSourceIds: readonly string[];
+  readonly challengingSourceIds: readonly string[];
   readonly careerDashaSynthesis?: CareerDashaSynthesis;
   readonly careerTimingSynthesis?: CareerTimingSynthesis;
   readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];

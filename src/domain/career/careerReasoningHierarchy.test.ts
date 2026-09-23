@@ -461,5 +461,74 @@ describe('Career Reasoning Hierarchy (Golden Scenarios C1-C7 & CW-01 Validation)
     expect(result.reasoningTrace.primaryPromise).toHaveLength(1);
     expect(result.reasoningTrace.primaryPromise[0].evidenceId).toBe('EV_TEST_TRACE');
   });
+
+  it('C8: Canonical evidence IDs vs occurrence-level source IDs for primary evidence', () => {
+    // Create 3 evidence items with the same identity (same sourceType, ruleId, source, phase, planet)
+    // but different occurrence IDs
+    const ev1 = createDomainEvidence({
+      id: 'EV_SUN_CAREER_1',
+      sourceType: 'PLANET',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.SUN,
+      ruleId: 'CAREER_SUN_RELEVANCE_001',
+      statement: 'Sun supports career prominence',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const ev2 = createDomainEvidence({
+      id: 'EV_SUN_CAREER_2',
+      sourceType: 'PLANET',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.SUN,
+      ruleId: 'CAREER_SUN_RELEVANCE_001',
+      statement: 'Sun supports career prominence',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const ev3 = createDomainEvidence({
+      id: 'EV_SUN_CAREER_3',
+      sourceType: 'PLANET',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      planet: Planet.SUN,
+      ruleId: 'CAREER_SUN_RELEVANCE_001',
+      statement: 'Sun supports career prominence',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 95
+    });
+
+    const result = evaluateCareerReasoningHierarchy({
+      evidence: [ev1, ev2, ev3]
+    });
+
+    // Canonical evidence IDs should be deduplicated to 1 (the identityKey)
+    expect(result.primaryEvidenceIds).toHaveLength(1);
+    // Occurrence-level source IDs should contain all 3 occurrence IDs
+    expect(result.primarySourceIds).toHaveLength(3);
+
+    // The canonical evidenceId should match the identityKey from reasoningTrace
+    const canonicalEvidence = result.reasoningTrace.primaryPromise[0];
+    expect(result.primaryEvidenceIds[0]).toBe(canonicalEvidence.evidenceId);
+    expect(result.primaryEvidenceIds[0]).toBe(canonicalEvidence.identityKey);
+
+    // The source IDs should match the occurrence IDs
+    expect(result.primarySourceIds).toEqual(canonicalEvidence.sourceIds);
+    expect(result.primarySourceIds).toContain('EV_SUN_CAREER_1');
+    expect(result.primarySourceIds).toContain('EV_SUN_CAREER_2');
+    expect(result.primarySourceIds).toContain('EV_SUN_CAREER_3');
+  });
 });
 

@@ -1162,18 +1162,18 @@ describe('CareerDomainInterpreterV2', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
 
-      // 1. Conclusion supporting IDs
-      for (const id of v2.conclusion.supportingEvidenceIds) {
+      // 1. Conclusion supporting source IDs (occurrence-level provenance)
+      for (const id of v2.conclusion.supportingSourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
 
-      // 2. Conclusion challenging IDs
-      for (const id of v2.conclusion.challengingEvidenceIds) {
+      // 2. Conclusion challenging source IDs (occurrence-level provenance)
+      for (const id of v2.conclusion.challengingSourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
 
-      // 3. Conclusion primary IDs
-      for (const id of v2.conclusion.primaryEvidenceIds) {
+      // 3. Conclusion primary source IDs (occurrence-level provenance)
+      for (const id of v2.conclusion.primarySourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
 
@@ -1383,10 +1383,11 @@ describe('CareerDomainInterpreterV2', () => {
 
       // Verify all evidence IDs in conclusionData exist in result.evidence
       const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
-      for (const id of cd.supportingEvidenceIds) {
+      // Note: conclusionData uses sourceIds for traceability since they reference occurrence IDs
+      for (const id of cd.supportingSourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
-      for (const id of cd.challengingEvidenceIds) {
+      for (const id of cd.challengingSourceIds || []) {
         expect(allEvidenceIds.has(id)).toBe(true);
       }
     });
