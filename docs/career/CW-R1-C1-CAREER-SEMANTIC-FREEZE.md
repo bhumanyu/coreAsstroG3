@@ -1,5 +1,9 @@
 # CW-R1 C1 — Career Semantic Source Freeze
 
+> **Status: Migration Baseline / Frozen Legacy Semantic Ownership**
+>
+> C1 serves as the migration baseline documenting the legacy Career semantic production path. This document is superseded in part by the CW-R1 Career Convergence Contract for the target architecture, but remains the authoritative description of the current legacy production producer.
+
 ## Purpose
 
 This document freezes the existing Career semantic sources before
@@ -209,6 +213,10 @@ These are not to be replaced by a third Dasha engine.
 
 2. ThemeInterpretation remains the authoritative producer of existing
    Career evidence.
+   >
+   > **SUPERSEDED by CW-R1 Career Convergence Contract for the target architecture.**
+   >
+   > This invariant remains the accurate description of the current legacy production producer. The convergence contract defines the transition to the canonical C4–C11 pipeline as the authoritative producer for the target architecture.
 
 3. Career evidence mapping remains the boundary between engine evidence
    and domain reasoning.
