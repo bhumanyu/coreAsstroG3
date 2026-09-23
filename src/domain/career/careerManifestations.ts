@@ -27,7 +27,7 @@ export const CAREER_LEADERSHIP_FAMILIES = new Set<CareerEvidenceFamily>([
   CareerEvidenceFamily.YOGA
 ]);
 
-export const CAREER_EMPLOYMENT_FAMILIES = new Set<CareerEvidenceFamily>([
+export const CAREER_SERVICE_EMPLOYMENT_FAMILIES = new Set<CareerEvidenceFamily>([
   CareerEvidenceFamily.SIXTH_HOUSE,
   CareerEvidenceFamily.SIXTH_LORD,
   CareerEvidenceFamily.SATURN
@@ -53,7 +53,7 @@ export const CAREER_LEADERSHIP_RULES = new Set<string>([
   'CAREER_10L_DIGNITY_001'
 ]);
 
-export const CAREER_EMPLOYMENT_RULES = new Set<string>([
+export const CAREER_SERVICE_EMPLOYMENT_RULES = new Set<string>([
   'CAREER_HOUSE_PROMISE_6H_001',
   'CAREER_LORD_PROMISE_6L_001',
   'CAREER_SATURN_KARAKA_001',
@@ -185,20 +185,20 @@ export function deriveCareerManifestations(
     })
   );
 
-  // 2. EMPLOYMENT & SERVICE
-  const employmentEvidence = getSupportingEvidence(
-    CAREER_EMPLOYMENT_FAMILIES,
-    CAREER_EMPLOYMENT_RULES
+  // 2. SERVICE EMPLOYMENT
+  const serviceEmploymentEvidence = getSupportingEvidence(
+    CAREER_SERVICE_EMPLOYMENT_FAMILIES,
+    CAREER_SERVICE_EMPLOYMENT_RULES
   );
-  const employmentConfidence = calculateManifestationConfidence(employmentEvidence);
+  const serviceEmploymentConfidence = calculateManifestationConfidence(serviceEmploymentEvidence);
   manifestations.push(
     createDomainManifestation({
-      mode: 'EMPLOYMENT',
-      confidence: employmentConfidence,
-      statement: employmentEvidence.length > 0
+      mode: 'SERVICE_EMPLOYMENT',
+      confidence: serviceEmploymentConfidence,
+      statement: serviceEmploymentEvidence.length > 0
         ? 'Structured professional employment, institutional service, and problem-solving career pathways are supported.'
         : 'Standard employment tracks operate as secondary avenues.',
-      evidenceIds: employmentEvidence.map((e) => e.id)
+      evidenceIds: serviceEmploymentEvidence.map((e) => e.id)
     })
   );
 

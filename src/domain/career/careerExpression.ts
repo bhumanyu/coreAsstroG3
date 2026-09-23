@@ -90,14 +90,10 @@ export interface CareerExpressionContext {
 export const CAREER_EXPRESSION_RULE_IDS = Object.freeze({
   TECHNICAL_SPECIALIZATION: 'CAREER.EXPRESSION.TECHNICAL_SPECIALIZATION',
   SERVICE_EMPLOYMENT: 'CAREER.EXPRESSION.SERVICE_EMPLOYMENT',
-  EMPLOYMENT: 'CAREER.EXPRESSION.EMPLOYMENT',
   MANAGEMENT: 'CAREER.EXPRESSION.MANAGEMENT',
   LEADERSHIP: 'CAREER.EXPRESSION.LEADERSHIP',
   AUTHORITY: 'CAREER.EXPRESSION.AUTHORITY',
-  SPECIALIZATION: 'CAREER.EXPRESSION.SPECIALIZATION',
-  PUBLIC_INSTITUTIONAL: 'CAREER.EXPRESSION.PUBLIC_INSTITUTIONAL',
   INDEPENDENT_WORK: 'CAREER.EXPRESSION.INDEPENDENT_WORK',
-  ENTREPRENEURSHIP: 'CAREER.EXPRESSION.ENTREPRENEURSHIP',
   BUSINESS_ENTREPRENEURSHIP: 'CAREER.EXPRESSION.BUSINESS_ENTREPRENEURSHIP'
 } as const);
 
@@ -250,40 +246,7 @@ function createServiceEmploymentEvidence(
   });
 }
 
-function createEmploymentEvidence(
-  context: CareerExpressionContext
-): CareerExpressionEvidence | undefined {
-  // Prerequisites: structural support + 6H + 10H (no Saturn requirement)
-  if (!hasCareerStructuralContext(context)) {
-    return undefined;
-  }
 
-  // Need relevant planets in 6H and 10H
-  const planetsIn6H = context.relevantPlanets.filter(p =>
-    isPlanetAvailableForExpression(p) && hasHouseInSet(p.relatedHouses, new Set<number>([6]))
-  );
-
-  const planetsIn10H = context.relevantPlanets.filter(p =>
-    isPlanetAvailableForExpression(p) && hasHouseInSet(p.relatedHouses, new Set<number>([10]))
-  );
-
-  if (planetsIn6H.length === 0 || planetsIn10H.length === 0) {
-    return undefined;
-  }
-
-  const involvedPlanets = Array.from(new Set(Array.from([...planetsIn6H, ...planetsIn10H]).map(p => p.planet)));
-  const involvedHouses = Object.freeze([6, 10]);
-
-  return Object.freeze({
-    id: CAREER_EXPRESSION_RULE_IDS.EMPLOYMENT,
-    mode: 'EMPLOYMENT',
-    role: 'STRUCTURAL',
-    statement: `Employment indicated by relevant planets in 6H and 10H: ${involvedPlanets.join(', ')}.`,
-    weight: 2,
-    planets: Object.freeze(involvedPlanets),
-    houses: involvedHouses
-  });
-}
 
 function createManagementEvidence(
   context: CareerExpressionContext
@@ -405,78 +368,9 @@ function createAuthorityEvidence(
   });
 }
 
-function createSpecializationEvidence(
-  context: CareerExpressionContext
-): CareerExpressionEvidence | undefined {
-  // Prerequisites: structural support + Mercury + specialized house context
-  if (!hasCareerStructuralContext(context)) {
-    return undefined;
-  }
 
-  const mercury = getPlanetContext(context, Planet.MERCURY);
-  if (!mercury || !isPlanetAvailableForExpression(mercury)) {
-    return undefined;
-  }
 
-  // Need Mercury in 5H, 8H, or 12H (specialization houses)
-  const hasSpecializationHouse = hasHouseInSet(mercury.relatedHouses, new Set<number>([5, 8, 12]));
 
-  if (!hasSpecializationHouse) {
-    return undefined;
-  }
-
-  // Additional structural signal: need career house connection (6H, 10H)
-  const hasCareerHouse = hasHouseInSet(mercury.relatedHouses, new Set<number>([6, 10]));
-
-  if (!hasCareerHouse) {
-    return undefined;
-  }
-
-  return Object.freeze({
-    id: CAREER_EXPRESSION_RULE_IDS.SPECIALIZATION,
-    mode: 'SPECIALIZATION',
-    role: 'PLANETARY',
-    statement: 'Specialization indicated by Mercury in specialized houses with career connections.',
-    weight: 2,
-    planets: Object.freeze([Planet.MERCURY]),
-    houses: mercury.relatedHouses
-  });
-}
-
-function createPublicInstitutionalEvidence(
-  context: CareerExpressionContext
-): CareerExpressionEvidence | undefined {
-  // Prerequisites: structural support + Jupiter + 10H + government/institutional context
-  if (!hasCareerStructuralContext(context)) {
-    return undefined;
-  }
-
-  const jupiter = getPlanetContext(context, Planet.JUPITER);
-  if (!jupiter || !isPlanetAvailableForExpression(jupiter)) {
-    return undefined;
-  }
-
-  if (!hasHouseInSet(jupiter.relatedHouses, new Set<number>([10]))) {
-    return undefined;
-  }
-
-  // Additional structural signal: need 2H or 11H (wealth/gain houses)
-  const hasWealthHouse = hasHouseInSet(jupiter.relatedHouses, new Set<number>([2, 11]));
-
-  if (!hasWealthHouse) {
-    return undefined;
-  }
-
-  return Object.freeze({
-    id: CAREER_EXPRESSION_RULE_IDS.PUBLIC_INSTITUTIONAL,
-    mode: 'PUBLIC_INSTITUTIONAL',
-    role: 'PLANETARY',
-    statement: 'Public institutional career indicated by Jupiter in 10H with wealth house connections.',
-    weight: 2,
-    planets: Object.freeze([Planet.JUPITER]),
-    houses: jupiter.relatedHouses
-  });
-}
 
 function createIndependentWorkEvidence(
   context: CareerExpressionContext
@@ -524,104 +418,131 @@ function createIndependentWorkEvidence(
   });
 }
 
-function createEntrepreneurshipEvidence(
-  context: CareerExpressionContext
-): CareerExpressionEvidence | undefined {
-  // Prerequisites: structural support + Mars/Jupiter + 11H + business house (2H/7H/11H) + supporting condition
-  if (!hasCareerStructuralContext(context)) {
-    return undefined;
-  }
 
-  const mars = getPlanetContext(context, Planet.MARS);
-  const jupiter = getPlanetContext(context, Planet.JUPITER);
-
-  const businessPlanets: CareerExpressionPlanetContext[] = [];
-  if (mars && isPlanetAvailableForExpression(mars) && hasHouseInSet(mars.relatedHouses, new Set<number>([11]))) {
-    businessPlanets.push(mars);
-  }
-  if (jupiter && isPlanetAvailableForExpression(jupiter) && hasHouseInSet(jupiter.relatedHouses, new Set<number>([11]))) {
-    businessPlanets.push(jupiter);
-  }
-
-  if (businessPlanets.length === 0) {
-    return undefined;
-  }
-
-  // Multi-factor evidence: need business house (2H/7H/11H) AND supporting condition
-  const hasBusinessHouse = businessPlanets.some(p =>
-    hasHouseInSet(p.relatedHouses, new Set<number>([2, 7, 11]))
-  );
-  const hasSupportingCondition = businessPlanets.some(p =>
-    p.condition === 'STRONG' || p.condition === 'MODERATE'
-  );
-
-  if (!hasBusinessHouse || !hasSupportingCondition) {
-    return undefined;
-  }
-
-  const involvedPlanets = Array.from(businessPlanets).map(p => p.planet);
-  const involvedHouses = Array.from(businessPlanets).flatMap(p => p.relatedHouses);
-
-  return Object.freeze({
-    id: CAREER_EXPRESSION_RULE_IDS.ENTREPRENEURSHIP,
-    mode: 'ENTREPRENEURSHIP',
-    role: 'PLANETARY',
-    statement: `Entrepreneurship indicated by ${involvedPlanets.join(', ')} in 11H with business house and supporting condition.`,
-    weight: 2,
-    planets: Object.freeze(involvedPlanets),
-    houses: Object.freeze(Array.from(new Set(involvedHouses)))
-  });
-}
 
 function createBusinessEntrepreneurshipEvidence(
   context: CareerExpressionContext
 ): CareerExpressionEvidence | undefined {
-  // Prerequisites: structural support + Mars/Jupiter + 7H + 11H + strong business structure
+  // Prerequisites: structural support + multi-axis combination for entrepreneurship
   if (!hasCareerStructuralContext(context)) {
     return undefined;
   }
 
+  // Multi-axis entrepreneurship indicators:
+  // 1. Initiative houses: 3H/3L (effort, communication, initiative)
+  // 2. Speculation/gain houses: 5H/5L (risk-taking, speculation)
+  // 3. Partnership/business houses: 7H/7L (partnerships, business relationships)
+  // 4. Career houses: 10H/10L (career, profession, karma)
+  // 5. Gain houses: 11H/11L (gains, fulfillment, network)
+  // 6. Key planets: Mars (action, drive), Mercury (business acumen), Sun (leadership)
+  // 7. D10 qualification (career divisional chart)
+
   const mars = getPlanetContext(context, Planet.MARS);
+  const mercury = getPlanetContext(context, Planet.MERCURY);
+  const sun = getPlanetContext(context, Planet.SUN);
   const jupiter = getPlanetContext(context, Planet.JUPITER);
 
-  const businessPlanets: CareerExpressionPlanetContext[] = [];
+  const entrepreneurshipIndicators: string[] = [];
+  const involvedPlanets: Planet[] = [];
+  const involvedHouses: number[] = [];
+
+  // Check for initiative axis (3H/3L)
+  const hasInitiativeAxis = context.relevantPlanets.some(p =>
+    hasHouseInSet(p.relatedHouses, new Set<number>([3])) &&
+    isPlanetAvailableForExpression(p)
+  );
+  if (hasInitiativeAxis) {
+    entrepreneurshipIndicators.push('3H initiative axis');
+    involvedHouses.push(3);
+  }
+
+  // Check for speculation axis (5H/5L)
+  const hasSpeculationAxis = context.relevantPlanets.some(p =>
+    hasHouseInSet(p.relatedHouses, new Set<number>([5])) &&
+    isPlanetAvailableForExpression(p)
+  );
+  if (hasSpeculationAxis) {
+    entrepreneurshipIndicators.push('5H speculation axis');
+    involvedHouses.push(5);
+  }
+
+  // Check for partnership axis (7H/7L)
+  const hasPartnershipAxis = context.relevantPlanets.some(p =>
+    hasHouseInSet(p.relatedHouses, new Set<number>([7])) &&
+    isPlanetAvailableForExpression(p)
+  );
+  if (hasPartnershipAxis) {
+    entrepreneurshipIndicators.push('7H partnership axis');
+    involvedHouses.push(7);
+  }
+
+  // Check for career axis (10H/10L)
+  const hasCareerAxis = context.relevantPlanets.some(p =>
+    hasHouseInSet(p.relatedHouses, new Set<number>([10])) &&
+    isPlanetAvailableForExpression(p)
+  );
+  if (hasCareerAxis) {
+    entrepreneurshipIndicators.push('10H career axis');
+    involvedHouses.push(10);
+  }
+
+  // Check for gain axis (11H/11L)
+  const hasGainAxis = context.relevantPlanets.some(p =>
+    hasHouseInSet(p.relatedHouses, new Set<number>([11])) &&
+    isPlanetAvailableForExpression(p)
+  );
+  if (hasGainAxis) {
+    entrepreneurshipIndicators.push('11H gain axis');
+    involvedHouses.push(11);
+  }
+
+  // Check for key planets
   if (mars && isPlanetAvailableForExpression(mars)) {
-    if (hasHouseInSet(mars.relatedHouses, new Set<number>([7])) && hasHouseInSet(mars.relatedHouses, new Set<number>([11]))) {
-      businessPlanets.push(mars);
-    }
+    entrepreneurshipIndicators.push('Mars (action/drive)');
+    involvedPlanets.push(mars.planet);
+    involvedHouses.push(...mars.relatedHouses);
   }
+
+  if (mercury && isPlanetAvailableForExpression(mercury)) {
+    entrepreneurshipIndicators.push('Mercury (business acumen)');
+    involvedPlanets.push(mercury.planet);
+    involvedHouses.push(...mercury.relatedHouses);
+  }
+
+  if (sun && isPlanetAvailableForExpression(sun)) {
+    entrepreneurshipIndicators.push('Sun (leadership)');
+    involvedPlanets.push(sun.planet);
+    involvedHouses.push(...sun.relatedHouses);
+  }
+
   if (jupiter && isPlanetAvailableForExpression(jupiter)) {
-    if (hasHouseInSet(jupiter.relatedHouses, new Set<number>([7])) && hasHouseInSet(jupiter.relatedHouses, new Set<number>([11]))) {
-      businessPlanets.push(jupiter);
-    }
+    entrepreneurshipIndicators.push('Jupiter (expansion)');
+    involvedPlanets.push(jupiter.planet);
+    involvedHouses.push(...jupiter.relatedHouses);
   }
 
-  if (businessPlanets.length === 0) {
+  // Require at least 3 different axes for coherent entrepreneurship indication
+  if (entrepreneurshipIndicators.length < 3) {
     return undefined;
   }
 
-  // Multi-factor evidence: need 2H (wealth) or strong condition
-  const hasWealthHouse = businessPlanets.some(p =>
-    hasHouseInSet(p.relatedHouses, new Set<number>([2]))
-  );
-  const hasStrongCondition = businessPlanets.some(p =>
-    p.condition === 'STRONG' || p.condition === 'MODERATE'
-  );
+  // Check for strong conditions across involved planets
+  const hasStrongConditions = involvedPlanets.some(planet => {
+    const planetContext = getPlanetContext(context, planet);
+    return planetContext && (planetContext.condition === 'STRONG' || planetContext.condition === 'MODERATE');
+  });
 
-  if (!hasWealthHouse && !hasStrongCondition) {
+  if (!hasStrongConditions) {
     return undefined;
   }
-
-  const involvedPlanets = Array.from(businessPlanets).map(p => p.planet);
-  const involvedHouses = Array.from(businessPlanets).flatMap(p => p.relatedHouses);
 
   return Object.freeze({
     id: CAREER_EXPRESSION_RULE_IDS.BUSINESS_ENTREPRENEURSHIP,
     mode: 'BUSINESS_ENTREPRENEURSHIP',
     role: 'PLANETARY',
-    statement: `Business entrepreneurship indicated by ${involvedPlanets.join(', ')} in 7H and 11H with strong business structure.`,
-    weight: 2,
-    planets: Object.freeze(involvedPlanets),
+    statement: `Business entrepreneurship indicated by multi-axis combination: ${entrepreneurshipIndicators.join(', ')}. Strong conditions present.`,
+    weight: 3, // Higher weight for multi-axis evidence
+    planets: Object.freeze(Array.from(new Set(involvedPlanets))),
     houses: Object.freeze(Array.from(new Set(involvedHouses)))
   });
 }
@@ -639,11 +560,6 @@ const CAREER_EXPRESSION_RULES: Readonly<CareerExpressionRule[]> = Object.freeze(
     evaluate: createServiceEmploymentEvidence
   },
   {
-    id: CAREER_EXPRESSION_RULE_IDS.EMPLOYMENT,
-    mode: 'EMPLOYMENT',
-    evaluate: createEmploymentEvidence
-  },
-  {
     id: CAREER_EXPRESSION_RULE_IDS.MANAGEMENT,
     mode: 'MANAGEMENT',
     evaluate: createManagementEvidence
@@ -659,24 +575,9 @@ const CAREER_EXPRESSION_RULES: Readonly<CareerExpressionRule[]> = Object.freeze(
     evaluate: createAuthorityEvidence
   },
   {
-    id: CAREER_EXPRESSION_RULE_IDS.SPECIALIZATION,
-    mode: 'SPECIALIZATION',
-    evaluate: createSpecializationEvidence
-  },
-  {
-    id: CAREER_EXPRESSION_RULE_IDS.PUBLIC_INSTITUTIONAL,
-    mode: 'PUBLIC_INSTITUTIONAL',
-    evaluate: createPublicInstitutionalEvidence
-  },
-  {
     id: CAREER_EXPRESSION_RULE_IDS.INDEPENDENT_WORK,
     mode: 'INDEPENDENT_WORK',
     evaluate: createIndependentWorkEvidence
-  },
-  {
-    id: CAREER_EXPRESSION_RULE_IDS.ENTREPRENEURSHIP,
-    mode: 'ENTREPRENEURSHIP',
-    evaluate: createEntrepreneurshipEvidence
   },
   {
     id: CAREER_EXPRESSION_RULE_IDS.BUSINESS_ENTREPRENEURSHIP,
@@ -693,11 +594,7 @@ const CAREER_EXPRESSION_PRESENTATION_ORDER: Readonly<CareerManifestationMode[]> 
   'SERVICE_EMPLOYMENT',
   'AUTHORITY',
   'INDEPENDENT_WORK',
-  'BUSINESS_ENTREPRENEURSHIP',
-  'PUBLIC_INSTITUTIONAL',
-  'SPECIALIZATION',
-  'EMPLOYMENT',
-  'ENTREPRENEURSHIP'
+  'BUSINESS_ENTREPRENEURSHIP'
 ]);
 
 // Direction resolver
@@ -864,7 +761,7 @@ function createExpression(
   });
 }
 
-// Primary expression resolver (semantic hierarchy, ties = undefined)
+// Primary expression resolver (evidence-driven selection)
 function resolvePrimaryExpression(
   expressions: readonly CareerExpression[]
 ): CareerExpression | undefined {
@@ -872,31 +769,42 @@ function resolvePrimaryExpression(
     return undefined;
   }
 
-  // Semantic hierarchy (highest to lowest)
-  const hierarchy: Readonly<CareerManifestationMode[]> = Object.freeze([
-    'LEADERSHIP',
-    'MANAGEMENT',
-    'AUTHORITY',
-    'BUSINESS_ENTREPRENEURSHIP',
-    'ENTREPRENEURSHIP',
-    'TECHNICAL_SPECIALIZATION',
-    'SPECIALIZATION',
-    'PUBLIC_INSTITUTIONAL',
-    'SERVICE_EMPLOYMENT',
-    'INDEPENDENT_WORK',
-    'EMPLOYMENT'
-  ]);
+  // Filter for SUPPORTED expressions only
+  const supportedExpressions = expressions.filter(e => e.direction === 'SUPPORTED');
 
-  // Find the highest-ranked SUPPORTED expression
-  for (const mode of hierarchy) {
-    const supported = expressions.find(e => e.mode === mode && e.direction === 'SUPPORTED');
-    if (supported) {
-      return supported;
-    }
+  if (supportedExpressions.length === 0) {
+    return undefined;
   }
 
-  // No SUPPORTED expressions, return undefined (do not invent a winner)
-  return undefined;
+  // Evidence-driven selection: prioritize by strength and evidence weight
+  // Calculate total evidence weight for each expression
+  const expressionsWithWeight = supportedExpressions.map(expr => {
+    const totalWeight = expr.evidence.reduce((sum, e) => sum + e.weight, 0);
+    return {
+      expression: expr,
+      totalWeight
+    };
+  });
+
+  // Sort by total weight (descending), then by strength (STRONG > MODERATE > WEAK)
+  const strengthOrder: Record<CareerExpressionStrength, number> = {
+    'STRONG': 3,
+    'MODERATE': 2,
+    'WEAK': 1,
+    'UNAVAILABLE': 0
+  };
+
+  expressionsWithWeight.sort((a, b) => {
+    // First sort by total evidence weight
+    if (b.totalWeight !== a.totalWeight) {
+      return b.totalWeight - a.totalWeight;
+    }
+    // Then sort by strength
+    return strengthOrder[b.expression.strength] - strengthOrder[a.expression.strength];
+  });
+
+  // Return the highest-weighted, strongest expression
+  return expressionsWithWeight[0].expression;
 }
 
 // Sort expressions by presentation order

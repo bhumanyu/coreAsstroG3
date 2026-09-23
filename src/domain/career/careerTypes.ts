@@ -13,6 +13,21 @@ import type { CareerManifestationSynthesis } from './manifestation/careerManifes
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { ReasoningTraceGraph } from '../careerWealth/reasoningTrace';
 
+/**
+ * Canonical Career Manifestation Mode Taxonomy
+ *
+ * This type defines the 7 canonical manifestation modes for Career expression.
+ * These are the only modes that are actively implemented in the C8 expression pipeline.
+ *
+ * Previous duplicate entries have been collapsed to their canonical forms:
+ * - ENTREPRENEURSHIP → collapsed into BUSINESS_ENTREPRENEURSHIP
+ * - SPECIALIZATION → collapsed into TECHNICAL_SPECIALIZATION
+ * - EMPLOYMENT → collapsed into SERVICE_EMPLOYMENT
+ * - PUBLIC_INSTITUTIONAL → collapsed into AUTHORITY
+ *
+ * The 7 canonical modes are derived from the C1 semantic freeze and represent
+ * the manifestation vocabulary that is actively mapped in CAREER_MANIFESTATION_RULES.
+ */
 export type CareerManifestationMode =
   | 'LEADERSHIP'
   | 'MANAGEMENT'
@@ -20,11 +35,7 @@ export type CareerManifestationMode =
   | 'SERVICE_EMPLOYMENT'
   | 'AUTHORITY'
   | 'INDEPENDENT_WORK'
-  | 'BUSINESS_ENTREPRENEURSHIP'
-  | 'PUBLIC_INSTITUTIONAL'
-  | 'SPECIALIZATION'
-  | 'EMPLOYMENT'
-  | 'ENTREPRENEURSHIP';
+  | 'BUSINESS_ENTREPRENEURSHIP';
 
 export const CAREER_PRIMARY_HOUSES: ReadonlySet<number> = new Set([10]);
 export const CAREER_SUPPORTING_HOUSES: ReadonlySet<number> = new Set([6, 2, 11]);
