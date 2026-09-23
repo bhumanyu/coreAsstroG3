@@ -62,6 +62,7 @@ import {
 } from './careerManifestations';
 import { synthesizeCareerManifestations } from './manifestation/careerManifestationSynthesis';
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
+import { synthesizeCareerFinal } from './careerFinalSynthesis/careerFinalSynthesis';
 import {
   linkCareerEvidence,
   resolveRelatedCareerPromiseEvidenceIds
@@ -1589,6 +1590,76 @@ describe('CareerDomainInterpreterV2', () => {
     expect(result1.conclusionData?.careerFinalSynthesis).toEqual(
       result2.conclusionData?.careerFinalSynthesis
     );
+  });
+
+  // C11 Semantic Freeze Tests
+  describe('C11 Semantic Freeze Tests', () => {
+    it('C11-FIX-02: Natal STRONG SUPPORT + Dasha SUPPORT + D10 SUPPORT + Expression CONDITIONAL + Transit CHALLENGE produces CONDITIONALLY_SUPPORTED with preserved natal promise', () => {
+      // This golden test verifies the C11 semantic freeze invariants:
+      // - Expression CONDITIONAL is a manifestation-axis qualification, not a general weakening of natal promise
+      // - Transit cannot change natal direction/strength (C11-INV-03, C11-INV-08)
+      // - Strong natal support is preserved through secondary layer qualifications
+
+      const input = {
+        natalDirection: 'SUPPORT' as const,
+        natalStrength: 'STRONG' as const,
+        expressionStrength: 'WEAK' as const, // Maps to CONDITIONAL in deriveExpressionStatus
+        dashaHierarchy: {
+          overallEffect: 'ACTIVATES' as const,
+          overallDirection: 'SUPPORT' as const,
+          overallStrength: 'STRONG' as const,
+          md: { period: 'MD', effect: 'ACTIVATES', direction: 'SUPPORT', strength: 'STRONG', activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '' },
+          ad: { period: 'AD', effect: 'ACTIVATES', direction: 'SUPPORT', strength: 'STRONG', activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '' },
+          pd: { period: 'PD', effect: 'INSUFFICIENT_DATA', direction: 'UNAVAILABLE', strength: 'UNDETERMINED', activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '' }
+        },
+        d10Effect: 'CONFIRMS' as const,
+        d10Direction: 'SUPPORT' as const,
+        d10Strength: 'STRONG' as const,
+        transitDirection: 'CHALLENGE' as const,
+        expressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: []
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Verify final status is CONDITIONALLY_SUPPORTED due to Expression CONDITIONAL
+      expect(result.finalStatus).toBe('CONDITIONALLY_SUPPORTED');
+
+      // Verify natal promise is preserved as STRONG SUPPORT (not downgraded by transit)
+      expect(result.natalDirection).toBe('SUPPORT');
+      expect(result.natalStrength).toBe('STRONG');
+
+      // Verify final direction reflects CONDITIONAL from expression
+      expect(result.finalDirection).toBe('CONDITIONAL');
+
+      // Verify final strength is downgraded by one notch from CONDITIONALLY_SUPPORTED
+      expect(result.finalStrength).toBe('MODERATE');
+
+      // Verify transit CHALLENGE only affects timingStatus/currentPressure, not natal promise
+      expect(result.transitDirection).toBe('CHALLENGE');
+      expect(result.timingStatus).toBe('PARTIALLY_ACTIVE'); // Transit challenge affects timing
+      expect(result.currentPressure).toBe('LOW'); // Transit challenge alone = LOW pressure
+
+      // Verify Dasha and D10 remain SUPPORT
+      expect(result.dashaDirection).toBe('SUPPORT');
+      expect(result.dashaEffect).toBe('ACTIVATES');
+      expect(result.d10Direction).toBe('SUPPORT');
+      expect(result.d10Effect).toBe('CONFIRMS');
+
+      // Verify expression status is CONDITIONAL
+      expect(result.expressionStatus).toBe('CONDITIONAL');
+
+      // This proves the semantic invariant:
+      // Natal promise       = STRONG SUPPORT (preserved)
+      // Dasha activation    = SUPPORT (preserved)
+      // D10 qualification   = SUPPORT (preserved)
+      // Expression          = CONDITIONAL (manifestation-axis qualification)
+      // Transit             = CHALLENGE (timing modifier only)
+      // Overall             = CONDITIONALLY_SUPPORTED (manifestation qualified, natal preserved)
+    });
   });
 
   // P0-01 Canonicalization Suite

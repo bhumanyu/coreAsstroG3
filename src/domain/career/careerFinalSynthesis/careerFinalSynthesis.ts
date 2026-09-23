@@ -179,7 +179,11 @@ function deriveFinalStatus(
   // Strong natal support (C11-INV-04: cannot be erased by D10 challenge alone)
   if (natalStrength === 'VERY_STRONG' || natalStrength === 'STRONG') {
     if (natalDirection === 'SUPPORT') {
-      // Expression CONDITIONAL downgrades to CONDITIONALLY_SUPPORTED
+      // Expression CONDITIONAL produces CONDITIONALLY_SUPPORTED as a manifestation-axis qualification
+      // SEMANTIC: The natal promise remains STRONG SUPPORT, but manifestation is conditional
+      // This is NOT a general weakening of the natal promise itself
+      // Dasha/D10/Transit may remain SUPPORT, but the overall result is CONDITIONALLY_SUPPORTED
+      // to indicate that manifestation requires specific conditions to be met
       if (hasExpressionConditional) {
         return 'CONDITIONALLY_SUPPORTED';
       }
@@ -204,6 +208,9 @@ function deriveFinalStatus(
   // Moderate natal support
   if (natalStrength === 'MODERATE') {
     if (natalDirection === 'SUPPORT') {
+      // Expression CONDITIONAL produces CONDITIONALLY_SUPPORTED as a manifestation-axis qualification
+      // SEMANTIC: The natal promise remains MODERATE SUPPORT, but manifestation is conditional
+      // This is NOT a general weakening of the natal promise itself
       if (hasExpressionConditional) {
         return 'CONDITIONALLY_SUPPORTED';
       }
@@ -346,6 +353,16 @@ function deriveTimingStatus(
  *
  * C11-INV-03: Transit may only affect timingStatus/currentPressure
  * Semantic precedence: Transit (current pressure) > Dasha (timing) > D10 (execution)
+ *
+ * DESIGN NOTE: This function intentionally aggregates three semantic dimensions into a single ordinal:
+ * - Transit challenge → current pressure
+ * - Dasha challenge → timing pressure
+ * - D10 challenge → execution pressure
+ *
+ * The current implementation combines these into LOW/MODERATE/HIGH for C11 simplicity.
+ * A future semantic refinement could preserve axis-specific pressures (currentTransitPressure,
+ * timingPressure, executionPressure) and only derive a human-readable aggregate when explicitly required.
+ * This is documented as an intentional C11 design decision, not a semantic flaw.
  */
 function deriveCurrentPressure(
   dashaDirection: CareerFinalDirection,
@@ -535,6 +552,11 @@ export function synthesizeCareerFinal(
   const dashaEffect = dashaHierarchy?.overallEffect;
   const dashaDirection = dashaHierarchy?.overallDirection;
   const dashaStrength = dashaHierarchy?.overallStrength;
+
+  // DESIGN NOTE: dashaStrength is derived but not currently used in final synthesis
+  // The Dasha hierarchy remains authoritative through dashaEffect and dashaDirection.
+  // dashaStrength could be used in future semantic refinements for qualification/confidence
+  // rather than as another numeric vote in the synthesis. This is an intentional C11 design decision.
 
   // Map layer directions to C11 vocabulary
   const mappedNatalDirection = mapStructuralDirectionToFinal(natalDirection);
