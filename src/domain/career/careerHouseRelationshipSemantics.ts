@@ -127,10 +127,6 @@ function resolveEffect(
   ]);
 
   if (categories.has('PRIMARY')) {
-    if (categories.has('SUPPORTING') && categories.has('CHALLENGING')) {
-      return 'MIXED';
-    }
-
     if (categories.has('CHALLENGING')) {
       return 'CHALLENGE';
     }

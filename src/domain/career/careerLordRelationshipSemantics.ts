@@ -141,14 +141,6 @@ function resolveEffect(
   const relevanceA = classifyCareerHouse(houseA);
   const relevanceB = classifyCareerHouse(houseB);
 
-  const hasPrimary = relevanceA === 'PRIMARY' || relevanceB === 'PRIMARY';
-  const hasSupporting = relevanceA === 'SUPPORTING' || relevanceB === 'SUPPORTING';
-  const hasChallenging = relevanceA === 'CHALLENGING' || relevanceB === 'CHALLENGING';
-
-  if (hasPrimary && hasSupporting && hasChallenging) {
-    return 'MIXED';
-  }
-
   if (
     (relevanceA === 'PRIMARY' &&
       relevanceB === 'SUPPORTING') ||

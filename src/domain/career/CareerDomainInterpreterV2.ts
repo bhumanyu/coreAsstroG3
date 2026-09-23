@@ -91,35 +91,6 @@ import { synthesizeCareerManifestations } from './manifestation/careerManifestat
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
-// C4-C11 Pipeline Integration
-import {
-  resolveCareerStructuralReasoning,
-  type CareerStructuralReasoning
-} from './careerStructuralReasoning';
-import {
-  interpretCareerPlanetaryRelevance,
-  interpretCareerPlanetaryRelevanceBatch,
-  type CareerPlanetaryRelevance,
-  type CareerPlanetaryRelevanceContext
-} from './careerPlanetaryRelevance';
-import {
-  resolveCareerExpression,
-  type CareerExpressionAnalysis,
-  type CareerExpressionContext,
-  type CareerExpressionPlanetContext
-} from './careerExpression';
-import {
-  interpretCareerHouseRelationships
-} from './careerHouseRelationshipSemantics';
-import {
-  interpretCareerLordRelationships
-} from './careerLordRelationshipSemantics';
-import type {
-  CareerHouseRelationship
-} from './careerHouseRelationship';
-import {
-  classifyCareerHouse
-} from './careerTypes';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
@@ -168,148 +139,19 @@ export function interpretCareerV2(
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
   const evidence = linkCareerEvidence(rawMappedEvidence);
 
-  // C4-C11 Pipeline Integration
-  // Extract house relationships from theme interpretation for structural reasoning
-  const careerHouseRelationships: CareerHouseRelationship[] = rawEvidence
-    .filter((e) => e.careerHouseRelationship)
-    .map((e) => e.careerHouseRelationship!)
-    .filter(Boolean);
-
-  // C4: Structural Reasoning
-  const houseRelationshipSemantics = interpretCareerHouseRelationships(careerHouseRelationships);
-  const structuralReasoning = resolveCareerStructuralReasoning(houseRelationshipSemantics);
-
-  // C5: Planetary Relevance
-  // Build planetary relevance contexts from horoscope data
-  const planetaryRelevanceContexts: CareerPlanetaryRelevanceContext[] = [];
-  for (const planet of Object.values(Planet)) {
-    if (planet === Planet.RAHU || planet === Planet.KETU) continue; // Skip nodes
-
-    const planetData = horoscope.planets[planet];
-    if (!planetData) continue;
-
-    const ruledHouses = planetData.ruledHouses || [];
-    const occupiedHouse = planetData.house;
-    const aspectsCareerHouse = planetData.aspects?.filter((h: number) =>
-      classifyCareerHouse(h) !== 'NEUTRAL'
-    ) || [];
-
-    // Check for career relationship participation
-    const careerRelationshipPlanets: Planet[] = careerHouseRelationships
-      .filter((r) => r.lordA === planet || r.lordB === planet)
-      .map((r) => (r.lordA === planet ? r.lordB : r.lordA))
-      .filter(Boolean) as Planet[];
-
-    const context: CareerPlanetaryRelevanceContext = {
-      planet,
-      ruledHouses,
-      occupiedHouse,
-      aspectsCareerHouse,
-      careerRelationshipPlanets,
-      careerYogaParticipation: false, // TODO: Integrate yoga detection
-      naturalCareerKaraka: planet === Planet.SATURN, // Saturn is natural career karaka
-      explicitCareerRelevant: false // TODO: Integrate explicit rules
-    };
-    planetaryRelevanceContexts.push(context);
-  }
-
-  const planetaryRelevanceResults = interpretCareerPlanetaryRelevanceBatch(planetaryRelevanceContexts);
-
-  // C8: Expression Analysis
-  // Build expression context from structural reasoning and planetary relevance
-  const expressionPlanetContexts: CareerExpressionPlanetContext[] = planetaryRelevanceResults
-    .filter((pr) => pr.relevance !== 'NEUTRAL')
-    .map((pr) => ({
-      planet: pr.planet,
-      relevance: pr.relevance,
-      roles: pr.roles,
-      effect: pr.effect,
-      condition: 'MODERATE', // TODO: Integrate proper condition assessment
-      relatedHouses: pr.relatedHouses,
-      relatedPlanets: pr.relatedPlanets
-    }));
-
-  const expressionContext: CareerExpressionContext = {
-    structuralDirection: structuralReasoning.direction,
-    structuralStrength: structuralReasoning.strength,
-    structuralPrimarySupport: structuralReasoning.primarySupport,
-    structuralPrimaryChallenge: structuralReasoning.primaryChallenge,
-    relevantPlanets: expressionPlanetContexts
-  };
-
-  const expressionAnalysis = resolveCareerExpression(expressionContext);
-
-  // Transform C4-C11 outputs into DomainEvidence
-  const c4Evidence: DomainEvidence[] = structuralReasoning.evidence.map((se) =>
-    createDomainEvidence({
-      id: se.id,
-      sourceType: 'STRUCTURAL_REASONING',
-      domain: 'CAREER',
-      role: se.role === 'PRIMARY' ? 'PRIMARY' : se.role === 'SUPPORTING' ? 'SUPPORTING' : se.role === 'CHALLENGING' ? 'CHALLENGING' : 'MODIFIER',
-      phase: 'NATAL_PROMISE',
-      source: 'C4_STRUCTURAL',
-      polarity: se.direction === 'SUPPORT' ? 'SUPPORTING' : se.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
-      strength: se.weight >= 3 ? 'STRONG' : se.weight >= 2 ? 'MODERATE' : 'WEAK',
-      priority: se.role === 'PRIMARY' ? 1 : se.role === 'SUPPORTING' ? 2 : 3,
-      ruleId: se.id,
-      house: se.relationship.houseA,
-      statement: se.statement
-    })
-  );
-
-  const c5Evidence: DomainEvidence[] = planetaryRelevanceResults
-    .filter((pr) => pr.relevance !== 'NEUTRAL')
-    .map((pr) =>
-      createDomainEvidence({
-        id: `C5_PLANETARY_${pr.planet}`,
-        sourceType: 'PLANETARY_RELEVANCE',
-        domain: 'CAREER',
-        role: pr.relevance === 'PRIMARY' ? 'PRIMARY' : pr.relevance === 'SUPPORTING' ? 'SUPPORTING' : 'MODIFIER',
-        phase: 'NATAL_PROMISE',
-        source: 'C5_PLANETARY',
-        polarity: pr.effect === 'SUPPORT' ? 'SUPPORTING' : pr.effect === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
-        strength: pr.relevance === 'PRIMARY' ? 'STRONG' : pr.relevance === 'SUPPORTING' ? 'MODERATE' : 'WEAK',
-        priority: pr.relevance === 'PRIMARY' ? 1 : pr.relevance === 'SUPPORTING' ? 2 : 3,
-        ruleId: `C5_${pr.planet}`,
-        statement: pr.statement
-      })
-    );
-
-  const c8Evidence: DomainEvidence[] = expressionAnalysis.expressions
-    .filter((expr) => expr.direction === 'SUPPORTED' || expr.direction === 'CONDITIONAL')
-    .map((expr) =>
-      createDomainEvidence({
-        id: `C8_EXPRESSION_${expr.mode}`,
-        sourceType: 'EXPRESSION_ANALYSIS',
-        domain: 'CAREER',
-        role: 'MANIFESTATION',
-        phase: 'NATAL_PROMISE',
-        source: 'C8_EXPRESSION',
-        polarity: expr.direction === 'SUPPORTED' ? 'SUPPORTING' : 'NEUTRAL',
-        strength: expr.strength === 'STRONG' ? 'STRONG' : expr.strength === 'MODERATE' ? 'MODERATE' : 'WEAK',
-        priority: 4, // Manifestation is lower priority than structural/planetary
-        ruleId: `C8_${expr.mode}`,
-        statement: expr.statement
-      })
-    );
-
-  // Merge legacy evidence with C4-C11 evidence
-  const mergedEvidence = Object.freeze([...evidence, ...c4Evidence, ...c5Evidence, ...c8Evidence]);
-  const finalEvidence = linkCareerEvidence(mergedEvidence);
-
-  const supportingEvidence = finalEvidence.filter(
+  const supportingEvidence = evidence.filter(
     (item) => item.polarity === 'SUPPORTING'
   );
-  const challengingEvidence = finalEvidence.filter(
+  const challengingEvidence = evidence.filter(
     (item) => item.polarity === 'CHALLENGING'
   );
 
   const natalSupporting = supportingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
   const natalChallenging = challengingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
-  const natalPromiseEvidence = finalEvidence.filter((item) => item.phase === 'NATAL_PROMISE');
+  const natalPromiseEvidence = evidence.filter((item) => item.phase === 'NATAL_PROMISE');
   const natalPromiseEvidenceIds = natalPromiseEvidence.map((item) => item.id);
 
-  const conflicts = detectDomainConflicts('CAREER', finalEvidence);
+  const conflicts = detectDomainConflicts('CAREER', evidence);
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 

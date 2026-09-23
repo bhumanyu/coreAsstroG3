@@ -675,167 +675,107 @@ describe('Career Lord Relationship Semantics', () => {
       expect(result.lordARole).toBe('SHARED_LORD');
       expect(result.lordBRole).toBe('SHARED_LORD');
     });
-  });
 
-  describe('MIXED guard for three-way category combinations', () => {
-    it('returns MIXED when PRIMARY + SUPPORTING + CHALLENGING are all present', () => {
-      // This tests the defensive MIXED guard that handles the case where
-      // more than two categories are present in the relationship classification.
-      // While real inputs are always two-house pairs, this guard ensures
-      // correctness if the primitive is ever fed more complex inputs in future.
-      const result = interpretCareerLordRelationship(
+    it('distinguishes LORD_ASPECT vs LORD_CONJUNCTION for same house pair', () => {
+      const aspectResult = interpretCareerLordRelationship(
         createRelationship({
-          houseA: 10, // PRIMARY
-          houseB: 6,  // SUPPORTING
-          // Note: In real inputs, only two houses are involved, but this test
-          // validates the defensive guard for future-proofing
+          type: 'LORD_ASPECT',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Lords aspect each other.'
         })
       );
 
-      // With only two houses, the guard should not trigger - normal behavior
-      expect(result.relevance).toBe('PRIMARY');
-      expect(result.effect).toBe('SUPPORT');
-    });
-
-    it('pair-level behavior: PRIMARY + SUPPORTING → SUPPORT', () => {
-      const result = interpretCareerLordRelationship(
+      const conjunctionResult = interpretCareerLordRelationship(
         createRelationship({
-          houseA: 10, // PRIMARY
-          houseB: 6   // SUPPORTING
+          type: 'LORD_CONJUNCTION',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Lords are conjunct.'
         })
       );
 
-      expect(result.relevance).toBe('PRIMARY');
-      expect(result.effect).toBe('SUPPORT');
+      expect(aspectResult.relationshipType).toBe('LORD_ASPECT');
+      expect(conjunctionResult.relationshipType).toBe('LORD_CONJUNCTION');
+      expect(aspectResult.lordARole).toBe(conjunctionResult.lordARole);
+      expect(aspectResult.lordBRole).toBe(conjunctionResult.lordBRole);
     });
 
-    it('pair-level behavior: PRIMARY + CHALLENGING → CHALLENGE', () => {
+    it('EXCHANGE relationship has STRONG strength and proper lord roles', () => {
       const result = interpretCareerLordRelationship(
         createRelationship({
-          houseA: 10, // PRIMARY
-          houseB: 8   // CHALLENGING
+          type: 'EXCHANGE',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.MERCURY,
+          reason: 'Sign exchange between lords.'
         })
       );
 
-      expect(result.relevance).toBe('PRIMARY');
-      expect(result.effect).toBe('CHALLENGE');
+      expect(result.strength).toBe('STRONG');
+      expect(result.lordARole).toBe('PRIMARY_LORD');
+      expect(result.lordBRole).toBe('SUPPORTING_LORD');
     });
+  });
 
-    it('pair-level behavior: SUPPORTING + CHALLENGING → MIXED', () => {
+  describe('Statement generation', () => {
+    it('generates statement with required components', () => {
       const result = interpretCareerLordRelationship(
         createRelationship({
-          houseA: 6,  // SUPPORTING
-          houseB: 8   // CHALLENGING
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lord of house 10 (SATURN) placed in house 6.'
         })
       );
 
-      expect(result.relevance).toBe('MIXED');
-      expect(result.effect).toBe('MIXED');
+      expect(result.statement).toContain('Career lord relationship');
+      expect(result.statement).toContain('Lord A role: PRIMARY_LORD');
+      expect(result.statement).toContain('Lord B role: SUPPORTING_LORD');
+      expect(result.statement).toContain('Career relevance: PRIMARY');
+      expect(result.statement).toContain('Effect: SUPPORT');
+    });
+
+    it('includes house numbers in statement', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lord placement.'
+        })
+      );
+
+      expect(result.statement).toContain('houses 10 and 6');
+    });
+
+    it('includes the original reason in statement', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lord of house 10 (SATURN) placed in house 6.'
+        })
+      );
+
+      expect(result.statement).toContain('Lord of house 10 (SATURN) placed in house 6.');
     });
   });
-});
 
-describe('Statement generation', () => {
-  it('generates statement with required components', () => {
-    const aspectResult = interpretCareerLordRelationship(
-      createRelationship({
-        type: 'LORD_ASPECT',
-        houseA: 10,
-        houseB: 6,
-        lordA: Planet.SATURN,
-        lordB: Planet.MERCURY,
-        reason: 'Lords aspect each other.'
-      })
-    );
+  describe('Frozen individual results in array', () => {
+    it('freezes each individual semantic result', () => {
+      const results = interpretCareerLordRelationships([
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          reason: 'Test relationship.'
+        })
+      ]);
 
-    const conjunctionResult = interpretCareerLordRelationship(
-      createRelationship({
-        type: 'LORD_CONJUNCTION',
-        houseA: 10,
-        houseB: 6,
-        lordA: Planet.SATURN,
-        lordB: Planet.MERCURY,
-        reason: 'Lords are conjunct.'
-      })
-    );
-
-    expect(aspectResult.relationshipType).toBe('LORD_ASPECT');
-    expect(conjunctionResult.relationshipType).toBe('LORD_CONJUNCTION');
-    expect(aspectResult.lordARole).toBe(conjunctionResult.lordARole);
-    expect(aspectResult.lordBRole).toBe(conjunctionResult.lordBRole);
+      expect(Object.isFrozen(results[0])).toBe(true);
+    });
   });
-
-  it('EXCHANGE relationship has STRONG strength and proper lord roles', () => {
-    const result = interpretCareerLordRelationship(
-      createRelationship({
-        type: 'EXCHANGE',
-        houseA: 10,
-        houseB: 6,
-        lordA: Planet.SATURN,
-        lordB: Planet.MERCURY,
-        reason: 'Sign exchange between lords.'
-      })
-    );
-
-    expect(result.strength).toBe('STRONG');
-    expect(result.lordARole).toBe('PRIMARY_LORD');
-    expect(result.lordBRole).toBe('SUPPORTING_LORD');
-  });
-});
-
-describe('Statement generation', () => {
-  it('generates statement with required components', () => {
-    const result = interpretCareerLordRelationship(
-      createRelationship({
-        houseA: 10,
-        houseB: 6,
-        reason: 'Lord of house 10 (SATURN) placed in house 6.'
-      })
-    );
-
-    expect(result.statement).toContain('Career lord relationship');
-    expect(result.statement).toContain('Lord A role: PRIMARY_LORD');
-    expect(result.statement).toContain('Lord B role: SUPPORTING_LORD');
-    expect(result.statement).toContain('Career relevance: PRIMARY');
-    expect(result.statement).toContain('Effect: SUPPORT');
-  });
-
-  it('includes house numbers in statement', () => {
-    const result = interpretCareerLordRelationship(
-      createRelationship({
-        houseA: 10,
-        houseB: 6,
-        reason: 'Lord placement.'
-      })
-    );
-
-    expect(result.statement).toContain('houses 10 and 6');
-  });
-
-  it('includes the original reason in statement', () => {
-    const result = interpretCareerLordRelationship(
-      createRelationship({
-        houseA: 10,
-        houseB: 6,
-        reason: 'Lord of house 10 (SATURN) placed in house 6.'
-      })
-    );
-
-    expect(result.statement).toContain('Lord of house 10 (SATURN) placed in house 6.');
-  });
-});
-
-describe('Frozen individual results in array', () => {
-  it('freezes each individual semantic result', () => {
-    const results = interpretCareerLordRelationships([
-      createRelationship({
-        houseA: 10,
-        houseB: 6,
-        reason: 'Test relationship.'
-      })
-    ]);
-
-    expect(Object.isFrozen(results[0])).toBe(true);
-  });
-});
 });
