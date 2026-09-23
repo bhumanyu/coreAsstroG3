@@ -30,7 +30,7 @@ import type { CareerManifestationMode } from '../careerTypes';
  *
  * C8 CareerExpressionDirection → C11 CareerFinalDirection:
  * - 'SUPPORTED' → 'SUPPORT'
- * - 'CONDITIONAL' → 'CHALLENGE' (conditional support is treated as a challenge in final synthesis)
+ * - 'CONDITIONAL' → 'CONDITIONAL' (conditional support is preserved as distinct status)
  * - 'NEUTRAL' → 'NEUTRAL'
  * - 'UNAVAILABLE' → 'UNAVAILABLE'
  *
@@ -41,6 +41,7 @@ import type { CareerManifestationMode } from '../careerTypes';
 export type CareerFinalDirection =
   | 'SUPPORT'
   | 'CHALLENGE'
+  | 'CONDITIONAL'
   | 'MIXED'
   | 'NEUTRAL'
   | 'UNAVAILABLE';
@@ -152,27 +153,9 @@ export interface CareerFinalSynthesisInput {
   readonly expressionStrength?: CareerExpressionStrength;
 
   /**
-   * C9 Career Dasha output: combined activation effect.
-   * Must be derived from canonical CareerDashaActivationHierarchy (MD > AD > PD).
-   */
-  readonly dashaEffect?: CareerDashaActivationEffect;
-
-  /**
-   * C9 Career Dasha output: combined activation direction.
-   * Must be derived from canonical CareerDashaActivationHierarchy (MD > AD > PD).
-   */
-  readonly dashaDirection?: CareerDashaActivationDirection;
-
-  /**
-   * C9 Career Dasha output: combined activation strength.
-   * Must be derived from canonical CareerDashaActivationHierarchy (MD > AD > PD).
-   */
-  readonly dashaStrength?: CareerDashaActivationStrength;
-
-  /**
    * C9 Career Dasha output: canonical activation hierarchy (MD > AD > PD).
    * REQUIRED for C11-INV-02 and C11-INV-09 compliance.
-   * C11 must not independently re-derive hierarchy from dashaEffect/dashaDirection/dashaStrength.
+   * C11 derives dashaEffect/dashaDirection/dashaStrength from this hierarchy's overallEffect/overallDirection/overallStrength.
    */
   readonly dashaHierarchy?: CareerDashaActivationHierarchy;
 

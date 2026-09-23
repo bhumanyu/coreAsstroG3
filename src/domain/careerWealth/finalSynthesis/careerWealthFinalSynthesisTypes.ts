@@ -150,8 +150,8 @@ export interface CareerWealthFinalSynthesis {
 
 /**
  * @deprecated Use CareerFinalSynthesisInput from src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts instead.
- * This type is kept for internal compatibility with the legacy CW-05 synthesis engine.
- * Re-exports from the canonical C11 boundary will be provided in a future update.
+ * This type is kept for legacy compatibility contract retained during C11 migration.
+ * The runtime still uses this legacy synthesis; the canonical C11 boundary will be wired in a future patch.
  */
 export interface CareerFinalSynthesisInput {
   readonly natalPromise: DomainStrength;

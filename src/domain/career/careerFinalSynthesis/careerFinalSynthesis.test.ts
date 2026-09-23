@@ -31,8 +31,51 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'UNAVAILABLE',
         natalStrength: 'UNDETERMINED',
-        dashaDirection: 'SUPPORT',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.JUPITER,
+            role: 'PRIMARY_DRIVER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Jupiter MD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.SATURN,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Saturn AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
         d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
         expressionStrength: 'STRONG',
         transitDirection: 'SUPPORT'
       };
@@ -48,8 +91,51 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'CHALLENGE',
         natalStrength: 'STRONG',
-        dashaDirection: 'SUPPORT',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.JUPITER,
+            role: 'PRIMARY_DRIVER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Jupiter MD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.SATURN,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Saturn AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
         d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
         expressionStrength: 'STRONG',
         transitDirection: 'SUPPORT'
       };
@@ -64,8 +150,51 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaDirection: 'CHALLENGE',
-        d10Direction: 'CHALLENGE'
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.SATURN,
+            role: 'PRIMARY_DRIVER',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Saturn MD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.JUPITER,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Jupiter AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'DOES_NOT_ACTIVATE',
+            direction: 'NEUTRAL',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD does not activate',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'CHALLENGES',
+          overallDirection: 'CHALLENGE',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha challenges'
+        },
+        d10Direction: 'CHALLENGE',
+        d10Strength: 'STRONG'
       };
 
       const result = synthesizeCareerFinal(input);
@@ -113,21 +242,23 @@ describe('C11 Final Synthesis', () => {
           statement: 'Mercury PD does not activate',
           start: '2024-01-01',
           end: '2024-12-31'
-        }
+        },
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        statement: 'Dasha activates career'
       };
 
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaEffect: 'ACTIVATES',
-        dashaDirection: 'SUPPORT',
-        dashaStrength: 'STRONG',
         dashaHierarchy: hierarchy
       };
 
       const result = synthesizeCareerFinal(input);
 
-      // Should use the provided dashaEffect/dashaDirection, not re-derive
+      // Should use the hierarchy's overall values
       expect(result.dashaEffect).toBe('ACTIVATES');
       expect(result.dashaDirection).toBe('SUPPORT');
     });
@@ -152,8 +283,51 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaDirection: 'SUPPORT',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.JUPITER,
+            role: 'PRIMARY_DRIVER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Jupiter MD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.SATURN,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Saturn AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
         d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
         transitDirection: 'CHALLENGE'
       };
 
@@ -196,7 +370,7 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG'
-        // No dashaDirection provided
+        // No dashaHierarchy provided
       };
 
       const result = synthesizeCareerFinal(input);
@@ -275,8 +449,49 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaEffect: 'CHALLENGES',
-        dashaDirection: 'CHALLENGE'
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.SATURN,
+            role: 'PRIMARY_DRIVER',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Saturn MD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.JUPITER,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Jupiter AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'DOES_NOT_ACTIVATE',
+            direction: 'NEUTRAL',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD does not activate',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'CHALLENGES',
+          overallDirection: 'CHALLENGE',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha challenges'
+        }
       };
 
       const result = synthesizeCareerFinal(input);
@@ -289,7 +504,49 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaDirection: 'CHALLENGE'
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.SATURN,
+            role: 'PRIMARY_DRIVER',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Saturn MD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.JUPITER,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Jupiter AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'DOES_NOT_ACTIVATE',
+            direction: 'NEUTRAL',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD does not activate',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'CHALLENGES',
+          overallDirection: 'CHALLENGE',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha challenges'
+        }
       };
 
       const result = synthesizeCareerFinal(input);
@@ -366,15 +623,17 @@ describe('C11 Final Synthesis', () => {
           statement: 'Mercury PD does not activate',
           start: '2024-01-01',
           end: '2024-12-31'
-        }
+        },
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        statement: 'Dasha activates career'
       };
 
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaEffect: 'ACTIVATES',
-        dashaDirection: 'SUPPORT',
-        dashaStrength: 'STRONG',
         dashaHierarchy: hierarchy
       };
 
@@ -415,8 +674,51 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'VERY_STRONG',
-        dashaDirection: 'CHALLENGE',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.SATURN,
+            role: 'PRIMARY_DRIVER',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Saturn MD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.JUPITER,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Jupiter AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'DOES_NOT_ACTIVATE',
+            direction: 'NEUTRAL',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD does not activate',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'CHALLENGES',
+          overallDirection: 'CHALLENGE',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha challenges'
+        },
         d10Direction: 'CHALLENGE',
+        d10Strength: 'STRONG',
         expressionStrength: 'WEAK'
       };
 
@@ -431,9 +733,51 @@ describe('C11 Final Synthesis', () => {
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
-        dashaEffect: 'ACTIVATES',
-        dashaDirection: 'SUPPORT',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.JUPITER,
+            role: 'PRIMARY_DRIVER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Jupiter MD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.SATURN,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Saturn AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
         d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
         expressionStrength: 'STRONG',
         transitDirection: 'SUPPORT',
         evidenceIds: ['ev-1', 'ev-2'],
@@ -544,16 +888,18 @@ describe('C11 Final Synthesis', () => {
           statement: 'Mercury PD does not activate',
           start: '2024-01-01',
           end: '2024-12-31'
-        }
+        },
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        statement: 'Dasha activates career'
       };
 
       const input: CareerFinalSynthesisInput = {
         natalDirection: 'SUPPORT',
         natalStrength: 'VERY_STRONG',
         expressionStrength: 'STRONG',
-        dashaEffect: 'ACTIVATES',
-        dashaDirection: 'SUPPORT',
-        dashaStrength: 'STRONG',
         dashaHierarchy: hierarchy,
         d10Effect: 'QUALIFIES',
         d10Direction: 'SUPPORT',
@@ -613,6 +959,353 @@ describe('C11 Final Synthesis', () => {
       expect(result.finalStatus).toBe('CHALLENGED');
       expect(result.finalDirection).toBe('CHALLENGE');
       expect(result.finalStrength).toBe('WEAK');
+    });
+  });
+
+  describe('Golden scenarios for C11 fixes', () => {
+    it('should preserve C8 CONDITIONAL as CONDITIONAL, not CHALLENGE', () => {
+      const hierarchy: CareerDashaActivationHierarchy = {
+        md: {
+          level: 'MD',
+          planet: Planet.JUPITER,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          evidence: [],
+          statement: 'Jupiter MD activates career',
+          start: '2024-01-01',
+          end: '2024-12-31'
+        },
+        ad: {
+          level: 'AD',
+          planet: Planet.SATURN,
+          role: 'MODIFIER',
+          effect: 'PARTIALLY_ACTIVATES',
+          direction: 'MIXED',
+          strength: 'MODERATE',
+          evidence: [],
+          statement: 'Saturn AD partially activates',
+          start: '2024-01-01',
+          end: '2024-12-31'
+        },
+        pd: {
+          level: 'PD',
+          planet: Planet.MERCURY,
+          role: 'REFINEMENT',
+          effect: 'DOES_NOT_ACTIVATE',
+          direction: 'NEUTRAL',
+          strength: 'WEAK',
+          evidence: [],
+          statement: 'Mercury PD does not activate',
+          start: '2024-01-01',
+          end: '2024-12-31'
+        },
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        statement: 'Dasha activates career'
+      };
+
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStrength: 'WEAK', // Maps to CONDITIONAL
+        dashaHierarchy: hierarchy,
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Expression status should be CONDITIONAL, not CHALLENGE
+      expect(result.expressionStatus).toBe('CONDITIONAL');
+      // Final status should reflect conditionality
+      expect(result.finalStatus).toBe('CONDITIONALLY_SUPPORTED');
+      // Final direction should preserve CONDITIONAL
+      expect(result.finalDirection).toBe('CONDITIONAL');
+      // Should NOT be artificially downgraded to CHALLENGE
+      expect(result.finalDirection).not.toBe('CHALLENGE');
+    });
+
+    it('should respect dashaHierarchy over convenience fields', () => {
+      const hierarchy: CareerDashaActivationHierarchy = {
+        md: {
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'CHALLENGES',
+          direction: 'CHALLENGE',
+          strength: 'STRONG',
+          evidence: [],
+          statement: 'Saturn MD challenges career',
+          start: '2024-01-01',
+          end: '2024-12-31'
+        },
+        ad: {
+          level: 'AD',
+          planet: Planet.JUPITER,
+          role: 'MODIFIER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'MODERATE',
+          evidence: [],
+          statement: 'Jupiter AD activates',
+          start: '2024-01-01',
+          end: '2024-12-31'
+        },
+        pd: {
+          level: 'PD',
+          planet: Planet.MERCURY,
+          role: 'REFINEMENT',
+          effect: 'DOES_NOT_ACTIVATE',
+          direction: 'NEUTRAL',
+          strength: 'WEAK',
+          evidence: [],
+          statement: 'Mercury PD does not activate',
+          start: '2024-01-01',
+          end: '2024-12-31'
+        },
+        overallEffect: 'CHALLENGES',
+        overallDirection: 'CHALLENGE',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        statement: 'Dasha challenges career'
+      };
+
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        dashaHierarchy: hierarchy
+        // Note: No convenience fields provided - hierarchy is authoritative
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Should use hierarchy's overall values
+      expect(result.dashaEffect).toBe('CHALLENGES');
+      expect(result.dashaDirection).toBe('CHALLENGE');
+      // Timing status should reflect dasha challenge
+      expect(result.timingStatus).toBe('CHALLENGED');
+    });
+
+    it('should prefer consistent high-quality layers over contradictory many layers', () => {
+      // Scenario 1: Two consistent high-quality supporting layers
+      const consistentInput: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'VERY_STRONG',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.JUPITER,
+            role: 'PRIMARY_DRIVER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Jupiter MD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.VENUS,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Venus AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Mercury PD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
+        expressionStrength: 'STRONG',
+        conflicts: [] // No conflicts
+      };
+
+      const consistentResult = synthesizeCareerFinal(consistentInput);
+
+      // Scenario 2: Four mutually contradictory layers
+      const contradictoryInput: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'VERY_STRONG',
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.SATURN,
+            role: 'PRIMARY_DRIVER',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Saturn MD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.JUPITER,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Jupiter AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'CHALLENGES',
+          overallDirection: 'CHALLENGE',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha challenges'
+        },
+        d10Direction: 'CHALLENGE',
+        d10Strength: 'STRONG',
+        expressionStrength: 'WEAK',
+        conflicts: [
+          {
+            source: 'DASHA',
+            direction: 'CHALLENGE',
+            severity: 'HIGH',
+            evidenceIds: ['ev-1'],
+            statement: 'Dasha contradicts natal'
+          },
+          {
+            source: 'D10',
+            direction: 'CHALLENGE',
+            severity: 'HIGH',
+            evidenceIds: ['ev-2'],
+            statement: 'D10 contradicts natal'
+          }
+        ]
+      };
+
+      const contradictoryResult = synthesizeCareerFinal(contradictoryInput);
+
+      // Consistent case should have equal or higher confidence
+      expect(consistentResult.confidence).toBe('HIGH');
+      expect(contradictoryResult.confidence).toBe('MEDIUM');
+      // Consistent case should be SUPPORTED
+      expect(consistentResult.finalStatus).toBe('SUPPORTED');
+      // Contradictory case should be downgraded
+      expect(contradictoryResult.finalStatus).toBe('CONDITIONALLY_SUPPORTED');
+    });
+
+    it('should produce semantically distinct results for D10-only vs Dasha-only challenges', () => {
+      const baseInput = {
+        natalDirection: 'SUPPORT' as CareerStructuralDirection,
+        natalStrength: 'STRONG' as CareerStructuralStrength
+      };
+
+      // D10-only challenge (execution qualification)
+      const d10ChallengeInput: CareerFinalSynthesisInput = {
+        ...baseInput,
+        d10Direction: 'CHALLENGE',
+        d10Strength: 'STRONG'
+      };
+
+      const d10ChallengeResult = synthesizeCareerFinal(d10ChallengeInput);
+
+      // Dasha-only challenge (timing qualification)
+      const dashaChallengeInput: CareerFinalSynthesisInput = {
+        ...baseInput,
+        dashaHierarchy: {
+          md: {
+            level: 'MD',
+            planet: Planet.SATURN,
+            role: 'PRIMARY_DRIVER',
+            effect: 'CHALLENGES',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            evidence: [],
+            statement: 'Saturn MD challenges',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          ad: {
+            level: 'AD',
+            planet: Planet.JUPITER,
+            role: 'MODIFIER',
+            effect: 'ACTIVATES',
+            direction: 'SUPPORT',
+            strength: 'MODERATE',
+            evidence: [],
+            statement: 'Jupiter AD activates',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          pd: {
+            level: 'PD',
+            planet: Planet.MERCURY,
+            role: 'REFINEMENT',
+            effect: 'DOES_NOT_ACTIVATE',
+            direction: 'NEUTRAL',
+            strength: 'WEAK',
+            evidence: [],
+            statement: 'Mercury PD does not activate',
+            start: '2024-01-01',
+            end: '2024-12-31'
+          },
+          overallEffect: 'CHALLENGES',
+          overallDirection: 'CHALLENGE',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha challenges'
+        }
+      };
+
+      const dashaChallengeResult = synthesizeCareerFinal(dashaChallengeInput);
+
+      // Both should be SUPPORTED (C11-INV-04: strong natal not erased by single challenge)
+      expect(d10ChallengeResult.finalStatus).toBe('SUPPORTED');
+      expect(dashaChallengeResult.finalStatus).toBe('SUPPORTED');
+
+      // But they should have different semantic effects:
+      // D10 challenge affects currentPressure
+      expect(d10ChallengeResult.currentPressure).toBe('LOW');
+      // Dasha challenge affects timingStatus
+      expect(dashaChallengeResult.timingStatus).toBe('CHALLENGED');
+      expect(dashaChallengeResult.currentPressure).toBe('LOW');
+
+      // D10 challenge should not affect timingStatus
+      expect(d10ChallengeResult.timingStatus).toBe('UNKNOWN');
+      // Dasha challenge should not affect d10Direction
+      expect(d10ChallengeResult.d10Direction).toBe('CHALLENGE');
+      expect(dashaChallengeResult.d10Direction).toBe('UNAVAILABLE');
     });
   });
 });

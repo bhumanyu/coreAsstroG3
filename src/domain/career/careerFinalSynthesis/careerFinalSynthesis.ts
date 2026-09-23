@@ -37,7 +37,7 @@ function mapExpressionDirectionToFinal(
     case 'SUPPORTED':
       return 'SUPPORT';
     case 'CONDITIONAL':
-      return 'CHALLENGE';
+      return 'CONDITIONAL';
     case 'NEUTRAL':
       return 'NEUTRAL';
     case 'UNAVAILABLE':
@@ -147,12 +147,16 @@ function mapD10DirectionToFinal(
  * C11-INV-01: Natal promise is authoritative
  * C11-INV-04: Strong natal support not erased by D10 challenge
  * C11-INV-05: Missing evidence ≠ negative evidence
+ *
+ * Layer hierarchy: Natal → Expression → Dasha → D10 → Transit
+ * Each layer qualifies along its semantic axis, not as interchangeable votes.
  */
 function deriveFinalStatus(
   natalDirection: CareerStructuralDirection,
   natalStrength: CareerStructuralStrength,
   dashaDirection: CareerFinalDirection,
   d10Direction: CareerFinalDirection,
+  d10Strength: CareerD10QualificationStrength | undefined,
   expressionDirection: CareerFinalDirection
 ): CareerFinalStatus {
   // C11-INV-05: Missing evidence ≠ negative evidence
@@ -165,20 +169,32 @@ function deriveFinalStatus(
     return 'INSUFFICIENT_DATA';
   }
 
+  // Expression CONDITIONAL should be preserved, not treated as CHALLENGE
+  const hasExpressionConditional = hasExpression && expressionDirection === 'CONDITIONAL';
+
+  // D10 challenge is only significant if strength is STRONG or VERY_STRONG
+  const hasStrongD10Challenge = hasD10 && d10Direction === 'CHALLENGE' &&
+    (d10Strength === 'STRONG' || d10Strength === 'VERY_STRONG');
+
   // Strong natal support (C11-INV-04: cannot be erased by D10 challenge alone)
   if (natalStrength === 'VERY_STRONG' || natalStrength === 'STRONG') {
     if (natalDirection === 'SUPPORT') {
-      // Check for strong secondary challenges
-      const hasStrongDashaChallenge = hasDasha && dashaDirection === 'CHALLENGE';
-      const hasStrongD10Challenge = hasD10 && d10Direction === 'CHALLENGE';
-      const hasStrongExpressionChallenge = hasExpression && expressionDirection === 'CHALLENGE';
-
-      const challengeCount = [hasStrongDashaChallenge, hasStrongD10Challenge, hasStrongExpressionChallenge].filter(Boolean).length;
-
-      if (challengeCount >= 2) {
+      // Expression CONDITIONAL downgrades to CONDITIONALLY_SUPPORTED
+      if (hasExpressionConditional) {
         return 'CONDITIONALLY_SUPPORTED';
       }
-      if (challengeCount === 1) {
+
+      // Check for strong secondary challenges (actual CHALLENGE, not CONDITIONAL)
+      const hasStrongDashaChallenge = hasDasha && dashaDirection === 'CHALLENGE';
+      const hasStrongExpressionChallenge = hasExpression && expressionDirection === 'CHALLENGE';
+
+      // Dasha challenge affects timing, not final status (C11-INV-07)
+      // D10 challenge qualifies execution (only STRONG D10 challenge matters)
+      // Expression challenge qualifies manifestation
+      if (hasStrongD10Challenge && hasStrongExpressionChallenge) {
+        return 'CONDITIONALLY_SUPPORTED';
+      }
+      if (hasStrongD10Challenge || hasStrongExpressionChallenge) {
         return 'SUPPORTED';
       }
       return 'SUPPORTED';
@@ -188,8 +204,11 @@ function deriveFinalStatus(
   // Moderate natal support
   if (natalStrength === 'MODERATE') {
     if (natalDirection === 'SUPPORT') {
+      if (hasExpressionConditional) {
+        return 'CONDITIONALLY_SUPPORTED';
+      }
       const hasAnyChallenge = (hasDasha && dashaDirection === 'CHALLENGE') ||
-        (hasD10 && d10Direction === 'CHALLENGE') ||
+        hasStrongD10Challenge ||
         (hasExpression && expressionDirection === 'CHALLENGE');
       return hasAnyChallenge ? 'MIXED' : 'SUPPORTED';
     }
@@ -222,7 +241,8 @@ function deriveFinalStatus(
  */
 function deriveFinalDirection(
   natalDirection: CareerStructuralDirection,
-  finalStatus: CareerFinalStatus
+  finalStatus: CareerFinalStatus,
+  expressionDirection: CareerFinalDirection
 ): CareerFinalDirection {
   const mappedNatal = mapStructuralDirectionToFinal(natalDirection);
 
@@ -231,6 +251,10 @@ function deriveFinalDirection(
     return mappedNatal === 'SUPPORT' ? 'SUPPORT' : 'MIXED';
   }
   if (finalStatus === 'CONDITIONALLY_SUPPORTED') {
+    // If expression is CONDITIONAL, preserve that in final direction
+    if (expressionDirection === 'CONDITIONAL') {
+      return 'CONDITIONAL';
+    }
     return 'MIXED';
   }
   if (finalStatus === 'CHALLENGED') {
@@ -321,37 +345,54 @@ function deriveTimingStatus(
  * Derive Current Pressure
  *
  * C11-INV-03: Transit may only affect timingStatus/currentPressure
+ * Semantic precedence: Transit (current pressure) > Dasha (timing) > D10 (execution)
  */
 function deriveCurrentPressure(
   dashaDirection: CareerFinalDirection,
   d10Direction: CareerFinalDirection,
   transitDirection: CareerFinalDirection | undefined
 ): 'NONE' | 'LOW' | 'MODERATE' | 'HIGH' | 'STRONG' | 'UNKNOWN' {
-  const challengeCount = [
-    dashaDirection === 'CHALLENGE',
-    d10Direction === 'CHALLENGE',
-    transitDirection === 'CHALLENGE'
-  ].filter(Boolean).length;
+  // Transit is the primary driver of current pressure
+  if (transitDirection === 'CHALLENGE') {
+    // If transit challenges, check if other layers also challenge
+    if (dashaDirection === 'CHALLENGE' && d10Direction === 'CHALLENGE') {
+      return 'HIGH';
+    }
+    if (dashaDirection === 'CHALLENGE' || d10Direction === 'CHALLENGE') {
+      return 'MODERATE';
+    }
+    return 'LOW';
+  }
 
-  if (challengeCount === 0) return 'NONE';
-  if (challengeCount === 1) return 'LOW';
-  if (challengeCount === 2) return 'MODERATE';
-  if (challengeCount >= 3) return 'HIGH';
+  // If no transit challenge, check Dasha (timing pressure)
+  if (dashaDirection === 'CHALLENGE') {
+    if (d10Direction === 'CHALLENGE') {
+      return 'MODERATE';
+    }
+    return 'LOW';
+  }
 
-  return 'UNKNOWN';
+  // D10 execution challenge alone
+  if (d10Direction === 'CHALLENGE') {
+    return 'LOW';
+  }
+
+  return 'NONE';
 }
 
 /**
  * Derive Confidence
  *
  * C11-INV-05: Missing evidence ≠ negative evidence
+ * Confidence derived from natal evidence quality + layer consistency + conflicts
  */
 function deriveConfidence(
   natalStrength: CareerStructuralStrength,
   hasDasha: boolean,
   hasD10: boolean,
   hasExpression: boolean,
-  hasTransit: boolean
+  hasTransit: boolean,
+  conflicts: readonly CareerFinalConflict[]
 ): CareerFinalConfidence {
   // C11-INV-05: Missing evidence ≠ negative evidence
   // Low confidence only if natal is weak/undetermined
@@ -359,19 +400,31 @@ function deriveConfidence(
     return 'LOW';
   }
 
-  // High confidence with strong natal + multiple secondary layers
+  // Check for conflicts - contradictory layers reduce confidence
+  const hasHighSeverityConflicts = conflicts.some(c => c.severity === 'HIGH');
+  const hasModerateSeverityConflicts = conflicts.some(c => c.severity === 'MODERATE');
+
+  // High confidence with strong natal + consistency
   if (natalStrength === 'VERY_STRONG' || natalStrength === 'STRONG') {
-    const secondaryLayerCount = [hasDasha, hasD10, hasExpression, hasTransit].filter(Boolean).length;
-    if (secondaryLayerCount >= 3) return 'HIGH';
-    if (secondaryLayerCount >= 2) return 'MEDIUM';
-    return 'MEDIUM';
+    if (hasHighSeverityConflicts) {
+      return 'MEDIUM';
+    }
+    if (hasModerateSeverityConflicts) {
+      return 'MEDIUM';
+    }
+    // Strong natal with no conflicts = HIGH confidence regardless of layer count
+    return 'HIGH';
   }
 
   // Moderate natal
   if (natalStrength === 'MODERATE') {
-    const secondaryLayerCount = [hasDasha, hasD10, hasExpression, hasTransit].filter(Boolean).length;
-    if (secondaryLayerCount >= 2) return 'MEDIUM';
-    return 'LOW';
+    if (hasHighSeverityConflicts) {
+      return 'LOW';
+    }
+    if (hasModerateSeverityConflicts) {
+      return 'MEDIUM';
+    }
+    return 'MEDIUM';
   }
 
   return 'LOW';
@@ -386,7 +439,7 @@ function deriveExpressionStatus(
   if (!expressionStrength) return 'UNAVAILABLE';
   if (expressionStrength === 'STRONG') return 'SUPPORT';
   if (expressionStrength === 'MODERATE') return 'SUPPORT';
-  if (expressionStrength === 'WEAK') return 'CHALLENGE';
+  if (expressionStrength === 'WEAK') return 'CONDITIONAL';
   return 'UNAVAILABLE';
 }
 
@@ -466,9 +519,6 @@ export function synthesizeCareerFinal(
     natalDirection,
     natalStrength,
     expressionStrength,
-    dashaEffect,
-    dashaDirection,
-    dashaStrength,
     dashaHierarchy,
     d10Effect,
     d10Direction,
@@ -481,8 +531,10 @@ export function synthesizeCareerFinal(
     ruleIds = []
   } = input;
 
-  // C11-INV-02: Assert Dasha hierarchy is canonical (C9)
-  // Note: This is a compile-time invariant; runtime validation could be added if needed
+  // C11-INV-02: Derive Dasha values from canonical hierarchy (MD > AD > PD)
+  const dashaEffect = dashaHierarchy?.overallEffect;
+  const dashaDirection = dashaHierarchy?.overallDirection;
+  const dashaStrength = dashaHierarchy?.overallStrength;
 
   // Map layer directions to C11 vocabulary
   const mappedNatalDirection = mapStructuralDirectionToFinal(natalDirection);
@@ -497,11 +549,12 @@ export function synthesizeCareerFinal(
     natalStrength,
     mappedDashaDirection,
     mappedD10Direction,
+    d10Strength,
     mappedExpressionStatus
   );
 
   // Derive final direction (C11-INV-01: Natal promise is authoritative)
-  const finalDirection = deriveFinalDirection(natalDirection, finalStatus);
+  const finalDirection = deriveFinalDirection(natalDirection, finalStatus, mappedExpressionStatus);
 
   // Derive final strength (C11-INV-01: Natal promise is authoritative)
   const finalStrength = deriveFinalStrength(natalStrength, finalStatus);
@@ -517,7 +570,7 @@ export function synthesizeCareerFinal(
   const hasD10 = d10Direction !== undefined;
   const hasExpression = expressionStrength !== undefined;
   const hasTransit = transitDirection !== undefined;
-  const confidence = deriveConfidence(natalStrength, hasDasha, hasD10, hasExpression, hasTransit);
+  const confidence = deriveConfidence(natalStrength, hasDasha, hasD10, hasExpression, hasTransit, conflicts);
 
   // Extract strongest and challenged expressions
   const strongestExpressions = Object.freeze(
