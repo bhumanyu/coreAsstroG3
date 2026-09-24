@@ -261,3 +261,43 @@ The final target state is a single canonical Career pipeline (C4–C11) that:
 - Demotes legacy Product A components to non-authoritative status or removes them
 
 This target state provides a clean, maintainable architecture for Career reasoning with single sources of truth for each semantic layer.
+
+## 9. C4 MIXED Evidence Identity Contract
+
+C4 MIXED structural evidence represents one semantic structural fact with multiple directional occurrences.
+
+A MIXED structural fact may be represented as:
+- one SUPPORTING occurrence
+- one CHALLENGING occurrence
+
+The occurrence IDs MUST remain distinct because they represent distinct occurrences.
+
+The semantic identity MUST remain shared.
+
+Therefore:
+
+```text
+occurrenceId(SUPPORTING) != occurrenceId(CHALLENGING)
+
+identityKey(SUPPORTING) == identityKey(CHALLENGING)
+```
+
+Both occurrences MUST preserve:
+- the same canonical rule identity;
+- the same semantic subject/object identity;
+- `provenance.effect = MIXED`;
+- their individual occurrence IDs.
+
+During canonical reasoning deduplication:
+```
+SUPPORT + CHALLENGE → MIXED
+```
+
+The canonical record MUST:
+- contain one semantic identity;
+- preserve both occurrence IDs through `sourceIds`;
+- report the appropriate occurrence count;
+- retain the maximum single-occurrence weight;
+- never sum duplicate occurrence weights.
+
+This contract prevents duplicate representations of one underlying structural fact from independently contributing to the Career conclusion.
