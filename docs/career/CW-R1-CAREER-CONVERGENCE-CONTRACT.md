@@ -427,3 +427,142 @@ The canonical evidence identity and deduplication contract is validated by `src/
 - H: false-dedup protection — different ruleId produces different identityKeys
 - I: deduplicateReasoningEvidence([]) returns [] (missing evidence is not negative evidence)
 - J: merging preserves ruleId, sourceIds, provenance-derived identityKey
+
+## W0.3 — Career Semantic Ownership
+
+### W0.3.1 Ownership Table
+
+One canonical owner per Career semantic concept, using the numbering established in §2.3:
+
+| Semantic Concept | Canonical Owner | Module/Component |
+|------------------|-----------------|------------------|
+| Career house structure | C4 | `careerStructuralReasoning` |
+| Planet relevance | C5 | `careerPlanetaryRelevance` |
+| Planet condition | C6 | `careerPlanetaryCondition` |
+| Lord relationship semantics | C7 | `interpretCareerLordRelationship` |
+| Career expression | C8 | `careerExpression` |
+| Dasha activation | C9 | `careerDashaActivation` |
+| D10 qualification | C10 | `careerD10Qualification` |
+| Timing | Timing layer | Transit timing synthesis |
+| Final conclusion | C11 | `careerFinalSynthesis` |
+| Evidence identity | DomainEvidence | Canonical evidence envelope |
+| Reasoning trace | Canonical reasoning trace | `deduplicateReasoningEvidence` pipeline |
+| UI explanation | Presentation layer | Display formatting |
+| AI explanation | AI layer | AI-specific interpretation |
+
+### W0.3.2 Central Invariant
+
+ONE SEMANTIC CONCEPT → ONE AUTHORITY → ONE CANONICAL RESULT → MANY CONSUMERS
+
+No module may independently recalculate another module's owned concept. Each semantic concept has exactly one authoritative producer. Other modules may consume the canonical result but must not produce their own version of the same concept.
+
+### W0.3.3 Dependency Direction
+
+Intended semantic dependency flow (not a linear implementation order):
+
+```
+C4 → C5 → C6 → C7 → Natal Career → C8 → {C9, C10, Timing} → C11
+```
+
+This represents the semantic dependency relationship between concepts. It does NOT prescribe a strict linear build order — actual implementation dependencies form a graph as documented in §5.7 (lines 220–239). Migration must respect the actual dependency graph rather than imposing a false linear chain.
+
+### W0.3.4 Per-Owner Boundary Notes
+
+**C4 `careerStructuralReasoning`**
+- Owns: Career house structure and foundational Career evidence
+- Must NOT: Recalculate planetary relevance, condition, or lord relationships delegated to C5–C7
+- Note: Currently additively integrated (see §2.5 migration state)
+
+**C5 `careerPlanetaryRelevance`**
+- Owns: Planet relevance scoring for Career context
+- Must NOT: Independently establish Career structural facts (owned by C4) or bypass C4 relevance gating
+- Note: Relevance gates C6 condition evaluation
+
+**C6 `careerPlanetaryCondition`**
+- Owns: Planet condition evaluation
+- Must NOT: Operate without C5 relevance gating; must not become a second relevance source
+- Note: Condition is relevance-gated by C5
+
+**C7 `interpretCareerLordRelationship`**
+- Owns: Lord relationship semantics
+- Must NOT: Recalculate structural reasoning (C4) or bypass C5/C6 relevance/condition gates
+
+**C8 `careerExpression`**
+- Owns: Career expression modes
+- Must NOT: Become a second natal-promise source; must operate on natal Career foundation from C4–C7
+- Note: Expression modes qualify the natal Career promise, not replace it
+
+**C9 `careerDashaActivation`**
+- Owns: Dasha activation insights
+- Must NOT: Create natal Career promise; must operate as activation layer on natal foundation
+- Note: See §3.4 Dasha Boundary — Dasha is an activation layer, not a natal Career promise engine
+
+**C10 `careerD10Qualification`**
+- Owns: D10 qualification insights
+- Must NOT: Create natal Career promise; must operate as qualification layer on natal foundation
+- Note: See §3.5 D10 Boundary — D10 is a qualification layer, not a natal Career promise engine
+
+**Timing layer**
+- Owns: Transit timing synthesis
+- Must NOT: Create natal Career promise; must operate as timing layer on natal foundation
+- Note: See §3.6 Timing Boundary — Transit timing is a timing layer, not a natal Career promise engine
+
+**C11 `careerFinalSynthesis`**
+- Owns: Final Career synthesis
+- Must NOT: Silently recalculate C4–C10 concepts; must synthesize from canonical outputs of upstream modules
+- Note: C11 is the final decision point that consumes, not replaces, upstream authority
+
+**DomainEvidence**
+- Owns: Canonical evidence identity and deduplication
+- Must NOT: Allow duplicate representations of the same semantic fact; must enforce identityKey-based dedup
+- Note: See W0.2 for canonical evidence identity contract
+
+**Canonical reasoning trace**
+- Owns: Deduplication pipeline and occurrence tracking
+- Must NOT: Allow silent double-counting; must preserve sourceIds and occurrenceCount
+- Note: See W0.2.2 for two-stage canonical pipeline
+
+**Presentation layer (UI)**
+- Owns: Display formatting and user-facing explanation
+- Must NOT: Independently compute Career semantics; must consume canonical output from C4–C11
+- Note: UI is a consumer, not a producer, of Career semantics
+
+**AI layer**
+- Owns: AI-specific interpretation formatting
+- Must NOT: Independently compute Career semantics; must consume canonical output from C4–C11
+- Note: AI is a consumer, not a producer, of Career semantics
+
+### W0.3.5 Prohibition of Duplicate/Hybrid Authority
+
+Legacy + canonical execution is permitted for comparison/parity ONLY during migration. Silent combination into a production conclusion is forbidden.
+
+Permitted shape (from §4.3):
+```
+Product A ────────┐
+                  ├──→ Comparison / parity
+Product B ────────┘
+```
+
+Forbidden shape (from §4.3):
+```
+Product A ────────┐
+                  ├──→ Undocumented hybrid conclusion
+Product B ────────┘
+```
+
+All authoritative Career conclusions must come from a single, documented source at any point in time. No module may silently combine its own calculation with another module's canonical output to produce a hybrid result.
+
+### W0.3.6 Migration State Clarification
+
+Current migration state (from §2.5):
+- C4 `careerStructuralReasoning`: Additively integrated, not yet legacy-replacement authority
+- C5–C8: Not fully production integrated
+- C9/C10: Partial integration (Dasha/D10 synthesis components consumed by interpreter)
+- C11: Not production-authoritative
+- Legacy Product A: Retained for comparison and controlled parity during transition
+
+Canonical target authority:
+- C4–C11 pipeline will become the authoritative production source
+- Legacy Product A will be demoted to non-authoritative status or removed
+
+This ownership contract establishes the target authority boundaries. During migration, legacy components remain available for controlled parity comparison but must not silently combine with canonical outputs to produce hybrid authoritative conclusions.
