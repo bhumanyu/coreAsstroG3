@@ -931,8 +931,19 @@ export function compareLegacyAndCanonicalStructuralReasoning(
   const legacyEvidence = linkCareerEvidence(rawMappedEvidence);
 
   // Filter for legacy structural evidence (NATAL_STRUCTURE dimension)
+  // Note: DomainEvidence does not preserve the dimension field from ThemeInterpretationEvidence,
+  // so we filter by source and evidenceFamily instead
   const legacyStructuralEvidence = legacyEvidence.filter(
-    (e) => (e as any).dimension === 'NATAL_STRUCTURE' || e.source === 'D1'
+    (e) => e.source === 'D1' && (
+      e.evidenceFamily === 'TENTH_HOUSE' ||
+      e.evidenceFamily === 'TENTH_LORD' ||
+      e.evidenceFamily === 'SIXTH_HOUSE' ||
+      e.evidenceFamily === 'SIXTH_LORD' ||
+      e.evidenceFamily === 'SECOND_HOUSE' ||
+      e.evidenceFamily === 'SECOND_LORD' ||
+      e.evidenceFamily === 'ELEVENTH_HOUSE' ||
+      e.evidenceFamily === 'ELEVENTH_LORD'
+    )
   );
 
   const comparisonNotes: string[] = [

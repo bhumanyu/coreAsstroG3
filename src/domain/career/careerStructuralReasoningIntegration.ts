@@ -1,4 +1,4 @@
-import type { Horoscope, Planet } from '../../types';
+import type { Horoscope, Planet, PlanetAnalysis } from '../../types';
 import type { CareerHouseRelationshipContext, CareerHouseRelationship } from './careerHouseRelationship';
 import { detectCareerHouseRelationships } from './careerHouseRelationship';
 import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
@@ -42,8 +42,9 @@ function createCareerHouseRelationshipContextFromHoroscope(
 
       // Also check planetAnalysis if available
       if (horoscope.planetAnalysis?.planets) {
-        for (const [planet, analysis] of Object.entries(horoscope.planetAnalysis.planets)) {
-          if ((analysis as any)?.house === targetHouse && !occupants.includes(planet as Planet)) {
+        const planetAnalysisPlanets = horoscope.planetAnalysis.planets as Record<string, PlanetAnalysis>;
+        for (const [planet, analysis] of Object.entries(planetAnalysisPlanets)) {
+          if (analysis.house === targetHouse && !occupants.includes(planet as Planet)) {
             occupants.push(planet as Planet);
           }
         }

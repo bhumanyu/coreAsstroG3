@@ -7,7 +7,8 @@ export type EvidenceAxis =
   | 'DIVISIONAL'
   | 'MANIFESTATION';
 
-export type EvidenceSource = 'D1' | 'D2' | 'D10' | 'DASHA' | 'TRANSIT';
+// C4_STRUCTURAL_REASONING: Evidence derived from the canonical C4 structural reasoning chain
+export type EvidenceSource = 'D1' | 'D2' | 'D10' | 'DASHA' | 'TRANSIT' | 'C4_STRUCTURAL_REASONING';
 
 export type EvidenceEffect = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
 
