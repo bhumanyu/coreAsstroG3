@@ -2,10 +2,9 @@ import type { Horoscope, Planet } from '../../types';
 import type { CareerHouseRelationshipContext } from './careerHouseRelationship';
 import { detectCareerHouseRelationships } from './careerHouseRelationship';
 import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
-import { resolveCareerStructuralReasoning, careerStructuralSemanticKey, type CareerStructuralReasoning, type CareerStructuralEvidence } from './careerStructuralReasoning';
+import { resolveCareerStructuralReasoning, type CareerStructuralReasoning, type CareerStructuralEvidence } from './careerStructuralReasoning';
 import { CAREER_HOUSE_PORTFOLIO } from './careerTypes';
 import { createDomainEvidence, type DomainEvidence } from '../interpretation/DomainEvidence';
-import { careerHouseRelationshipKey } from './careerHouseRelationship';
 import type { EvidenceProvenance, EvidenceStrength } from '../careerWealth/provenance/evidenceProvenance';
 
 export interface CareerStructuralReasoningInput {
@@ -105,6 +104,28 @@ function mapStructuralDirectionToPolarity(
       return 'NEUTRAL';
   }
 }
+
+/**
+ * NOTE: MIXED structural evidence handling
+ * 
+ * C4 structural reasoning can produce MIXED direction (when both supporting and challenging
+ * relationships exist at the same level). However, the DomainEvidence.polarity enum does not
+ * support MIXED - it only has SUPPORTING, CHALLENGING, and NEUTRAL.
+ * 
+ * Therefore, MIXED structural evidence is mapped to NEUTRAL polarity in this integration layer.
+ * The original MIXED direction is preserved in:
+ * - provenance.effect (set to 'MIXED')
+ * - evidence.notes (includes descriptive text about the mixed nature)
+ * 
+ * CRITICAL: The career reasoning hierarchy (resolveDirection in reasoningHierarchy.ts) only
+ * reads DomainEvidence.polarity to determine direction, not provenance.effect. This means MIXED
+ * structural evidence currently drops out of both support and challenge calculations in the
+ * hierarchy, since NEUTRAL evidence contributes neither.
+ * 
+ * Future enhancement: Either:
+ * 1. Add MIXED to DomainEvidence.polarity enum and update reasoning hierarchy to consume it, or
+ * 2. Route MIXED evidence through provenance.effect in the reasoning hierarchy instead of polarity
+ */
 
 function mapStructuralDirectionToProvenanceEffect(
   direction: CareerStructuralEvidence['direction']

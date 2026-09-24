@@ -122,39 +122,21 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
     });
 
     it('handles charts with mixed structural effects (10H↔6H=SUPPORT, 10H↔8H=CHALLENGE)', () => {
-      // Create a chart with specific house relationships
-      // This test assumes the canonical chart has some structural relationships
-      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const options = makeDomainOptions(undefined, horoscope);
+      // Use the dedicated mixed structural chart fixture
+      const structuralReasoning = buildCareerStructuralReasoning({ horoscope: MIXED_STRUCTURAL_CHART });
 
-      const interpretation = interpretCareerV2(horoscope, options);
-
-      // Build C4 structural reasoning
-      const structuralReasoning = buildCareerStructuralReasoning({ horoscope });
-
-      // If there are both supporting and challenging relationships, direction should be MIXED
-      if (structuralReasoning.primarySupport > 0 && structuralReasoning.primaryChallenge > 0) {
-        expect(structuralReasoning.direction).toBe('MIXED');
-      }
+      // The fixture is designed to produce both supporting and challenging relationships
+      // Therefore direction should be MIXED unconditionally
+      expect(structuralReasoning.direction).toBe('MIXED');
 
       // Verify that structural evidence reflects the mixed nature
       const structuralEvidence = toDomainEvidence(structuralReasoning);
       const hasSupporting = structuralEvidence.some(e => e.polarity === 'SUPPORTING');
       const hasChallenging = structuralEvidence.some(e => e.polarity === 'CHALLENGING');
 
-      if (hasSupporting && hasChallenging) {
-        // Both polarities should be present in interpretation
-        const structuralIds = new Set(structuralEvidence.map(e => e.id));
-        const structuralItemsInInterpretation = interpretation.evidence.filter(e =>
-          structuralIds.has(e.id)
-        );
-
-        const hasSupportingInInterpretation = structuralItemsInInterpretation.some(e => e.polarity === 'SUPPORTING');
-        const hasChallengingInInterpretation = structuralItemsInInterpretation.some(e => e.polarity === 'CHALLENGING');
-
-        expect(hasSupportingInInterpretation).toBe(true);
-        expect(hasChallengingInInterpretation).toBe(true);
-      }
+      // Both polarities should be present in the structural evidence
+      expect(hasSupporting).toBe(true);
+      expect(hasChallenging).toBe(true);
     });
 
     it('deduplicates structural evidence with same identity in reasoning hierarchy', () => {
@@ -165,10 +147,29 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       const structuralReasoning = buildCareerStructuralReasoning({ horoscope });
       const structuralEvidence = toDomainEvidence(structuralReasoning);
 
-      if (structuralEvidence.length === 0) {
-        // Skip test if no structural evidence generated
-        return;
-      }
+      // Ensure we have structural evidence to test with
+      expect(structuralEvidence.length).toBeGreaterThan(0);
+
+      // Run hierarchy once with single occurrence
+      const singleResult = evaluateCareerReasoningHierarchy({
+        evidence: structuralEvidence,
+        d10Confirmation: {
+          domain: 'CAREER',
+          varga: 'D10',
+          relationship: 'UNAVAILABLE',
+          strength: 'UNDETERMINED',
+          confidence: 'UNDETERMINED',
+          statement: '',
+          evidenceIds: []
+        },
+        dashaTimings: {
+          md: { level: 'MD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 },
+          ad: { level: 'AD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 },
+          pd: { level: 'PD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 }
+        },
+        transitEvidence: [],
+        rawConflicts: []
+      });
 
       // Create duplicate evidence with same identity (same ruleId)
       const duplicateEvidence = structuralEvidence[0];
@@ -177,8 +178,8 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         { ...duplicateEvidence, id: `DUPLICATE_${duplicateEvidence.id}` }
       ];
 
-      // Run through reasoning hierarchy
-      const cw01Result = evaluateCareerReasoningHierarchy({
+      // Run hierarchy again with duplicate
+      const duplicateResult = evaluateCareerReasoningHierarchy({
         evidence: evidenceWithDuplicate,
         d10Confirmation: {
           domain: 'CAREER',
@@ -198,9 +199,17 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         rawConflicts: []
       });
 
-      // Should have deduplicated - only one canonical record for the identity
-      // The evidence should not be doubled in weight
-      expect(cw01Result.natalStrength).toBeDefined();
+      // Should have deduplicated - natalStrength should be identical (not doubled)
+      expect(singleResult.natalStrength).toBeDefined();
+      expect(duplicateResult.natalStrength).toBeDefined();
+      expect(singleResult.natalStrength).toBe(duplicateResult.natalStrength);
+
+      // Should have identical direction (not affected by duplicate)
+      expect(singleResult.natalDirection).toBe(duplicateResult.natalDirection);
+
+      // Only one canonical record should exist for the shared identity
+      // The evidence count in the result should be the same as the original (not incremented)
+      expect(singleResult.primaryEvidenceIds.length).toBe(duplicateResult.primaryEvidenceIds.length);
     });
 
     it('deduplicates C4 evidence with legacy evidence having same identity', () => {
@@ -211,10 +220,29 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       const structuralReasoning = buildCareerStructuralReasoning({ horoscope });
       const structuralEvidence = toDomainEvidence(structuralReasoning);
 
-      if (structuralEvidence.length === 0) {
-        // Skip test if no structural evidence generated
-        return;
-      }
+      // Ensure we have structural evidence to test with
+      expect(structuralEvidence.length).toBeGreaterThan(0);
+
+      // Run hierarchy once with only C4 evidence
+      const c4OnlyResult = evaluateCareerReasoningHierarchy({
+        evidence: structuralEvidence,
+        d10Confirmation: {
+          domain: 'CAREER',
+          varga: 'D10',
+          relationship: 'UNAVAILABLE',
+          strength: 'UNDETERMINED',
+          confidence: 'UNDETERMINED',
+          statement: '',
+          evidenceIds: []
+        },
+        dashaTimings: {
+          md: { level: 'MD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 },
+          ad: { level: 'AD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 },
+          pd: { level: 'PD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 }
+        },
+        transitEvidence: [],
+        rawConflicts: []
+      });
 
       // Create legacy evidence with same ruleId (simulating overlap)
       const legacyEvidence = {
@@ -225,8 +253,8 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
 
       const combinedEvidence = [...structuralEvidence, legacyEvidence];
 
-      // Run through reasoning hierarchy
-      const cw01Result = evaluateCareerReasoningHierarchy({
+      // Run hierarchy again with C4 + legacy evidence
+      const combinedResult = evaluateCareerReasoningHierarchy({
         evidence: combinedEvidence,
         d10Confirmation: {
           domain: 'CAREER',
@@ -247,7 +275,15 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       });
 
       // Should result in single canonical fact, not doubled weight
-      expect(cw01Result.natalStrength).toBeDefined();
+      expect(c4OnlyResult.natalStrength).toBeDefined();
+      expect(combinedResult.natalStrength).toBeDefined();
+      expect(c4OnlyResult.natalStrength).toBe(combinedResult.natalStrength);
+
+      // Should have identical direction
+      expect(c4OnlyResult.natalDirection).toBe(combinedResult.natalDirection);
+
+      // Only one canonical record should exist for the shared identity
+      expect(c4OnlyResult.primaryEvidenceIds.length).toBe(combinedResult.primaryEvidenceIds.length);
     });
   });
 
