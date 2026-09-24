@@ -431,4 +431,66 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
       expect(canonical[0].identityKey).toContain('JUPITER_10TH_ASPECT');
     });
   });
+
+  describe('Group K: false-dedup protection — different object (house) produces different identityKeys', () => {
+    it('same ruleId + same planet, different house produce DIFFERENT identityKeys (not merged)', () => {
+      const evidence: DomainEvidence[] = [
+        createEvidenceWithProvenance('EVIDENCE_10TH', {
+          provenance: createProvenance('EVIDENCE_10TH', 'JUPITER_HOUSE_ASPECT', 'SUPPORT'),
+          planet: 'JUPITER',
+          house: 10,
+          polarity: 'SUPPORTING',
+          strength: 'STRONG'
+        }),
+        createEvidenceWithProvenance('EVIDENCE_7TH', {
+          provenance: createProvenance('EVIDENCE_7TH', 'JUPITER_HOUSE_ASPECT', 'SUPPORT'),
+          planet: 'JUPITER',
+          house: 7,
+          polarity: 'SUPPORTING',
+          strength: 'STRONG'
+        })
+      ];
+
+      const weighted = classifyReasoningEvidence(evidence);
+
+      // Should have different identityKeys due to different house (objectKey)
+      expect(weighted[0].identityKey).not.toBe(weighted[1].identityKey);
+
+      const canonical = deduplicateReasoningEvidence(weighted);
+
+      // Should NOT be deduplicated - they are different semantic facts (different objects)
+      expect(canonical).toHaveLength(2);
+    });
+  });
+
+  describe('Group L: false-dedup protection — different subject (planet) produces different identityKeys', () => {
+    it('same ruleId + different planet, same house produce DIFFERENT identityKeys (not merged)', () => {
+      const evidence: DomainEvidence[] = [
+        createEvidenceWithProvenance('EVIDENCE_JUPITER', {
+          provenance: createProvenance('EVIDENCE_JUPITER', 'PLANET_HOUSE_ASPECT', 'SUPPORT'),
+          planet: 'JUPITER',
+          house: 10,
+          polarity: 'SUPPORTING',
+          strength: 'STRONG'
+        }),
+        createEvidenceWithProvenance('EVIDENCE_SATURN', {
+          provenance: createProvenance('EVIDENCE_SATURN', 'PLANET_HOUSE_ASPECT', 'SUPPORT'),
+          planet: 'SATURN',
+          house: 10,
+          polarity: 'SUPPORTING',
+          strength: 'STRONG'
+        })
+      ];
+
+      const weighted = classifyReasoningEvidence(evidence);
+
+      // Should have different identityKeys due to different planet (subjectKey)
+      expect(weighted[0].identityKey).not.toBe(weighted[1].identityKey);
+
+      const canonical = deduplicateReasoningEvidence(weighted);
+
+      // Should NOT be deduplicated - they are different semantic facts (different subjects)
+      expect(canonical).toHaveLength(2);
+    });
+  });
 });

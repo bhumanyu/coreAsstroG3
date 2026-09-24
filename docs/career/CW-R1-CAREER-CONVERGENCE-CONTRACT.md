@@ -425,6 +425,299 @@ The canonical evidence identity and deduplication contract is validated by `src/
 - F: order independence — dedup([A,B]) deep-equals dedup([B,A])
 - G: three occurrences (SUPPORT 3, SUPPORT 2, CHALLENGE 1) → MIXED, weight 3, occurrenceCount 3
 - H: false-dedup protection — different ruleId produces different identityKeys
+
+## W0.4 — Canonical Evidence Identity Contract
+
+### W0.4.1 Central Invariant
+
+The canonical evidence identity engine enforces one fundamental invariant:
+
+```
+ONE SEMANTIC FACT → ONE identityKey → MANY OCCURRENCES → sourceIds[]
+```
+
+A single semantic astrological fact (e.g., "Jupiter aspects the 10th house") is represented by exactly one semantic identity (identityKey). This fact may appear multiple times across different layers, representations, or reasoning passes (many occurrences). All occurrence IDs are preserved in the sourceIds array for provenance traceability.
+
+Example from C4 MIXED evidence:
+- One semantic fact: Jupiter's relationship to the 10th house
+- One identityKey: `CW-CAREER-NATAL-D1-JUPITER_10TH_ASPECT-JUPITER-HOUSE_10`
+- Two occurrences: one SUPPORTING, one CHALLENGING
+- sourceIds: `[occurrenceId(SUPPORT), occurrenceId(CHALLENGE)]`
+- occurrenceCount: 2
+
+This invariant prevents duplicate representations of the same underlying fact from independently contributing to the Career conclusion.
+
+### W0.4.2 Three Identity Levels
+
+Per W0.2.1, the canonical evidence identity engine operates at three distinct identity levels:
+
+1. **Occurrence ID (evidenceId)** — Unique identifier for each evidence occurrence. Includes effect/strength in the identifier. Format: `CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]-<EFFECT>-<STRENGTH>`
+
+2. **Semantic Identity Key (identityKey)** — Canonical semantic identity. Excludes effect/strength to enable identity-based deduplication. Same fact with different direction/strength shares the same identityKey. Format: `CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]`
+
+3. **Source IDs (sourceIds)** — Array of all occurrence IDs that were merged into the canonical fact. Provides provenance traceability to original input evidence items.
+
+Relationship:
+```
+occurrenceId(SUPPORT) != occurrenceId(CHALLENGE)
+identityKey(SUPPORT) == identityKey(CHALLENGE)
+sourceIds = [occurrenceId(SUPPORT), occurrenceId(CHALLENGE), ...]
+```
+
+**Critical distinction:** Semantic identity (identityKey) != occurrence identity (evidenceId). The same semantic fact can have multiple occurrence IDs (different directions, strengths, layers) but must share one identityKey.
+
+### W0.4.3 DomainEvidence Envelope Contract
+
+The canonical evidence envelope is defined in `src/domain/interpretation/DomainEvidence.ts` and `DomainInterpretationTypes.ts`. The field-by-field contract:
+
+- **id / evidenceId** — Occurrence identifier. Includes effect/strength. Distinct for each occurrence of the same semantic fact.
+
+- **ruleId** — Canonical rule identifier. Preserved from first occurrence during deduplication. Does not vary across occurrences of the same semantic fact.
+
+- **identityKey** — Derived semantic identity key. Computed by `buildEvidenceIdentityKey` (evidenceIdentity.ts) based on domain, axis, source, ruleId, subjectKey, and objectKey. Excludes effect/strength. Same for all occurrences of the same semantic fact.
+
+- **provenance** — EvidenceProvenance object with fields:
+  - domain: EvidenceDomain (CAREER/WEALTH)
+  - axis: EvidenceAxis (NATAL/DASHA/TIMING)
+  - source: EvidenceSource (D1/D2/D10/DASHA/TRANSIT/C4_STRUCTURAL_REASONING)
+  - effect: EvidenceEffect (SUPPORT/CHALLENGE/NEUTRAL/MIXED/UNAVAILABLE)
+  - strength: EvidenceStrength (PRIMARY/STRONG/MODERATE/WEAK)
+
+- **polarity** — EvidencePolarity from DomainEvidence. EXACTLY three values:
+  - SUPPORTING
+  - CHALLENGING
+  - NEUTRAL
+
+  Note: MIXED and UNAVAILABLE exist only at the reasoning-direction level (ReasoningDirection in reasoningTypes.ts), not at the DomainEvidence.polarity level. Reference W0.2.3 direction merge table.
+
+- **strength** — EvidenceStrength from DomainEvidence. Ordered scale:
+  - VERY_STRONG
+  - STRONG
+  - MODERATE
+  - WEAK
+
+- **weight** — Reasoning-derived composite weight (layerWeight * strengthWeight). MAX-not-SUM: duplicate occurrences do not increase evidentiary weight; the max single-occurrence weight is retained. Explicitly "weight is not identity" — weight varies by layer/strength but does not affect semantic identity.
+
+- **role** — EvidenceRole from DomainEvidence. Five values:
+  - PRIMARY
+  - SECONDARY
+  - MODIFIER
+  - CONFIRMATION
+  - TIMING
+
+  **CRITICAL DISTINCTION:** EvidenceRole (DomainEvidence.role field, 5 values) is NOT the same as ReasoningLayer (PRIMARY_PROMISE/SECONDARY_SUPPORT/MODIFIER/YOGA/VARGA/DASHA/TRANSIT, 7 values used for layer precedence in deduplicateReasoningEvidence). Do not document the layer set as if it were the role union.
+
+- **phase** — EvidencePhase from DomainEvidence. Examples:
+  - NATAL_PROMISE
+  - DASHA_ACTIVATION
+  - TRANSIT_TRIGGER
+  - VARGA_CONFIRMATION
+  - MODIFIER
+
+- **source** — EvidenceSource from DomainEvidence. Examples:
+  - D1
+  - D2
+  - D10
+  - DASHA
+  - TRANSIT
+  - C4_STRUCTURAL_REASONING
+
+### W0.4.4 Subject/Object Identity Derivation
+
+Subject and object identity are derived in `classifyReasoningEvidence` (reasoningHierarchy.ts) and feed into `buildEvidenceIdentityKey`:
+
+- **subjectKey** — Derived from planet field (e.g., JUPITER, SATURN) or house alone (e.g., HOUSE_10). Deterministic and normalized. Must not invent new subject vocabulary.
+
+- **objectKey** — Derived from house field when planet is also present (e.g., HOUSE_10). Optional for facts without an object.
+
+Derivation logic (classifyReasoningEvidence):
+- planet + house → subjectKey = planet, objectKey = HOUSE_<house>
+- planet only → subjectKey = planet, objectKey = undefined
+- house only → subjectKey = HOUSE_<house>, objectKey = undefined
+- neither → fallback to occurrence ID, subjectKey = UNKNOWN
+
+Subject/object must be deterministic and normalized. The identity key construction uses these subject/object keys to distinguish semantic facts (e.g., JUPITER/HOUSE_10 vs JUPITER/HOUSE_7 are different semantic facts).
+
+### W0.4.5 Root Evidence Link (Forward-Looking)
+
+Root evidence linkage is a forward-looking (W1) concept. The current repository does NOT implement a rootEvidenceId field:
+
+- Verified: zero grep matches for "rootEvidenceId" in the codebase
+- Current linkage field: `relatedEvidenceIds` in DomainEvidence
+- W0.4 does NOT introduce a new root-link mechanism
+
+Future W1 work may establish a root evidence tree structure for evidence dependency tracking, but this is outside the scope of W0.4.
+
+### W0.4.6 Reference to Existing Identity & Dedup Mechanisms
+
+W0.4 references (does not restate in full) the existing mechanisms documented in W0.2:
+
+- **W0.2.3 Direction Merge Table** — SUPPORT + CHALLENGE → MIXED, with full merge rules for all direction combinations.
+
+- **W0.2.4 MAX-Strength Rule** — Evidence strength merge uses MAX on the ordered scale (WEAK < MODERATE < STRONG < VERY_STRONG). Duplicate occurrences do NOT increase evidentiary weight.
+
+- **W0.2.5 Determinism Guarantee** — Evidence sorted by identityKey, fixed layer precedence, sorted sourceIds/relatedEvidenceIds, input-order independence.
+
+- **W0.2.6 Identity Mechanism Resolution** — Two complementary mechanisms:
+  - `buildEvidenceIdentityKey` — Canonical dedup identity (evidenceIdentity.ts)
+  - `getEvidenceIndependenceKey` — Separate manifestation-scoping heuristic (ManifestationMode.ts)
+  - They serve different purposes and do not violate the "one canonical dedup mechanism" invariant.
+
+### W0.4.7 Source/Phase/Role Preservation Through Dedup
+
+Current behavior from `deduplicateReasoningEvidence` (deduplicateEvidence.ts):
+
+- **Canonical layer selection** — Deterministic based on fixed precedence order: PRIMARY_PROMISE > SECONDARY_SUPPORT > MODIFIER > YOGA > VARGA > DASHA > TRANSIT. The highest-precedence layer present in the occurrence set becomes the canonical layer.
+
+- **Layers set retention** — The `layers` field in CanonicalReasoningEvidence contains the full set of all occurrence layers, sorted by precedence. This preserves which layers contributed to the canonical fact.
+
+- **ruleId preservation** — Taken from the first occurrence with a ruleId. Not merged or changed.
+
+- **sourceIds preservation** — All distinct occurrence IDs are accumulated and sorted alphabetically. Provides complete provenance traceability.
+
+- **role/phase/source preservation** — The current implementation does NOT merge role, phase, or source fields. The canonical record's role/phase/source values come from the selected canonical layer (the highest-precedence occurrence). This is the actual current behavior; W0.4 does not introduce a new merge rule for these fields.
+
+### W0.4.8 Invariants Checklist
+
+W0.4 establishes the following invariants:
+
+- [ ] ONE SEMANTIC FACT → ONE identityKey → MANY OCCURRENCES → sourceIds[]
+- [ ] Semantic identity (identityKey) != occurrence identity (evidenceId)
+- [ ] identityKey excludes effect/strength to enable semantic deduplication
+- [ ] occurrenceId includes effect/strength to distinguish occurrences
+- [ ] EvidenceRole (5 values) != ReasoningLayer (7 values) — distinct concepts
+- [ ] polarity is exactly SUPPORTING/CHALLENGING/NEUTRAL (MIXED/UNAVAILABLE are reasoning-direction only)
+- [ ] weight is MAX-not-SUM (duplicate occurrences do not increase weight)
+- [ ] subject/object identity is deterministic and normalized
+- [ ] rootEvidenceId does not exist in current repo (forward-looking W1 concept)
+- [ ] source/phase/source preservation follows actual deduplicateReasoningEvidence behavior
+- [ ] buildEvidenceIdentityKey is the canonical dedup identity mechanism
+- [ ] getEvidenceIndependenceKey is a separate heuristic (not a competing dedup implementation)
+
+### W0.4.9 Contract Test Coverage (Extended)
+
+The canonical evidence identity contract is validated by `src/domain/reasoning/canonicalEvidenceIdentity.contract.test.ts`, which tests spec §16 groups A–L:
+
+- A: same identity + same direction → one canonical record
+- B: SUPPORT + CHALLENGE (same identityKey) → direction MIXED, occurrenceCount 2
+- C: SUPPORT weight 3 + CHALLENGE weight 2 → MIXED, canonical weight 3 (never 5)
+- D: both occurrence ids survive in sourceIds
+- E: identityKey(SUPPORT) === identityKey(CHALLENGE) while occurrence ids differ
+- F: order independence — dedup([A,B]) deep-equals dedup([B,A])
+- G: three occurrences (SUPPORT 3, SUPPORT 2, CHALLENGE 1) → MIXED, weight 3, occurrenceCount 3
+- H: false-dedup protection — different ruleId produces different identityKeys
+- K: false-dedup protection — different object (house) produces different identityKeys (same ruleId + same planet, different house → not merged)
+- L: false-dedup protection — different subject (planet) produces different identityKeys (same ruleId + different planet, same house → not merged)
+
+## W0.5 — Test Gates
+
+### W0.5.1 Six Test Gates
+
+The canonical Career pipeline validation uses six test gates:
+
+1. **TypeScript Compilation** — Verify all TypeScript code compiles without errors. This catches type mismatches, missing imports, and syntax errors before runtime.
+
+2. **Changed-Module Unit Tests** — Run unit tests for modules that were changed in the current PR. This validates that changes do not break existing functionality at the module level.
+
+3. **Career Integration Tests** — Run integration tests for the Career domain. This validates that the Career pipeline produces correct results end-to-end, including evidence flow through C4–C11.
+
+4. **Determinism** — Verify that the canonical pipeline produces deterministic output. Run deduplicateReasoningEvidence(input) twice and verify deep-equal results. Verify input-order independence (dedup([A,B]) === dedup([B,A])).
+
+5. **Golden Tests** — Compare current output against golden fixtures for Career and Wealth domains. Existing fixtures:
+   - `src/domain/career/career-v2-golden.fixture.ts`
+   - `src/domain/wealth/wealth-v2-golden.fixture.ts`
+
+   Golden tests validate that changes do not unexpectedly alter canonical outputs for known inputs.
+
+6. **Legacy-vs-Canonical Comparison** — Compare legacy Product A output with canonical Product B output. This is a semantic-dimension comparison, not JSON===JSON. Parity is allowed (canonical may differ from legacy while still being correct). Hybrid authority is forbidden — cross-reference §4.3. The comparison must explain differences and classify them as:
+
+   - Acceptable parity (canonical correct, legacy outdated/incorrect)
+   - Acceptable improvement (canonical fixes legacy bug)
+   - Regression (canonical breaks working legacy behavior)
+   - Inconclusive (requires manual review)
+
+### W0.5.2 Gate Applicability Matrix
+
+| Gate | W0.1–W0.4 | W1+ |
+|------|----------|-----|
+| TypeScript Compilation | Required | Required |
+| Changed-Module Unit Tests | Required | Required |
+| Career Integration Tests | Required | Required |
+| Determinism | Required | Required |
+| Golden Tests | Optional (if no canonical output changes) | Required |
+| Legacy-vs-Canonical Comparison | Optional (if no legacy integration) | Required |
+
+W0.1–W0.4 are foundational contract work without canonical output changes, so golden tests and legacy comparison are optional. W1+ changes canonical outputs, so all six gates are required.
+
+### W0.5.3 Failure Policy
+
+- **TypeScript Compilation** — Hard stop. Must fix compilation errors before proceeding.
+
+- **Changed-Module Unit Tests** — Hard stop. Must fix failing unit tests before proceeding.
+
+- **Career Integration Tests** — Hard stop. Must fix failing integration tests before proceeding.
+
+- **Determinism** — Hard stop. Must fix non-deterministic behavior before proceeding.
+
+- **Golden Tests** — Requires explained approval. If golden tests fail:
+  - Explain why the change is correct (golden fixture may be outdated)
+  - Update golden fixture if appropriate
+  - Document the rationale for the change
+  - Obtain approval before proceeding
+
+- **Legacy-vs-Canonical Comparison** — Explain → classify → approve/fix:
+  - Explain all semantic differences between legacy and canonical outputs
+  - Classify each difference as acceptable parity, improvement, regression, or inconclusive
+  - Fix regressions or inconclusive cases
+  - Obtain approval for acceptable parity/improvement cases
+  - Hybrid authority is forbidden — do not silently combine legacy and canonical
+
+### W0.5.4 "Do Not Claim Green" Discipline
+
+Report per-command PASS/NOT RUN/NOT VERIFIED honestly. Do not claim repository-wide green status without actually running and passing the commands.
+
+- **PASS** — Command executed and all tests passed
+- **NOT RUN** — Command was not executed (e.g., dependencies not installed, test not applicable)
+- **NOT VERIFIED** — Command executed but results were not verified (e.g., timeout, environment issue)
+
+Example honest reporting:
+```
+npm run lint: PASS
+npm run test: NOT RUN (dependencies not installed)
+npm run build: PASS
+```
+
+Do not claim "all tests pass" if tests were not actually run. Do not claim "build succeeded" if build was not executed.
+
+### W0.5.5 Dasha/D10/Transit Independence Requirements
+
+As W1 acceptance gates, changes to Dasha, D10, or transit modules must not create natal Career promise. Cross-reference existing boundary documentation:
+
+- **§3.4 Dasha Boundary** — Dasha is an activation layer, not a natal Career promise engine. Dasha identifies WHEN and HOW the natal Career promise activates, but does not independently establish Career promise.
+
+- **§3.5 D10 Boundary** — D10 is a qualification/confirmation layer, not a natal Career promise engine. D10 qualifies and confirms Career potential from the natal foundation, but does not independently establish Career promise.
+
+- **§3.6 Timing Boundary** — Transit timing is a timing layer, not a natal Career promise engine. Transit identifies WHEN Career themes manifest, but does not independently establish Career promise.
+
+Validation: After changes to Dasha/D10/transit, verify that natal Career promise (C4–C8) remains unchanged. The canonical pipeline must preserve the boundary: natal foundation → Career promise → activation/qualification/timing.
+
+### W0.5.6 Definition-of-Done Checklist
+
+W0.5 Definition-of-Done (mirroring spec §43):
+
+- [ ] TypeScript compilation passes
+- [ ] Changed-module unit tests pass
+- [ ] Career integration tests pass
+- [ ] Determinism verified (dedup is deterministic, input-order independent)
+- [ ] Golden tests pass OR explained and approved
+- [ ] Legacy-vs-Canonical comparison completed and classified
+- [ ] Dasha/D10/Transit independence verified (no natal Career promise creation)
+- [ ] All W0.4 invariants satisfied
+- [ ] All boundary conditions preserved (Dasha/D10/Timing as layers, not promise engines)
+- [ ] No hybrid authority (single documented source of truth)
+- [ ] No double-counting (identityKey dedup respected)
+- [ ] Documentation updated (W0.4/W0.5 sections reflect actual implementation)
+- [ ] Honest reporting of test results (PASS/NOT RUN/NOT VERIFIED)
 - I: deduplicateReasoningEvidence([]) returns [] (missing evidence is not negative evidence)
 - J: merging preserves ruleId, sourceIds, provenance-derived identityKey
 
