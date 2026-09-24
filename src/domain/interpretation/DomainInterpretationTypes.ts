@@ -91,6 +91,7 @@ export type EvidenceSource =
   | 'D60'
   | 'DASHA'
   | 'TRANSIT'
+  | 'C4_STRUCTURAL_REASONING'
   | 'OTHER';
 
 export type ManifestationMode =

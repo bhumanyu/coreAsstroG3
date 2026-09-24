@@ -54,6 +54,10 @@ export function getHouseLord(context: ThemeInterpretationContext, houseNum: numb
       : (context.houseAnalysis.houses as Record<number, HouseAnalysis>)[houseNum];
     if (item?.lord) return item.lord;
   }
+  const bhavaFacts = (context.horoscope as any)?.bhavaFacts ?? context.horoscope?.bhavas;
+  if (bhavaFacts?.[houseNum]?.lord) {
+    return bhavaFacts[houseNum].lord;
+  }
   return undefined;
 }
 
