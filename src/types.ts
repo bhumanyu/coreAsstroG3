@@ -616,7 +616,7 @@ export interface HouseAnalysis {
   evidence: readonly HouseAnalysisEvidence[] | any;
 }
 
-export interface HouseAnalysisItem extends HouseAnalysis {}
+export interface HouseAnalysisItem extends HouseAnalysis { }
 
 export interface HouseAnalysisReport {
   houses: Record<number, HouseAnalysisItem | HouseAnalysis>;
@@ -965,6 +965,7 @@ export interface Horoscope {
   positions?: PlanetaryPositions;
   planetFacts: Record<Planet, PlanetFact>;
   bhavas?: Record<number, BhavaFact>;
+  bhavaFacts?: Record<number, BhavaFact>;
   vargas?: VargaPositions;
   nakshatras?: NakshatraMap;
   grahaDrishti?: NatalGrahaDrishti;

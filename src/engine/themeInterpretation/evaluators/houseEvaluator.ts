@@ -24,16 +24,14 @@ export function evaluateHouseStatus(
   const hi: HouseInterpretation | undefined = context.houseInterpretation?.houses?.[houseNum];
   const ha: HouseAnalysis | undefined = context.houseAnalysis?.houses
     ? (Array.isArray(context.houseAnalysis.houses)
-        ? context.houseAnalysis.houses.find((h: HouseAnalysis) => h.house === houseNum)
-        : (context.houseAnalysis.houses as Record<number, HouseAnalysis>)[houseNum])
+      ? context.houseAnalysis.houses.find((h: HouseAnalysis) => h.house === houseNum)
+      : (context.houseAnalysis.houses as Record<number, HouseAnalysis>)[houseNum])
     : undefined;
 
   if (hi) {
-    lord = hi.placement?.signLord ?? (hi as any).lord;
+    lord = hi.placement?.signLord;
     if (hi.occupants?.planets) {
       occupants = [...hi.occupants.planets];
-    } else if (Array.isArray((hi as any).occupants)) {
-      occupants = [...(hi as any).occupants];
     }
   } else if (ha) {
     lord = ha.lord;
@@ -42,7 +40,7 @@ export function evaluateHouseStatus(
     }
   }
 
-  const bhavaFacts = (context.horoscope as any)?.bhavaFacts ?? context.horoscope?.bhavas;
+  const bhavaFacts = context.horoscope?.bhavaFacts ?? context.horoscope?.bhavas;
   if (!lord && bhavaFacts?.[houseNum]?.lord) {
     lord = bhavaFacts[houseNum].lord;
   }
@@ -70,25 +68,7 @@ export function evaluateHouseStatus(
       status = 'NEUTRAL';
       effect = 'NEUTRAL';
       strength = 'MODERATE';
-    } else if ((hi as any).status || (hi as any).effect) {
-      if ((hi as any).status) {
-        status = (hi as any).status;
-        if (status === 'STRONG' && !(hi as any).effect) effect = 'SUPPORT';
-        if (status === 'AFFLICTED' && !(hi as any).effect) effect = 'CHALLENGE';
-        if (status === 'STRONG' && !(hi as any).strength) strength = 'STRONG';
-      }
-      if ((hi as any).effect) effect = (hi as any).effect;
-      if ((hi as any).strength) strength = (hi as any).strength;
     }
-  } else if (ha && ((ha as any).status || (ha as any).effect)) {
-    if ((ha as any).status) {
-      status = (ha as any).status;
-      if (status === 'STRONG' && !(ha as any).effect) effect = 'SUPPORT';
-      if (status === 'AFFLICTED' && !(ha as any).effect) effect = 'CHALLENGE';
-      if (status === 'STRONG' && !(ha as any).strength) strength = 'STRONG';
-    }
-    if ((ha as any).effect) effect = (ha as any).effect;
-    if ((ha as any).strength) strength = (ha as any).strength;
   }
 
   const lordStr = lord ? ` Lord: ${lord}.` : '';

@@ -1,4 +1,4 @@
-import { Planet, DignityStatus, HouseAnalysis } from '../../types';
+import { Planet, DignityStatus, HouseAnalysis, PlanetAnalysis } from '../../types';
 import { ThemeInterpretationContext } from './themeInterpretationContext';
 import {
   ThemeInterpretationEvidence,
@@ -45,16 +45,13 @@ export function getHouseLord(context: ThemeInterpretationContext, houseNum: numb
   if (context.houseInterpretation?.houses?.[houseNum]?.placement?.signLord) {
     return context.houseInterpretation.houses[houseNum].placement.signLord;
   }
-  if ((context.houseInterpretation?.houses?.[houseNum] as any)?.lord) {
-    return (context.houseInterpretation!.houses[houseNum] as any).lord;
-  }
   if (context.houseAnalysis?.houses) {
     const item = Array.isArray(context.houseAnalysis.houses)
       ? context.houseAnalysis.houses.find((h: HouseAnalysis) => h.house === houseNum)
       : (context.houseAnalysis.houses as Record<number, HouseAnalysis>)[houseNum];
     if (item?.lord) return item.lord;
   }
-  const bhavaFacts = (context.horoscope as any)?.bhavaFacts ?? context.horoscope?.bhavas;
+  const bhavaFacts = context.horoscope?.bhavaFacts ?? context.horoscope?.bhavas;
   if (bhavaFacts?.[houseNum]?.lord) {
     return bhavaFacts[houseNum].lord;
   }
@@ -90,7 +87,7 @@ export function getHouseAnalysis(context: ThemeInterpretationContext, houseNum: 
   return undefined;
 }
 
-export function getPlanetAnalysis(context: ThemeInterpretationContext, planet: Planet): any {
+export function getPlanetAnalysis(context: ThemeInterpretationContext, planet: Planet): PlanetAnalysis | undefined {
   if (context.planetAnalysis?.planets) {
     return context.planetAnalysis.planets[planet];
   }
@@ -103,7 +100,7 @@ export function getDignity(context: ThemeInterpretationContext, planet: Planet):
     if (typeof pa.dignity === 'string') return pa.dignity as DignityStatus;
     if (pa.dignity.status) return pa.dignity.status as DignityStatus;
   }
-  const pi = context.planetInterpretation?.planets?.[planet] as any;
+  const pi = context.planetInterpretation?.planets?.[planet];
   if (pi?.dignity) {
     if (typeof pi.dignity === 'string') return pi.dignity as DignityStatus;
     if (pi.dignity.status) return pi.dignity.status as DignityStatus;

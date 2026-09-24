@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { careerHouseRules } from '../rules/career/careerHouseRules';
 import { ThemeInterpretationContext } from '../themeInterpretationContext';
+import { Planet } from '../../../types';
 
 describe('careerHouseRules', () => {
   it('triggers CAREER_10H_STRONG_001 when 10th house is strong', () => {
@@ -13,8 +14,8 @@ describe('careerHouseRules', () => {
               supportingFactors: ['Benefic occupant in 10th house.'],
               challengingFactors: []
             },
-            occupants: { planets: ['JUPITER' as any] },
-            placement: { signLord: 'SATURN' as any }
+            occupants: { planets: [Planet.JUPITER] },
+            placement: { signLord: Planet.SATURN }
           }
         }
       } as any
@@ -37,7 +38,7 @@ describe('careerHouseRules', () => {
               challengingFactors: ['Malefic aspect on 10th house.']
             },
             occupants: { planets: [] },
-            placement: { signLord: 'SATURN' as any }
+            placement: { signLord: Planet.SATURN }
           }
         }
       } as any
@@ -72,6 +73,9 @@ describe('careerHouseRules', () => {
 
   describe('CAREER_6H_10H_LINK_001 regression', () => {
     it('triggers CAREER_6H_10H_LINK_001 with common lord relationship', () => {
+      // Precedence rule: bhavaFacts (canonical house structure) takes precedence over planetFacts
+      // when determining house lords and occupants. This ensures house-based structural
+      // relationships are correctly identified even when planet placement data is incomplete.
       const context: ThemeInterpretationContext = {
         horoscope: {
           planetFacts: {
@@ -79,8 +83,8 @@ describe('careerHouseRules', () => {
             MARS: { house: 10 } as any
           },
           bhavaFacts: {
-            6: { lord: 'SATURN' as any, occupants: [] } as any,
-            10: { lord: 'SATURN' as any, occupants: [] } as any
+            6: { lord: Planet.SATURN, occupants: [] } as any,
+            10: { lord: Planet.SATURN, occupants: [] } as any
           }
         } as any,
         houseInterpretation: {
@@ -113,6 +117,7 @@ describe('careerHouseRules', () => {
     });
 
     it('triggers CAREER_6H_10H_LINK_001 with lord placement relationship', () => {
+      // bhavaFacts precedence: house structure from bhavaFacts determines lord relationships
       const context: ThemeInterpretationContext = {
         horoscope: {
           planetFacts: {
@@ -120,8 +125,8 @@ describe('careerHouseRules', () => {
             MARS: { house: 5 } as any
           },
           bhavaFacts: {
-            6: { lord: 'SATURN' as any, occupants: [] } as any,
-            10: { lord: 'MARS' as any, occupants: ['SATURN' as any] } as any
+            6: { lord: Planet.SATURN, occupants: [] } as any,
+            10: { lord: Planet.MARS, occupants: [Planet.SATURN] } as any
           }
         } as any,
         houseInterpretation: {
@@ -133,7 +138,7 @@ describe('careerHouseRules', () => {
             },
             10: {
               house: 10,
-              occupants: { planets: ['SATURN' as any] },
+              occupants: { planets: [Planet.SATURN] },
               summary: { supportingFactors: [], challengingFactors: [] }
             }
           }
@@ -161,13 +166,13 @@ describe('careerHouseRules', () => {
           },
           bhavaFacts: {
             6: {
-              lord: 'SATURN' as any,
+              lord: Planet.SATURN,
               occupants: []
             } as any,
 
             10: {
-              lord: 'MARS' as any,
-              occupants: ['SATURN' as any]
+              lord: Planet.MARS,
+              occupants: [Planet.SATURN]
             } as any
           }
         } as any,
@@ -186,7 +191,7 @@ describe('careerHouseRules', () => {
             10: {
               house: 10,
               occupants: {
-                planets: ['SATURN' as any]
+                planets: [Planet.SATURN]
               },
               summary: {
                 supportingFactors: [],
@@ -213,6 +218,7 @@ describe('careerHouseRules', () => {
 
   describe('CAREER_10H_11H_LINK_001 regression', () => {
     it('triggers CAREER_10H_11H_LINK_001 with common lord relationship', () => {
+      // bhavaFacts precedence: house structure determines lord relationships
       const context: ThemeInterpretationContext = {
         horoscope: {
           planetFacts: {
@@ -220,8 +226,8 @@ describe('careerHouseRules', () => {
             MARS: { house: 10 } as any
           },
           bhavaFacts: {
-            10: { lord: 'JUPITER' as any, occupants: [] } as any,
-            11: { lord: 'JUPITER' as any, occupants: [] } as any
+            10: { lord: Planet.JUPITER, occupants: [] } as any,
+            11: { lord: Planet.JUPITER, occupants: [] } as any
           }
         } as any,
         houseInterpretation: {
@@ -255,6 +261,7 @@ describe('careerHouseRules', () => {
     });
 
     it('triggers CAREER_10H_11H_LINK_001 with exchange relationship', () => {
+      // bhavaFacts precedence: exchange relationships are detected from bhavaFacts structure
       const context: ThemeInterpretationContext = {
         horoscope: {
           planetFacts: {
@@ -262,20 +269,20 @@ describe('careerHouseRules', () => {
             MARS: { house: 10 } as any
           },
           bhavaFacts: {
-            10: { lord: 'JUPITER' as any, occupants: ['MARS' as any] } as any,
-            11: { lord: 'MARS' as any, occupants: ['JUPITER' as any] } as any
+            10: { lord: Planet.JUPITER, occupants: [Planet.MARS] } as any,
+            11: { lord: Planet.MARS, occupants: [Planet.JUPITER] } as any
           }
         } as any,
         houseInterpretation: {
           houses: {
             10: {
               house: 10,
-              occupants: { planets: ['MARS' as any] },
+              occupants: { planets: [Planet.MARS] },
               summary: { supportingFactors: [], challengingFactors: [] }
             },
             11: {
               house: 11,
-              occupants: { planets: ['JUPITER' as any] },
+              occupants: { planets: [Planet.JUPITER] },
               summary: { supportingFactors: [], challengingFactors: [] }
             }
           }
