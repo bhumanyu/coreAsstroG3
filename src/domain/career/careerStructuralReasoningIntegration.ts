@@ -2,7 +2,7 @@ import type { Horoscope, Planet } from '../../types';
 import type { CareerHouseRelationshipContext } from './careerHouseRelationship';
 import { detectCareerHouseRelationships } from './careerHouseRelationship';
 import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
-import { resolveCareerStructuralReasoning, type CareerStructuralReasoning, type CareerStructuralEvidence } from './careerStructuralReasoning';
+import { resolveCareerStructuralReasoning, type CareerStructuralReasoning, type CareerStructuralEvidence, careerStructuralSemanticKey } from './careerStructuralReasoning';
 import { CAREER_HOUSE_PORTFOLIO } from './careerTypes';
 import { createDomainEvidence, type DomainEvidence } from '../interpretation/DomainEvidence';
 import type { EvidenceProvenance, EvidenceStrength } from '../careerWealth/provenance/evidenceProvenance';
@@ -96,36 +96,17 @@ function mapStructuralDirectionToPolarity(
       return 'SUPPORTING';
     case 'CHALLENGE':
       return 'CHALLENGING';
-    case 'MIXED':
     case 'NEUTRAL':
     case 'UNAVAILABLE':
       return 'NEUTRAL';
+    case 'MIXED':
+      // MIXED is handled by splitting into separate SUPPORTING and CHALLENGING items
+      // This function should not be called for MIXED direction
+      throw new Error('MIXED direction should be split into separate SUPPORTING and CHALLENGING items');
     default:
       return 'NEUTRAL';
   }
 }
-
-/**
- * NOTE: MIXED structural evidence handling
- * 
- * C4 structural reasoning can produce MIXED direction (when both supporting and challenging
- * relationships exist at the same level). However, the DomainEvidence.polarity enum does not
- * support MIXED - it only has SUPPORTING, CHALLENGING, and NEUTRAL.
- * 
- * Therefore, MIXED structural evidence is mapped to NEUTRAL polarity in this integration layer.
- * The original MIXED direction is preserved in:
- * - provenance.effect (set to 'MIXED')
- * - evidence.notes (includes descriptive text about the mixed nature)
- * 
- * CRITICAL: The career reasoning hierarchy (resolveDirection in reasoningHierarchy.ts) only
- * reads DomainEvidence.polarity to determine direction, not provenance.effect. This means MIXED
- * structural evidence currently drops out of both support and challenge calculations in the
- * hierarchy, since NEUTRAL evidence contributes neither.
- * 
- * Future enhancement: Either:
- * 1. Add MIXED to DomainEvidence.polarity enum and update reasoning hierarchy to consume it, or
- * 2. Route MIXED evidence through provenance.effect in the reasoning hierarchy instead of polarity
- */
 
 function mapStructuralDirectionToProvenanceEffect(
   direction: CareerStructuralEvidence['direction']
@@ -238,50 +219,127 @@ export function buildCareerStructuralReasoning(
  * - Mapping weight and role appropriately
  * - Adding provenance marking as C4-derived
  * 
+ * For MIXED direction evidence, this function splits it into TWO separate DomainEvidence items:
+ * - One with polarity='SUPPORTING' 
+ * - One with polarity='CHALLENGING'
+ * 
+ * Each split item has a distinct identityKey (derived from the semantic key with modified effect)
+ * to ensure canonical dedup does not merge them back into one MIXED item. Both items preserve
+ * the original MIXED nature in provenance.effect='MIXED' and descriptive notes.
+ * 
  * @param structural - The CareerStructuralReasoning result
  * @returns Array of DomainEvidence items
  */
 export function toDomainEvidence(
   structural: CareerStructuralReasoning
 ): DomainEvidence[] {
-  return structural.evidence.map((evidence: CareerStructuralEvidence): DomainEvidence => {
-    const ruleId = deriveRuleIdFromStructuralEvidence(evidence);
-    const polarity = mapStructuralDirectionToPolarity(evidence.direction);
-    const strength = mapStructuralWeightToStrength(evidence.weight);
-    const role = mapStructuralRoleToEvidenceRole(evidence.role);
-    const provenanceEffect = mapStructuralDirectionToProvenanceEffect(evidence.direction);
-    const provenanceStrength = mapStructuralRoleToEvidenceStrength(evidence.role);
+  const result: DomainEvidence[] = [];
 
-    // For MIXED direction, preserve the true C4 direction in notes for traceability
-    const notes = evidence.direction === 'MIXED'
-      ? `C4 structural direction: MIXED. Contains both supporting and challenging influences.`
-      : undefined;
+  for (const evidence of structural.evidence) {
+    // Handle MIXED direction by splitting into separate SUPPORTING and CHALLENGING items
+    if (evidence.direction === 'MIXED') {
+      const strength = mapStructuralWeightToStrength(evidence.weight);
+      const role = mapStructuralRoleToEvidenceRole(evidence.role);
+      const provenanceStrength = mapStructuralRoleToEvidenceStrength(evidence.role);
+      const notes = `C4 structural direction: MIXED. Split into SUPPORTING and CHALLENGING items to preserve both directional influences in reasoning hierarchy.`;
 
-    return createDomainEvidence({
-      id: evidence.id,
-      sourceType: 'STRUCTURAL',
-      domain: 'CAREER',
-      role,
-      phase: 'NATAL_PROMISE',
-      source: 'D1',
-      statement: evidence.statement,
-      polarity,
-      strength,
-      priority: evidence.weight, // Use weight as priority for structural evidence
-      ruleId,
-      relatedEvidenceIds: [], // Structural evidence doesn't link to other evidence
-      notes,
-      provenance: {
-        evidenceId: evidence.id,
-        ruleId,
+      // Use the semantic key as the base for distinct identities
+      const semanticKey = careerStructuralSemanticKey(evidence.semantic);
+
+      // Create SUPPORTING item with distinct identity based on semantic key
+      const supportingId = `CAREER_STRUCTURAL:${semanticKey}:SUPPORTING`;
+      const supportingEvidence = createDomainEvidence({
+        id: supportingId,
+        sourceType: 'STRUCTURAL',
         domain: 'CAREER',
-        axis: 'NATAL',
-        source: 'D1', // Structural facts are D1/natal
-        effect: provenanceEffect,
-        strength: provenanceStrength
-      },
-      // Add house information if available from the relationship
-      ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
-    });
-  });
+        role,
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: evidence.statement,
+        polarity: 'SUPPORTING',
+        strength,
+        priority: evidence.weight,
+        ruleId: supportingId,
+        relatedEvidenceIds: [],
+        notes,
+        provenance: {
+          evidenceId: supportingId,
+          ruleId: supportingId,
+          domain: 'CAREER',
+          axis: 'NATAL',
+          source: 'D1',
+          effect: 'MIXED', // Preserve original MIXED effect
+          strength: provenanceStrength
+        },
+        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
+      });
+
+      // Create CHALLENGING item with distinct identity based on semantic key
+      const challengingId = `CAREER_STRUCTURAL:${semanticKey}:CHALLENGING`;
+      const challengingEvidence = createDomainEvidence({
+        id: challengingId,
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role,
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: evidence.statement,
+        polarity: 'CHALLENGING',
+        strength,
+        priority: evidence.weight,
+        ruleId: challengingId,
+        relatedEvidenceIds: [],
+        notes,
+        provenance: {
+          evidenceId: challengingId,
+          ruleId: challengingId,
+          domain: 'CAREER',
+          axis: 'NATAL',
+          source: 'D1',
+          effect: 'MIXED', // Preserve original MIXED effect
+          strength: provenanceStrength
+        },
+        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
+      });
+
+      result.push(supportingEvidence, challengingEvidence);
+    } else {
+      // Non-MIXED directions keep their existing 1:1 mapping
+      const ruleId = deriveRuleIdFromStructuralEvidence(evidence);
+      const polarity = mapStructuralDirectionToPolarity(evidence.direction);
+      const strength = mapStructuralWeightToStrength(evidence.weight);
+      const role = mapStructuralRoleToEvidenceRole(evidence.role);
+      const provenanceEffect = mapStructuralDirectionToProvenanceEffect(evidence.direction);
+      const provenanceStrength = mapStructuralRoleToEvidenceStrength(evidence.role);
+
+      const domainEvidence = createDomainEvidence({
+        id: evidence.id,
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role,
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: evidence.statement,
+        polarity,
+        strength,
+        priority: evidence.weight,
+        ruleId,
+        relatedEvidenceIds: [],
+        provenance: {
+          evidenceId: evidence.id,
+          ruleId,
+          domain: 'CAREER',
+          axis: 'NATAL',
+          source: 'D1',
+          effect: provenanceEffect,
+          strength: provenanceStrength
+        },
+        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
+      });
+
+      result.push(domainEvidence);
+    }
+  }
+
+  return Object.freeze(result);
 }

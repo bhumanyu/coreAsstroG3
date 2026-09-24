@@ -9,6 +9,7 @@ import { interpretCareerV2 } from './CareerDomainInterpreterV2';
 import { buildCareerStructuralReasoning, toDomainEvidence } from './careerStructuralReasoningIntegration';
 import { MIXED_STRUCTURAL_CHART } from './__fixtures__/structural/mixedStructuralChart.fixture';
 import { evaluateCareerReasoningHierarchy } from './careerReasoningHierarchy';
+import type { DomainEvidence } from '../interpretation/DomainEvidence';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -139,6 +140,85 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       expect(hasChallenging).toBe(true);
     });
 
+    it('splits MIXED structural evidence into distinct SUPPORTING and CHALLENGING items', () => {
+      // Use the dedicated mixed structural chart fixture
+      const structuralReasoning = buildCareerStructuralReasoning({ horoscope: MIXED_STRUCTURAL_CHART });
+
+      // Find MIXED structural evidence items
+      const mixedEvidence = structuralReasoning.evidence.filter(e => e.direction === 'MIXED');
+
+      // The fixture should produce at least one MIXED evidence item
+      expect(mixedEvidence.length).toBeGreaterThan(0);
+
+      // Convert to DomainEvidence
+      const domainEvidence = toDomainEvidence(structuralReasoning);
+
+      // For each MIXED evidence, we should have TWO split items with distinct ids
+      for (const mixedItem of mixedEvidence) {
+        // Find the split items derived from this MIXED evidence
+        const splitItems = domainEvidence.filter(e =>
+          e.id.startsWith(mixedItem.id) ||
+          (e.notes && e.notes.includes('C4 structural direction: MIXED'))
+        );
+
+        // Should have exactly 2 items (SUPPORTING and CHALLENGING)
+        expect(splitItems.length).toBe(2);
+
+        // One should be SUPPORTING, one should be CHALLENGING
+        const supportingItem = splitItems.find(e => e.polarity === 'SUPPORTING');
+        const challengingItem = splitItems.find(e => e.polarity === 'CHALLENGING');
+
+        expect(supportingItem).toBeDefined();
+        expect(challengingItem).toBeDefined();
+
+        // Both should have distinct ids
+        expect(supportingItem?.id).not.toBe(challengingItem?.id);
+
+        // Both should preserve MIXED effect in provenance
+        expect(supportingItem?.provenance?.effect).toBe('MIXED');
+        expect(challengingItem?.provenance?.effect).toBe('MIXED');
+
+        // Both should have descriptive notes about the split
+        expect(supportingItem?.notes).toContain('C4 structural direction: MIXED');
+        expect(challengingItem?.notes).toContain('C4 structural direction: MIXED');
+      }
+    });
+
+    it('preserves MIXED nature through reasoning hierarchy after splitting', () => {
+      // Use the dedicated mixed structural chart fixture
+      const structuralReasoning = buildCareerStructuralReasoning({ horoscope: MIXED_STRUCTURAL_CHART });
+      const structuralEvidence = toDomainEvidence(structuralReasoning);
+
+      // Run through the reasoning hierarchy
+      const hierarchyResult = evaluateCareerReasoningHierarchy({
+        evidence: structuralEvidence,
+        d10Confirmation: {
+          domain: 'CAREER',
+          varga: 'D10',
+          relationship: 'UNAVAILABLE',
+          strength: 'UNDETERMINED',
+          confidence: 'UNDETERMINED',
+          statement: '',
+          evidenceIds: []
+        },
+        dashaTimings: {
+          md: { level: 'MD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 },
+          ad: { level: 'AD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 },
+          pd: { level: 'PD', effect: 'INSUFFICIENT_DATA', evidenceIds: [], confidence: 1.0 }
+        },
+        transitEvidence: [],
+        rawConflicts: []
+      });
+
+      // The result should reflect MIXED nature since we have both support and challenge
+      // (primarySupport > 0 and primaryChallenge > 0 should yield MIXED direction)
+      expect(hierarchyResult.natalDirection).toBe('MIXED');
+
+      // Verify that both support and challenge are present in the totals
+      expect(hierarchyResult.primarySupport).toBeGreaterThan(0);
+      expect(hierarchyResult.primaryChallenge).toBeGreaterThan(0);
+    });
+
     it('deduplicates structural evidence with same identity in reasoning hierarchy', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const options = makeDomainOptions(undefined, horoscope);
@@ -171,11 +251,20 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         rawConflicts: []
       });
 
-      // Create duplicate evidence with same identity (same ruleId)
+      // Create duplicate evidence with same identity (same ruleId and all semantic fields)
       const duplicateEvidence = structuralEvidence[0];
       const evidenceWithDuplicate = [
         ...structuralEvidence,
-        { ...duplicateEvidence, id: `DUPLICATE_${duplicateEvidence.id}` }
+        {
+          ...duplicateEvidence,
+          id: `DUPLICATE_${duplicateEvidence.id}`,
+          // Keep all semantic fields identical to ensure identity key match
+          ruleId: duplicateEvidence.ruleId,
+          provenance: duplicateEvidence.provenance ? {
+            ...duplicateEvidence.provenance,
+            evidenceId: `DUPLICATE_${duplicateEvidence.id}` // Only change evidenceId
+          } : undefined
+        }
       ];
 
       // Run hierarchy again with duplicate
@@ -244,12 +333,19 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         rawConflicts: []
       });
 
-      // Create legacy evidence with same ruleId (simulating overlap)
+      // Create legacy evidence with same identity (same ruleId and all semantic fields)
+      const c4Item = structuralEvidence[0];
       const legacyEvidence = {
-        ...structuralEvidence[0],
-        id: `LEGACY_${structuralEvidence[0].id}`,
-        sourceType: 'HOUSE' as const
-      };
+        ...c4Item,
+        id: `LEGACY_${c4Item.id}`,
+        sourceType: 'HOUSE' as const,
+        // Keep all semantic fields identical to ensure identity key match
+        ruleId: c4Item.ruleId,
+        provenance: c4Item.provenance ? {
+          ...c4Item.provenance,
+          evidenceId: `LEGACY_${c4Item.id}` // Only change evidenceId
+        } : undefined
+      } as DomainEvidence;
 
       const combinedEvidence = [...structuralEvidence, legacyEvidence];
 
