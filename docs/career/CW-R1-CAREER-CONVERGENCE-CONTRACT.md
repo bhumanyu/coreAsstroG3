@@ -301,3 +301,116 @@ The canonical record MUST:
 - never sum duplicate occurrence weights.
 
 This contract prevents duplicate representations of one underlying structural fact from independently contributing to the Career conclusion.
+
+## W0.2 — Canonical Evidence Identity & Deduplication
+
+### W0.2.1 Three Identity Levels
+
+The canonical evidence identity engine operates at three distinct identity levels:
+
+1. **Occurrence ID (evidenceId)** — Unique identifier for each evidence occurrence. Includes effect/strength in the identifier. Format: `CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]-<EFFECT>-<STRENGTH>`
+
+2. **Semantic Identity Key (identityKey)** — Canonical semantic identity. Excludes effect/strength to enable identity-based deduplication. Same fact with different direction/strength shares the same identityKey. Format: `CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]`
+
+3. **Source IDs (sourceIds)** — Array of all occurrence IDs that were merged into the canonical fact. Provides provenance traceability to original input evidence items.
+
+Relationship:
+```
+occurrenceId(SUPPORT) != occurrenceId(CHALLENGE)
+identityKey(SUPPORT) == identityKey(CHALLENGE)
+sourceIds = [occurrenceId(SUPPORT), occurrenceId(CHALLENGE), ...]
+```
+
+### W0.2.2 Two-Stage Canonical Pipeline
+
+The canonical deduplication engine uses a two-stage pipeline:
+
+```
+DomainEvidence[]
+        ↓
+classifyReasoningEvidence
+        ↓
+WeightedReasoningEvidence[] (with identityKey derived from provenance/ruleId + planet/house)
+        ↓
+deduplicateReasoningEvidence
+        ↓
+CanonicalReasoningEvidence[] (grouped by identityKey, merged, tracked)
+```
+
+Stage 1: `classifyReasoningEvidence` (reasoningHierarchy.ts)
+- Derives identityKey from provenance if available, otherwise from ruleId + planet/house
+- Converts DomainEvidence → WeightedReasoningEvidence
+- Computes layer, direction, strength, and weight
+
+Stage 2: `deduplicateReasoningEvidence` (deduplicateEvidence.ts)
+- Groups evidence by identityKey
+- Merges conflicting directions and strengths
+- Tracks occurrenceCount and sourceIds
+- Returns MAX weight (never sum)
+- Sorts deterministically by identityKey
+
+### W0.2.3 Direction Merge Table
+
+The canonical direction merge table (mergeEvidenceDirection):
+
+```
+SUPPORT + SUPPORT → SUPPORT
+CHALLENGE + CHALLENGE → CHALLENGE
+SUPPORT + CHALLENGE → MIXED (either order)
+MIXED + anything → MIXED
+NEUTRAL + X → X
+UNAVAILABLE + X → X (UNAVAILABLE never becomes negative/positive on its own)
+```
+
+### W0.2.4 Strength Merge (MAX Rule)
+
+Evidence strength merge (mergeEvidenceStrength) uses MAX on the ordered scale:
+
+```
+WEAK < MODERATE < STRONG < VERY_STRONG
+
+WEAK + STRONG → STRONG (not VERY_STRONG)
+MODERATE + VERY_STRONG → VERY_STRONG
+```
+
+Duplicate occurrences do NOT increase evidentiary weight — the max single-occurrence weight is retained.
+
+### W0.2.5 Determinism Guarantee
+
+The canonical pipeline guarantees deterministic output:
+
+- Evidence is sorted by identityKey in the final result
+- Canonical layer selection uses fixed precedence order: PRIMARY_PROMISE > SECONDARY_SUPPORT > MODIFIER > YOGA > VARGA > DASHA > TRANSIT
+- sourceIds and relatedEvidenceIds are sorted alphabetically
+- Statement selection uses highest weight, tie-break by evidenceId localeCompare
+- deduplicateReasoningEvidence(input) twice yields identical deep-equal results
+- Input order does not affect output: deduplicateReasoningEvidence([A,B]) === deduplicateReasoningEvidence([B,A])
+
+### W0.2.6 Identity Mechanism Resolution
+
+The codebase contains TWO identity mechanisms that serve different purposes:
+
+1. **`buildEvidenceIdentityKey`** (evidenceIdentity.ts) — The single canonical dedup identity mechanism. Used by `classifyReasoningEvidence` to derive identityKey for canonical deduplication. Based on domain, axis, source, ruleId, subjectKey, and objectKey. Excludes effect/strength to enable semantic identity-based deduplication.
+
+2. **`getEvidenceIndependenceKey`** (ManifestationMode.ts) — A distinct, non-competing manifestation-scoping heuristic. Used to group evidence for manifestation independence analysis (Spec §12). Based on sourceType, base ruleId, source, phase, planet, and house. Answers a different question ("are these evidence items independent factors?") than dedup identity ("are these the same semantic fact?").
+
+These mechanisms are complementary and do not violate the "one canonical dedup mechanism" invariant:
+- `buildEvidenceIdentityKey` is the authoritative dedup identity for the canonical pipeline
+- `getEvidenceIndependenceKey` is a separate heuristic for manifestation status resolution
+- They operate at different layers and answer different questions
+- The existence of `getEvidenceIndependenceKey` does not create a competing dedup implementation
+
+### W0.2.7 Contract Test Coverage
+
+The canonical evidence identity and deduplication contract is validated by `src/domain/reasoning/canonicalEvidenceIdentity.contract.test.ts`, which tests spec §16 groups A–J:
+
+- A: same identity + same direction → one canonical record
+- B: SUPPORT + CHALLENGE (same identityKey) → direction MIXED, occurrenceCount 2
+- C: SUPPORT weight 3 + CHALLENGE weight 2 → MIXED, canonical weight 3 (never 5)
+- D: both occurrence ids survive in sourceIds
+- E: identityKey(SUPPORT) === identityKey(CHALLENGE) while occurrence ids differ
+- F: order independence — dedup([A,B]) deep-equals dedup([B,A])
+- G: three occurrences (SUPPORT 3, SUPPORT 2, CHALLENGE 1) → MIXED, weight 3, occurrenceCount 3
+- H: false-dedup protection — different ruleId produces different identityKeys
+- I: deduplicateReasoningEvidence([]) returns [] (missing evidence is not negative evidence)
+- J: merging preserves ruleId, sourceIds, provenance-derived identityKey
