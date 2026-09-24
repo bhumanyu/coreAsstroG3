@@ -75,6 +75,19 @@ Specifically:
 
 The pure C4–C11 canonical semantic modules (`careerStructuralReasoning`, `careerPlanetaryRelevance`/`interpretCareerPlanetaryRelevance`, `careerPlanetaryCondition`, `interpretCareerLordRelationship`, `careerExpression`, C9 `careerDashaActivation`, C10 `careerD10Qualification`, C11 `careerFinalSynthesis`) are NOT imported/called by the interpreter.
 
+### 2.5 Current Migration State
+
+**Authoritative Right Now:**
+- C4 `careerStructuralReasoning`: Additively integrated, not yet legacy-replacement authority
+- C5–C8: Not fully production integrated
+- C9/C10: Partial integration (Dasha/D10 synthesis components consumed by interpreter)
+- C11: Not production-authoritative
+- Legacy Product A: Retained for comparison and controlled parity during transition
+
+**Canonical Target Authority:**
+- C4–C11 pipeline will become the authoritative production source
+- Legacy Product A will be demoted to non-authoritative status or removed
+
 ## 3. Target Architecture
 
 ### 3.1 Canonical Career Pipeline
@@ -178,15 +191,15 @@ Migration must respect the existing canonical evidence dedup contract (identityK
 
 ### 5.1 Structural integration
 
-Integrate C4 `careerStructuralReasoning` as the authoritative producer of Career structural evidence. Establish the flow from C4 to DomainEvidence, replacing the legacy CW-01 structural hierarchy source.
+Integrate C4 `careerStructuralReasoning` additively into the production Career path. C4 becomes the canonical structural reasoning implementation for the migration target, but during the transitional phase does NOT yet replace the legacy CW-01 structural hierarchy authority. The legacy structural reasoning remains available for controlled parity/comparison until the canonical C4–C7 path is production-authoritative.
 
 ### 5.2 Planetary integration
 
-Integrate C5 `careerPlanetaryRelevance` and C6 `careerPlanetaryCondition` as the authoritative producers of planetary semantics. Establish the flow from C5/C6 to DomainEvidence, replacing legacy planetary relevance sources.
+Integrate C5 `careerPlanetaryRelevance` and C6 `careerPlanetaryCondition` as the authoritative producers of planetary semantics. This step will establish the flow from C5/C6 to DomainEvidence, replacing legacy planetary relevance sources for the target architecture.
 
 ### 5.3 Expression integration
 
-Integrate C8 `careerExpression` as the authoritative producer of Career expression modes. Establish the flow from C8 to DomainEvidence, replacing legacy manifestation mappings.
+Integrate C8 `careerExpression` as the authoritative producer of Career expression modes. This step will establish the flow from C8 to DomainEvidence, replacing legacy manifestation mappings for the target architecture.
 
 ### 5.4 Dasha integration
 
@@ -198,7 +211,7 @@ Elevate C10 `careerD10Qualification` to authoritative status for D10 qualificati
 
 ### 5.6 C11 integration
 
-Integrate C11 `careerFinalSynthesis` as the authoritative final Career synthesis. Replace the legacy CW-05 final synthesis with C11 as the final decision point.
+Integrate C11 `careerFinalSynthesis` as the authoritative final Career synthesis. This step will replace the legacy CW-05 final synthesis with C11 as the final decision point for the target architecture.
 
 ### 5.7 Legacy demotion
 

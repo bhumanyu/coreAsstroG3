@@ -165,8 +165,8 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
       expect(canonical).toHaveLength(1);
       expect(canonical[0].direction).toBe('MIXED');
       expect(canonical[0].strength).toBe('STRONG'); // MAX(STRONG, MODERATE) = STRONG
-      expect(canonical[0].weight).toBeGreaterThan(0);
-      // Weight is computed from layerWeight * strengthWeight, should be from STRONG (higher)
+      const expectedMax = Math.max(...weighted.map((e) => e.weight));
+      expect(canonical[0].weight).toBe(expectedMax); // MAX-not-SUM: canonical weight = max single occurrence weight
       expect(canonical[0].occurrenceCount).toBe(2);
     });
   });
