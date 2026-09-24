@@ -8,7 +8,7 @@ describe('careerPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          10: { lord: Planet.JUPITER, occupants: [Planet.SUN, Planet.SATURN, Planet.MARS] }
+          10: { placement: { signLord: Planet.JUPITER }, occupants: { planets: [Planet.SUN, Planet.SATURN, Planet.MARS] } }
         }
       } as any,
       planetAnalysis: {

@@ -547,9 +547,10 @@ function createEntrepreneurshipEvidence(
     return undefined;
   }
 
-  // Multi-factor evidence: need business house (2H/7H/11H) AND supporting condition
+  // Multi-factor evidence: need business house (2H/7H) AND supporting condition
+  // Note: 11H is required above, but for business house we need 2H or 7H specifically
   const hasBusinessHouse = businessPlanets.some(p =>
-    hasHouseInSet(p.relatedHouses, new Set<number>([2, 7, 11]))
+    hasHouseInSet(p.relatedHouses, new Set<number>([2, 7]))
   );
   const hasSupportingCondition = businessPlanets.some(p =>
     p.condition === 'STRONG' || p.condition === 'MODERATE'

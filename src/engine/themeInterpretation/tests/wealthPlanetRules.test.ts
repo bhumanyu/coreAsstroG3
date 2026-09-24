@@ -9,7 +9,7 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.JUPITER, occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.JUPITER }, occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -33,7 +33,7 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          11: { lord: Planet.VENUS, occupants: [Planet.VENUS] }
+          11: { placement: { signLord: Planet.VENUS }, occupants: { planets: [Planet.VENUS] } }
         }
       } as any,
       planetInterpretation: {
@@ -56,7 +56,7 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          5: { lord: Planet.MERCURY, occupants: [Planet.MERCURY] }
+          5: { placement: { signLord: Planet.MERCURY }, occupants: { planets: [Planet.MERCURY] } }
         }
       } as any,
       planetInterpretation: {
@@ -79,11 +79,11 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.SATURN },
-          11: { lord: Planet.MARS },
-          9: { lord: Planet.SUN },
-          5: { lord: Planet.JUPITER },
-          6: { lord: Planet.MERCURY, occupants: [Planet.VENUS] }
+          2: { placement: { signLord: Planet.SATURN } },
+          11: { placement: { signLord: Planet.MARS } },
+          9: { placement: { signLord: Planet.SUN } },
+          5: { placement: { signLord: Planet.JUPITER } },
+          6: { placement: { signLord: Planet.MERCURY }, occupants: { planets: [Planet.VENUS] } }
         }
       } as any,
       planetInterpretation: {
@@ -103,11 +103,11 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.SATURN },
-          11: { lord: Planet.MARS },
-          9: { lord: Planet.SUN },
-          5: { lord: Planet.VENUS },
-          1: { lord: Planet.MOON, occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.SATURN } },
+          11: { placement: { signLord: Planet.MARS } },
+          9: { placement: { signLord: Planet.SUN } },
+          5: { placement: { signLord: Planet.VENUS } },
+          1: { placement: { signLord: Planet.MOON }, occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -127,11 +127,11 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.JUPITER },
-          11: { lord: Planet.MARS },
-          9: { lord: Planet.SUN },
-          5: { lord: Planet.VENUS },
-          1: { occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.JUPITER } },
+          11: { placement: { signLord: Planet.MARS } },
+          9: { placement: { signLord: Planet.SUN } },
+          5: { placement: { signLord: Planet.VENUS } },
+          1: { occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -152,11 +152,11 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.SATURN },
-          11: { lord: Planet.MARS },
-          9: { lord: Planet.SUN },
-          5: { lord: Planet.VENUS },
-          1: { occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.SATURN } },
+          11: { placement: { signLord: Planet.MARS } },
+          9: { placement: { signLord: Planet.SUN } },
+          5: { placement: { signLord: Planet.VENUS } },
+          1: { occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -180,7 +180,7 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.SATURN, occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.SATURN }, occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -203,11 +203,11 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.SATURN },
-          11: { lord: Planet.MARS },
-          9: { lord: Planet.SUN },
-          5: { lord: Planet.VENUS },
-          1: { lord: Planet.MOON, occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.SATURN } },
+          11: { placement: { signLord: Planet.MARS } },
+          9: { placement: { signLord: Planet.SUN } },
+          5: { placement: { signLord: Planet.VENUS } },
+          1: { placement: { signLord: Planet.MOON }, occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -239,11 +239,11 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.SATURN },
-          11: { lord: Planet.MARS },
-          9: { lord: Planet.SUN },
-          5: { lord: Planet.VENUS },
-          1: { lord: Planet.MOON, occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.SATURN } },
+          11: { placement: { signLord: Planet.MARS } },
+          9: { placement: { signLord: Planet.SUN } },
+          5: { placement: { signLord: Planet.VENUS } },
+          1: { placement: { signLord: Planet.MOON }, occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
@@ -277,8 +277,8 @@ describe('wealthPlanetRules', () => {
     const context: ThemeInterpretationContext = {
       houseInterpretation: {
         houses: {
-          2: { lord: Planet.JUPITER },
-          11: { lord: Planet.VENUS, occupants: [Planet.JUPITER] }
+          2: { placement: { signLord: Planet.JUPITER } },
+          11: { placement: { signLord: Planet.VENUS }, occupants: { planets: [Planet.JUPITER] } }
         }
       } as any,
       planetInterpretation: {
