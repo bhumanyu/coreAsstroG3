@@ -80,7 +80,7 @@ describe('ReliableAiProvider', () => {
 
   it('does not retry POST by default', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockRejectedValue(new RemoteAiError('NETWORK_ERROR', 'network failed'));
 
     const provider = createProvider(generate);
@@ -95,7 +95,7 @@ describe('ReliableAiProvider', () => {
 
   it('retries when POST retry is explicitly enabled and succeeds', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockRejectedValueOnce(
         new RemoteAiError('NETWORK_ERROR', 'network failure')
       )
@@ -123,7 +123,7 @@ describe('ReliableAiProvider', () => {
 
   it('stops after max attempts and preserves original RemoteAiError', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockRejectedValue(
         new RemoteAiError('HTTP_ERROR', 'internal server error', {
           statusCode: 500
@@ -146,7 +146,7 @@ describe('ReliableAiProvider', () => {
 
   it('does not retry mapping errors', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockRejectedValue(new RemoteAiError('MAPPING_ERROR', 'cannot map payload'));
 
     const provider = createProvider(generate);
@@ -161,7 +161,7 @@ describe('ReliableAiProvider', () => {
 
   it('does not retry invalid endpoint errors', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockRejectedValue(
         new RemoteAiError('INVALID_ENDPOINT', 'bad endpoint URL')
       );
@@ -178,7 +178,7 @@ describe('ReliableAiProvider', () => {
 
   it('does not retry non-retryable HTTP status 400', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockRejectedValue(
         new RemoteAiError('HTTP_ERROR', 'Bad Request', {
           statusCode: 400
@@ -198,7 +198,7 @@ describe('ReliableAiProvider', () => {
 
   it('works via withRemoteReliability factory function', async () => {
     const generate = vi
-      .fn<AiProvider['generate']>()
+      .fn<[AiRequest], Promise<AiResponse>>()
       .mockResolvedValueOnce({
         requestId: 'req-factory-test',
         content: 'factory ok',
@@ -218,7 +218,7 @@ describe('ReliableAiProvider', () => {
     vi.useFakeTimers();
     try {
       const generate = vi
-        .fn<AiProvider['generate']>()
+        .fn<[AiRequest], Promise<AiResponse>>()
         .mockRejectedValueOnce(
           new RemoteAiError('NETWORK_ERROR', 'network drop')
         )
