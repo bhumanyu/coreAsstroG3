@@ -543,6 +543,10 @@ export function buildCareerReasoningTraceGraph(params: {
         } else {
           edgeType = 'SUPPORTS';
         }
+      } else if (e.provenance.effect === 'MIXED') {
+        // MIXED evidence doesn't create a single directional edge
+        // It represents conflicting influences that are tracked separately
+        edgeType = undefined;
       }
 
       if (edgeType) {

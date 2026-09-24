@@ -100,7 +100,7 @@ const CAREER_STRUCTURAL_STRENGTH_WEIGHT: Readonly<
   WEAK: 1
 });
 
-function careerStructuralSemanticKey(
+export function careerStructuralSemanticKey(
   semantic: CareerHouseRelationshipSemantic
 ): string {
   return [

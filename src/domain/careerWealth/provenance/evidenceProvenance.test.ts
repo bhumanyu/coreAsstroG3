@@ -62,4 +62,20 @@ describe('CW-06A Evidence Provenance & Factory', () => {
       /Duplicate evidenceId detected: CW-CAREER-NATAL-D1-CAREER_10TH_LORD_SUPPORT-SATURN-SUPPORT-PRIMARY/
     );
   });
+
+  it('handles MIXED effect correctly (FIX 1: preserve MIXED support)', () => {
+    const mixedInput: EvidenceIdentityInput = {
+      ...sampleInput,
+      effect: 'MIXED',
+      subjectKey: 'MARS'
+    };
+
+    const provenance = createEvidenceProvenance(mixedInput);
+
+    expect(provenance.effect).toBe('MIXED');
+    expect(provenance.evidenceId).toContain('MIXED');
+    expect(provenance.evidenceId).toBe(
+      'CW-CAREER-NATAL-D1-CAREER_10TH_LORD_SUPPORT-MARS-MIXED-PRIMARY'
+    );
+  });
 });

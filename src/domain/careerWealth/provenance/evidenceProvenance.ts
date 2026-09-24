@@ -9,7 +9,7 @@ export type EvidenceAxis =
 
 export type EvidenceSource = 'D1' | 'D2' | 'D10' | 'DASHA' | 'TRANSIT';
 
-export type EvidenceEffect = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
+export type EvidenceEffect = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
 
 export type EvidenceStrength = 'PRIMARY' | 'SECONDARY' | 'TERTIARY';
 

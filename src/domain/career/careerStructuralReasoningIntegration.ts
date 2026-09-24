@@ -2,10 +2,11 @@ import type { Horoscope, Planet } from '../../types';
 import type { CareerHouseRelationshipContext } from './careerHouseRelationship';
 import { detectCareerHouseRelationships } from './careerHouseRelationship';
 import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
-import { resolveCareerStructuralReasoning, type CareerStructuralReasoning, type CareerStructuralEvidence } from './careerStructuralReasoning';
+import { resolveCareerStructuralReasoning, careerStructuralSemanticKey, type CareerStructuralReasoning, type CareerStructuralEvidence } from './careerStructuralReasoning';
 import { CAREER_HOUSE_PORTFOLIO } from './careerTypes';
 import { createDomainEvidence, type DomainEvidence } from '../interpretation/DomainEvidence';
 import { careerHouseRelationshipKey } from './careerHouseRelationship';
+import type { EvidenceProvenance, EvidenceStrength } from '../careerWealth/provenance/evidenceProvenance';
 
 export interface CareerStructuralReasoningInput {
   readonly horoscope: Horoscope;
@@ -83,20 +84,9 @@ function deriveRuleIdFromStructuralEvidence(
   evidence: CareerStructuralEvidence
 ): string {
   // Derive deterministic ruleId from the relationship and semantic identity
-  // This ensures stability by reusing the existing key functions
-  const relationshipKey = careerHouseRelationshipKey(evidence.relationship);
-
-  // Build semantic key manually since careerStructuralSemanticKey is not exported
-  const semanticKey = [
-    relationshipKey,
-    evidence.semantic.relevance,
-    evidence.semantic.effect,
-    evidence.semantic.strength,
-    evidence.semantic.conditional
-  ].join(':');
-
-  // Create a deterministic ruleId that identifies this structural fact
-  return `CAREER_STRUCTURAL_${evidence.relationship.type}_${semanticKey}`;
+  // For consistent identity, use the same ruleId as the evidence id
+  // This ensures the identity used for dedup is consistent
+  return evidence.id;
 }
 
 function mapStructuralDirectionToPolarity(
@@ -113,6 +103,42 @@ function mapStructuralDirectionToPolarity(
       return 'NEUTRAL';
     default:
       return 'NEUTRAL';
+  }
+}
+
+function mapStructuralDirectionToProvenanceEffect(
+  direction: CareerStructuralEvidence['direction']
+): EvidenceProvenance['effect'] {
+  switch (direction) {
+    case 'SUPPORT':
+      return 'SUPPORT';
+    case 'CHALLENGE':
+      return 'CHALLENGE';
+    case 'MIXED':
+      return 'MIXED';
+    case 'NEUTRAL':
+    case 'UNAVAILABLE':
+      return 'NEUTRAL';
+    default:
+      return 'NEUTRAL';
+  }
+}
+
+function mapStructuralRoleToEvidenceStrength(
+  role: CareerStructuralEvidence['role']
+): EvidenceStrength {
+  switch (role) {
+    case 'PRIMARY':
+      return 'PRIMARY';
+    case 'SUPPORTING':
+      return 'SECONDARY';
+    case 'CHALLENGING':
+      return 'SECONDARY';
+    case 'MIXED':
+    case 'MODIFIER':
+      return 'TERTIARY';
+    default:
+      return 'TERTIARY';
   }
 }
 
@@ -202,6 +228,13 @@ export function toDomainEvidence(
     const polarity = mapStructuralDirectionToPolarity(evidence.direction);
     const strength = mapStructuralWeightToStrength(evidence.weight);
     const role = mapStructuralRoleToEvidenceRole(evidence.role);
+    const provenanceEffect = mapStructuralDirectionToProvenanceEffect(evidence.direction);
+    const provenanceStrength = mapStructuralRoleToEvidenceStrength(evidence.role);
+
+    // For MIXED direction, preserve the true C4 direction in notes for traceability
+    const notes = evidence.direction === 'MIXED'
+      ? `C4 structural direction: MIXED. Contains both supporting and challenging influences.`
+      : undefined;
 
     return createDomainEvidence({
       id: evidence.id,
@@ -216,12 +249,15 @@ export function toDomainEvidence(
       priority: evidence.weight, // Use weight as priority for structural evidence
       ruleId,
       relatedEvidenceIds: [], // Structural evidence doesn't link to other evidence
+      notes,
       provenance: {
-        axis: 'NATAL',
+        evidenceId: evidence.id,
         ruleId,
-        effect: evidence.direction === 'SUPPORT' ? 'SUPPORT' :
-          evidence.direction === 'CHALLENGE' ? 'CHALLENGE' : 'NEUTRAL',
-        source: 'C4_STRUCTURAL_REASONING'
+        domain: 'CAREER',
+        axis: 'NATAL',
+        source: 'D1', // Structural facts are D1/natal
+        effect: provenanceEffect,
+        strength: provenanceStrength
       },
       // Add house information if available from the relationship
       ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
