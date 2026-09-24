@@ -91,6 +91,11 @@ import { synthesizeCareerManifestations } from './manifestation/careerManifestat
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import { synthesizeCareerFinal } from '../careerWealth/finalSynthesis/careerFinalSynthesis';
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+import {
+  buildCareerStructuralReasoning,
+  toDomainEvidence,
+  type CareerStructuralReasoning
+} from './careerStructuralReasoningIntegration';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
@@ -139,19 +144,28 @@ export function interpretCareerV2(
   const rawMappedEvidence = buildCareerEvidence(rawEvidence);
   const evidence = linkCareerEvidence(rawMappedEvidence);
 
-  const supportingEvidence = evidence.filter(
+  // C4 Structural Reasoning Integration
+  // Build canonical structural reasoning chain and convert to DomainEvidence
+  const structuralReasoning = buildCareerStructuralReasoning({ horoscope });
+  const structuralEvidence = toDomainEvidence(structuralReasoning);
+
+  // Merge structural evidence additively - existing dedup in evaluateCareerReasoningHierarchy
+  // will collapse any structural fact that already exists by identityKey
+  const evidenceWithStructural = Object.freeze([...evidence, ...structuralEvidence]);
+
+  const supportingEvidence = evidenceWithStructural.filter(
     (item) => item.polarity === 'SUPPORTING'
   );
-  const challengingEvidence = evidence.filter(
+  const challengingEvidence = evidenceWithStructural.filter(
     (item) => item.polarity === 'CHALLENGING'
   );
 
   const natalSupporting = supportingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
   const natalChallenging = challengingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
-  const natalPromiseEvidence = evidence.filter((item) => item.phase === 'NATAL_PROMISE');
+  const natalPromiseEvidence = evidenceWithStructural.filter((item) => item.phase === 'NATAL_PROMISE');
   const natalPromiseEvidenceIds = natalPromiseEvidence.map((item) => item.id);
 
-  const conflicts = detectDomainConflicts('CAREER', evidence);
+  const conflicts = detectDomainConflicts('CAREER', evidenceWithStructural);
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
@@ -182,7 +196,7 @@ export function interpretCareerV2(
   });
 
   // Dasha Timing & Multi-period evaluation (MD / AD / PD)
-  const dashaEvidence = evidence.filter(
+  const dashaEvidence = evidenceWithStructural.filter(
     (item) => item.phase === 'DASHA_ACTIVATION' || item.source === 'DASHA'
   );
   const dashaSupporting = dashaEvidence.filter((item) => item.polarity === 'SUPPORTING');
@@ -221,7 +235,7 @@ export function interpretCareerV2(
   ]);
 
   // Transit Trigger evaluation
-  const transitEvidence = evidence.filter(
+  const transitEvidence = evidenceWithStructural.filter(
     (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
   );
   const transitSupporting = transitEvidence.filter((item) => item.polarity === 'SUPPORTING');
@@ -245,7 +259,7 @@ export function interpretCareerV2(
   });
 
   // D10 Varga Confirmation
-  const d10Evidence = evidence.filter((item) => item.source === 'D10');
+  const d10Evidence = evidenceWithStructural.filter((item) => item.source === 'D10');
   const d10Relationship = evaluateD10Relationship(
     rawEvidence,
     themeInterpretation.metadata?.vargaConfirmationStatus,
@@ -266,7 +280,7 @@ export function interpretCareerV2(
 
   // CW-01 reasoning hierarchy is the authoritative production reasoning path
   const cw01Result = evaluateCareerReasoningHierarchy({
-    evidence,
+    evidence: evidenceWithStructural,
     d10Confirmation: vargaConfirmation,
     dashaTimings: {
       md: {
@@ -351,7 +365,7 @@ export function interpretCareerV2(
     });
   });
 
-  const mergedEvidence = Object.freeze([...evidence, ...dashaFactorsEvidence]);
+  const mergedEvidence = Object.freeze([...evidenceWithStructural, ...dashaFactorsEvidence]);
 
   const conclusionData = buildCareerConclusionData(
     cw01Result.natalStrength,
@@ -853,3 +867,81 @@ export {
 
 export { calculateCareerDataCompleteness } from './careerDataCompleteness';
 export * from './careerTypes';
+
+/**
+ * Comparison-only legacy path helper for debugging/test infrastructure.
+ * This function does NOT alter the returned DomainInterpretation and is gated
+ * behind an explicit flag (default off). It compares legacy structural interpretation
+ * with the canonical C4 structural reasoning for A/B testing purposes.
+ * 
+ * @param horoscope - The horoscope to analyze
+ * @param options - Domain reasoning options
+ * @param enableComparison - Flag to enable comparison (default false)
+ * @returns Comparison result object (side-effect-free, does not affect interpretation)
+ */
+export function compareLegacyAndCanonicalStructuralReasoning(
+  horoscope: Horoscope,
+  options: DomainReasoningOptions,
+  enableComparison: boolean = false
+): {
+  enabled: boolean;
+  canonicalStructural: CareerStructuralReasoning;
+  legacyEvidence: readonly DomainEvidence[];
+  comparisonNotes: string[];
+} {
+  if (!enableComparison) {
+    return {
+      enabled: false,
+      canonicalStructural: {
+        direction: 'UNAVAILABLE',
+        strength: 'UNDETERMINED',
+        primarySupport: 0,
+        primaryChallenge: 0,
+        supportingSupport: 0,
+        supportingChallenge: 0,
+        challengingSupport: 0,
+        challengingChallenge: 0,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Comparison disabled'
+      } as CareerStructuralReasoning,
+      legacyEvidence: [],
+      comparisonNotes: ['Comparison disabled by default']
+    };
+  }
+
+  // Build canonical C4 structural reasoning
+  const canonicalStructural = buildCareerStructuralReasoning({ horoscope });
+
+  // Extract legacy structural evidence from theme interpretation
+  const themeInterpretation = interpretCareerTheme({
+    horoscope,
+    dashaInterpretation: options.temporalState.dashaInterpretation
+  });
+  const rawEvidence = themeInterpretation.evidence;
+  const rawMappedEvidence = buildCareerEvidence(rawEvidence);
+  const legacyEvidence = linkCareerEvidence(rawMappedEvidence);
+
+  // Filter for legacy structural evidence (NATAL_STRUCTURE dimension)
+  const legacyStructuralEvidence = legacyEvidence.filter(
+    (e) => e.dimension === 'NATAL_STRUCTURE' || e.source === 'D1'
+  );
+
+  const comparisonNotes: string[] = [
+    `Canonical C4 evidence count: ${canonicalStructural.evidence.length}`,
+    `Legacy structural evidence count: ${legacyStructuralEvidence.length}`,
+    `Canonical direction: ${canonicalStructural.direction}`,
+    `Canonical strength: ${canonicalStructural.strength}`
+  ];
+
+  return {
+    enabled: true,
+    canonicalStructural,
+    legacyEvidence: legacyStructuralEvidence,
+    comparisonNotes
+  };
+}
