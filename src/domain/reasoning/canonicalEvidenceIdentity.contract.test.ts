@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { Planet } from '../../types';
 import { classifyReasoningEvidence } from './reasoningHierarchy';
 import { deduplicateReasoningEvidence } from './deduplicateEvidence';
 import type { DomainEvidence } from '../interpretation';
@@ -16,12 +17,21 @@ import type { EvidenceProvenance } from '../careerWealth/provenance';
  * without modifying the production code.
  */
 describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () => {
+  type DomainEvidenceOverride = Partial<Omit<DomainEvidence, 'planet'>> & {
+    provenance?: EvidenceProvenance;
+    ruleId?: string;
+    planet?: Planet | string;
+  };
+
+  const normalizePlanet = (planet: Planet | string | undefined): Planet | undefined =>
+    typeof planet === 'string' ? (planet as Planet) : planet;
+
   /**
    * Helper to create DomainEvidence with provenance for identity key derivation
    */
   function createEvidenceWithProvenance(
     id: string,
-    overrides: Partial<DomainEvidence> & { provenance: EvidenceProvenance }
+    overrides: DomainEvidenceOverride & { provenance: EvidenceProvenance }
   ): DomainEvidence {
     return createDomainEvidence({
       id,
@@ -35,8 +45,9 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
       strength: 'STRONG',
       priority: 95,
       relatedEvidenceIds: [],
-      ...overrides
-    });
+      ...overrides,
+      planet: normalizePlanet(overrides.planet)
+    } as any);
   }
 
   /**
@@ -44,7 +55,7 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
    */
   function createEvidenceWithRuleId(
     id: string,
-    overrides: Partial<DomainEvidence> & { ruleId: string }
+    overrides: DomainEvidenceOverride & { ruleId: string }
   ): DomainEvidence {
     return createDomainEvidence({
       id,
@@ -58,8 +69,9 @@ describe('Canonical Evidence Identity & Deduplication Contract (spec §16)', () 
       strength: 'STRONG',
       priority: 95,
       relatedEvidenceIds: [],
-      ...overrides
-    });
+      ...overrides,
+      planet: normalizePlanet(overrides.planet)
+    } as any);
   }
 
   /**

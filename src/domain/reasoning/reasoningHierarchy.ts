@@ -214,7 +214,9 @@ export function classifyReasoningEvidence(
         statement: item.statement,
         relatedEvidenceIds: Object.freeze([
           ...item.relatedEvidenceIds
-        ])
+        ]),
+        sourceIds: Object.freeze([item.id]),
+        occurrenceCount: 1
       });
     })
   );

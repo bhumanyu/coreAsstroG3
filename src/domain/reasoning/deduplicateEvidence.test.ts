@@ -17,6 +17,7 @@ function createWeightedEvidence(
     weight: 7.5,
     statement: 'Test evidence',
     relatedEvidenceIds: [],
+    sourceIds: [evidenceId],
     ...overrides
   });
 }

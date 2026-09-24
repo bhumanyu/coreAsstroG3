@@ -58,7 +58,7 @@ export interface CareerNatalAnalysisInput {
  * - Timing/transit layers
  * - C11 final synthesis
  */
-export interface CareerNatalAnalysis extends CareerNatalAnalysisInput {}
+export interface CareerNatalAnalysis extends CareerNatalAnalysisInput { }
 
 /**
  * Factory function to create an immutable CareerNatalAnalysis aggregate.
@@ -92,24 +92,26 @@ export function createCareerNatalAnalysis(
  * Uses NEUTRAL direction to represent "no data" without negative inference.
  * Empty arrays indicate missing evidence, not negative evidence.
  */
+const EMPTY_STRUCTURAL_REASONING: CareerStructuralReasoning = Object.freeze({
+  direction: 'NEUTRAL',
+  strength: 'UNDETERMINED',
+  primarySupport: 0,
+  primaryChallenge: 0,
+  supportingSupport: 0,
+  supportingChallenge: 0,
+  challengingSupport: 0,
+  challengingChallenge: 0,
+  mixedWeight: 0,
+  evidence: Object.freeze([]),
+  primaryEvidenceIds: Object.freeze([]),
+  supportingEvidenceIds: Object.freeze([]),
+  challengingEvidenceIds: Object.freeze([]),
+  conflicts: Object.freeze([]),
+  statement: 'No structural reasoning data available.'
+});
+
 export const EMPTY_CAREER_NATAL_ANALYSIS: CareerNatalAnalysis = Object.freeze({
-  structural: {
-    direction: 'NEUTRAL',
-    strength: 'UNDETERMINED',
-    primarySupport: 0,
-    primaryChallenge: 0,
-    supportingSupport: 0,
-    supportingChallenge: 0,
-    challengingSupport: 0,
-    challengingChallenge: 0,
-    mixedWeight: 0,
-    evidence: [],
-    primaryEvidenceIds: [],
-    supportingEvidenceIds: [],
-    challengingEvidenceIds: [],
-    conflicts: [],
-    statement: 'No structural reasoning data available.'
-  },
+  structural: EMPTY_STRUCTURAL_REASONING,
   relevance: [],
   condition: [],
   lordRelationships: [],

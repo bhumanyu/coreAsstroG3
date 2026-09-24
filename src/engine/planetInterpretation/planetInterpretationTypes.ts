@@ -9,7 +9,8 @@ import {
   PlanetAnalysisReport,
   PlanetaryStrengthReport,
   ShadbalaAggregationStatus,
-  AspectType
+  AspectType,
+  DignityStatus
 } from '../../types';
 import { FunctionalRole } from '../functionalNature/functionalRoleTypes';
 import { FunctionalRoleAnalysisReport } from '../functionalNature/functionalRoles';
@@ -115,6 +116,7 @@ export interface PlanetInterpretation {
   readonly summary: PlanetInterpretationSummary;
   readonly placement: PlanetPlacementInterpretation;
   readonly house?: number;
+  readonly dignity?: DignityStatus | { status?: DignityStatus };
   readonly functionalRole: PlanetRoleInterpretation;
   readonly strength: PlanetStrengthInterpretation;
   readonly drishti: PlanetDrishtiInterpretation;

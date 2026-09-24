@@ -8,6 +8,7 @@ export type EvidenceSourceType =
   | 'STRENGTH'
   | 'DASHA'
   | 'TRANSIT'
+  | 'STRUCTURAL'
   | 'OTHER';
 
 const VALID_EVIDENCE_SOURCE_TYPES: ReadonlySet<string> = new Set<EvidenceSourceType>([
@@ -20,6 +21,7 @@ const VALID_EVIDENCE_SOURCE_TYPES: ReadonlySet<string> = new Set<EvidenceSourceT
   'STRENGTH',
   'DASHA',
   'TRANSIT',
+  'STRUCTURAL',
   'OTHER'
 ]);
 
