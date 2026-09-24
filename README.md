@@ -14,6 +14,9 @@ PR-001A Repository Foundation
 - `npm test`: Run the test suite with Vitest
 - `npm run build`: Compile and build production assets
 
+## Development Guide
+See [PLAYBOOK.md](./PLAYBOOK.md) for the comprehensive guide on planning and safely making changes, including layer responsibilities, non-negotiable invariants, and testing guardrails.
+
 ## Vimshottari Dasha Engine (PR-041)
 - **Year Length Convention**: 1 Vimshottari year = 365.25 days; this materially affects MD/AD/PD boundaries and must match the chosen reference software/source (`VIMSHOTTARI_YEAR_DAYS`).
 - **Date Arithmetic**: Fractional years added via deterministic date arithmetic (`addFractionalYears`).
