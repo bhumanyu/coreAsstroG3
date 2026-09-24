@@ -6,7 +6,7 @@ function createWeightedEvidence(
   evidenceId: string,
   overrides: Partial<WeightedReasoningEvidence> = {}
 ): WeightedReasoningEvidence {
-  const base = {
+  const base: WeightedReasoningEvidence = {
     identityKey: overrides.identityKey ?? evidenceId, // Allow custom identityKey, default to evidenceId
     evidenceId,
     ruleId: 'TEST_RULE',

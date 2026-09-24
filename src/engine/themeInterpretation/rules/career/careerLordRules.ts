@@ -2,7 +2,8 @@ import {
   ThemeRule,
   ThemeRuleResult,
   CareerEvidenceFamily,
-  ThemeInterpretationEvidence
+  ThemeInterpretationEvidence,
+  ThemeEvidenceFactor
 } from '../../themeInterpretationTypes';
 import { ThemeInterpretationContext } from '../../themeInterpretationContext';
 import { evaluateHouseLord } from '../../evaluators/lordEvaluator';
@@ -21,16 +22,24 @@ export const careerLordRules: readonly ThemeRule[] = Object.freeze([
       }
 
       // Collect all factors for the 10th lord
-      const allFactors: string[] = [];
+      const allFactors: ThemeEvidenceFactor[] = [];
       if (lordFacts.factors) {
         allFactors.push(...lordFacts.factors);
       }
 
       // Add standard factors based on evaluation
       if (lordFacts.effect === 'SUPPORT') {
-        allFactors.push(`10th lord (${lordFacts.lordPlanet}) supports career through dignity and placement`);
+        allFactors.push({
+          label: 'Lord Effect',
+          value: `10th lord (${lordFacts.lordPlanet}) supports career through dignity and placement`,
+          role: 'PRIMARY'
+        });
       } else if (lordFacts.effect === 'CHALLENGE') {
-        allFactors.push(`10th lord (${lordFacts.lordPlanet}) challenges career through dignity and placement`);
+        allFactors.push({
+          label: 'Lord Effect',
+          value: `10th lord (${lordFacts.lordPlanet}) challenges career through dignity and placement`,
+          role: 'PRIMARY'
+        });
       }
 
       const evidence: ThemeInterpretationEvidence = {
