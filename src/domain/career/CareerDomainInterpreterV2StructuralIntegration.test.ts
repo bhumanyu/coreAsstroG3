@@ -140,7 +140,7 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       expect(hasChallenging).toBe(true);
     });
 
-    it('splits MIXED structural evidence into distinct SUPPORTING and CHALLENGING items', () => {
+    it('splits MIXED structural evidence into two occurrences with same canonical identity', () => {
       // Use the dedicated mixed structural chart fixture
       const structuralReasoning = buildCareerStructuralReasoning({ horoscope: MIXED_STRUCTURAL_CHART });
 
@@ -153,7 +153,7 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       // Convert to DomainEvidence
       const domainEvidence = toDomainEvidence(structuralReasoning);
 
-      // For each MIXED evidence, we should have TWO split items with distinct ids
+      // For each MIXED evidence, we should have TWO split items with distinct occurrence ids but SAME canonical identity
       for (const mixedItem of mixedEvidence) {
         // Find the split items derived from this MIXED evidence
         const splitItems = domainEvidence.filter(e =>
@@ -171,8 +171,13 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         expect(supportingItem).toBeDefined();
         expect(challengingItem).toBeDefined();
 
-        // Both should have distinct ids
+        // Both should have distinct occurrence ids
         expect(supportingItem?.id).not.toBe(challengingItem?.id);
+
+        // Both should share the SAME canonical ruleId (key change for identity collapse)
+        expect(supportingItem?.ruleId).toBe(challengingItem?.ruleId);
+        expect(supportingItem?.ruleId).not.toContain('_SUPPORTING');
+        expect(supportingItem?.ruleId).not.toContain('_CHALLENGING');
 
         // Both should preserve MIXED effect in provenance
         expect(supportingItem?.provenance?.effect).toBe('MIXED');
@@ -181,6 +186,9 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         // Both should have descriptive notes about the split
         expect(supportingItem?.notes).toContain('C4 structural direction: MIXED');
         expect(challengingItem?.notes).toContain('C4 structural direction: MIXED');
+
+        // Both should share the same house (same semantic subject/object for identity collapse)
+        expect(supportingItem?.house).toBe(challengingItem?.house);
       }
     });
 
@@ -218,6 +226,30 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       const primaryLayer = hierarchyResult.layerSummaries.find(l => l.layer === 'PRIMARY_PROMISE');
       expect(primaryLayer?.weightedSupport).toBeGreaterThan(0);
       expect(primaryLayer?.weightedChallenge).toBeGreaterThan(0);
+
+      // Extended assertion: verify the canonical identity contract
+      // The two MIXED occurrences should collapse to exactly ONE canonical record
+      expect(hierarchyResult.reasoningTrace.primaryPromise).toBeDefined();
+      const canonicalRecords = hierarchyResult.reasoningTrace.primaryPromise.filter(
+        r => r.direction === 'MIXED' && r.occurrenceCount === 2
+      );
+      // At least one MIXED record should have occurrenceCount=2 (collapsed from the two split items)
+      expect(canonicalRecords.length).toBeGreaterThan(0);
+
+      // Verify the canonical record has evidenceId === identityKey
+      const mixedRecord = canonicalRecords[0];
+      expect(mixedRecord.evidenceId).toBe(mixedRecord.identityKey);
+
+      // Verify sourceIds contains both occurrence IDs
+      expect(mixedRecord.sourceIds).toBeDefined();
+      expect(mixedRecord.sourceIds.length).toBe(2);
+
+      // Verify weight is NOT doubled (should be max of single occurrences, not sum)
+      // Since both occurrences have the same weight, the canonical weight should equal that single weight
+      const originalMixedEvidence = structuralReasoning.evidence.find(e => e.direction === 'MIXED');
+      if (originalMixedEvidence) {
+        expect(mixedRecord.weight).toBeLessThanOrEqual(originalMixedEvidence.weight);
+      }
     });
 
     it('deduplicates structural evidence with same identity in reasoning hierarchy', () => {
@@ -548,6 +580,36 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
 
       // Direction should be UNAVAILABLE when no evidence
       expect(structuralReasoning.direction).toBe('UNAVAILABLE');
+    });
+
+    it('mixed non-primary relationship maps to role MODIFIER, not PRIMARY', () => {
+      // Use the dedicated mixed structural chart fixture
+      const structuralReasoning = buildCareerStructuralReasoning({ horoscope: MIXED_STRUCTURAL_CHART });
+
+      // Find MIXED structural evidence items with non-PRIMARY role
+      const mixedNonPrimaryEvidence = structuralReasoning.evidence.filter(
+        e => e.direction === 'MIXED' && e.role !== 'PRIMARY'
+      );
+
+      // The fixture should produce at least one MIXED non-PRIMARY evidence item
+      expect(mixedNonPrimaryEvidence.length).toBeGreaterThan(0);
+
+      // Convert to DomainEvidence
+      const domainEvidence = toDomainEvidence(structuralReasoning);
+
+      // Verify that mixed non-primary relationships map to MODIFIER role in DomainEvidence
+      for (const mixedItem of mixedNonPrimaryEvidence) {
+        const splitItems = domainEvidence.filter(e =>
+          e.id.startsWith(mixedItem.id) ||
+          (e.notes && e.notes.includes('C4 structural direction: MIXED'))
+        );
+
+        // All split items from mixed non-primary relationships should have MODIFIER role
+        splitItems.forEach(item => {
+          expect(item.role).toBe('MODIFIER');
+          expect(item.role).not.toBe('PRIMARY');
+        });
+      }
     });
   });
 });

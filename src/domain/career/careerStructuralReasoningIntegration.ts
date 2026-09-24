@@ -103,9 +103,9 @@ function mapStructuralDirectionToPolarity(
     case 'UNAVAILABLE':
       return 'NEUTRAL';
     case 'MIXED':
-      // MIXED is handled by splitting into separate SUPPORTING and CHALLENGING items
+      // MIXED is handled by splitting into two occurrences of the same semantic fact
       // This function should not be called for MIXED direction
-      throw new Error('MIXED direction should be split into separate SUPPORTING and CHALLENGING items');
+      throw new Error('MIXED direction should be split into two occurrences of the same semantic fact');
     default:
       return 'NEUTRAL';
   }
@@ -226,9 +226,16 @@ export function buildCareerStructuralReasoning(
  * - One with polarity='SUPPORTING' 
  * - One with polarity='CHALLENGING'
  * 
- * Each split item has a distinct identityKey (derived from the semantic key with modified effect)
- * to ensure canonical dedup does not merge them back into one MIXED item. Both items preserve
- * the original MIXED nature in provenance.effect='MIXED' and descriptive notes.
+ * Both split items share the SAME canonical ruleId and semantic identity (same house), so
+ * downstream deduplication merges them into ONE canonical record with direction='MIXED',
+ * occurrenceCount=2, and sourceIds containing both occurrence IDs. The weight is NOT doubled
+ * (max of single occurrences). This reuses the existing mergeEvidenceDirection and
+ * deduplicateReasoningEvidence engine as intended.
+ * 
+ * Note: CareerStructuralReasoning.direction === 'MIXED' is an AGGREGATE conclusion across
+ * all career house relationships. It does NOT make every underlying mixed relationship a
+ * primary-promise factor. The per-relationship role mapping (MIXED/MODIFIER → MODIFIER) is
+ * intentional to distinguish aggregate conclusions from per-relationship factors.
  * 
  * @param structural - The CareerStructuralReasoning result
  * @returns Array of DomainEvidence items
@@ -239,19 +246,21 @@ export function toDomainEvidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of structural.evidence) {
-    // Handle MIXED direction by splitting into separate SUPPORTING and CHALLENGING items
+    // Handle MIXED direction by splitting into two occurrences of the same semantic fact
     if (evidence.direction === 'MIXED') {
       const strength = mapStructuralWeightToStrength(evidence.weight);
       const role = mapStructuralRoleToEvidenceRole(evidence.role);
       const provenanceStrength = mapStructuralRoleToEvidenceStrength(evidence.role);
-      const notes = `C4 structural direction: MIXED. Split into SUPPORTING and CHALLENGING items to preserve both directional influences in reasoning hierarchy.`;
+      const notes = `C4 structural direction: MIXED. Split into SUPPORTING and CHALLENGING occurrences of the same semantic fact; canonical dedup merges these into one MIXED record with occurrenceCount=2.`;
 
-      // Use the semantic key as the base for distinct identities
+      // Use the canonical semantic ruleId (same as non-MIXED branch would produce)
       const semanticKey = careerStructuralSemanticKey(evidence.semantic);
-      const supportingRuleId = `CAREER_STRUCTURAL_${semanticKey.replace(/:/g, '_')}_SUPPORTING`;
-      const challengingRuleId = `CAREER_STRUCTURAL_${semanticKey.replace(/:/g, '_')}_CHALLENGING`;
+      const canonicalRuleId = `CAREER_STRUCTURAL_${semanticKey.replace(/:/g, '_')}`;
 
-      // Create SUPPORTING item with distinct identity based on semantic key
+      // Both occurrences share the same house to ensure identityKey collapse
+      const house = evidence.relationship.houseA;
+
+      // Create SUPPORTING occurrence with distinct id but shared ruleId/identity
       const supportingId = `CAREER_STRUCTURAL:${semanticKey}:SUPPORTING`;
       const supportingEvidence = createDomainEvidence({
         id: supportingId,
@@ -264,22 +273,22 @@ export function toDomainEvidence(
         polarity: 'SUPPORTING',
         strength,
         priority: evidence.weight,
-        ruleId: supportingRuleId,
+        ruleId: canonicalRuleId, // Same canonical ruleId for both occurrences
         relatedEvidenceIds: [],
         notes,
         provenance: {
           evidenceId: supportingId,
-          ruleId: supportingRuleId,
+          ruleId: canonicalRuleId, // Same canonical ruleId for both occurrences
           domain: 'CAREER',
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED', // Preserve original MIXED effect
           strength: provenanceStrength
         },
-        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
+        ...(house !== undefined ? { house } : {}) // Same house for both occurrences
       });
 
-      // Create CHALLENGING item with distinct identity based on semantic key
+      // Create CHALLENGING occurrence with distinct id but shared ruleId/identity
       const challengingId = `CAREER_STRUCTURAL:${semanticKey}:CHALLENGING`;
       const challengingEvidence = createDomainEvidence({
         id: challengingId,
@@ -292,19 +301,19 @@ export function toDomainEvidence(
         polarity: 'CHALLENGING',
         strength,
         priority: evidence.weight,
-        ruleId: challengingRuleId,
+        ruleId: canonicalRuleId, // Same canonical ruleId for both occurrences
         relatedEvidenceIds: [],
         notes,
         provenance: {
           evidenceId: challengingId,
-          ruleId: challengingRuleId,
+          ruleId: canonicalRuleId, // Same canonical ruleId for both occurrences
           domain: 'CAREER',
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED', // Preserve original MIXED effect
           strength: provenanceStrength
         },
-        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
+        ...(house !== undefined ? { house } : {}) // Same house for both occurrences
       });
 
       result.push(supportingEvidence, challengingEvidence);
