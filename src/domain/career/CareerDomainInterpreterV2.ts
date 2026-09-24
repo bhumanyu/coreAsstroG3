@@ -368,7 +368,7 @@ export function interpretCareerV2(
   const mergedEvidence = Object.freeze([...evidenceWithStructural, ...dashaFactorsEvidence]);
 
   const conclusionData = buildCareerConclusionData(
-    cw01Result.natalStrength,
+    natalStrength,
     d10Relationship,
     timingActivations,
     transitTrigger,
@@ -932,7 +932,7 @@ export function compareLegacyAndCanonicalStructuralReasoning(
 
   // Filter for legacy structural evidence (NATAL_STRUCTURE dimension)
   const legacyStructuralEvidence = legacyEvidence.filter(
-    (e) => e.dimension === 'NATAL_STRUCTURE' || e.source === 'D1'
+    (e) => (e as any).dimension === 'NATAL_STRUCTURE' || e.source === 'D1'
   );
 
   const comparisonNotes: string[] = [

@@ -1,8 +1,9 @@
 import type { Horoscope, Planet } from '../../types';
-import type { CareerHouseRelationshipContext } from './careerHouseRelationship';
+import type { CareerHouseRelationshipContext, CareerHouseRelationship } from './careerHouseRelationship';
 import { detectCareerHouseRelationships } from './careerHouseRelationship';
 import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
 import { resolveCareerStructuralReasoning, type CareerStructuralReasoning, type CareerStructuralEvidence, careerStructuralSemanticKey } from './careerStructuralReasoning';
+export type { CareerStructuralReasoning } from './careerStructuralReasoning';
 import { CAREER_HOUSE_PORTFOLIO } from './careerTypes';
 import { createDomainEvidence, type DomainEvidence } from '../interpretation/DomainEvidence';
 import type { EvidenceProvenance, EvidenceStrength } from '../careerWealth/provenance/evidenceProvenance';
@@ -42,7 +43,7 @@ function createCareerHouseRelationshipContextFromHoroscope(
       // Also check planetAnalysis if available
       if (horoscope.planetAnalysis?.planets) {
         for (const [planet, analysis] of Object.entries(horoscope.planetAnalysis.planets)) {
-          if (analysis.house === targetHouse && !occupants.includes(planet as Planet)) {
+          if ((analysis as any)?.house === targetHouse && !occupants.includes(planet as Planet)) {
             occupants.push(planet as Planet);
           }
         }
@@ -83,9 +84,10 @@ function deriveRuleIdFromStructuralEvidence(
   evidence: CareerStructuralEvidence
 ): string {
   // Derive deterministic ruleId from the relationship and semantic identity
-  // For consistent identity, use the same ruleId as the evidence id
-  // This ensures the identity used for dedup is consistent
-  return evidence.id;
+  if (evidence.id.startsWith('CAREER_STRUCTURAL:')) {
+    return `CAREER_STRUCTURAL_${evidence.id.slice('CAREER_STRUCTURAL:'.length).replace(/:/g, '_')}`;
+  }
+  return `CAREER_STRUCTURAL_${evidence.id}`;
 }
 
 function mapStructuralDirectionToPolarity(
@@ -232,7 +234,7 @@ export function buildCareerStructuralReasoning(
  */
 export function toDomainEvidence(
   structural: CareerStructuralReasoning
-): DomainEvidence[] {
+): readonly DomainEvidence[] {
   const result: DomainEvidence[] = [];
 
   for (const evidence of structural.evidence) {
@@ -245,12 +247,14 @@ export function toDomainEvidence(
 
       // Use the semantic key as the base for distinct identities
       const semanticKey = careerStructuralSemanticKey(evidence.semantic);
+      const supportingRuleId = `CAREER_STRUCTURAL_${semanticKey.replace(/:/g, '_')}_SUPPORTING`;
+      const challengingRuleId = `CAREER_STRUCTURAL_${semanticKey.replace(/:/g, '_')}_CHALLENGING`;
 
       // Create SUPPORTING item with distinct identity based on semantic key
       const supportingId = `CAREER_STRUCTURAL:${semanticKey}:SUPPORTING`;
       const supportingEvidence = createDomainEvidence({
         id: supportingId,
-        sourceType: 'STRUCTURAL',
+        sourceType: 'HOUSE',
         domain: 'CAREER',
         role,
         phase: 'NATAL_PROMISE',
@@ -259,15 +263,15 @@ export function toDomainEvidence(
         polarity: 'SUPPORTING',
         strength,
         priority: evidence.weight,
-        ruleId: supportingId,
+        ruleId: supportingRuleId,
         relatedEvidenceIds: [],
         notes,
         provenance: {
           evidenceId: supportingId,
-          ruleId: supportingId,
+          ruleId: supportingRuleId,
           domain: 'CAREER',
           axis: 'NATAL',
-          source: 'D1',
+          source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED', // Preserve original MIXED effect
           strength: provenanceStrength
         },
@@ -278,7 +282,7 @@ export function toDomainEvidence(
       const challengingId = `CAREER_STRUCTURAL:${semanticKey}:CHALLENGING`;
       const challengingEvidence = createDomainEvidence({
         id: challengingId,
-        sourceType: 'STRUCTURAL',
+        sourceType: 'HOUSE',
         domain: 'CAREER',
         role,
         phase: 'NATAL_PROMISE',
@@ -287,15 +291,15 @@ export function toDomainEvidence(
         polarity: 'CHALLENGING',
         strength,
         priority: evidence.weight,
-        ruleId: challengingId,
+        ruleId: challengingRuleId,
         relatedEvidenceIds: [],
         notes,
         provenance: {
           evidenceId: challengingId,
-          ruleId: challengingId,
+          ruleId: challengingRuleId,
           domain: 'CAREER',
           axis: 'NATAL',
-          source: 'D1',
+          source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED', // Preserve original MIXED effect
           strength: provenanceStrength
         },
@@ -314,7 +318,7 @@ export function toDomainEvidence(
 
       const domainEvidence = createDomainEvidence({
         id: evidence.id,
-        sourceType: 'STRUCTURAL',
+        sourceType: 'HOUSE',
         domain: 'CAREER',
         role,
         phase: 'NATAL_PROMISE',
@@ -330,7 +334,7 @@ export function toDomainEvidence(
           ruleId,
           domain: 'CAREER',
           axis: 'NATAL',
-          source: 'D1',
+          source: 'C4_STRUCTURAL_REASONING',
           effect: provenanceEffect,
           strength: provenanceStrength
         },

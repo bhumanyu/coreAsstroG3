@@ -25,7 +25,7 @@ function makeContext(asOf?: string) {
   return createAnalysisContext({ asOf, methodology: testMethodology });
 }
 
-function makeDomainOptions(asOf?: string, targetHoroscope: Horoscope): DomainReasoningOptions {
+function makeDomainOptions(asOf: string | undefined, targetHoroscope: Horoscope): DomainReasoningOptions {
   const context = makeContext(asOf);
   const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
   return { context, temporalState };
@@ -215,8 +215,9 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       expect(hierarchyResult.natalDirection).toBe('MIXED');
 
       // Verify that both support and challenge are present in the totals
-      expect(hierarchyResult.primarySupport).toBeGreaterThan(0);
-      expect(hierarchyResult.primaryChallenge).toBeGreaterThan(0);
+      const primaryLayer = hierarchyResult.layerSummaries.find(l => l.layer === 'PRIMARY_PROMISE');
+      expect(primaryLayer?.weightedSupport).toBeGreaterThan(0);
+      expect(primaryLayer?.weightedChallenge).toBeGreaterThan(0);
     });
 
     it('deduplicates structural evidence with same identity in reasoning hierarchy', () => {

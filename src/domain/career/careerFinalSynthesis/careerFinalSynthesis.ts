@@ -5,7 +5,8 @@ import type {
   CareerFinalStrength,
   CareerFinalStatus,
   CareerFinalTimingStatus,
-  CareerFinalConfidence
+  CareerFinalConfidence,
+  CareerFinalConflict
 } from './careerFinalSynthesisTypes';
 import type {
   CareerStructuralDirection,
@@ -280,7 +281,8 @@ function deriveFinalDirection(
  */
 function deriveFinalStrength(
   natalStrength: CareerStructuralStrength,
-  finalStatus: CareerFinalStatus
+  finalStatus: CareerFinalStatus,
+  natalDirection?: CareerStructuralDirection
 ): CareerFinalStrength {
   const mappedNatal = mapStructuralStrengthToFinal(natalStrength);
 
@@ -296,6 +298,9 @@ function deriveFinalStrength(
     return 'WEAK';
   }
   if (finalStatus === 'CHALLENGED') {
+    if (natalDirection === 'CHALLENGE') {
+      return mappedNatal;
+    }
     if (mappedNatal === 'VERY_STRONG') return 'MODERATE';
     if (mappedNatal === 'STRONG') return 'WEAK';
     if (mappedNatal === 'MODERATE') return 'WEAK';
@@ -579,7 +584,7 @@ export function synthesizeCareerFinal(
   const finalDirection = deriveFinalDirection(natalDirection, finalStatus, mappedExpressionStatus);
 
   // Derive final strength (C11-INV-01: Natal promise is authoritative)
-  const finalStrength = deriveFinalStrength(natalStrength, finalStatus);
+  const finalStrength = deriveFinalStrength(natalStrength, finalStatus, natalDirection);
 
   // Derive timing status (C11-INV-07: Dasha challenge modifies timing status)
   const timingStatus = deriveTimingStatus(dashaEffect, mappedDashaDirection, transitDirection);

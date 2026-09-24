@@ -110,6 +110,7 @@ function resolveRelevance(
 
   if (
     roles.includes('SUPPORTING_LORD') ||
+    roles.includes('CHALLENGING_LORD') ||
     roles.includes('HOUSE_OCCUPANT') ||
     roles.includes('HOUSE_ASPECTOR') ||
     roles.includes('RELATIONSHIP_PARTICIPANT')
@@ -117,12 +118,12 @@ function resolveRelevance(
     return 'SUPPORTING';
   }
 
-  if (roles.includes('NATURAL_KARAKA')) {
-    return 'SECONDARY';
-  }
-
   if (reasons.includes('CAREER_YOGA') || reasons.includes('EXPLICIT_RULE')) {
     return 'CONDITIONAL';
+  }
+
+  if (roles.includes('NATURAL_KARAKA')) {
+    return 'SECONDARY';
   }
 
   return 'NEUTRAL';

@@ -1,4 +1,4 @@
-import type { Horoscope, Planet } from '../../../types';
+import type { Horoscope, Planet } from '../../../../types';
 
 /**
  * Fixture chart designed to produce mixed structural effects:
@@ -27,7 +27,7 @@ export const MIXED_STRUCTURAL_CHART: Horoscope = {
     MARS: { house: 10, sign: 'CAPRICORN', position: { longitude: 295.2 } },
     MERCURY: { house: 5, sign: 'LEO', position: { longitude: 138.5 } },
     JUPITER: { house: 12, sign: 'PISCES', position: { longitude: 345.2 } },
-    VENUS: { house: 4, sign: 'CANCER', position: { longitude: 115.3 } },
+    VENUS: { house: 8, sign: 'SCORPIO', position: { longitude: 215.3 } },
     SATURN: { house: 6, sign: 'VIRGO', position: { longitude: 175.8 } },
     RAHU: { house: 11, sign: 'AQUARIUS', position: { longitude: 325.4 } },
     KETU: { house: 5, sign: 'LEO', position: { longitude: 135.2 } }
@@ -55,7 +55,7 @@ export const MIXED_STRUCTURAL_CHART: Horoscope = {
       MARS: { house: 10, sign: 'CAPRICORN', dignity: 'ENEMY' },
       MERCURY: { house: 5, sign: 'LEO', dignity: 'ENEMY' },
       JUPITER: { house: 12, sign: 'PISCES', dignity: 'OWN' },
-      VENUS: { house: 4, sign: 'CANCER', dignity: 'FRIEND' },
+      VENUS: { house: 8, sign: 'SCORPIO', dignity: 'ENEMY' },
       SATURN: { house: 6, sign: 'VIRGO', dignity: 'ENEMY' },
       RAHU: { house: 11, sign: 'AQUARIUS', dignity: 'FRIEND' },
       KETU: { house: 5, sign: 'LEO', dignity: 'ENEMY' }

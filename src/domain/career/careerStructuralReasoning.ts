@@ -298,6 +298,9 @@ function resolveStructuralDirection(
     primarySupport === 0 &&
     primaryChallenge === 0
   ) {
+    if (totals.mixedWeight > 0) {
+      return 'MIXED';
+    }
     return 'UNAVAILABLE';
   }
 
@@ -328,6 +331,9 @@ function resolveStructuralStrength(
     totals.primaryChallenge;
 
   if (primaryTotal === 0) {
+    if (totals.mixedWeight > 0) {
+      return 'MIXED';
+    }
     return 'UNDETERMINED';
   }
 
@@ -362,6 +368,27 @@ function resolveStructuralStrength(
   }
 
   if (direction === 'MIXED') {
+    if (totals.primarySupport > totals.primaryChallenge) {
+      if (primaryDominance >= 0.75) {
+        return 'VERY_STRONG';
+      }
+      if (primaryDominance >= 0.50) {
+        return 'STRONG';
+      }
+      if (primaryDominance >= 0.25) {
+        return 'MODERATE';
+      }
+      return 'MIXED';
+    }
+    if (totals.primaryChallenge > totals.primarySupport) {
+      if (primaryDominance >= 0.75) {
+        return 'VERY_WEAK';
+      }
+      if (primaryDominance >= 0.50) {
+        return 'WEAK';
+      }
+      return 'MIXED';
+    }
     return 'MIXED';
   }
 

@@ -61,6 +61,10 @@ export function resolveCareerDashaPlanetDirection(
       return 'NEUTRAL';
     }
 
+    if (relevance === 'PRIMARY' && hasStrongCondition && expressions.length === 0) {
+      return 'SUPPORT';
+    }
+
     return 'NEUTRAL';
   }
 

@@ -409,7 +409,7 @@ describe('counterReasoningEngine (CW-07)', () => {
     );
 
     const whyCareer = evaluateCounterReasoning('Why is my career structured this way?', context);
-    expect(whyCareer.disposition).toBe('INSUFFICIENT_EVIDENCE');
+    expect(whyCareer.disposition).toBe('PARTIALLY_CONFIRMED');
     expect(whyCareer.conclusionChanged).toBe(false);
     expect(whyCareer.claim.targetSubjectKey).toBe('FINAL_SYNTHESIS');
     whyCareer.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));

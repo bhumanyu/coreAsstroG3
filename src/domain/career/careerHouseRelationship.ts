@@ -173,25 +173,10 @@ export function detectCareerHouseRelationships(
   /*
    * 2. Mutual placement / exchange
    */
-  if (lordAInB && lordBInA) {
-    relationships.push({
-      type: 'EXCHANGE',
-      houseA,
-      houseB,
-      lordA,
-      lordB,
-      lordAHouse,
-      lordBHouse,
-      reason:
-        `Sign exchange (Parivartana) between lord of house ${houseA} (${lordA}) and lord of house ${houseB} (${lordB}).`
-    });
-  } else {
-    /*
-     * 3. One lord placed in the other house
-     */
-    if (lordAInB) {
+  if (lordA !== lordB) {
+    if (lordAInB && lordBInA) {
       relationships.push({
-        type: 'LORD_IN_HOUSE',
+        type: 'EXCHANGE',
         houseA,
         houseB,
         lordA,
@@ -199,22 +184,39 @@ export function detectCareerHouseRelationships(
         lordAHouse,
         lordBHouse,
         reason:
-          `Lord of house ${houseA} (${lordA}) placed in house ${houseB}.`
+          `Sign exchange (Parivartana) between lord of house ${houseA} (${lordA}) and lord of house ${houseB} (${lordB}).`
       });
-    }
+    } else {
+      /*
+       * 3. One lord placed in the other house
+       */
+      if (lordAInB) {
+        relationships.push({
+          type: 'LORD_IN_HOUSE',
+          houseA,
+          houseB,
+          lordA,
+          lordB,
+          lordAHouse,
+          lordBHouse,
+          reason:
+            `Lord of house ${houseA} (${lordA}) placed in house ${houseB}.`
+        });
+      }
 
-    if (lordBInA) {
-      relationships.push({
-        type: 'LORD_IN_HOUSE',
-        houseA,
-        houseB,
-        lordA,
-        lordB,
-        lordAHouse,
-        lordBHouse,
-        reason:
-          `Lord of house ${houseB} (${lordB}) placed in house ${houseA}.`
-      });
+      if (lordBInA) {
+        relationships.push({
+          type: 'LORD_IN_HOUSE',
+          houseA,
+          houseB,
+          lordA,
+          lordB,
+          lordAHouse,
+          lordBHouse,
+          reason:
+            `Lord of house ${houseB} (${lordB}) placed in house ${houseA}.`
+        });
+      }
     }
   }
 

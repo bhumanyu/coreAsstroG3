@@ -571,7 +571,7 @@ describe('Career Planetary Relevance', () => {
   });
 
   describe('Group M: Multi-Role Planets', () => {
-    it('Saturn with all roles preserves all seven roles', () => {
+    it('Saturn with all roles preserves all eight roles', () => {
       const result = interpretCareerPlanetaryRelevance(
         createContext({
           planet: Planet.SATURN,
@@ -593,7 +593,7 @@ describe('Career Planetary Relevance', () => {
       expect(result.roles).toContain('RELATIONSHIP_PARTICIPANT');
       expect(result.roles).toContain('YOGA_PARTICIPANT');
       expect(result.roles).toContain('NATURAL_KARAKA');
-      expect(result.roles.length).toBe(7);
+      expect(result.roles.length).toBe(8);
     });
   });
 
