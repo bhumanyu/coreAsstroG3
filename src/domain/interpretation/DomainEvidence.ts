@@ -34,6 +34,7 @@ export interface DomainEvidence {
   readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
   readonly planet?: Planet;
   readonly house?: number;
+  readonly identityKey?: string;
 }
 
 export function createDomainEvidence(
@@ -58,11 +59,12 @@ export function createDomainEvidence(
     ]),
     ...(evidence.ruleId ? { ruleId: evidence.ruleId } : {}),
     ...(evidence.notes ? { notes: evidence.notes } : {}),
-    ...(evidence.provenance ? { provenance: evidence.provenance } : {}),
+    ...(evidence.provenance ? { provenance: Object.freeze(evidence.provenance) } : {}),
     ...(evidence.timing ? { timing: Object.freeze({ ...evidence.timing }) } : {}),
     ...(evidence.evidenceFamily ? { evidenceFamily: evidence.evidenceFamily } : {}),
     ...(evidence.dimension ? { dimension: evidence.dimension } : {}),
     ...(evidence.planet ? { planet: evidence.planet } : {}),
-    ...(evidence.house !== undefined ? { house: evidence.house } : {})
+    ...(evidence.house !== undefined ? { house: evidence.house } : {}),
+    ...(evidence.identityKey ? { identityKey: evidence.identityKey } : {})
   });
 }

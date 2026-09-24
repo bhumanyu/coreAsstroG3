@@ -20,6 +20,19 @@ export const careerLordRules: readonly ThemeRule[] = Object.freeze([
         return { triggered: false };
       }
 
+      // Collect all factors for the 10th lord
+      const allFactors: string[] = [];
+      if (lordFacts.factors) {
+        allFactors.push(...lordFacts.factors);
+      }
+
+      // Add standard factors based on evaluation
+      if (lordFacts.effect === 'SUPPORT') {
+        allFactors.push(`10th lord (${lordFacts.lordPlanet}) supports career through dignity and placement`);
+      } else if (lordFacts.effect === 'CHALLENGE') {
+        allFactors.push(`10th lord (${lordFacts.lordPlanet}) challenges career through dignity and placement`);
+      }
+
       const evidence: ThemeInterpretationEvidence = {
         id: `CAREER_10L_DIGNITY_001:${lordFacts.lordPlanet}`,
         ruleId: 'CAREER_10L_DIGNITY_001',
@@ -30,7 +43,7 @@ export const careerLordRules: readonly ThemeRule[] = Object.freeze([
         statement: lordFacts.statement,
         planets: [lordFacts.lordPlanet],
         houses: lordFacts.occupiedHouse ? [10, lordFacts.occupiedHouse] : [10],
-        factors: lordFacts.factors,
+        factors: allFactors.length > 0 ? allFactors : undefined,
         conditional: lordFacts.conditional,
         dimension: 'NATAL_STRUCTURE'
       };

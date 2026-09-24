@@ -113,9 +113,18 @@ export function classifyReasoningEvidence(
       const layerWeight =
         REASONING_LAYER_WEIGHTS[layer] ?? 1.0;
 
-      // Derive identity key from provenance if available, otherwise from evidence fields
+      // Derive identity key from evidence.identityKey if available, otherwise from provenance, otherwise from evidence fields
       let identityKey: string = item.id;
-      if (item.provenance) {
+      if (item.identityKey) {
+        // Use the pre-computed identityKey from evidence if available
+        identityKey = item.identityKey;
+      } else if (item.ruleId) {
+        // Use ruleId as identityKey if available but no explicit identityKey
+        identityKey = item.ruleId;
+      } else if (item.provenance && item.provenance.ruleId) {
+        // Use provenance ruleId as identityKey if available
+        identityKey = item.provenance.ruleId;
+      } else if (item.provenance) {
         // Determine subjectKey and objectKey based on planet/house presence
         let subjectKey: string;
         let objectKey: string | undefined;

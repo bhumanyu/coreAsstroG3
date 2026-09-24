@@ -76,13 +76,13 @@ export function createCareerNatalAnalysis(
 ): CareerNatalAnalysis {
   return Object.freeze({
     structural: input.structural,
-    relevance: input.relevance,
-    condition: input.condition,
-    lordRelationships: input.lordRelationships,
+    relevance: Object.freeze([...input.relevance]),
+    condition: Object.freeze([...input.condition]),
+    lordRelationships: Object.freeze([...input.lordRelationships]),
     direction: input.direction,
     strength: input.strength,
-    evidence: [...input.evidence],
-    conflicts: [...input.conflicts],
+    evidence: Object.freeze([...input.evidence]),
+    conflicts: Object.freeze([...input.conflicts]),
     reasoningTrace: input.reasoningTrace
   });
 }

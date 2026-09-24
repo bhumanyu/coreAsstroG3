@@ -18,7 +18,9 @@ export function evaluateD10Rule(
   natalPromise?: CareerNatalPromise
 ): ThemeRuleResult {
   const vargaEv = evaluateD10VargaConfirmation(context, natalPromise);
-  if (vargaEv.relationship === 'UNAVAILABLE') {
+
+  // Only return false if D10 data is truly unavailable
+  if (!context.divisionalInterpretation?.d10) {
     return { triggered: false };
   }
 
@@ -27,7 +29,8 @@ export function evaluateD10Rule(
     ruleId: 'CAREER_D10_CONFIRMATION_001',
     evidenceFamily: CareerEvidenceFamily.D10,
     priority: 'CONFIRMATORY',
-    strength: vargaEv.relationship === 'CONFIRMS' ? 'STRONG' : 'MODERATE',
+    strength: vargaEv.relationship === 'CONFIRMS' ? 'STRONG' :
+      vargaEv.relationship === 'CONFLICTS' ? 'STRONG' : 'MODERATE',
     effect: vargaEv.effect,
     statement: vargaEv.statement,
     vargaEvidence: vargaEv,

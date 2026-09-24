@@ -6,8 +6,8 @@ function createWeightedEvidence(
   evidenceId: string,
   overrides: Partial<WeightedReasoningEvidence> = {}
 ): WeightedReasoningEvidence {
-  return Object.freeze({
-    identityKey: evidenceId, // For test purposes, use evidenceId as identityKey
+  const base = {
+    identityKey: overrides.identityKey ?? evidenceId, // Allow custom identityKey, default to evidenceId
     evidenceId,
     ruleId: 'TEST_RULE',
     layer: 'PRIMARY_PROMISE',
@@ -17,19 +17,21 @@ function createWeightedEvidence(
     weight: 7.5,
     statement: 'Test evidence',
     relatedEvidenceIds: [],
-    sourceIds: [evidenceId],
-    ...overrides
-  });
+    sourceIds: overrides.sourceIds ?? [evidenceId] // Use custom sourceIds if provided, default to evidenceId
+  };
+  // Don't spread sourceIds again in overrides
+  const { sourceIds, ...restOverrides } = overrides;
+  return Object.freeze({ ...base, ...restOverrides });
 }
 
 describe('deduplicateReasoningEvidence', () => {
   describe('exact duplicates', () => {
     it('exact duplicate x3 => 1 canonical, occurrenceCount=3', () => {
-      const evidenceId = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG';
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence(evidenceId),
-        createWeightedEvidence(evidenceId),
-        createWeightedEvidence(evidenceId)
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-2', { identityKey }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-3', { identityKey })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -43,12 +45,13 @@ describe('deduplicateReasoningEvidence', () => {
 
   describe('same identity, different attributes', () => {
     it('same identity, different prose => 1 canonical', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const evidenceId1 = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG';
       const evidenceId2 = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-WEAK';
 
       const input = [
-        createWeightedEvidence(evidenceId1, { statement: 'Jupiter supports career' }),
-        createWeightedEvidence(evidenceId2, { statement: 'Jupiter challenges career', direction: 'CHALLENGE', strength: 'WEAK' })
+        createWeightedEvidence(evidenceId1, { identityKey, statement: 'Jupiter supports career' }),
+        createWeightedEvidence(evidenceId2, { identityKey, statement: 'Jupiter challenges career', direction: 'CHALLENGE', strength: 'WEAK' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -60,12 +63,13 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('same identity, different layer => 1 canonical with layers=[both]', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const evidenceId1 = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG';
       const evidenceId2 = 'CW-CAREER-DASHA-DASHA-TEST_RULE-JUPITER-SUPPORT-STRONG';
 
       const input = [
-        createWeightedEvidence(evidenceId1, { layer: 'PRIMARY_PROMISE' }),
-        createWeightedEvidence(evidenceId2, { layer: 'DASHA' })
+        createWeightedEvidence(evidenceId1, { identityKey, layer: 'PRIMARY_PROMISE' }),
+        createWeightedEvidence(evidenceId2, { identityKey, layer: 'DASHA' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -207,9 +211,10 @@ describe('deduplicateReasoningEvidence', () => {
 
   describe('direction merge logic', () => {
     it('SUPPORT + SUPPORT => SUPPORT', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { direction: 'SUPPORT' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-WEAK', { direction: 'SUPPORT', strength: 'WEAK' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, direction: 'SUPPORT' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-WEAK', { identityKey, direction: 'SUPPORT', strength: 'WEAK' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -219,9 +224,10 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('CHALLENGE + CHALLENGE => CHALLENGE', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-STRONG', { direction: 'CHALLENGE' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-WEAK', { direction: 'CHALLENGE', strength: 'WEAK' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-STRONG', { identityKey, direction: 'CHALLENGE' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-WEAK', { identityKey, direction: 'CHALLENGE', strength: 'WEAK' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -231,9 +237,10 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('SUPPORT + CHALLENGE => MIXED', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { direction: 'SUPPORT' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-STRONG', { direction: 'CHALLENGE' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, direction: 'SUPPORT' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-CHALLENGE-STRONG', { identityKey, direction: 'CHALLENGE' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -243,9 +250,10 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('UNAVAILABLE + SUPPORT => SUPPORT (never negative)', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-UNAVAILABLE-STRONG', { direction: 'UNAVAILABLE' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { direction: 'SUPPORT' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-UNAVAILABLE-STRONG', { identityKey, direction: 'UNAVAILABLE' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, direction: 'SUPPORT' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -255,9 +263,10 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('NEUTRAL + SUPPORT => SUPPORT', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-NEUTRAL-STRONG', { direction: 'NEUTRAL' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { direction: 'SUPPORT' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-NEUTRAL-STRONG', { identityKey, direction: 'NEUTRAL' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, direction: 'SUPPORT' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -267,9 +276,10 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('MIXED + anything => MIXED', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-MIXED-STRONG', { direction: 'MIXED' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { direction: 'SUPPORT' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-MIXED-STRONG', { identityKey, direction: 'MIXED' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, direction: 'SUPPORT' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -281,9 +291,10 @@ describe('deduplicateReasoningEvidence', () => {
 
   describe('strength merge logic', () => {
     it('WEAK + STRONG => STRONG (not VERY_STRONG)', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-WEAK', { strength: 'WEAK' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { strength: 'STRONG' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-WEAK', { identityKey, strength: 'WEAK' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, strength: 'STRONG' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -293,9 +304,10 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('MODERATE + VERY_STRONG => VERY_STRONG', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-MODERATE', { strength: 'MODERATE' }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-VERY_STRONG', { strength: 'VERY_STRONG' })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-MODERATE', { identityKey, strength: 'MODERATE' }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-VERY_STRONG', { identityKey, strength: 'VERY_STRONG' })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -305,10 +317,11 @@ describe('deduplicateReasoningEvidence', () => {
     });
 
     it('duplicate occurrences do not sum weight', () => {
+      const identityKey = 'CW-CAREER-NATAL-D1-TEST_RULE-JUPITER';
       const input = [
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { weight: 7.5 }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { weight: 7.5 }),
-        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { weight: 7.5 })
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG', { identityKey, weight: 7.5 }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-2', { identityKey, weight: 7.5 }),
+        createWeightedEvidence('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG-3', { identityKey, weight: 7.5 })
       ];
 
       const result = deduplicateReasoningEvidence(input);
@@ -385,9 +398,9 @@ describe('deduplicateReasoningEvidence', () => {
       const result2 = deduplicateReasoningEvidence(input2);
 
       expect(result1).toEqual(result2);
-      // Both should be sorted by identity key
-      expect(result1[0].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER');
-      expect(result1[1].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-SATURN');
+      // Both should be sorted by identity key (the evidenceId is used as identityKey by default)
+      expect(result1[0].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-JUPITER-SUPPORT-STRONG');
+      expect(result1[1].identityKey).toBe('CW-CAREER-NATAL-D1-TEST_RULE-SATURN-SUPPORT-STRONG');
     });
 
     it('canonical evidenceId is deterministic regardless of occurrence order (SUPPORT-first vs CHALLENGE-first)', () => {

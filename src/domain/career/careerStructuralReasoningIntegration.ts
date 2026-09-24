@@ -285,7 +285,8 @@ export function toDomainEvidence(
           effect: 'MIXED', // Preserve original MIXED effect
           strength: provenanceStrength
         },
-        ...(house !== undefined ? { house } : {}) // Same house for both occurrences
+        ...(house !== undefined ? { house } : {}), // Same house for both occurrences
+        identityKey: canonicalRuleId // Add identityKey for deduplication
       });
 
       // Create CHALLENGING occurrence with distinct id but shared ruleId/identity
@@ -313,7 +314,8 @@ export function toDomainEvidence(
           effect: 'MIXED', // Preserve original MIXED effect
           strength: provenanceStrength
         },
-        ...(house !== undefined ? { house } : {}) // Same house for both occurrences
+        ...(house !== undefined ? { house } : {}), // Same house for both occurrences
+        identityKey: canonicalRuleId // Add identityKey for deduplication
       });
 
       result.push(supportingEvidence, challengingEvidence);
@@ -348,7 +350,8 @@ export function toDomainEvidence(
           effect: provenanceEffect,
           strength: provenanceStrength
         },
-        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {})
+        ...(evidence.relationship.houseA !== undefined ? { house: evidence.relationship.houseA } : {}),
+        identityKey: ruleId // Add identityKey for deduplication
       });
 
       result.push(domainEvidence);
