@@ -436,9 +436,9 @@ One canonical owner per Career semantic concept, using the numbering established
 
 | Semantic Concept | Canonical Owner | Module/Component |
 |------------------|-----------------|------------------|
-| Career house structure | C4 | `careerStructuralReasoning` |
-| Planet relevance | C5 | `careerPlanetaryRelevance` |
-| Planet condition | C6 | `careerPlanetaryCondition` |
+| Career house structure and C4 structural evidence | C4 | `careerStructuralReasoning` |
+| Planetary relevance semantics | C5 | `careerPlanetaryRelevance` |
+| Planetary condition evaluation | C6 | `careerPlanetaryCondition` |
 | Lord relationship semantics | C7 | `interpretCareerLordRelationship` |
 | Career expression | C8 | `careerExpression` |
 | Dasha activation | C9 | `careerDashaActivation` |
@@ -446,7 +446,8 @@ One canonical owner per Career semantic concept, using the numbering established
 | Timing | Timing layer | Transit timing synthesis |
 | Final conclusion | C11 | `careerFinalSynthesis` |
 | Evidence identity | DomainEvidence | Canonical evidence envelope |
-| Reasoning trace | Canonical reasoning trace | `deduplicateReasoningEvidence` pipeline |
+| Evidence normalization/deduplication | deduplicateReasoningEvidence | Canonical evidence deduplication pipeline |
+| Reasoning trace | Canonical Career reasoning trace | Trace/provenance assembly layer |
 | UI explanation | Presentation layer | Display formatting |
 | AI explanation | AI layer | AI-specific interpretation |
 
@@ -469,17 +470,17 @@ This represents the semantic dependency relationship between concepts. It does N
 ### W0.3.4 Per-Owner Boundary Notes
 
 **C4 `careerStructuralReasoning`**
-- Owns: Career house structure and foundational Career evidence
+- Owns: Career house structure and C4 structural evidence
 - Must NOT: Recalculate planetary relevance, condition, or lord relationships delegated to C5–C7
 - Note: Currently additively integrated (see §2.5 migration state)
 
 **C5 `careerPlanetaryRelevance`**
-- Owns: Planet relevance scoring for Career context
+- Owns: Career planetary relevance semantics, including relevance classification/scoring where applicable
 - Must NOT: Independently establish Career structural facts (owned by C4) or bypass C4 relevance gating
 - Note: Relevance gates C6 condition evaluation
 
 **C6 `careerPlanetaryCondition`**
-- Owns: Planet condition evaluation
+- Owns: Planetary condition evaluation
 - Must NOT: Operate without C5 relevance gating; must not become a second relevance source
 - Note: Condition is relevance-gated by C5
 
@@ -517,10 +518,15 @@ This represents the semantic dependency relationship between concepts. It does N
 - Must NOT: Allow duplicate representations of the same semantic fact; must enforce identityKey-based dedup
 - Note: See W0.2 for canonical evidence identity contract
 
-**Canonical reasoning trace**
-- Owns: Deduplication pipeline and occurrence tracking
+**Evidence normalization/deduplication**
+- Owns: Canonical evidence deduplication pipeline (deduplicateReasoningEvidence)
 - Must NOT: Allow silent double-counting; must preserve sourceIds and occurrenceCount
 - Note: See W0.2.2 for two-stage canonical pipeline
+
+**Canonical Career reasoning trace**
+- Owns: Trace/provenance assembly layer for complete Career reasoning chain
+- Must NOT: Conflate evidence deduplication with full reasoning chain assembly
+- Note: Trace assembly spans C4→C5→C6→C7→Natal Career→C8→{C9,C10,Timing}→C11
 
 **Presentation layer (UI)**
 - Owns: Display formatting and user-facing explanation
