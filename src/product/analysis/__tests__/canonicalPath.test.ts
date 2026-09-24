@@ -35,11 +35,11 @@ import { classifyReasoningEvidence } from '../../../domain/reasoning/reasoningHi
 describe('Canonical Production Analysis Path Regression Suite', () => {
   const FIXED_AS_OF = '2026-01-01T00:00:00.000Z';
 
-  let careerSpy: ReturnType<typeof vi.spyOn>;
-  let wealthSpy: ReturnType<typeof vi.spyOn>;
-  let temporalSpy: ReturnType<typeof vi.spyOn>;
-  let aiExplanationSpy: ReturnType<typeof vi.spyOn>;
-  let resolveDashaSpy: ReturnType<typeof vi.spyOn>;
+  let careerSpy: any;
+  let wealthSpy: any;
+  let temporalSpy: any;
+  let aiExplanationSpy: any;
+  let resolveDashaSpy: any;
 
   beforeEach(() => {
     careerSpy = vi.spyOn(careerModule, 'interpretCareerV2');
@@ -84,9 +84,9 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
 
     // Verify SAME temporalState instance reaches Career, Wealth, and AI call
     const canonicalTemporalState = temporalSpy.mock.results[0].value;
-    expect(careerSpy.mock.calls[0][1].temporalState).toBe(canonicalTemporalState);
-    expect(wealthSpy.mock.calls[0][1].temporalState).toBe(canonicalTemporalState);
-    expect(aiExplanationSpy.mock.calls[0][0].temporalState).toBe(canonicalTemporalState);
+    expect((careerSpy.mock.calls[0][1] as any).temporalState).toBe(canonicalTemporalState);
+    expect((wealthSpy.mock.calls[0][1] as any).temporalState).toBe(canonicalTemporalState);
+    expect((aiExplanationSpy.mock.calls[0][0] as any).temporalState).toBe(canonicalTemporalState);
 
     contextSpy.mockRestore();
   });
@@ -108,11 +108,11 @@ describe('Canonical Production Analysis Path Regression Suite', () => {
     }
 
     // Consumed by Career
-    const careerDomainOptions = careerSpy.mock.calls[0][1];
+    const careerDomainOptions = careerSpy.mock.calls[0][1] as any;
     expect(careerDomainOptions.temporalState).toBe(pipelineTemporalState);
 
     // Consumed by Wealth
-    const wealthDomainOptions = wealthSpy.mock.calls[0][1];
+    const wealthDomainOptions = wealthSpy.mock.calls[0][1] as any;
     expect(wealthDomainOptions.temporalState).toBe(pipelineTemporalState);
 
     // Attached to LifeAnalysisProductState
