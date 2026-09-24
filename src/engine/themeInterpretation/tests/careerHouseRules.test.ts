@@ -258,8 +258,8 @@ describe('careerHouseRules', () => {
       const context: ThemeInterpretationContext = {
         horoscope: {
           planetFacts: {
-            JUPITER: { house: 10 } as any,
-            MARS: { house: 11 } as any
+            JUPITER: { house: 11 } as any,
+            MARS: { house: 10 } as any
           },
           bhavaFacts: {
             10: { lord: 'JUPITER' as any, occupants: ['MARS' as any] } as any,

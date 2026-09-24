@@ -42,6 +42,14 @@ export function evaluateHouseStatus(
     }
   }
 
+  const bhavaFacts = (context.horoscope as any)?.bhavaFacts ?? context.horoscope?.bhavas;
+  if (!lord && bhavaFacts?.[houseNum]?.lord) {
+    lord = bhavaFacts[houseNum].lord;
+  }
+  if (occupants.length === 0 && bhavaFacts?.[houseNum]?.occupants) {
+    occupants = [...bhavaFacts[houseNum].occupants];
+  }
+
   let status: 'STRONG' | 'AFFLICTED' | 'NEUTRAL' = 'NEUTRAL';
   let effect: ThemeEvidenceEffect = 'NEUTRAL';
   let strength: ThemeEvidenceStrength = 'MODERATE';

@@ -45,17 +45,6 @@ export function validateBirthDetails(birth: BirthDetails): readonly BirthValidat
     });
   }
 
-  // Validate dateTimeStr using existing parseUtcDate
-  try {
-    parseUtcDate(birth.dateTimeStr);
-  } catch (e) {
-    errors.push({
-      field: 'dateTimeStr',
-      code: 'INVALID_DATETIME',
-      message: `Invalid birth datetime: ${e instanceof Error ? e.message : 'Unknown error'}`
-    });
-  }
-
   // Validate timeZone: must be non-empty string and valid IANA identifier
   if (!birth.timeZone || typeof birth.timeZone !== 'string' || birth.timeZone.trim() === '') {
     errors.push({
@@ -83,6 +72,17 @@ export function validateBirthDetails(birth: BirthDetails): readonly BirthValidat
       field: 'ayanamsa',
       code: 'INVALID_AYANAMSA',
       message: `Invalid ayanamsa value: ${birth.ayanamsa}. Must be one of: ${ayanamsaValues.join(', ')}`
+    });
+  }
+
+  // Validate dateTimeStr using existing parseUtcDate
+  try {
+    parseUtcDate(birth.dateTimeStr);
+  } catch (e) {
+    errors.push({
+      field: 'dateTimeStr',
+      code: 'INVALID_DATETIME',
+      message: `Invalid birth datetime: ${e instanceof Error ? e.message : 'Unknown error'}`
     });
   }
 

@@ -400,9 +400,15 @@ export function interpretCareerV2(
         conclusionData
       }
     ),
-    primaryEvidenceIds: cw01Result.primaryEvidenceIds,
-    supportingEvidenceIds: cw01Result.supportingEvidenceIds,
-    challengingEvidenceIds: cw01Result.challengingEvidenceIds,
+    primaryEvidenceIds: cw01Result.primarySourceIds && cw01Result.primarySourceIds.length > 0
+      ? cw01Result.primarySourceIds
+      : cw01Result.primaryEvidenceIds,
+    supportingEvidenceIds: cw01Result.supportingSourceIds && cw01Result.supportingSourceIds.length > 0
+      ? cw01Result.supportingSourceIds
+      : cw01Result.supportingEvidenceIds,
+    challengingEvidenceIds: cw01Result.challengingSourceIds && cw01Result.challengingSourceIds.length > 0
+      ? cw01Result.challengingSourceIds
+      : cw01Result.challengingEvidenceIds,
     unresolvedQuestions: [],
     primarySourceIds: cw01Result.primarySourceIds,
     supportingSourceIds: cw01Result.supportingSourceIds,
