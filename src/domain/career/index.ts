@@ -16,3 +16,4 @@ export * from './careerPlanetaryRelevance';
 export * from './careerPlanetaryCondition';
 export * from './careerExpression';
 export * from './careerD10';
+export * from './careerNatalAnalysis';

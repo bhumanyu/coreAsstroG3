@@ -865,3 +865,72 @@ Canonical target authority:
 - Legacy Product A will be demoted to non-authoritative status or removed
 
 This ownership contract establishes the target authority boundaries. During migration, legacy components remain available for controlled parity comparison but must not silently combine with canonical outputs to produce hybrid authoritative conclusions.
+
+## W1.1 — CareerNatalAnalysis Contract
+
+### Purpose
+
+CareerNatalAnalysis is the canonical natal-boundary aggregate type for the Career domain. It serves as the D1/C4-C7 natal boundary, aggregating all natal Career promise components into a single immutable structure. This aggregate represents the natal Career foundation only — it does NOT include activation (C9), qualification (C10), timing layers, or final synthesis (C11).
+
+### Authority
+
+CareerNatalAnalysis aggregates authoritative outputs from canonical C4-C7 producers:
+
+- **C4 → structural**: `CareerStructuralReasoning` from `careerStructuralReasoning.ts`
+- **C5 → relevance**: `readonly CareerPlanetaryRelevance[]` from `careerPlanetaryRelevance.ts`
+- **C6 → condition**: `readonly CareerPlanetaryConditionResult[]` from `careerPlanetaryCondition.ts`
+- **C7 → lordRelationships**: `readonly CareerLordRelationshipSemantic[]` from `careerLordRelationshipSemantics.ts`
+
+The aggregate reuses canonical reasoning vocabulary:
+- `direction`: `ReasoningDirection` from `reasoningTypes.ts` (SUPPORT/CHALLENGE/MIXED/NEUTRAL/UNAVAILABLE)
+- `strength`: `DomainStrength` from `reasoningTypes.ts` (VERY_STRONG/STRONG/MODERATE/MIXED/WEAK/VERY_WEAK/UNDETERMINED)
+- `evidence`: `readonly WeightedReasoningEvidence[]` from `reasoningTypes.ts` (canonical deduplicated evidence)
+- `reasoningTrace`: `ReasoningTrace` from `reasoningTypes.ts` (produced by `buildReasoningTrace`)
+
+### Contains
+
+CareerNatalAnalysis contains the following 9 sections:
+
+1. **structural**: `CareerStructuralReasoning` — Full C4 structural reasoning result
+2. **relevance**: `readonly CareerPlanetaryRelevance[]` — Per-planet relevance results from C5
+3. **condition**: `readonly CareerPlanetaryConditionResult[]` — Per-planet condition results from C6
+4. **lordRelationships**: `readonly CareerLordRelationshipSemantic[]` — Per-relationship semantics from C7
+5. **direction**: `ReasoningDirection` — Overall natal Career direction
+6. **strength**: `DomainStrength` — Overall natal Career strength
+7. **evidence**: `readonly WeightedReasoningEvidence[]` — Canonical deduplicated evidence
+8. **conflicts**: `readonly CareerNatalConflict[]` — Local conflict interface with identityKey, supportingEvidenceIds, challengingEvidenceIds
+9. **reasoningTrace**: `ReasoningTrace` — Evidence trace grouped by layer (produced by `buildReasoningTrace`)
+
+### Does NOT Contain
+
+CareerNatalAnalysis does NOT contain:
+
+- **C8**: `expression`, `manifestation`, `expressionMode` (Career expression modes)
+- **C9**: `dasha`, `activation`, `activePlanets` (Dasha activation synthesis)
+- **C10**: `d10`, `d10Qualification`, `dasamsa` (D10 qualification synthesis)
+- **Timing**: `transit`, `timing`, `transitStrength` (Transit timing layer)
+- **C11**: `finalConclusion`, `summary`, `careerOutcome`, `recommendation`, `careerScore` (Final synthesis)
+
+### Invariant
+
+CareerNatalAnalysis describes natal promise only. Missing evidence is not negative evidence:
+- Empty condition/relevance arrays do NOT map to CHALLENGE direction
+- The `EMPTY_CAREER_NATAL_ANALYSIS` constant uses `direction: 'NEUTRAL'` to represent "no data"
+- Downstream C8/C9/C10 layers must NOT mutate the natal result (array fields are copied during construction)
+
+### Factory Contract
+
+The `createCareerNatalAnalysis` factory:
+- Returns an `Object.freeze`d object to prevent mutation
+- Copies array fields (`[...input.evidence]`, `[...input.conflicts]`) so downstream consumers cannot mutate the natal result
+- Does NOT recalculate any C4-C7 semantics (pure aggregation only)
+- Preserves all input fields without modification
+
+### Empty State
+
+`EMPTY_CAREER_NATAL_ANALYSIS` constant provides:
+- Empty arrays for all array fields (relevance, condition, lordRelationships, evidence, conflicts)
+- `direction: 'NEUTRAL'` to represent missing data without negative inference
+- `strength: 'UNDETERMINED'` for strength
+- Frozen empty `ReasoningTrace` with all layer arrays empty
+- Minimal `CareerStructuralReasoning` with NEUTRAL direction and UNDETERMINED strength
