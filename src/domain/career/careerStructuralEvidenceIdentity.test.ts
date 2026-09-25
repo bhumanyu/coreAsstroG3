@@ -18,6 +18,25 @@ import {
 } from '../reasoning/deduplicateEvidence';
 
 describe('C4 MIXED evidence identity contract', () => {
+  it('preserves unique occurrence ids for non-MIXED structural evidence', () => {
+    const structuralReasoning =
+      buildCareerStructuralReasoning({
+        horoscope: MIXED_STRUCTURAL_CHART
+      });
+    const sourceEvidence = structuralReasoning.evidence.find(
+      (evidence) => evidence.direction !== 'MIXED'
+    );
+
+    expect(sourceEvidence).toBeDefined();
+
+    const mappedEvidence = toDomainEvidence(structuralReasoning).find(
+      (evidence) => evidence.provenance?.evidenceId === sourceEvidence?.id
+    );
+
+    expect(mappedEvidence?.id).toBe(sourceEvidence?.id);
+    expect(mappedEvidence?.id).not.toBe(mappedEvidence?.ruleId);
+  });
+
   it('produces distinct occurrence ids for the SUPPORTING and CHALLENGING occurrences', () => {
     const structuralReasoning =
       buildCareerStructuralReasoning({

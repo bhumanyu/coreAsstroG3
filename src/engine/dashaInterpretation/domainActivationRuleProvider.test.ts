@@ -342,7 +342,7 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
       );
     });
 
-    it('all projected AI evidence IDs resolve in context evidence', () => {
+    it('keeps canonical primary IDs separate from projected occurrence evidence IDs', () => {
       const careerV2 = interpretCareerV2(horoscope, makeDomainOptions(horoscope));
       const aiCareer = projectDomainInterpretationForAi(careerV2);
 
@@ -351,9 +351,7 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
       for (const ev of aiCareer.evidence) {
         expect(allEvidenceIds.has(ev.id)).toBe(true);
       }
-      for (const id of aiCareer.evidenceIds) {
-        expect(allEvidenceIds.has(id)).toBe(true);
-      }
+      expect(aiCareer.evidenceIds).toEqual(careerV2.conclusion.primaryEvidenceIds);
     });
   });
 });

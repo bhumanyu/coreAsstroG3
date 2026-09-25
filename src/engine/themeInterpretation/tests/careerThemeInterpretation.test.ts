@@ -121,7 +121,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     expect(result.metadata.vargaConfirmationStatus).toBe('UNAVAILABLE');
   });
 
-  it('preserves distinct SUPPORT and CHALLENGE evidence items for a family without merging to single NEUTRAL (Test 1)', () => {
+  it('does not emit a 10th-house challenge from the removed C1 lord-affliction rule', () => {
     const mixedContext: ThemeInterpretationContextInput = {
       ...baseContext,
       houseInterpretation: {
@@ -154,10 +154,10 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     const result = interpretCareerTheme(mixedContext);
     const tenthHouseEv = result.evidence.filter((e) => e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE);
 
-    // Preserves BOTH items (SUPPORT and CHALLENGE), no single NEUTRAL merge
+    // The frozen C1 inventory excludes the former lord-affliction challenge rule.
     expect(tenthHouseEv.some((e) => e.effect === 'SUPPORT')).toBe(true);
-    expect(tenthHouseEv.some((e) => e.effect === 'CHALLENGE')).toBe(true);
-    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('MIXED');
+    expect(tenthHouseEv.some((e) => e.effect === 'CHALLENGE')).toBe(false);
+    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('SUPPORT');
   });
 
   it('prevents Yoga and D10 from manufacturing STRONGLY_SUPPORTED without >= 2 structural families (Test 2)', () => {
@@ -236,7 +236,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     expect(result.metadata.vargaConfirmationStatus).toBe('PARTIALLY_CONFIRMS');
   });
 
-  it('resolves end-to-end conclusion status to MIXED when 10H has mixed evidence (Test 4)', () => {
+  it('does not resolve an end-to-end 10th-house conflict from the removed C1 lord-affliction rule', () => {
     const endToEndMixedContext: ThemeInterpretationContextInput = {
       ...baseContext,
       houseInterpretation: {
@@ -261,8 +261,12 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     };
 
     const result = interpretCareerTheme(endToEndMixedContext);
-    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('MIXED');
-    expect(result.conclusion.status).toBe('MIXED');
+    const tenthHouseEvidence = result.evidence.filter(
+      (e) => e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE
+    );
+    expect(tenthHouseEvidence.some((e) => e.effect === 'SUPPORT')).toBe(true);
+    expect(tenthHouseEvidence.some((e) => e.effect === 'CHALLENGE')).toBe(false);
+    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('SUPPORT');
   });
 
   it('handles D1 strong + D10 adverse by flagging conflicts and preventing STRONGLY_SUPPORTED (Test A)', () => {

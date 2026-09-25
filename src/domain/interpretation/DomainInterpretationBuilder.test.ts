@@ -458,12 +458,12 @@ describe('projectDomainInterpretationForAi', () => {
       domain: 'CAREER',
       evidence: [
         createDomainEvidence({
-          id: 'E1',
+          id: 'OCCURRENCE-E1',
           identityKey: 'E1',
           sourceType: 'HOUSE'
         }),
         createDomainEvidence({
-          id: 'E2',
+          id: 'OCCURRENCE-E2',
           identityKey: 'E2',
           sourceType: 'HOUSE'
         })
@@ -518,12 +518,7 @@ describe('projectDomainInterpretationForAi', () => {
     expect(projection.dashaActivation.active).toBe(true);
     expect(projection.transitTrigger.active).toBe(false);
     expect(projection.conclusion.statement).toBe('Final career synthesis.');
-    expect(projection.evidenceIds).toEqual(['E1', 'E2']);
-
-    // Verify traceability: all evidenceIds exist in the projected evidence array
-    const projectedEvidenceIds = new Set(projection.evidence.map(e => e.id));
-    for (const id of projection.evidenceIds) {
-      expect(projectedEvidenceIds.has(id)).toBe(true);
-    }
+    expect(projection.evidenceIds).toEqual(interpretation.conclusion.primaryEvidenceIds);
+    expect(projection.evidence.map((e) => e.id)).toEqual(['OCCURRENCE-E1', 'OCCURRENCE-E2']);
   });
 });

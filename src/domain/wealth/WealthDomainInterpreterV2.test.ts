@@ -1399,7 +1399,7 @@ describe('WealthDomainInterpreterV2', () => {
       // Note: evidenceIds are canonical identityKeys from reasoning hierarchy
       // The projection preserves the canonical id-space, which may differ from occurrence-level evidence IDs
       // This is correct behavior - traceability is maintained at the reasoning hierarchy level
-      expect(projection.evidenceIds.length).toBeGreaterThan(0);
+      expect(projection.evidenceIds).toEqual(v2.conclusion.primaryEvidenceIds);
 
       // Verify enriched evidence array in projection
       expect(projection.evidence).toBeDefined();
