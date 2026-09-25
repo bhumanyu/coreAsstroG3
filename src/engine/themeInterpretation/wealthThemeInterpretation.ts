@@ -331,8 +331,8 @@ function synthesizeWealthEvidence(
   } else if (wealthNatalPromise.status === 'SUPPORTED') {
     status = 'SUPPORTED';
 
-    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or Dasha AND >= 2 independent supporting structural families
-    if ((hasYogaSupport || hasDashaSupport) && independentSupportingDomains.size >= 2) {
+    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or D2 AND >= 2 independent supporting structural families
+    if ((hasYogaSupport || hasD2Confirms) && independentSupportingDomains.size >= 2) {
       status = 'STRONGLY_SUPPORTED';
     }
   }

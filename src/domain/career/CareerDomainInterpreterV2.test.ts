@@ -1236,6 +1236,7 @@ describe('CareerDomainInterpreterV2', () => {
     it('projects domain interpretation cleanly for AI without raw horoscope and without unknown evidence IDs', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       const projection = projectDomainInterpretationForAi(v2);
+      const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
 
       expect(projection.domain).toBe('CAREER');
       expect(projection.natalPromise).toBeDefined();

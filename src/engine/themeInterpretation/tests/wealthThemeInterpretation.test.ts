@@ -64,7 +64,7 @@ describe('Wealth Theme Interpretation Engine', () => {
   it('runs complete Wealth Theme Interpretation successfully', () => {
     const result = interpretWealthTheme(baseWealthContext);
     expect(result.theme).toBe('WEALTH_PROSPERITY');
-    expect(result.conclusion.status).toBe('SUPPORTED');
+    expect(result.conclusion.status).toBe('SUPPORTED'); // Removed upgrade guard for symmetry
     expect(result.conclusion.confidence).toBe('HIGH');
     expect(result.evidence.length).toBeGreaterThan(0);
     expect(result.wealthNatalPromise.status).toBe('STRONG');

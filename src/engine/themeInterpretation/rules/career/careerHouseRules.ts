@@ -114,38 +114,6 @@ export const careerHouseRules: readonly ThemeRule[] = Object.freeze([
     }
   },
 
-  // CAREER_10H_LORD_AFFLICTION_001
-  {
-    id: 'CAREER_10H_LORD_AFFLICTION_001',
-    evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
-    priority: 'PRIMARY',
-    evaluate: (context: ThemeInterpretationContext): ThemeRuleResult => {
-      const h10 = evaluateHouseStatus(context, 10);
-      // Emit CHALLENGE when house is structurally strong but lord or occupant is debilitated/afflicted
-      if ((h10.status === 'STRONG' || h10.effect === 'SUPPORT') && h10.hasAfflictedLordOrOccupant) {
-        const afflictedPlanet = h10.lord || h10.occupants[0];
-        if (!afflictedPlanet) {
-          return { triggered: false };
-        }
-        const evidence: ThemeInterpretationEvidence = {
-          id: 'CAREER_10H_LORD_AFFLICTION_001:HOUSE_10',
-          ruleId: 'CAREER_10H_LORD_AFFLICTION_001',
-          evidenceFamily: CareerEvidenceFamily.TENTH_HOUSE,
-          priority: 'PRIMARY',
-          strength: 'STRONG',
-          effect: 'CHALLENGE',
-          statement: `10th house structural strength is tempered by ${afflictedPlanet}'s affliction (${h10.lordDignity}).`,
-          houses: [10],
-          planets: [afflictedPlanet],
-          conditional: false,
-          dimension: 'NATAL_STRUCTURE'
-        };
-        return { triggered: true, evidence };
-      }
-      return { triggered: false };
-    }
-  },
-
   // CAREER_10H_AFFLICTION_001
   {
     id: 'CAREER_10H_AFFLICTION_001',

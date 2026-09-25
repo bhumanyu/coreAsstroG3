@@ -319,6 +319,8 @@ export function toDomainEvidence(
       });
 
       result.push(supportingEvidence, challengingEvidence);
+
+      result.push(supportingEvidence, challengingEvidence);
     } else {
       // Non-MIXED directions keep their existing 1:1 mapping
       const ruleId = deriveRuleIdFromStructuralEvidence(evidence);
@@ -329,7 +331,7 @@ export function toDomainEvidence(
       const provenanceStrength = mapStructuralRoleToEvidenceStrength(evidence.role);
 
       const domainEvidence = createDomainEvidence({
-        id: evidence.id,
+        id: ruleId, // Use canonical ruleId as evidence id to match primaryEvidenceIds
         sourceType: 'HOUSE',
         domain: 'CAREER',
         role,
@@ -342,7 +344,7 @@ export function toDomainEvidence(
         ruleId,
         relatedEvidenceIds: [],
         provenance: {
-          evidenceId: evidence.id,
+          evidenceId: evidence.id, // Keep original occurrence id for traceability
           ruleId,
           domain: 'CAREER',
           axis: 'NATAL',
