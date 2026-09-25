@@ -570,6 +570,8 @@ describe('AI Context Factory', () => {
       strength: 'STRONG',
       statement: '10th lord strong in kendra',
       ruleId: 'RULE_10L_KENDRA',
+      planet: Planet.JUPITER,
+      house: 10,
       role: 'PRIMARY',
       phase: 'NATAL_PROMISE'
     });
@@ -581,6 +583,7 @@ describe('AI Context Factory', () => {
     expect(aiEvidence.strength).toBe('STRONG');
     expect(aiEvidence.statement).toBe('10th lord strong in kendra');
     expect(aiEvidence.ruleId).toBe('RULE_10L_KENDRA');
+    expect(aiEvidence.identityKey).toBe('CW-CAREER-NATAL-D1-RULE_10L_KENDRA-JUPITER-HOUSE_10');
     expect(aiEvidence.priority).toBe('PRIMARY');
     expect(aiEvidence.dimension).toBe('NATAL_STRUCTURE');
   });

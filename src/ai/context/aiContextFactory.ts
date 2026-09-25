@@ -1,5 +1,6 @@
 import { Horoscope, Planet, Sign } from '../../types';
 import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
+import { classifyReasoningEvidence } from '../../domain/reasoning/reasoningHierarchy';
 import type { TimingEffect } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import {
   AI_CONTEXT_SCHEMA_VERSION,
@@ -1157,6 +1158,7 @@ function mapPolarityToAiEffect(polarity: unknown): AiEvidenceEffect {
 
 export function projectDomainEvidenceToAi(evidence: DomainEvidence): AiEvidence {
   const e = evidence as any;
+  const identityKey = classifyReasoningEvidence([evidence])[0]?.identityKey;
   const source = mapToAiEvidenceSource(e.evidenceFamily || e.sourceType || e.source);
   const strength = normalizeEvidenceStrength(e.strength);
   const effect = mapPolarityToAiEffect(e.polarity ?? e.effect);
@@ -1263,6 +1265,7 @@ export function projectDomainEvidenceToAi(evidence: DomainEvidence): AiEvidence 
     ...(planets ? { planets } : {}),
     ...(houses ? { houses } : {}),
     ...(ruleId ? { ruleId } : {}),
+    ...(identityKey ? { identityKey } : {}),
     ...(priority ? { priority } : {}),
     ...(dimension ? { dimension } : {}),
     ...(conditional !== undefined ? { conditional } : {}),

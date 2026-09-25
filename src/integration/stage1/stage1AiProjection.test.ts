@@ -130,7 +130,13 @@ describe('Stage-1 AI Projection Integration', () => {
 
   it('preserves evidence IDs without inflation or fabrication in full pipeline integration', async () => {
     const result = await runStage1Integration(STAGE1_GOLDEN_INPUT);
-    const aiEvidenceIds = new Set(result.aiContext.evidence.map((e) => e.id));
+    const aiEvidenceIds = new Set<string>();
+    for (const evidence of result.aiContext.evidence) {
+      aiEvidenceIds.add(evidence.id);
+      // Canonical evidenceIds equal identityKey; structural evidence also carries it in ruleId, while id is occurrence-level (FIX-01).
+      if (evidence.ruleId) aiEvidenceIds.add(evidence.ruleId);
+      if (evidence.identityKey) aiEvidenceIds.add(evidence.identityKey);
+    }
 
     // Check all projected domain evidence IDs exist in AiContext.evidence
     for (const domainInterp of result.aiContext.domainInterpretations ?? []) {

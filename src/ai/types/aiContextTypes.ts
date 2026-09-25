@@ -95,11 +95,11 @@ export interface YogaFactSummary {
   readonly type: string;
   readonly category: string;
   readonly status:
-    | 'PRESENT'
-    | 'WEAKENED'
-    | 'STRONG'
-    | 'CANCELLED'
-    | 'UNKNOWN';
+  | 'PRESENT'
+  | 'WEAKENED'
+  | 'STRONG'
+  | 'CANCELLED'
+  | 'UNKNOWN';
   readonly strength?: string;
   readonly planets: readonly Planet[];
   readonly houses: readonly number[];
@@ -338,11 +338,11 @@ export interface CareerManifestationSynthesisFact {
   readonly reasoningVersion: 'CW-04';
   readonly mode: CareerManifestationMode;
   readonly status:
-    | 'STRONGLY_SUPPORTED'
-    | 'SUPPORTED'
-    | 'MIXED'
-    | 'CHALLENGED'
-    | 'INSUFFICIENT_DATA';
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'INSUFFICIENT_DATA';
   readonly confidence: 'LOW' | 'MEDIUM' | 'HIGH';
   readonly natalSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly dashaSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
@@ -419,12 +419,12 @@ export interface CareerWealthFinalSynthesisFact {
 
 export interface CareerFact {
   readonly status:
-    | 'STRONGLY_SUPPORTED'
-    | 'SUPPORTED'
-    | 'NEUTRAL'
-    | 'MIXED'
-    | 'CHALLENGED'
-    | 'LIMITED_EVIDENCE';
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'NEUTRAL'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'LIMITED_EVIDENCE';
   readonly confidence: AiConfidence;
   readonly natalPromise: CareerNatalPromise;
   readonly d10Relationship: CareerD10Relationship;
@@ -514,12 +514,12 @@ export interface WealthSubthemeFact {
   readonly subtheme: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
   readonly house: number;
   readonly status:
-    | 'STRONGLY_SUPPORTED'
-    | 'SUPPORTED'
-    | 'NEUTRAL'
-    | 'MIXED'
-    | 'CHALLENGED'
-    | 'LIMITED_EVIDENCE';
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'NEUTRAL'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'LIMITED_EVIDENCE';
   readonly primaryFamily: string;
   readonly supportingCount: number;
   readonly challengingCount: number;
@@ -542,11 +542,11 @@ export interface WealthDimensionManifestationSynthesisFact {
   readonly reasoningVersion: 'CW-04';
   readonly dimension: WealthManifestationDimension;
   readonly status:
-    | 'STRONGLY_SUPPORTED'
-    | 'SUPPORTED'
-    | 'MIXED'
-    | 'CHALLENGED'
-    | 'INSUFFICIENT_DATA';
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'INSUFFICIENT_DATA';
   readonly confidence: 'LOW' | 'MEDIUM' | 'HIGH';
   readonly natalSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
   readonly dashaSupport: 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL';
@@ -569,12 +569,12 @@ export interface WealthManifestationSynthesisFact {
 
 export interface WealthFact {
   readonly status:
-    | 'STRONGLY_SUPPORTED'
-    | 'SUPPORTED'
-    | 'NEUTRAL'
-    | 'MIXED'
-    | 'CHALLENGED'
-    | 'LIMITED_EVIDENCE';
+  | 'STRONGLY_SUPPORTED'
+  | 'SUPPORTED'
+  | 'NEUTRAL'
+  | 'MIXED'
+  | 'CHALLENGED'
+  | 'LIMITED_EVIDENCE';
   readonly confidence: AiConfidence;
   readonly subthemes?: readonly WealthSubthemeFact[];
   readonly supportingFactors: readonly string[];
@@ -601,6 +601,7 @@ export interface AiEvidence {
   readonly planets?: readonly Planet[];
   readonly houses?: readonly number[];
   readonly ruleId?: string;
+  readonly identityKey?: string;
   readonly priority?: AiEvidencePriority;
   readonly dimension?: AiEvidenceDimension;
   readonly conditional?: boolean;
@@ -608,11 +609,11 @@ export interface AiEvidence {
   readonly dashaLevel?: 'MAHADASHA' | 'ANTARDASHA' | 'PRATYANTARDASHA';
   readonly timingPlanet?: Planet;
   readonly vargaRelationship?:
-    | 'CONFIRMS'
-    | 'PARTIALLY_CONFIRMS'
-    | 'MODIFIES'
-    | 'CONFLICTS'
-    | 'UNAVAILABLE';
+  | 'CONFIRMS'
+  | 'PARTIALLY_CONFIRMS'
+  | 'MODIFIES'
+  | 'CONFLICTS'
+  | 'UNAVAILABLE';
   readonly timingHouses?: readonly number[];
   readonly timingReason?: string;
   readonly timingRelevanceType?: string;
