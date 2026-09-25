@@ -239,7 +239,28 @@ function aggregateEvidence(
 
   for (const item of evidence) {
     if (item.direction === 'MIXED') {
-      mixedWeight += item.weight;
+      // For MIXED direction, split the weight evenly between support and challenge
+      // based on the role to preserve the structural contribution
+      const splitWeight = item.weight / 2;
+
+      switch (item.role) {
+        case 'PRIMARY':
+          primarySupport += splitWeight;
+          primaryChallenge += splitWeight;
+          break;
+        case 'SUPPORTING':
+          supportingSupport += splitWeight;
+          supportingChallenge += splitWeight;
+          break;
+        case 'CHALLENGING':
+          challengingSupport += splitWeight;
+          challengingChallenge += splitWeight;
+          break;
+        case 'MIXED':
+        case 'MODIFIER':
+          mixedWeight += item.weight;
+          break;
+      }
       continue;
     }
 

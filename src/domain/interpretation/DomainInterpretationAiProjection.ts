@@ -137,7 +137,7 @@ export function projectDomainInterpretationForAi(
     ),
 
     evidenceIds: Object.freeze(
-      [...interpretation.conclusion.primaryEvidenceIds]
+      interpretation.evidence.map((e) => e.id)
     ),
 
     evidence: Object.freeze(

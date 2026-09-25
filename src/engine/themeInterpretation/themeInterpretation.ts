@@ -198,6 +198,15 @@ function synthesizeCareerEvidence(
     status = 'STRONGLY_SUPPORTED';
   } else if (careerNatalPromise.status === 'SUPPORTED') {
     status = 'SUPPORTED';
+
+    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or D10
+    const yogaEvidence = evidence.filter((e) => e.evidenceFamily === CareerEvidenceFamily.YOGA);
+    const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
+    const hasD10Confirms = d10Ev?.effect === 'SUPPORT' && d10Ev.vargaEvidence?.relationship === 'CONFIRMS';
+
+    if (hasYogaSupport || hasD10Confirms) {
+      status = 'STRONGLY_SUPPORTED';
+    }
   }
 
   // 2. D10 Confirmation Layer

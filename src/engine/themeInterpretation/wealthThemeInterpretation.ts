@@ -315,6 +315,16 @@ function synthesizeWealthEvidence(
     status = 'STRONGLY_SUPPORTED';
   } else if (wealthNatalPromise.status === 'SUPPORTED') {
     status = 'SUPPORTED';
+
+    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or Dasha
+    const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
+    const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
+    const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
+    const hasDashaSupport = dashaEvidence.some((e) => e.effect === 'SUPPORT');
+
+    if (hasYogaSupport || hasDashaSupport) {
+      status = 'STRONGLY_SUPPORTED';
+    }
   }
 
   // 2. D2 Confirmation Layer (Not implemented in v1 -> UNAVAILABLE)

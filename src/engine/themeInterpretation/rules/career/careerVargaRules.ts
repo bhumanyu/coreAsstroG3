@@ -19,7 +19,9 @@ export function evaluateD10Rule(
 ): ThemeRuleResult {
   const vargaEv = evaluateD10VargaConfirmation(context, natalPromise);
 
-  if (vargaEv.relationship === 'UNAVAILABLE') {
+  // Always return evidence if D10 data is available, even if relationship is UNAVAILABLE
+  // This ensures traceability and proper evidence ID resolution
+  if (!context.divisionalInterpretation?.d10) {
     return { triggered: false };
   }
 

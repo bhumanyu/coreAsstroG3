@@ -67,10 +67,14 @@ export function calculateDomainStrength(
   }
 
   if (supporting.length > 0 && challenging.length === 0) {
-    if (hasStrongSupport && supporting.length >= 2) {
+    // Relaxed threshold for VERY_STRONG: single strong support or multiple moderate supports
+    if (hasStrongSupport && supporting.length >= 1) {
       return 'VERY_STRONG';
     }
-    return 'STRONG';
+    if (supporting.length >= 2) {
+      return 'STRONG';
+    }
+    return 'MODERATE';
   }
 
   if (challenging.length > 0 && supporting.length === 0) {

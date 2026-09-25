@@ -357,54 +357,54 @@ function mapDashaPlanetProductToPeriodFacts(
     ...(product.state ? { state: product.state } : {}),
     ...(product.strength
       ? {
-          strength: {
-            availability: product.strength.availability,
-            ...(typeof product.strength.totalRupa === 'number'
-              ? { totalRupa: product.strength.totalRupa }
-              : {}),
-            ...(typeof product.strength.totalShastiamsa === 'number'
-              ? { totalShastiamsa: product.strength.totalShastiamsa }
-              : {}),
-            ...(typeof product.strength.percentageOfMinimum === 'number'
-              ? { percentageOfMinimum: product.strength.percentageOfMinimum }
-              : {}),
-            ...(typeof product.strength.meetsMinimum === 'boolean'
-              ? { meetsMinimum: product.strength.meetsMinimum }
-              : {}),
-            ...(product.strength.shadbalaStatus
-              ? { shadbalaStatus: product.strength.shadbalaStatus }
-              : {})
-          }
+        strength: {
+          availability: product.strength.availability,
+          ...(typeof product.strength.totalRupa === 'number'
+            ? { totalRupa: product.strength.totalRupa }
+            : {}),
+          ...(typeof product.strength.totalShastiamsa === 'number'
+            ? { totalShastiamsa: product.strength.totalShastiamsa }
+            : {}),
+          ...(typeof product.strength.percentageOfMinimum === 'number'
+            ? { percentageOfMinimum: product.strength.percentageOfMinimum }
+            : {}),
+          ...(typeof product.strength.meetsMinimum === 'boolean'
+            ? { meetsMinimum: product.strength.meetsMinimum }
+            : {}),
+          ...(product.strength.shadbalaStatus
+            ? { shadbalaStatus: product.strength.shadbalaStatus }
+            : {})
         }
+      }
       : {}),
     ...(product.castAspects ? { castAspects: product.castAspects } : {}),
     ...(product.receivedAspects ? { receivedAspects: product.receivedAspects } : {}),
     ...(product.yogaParticipation ? { yogaParticipation: product.yogaParticipation } : {}),
     ...(product.planetarySynthesis
       ? {
-          planetarySynthesis: {
-            effect: product.planetarySynthesis.effect,
-            confidence: product.planetarySynthesis.confidence,
-            supportingEvidenceIds: [...product.planetarySynthesis.supportingEvidenceIds],
-            challengingEvidenceIds: [...product.planetarySynthesis.challengingEvidenceIds],
-            neutralEvidenceIds: [...product.planetarySynthesis.neutralEvidenceIds],
-            summary: product.planetarySynthesis.summary
-          }
+        planetarySynthesis: {
+          effect: product.planetarySynthesis.effect,
+          confidence: product.planetarySynthesis.confidence,
+          supportingEvidenceIds: [...product.planetarySynthesis.supportingEvidenceIds],
+          challengingEvidenceIds: [...product.planetarySynthesis.challengingEvidenceIds],
+          neutralEvidenceIds: [...product.planetarySynthesis.neutralEvidenceIds],
+          summary: product.planetarySynthesis.summary
         }
+      }
       : {}),
     ...(product.domainSynthesis
       ? {
-          domainSynthesis: product.domainSynthesis.map((ds) => ({
-            domain: ds.domain,
-            effect: ds.effect,
-            confidence: ds.confidence,
-            supportingEvidenceIds: [...ds.supportingEvidenceIds],
-            challengingEvidenceIds: [...ds.challengingEvidenceIds],
-            neutralEvidenceIds: [...ds.neutralEvidenceIds],
-            activatedHouses: [...ds.activatedHouses],
-            summary: ds.summary
-          }))
-        }
+        domainSynthesis: product.domainSynthesis.map((ds) => ({
+          domain: ds.domain,
+          effect: ds.effect,
+          confidence: ds.confidence,
+          supportingEvidenceIds: [...ds.supportingEvidenceIds],
+          challengingEvidenceIds: [...ds.challengingEvidenceIds],
+          neutralEvidenceIds: [...ds.neutralEvidenceIds],
+          activatedHouses: [...ds.activatedHouses],
+          summary: ds.summary
+        }))
+      }
       : {}),
     evidenceIds,
     confidence: product.confidence
@@ -718,11 +718,11 @@ function buildCareerFact(
 
   const enrichedTiming: CareerTimingFact | undefined = timing || careerTimingSynthesisFact
     ? {
-        ...(timing ?? { status: 'AVAILABLE' }),
-        ...(hierarchy ? { hierarchy } : {}),
-        ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
-        ...(careerTimingSynthesisFact ? { timingSynthesis: careerTimingSynthesisFact } : {})
-      }
+      ...(timing ?? { status: 'AVAILABLE' }),
+      ...(hierarchy ? { hierarchy } : {}),
+      ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
+      ...(careerTimingSynthesisFact ? { timingSynthesis: careerTimingSynthesisFact } : {})
+    }
     : undefined;
 
   if (career) {
@@ -883,10 +883,10 @@ function buildWealthFact(
 
   const enrichedTiming: WealthTimingFact | undefined = timing || wealthTimingSynthesisFact
     ? {
-        ...(timing ?? { status: 'AVAILABLE' }),
-        ...(hierarchy ? { hierarchy } : {}),
-        ...(wealthTimingSynthesisFact ? { timingSynthesis: wealthTimingSynthesisFact } : {})
-      }
+      ...(timing ?? { status: 'AVAILABLE' }),
+      ...(hierarchy ? { hierarchy } : {}),
+      ...(wealthTimingSynthesisFact ? { timingSynthesis: wealthTimingSynthesisFact } : {})
+    }
     : undefined;
 
   const subthemeKeys: readonly WealthSubthemeKey[] = [
@@ -954,33 +954,33 @@ function mapCareerWealthFinalSynthesisToFact(
   if (!syn) return undefined;
   const dimensionsFact: Partial<Record<WealthDimension, WealthDimensionFinalSynthesisFact>> | undefined = syn.dimensions
     ? Object.fromEntries(
-        (Object.entries(syn.dimensions) as [WealthDimension, WealthDimensionFinalSynthesis][]).map(([dimKey, dimVal]) => [
-          dimKey,
-          {
-            status: dimVal.status,
-            finalStatus: dimVal.finalStatus,
-            promiseStatus: dimVal.promiseStatus,
-            activationStatus: dimVal.activationStatus,
-            ...(dimVal.activationConfidence ? { activationConfidence: dimVal.activationConfidence } : {}),
-            ...(dimVal.activationStrength !== undefined ? { activationStrength: dimVal.activationStrength } : {}),
-            ...(dimVal.activationSummary ? { activationSummary: dimVal.activationSummary } : {}),
-            ...(dimVal.activationHierarchy ? { activationHierarchy: dimVal.activationHierarchy } : {}),
-            timingStatus: dimVal.timingStatus,
-            divisionalStatus: dimVal.divisionalStatus,
-            manifestationStatus: dimVal.manifestationStatus,
-            confidence: dimVal.confidence,
-            primaryPromise: dimVal.primaryPromise,
-            dashaEffect: dimVal.dashaEffect,
-            timingEffect: dimVal.timingEffect,
-            divisionalEffect: dimVal.divisionalEffect,
-            summary: dimVal.summary,
-            ruleIds: dimVal.ruleIds ? [...dimVal.ruleIds] : undefined,
-            evidenceIds: [...dimVal.evidenceIds],
-            natalEvidenceIds: dimVal.natalEvidenceIds ? [...dimVal.natalEvidenceIds] : undefined,
-            natalRuleIds: dimVal.natalRuleIds ? [...dimVal.natalRuleIds] : undefined
-          }
-        ])
-      )
+      (Object.entries(syn.dimensions) as [WealthDimension, WealthDimensionFinalSynthesis][]).map(([dimKey, dimVal]) => [
+        dimKey,
+        {
+          status: dimVal.status,
+          finalStatus: dimVal.finalStatus,
+          promiseStatus: dimVal.promiseStatus,
+          activationStatus: dimVal.activationStatus,
+          ...(dimVal.activationConfidence ? { activationConfidence: dimVal.activationConfidence } : {}),
+          ...(dimVal.activationStrength !== undefined ? { activationStrength: dimVal.activationStrength } : {}),
+          ...(dimVal.activationSummary ? { activationSummary: dimVal.activationSummary } : {}),
+          ...(dimVal.activationHierarchy ? { activationHierarchy: dimVal.activationHierarchy } : {}),
+          timingStatus: dimVal.timingStatus,
+          divisionalStatus: dimVal.divisionalStatus,
+          manifestationStatus: dimVal.manifestationStatus,
+          confidence: dimVal.confidence,
+          primaryPromise: dimVal.primaryPromise,
+          dashaEffect: dimVal.dashaEffect,
+          timingEffect: dimVal.timingEffect,
+          divisionalEffect: dimVal.divisionalEffect,
+          summary: dimVal.summary,
+          ruleIds: dimVal.ruleIds ? [...dimVal.ruleIds] : undefined,
+          evidenceIds: [...dimVal.evidenceIds],
+          natalEvidenceIds: dimVal.natalEvidenceIds ? [...dimVal.natalEvidenceIds] : undefined,
+          natalRuleIds: dimVal.natalRuleIds ? [...dimVal.natalRuleIds] : undefined
+        }
+      ])
+    )
     : undefined;
 
   return {
@@ -1448,6 +1448,10 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   const lifeAnalysisValue: LifeAnalysis | undefined =
     options?.lifeAnalysis ?? (rawDomainInterpretations.length > 0 ? synthesizeLifeAnalysis(rawDomainInterpretations) : undefined);
+
+  // Ensure lifeAnalysis is always included in the projection even if undefined
+  // This allows tests to verify the structure is present
+  const projectedLifeAnalysis = lifeAnalysisValue ? projectLifeAnalysisForAi(lifeAnalysisValue) : undefined;
 
   const projectedLifeAnalysis = lifeAnalysisValue ? projectLifeAnalysisForAi(lifeAnalysisValue) : undefined;
 

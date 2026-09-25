@@ -12,8 +12,10 @@ import {
   createDomainEvidence
 } from '../../domain/interpretation';
 import { buildAiContext } from '../../ai/context/aiContextFactory';
-import { STAGE1_GOLDEN_HOROSCOPE } from './stage1GoldenFixture';
+import { STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS } from './stage1GoldenFixture';
 import { forbiddenAiContextKeys } from '../../ai/context/aiContextPrivacy';
+import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
+import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 
 describe('Domain Synthesis AI Projection (P-028)', () => {
   function makeMockInterpretations() {
@@ -97,7 +99,13 @@ describe('Domain Synthesis AI Projection (P-028)', () => {
   });
 
   it('embeds lifeAnalysis inside AiContext when built from canonical horoscope', () => {
-    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE);
+    const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS);
+    const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS);
+
+    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE, {
+      domainInterpretations: [career, wealth],
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState
+    });
 
     expect(aiContext.lifeAnalysis).toBeDefined();
     expect(aiContext.lifeAnalysis?.status).toBeDefined();
@@ -108,7 +116,13 @@ describe('Domain Synthesis AI Projection (P-028)', () => {
   });
 
   it('ensures projected lifeAnalysis contains no forbidden privacy keys', () => {
-    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE);
+    const career = interpretCareerV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS);
+    const wealth = interpretWealthV2(STAGE1_GOLDEN_HOROSCOPE, STAGE1_GOLDEN_OPTIONS);
+
+    const aiContext = buildAiContext(STAGE1_GOLDEN_HOROSCOPE, {
+      domainInterpretations: [career, wealth],
+      temporalState: STAGE1_GOLDEN_OPTIONS.temporalState
+    });
     const lifeAnalysisJson = JSON.stringify(aiContext.lifeAnalysis);
 
     for (const forbiddenKey of forbiddenAiContextKeys) {

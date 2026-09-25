@@ -145,8 +145,11 @@ export function deduplicateReasoningEvidence(
         relatedEvidenceIds.add(relatedId);
       }
 
-      // Use the first ruleId if available
-      if (!ruleId && item.ruleId) {
+      // Use the first ruleId if available (preserve from first occurrence with ruleId)
+      if (item.ruleId && !ruleId) {
+        ruleId = item.ruleId;
+      } else if (!ruleId && item.ruleId) {
+        // Fallback: if no ruleId set yet and this item has one, use it
         ruleId = item.ruleId;
       }
     }

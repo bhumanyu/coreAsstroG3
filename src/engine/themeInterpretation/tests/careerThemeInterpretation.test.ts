@@ -448,6 +448,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
 
     const result = interpretCareerTheme(input);
     const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+    expect(d10Ev).toBeDefined();
     expect(d10Ev?.vargaEvidence?.relationship).toBe('PARTIALLY_CONFIRMS');
     expect(result.conclusion.confidence).not.toBe('HIGH');
     expect(result.conclusion.confidence).toBe('MEDIUM');
@@ -608,6 +609,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).not.toBe('CONFLICTS');
       expect(d10Ev?.vargaEvidence?.relationship).toBe('PARTIALLY_CONFIRMS');
     });
@@ -628,6 +630,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).not.toBe('CONFLICTS');
       expect(d10Ev?.vargaEvidence?.relationship).toBe('PARTIALLY_CONFIRMS');
     });
@@ -648,6 +651,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).not.toBe('CONFLICTS');
       expect(d10Ev?.vargaEvidence?.relationship).toBe('PARTIALLY_CONFIRMS');
     });
@@ -668,6 +672,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).not.toBe('CONFLICTS');
       expect(d10Ev?.vargaEvidence?.relationship).toBe('PARTIALLY_CONFIRMS');
     });
@@ -688,6 +693,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).toBe('CONFLICTS');
       expect(d10Ev?.effect).toBe('CHALLENGE');
     });
@@ -708,6 +714,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).toBe('CONFIRMS');
       expect(d10Ev?.effect).toBe('SUPPORT');
     });
@@ -728,6 +735,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       };
       const result = interpretCareerTheme(context);
       const d10Ev = result.evidence.find((e) => e.evidenceFamily === CareerEvidenceFamily.D10);
+      expect(d10Ev).toBeDefined();
       expect(d10Ev?.vargaEvidence?.relationship).not.toBe('CONFLICTS');
       expect(d10Ev?.vargaEvidence?.relationship).toBe('PARTIALLY_CONFIRMS');
       expect(d10Ev?.effect).toBe('NEUTRAL');
