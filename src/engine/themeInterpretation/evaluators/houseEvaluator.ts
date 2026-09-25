@@ -29,9 +29,11 @@ export function evaluateHouseStatus(
     : undefined;
 
   if (hi) {
-    lord = hi.placement?.signLord;
+    lord = hi.placement?.signLord ?? (hi as any).lord;
     if (hi.occupants?.planets) {
       occupants = [...hi.occupants.planets];
+    } else if (Array.isArray((hi as any).occupants)) {
+      occupants = [...(hi as any).occupants];
     }
   } else if (ha) {
     lord = ha.lord;
@@ -68,6 +70,17 @@ export function evaluateHouseStatus(
       status = 'NEUTRAL';
       effect = 'NEUTRAL';
       strength = 'MODERATE';
+    } else if (!hi.summary && (hi as any).status) {
+      const flatStatus = (hi as any).status as 'STRONG' | 'AFFLICTED' | 'NEUTRAL';
+      if (flatStatus === 'STRONG') {
+        status = 'STRONG';
+        effect = 'SUPPORT';
+        strength = 'STRONG';
+      } else if (flatStatus === 'AFFLICTED') {
+        status = 'AFFLICTED';
+        effect = 'CHALLENGE';
+        strength = 'MODERATE';
+      }
     }
   }
 

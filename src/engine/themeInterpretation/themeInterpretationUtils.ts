@@ -45,6 +45,9 @@ export function getHouseLord(context: ThemeInterpretationContext, houseNum: numb
   if (context.houseInterpretation?.houses?.[houseNum]?.placement?.signLord) {
     return context.houseInterpretation.houses[houseNum].placement.signLord;
   }
+  if (context.houseInterpretation?.houses?.[houseNum]?.lord) {
+    return (context.houseInterpretation.houses[houseNum] as any).lord as Planet;
+  }
   if (context.houseAnalysis?.houses) {
     const item = Array.isArray(context.houseAnalysis.houses)
       ? context.houseAnalysis.houses.find((h: HouseAnalysis) => h.house === houseNum)

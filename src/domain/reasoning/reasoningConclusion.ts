@@ -81,6 +81,12 @@ export function resolveNatalPromise(
   const primarySupport = sum(primary, 'SUPPORT');
   const primaryChallenge = sum(primary, 'CHALLENGE');
 
+  // Add MIXED evidence to both support and challenge counts
+  const mixedEvidence = primary.filter((item) => item.direction === 'MIXED');
+  const mixedWeight = mixedEvidence.reduce((total, item) => total + item.weight, 0);
+  const primarySupportWithMixed = primarySupport + mixedWeight;
+  const primaryChallengeWithMixed = primaryChallenge + mixedWeight;
+
   const secondarySupport = sum(secondary, 'SUPPORT');
   const secondaryChallenge = sum(secondary, 'CHALLENGE');
 
@@ -89,11 +95,11 @@ export function resolveNatalPromise(
 
   let primaryDirection: ReasoningDirection;
 
-  if (primarySupport === 0 && primaryChallenge === 0) {
+  if (primarySupportWithMixed === 0 && primaryChallengeWithMixed === 0) {
     primaryDirection = 'UNAVAILABLE';
-  } else if (primarySupport > 0 && primaryChallenge > 0) {
+  } else if (primarySupportWithMixed > 0 && primaryChallengeWithMixed > 0) {
     primaryDirection = 'MIXED';
-  } else if (primarySupport > primaryChallenge) {
+  } else if (primarySupportWithMixed > primaryChallengeWithMixed) {
     primaryDirection = 'SUPPORT';
   } else {
     primaryDirection = 'CHALLENGE';
@@ -102,13 +108,13 @@ export function resolveNatalPromise(
   const primaryStrength: DomainStrength =
     primaryDirection === 'UNAVAILABLE'
       ? 'UNDETERMINED'
-      : resolveStrength(primarySupport, primaryChallenge);
+      : resolveStrength(primarySupportWithMixed, primaryChallengeWithMixed);
 
   const guardrailResult = applyNatalStrengthGuardrails({
     primaryDirection,
     primaryStrength,
-    primarySupport,
-    primaryChallenge,
+    primarySupport: primarySupportWithMixed,
+    primaryChallenge: primaryChallengeWithMixed,
     secondarySupport,
     secondaryChallenge
   });
@@ -158,8 +164,8 @@ export function resolveNatalPromise(
     strength: guardrailResult.strength,
     primaryDirection,
     primaryStrength,
-    primarySupport,
-    primaryChallenge,
+    primarySupport: primarySupportWithMixed,
+    primaryChallenge: primaryChallengeWithMixed,
     secondarySupport,
     secondaryChallenge,
     modifierSupport,

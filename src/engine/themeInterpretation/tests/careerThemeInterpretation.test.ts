@@ -129,20 +129,33 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
           10: {
             house: 10,
             lord: Planet.SUN,
-            occupants: [],
-            status: 'STRONG',
-            effect: 'CHALLENGE'
+            occupants: [Planet.SATURN],
+            status: 'STRONG'
           } as any,
           6: { house: 6, lord: Planet.VENUS, occupants: [] },
           11: { house: 11, lord: Planet.MOON, occupants: [] },
           2: { house: 2, lord: Planet.MERCURY, occupants: [] },
           1: { house: 1, lord: Planet.MARS, occupants: [] }
         }
+      } as any,
+      planetInterpretation: {
+        planets: {
+          [Planet.SUN]: { planet: Planet.SUN, house: 10, dignity: DignityStatus.DEBILITATED },
+          [Planet.SATURN]: { planet: Planet.SATURN, house: 10, dignity: DignityStatus.OWN_SIGN },
+          [Planet.MARS]: { planet: Planet.MARS, house: 1, dignity: DignityStatus.FRIEND_SIGN },
+          [Planet.MERCURY]: { planet: Planet.MERCURY, house: 2, dignity: DignityStatus.FRIEND_SIGN },
+          [Planet.JUPITER]: { planet: Planet.JUPITER, house: 9, dignity: DignityStatus.OWN_SIGN },
+          [Planet.VENUS]: { planet: Planet.VENUS, house: 6, dignity: DignityStatus.NEUTRAL_SIGN },
+          [Planet.MOON]: { planet: Planet.MOON, house: 11, dignity: DignityStatus.NEUTRAL_SIGN }
+        }
       } as any
     };
 
     const result = interpretCareerTheme(mixedContext);
     const tenthHouseEv = result.evidence.filter((e) => e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE);
+
+    // Debug: Check what evidence we got
+    console.log('Test 1 Debug - tenthHouseEv:', tenthHouseEv.map(e => ({ effect: e.effect, statement: e.statement })));
 
     // Preserves BOTH items (SUPPORT and CHALLENGE), no single NEUTRAL merge
     expect(tenthHouseEv.some((e) => e.effect === 'SUPPORT')).toBe(true);
