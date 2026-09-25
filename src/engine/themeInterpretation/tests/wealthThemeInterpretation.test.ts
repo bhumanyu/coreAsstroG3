@@ -64,7 +64,7 @@ describe('Wealth Theme Interpretation Engine', () => {
   it('runs complete Wealth Theme Interpretation successfully', () => {
     const result = interpretWealthTheme(baseWealthContext);
     expect(result.theme).toBe('WEALTH_PROSPERITY');
-    expect(result.conclusion.status).toBe('SUPPORTED'); // Removed upgrade guard for symmetry
+    expect(result.conclusion.status).toBe('STRONGLY_SUPPORTED');
     expect(result.conclusion.confidence).toBe('HIGH');
     expect(result.evidence.length).toBeGreaterThan(0);
     expect(result.wealthNatalPromise.status).toBe('STRONG');
@@ -73,6 +73,31 @@ describe('Wealth Theme Interpretation Engine', () => {
   it('explicitly sets metadata.vargaConfirmationStatus to UNAVAILABLE in v1', () => {
     const result = interpretWealthTheme(baseWealthContext);
     expect(result.metadata.vargaConfirmationStatus).toBe('UNAVAILABLE');
+  });
+
+  it('upgrades supported promise only with Yoga or D2 confirmation and two independent structural domains', () => {
+    const supportedContext: ThemeInterpretationContextInput = {
+      ...baseWealthContext,
+      horoscope: undefined,
+      houseInterpretation: {
+        houses: {
+          2: { house: 2, lord: Planet.JUPITER, occupants: [Planet.JUPITER], status: 'STRONG' },
+          9: { house: 9, lord: Planet.MARS, occupants: [], status: 'STRONG' }
+        }
+      } as any
+    };
+
+    const yogaConfirmed = interpretWealthTheme(supportedContext);
+    expect(yogaConfirmed.wealthNatalPromise.status).toBe('SUPPORTED');
+    expect(yogaConfirmed.conclusion.status).toBe('STRONGLY_SUPPORTED');
+
+    const unconfirmedContext: ThemeInterpretationContextInput = {
+      ...supportedContext,
+      yogas: { yogas: [] } as any
+    };
+    const unconfirmed = interpretWealthTheme(unconfirmedContext);
+    expect(unconfirmed.wealthNatalPromise.status).toBe('SUPPORTED');
+    expect(unconfirmed.conclusion.status).toBe('SUPPORTED');
   });
 
   it('populates all 4 wealth subthemes with accurate house numbers and status', () => {

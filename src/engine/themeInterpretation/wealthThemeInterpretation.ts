@@ -303,10 +303,9 @@ function synthesizeWealthEvidence(
 ): WealthInterpretationConclusion {
   const dataCompleteness = checkDataCompleteness(context);
   const d2Ev = evidence.find((e) => e.evidenceFamily === WealthEvidenceFamily.D2);
+  const hasD2Confirms = d2Ev?.effect === 'SUPPORT' && d2Ev.vargaEvidence?.relationship === 'CONFIRMS';
   const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
   const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
-  const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
-  const hasDashaSupport = dashaEvidence.some((e) => e.effect === 'SUPPORT');
 
   // Derive independent supporting structural domains early for use in status upgrade logic
   const structuralEvidence = evidence.filter((e) => WEALTH_STRUCTURAL_FAMILIES.has(e.evidenceFamily));
@@ -346,7 +345,6 @@ function synthesizeWealthEvidence(
   }
 
   // 3. Yoga Confirmation Layer
-  const hasD2Confirms = d2Ev?.effect === 'SUPPORT' && d2Ev.vargaEvidence?.relationship === 'CONFIRMS';
   const hasConfirmation = hasYogaSupport || hasD2Confirms;
 
   // 4. Derive Final Confidence
