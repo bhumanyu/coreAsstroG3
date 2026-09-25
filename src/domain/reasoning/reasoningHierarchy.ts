@@ -115,6 +115,7 @@ export function classifyReasoningEvidence(
 
       // Derive identity key from provenance if available, otherwise from evidence fields
       let identityKey: string = item.id;
+      let ruleId: string | undefined = item.ruleId;
       if (item.identityKey) {
         // Use the pre-computed identityKey from evidence if available
         identityKey = item.identityKey;
@@ -149,6 +150,10 @@ export function classifyReasoningEvidence(
             subjectKey,
             objectKey
           });
+          // Set ruleId from provenance for canonical identification
+          if (item.provenance.ruleId) {
+            ruleId = item.provenance.ruleId;
+          }
         }
       } else if (item.ruleId) {
         // Determine subjectKey and objectKey based on planet/house presence
@@ -195,6 +200,7 @@ export function classifyReasoningEvidence(
               subjectKey,
               objectKey
             });
+            // ruleId is already set from item.ruleId above
           } else {
             // Missing or unknown semantic information - fall back to occurrence id
             identityKey = item.id;
@@ -208,7 +214,7 @@ export function classifyReasoningEvidence(
       return Object.freeze({
         identityKey,
         evidenceId: item.id,
-        ...(item.ruleId ? { ruleId: item.ruleId } : {}),
+        ...(ruleId ? { ruleId } : {}),
         layer,
         direction,
         strength: item.strength,

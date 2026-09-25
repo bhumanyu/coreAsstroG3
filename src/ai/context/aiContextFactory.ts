@@ -1453,8 +1453,6 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   // This allows tests to verify the structure is present
   const projectedLifeAnalysis = lifeAnalysisValue ? projectLifeAnalysisForAi(lifeAnalysisValue) : undefined;
 
-  const projectedLifeAnalysis = lifeAnalysisValue ? projectLifeAnalysisForAi(lifeAnalysisValue) : undefined;
-
   // Build unified evidence universe: Canonical DomainInterpretation evidence + Life Themes evidence + Dasha interpretation evidence
   const domainEvidenceList = buildEvidenceFromDomainInterpretations(rawDomainInterpretations);
   const lifeThemeEvidenceList = buildLifeThemeEvidence(horoscope);

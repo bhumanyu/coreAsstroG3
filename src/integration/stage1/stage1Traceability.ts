@@ -6,35 +6,39 @@ import { isAiExplanationStructuredOutput } from '../../ai/product/aiExplanationT
 /**
  * Validates that all evidence IDs referenced in a DomainInterpretation's conclusion
  * and manifestations exist in the interpretation's own evidence collection.
+ *
+ * Uses occurrence-level *SourceIds for traceability since these point to actual
+ * DomainEvidence.id values in interp.evidence, while *EvidenceIds are canonical
+ * identity keys that may not match occurrence IDs.
  */
 export function assertEvidenceIdsExist(interp: DomainInterpretation): void {
   const ownEvidenceIds = new Set(interp.evidence.map((e) => e.id));
 
-  // Check conclusion supportingEvidenceIds
-  for (const id of interp.conclusion.supportingEvidenceIds ?? []) {
+  // Check conclusion supportingSourceIds (occurrence-level provenance)
+  for (const id of interp.conclusion.supportingSourceIds ?? []) {
     expect(
       ownEvidenceIds.has(id),
-      `Domain ${interp.domain} conclusion supporting evidence ID '${id}' not found in own evidence`
+      `Domain ${interp.domain} conclusion supporting source ID '${id}' not found in own evidence`
     ).toBe(true);
   }
 
-  // Check conclusion challengingEvidenceIds
-  for (const id of interp.conclusion.challengingEvidenceIds ?? []) {
+  // Check conclusion challengingSourceIds (occurrence-level provenance)
+  for (const id of interp.conclusion.challengingSourceIds ?? []) {
     expect(
       ownEvidenceIds.has(id),
-      `Domain ${interp.domain} conclusion challenging evidence ID '${id}' not found in own evidence`
+      `Domain ${interp.domain} conclusion challenging source ID '${id}' not found in own evidence`
     ).toBe(true);
   }
 
-  // Check conclusion primaryEvidenceIds
-  for (const id of interp.conclusion.primaryEvidenceIds ?? []) {
+  // Check conclusion primarySourceIds (occurrence-level provenance)
+  for (const id of interp.conclusion.primarySourceIds ?? []) {
     expect(
       ownEvidenceIds.has(id),
-      `Domain ${interp.domain} conclusion primary evidence ID '${id}' not found in own evidence`
+      `Domain ${interp.domain} conclusion primary source ID '${id}' not found in own evidence`
     ).toBe(true);
   }
 
-  // Check manifestation evidenceIds
+  // Check manifestation evidenceIds (these are occurrence-level)
   for (const manifestation of interp.manifestations) {
     for (const id of manifestation.evidenceIds) {
       expect(

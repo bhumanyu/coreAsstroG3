@@ -302,6 +302,11 @@ function synthesizeWealthEvidence(
   wealthNatalPromise: WealthNatalPromise
 ): WealthInterpretationConclusion {
   const dataCompleteness = checkDataCompleteness(context);
+  const d2Ev = evidence.find((e) => e.evidenceFamily === WealthEvidenceFamily.D2);
+  const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
+  const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
+  const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
+  const hasDashaSupport = dashaEvidence.some((e) => e.effect === 'SUPPORT');
 
   // 1. Base status from WealthNatalPromise
   let status: WealthThemeStatus = 'LIMITED_EVIDENCE';
@@ -317,18 +322,12 @@ function synthesizeWealthEvidence(
     status = 'SUPPORTED';
 
     // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or Dasha
-    const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
-    const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
-    const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
-    const hasDashaSupport = dashaEvidence.some((e) => e.effect === 'SUPPORT');
-
     if (hasYogaSupport || hasDashaSupport) {
       status = 'STRONGLY_SUPPORTED';
     }
   }
 
   // 2. D2 Confirmation Layer (Not implemented in v1 -> UNAVAILABLE)
-  const d2Ev = evidence.find((e) => e.evidenceFamily === WealthEvidenceFamily.D2);
   const hasD2Conflict =
     d2Ev?.effect === 'CHALLENGE' || d2Ev?.vargaEvidence?.relationship === 'CONFLICTS';
 
@@ -337,8 +336,6 @@ function synthesizeWealthEvidence(
   }
 
   // 3. Yoga Confirmation Layer
-  const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
-  const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
   const hasD2Confirms = d2Ev?.effect === 'SUPPORT' && d2Ev.vargaEvidence?.relationship === 'CONFIRMS';
   const hasConfirmation = hasYogaSupport || hasD2Confirms;
 

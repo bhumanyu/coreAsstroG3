@@ -58,17 +58,17 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
     const careerIds = new Set(careerEvidence.map((e) => e.id));
     const wealthIds = new Set(wealthEvidence.map((e) => e.id));
 
-    for (const id of result.career.conclusion.supportingEvidenceIds) {
+    for (const id of result.career.conclusion.supportingSourceIds ?? []) {
       expect(careerIds.has(id)).toBe(true);
     }
-    for (const id of result.career.conclusion.challengingEvidenceIds) {
+    for (const id of result.career.conclusion.challengingSourceIds ?? []) {
       expect(careerIds.has(id)).toBe(true);
     }
 
-    for (const id of result.wealth.conclusion.supportingEvidenceIds) {
+    for (const id of result.wealth.conclusion.supportingSourceIds ?? []) {
       expect(wealthIds.has(id)).toBe(true);
     }
-    for (const id of result.wealth.conclusion.challengingEvidenceIds) {
+    for (const id of result.wealth.conclusion.challengingSourceIds ?? []) {
       expect(wealthIds.has(id)).toBe(true);
     }
   });
