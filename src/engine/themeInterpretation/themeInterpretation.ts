@@ -190,6 +190,12 @@ function synthesizeCareerEvidence(
   const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
   const hasD10Confirms = d10Ev?.effect === 'SUPPORT' && d10Ev.vargaEvidence?.relationship === 'CONFIRMS';
 
+  // Derive independent supporting structural families early for use in status upgrade logic
+  const structuralEvidence = evidence.filter((e) => STRUCTURAL_FAMILIES.has(e.evidenceFamily));
+  const independentSupportingFamilies = new Set(
+    structuralEvidence.filter((e) => e.effect === 'SUPPORT').map((e) => e.evidenceFamily)
+  );
+
   // 1. Base status from CareerNatalPromise (structural engine)
   let status: CareerThemeStatus = 'LIMITED_EVIDENCE';
   if (careerNatalPromise.status === 'UNAVAILABLE') {
@@ -203,8 +209,8 @@ function synthesizeCareerEvidence(
   } else if (careerNatalPromise.status === 'SUPPORTED') {
     status = 'SUPPORTED';
 
-    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or D10
-    if (hasYogaSupport || hasD10Confirms) {
+    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or D10 AND >= 2 independent supporting structural families
+    if ((hasYogaSupport || hasD10Confirms) && independentSupportingFamilies.size >= 2) {
       status = 'STRONGLY_SUPPORTED';
     }
   }
@@ -225,10 +231,6 @@ function synthesizeCareerEvidence(
   const dashaEvidence = evidence.filter((e) => e.evidenceFamily === CareerEvidenceFamily.DASHA);
 
   // 5. Derive Final Confidence
-  const structuralEvidence = evidence.filter((e) => STRUCTURAL_FAMILIES.has(e.evidenceFamily));
-  const independentSupportingFamilies = new Set(
-    structuralEvidence.filter((e) => e.effect === 'SUPPORT').map((e) => e.evidenceFamily)
-  );
   const primaryEvidence = structuralEvidence.filter((e) => e.priority === 'PRIMARY');
   const hasPrimaryChallenge = careerNatalPromise.primaryChallenges.length > 0;
   const tenthHouseSummary = familySummaries[CareerEvidenceFamily.TENTH_HOUSE];

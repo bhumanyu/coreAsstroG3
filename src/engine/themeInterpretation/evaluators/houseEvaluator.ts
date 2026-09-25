@@ -1,4 +1,4 @@
-import { Planet } from '../../../types';
+import { Planet, DignityStatus } from '../../../types';
 import type { HouseAnalysis } from '../../../types';
 import type { HouseInterpretation } from '../../houseInterpretation/houseInterpretationTypes';
 import type { ThemeInterpretationContext } from '../themeInterpretationContext';
@@ -12,6 +12,8 @@ export interface HouseEvaluationFacts {
   readonly effect: ThemeEvidenceEffect;
   readonly strength: ThemeEvidenceStrength;
   readonly summaryStatement: string;
+  readonly lordDignity?: DignityStatus | string;
+  readonly hasAfflictedLordOrOccupant: boolean;
 }
 
 export function evaluateHouseStatus(
@@ -84,6 +86,31 @@ export function evaluateHouseStatus(
     }
   }
 
+  // Check lord and occupant dignity from planetInterpretation
+  let lordDignity: DignityStatus | string | undefined = undefined;
+  let hasAfflictedLordOrOccupant = false;
+
+  if (lord && context.planetInterpretation?.planets?.[lord]) {
+    const lordDignityRaw = context.planetInterpretation.planets[lord].dignity;
+    lordDignity = typeof lordDignityRaw === 'string' ? lordDignityRaw : (lordDignityRaw as any)?.status;
+    const lordDignityStr = String(lordDignity).toUpperCase();
+    if (lordDignityStr === DignityStatus.DEBILITATED || lordDignityStr === 'AFFLICTED') {
+      hasAfflictedLordOrOccupant = true;
+    }
+  }
+
+  for (const occupant of occupants) {
+    if (context.planetInterpretation?.planets?.[occupant]) {
+      const occDignityRaw = context.planetInterpretation.planets[occupant].dignity;
+      const occDignity = typeof occDignityRaw === 'string' ? occDignityRaw : (occDignityRaw as any)?.status;
+      const occDignityStr = String(occDignity).toUpperCase();
+      if (occDignityStr === DignityStatus.DEBILITATED || occDignityStr === 'AFFLICTED') {
+        hasAfflictedLordOrOccupant = true;
+        break;
+      }
+    }
+  }
+
   const lordStr = lord ? ` Lord: ${lord}.` : '';
   const occStr = occupants.length > 0 ? ` Occupants: ${occupants.join(', ')}.` : ' No occupants.';
   const summaryStatement = `House ${houseNum} is evaluated as ${status}.${lordStr}${occStr}`;
@@ -95,6 +122,8 @@ export function evaluateHouseStatus(
     status,
     effect,
     strength,
-    summaryStatement
+    summaryStatement,
+    lordDignity,
+    hasAfflictedLordOrOccupant
   });
 }

@@ -175,15 +175,57 @@ function createHouseLinkRule(
   };
 }
 
+function createHouseLordAfflictionRule(
+  houseNum: number,
+  family: WealthEvidenceFamily
+): WealthRule {
+  const ruleId = `WEALTH_${houseNum}H_LORD_AFFLICTION_001`;
+
+  return {
+    id: ruleId,
+    evidenceFamily: family,
+    priority: 'PRIMARY',
+    evaluate: (context: ThemeInterpretationContext): ThemeRuleResult<WealthEvidenceFamily> => {
+      const hStatus = evaluateHouseStatus(context, houseNum);
+      // Emit CHALLENGE when house is structurally strong but lord or occupant is debilitated/afflicted
+      if ((hStatus.status === 'STRONG' || hStatus.effect === 'SUPPORT') && hStatus.hasAfflictedLordOrOccupant) {
+        const afflictedPlanet = hStatus.lord || hStatus.occupants[0];
+        if (!afflictedPlanet) {
+          return { triggered: false };
+        }
+        const evidence: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+          id: `${ruleId}:HOUSE_${houseNum}`,
+          ruleId,
+          evidenceFamily: family,
+          priority: 'PRIMARY',
+          strength: 'STRONG',
+          effect: 'CHALLENGE',
+          statement: `${houseNum}th house structural strength is tempered by ${afflictedPlanet}'s affliction (${hStatus.lordDignity}).`,
+          houses: [houseNum],
+          planets: [afflictedPlanet],
+          conditional: false,
+          dimension: 'NATAL_STRUCTURE'
+        };
+        return { triggered: true, evidence };
+      }
+      return { triggered: false };
+    }
+  };
+}
+
 export const wealthHouseRules: readonly WealthRule[] = Object.freeze([
   createHouseStatusRule(2, WealthEvidenceFamily.SECOND_HOUSE, 'STRONG'),
   createHouseStatusRule(2, WealthEvidenceFamily.SECOND_HOUSE, 'AFFLICTION'),
+  createHouseLordAfflictionRule(2, WealthEvidenceFamily.SECOND_HOUSE),
   createHouseStatusRule(11, WealthEvidenceFamily.ELEVENTH_HOUSE, 'STRONG'),
   createHouseStatusRule(11, WealthEvidenceFamily.ELEVENTH_HOUSE, 'AFFLICTION'),
+  createHouseLordAfflictionRule(11, WealthEvidenceFamily.ELEVENTH_HOUSE),
   createHouseStatusRule(9, WealthEvidenceFamily.NINTH_HOUSE, 'STRONG'),
   createHouseStatusRule(9, WealthEvidenceFamily.NINTH_HOUSE, 'AFFLICTION'),
+  createHouseLordAfflictionRule(9, WealthEvidenceFamily.NINTH_HOUSE),
   createHouseStatusRule(5, WealthEvidenceFamily.FIFTH_HOUSE, 'STRONG'),
   createHouseStatusRule(5, WealthEvidenceFamily.FIFTH_HOUSE, 'AFFLICTION'),
+  createHouseLordAfflictionRule(5, WealthEvidenceFamily.FIFTH_HOUSE),
   createHouseLinkRule(2, 11, WealthEvidenceFamily.ELEVENTH_HOUSE),
   createHouseLinkRule(2, 9, WealthEvidenceFamily.NINTH_HOUSE),
   createHouseLinkRule(2, 5, WealthEvidenceFamily.FIFTH_HOUSE),

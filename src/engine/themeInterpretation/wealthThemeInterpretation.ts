@@ -308,6 +308,16 @@ function synthesizeWealthEvidence(
   const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
   const hasDashaSupport = dashaEvidence.some((e) => e.effect === 'SUPPORT');
 
+  // Derive independent supporting structural domains early for use in status upgrade logic
+  const structuralEvidence = evidence.filter((e) => WEALTH_STRUCTURAL_FAMILIES.has(e.evidenceFamily));
+  const independentSupportingDomains = new Set<WealthDomain>();
+  for (const e of structuralEvidence) {
+    if (e.effect === 'SUPPORT') {
+      const dom = getWealthDomain(e.evidenceFamily);
+      if (dom) independentSupportingDomains.add(dom);
+    }
+  }
+
   // 1. Base status from WealthNatalPromise
   let status: WealthThemeStatus = 'LIMITED_EVIDENCE';
   if (wealthNatalPromise.status === 'UNAVAILABLE') {
@@ -321,8 +331,8 @@ function synthesizeWealthEvidence(
   } else if (wealthNatalPromise.status === 'SUPPORTED') {
     status = 'SUPPORTED';
 
-    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or Dasha
-    if (hasYogaSupport || hasDashaSupport) {
+    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or Dasha AND >= 2 independent supporting structural families
+    if ((hasYogaSupport || hasDashaSupport) && independentSupportingDomains.size >= 2) {
       status = 'STRONGLY_SUPPORTED';
     }
   }
@@ -340,15 +350,6 @@ function synthesizeWealthEvidence(
   const hasConfirmation = hasYogaSupport || hasD2Confirms;
 
   // 4. Derive Final Confidence
-  const structuralEvidence = evidence.filter((e) => WEALTH_STRUCTURAL_FAMILIES.has(e.evidenceFamily));
-  const independentSupportingDomains = new Set<WealthDomain>();
-  for (const e of structuralEvidence) {
-    if (e.effect === 'SUPPORT') {
-      const dom = getWealthDomain(e.evidenceFamily);
-      if (dom) independentSupportingDomains.add(dom);
-    }
-  }
-
   const primaryEvidence = structuralEvidence.filter((e) => e.priority === 'PRIMARY');
   const hasPrimaryChallenge = wealthNatalPromise.primaryChallenges.length > 0;
   const secondHouseSummary = familySummaries[WealthEvidenceFamily.SECOND_HOUSE];

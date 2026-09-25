@@ -154,9 +154,6 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     const result = interpretCareerTheme(mixedContext);
     const tenthHouseEv = result.evidence.filter((e) => e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE);
 
-    // Debug: Check what evidence we got
-    console.log('Test 1 Debug - tenthHouseEv:', tenthHouseEv.map(e => ({ effect: e.effect, statement: e.statement })));
-
     // Preserves BOTH items (SUPPORT and CHALLENGE), no single NEUTRAL merge
     expect(tenthHouseEv.some((e) => e.effect === 'SUPPORT')).toBe(true);
     expect(tenthHouseEv.some((e) => e.effect === 'CHALLENGE')).toBe(true);
@@ -248,8 +245,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
             house: 10,
             lord: Planet.SUN,
             occupants: [],
-            status: 'STRONG',
-            effect: 'CHALLENGE'
+            status: 'STRONG'
           } as any,
           6: { house: 6, lord: Planet.VENUS, occupants: [] },
           11: { house: 11, lord: Planet.MOON, occupants: [] },
@@ -259,7 +255,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       } as any,
       planetInterpretation: {
         planets: {
-          [Planet.SUN]: { planet: Planet.SUN, house: 10, dignity: DignityStatus.EXALTED }
+          [Planet.SUN]: { planet: Planet.SUN, house: 10, dignity: DignityStatus.DEBILITATED }
         }
       } as any
     };

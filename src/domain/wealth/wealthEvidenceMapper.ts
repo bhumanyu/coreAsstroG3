@@ -211,7 +211,7 @@ export function buildWealthEvidence(
       }
 
       return createDomainEvidence({
-        id: item.id,
+        id: (item as any).identityKey ?? item.id,
         sourceType: mapWealthSourceType(item),
         domain: 'WEALTH',
         role,
@@ -227,7 +227,8 @@ export function buildWealthEvidence(
         evidenceFamily: item.evidenceFamily,
         dimension,
         planet,
-        house
+        house,
+        identityKey: (item as any).identityKey
       });
     })
   );
