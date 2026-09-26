@@ -10,7 +10,7 @@ import type {
   CareerPlanetRelevance
 } from './careerPlanetaryRelevance';
 
-describe('Career Planetary Condition (C7)', () => {
+describe('Career Planetary Condition (C6)', () => {
   // Group A — relevance boundary
   describe('Group A — relevance boundary', () => {
     it('A1: PRIMARY + valid condition → condition evaluated', () => {

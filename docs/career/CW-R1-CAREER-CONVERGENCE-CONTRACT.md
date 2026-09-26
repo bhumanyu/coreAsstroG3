@@ -857,6 +857,126 @@ A future wave will:
 
 No changes to `CareerDomainInterpreterV2` production authority are made in W1.2. The C5 adapter remains available for testing and validation but is not yet integrated into the production Career pipeline.
 
+## W1.3 — C6 Planetary Condition Integration
+
+### W1.3.1 W1.3 Scope
+
+W1.3 delivers the C6 adapter (`careerPlanetaryConditionIntegration.ts`) that builds `CareerPlanetaryConditionContext` objects from a `Horoscope` and C5 `CareerPlanetaryRelevance`, then delegates to the existing C6 `interpretCareerPlanetaryConditionBatch`.
+
+This is an adapter + integration wave only:
+- Adds a new canonical producer that consumes C5 relevance and existing engine `PlanetFact` data
+- Feeds the EXISTING C6 semantic engine
+- Does NOT modify `CareerDomainInterpreterV2.ts`, `careerNatalAnalysis.ts`, or any C7–C11/D10/Dasha/Transit/Timing modules
+- Does NOT wire `CareerNatalAnalysis.condition`
+
+### W1.3.2 Adapter Implementation
+
+The adapter implements the following mappers:
+
+**Dignity Mapping (`mapCareerDignity`):**
+- Maps engine `DignityStatus` enum → `CareerPlanetaryDignity`
+- Switches on actual `DignityStatus` enum members from `src/types.ts`
+- Mapping table:
+  - EXALTED → 'EXALTED'
+  - MOOLATRIKONA → 'OWN_SIGN' (compatibility mapping — C6 has no MOOLATRIKONA vocabulary)
+  - OWN_SIGN → 'OWN_SIGN'
+  - GREAT_FRIEND_SIGN/FRIEND_SIGN → 'FRIENDLY_SIGN'
+  - NEUTRAL/NEUTRAL_SIGN → 'NEUTRAL_SIGN'
+  - ENEMY_SIGN/GREAT_ENEMY_SIGN → 'ENEMY_SIGN'
+  - DEBILITATED → 'DEBILITATED'
+  - default → 'UNAVAILABLE'
+
+**Motion Mapping (`mapCareerMotion`):**
+- Maps engine `PlanetMotion` object → `CareerPlanetaryMotion`
+- Planet motion is stored as an object with `retrograde`/`stationary` booleans on `planetFact.state.motion` and `planetFact.position.motion`
+- Mapping:
+  - stationary → 'STATIONARY'
+  - retrograde → 'RETROGRADE'
+  - otherwise → 'DIRECT'
+  - missing → 'UNKNOWN'
+- Does not recompute astronomical motion
+
+**Combustion Mapping (`mapCareerCombustion`):**
+- Maps engine `PlanetStateCondition` → `CareerPlanetaryCombustion`
+- Combustion is stored on `state.condition` (`PlanetStateCondition.COMBUST`/`DEEP_COMBUST`/`NORMAL`)
+- Mapping:
+  - COMBUST/DEEP_COMBUST/DEEPLY_COMBUST → 'COMBUST' (DEEP_COMBUST collapses to COMBUST since C6 has no deep-combust category)
+  - NORMAL → 'NOT_COMBUST'
+  - missing → 'UNAVAILABLE'
+
+**Affliction Mapping (`mapCareerAffliction`):**
+- Returns 'UNAVAILABLE' if no planetFact
+- Returns 'NONE' if planetFact exists
+- The engine exposes no canonical standalone affliction fact
+- "Missing evidence is not negative evidence" — does NOT synthesize affliction from dignity/combustion
+
+**Aspect Influence:**
+- Defines narrow local type `CareerConditionAspect` for aspect data at engine boundary
+- `getNatalAspects(horoscope)` reads `horoscope.natalGrahaDrishti?.aspects ?? []` cast to `CareerConditionAspect[]`
+- `resolveAspectInfluence(horoscope, planet)`:
+  - For each aspect where `targetPlanet ?? target === planet`
+  - Takes `sourcePlanet ?? aspectingPlanet`
+  - If `isNaturalBenefic(source, horoscope.planetFacts)` → `beneficSupport=true`
+  - Else → `maleficPressure=true`
+- Uses existing `isNaturalBenefic` from `src/engine/planetaryStrength/drikBala.ts`
+
+**Context Building:**
+- `buildCareerPlanetaryConditionContext(horoscope, relevanceItem)`:
+  - Looks up `horoscope.planetFacts[planet]`
+  - If missing → returns frozen context with all UNAVAILABLE/UNKNOWN and `dataAvailable:false`
+  - Otherwise builds dignity/affliction/motion/combustion via mappers
+  - Sets `beneficSupport`/`maleficPressure` from aspects
+  - Sets `relevance: relevanceItem.relevance` (string union, not object)
+  - `dataAvailable = dignity!=='UNAVAILABLE' && affliction!=='UNAVAILABLE' && motion!=='UNKNOWN' && combustion!=='UNAVAILABLE'`
+  - Freezes every context
+
+**Batch Building:**
+- `buildCareerPlanetaryConditionContexts(input)`:
+  - Builds Map from relevance by planet
+  - Iterates `CANONICAL_PLANET_ORDER` (SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN, RAHU, KETU)
+  - Emits NEUTRAL/UNAVAILABLE frozen context for planets missing from C5 relevance
+  - Delegates to `buildCareerPlanetaryConditionContext` for planets in relevance
+  - Returns frozen array
+  - Guarantees deterministic canonical ordering regardless of input order
+
+**Main Integration:**
+- `buildCareerPlanetaryCondition(input)`:
+  - Calls `interpretCareerPlanetaryConditionBatch(buildCareerPlanetaryConditionContexts(input))`
+  - Delegates condition semantics to existing C6 engine
+
+### W1.3.3 Input Contract
+
+```typescript
+export interface CareerPlanetaryConditionIntegrationInput {
+  readonly horoscope: Horoscope;
+  readonly relevance: readonly CareerPlanetaryRelevance[];
+}
+```
+
+### W1.3.4 Constraints
+
+- Does NOT read C5 `effect` for condition
+- Does NOT read `CareerStructuralReasoning`
+- Does NOT add scoring/weights
+- Does NOT modify C7–C11/D10/Dasha/Transit/Timing modules
+- Does NOT wire `CareerNatalAnalysis.condition`
+- Reuses existing C6 semantic engine — does not recreate condition logic
+
+### W1.3.5 Authority
+
+- C6 owns condition semantics
+- C5 remains sole owner of relevance
+- Missing condition evidence stays UNAVAILABLE and must not become negative evidence
+- Adapter is read-only with respect to C5 relevance (no mutation)
+- All contexts and results are frozen (immutable)
+
+### W1.3.6 Future Work
+
+A future wave will:
+1. Wire `buildCareerPlanetaryCondition` output into `CareerNatalAnalysis.condition`
+2. Integrate condition results into the production Career pipeline
+3. Update this contract document to reflect the completed wiring
+
 ### W0.3.5 Prohibition of Duplicate/Hybrid Authority
 
 Legacy + canonical execution is permitted for comparison/parity ONLY during migration. Silent combination into a production conclusion is forbidden.
