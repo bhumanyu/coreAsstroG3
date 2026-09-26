@@ -4,10 +4,10 @@ import type {
 } from './careerHouseRelationship';
 
 import {
-  CAREER_PRIMARY_HOUSES,
-  CAREER_SUPPORTING_HOUSES,
-  CAREER_CHALLENGING_HOUSES
-} from './careerTypes';
+  resolveRelationshipRelevance,
+  resolveRelationshipEffect,
+  resolveRelationshipStrength
+} from './careerRelationshipRules';
 
 export type CareerHouseRelationshipEffect =
   | 'SUPPORT'
@@ -43,151 +43,24 @@ export interface CareerHouseRelationshipSemantic {
   readonly statement: string;
 }
 
-type CareerHouseCategory =
-  | 'PRIMARY'
-  | 'SUPPORTING'
-  | 'CHALLENGING'
-  | 'NEUTRAL';
-
-function classifyCareerHouse(
-  house: number
-): CareerHouseCategory {
-  if (CAREER_PRIMARY_HOUSES.has(house)) {
-    return 'PRIMARY';
-  }
-
-  if (CAREER_SUPPORTING_HOUSES.has(house)) {
-    return 'SUPPORTING';
-  }
-
-  if (CAREER_CHALLENGING_HOUSES.has(house)) {
-    return 'CHALLENGING';
-  }
-
-  return 'NEUTRAL';
-}
-
 function resolveRelevance(
   houseA: number,
   houseB: number
 ): CareerHouseRelationshipRelevance {
-  const categoryA = classifyCareerHouse(houseA);
-  const categoryB = classifyCareerHouse(houseB);
-
-  const categories = new Set([
-    categoryA,
-    categoryB
-  ]);
-
-  if (categories.has('PRIMARY')) {
-    return 'PRIMARY';
-  }
-
-  if (
-    categoryA === 'SUPPORTING' &&
-    categoryB === 'CHALLENGING'
-  ) {
-    return 'MIXED';
-  }
-
-  if (
-    categoryA === 'CHALLENGING' &&
-    categoryB === 'SUPPORTING'
-  ) {
-    return 'MIXED';
-  }
-
-  if (
-    categoryA === 'CHALLENGING' &&
-    categoryB === 'CHALLENGING'
-  ) {
-    return 'CHALLENGING';
-  }
-
-  if (
-    categoryA === 'SUPPORTING' &&
-    categoryB === 'SUPPORTING'
-  ) {
-    return 'SUPPORTING';
-  }
-
-  return 'NEUTRAL';
+  return resolveRelationshipRelevance(houseA, houseB) as CareerHouseRelationshipRelevance;
 }
 
 function resolveEffect(
   houseA: number,
   houseB: number
 ): CareerHouseRelationshipEffect {
-  const categoryA = classifyCareerHouse(houseA);
-  const categoryB = classifyCareerHouse(houseB);
-
-  const categories = new Set([
-    categoryA,
-    categoryB
-  ]);
-
-  if (categories.has('PRIMARY')) {
-    if (categories.has('CHALLENGING')) {
-      return 'CHALLENGE';
-    }
-
-    if (categories.has('SUPPORTING')) {
-      return 'SUPPORT';
-    }
-
-    return 'NEUTRAL';
-  }
-
-  if (
-    categoryA === 'SUPPORTING' &&
-    categoryB === 'SUPPORTING'
-  ) {
-    return 'SUPPORT';
-  }
-
-  if (
-    categoryA === 'CHALLENGING' &&
-    categoryB === 'CHALLENGING'
-  ) {
-    return 'CHALLENGE';
-  }
-
-  if (
-    categoryA === 'SUPPORTING' &&
-    categoryB === 'CHALLENGING'
-  ) {
-    return 'MIXED';
-  }
-
-  if (
-    categoryA === 'CHALLENGING' &&
-    categoryB === 'SUPPORTING'
-  ) {
-    return 'MIXED';
-  }
-
-  return 'NEUTRAL';
+  return resolveRelationshipEffect(houseA, houseB) as CareerHouseRelationshipEffect;
 }
 
 function resolveStrength(
   relationship: CareerHouseRelationship
 ): CareerHouseRelationshipSemanticStrength {
-  switch (relationship.type) {
-    case 'EXCHANGE':
-    case 'COMMON_LORD':
-      return 'STRONG';
-
-    case 'LORD_IN_HOUSE':
-    case 'LORD_CONJUNCTION':
-    case 'LORD_ASPECT':
-      return 'MODERATE';
-
-    case 'HOUSE_ASPECT':
-      return 'WEAK';
-
-    default:
-      return 'WEAK';
-  }
+  return resolveRelationshipStrength(relationship.type) as CareerHouseRelationshipSemanticStrength;
 }
 
 function resolveConditional(

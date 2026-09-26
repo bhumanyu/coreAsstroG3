@@ -20,6 +20,158 @@ function createRelationship(
 }
 
 describe('Career Lord Relationship Semantics', () => {
+  describe('Explicit rule assertions (Fix 3)', () => {
+    it('asserts 10+6 → relevance PRIMARY / effect SUPPORT', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 6,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 10 (SATURN) placed in house 6.'
+        })
+      );
+
+      expect(result.relevance).toBe('PRIMARY');
+      expect(result.effect).toBe('SUPPORT');
+    });
+
+    it('asserts 10+8 → relevance PRIMARY / effect CHALLENGE', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 10,
+          houseB: 8,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 10 (SATURN) placed in house 8.'
+        })
+      );
+
+      expect(result.relevance).toBe('PRIMARY');
+      expect(result.effect).toBe('CHALLENGE');
+    });
+
+    it('asserts 6+2 → relevance SUPPORTING / effect SUPPORT', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 6,
+          houseB: 2,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 6 (MERCURY) placed in house 2.'
+        })
+      );
+
+      expect(result.relevance).toBe('SUPPORTING');
+      expect(result.effect).toBe('SUPPORT');
+    });
+
+    it('asserts 8+12 → relevance CHALLENGING / effect CHALLENGE', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 8,
+          houseB: 12,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 8 (MARS) placed in house 12.'
+        })
+      );
+
+      expect(result.relevance).toBe('CHALLENGING');
+      expect(result.effect).toBe('CHALLENGE');
+    });
+
+    it('asserts 6+8 → relevance MIXED / effect MIXED', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          houseA: 6,
+          houseB: 8,
+          type: 'LORD_IN_HOUSE',
+          reason: 'Lord of house 6 (MERCURY) placed in house 8.'
+        })
+      );
+
+      expect(result.relevance).toBe('MIXED');
+      expect(result.effect).toBe('MIXED');
+    });
+
+    it('asserts strength-by-type: EXCHANGE → STRONG', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'EXCHANGE',
+          houseA: 10,
+          houseB: 6,
+          reason: 'Sign exchange between lords.'
+        })
+      );
+
+      expect(result.strength).toBe('STRONG');
+    });
+
+    it('asserts strength-by-type: COMMON_LORD → STRONG', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'COMMON_LORD',
+          houseA: 10,
+          houseB: 6,
+          lordA: Planet.SATURN,
+          lordB: Planet.SATURN,
+          reason: 'Single planet rules both houses.'
+        })
+      );
+
+      expect(result.strength).toBe('STRONG');
+    });
+
+    it('asserts strength-by-type: LORD_IN_HOUSE → MODERATE', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'LORD_IN_HOUSE',
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lord placed in house.'
+        })
+      );
+
+      expect(result.strength).toBe('MODERATE');
+    });
+
+    it('asserts strength-by-type: LORD_CONJUNCTION → MODERATE', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'LORD_CONJUNCTION',
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lords are conjunct.'
+        })
+      );
+
+      expect(result.strength).toBe('MODERATE');
+    });
+
+    it('asserts strength-by-type: LORD_ASPECT → MODERATE', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'LORD_ASPECT',
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lords aspect each other.'
+        })
+      );
+
+      expect(result.strength).toBe('MODERATE');
+    });
+
+    it('asserts strength-by-type: HOUSE_ASPECT → WEAK', () => {
+      const result = interpretCareerLordRelationship(
+        createRelationship({
+          type: 'HOUSE_ASPECT',
+          houseA: 10,
+          houseB: 6,
+          reason: 'Lord aspects house.'
+        })
+      );
+
+      expect(result.strength).toBe('WEAK');
+    });
+  });
+
   describe('Primary relationships (10H involvement)', () => {
     it('classifies 10H and 6H lord relationship as PRIMARY SUPPORT', () => {
       const result = interpretCareerLordRelationship(

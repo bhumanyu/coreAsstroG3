@@ -244,4 +244,77 @@ describe('Career Lord Relationship Integration', () => {
       }
     });
   });
+
+  describe('MIXED-dedup', () => {
+    it('collapses MIXED C4 structural fact to single C7 semantic', () => {
+      // Create a MIXED C4 structural fact with two occurrences sharing one relationship
+      const relationship: CareerHouseRelationship = {
+        type: 'LORD_ASPECT',
+        houseA: 6,
+        houseB: 8,
+        lordA: Planet.MERCURY,
+        lordB: Planet.MARS,
+        lordAHouse: 6,
+        lordBHouse: 8,
+        reason: 'Lords of house 6 (Mercury) and house 8 (Mars) have aspect relationship'
+      };
+
+      const semantic = {
+        relationship: relationship,
+        relationshipType: relationship.type,
+        relevance: 'MIXED' as const,
+        effect: 'MIXED' as const,
+        strength: 'MODERATE' as const,
+        conditional: false,
+        statement: 'Mixed aspect relationship between 6L and 8L'
+      };
+
+      // Two occurrences of the same semantic fact (SUPPORTING and CHALLENGING)
+      const evidence1: CareerStructuralEvidence = {
+        id: 'CAREER_STRUCTURAL:6:8:LORD_ASPECT:MERCURY:MARS:SUPPORTING:SUPPORT:MODERATE:false',
+        relationship: relationship,
+        semantic: semantic,
+        role: 'SUPPORTING',
+        direction: 'SUPPORT',
+        weight: 2,
+        statement: 'Supporting aspect relationship between 6L and 8L'
+      };
+
+      const evidence2: CareerStructuralEvidence = {
+        id: 'CAREER_STRUCTURAL:6:8:LORD_ASPECT:MERCURY:MARS:CHALLENGING:CHALLENGE:MODERATE:false',
+        relationship: relationship,
+        semantic: semantic,
+        role: 'CHALLENGING',
+        direction: 'CHALLENGE',
+        weight: 2,
+        statement: 'Challenging aspect relationship between 6L and 8L'
+      };
+
+      const structural: CareerStructuralReasoning = {
+        direction: 'MIXED',
+        strength: 'MODERATE',
+        primarySupport: 0,
+        primaryChallenge: 0,
+        supportingSupport: 2,
+        supportingChallenge: 0,
+        challengingSupport: 0,
+        challengingChallenge: 2,
+        mixedWeight: 2,
+        evidence: [evidence1, evidence2],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [evidence1.id],
+        challengingEvidenceIds: [evidence2.id],
+        conflicts: [],
+        statement: 'Mixed structural reasoning'
+      };
+
+      const result = buildCareerLordRelationships({ structural });
+
+      // Assert that deduplicateRelationships collapses by key to exactly one C7 semantic
+      expect(result).toHaveLength(1);
+      expect(result[0].relationship).toBe(relationship);
+      expect(result[0].relevance).toBe('MIXED');
+      expect(result[0].effect).toBe('MIXED');
+    });
+  });
 });

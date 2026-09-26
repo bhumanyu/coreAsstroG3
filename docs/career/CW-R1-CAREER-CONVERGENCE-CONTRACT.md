@@ -1222,3 +1222,22 @@ C7 integration is validated by `src/domain/career/careerLordRelationshipIntegrat
 - Input-order determinism: identical canonical output regardless of input evidence order
 - Boundary/leakage: result objects contain no later-wave properties (dasha, md, ad, pd, d10, transit, timing, c8, c9, c10, c11, conclusion)
 - Immutability: returned array and all semantic objects are frozen
+- MIXED-dedup: when a MIXED C4 structural fact produces two `CareerStructuralEvidence` occurrences sharing one relationship, `buildCareerLordRelationships` yields exactly one C7 semantic for that relationship (verifying `deduplicateRelationships` collapses by key)
+
+C7 semantic unit tests are in `src/domain/career/careerLordRelationshipSemantics.test.ts`:
+- Explicit rule assertions: 10+6 → PRIMARY/SUPPORT, 10+8 → PRIMARY/CHALLENGE, 6+2 → SUPPORTING/SUPPORT, 8+12 → CHALLENGING/CHALLENGE, 6+8 → MIXED/MIXED
+- Strength-by-type assertions: EXCHANGE → STRONG, COMMON_LORD → STRONG, LORD_IN_HOUSE → MODERATE, LORD_CONJUNCTION → MODERATE, LORD_ASPECT → MODERATE, HOUSE_ASPECT → WEAK
+
+### W1.4.7 Canonical Rule Authority
+
+**Single Canonical Source for Relationship Rules:**
+- The relationship relevance/effect/strength rules now have a single canonical source in `src/domain/career/careerRelationshipRules.ts`
+- Both C4 (`careerHouseRelationshipSemantics.ts`) and C7 (`careerLordRelationshipSemantics.ts`) delegate to this shared module
+- `careerHouseRelationshipSemantics.ts` no longer contains its own independent copies of `resolveRelevance`/`resolveEffect`/`resolveStrength`/statement rule logic
+- If a rule changes (e.g., "10 + 11 → SUPPORT"), it changes in exactly one place and both C4 structural evidence and C7 output reflect the change
+- The shared module exports `resolveRelationshipRelevance`, `resolveRelationshipEffect`, and `resolveRelationshipStrength` functions
+
+**Canonical Deduplication Sorting:**
+- C7 deduplication output is canonically sorted by `careerHouseRelationshipKey` in the `deduplicateRelationships` function
+- This makes the existing "Input-Order Determinism" test in `careerLordRelationshipIntegration.test.ts` meaningful and passing
+- The sort ensures deterministic output regardless of input evidence order

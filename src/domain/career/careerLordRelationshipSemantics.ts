@@ -13,6 +13,12 @@ import {
   careerHouseRelationshipKey
 } from './careerHouseRelationship';
 
+import {
+  resolveRelationshipRelevance,
+  resolveRelationshipEffect,
+  resolveRelationshipStrength
+} from './careerRelationshipRules';
+
 export type CareerLordRole =
   | 'PRIMARY_LORD'
   | 'SUPPORTING_LORD'
@@ -52,19 +58,7 @@ export interface CareerLordRelationshipSemantic {
   readonly statement: string;
 }
 
-const CAREER_LORD_RELATIONSHIP_STRENGTH: Readonly<
-  Record<
-    CareerHouseRelationshipType,
-    CareerLordRelationshipSemanticStrength
-  >
-> = Object.freeze({
-  EXCHANGE: 'STRONG',
-  COMMON_LORD: 'STRONG',
-  LORD_IN_HOUSE: 'MODERATE',
-  LORD_CONJUNCTION: 'MODERATE',
-  LORD_ASPECT: 'MODERATE',
-  HOUSE_ASPECT: 'WEAK'
-});
+
 
 function mapHouseDirectionToLordRole(
   direction: 'PRIMARY' | 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL'
@@ -98,99 +92,20 @@ function resolveRelevance(
   houseA: number,
   houseB: number
 ): CareerLordRelationshipRelevance {
-  const relevanceA = classifyCareerHouse(houseA);
-  const relevanceB = classifyCareerHouse(houseB);
-
-  if (
-    relevanceA === 'PRIMARY' ||
-    relevanceB === 'PRIMARY'
-  ) {
-    return 'PRIMARY';
-  }
-
-  if (
-    (relevanceA === 'SUPPORTING' &&
-      relevanceB === 'CHALLENGING') ||
-    (relevanceA === 'CHALLENGING' &&
-      relevanceB === 'SUPPORTING')
-  ) {
-    return 'MIXED';
-  }
-
-  if (
-    relevanceA === 'CHALLENGING' &&
-    relevanceB === 'CHALLENGING'
-  ) {
-    return 'CHALLENGING';
-  }
-
-  if (
-    relevanceA === 'SUPPORTING' &&
-    relevanceB === 'SUPPORTING'
-  ) {
-    return 'SUPPORTING';
-  }
-
-  return 'NEUTRAL';
+  return resolveRelationshipRelevance(houseA, houseB) as CareerLordRelationshipRelevance;
 }
 
 function resolveEffect(
   houseA: number,
   houseB: number
 ): CareerLordRelationshipEffect {
-  const relevanceA = classifyCareerHouse(houseA);
-  const relevanceB = classifyCareerHouse(houseB);
-
-  if (
-    (relevanceA === 'PRIMARY' &&
-      relevanceB === 'SUPPORTING') ||
-    (relevanceB === 'PRIMARY' &&
-      relevanceA === 'SUPPORTING')
-  ) {
-    return 'SUPPORT';
-  }
-
-  if (
-    (relevanceA === 'PRIMARY' &&
-      relevanceB === 'CHALLENGING') ||
-    (relevanceB === 'PRIMARY' &&
-      relevanceA === 'CHALLENGING')
-  ) {
-    return 'CHALLENGE';
-  }
-
-  if (
-    relevanceA === 'SUPPORTING' &&
-    relevanceB === 'SUPPORTING'
-  ) {
-    return 'SUPPORT';
-  }
-
-  if (
-    relevanceA === 'CHALLENGING' &&
-    relevanceB === 'CHALLENGING'
-  ) {
-    return 'CHALLENGE';
-  }
-
-  if (
-    (relevanceA === 'SUPPORTING' &&
-      relevanceB === 'CHALLENGING') ||
-    (relevanceA === 'CHALLENGING' &&
-      relevanceB === 'SUPPORTING')
-  ) {
-    return 'MIXED';
-  }
-
-  return 'NEUTRAL';
+  return resolveRelationshipEffect(houseA, houseB) as CareerLordRelationshipEffect;
 }
 
 function resolveStrength(
   relationshipType: CareerHouseRelationshipType
 ): CareerLordRelationshipSemanticStrength {
-  return CAREER_LORD_RELATIONSHIP_STRENGTH[
-    relationshipType
-  ];
+  return resolveRelationshipStrength(relationshipType) as CareerLordRelationshipSemanticStrength;
 }
 
 function createStatement(
@@ -228,7 +143,9 @@ function deduplicateRelationships(
   }
 
   return Object.freeze(
-    [...unique.values()]
+    [...unique.values()].sort((a, b) =>
+      careerHouseRelationshipKey(a).localeCompare(careerHouseRelationshipKey(b))
+    )
   );
 }
 
