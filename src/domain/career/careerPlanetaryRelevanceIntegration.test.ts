@@ -49,10 +49,10 @@ function createMinimalHoroscope(overrides: Partial<Horoscope> = {}): Horoscope {
       [Planet.KETU]: { planet: Planet.KETU, position: { house: 7, longitude: 0, sign: 'LIBRA' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any
     },
     bhavaFacts: {},
-    houseAnalysis: null,
-    natalGrahaDrishti: null,
-    grahaDrishti: null,
-    yogas: null,
+    houseAnalysis: undefined,
+    natalGrahaDrishti: undefined,
+    grahaDrishti: undefined,
+    yogas: undefined,
     fullNatalAnalysis: {} as any,
     ...overrides
   };
@@ -121,7 +121,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] }
           ]
         } as any
       });
@@ -240,7 +240,7 @@ describe('Career Planetary Relevance Integration', () => {
 
     it('falls back to grahaDrishti when natalGrahaDrishti is unavailable', () => {
       const horoscope = createMinimalHoroscope({
-        natalGrahaDrishti: null,
+        natalGrahaDrishti: undefined,
         grahaDrishti: {
           aspects: [
             { sourcePlanet: Planet.SATURN, targetHouse: 10, aspectType: 'FULL' }
@@ -265,8 +265,8 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN },
-            { house: 6, lord: Planet.SATURN }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] },
+            { house: 6, lord: Planet.SATURN, sign: 'VIRGO' as any, occupants: [], evidence: [] }
           ]
         } as any
       });
@@ -293,8 +293,8 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN },
-            { house: 6, lord: Planet.MERCURY }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] },
+            { house: 6, lord: Planet.MERCURY, sign: 'VIRGO' as any, occupants: [], evidence: [] }
           ]
         } as any
       });
@@ -325,9 +325,9 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN },
-            { house: 6, lord: Planet.MERCURY },
-            { house: 11, lord: Planet.VENUS }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] },
+            { house: 6, lord: Planet.MERCURY, sign: 'VIRGO' as any, occupants: [], evidence: [] },
+            { house: 11, lord: Planet.VENUS, sign: 'AQUARIUS' as any, occupants: [], evidence: [] }
           ]
         } as any
       });
@@ -406,7 +406,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] }
           ]
         } as any,
         planetFacts: {
@@ -497,7 +497,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] }
           ]
         } as any
       });
@@ -607,11 +607,16 @@ describe('Career Planetary Relevance Integration', () => {
       expect(tenthLordResult!.roles).toContain('CAREER_LORD');
       expect(tenthLordResult!.relevance).not.toBe('NEUTRAL');
 
-      // Find at least one planet occupying a career house
+      // Find at least one planet occupying a career house using houseAnalysis
       const careerHouses = [...CAREER_PRIMARY_HOUSES, ...CAREER_SUPPORTING_HOUSES, ...CAREER_CHALLENGING_HOUSES];
       let careerHouseOccupant: Planet | undefined;
       for (const house of careerHouses) {
-        const occupants = horoscope.bhavaFacts?.[house]?.occupants ?? horoscope.bhavas?.[house]?.occupants ?? [];
+        const houseData = horoscope.houseAnalysis?.houses
+          ? (Array.isArray(horoscope.houseAnalysis.houses)
+            ? horoscope.houseAnalysis.houses.find((h: any) => h.house === house)
+            : horoscope.houseAnalysis.houses[house])
+          : undefined;
+        const occupants = houseData?.occupants ?? [];
         if (occupants.length > 0) {
           careerHouseOccupant = occupants[0];
           break;
@@ -736,7 +741,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 8, lord: Planet.SATURN }
+            { house: 8, lord: Planet.SATURN, sign: 'SCORPIO' as any, occupants: [], evidence: [] }
           ]
         }
       });
@@ -756,7 +761,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 12, lord: Planet.SATURN }
+            { house: 12, lord: Planet.SATURN, sign: 'PISCES' as any, occupants: [], evidence: [] }
           ]
         }
       });
@@ -776,8 +781,8 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         houseAnalysis: {
           houses: [
-            { house: 10, lord: Planet.SATURN },
-            { house: 8, lord: Planet.SATURN }
+            { house: 10, lord: Planet.SATURN, sign: 'CAPRICORN' as any, occupants: [], evidence: [] },
+            { house: 8, lord: Planet.SATURN, sign: 'SCORPIO' as any, occupants: [], evidence: [] }
           ]
         }
       });
