@@ -10,6 +10,11 @@ import type { CareerHouseRelationship } from './careerHouseRelationship';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { buildCareerStructuralReasoning } from './careerStructuralReasoningIntegration';
+import {
+  CAREER_PRIMARY_HOUSES,
+  CAREER_SUPPORTING_HOUSES,
+  CAREER_CHALLENGING_HOUSES
+} from './careerTypes';
 
 function createMinimalHoroscope(overrides: any = {}): any {
   return {
@@ -245,6 +250,42 @@ describe('Career Planetary Relevance Integration', () => {
       expect(mercuryResult!.roles).toContain('RELATIONSHIP_PARTICIPANT');
       expect(mercuryResult!.reasons).toContain('CAREER_RELATIONSHIP');
       expect(mercuryResult!.relatedPlanets).toContain(Planet.SATURN);
+    });
+
+    it('relatedPlanets order is independent of structural.evidence ordering', () => {
+      const horoscope = createMinimalHoroscope({
+        houseAnalysis: {
+          houses: [
+            { house: 10, lord: Planet.SATURN },
+            { house: 6, lord: Planet.MERCURY },
+            { house: 11, lord: Planet.VENUS }
+          ]
+        }
+      });
+
+      const evidence1 = createRelationshipEvidence(10, 6, Planet.SATURN, Planet.MERCURY);
+      const evidence2 = createRelationshipEvidence(10, 11, Planet.SATURN, Planet.VENUS);
+
+      const structural1 = createMinimalStructural({
+        evidence: [evidence1, evidence2]
+      });
+
+      const structural2 = createMinimalStructural({
+        evidence: [evidence2, evidence1]
+      });
+
+      const input1: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural: structural1 };
+      const input2: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural: structural2 };
+
+      const result1 = buildCareerPlanetaryRelevance(input1);
+      const result2 = buildCareerPlanetaryRelevance(input2);
+
+      const saturnResult1 = result1.find(r => r.planet === Planet.SATURN);
+      const saturnResult2 = result2.find(r => r.planet === Planet.SATURN);
+
+      expect(saturnResult1).toBeDefined();
+      expect(saturnResult2).toBeDefined();
+      expect(saturnResult1!.relatedPlanets).toEqual(saturnResult2!.relatedPlanets);
     });
   });
 
@@ -498,8 +539,8 @@ describe('Career Planetary Relevance Integration', () => {
         expect(tenthLordResult!.relevance).not.toBe('NEUTRAL');
       }
 
-      // Find at least one planet occupying a career house (10, 6, 11, 2, 1)
-      const careerHouses = [10, 6, 11, 2, 1];
+      // Find at least one planet occupying a career house
+      const careerHouses = [...CAREER_PRIMARY_HOUSES, ...CAREER_SUPPORTING_HOUSES, ...CAREER_CHALLENGING_HOUSES];
       let careerHouseOccupant: Planet | undefined;
       for (const house of careerHouses) {
         const occupants = horoscope.bhavaFacts?.[house]?.occupants ?? horoscope.bhavas?.[house]?.occupants ?? [];
@@ -521,23 +562,33 @@ describe('Career Planetary Relevance Integration', () => {
       expect(nonNeutralResults.length).toBeGreaterThan(0);
     });
 
-    it('reads from both natalGrahaDrishti and grahaDrishti for aspects', () => {
+    it('uses natalGrahaDrishti and falls back to grahaDrishti', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const structural = buildCareerStructuralReasoning({ horoscope });
       const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
 
       const result = buildCareerPlanetaryRelevance(input);
 
-      // Verify that if either natalGrahaDrishti or grahaDrishti has aspects,
-      // they are not silently dropped
-      const hasAspects = (horoscope.natalGrahaDrishti?.aspects?.length ?? 0) > 0 ||
-        (horoscope.grahaDrishti?.aspects?.length ?? 0) > 0;
+      // Compute the set of planets that actually aspect a canonical career house
+      const careerHouses = new Set([...CAREER_PRIMARY_HOUSES, ...CAREER_SUPPORTING_HOUSES, ...CAREER_CHALLENGING_HOUSES]);
+      const aspects = horoscope.natalGrahaDrishti?.aspects ?? horoscope.grahaDrishti?.aspects ?? [];
+      const expectedAspectors = new Set<Planet>();
 
-      if (hasAspects) {
-        // At least one planet should have HOUSE_ASPECTOR role if aspects data exists
-        const anyAspectResults = result.filter(r => r.roles.includes('HOUSE_ASPECTOR'));
-        expect(anyAspectResults.length).toBeGreaterThan(0);
+      for (const aspect of aspects) {
+        if (aspect.targetHouse !== undefined && careerHouses.has(aspect.targetHouse)) {
+          expectedAspectors.add(aspect.sourcePlanet);
+        }
       }
+
+      // Get the actual HOUSE_ASPECTOR planets from C5 output
+      const actualAspectors = new Set(
+        result
+          .filter(r => r.roles.includes('HOUSE_ASPECTOR'))
+          .map(r => r.planet)
+      );
+
+      // Assert exact match between derived expectations and C5 output
+      expect(actualAspectors).toEqual(expectedAspectors);
     });
   });
 

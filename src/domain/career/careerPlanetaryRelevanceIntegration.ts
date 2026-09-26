@@ -124,7 +124,7 @@ function getCareerAspectHouses(horoscope: Horoscope, planet: Planet): readonly n
 
   const aspectHouses = new Set<number>();
 
-  // Read from both natalGrahaDrishti and grahaDrishti (whichever is populated)
+  // Read from natalGrahaDrishti (authoritative) with grahaDrishti as compatibility fallback
   const natalGrahaDrishti = horoscope.natalGrahaDrishti as NatalGrahaDrishtiReport | undefined;
   const grahaDrishti = horoscope.grahaDrishti as NatalGrahaDrishtiReport | undefined;
 
@@ -160,7 +160,7 @@ function getCareerRelationshipPlanets(
     }
   }
 
-  return Object.freeze([...relatedPlanets]);
+  return Object.freeze([...relatedPlanets].sort((a, b) => String(a).localeCompare(String(b))));
 }
 
 function hasCareerYogaParticipation(horoscope: Horoscope, planet: Planet): boolean {
