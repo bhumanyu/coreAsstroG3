@@ -4,8 +4,8 @@ import {
   buildCareerPlanetaryRelevanceContexts,
   type CareerPlanetaryRelevanceIntegrationInput
 } from './careerPlanetaryRelevanceIntegration';
-import { Planet } from '../../types';
-import type { CareerStructuralEvidence } from './careerStructuralReasoning';
+import { Planet, type Horoscope } from '../../types';
+import type { CareerStructuralEvidence, CareerStructuralReasoning } from './careerStructuralReasoning';
 import type { CareerHouseRelationship } from './careerHouseRelationship';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
@@ -16,33 +16,49 @@ import {
   CAREER_CHALLENGING_HOUSES
 } from './careerTypes';
 
-function createMinimalHoroscope(overrides: any = {}): any {
+const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
+  Planet.SUN,
+  Planet.MOON,
+  Planet.MARS,
+  Planet.MERCURY,
+  Planet.JUPITER,
+  Planet.VENUS,
+  Planet.SATURN,
+  Planet.RAHU,
+  Planet.KETU
+] as const);
+
+function createMinimalHoroscope(overrides: Partial<Horoscope> = {}): Horoscope {
   return {
     birthDetails: {
-      date: '1990-01-01',
-      time: '12:00:00',
-      timezone: 'UTC'
+      latitude: 0,
+      longitude: 0,
+      timeZone: 'UTC',
+      ayanamsa: 'LAHIRI' as any,
+      dateTimeStr: '1990-01-01T12:00:00Z'
     },
     planetFacts: {
-      [Planet.SUN]: { planet: Planet.SUN, position: { house: 1 } },
-      [Planet.MOON]: { planet: Planet.MOON, position: { house: 3 } },
-      [Planet.MARS]: { planet: Planet.MARS, position: { house: 3 } },
-      [Planet.MERCURY]: { planet: Planet.MERCURY, position: { house: 4 } },
-      [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 5 } },
-      [Planet.VENUS]: { planet: Planet.VENUS, position: { house: 7 } },
-      [Planet.SATURN]: { planet: Planet.SATURN, position: { house: 9 } },
-      [Planet.RAHU]: { planet: Planet.RAHU, position: { house: 1 } },
-      [Planet.KETU]: { planet: Planet.KETU, position: { house: 7 } }
+      [Planet.SUN]: { planet: Planet.SUN, position: { house: 1, longitude: 0, sign: 'ARIES' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.MOON]: { planet: Planet.MOON, position: { house: 3, longitude: 0, sign: 'GEMINI' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.MARS]: { planet: Planet.MARS, position: { house: 3, longitude: 0, sign: 'GEMINI' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.MERCURY]: { planet: Planet.MERCURY, position: { house: 4, longitude: 0, sign: 'CANCER' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 5, longitude: 0, sign: 'LEO' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.VENUS]: { planet: Planet.VENUS, position: { house: 7, longitude: 0, sign: 'LIBRA' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.SATURN]: { planet: Planet.SATURN, position: { house: 9, longitude: 0, sign: 'SAGITTARIUS' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.RAHU]: { planet: Planet.RAHU, position: { house: 1, longitude: 0, sign: 'ARIES' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any,
+      [Planet.KETU]: { planet: Planet.KETU, position: { house: 7, longitude: 0, sign: 'LIBRA' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any
     },
     bhavaFacts: {},
     houseAnalysis: null,
     natalGrahaDrishti: null,
+    grahaDrishti: null,
     yogas: null,
+    fullNatalAnalysis: {} as any,
     ...overrides
   };
 }
 
-function createMinimalStructural(overrides: any = {}): any {
+function createMinimalStructural(overrides: Partial<CareerStructuralReasoning> = {}): CareerStructuralReasoning {
   return {
     direction: 'SUPPORT',
     strength: 'MODERATE',
@@ -107,7 +123,7 @@ describe('Career Planetary Relevance Integration', () => {
           houses: [
             { house: 10, lord: Planet.SATURN }
           ]
-        }
+        } as any
       });
 
       const structural = createMinimalStructural();
@@ -128,7 +144,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         planetFacts: {
           ...createMinimalHoroscope().planetFacts,
-          [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10 } }
+          [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10, longitude: 0, sign: 'CAPRICORN' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any
         }
       });
 
@@ -191,6 +207,59 @@ describe('Career Planetary Relevance Integration', () => {
     });
   });
 
+  describe('Aspect Precedence (natalGrahaDrishti vs grahaDrishti)', () => {
+    it('prefers natalGrahaDrishti over grahaDrishti', () => {
+      const horoscope = createMinimalHoroscope({
+        natalGrahaDrishti: {
+          aspects: [
+            { sourcePlanet: Planet.JUPITER, targetHouse: 10, aspectType: 'FULL' }
+          ]
+        },
+        grahaDrishti: {
+          aspects: [
+            { sourcePlanet: Planet.SATURN, targetHouse: 10, aspectType: 'FULL' }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const jupiterResult = result.find(r => r.planet === Planet.JUPITER);
+      const saturnResult = result.find(r => r.planet === Planet.SATURN);
+
+      expect(jupiterResult).toBeDefined();
+      expect(jupiterResult!.roles).toContain('HOUSE_ASPECTOR');
+      expect(jupiterResult!.reasons).toContain('CAREER_HOUSE_ASPECT');
+
+      expect(saturnResult).toBeDefined();
+      expect(saturnResult!.roles).not.toContain('HOUSE_ASPECTOR');
+      expect(saturnResult!.reasons).not.toContain('CAREER_HOUSE_ASPECT');
+    });
+
+    it('falls back to grahaDrishti when natalGrahaDrishti is unavailable', () => {
+      const horoscope = createMinimalHoroscope({
+        natalGrahaDrishti: null,
+        grahaDrishti: {
+          aspects: [
+            { sourcePlanet: Planet.SATURN, targetHouse: 10, aspectType: 'FULL' }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const saturnResult = result.find(r => r.planet === Planet.SATURN);
+
+      expect(saturnResult).toBeDefined();
+      expect(saturnResult!.roles).toContain('HOUSE_ASPECTOR');
+      expect(saturnResult!.reasons).toContain('CAREER_HOUSE_ASPECT');
+    });
+  });
+
   describe('C4 Same-Planet Relationship → No Self-Participant', () => {
     it('same-planet relationship (COMMON_LORD) yields no self-participant', () => {
       const horoscope = createMinimalHoroscope({
@@ -199,7 +268,7 @@ describe('Career Planetary Relevance Integration', () => {
             { house: 10, lord: Planet.SATURN },
             { house: 6, lord: Planet.SATURN }
           ]
-        }
+        } as any
       });
 
       const evidence = createRelationshipEvidence(10, 6, Planet.SATURN, Planet.SATURN);
@@ -227,7 +296,7 @@ describe('Career Planetary Relevance Integration', () => {
             { house: 10, lord: Planet.SATURN },
             { house: 6, lord: Planet.MERCURY }
           ]
-        }
+        } as any
       });
 
       const evidence = createRelationshipEvidence(10, 6, Planet.SATURN, Planet.MERCURY);
@@ -260,7 +329,7 @@ describe('Career Planetary Relevance Integration', () => {
             { house: 6, lord: Planet.MERCURY },
             { house: 11, lord: Planet.VENUS }
           ]
-        }
+        } as any
       });
 
       const evidence1 = createRelationshipEvidence(10, 6, Planet.SATURN, Planet.MERCURY);
@@ -339,10 +408,10 @@ describe('Career Planetary Relevance Integration', () => {
           houses: [
             { house: 10, lord: Planet.SATURN }
           ]
-        },
+        } as any,
         planetFacts: {
           ...createMinimalHoroscope().planetFacts,
-          [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10 } }
+          [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10, longitude: 0, sign: 'CAPRICORN' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any
         },
         natalGrahaDrishti: {
           aspects: [
@@ -430,7 +499,7 @@ describe('Career Planetary Relevance Integration', () => {
           houses: [
             { house: 10, lord: Planet.SATURN }
           ]
-        }
+        } as any
       });
 
       const structural = createMinimalStructural();
@@ -448,7 +517,7 @@ describe('Career Planetary Relevance Integration', () => {
           houses: {
             10: { lord: Planet.SATURN }
           }
-        }
+        } as any
       });
 
       const structural = createMinimalStructural();
@@ -463,7 +532,7 @@ describe('Career Planetary Relevance Integration', () => {
     it('falls back to bhavaFacts for house lord', () => {
       const horoscope = createMinimalHoroscope({
         bhavaFacts: {
-          10: { lord: Planet.SATURN }
+          10: { lord: Planet.SATURN } as any
         }
       });
 
@@ -482,7 +551,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         planetFacts: {
           ...createMinimalHoroscope().planetFacts,
-          [Planet.JUPITER]: { planet: Planet.JUPITER, house: 10 }
+          [Planet.JUPITER]: { planet: Planet.JUPITER, house: 10 } as any
         }
       });
 
@@ -499,7 +568,7 @@ describe('Career Planetary Relevance Integration', () => {
       const horoscope = createMinimalHoroscope({
         planetFacts: {
           ...createMinimalHoroscope().planetFacts,
-          [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10 } }
+          [Planet.JUPITER]: { planet: Planet.JUPITER, position: { house: 10, longitude: 0, sign: 'CAPRICORN' as any, signLongitude: 0, motion: { speed: 0, retrograde: false, stationary: false } } } as any
         }
       });
 
@@ -531,13 +600,12 @@ describe('Career Planetary Relevance Integration', () => {
           : horoscope.houseAnalysis.houses[10]?.lord)
         : horoscope.bhavaFacts?.[10]?.lord ?? horoscope.bhavas?.[10]?.lord;
 
-      if (tenthHouseLord) {
-        // Verify the 10th-lord gets CAREER_LORD role
-        const tenthLordResult = result.find(r => r.planet === tenthHouseLord);
-        expect(tenthLordResult).toBeDefined();
-        expect(tenthLordResult!.roles).toContain('CAREER_LORD');
-        expect(tenthLordResult!.relevance).not.toBe('NEUTRAL');
-      }
+      // Verify the 10th-lord gets CAREER_LORD role
+      expect(tenthHouseLord).toBeDefined();
+      const tenthLordResult = result.find(r => r.planet === tenthHouseLord);
+      expect(tenthLordResult).toBeDefined();
+      expect(tenthLordResult!.roles).toContain('CAREER_LORD');
+      expect(tenthLordResult!.relevance).not.toBe('NEUTRAL');
 
       // Find at least one planet occupying a career house
       const careerHouses = [...CAREER_PRIMARY_HOUSES, ...CAREER_SUPPORTING_HOUSES, ...CAREER_CHALLENGING_HOUSES];
@@ -550,11 +618,19 @@ describe('Career Planetary Relevance Integration', () => {
         }
       }
 
-      if (careerHouseOccupant) {
-        const occupantResult = result.find(r => r.planet === careerHouseOccupant);
-        expect(occupantResult).toBeDefined();
-        expect(occupantResult!.roles).toContain('HOUSE_OCCUPANT');
-        expect(occupantResult!.relevance).not.toBe('NEUTRAL');
+      // Verify career-house occupant gets HOUSE_OCCUPANT role
+      expect(careerHouseOccupant).toBeDefined();
+      const occupantResult = result.find(r => r.planet === careerHouseOccupant);
+      expect(occupantResult).toBeDefined();
+      expect(occupantResult!.roles).toContain('HOUSE_OCCUPANT');
+      expect(occupantResult!.relevance).not.toBe('NEUTRAL');
+
+      // Verify all canonical planets exist and have house information
+      for (const planet of CANONICAL_PLANET_ORDER) {
+        expect(horoscope.planetFacts[planet]).toBeDefined();
+        const planetFact = horoscope.planetFacts[planet];
+        const house = planetFact?.house ?? planetFact?.position?.house;
+        expect(house).toBeDefined();
       }
 
       // At minimum, verify that some planets have non-NEUTRAL relevance
@@ -619,10 +695,12 @@ describe('Career Planetary Relevance Integration', () => {
       expect(jupiterResult).toBeDefined();
       expect(jupiterResult!.roles).toContain('YOGA_PARTICIPANT');
       expect(jupiterResult!.reasons).toContain('CAREER_YOGA');
+      expect(jupiterResult!.relevance).toBe('CONDITIONAL');
 
       expect(venusResult).toBeDefined();
       expect(venusResult!.roles).toContain('YOGA_PARTICIPANT');
       expect(venusResult!.reasons).toContain('CAREER_YOGA');
+      expect(venusResult!.relevance).toBe('CONDITIONAL');
     });
 
     it('planet not participating in any yoga has careerYogaParticipation false', () => {

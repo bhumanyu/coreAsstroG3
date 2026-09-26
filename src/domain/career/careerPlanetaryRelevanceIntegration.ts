@@ -1,4 +1,4 @@
-import type { Horoscope, HouseAnalysis, BhavaFact, PlanetFact, NatalGrahaDrishtiReport, YogaResult, YogaAnalysisReport, HouseAnalysisReport } from '../../types';
+import type { Horoscope, HouseAnalysis } from '../../types';
 import { Planet } from '../../types';
 
 import type { CareerStructuralReasoning } from './careerStructuralReasoning';
