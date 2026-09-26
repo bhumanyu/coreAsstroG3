@@ -109,11 +109,9 @@ function getCareerAspectHouses(horoscope: Horoscope, planet: Planet): readonly n
 
   const aspectHouses = new Set<number>();
 
-  // Read from natalGrahaDrishti (authoritative) with grahaDrishti as compatibility fallback
-  const natalGrahaDrishti = horoscope.natalGrahaDrishti;
-  const grahaDrishti = horoscope.grahaDrishti;
-
-  const aspects = natalGrahaDrishti?.aspects ?? grahaDrishti?.aspects ?? [];
+  // natalGrahaDrishti is the canonical natal aspect source (aligned with C4).
+  // grahaDrishti is legacy and must NOT contribute to C5 relevance.
+  const aspects = horoscope.natalGrahaDrishti?.aspects ?? [];
 
   for (const aspect of aspects) {
     if (aspect.sourcePlanet === planet && aspect.targetHouse !== undefined) {

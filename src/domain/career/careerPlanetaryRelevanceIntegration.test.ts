@@ -207,8 +207,8 @@ describe('Career Planetary Relevance Integration', () => {
     });
   });
 
-  describe('Aspect Precedence (natalGrahaDrishti vs grahaDrishti)', () => {
-    it('prefers natalGrahaDrishti over grahaDrishti', () => {
+  describe('Single Source of Truth: natalGrahaDrishti', () => {
+    it('ignores grahaDrishti when both natalGrahaDrishti and grahaDrishti are present with conflicting values', () => {
       const horoscope = createMinimalHoroscope({
         natalGrahaDrishti: {
           aspects: [
@@ -238,7 +238,7 @@ describe('Career Planetary Relevance Integration', () => {
       expect(saturnResult!.reasons).not.toContain('CAREER_HOUSE_ASPECT');
     });
 
-    it('falls back to grahaDrishti when natalGrahaDrishti is unavailable', () => {
+    it('ignores grahaDrishti when natalGrahaDrishti is absent/null', () => {
       const horoscope = createMinimalHoroscope({
         natalGrahaDrishti: undefined,
         grahaDrishti: {
@@ -255,8 +255,8 @@ describe('Career Planetary Relevance Integration', () => {
       const saturnResult = result.find(r => r.planet === Planet.SATURN);
 
       expect(saturnResult).toBeDefined();
-      expect(saturnResult!.roles).toContain('HOUSE_ASPECTOR');
-      expect(saturnResult!.reasons).toContain('CAREER_HOUSE_ASPECT');
+      expect(saturnResult!.roles).not.toContain('HOUSE_ASPECTOR');
+      expect(saturnResult!.reasons).not.toContain('CAREER_HOUSE_ASPECT');
     });
   });
 
@@ -643,7 +643,7 @@ describe('Career Planetary Relevance Integration', () => {
       expect(nonNeutralResults.length).toBeGreaterThan(0);
     });
 
-    it('uses natalGrahaDrishti and falls back to grahaDrishti', () => {
+    it('uses natalGrahaDrishti as the canonical C5 aspect source', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const structural = buildCareerStructuralReasoning({ horoscope });
       const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
@@ -652,7 +652,7 @@ describe('Career Planetary Relevance Integration', () => {
 
       // Compute the set of planets that actually aspect a canonical career house
       const careerHouses = new Set([...CAREER_PRIMARY_HOUSES, ...CAREER_SUPPORTING_HOUSES, ...CAREER_CHALLENGING_HOUSES]);
-      const aspects = horoscope.natalGrahaDrishti?.aspects ?? horoscope.grahaDrishti?.aspects ?? [];
+      const aspects = horoscope.natalGrahaDrishti?.aspects ?? [];
       const expectedAspectors = new Set<Planet>();
 
       for (const aspect of aspects) {

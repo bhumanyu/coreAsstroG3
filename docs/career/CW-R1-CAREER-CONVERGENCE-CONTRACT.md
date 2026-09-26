@@ -857,6 +857,10 @@ A future wave will:
 
 No changes to `CareerDomainInterpreterV2` production authority are made in W1.2. The C5 adapter remains available for testing and validation but is not yet integrated into the production Career pipeline.
 
+### W1.2.6 Single Source of Truth
+
+C5 uses `natalGrahaDrishti` as the canonical natal aspect source (aligned with C4). The legacy `grahaDrishti` field is not consulted by C5 and must not contribute to planetary relevance. This ensures consistency with the C4 canonical decision and eliminates dual-source ambiguity in aspect calculations.
+
 ## W1.3 — C6 Planetary Condition Integration
 
 ### W1.3.1 W1.3 Scope
