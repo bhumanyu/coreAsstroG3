@@ -916,7 +916,7 @@ The adapter implements the following mappers:
 
 **Aspect Influence:**
 - Defines narrow local type `CareerConditionAspect` for aspect data at engine boundary
-- `getNatalAspects(horoscope)` reads `horoscope.natalGrahaDrishti?.aspects ?? []` cast to `CareerConditionAspect[]`
+- `getNatalAspects(horoscope)` reads only `horoscope.natalGrahaDrishti?.aspects ?? []` cast to `CareerConditionAspect[]` (legacy `grahaDrishti` is intentionally ignored)
 - `resolveAspectInfluence(horoscope, planet)`:
   - For each aspect where `targetPlanet ?? target === planet`
   - Takes `sourcePlanet ?? aspectingPlanet`
@@ -980,6 +980,33 @@ A future wave will:
 1. Wire `buildCareerPlanetaryCondition` output into `CareerNatalAnalysis.condition`
 2. Integrate condition results into the production Career pipeline
 3. Update this contract document to reflect the completed wiring
+
+### W1.3.7 Canonical Natal Aspect Source
+
+C6 uses `horoscope.natalGrahaDrishti.aspects` as the canonical natal aspect source for Career C4/C5/C6 reasoning. The legacy `horoscope.grahaDrishti` field is not consulted by the C6 integration adapter.
+
+**Single-Source Semantics:**
+- `getNatalAspects(horoscope)` reads only from `horoscope.natalGrahaDrishti?.aspects ?? []`
+- The legacy `horoscope.grahaDrishti` fallback is intentionally removed
+- If `natalGrahaDrishti` is unavailable, C6 does not fall back to `grahaDrishti`
+- The resulting absence of aspect evidence must not be interpreted as negative evidence (missing evidence ≠ negative evidence)
+
+**Alignment with C4/C5:**
+- C4, C5, and C6 all read `natalGrahaDrishti` as the canonical natal aspect source
+- This ensures consistent aspect interpretation across the Career planetary semantics pipeline
+- Legacy `grahaDrishti` may remain on the `Horoscope` type for compatibility but is non-authoritative for Career reasoning
+
+**Implementation:**
+- `careerPlanetaryConditionIntegration.ts` (lines 121-132): `getNatalAspects` function uses only `natalGrahaDrishti`
+- `resolveAspectInfluence` (lines 134-161) correctly delegates to `isNaturalBenefic` for benefic classification
+- No local benefic-classification helper is introduced — the existing `isNaturalBenefic` from `drikBala.ts` is used
+
+**Test Coverage:**
+- Test scenarios validate single-source semantics:
+  - Both sources conflicting (canonical wins): natalGrahaDrishti Jupiter→Mercury, legacy grahaDrishti Saturn→Mercury ignored
+  - Canonical source absent, legacy present (no fallback): legacy grahaDrishti aspects are ignored
+  - Both sources absent (missing data ≠ negative): condition does not become CHALLENGE/WEAK from missing aspect data
+  - Influence directions: Jupiter→Mercury only ⇒ beneficSupport=true; Saturn→Mercury only ⇒ maleficPressure=true; both in natalGrahaDrishti ⇒ both flags true
 
 ### W0.3.5 Prohibition of Duplicate/Hybrid Authority
 

@@ -120,10 +120,13 @@ interface CareerConditionAspect {
 
 /**
  * Reads natal aspects from the horoscope.
- * Uses natalGrahaDrishti.aspects with grahaDrishti.aspects as fallback.
+ * `natalGrahaDrishti` is the canonical natal aspect source for Career C4/C5/C6 reasoning;
+ * the legacy `grahaDrishti` field is intentionally ignored; missing `natalGrahaDrishti`
+ * means no aspect influence is established and must not fall back to a legacy representation
+ * (missing evidence ≠ negative evidence).
  */
 function getNatalAspects(horoscope: Horoscope): readonly CareerConditionAspect[] {
-  const aspects = horoscope.natalGrahaDrishti?.aspects ?? horoscope.grahaDrishti?.aspects ?? [];
+  const aspects = horoscope.natalGrahaDrishti?.aspects ?? [];
   return aspects as CareerConditionAspect[];
 }
 

@@ -74,8 +74,7 @@ function createMockHoroscope(planetFactsOverrides: Partial<Record<Planet, any>> 
 
   return {
     planetFacts: { ...defaultFacts, ...planetFactsOverrides },
-    natalGrahaDrishti: { aspects: [] },
-    grahaDrishti: { aspects: [] }
+    natalGrahaDrishti: { aspects: [] }
   };
 }
 
@@ -453,7 +452,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
       expect(mercuryResult).toBeDefined();
       // Jupiter is a natural benefic, so beneficSupport should be true
-      // Note: The actual result depends on the engine's aspect calculation
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(true);
     });
 
     it('Saturn aspecting Mercury → maleficPressure=true', () => {
@@ -474,7 +473,144 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
       expect(mercuryResult).toBeDefined();
       // Saturn is a natural malefic, so maleficPressure should be true
-      // Note: The actual result depends on the engine's aspect calculation
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(true);
+    });
+
+    it('both sources conflicting (canonical wins): natalGrahaDrishti Jupiter→Mercury, legacy grahaDrishti Saturn→Mercury ignored', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 5 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      horoscope.natalGrahaDrishti = {
+        aspects: [
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY }
+        ] as any[]
+      };
+      // Legacy grahaDrishti with conflicting aspect (should be ignored)
+      (horoscope as any).grahaDrishti = {
+        aspects: [
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+        ] as any[]
+      };
+      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
+      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
+
+      const result = buildCareerPlanetaryCondition(input);
+      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
+
+      expect(mercuryResult).toBeDefined();
+      // Jupiter (benefic) from canonical source should be seen, Saturn (malefic) from legacy should be ignored
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(true);
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(false);
+    });
+
+    it('canonical source absent, legacy present (no fallback): natalGrahaDrishti undefined, legacy grahaDrishti Saturn→Mercury ignored', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 7 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 11 })
+      });
+      delete horoscope.natalGrahaDrishti;
+      // Legacy grahaDrishti with Saturn aspect (should be ignored)
+      (horoscope as any).grahaDrishti = {
+        aspects: [
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+        ] as any[]
+      };
+      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
+      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
+
+      const result = buildCareerPlanetaryCondition(input);
+      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
+
+      expect(mercuryResult).toBeDefined();
+      // Legacy Saturn aspect must NOT become pressure
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(false);
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(false);
+    });
+
+    it('both sources absent (missing data ≠ negative): natalGrahaDrishti undefined', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      delete horoscope.natalGrahaDrishti;
+      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
+      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
+
+      const result = buildCareerPlanetaryCondition(input);
+      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
+
+      expect(mercuryResult).toBeDefined();
+      // Missing aspect data should not create negative evidence
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(false);
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(false);
+      // Condition should not become CHALLENGE/WEAK merely from missing aspect data
+      expect(mercuryResult!.condition).not.toBe('CHALLENGE');
+      expect(mercuryResult!.condition).not.toBe('WEAK');
+    });
+
+    it('influence directions: Jupiter→Mercury only ⇒ beneficSupport=true', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 5 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      horoscope.natalGrahaDrishti = {
+        aspects: [
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY }
+        ] as any[]
+      };
+      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
+      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
+
+      const result = buildCareerPlanetaryCondition(input);
+      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
+
+      expect(mercuryResult).toBeDefined();
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(true);
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(false);
+    });
+
+    it('influence directions: Saturn→Mercury only ⇒ maleficPressure=true', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 7 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 11 })
+      });
+      horoscope.natalGrahaDrishti = {
+        aspects: [
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+        ] as any[]
+      };
+      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
+      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
+
+      const result = buildCareerPlanetaryCondition(input);
+      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
+
+      expect(mercuryResult).toBeDefined();
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(false);
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(true);
+    });
+
+    it('influence directions: Jupiter+Saturn→Mercury (both in natalGrahaDrishti) ⇒ both flags true', () => {
+      const horoscope = createMockHoroscope({
+        [Planet.JUPITER]: createMockPlanetFact(Planet.JUPITER, { house: 5 }),
+        [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, { house: 7 }),
+        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { house: 9 })
+      });
+      horoscope.natalGrahaDrishti = {
+        aspects: [
+          { sourcePlanet: Planet.JUPITER, targetPlanet: Planet.MERCURY },
+          { sourcePlanet: Planet.SATURN, targetPlanet: Planet.MERCURY }
+        ] as any[]
+      };
+      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
+      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
+
+      const result = buildCareerPlanetaryCondition(input);
+      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
+
+      expect(mercuryResult).toBeDefined();
+      expect(mercuryResult!.positiveFactors.some(f => f.type === 'BENEFIC_SUPPORT')).toBe(true);
+      expect(mercuryResult!.negativeFactors.some(f => f.type === 'MALEFIC_PRESSURE')).toBe(true);
     });
   });
 
