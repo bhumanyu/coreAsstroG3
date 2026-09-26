@@ -1112,6 +1112,256 @@ The `createCareerNatalAnalysis` factory:
 - Frozen empty `ReasoningTrace` with all layer arrays empty
 - Minimal `CareerStructuralReasoning` with NEUTRAL direction and UNDETERMINED strength
 
+## W3 — C9 Dasha Activation
+
+### W3.1 Authority and Ownership
+
+C9 `careerDashaActivation` is the authoritative producer of Dasha activation insights for the Career domain. C9 operates as an activation layer on top of the natal Career foundation produced by C4–C8.
+
+**Authority:**
+- C9 owns Dasha activation semantics (WHEN and HOW the natal Career promise activates)
+- C9 must NOT independently establish natal Career promise
+- C9 must NOT recalculate houses, lords, relevance, condition, or promise (consumes natal.structural from C4)
+- C9 must NOT compute D10 or transit data (D10 is C10, transit is timing layer)
+
+**Non-Responsibilities:**
+- C9 does NOT compute natal Career promise (owned by C4–C8)
+- C9 does NOT recompute planetary relevance or condition (owned by C5/C6)
+- C9 does NOT recompute Career expression modes (owned by C8)
+- C9 does NOT compute D10 qualification (owned by C10)
+- C9 does NOT compute transit timing (owned by timing layer)
+- C9 does NOT produce the final Career conclusion (owned by C11)
+
+### W3.2 Input Contract
+
+C9 consumes the following inputs:
+
+1. **CareerNatalAnalysis** — The natal Career foundation aggregate from C4–C7
+   - `natal.structural` — Structural direction, strength, primary support/challenge
+   - `natal.relevance` — Per-planet relevance results from C5
+   - `natal.condition` — Per-planet condition results from C6
+   - `natal.evidence` — Canonical deduplicated evidence with sourceIds
+
+2. **CareerExpressionAnalysis** — Career expression modes from C8
+   - `expression.expressions[]` — Expression modes with evidence and planets
+
+3. **Horoscope** — Engine-produced horoscope with Dasha timing
+   - `horoscope.dashaInterpretation.current` — Current MD/AD/PD timing with planets and dates
+
+C9 does NOT read:
+- D10 data (dasamsa chart, D10 qualification)
+- Transit data (transit positions, aspects)
+- Any natal astrology beyond what CareerNatalAnalysis exposes
+
+### W3.3 Dasha Level Roles
+
+C9 assigns canonical roles to each Dasha level in the activation hierarchy:
+
+- **MD (Mahadasha)** — `PRIMARY_DRIVER` — The primary driver of Career activation during this period
+- **AD (Antardasha)** — `MODIFIER` — Modifies the MD effect (can support, challenge, or refine)
+- **PD (Pratyantardasha)** — `REFINEMENT` — Refines the combined MD+AD effect at a granular level
+
+The role hierarchy determines the dominant level:
+- MD is dominant by default (PRIMARY_DRIVER)
+- AD can become dominant if MD is neutral/unavailable and AD is strong
+- PD refines but does not become dominant (REFINEMENT role)
+
+### W3.4 Evidence Identity Semantics
+
+C9 canonical evidence uses three identity levels:
+
+1. **identityKey** — Semantic identity (excludes effect)
+   - Format: `CAREER_DASHA:{level}:{planet}:{role}`
+   - Same semantic fact with different effect shares the same identityKey
+   - Example: `CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER`
+
+2. **id** — Occurrence identity (includes effect)
+   - Format: `{identityKey}:{effect}`
+   - Different effects have different occurrence IDs
+   - Example: `CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER:ACTIVATES`
+
+3. **sourceIds** — Actual upstream occurrence IDs
+   - Contains the `CareerDashaActivationEvidence.id` values from the activation level
+   - These are the real source occurrence IDs from the engine's evidence rows
+   - NOT the C9-generated occurrence id (which is the evidence's own identity)
+   - Preserves provenance traceability to the actual activation evidence
+
+**Critical distinction:**
+- `id` is the C9-generated occurrence identity (this evidence's identity)
+- `sourceIds` are the upstream activation evidence ids (provenance)
+- This prevents circular provenance (C9 evidence pointing at itself)
+
+### W3.5 Root Evidence Linkage (Conservative Approach)
+
+C9 currently uses a conservative approach for `natalRootIds` in canonical evidence provenance:
+
+**Current Implementation:**
+- `resolveNatalRootEvidenceIds` returns an empty array `readonly string[]`
+- This is because `WeightedReasoningEvidence` does not expose a structured field that reliably identifies the planet/subject
+- The `rootEvidenceId` field is a forward-looking W1 concept that is not yet implemented in the current codebase
+
+**Rationale:**
+- Fabricating links via string matching (e.g., `id.includes(planet)`) would be unreliable and create false provenance
+- The contract states `rootEvidenceId` is a forward-looking, not-yet-implemented W1 concept
+- Returning an empty array preserves correctness by not claiming traceability that does not exist in the data contract
+
+**Future W1 Work:**
+- When W1 establishes a root evidence tree structure for evidence dependency tracking
+- This function can be updated to use the structured mechanism
+- Until then, the conservative empty-array approach is the correct implementation
+
+### W3.6 Missing Data Representation
+
+C9 represents missing/unavailable data explicitly:
+
+**Unavailable Periods:**
+- When no current Dasha is available (`horoscope.dashaInterpretation.current` is missing)
+- `createUnavailableCareerDashaAnalysis` returns:
+  - `overallEffect: 'INSUFFICIENT_DATA'`
+  - `overallDirection: 'UNAVAILABLE'`
+  - `md.planet: undefined` (explicit absence, not misread as real Sun Dasha)
+  - `ad.planet: undefined`
+  - `pd.planet: undefined`
+  - Empty evidence and rootEvidenceIds arrays
+
+**C6 UNAVAILABLE Preservation:**
+- C9 preserves `condition: 'UNAVAILABLE'` from C6 without coercion
+- Missing condition evidence is NOT defaulted to WEAK/MODERATE
+- Missing evidence is not negative evidence (core invariant)
+
+**INSUFFICIENT_DATA → UNAVAILABLE Mapping:**
+- At the adapter level (`buildCareerDashaAnalysis`), `overallDirection` is derived from `hierarchy.overallEffect`:
+  - `INSUFFICIENT_DATA` → `'UNAVAILABLE'` (missing evidence ≠ negative evidence)
+  - `UNKNOWN` → `'UNAVAILABLE'`
+  - `DOES_NOT_ACTIVATE` → `'NEUTRAL'`
+  - `ACTIVATES` → `'SUPPORT'`
+  - `CHALLENGES` → `'CHALLENGE'`
+  - `PARTIALLY_ACTIVATES` → `'MIXED'`
+- This mapping is done at the adapter to avoid changing the shared `CareerDashaActivationHierarchy.overallDirection` that C11 consumes
+
+### W3.7 MIXED Direction Preservation
+
+C9 preserves MIXED structural direction from the natal foundation:
+
+**Implementation:**
+- In `buildActivationEvidence` (line 169 of `careerDashaActivation.ts`), the structural evidence direction is explicitly mapped
+- The old ternary `SUPPORT ? 'SUPPORT' : CHALLENGE ? 'CHALLENGE' : 'NEUTRAL'` is replaced with an explicit switch
+- This preserves `MIXED`, `NEUTRAL`, and `UNAVAILABLE` from `context.structuralDirection`
+- The evidence `direction` type already allows MIXED
+
+**Rationale:**
+- The natal structural direction can be MIXED (conflicting structural evidence)
+- C9 must preserve this MIXED state in the activation evidence
+- Coercing MIXED to NEUTRAL would lose information about conflicting structural factors
+
+### W3.8 Expression Deduplication
+
+C9 deduplicates expressions per planet to prevent double-counting:
+
+**Implementation:**
+- In `buildPlanetContexts`, expressions are accumulated using `Map<Planet, Map<string, CareerExpression>>`
+- The inner map key is `${expr.mode}:${expr.direction}` (semantic dedup)
+- This ensures the same expression (same mode+direction) appears once per planet
+- The engine uses `expressions.length`, so deduplication matters for correct weight
+
+**Before (incorrect):**
+```typescript
+const expressionsByPlanet = new Map<Planet, CareerExpression[]>();
+for (const expr of expression.expressions) {
+  for (const evidence of expr.evidence) {
+    for (const planet of evidence.planets) {
+      const existing = expressionsByPlanet.get(planet) ?? [];
+      expressionsByPlanet.set(planet, [...existing, expr]); // Pushes same expr once per evidence row
+    }
+  }
+}
+```
+
+**After (correct):**
+```typescript
+const expressionsByPlanet = new Map<Planet, Map<string, CareerExpression>>();
+for (const expr of expression.expressions) {
+  for (const evidence of expr.evidence) {
+    for (const planet of evidence.planets) {
+      const planetMap = expressionsByPlanet.get(planet) ?? new Map<string, CareerExpression>();
+      const exprKey = `${expr.mode}:${expr.direction}`;
+      if (!planetMap.has(exprKey)) {
+        planetMap.set(exprKey, expr); // Deduplicated by mode:direction
+      }
+      expressionsByPlanet.set(planet, planetMap);
+    }
+  }
+}
+```
+
+### W3.9 Type Safety
+
+C9 removes `any` types from canonical conversion functions:
+
+**Before:**
+```typescript
+function buildCanonicalPeriod(activation: any, level: CareerDashaCanonicalLevel)
+function buildCanonicalEvidence(hierarchy: any, natal: CareerNatalAnalysis)
+const levels: Array<{ level: CareerDashaCanonicalLevel; activation: any }>
+```
+
+**After:**
+```typescript
+import type {
+  CareerDashaActivation,
+  CareerDashaActivationHierarchy
+} from './careerDashaActivationTypes';
+
+function buildCanonicalPeriod(activation: CareerDashaActivation, level: CareerDashaCanonicalLevel)
+function buildCanonicalEvidence(hierarchy: CareerDashaActivationHierarchy, natal: CareerNatalAnalysis)
+const levels: Array<{ level: CareerDashaCanonicalLevel; activation: CareerDashaActivation }>
+```
+
+### W3.10 Test Coverage
+
+C9 integration is validated by `careerDashaIntegration.test.ts` with the following test scenarios:
+
+1. **MD primary / AD modifier / PD refinement roles** — Correct role assignment
+2. **MD activation + AD challenge** — PARTIALLY_ACTIVATES with MIXED direction
+3. **MD challenge + AD activation** — PARTIALLY_ACTIVATES with MIXED direction
+4. **PD refinement** — PD refines when AD is dominant
+5. **Natural-karaka-only guardrail** — Does NOT activate with only NATURAL_KARAKA role
+6. **C6 UNAVAILABLE preserved** — Not coerced to WEAK/MODERATE
+7. **C8 conditional** — CONDITIONAL expression produces PARTIALLY_ACTIVATES
+8. **C8 expression absent** — No expression evidence when C8 expressions are absent
+9. **Determinism** — Two runs produce identical results (toEqual)
+10. **Input-order independence** — Planet contexts produce same result regardless of relevance order
+11. **Canonical evidence identity** — Distinguishes identityKey vs occurrence id vs sourceIds
+12. **Provenance correctness** — No unrelated-planet root ids (conservative empty array)
+13. **Immutability** — Frozen result + arrays, horoscope not mutated
+14. **No D10/transit fields** — Does not include D10 or transit-specific fields
+15. **Unavailable case** — Returns planet: undefined and overallDirection: UNAVAILABLE
+16. **Real-engine integration** — Produces coherent hierarchy with real horoscope calculation
+
+### W3.11 API Export
+
+C9 exports its canonical types and integration function via `src/domain/career/careerDasha/index.ts`:
+
+```typescript
+export * from './careerDashaCanonicalTypes';
+export * from './careerDashaIntegration';
+```
+
+This makes the following available to consumers:
+- `CareerDashaCanonicalAnalysis` — Canonical analysis result type
+- `CareerDashaCanonicalEvidence` — Canonical evidence type
+- `CareerDashaCanonicalPeriod` — Canonical period type
+- `CareerDashaCanonicalEffect` — Canonical effect union
+- `CareerDashaCanonicalLevel` — Canonical level union (MD/AD/PD)
+- `CareerDashaCanonicalRole` — Canonical role union
+- `CareerDashaCanonicalProvenance` — Canonical provenance type
+- `buildCareerDashaAnalysis` — Main integration function
+- `CareerDashaIntegrationInput` — Input interface
+
+### W3.12 Reasoning Version
+
+C9 uses `reasoningVersion: 'CW-02'` for canonical evidence. This version label is NOT changed by the W3 hardening work — the hardening is adapter + type + test + provenance improvements, not a semantic engine redesign.
+
 ## C4 — IMPLEMENTATION COMPLETE / Hardening
 
 C4 structural reasoning is implementation-complete and test-hardened. This section records the hardening decisions and invariants that close the C4 wave.

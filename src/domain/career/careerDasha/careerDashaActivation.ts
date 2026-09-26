@@ -162,11 +162,34 @@ function buildActivationEvidence(
 
   const structuralKey = `${level}:${planetContext.planet}:STRUCTURAL:structural:STRUCTURAL`;
   if (!seenKeys.has(structuralKey)) {
+    // Preserve MIXED (and NEUTRAL/UNAVAILABLE) from context.structuralDirection
+    // Use explicit mapping instead of ternary to preserve all direction values
+    let structuralDirection: CareerDashaActivationDirection;
+    switch (context.structuralDirection) {
+      case 'SUPPORT':
+        structuralDirection = 'SUPPORT';
+        break;
+      case 'CHALLENGE':
+        structuralDirection = 'CHALLENGE';
+        break;
+      case 'MIXED':
+        structuralDirection = 'MIXED';
+        break;
+      case 'NEUTRAL':
+        structuralDirection = 'NEUTRAL';
+        break;
+      case 'UNAVAILABLE':
+        structuralDirection = 'UNAVAILABLE';
+        break;
+      default:
+        structuralDirection = 'NEUTRAL';
+    }
+
     evidence.push(Object.freeze({
       id: structuralKey,
       role: 'STRUCTURAL',
       statement: `Structural direction: ${context.structuralDirection}, strength: ${context.structuralStrength}, primary support: ${context.structuralPrimarySupport}.`,
-      direction: context.structuralDirection === 'SUPPORT' ? 'SUPPORT' : context.structuralDirection === 'CHALLENGE' ? 'CHALLENGE' : 'NEUTRAL'
+      direction: structuralDirection
     }));
     seenKeys.add(structuralKey);
   }

@@ -15,3 +15,5 @@ export * from './careerDashaD10Context';
 export * from './careerDashaActivationTypes';
 export * from './careerDashaActivationRules';
 export * from './careerDashaActivation';
+export * from './careerDashaCanonicalTypes';
+export * from './careerDashaIntegration';

@@ -1,6 +1,6 @@
 import type {
   Horoscope
-} from '../../types';
+} from '../../../types';
 
 import type {
   CareerNatalAnalysis
@@ -24,7 +24,9 @@ import type {
 import type {
   CareerDashaActivationContext,
   CareerDashaPlanetContext,
-  CareerDashaTiming
+  CareerDashaTiming,
+  CareerDashaActivation,
+  CareerDashaActivationHierarchy
 } from './careerDashaActivationTypes';
 
 import type {
@@ -43,7 +45,7 @@ import type {
 
 import {
   Planet
-} from '../../types';
+} from '../../../types';
 
 import {
   resolveCareerDashaActivation
@@ -102,7 +104,7 @@ function buildPlanetContexts(
   // Build relevance and condition maps
   const relevanceByPlanet = new Map<Planet, CareerPlanetRelevance>();
   for (const relevance of natal.relevance) {
-    relevanceByPlanet.set(relevance.planet, relevance);
+    relevanceByPlanet.set(relevance.planet, relevance.relevance);
   }
 
   const conditionByPlanet = new Map<Planet, CareerPlanetaryConditionResult>();
@@ -110,13 +112,19 @@ function buildPlanetContexts(
     conditionByPlanet.set(condition.planet, condition);
   }
 
-  // Build expressions-by-planet map
-  const expressionsByPlanet = new Map<Planet, CareerExpression[]>();
+  // Build expressions-by-planet map with semantic deduplication
+  // Use Map<Planet, Map<string, CareerExpression>> where key is `${mode}:${direction}`
+  // to deduplicate expressions per planet (same mode+direction appears once)
+  const expressionsByPlanet = new Map<Planet, Map<string, CareerExpression>>();
   for (const expr of expression.expressions) {
     for (const evidence of expr.evidence) {
       for (const planet of evidence.planets) {
-        const existing = expressionsByPlanet.get(planet) ?? [];
-        expressionsByPlanet.set(planet, [...existing, expr]);
+        const planetMap = expressionsByPlanet.get(planet) ?? new Map<string, CareerExpression>();
+        const exprKey = `${expr.mode}:${expr.direction}`;
+        if (!planetMap.has(exprKey)) {
+          planetMap.set(exprKey, expr);
+        }
+        expressionsByPlanet.set(planet, planetMap);
       }
     }
   }
@@ -128,7 +136,7 @@ function buildPlanetContexts(
     const relevance = relevanceByPlanet.get(planet);
 
     // Skip planets with no C5 relevance (missing evidence is not negative evidence)
-    if (!relevance || relevance.relevance === 'NEUTRAL') {
+    if (!relevance || relevance === 'NEUTRAL') {
       continue;
     }
 
@@ -137,8 +145,14 @@ function buildPlanetContexts(
     // Preserve C6 UNAVAILABLE — do NOT default to WEAK/MODERATE
     const planetCondition = condition?.condition ?? 'UNAVAILABLE';
 
+    // Get the full relevance object to extract roles, relatedHouses, relatedPlanets
+    const fullRelevance = natal.relevance.find(r => r.planet === planet);
+    if (!fullRelevance) {
+      continue;
+    }
+
     // Merge relatedPlanets from relevance and condition, deduped and sorted by canonical order
-    const relevanceRelatedPlanets = relevance.relatedPlanets;
+    const relevanceRelatedPlanets = fullRelevance.relatedPlanets;
     const conditionRelatedPlanets = condition?.relatedPlanets ?? [];
     const mergedRelatedPlanets = Array.from(new Set([...relevanceRelatedPlanets, ...conditionRelatedPlanets]));
 
@@ -152,16 +166,19 @@ function buildPlanetContexts(
     });
 
     // Sort relatedHouses numerically
-    const sortedRelatedHouses = Array.from(relevance.relatedHouses).sort((a, b) => a - b);
+    const sortedRelatedHouses = Array.from(fullRelevance.relatedHouses).sort((a, b) => a - b);
 
-    // Get expressions for this planet
-    const planetExpressions = expressionsByPlanet.get(planet) ?? [];
+    // Get expressions for this planet (deduplicated)
+    const planetExpressionsMap = expressionsByPlanet.get(planet);
+    const planetExpressions = planetExpressionsMap
+      ? Array.from(planetExpressionsMap.values())
+      : [];
 
     // Build planet context
     const planetContext: CareerDashaPlanetContext = Object.freeze({
       planet,
-      relevance: relevance.relevance,
-      roles: Object.freeze([...relevance.roles]),
+      relevance: relevance,
+      roles: Object.freeze([...fullRelevance.roles]),
       condition: planetCondition,
       expressions: Object.freeze(planetExpressions),
       relatedHouses: Object.freeze(sortedRelatedHouses),
@@ -282,7 +299,7 @@ function mapActivationStrength(
  * Builds a canonical period from a CareerDashaActivation.
  */
 function buildCanonicalPeriod(
-  activation: any,
+  activation: CareerDashaActivation,
   level: CareerDashaCanonicalLevel
 ): CareerDashaCanonicalPeriod {
   return Object.freeze({
@@ -300,52 +317,46 @@ function buildCanonicalPeriod(
 
 /**
  * Resolves natal root evidence IDs for a planet.
- * Conservative implementation that references actual natal.evidence[].sourceIds.
- * Does NOT fabricate IDs that C5/C6 don't expose.
+ *
+ * Conservative implementation: WeightedReasoningEvidence does not expose a structured
+ * field that reliably identifies the planet/subject. The rootEvidenceId field is a
+ * forward-looking W1 concept that is not yet implemented in the current codebase.
+ *
+ * Rather than fabricating links via string matching (which would be unreliable and
+ * create false provenance), this function returns an empty array. This preserves
+ * correctness by not claiming traceability that does not exist in the data contract.
+ *
+ * Future W1 work may establish a root evidence tree structure for evidence dependency
+ * tracking, at which point this function can be updated to use the structured mechanism.
  */
 function resolveNatalRootEvidenceIds(
   natal: CareerNatalAnalysis,
   planet: Planet
 ): readonly string[] {
-  const rootIds: string[] = [];
-
-  // Look for evidence in natal.evidence that references this planet
-  for (const evidence of natal.evidence) {
-    // Check if evidence has sourceIds that might reference the planet
-    // This is a conservative approach - only use IDs that are actually exposed
-    if (evidence.sourceIds && evidence.sourceIds.length > 0) {
-      // Filter for evidence that might be related to this planet
-      // This is a simple heuristic - in production, you'd want more sophisticated matching
-      const hasPlanetReference = evidence.sourceIds.some(id =>
-        id.includes(planet) || id.includes('PLANETARY')
-      );
-      if (hasPlanetReference) {
-        rootIds.push(...evidence.sourceIds);
-      }
-    }
-  }
-
-  return Object.freeze(rootIds);
+  // Conservative: return empty array since WeightedReasoningEvidence does not
+  // expose a structured planet/subject field, and rootEvidenceId is not yet implemented.
+  // Do not fabricate links via string matching.
+  return Object.freeze([]);
 }
 
 /**
  * Builds canonical evidence from the activation hierarchy.
- * 
+ *
  * This function:
  * - Uses deterministic identityKey = ['CAREER_DASHA', level, planet, role].join(':')
  * - id = identityKey + ':' + effect (occurrence identity)
- * - sourceIds = [source.id]
+ * - sourceIds = activation.evidence.map(e => e.id) (actual source occurrence ids)
  * - provenance = { source: 'C9_DASHA', activationLevel, natalRootIds }
  * - Deduplicates canonical evidence by identityKey (merging sourceIds/rootEvidenceIds)
  * - Sorts output by identityKey.localeCompare
  */
 function buildCanonicalEvidence(
-  hierarchy: any,
+  hierarchy: CareerDashaActivationHierarchy,
   natal: CareerNatalAnalysis
 ): readonly CareerDashaCanonicalEvidence[] {
   const evidenceMap = new Map<string, CareerDashaCanonicalEvidence>();
 
-  const levels: Array<{ level: CareerDashaCanonicalLevel; activation: any }> = [
+  const levels: Array<{ level: CareerDashaCanonicalLevel; activation: CareerDashaActivation }> = [
     { level: 'MD', activation: hierarchy.md },
     { level: 'AD', activation: hierarchy.ad },
     { level: 'PD', activation: hierarchy.pd }
@@ -369,6 +380,10 @@ function buildCanonicalEvidence(
     });
 
     // Build canonical evidence
+    // sourceIds are the actual source occurrence ids from the activation level
+    // (each CareerDashaActivationEvidence.id), not the C9-generated occurrence id
+    const sourceIds = Object.freeze(activation.evidence.map(e => e.id));
+
     const canonicalEvidence: CareerDashaCanonicalEvidence = Object.freeze({
       identityKey,
       id,
@@ -379,7 +394,7 @@ function buildCanonicalEvidence(
       direction: mapActivationDirection(activation.direction),
       strength: mapActivationStrength(activation.strength),
       statement: activation.statement,
-      sourceIds: Object.freeze([id]),
+      sourceIds,
       provenance
     });
 
@@ -415,7 +430,7 @@ function buildCanonicalEvidence(
 
 /**
  * Creates an explicit unavailable Career Dasha analysis result.
- * 
+ *
  * This function:
  * - Returns overallEffect INSUFFICIENT_DATA
  * - Returns overallDirection UNAVAILABLE
@@ -423,7 +438,7 @@ function buildCanonicalEvidence(
  * - Returns dominantLevel NONE
  * - Returns empty evidence and rootEvidenceIds
  * - Omits hierarchy
- * - Does NOT invent Sun MD/AD/PD (uses SUN as placeholder with empty dates)
+ * - Sets planet: undefined for MD/AD/PD to make absence explicit (not misread as real Sun Dasha)
  */
 function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
   return Object.freeze({
@@ -433,7 +448,7 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
     dominantLevel: 'NONE',
     md: Object.freeze({
       level: 'MD',
-      planet: Planet.SUN,
+      planet: undefined,
       role: 'PRIMARY_DRIVER',
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
@@ -444,7 +459,7 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
     }),
     ad: Object.freeze({
       level: 'AD',
-      planet: Planet.SUN,
+      planet: undefined,
       role: 'MODIFIER',
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
@@ -455,7 +470,7 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
     }),
     pd: Object.freeze({
       level: 'PD',
-      planet: Planet.SUN,
+      planet: undefined,
       role: 'REFINEMENT',
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
@@ -518,10 +533,32 @@ export function buildCareerDashaAnalysis(
     `Evidence count: ${evidence.length}.`
   ].join(' ');
 
+  // Derive overallDirection from hierarchy.overallEffect at the adapter level
+  // This avoids changing the shared CareerDashaActivationHierarchy.overallDirection
+  // that C11 consumes. Mapping: INSUFFICIENT_DATA/UNKNOWN → UNAVAILABLE (missing evidence ≠ negative),
+  // DOES_NOT_ACTIVATE → NEUTRAL, ACTIVATES → SUPPORT, CHALLENGES → CHALLENGE, PARTIALLY_ACTIVATES → MIXED.
+  function mapOverallDirectionFromEffect(effect: string): ReasoningDirection {
+    switch (effect) {
+      case 'ACTIVATES':
+        return 'SUPPORT';
+      case 'CHALLENGES':
+        return 'CHALLENGE';
+      case 'PARTIALLY_ACTIVATES':
+        return 'MIXED';
+      case 'DOES_NOT_ACTIVATE':
+        return 'NEUTRAL';
+      case 'INSUFFICIENT_DATA':
+      case 'UNKNOWN':
+        return 'UNAVAILABLE';
+      default:
+        return 'UNAVAILABLE';
+    }
+  }
+
   // Return frozen canonical analysis
   return Object.freeze({
     overallEffect: hierarchy.overallEffect as CareerDashaCanonicalEffect,
-    overallDirection: mapActivationDirection(hierarchy.overallDirection),
+    overallDirection: mapOverallDirectionFromEffect(hierarchy.overallEffect),
     overallStrength: mapActivationStrength(hierarchy.overallStrength),
     dominantLevel: hierarchy.dominantLevel,
     md,

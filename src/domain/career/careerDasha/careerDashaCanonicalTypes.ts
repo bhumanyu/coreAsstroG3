@@ -74,7 +74,7 @@ export interface CareerDashaCanonicalProvenance {
  */
 export interface CareerDashaCanonicalPeriod {
   readonly level: CareerDashaCanonicalLevel;
-  readonly planet: Planet;
+  readonly planet?: Planet; // Optional to represent unavailable periods
   readonly role: CareerDashaCanonicalRole;
   readonly effect: CareerDashaCanonicalEffect;
   readonly direction: ReasoningDirection;
