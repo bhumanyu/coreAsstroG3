@@ -129,6 +129,15 @@ describe('CareerNatalAnalysis', () => {
       expect(result.conflicts).toEqual(mockConflicts);
       expect(result.reasoningTrace).toEqual(mockReasoningTrace);
     });
+
+    it('should preserve new conflict fields (supportWeight, challengeWeight, ratio, statement)', () => {
+      const result = createCareerNatalAnalysis(mockInput);
+
+      expect(result.conflicts[0].supportWeight).toBe(5);
+      expect(result.conflicts[0].challengeWeight).toBe(3);
+      expect(result.conflicts[0].ratio).toBe(0.375);
+      expect(result.conflicts[0].statement).toBe('Test conflict statement');
+    });
   });
 
   describe('Immutability', () => {
@@ -165,6 +174,20 @@ describe('CareerNatalAnalysis', () => {
         (result.conflicts as any).push({} as CareerNatalConflict);
       }).toThrow();
     });
+
+    it('should freeze reasoningTrace output', () => {
+      const result = createCareerNatalAnalysis(mockInput);
+
+      expect(Object.isFrozen(result.reasoningTrace)).toBe(true);
+    });
+
+    it('should prevent mutation of reasoningTrace.primaryPromise', () => {
+      const result = createCareerNatalAnalysis(mockInput);
+
+      expect(() => {
+        (result.reasoningTrace.primaryPromise as any).push({} as WeightedReasoningEvidence);
+      }).toThrow();
+    });
   });
 
   describe('Empty-state', () => {
@@ -183,6 +206,31 @@ describe('CareerNatalAnalysis', () => {
 
     it('should be frozen', () => {
       expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS)).toBe(true);
+    });
+
+    it('should have deep-immutable array fields', () => {
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.relevance)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.condition)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.lordRelationships)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.evidence)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.conflicts)).toBe(true);
+    });
+
+    it('should have deep-immutable reasoningTrace', () => {
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.primaryPromise)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.secondarySupport)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.modifiers)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.yogas)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.varga)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.dasha)).toBe(true);
+      expect(Object.isFrozen(EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.transit)).toBe(true);
+    });
+
+    it('should prevent mutation of reasoningTrace.dasha', () => {
+      expect(() => {
+        (EMPTY_CAREER_NATAL_ANALYSIS.reasoningTrace.dasha as any).push({});
+      }).toThrow();
     });
   });
 

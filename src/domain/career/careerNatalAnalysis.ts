@@ -89,7 +89,16 @@ export function createCareerNatalAnalysis(
     strength: input.strength,
     evidence: Object.freeze([...input.evidence]),
     conflicts: Object.freeze([...input.conflicts]),
-    reasoningTrace: input.reasoningTrace
+    reasoningTrace: Object.freeze({
+      primaryPromise: Object.freeze([...input.reasoningTrace.primaryPromise]),
+      secondarySupport: Object.freeze([...input.reasoningTrace.secondarySupport]),
+      modifiers: Object.freeze([...input.reasoningTrace.modifiers]),
+      yogas: Object.freeze([...input.reasoningTrace.yogas]),
+      varga: Object.freeze([...input.reasoningTrace.varga]),
+      dasha: Object.freeze([...input.reasoningTrace.dasha]),
+      transit: Object.freeze([...input.reasoningTrace.transit])
+    })
+    // structural is passed by reference - C4 already returns a frozen aggregate
   });
 }
 
