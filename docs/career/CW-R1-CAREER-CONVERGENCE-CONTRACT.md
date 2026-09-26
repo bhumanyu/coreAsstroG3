@@ -1080,3 +1080,52 @@ The `createCareerNatalAnalysis` factory:
 - `strength: 'UNDETERMINED'` for strength
 - Frozen empty `ReasoningTrace` with all layer arrays empty
 - Minimal `CareerStructuralReasoning` with NEUTRAL direction and UNDETERMINED strength
+
+## C4 — IMPLEMENTATION COMPLETE / Hardening
+
+C4 structural reasoning is implementation-complete and test-hardened. This section records the hardening decisions and invariants that close the C4 wave.
+
+### C4 Scope and Authority
+
+C4 is D1-structural only:
+- C4 reads exclusively from D1 natal chart data
+- C4 produces structural evidence (house relationships, lord aspects, occupancies)
+- C4 does NOT incorporate D10, Dasha, or transit data
+- C4 structural evidence is the foundation for natal Career promise, not the final conclusion
+
+### Canonical Natal Aspect Source
+
+C4 relationship detection reads aspects exclusively from `horoscope.natalGrahaDrishti`:
+- Aspect relationships (LORD_ASPECT, HOUSE_ASPECT) are derived only from `natalGrahaDrishti.aspects`
+- The legacy `grahaDrishti` field is ignored when `natalGrahaDrishti` is present
+- This locks the canonical natal aspect source and prevents dual-aspect-path ambiguity
+
+### Legacy-Source Decision (planetAnalysis Fallback)
+
+C4's `getHouseOccupants` and `getPlanetHouse` functions retain a `planetAnalysis` fallback for backward compatibility:
+- Primary source: `horoscope.planetFacts` (canonical engine state)
+- Fallback source: `horoscope.planetAnalysis.planets` (legacy compatibility)
+- Rationale: Modern engine output (canonical chart) fully populates `planetFacts` with house data for all 9 planets, making the fallback unnecessary for current production data. The fallback is retained to support older horoscope data formats that may have incomplete `planetFacts` but complete `planetAnalysis`.
+- Decision: Keep the fallback with explicit documentation. Test coverage validates that `planetFacts` fully populates house/occupant data for the canonical chart, and that the fallback path works for legacy data compatibility.
+
+### C4 Invariants (Closure Gates)
+
+C4 must preserve the following invariants:
+
+1. **D1-only**: C4 reads only D1 natal chart data. D10/Dasha/transit cannot create C4 structural promise.
+2. **No C5/C6 interference**: C5 relevance and C6 condition cannot modify C4 structural direction or strength. C4's structural evidence is produced independently; C5/C6 operate as separate semantic layers.
+3. **No final conclusion**: C4 produces structural evidence, not a final Career conclusion. The final conclusion is produced by C11 after integrating all layers.
+4. **Missing evidence ≠ negative evidence**: Empty or missing C4 evidence does NOT imply CHALLENGE direction. Absence of structural relationships is represented as NEUTRAL/UNAVAILABLE, not negative inference.
+5. **MIXED = one canonical identity**: MIXED-direction structural evidence splits into two DomainEvidence occurrences (SUPPORTING + CHALLENGING) with the same identityKey and ruleId. Canonical dedup merges these into one MIXED semantic fact with MAX weight (no weight inflation) and both occurrence IDs preserved in sourceIds.
+6. **Input ordering independence**: C4 output is deterministic regardless of input ordering. Map insertion order cannot leak into `getHouseOccupants` output. Evidence arrays, evidence IDs, and conflicts are sorted deterministically.
+7. **Structural-only output**: C4 `CareerStructuralReasoning` output and its `toDomainEvidence` result contain ONLY structural fields (direction, strength, evidence, roles, conflicts). They do NOT leak C5 relevance, C6 condition, C7 lord-semantics, C8 expression, C9 Dasha, C10 D10, timing, or C11 conclusion properties.
+8. **Immutability**: All C4 output arrays and objects are frozen. The input horoscope is not mutated during C4 processing.
+
+### Test Coverage
+
+C4 hardening is validated by `src/domain/career/careerStructuralReasoningIntegration.test.ts`:
+- Integration determinism: identical inputs produce identical outputs; canonical ordering is stable
+- Real-engine integration: actual engine produces expected structural evidence for the canonical chart
+- MIXED identity regression: MIXED occurrences share identityKey/ruleId, collapse to one semantic fact through dedup with MAX weight
+- Boundary/immutability: C4 output contains only structural fields; all arrays/objects are frozen; input is not mutated
+- Aspect single-source verification: C4 reads aspects exclusively from `natalGrahaDrishti`

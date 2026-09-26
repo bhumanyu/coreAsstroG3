@@ -11,6 +11,7 @@ describe('CW-R1 C1 — Career semantic source registry', () => {
   it('freezes the complete existing Career rule inventory', () => {
     expect(CAREER_SEMANTIC_SOURCE_RULE_IDS).toEqual([
       'CAREER_10H_STRONG_001',
+      'CAREER_10H_LORD_AFFLICTION_001',
       'CAREER_10H_AFFLICTION_001',
       'CAREER_10H_OCCUPANT_001',
       'CAREER_6H_SERVICE_001',

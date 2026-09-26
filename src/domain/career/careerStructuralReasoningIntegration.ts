@@ -1,4 +1,4 @@
-import type { Horoscope, Planet, PlanetAnalysis } from '../../types';
+import type { Horoscope, Planet, PlanetAnalysis, HouseAnalysis, HouseAnalysisReport } from '../../types';
 import type { CareerHouseRelationshipContext, CareerHouseRelationship } from './careerHouseRelationship';
 import { detectCareerHouseRelationships } from './careerHouseRelationship';
 import { interpretCareerHouseRelationships } from './careerHouseRelationshipSemantics';
@@ -21,8 +21,8 @@ function createCareerHouseRelationshipContextFromHoroscope(
       if (!houseAnalysis) return undefined;
 
       const houseData = Array.isArray(houseAnalysis)
-        ? houseAnalysis.find((h: any) => h.house === house)
-        : (houseAnalysis as Record<number, any>)[house];
+        ? houseAnalysis.find((h: HouseAnalysis) => h.house === house)
+        : (houseAnalysis as Record<number, HouseAnalysis>)[house];
 
       return houseData?.lord;
     },
@@ -30,7 +30,7 @@ function createCareerHouseRelationshipContextFromHoroscope(
     getHouseOccupants: (targetHouse: number): readonly Planet[] => {
       const occupants: Planet[] = [];
 
-      // Check planetFacts for house placement
+      // Check planetFacts for house placement (canonical engine source)
       if (horoscope.planetFacts) {
         for (const [planet, facts] of Object.entries(horoscope.planetFacts)) {
           const house = facts.house ?? facts.position?.house;
@@ -40,9 +40,13 @@ function createCareerHouseRelationshipContextFromHoroscope(
         }
       }
 
-      // Also check planetAnalysis if available
+      // Legacy fallback: check planetAnalysis if available
+      // This is retained for backward compatibility with older horoscope data formats
+      // that may not have complete planetFacts. Modern engine output (canonical chart)
+      // fully populates planetFacts with house data for all 9 planets, making this
+      // fallback unnecessary for current production data.
       if (horoscope.planetAnalysis?.planets) {
-        const planetAnalysisPlanets = horoscope.planetAnalysis.planets as Record<string, PlanetAnalysis>;
+        const planetAnalysisPlanets = horoscope.planetAnalysis.planets as Record<Planet, PlanetAnalysis>;
         for (const [planet, analysis] of Object.entries(planetAnalysisPlanets)) {
           if (analysis.house === targetHouse && !occupants.includes(planet as Planet)) {
             occupants.push(planet as Planet);
@@ -54,9 +58,14 @@ function createCareerHouseRelationshipContextFromHoroscope(
     },
 
     getPlanetHouse: (planet: Planet): number | undefined => {
+      // Check planetFacts first (canonical engine source)
       if (horoscope.planetFacts?.[planet]) {
         return horoscope.planetFacts[planet].house ?? horoscope.planetFacts[planet].position?.house;
       }
+      // Legacy fallback: check planetAnalysis if available
+      // Retained for backward compatibility with older horoscope data formats.
+      // Modern engine output fully populates planetFacts, making this fallback
+      // unnecessary for current production data.
       if (horoscope.planetAnalysis?.planets?.[planet]) {
         return horoscope.planetAnalysis.planets[planet].house;
       }
