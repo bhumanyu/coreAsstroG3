@@ -303,7 +303,6 @@ function synthesizeWealthEvidence(
 ): WealthInterpretationConclusion {
   const dataCompleteness = checkDataCompleteness(context);
   const d2Ev = evidence.find((e) => e.evidenceFamily === WealthEvidenceFamily.D2);
-  const hasD2Confirms = d2Ev?.effect === 'SUPPORT' && d2Ev.vargaEvidence?.relationship === 'CONFIRMS';
   const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
   const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
   const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
