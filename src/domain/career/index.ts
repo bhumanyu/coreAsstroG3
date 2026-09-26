@@ -12,6 +12,7 @@ export * from './careerHouseRelationship';
 export * from './careerHouseRelationshipSemantics';
 export * from './careerStructuralReasoning';
 export * from './careerLordRelationshipSemantics';
+export * from './careerLordRelationshipIntegration';
 export * from './careerPlanetaryRelevance';
 export * from './careerPlanetaryCondition';
 export * from './careerExpression';

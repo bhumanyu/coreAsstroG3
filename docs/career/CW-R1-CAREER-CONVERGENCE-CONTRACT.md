@@ -1160,3 +1160,65 @@ C4 hardening is validated by `src/domain/career/careerStructuralReasoningIntegra
 - MIXED identity regression: MIXED occurrences share identityKey/ruleId, collapse to one semantic fact through dedup with MAX weight
 - Boundary/immutability: C4 output contains only structural fields; all arrays/objects are frozen; input is not mutated
 - Aspect single-source verification: C4 reads aspects exclusively from `natalGrahaDrishti`
+
+## W1.4 — C7 Lord Relationship Semantics
+
+### W1.4.1 C7 Semantic Ownership
+
+C7 is the canonical semantic owner for career-relevant lord-relationship interpretation. C7 consumes C4 relationships and does not rediscover them. C4 owns portfolio/detection/identity; C7 owns semantic interpretation (relevance, effect/direction, strength, statements).
+
+### W1.4.2 Authority Boundaries
+
+**C4 Authority (Portfolio/Detection/Identity):**
+- C4 `detectCareerHouseRelationships` is the sole relationship detector/identity authority
+- C4 `careerHouseRelationshipKey` is the canonical relationship identity mechanism
+- C4 produces the canonical `CareerHouseRelationship[]` portfolio
+
+**C7 Authority (Semantic Interpretation):**
+- C7 `interpretCareerLordRelationship` and `interpretCareerLordRelationships` are the canonical semantic interpreters
+- C7 owns lord-role classification (PRIMARY_LORD, SUPPORTING_LORD, CHALLENGING_LORD, NEUTRAL_LORD, SHARED_LORD)
+- C7 owns relevance classification (PRIMARY, SUPPORTING, CHALLENGING, MIXED, NEUTRAL)
+- C7 owns effect/direction classification (SUPPORT, CHALLENGE, MIXED, NEUTRAL)
+- C7 owns strength classification (STRONG, MODERATE, WEAK)
+- C7 produces canonical `CareerLordRelationshipSemantic[]` results
+
+### W1.4.3 Integration Contract
+
+**C7 Adapter (`careerLordRelationshipIntegration.ts`):**
+- Export `interface CareerLordRelationshipIntegrationInput { readonly structural: CareerStructuralReasoning; }`
+- Export `function buildCareerLordRelationships(input: CareerLordRelationshipIntegrationInput): readonly CareerLordRelationshipSemantic[]`
+- Extract canonical `CareerHouseRelationship[]` from `input.structural.evidence` (each `CareerStructuralEvidence` has a `.relationship` field)
+- Delegate to `interpretCareerLordRelationships(...)` for semantic interpretation
+- Do NOT read the Horoscope directly
+- Do NOT re-detect relationships — C7 must only interpret what C4 already produced
+- Freeze the returned array
+- Must not mutate `input.structural`
+
+### W1.4.4 Constraints
+
+- C7 does NOT modify C5 relevance or C6 condition
+- C7 does NOT do Dasha/D10/timing
+- C7 does NOT produce final conclusion or scoring
+- C7 does NOT wire `CareerNatalAnalysis.lordRelationships` (deferred to C4–C7 aggregation wave)
+- C7 must NOT create a competing `CareerLordRelationship` structural type
+- C7 must NOT create a second relationship-detection or identity mechanism
+
+### W1.4.5 Direction Field Mapping
+
+The spec's `direction` naming maps to the existing `effect` field in `CareerLordRelationshipSemantic`. This mapping was intentional to avoid duplication:
+
+- Spec direction values: SUPPORT, CHALLENGE, MIXED, NEUTRAL
+- Existing `effect` field values: SUPPORT, CHALLENGE, MIXED, NEUTRAL
+- Mapping: direct 1:1 correspondence (no transformation needed)
+
+The `effect` field is the C7 direction field. No separate `direction` field was added to avoid vocabulary duplication.
+
+### W1.4.6 Test Coverage
+
+C7 integration is validated by `src/domain/career/careerLordRelationshipIntegration.test.ts`:
+- Real-engine integration: uses canonical chart and C4 structural reasoning; asserts deterministic mechanics only (results defined, canonical ordering stable, relationship identity preserved)
+- C4-authoritative test: empty structural evidence produces empty result (C7 must not rediscover relationships)
+- No-mutation test: input structural object is not mutated
+- Input-order determinism: identical canonical output regardless of input evidence order
+- Boundary/leakage: result objects contain no later-wave properties (dasha, md, ad, pd, d10, transit, timing, c8, c9, c10, c11, conclusion)
+- Immutability: returned array and all semantic objects are frozen
