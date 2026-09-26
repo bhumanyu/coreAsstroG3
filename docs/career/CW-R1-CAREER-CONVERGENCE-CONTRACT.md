@@ -1241,3 +1241,138 @@ C7 semantic unit tests are in `src/domain/career/careerLordRelationshipSemantics
 - C7 deduplication output is canonically sorted by `careerHouseRelationshipKey` in the `deduplicateRelationships` function
 - This makes the existing "Input-Order Determinism" test in `careerLordRelationshipIntegration.test.ts` meaningful and passing
 - The sort ensures deterministic output regardless of input evidence order
+
+## W1.6 — C8 Career Expression
+
+### Purpose
+
+C8 Career Expression integration provides the adapter layer that bridges the C4-C7 natal boundary aggregate (`CareerNatalAnalysis`) with the C8 expression semantic engine (`careerExpression.ts`). This wave is an adapter-only implementation: it does NOT modify the existing C8 semantic rules in `careerExpression.ts`, `careerNatalAnalysis.ts`, `careerStructuralReasoning.ts`, `careerPlanetaryRelevance.ts`, `careerPlanetaryCondition.ts`, or `careerLordRelationshipSemantics.ts`, unless a test exposes a genuine defect in an existing C8 semantic rule.
+
+### Input
+
+C8 integration consumes the C4-C7 natal boundary aggregate:
+
+```typescript
+export interface CareerExpressionIntegrationInput {
+  readonly natal: CareerNatalAnalysis;
+}
+```
+
+The input contains:
+- `natal.structural`: C4 structural reasoning (direction, strength, primarySupport, primaryChallenge)
+- `natal.relevance`: C5 planetary relevance results (per-planet relevance, roles, effect, relatedHouses, relatedPlanets)
+- `natal.condition`: C6 planetary condition results (per-planet condition, relatedPlanets)
+- `natal.lordRelationships`: C7 lord relationship semantics (not directly consumed by C8 adapter)
+
+### Authority Table
+
+C8 owns Career expression/manifestation semantics only:
+
+|| Semantic Concept | Canonical Owner | Module/Component |
+||------------------|-----------------|------------------|
+|| Career expression modes | C8 | `careerExpression` |
+|| C4 structural reasoning | C4 | `careerStructuralReasoning` |
+|| Planetary relevance semantics | C5 | `careerPlanetaryRelevance` |
+|| Planetary condition evaluation | C6 | `careerPlanetaryCondition` |
+|| Lord relationship semantics | C7 | `interpretCareerLordRelationship` |
+
+C8 must NOT:
+- Recalculate C4 structural direction, strength, primarySupport, or primaryChallenge
+- Recalculate C5 planetary relevance
+- Recalculate C6 planetary condition
+- Rediscover C7 lord relationships
+- Incorporate D10, Dasha, transit, final-synthesis, score, or natal-promise data
+
+### Flow
+
+```
+CareerNatalAnalysis (C4-C7 aggregate)
+        ↓
+buildCareerExpressionContext
+        ↓
+CareerExpressionContext
+        ↓
+resolveCareerExpression (existing C8 engine)
+        ↓
+CareerExpressionAnalysis
+```
+
+The adapter:
+1. Builds `relevanceByPlanet` and `conditionByPlanet` maps from `natal.relevance` / `natal.condition`
+2. Iterates `CANONICAL_PLANET_ORDER` (SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN, RAHU, KETU)
+3. Skips planets with no C5 relevance (missing evidence is not negative evidence)
+4. Maps `condition?.condition ?? 'UNAVAILABLE'` (preserves C6 UNAVAILABLE — does NOT default to WEAK/MODERATE)
+5. Merges `relevance.relatedPlanets` with `condition?.relatedPlanets` deduped and sorted by canonical order
+6. Sorts `relatedHouses` numerically
+7. Returns a frozen `CareerExpressionContext` mapping `natal.structural.direction/strength/primarySupport/primaryChallenge` to the four structural fields
+8. Freezes all nested arrays and each planet context
+9. Delegates to `resolveCareerExpression` for expression semantics
+
+### Constraints
+
+- No C4/C5/C6 recalculation: C8 adapter must read the pre-computed values from `CareerNatalAnalysis` and must not recompute structural reasoning, planetary relevance, or planetary condition
+- No C7 rediscovery: C8 adapter must not independently detect or interpret lord relationships
+- No D10/Dasha/transit/final-synthesis/score/natal-promise: C8 adapter must not incorporate these later-wave data sources
+- Missing-evidence rule: C6 UNAVAILABLE stays UNAVAILABLE — the adapter must not default missing conditions to WEAK or MODERATE
+- Taxonomy reuse: C8 reuses `CareerManifestationMode` from `careerTypes.ts` for expression mode vocabulary
+- Entrepreneurship multi-factor guardrail: C8 expression rules enforce multi-factor evidence for entrepreneurship modes (business house + supporting condition) — the adapter must not weaken this guardrail
+- Output shape: C8 adapter returns `CareerExpressionAnalysis` with expressions array, primaryExpression, and statement — the adapter must not add or remove fields from this shape
+- Determinism: C8 adapter must produce deterministic output regardless of input ordering — canonical planet order and sorted relatedPlanets/relatedHouses ensure this
+- Immutability: All output arrays and objects from C8 adapter must be frozen
+
+### Missing-Evidence Rule
+
+C6 condition may be UNAVAILABLE for planets with insufficient dignity/affliction data. The adapter must preserve this UNAVAILABLE state and must not default to WEAK or MODERATE. Missing condition evidence is not negative evidence.
+
+### Taxonomy Reuse
+
+C8 reuses the `CareerManifestationMode` type from `careerTypes.ts` for expression mode vocabulary. The adapter must not introduce a separate expression mode taxonomy.
+
+### Entrepreneurship Multi-Factor Guardrail
+
+C8 expression rules enforce multi-factor evidence for entrepreneurship modes:
+- `ENTREPRENEURSHIP`: Requires Mars/Jupiter in 11H + business house (2H/7H) + supporting condition
+- `BUSINESS_ENTREPRENEURSHIP`: Requires Mars/Jupiter in 7H + 11H + wealth house (2H) or strong condition
+
+The adapter must not weaken these guardrails by providing incomplete or insufficient context to the C8 engine.
+
+### Output Shape
+
+C8 adapter returns `CareerExpressionAnalysis` with the following shape:
+
+```typescript
+{
+  expressions: readonly CareerExpression[];
+  primaryExpression?: CareerExpression;
+  statement: string;
+}
+```
+
+The adapter must not add or remove fields from this shape.
+
+### Determinism
+
+C8 adapter must produce deterministic output regardless of input ordering:
+- Canonical planet order (SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN, RAHU, KETU) ensures consistent planet iteration
+- Related planets are sorted by canonical order after deduplication
+- Related houses are sorted numerically
+- Input ordering of `natal.relevance` and `natal.condition` arrays does not affect output
+
+### Immutability
+
+All output from C8 adapter must be frozen:
+- `CareerExpressionContext` object is frozen
+- `relevantPlanets` array is frozen
+- Each `CareerExpressionPlanetContext` object is frozen
+- Nested arrays (`roles`, `relatedHouses`, `relatedPlanets`) are frozen
+- `CareerExpressionAnalysis` result from `resolveCareerExpression` is frozen (by existing C8 engine)
+
+### Semantic Hardening Candidates (Deferred)
+
+The following C8 semantic hardening candidates are noted for future waves but are NOT implemented in this adapter-only wave:
+
+1. **`deduplicateEvidenceByMode` is "first-occurrence-by-planet" not true semantic dedup**: The current implementation in `careerExpression.ts` deduplicates evidence by planet within each mode, but this is a first-occurrence heuristic rather than true semantic deduplication. A future wave may implement semantic identity-based deduplication aligned with the canonical evidence identity contract (W0.2/W0.4).
+
+2. **`resolvePrimaryExpression` uses a fixed semantic hierarchy, not weight/count**: The current implementation in `careerExpression.ts` selects the primary expression using a fixed semantic hierarchy (LEADERSHIP > MANAGEMENT > AUTHORITY > BUSINESS_ENTREPRENEURSHIP > ENTREPRENEURSHIP > TECHNICAL_SPECIALIZATION > SPECIALIZATION > PUBLIC_INSTITUTIONAL > SERVICE_EMPLOYMENT > INDEPENDENT_WORK > EMPLOYMENT). A future wave may implement weight-based or count-based primary expression selection.
+
+These candidates are deferred to avoid scope creep in this adapter-only wave. The adapter must not implement these hardening changes.

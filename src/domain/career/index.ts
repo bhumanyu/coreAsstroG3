@@ -16,6 +16,7 @@ export * from './careerLordRelationshipIntegration';
 export * from './careerPlanetaryRelevance';
 export * from './careerPlanetaryCondition';
 export * from './careerExpression';
+export * from './careerExpressionIntegration';
 export * from './careerD10';
 export * from './careerNatalAnalysis';
 export * from './careerNatalConvergence';
