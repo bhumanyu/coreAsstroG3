@@ -50,7 +50,7 @@ export interface CareerDashaCanonicalEvidence {
   readonly identityKey: string;
   readonly id: string;
   readonly level: CareerDashaCanonicalLevel;
-  readonly planet: Planet;
+  readonly planet?: Planet;
   readonly role: CareerDashaCanonicalRole;
   readonly effect: CareerDashaCanonicalEffect;
   readonly direction: ReasoningDirection;
@@ -79,8 +79,8 @@ export interface CareerDashaCanonicalPeriod {
   readonly effect: CareerDashaCanonicalEffect;
   readonly direction: ReasoningDirection;
   readonly strength: DomainStrength;
-  readonly start: string;
-  readonly end: string;
+  readonly start?: string;
+  readonly end?: string;
   readonly statement: string;
 }
 

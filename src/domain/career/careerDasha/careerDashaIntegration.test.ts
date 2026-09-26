@@ -22,6 +22,14 @@ import type {
   CareerPlanetaryRelevance
 } from '../careerPlanetaryRelevance';
 
+import {
+  CareerPlanetRelevance,
+  CareerPlanetRole,
+  CareerPlanetRelevanceReason,
+  CareerPlanetEffect,
+  CareerExpressionHint
+} from '../careerPlanetaryRelevance';
+
 import type {
   CareerPlanetaryConditionResult
 } from '../careerPlanetaryCondition';
@@ -81,6 +89,33 @@ function makeHoroscopeWithDasha(): Horoscope {
   } as Horoscope);
 }
 
+function makeHoroscopeWithPartialDasha(): Horoscope {
+  const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+  // Add mock Dasha timing with missing planet for testing
+  return Object.freeze({
+    ...horoscope,
+    dashaInterpretation: Object.freeze({
+      current: Object.freeze({
+        mahadasha: Object.freeze({
+          planet: Planet.SATURN,
+          start: '2020-01-01',
+          end: '2025-01-01'
+        }),
+        antardasha: Object.freeze({
+          // Missing planet - should NOT default to Sun
+          start: '2020-01-01',
+          end: '2022-01-01'
+        }),
+        pratyantardasha: Object.freeze({
+          // Missing planet - should NOT default to Sun
+          start: '2020-01-01',
+          end: '2021-01-01'
+        })
+      })
+    })
+  } as Horoscope);
+}
+
 function makeMinimalNatal(): CareerNatalAnalysis {
   // Use a minimal natal that satisfies the type requirements
   // The actual C5/C6/C8 test suites should cover detailed semantics
@@ -102,7 +137,20 @@ function makeMinimalNatal(): CareerNatalAnalysis {
       conflicts: Object.freeze([]),
       statement: 'Strong structural support for career.'
     } as unknown as CareerStructuralReasoning),
-    relevance: Object.freeze([]) as readonly CareerPlanetaryRelevance[],
+    relevance: Object.freeze([
+      Object.freeze({
+        planet: Planet.SUN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
+        reasons: Object.freeze(['PRIMARY_LORDSHIP' as CareerPlanetRelevanceReason]),
+        effect: 'SUPPORT' as CareerPlanetEffect,
+        expressionHints: Object.freeze([] as CareerExpressionHint[]),
+        relatedHouses: Object.freeze([5]),
+        relatedPlanets: Object.freeze([]),
+        conditional: false,
+        statement: 'Sun has primary career relevance.'
+      })
+    ]) as readonly CareerPlanetaryRelevance[],
     condition: Object.freeze([]) as readonly CareerPlanetaryConditionResult[],
     lordRelationships: Object.freeze([]),
     direction: 'SUPPORT',
@@ -284,6 +332,35 @@ describe('C9 Dasha Integration', () => {
       expect(result.overallDirection).toBe('UNAVAILABLE');
       // Should NOT be NEUTRAL (missing evidence ≠ negative evidence)
       expect(result.overallDirection).not.toBe('NEUTRAL');
+    });
+  });
+
+  describe('Test 10: Missing AD/PD planet timing does NOT default to Sun', () => {
+    it('when AD/PD planet is missing, planet remains undefined with INSUFFICIENT_DATA', () => {
+      const input = makeInput({
+        horoscope: makeHoroscopeWithPartialDasha()
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // MD should have planet (it's present)
+      expect(result.md.planet).toBe(Planet.SATURN);
+
+      // AD and PD should have undefined planet (missing from timing)
+      expect(result.ad.planet).toBeUndefined();
+      expect(result.pd.planet).toBeUndefined();
+
+      // AD and PD should have INSUFFICIENT_DATA effect
+      expect(result.ad.effect).toBe('INSUFFICIENT_DATA');
+      expect(result.pd.effect).toBe('INSUFFICIENT_DATA');
+
+      // AD and PD should have UNAVAILABLE direction
+      expect(result.ad.direction).toBe('UNAVAILABLE');
+      expect(result.pd.direction).toBe('UNAVAILABLE');
+
+      // AD and PD should NOT resolve to Sun activation even if Sun is career-relevant
+      expect(result.ad.planet).not.toBe(Planet.SUN);
+      expect(result.pd.planet).not.toBe(Planet.SUN);
     });
   });
 });

@@ -84,15 +84,15 @@ export interface CareerDashaActivationEvidence {
 
 export interface CareerDashaActivation {
   readonly level: CareerDashaActivationLevel;
-  readonly planet: Planet;
+  readonly planet?: Planet;
   readonly role: CareerDashaActivationRole;
   readonly effect: CareerDashaActivationEffect;
   readonly direction: CareerDashaActivationDirection;
   readonly strength: CareerDashaActivationStrength;
   readonly evidence: readonly CareerDashaActivationEvidence[];
   readonly statement: string;
-  readonly start: string;
-  readonly end: string;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface CareerDashaActivationHierarchy {
@@ -107,9 +107,9 @@ export interface CareerDashaActivationHierarchy {
 }
 
 export interface CareerDashaTiming {
-  readonly planet: Planet;
-  readonly start: string;
-  readonly end: string;
+  readonly planet?: Planet;
+  readonly start?: string;
+  readonly end?: string;
 }
 
 export interface CareerDashaActivationContext {

@@ -70,7 +70,7 @@ function resolveLevel(
 ): CareerDashaActivation {
   const { structuralDirection, structuralPrimarySupport } = context;
 
-  const actualPlanetContext = planetContext ?? findPlanetContext(context, timing.planet);
+  const actualPlanetContext = planetContext ?? (timing.planet ? findPlanetContext(context, timing.planet) : undefined);
 
   if (!actualPlanetContext) {
     return Object.freeze({
@@ -81,7 +81,7 @@ function resolveLevel(
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
       evidence: Object.freeze([]),
-      statement: `Planet ${timing.planet} has insufficient context for ${level} activation.`,
+      statement: timing.planet ? `Planet ${timing.planet} has insufficient context for ${level} activation.` : `No planet specified for ${level} activation.`,
       start: timing.start,
       end: timing.end
     });
@@ -259,7 +259,7 @@ function buildActivationEvidence(
 
 function buildActivationStatement(
   level: CareerDashaActivationLevel,
-  planet: string,
+  planet: string | undefined,
   role: CareerDashaActivationRole,
   effect: CareerDashaActivationEffect,
   direction: CareerDashaActivationDirection,
@@ -267,7 +267,7 @@ function buildActivationStatement(
   evidence: readonly CareerDashaActivationEvidence[]
 ): string {
   const parts = [
-    `${level} period for planet ${planet}.`,
+    `${level} period for planet ${planet ?? 'none'}.`,
     `Role: ${role}.`,
     `Effect: ${effect}.`,
     `Direction: ${direction}.`,
@@ -376,9 +376,9 @@ function buildHierarchyStatement(
 ): string {
   const parts = [
     `Career Dasha activation hierarchy.`,
-    `MD: ${md.planet} (${md.effect}, ${md.direction}, ${md.strength}).`,
-    `AD: ${ad.planet} (${ad.effect}, ${ad.direction}, ${ad.strength}).`,
-    `PD: ${pd.planet} (${pd.effect}, ${pd.direction}, ${pd.strength}).`,
+    `MD: ${md.planet ?? 'none'} (${md.effect}, ${md.direction}, ${md.strength}).`,
+    `AD: ${ad.planet ?? 'none'} (${ad.effect}, ${ad.direction}, ${ad.strength}).`,
+    `PD: ${pd.planet ?? 'none'} (${pd.effect}, ${pd.direction}, ${pd.strength}).`,
     `Overall effect: ${finalEffect}.`,
     `Overall direction: ${overallDirection}.`,
     `Overall strength: ${overallStrength}.`,

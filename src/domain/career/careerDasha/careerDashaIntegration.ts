@@ -31,7 +31,8 @@ import type {
 
 import type {
   CareerPlanetRelevance,
-  CareerPlanetRole
+  CareerPlanetRole,
+  CareerPlanetaryRelevance
 } from '../careerPlanetaryRelevance';
 
 import type {
@@ -102,9 +103,9 @@ function buildPlanetContexts(
   expression: CareerExpressionAnalysis
 ): readonly CareerDashaPlanetContext[] {
   // Build relevance and condition maps
-  const relevanceByPlanet = new Map<Planet, CareerPlanetRelevance>();
+  const relevanceByPlanet = new Map<Planet, CareerPlanetaryRelevance>();
   for (const relevance of natal.relevance) {
-    relevanceByPlanet.set(relevance.planet, relevance.relevance);
+    relevanceByPlanet.set(relevance.planet, relevance);
   }
 
   const conditionByPlanet = new Map<Planet, CareerPlanetaryConditionResult>();
@@ -136,7 +137,7 @@ function buildPlanetContexts(
     const relevance = relevanceByPlanet.get(planet);
 
     // Skip planets with no C5 relevance (missing evidence is not negative evidence)
-    if (!relevance || relevance === 'NEUTRAL') {
+    if (!relevance || relevance.relevance === 'NEUTRAL') {
       continue;
     }
 
@@ -145,14 +146,8 @@ function buildPlanetContexts(
     // Preserve C6 UNAVAILABLE — do NOT default to WEAK/MODERATE
     const planetCondition = condition?.condition ?? 'UNAVAILABLE';
 
-    // Get the full relevance object to extract roles, relatedHouses, relatedPlanets
-    const fullRelevance = natal.relevance.find(r => r.planet === planet);
-    if (!fullRelevance) {
-      continue;
-    }
-
     // Merge relatedPlanets from relevance and condition, deduped and sorted by canonical order
-    const relevanceRelatedPlanets = fullRelevance.relatedPlanets;
+    const relevanceRelatedPlanets = relevance.relatedPlanets;
     const conditionRelatedPlanets = condition?.relatedPlanets ?? [];
     const mergedRelatedPlanets = Array.from(new Set([...relevanceRelatedPlanets, ...conditionRelatedPlanets]));
 
@@ -166,7 +161,7 @@ function buildPlanetContexts(
     });
 
     // Sort relatedHouses numerically
-    const sortedRelatedHouses = Array.from(fullRelevance.relatedHouses).sort((a, b) => a - b);
+    const sortedRelatedHouses = Array.from(relevance.relatedHouses).sort((a, b) => a - b);
 
     // Get expressions for this planet (deduplicated)
     const planetExpressionsMap = expressionsByPlanet.get(planet);
@@ -177,8 +172,8 @@ function buildPlanetContexts(
     // Build planet context
     const planetContext: CareerDashaPlanetContext = Object.freeze({
       planet,
-      relevance: relevance,
-      roles: Object.freeze([...fullRelevance.roles]),
+      relevance: relevance.relevance,
+      roles: Object.freeze([...relevance.roles]),
       condition: planetCondition,
       expressions: Object.freeze(planetExpressions),
       relatedHouses: Object.freeze(sortedRelatedHouses),
@@ -214,21 +209,21 @@ function buildCareerDashaActivationContext(
 
   // Extract timing from current Dasha
   const mdTiming: CareerDashaTiming = Object.freeze({
-    planet: currentDasha.mahadasha?.planet ?? Planet.SUN,
-    start: currentDasha.mahadasha?.start ?? '',
-    end: currentDasha.mahadasha?.end ?? ''
+    planet: currentDasha.mahadasha?.planet,
+    start: currentDasha.mahadasha?.start,
+    end: currentDasha.mahadasha?.end
   });
 
   const adTiming: CareerDashaTiming = Object.freeze({
-    planet: currentDasha.antardasha?.planet ?? Planet.SUN,
-    start: currentDasha.antardasha?.start ?? '',
-    end: currentDasha.antardasha?.end ?? ''
+    planet: currentDasha.antardasha?.planet,
+    start: currentDasha.antardasha?.start,
+    end: currentDasha.antardasha?.end
   });
 
   const pdTiming: CareerDashaTiming = Object.freeze({
-    planet: currentDasha.pratyantardasha?.planet ?? Planet.SUN,
-    start: currentDasha.pratyantardasha?.start ?? '',
-    end: currentDasha.pratyantardasha?.end ?? ''
+    planet: currentDasha.pratyantardasha?.planet,
+    start: currentDasha.pratyantardasha?.start,
+    end: currentDasha.pratyantardasha?.end
   });
 
   // Build planet contexts
@@ -330,8 +325,8 @@ function buildCanonicalPeriod(
  * tracking, at which point this function can be updated to use the structured mechanism.
  */
 function resolveNatalRootEvidenceIds(
-  natal: CareerNatalAnalysis,
-  planet: Planet
+  _natal: CareerNatalAnalysis,
+  _planet?: Planet
 ): readonly string[] {
   // Conservative: return empty array since WeightedReasoningEvidence does not
   // expose a structured planet/subject field, and rootEvidenceId is not yet implemented.
@@ -364,13 +359,13 @@ function buildCanonicalEvidence(
 
   for (const { level, activation } of levels) {
     // Build identityKey (semantic identity, excludes effect)
-    const identityKey = ['CAREER_DASHA', level, activation.planet, activation.role].join(':');
+    const identityKey = ['CAREER_DASHA', level, activation.planet ?? 'none', activation.role].join(':');
 
     // Build id (occurrence identity, includes effect)
     const id = `${identityKey}:${activation.effect}`;
 
     // Resolve natal root evidence IDs
-    const natalRootIds = resolveNatalRootEvidenceIds(natal, activation.planet);
+    const natalRootIds = activation.planet ? resolveNatalRootEvidenceIds(natal, activation.planet) : [];
 
     // Build provenance
     const provenance: CareerDashaCanonicalProvenance = Object.freeze({
@@ -453,8 +448,8 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
-      start: '',
-      end: '',
+      start: undefined,
+      end: undefined,
       statement: 'No current Dasha period available.'
     }),
     ad: Object.freeze({
@@ -464,8 +459,8 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
-      start: '',
-      end: '',
+      start: undefined,
+      end: undefined,
       statement: 'No current Dasha period available.'
     }),
     pd: Object.freeze({
@@ -475,8 +470,8 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
       effect: 'INSUFFICIENT_DATA',
       direction: 'UNAVAILABLE',
       strength: 'UNDETERMINED',
-      start: '',
-      end: '',
+      start: undefined,
+      end: undefined,
       statement: 'No current Dasha period available.'
     }),
     evidence: Object.freeze([]),
