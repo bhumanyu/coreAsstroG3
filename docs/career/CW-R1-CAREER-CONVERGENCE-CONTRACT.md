@@ -861,11 +861,134 @@ No changes to `CareerDomainInterpreterV2` production authority are made in W1.2.
 
 C5 uses `natalGrahaDrishti` as the canonical natal aspect source (aligned with C4). The legacy `grahaDrishti` field is not consulted by C5 and must not contribute to planetary relevance. This ensures consistency with the C4 canonical decision and eliminates dual-source ambiguity in aspect calculations.
 
-## W1.3 — C6 Planetary Condition Integration
+## W1.3 — C10 D10 Qualification Integration
 
 ### W1.3.1 W1.3 Scope
 
-W1.3 delivers the C6 adapter (`careerPlanetaryConditionIntegration.ts`) that builds `CareerPlanetaryConditionContext` objects from a `Horoscope` and C5 `CareerPlanetaryRelevance`, then delegates to the existing C6 `interpretCareerPlanetaryConditionBatch`.
+W1.3 delivers the C10 canonical integration adapter (`careerD10Integration.ts`) that wraps the existing C10 semantic engine (`careerD10Qualification.ts`) with proper canonical typing, evidence canonicalization, and conflict detection.
+
+This is an adapter-only wave:
+- Adds canonical types (`careerD10CanonicalTypes.ts`) per spec §4
+- Adds canonical integration adapter (`careerD10Integration.ts`) following C9 pattern
+- Adds comprehensive test coverage (`careerD10Integration.test.ts`) with test groups A–O plus real-engine test
+- Does NOT modify `careerD10Qualification.ts`, `careerD10QualificationRules.ts`, or `careerD10QualificationTypes.ts`
+- Does NOT delete `src/domain/career/d10/*` (legacy D10 manifestation logic)
+- Does NOT change any production reasoning-version label
+
+### W1.3.2 Adapter Implementation
+
+The adapter implements the following components:
+
+**Canonical Types (`careerD10CanonicalTypes.ts`):**
+- `CareerD10CanonicalAvailability` - AVAILABLE or UNAVAILABLE
+- `CareerD10CanonicalRelationship` - REINFORCES, QUALIFIES, MODIFIES, CONFLICTS, PRESERVES, UNAVAILABLE
+- `CareerD10CanonicalProvenance` - Evidence provenance with source tracking (source: 'C10_D10', ruleIds, sourceIds, natalRootIds)
+- `CareerD10CanonicalEvidence` - Canonical evidence with identityKey/id separation
+- `CareerD10Conflict` - Conflict detection for evidence
+- `CareerD10ExpressionQualificationCanonical` - Expression qualification
+- `CareerD10CanonicalAnalysis` - Final canonical analysis (no dasha/timing/C11 fields)
+
+**Integration Adapter (`careerD10Integration.ts`):**
+- `CareerD10IntegrationInput = { horoscope: Horoscope; natal: CareerNatalAnalysis; expression: CareerExpressionAnalysis }`
+- C10 is parallel to C9 (no Dasha dependency)
+- `mapD10Condition(dignity: DignityStatus | undefined): CareerPlanetaryCondition` - Maps dignity to condition:
+  - EXALTED|OWN_SIGN|MOOLATRIKONA → STRONG
+  - DEBILITATED → AFFLICTED
+  - GREAT_FRIEND_SIGN|FRIEND_SIGN → MODERATE
+  - ENEMY_SIGN|GREAT_ENEMY_SIGN → WEAK
+  - Default (incl. NEUTRAL|NEUTRAL_SIGN|undefined) → UNAVAILABLE
+- `CANONICAL_D10_PLANETS` - Frozen planet order (SUN…KETU)
+- `buildD10PlanetContexts(horoscope)` - Reads D10 planets from divisionalInterpretation, sets natalHouse: 0 (placeholder)
+- `buildD10HouseContexts(horoscope)` - Reads D10 houses with real occupants/tenantConditions
+- `buildCareerD10Context(input)` - Builds context per spec §10
+- `resolveCanonicalRelationship(effect)` - Maps effects to relationships
+- `buildD10EvidenceIdentityKey(source, direction, role)` - Evidence identity key generation
+- `canonicalizeEvidence(evidence, result)` - Canonical evidence attachment with result.d10Effect/d10Strength
+- `buildD10Conflicts(canonicalEvidence)` - Conflict detection (SUPPORT vs CHALLENGE for same identityKey)
+- `resolveExpressionRelationship(expression, d10Direction)` - Expression relationship resolution
+- `qualifyExpression(expression, result)` - Expression qualification (C10 only qualifies existing C8 expressions)
+- `resolveAvailability(result)` - Availability resolution
+- `resolveNatalRootEvidenceIds` - Conservative empty array (mirror C9)
+- `buildCareerD10Analysis(input)` - Main public function
+
+### W1.3.3 Key Design Decisions
+
+**Canonical Integration Pattern**: C10 is an adapter-only wave that wraps the existing C10 semantic engine without modifying it. This preserves the existing implementation while providing a canonical interface.
+
+**Parallel to C9**: C10 consumes `Horoscope` + `CareerNatalAnalysis` + C8 `CareerExpressionAnalysis`, but does NOT include C9/Dasha input. C10 is parallel to C9 in the layering: Natal foundation → Career promise → Expression → {C9 Dasha, C10 D10} → C11.
+
+**Qualifies but Never Creates**: C10 only qualifies existing C8 expressions; it never invents new expressions from D10 alone. This preserves natal C4–C7 authority.
+
+**Evidence IdentityKey vs ID**: Canonical evidence uses separate identityKey (semantic identity) and id (occurrence identity) for proper deduplication and traceability. Format: identityKey = `CAREER_D10:<source>:<direction>:<role>`, id = `identityKey:<d10Effect>:<d10Strength>`.
+
+**Root Evidence Empty**: `resolveNatalRootEvidenceIds` returns an empty array (conservative approach, mirror C9) since WeightedReasoningEvidence does not expose structured planet/subject fields.
+
+**Missing D10 ≠ Negative D10**: When D10 data is unavailable, C10 returns `UNAVAILABLE` for availability/d10Direction/d10Effect but preserves natal direction/strength. Missing evidence is not negative evidence.
+
+**mapD10Condition Decision**: Neutral dignity (NEUTRAL, NEUTRAL_SIGN, undefined) maps to `UNAVAILABLE` condition, not `MODERATE`. This is a conservative decision: neutral dignity does not imply moderate planetary condition.
+
+**NatalHouse Placeholder**: The `natalHouse` field in `CareerD10PlanetContext` is set to 0 as a documented placeholder for future migration. Real natal house mapping is deferred.
+
+**Tenant Population**: D10 house contexts populate `tenants` and `tenantConditions` from the real `occupants` array in the D10 house interpretation, not hardcoded empty arrays.
+
+### W1.3.4 Constraints
+
+- C10 does NOT modify the existing C10 semantic engine (`careerD10Qualification.ts`, `careerD10QualificationRules.ts`, `careerD10QualificationTypes.ts`)
+- C10 does NOT delete `src/domain/career/d10/*` (legacy D10 manifestation logic)
+- C10 does NOT change any production reasoning-version label
+- C10 does NOT include dasha/timing/C11 fields in canonical analysis
+- C10 does NOT consume C9/Dasha input (parallel architecture)
+- C10 does NOT create new expressions from D10 alone (only qualifies existing C8 expressions)
+
+### W1.3.5 Test Coverage
+
+C10 integration is validated by `src/domain/career/careerD10/careerD10Integration.test.ts`:
+- Test Group A: Natal direction/strength preservation (§26-30)
+- Test Group B: natalPromisePreserved true when natal is NEUTRAL and D10 is strong (§27)
+- Test Group C: REINFORCES/MODIFIES relationships (§28-29)
+- Test Group D: Expression qualification of existing C8 expression (§31-32)
+- Test Group E: NO expression created from D10 alone (§31-32)
+- Test Group F: Missing D10 → UNAVAILABLE with natal preserved (§33)
+- Test Group G: Determinism and input-order independence (§34-35)
+- Test Group H: Evidence identityKey ≠ id and non-empty sourceIds (§36)
+- Test Group I: rootEvidenceIds deduped+sorted (§37)
+- Test Group J: Deep immutability (§38)
+- Test Group K: D10 does not mutate horoscope.dashaInterpretation (§39)
+- Test Group L: No timing/transit/finalConclusion properties (§40)
+- Test Group M: Real-engine chain test (§41)
+- Test Group N: mapD10Condition neutral-dignity→UNAVAILABLE decision
+- Test Group O: Various D10 qualification scenarios
+
+### W1.3.6 Deferred Items
+
+The following items are deferred to future waves:
+
+1. **NatalHouse Migration**: The `natalHouse` field is currently set to 0 as a placeholder. Future migration will map D10 planet positions to their natal house positions.
+
+2. **d10CareerManifestation Integration**: Existing `d10CareerManifestation` logic in `src/domain/career/d10/` will feed into C10's context in a future wave.
+
+3. **VargaRelationship Migration**: Legacy `VargaRelationship` logic will be migrated to use C10's semantic model.
+
+4. **Legacy D10 Removal**: After A/B testing, legacy D10 logic will be removed from `careerConclusion.ts`.
+
+### W1.3.7 Canonical Authority
+
+**Single Canonical Source for D10 Qualification:**
+- C10 is the authoritative producer of D10 qualification insights
+- C10 canonical types and integration adapter provide the canonical interface
+- Existing C10 semantic engine remains unchanged (adapter-only wave)
+- Future waves will integrate legacy D10 logic into C10's context
+
+**Natal C4–C7 Authority Preservation:**
+- C10 copies natal direction/strength for traceability only
+- C10 does NOT mutate natal C4–C7 authority
+- C10 qualifies but never creates natal promise or expressions
+
+## W1.5 — C6 Planetary Condition Integration
+
+### W1.5.1 W1.5 Scope
+
+W1.5 delivers the C6 adapter (`careerPlanetaryConditionIntegration.ts`) that builds `CareerPlanetaryConditionContext` objects from a `Horoscope` and C5 `CareerPlanetaryRelevance`, then delegates to the existing C6 `interpretCareerPlanetaryConditionBatch`.
 
 This is an adapter + integration wave only:
 - Adds a new canonical producer that consumes C5 relevance and existing engine `PlanetFact` data
@@ -873,7 +996,7 @@ This is an adapter + integration wave only:
 - Does NOT modify `CareerDomainInterpreterV2.ts`, `careerNatalAnalysis.ts`, or any C7–C11/D10/Dasha/Transit/Timing modules
 - Does NOT wire `CareerNatalAnalysis.condition`
 
-### W1.3.2 Adapter Implementation
+### W1.5.2 Adapter Implementation
 
 The adapter implements the following mappers:
 
@@ -948,7 +1071,7 @@ The adapter implements the following mappers:
   - Calls `interpretCareerPlanetaryConditionBatch(buildCareerPlanetaryConditionContexts(input))`
   - Delegates condition semantics to existing C6 engine
 
-### W1.3.3 Input Contract
+### W1.5.3 Input Contract
 
 ```typescript
 export interface CareerPlanetaryConditionIntegrationInput {
@@ -957,7 +1080,7 @@ export interface CareerPlanetaryConditionIntegrationInput {
 }
 ```
 
-### W1.3.4 Constraints
+### W1.5.4 Constraints
 
 - Does NOT read C5 `effect` for condition
 - Does NOT read `CareerStructuralReasoning`
@@ -966,7 +1089,7 @@ export interface CareerPlanetaryConditionIntegrationInput {
 - Does NOT wire `CareerNatalAnalysis.condition`
 - Reuses existing C6 semantic engine — does not recreate condition logic
 
-### W1.3.5 Authority
+### W1.5.5 Authority
 
 - C6 owns condition semantics
 - C5 remains sole owner of relevance
@@ -974,14 +1097,14 @@ export interface CareerPlanetaryConditionIntegrationInput {
 - Adapter is read-only with respect to C5 relevance (no mutation)
 - All contexts and results are frozen (immutable)
 
-### W1.3.6 Future Work
+### W1.5.6 Future Work
 
 A future wave will:
 1. Wire `buildCareerPlanetaryCondition` output into `CareerNatalAnalysis.condition`
 2. Integrate condition results into the production Career pipeline
 3. Update this contract document to reflect the completed wiring
 
-### W1.3.7 Canonical Natal Aspect Source
+### W1.5.7 Canonical Natal Aspect Source
 
 C6 uses `horoscope.natalGrahaDrishti.aspects` as the canonical natal aspect source for Career C4/C5/C6 reasoning. The legacy `horoscope.grahaDrishti` field is not consulted by the C6 integration adapter.
 
@@ -1411,13 +1534,13 @@ C4 hardening is validated by `src/domain/career/careerStructuralReasoningIntegra
 - Boundary/immutability: C4 output contains only structural fields; all arrays/objects are frozen; input is not mutated
 - Aspect single-source verification: C4 reads aspects exclusively from `natalGrahaDrishti`
 
-## W1.4 — C7 Lord Relationship Semantics
+## W1.6 — C7 Lord Relationship Semantics
 
-### W1.4.1 C7 Semantic Ownership
+### W1.6.1 C7 Semantic Ownership
 
 C7 is the canonical semantic owner for career-relevant lord-relationship interpretation. C7 consumes C4 relationships and does not rediscover them. C4 owns portfolio/detection/identity; C7 owns semantic interpretation (relevance, effect/direction, strength, statements).
 
-### W1.4.2 Authority Boundaries
+### W1.6.2 Authority Boundaries
 
 **C4 Authority (Portfolio/Detection/Identity):**
 - C4 `detectCareerHouseRelationships` is the sole relationship detector/identity authority
@@ -1432,7 +1555,7 @@ C7 is the canonical semantic owner for career-relevant lord-relationship interpr
 - C7 owns strength classification (STRONG, MODERATE, WEAK)
 - C7 produces canonical `CareerLordRelationshipSemantic[]` results
 
-### W1.4.3 Integration Contract
+### W1.6.3 Integration Contract
 
 **C7 Adapter (`careerLordRelationshipIntegration.ts`):**
 - Export `interface CareerLordRelationshipIntegrationInput { readonly structural: CareerStructuralReasoning; }`
@@ -1444,7 +1567,7 @@ C7 is the canonical semantic owner for career-relevant lord-relationship interpr
 - Freeze the returned array
 - Must not mutate `input.structural`
 
-### W1.4.4 Constraints
+### W1.6.4 Constraints
 
 - C7 does NOT modify C5 relevance or C6 condition
 - C7 does NOT do Dasha/D10/timing
@@ -1453,7 +1576,7 @@ C7 is the canonical semantic owner for career-relevant lord-relationship interpr
 - C7 must NOT create a competing `CareerLordRelationship` structural type
 - C7 must NOT create a second relationship-detection or identity mechanism
 
-### W1.4.5 Direction Field Mapping
+### W1.6.5 Direction Field Mapping
 
 The spec's `direction` naming maps to the existing `effect` field in `CareerLordRelationshipSemantic`. This mapping was intentional to avoid duplication:
 
@@ -1463,7 +1586,7 @@ The spec's `direction` naming maps to the existing `effect` field in `CareerLord
 
 The `effect` field is the C7 direction field. No separate `direction` field was added to avoid vocabulary duplication.
 
-### W1.4.6 Test Coverage
+### W1.6.6 Test Coverage
 
 C7 integration is validated by `src/domain/career/careerLordRelationshipIntegration.test.ts`:
 - Real-engine integration: uses canonical chart and C4 structural reasoning; asserts deterministic mechanics only (results defined, canonical ordering stable, relationship identity preserved)
@@ -1478,7 +1601,7 @@ C7 semantic unit tests are in `src/domain/career/careerLordRelationshipSemantics
 - Explicit rule assertions: 10+6 → PRIMARY/SUPPORT, 10+8 → PRIMARY/CHALLENGE, 6+2 → SUPPORTING/SUPPORT, 8+12 → CHALLENGING/CHALLENGE, 6+8 → MIXED/MIXED
 - Strength-by-type assertions: EXCHANGE → STRONG, COMMON_LORD → STRONG, LORD_IN_HOUSE → MODERATE, LORD_CONJUNCTION → MODERATE, LORD_ASPECT → MODERATE, HOUSE_ASPECT → WEAK
 
-### W1.4.7 Canonical Rule Authority
+### W1.6.7 Canonical Rule Authority
 
 **Single Canonical Source for Relationship Rules:**
 - The relationship relevance/effect/strength rules now have a single canonical source in `src/domain/career/careerRelationshipRules.ts`
