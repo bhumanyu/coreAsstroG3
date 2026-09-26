@@ -21,6 +21,8 @@ import type {
   ReasoningTrace
 } from '../reasoning/reasoningTypes';
 
+import { buildReasoningTrace } from '../reasoning/reasoningTrace';
+
 /**
  * Local conflict interface for Career natal analysis.
  * Reuses CareerStructuralConflict shape as a reference for field naming.
@@ -29,6 +31,10 @@ export interface CareerNatalConflict {
   readonly identityKey: string;
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
+  readonly supportWeight: number;
+  readonly challengeWeight: number;
+  readonly ratio: number;
+  readonly statement: string;
 }
 
 /**
@@ -112,20 +118,12 @@ const EMPTY_STRUCTURAL_REASONING: CareerStructuralReasoning = Object.freeze({
 
 export const EMPTY_CAREER_NATAL_ANALYSIS: CareerNatalAnalysis = Object.freeze({
   structural: EMPTY_STRUCTURAL_REASONING,
-  relevance: [],
-  condition: [],
-  lordRelationships: [],
+  relevance: Object.freeze([]),
+  condition: Object.freeze([]),
+  lordRelationships: Object.freeze([]),
   direction: 'NEUTRAL',
   strength: 'UNDETERMINED',
-  evidence: [],
-  conflicts: [],
-  reasoningTrace: {
-    primaryPromise: [],
-    secondarySupport: [],
-    modifiers: [],
-    yogas: [],
-    varga: [],
-    dasha: [],
-    transit: []
-  }
+  evidence: Object.freeze([]),
+  conflicts: Object.freeze([]),
+  reasoningTrace: buildReasoningTrace([])
 });

@@ -73,7 +73,11 @@ describe('CareerNatalAnalysis', () => {
     {
       identityKey: 'conflict-1',
       supportingEvidenceIds: ['ev1'],
-      challengingEvidenceIds: ['ev2']
+      challengingEvidenceIds: ['ev2'],
+      supportWeight: 5,
+      challengeWeight: 3,
+      ratio: 0.375,
+      statement: 'Test conflict statement'
     }
   ];
 
