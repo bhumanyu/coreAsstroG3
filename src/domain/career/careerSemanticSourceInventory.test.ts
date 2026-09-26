@@ -22,6 +22,7 @@ describe('CW-R1 C1 — Career semantic source inventory', () => {
   it('freezes the House rule source', () => {
     expect(ruleIds(careerHouseRules)).toEqual([
       'CAREER_10H_STRONG_001',
+      'CAREER_10H_LORD_AFFLICTION_001',
       'CAREER_10H_AFFLICTION_001',
       'CAREER_10H_OCCUPANT_001',
       'CAREER_6H_SERVICE_001',

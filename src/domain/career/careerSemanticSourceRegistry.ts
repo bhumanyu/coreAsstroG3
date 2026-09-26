@@ -80,6 +80,23 @@ export const CAREER_SEMANTIC_SOURCE_REGISTRY: readonly CareerSemanticSource[] =
     }),
 
     Object.freeze({
+      ruleId: 'CAREER_10H_LORD_AFFLICTION_001',
+      sourceFile:
+        'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
+      ownership: freezeOwnership([
+        'STRUCTURAL',
+        'CONDITION'
+      ]),
+      currentMeaning:
+        '10th house structural strength is tempered when its lord or occupant is debilitated or afflicted, creating a Career challenge despite favorable house status.',
+      status: 'EXISTING',
+      mustNotBeDuplicatedBy: Object.freeze([
+        'careerReasoningHierarchy',
+        'careerManifestationSynthesis'
+      ])
+    }),
+
+    Object.freeze({
       ruleId: 'CAREER_10H_AFFLICTION_001',
       sourceFile:
         'src/engine/themeInterpretation/rules/career/careerHouseRules.ts',
