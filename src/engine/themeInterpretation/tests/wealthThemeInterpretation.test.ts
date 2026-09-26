@@ -75,7 +75,7 @@ describe('Wealth Theme Interpretation Engine', () => {
     expect(result.metadata.vargaConfirmationStatus).toBe('UNAVAILABLE');
   });
 
-  it('upgrades supported promise only with Yoga or D2 confirmation and two independent structural domains', () => {
+  it('upgrades supported promise only with Yoga or Dasha confirmation and two independent structural domains', () => {
     const supportedContext: ThemeInterpretationContextInput = {
       ...baseWealthContext,
       horoscope: undefined,

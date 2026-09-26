@@ -1,4 +1,4 @@
-import type { Horoscope, HouseAnalysis, BhavaFact, PlanetFact, NatalGrahaDrishtiReport, YogaResult } from '../../types';
+import type { Horoscope, HouseAnalysis, BhavaFact, PlanetFact, NatalGrahaDrishtiReport, YogaResult, YogaAnalysisReport, HouseAnalysisReport } from '../../types';
 import { Planet } from '../../types';
 
 import type { CareerStructuralReasoning } from './careerStructuralReasoning';
@@ -15,21 +15,6 @@ import {
   type CareerPlanetaryRelevanceContext,
   type CareerPlanetaryRelevance
 } from './careerPlanetaryRelevance';
-
-// Typed reader interfaces for Horoscope fields
-interface HouseAnalysisReport {
-  houses: readonly HouseAnalysis[] | Record<number, HouseAnalysis>;
-}
-
-interface YogaAnalysisReport {
-  yogas: readonly YogaResult[];
-}
-
-interface Aspect {
-  sourcePlanet: Planet;
-  targetHouse?: number;
-  aspectType?: string;
-}
 
 export interface CareerPlanetaryRelevanceIntegrationInput {
   readonly horoscope: Horoscope;
@@ -49,7 +34,7 @@ const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
 ] as const);
 
 function getHouseLord(horoscope: Horoscope, house: number): Planet | undefined {
-  const houseAnalysis = horoscope.houseAnalysis as HouseAnalysisReport | undefined;
+  const houseAnalysis = horoscope.houseAnalysis;
   if (houseAnalysis?.houses) {
     const houses = houseAnalysis.houses;
     if (Array.isArray(houses)) {
@@ -125,10 +110,10 @@ function getCareerAspectHouses(horoscope: Horoscope, planet: Planet): readonly n
   const aspectHouses = new Set<number>();
 
   // Read from natalGrahaDrishti (authoritative) with grahaDrishti as compatibility fallback
-  const natalGrahaDrishti = horoscope.natalGrahaDrishti as NatalGrahaDrishtiReport | undefined;
-  const grahaDrishti = horoscope.grahaDrishti as NatalGrahaDrishtiReport | undefined;
+  const natalGrahaDrishti = horoscope.natalGrahaDrishti;
+  const grahaDrishti = horoscope.grahaDrishti;
 
-  const aspects: readonly Aspect[] = (natalGrahaDrishti?.aspects ?? grahaDrishti?.aspects ?? []) as Aspect[];
+  const aspects = natalGrahaDrishti?.aspects ?? grahaDrishti?.aspects ?? [];
 
   for (const aspect of aspects) {
     if (aspect.sourcePlanet === planet && aspect.targetHouse !== undefined) {
@@ -164,7 +149,7 @@ function getCareerRelationshipPlanets(
 }
 
 function hasCareerYogaParticipation(horoscope: Horoscope, planet: Planet): boolean {
-  const yogas = horoscope.yogas as YogaAnalysisReport | undefined;
+  const yogas = horoscope.yogas;
   if (!yogas?.yogas) {
     return false;
   }

@@ -306,6 +306,8 @@ function synthesizeWealthEvidence(
   const hasD2Confirms = d2Ev?.effect === 'SUPPORT' && d2Ev.vargaEvidence?.relationship === 'CONFIRMS';
   const yogaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.YOGA);
   const hasYogaSupport = yogaEvidence.some((e) => e.effect === 'SUPPORT');
+  const dashaEvidence = evidence.filter((e) => e.evidenceFamily === WealthEvidenceFamily.DASHA);
+  const hasDashaSupport = dashaEvidence.some((e) => e.effect === 'SUPPORT');
 
   // Derive independent supporting structural domains early for use in status upgrade logic
   const structuralEvidence = evidence.filter((e) => WEALTH_STRUCTURAL_FAMILIES.has(e.evidenceFamily));
@@ -330,8 +332,8 @@ function synthesizeWealthEvidence(
   } else if (wealthNatalPromise.status === 'SUPPORTED') {
     status = 'SUPPORTED';
 
-    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or D2 AND >= 2 independent supporting structural families
-    if ((hasYogaSupport || hasD2Confirms) && independentSupportingDomains.size >= 2) {
+    // Upgrade to STRONGLY_SUPPORTED if we have confirmation from Yoga or Dasha AND >= 2 independent supporting structural families
+    if ((hasYogaSupport || hasDashaSupport) && independentSupportingDomains.size >= 2) {
       status = 'STRONGLY_SUPPORTED';
     }
   }
@@ -345,7 +347,7 @@ function synthesizeWealthEvidence(
   }
 
   // 3. Yoga Confirmation Layer
-  const hasConfirmation = hasYogaSupport || hasD2Confirms;
+  const hasConfirmation = hasYogaSupport || hasDashaSupport;
 
   // 4. Derive Final Confidence
   const primaryEvidence = structuralEvidence.filter((e) => e.priority === 'PRIMARY');

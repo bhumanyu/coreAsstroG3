@@ -974,10 +974,11 @@ export interface Horoscope {
   charts?: any;
   vimshottari?: any;
   houseLordship?: any;
-  yogas?: any;
+  yogas?: YogaAnalysisReport;
   natalGrahaDrishti?: NatalGrahaDrishtiReport;
+  grahaDrishti?: NatalGrahaDrishtiReport;
   planetAnalysis?: any;
-  houseAnalysis?: any;
+  houseAnalysis?: HouseAnalysisReport;
   functionalNatureIntegration?: any;
   functionalRoles?: any;
   planetaryStrength?: any;

@@ -121,7 +121,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     expect(result.metadata.vargaConfirmationStatus).toBe('UNAVAILABLE');
   });
 
-  it('does not emit a 10th-house challenge from the removed C1 lord-affliction rule', () => {
+  it('emits a 10th-house challenge from the restored CAREER_10H_LORD_AFFLICTION_001 rule', () => {
     const mixedContext: ThemeInterpretationContextInput = {
       ...baseContext,
       houseInterpretation: {
@@ -154,10 +154,10 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     const result = interpretCareerTheme(mixedContext);
     const tenthHouseEv = result.evidence.filter((e) => e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE);
 
-    // The frozen C1 inventory excludes the former lord-affliction challenge rule.
+    // The restored CAREER_10H_LORD_AFFLICTION_001 rule should emit a CHALLENGE
     expect(tenthHouseEv.some((e) => e.effect === 'SUPPORT')).toBe(true);
-    expect(tenthHouseEv.some((e) => e.effect === 'CHALLENGE')).toBe(false);
-    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('SUPPORT');
+    expect(tenthHouseEv.some((e) => e.effect === 'CHALLENGE')).toBe(true);
+    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('MIXED');
   });
 
   it('prevents Yoga and D10 from manufacturing STRONGLY_SUPPORTED without >= 2 structural families (Test 2)', () => {
@@ -236,7 +236,7 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
     expect(result.metadata.vargaConfirmationStatus).toBe('PARTIALLY_CONFIRMS');
   });
 
-  it('does not resolve an end-to-end 10th-house conflict from the removed C1 lord-affliction rule', () => {
+  it('resolves an end-to-end 10th-house conflict from the restored CAREER_10H_LORD_AFFLICTION_001 rule', () => {
     const endToEndMixedContext: ThemeInterpretationContextInput = {
       ...baseContext,
       houseInterpretation: {
@@ -265,8 +265,8 @@ describe('Career Theme Interpretation Engine Hardening & Synthesis', () => {
       (e) => e.evidenceFamily === CareerEvidenceFamily.TENTH_HOUSE
     );
     expect(tenthHouseEvidence.some((e) => e.effect === 'SUPPORT')).toBe(true);
-    expect(tenthHouseEvidence.some((e) => e.effect === 'CHALLENGE')).toBe(false);
-    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('SUPPORT');
+    expect(tenthHouseEvidence.some((e) => e.effect === 'CHALLENGE')).toBe(true);
+    expect(result.familySummaries[CareerEvidenceFamily.TENTH_HOUSE]?.status).toBe('MIXED');
   });
 
   it('handles D1 strong + D10 adverse by flagging conflicts and preventing STRONGLY_SUPPORTED (Test A)', () => {
