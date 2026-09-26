@@ -43,7 +43,7 @@ export const PlanetFactsTable: React.FC<PlanetFactsTableProps> = ({ planetFacts 
 
   const getCombustionBadge = (condition: PlanetCondition, dist?: number) => {
     switch (condition) {
-      case PlanetCondition.DEEPLY_COMBUST:
+      case PlanetCondition.DEEP_COMBUST:
         return (
           <span className="px-2 py-0.5 text-xs font-bold bg-orange-500/20 text-orange-300 border border-orange-500/40 rounded-full inline-flex items-center gap-1">
             <Flame className="w-3 h-3 text-orange-400" /> Deeply Combust ({dist}°)

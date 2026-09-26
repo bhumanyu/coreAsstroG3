@@ -126,7 +126,7 @@ export function calculateCombustion(
   let condition = PlanetCondition.NORMAL;
 
   if (dist <= orb.deeply) {
-    condition = PlanetCondition.DEEPLY_COMBUST;
+    condition = PlanetCondition.DEEP_COMBUST;
   } else if (dist <= orb.combust) {
     condition = PlanetCondition.COMBUST;
   }

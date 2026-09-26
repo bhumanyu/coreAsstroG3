@@ -122,10 +122,10 @@ export function analyzePlanets(input: PlanetAnalysisInput): PlanetAnalysisReport
       );
     }
 
-    // 6. COMBUSTION (only when condition is COMBUST or DEEPLY_COMBUST)
+    // 6. COMBUSTION (only when condition is COMBUST or DEEP_COMBUST)
     if (
       facts.state?.condition === PlanetCondition.COMBUST ||
-      facts.state?.condition === PlanetCondition.DEEPLY_COMBUST
+      facts.state?.condition === PlanetCondition.DEEP_COMBUST
     ) {
       evidenceList.push(
         Object.freeze({

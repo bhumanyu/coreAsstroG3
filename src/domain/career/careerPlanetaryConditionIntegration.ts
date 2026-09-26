@@ -99,12 +99,10 @@ function mapCareerCombustion(condition: PlanetStateCondition): CareerPlanetaryCo
  * Maps planetFact to C6 CareerPlanetaryAffliction.
  * The engine exposes no canonical standalone affliction fact.
  * Missing evidence is not negative evidence — do NOT synthesize affliction from dignity/combustion.
+ * Always returns 'UNAVAILABLE' until a canonical affliction fact source exists.
  */
-function mapCareerAffliction(planetFact: PlanetFact | undefined): CareerPlanetaryAffliction {
-  if (!planetFact) {
-    return 'UNAVAILABLE';
-  }
-  return 'NONE';
+function mapCareerAffliction(_planetFact: PlanetFact | undefined): CareerPlanetaryAffliction {
+  return 'UNAVAILABLE';
 }
 
 /**

@@ -149,10 +149,10 @@ export function analyzePlanetInterpretation(
       roleInterp.functionalNature === FunctionalNature.BENEFIC
         ? 'SUPPORT'
         : roleInterp.functionalNature === FunctionalNature.MALEFIC
-        ? 'CHALLENGE'
-        : roleInterp.functionalNature === FunctionalNature.MIXED
-        ? 'MIXED'
-        : 'NEUTRAL';
+          ? 'CHALLENGE'
+          : roleInterp.functionalNature === FunctionalNature.MIXED
+            ? 'MIXED'
+            : 'NEUTRAL';
 
     evidenceList.push(
       Object.freeze({
@@ -193,13 +193,13 @@ export function analyzePlanetInterpretation(
     const condition = facts.state?.condition ?? PlanetCondition.NORMAL;
     const isRetrograde = facts.state?.motion?.retrograde ?? false;
 
-    if (condition === PlanetCondition.COMBUST || condition === PlanetCondition.DEEPLY_COMBUST) {
+    if (condition === PlanetCondition.COMBUST || condition === PlanetCondition.DEEP_COMBUST) {
       evidenceList.push(
         Object.freeze({
           ruleId: 'PLANET_INTERPRETATION_STATE_COMBUST_001',
           type: 'STATE',
           planet,
-          statement: `${formatTitleCase(planet)} is ${condition === PlanetCondition.DEEPLY_COMBUST ? 'deeply combust' : 'combust'}.`,
+          statement: `${formatTitleCase(planet)} is ${condition === PlanetCondition.DEEP_COMBUST ? 'deeply combust' : 'combust'}.`,
           effect: 'CHALLENGE',
           source: 'PLANET_FACTS'
         })

@@ -103,7 +103,7 @@ function createMockRelevance(
 describe('W1.3 C6 Planetary Condition Integration', () => {
   // Group A — C5 relevance gating
   describe('Group A — C5 relevance gating', () => {
-    it('PRIMARY relevance → condition evaluated', () => {
+    it('PRIMARY relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.SATURN, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -113,10 +113,10 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const saturnResult = result.find(r => r.planet === Planet.SATURN);
       expect(saturnResult).toBeDefined();
       expect(saturnResult!.relevance).toBe('PRIMARY');
-      expect(saturnResult!.condition).not.toBe('UNAVAILABLE');
+      expect(saturnResult!.condition).toBe('UNAVAILABLE');
     });
 
-    it('SUPPORTING relevance → condition evaluated', () => {
+    it('SUPPORTING relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.MERCURY, 'SUPPORTING')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -126,10 +126,10 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
       expect(mercuryResult).toBeDefined();
       expect(mercuryResult!.relevance).toBe('SUPPORTING');
-      expect(mercuryResult!.condition).not.toBe('UNAVAILABLE');
+      expect(mercuryResult!.condition).toBe('UNAVAILABLE');
     });
 
-    it('SECONDARY relevance → condition evaluated', () => {
+    it('SECONDARY relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.JUPITER, 'SECONDARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -139,10 +139,10 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const jupiterResult = result.find(r => r.planet === Planet.JUPITER);
       expect(jupiterResult).toBeDefined();
       expect(jupiterResult!.relevance).toBe('SECONDARY');
-      expect(jupiterResult!.condition).not.toBe('UNAVAILABLE');
+      expect(jupiterResult!.condition).toBe('UNAVAILABLE');
     });
 
-    it('CONDITIONAL relevance → condition evaluated', () => {
+    it('CONDITIONAL relevance → condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
       const horoscope = createMockHoroscope();
       const relevance = [createMockRelevance(Planet.MARS, 'CONDITIONAL')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -152,7 +152,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const marsResult = result.find(r => r.planet === Planet.MARS);
       expect(marsResult).toBeDefined();
       expect(marsResult!.relevance).toBe('CONDITIONAL');
-      expect(marsResult!.condition).not.toBe('UNAVAILABLE');
+      expect(marsResult!.condition).toBe('UNAVAILABLE');
     });
 
     it('NEUTRAL relevance → UNAVAILABLE', () => {
@@ -333,19 +333,6 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
     it('DEEP_COMBUST → COMBUST (collapsed)', () => {
       const horoscope = createMockHoroscope({
         [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { condition: PlanetStateCondition.DEEP_COMBUST })
-      });
-      const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
-      const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
-
-      const result = buildCareerPlanetaryCondition(input);
-      const mercuryResult = result.find(r => r.planet === Planet.MERCURY);
-
-      expect(mercuryResult!.combustion).toBe('COMBUST');
-    });
-
-    it('DEEPLY_COMBUST → COMBUST (collapsed)', () => {
-      const horoscope = createMockHoroscope({
-        [Planet.MERCURY]: createMockPlanetFact(Planet.MERCURY, { condition: PlanetStateCondition.DEEPLY_COMBUST })
       });
       const relevance = [createMockRelevance(Planet.MERCURY, 'PRIMARY')];
       const input: CareerPlanetaryConditionIntegrationInput = { horoscope, relevance };
@@ -642,7 +629,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
 
   // Group H — relevance/condition separation
   describe('Group H — relevance/condition separation', () => {
-    it('PRIMARY relevance + DEBILITATED dignity → relevance stays PRIMARY, condition WEAK', () => {
+    it('PRIMARY relevance + DEBILITATED dignity → relevance stays PRIMARY, condition UNAVAILABLE (affliction always UNAVAILABLE)', () => {
       const horoscope = createMockHoroscope({
         [Planet.SATURN]: createMockPlanetFact(Planet.SATURN, {
           dignityStatus: DignityStatus.DEBILITATED
@@ -655,7 +642,7 @@ describe('W1.3 C6 Planetary Condition Integration', () => {
       const saturnResult = result.find(r => r.planet === Planet.SATURN);
 
       expect(saturnResult!.relevance).toBe('PRIMARY');
-      expect(saturnResult!.condition).toBe('WEAK');
+      expect(saturnResult!.condition).toBe('UNAVAILABLE');
       expect(saturnResult!.relevance).not.toBe('NEUTRAL');
     });
   });

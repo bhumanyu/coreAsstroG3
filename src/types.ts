@@ -164,8 +164,7 @@ export enum DignityStatus {
 export enum PlanetStateCondition {
   NORMAL = 'NORMAL',
   COMBUST = 'COMBUST',
-  DEEP_COMBUST = 'DEEP_COMBUST',
-  DEEPLY_COMBUST = 'DEEP_COMBUST'
+  DEEP_COMBUST = 'DEEP_COMBUST'
 }
 
 export enum DirectionalStrengthStatus {

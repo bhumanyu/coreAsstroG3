@@ -188,7 +188,7 @@ export function analyzeHouseInterpretation(
     const stateParts: string[] = [];
     if (lordPAnalysis.state?.condition === PlanetCondition.COMBUST) {
       stateParts.push('combust');
-    } else if (lordPAnalysis.state?.condition === PlanetCondition.DEEPLY_COMBUST) {
+    } else if (lordPAnalysis.state?.condition === PlanetCondition.DEEP_COMBUST) {
       stateParts.push('deeply combust');
     }
     if (lordPAnalysis.state?.motion?.retrograde) {
@@ -254,10 +254,10 @@ export function analyzeHouseInterpretation(
         const relationship: 'LORD' | 'OCCUPANT' | 'HOUSE' | 'LORD_RELATIONSHIP' = operatesOnLord
           ? 'LORD'
           : operatesOnOccupant
-          ? 'OCCUPANT'
-          : operatesOnHouse
-          ? 'HOUSE'
-          : 'LORD_RELATIONSHIP';
+            ? 'OCCUPANT'
+            : operatesOnHouse
+              ? 'HOUSE'
+              : 'LORD_RELATIONSHIP';
 
         const finalStatus = y.assessment?.finalStatus;
         const strength = y.assessment?.strength;
