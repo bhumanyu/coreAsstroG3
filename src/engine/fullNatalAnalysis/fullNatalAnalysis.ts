@@ -159,8 +159,8 @@ function buildPlanetAnalysisSection(horoscope: Horoscope): PlanetAnalysisSection
     items.length === 0
       ? 'UNAVAILABLE'
       : items.length === EXPECTED_PLANET_ORDER.length
-      ? 'AVAILABLE'
-      : 'PARTIAL';
+        ? 'AVAILABLE'
+        : 'PARTIAL';
 
   return {
     status,
@@ -198,8 +198,8 @@ function buildHouseAnalysisSection(horoscope: Horoscope): HouseAnalysisSection {
     items.length === 0
       ? 'UNAVAILABLE'
       : items.length === 12 && allLordsPresent
-      ? 'AVAILABLE'
-      : 'PARTIAL';
+        ? 'AVAILABLE'
+        : 'PARTIAL';
 
   return {
     status,
@@ -239,8 +239,8 @@ function buildFunctionalRolesSection(horoscope: Horoscope): FunctionalRolesSecti
     items.length === 0
       ? 'UNAVAILABLE'
       : items.length === EXPECTED_PLANET_ORDER.length
-      ? 'AVAILABLE'
-      : 'PARTIAL';
+        ? 'AVAILABLE'
+        : 'PARTIAL';
 
   return {
     status,
@@ -263,7 +263,7 @@ function buildYogasSection(horoscope: Horoscope): YogasSection {
       finalStatus,
       strength: strengthVal !== undefined ? String(strengthVal) : undefined,
       planets: y.planets,
-      houses: y.houses,
+      houses: (y.houses ?? []).filter((h): h is number => h !== undefined),
       supportingFactors: y.supportingFactors ?? y.assessment?.supportingFactors,
       weakeningFactors: y.weakeningFactors ?? y.assessment?.weakeningFactors,
       cancellationFactors: y.cancellationFactors ?? y.assessment?.cancellationFactors,
@@ -431,8 +431,8 @@ function buildLifeThemesSection(
     themeCount === 0
       ? 'UNAVAILABLE'
       : themeCount === Object.values(LifeTheme).length
-      ? 'AVAILABLE'
-      : 'PARTIAL';
+        ? 'AVAILABLE'
+        : 'PARTIAL';
 
   return {
     status,

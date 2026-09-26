@@ -139,7 +139,7 @@ describe('P-21 FullNatalAnalysis Engine', () => {
 
     // 2. House
     const house1Report = report.houses.houses.find((h) => h.house === 1);
-    const house1Upstream = horoscope.houseAnalysis.houses[1];
+    const house1Upstream = horoscope.houseAnalysis!.houses[1];
     if (house1Upstream?.evidence && house1Upstream.evidence.length > 0) {
       expect(house1Report!.evidence).toEqual(house1Upstream.evidence);
     }
@@ -300,7 +300,7 @@ describe('P-21 FullNatalAnalysis Engine', () => {
 
   it('should reflect PARTIAL status for partial houses (11 houses)', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-    const partialHouses = { ...horoscope.houseAnalysis.houses };
+    const partialHouses = { ...horoscope.houseAnalysis!.houses };
     delete (partialHouses as any)[12];
 
     const partialHoroscope = {

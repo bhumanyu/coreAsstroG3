@@ -968,7 +968,6 @@ export interface Horoscope {
   bhavaFacts?: Record<number, BhavaFact>;
   vargas?: VargaPositions;
   nakshatras?: NakshatraMap;
-  grahaDrishti?: NatalGrahaDrishti;
   fullNatalAnalysis: FullNatalAnalysisReport;
   rasiChart?: any;
   charts?: any;

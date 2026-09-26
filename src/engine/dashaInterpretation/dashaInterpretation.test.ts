@@ -1456,7 +1456,7 @@ describe('dashaInterpretation Engine', () => {
         houseInterpretation: horoscope.houseInterpretation,
         functionalRoles: horoscope.functionalRoles,
         natalGrahaDrishti: (horoscope.natalGrahaDrishti ?? { aspects: [] }) as any,
-        yogas: horoscope.yogas,
+        yogas: horoscope.yogas!,
         planetAnalysis: horoscope.planetAnalysis,
         planetaryStrength: horoscope.planetaryStrength
       },

@@ -34,7 +34,7 @@ export function resolveDashaInterpretationForAsOf(
         houseInterpretation: horoscope.houseInterpretation,
         functionalRoles: horoscope.functionalRoles,
         ...(natalGrahaDrishti ? { natalGrahaDrishti } : {}),
-        yogas: horoscope.yogas,
+        yogas: horoscope.yogas!,
         planetAnalysis: horoscope.planetAnalysis,
         ...(horoscope.planetaryStrength ? { planetaryStrength: horoscope.planetaryStrength } : {})
       };

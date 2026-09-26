@@ -87,7 +87,6 @@ function mapCareerCombustion(condition: PlanetStateCondition): CareerPlanetaryCo
   switch (condition) {
     case 'COMBUST':
     case 'DEEP_COMBUST':
-    case 'DEEPLY_COMBUST':
       return 'COMBUST';
     case 'NORMAL':
       return 'NOT_COMBUST';

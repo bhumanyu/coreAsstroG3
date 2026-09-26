@@ -111,7 +111,7 @@ describe('astroEngine', () => {
 
     const horoscope = calculateHoroscope(birth, customPositions);
     expect(horoscope.yogas).toBeDefined();
-    const hasGajaKesari = horoscope.yogas.yogas.some((y: any) => y.type === 'GAJA_KESARI');
+    const hasGajaKesari = horoscope.yogas!.yogas.some((y: any) => y.type === 'GAJA_KESARI');
     expect(hasGajaKesari).toBe(true);
   });
 
@@ -164,7 +164,7 @@ describe('astroEngine', () => {
     const horoscope = calculateHoroscope(birth, customPositions);
     expect(horoscope.yogas).toBeDefined();
 
-    const hasYoga = horoscope.yogas.yogas.some((y: any) => y.type === match.yoga);
+    const hasYoga = horoscope.yogas!.yogas.some((y: any) => y.type === match.yoga);
     expect(hasYoga).toBe(true);
   });
 
@@ -202,7 +202,7 @@ describe('astroEngine', () => {
     const horoscope = calculateHoroscope(birth, customPositions);
     expect(horoscope.yogas).toBeDefined();
 
-    const dhanaYoga = horoscope.yogas.yogas.find(
+    const dhanaYoga = horoscope.yogas!.yogas.find(
       (y: any) => y.type === YogaType.DHANA_YOGA && y.evidence[0]?.ruleId === 'YOGA_DHANA_001'
     );
     expect(dhanaYoga).toBeDefined();
@@ -238,7 +238,7 @@ describe('astroEngine', () => {
     const horoscope = calculateHoroscope(birth, customPositions);
     expect(horoscope.yogas).toBeDefined();
 
-    const cmYoga = horoscope.yogas.yogas.find(
+    const cmYoga = horoscope.yogas!.yogas.find(
       (y: any) => y.type === YogaType.CHANDRA_MANGALA_YOGA
     );
     expect(cmYoga).toBeDefined();
@@ -283,7 +283,7 @@ describe('astroEngine', () => {
     const horoscope = calculateHoroscope(birth, customPositions);
     expect(horoscope.yogas).toBeDefined();
 
-    const lakshmiYoga = horoscope.yogas.yogas.find(
+    const lakshmiYoga = horoscope.yogas!.yogas.find(
       (y: any) => y.type === YogaType.LAKSHMI_YOGA
     );
     expect(lakshmiYoga).toBeDefined();
@@ -339,7 +339,7 @@ describe('astroEngine', () => {
     const horoscope = calculateHoroscope(birth, customPositions);
     expect(horoscope.yogas).toBeDefined();
 
-    const vasumatiYoga = horoscope.yogas.yogas.find(
+    const vasumatiYoga = horoscope.yogas!.yogas.find(
       (y: any) => y.type === YogaType.VASUMATI_YOGA
     );
     expect(vasumatiYoga).toBeDefined();
@@ -414,10 +414,10 @@ describe('astroEngine', () => {
   it('shouldIncludeHouseAnalysisInHoroscope', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     expect(horoscope.houseAnalysis).toBeDefined();
-    expect(Object.keys(horoscope.houseAnalysis.houses)).toHaveLength(12);
+    expect(Object.keys(horoscope.houseAnalysis!.houses)).toHaveLength(12);
 
     for (let h = 1; h <= 12; h++) {
-      const houseAnalysis = horoscope.houseAnalysis.houses[h];
+      const houseAnalysis = horoscope.houseAnalysis!.houses[h];
       expect(houseAnalysis).toBeDefined();
       expect(houseAnalysis.house).toBe(h);
       expect(houseAnalysis.lord).toBe(horoscope.houseLordship.houseLords[h as House]);
@@ -684,9 +684,9 @@ describe('astroEngine', () => {
   it('shouldExposeYogaAssessmentInHoroscope', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     expect(horoscope.yogas).toBeDefined();
-    expect(horoscope.yogas.yogas.length).toBeGreaterThan(0);
+    expect(horoscope.yogas!.yogas.length).toBeGreaterThan(0);
 
-    for (const yoga of horoscope.yogas.yogas) {
+    for (const yoga of horoscope.yogas!.yogas) {
       expect(yoga.assessment).toBeDefined();
       expect(yoga.assessment!.formationPresent).toBe(true);
       expect(yoga.assessment!.strength).toBeDefined();
@@ -738,7 +738,7 @@ describe('astroEngine', () => {
 
     const house1Interp = horoscope.houseInterpretation.houses[1];
     expect(house1Interp.placement.house).toBe(1);
-    expect(house1Interp.lord.planet).toBe(horoscope.houseAnalysis.houses[1].lord);
+    expect(house1Interp.lord.planet).toBe(horoscope.houseAnalysis!.houses[1].lord);
     expect(house1Interp.evidence.length).toBeGreaterThan(0);
   });
 
