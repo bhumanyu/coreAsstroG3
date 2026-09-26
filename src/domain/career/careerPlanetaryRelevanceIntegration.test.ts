@@ -7,6 +7,9 @@ import {
 import { Planet } from '../../types';
 import type { CareerStructuralEvidence } from './careerStructuralReasoning';
 import type { CareerHouseRelationship } from './careerHouseRelationship';
+import { calculateHoroscope } from '../../engine/astroEngine';
+import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import { buildCareerStructuralReasoning } from './careerStructuralReasoningIntegration';
 
 function createMinimalHoroscope(overrides: any = {}): any {
   return {
@@ -467,7 +470,200 @@ describe('Career Planetary Relevance Integration', () => {
 
       expect(jupiterResult!.roles).toContain('HOUSE_OCCUPANT');
     });
+  });
 
+  describe('Real Engine-Produced Horoscope Integration', () => {
+    it('reads real engine-produced Horoscope and produces non-empty relevance for 10th-lord and career-house occupant', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
 
+      const result = buildCareerPlanetaryRelevance(input);
+
+      // Verify we get results for all 9 planets
+      expect(result).toHaveLength(9);
+
+      // Find the 10th house lord from the real horoscope using houseAnalysis
+      const tenthHouseLord = horoscope.houseAnalysis?.houses
+        ? (Array.isArray(horoscope.houseAnalysis.houses)
+          ? horoscope.houseAnalysis.houses.find((h: any) => h.house === 10)?.lord
+          : horoscope.houseAnalysis.houses[10]?.lord)
+        : horoscope.bhavaFacts?.[10]?.lord ?? horoscope.bhavas?.[10]?.lord;
+
+      if (tenthHouseLord) {
+        // Verify the 10th-lord gets CAREER_LORD role
+        const tenthLordResult = result.find(r => r.planet === tenthHouseLord);
+        expect(tenthLordResult).toBeDefined();
+        expect(tenthLordResult!.roles).toContain('CAREER_LORD');
+        expect(tenthLordResult!.relevance).not.toBe('NEUTRAL');
+      }
+
+      // Find at least one planet occupying a career house (10, 6, 11, 2, 1)
+      const careerHouses = [10, 6, 11, 2, 1];
+      let careerHouseOccupant: Planet | undefined;
+      for (const house of careerHouses) {
+        const occupants = horoscope.bhavaFacts?.[house]?.occupants ?? horoscope.bhavas?.[house]?.occupants ?? [];
+        if (occupants.length > 0) {
+          careerHouseOccupant = occupants[0];
+          break;
+        }
+      }
+
+      if (careerHouseOccupant) {
+        const occupantResult = result.find(r => r.planet === careerHouseOccupant);
+        expect(occupantResult).toBeDefined();
+        expect(occupantResult!.roles).toContain('HOUSE_OCCUPANT');
+        expect(occupantResult!.relevance).not.toBe('NEUTRAL');
+      }
+
+      // At minimum, verify that some planets have non-NEUTRAL relevance
+      const nonNeutralResults = result.filter(r => r.relevance !== 'NEUTRAL');
+      expect(nonNeutralResults.length).toBeGreaterThan(0);
+    });
+
+    it('reads from both natalGrahaDrishti and grahaDrishti for aspects', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+
+      // Verify that if either natalGrahaDrishti or grahaDrishti has aspects,
+      // they are not silently dropped
+      const hasAspects = (horoscope.natalGrahaDrishti?.aspects?.length ?? 0) > 0 ||
+        (horoscope.grahaDrishti?.aspects?.length ?? 0) > 0;
+
+      if (hasAspects) {
+        // At least one planet should have HOUSE_ASPECTOR role if aspects data exists
+        const anyAspectResults = result.filter(r => r.roles.includes('HOUSE_ASPECTOR'));
+        expect(anyAspectResults.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('Yoga Participation → CONDITIONAL Path', () => {
+    it('planet participating in career-relevant yoga gets yoga participation with CONDITIONAL path', () => {
+      const horoscope = createMinimalHoroscope({
+        yogas: {
+          yogas: [
+            {
+              type: 'RAJA_YOGA' as any,
+              category: 'RAJA' as any,
+              planets: [Planet.JUPITER, Planet.VENUS],
+              houses: [10, 9],
+              evidence: [] as any,
+              strength: 'STRONG' as any
+            }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const jupiterResult = result.find(r => r.planet === Planet.JUPITER);
+      const venusResult = result.find(r => r.planet === Planet.VENUS);
+
+      expect(jupiterResult).toBeDefined();
+      expect(jupiterResult!.roles).toContain('YOGA_PARTICIPANT');
+      expect(jupiterResult!.reasons).toContain('CAREER_YOGA');
+
+      expect(venusResult).toBeDefined();
+      expect(venusResult!.roles).toContain('YOGA_PARTICIPANT');
+      expect(venusResult!.reasons).toContain('CAREER_YOGA');
+    });
+
+    it('planet not participating in any yoga has careerYogaParticipation false', () => {
+      const horoscope = createMinimalHoroscope({
+        yogas: {
+          yogas: [
+            {
+              type: 'RAJA_YOGA' as any,
+              category: 'RAJA' as any,
+              planets: [Planet.JUPITER, Planet.VENUS],
+              houses: [10, 9],
+              evidence: [] as any,
+              strength: 'STRONG' as any
+            }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const marsResult = result.find(r => r.planet === Planet.MARS);
+
+      expect(marsResult).toBeDefined();
+      expect(marsResult!.roles).not.toContain('YOGA_PARTICIPANT');
+      expect(marsResult!.reasons).not.toContain('CAREER_YOGA');
+    });
+  });
+
+  describe('CHALLENGING_LORD (8H/12H) Cases', () => {
+    it('planet ruling 8th house gets CHALLENGING_LORD role', () => {
+      const horoscope = createMinimalHoroscope({
+        houseAnalysis: {
+          houses: [
+            { house: 8, lord: Planet.SATURN }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const saturnResult = result.find(r => r.planet === Planet.SATURN);
+
+      expect(saturnResult).toBeDefined();
+      expect(saturnResult!.roles).toContain('CHALLENGING_LORD');
+      expect(saturnResult!.reasons).toContain('CHALLENGING_LORDSHIP');
+    });
+
+    it('planet ruling 12th house gets CHALLENGING_LORD role', () => {
+      const horoscope = createMinimalHoroscope({
+        houseAnalysis: {
+          houses: [
+            { house: 12, lord: Planet.SATURN }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const saturnResult = result.find(r => r.planet === Planet.SATURN);
+
+      expect(saturnResult).toBeDefined();
+      expect(saturnResult!.roles).toContain('CHALLENGING_LORD');
+      expect(saturnResult!.reasons).toContain('CHALLENGING_LORDSHIP');
+    });
+
+    it('planet ruling both primary and challenging houses gets both roles', () => {
+      const horoscope = createMinimalHoroscope({
+        houseAnalysis: {
+          houses: [
+            { house: 10, lord: Planet.SATURN },
+            { house: 8, lord: Planet.SATURN }
+          ]
+        }
+      });
+
+      const structural = createMinimalStructural();
+      const input: CareerPlanetaryRelevanceIntegrationInput = { horoscope, structural };
+
+      const result = buildCareerPlanetaryRelevance(input);
+      const saturnResult = result.find(r => r.planet === Planet.SATURN);
+
+      expect(saturnResult).toBeDefined();
+      expect(saturnResult!.roles).toContain('CAREER_LORD');
+      expect(saturnResult!.roles).toContain('CHALLENGING_LORD');
+      expect(saturnResult!.reasons).toContain('PRIMARY_LORDSHIP');
+      expect(saturnResult!.reasons).toContain('CHALLENGING_LORDSHIP');
+    });
   });
 });

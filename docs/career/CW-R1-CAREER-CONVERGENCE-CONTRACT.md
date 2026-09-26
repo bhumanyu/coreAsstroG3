@@ -831,6 +831,32 @@ This represents the semantic dependency relationship between concepts. It does N
 - Must NOT: Independently compute Career semantics; must consume canonical output from C4–C11
 - Note: AI is a consumer, not a producer, of Career semantics
 
+## W1.2 — CareerNatalAnalysis.relevance Wiring (Deferred)
+
+### W1.2.1 W1.2 Scope
+
+W1.2 delivers the C5 adapter (`careerPlanetaryRelevanceIntegration.ts`) that builds `CareerPlanetaryRelevanceContext` objects from a `Horoscope` and C4 `CareerStructuralReasoning`, then delegates to the existing C5 `interpretCareerPlanetaryRelevanceBatch`.
+
+### W1.2.2 Wiring Decision
+
+The aggregate population of `CareerNatalAnalysis.relevance` is **deferred to a later wave**. W1.2 delivers only the C5 adapter implementation and does not wire the adapter output into `createCareerNatalAnalysis` at the intended aggregation site.
+
+### W1.2.3 Rationale
+
+The adapter implementation requires validation against real engine-produced Horoscope data before production wiring. Additionally, the aggregation site (likely in `CareerDomainInterpreterV2` or a dedicated career natal analysis builder) requires careful coordination with existing evidence flow to maintain the canonical evidence identity contract (W0.2/W0.4).
+
+### W1.2.4 Future Work
+
+A future wave will:
+1. Validate the adapter against production Horoscope data
+2. Identify the correct aggregation site for `CareerNatalAnalysis.relevance`
+3. Wire `buildCareerPlanetaryRelevance` output into the aggregation flow
+4. Update this contract document to reflect the completed wiring
+
+### W1.2.5 Constraints
+
+No changes to `CareerDomainInterpreterV2` production authority are made in W1.2. The C5 adapter remains available for testing and validation but is not yet integrated into the production Career pipeline.
+
 ### W0.3.5 Prohibition of Duplicate/Hybrid Authority
 
 Legacy + canonical execution is permitted for comparison/parity ONLY during migration. Silent combination into a production conclusion is forbidden.

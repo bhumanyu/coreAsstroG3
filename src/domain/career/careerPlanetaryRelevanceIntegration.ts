@@ -1,4 +1,4 @@
-import type { Horoscope } from '../../types';
+import type { Horoscope, HouseAnalysis, BhavaFact, PlanetFact, NatalGrahaDrishtiReport, YogaResult } from '../../types';
 import { Planet } from '../../types';
 
 import type { CareerStructuralReasoning } from './careerStructuralReasoning';
@@ -15,6 +15,21 @@ import {
   type CareerPlanetaryRelevanceContext,
   type CareerPlanetaryRelevance
 } from './careerPlanetaryRelevance';
+
+// Typed reader interfaces for Horoscope fields
+interface HouseAnalysisReport {
+  houses: readonly HouseAnalysis[] | Record<number, HouseAnalysis>;
+}
+
+interface YogaAnalysisReport {
+  yogas: readonly YogaResult[];
+}
+
+interface Aspect {
+  sourcePlanet: Planet;
+  targetHouse?: number;
+  aspectType?: string;
+}
 
 export interface CareerPlanetaryRelevanceIntegrationInput {
   readonly horoscope: Horoscope;
@@ -34,22 +49,22 @@ const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
 ] as const);
 
 function getHouseLord(horoscope: Horoscope, house: number): Planet | undefined {
-  const houseAnalysis = horoscope.houseAnalysis as any;
+  const houseAnalysis = horoscope.houseAnalysis as HouseAnalysisReport | undefined;
   if (houseAnalysis?.houses) {
     const houses = houseAnalysis.houses;
     if (Array.isArray(houses)) {
-      const houseData = houses.find((h: any) => h.house === house);
+      const houseData = houses.find((h: HouseAnalysis) => h.house === house);
       if (houseData?.lord) {
-        return houseData.lord as Planet;
+        return houseData.lord;
       }
     } else if (houses[house]) {
-      return houses[house].lord as Planet;
+      return houses[house].lord;
     }
   }
 
   const bhavaFacts = horoscope.bhavaFacts ?? horoscope.bhavas;
   if (bhavaFacts?.[house]) {
-    return bhavaFacts[house].lord as Planet;
+    return bhavaFacts[house].lord;
   }
 
   return undefined;
@@ -63,11 +78,6 @@ function getPlanetHouse(horoscope: Horoscope, planet: Planet): number | undefine
 
   if (planetFact?.position && planetFact.position.house !== undefined) {
     return planetFact.position.house;
-  }
-
-  const planetAnalysis = horoscope.planetAnalysis as any;
-  if (planetAnalysis?.planets?.[planet]?.house !== undefined) {
-    return planetAnalysis.planets[planet].house;
   }
 
   return undefined;
@@ -101,11 +111,6 @@ function getCareerRuledHouses(horoscope: Horoscope, planet: Planet): readonly nu
 }
 
 function getCareerAspectHouses(horoscope: Horoscope, planet: Planet): readonly number[] {
-  const natalGrahaDrishti = horoscope.natalGrahaDrishti as any;
-  if (!natalGrahaDrishti?.aspects) {
-    return Object.freeze([]);
-  }
-
   const careerHouses = new Set<number>();
   for (const house of CAREER_PRIMARY_HOUSES) {
     careerHouses.add(house);
@@ -117,8 +122,13 @@ function getCareerAspectHouses(horoscope: Horoscope, planet: Planet): readonly n
     careerHouses.add(house);
   }
 
-  const aspects = natalGrahaDrishti.aspects;
   const aspectHouses = new Set<number>();
+
+  // Read from both natalGrahaDrishti and grahaDrishti (whichever is populated)
+  const natalGrahaDrishti = horoscope.natalGrahaDrishti as NatalGrahaDrishtiReport | undefined;
+  const grahaDrishti = horoscope.grahaDrishti as NatalGrahaDrishtiReport | undefined;
+
+  const aspects: readonly Aspect[] = (natalGrahaDrishti?.aspects ?? grahaDrishti?.aspects ?? []) as Aspect[];
 
   for (const aspect of aspects) {
     if (aspect.sourcePlanet === planet && aspect.targetHouse !== undefined) {
@@ -154,7 +164,7 @@ function getCareerRelationshipPlanets(
 }
 
 function hasCareerYogaParticipation(horoscope: Horoscope, planet: Planet): boolean {
-  const yogas = horoscope.yogas as any;
+  const yogas = horoscope.yogas as YogaAnalysisReport | undefined;
   if (!yogas?.yogas) {
     return false;
   }
