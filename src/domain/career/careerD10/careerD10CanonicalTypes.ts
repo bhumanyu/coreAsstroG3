@@ -59,6 +59,7 @@ export interface CareerD10CanonicalEvidence {
   readonly direction: CareerD10QualificationDirection;
   readonly d10Effect: CareerD10QualificationEffect;
   readonly d10Strength: CareerD10QualificationStrength;
+  readonly weight: number;
   readonly statement: string;
   readonly sourceIds: readonly string[];
   readonly provenance: CareerD10CanonicalProvenance;

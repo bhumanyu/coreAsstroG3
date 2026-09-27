@@ -902,9 +902,9 @@ The adapter implements the following components:
 - `buildD10HouseContexts(horoscope)` - Reads D10 houses with real occupants/tenantConditions
 - `buildCareerD10Context(input)` - Builds context per spec §10
 - `resolveCanonicalRelationship(effect)` - Maps effects to relationships
-- `buildD10EvidenceIdentityKey(source, direction, role)` - Evidence identity key generation
-- `canonicalizeEvidence(evidence, result)` - Canonical evidence attachment with result.d10Effect/d10Strength
-- `buildD10Conflicts(canonicalEvidence)` - Conflict detection (SUPPORT vs CHALLENGE for same identityKey)
+- `buildD10EvidenceIdentityKey(source, role)` - Evidence identity key generation (excludes direction/effect/strength; format: CAREER_D10:<source>:<role>)
+- `canonicalizeEvidence(evidence, result)` - Canonical evidence attachment with result.d10Effect/d10Strength, dedup by identityKey, sort by identityKey.localeCompare
+- `buildD10Conflicts(canonicalEvidence)` - Conflict detection (SUPPORT vs CHALLENGE for same identityKey, weights are MAX single-occurrence weight)
 - `resolveExpressionRelationship(expression, d10Direction)` - Expression relationship resolution
 - `qualifyExpression(expression, result)` - Expression qualification (C10 only qualifies existing C8 expressions)
 - `resolveAvailability(result)` - Availability resolution
@@ -915,11 +915,11 @@ The adapter implements the following components:
 
 **Canonical Integration Pattern**: C10 is an adapter-only wave that wraps the existing C10 semantic engine without modifying it. This preserves the existing implementation while providing a canonical interface.
 
-**Parallel to C9**: C10 consumes `Horoscope` + `CareerNatalAnalysis` + C8 `CareerExpressionAnalysis`, but does NOT include C9/Dasha input. C10 is parallel to C9 in the layering: Natal foundation → Career promise → Expression → {C9 Dasha, C10 D10} → C11.
+**Parallel to C9**: C10 consumes `Horoscope` + `CareerNatalAnalysis` + C8 `CareerExpressionAnalysis`, but does NOT include C9/Dasha input. C10 is parallel to C9 in the layering: Natal foundation → Career promise → Expression → {C9 Dasha, C10 D10} → C11. C10 remains parallel to C9 (no Dasha dependency in the canonical adapter).
 
 **Qualifies but Never Creates**: C10 only qualifies existing C8 expressions; it never invents new expressions from D10 alone. This preserves natal C4–C7 authority.
 
-**Evidence IdentityKey vs ID**: Canonical evidence uses separate identityKey (semantic identity) and id (occurrence identity) for proper deduplication and traceability. Format: identityKey = `CAREER_D10:<source>:<direction>:<role>`, id = `identityKey:<d10Effect>:<d10Strength>`.
+**Evidence IdentityKey vs ID**: Canonical evidence uses separate identityKey (semantic identity) and id (occurrence identity) for proper deduplication and traceability. Format: identityKey = `CAREER_D10:<source>:<role>` (direction/effect/strength are occurrence/result attributes, not identity), id = `identityKey:<direction>:<d10Effect>:<d10Strength>`.
 
 **Root Evidence Empty**: `resolveNatalRootEvidenceIds` returns an empty array (conservative approach, mirror C9) since WeightedReasoningEvidence does not expose structured planet/subject fields.
 
@@ -927,7 +927,15 @@ The adapter implements the following components:
 
 **mapD10Condition Decision**: Neutral dignity (NEUTRAL, NEUTRAL_SIGN, undefined) maps to `UNAVAILABLE` condition, not `MODERATE`. This is a conservative decision: neutral dignity does not imply moderate planetary condition.
 
-**NatalHouse Placeholder**: The `natalHouse` field in `CareerD10PlanetContext` is set to 0 as a documented placeholder for future migration. Real natal house mapping is deferred.
+**NatalHouse Placeholder**: The `natalHouse` field in `CareerD10PlanetContext` is set to 0 as a documented placeholder for future migration. The preferred future type is `natalHouse?: number` / `number | undefined` meaning genuinely unavailable. Real natal house mapping is deferred.
+
+**Canonical Dedup**: Canonical C10 evidence is deduplicated by identityKey (merging sourceIds and rootEvidenceIds via Set-merge, re-freezing), then sorted by identityKey.localeCompare. This mirrors C9's narrow per-adapter dedup pattern, preserving the "one semantic fact → one identityKey → many occurrences → sourceIds[]" structure.
+
+**Conflict Weights**: Conflict supportWeight and challengeWeight are computed as MAX single-occurrence weight (Math.max of evidence weights), not occurrence counts. Duplicate occurrences must not inflate weight. Empty arrays default to 0.
+
+**Expression Evidence**: Expression qualifications carry C10 evidence - the canonical C10 evidence that produced the qualification is filtered by direction matching the qualification result and frozen onto the qualification.evidence array. The C8-expression → C10-qualification → C10-evidence chain is traceable.
+
+**ExpressionId**: ExpressionId is order-independent and non-empty: `[expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':')`. This fixes empty-id collisions and order dependence (e.g., [A,B] vs [B,A] yield the same id).
 
 **Tenant Population**: D10 house contexts populate `tenants` and `tenantConditions` from the real `occupants` array in the D10 house interpretation, not hardcoded empty arrays.
 
@@ -947,6 +955,19 @@ C10 integration is validated by `src/domain/career/careerD10/careerD10Integratio
 - Test Group B: natalPromisePreserved true when natal is NEUTRAL and D10 is strong (§27)
 - Test Group C: REINFORCES/MODIFIES relationships (§28-29)
 - Test Group D: Expression qualification of existing C8 expression (§31-32)
+- Test Group E: NO expression created from D10 alone (§31-32)
+- Test Group F: Missing D10 → UNAVAILABLE with natal preserved (§33)
+- Test Group G: Determinism and input-order independence (§34-35)
+- Test Group H: Evidence identityKey ≠ id and non-empty sourceIds (§36)
+- Test Group I: rootEvidenceIds deduped+sorted (§37)
+- Test Group J: Deep immutability (§38)
+- Test Group K: D10 does not mutate horoscope.dashaInterpretation (§39)
+- Test Group L: No timing/transit/finalConclusion properties (§40)
+- Test Group M: Real-engine chain test (§41)
+- Test Group N: mapD10Condition neutral-dignity→UNAVAILABLE decision
+- Test Group O: Various D10 qualification scenarios
+- Test Group P: W0.4 identity test (SUPPORT/CHALLENGE same identityKey)
+- Test Group Q: Input-order determinism tests (expressionId order-independence, canonical evidence determinism)
 - Test Group E: NO expression created from D10 alone (§31-32)
 - Test Group F: Missing D10 → UNAVAILABLE with natal preserved (§33)
 - Test Group G: Determinism and input-order independence (§34-35)

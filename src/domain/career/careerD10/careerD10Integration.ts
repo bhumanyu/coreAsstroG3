@@ -126,13 +126,13 @@ function mapD10Condition(
 
 /**
  * Builds D10 planet contexts from the horoscope.
- * 
+ *
  * This function:
  * - Reads horoscope.divisionalInterpretation?.d10?.planets
  * - Iterates in canonical planet order
  * - Skips planets missing or without a house
  * - Builds CareerD10PlanetContext with condition from mapD10Condition
- * - Sets natalHouse: 0 (documented placeholder for future migration)
+ * - Sets natalHouse: 0 (deferred placeholder; preferred future type is natalHouse?: number / number | undefined meaning genuinely unavailable)
  * - Sets relatedHouses: [info.house]
  * - Freezes each context and the array
  */
@@ -285,74 +285,106 @@ function resolveCanonicalRelationship(
 
 /**
  * Builds evidence identity key for canonical D10 evidence.
- * Format: CAREER_D10:<source>:<direction>:<role>
+ * Format: CAREER_D10:<source>:<role>
+ * Direction/effect/strength are occurrence attributes, not identity.
  */
 function buildD10EvidenceIdentityKey(
   source: string,
-  direction: CareerD10QualificationDirection,
   role: string
 ): string {
-  return `CAREER_D10:${source}:${direction}:${role}`;
+  return `CAREER_D10:${source}:${role}`;
 }
 
 /**
  * Canonicalizes evidence from the semantic engine.
- * 
+ *
  * This function:
+ * - Builds identityKey without direction/effect/strength (semantic identity)
+ * - Builds id with direction/effect/strength (occurrence identity)
  * - Attaches result.d10Effect and result.d10Strength to each canonical evidence
  * - Sets direction from the item
  * - Sets sourceIds: [item.id]
  * - Sets provenance with source: 'C10_D10', ruleIds, sourceIds, natalRootIds: []
+ * - Deduplicates by identityKey (merging sourceIds and rootEvidenceIds)
+ * - Sorts output by identityKey.localeCompare
  * - Freezes all
  */
 function canonicalizeEvidence(
   evidence: readonly CareerD10Evidence[],
   result: CareerD10QualificationResult
 ): readonly CareerD10CanonicalEvidence[] {
-  return Object.freeze(
-    evidence.map(item => {
-      const identityKey = buildD10EvidenceIdentityKey(
-        item.source ?? 'UNKNOWN',
-        item.direction,
-        item.role
-      );
+  const evidenceMap = new Map<string, CareerD10CanonicalEvidence>();
 
-      const id = `${identityKey}:${result.d10Effect}:${result.d10Strength}`;
+  for (const item of evidence) {
+    const identityKey = buildD10EvidenceIdentityKey(
+      item.source ?? 'UNKNOWN',
+      item.role
+    );
 
-      const provenance: CareerD10CanonicalProvenance = Object.freeze({
+    const id = [identityKey, item.direction, result.d10Effect, result.d10Strength].join(':');
+
+    const natalRootIds = Object.freeze([]);
+
+    const provenance: CareerD10CanonicalProvenance = Object.freeze({
+      source: 'C10_D10',
+      ruleIds: Object.freeze([item.source ?? 'UNKNOWN']),
+      sourceIds: Object.freeze([item.id]),
+      natalRootIds
+    });
+
+    const canonicalEvidence: CareerD10CanonicalEvidence = Object.freeze({
+      identityKey,
+      id,
+      role: item.role,
+      direction: item.direction,
+      d10Effect: result.d10Effect,
+      d10Strength: result.d10Strength,
+      weight: item.weight,
+      statement: item.statement,
+      sourceIds: provenance.sourceIds,
+      provenance
+    });
+
+    // Deduplicate by identityKey (merge sourceIds and rootEvidenceIds)
+    const existing = evidenceMap.get(identityKey);
+    if (existing) {
+      const mergedSourceIds = Array.from(new Set([...existing.sourceIds, ...canonicalEvidence.sourceIds]));
+      const mergedRootIds = Array.from(new Set([...existing.provenance.natalRootIds, ...natalRootIds]));
+      const mergedProvenance: CareerD10CanonicalProvenance = Object.freeze({
         source: 'C10_D10',
-        ruleIds: Object.freeze([item.source ?? 'UNKNOWN']),
-        sourceIds: Object.freeze([item.id]),
-        natalRootIds: Object.freeze([])
+        ruleIds: Object.freeze([...new Set([...existing.provenance.ruleIds, ...provenance.ruleIds])]),
+        sourceIds: Object.freeze(mergedSourceIds),
+        natalRootIds: Object.freeze(mergedRootIds)
       });
 
-      const canonicalEvidence: CareerD10CanonicalEvidence = Object.freeze({
-        identityKey,
-        id,
-        role: item.role,
-        direction: item.direction,
-        d10Effect: result.d10Effect,
-        d10Strength: result.d10Strength,
-        statement: item.statement,
-        sourceIds: provenance.sourceIds,
-        provenance
-      });
+      evidenceMap.set(identityKey, Object.freeze({
+        ...existing,
+        sourceIds: Object.freeze(mergedSourceIds),
+        provenance: mergedProvenance
+      }));
+    } else {
+      evidenceMap.set(identityKey, canonicalEvidence);
+    }
+  }
 
-      return canonicalEvidence;
-    })
+  // Sort by identityKey.localeCompare
+  const sortedEvidence = Array.from(evidenceMap.values()).sort((a, b) =>
+    a.identityKey.localeCompare(b.identityKey)
   );
+
+  return Object.freeze(sortedEvidence);
 }
 
 /**
  * Builds D10 conflicts from canonical evidence.
- * 
+ *
  * This function:
  * - Groups evidence by identityKey
  * - Emits a conflict only when both SUPPORT and CHALLENGE directions exist for the same key
  * - Sorts evidence-id arrays
- * - Sets supportWeight/challengeWeight to counts
+ * - Sets supportWeight/challengeWeight to MAX single-occurrence weight (not counts)
  * - Sorts conflicts by identityKey
- * 
+ *
  * This is traceability only — not a second direction resolver.
  */
 function buildD10Conflicts(
@@ -379,13 +411,17 @@ function buildD10Conflicts(
         challengeEvidence.map(e => e.id).sort()
       );
 
+      // Use MAX single-occurrence weight, not counts
+      const supportWeight = supportEvidence.length > 0 ? Math.max(...supportEvidence.map(e => e.weight)) : 0;
+      const challengeWeight = challengeEvidence.length > 0 ? Math.max(...challengeEvidence.map(e => e.weight)) : 0;
+
       const conflict: CareerD10Conflict = Object.freeze({
         identityKey,
         supportEvidenceIds,
         challengeEvidenceIds,
-        supportWeight: supportEvidence.length,
-        challengeWeight: challengeEvidence.length,
-        statement: `Conflict in D10 evidence for ${identityKey}: ${supportEvidence.length} support vs ${challengeEvidence.length} challenge.`
+        supportWeight,
+        challengeWeight,
+        statement: `Conflict in D10 evidence for ${identityKey}: ${supportWeight} support weight vs ${challengeWeight} challenge weight.`
       });
 
       conflicts.push(conflict);
@@ -436,19 +472,25 @@ function resolveExpressionRelationship(
 /**
  * Qualifies an expression with D10.
  * Per spec §21.
- * 
+ *
  * C10 only qualifies existing C8 expressions; it never invents one.
  */
 function qualifyExpression(
   expression: CareerExpression,
-  result: CareerD10QualificationResult
+  result: CareerD10QualificationResult,
+  canonicalEvidence: readonly CareerD10CanonicalEvidence[]
 ): CareerD10ExpressionQualificationCanonical {
-  const expressionId = expression.supportingEvidenceIds.join('|');
+  // Order-independent, non-empty identity: mode + sorted supporting ids
+  const expressionId = [expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':');
   const relationship = resolveExpressionRelationship(expression, result.d10Direction);
 
   const qualified = relationship !== 'INSUFFICIENT_DATA' && relationship !== 'UNAVAILABLE';
 
-  const canonicalEvidence: CareerD10CanonicalEvidence[] = [];
+  // Populate evidence with canonical C10 evidence that produced the qualification
+  // Filter by the direction that matches the qualification result
+  const qualificationEvidence = Object.freeze(
+    canonicalEvidence.filter(e => e.direction === result.d10Direction)
+  );
 
   const qualification: CareerD10ExpressionQualificationCanonical = Object.freeze({
     expressionId,
@@ -460,7 +502,7 @@ function qualifyExpression(
     strength: qualified ? result.d10Strength : expression.strength === 'STRONG' ? 'STRONG' :
       expression.strength === 'MODERATE' ? 'MODERATE' :
         expression.strength === 'WEAK' ? 'WEAK' : 'UNDETERMINED',
-    evidence: canonicalEvidence,
+    evidence: qualificationEvidence,
     statement: qualified
       ? `Expression ${expressionId} qualified by D10 with effect ${relationship}.`
       : `Expression ${expressionId} not qualified by D10; preserved original direction.`
@@ -532,7 +574,7 @@ export function buildCareerD10Analysis(
 
   // Qualify expressions
   const expressionQualifications = Object.freeze(
-    input.expression.expressions.map(expr => qualifyExpression(expr, result))
+    input.expression.expressions.map(expr => qualifyExpression(expr, result, canonicalEvidence))
   );
 
   // Resolve availability
