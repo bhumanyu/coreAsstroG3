@@ -1,0 +1,442 @@
+import type {
+  CareerFinalSynthesisIntegrationInput
+} from './careerFinalSynthesisCanonicalTypes';
+
+import type {
+  CareerFinalSynthesisResult,
+  CareerFinalDirection,
+  CareerFinalStrength,
+  CareerFinalExpression,
+  CareerFinalConflict
+} from './careerFinalSynthesisTypes';
+
+import type {
+  CareerExpressionDirection,
+  CareerExpressionStrength
+} from '../careerExpression';
+
+import type {
+  CareerDashaActivationHierarchy
+} from '../careerDasha';
+
+import type {
+  CareerD10QualificationStrength
+} from '../careerD10';
+
+import {
+  synthesizeCareerFinal
+} from './careerFinalSynthesis';
+
+/**
+ * Maps C8 CareerExpressionDirection to C11 CareerFinalDirection.
+ * SUPPORTED → SUPPORT, CONDITIONAL → CONDITIONAL, NEUTRAL → NEUTRAL, UNAVAILABLE → UNAVAILABLE.
+ */
+function mapExpressionDirection(
+  direction: CareerExpressionDirection
+): CareerFinalDirection {
+  switch (direction) {
+    case 'SUPPORTED':
+      return 'SUPPORT';
+    case 'CONDITIONAL':
+      return 'CONDITIONAL';
+    case 'NEUTRAL':
+      return 'NEUTRAL';
+    case 'UNAVAILABLE':
+      return 'UNAVAILABLE';
+    default:
+      return 'UNAVAILABLE';
+  }
+}
+
+/**
+ * Maps C8 CareerExpressionStrength to C11 CareerFinalStrength.
+ * VERY_STRONG → VERY_STRONG, STRONG → STRONG, MODERATE → MODERATE, WEAK → WEAK, UNAVAILABLE → UNDETERMINED.
+ */
+function mapExpressionStrength(
+  strength: CareerExpressionStrength
+): CareerFinalStrength {
+  switch (strength) {
+    case 'STRONG':
+      return 'STRONG';
+    case 'MODERATE':
+      return 'MODERATE';
+    case 'WEAK':
+      return 'WEAK';
+    case 'UNAVAILABLE':
+      return 'UNDETERMINED';
+    default:
+      return 'UNDETERMINED';
+  }
+}
+
+/**
+ * Determines if an expression is qualified based on its direction.
+ * SUPPORTED → true, CONDITIONAL → true, NEUTRAL → false, UNAVAILABLE → false.
+ */
+function isExpressionQualified(
+  direction: CareerExpressionDirection
+): boolean {
+  return direction === 'SUPPORTED' || direction === 'CONDITIONAL';
+}
+
+/**
+ * Maps C8 expressions to C11 final expressions.
+ * For each C8 CareerExpression, produces a CareerFinalExpression with mapped direction/strength.
+ */
+function mapExpressions(
+  expressionAnalysis: import('../careerExpression').CareerExpressionAnalysis
+): readonly CareerFinalExpression[] {
+  const { CareerExpression } = require('../careerExpression');
+
+  return Object.freeze(
+    expressionAnalysis.expressions.map((expr: typeof CareerExpression) =>
+      Object.freeze({
+        mode: expr.mode,
+        direction: mapExpressionDirection(expr.direction),
+        strength: mapExpressionStrength(expr.strength),
+        qualified: isExpressionQualified(expr.direction),
+        evidenceIds: Object.freeze([...expr.supportingEvidenceIds].sort((a, b) => a.localeCompare(b)))
+      })
+    )
+  );
+}
+
+/**
+ * Maps transit effect to final direction.
+ * SUPPORTS → SUPPORT, CHALLENGES → CHALLENGE, MIXED → MIXED, NEUTRAL → NEUTRAL, INSUFFICIENT_DATA/default → UNAVAILABLE.
+ */
+function mapTransitEffectToFinalDirection(
+  transitEffect: string | undefined
+): CareerFinalDirection {
+  if (!transitEffect) {
+    return 'UNAVAILABLE';
+  }
+
+  switch (transitEffect) {
+    case 'SUPPORTS':
+      return 'SUPPORT';
+    case 'CHALLENGES':
+      return 'CHALLENGE';
+    case 'MIXED':
+      return 'MIXED';
+    case 'NEUTRAL':
+      return 'NEUTRAL';
+    case 'INSUFFICIENT_DATA':
+    default:
+      return 'UNAVAILABLE';
+  }
+}
+
+/**
+ * Collects evidence IDs from natal analysis.
+ * From natal.evidence (WeightedReasoningEvidence.evidenceId).
+ */
+function collectNatalEvidenceIds(
+  natal: import('../careerNatalAnalysis').CareerNatalAnalysis
+): readonly string[] {
+  return Object.freeze(
+    natal.evidence.map(e => e.evidenceId).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects source IDs from natal analysis.
+ * From natal.evidence (WeightedReasoningEvidence.evidenceId).
+ */
+function collectNatalSourceIds(
+  natal: import('../careerNatalAnalysis').CareerNatalAnalysis
+): readonly string[] {
+  return Object.freeze(
+    natal.evidence.map(e => e.evidenceId).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects rule IDs from natal analysis.
+ * From natal.evidence (WeightedReasoningEvidence.ruleId).
+ */
+function collectNatalRuleIds(
+  natal: import('../careerNatalAnalysis').CareerNatalAnalysis
+): readonly string[] {
+  const allRuleIds = natal.evidence
+    .map(e => e.ruleId)
+    .filter((ruleId): ruleId is string => ruleId !== undefined);
+  return Object.freeze(
+    Array.from(new Set(allRuleIds)).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects evidence IDs from Dasha analysis.
+ * From dasha.evidence (CareerDashaCanonicalEvidence.id).
+ */
+function collectDashaEvidenceIds(
+  dasha: import('../careerDasha').CareerDashaCanonicalAnalysis
+): readonly string[] {
+  const allIds: string[] = [];
+  for (const e of dasha.evidence) {
+    allIds.push(e.id);
+  }
+  return Object.freeze(
+    allIds.sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects source IDs from Dasha analysis.
+ * From dasha.evidence (CareerDashaCanonicalEvidence.sourceIds).
+ */
+function collectDashaSourceIds(
+  dasha: import('../careerDasha').CareerDashaCanonicalAnalysis
+): readonly string[] {
+  const allSourceIds: string[] = [];
+  for (const e of dasha.evidence) {
+    allSourceIds.push(...e.sourceIds);
+  }
+  return Object.freeze(
+    Array.from(new Set(allSourceIds)).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects rule IDs from Dasha analysis.
+ * From dasha.evidence (CareerDashaCanonicalEvidence does not expose ruleIds in provenance — return empty array).
+ */
+function collectDashaRuleIds(
+  _dasha: import('../careerDasha').CareerDashaCanonicalAnalysis
+): readonly string[] {
+  // CareerDashaCanonicalProvenance does not expose ruleIds in current contract
+  return Object.freeze([]);
+}
+
+/**
+ * Collects evidence IDs from D10 analysis.
+ * From d10.evidence (CareerD10CanonicalEvidence.id).
+ */
+function collectD10EvidenceIds(
+  d10: import('../careerD10').CareerD10CanonicalAnalysis
+): readonly string[] {
+  const allIds: string[] = [];
+  for (const e of d10.evidence) {
+    allIds.push(e.id);
+  }
+  return Object.freeze(
+    allIds.sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects source IDs from D10 analysis.
+ * From d10.evidence (CareerD10CanonicalEvidence.sourceIds).
+ */
+function collectD10SourceIds(
+  d10: import('../careerD10').CareerD10CanonicalAnalysis
+): readonly string[] {
+  const allSourceIds: string[] = [];
+  for (const e of d10.evidence) {
+    allSourceIds.push(...e.sourceIds);
+  }
+  return Object.freeze(
+    Array.from(new Set(allSourceIds)).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects rule IDs from D10 analysis.
+ * From d10.evidence (CareerD10CanonicalEvidence.provenance.ruleIds).
+ */
+function collectD10RuleIds(
+  d10: import('../careerD10').CareerD10CanonicalAnalysis
+): readonly string[] {
+  const allRuleIds: string[] = [];
+  for (const e of d10.evidence) {
+    allRuleIds.push(...e.provenance.ruleIds);
+  }
+  return Object.freeze(
+    Array.from(new Set(allRuleIds)).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Collects evidence IDs from expression analysis.
+ * From expression.expressions[].supportingEvidenceIds.
+ */
+function collectExpressionEvidenceIds(
+  expression: import('../careerExpression').CareerExpressionAnalysis
+): readonly string[] {
+  const allEvidenceIds: string[] = [];
+  for (const e of expression.expressions) {
+    allEvidenceIds.push(...e.supportingEvidenceIds);
+  }
+  return Object.freeze(
+    Array.from(new Set(allEvidenceIds)).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Merges evidence IDs from all sources, deduplicated and sorted.
+ */
+function mergeEvidenceIds(
+  ...arrays: (readonly string[])[]
+): readonly string[] {
+  const allIds: string[] = [];
+  for (const arr of arrays) {
+    for (const id of arr) {
+      allIds.push(id);
+    }
+  }
+  return Object.freeze(
+    Array.from(new Set(allIds)).sort((a, b) => a.localeCompare(b))
+  );
+}
+
+/**
+ * Builds final conflicts diagnostically.
+ * Emits conflicts when secondary layers challenge natal support.
+ * Conflicts never set finalDirection — that stays with the engine.
+ */
+function buildFinalConflicts(
+  natalDirection: string,
+  d10Direction: string | undefined,
+  d10Strength: CareerD10QualificationStrength | undefined,
+  dashaDirection: string | undefined,
+  d10EvidenceIds: readonly string[],
+  dashaEvidenceIds: readonly string[]
+): readonly CareerFinalConflict[] {
+  const conflicts: CareerFinalConflict[] = [];
+
+  // D10 conflict: natal SUPPORT with D10 CHALLENGE
+  if (natalDirection === 'SUPPORT' && d10Direction === 'CHALLENGE') {
+    const severity = d10Strength === 'VERY_STRONG' || d10Strength === 'STRONG' ? 'HIGH' :
+      d10Strength === 'MODERATE' ? 'MODERATE' : 'LOW';
+
+    conflicts.push(Object.freeze({
+      source: 'D10' as const,
+      direction: 'CHALLENGE' as const,
+      severity,
+      evidenceIds: d10EvidenceIds,
+      statement: `D10 qualification challenges natal support with ${severity} severity.`
+    }));
+  }
+
+  // Dasha conflict: natal SUPPORT with Dasha CHALLENGE (timing pressure)
+  if (natalDirection === 'SUPPORT' && dashaDirection === 'CHALLENGE') {
+    conflicts.push(Object.freeze({
+      source: 'DASHA' as const,
+      direction: 'CHALLENGE' as const,
+      severity: 'MODERATE',
+      evidenceIds: dashaEvidenceIds,
+      statement: 'Dasha activation challenges natal support, creating timing pressure.'
+    }));
+  }
+
+  return Object.freeze(conflicts);
+}
+
+/**
+ * Maps D10 strength to conflict severity.
+ */
+function mapD10StrengthToSeverity(
+  strength: CareerD10QualificationStrength | undefined
+): 'LOW' | 'MODERATE' | 'HIGH' {
+  if (!strength) return 'LOW';
+  if (strength === 'VERY_STRONG' || strength === 'STRONG') return 'HIGH';
+  if (strength === 'MODERATE') return 'MODERATE';
+  return 'LOW';
+}
+
+/**
+ * Canonical C11 Final Career Synthesis Integration Adapter
+ *
+ * This adapter:
+ * - Consumes canonical C4–C10 outputs plus optional Timing
+ * - Maps each layer to the CareerFinalSynthesisInput contract
+ * - Collects evidence trace arrays from upstream canonical evidence
+ * - Builds conflicts diagnostically (never sets finalDirection)
+ * - Calls synthesizeCareerFinal from the canonical engine
+ * - Returns the existing CareerFinalSynthesisResult (no new wrapper)
+ *
+ * The adapter does NOT:
+ * - Accept or reference Horoscope
+ * - Mutate any input aggregate
+ * - Reconstruct MD/AD/PD hierarchy (consumes dasha.hierarchy directly)
+ * - Invent new evidence IDs (collects from upstream)
+ * - Re-run any dedup engine
+ *
+ * @param input - Canonical integration input with C4–C10 outputs
+ * @returns Frozen CareerFinalSynthesisResult from the canonical engine
+ */
+export function buildCareerFinalAnalysis(
+  input: CareerFinalSynthesisIntegrationInput
+): CareerFinalSynthesisResult {
+  const { natal, expression, dasha, d10, timing } = input;
+
+  // Map natal: natalDirection and natalStrength from natal.structural
+  const natalDirection = natal.structural.direction;
+  const natalStrength = natal.structural.strength;
+
+  // Map expression: expressionStrength from primaryExpression
+  const expressionStrength = expression.primaryExpression?.strength;
+  const expressions = mapExpressions(expression);
+
+  // Map dasha: dashaHierarchy from dasha.hierarchy (undefined if missing)
+  const dashaHierarchy: CareerDashaActivationHierarchy | undefined = dasha.hierarchy;
+
+  // Map d10: pass d10Effect, d10Direction, d10Strength unchanged
+  const d10Effect = d10.d10Effect;
+  const d10Direction = d10.d10Direction;
+  const d10Strength = d10.d10Strength;
+
+  // Map timing: transitDirection from timing.transitEffect
+  const transitDirection = timing ? mapTransitEffectToFinalDirection(timing.transitEffect) : 'UNAVAILABLE';
+
+  // Collect evidence trace arrays from upstream canonical evidence
+  const natalEvidenceIds = collectNatalEvidenceIds(natal);
+  const natalSourceIds = collectNatalSourceIds(natal);
+  const natalRuleIds = collectNatalRuleIds(natal);
+
+  const dashaEvidenceIds = collectDashaEvidenceIds(dasha);
+  const dashaSourceIds = collectDashaSourceIds(dasha);
+  const dashaRuleIds = collectDashaRuleIds(dasha);
+
+  const d10EvidenceIds = collectD10EvidenceIds(d10);
+  const d10SourceIds = collectD10SourceIds(d10);
+  const d10RuleIds = collectD10RuleIds(d10);
+
+  const expressionEvidenceIds = collectExpressionEvidenceIds(expression);
+
+  // Merge all evidence IDs, source IDs, and rule IDs deterministically
+  const evidenceIds = mergeEvidenceIds(natalEvidenceIds, dashaEvidenceIds, d10EvidenceIds, expressionEvidenceIds);
+  const sourceIds = mergeEvidenceIds(natalSourceIds, dashaSourceIds, d10SourceIds);
+  const ruleIds = mergeEvidenceIds(natalRuleIds, dashaRuleIds, d10RuleIds);
+
+  // Build conflicts diagnostically
+  const conflicts = buildFinalConflicts(
+    natalDirection,
+    d10Direction,
+    d10Strength,
+    dashaHierarchy?.overallDirection,
+    d10EvidenceIds,
+    dashaEvidenceIds
+  );
+
+  // Assemble frozen CareerFinalSynthesisInput
+  const finalInput = Object.freeze({
+    natalDirection,
+    natalStrength,
+    expressionStrength,
+    dashaHierarchy,
+    d10Effect,
+    d10Direction,
+    d10Strength,
+    transitDirection,
+    expressions,
+    conflicts,
+    evidenceIds,
+    sourceIds,
+    ruleIds
+  });
+
+  // Return result from canonical engine
+  return synthesizeCareerFinal(finalInput);
+}

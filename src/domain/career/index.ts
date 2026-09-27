@@ -22,3 +22,4 @@ export * from './careerNatalAnalysis';
 export * from './careerNatalConvergence';
 export * from './careerPlanetaryRelevanceIntegration';
 export * from './careerPlanetaryConditionIntegration';
+export * from './careerFinalSynthesis';
