@@ -153,13 +153,17 @@ function collectNatalEvidenceIds(
 
 /**
  * Collects source IDs from natal analysis.
- * From natal.evidence (WeightedReasoningEvidence.evidenceId).
+ * From natal.evidence (WeightedReasoningEvidence.sourceIds).
  */
 function collectNatalSourceIds(
   natal: CareerNatalAnalysis
 ): readonly string[] {
+  const allSourceIds: string[] = [];
+  for (const e of natal.evidence) {
+    allSourceIds.push(...e.sourceIds);
+  }
   return Object.freeze(
-    natal.evidence.map(e => e.evidenceId).sort((a, b) => a.localeCompare(b))
+    Array.from(new Set(allSourceIds)).sort((a, b) => a.localeCompare(b))
   );
 }
 
@@ -343,18 +347,6 @@ function buildFinalConflicts(
   }
 
   return Object.freeze(conflicts);
-}
-
-/**
- * Maps D10 strength to conflict severity.
- */
-function mapD10StrengthToSeverity(
-  strength: CareerD10QualificationStrength | undefined
-): 'LOW' | 'MODERATE' | 'HIGH' {
-  if (!strength) return 'LOW';
-  if (strength === 'VERY_STRONG' || strength === 'STRONG') return 'HIGH';
-  if (strength === 'MODERATE') return 'MODERATE';
-  return 'LOW';
 }
 
 /**

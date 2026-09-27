@@ -438,22 +438,27 @@ describe('C11 Final Career Synthesis Integration', () => {
   });
 
   describe('Test Group K: Evidence identity', () => {
-    it('evidenceIds distinct from sourceIds; ruleIds distinct', () => {
+    it('evidenceIds, sourceIds, and ruleIds are distinct arrays with separate semantic contracts', () => {
       const input = makeInput({
         natal: makeMinimalNatal('SUPPORT', 'STRONG')
       });
 
       const result = buildCareerFinalAnalysis(input);
 
-      // evidenceIds and sourceIds should be distinct arrays
+      // evidenceIds, sourceIds, and ruleIds should be distinct arrays
       expect(result.evidenceIds).toBeDefined();
       expect(result.sourceIds).toBeDefined();
       expect(result.ruleIds).toBeDefined();
 
-      // They may have overlapping content but are conceptually distinct
+      // They are conceptually separate arrays representing different identity contracts
       expect(Array.isArray(result.evidenceIds)).toBe(true);
       expect(Array.isArray(result.sourceIds)).toBe(true);
       expect(Array.isArray(result.ruleIds)).toBe(true);
+
+      // Verify they are separate array instances (not the same reference)
+      expect(result.evidenceIds).not.toBe(result.sourceIds);
+      expect(result.evidenceIds).not.toBe(result.ruleIds);
+      expect(result.sourceIds).not.toBe(result.ruleIds);
     });
   });
 
