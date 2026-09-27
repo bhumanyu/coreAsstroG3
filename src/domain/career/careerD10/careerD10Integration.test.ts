@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  buildCareerD10Analysis
+  buildCareerD10Analysis,
+  buildD10EvidenceIdentityKey,
+  buildCanonicalOccurrences,
+  dedupCanonicalEvidence,
+  buildD10Conflicts
 } from './careerD10Integration';
 
 import type {
   CareerD10IntegrationInput
 } from './careerD10Integration';
+
+import type {
+  CareerD10QualificationResult
+} from './careerD10QualificationTypes';
 
 import {
   Planet,
@@ -754,27 +762,75 @@ describe('C10 D10 Integration', () => {
       // If not found, the test still passes as the structure is correct
     });
 
-    it('SUPPORT and CHALLENGE occurrences produce CareerD10Conflict', () => {
-      const input = makeInput({
-        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
-        horoscope: makeHoroscopeWithD10(
-          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
-          [{ house: 10, lord: Planet.SUN, occupants: [] }]
-        )
+    it('controlled scenario: SUPPORT and CHALLENGE occurrences produce CareerD10Conflict with correct weights', () => {
+      // Create two hand-built evidence occurrences with same source+role but different directions
+      const supportEvidence = Object.freeze({
+        id: 'evidence-support-1',
+        role: 'PRIMARY' as const,
+        direction: 'SUPPORT' as const,
+        weight: 3,
+        statement: 'Support evidence for SUN in house 10',
+        source: 'RULE_1'
       });
 
-      const result = buildCareerD10Analysis(input);
+      const challengeEvidence = Object.freeze({
+        id: 'evidence-challenge-1',
+        role: 'PRIMARY' as const,
+        direction: 'CHALLENGE' as const,
+        weight: 2,
+        statement: 'Challenge evidence for SUN in house 10',
+        source: 'RULE_1'
+      });
 
-      // If conflicts exist, verify they have the correct structure
-      if (result.conflicts.length > 0) {
-        result.conflicts.forEach(conflict => {
-          expect(conflict.identityKey).toBeDefined();
-          expect(conflict.supportEvidenceIds.length).toBeGreaterThan(0);
-          expect(conflict.challengeEvidenceIds.length).toBeGreaterThan(0);
-          expect(conflict.supportWeight).toBeGreaterThanOrEqual(0);
-          expect(conflict.challengeWeight).toBeGreaterThanOrEqual(0);
-        });
-      }
+      // Create a mock result object (only fields used by buildCanonicalOccurrences)
+      const mockResult = Object.freeze({
+        natalDirection: 'SUPPORT' as any,
+        natalStrength: 'STRONG' as any,
+        dashaEffect: 'UNAVAILABLE' as any,
+        dashaDirection: 'UNAVAILABLE' as any,
+        d10Effect: 'REINFORCES' as any,
+        d10Direction: 'SUPPORT' as any,
+        d10Strength: 'STRONG' as any,
+        qualifiedDirection: 'SUPPORT' as any,
+        qualifiedStrength: 'STRONG' as any,
+        natalPromisePreserved: true,
+        dashaPreserved: true,
+        evidence: [],
+        expressionQualifications: [],
+        statement: 'Mock result'
+      }) as CareerD10QualificationResult;
+
+      // Build raw occurrences
+      const rawOccurrences = buildCanonicalOccurrences([supportEvidence, challengeEvidence], mockResult);
+
+      // Verify both occurrences exist with same identityKey but different ids
+      expect(rawOccurrences).toHaveLength(2);
+      expect(rawOccurrences[0].identityKey).toBe(rawOccurrences[1].identityKey);
+      expect(rawOccurrences[0].id).not.toBe(rawOccurrences[1].id);
+      expect(rawOccurrences[0].direction).toBe('SUPPORT');
+      expect(rawOccurrences[1].direction).toBe('CHALLENGE');
+
+      // Build conflicts from raw occurrences
+      const conflicts = buildD10Conflicts(rawOccurrences);
+
+      // Assert non-optionally: at least one conflict is emitted
+      expect(conflicts.length).toBeGreaterThan(0);
+
+      const conflict = conflicts[0];
+      expect(conflict.supportEvidenceIds.length).toBeGreaterThan(0);
+      expect(conflict.challengeEvidenceIds.length).toBeGreaterThan(0);
+      expect(conflict.supportWeight).toBe(3); // MAX weight of SUPPORT occurrences
+      expect(conflict.challengeWeight).toBe(2); // MAX weight of CHALLENGE occurrences
+
+      // Dedup canonical evidence
+      const dedupedEvidence = dedupCanonicalEvidence(rawOccurrences);
+
+      // Assert non-optionally: deduped record has resolved MIXED direction
+      expect(dedupedEvidence).toHaveLength(1);
+      expect(dedupedEvidence[0].direction).toBe('MIXED');
+      expect(dedupedEvidence[0].weight).toBe(3); // MAX weight (Math.max(3, 2))
+      expect(dedupedEvidence[0].identityKey).toBe(rawOccurrences[0].identityKey);
+      expect(dedupedEvidence[0].sourceIds).toHaveLength(2); // Both sourceIds merged
     });
   });
 

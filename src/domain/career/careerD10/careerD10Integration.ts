@@ -288,7 +288,7 @@ function resolveCanonicalRelationship(
  * Format: CAREER_D10:<source>:<role>
  * Direction/effect/strength are occurrence attributes, not identity.
  */
-function buildD10EvidenceIdentityKey(
+export function buildD10EvidenceIdentityKey(
   source: string,
   role: string
 ): string {
@@ -296,7 +296,7 @@ function buildD10EvidenceIdentityKey(
 }
 
 /**
- * Canonicalizes evidence from the semantic engine.
+ * Builds raw canonical occurrences from the semantic engine (no deduplication).
  *
  * This function:
  * - Builds identityKey without direction/effect/strength (semantic identity)
@@ -305,15 +305,15 @@ function buildD10EvidenceIdentityKey(
  * - Sets direction from the item
  * - Sets sourceIds: [item.id]
  * - Sets provenance with source: 'C10_D10', ruleIds, sourceIds, natalRootIds: []
- * - Deduplicates by identityKey (merging sourceIds and rootEvidenceIds)
+ * - Does NOT deduplicate - returns one record per source occurrence
  * - Sorts output by identityKey.localeCompare
  * - Freezes all
  */
-function canonicalizeEvidence(
+export function buildCanonicalOccurrences(
   evidence: readonly CareerD10Evidence[],
   result: CareerD10QualificationResult
 ): readonly CareerD10CanonicalEvidence[] {
-  const evidenceMap = new Map<string, CareerD10CanonicalEvidence>();
+  const occurrences: CareerD10CanonicalEvidence[] = [];
 
   for (const item of evidence) {
     const identityKey = buildD10EvidenceIdentityKey(
@@ -345,25 +345,93 @@ function canonicalizeEvidence(
       provenance
     });
 
-    // Deduplicate by identityKey (merge sourceIds and rootEvidenceIds)
-    const existing = evidenceMap.get(identityKey);
-    if (existing) {
-      const mergedSourceIds = Array.from(new Set([...existing.sourceIds, ...canonicalEvidence.sourceIds]));
-      const mergedRootIds = Array.from(new Set([...existing.provenance.natalRootIds, ...natalRootIds]));
-      const mergedProvenance: CareerD10CanonicalProvenance = Object.freeze({
-        source: 'C10_D10',
-        ruleIds: Object.freeze([...new Set([...existing.provenance.ruleIds, ...provenance.ruleIds])]),
-        sourceIds: Object.freeze(mergedSourceIds),
-        natalRootIds: Object.freeze(mergedRootIds)
-      });
+    occurrences.push(canonicalEvidence);
+  }
 
-      evidenceMap.set(identityKey, Object.freeze({
-        ...existing,
-        sourceIds: Object.freeze(mergedSourceIds),
-        provenance: mergedProvenance
-      }));
+  // Sort by identityKey.localeCompare
+  const sortedOccurrences = occurrences.sort((a, b) =>
+    a.identityKey.localeCompare(b.identityKey)
+  );
+
+  return Object.freeze(sortedOccurrences);
+}
+
+/**
+ * Merges two canonical evidence occurrences with the same identityKey.
+ * Resolves combined semantic state:
+ * - direction: SUPPORT+SUPPORT→SUPPORT, CHALLENGE+CHALLENGE→CHALLENGE, SUPPORT+CHALLENGE→MIXED, MIXED+anything→MIXED
+ * - weight: Math.max(existing.weight, incoming.weight)
+ * - id: recomputed to reflect resolved state
+ * - sourceIds, ruleIds, natalRootIds: merged via Set
+ */
+function mergeCanonicalOccurrences(
+  existing: CareerD10CanonicalEvidence,
+  incoming: CareerD10CanonicalEvidence
+): CareerD10CanonicalEvidence {
+  // Resolve direction
+  let resolvedDirection: CareerD10QualificationDirection;
+  if (existing.direction === 'MIXED' || incoming.direction === 'MIXED') {
+    resolvedDirection = 'MIXED';
+  } else if (existing.direction === incoming.direction) {
+    resolvedDirection = existing.direction;
+  } else {
+    // SUPPORT + CHALLENGE or CHALLENGE + SUPPORT
+    resolvedDirection = 'MIXED';
+  }
+
+  // Resolve weight (MAX)
+  const resolvedWeight = Math.max(existing.weight, incoming.weight);
+
+  // Merge sourceIds, ruleIds, natalRootIds
+  const mergedSourceIds = Array.from(new Set([...existing.sourceIds, ...incoming.sourceIds]));
+  const mergedRuleIds = Array.from(new Set([...existing.provenance.ruleIds, ...incoming.provenance.ruleIds]));
+  const mergedRootIds = Array.from(new Set([...existing.provenance.natalRootIds, ...incoming.provenance.natalRootIds]));
+
+  // Recompute id to reflect resolved state
+  const resolvedId = [existing.identityKey, resolvedDirection, existing.d10Effect, existing.d10Strength].join(':');
+
+  const mergedProvenance: CareerD10CanonicalProvenance = Object.freeze({
+    source: 'C10_D10',
+    ruleIds: Object.freeze(mergedRuleIds),
+    sourceIds: Object.freeze(mergedSourceIds),
+    natalRootIds: Object.freeze(mergedRootIds)
+  });
+
+  return Object.freeze({
+    identityKey: existing.identityKey,
+    id: resolvedId,
+    role: existing.role,
+    direction: resolvedDirection,
+    d10Effect: existing.d10Effect,
+    d10Strength: existing.d10Strength,
+    weight: resolvedWeight,
+    statement: existing.statement,
+    sourceIds: Object.freeze(mergedSourceIds),
+    provenance: mergedProvenance
+  });
+}
+
+/**
+ * Deduplicates canonical occurrences by identityKey.
+ *
+ * This function:
+ * - Groups occurrences by identityKey
+ * - Merges occurrences with the same identityKey using mergeCanonicalOccurrences
+ * - Resolves combined direction (SUPPORT+CHALLENGE→MIXED) and MAX weight
+ * - Sorts output by identityKey.localeCompare
+ * - Freezes all
+ */
+export function dedupCanonicalEvidence(
+  occurrences: readonly CareerD10CanonicalEvidence[]
+): readonly CareerD10CanonicalEvidence[] {
+  const evidenceMap = new Map<string, CareerD10CanonicalEvidence>();
+
+  for (const occurrence of occurrences) {
+    const existing = evidenceMap.get(occurrence.identityKey);
+    if (existing) {
+      evidenceMap.set(occurrence.identityKey, mergeCanonicalOccurrences(existing, occurrence));
     } else {
-      evidenceMap.set(identityKey, canonicalEvidence);
+      evidenceMap.set(occurrence.identityKey, occurrence);
     }
   }
 
@@ -387,7 +455,7 @@ function canonicalizeEvidence(
  *
  * This is traceability only — not a second direction resolver.
  */
-function buildD10Conflicts(
+export function buildD10Conflicts(
   canonicalEvidence: readonly CareerD10CanonicalEvidence[]
 ): readonly CareerD10Conflict[] {
   const evidenceByKey = new Map<string, CareerD10CanonicalEvidence[]>();
@@ -566,11 +634,14 @@ export function buildCareerD10Analysis(
   // Call the existing C10 semantic engine
   const result = resolveCareerD10Qualification(context);
 
-  // Canonicalize evidence
-  const canonicalEvidence = canonicalizeEvidence(result.evidence, result);
+  // Build raw canonical occurrences (no dedup)
+  const rawOccurrences = buildCanonicalOccurrences(result.evidence, result);
 
-  // Build conflicts
-  const conflicts = buildD10Conflicts(canonicalEvidence);
+  // Build conflicts from raw occurrences (so we can see both SUPPORT and CHALLENGE for same key)
+  const conflicts = buildD10Conflicts(rawOccurrences);
+
+  // Dedup canonical evidence for output (resolves combined state)
+  const canonicalEvidence = dedupCanonicalEvidence(rawOccurrences);
 
   // Qualify expressions
   const expressionQualifications = Object.freeze(

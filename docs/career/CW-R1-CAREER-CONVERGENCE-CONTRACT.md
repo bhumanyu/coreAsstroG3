@@ -929,11 +929,19 @@ The adapter implements the following components:
 
 **NatalHouse Placeholder**: The `natalHouse` field in `CareerD10PlanetContext` is set to 0 as a documented placeholder for future migration. The preferred future type is `natalHouse?: number` / `number | undefined` meaning genuinely unavailable. Real natal house mapping is deferred.
 
-**Canonical Dedup**: Canonical C10 evidence is deduplicated by identityKey (merging sourceIds and rootEvidenceIds via Set-merge, re-freezing), then sorted by identityKey.localeCompare. This mirrors C9's narrow per-adapter dedup pattern, preserving the "one semantic fact → one identityKey → many occurrences → sourceIds[]" structure.
+**Canonical Dedup**: Canonical C10 evidence deduplication operates in two stages:
+1. `buildCanonicalOccurrences` - Builds raw canonical occurrences (one per source occurrence) with individual direction, weight, id, and statement preserved.
+2. `dedupCanonicalEvidence` - Deduplicates by identityKey, resolving combined semantic state:
+   - Direction: SUPPORT+SUPPORT→SUPPORT, CHALLENGE+CHALLENGE→CHALLENGE, SUPPORT+CHALLENGE→MIXED, MIXED+anything→MIXED
+   - Weight: Math.max(existing.weight, incoming.weight) (MAX-not-SUM)
+   - id: Recomputed to reflect the resolved (possibly MIXED) state
+   - sourceIds, ruleIds, natalRootIds: Merged via Set
+
+**Conflict Detection**: Conflicts are detected from raw pre-collapse occurrences (via `buildD10Conflicts` on the output of `buildCanonicalOccurrences`), not from the deduped evidence. This ensures that both SUPPORT and CHALLENGE occurrences for the same identityKey are visible to conflict detection.
 
 **Conflict Weights**: Conflict supportWeight and challengeWeight are computed as MAX single-occurrence weight (Math.max of evidence weights), not occurrence counts. Duplicate occurrences must not inflate weight. Empty arrays default to 0.
 
-**Expression Evidence**: Expression qualifications carry C10 evidence - the canonical C10 evidence that produced the qualification is filtered by direction matching the qualification result and frozen onto the qualification.evidence array. The C8-expression → C10-qualification → C10-evidence chain is traceable.
+**Expression Evidence**: Expression qualifications carry C10 evidence - the canonical C10 evidence that produced the qualification is filtered by direction matching the qualification result and frozen onto the qualification.evidence array. The C8-expression → C10-qualification → C10-evidence chain is traceable. Note: Expression evidence selection is direction-only (not linked to the specific producing rule) — this is explicitly deferred to a future hardening pass.
 
 **ExpressionId**: ExpressionId is order-independent and non-empty: `[expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':')`. This fixes empty-id collisions and order dependence (e.g., [A,B] vs [B,A] yield the same id).
 
@@ -966,7 +974,7 @@ C10 integration is validated by `src/domain/career/careerD10/careerD10Integratio
 - Test Group M: Real-engine chain test (§41)
 - Test Group N: mapD10Condition neutral-dignity→UNAVAILABLE decision
 - Test Group O: Various D10 qualification scenarios
-- Test Group P: W0.4 identity test (SUPPORT/CHALLENGE same identityKey)
+- Test Group P: W0.4 identity test (SUPPORT/CHALLENGE same identityKey) - controlled scenario with non-optional assertions
 - Test Group Q: Input-order determinism tests (expressionId order-independence, canonical evidence determinism)
 - Test Group E: NO expression created from D10 alone (§31-32)
 - Test Group F: Missing D10 → UNAVAILABLE with natal preserved (§33)
