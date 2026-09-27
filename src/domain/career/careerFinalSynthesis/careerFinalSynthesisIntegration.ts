@@ -12,7 +12,9 @@ import type {
 
 import type {
   CareerExpressionDirection,
-  CareerExpressionStrength
+  CareerExpressionStrength,
+  CareerExpression,
+  CareerExpressionAnalysis
 } from '../careerExpression';
 
 import type {
@@ -21,6 +23,18 @@ import type {
 
 import type {
   CareerD10QualificationStrength
+} from '../careerD10';
+
+import type {
+  CareerNatalAnalysis
+} from '../careerNatalAnalysis';
+
+import type {
+  CareerDashaCanonicalAnalysis
+} from '../careerDasha';
+
+import type {
+  CareerD10CanonicalAnalysis
 } from '../careerD10';
 
 import {
@@ -84,12 +98,10 @@ function isExpressionQualified(
  * For each C8 CareerExpression, produces a CareerFinalExpression with mapped direction/strength.
  */
 function mapExpressions(
-  expressionAnalysis: import('../careerExpression').CareerExpressionAnalysis
+  expressionAnalysis: CareerExpressionAnalysis
 ): readonly CareerFinalExpression[] {
-  const { CareerExpression } = require('../careerExpression');
-
   return Object.freeze(
-    expressionAnalysis.expressions.map((expr: typeof CareerExpression) =>
+    expressionAnalysis.expressions.map((expr: CareerExpression) =>
       Object.freeze({
         mode: expr.mode,
         direction: mapExpressionDirection(expr.direction),
@@ -132,7 +144,7 @@ function mapTransitEffectToFinalDirection(
  * From natal.evidence (WeightedReasoningEvidence.evidenceId).
  */
 function collectNatalEvidenceIds(
-  natal: import('../careerNatalAnalysis').CareerNatalAnalysis
+  natal: CareerNatalAnalysis
 ): readonly string[] {
   return Object.freeze(
     natal.evidence.map(e => e.evidenceId).sort((a, b) => a.localeCompare(b))
@@ -144,7 +156,7 @@ function collectNatalEvidenceIds(
  * From natal.evidence (WeightedReasoningEvidence.evidenceId).
  */
 function collectNatalSourceIds(
-  natal: import('../careerNatalAnalysis').CareerNatalAnalysis
+  natal: CareerNatalAnalysis
 ): readonly string[] {
   return Object.freeze(
     natal.evidence.map(e => e.evidenceId).sort((a, b) => a.localeCompare(b))
@@ -156,7 +168,7 @@ function collectNatalSourceIds(
  * From natal.evidence (WeightedReasoningEvidence.ruleId).
  */
 function collectNatalRuleIds(
-  natal: import('../careerNatalAnalysis').CareerNatalAnalysis
+  natal: CareerNatalAnalysis
 ): readonly string[] {
   const allRuleIds = natal.evidence
     .map(e => e.ruleId)
@@ -171,7 +183,7 @@ function collectNatalRuleIds(
  * From dasha.evidence (CareerDashaCanonicalEvidence.id).
  */
 function collectDashaEvidenceIds(
-  dasha: import('../careerDasha').CareerDashaCanonicalAnalysis
+  dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of dasha.evidence) {
@@ -187,7 +199,7 @@ function collectDashaEvidenceIds(
  * From dasha.evidence (CareerDashaCanonicalEvidence.sourceIds).
  */
 function collectDashaSourceIds(
-  dasha: import('../careerDasha').CareerDashaCanonicalAnalysis
+  dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
   const allSourceIds: string[] = [];
   for (const e of dasha.evidence) {
@@ -203,7 +215,7 @@ function collectDashaSourceIds(
  * From dasha.evidence (CareerDashaCanonicalEvidence does not expose ruleIds in provenance — return empty array).
  */
 function collectDashaRuleIds(
-  _dasha: import('../careerDasha').CareerDashaCanonicalAnalysis
+  _dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
   // CareerDashaCanonicalProvenance does not expose ruleIds in current contract
   return Object.freeze([]);
@@ -214,7 +226,7 @@ function collectDashaRuleIds(
  * From d10.evidence (CareerD10CanonicalEvidence.id).
  */
 function collectD10EvidenceIds(
-  d10: import('../careerD10').CareerD10CanonicalAnalysis
+  d10: CareerD10CanonicalAnalysis
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of d10.evidence) {
@@ -230,7 +242,7 @@ function collectD10EvidenceIds(
  * From d10.evidence (CareerD10CanonicalEvidence.sourceIds).
  */
 function collectD10SourceIds(
-  d10: import('../careerD10').CareerD10CanonicalAnalysis
+  d10: CareerD10CanonicalAnalysis
 ): readonly string[] {
   const allSourceIds: string[] = [];
   for (const e of d10.evidence) {
@@ -246,7 +258,7 @@ function collectD10SourceIds(
  * From d10.evidence (CareerD10CanonicalEvidence.provenance.ruleIds).
  */
 function collectD10RuleIds(
-  d10: import('../careerD10').CareerD10CanonicalAnalysis
+  d10: CareerD10CanonicalAnalysis
 ): readonly string[] {
   const allRuleIds: string[] = [];
   for (const e of d10.evidence) {
@@ -262,7 +274,7 @@ function collectD10RuleIds(
  * From expression.expressions[].supportingEvidenceIds.
  */
 function collectExpressionEvidenceIds(
-  expression: import('../careerExpression').CareerExpressionAnalysis
+  expression: CareerExpressionAnalysis
 ): readonly string[] {
   const allEvidenceIds: string[] = [];
   for (const e of expression.expressions) {
