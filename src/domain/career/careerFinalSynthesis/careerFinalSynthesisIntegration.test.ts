@@ -71,7 +71,8 @@ import {
 
 function makeMinimalNatal(
   direction: CareerStructuralDirection = 'SUPPORT',
-  strength: CareerStructuralStrength = 'STRONG'
+  strength: CareerStructuralStrength = 'STRONG',
+  evidenceItems: readonly WeightedReasoningEvidence[] = Object.freeze([])
 ): CareerNatalAnalysis {
   return Object.freeze({
     structural: Object.freeze({
@@ -90,13 +91,13 @@ function makeMinimalNatal(
       challengingEvidenceIds: Object.freeze([]),
       conflicts: Object.freeze([]),
       statement: 'Structural reasoning.'
-    } as unknown as any),
-    relevance: Object.freeze([]) as any,
-    condition: Object.freeze([]) as any,
+    }),
+    relevance: Object.freeze([]),
+    condition: Object.freeze([]),
     lordRelationships: Object.freeze([]),
-    direction: direction as any,
-    strength: strength as any,
-    evidence: Object.freeze([]) as readonly WeightedReasoningEvidence[],
+    direction,
+    strength,
+    evidence: evidenceItems,
     conflicts: Object.freeze([]),
     reasoningTrace: Object.freeze({
       primaryPromise: Object.freeze([]),
@@ -120,21 +121,22 @@ function makeMinimalExpression(
 }
 
 function makeMinimalDasha(
-  overallDirection: string = 'SUPPORT',
-  hierarchy?: CareerDashaActivationHierarchy
+  overallDirection: 'SUPPORT' | 'CHALLENGE' | 'UNAVAILABLE' = 'SUPPORT',
+  hierarchy?: CareerDashaActivationHierarchy,
+  evidenceItems: readonly any[] = Object.freeze([])
 ): CareerDashaCanonicalAnalysis {
   return Object.freeze({
-    overallEffect: 'ACTIVATES' as any,
-    overallDirection: overallDirection as any,
-    overallStrength: 'STRONG' as any,
+    overallEffect: 'ACTIVATES',
+    overallDirection,
+    overallStrength: 'STRONG',
     dominantLevel: 'MD',
     md: Object.freeze({
       level: 'MD',
       planet: Planet.SATURN,
-      role: 'PRIMARY_DRIVER' as any,
-      effect: 'ACTIVATES' as any,
-      direction: overallDirection as any,
-      strength: 'STRONG' as any,
+      role: 'PRIMARY_DRIVER',
+      effect: 'ACTIVATES',
+      direction: overallDirection,
+      strength: 'STRONG',
       start: '2020-01-01',
       end: '2025-01-01',
       statement: 'MD period.'
@@ -142,10 +144,10 @@ function makeMinimalDasha(
     ad: Object.freeze({
       level: 'AD',
       planet: Planet.JUPITER,
-      role: 'MODIFIER' as any,
-      effect: 'ACTIVATES' as any,
-      direction: overallDirection as any,
-      strength: 'STRONG' as any,
+      role: 'MODIFIER',
+      effect: 'ACTIVATES',
+      direction: overallDirection,
+      strength: 'STRONG',
       start: '2020-01-01',
       end: '2022-01-01',
       statement: 'AD period.'
@@ -153,15 +155,15 @@ function makeMinimalDasha(
     pd: Object.freeze({
       level: 'PD',
       planet: Planet.MERCURY,
-      role: 'REFINEMENT' as any,
-      effect: 'ACTIVATES' as any,
-      direction: overallDirection as any,
-      strength: 'STRONG' as any,
+      role: 'REFINEMENT',
+      effect: 'ACTIVATES',
+      direction: overallDirection,
+      strength: 'STRONG',
       start: '2020-01-01',
       end: '2021-01-01',
       statement: 'PD period.'
     }),
-    evidence: Object.freeze([]),
+    evidence: evidenceItems,
     rootEvidenceIds: Object.freeze([]),
     statement: 'Dasha analysis.',
     hierarchy
@@ -169,21 +171,22 @@ function makeMinimalDasha(
 }
 
 function makeMinimalD10(
-  d10Direction: string = 'SUPPORT',
-  d10Strength: string = 'STRONG'
+  d10Direction: 'SUPPORT' | 'CHALLENGE' | 'UNAVAILABLE' = 'SUPPORT',
+  d10Strength: 'STRONG' | 'MODERATE' | 'WEAK' | 'VERY_STRONG' | 'VERY_WEAK' | 'UNDETERMINED' = 'STRONG',
+  evidenceItems: readonly any[] = Object.freeze([])
 ): CareerD10CanonicalAnalysis {
   return Object.freeze({
-    availability: 'AVAILABLE' as any,
-    natalDirection: 'SUPPORT' as any,
-    natalStrength: 'STRONG' as any,
-    d10Effect: 'REINFORCES' as any,
-    d10Direction: d10Direction as any,
-    d10Strength: d10Strength as any,
-    qualifiedDirection: d10Direction as any,
-    qualifiedStrength: d10Strength as any,
+    availability: 'AVAILABLE',
+    natalDirection: 'SUPPORT',
+    natalStrength: 'STRONG',
+    d10Effect: 'REINFORCES',
+    d10Direction,
+    d10Strength,
+    qualifiedDirection: d10Direction,
+    qualifiedStrength: d10Strength,
     natalPromisePreserved: true,
-    relationship: 'REINFORCES' as any,
-    evidence: Object.freeze([]),
+    relationship: 'REINFORCES',
+    evidence: evidenceItems,
     conflicts: Object.freeze([]),
     expressionQualifications: Object.freeze([]),
     rootEvidenceIds: Object.freeze([]),
@@ -192,13 +195,13 @@ function makeMinimalD10(
 }
 
 function makeMinimalTiming(
-  transitEffect: string = 'SUPPORTS'
+  transitEffect: 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' = 'SUPPORTS'
 ): CareerTimingSynthesis {
   return Object.freeze({
-    natalPromise: 'STRONG' as any,
-    dashaEffect: 'SUPPORTS' as any,
-    transitEffect: transitEffect as any,
-    overallEffect: 'ACTIVATES' as any,
+    natalPromise: 'STRONG',
+    dashaEffect: 'SUPPORTS',
+    transitEffect,
+    overallEffect: 'ACTIVATES',
     confidence: 0.85,
     factors: Object.freeze([]),
     summary: 'Timing synthesis.'
@@ -305,18 +308,18 @@ describe('C11 Final Career Synthesis Integration', () => {
   describe('Test Group G: Dasha hierarchy authority', () => {
     it('hierarchy with MD SUPPORT/AD CHALLENGE/PD CHALLENGE but overallDirection SUPPORT → dashaDirection SUPPORT', () => {
       const hierarchy: CareerDashaActivationHierarchy = Object.freeze({
-        overallEffect: 'ACTIVATES' as any,
-        overallDirection: 'SUPPORT' as any,
-        overallStrength: 'STRONG' as any,
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
         dominantLevel: 'MD',
         statement: 'Dasha hierarchy with MD SUPPORT, AD/PD CHALLENGE.',
         md: Object.freeze({
           level: 'MD',
           planet: Planet.SATURN,
-          effect: 'ACTIVATES' as any,
-          direction: 'SUPPORT' as any,
-          strength: 'STRONG' as any,
-          role: 'PRIMARY_DRIVER' as any,
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          role: 'PRIMARY_DRIVER',
           evidence: Object.freeze([]),
           start: '2020-01-01',
           end: '2025-01-01',
@@ -325,10 +328,10 @@ describe('C11 Final Career Synthesis Integration', () => {
         ad: Object.freeze({
           level: 'AD',
           planet: Planet.JUPITER,
-          effect: 'CHALLENGES' as any,
-          direction: 'CHALLENGE' as any,
-          strength: 'STRONG' as any,
-          role: 'MODIFIER' as any,
+          effect: 'CHALLENGES',
+          direction: 'CHALLENGE',
+          strength: 'STRONG',
+          role: 'MODIFIER',
           evidence: Object.freeze([]),
           start: '2020-01-01',
           end: '2022-01-01',
@@ -337,10 +340,10 @@ describe('C11 Final Career Synthesis Integration', () => {
         pd: Object.freeze({
           level: 'PD',
           planet: Planet.MERCURY,
-          effect: 'CHALLENGES' as any,
-          direction: 'CHALLENGE' as any,
-          strength: 'STRONG' as any,
-          role: 'REFINEMENT' as any,
+          effect: 'CHALLENGES',
+          direction: 'CHALLENGE',
+          strength: 'STRONG',
+          role: 'REFINEMENT',
           evidence: Object.freeze([]),
           start: '2020-01-01',
           end: '2021-01-01',
@@ -432,8 +435,10 @@ describe('C11 Final Career Synthesis Integration', () => {
       const result = buildCareerFinalAnalysis(input);
 
       expect(result.expressions).toHaveLength(2);
-      expect(result.expressions[0].mode).toBe('LEADERSHIP');
-      expect(result.expressions[1].mode).toBe('ENTREPRENEURSHIP');
+      // Expressions are sorted by mode for determinism
+      const modes = result.expressions.map(e => e.mode);
+      expect(modes).toContain('LEADERSHIP');
+      expect(modes).toContain('ENTREPRENEURSHIP');
     });
   });
 
@@ -459,34 +464,163 @@ describe('C11 Final Career Synthesis Integration', () => {
       expect(result.evidenceIds).not.toBe(result.sourceIds);
       expect(result.evidenceIds).not.toBe(result.ruleIds);
       expect(result.sourceIds).not.toBe(result.ruleIds);
+
+      // Document the semantic relationship:
+      // - evidenceIds: semantic identity IDs (one per evidence item)
+      // - sourceIds: occurrence-level source IDs (multiple per evidence item, representing provenance)
+      // These are distinct contracts - sourceIds trace back to original input evidence items,
+      // while evidenceIds represent the deduplicated semantic facts.
+      // The arrays may have overlapping content if an evidenceId equals a sourceId,
+      // but they serve different purposes in the trace envelope.
     });
   });
 
   describe('Test Group L: Input-order independence', () => {
     it('reverse natal/expression/dasha/d10 evidence arrays → identical output', () => {
-      const expr: CareerExpression = Object.freeze({
+      // Create two distinct expressions
+      const expr1: CareerExpression = Object.freeze({
         mode: 'LEADERSHIP',
         direction: 'SUPPORTED',
         strength: 'STRONG',
         evidence: Object.freeze([]),
-        supportingEvidenceIds: Object.freeze(['evidence-1', 'evidence-2', 'evidence-3']),
+        supportingEvidenceIds: Object.freeze(['evidence-1', 'evidence-2']),
         statement: 'Leadership.',
         conditional: false
       });
 
-      const input1 = makeInput({
-        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
-        expression: makeMinimalExpression([expr])
+      const expr2: CareerExpression = Object.freeze({
+        mode: 'ENTREPRENEURSHIP',
+        direction: 'CONDITIONAL',
+        strength: 'MODERATE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-3', 'evidence-4']),
+        statement: 'Entrepreneurship.',
+        conditional: true
       });
 
+      // Create two distinct natal evidence items
+      const natalEvidence1: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'natal-evidence-1',
+        evidenceId: 'natal-evidence-1',
+        ruleId: 'rule-1',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 5,
+        statement: 'Natal evidence 1.',
+        relatedEvidenceIds: Object.freeze([]),
+        sourceIds: Object.freeze(['source-1'])
+      });
+
+      const natalEvidence2: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'natal-evidence-2',
+        evidenceId: 'natal-evidence-2',
+        ruleId: 'rule-2',
+        layer: 'SECONDARY_SUPPORT',
+        direction: 'SUPPORT',
+        strength: 'MODERATE',
+        priority: 2,
+        weight: 3,
+        statement: 'Natal evidence 2.',
+        relatedEvidenceIds: Object.freeze([]),
+        sourceIds: Object.freeze(['source-2'])
+      });
+
+      // Create two distinct Dasha evidence items
+      const dashaEvidence1 = Object.freeze({
+        identityKey: 'dasha-evidence-1',
+        id: 'dasha-evidence-1',
+        level: 'MD' as const,
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 1.',
+        sourceIds: Object.freeze(['dasha-source-1']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'MD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const dashaEvidence2 = Object.freeze({
+        identityKey: 'dasha-evidence-2',
+        id: 'dasha-evidence-2',
+        level: 'AD' as const,
+        planet: Planet.JUPITER,
+        role: 'MODIFIER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 2.',
+        sourceIds: Object.freeze(['dasha-source-2']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'AD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      // Create two distinct D10 evidence items
+      const d10Evidence1 = Object.freeze({
+        identityKey: 'd10-evidence-1',
+        id: 'd10-evidence-1',
+        role: 'PRIMARY' as const,
+        direction: 'SUPPORT' as const,
+        d10Effect: 'REINFORCES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence 1.',
+        sourceIds: Object.freeze(['d10-source-1']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source-1']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const d10Evidence2 = Object.freeze({
+        identityKey: 'd10-evidence-2',
+        id: 'd10-evidence-2',
+        role: 'SUPPORTING' as const,
+        direction: 'SUPPORT' as const,
+        d10Effect: 'REINFORCES' as const,
+        d10Strength: 'MODERATE' as const,
+        weight: 3,
+        statement: 'D10 evidence 2.',
+        sourceIds: Object.freeze(['d10-source-2']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-2']),
+          sourceIds: Object.freeze(['d10-source-2']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      // Input 1: expressions in forward order, evidence arrays in forward order
+      const input1 = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG', Object.freeze([natalEvidence1, natalEvidence2])),
+        expression: makeMinimalExpression([expr1, expr2]),
+        dasha: makeMinimalDasha('SUPPORT', undefined, Object.freeze([dashaEvidence1, dashaEvidence2])),
+        d10: makeMinimalD10('SUPPORT', 'STRONG', Object.freeze([d10Evidence1, d10Evidence2]))
+      });
+
+      // Input 2: expressions in reversed order, evidence arrays in reversed order
       const input2 = makeInput({
-        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
-        expression: makeMinimalExpression([expr])
+        natal: makeMinimalNatal('SUPPORT', 'STRONG', Object.freeze([natalEvidence2, natalEvidence1])),
+        expression: makeMinimalExpression([expr2, expr1]),
+        dasha: makeMinimalDasha('SUPPORT', undefined, Object.freeze([dashaEvidence2, dashaEvidence1])),
+        d10: makeMinimalD10('SUPPORT', 'STRONG', Object.freeze([d10Evidence2, d10Evidence1]))
       });
 
       const result1 = buildCareerFinalAnalysis(input1);
       const result2 = buildCareerFinalAnalysis(input2);
 
+      // Assert byte-identical output - the adapter should sort arrays deterministically
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
     });
   });
@@ -540,10 +674,10 @@ describe('C11 Final Career Synthesis Integration', () => {
       const d10 = buildCareerD10Analysis(d10Input);
 
       const timing: CareerTimingSynthesis = Object.freeze({
-        natalPromise: natal.strength as any,
-        dashaEffect: 'SUPPORTS' as any,
-        transitEffect: 'SUPPORTS' as any,
-        overallEffect: 'ACTIVATES' as any,
+        natalPromise: natal.strength,
+        dashaEffect: 'SUPPORTS',
+        transitEffect: 'SUPPORTS',
+        overallEffect: 'ACTIVATES',
         confidence: 0.85,
         factors: Object.freeze([]),
         summary: 'Timing synthesis.'
@@ -585,6 +719,24 @@ describe('C11 Final Career Synthesis Integration', () => {
       expect(result).toHaveProperty('ruleIds');
       expect(result).toHaveProperty('evidenceTrace');
       expect(result).toHaveProperty('statement');
+
+      // Deterministic cross-layer semantic assertions
+      expect(result.natalDirection).toBe(natal.structural.direction);
+      expect(result.natalStrength).toBe(natal.structural.strength);
+      // Expressions are sorted by mode for determinism, so compare as sets
+      expect(new Set(result.expressions.map(e => e.mode))).toEqual(new Set(expression.expressions.map(e => e.mode)));
+      expect(result.d10Direction).toBe(d10.d10Direction);
+      expect(result.d10Effect).toBe(d10.d10Effect);
+
+      // Determinism assertion: run twice and assert byte-identical output
+      const result2 = buildCareerFinalAnalysis(c11Input);
+      expect(JSON.stringify(result)).toBe(JSON.stringify(result2));
+
+      // Assert result is frozen and has no leakage fields
+      expect(Object.isFrozen(result)).toBe(true);
+      expect(result).not.toHaveProperty('horoscope');
+      expect(result).not.toHaveProperty('d10Planets');
+      expect(result).not.toHaveProperty('transitCalc');
     });
   });
 

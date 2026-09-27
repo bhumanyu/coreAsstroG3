@@ -96,20 +96,23 @@ function isExpressionQualified(
 /**
  * Maps C8 expressions to C11 final expressions.
  * For each C8 CareerExpression, produces a CareerFinalExpression with mapped direction/strength.
+ * Expressions are sorted by mode to ensure deterministic output regardless of input order.
  */
 function mapExpressions(
   expressionAnalysis: CareerExpressionAnalysis
 ): readonly CareerFinalExpression[] {
   return Object.freeze(
-    expressionAnalysis.expressions.map((expr: CareerExpression) =>
-      Object.freeze({
-        mode: expr.mode,
-        direction: mapExpressionDirection(expr.direction),
-        strength: mapExpressionStrength(expr.strength),
-        qualified: isExpressionQualified(expr.direction),
-        evidenceIds: Object.freeze([...expr.supportingEvidenceIds].sort((a, b) => a.localeCompare(b)))
-      })
-    )
+    expressionAnalysis.expressions
+      .map((expr: CareerExpression) =>
+        Object.freeze({
+          mode: expr.mode,
+          direction: mapExpressionDirection(expr.direction),
+          strength: mapExpressionStrength(expr.strength),
+          qualified: isExpressionQualified(expr.direction),
+          evidenceIds: Object.freeze([...expr.supportingEvidenceIds].sort((a, b) => a.localeCompare(b)))
+        })
+      )
+      .sort((a, b) => a.mode.localeCompare(b.mode))
   );
 }
 
@@ -142,6 +145,7 @@ function mapTransitEffectToFinalDirection(
 /**
  * Collects evidence IDs from natal analysis.
  * From natal.evidence (WeightedReasoningEvidence.evidenceId).
+ * These are semantic identity IDs (one per evidence item).
  */
 function collectNatalEvidenceIds(
   natal: CareerNatalAnalysis
@@ -154,6 +158,8 @@ function collectNatalEvidenceIds(
 /**
  * Collects source IDs from natal analysis.
  * From natal.evidence (WeightedReasoningEvidence.sourceIds).
+ * These are occurrence-level source IDs (multiple per evidence item, representing provenance).
+ * Distinct from evidenceIds - sourceIds trace back to original input evidence items.
  */
 function collectNatalSourceIds(
   natal: CareerNatalAnalysis
