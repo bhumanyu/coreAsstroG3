@@ -23,3 +23,4 @@ export * from './careerNatalConvergence';
 export * from './careerPlanetaryRelevanceIntegration';
 export * from './careerPlanetaryConditionIntegration';
 export * from './careerFinalSynthesis';
+export * from './careerGraph';
