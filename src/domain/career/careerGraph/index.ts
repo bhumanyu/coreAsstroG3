@@ -32,3 +32,21 @@ export type {
   CareerNetworkTopology,
   CareerNetworkDirection
 } from './careerHouseNetworkTypes';
+
+// Network builders
+export {
+  buildCareerHouseNetwork,
+  buildCareerHouseNetworkIdentityKey
+} from './careerHouseNetwork';
+
+// P2-02 Network detection
+export {
+  detectCareerHouseNetworks
+} from './careerNetworkDetection';
+
+export type {
+  CareerNetworkDetectionInput,
+  CareerNetworkDetectionResult,
+  CareerHouseConnection,
+  CareerHouseConnectionKind
+} from './careerNetworkDetectionTypes';

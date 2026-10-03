@@ -721,6 +721,73 @@ W0.5 Definition-of-Done (mirroring spec §43):
 - I: deduplicateReasoningEvidence([]) returns [] (missing evidence is not negative evidence)
 - J: merging preserves ruleId, sourceIds, provenance-derived identityKey
 
+## P2-02 — Career House Network Detection
+
+### P2-02.1 Purpose
+
+P2-02 implements the network detection layer that consumes the P2-01 `CareerAstroGraph` and emits `CareerHouseNetwork[]`. This is a structural, deterministic adapter that:
+- Detects house networks from graph topology
+- Classifies network topology (DIRECT_LINK, CHAIN, TRIANGLE, LOOP, STAR, CLUSTER)
+- Resolves network direction (FORWARD, REVERSE, BIDIRECTIONAL)
+- Preserves provenance without fabrication
+- Does NOT perform pattern classification or semantic interpretation (owned by P2-03)
+
+### P2-02.2 Pipeline Position
+
+```
+CareerAstroGraph (P2-01)
+        ↓
+    House Projection
+        ↓
+  Topology Detection
+        ↓
+CareerHouseNetwork[] (P2-02)
+        ↓
+Pattern Classification (P2-03, future)
+```
+
+### P2-02.3 Connection Kinds
+
+**DIRECT Connection**
+- Both endpoints are houses
+- OR explicit house-linking relationship (e.g., LORD_OF from house to house via planet)
+
+**SHARED_PARTICIPANT Connection**
+- Houses connected only via a shared planet node
+- Pairwise projection: e.g., Saturn→6 and Saturn→10 yields 6–10 SHARED_PARTICIPANT
+
+### P2-02.4 Topology Precedence Order (Strict)
+
+1. **DIRECT_LINK** (2 nodes) - Simplest case
+2. **TRIANGLE** (3 nodes, all degree 2) - Checked before LOOP because a triangle is also a loop
+3. **LOOP** (≥3 nodes, all degree 2) - But not a triangle
+4. **STAR** (one node of degree n-1, rest degree 1)
+5. **CHAIN** (exactly two degree-1, rest degree-2)
+6. **CLUSTER** (fallback for any other configuration)
+
+The TRIANGLE → LOOP precedence is semantically required: a triangle is technically a loop (all nodes have degree 2), but we classify it as TRIANGLE for its special significance.
+
+### P2-02.5 Boundary Enforcement
+
+The network detection layer must NOT import from:
+- `careerDasha`
+- `careerD10`
+- `careerFinalSynthesis`
+- `careerExpression*`
+- `domain/timing`
+
+This is enforced via architectural comments in each module file.
+
+### P2-02.6 No Classification Boundary
+
+P2-02 is structural only. It does NOT:
+- Classify semantic patterns (owned by P2-03)
+- Calculate scores or confidence
+- Produce predictions or qualifications
+- Depend on C5–C11/Dasha/D10/Timing
+
+The detection layer answers "what houses are connected and how" (structural topology), while P2-03 will answer "what does this network mean for Career" (semantic classification).
+
 ## W0.3 — Career Semantic Ownership
 
 ### W0.3.1 Ownership Table

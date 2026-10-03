@@ -9,6 +9,21 @@ import { normalizeCareerGraphProvenance, mergeCareerGraphProvenances } from './c
 import { CANONICAL_CAREER_PLANET_ORDER } from './careerGraphConstants';
 
 /**
+ * P2-02 Career House Network Builder
+ *
+ * This module provides deterministic network identity and network building utilities.
+ *
+ * BOUNDARY ENFORCEMENT: This module must NOT import from:
+ * - careerDasha
+ * - careerD10
+ * - careerFinalSynthesis
+ * - careerExpression*
+ * - domain/timing
+ *
+ * It is a pure structural adapter over the CareerAstroGraph.
+ */
+
+/**
  * Builds a deterministic network identity key.
  * Format: `${sortedHouses}:${topology}:${direction}:${sortedRelationshipIdentities}`
  *
