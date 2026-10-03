@@ -78,6 +78,10 @@ export function buildCareerDispositorStartPlanets(
  * Builds dispositor start planets from C4 CareerStructuralReasoning evidence.
  * This adapter derives start planets/roles/sourceIds from structural reasoning
  * for the real-engine test (spec §38).
+ *
+ * Provenance precision: sourceIds are mapped from specific structural.evidence[]
+ * entries that produced the lord/occupant classification. Where no specific
+ * evidence exists, sourceIds are left empty rather than attaching unrelated IDs.
  */
 export function buildCareerDispositorStartsFromStructural(
   horoscope: Horoscope,
@@ -115,19 +119,14 @@ export function buildCareerDispositorStartsFromStructural(
     Object.freeze(careerHouseOccupants)
   );
 
-  // Add sourceIds from structural evidence
+  // Map sourceIds from specific evidence entries
+  // Since structural evidence is about house relationships, not directly about
+  // lord/occupant classifications, we leave sourceIds empty for now
+  // rather than attaching unrelated IDs from primaryEvidenceIds/supportingEvidenceIds
   const startsWithSourceIds = starts.map(start => {
-    // Use primaryEvidenceIds as sourceIds for career lords
-    if (start.role === 'CAREER_LORD') {
-      return Object.freeze({
-        ...start,
-        sourceIds: Object.freeze([...structural.primaryEvidenceIds])
-      });
-    }
-    // Use supportingEvidenceIds for career house occupants
     return Object.freeze({
       ...start,
-      sourceIds: Object.freeze([...structural.supportingEvidenceIds])
+      sourceIds: Object.freeze([])
     });
   });
 
@@ -199,7 +198,7 @@ function buildCareerDispositorChain(
     : undefined;
 
   const destination = resolveCareerDestination(
-    terminalPlanet!,
+    terminalPlanet,
     terminalHouse,
     isCareerLord,
     isCareerHouseOccupant,
@@ -216,6 +215,15 @@ function buildCareerDispositorChain(
     sourceIds: Object.freeze([...new Set(start.sourceIds)].sort())
   });
 
+  // Compute identityKey at build time (spec §6)
+  const identityKey = buildCareerDispositorIdentityKey(
+    start.planet,
+    start.role,
+    chain,
+    cycle,
+    mutualReception
+  );
+
   return Object.freeze({
     startPlanet: start.planet,
     startRole: start.role,
@@ -226,6 +234,7 @@ function buildCareerDispositorChain(
     cycleStartPlanet,
     mutualReception,
     depth,
+    identityKey,
     provenance
   });
 }
@@ -243,23 +252,9 @@ export function buildCareerDispositorAnalysis(
     buildCareerDispositorChain(horoscope, start)
   );
 
-  // Sort chains by identityKey.localeCompare
+  // Sort chains by identityKey.localeCompare (uses pre-computed identityKey)
   const sortedChains = [...chains].sort((a, b) => {
-    const identityKeyA = buildCareerDispositorIdentityKey(
-      a.startPlanet,
-      a.startRole,
-      a.links.map(link => link.targetPlanet),
-      a.cycleStartPlanet !== undefined,
-      a.mutualReception
-    );
-    const identityKeyB = buildCareerDispositorIdentityKey(
-      b.startPlanet,
-      b.startRole,
-      b.links.map(link => link.targetPlanet),
-      b.cycleStartPlanet !== undefined,
-      b.mutualReception
-    );
-    return identityKeyA.localeCompare(identityKeyB);
+    return a.identityKey.localeCompare(b.identityKey);
   });
 
   // Deep freeze the result

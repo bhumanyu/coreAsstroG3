@@ -54,10 +54,16 @@ export type CareerDispositorTermination =
  * Destination classification for the terminal planet.
  * Never includes NEGATIVE or CAREER_LOSS - dusthana is structural context,
  * not negative inference (per spec §14).
+ *
+ * CAREER_LORD: Terminal planet is a lord of a career house (5, 6, 9, 10, 11)
+ * CAREER_HOUSE_OCCUPANT: Terminal planet occupies a career house (6, 10, 11)
+ * CAREER_RELEVANT_PLANET: Terminal planet is career-relevant (currently unused)
+ * DUSTHANA_CAREER_CONTEXT: Terminal planet occupies a dusthana house (8, 12) - structural context only
+ * NON_CAREER: Terminal planet is not career-relevant
+ * UNAVAILABLE: Terminal planet is undefined (missing data)
  */
 export type CareerDispositorDestination =
   | 'CAREER_LORD'
-  | 'CAREER_HOUSE'
   | 'CAREER_HOUSE_OCCUPANT'
   | 'CAREER_RELEVANT_PLANET'
   | 'DUSTHANA_CAREER_CONTEXT'
@@ -66,17 +72,19 @@ export type CareerDispositorDestination =
 
 /**
  * A single link in the dispositor chain.
+ * targetSign may be undefined if the target planet's fact is missing.
  */
 export interface CareerDispositorLink {
   readonly sourcePlanet: Planet;
   readonly targetPlanet: Planet;
   readonly sourceSign: Sign;
-  readonly targetSign: Sign;
+  readonly targetSign: Sign | undefined;
   readonly relationship: CareerDispositorRelationship;
 }
 
 /**
  * A complete dispositor chain from start to termination.
+ * identityKey is computed at build time and frozen for stable identity.
  */
 export interface CareerDispositorChain {
   readonly startPlanet: Planet;
@@ -88,6 +96,7 @@ export interface CareerDispositorChain {
   readonly cycleStartPlanet: Planet | undefined;
   readonly mutualReception: boolean;
   readonly depth: number;
+  readonly identityKey: string;
   readonly provenance: CareerDispositorProvenance;
 }
 

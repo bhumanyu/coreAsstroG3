@@ -129,12 +129,14 @@ export function traverseDispositorChain(
       break;
     }
 
-    // Create link
+    // Create link - targetSign may be undefined if ruler's fact is missing
+    const rulerFact = horoscope.planetFacts[ruler];
+    const targetSign = rulerFact ? readPlanetSign(rulerFact) : undefined;
     const link: CareerDispositorLink = Object.freeze({
       sourcePlanet: currentPlanet,
       targetPlanet: ruler,
       sourceSign: sign,
-      targetSign: readPlanetSign(horoscope.planetFacts[ruler]) ?? sign,
+      targetSign,
       relationship: 'DISPOSITOR_OF' as CareerDispositorRelationship
     });
 
@@ -142,9 +144,16 @@ export function traverseDispositorChain(
     chain.push(ruler);
     visited.add(ruler);
     currentPlanet = ruler;
+
+    // If ruler's fact is missing, terminate after adding the link
+    if (!rulerFact) {
+      terminalPlanet = undefined;
+      break;
+    }
   }
 
   // If we exited due to depth limit without finding a terminal
+  // Set terminalPlanet to the last planet in the chain (which is currentPlanet)
   if (terminalPlanet === undefined && cycleStartPlanet === undefined) {
     terminalPlanet = currentPlanet;
   }
@@ -163,9 +172,8 @@ export function traverseDispositorChain(
 
 /**
  * Detects if mutual reception exists anywhere in the chain.
- * Internal helper - not exported
  */
-function detectChainMutualReception(
+export function detectChainMutualReception(
   horoscope: Horoscope,
   chain: readonly Planet[]
 ): boolean {

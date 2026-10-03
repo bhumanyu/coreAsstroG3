@@ -36,9 +36,19 @@ export function isCareerHouse(house: number): boolean {
 /**
  * Resolves the destination classification for a terminal planet.
  * Documents precedence hierarchy as implementation convention, not classical rule (spec §7).
+ *
+ * Precedence hierarchy:
+ * 1. Career Lord (highest priority)
+ * 2. Career House Occupant in career house (6, 10, 11)
+ * 3. Dusthana context (8, 12) - structural context, not negative
+ * 4. House 6 is both career house and dusthana - CAREER_HOUSE_OCCUPANT takes precedence
+ * 5. Career House (lord of Career house) - REMOVED (semantics unclear, merged with CAREER_LORD)
+ * 6. Career Relevant Planet
+ * 7. Non-Career
+ * 8. UNAVAILABLE (when terminalPlanet is undefined)
  */
 export function resolveCareerDestination(
-  terminalPlanet: Planet,
+  terminalPlanet: Planet | undefined,
   terminalHouse: number | undefined,
   isCareerLord: boolean,
   isCareerHouseOccupant: boolean,
@@ -48,26 +58,20 @@ export function resolveCareerDestination(
     return 'UNAVAILABLE';
   }
 
-  // Precedence hierarchy:
   // 1. Career Lord (highest priority)
   if (isCareerLord) {
     return 'CAREER_LORD';
   }
 
-  // 2. Career House Occupant with known house
-  if (isCareerHouseOccupant && terminalHouse !== undefined) {
-    if (isCareerHouse(terminalHouse)) {
-      return 'CAREER_HOUSE_OCCUPANT';
-    }
-    // Dusthana context (6, 8, 12) - structural context, not negative
-    if (terminalHouse === 6 || terminalHouse === 8 || terminalHouse === 12) {
-      return 'DUSTHANA_CAREER_CONTEXT';
-    }
+  // 2. Career House Occupant in career house (6, 10, 11)
+  if (isCareerHouseOccupant && terminalHouse !== undefined && isCareerHouse(terminalHouse)) {
+    return 'CAREER_HOUSE_OCCUPANT';
   }
 
-  // 3. Career House (lord of Career house)
-  if (terminalHouse !== undefined && isCareerHouse(terminalHouse)) {
-    return 'CAREER_HOUSE';
+  // 3. Dusthana context (8, 12) - evaluated after career house checks
+  // House 6 is excluded here as it's handled by CAREER_HOUSE_OCCUPANT above
+  if (terminalHouse !== undefined && (terminalHouse === 8 || terminalHouse === 12)) {
+    return 'DUSTHANA_CAREER_CONTEXT';
   }
 
   // 4. Career Relevant Planet
@@ -85,9 +89,9 @@ export function resolveCareerDestination(
  * - Cycle + mutualReception → MUTUAL_RECEPTION
  * - Cycle → CYCLE
  * - Self → SELF_DISPOSITOR
+ * - Missing → UNAVAILABLE
  * - Career terminal → CAREER_TERMINAL
  * - Else NON_CAREER_TERMINAL
- * - Missing → UNAVAILABLE
  */
 export function resolveTermination(
   cycle: boolean,
@@ -96,20 +100,20 @@ export function resolveTermination(
   isCareerTerminal: boolean,
   hasTerminalPlanet: boolean
 ): CareerDispositorTermination {
-  if (!hasTerminalPlanet) {
-    return 'UNAVAILABLE';
-  }
-
-  if (isSelfDispositor) {
-    return 'SELF_DISPOSITOR';
-  }
-
   if (cycle && mutualReception) {
     return 'MUTUAL_RECEPTION';
   }
 
   if (cycle) {
     return 'CYCLE';
+  }
+
+  if (isSelfDispositor) {
+    return 'SELF_DISPOSITOR';
+  }
+
+  if (!hasTerminalPlanet) {
+    return 'UNAVAILABLE';
   }
 
   if (isCareerTerminal) {

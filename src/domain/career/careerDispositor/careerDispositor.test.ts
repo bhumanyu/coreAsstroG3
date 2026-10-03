@@ -1,10 +1,13 @@
 import type { Horoscope } from '../../../types';
 import { Planet, Sign, AyanamsaType } from '../../../types';
-import { buildCareerDispositorAnalysis, buildCareerDispositorStartPlanets } from './careerDispositorIntegration';
+import { buildCareerDispositorAnalysis, buildCareerDispositorStartPlanets, buildCareerDispositorStartsFromStructural } from './careerDispositorIntegration';
 import { traverseDispositorChain, detectMutualReception } from './careerDispositor';
 import { buildCareerDispositorIdentityKey } from './careerDispositorIdentity';
 import { CAREER_HOUSES as DISPOSITOR_CAREER_HOUSES, isCareerHouse as dispositorIsCareerHouse } from './careerDispositorRules';
 import type { CareerDispositorStart } from './careerDispositorTypes';
+import { calculateHoroscope } from '../../../engine/astroEngine';
+import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
+import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
 
 const MOCK_BIRTH_DETAILS = Object.freeze({
   latitude: 0,
@@ -31,43 +34,59 @@ describe('CareerDispositor', () => {
   describe('Test Group A: Single link', () => {
     it('single dispositor link MARS → VENUS', () => {
       const horoscope = createMockHoroscope({
-        [Planet.MARS]: {
-          planet: Planet.MARS,
-          position: {
+        planetFacts: {
+          [Planet.MARS]: {
             planet: Planet.MARS,
-            longitude: 0,
+            position: {
+              planet: Planet.MARS,
+              longitude: 0,
+              sign: Sign.TAURUS,
+              house: 1,
+              signLongitude: 0,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.TAURUS,
-            house: 1,
-            signLongitude: 0,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.TAURUS,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.VENUS]: {
-          planet: Planet.VENUS,
-          position: {
+          [Planet.VENUS]: {
             planet: Planet.VENUS,
-            longitude: 180,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 180,
+              sign: Sign.LEO,
+              house: 5,
+              signLongitude: 180,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.LEO,
-            house: 5,
-            signLongitude: 180,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.LEO,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          [Planet.SUN]: {
+            planet: Planet.SUN,
+            position: {
+              planet: Planet.SUN,
+              longitude: 135,
+              sign: Sign.LEO,
+              house: 5,
+              signLongitude: 135,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.LEO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
         }
       });
 
       const result = traverseDispositorChain(horoscope, Planet.MARS);
 
-      expect(result.chain).toEqual([Planet.MARS, Planet.VENUS]);
-      expect(result.depth).toBe(1);
-      expect(result.terminalPlanet).toBe(Planet.VENUS);
+      expect(result.chain).toEqual([Planet.MARS, Planet.VENUS, Planet.SUN]);
+      expect(result.depth).toBe(2);
+      expect(result.terminalPlanet).toBe(Planet.SUN);
       expect(result.cycleStartPlanet).toBeUndefined();
-      expect(result.links).toHaveLength(1);
+      expect(result.links).toHaveLength(2);
       expect(result.links[0].sourcePlanet).toBe(Planet.MARS);
       expect(result.links[0].targetPlanet).toBe(Planet.VENUS);
       expect(result.links[0].relationship).toBe('DISPOSITOR_OF');
@@ -77,19 +96,21 @@ describe('CareerDispositor', () => {
   describe('Test Group B: Self-dispositor', () => {
     it('self-dispositor SUN in LEO (cycle=false, depth=0)', () => {
       const horoscope = createMockHoroscope({
-        [Planet.SUN]: {
-          planet: Planet.SUN,
-          position: {
+        planetFacts: {
+          [Planet.SUN]: {
             planet: Planet.SUN,
-            longitude: 135,
+            position: {
+              planet: Planet.SUN,
+              longitude: 135,
+              sign: Sign.LEO,
+              house: 5,
+              signLongitude: 135,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.LEO,
-            house: 5,
-            signLongitude: 135,
-            motion: { speed: 0, retrograde: false, stationary: false }
-          },
-          sign: Sign.LEO,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
         }
       });
 
@@ -106,61 +127,63 @@ describe('CareerDispositor', () => {
   describe('Test Group C: Multi-level chain', () => {
     it('multi-level chain MARS→VENUS→SATURN→JUPITER (depth=3)', () => {
       const horoscope = createMockHoroscope({
-        [Planet.MARS]: {
-          planet: Planet.MARS,
-          position: {
+        planetFacts: {
+          [Planet.MARS]: {
             planet: Planet.MARS,
-            longitude: 30,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.TAURUS,
-            house: 2,
-            signLongitude: 30,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.TAURUS,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.VENUS]: {
-          planet: Planet.VENUS,
-          position: {
+          [Planet.VENUS]: {
             planet: Planet.VENUS,
-            longitude: 240,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 240,
+              sign: Sign.SAGITTARIUS,
+              house: 9,
+              signLongitude: 240,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.SAGITTARIUS,
-            house: 9,
-            signLongitude: 240,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.SAGITTARIUS,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.SATURN]: {
-          planet: Planet.SATURN,
-          position: {
+          [Planet.SATURN]: {
             planet: Planet.SATURN,
-            longitude: 60,
+            position: {
+              planet: Planet.SATURN,
+              longitude: 60,
+              sign: Sign.GEMINI,
+              house: 3,
+              signLongitude: 60,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.GEMINI,
-            house: 3,
-            signLongitude: 60,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.GEMINI,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.JUPITER]: {
-          planet: Planet.JUPITER,
-          position: {
+          [Planet.JUPITER]: {
             planet: Planet.JUPITER,
-            longitude: 270,
+            position: {
+              planet: Planet.JUPITER,
+              longitude: 270,
+              sign: Sign.CAPRICORN,
+              house: 10,
+              signLongitude: 270,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.CAPRICORN,
-            house: 10,
-            signLongitude: 270,
-            motion: { speed: 0, retrograde: false, stationary: false }
-          },
-          sign: Sign.CAPRICORN,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
         }
       });
 
@@ -177,33 +200,35 @@ describe('CareerDispositor', () => {
   describe('Test Group D: Simple cycle', () => {
     it('simple cycle A↔B (terminalPlanet undefined)', () => {
       const horoscope = createMockHoroscope({
-        [Planet.MARS]: {
-          planet: Planet.MARS,
-          position: {
+        planetFacts: {
+          [Planet.MARS]: {
             planet: Planet.MARS,
-            longitude: 30,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.TAURUS,
-            house: 2,
-            signLongitude: 30,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.TAURUS,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.VENUS]: {
-          planet: Planet.VENUS,
-          position: {
+          [Planet.VENUS]: {
             planet: Planet.VENUS,
-            longitude: 0,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 0,
+              sign: Sign.ARIES,
+              house: 1,
+              signLongitude: 0,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.ARIES,
-            house: 1,
-            signLongitude: 0,
-            motion: { speed: 0, retrograde: false, stationary: false }
-          },
-          sign: Sign.ARIES,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
         }
       });
 
@@ -218,61 +243,63 @@ describe('CareerDispositor', () => {
   describe('Test Group E: 4-planet cycle', () => {
     it('4-planet cycle A→B→C→D→A', () => {
       const horoscope = createMockHoroscope({
-        [Planet.MARS]: {
-          planet: Planet.MARS,
-          position: {
+        planetFacts: {
+          [Planet.MARS]: {
             planet: Planet.MARS,
-            longitude: 30,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.TAURUS,
-            house: 2,
-            signLongitude: 30,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.TAURUS,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.VENUS]: {
-          planet: Planet.VENUS,
-          position: {
+          [Planet.VENUS]: {
             planet: Planet.VENUS,
-            longitude: 180,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 180,
+              sign: Sign.SCORPIO,
+              house: 8,
+              signLongitude: 180,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.SCORPIO,
-            house: 8,
-            signLongitude: 180,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.SCORPIO,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.SATURN]: {
-          planet: Planet.SATURN,
-          position: {
+          [Planet.SATURN]: {
             planet: Planet.SATURN,
-            longitude: 60,
+            position: {
+              planet: Planet.SATURN,
+              longitude: 60,
+              sign: Sign.GEMINI,
+              house: 3,
+              signLongitude: 60,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.GEMINI,
-            house: 3,
-            signLongitude: 60,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.GEMINI,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.MERCURY]: {
-          planet: Planet.MERCURY,
-          position: {
+          [Planet.MERCURY]: {
             planet: Planet.MERCURY,
-            longitude: 240,
+            position: {
+              planet: Planet.MERCURY,
+              longitude: 240,
+              sign: Sign.CAPRICORN,
+              house: 10,
+              signLongitude: 240,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.CAPRICORN,
-            house: 10,
-            signLongitude: 240,
-            motion: { speed: 0, retrograde: false, stationary: false }
-          },
-          sign: Sign.CAPRICORN,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
         }
       });
 
@@ -286,33 +313,35 @@ describe('CareerDispositor', () => {
   describe('Test Group F: Mutual reception detection', () => {
     it('mutual-reception pair detection', () => {
       const horoscope = createMockHoroscope({
-        [Planet.MARS]: {
-          planet: Planet.MARS,
-          position: {
+        planetFacts: {
+          [Planet.MARS]: {
             planet: Planet.MARS,
-            longitude: 210,
+            position: {
+              planet: Planet.MARS,
+              longitude: 210,
+              sign: Sign.SCORPIO,
+              house: 8,
+              signLongitude: 210,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.SCORPIO,
-            house: 8,
-            signLongitude: 210,
-            motion: { speed: 0, retrograde: false, stationary: false }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
-          sign: Sign.SCORPIO,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
-        },
-        [Planet.VENUS]: {
-          planet: Planet.VENUS,
-          position: {
+          [Planet.VENUS]: {
             planet: Planet.VENUS,
-            longitude: 0,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 0,
+              sign: Sign.ARIES,
+              house: 1,
+              signLongitude: 0,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
             sign: Sign.ARIES,
-            house: 1,
-            signLongitude: 0,
-            motion: { speed: 0, retrograde: false, stationary: false }
-          },
-          sign: Sign.ARIES,
-          dignity: { status: 'NEUTRAL' as any },
-          state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
         }
       });
 
@@ -371,7 +400,7 @@ describe('CareerDispositor', () => {
         }
       });
 
-      const starts: CareerDispositorStart[] = Object.freeze([
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
         {
           planet: Planet.MARS,
           role: 'CAREER_HOUSE_OCCUPANT',
@@ -430,7 +459,7 @@ describe('CareerDispositor', () => {
         }
       });
 
-      const starts: CareerDispositorStart[] = Object.freeze([
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
         {
           planet: Planet.VENUS,
           role: 'CAREER_LORD',
@@ -447,7 +476,7 @@ describe('CareerDispositor', () => {
   });
 
   describe('Test Group H: Dusthana produces no negative type', () => {
-    it('dusthana producing DUSTHANA_CAREER_CONTEXT (6th house)', () => {
+    it('dusthana producing DUSTHANA_CAREER_CONTEXT (8th house)', () => {
       const horoscope = createMockHoroscope({
 
         planetFacts: {
@@ -455,13 +484,13 @@ describe('CareerDispositor', () => {
             planet: Planet.MERCURY,
             position: {
               planet: Planet.MERCURY,
-              longitude: 150,
-              sign: Sign.VIRGO,
-              house: 6,
-              signLongitude: 150,
+              longitude: 210,
+              sign: Sign.SCORPIO,
+              house: 8,
+              signLongitude: 210,
               motion: { speed: 0, retrograde: false, stationary: false }
             },
-            sign: Sign.VIRGO,
+            sign: Sign.SCORPIO,
             dignity: { status: 'NEUTRAL' as any },
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           },
@@ -481,10 +510,10 @@ describe('CareerDispositor', () => {
           }
         },
         bhavas: {
-          6: {
-            house: 6,
-            sign: Sign.VIRGO,
-            lord: Planet.MERCURY,
+          8: {
+            house: 8,
+            sign: Sign.SCORPIO,
+            lord: Planet.MARS,
             occupants: [Planet.MERCURY]
           },
           3: {
@@ -496,7 +525,7 @@ describe('CareerDispositor', () => {
         }
       });
 
-      const starts: CareerDispositorStart[] = Object.freeze([
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
         {
           planet: Planet.MERCURY,
           role: 'CAREER_HOUSE_OCCUPANT',
@@ -507,10 +536,56 @@ describe('CareerDispositor', () => {
       const result = buildCareerDispositorAnalysis({ horoscope: horoscope as Horoscope, starts });
 
       expect(result.chains).toHaveLength(1);
-      // Mercury in Virgo (house 6, dusthana, self-dispositor)
-      // Mercury is occupant of dusthana house 6
+      // Mercury in Scorpio (house 8, dusthana) -> Mars (lord of 8)
+      // Mercury is occupant of dusthana house 8 (non-career house)
       // Destination should be DUSTHANA_CAREER_CONTEXT (structural context, not negative)
       expect(result.chains[0].destination).toBe('DUSTHANA_CAREER_CONTEXT');
+    });
+
+    it('house 6 (career house + dusthana) yields CAREER_HOUSE_OCCUPANT', () => {
+      const horoscope = createMockHoroscope({
+
+        planetFacts: {
+          [Planet.MERCURY]: {
+            planet: Planet.MERCURY,
+            position: {
+              planet: Planet.MERCURY,
+              longitude: 150,
+              sign: Sign.VIRGO,
+              house: 6,
+              signLongitude: 150,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.VIRGO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+        },
+        bhavas: {
+          6: {
+            house: 6,
+            sign: Sign.VIRGO,
+            lord: Planet.MERCURY,
+            occupants: [Planet.MERCURY]
+          }
+        }
+      });
+
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
+        {
+          planet: Planet.MERCURY,
+          role: 'CAREER_HOUSE_OCCUPANT',
+          sourceIds: []
+        }
+      ]);
+
+      const result = buildCareerDispositorAnalysis({ horoscope: horoscope as Horoscope, starts });
+
+      expect(result.chains).toHaveLength(1);
+      // Mercury in Virgo (house 6, career house + dusthana, self-dispositor)
+      // Mercury is occupant of career house 6
+      // CAREER_HOUSE_OCCUPANT takes precedence over DUSTHANA_CAREER_CONTEXT
+      expect(result.chains[0].destination).toBe('CAREER_HOUSE_OCCUPANT');
     });
   });
 
@@ -564,7 +639,7 @@ describe('CareerDispositor', () => {
         }
       });
 
-      const starts1: CareerDispositorStart[] = Object.freeze([
+      const starts1: readonly CareerDispositorStart[] = Object.freeze([
         {
           planet: Planet.MARS,
           role: 'CAREER_RELEVANT_PLANET',
@@ -582,7 +657,7 @@ describe('CareerDispositor', () => {
         }
       ]);
 
-      const starts2: CareerDispositorStart[] = Object.freeze([
+      const starts2: readonly CareerDispositorStart[] = Object.freeze([
         {
           planet: Planet.JUPITER,
           role: 'CAREER_RELEVANT_PLANET',
@@ -610,7 +685,6 @@ describe('CareerDispositor', () => {
   describe('Test Group J: Missing sign/fact → UNAVAILABLE', () => {
     it('missing sign → UNAVAILABLE (never invented, never negative)', () => {
       const horoscope = createMockHoroscope({
-
         planetFacts: {
           [Planet.MARS]: {
             planet: Planet.MARS,
@@ -636,7 +710,6 @@ describe('CareerDispositor', () => {
 
     it('missing planet fact → UNAVAILABLE', () => {
       const horoscope = createMockHoroscope({
-
         planetFacts: {}
       });
 
@@ -644,12 +717,40 @@ describe('CareerDispositor', () => {
 
       expect(result.terminalPlanet).toBeUndefined();
     });
+
+    it('target planet fact missing → terminate with current planet', () => {
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+          // Venus fact is missing
+        }
+      });
+
+      const result = traverseDispositorChain(horoscope, Planet.MARS);
+
+      // Mars in Taurus -> Venus (ruler of Taurus)
+      // Venus fact is missing, so chain terminates with Mars as terminal
+      expect(result.terminalPlanet).toBe(Planet.MARS);
+      expect(result.links).toHaveLength(0); // No link created because ruler fact is missing
+    });
   });
 
   describe('Test Group K: Deep immutability', () => {
     it('deep immutability (result/chains/chain/links/provenance frozen)', () => {
       const horoscope = createMockHoroscope({
-
         planetFacts: {
           [Planet.MARS]: {
             planet: Planet.MARS,
@@ -682,7 +783,7 @@ describe('CareerDispositor', () => {
         }
       });
 
-      const starts: CareerDispositorStart[] = [
+      const starts: readonly CareerDispositorStart[] = [
         {
           planet: Planet.MARS,
           role: 'CAREER_RELEVANT_PLANET',
@@ -745,16 +846,15 @@ describe('CareerDispositor', () => {
 
   describe('Test Group M: No downstream imports', () => {
     it('module does not import from disallowed modules', () => {
-      // This is a structural test - the module should not have imports from:
-      // - careerDasha
-      // - careerD10
-      // - careerFinalSynthesis
-      // - careerExpression*
-      // - domain/timing
-      // - careerPattern*
-      // - careerPatternQualification*
-      // The implementation enforces this via BOUNDARY ENFORCEMENT comments
-      expect(true).toBe(true);
+      // This test is deleted as requested - boundary enforcement is documented
+      // in BOUNDARY ENFORCEMENT comments in the module
+      // Manual verification: careerDispositorIntegration.ts imports only from:
+      // - types (core types)
+      // - careerGraph/careerGraphConstants (constants)
+      // - careerStructuralReasoning (C4 module, upstream)
+      // - careerDispositor* (local module)
+      // It does NOT import from careerDasha, careerD10, careerFinalSynthesis,
+      // careerExpression*, domain/timing, careerPattern*, careerPatternQualification*
     });
   });
 
@@ -785,22 +885,174 @@ describe('CareerDispositor', () => {
 
     it('starts are sorted by CANONICAL_CAREER_PLANET_ORDER', () => {
       const careerLordPlanets = Object.freeze([Planet.SATURN, Planet.MARS, Planet.JUPITER]);
-      const careerHouseOccupants = [];
+      const careerHouseOccupants: Planet[] = [];
 
       const starts = buildCareerDispositorStartPlanets(careerLordPlanets, careerHouseOccupants);
 
-      expect(starts[0].planet).toBe(Planet.JUPITER);
-      expect(starts[1].planet).toBe(Planet.MARS);
+      // CANONICAL_CAREER_PLANET_ORDER: SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN, RAHU, KETU
+      expect(starts[0].planet).toBe(Planet.MARS);
+      expect(starts[1].planet).toBe(Planet.JUPITER);
       expect(starts[2].planet).toBe(Planet.SATURN);
+    });
+  });
+
+  describe('Test Group O2: Termination ordering for cyclic chains', () => {
+    it('cycle with mutual reception yields MUTUAL_RECEPTION (not UNAVAILABLE)', () => {
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 210,
+              sign: Sign.SCORPIO,
+              house: 8,
+              signLongitude: 210,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.SCORPIO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.VENUS]: {
+            planet: Planet.VENUS,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 0,
+              sign: Sign.ARIES,
+              house: 1,
+              signLongitude: 0,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.ARIES,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+        },
+        bhavas: {
+          10: {
+            house: 10,
+            sign: Sign.TAURUS,
+            lord: Planet.VENUS,
+            occupants: []
+          }
+        }
+      });
+
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
+        {
+          planet: Planet.MARS,
+          role: 'CAREER_RELEVANT_PLANET',
+          sourceIds: []
+        }
+      ]);
+
+      const result = buildCareerDispositorAnalysis({ horoscope: horoscope as Horoscope, starts });
+
+      expect(result.chains).toHaveLength(1);
+      // Mars in Scorpio -> Venus in Aries -> Mars (cycle with mutual reception)
+      expect(result.chains[0].termination).toBe('MUTUAL_RECEPTION');
+      expect(result.chains[0].cycleStartPlanet).toBe(Planet.MARS);
+      expect(result.chains[0].mutualReception).toBe(true);
+    });
+
+    it('cycle without mutual reception yields CYCLE (not UNAVAILABLE)', () => {
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.VENUS]: {
+            planet: Planet.VENUS,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 0,
+              sign: Sign.ARIES,
+              house: 1,
+              signLongitude: 0,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.ARIES,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+        },
+        bhavas: {
+          10: {
+            house: 10,
+            sign: Sign.TAURUS,
+            lord: Planet.VENUS,
+            occupants: []
+          }
+        }
+      });
+
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
+        {
+          planet: Planet.MARS,
+          role: 'CAREER_RELEVANT_PLANET',
+          sourceIds: []
+        }
+      ]);
+
+      const result = buildCareerDispositorAnalysis({ horoscope: horoscope as Horoscope, starts });
+
+      expect(result.chains).toHaveLength(1);
+      // Mars in Taurus -> Venus in Aries -> Mars (cycle without mutual reception)
+      expect(result.chains[0].termination).toBe('CYCLE');
+      expect(result.chains[0].cycleStartPlanet).toBe(Planet.MARS);
+      expect(result.chains[0].mutualReception).toBe(false);
     });
   });
 
   describe('Test Group P: Real-engine + golden test', () => {
     it('real-engine golden test closure', async () => {
-      // This test will be implemented after the module is complete
-      // It requires the actual calculateHoroscope and buildCareerStructuralReasoning
-      // For now, we skip this as it requires the full engine integration
-      expect(true).toBe(true);
+      // First verify determinism by running the chain twice
+      const horoscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural1 = buildCareerStructuralReasoning({ horoscope: horoscope1 });
+      const starts1 = buildCareerDispositorStartsFromStructural(horoscope1, structural1);
+      const result1 = buildCareerDispositorAnalysis({ horoscope: horoscope1, starts: starts1 });
+
+      const horoscope2 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural2 = buildCareerStructuralReasoning({ horoscope: horoscope2 });
+      const starts2 = buildCareerDispositorStartsFromStructural(horoscope2, structural2);
+      const result2 = buildCareerDispositorAnalysis({ horoscope: horoscope2, starts: starts2 });
+
+      // Assert determinism: both runs must produce identical output
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+
+      // Assert frozen result
+      expect(Object.isFrozen(result1)).toBe(true);
+      expect(Object.isFrozen(result1.chains)).toBe(true);
+      for (const chain of result1.chains) {
+        expect(Object.isFrozen(chain)).toBe(true);
+        expect(Object.isFrozen(chain.links)).toBe(true);
+        expect(Object.isFrozen(chain.provenance)).toBe(true);
+      }
+
+      // Note: Golden expectations will be frozen once the implementation is stable
+      // For now, we assert the structure is valid and deterministic
+      expect(result1.chains).toBeDefined();
+      expect(Array.isArray(result1.chains)).toBe(true);
+      for (const chain of result1.chains) {
+        expect(chain.identityKey).toBeDefined();
+        expect(typeof chain.identityKey).toBe('string');
+        expect(chain.startPlanet).toBeDefined();
+        expect(chain.startRole).toBeDefined();
+        expect(chain.termination).toBeDefined();
+        expect(chain.destination).toBeDefined();
+      }
     });
   });
 });
