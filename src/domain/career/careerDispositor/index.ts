@@ -48,7 +48,8 @@ export {
 // Core dispositor exports
 export {
   traverseDispositorChain,
-  detectMutualReception
+  detectMutualReception,
+  detectChainMutualReception
 } from './careerDispositor';
 
 // Integration exports

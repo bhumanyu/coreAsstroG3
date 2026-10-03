@@ -38,14 +38,17 @@ export function isCareerHouse(house: number): boolean {
  * Documents precedence hierarchy as implementation convention, not classical rule (spec §7).
  *
  * Precedence hierarchy:
- * 1. Career Lord (highest priority)
- * 2. Career House Occupant in career house (6, 10, 11)
+ * 1. Career Lord (highest priority) - lord of career lord start houses (5, 6, 9, 10, 11)
+ * 2. Career House Occupant in career house (6, 10, 11) - planet occupies a career house
  * 3. Dusthana context (8, 12) - structural context, not negative
  * 4. House 6 is both career house and dusthana - CAREER_HOUSE_OCCUPANT takes precedence
- * 5. Career House (lord of Career house) - REMOVED (semantics unclear, merged with CAREER_LORD)
- * 6. Career Relevant Planet
- * 7. Non-Career
- * 8. UNAVAILABLE (when terminalPlanet is undefined)
+ * 5. Career Relevant Planet
+ * 6. Non-Career
+ * 7. UNAVAILABLE (when terminalPlanet is undefined)
+ *
+ * Note: CAREER_HOUSE destination type has been removed - it was redundant with CAREER_LORD.
+ * CAREER_LORD covers lords of career houses (5, 6, 9, 10, 11).
+ * CAREER_HOUSE_OCCUPANT covers planets occupying career houses (6, 10, 11).
  */
 export function resolveCareerDestination(
   terminalPlanet: Planet | undefined,
@@ -68,7 +71,8 @@ export function resolveCareerDestination(
     return 'CAREER_HOUSE_OCCUPANT';
   }
 
-  // 3. Dusthana context (8, 12) - evaluated after career house checks
+  // 3. Dusthana context (8, 12) - evaluated after career-lord and career-house checks
+  // This branch is now reachable for terminals in 8/12 (non-career houses)
   // House 6 is excluded here as it's handled by CAREER_HOUSE_OCCUPANT above
   if (terminalHouse !== undefined && (terminalHouse === 8 || terminalHouse === 12)) {
     return 'DUSTHANA_CAREER_CONTEXT';
@@ -85,13 +89,13 @@ export function resolveCareerDestination(
 
 /**
  * Resolves the termination condition for a dispositor chain.
- * - Self-dispositor is NOT a cycle
- * - Cycle + mutualReception → MUTUAL_RECEPTION
- * - Cycle → CYCLE
- * - Self → SELF_DISPOSITOR
- * - Missing → UNAVAILABLE
- * - Career terminal → CAREER_TERMINAL
- * - Else NON_CAREER_TERMINAL
+ * Precedence hierarchy:
+ * 1. cycle && mutualReception → MUTUAL_RECEPTION
+ * 2. cycle → CYCLE
+ * 3. isSelfDispositor → SELF_DISPOSITOR
+ * 4. !hasTerminalPlanet → UNAVAILABLE
+ * 5. isCareerTerminal → CAREER_TERMINAL
+ * 6. else NON_CAREER_TERMINAL
  */
 export function resolveTermination(
   cycle: boolean,

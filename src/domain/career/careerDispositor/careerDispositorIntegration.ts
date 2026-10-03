@@ -120,13 +120,38 @@ export function buildCareerDispositorStartsFromStructural(
   );
 
   // Map sourceIds from specific evidence entries
-  // Since structural evidence is about house relationships, not directly about
-  // lord/occupant classifications, we leave sourceIds empty for now
-  // rather than attaching unrelated IDs from primaryEvidenceIds/supportingEvidenceIds
+  // Evidence entries contain relationship.lordA/lordB and relationship.houseA/houseB
+  // We match these to the planet and house classifications
   const startsWithSourceIds = starts.map(start => {
+    const sourceIds: string[] = [];
+
+    for (const evidence of structural.evidence) {
+      const rel = evidence.relationship;
+
+      // For CAREER_LORD: match evidence where the planet is a lord of a career lord start house
+      if (start.role === 'CAREER_LORD') {
+        if (rel.lordA === start.planet && CAREER_LORD_START_HOUSES.includes(rel.houseA)) {
+          sourceIds.push(evidence.id);
+        }
+        if (rel.lordB === start.planet && CAREER_LORD_START_HOUSES.includes(rel.houseB)) {
+          sourceIds.push(evidence.id);
+        }
+      }
+
+      // For CAREER_HOUSE_OCCUPANT: match evidence where the planet is in a career house
+      if (start.role === 'CAREER_HOUSE_OCCUPANT') {
+        if (rel.lordA === start.planet && isCareerHouse(rel.lordAHouse)) {
+          sourceIds.push(evidence.id);
+        }
+        if (rel.lordB === start.planet && isCareerHouse(rel.lordBHouse)) {
+          sourceIds.push(evidence.id);
+        }
+      }
+    }
+
     return Object.freeze({
       ...start,
-      sourceIds: Object.freeze([])
+      sourceIds: Object.freeze(sourceIds)
     });
   });
 
