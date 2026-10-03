@@ -21,6 +21,8 @@ export * from './careerPatternIdentity';
 export * from './careerPatternPredicates';
 export * from './careerPatternClassificationRules';
 export * from './careerPatternClassification';
+export * from './dusthanaRelationshipTypes';
+export * from './dusthanaRelationshipValidation';
 export * from './dusthanaTransformationDetector';
 export * from './careerYogaDetector';
 export * from './kendraTrikonaDetector';

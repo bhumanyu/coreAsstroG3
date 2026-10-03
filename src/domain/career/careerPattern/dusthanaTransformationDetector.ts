@@ -6,6 +6,12 @@ import type { CareerMechanism } from './careerPatternTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
 import { hasDirectHouseRelationship } from './careerPatternPredicates';
+import {
+  validateDusthanaRelationships
+} from './dusthanaRelationshipValidation';
+import type {
+  DusthanaRelationshipValidationResult
+} from './dusthanaRelationshipTypes';
 
 /**
  * P2-06B Dusthana Transformation Detector
@@ -24,8 +30,12 @@ import { hasDirectHouseRelationship } from './careerPatternPredicates';
  *
  * Methodology chain: dusthana → relationship → condition → career connection → mechanism
  *
- * Missing relationship → no pattern
+ * MISSING RELATIONSHIP → no pattern (changed from membership-only to validation-based)
  * Missing planet data → mechanism MIXED (not negative)
+ *
+ * VALIDATION REQUIREMENT: Emits patterns ONLY for pairs with VALIDATED status from
+ * validateDusthanaRelationships. Attaches validation's relationshipIds/evidenceIds/network
+ * provenance to pattern.
  *
  * BOUNDARY ENFORCEMENT: This module must NOT import from:
  * - careerDasha
@@ -73,33 +83,50 @@ const MECHANISMS_12_TO_10: readonly CareerMechanism[] = Object.freeze([
 ]);
 
 /**
- * Checks if a network contains an 8↔10 relationship.
- * Per freeze semantics: uses undirected hasDirectHouseRelationship.
- * House membership alone no longer qualifies.
+ * Checks if a network contains a VALIDATED 8↔10 relationship.
+ * Uses validation output to confirm VALIDATED status.
  */
-function has8to10Relationship(network: CareerHouseNetwork): boolean {
-  const houses = network.houses;
-  return houses.includes(8) && houses.includes(10) && hasDirectHouseRelationship(network, 8, 10);
+function hasValidated8to10Relationship(
+  validationResult: DusthanaRelationshipValidationResult,
+  networkId: string
+): boolean {
+  return validationResult.validations.some(
+    v =>
+      v.dusthanaHouse === 8 &&
+      v.careerAnchorHouse === 10 &&
+      v.status === 'VALIDATED' &&
+      v.sourceNetworkIds.includes(networkId)
+  );
 }
 
 /**
- * Checks if a network contains a 12↔10 relationship.
- * Per freeze semantics: uses undirected hasDirectHouseRelationship.
- * House membership alone no longer qualifies.
+ * Checks if a network contains a VALIDATED 12↔10 relationship.
+ * Uses validation output to confirm VALIDATED status.
  */
-function has12to10Relationship(network: CareerHouseNetwork): boolean {
-  const houses = network.houses;
-  return houses.includes(12) && houses.includes(10) && hasDirectHouseRelationship(network, 12, 10);
+function hasValidated12to10Relationship(
+  validationResult: DusthanaRelationshipValidationResult,
+  networkId: string
+): boolean {
+  return validationResult.validations.some(
+    v =>
+      v.dusthanaHouse === 12 &&
+      v.careerAnchorHouse === 10 &&
+      v.status === 'VALIDATED' &&
+      v.sourceNetworkIds.includes(networkId)
+  );
 }
 
 /**
- * Builds a dusthana transformation pattern from a network.
+ * Builds a dusthana transformation pattern from a network with validation.
  * Mechanisms are derived from structural facts (dusthana-house↔career-house relationship),
  * not from participating planets. Planet-level refinement is deferred to P2-04 qualification.
+ *
+ * Attaches validation's relationshipIds/evidenceIds/network provenance to pattern.
  */
 function buildDusthanaPattern(
   network: CareerHouseNetwork,
-  dusthanaHouse: 8 | 12
+  dusthanaHouse: 8 | 12,
+  validationResult: DusthanaRelationshipValidationResult
 ): CareerPattern {
   const family = 'DUSTHANA_TRANSFORMATION';
   const classification = 'DUSTHANA_CAREER_TRANSFORMATION';
@@ -121,19 +148,36 @@ function buildDusthanaPattern(
   // Planet-level refinement happens in P2-04 qualification
   const mechanisms = dusthanaHouse === 8 ? MECHANISMS_8_TO_10 : MECHANISMS_12_TO_10;
 
-  const relationshipIds = network.relationships.map(r => r.identityKey).sort();
+  // Get validated relationship IDs for this pair
+  const validatedRelationships = validationResult.validations.filter(
+    (v) =>
+      v.dusthanaHouse === dusthanaHouse &&
+      v.careerAnchorHouse === 10 &&
+      v.status === 'VALIDATED' &&
+      v.sourceNetworkIds.includes(network.networkId)
+  );
 
-  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze([{
-    evidenceId: `P2-06B-EVIDENCE:DUSTHANA_${dusthanaHouse}_TO_10:${network.identityKey}`,
-    ruleId: `RULE_DUSTHANA_${dusthanaHouse}_TO_10`,
-    sourceNetworkId: network.networkId,
-    sourceNetworkIdentityKey: network.identityKey
-  }]);
+  const relationshipIds: string[] = Array.from(
+    new Set(validatedRelationships.flatMap((v) => v.relationshipIds))
+  ).sort();
+
+  const evidenceIds: string[] = Array.from(
+    new Set(validatedRelationships.flatMap((v) => v.evidenceIds))
+  ).sort();
+
+  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze(
+    validatedRelationships.map((v) => ({
+      evidenceId: v.evidenceIds[0] || `EVIDENCE:${v.validationId}`,
+      ruleId: v.provenance.ruleIds[0] || `RULE_DUSTHANA_${dusthanaHouse}_TO_10`,
+      sourceNetworkId: network.networkId,
+      sourceNetworkIdentityKey: network.identityKey
+    }))
+  );
 
   const provenance: CareerPatternClassificationProvenance = {
     sourceNetworkIds: [network.networkId],
     relationshipIds,
-    ruleIds: [`RULE_DUSTHANA_${dusthanaHouse}_TO_10`]
+    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort()
   };
 
   return Object.freeze({
@@ -165,6 +209,9 @@ function buildDusthanaPattern(
  * Missing relationship → no pattern.
  * Missing planet data → mechanism MIXED (not negative).
  *
+ * VALIDATION REQUIREMENT: Emits patterns ONLY for pairs with VALIDATED status from
+ * validateDusthanaRelationships.
+ *
  * DOUBLE-EMISSION CONTRACT:
  * For networks containing both 8-10 and 12-10 relationships (e.g., 8-10-12),
  * emit ONE composite pattern with the full house set, not separate patterns for each dusthana-house pair.
@@ -179,24 +226,27 @@ export function detectDusthanaPatterns(
 ): readonly CareerPattern[] {
   const patterns: CareerPattern[] = [];
 
-  for (const network of networks) {
-    const has8to10 = has8to10Relationship(network);
-    const has12to10 = has12to10Relationship(network);
+  // Run validation first
+  const validationResult = validateDusthanaRelationships(networks);
 
-    // If neither relationship exists, skip
+  for (const network of networks) {
+    const has8to10 = hasValidated8to10Relationship(validationResult, network.networkId);
+    const has12to10 = hasValidated12to10Relationship(validationResult, network.networkId);
+
+    // If neither relationship is validated, skip
     if (!has8to10 && !has12to10) {
       continue;
     }
 
-    // If both relationships exist, emit one composite pattern
+    // If both relationships are validated, emit one composite pattern
     if (has8to10 && has12to10) {
-      const pattern = buildCompositeDusthanaPattern(network);
+      const pattern = buildCompositeDusthanaPattern(network, validationResult);
       patterns.push(pattern);
     } else if (has8to10) {
-      const pattern = buildDusthanaPattern(network, 8);
+      const pattern = buildDusthanaPattern(network, 8, validationResult);
       patterns.push(pattern);
     } else if (has12to10) {
-      const pattern = buildDusthanaPattern(network, 12);
+      const pattern = buildDusthanaPattern(network, 12, validationResult);
       patterns.push(pattern);
     }
   }
@@ -208,8 +258,13 @@ export function detectDusthanaPatterns(
 /**
  * Builds a composite dusthana pattern for networks with both 8↔10 and 12↔10 relationships.
  * Mechanisms are the union of both mechanism sets.
+ *
+ * Attaches validation's relationshipIds/evidenceIds/network provenance to pattern.
  */
-function buildCompositeDusthanaPattern(network: CareerHouseNetwork): CareerPattern {
+function buildCompositeDusthanaPattern(
+  network: CareerHouseNetwork,
+  validationResult: DusthanaRelationshipValidationResult
+): CareerPattern {
   const family = 'DUSTHANA_TRANSFORMATION';
   const classification = 'DUSTHANA_CAREER_TRANSFORMATION';
   const topology = network.topology;
@@ -229,19 +284,36 @@ function buildCompositeDusthanaPattern(network: CareerHouseNetwork): CareerPatte
   // Union of both mechanism sets
   const mechanisms = [...new Set([...MECHANISMS_8_TO_10, ...MECHANISMS_12_TO_10])].sort();
 
-  const relationshipIds = network.relationships.map(r => r.identityKey).sort();
+  // Get validated relationship IDs for both pairs
+  const validatedRelationships = validationResult.validations.filter(
+    (v) =>
+    ((v.dusthanaHouse === 8 || v.dusthanaHouse === 12) &&
+      v.careerAnchorHouse === 10 &&
+      v.status === 'VALIDATED' &&
+      v.sourceNetworkIds.includes(network.networkId))
+  );
 
-  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze([{
-    evidenceId: `P2-06B-EVIDENCE:DUSTHANA_COMPOSITE_8_12_TO_10:${network.identityKey}`,
-    ruleId: 'RULE_DUSTHANA_COMPOSITE_8_12_TO_10',
-    sourceNetworkId: network.networkId,
-    sourceNetworkIdentityKey: network.identityKey
-  }]);
+  const relationshipIds: string[] = Array.from(
+    new Set(validatedRelationships.flatMap((v) => v.relationshipIds))
+  ).sort();
+
+  const evidenceIds: string[] = Array.from(
+    new Set(validatedRelationships.flatMap((v) => v.evidenceIds))
+  ).sort();
+
+  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze(
+    validatedRelationships.map((v) => ({
+      evidenceId: v.evidenceIds[0] || `EVIDENCE:${v.validationId}`,
+      ruleId: v.provenance.ruleIds[0] || 'RULE_DUSTHANA_COMPOSITE_8_12_TO_10',
+      sourceNetworkId: network.networkId,
+      sourceNetworkIdentityKey: network.identityKey
+    }))
+  );
 
   const provenance: CareerPatternClassificationProvenance = {
     sourceNetworkIds: [network.networkId],
     relationshipIds,
-    ruleIds: ['RULE_DUSTHANA_COMPOSITE_8_12_TO_10']
+    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort()
   };
 
   return Object.freeze({

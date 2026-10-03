@@ -47,10 +47,10 @@ function makeRelationship(overrides: Partial<CareerGraphEdge> = {}): CareerGraph
 
   const defaultRelationship: CareerGraphEdge = {
     edgeId: 'EDGE:TEST',
-    identityKey: 'RELATIONSHIP:TEST',
+    identityKey: 'REL:TEST',
     type: 'LORD_OF',
-    sourceNodeId: 'NODE:PLANET:SATURN',
-    targetNodeId: 'NODE:HOUSE:6',
+    sourceNodeId: 'PLANET:SATURN',
+    targetNodeId: 'HOUSE:6',
     provenance
   };
 
@@ -59,7 +59,7 @@ function makeRelationship(overrides: Partial<CareerGraphEdge> = {}): CareerGraph
 
 describe('Dusthana Transformation Detector', () => {
   describe('8↔10 detection', () => {
-    it('detects 8-10 network as dusthana transformation', () => {
+    it('detects 8-10 network as dusthana transformation with validated relationship', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:8-10',
         identityKey: 'NETWORK:8-10',
@@ -69,12 +69,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:8'
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
           })
         ]
       });
@@ -87,7 +95,7 @@ describe('Dusthana Transformation Detector', () => {
       expect(patterns[0].houses).toEqual([8, 10]);
     });
 
-    it('infers mechanisms from Saturn for 8-10', () => {
+    it('infers mechanisms from Saturn for 8-10 with validated relationship', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:8-10-SATURN',
         identityKey: 'NETWORK:8-10-SATURN',
@@ -97,12 +105,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:8'
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
           })
         ]
       });
@@ -114,7 +130,7 @@ describe('Dusthana Transformation Detector', () => {
       expect(patterns[0].mechanisms).toContain('TRANSFORMATION');
     });
 
-    it('infers structural mechanisms when no planets present', () => {
+    it('infers structural mechanisms when no planets present with validated relationship', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:8-10-NO-PLANETS',
         identityKey: 'NETWORK:8-10-NO-PLANETS',
@@ -124,12 +140,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:8'
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'CONJUNCT',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'PLANET:MARS',
+            identityKey: 'REL:CONJUNCT:SATURN:MARS'
           })
         ]
       });
@@ -153,12 +177,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:8'
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
           })
         ]
       });
@@ -171,7 +203,7 @@ describe('Dusthana Transformation Detector', () => {
   });
 
   describe('12↔10 detection', () => {
-    it('detects 12-10 network as dusthana transformation', () => {
+    it('detects 12-10 network as dusthana transformation with validated relationship', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:12-10',
         identityKey: 'NETWORK:12-10',
@@ -181,12 +213,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:12'
+            targetNodeId: 'HOUSE:12',
+            identityKey: 'REL:LORD_OF:SATURN:12'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
           })
         ]
       });
@@ -199,7 +239,7 @@ describe('Dusthana Transformation Detector', () => {
       expect(patterns[0].houses).toEqual([12, 10]);
     });
 
-    it('infers mechanisms from Saturn for 12-10', () => {
+    it('infers mechanisms from Saturn for 12-10 with validated relationship', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:12-10-SATURN',
         identityKey: 'NETWORK:12-10-SATURN',
@@ -209,12 +249,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:12'
+            targetNodeId: 'HOUSE:12',
+            identityKey: 'REL:LORD_OF:SATURN:12'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
           })
         ]
       });
@@ -225,7 +273,7 @@ describe('Dusthana Transformation Detector', () => {
       expect(patterns[0].mechanisms).toContain('REMOTE_WORK');
     });
 
-    it('infers FOREIGN_WORK from Jupiter for 12-10', () => {
+    it('infers FOREIGN_WORK from Jupiter for 12-10 with validated relationship', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:12-10-JUPITER',
         identityKey: 'NETWORK:12-10-JUPITER',
@@ -235,12 +283,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:JUPITER',
-            targetNodeId: 'HOUSE:12'
+            targetNodeId: 'HOUSE:12',
+            identityKey: 'REL:LORD_OF:JUPITER:12'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:JUPITER',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:JUPITER:10'
           })
         ]
       });
@@ -262,12 +318,20 @@ describe('Dusthana Transformation Detector', () => {
           makeRelationship({
             type: 'LORD_OF',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:12'
+            targetNodeId: 'HOUSE:12',
+            identityKey: 'REL:LORD_OF:SATURN:12'
           }),
           makeRelationship({
             type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
             sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
           })
         ]
       });
@@ -281,22 +345,24 @@ describe('Dusthana Transformation Detector', () => {
 });
 
 describe('Missing relationship handling', () => {
-  it('produces no pattern when 8-10 relationship is missing', () => {
+  it('produces no pattern when 8-10 relationship is not validated', () => {
     const network = makeNetwork({
-      networkId: 'NETWORK:6-10',
-      identityKey: 'NETWORK:6-10',
-      houses: [6, 10],
-      lords: [Planet.SATURN],
+      networkId: 'NETWORK:8-10-NO-RELATIONSHIP',
+      identityKey: 'NETWORK:8-10-NO-RELATIONSHIP',
+      houses: [8, 10],
+      lords: [Planet.SATURN, Planet.MARS],
       relationships: [
         makeRelationship({
           type: 'LORD_OF',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:6'
+          targetNodeId: 'HOUSE:8',
+          identityKey: 'REL:LORD_OF:SATURN:8'
         }),
         makeRelationship({
           type: 'LORD_OF',
-          sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:10'
+          sourceNodeId: 'PLANET:MARS',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:LORD_OF:MARS:10'
         })
       ]
     });
@@ -306,22 +372,24 @@ describe('Missing relationship handling', () => {
     expect(patterns).toHaveLength(0);
   });
 
-  it('produces no pattern when 12-10 relationship is missing', () => {
+  it('produces no pattern when 12-10 relationship is not validated', () => {
     const network = makeNetwork({
-      networkId: 'NETWORK:6-10',
-      identityKey: 'NETWORK:6-10',
-      houses: [6, 10],
-      lords: [Planet.SATURN],
+      networkId: 'NETWORK:12-10-NO-RELATIONSHIP',
+      identityKey: 'NETWORK:12-10-NO-RELATIONSHIP',
+      houses: [12, 10],
+      lords: [Planet.SATURN, Planet.MARS],
       relationships: [
         makeRelationship({
           type: 'LORD_OF',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:6'
+          targetNodeId: 'HOUSE:12',
+          identityKey: 'REL:LORD_OF:SATURN:12'
         }),
         makeRelationship({
           type: 'LORD_OF',
-          sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:10'
+          sourceNodeId: 'PLANET:MARS',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:LORD_OF:MARS:10'
         })
       ]
     });
@@ -329,6 +397,40 @@ describe('Missing relationship handling', () => {
     const patterns = detectDusthanaPatterns([network]);
 
     expect(patterns).toHaveLength(0);
+  });
+
+  it('produces pattern only when validation returns VALIDATED status', () => {
+    const networkWithRelationship = makeNetwork({
+      networkId: 'NETWORK:8-10-VALIDATED',
+      identityKey: 'NETWORK:8-10-VALIDATED',
+      houses: [8, 10],
+      lords: [Planet.SATURN],
+      relationships: [
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:8',
+          identityKey: 'REL:LORD_OF:SATURN:8'
+        }),
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MARS',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:LORD_OF:MARS:10'
+        }),
+        makeRelationship({
+          type: 'OCCUPIES',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:OCCUPIES:SATURN:10'
+        })
+      ]
+    });
+
+    const patterns = detectDusthanaPatterns([networkWithRelationship]);
+
+    expect(patterns).toHaveLength(1);
+    expect(patterns[0].family).toBe('DUSTHANA_TRANSFORMATION');
   });
 });
 
@@ -343,12 +445,20 @@ describe('Deterministic sorting', () => {
         makeRelationship({
           type: 'LORD_OF',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:12'
+          targetNodeId: 'HOUSE:12',
+          identityKey: 'REL:LORD_OF:SATURN:12'
         }),
         makeRelationship({
           type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MARS',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:LORD_OF:MARS:10'
+        }),
+        makeRelationship({
+          type: 'OCCUPIES',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:10'
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:OCCUPIES:SATURN:10'
         })
       ]
     });
@@ -362,12 +472,20 @@ describe('Deterministic sorting', () => {
         makeRelationship({
           type: 'LORD_OF',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:8'
+          targetNodeId: 'HOUSE:8',
+          identityKey: 'REL:LORD_OF:SATURN:8'
         }),
         makeRelationship({
           type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MARS',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:LORD_OF:MARS:10'
+        }),
+        makeRelationship({
+          type: 'OCCUPIES',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:10'
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:OCCUPIES:SATURN:10'
         })
       ]
     });
