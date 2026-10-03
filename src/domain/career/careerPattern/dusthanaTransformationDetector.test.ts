@@ -64,7 +64,19 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:8-10',
         identityKey: 'NETWORK:8-10',
         houses: [8, 10],
-        lords: [Planet.SATURN]
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -80,7 +92,19 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:8-10-SATURN',
         identityKey: 'NETWORK:8-10-SATURN',
         houses: [8, 10],
-        lords: [Planet.SATURN]
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -95,7 +119,19 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:8-10-NO-PLANETS',
         identityKey: 'NETWORK:8-10-NO-PLANETS',
         houses: [8, 10],
-        lords: []
+        lords: [],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -112,7 +148,19 @@ describe('Dusthana Transformation Detector', () => {
         identityKey: 'NETWORK:8-10',
         houses: [8, 10],
         lords: [Planet.SATURN],
-        direction: 'FORWARD'
+        direction: 'FORWARD',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -128,7 +176,19 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10',
         identityKey: 'NETWORK:12-10',
         houses: [12, 10],
-        lords: [Planet.SATURN]
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:12'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -144,7 +204,19 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10-SATURN',
         identityKey: 'NETWORK:12-10-SATURN',
         houses: [12, 10],
-        lords: [Planet.SATURN]
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:12'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -158,7 +230,19 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10-JUPITER',
         identityKey: 'NETWORK:12-10-JUPITER',
         houses: [12, 10],
-        lords: [Planet.JUPITER]
+        lords: [Planet.JUPITER],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:12'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -173,7 +257,19 @@ describe('Dusthana Transformation Detector', () => {
         identityKey: 'NETWORK:12-10',
         houses: [12, 10],
         lords: [Planet.SATURN],
-        direction: 'REVERSE'
+        direction: 'REVERSE',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:12'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -182,55 +278,103 @@ describe('Dusthana Transformation Detector', () => {
       expect(patterns[0].direction).toBe('REVERSE');
     });
   });
+});
 
-  describe('Missing relationship handling', () => {
-    it('produces no pattern when 8-10 relationship is missing', () => {
-      const network = makeNetwork({
-        networkId: 'NETWORK:6-10',
-        identityKey: 'NETWORK:6-10',
-        houses: [6, 10],
-        lords: [Planet.SATURN]
-      });
-
-      const patterns = detectDusthanaPatterns([network]);
-
-      expect(patterns).toHaveLength(0);
+describe('Missing relationship handling', () => {
+  it('produces no pattern when 8-10 relationship is missing', () => {
+    const network = makeNetwork({
+      networkId: 'NETWORK:6-10',
+      identityKey: 'NETWORK:6-10',
+      houses: [6, 10],
+      lords: [Planet.SATURN],
+      relationships: [
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:6'
+        }),
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10'
+        })
+      ]
     });
 
-    it('produces no pattern when 12-10 relationship is missing', () => {
-      const network = makeNetwork({
-        networkId: 'NETWORK:6-10',
-        identityKey: 'NETWORK:6-10',
-        houses: [6, 10],
-        lords: [Planet.SATURN]
-      });
+    const patterns = detectDusthanaPatterns([network]);
 
-      const patterns = detectDusthanaPatterns([network]);
-
-      expect(patterns).toHaveLength(0);
-    });
+    expect(patterns).toHaveLength(0);
   });
 
-  describe('Deterministic sorting', () => {
-    it('sorts patterns by identityKey deterministically', () => {
-      const network1 = makeNetwork({
-        networkId: 'NETWORK:12-10',
-        identityKey: 'NETWORK:12-10',
-        houses: [12, 10],
-        lords: [Planet.SATURN]
-      });
-
-      const network2 = makeNetwork({
-        networkId: 'NETWORK:8-10',
-        identityKey: 'NETWORK:8-10',
-        houses: [8, 10],
-        lords: [Planet.SATURN]
-      });
-
-      const patterns = detectDusthanaPatterns([network2, network1]);
-
-      // Verify patterns are sorted by identityKey
-      expect(patterns[0].identityKey.localeCompare(patterns[1].identityKey)).toBeLessThan(0);
+  it('produces no pattern when 12-10 relationship is missing', () => {
+    const network = makeNetwork({
+      networkId: 'NETWORK:6-10',
+      identityKey: 'NETWORK:6-10',
+      houses: [6, 10],
+      lords: [Planet.SATURN],
+      relationships: [
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:6'
+        }),
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10'
+        })
+      ]
     });
+
+    const patterns = detectDusthanaPatterns([network]);
+
+    expect(patterns).toHaveLength(0);
+  });
+});
+
+describe('Deterministic sorting', () => {
+  it('sorts patterns by identityKey deterministically', () => {
+    const network1 = makeNetwork({
+      networkId: 'NETWORK:12-10',
+      identityKey: 'NETWORK:12-10',
+      houses: [12, 10],
+      lords: [Planet.SATURN],
+      relationships: [
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:12'
+        }),
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10'
+        })
+      ]
+    });
+
+    const network2 = makeNetwork({
+      networkId: 'NETWORK:8-10',
+      identityKey: 'NETWORK:8-10',
+      houses: [8, 10],
+      lords: [Planet.SATURN],
+      relationships: [
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:8'
+        }),
+        makeRelationship({
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10'
+        })
+      ]
+    });
+
+    const patterns = detectDusthanaPatterns([network2, network1]);
+
+    // Verify patterns are sorted by identityKey
+    expect(patterns[0].identityKey.localeCompare(patterns[1].identityKey)).toBeLessThan(0);
   });
 });

@@ -7,6 +7,7 @@ import {
   isDirectChain,
   buildLordshipMap
 } from './careerPatternPredicates';
+import { Planet } from '../../../types';
 
 /**
  * P2-03 Career Pattern Classification Rules
@@ -426,8 +427,8 @@ export function classifyParivartana(network: CareerHouseNetwork): readonly Caree
     const matches: CareerPatternRuleMatch[] = [];
 
     for (const edge of exchangeEdges) {
-      const sourcePlanet = edge.sourceNodeId.startsWith('PLANET:') ? edge.sourceNodeId.slice(7) : null;
-      const targetPlanet = edge.targetNodeId.startsWith('PLANET:') ? edge.targetNodeId.slice(7) : null;
+      const sourcePlanet = edge.sourceNodeId.startsWith('PLANET:') ? edge.sourceNodeId.slice(7) as Planet : null;
+      const targetPlanet = edge.targetNodeId.startsWith('PLANET:') ? edge.targetNodeId.slice(7) as Planet : null;
 
       if (sourcePlanet && targetPlanet) {
         const sourceHouses = lordshipMap.get(sourcePlanet);

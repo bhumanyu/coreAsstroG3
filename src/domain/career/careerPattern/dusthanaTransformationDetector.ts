@@ -5,6 +5,7 @@ import type { CareerPatternHouseRole } from './careerPatternTypes';
 import type { CareerMechanism } from './careerPatternTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
+import { hasDirectHouseRelationship } from './careerPatternPredicates';
 
 /**
  * P2-06B Dusthana Transformation Detector
@@ -73,18 +74,22 @@ const MECHANISMS_12_TO_10: readonly CareerMechanism[] = Object.freeze([
 
 /**
  * Checks if a network contains an 8↔10 relationship.
+ * Per freeze semantics: uses undirected hasDirectHouseRelationship.
+ * House membership alone no longer qualifies.
  */
 function has8to10Relationship(network: CareerHouseNetwork): boolean {
   const houses = network.houses;
-  return houses.includes(8) && houses.includes(10);
+  return houses.includes(8) && houses.includes(10) && hasDirectHouseRelationship(network, 8, 10);
 }
 
 /**
  * Checks if a network contains a 12↔10 relationship.
+ * Per freeze semantics: uses undirected hasDirectHouseRelationship.
+ * House membership alone no longer qualifies.
  */
 function has12to10Relationship(network: CareerHouseNetwork): boolean {
   const houses = network.houses;
-  return houses.includes(12) && houses.includes(10);
+  return houses.includes(12) && houses.includes(10) && hasDirectHouseRelationship(network, 12, 10);
 }
 
 /**

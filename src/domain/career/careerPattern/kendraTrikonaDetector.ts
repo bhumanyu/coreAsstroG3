@@ -2,7 +2,6 @@ import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes'
 import type { CareerPattern, CareerPatternClassification, CareerPatternClassificationEvidence, CareerPatternClassificationProvenance, CareerMechanism } from './careerPatternTypes';
 import type { CareerPatternHouseRole } from './careerPatternTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
-import type { CareerGraphEdgeType } from '../careerGraph/careerAstroGraphTypes';
 import { Planet } from '../../../types';
 
 /**
@@ -38,13 +37,6 @@ const KENDRA_HOUSES = [1, 4, 7, 10] as const;
  * Trikona houses (trine houses).
  */
 const TRIKONA_HOUSES = [1, 5, 9] as const;
-
-/**
- * Edge types that establish lord relationships between houses.
- */
-const LORD_RELATIONSHIP_EDGE_TYPES: ReadonlySet<CareerGraphEdgeType> = Object.freeze(
-  new Set<CareerGraphEdgeType>(['LORD_OF', 'EXCHANGES', 'CONJUNCT', 'ASPECTS'])
-);
 
 /**
  * House role mapping for Kendra-Trikona patterns.
