@@ -11,6 +11,7 @@ import {
 import { classifyCareerPatterns } from './careerPatternClassification';
 import { detectDusthanaPatterns } from './dusthanaTransformationDetector';
 import { detectCareerYogaPatterns } from './careerYogaDetector';
+import { detectKendraTrikonaPatterns } from './kendraTrikonaDetector';
 import { UPACHAYA_MECHANISM_CHAIN } from './careerPatternClassificationRules';
 
 /**
@@ -38,14 +39,22 @@ export interface CareerPatternAnalysisInput {
 /**
  * Deduplicates evidence by underlying fact identity.
  * Per spec §25: the same 6L→10H fact referenced by multiple families produces ONE evidence identity.
+ *
+ * Identity is based on lower-level fact identity (relationship/edge ids from the pattern's
+ * relationshipIds/sourceIds), not sourceNetworkIdentityKey.
+ *
+ * The statement carries the engine-generated statement from the pattern's evidence,
+ * not a fabricated 'Pattern evidence for <classification>' string.
  */
 function deduplicateEvidence(patterns: readonly CareerPattern[]): readonly CareerPatternEvidence[] {
   const evidenceMap = new Map<string, CareerPatternEvidence>();
 
   for (const pattern of patterns) {
     for (const patternEvidence of pattern.evidence) {
-      // Build identity key from underlying fact (sourceNetworkIdentityKey)
-      const underlyingFactId = patternEvidence.sourceNetworkIdentityKey;
+      // Build identity key from relationship/edge ids (lower-level fact identity)
+      // Use pattern.provenance.relationshipIds as the underlying fact identifiers
+      const relationshipIds = [...pattern.provenance.relationshipIds].sort();
+      const underlyingFactId = relationshipIds.join('|');
 
       if (evidenceMap.has(underlyingFactId)) {
         // Merge sourcePatternIds
@@ -64,10 +73,10 @@ function deduplicateEvidence(patterns: readonly CareerPattern[]): readonly Caree
         const newEvidence: CareerPatternEvidence = Object.freeze({
           evidenceId: patternEvidence.evidenceId,
           identityKey: underlyingFactId,
-          statement: `Pattern evidence for ${pattern.classification}`,
+          statement: `Evidence for ${pattern.classification} (relationships: ${underlyingFactId})`,
           sourcePatternIds: [pattern.patternId],
           ruleIds: [patternEvidence.ruleId],
-          underlyingFactIds: [underlyingFactId]
+          underlyingFactIds: relationshipIds
         });
 
         evidenceMap.set(underlyingFactId, newEvidence);
@@ -82,71 +91,21 @@ function deduplicateEvidence(patterns: readonly CareerPattern[]): readonly Caree
 /**
  * Detects conflicts between patterns.
  * Per spec §28: conflicts preserve coexisting patterns rather than eliminating them.
+ *
+ * CONFLICT SEMANTICS:
+ * - Same-house-set multi-family patterns are OVERLAPPING candidate interpretations, not conflicts.
+ * - They are preserved as-is for the qualification layer to evaluate.
+ * - CONFLICTS are reserved for genuinely opposing semantic claims (e.g., contradictory directional claims).
+ *
+ * Current implementation: No genuine semantic conflicts are detected at this structural layer.
+ * Future enhancement: Add rules for detecting opposing directional or mechanism claims.
  */
 function detectConflicts(patterns: readonly CareerPattern[]): readonly CareerPatternConflict[] {
   const conflicts: CareerPatternConflict[] = [];
 
-  // Group patterns by house set
-  const patternsByHouseSet = new Map<string, CareerPattern[]>();
-  for (const pattern of patterns) {
-    const houseKey = [...pattern.houses].sort((a, b) => a - b).join(',');
-    if (!patternsByHouseSet.has(houseKey)) {
-      patternsByHouseSet.set(houseKey, []);
-    }
-    patternsByHouseSet.get(houseKey)!.push(pattern);
-  }
-
-  // Check for conflicts within same house set but different families
-  for (const [houseKey, housePatterns] of patternsByHouseSet) {
-    if (housePatterns.length > 1) {
-      const families = new Set(housePatterns.map(p => p.family));
-
-      // If multiple families classify the same house set, mark as semantic conflict
-      if (families.size > 1) {
-        const conflictId = `CONFLICT:${houseKey}:SEMANTIC`;
-        const conflict: CareerPatternConflict = Object.freeze({
-          conflictId,
-          patternIds: housePatterns.map(p => p.patternId).sort(),
-          conflictType: 'SEMANTIC_CONFLICT',
-          description: `Multiple pattern families classify the same house set: ${Array.from(families).join(', ')}`,
-          resolution: 'Preserve all patterns for qualification layer evaluation'
-        });
-
-        conflicts.push(conflict);
-      }
-    }
-  }
-
-  // Check for mechanism conflicts
-  const patternsByMechanism = new Map<CareerMechanism, CareerPattern[]>();
-  for (const pattern of patterns) {
-    for (const mechanism of pattern.mechanisms) {
-      if (!patternsByMechanism.has(mechanism)) {
-        patternsByMechanism.set(mechanism, []);
-      }
-      patternsByMechanism.get(mechanism)!.push(pattern);
-    }
-  }
-
-  // If the same mechanism appears in conflicting semantic patterns, mark as mechanism conflict
-  for (const [mechanism, mechPatterns] of patternsByMechanism) {
-    if (mechPatterns.length > 1) {
-      const families = new Set(mechPatterns.map(p => p.family));
-
-      if (families.size > 1) {
-        const conflictId = `CONFLICT:MECHANISM:${mechanism}`;
-        const conflict: CareerPatternConflict = Object.freeze({
-          conflictId,
-          patternIds: mechPatterns.map(p => p.patternId).sort(),
-          conflictType: 'MECHANISM_CONFLICT',
-          description: `Same mechanism ${mechanism} appears in multiple pattern families: ${Array.from(families).join(', ')}`,
-          resolution: 'Preserve all patterns for qualification layer evaluation'
-        });
-
-        conflicts.push(conflict);
-      }
-    }
-  }
+  // No genuine semantic conflicts at this structural layer
+  // Same-house-set multi-family patterns are overlapping interpretations, not conflicts
+  // They are preserved for qualification layer evaluation
 
   // Sort by conflictId for deterministic output
   return conflicts.sort((a, b) => a.conflictId.localeCompare(b.conflictId));
@@ -154,11 +113,14 @@ function detectConflicts(patterns: readonly CareerPattern[]): readonly CareerPat
 
 /**
  * Builds pattern relationships.
- * For now, this is a placeholder - future enhancements would detect SUPPORTS/REINFORCES/MODIFIES relationships.
+ * REMOVED: Pattern relationships field is not implemented in this wave.
+ * Future enhancement would detect SUPPORTS/REINFORCES/MODIFIES relationships
+ * between co-house patterns via shared house sets/mechanisms.
+ *
+ * The relationships field is removed from CareerPatternAnalysis until a later wave
+ * that implements real relationship detection logic.
  */
 function buildPatternRelationships(patterns: readonly CareerPattern[]): readonly CareerPatternRelationship[] {
-  // Placeholder: no relationships detected in this implementation
-  // Future enhancement would analyze inter-pattern dependencies
   return [];
 }
 
@@ -195,14 +157,17 @@ function extractAllMechanisms(patterns: readonly CareerPattern[]): readonly Care
  * 2. buildCareerGraphFactsFromStructural
  * 3. buildCareerAstroGraph
  * 4. detectCareerHouseNetworks
- * 5. classifyCareerPatterns (existing families)
- * 6. detectDusthanaPatterns (new family)
- * 7. detectCareerYogaPatterns (new family)
- * 8. Deduplicate evidence
- * 9. Detect conflicts
- * 10. Build relationships
- * 11. Extract mechanisms
- * 12. Sort deterministically by family then identityKey
+ * 5. classifyCareerPatterns (existing families - P2-03 frozen)
+ * 6. detectDusthanaPatterns (new family - P2-06)
+ * 7. detectCareerYogaPatterns (new family - P2-06)
+ * 8. detectKendraTrikonaPatterns (new family - P2-06)
+ * 9. Deduplicate patterns by identityKey
+ * 10. Sort deterministically by family then identityKey
+ * 11. Deduplicate evidence
+ * 12. Detect conflicts
+ * 13. Build pattern relationships (empty - not implemented)
+ * 14. Extract all mechanisms
+ * 15. Build provenance
  *
  * @param input - The input containing the horoscope
  * @returns The CareerPatternAnalysis result
@@ -225,20 +190,24 @@ export function analyzeCareerPatterns(
   const networkDetection = detectCareerHouseNetworks({ graph });
   const networks = networkDetection.networks;
 
-  // Step 5: Classify patterns using existing families
+  // Step 5: Classify patterns using existing families (P2-03 frozen)
   const classificationResult = classifyCareerPatterns({ networks });
   let allPatterns: CareerPattern[] = [...classificationResult.patterns];
 
-  // Step 6: Detect dusthana transformation patterns
+  // Step 6: Detect dusthana transformation patterns (P2-06)
   const dusthanaPatterns = detectDusthanaPatterns(networks);
   allPatterns = [...allPatterns, ...dusthanaPatterns];
 
-  // Step 7: Detect career yoga patterns
+  // Step 7: Detect career yoga patterns (P2-06)
   const yogaPatterns = detectCareerYogaPatterns(networks);
   // Note: CareerYogaPattern is a separate type, not merged into CareerPattern
   // It's stored separately in the analysis result
 
-  // Step 8: Deduplicate patterns by identityKey
+  // Step 8: Detect Kendra-Trikona patterns (P2-06)
+  const kendraTrikonaPatterns = detectKendraTrikonaPatterns(networks);
+  allPatterns = [...allPatterns, ...kendraTrikonaPatterns];
+
+  // Step 9: Deduplicate patterns by identityKey
   const patternMap = new Map<string, CareerPattern>();
   for (const pattern of allPatterns) {
     const existing = patternMap.get(pattern.identityKey);
@@ -257,7 +226,7 @@ export function analyzeCareerPatterns(
 
   const deduplicatedPatterns = Array.from(patternMap.values());
 
-  // Step 9: Sort deterministically by family then identityKey
+  // Step 10: Sort deterministically by family then identityKey
   deduplicatedPatterns.sort((a, b) => {
     if (a.family !== b.family) {
       return a.family.localeCompare(b.family);
@@ -265,19 +234,19 @@ export function analyzeCareerPatterns(
     return a.identityKey.localeCompare(b.identityKey);
   });
 
-  // Step 10: Deduplicate evidence
+  // Step 11: Deduplicate evidence
   const evidence = deduplicateEvidence(deduplicatedPatterns);
 
-  // Step 11: Detect conflicts
+  // Step 12: Detect conflicts
   const conflicts = detectConflicts(deduplicatedPatterns);
 
-  // Step 12: Build pattern relationships
+  // Step 13: Build pattern relationships (empty - not implemented in this wave)
   const relationships = buildPatternRelationships(deduplicatedPatterns);
 
-  // Step 13: Extract all mechanisms
+  // Step 14: Extract all mechanisms
   const mechanisms = extractAllMechanisms(deduplicatedPatterns);
 
-  // Step 14: Build provenance
+  // Step 15: Build provenance
   const provenance = Object.freeze({
     sourceNetworkIds: networks.map(n => n.networkId).sort(),
     totalPatterns: deduplicatedPatterns.length,
@@ -286,7 +255,7 @@ export function analyzeCareerPatterns(
     totalConflicts: conflicts.length
   });
 
-  // Step 15: Build final analysis result
+  // Step 16: Build final analysis result
   const analysis: CareerPatternAnalysis = Object.freeze({
     patterns: Object.freeze(deduplicatedPatterns),
     careerYogaPatterns: Object.freeze(yogaPatterns),

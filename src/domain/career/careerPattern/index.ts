@@ -22,4 +22,5 @@ export * from './careerPatternClassificationRules';
 export * from './careerPatternClassification';
 export * from './dusthanaTransformationDetector';
 export * from './careerYogaDetector';
+export * from './kendraTrikonaDetector';
 export * from './careerPatternAnalysis';

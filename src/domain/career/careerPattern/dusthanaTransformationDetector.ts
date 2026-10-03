@@ -5,7 +5,6 @@ import type { CareerPatternHouseRole } from './careerPatternTypes';
 import type { CareerMechanism } from './careerPatternTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
-import type { Planet } from '../../../types';
 
 /**
  * P2-06B Dusthana Transformation Detector
@@ -16,6 +15,13 @@ import type { Planet } from '../../../types';
  * Mechanism classifications:
  * - 8↔10: RESEARCH, INVESTIGATION, TRANSFORMATION, INSURANCE, TAXATION, BANKING_FINANCE, COMPLIANCE, CRISIS_MANAGEMENT
  * - 12↔10: FOREIGN_WORK, REMOTE_WORK, INSTITUTIONAL_WORK, ISOLATED_ENVIRONMENT
+ *
+ * DESIGN CHOICE: Mechanisms are derived from structural facts (house relationship types),
+ * not from per-planet hardcoded tables. Planet-level mechanism refinement is deferred to
+ * the qualification wave (P2-04 layer) which consumes C5 CareerPlanetaryRelevance[] and
+ * C6 CareerPlanetaryConditionResult[] to apply planet-specific modifiers.
+ *
+ * Methodology chain: dusthana → relationship → condition → career connection → mechanism
  *
  * Missing relationship → no pattern
  * Missing planet data → mechanism MIXED (not negative)
@@ -38,95 +44,32 @@ const DUSTHANA_HOUSE_ROLES: Readonly<Record<number, CareerPatternHouseRole>> = O
 });
 
 /**
- * Mechanism mapping for 8↔10 patterns based on participating planets.
- * Per spec §15: inferred from participating planets, not house negativity.
+ * Mechanism candidates for 8↔10 structural relationship.
+ * Derived from the structural fact that house 8 (transformation/death) connects to house 10 (career).
+ * These are candidate mechanisms; planet-level refinement happens in P2-04 qualification.
  */
-function inferMechanismsFor8to10(planets: readonly Planet[]): readonly CareerMechanism[] {
-  if (planets.length === 0) {
-    return ['MIXED'];
-  }
-
-  const mechanisms: Set<CareerMechanism> = new Set();
-
-  // Mechanism inference based on planetary nature
-  // This is a simplified mapping - full implementation would use planetary attributes
-  // from C5/C6 relevance/condition data
-  for (const planet of planets) {
-    switch (planet) {
-      case 'SATURN':
-        mechanisms.add('RESEARCH');
-        mechanisms.add('INVESTIGATION');
-        mechanisms.add('TRANSFORMATION');
-        mechanisms.add('COMPLIANCE');
-        break;
-      case 'MARS':
-        mechanisms.add('CRISIS_MANAGEMENT');
-        mechanisms.add('TRANSFORMATION');
-        mechanisms.add('INVESTIGATION');
-        break;
-      case 'MERCURY':
-        mechanisms.add('TAXATION');
-        mechanisms.add('BANKING_FINANCE');
-        mechanisms.add('COMPLIANCE');
-        mechanisms.add('RESEARCH');
-        break;
-      case 'JUPITER':
-        mechanisms.add('BANKING_FINANCE');
-        mechanisms.add('INSURANCE');
-        mechanisms.add('COMPLIANCE');
-        break;
-      case 'VENUS':
-        mechanisms.add('BANKING_FINANCE');
-        mechanisms.add('INSURANCE');
-        break;
-      default:
-        mechanisms.add('MIXED');
-    }
-  }
-
-  return mechanisms.size > 0 ? Array.from(mechanisms).sort() : ['MIXED'];
-}
+const MECHANISMS_8_TO_10: readonly CareerMechanism[] = Object.freeze([
+  'RESEARCH',
+  'INVESTIGATION',
+  'TRANSFORMATION',
+  'INSURANCE',
+  'TAXATION',
+  'BANKING_FINANCE',
+  'COMPLIANCE',
+  'CRISIS_MANAGEMENT'
+]);
 
 /**
- * Mechanism mapping for 12↔10 patterns based on participating planets.
- * Per spec §16: inferred from participating planets, not house negativity.
+ * Mechanism candidates for 12↔10 structural relationship.
+ * Derived from the structural fact that house 12 (loss/foreign) connects to house 10 (career).
+ * These are candidate mechanisms; planet-level refinement happens in P2-04 qualification.
  */
-function inferMechanismsFor12to10(planets: readonly Planet[]): readonly CareerMechanism[] {
-  if (planets.length === 0) {
-    return ['MIXED'];
-  }
-
-  const mechanisms: Set<CareerMechanism> = new Set();
-
-  // Mechanism inference based on planetary nature
-  for (const planet of planets) {
-    switch (planet) {
-      case 'SATURN':
-        mechanisms.add('INSTITUTIONAL_WORK');
-        mechanisms.add('REMOTE_WORK');
-        mechanisms.add('ISOLATED_ENVIRONMENT' as CareerMechanism);
-        break;
-      case 'JUPITER':
-        mechanisms.add('FOREIGN_WORK');
-        mechanisms.add('INSTITUTIONAL_WORK');
-        break;
-      case 'RAHU':
-        mechanisms.add('FOREIGN_WORK');
-        mechanisms.add('REMOTE_WORK');
-        mechanisms.add('INSTITUTIONAL_WORK');
-        break;
-      case 'KETU':
-        mechanisms.add('ISOLATED_ENVIRONMENT' as CareerMechanism);
-        mechanisms.add('REMOTE_WORK');
-        mechanisms.add('INSTITUTIONAL_WORK');
-        break;
-      default:
-        mechanisms.add('MIXED');
-    }
-  }
-
-  return mechanisms.size > 0 ? Array.from(mechanisms).sort() : ['MIXED'];
-}
+const MECHANISMS_12_TO_10: readonly CareerMechanism[] = Object.freeze([
+  'FOREIGN_WORK',
+  'REMOTE_WORK',
+  'INSTITUTIONAL_WORK',
+  'ISOLATED_ENVIRONMENT'
+]);
 
 /**
  * Checks if a network contains an 8↔10 relationship.
@@ -146,6 +89,8 @@ function has12to10Relationship(network: CareerHouseNetwork): boolean {
 
 /**
  * Builds a dusthana transformation pattern from a network.
+ * Mechanisms are derived from structural facts (dusthana-house↔career-house relationship),
+ * not from participating planets. Planet-level refinement is deferred to P2-04 qualification.
  */
 function buildDusthanaPattern(
   network: CareerHouseNetwork,
@@ -167,10 +112,9 @@ function buildDusthanaPattern(
   const patternId = buildCareerPatternId(identityKey);
   const name = 'Dusthana Career Transformation';
 
-  // Infer mechanisms based on participating planets
-  const mechanisms = dusthanaHouse === 8
-    ? inferMechanismsFor8to10(network.lords)
-    : inferMechanismsFor12to10(network.lords);
+  // Derive mechanisms from structural relationship type (8↔10 or 12↔10)
+  // Planet-level refinement happens in P2-04 qualification
+  const mechanisms = dusthanaHouse === 8 ? MECHANISMS_8_TO_10 : MECHANISMS_12_TO_10;
 
   const relationshipIds = network.relationships.map(r => r.identityKey).sort();
 
@@ -216,6 +160,12 @@ function buildDusthanaPattern(
  * Missing relationship → no pattern.
  * Missing planet data → mechanism MIXED (not negative).
  *
+ * DOUBLE-EMISSION CONTRACT:
+ * For networks containing both 8-10 and 12-10 relationships (e.g., 8-10-12),
+ * emit ONE composite pattern with the full house set, not separate patterns for each dusthana-house pair.
+ * The mechanisms are the union of both 8↔10 and 12↔10 mechanism sets.
+ * This ensures deterministic output and avoids duplication.
+ *
  * @param networks - The career house networks to analyze
  * @returns Array of dusthana transformation patterns
  */
@@ -225,14 +175,22 @@ export function detectDusthanaPatterns(
   const patterns: CareerPattern[] = [];
 
   for (const network of networks) {
-    // Check for 8↔10 relationship
-    if (has8to10Relationship(network)) {
-      const pattern = buildDusthanaPattern(network, 8);
-      patterns.push(pattern);
+    const has8to10 = has8to10Relationship(network);
+    const has12to10 = has12to10Relationship(network);
+
+    // If neither relationship exists, skip
+    if (!has8to10 && !has12to10) {
+      continue;
     }
 
-    // Check for 12↔10 relationship
-    if (has12to10Relationship(network)) {
+    // If both relationships exist, emit one composite pattern
+    if (has8to10 && has12to10) {
+      const pattern = buildCompositeDusthanaPattern(network);
+      patterns.push(pattern);
+    } else if (has8to10) {
+      const pattern = buildDusthanaPattern(network, 8);
+      patterns.push(pattern);
+    } else if (has12to10) {
       const pattern = buildDusthanaPattern(network, 12);
       patterns.push(pattern);
     }
@@ -240,4 +198,64 @@ export function detectDusthanaPatterns(
 
   // Sort by identityKey for deterministic output
   return patterns.sort((a, b) => a.identityKey.localeCompare(b.identityKey));
+}
+
+/**
+ * Builds a composite dusthana pattern for networks with both 8↔10 and 12↔10 relationships.
+ * Mechanisms are the union of both mechanism sets.
+ */
+function buildCompositeDusthanaPattern(network: CareerHouseNetwork): CareerPattern {
+  const family = 'DUSTHANA_TRANSFORMATION';
+  const classification = 'DUSTHANA_CAREER_TRANSFORMATION';
+  const topology = network.topology;
+  const direction = network.direction;
+
+  const identityKey = buildCareerPatternIdentityKey(
+    family,
+    classification,
+    network.houses,
+    topology,
+    network.relationships.map(r => r.identityKey)
+  );
+
+  const patternId = buildCareerPatternId(identityKey);
+  const name = 'Dusthana Career Transformation (Composite)';
+
+  // Union of both mechanism sets
+  const mechanisms = [...new Set([...MECHANISMS_8_TO_10, ...MECHANISMS_12_TO_10])].sort();
+
+  const relationshipIds = network.relationships.map(r => r.identityKey).sort();
+
+  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze([{
+    evidenceId: `P2-06B-EVIDENCE:DUSTHANA_COMPOSITE_8_12_TO_10:${network.identityKey}`,
+    ruleId: 'RULE_DUSTHANA_COMPOSITE_8_12_TO_10',
+    sourceNetworkId: network.networkId,
+    sourceNetworkIdentityKey: network.identityKey
+  }]);
+
+  const provenance: CareerPatternClassificationProvenance = {
+    sourceNetworkIds: [network.networkId],
+    relationshipIds,
+    ruleIds: ['RULE_DUSTHANA_COMPOSITE_8_12_TO_10']
+  };
+
+  return Object.freeze({
+    patternId,
+    identityKey,
+    family,
+    level: 'HOUSE_NETWORK',
+    classification,
+    name,
+    topology,
+    direction,
+    houses: network.houses,
+    houseRoles: DUSTHANA_HOUSE_ROLES,
+    planets: network.lords,
+    networkIds: [network.networkId],
+    relationshipIds,
+    mechanisms,
+    relationships: [],
+    evidence,
+    provenance
+  });
 }

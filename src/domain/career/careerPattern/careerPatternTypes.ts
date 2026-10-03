@@ -251,6 +251,9 @@ export interface CareerPatternEvidence {
  * Result of pattern analysis.
  * Per spec §23: contains patterns, evidence, relationships, mechanisms, conflicts, and provenance.
  * Sorted deterministically by family then identityKey.
+ *
+ * NOTE: relationships field is retained for type compatibility but is always empty in this wave.
+ * Future enhancement would implement SUPPORTS/REINFORCES/MODIFIES relationship detection.
  */
 export interface CareerPatternAnalysis {
   readonly patterns: readonly CareerPattern[];

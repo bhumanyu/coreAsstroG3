@@ -176,57 +176,20 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
 }
 
 /**
- * Classifies Kendra-Trikona sub-types.
- * Per spec §9: DHARMA_KARMA_ALIGNMENT for 9↔10, AUTHORITY_PATTERN for kendraHouse=10, else PROFESSIONAL_RISE_PATTERN.
- */
-export function classifyKendraTrikona(
-  network: CareerHouseNetwork
-): { ruleId: string; classification: string } | null {
-  const houses = network.houses;
-  const houseSet = new Set(houses);
-
-  // 9↔10 → DHARMA_KARMA_ALIGNMENT
-  if (houseSet.has(9) && houseSet.has(10)) {
-    return {
-      ruleId: 'RULE_KENDRA_TRIKONA_DHARMA_KARMA',
-      classification: 'DHARMA_KARMA_ALIGNMENT'
-    };
-  }
-
-  // Kendra house is 10 → AUTHORITY_PATTERN
-  const kendraHouses = [1, 4, 7, 10];
-  if (houseSet.has(10) && kendraHouses.some(h => houseSet.has(h))) {
-    return {
-      ruleId: 'RULE_KENDRA_TRIKONA_AUTHORITY',
-      classification: 'AUTHORITY_PATTERN'
-    };
-  }
-
-  // Default: PROFESSIONAL_RISE_PATTERN
-  return {
-    ruleId: 'RULE_KENDRA_TRIKONA_RISE',
-    classification: 'PROFESSIONAL_RISE_PATTERN'
-  };
-}
-
-/**
  * Classifies a 5-9-10 network as CREATIVE_DHARMA_TO_PROFESSION.
  * NOT Raja Yoga - no lordship/functional info yet.
- * Per spec §9: enhanced with classifyKendraTrikona sub-types.
+ * NOTE: Kendra-Trikona verification with real lord relationships is handled by
+ * the dedicated kendraTrikonaDetector.ts (P2-06D). This remains a structural carrier.
  */
 export function classifyFiveNineTen(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
   if (sortedHouses.join(',') === '5,9,10') {
-    const kendraTrikonaType = classifyKendraTrikona(network);
-
     return [{
-      ruleId: kendraTrikonaType?.ruleId || 'RULE_5_9_10',
-      classification: kendraTrikonaType?.classification === 'DHARMA_KARMA_ALIGNMENT'
-        ? 'DHARMA_KARMA_ALIGNMENT'
-        : 'CREATIVE_DHARMA_TO_PROFESSION',
-      family: 'KENDRA_TRIKONA',
+      ruleId: 'RULE_5_9_10',
+      classification: 'CREATIVE_DHARMA_TO_PROFESSION',
+      family: 'CAREER_HOUSE_NETWORK',
       houseRoles: HOUSE_ROLES_5_9_10
     }];
   }
@@ -235,8 +198,9 @@ export function classifyFiveNineTen(network: CareerHouseNetwork): readonly Caree
 }
 
 /**
- * Classifies a 9-10 network as DHARMA_KARMA_ALIGNMENT.
- * Per spec §9: Kendra-Trikona sub-type for 9↔10.
+ * Classifies a 9-10 network as CAREER_HOUSE_NETWORK (structural carrier).
+ * NOTE: Kendra-Trikona verification with real lord relationships is handled by
+ * the dedicated kendraTrikonaDetector.ts (P2-06D). This remains a structural carrier.
  */
 export function classifyNineTen(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
@@ -244,9 +208,9 @@ export function classifyNineTen(network: CareerHouseNetwork): readonly CareerPat
 
   if (sortedHouses.join(',') === '9,10') {
     return [{
-      ruleId: 'RULE_9_10_DHARMA_KARMA',
-      classification: 'DHARMA_KARMA_ALIGNMENT',
-      family: 'KENDRA_TRIKONA',
+      ruleId: 'RULE_9_10',
+      classification: 'CAREER_HOUSE_NETWORK',
+      family: 'CAREER_HOUSE_NETWORK',
       houseRoles: Object.freeze({
         9: 'DHARMA_HOUSE',
         10: 'CAREER_HOUSE'
