@@ -90,23 +90,23 @@ export function buildCareerDispositorStartsFromStructural(
   const careerLordPlanets: Planet[] = [];
   const careerHouseOccupants: Planet[] = [];
 
-  // Extract career lord planets from evidence
+  // Extract career lord planets from houseAnalysis
   // Lords of Career houses via CAREER_LORD_START_HOUSES
-  if (horoscope.bhavas) {
+  if (horoscope.houseAnalysis?.houses) {
     for (const house of CAREER_LORD_START_HOUSES) {
-      const bhava = horoscope.bhavas[house];
-      if (bhava?.lord) {
-        careerLordPlanets.push(bhava.lord);
+      const houseAnalysis = horoscope.houseAnalysis.houses[house];
+      if (houseAnalysis?.lord) {
+        careerLordPlanets.push(houseAnalysis.lord);
       }
     }
   }
 
   // Extract career house occupants via isCareerHouse
-  if (horoscope.bhavas) {
-    for (const [houseNum, bhava] of Object.entries(horoscope.bhavas)) {
+  if (horoscope.houseAnalysis?.houses) {
+    for (const [houseNum, houseAnalysis] of Object.entries(horoscope.houseAnalysis.houses)) {
       const house = parseInt(houseNum, 10);
-      if (isCareerHouse(house) && bhava.occupants) {
-        for (const occupant of bhava.occupants) {
+      if (isCareerHouse(house) && houseAnalysis.occupants) {
+        for (const occupant of houseAnalysis.occupants) {
           careerHouseOccupants.push(occupant);
         }
       }
@@ -140,10 +140,10 @@ export function buildCareerDispositorStartsFromStructural(
 
       // For CAREER_HOUSE_OCCUPANT: match evidence where the planet is in a career house
       if (start.role === 'CAREER_HOUSE_OCCUPANT') {
-        if (rel.lordA === start.planet && isCareerHouse(rel.lordAHouse)) {
+        if (rel.lordA === start.planet && rel.lordAHouse !== undefined && isCareerHouse(rel.lordAHouse)) {
           sourceIds.push(evidence.id);
         }
-        if (rel.lordB === start.planet && isCareerHouse(rel.lordBHouse)) {
+        if (rel.lordB === start.planet && rel.lordBHouse !== undefined && isCareerHouse(rel.lordBHouse)) {
           sourceIds.push(evidence.id);
         }
       }
@@ -187,10 +187,10 @@ function buildCareerDispositorChain(
       const terminalHouse = terminalFact.position?.house;
 
       // Check if terminal is a career lord
-      if (horoscope.bhavas) {
+      if (horoscope.houseAnalysis?.houses) {
         for (const house of CAREER_LORD_START_HOUSES) {
-          const bhava = horoscope.bhavas[house];
-          if (bhava?.lord === terminalPlanet) {
+          const houseAnalysis = horoscope.houseAnalysis.houses[house];
+          if (houseAnalysis?.lord === terminalPlanet) {
             isCareerLord = true;
             break;
           }

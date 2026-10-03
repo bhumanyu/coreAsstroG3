@@ -93,28 +93,25 @@ export function traverseDispositorChain(
     const fact = horoscope.planetFacts[currentPlanet];
 
     if (!fact) {
-      // Missing planet fact - terminate
-      terminalPlanet = undefined;
+      // Missing planet fact - terminate with undefined terminalPlanet
       break;
     }
 
     const sign = readPlanetSign(fact);
 
     if (!sign) {
-      // Missing sign - terminate
-      terminalPlanet = undefined;
+      // Missing sign - terminate with undefined terminalPlanet
       break;
     }
 
     const ruler = getSignRuler(sign);
 
     if (!ruler) {
-      // Missing ruler - terminate
-      terminalPlanet = undefined;
+      // Missing ruler - terminate with undefined terminalPlanet
       break;
     }
 
-    // Check for self-dispositor
+    // Check for self-dispositor - only this path may set terminalPlanet
     if (ruler === currentPlanet) {
       // Self-dispositor is NOT a cycle
       terminalPlanet = currentPlanet;
@@ -125,7 +122,6 @@ export function traverseDispositorChain(
     if (visited.has(ruler)) {
       // Cycle detected - terminalPlanet is undefined per spec §18
       cycleStartPlanet = ruler;
-      terminalPlanet = undefined;
       break;
     }
 
@@ -145,18 +141,13 @@ export function traverseDispositorChain(
     visited.add(ruler);
     currentPlanet = ruler;
 
-    // If ruler's fact is missing, terminate after adding the link
+    // If ruler's fact is missing, terminate after adding the link with undefined terminalPlanet
     if (!rulerFact) {
-      terminalPlanet = undefined;
       break;
     }
   }
 
-  // If we exited due to depth limit without finding a terminal
-  // Set terminalPlanet to the last planet in the chain (which is currentPlanet)
-  if (terminalPlanet === undefined && cycleStartPlanet === undefined) {
-    terminalPlanet = currentPlanet;
-  }
+  // Depth limit exhaustion: terminalPlanet remains undefined (no fallback)
 
   // depth = number of dispositor transitions (links.length), not planet count
   const depth = links.length;

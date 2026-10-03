@@ -21,11 +21,11 @@ const MOCK_FULL_NATAL_ANALYSIS = Object.freeze({
   planets: {}
 } as any);
 
-function createMockHoroscope(planetFacts: any, bhavas?: any): any {
+function createMockHoroscope(planetFacts: any, houseAnalysis?: any): any {
   return {
     birthDetails: MOCK_BIRTH_DETAILS,
     planetFacts,
-    bhavas,
+    houseAnalysis,
     fullNatalAnalysis: MOCK_FULL_NATAL_ANALYSIS
   };
 }
@@ -384,18 +384,20 @@ describe('CareerDispositor', () => {
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           }
         },
-        bhavas: {
-          10: {
-            house: 10,
-            sign: Sign.SCORPIO,
-            lord: Planet.MARS,
-            occupants: [Planet.MARS]
-          },
-          11: {
-            house: 11,
-            sign: Sign.CAPRICORN,
-            lord: Planet.SATURN,
-            occupants: [Planet.SATURN]
+        houseAnalysis: {
+          houses: {
+            10: {
+              house: 10,
+              sign: Sign.SCORPIO,
+              lord: Planet.MARS,
+              occupants: [Planet.MARS]
+            },
+            11: {
+              house: 11,
+              sign: Sign.CAPRICORN,
+              lord: Planet.SATURN,
+              occupants: [Planet.SATURN]
+            }
           }
         }
       });
@@ -449,12 +451,14 @@ describe('CareerDispositor', () => {
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           }
         },
-        bhavas: {
-          10: {
-            house: 10,
-            sign: Sign.TAURUS,
-            lord: Planet.VENUS,
-            occupants: []
+        houseAnalysis: {
+          houses: {
+            10: {
+              house: 10,
+              sign: Sign.TAURUS,
+              lord: Planet.VENUS,
+              occupants: []
+            }
           }
         }
       });
@@ -509,18 +513,20 @@ describe('CareerDispositor', () => {
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           }
         },
-        bhavas: {
-          8: {
-            house: 8,
-            sign: Sign.SCORPIO,
-            lord: Planet.MARS,
-            occupants: [Planet.MERCURY]
-          },
-          12: {
-            house: 12,
-            sign: Sign.GEMINI,
-            lord: Planet.MERCURY,
-            occupants: [Planet.MARS]
+        houseAnalysis: {
+          houses: {
+            8: {
+              house: 8,
+              sign: Sign.SCORPIO,
+              lord: Planet.MARS,
+              occupants: [Planet.MERCURY]
+            },
+            12: {
+              house: 12,
+              sign: Sign.GEMINI,
+              lord: Planet.MERCURY,
+              occupants: [Planet.MARS]
+            }
           }
         }
       });
@@ -561,12 +567,14 @@ describe('CareerDispositor', () => {
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           }
         },
-        bhavas: {
-          6: {
-            house: 6,
-            sign: Sign.VIRGO,
-            lord: Planet.MERCURY,
-            occupants: [Planet.MERCURY]
+        houseAnalysis: {
+          houses: {
+            6: {
+              house: 6,
+              sign: Sign.VIRGO,
+              lord: Planet.MERCURY,
+              occupants: [Planet.MERCURY]
+            }
           }
         }
       });
@@ -718,7 +726,7 @@ describe('CareerDispositor', () => {
       expect(result.terminalPlanet).toBeUndefined();
     });
 
-    it('target planet fact missing → terminate with current planet', () => {
+    it('target planet fact missing → terminate with undefined terminalPlanet (no fabrication)', () => {
       const horoscope = createMockHoroscope({
         planetFacts: {
           [Planet.MARS]: {
@@ -742,8 +750,8 @@ describe('CareerDispositor', () => {
       const result = traverseDispositorChain(horoscope, Planet.MARS);
 
       // Mars in Taurus -> Venus (ruler of Taurus)
-      // Venus fact is missing, so chain terminates with Mars as terminal
-      expect(result.terminalPlanet).toBe(Planet.MARS);
+      // Venus fact is missing, so chain terminates with undefined terminalPlanet (no fabrication)
+      expect(result.terminalPlanet).toBeUndefined();
       expect(result.links).toHaveLength(0); // No link created because ruler fact is missing
     });
 
@@ -791,6 +799,204 @@ describe('CareerDispositor', () => {
       expect(result.links[0].targetSign).toBe(Sign.LEO); // Venus fact exists
       expect(result.links[1].sourceSign).toBe(Sign.LEO);
       expect(result.links[1].targetSign).toBeUndefined(); // Sun fact missing - no fabrication
+      expect(result.terminalPlanet).toBeUndefined(); // No fabrication of terminalPlanet
+    });
+
+    it('missing planetFact mid-chain → UNAVAILABLE (no fabrication)', () => {
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.VENUS]: {
+            planet: Planet.VENUS,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 180,
+              sign: Sign.LEO,
+              house: 5,
+              signLongitude: 180,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.LEO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+          // Sun fact is missing (mid-chain)
+        }
+      });
+
+      const result = traverseDispositorChain(horoscope, Planet.MARS);
+
+      // Mars -> Venus -> Sun (missing)
+      expect(result.terminalPlanet).toBeUndefined();
+      expect(result.links).toHaveLength(2);
+    });
+
+    it('missing sign mid-chain → UNAVAILABLE (no fabrication)', () => {
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.VENUS]: {
+            planet: Planet.VENUS,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 180,
+              sign: undefined as any,
+              house: 5,
+              signLongitude: 180,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: undefined as any,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+        }
+      });
+
+      const result = traverseDispositorChain(horoscope, Planet.MARS);
+
+      // Mars -> Venus (missing sign)
+      expect(result.terminalPlanet).toBeUndefined();
+      expect(result.links).toHaveLength(1);
+    });
+
+    it('depth exhaustion (MAX_DISPOSITOR_DEPTH) → UNAVAILABLE (no fabrication)', () => {
+      // Create a long chain that will hit MAX_DISPOSITOR_DEPTH
+      // Mars -> Venus -> Saturn -> Mercury -> Jupiter -> Sun -> Moon -> (depth limit)
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.VENUS]: {
+            planet: Planet.VENUS,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 240,
+              sign: Sign.SAGITTARIUS,
+              house: 9,
+              signLongitude: 240,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.SAGITTARIUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.JUPITER]: {
+            planet: Planet.JUPITER,
+            position: {
+              planet: Planet.JUPITER,
+              longitude: 60,
+              sign: Sign.GEMINI,
+              house: 3,
+              signLongitude: 60,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.GEMINI,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.MERCURY]: {
+            planet: Planet.MERCURY,
+            position: {
+              planet: Planet.MERCURY,
+              longitude: 270,
+              sign: Sign.CAPRICORN,
+              house: 10,
+              signLongitude: 270,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.CAPRICORN,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.SATURN]: {
+            planet: Planet.SATURN,
+            position: {
+              planet: Planet.SATURN,
+              longitude: 120,
+              sign: Sign.LEO,
+              house: 5,
+              signLongitude: 120,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.LEO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.SUN]: {
+            planet: Planet.SUN,
+            position: {
+              planet: Planet.SUN,
+              longitude: 150,
+              sign: Sign.VIRGO,
+              house: 6,
+              signLongitude: 150,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.VIRGO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.MOON]: {
+            planet: Planet.MOON,
+            position: {
+              planet: Planet.MOON,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+        }
+      });
+
+      const result = traverseDispositorChain(horoscope, Planet.MARS);
+
+      // Chain hits depth limit without finding a terminal
+      // terminalPlanet should remain undefined (no fabrication)
+      expect(result.terminalPlanet).toBeUndefined();
+      expect(result.cycleStartPlanet).toBeUndefined();
     });
   });
 
@@ -975,12 +1181,14 @@ describe('CareerDispositor', () => {
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           }
         },
-        bhavas: {
-          10: {
-            house: 10,
-            sign: Sign.TAURUS,
-            lord: Planet.VENUS,
-            occupants: []
+        houseAnalysis: {
+          houses: {
+            10: {
+              house: 10,
+              sign: Sign.TAURUS,
+              lord: Planet.VENUS,
+              occupants: []
+            }
           }
         }
       });
@@ -1034,12 +1242,14 @@ describe('CareerDispositor', () => {
             state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
           }
         },
-        bhavas: {
-          10: {
-            house: 10,
-            sign: Sign.TAURUS,
-            lord: Planet.VENUS,
-            occupants: []
+        houseAnalysis: {
+          houses: {
+            10: {
+              house: 10,
+              sign: Sign.TAURUS,
+              lord: Planet.VENUS,
+              occupants: []
+            }
           }
         }
       });
@@ -1064,37 +1274,16 @@ describe('CareerDispositor', () => {
 
   describe('Test Group P: Real-engine + golden test', () => {
     it('real-engine golden test closure', async () => {
-      // Helper to build bhavas from houseAnalysis (needed for dispositor integration)
-      const buildBhavas = (horoscope: any) => {
-        const bhavas: Record<number, any> = {};
-        if (horoscope.houseAnalysis?.houses) {
-          for (const [houseNum, houseAnalysis] of Object.entries(horoscope.houseAnalysis.houses)) {
-            const house = parseInt(houseNum, 10);
-            bhavas[house] = {
-              house,
-              sign: houseAnalysis.sign,
-              lord: houseAnalysis.lord,
-              occupants: houseAnalysis.occupants
-            };
-          }
-        }
-        return bhavas;
-      };
-
       // First verify determinism by running the chain twice
       const horoscope1 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const bhavas1 = buildBhavas(horoscope1);
-      const horoscopeWithBhavas1 = { ...horoscope1, bhavas: bhavas1 };
-      const structural1 = buildCareerStructuralReasoning({ horoscope: horoscopeWithBhavas1 });
-      const starts1 = buildCareerDispositorStartsFromStructural(horoscopeWithBhavas1, structural1);
-      const result1 = buildCareerDispositorAnalysis({ horoscope: horoscopeWithBhavas1, starts: starts1 });
+      const structural1 = buildCareerStructuralReasoning({ horoscope: horoscope1 });
+      const starts1 = buildCareerDispositorStartsFromStructural(horoscope1, structural1);
+      const result1 = buildCareerDispositorAnalysis({ horoscope: horoscope1, starts: starts1 });
 
       const horoscope2 = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const bhavas2 = buildBhavas(horoscope2);
-      const horoscopeWithBhavas2 = { ...horoscope2, bhavas: bhavas2 };
-      const structural2 = buildCareerStructuralReasoning({ horoscope: horoscopeWithBhavas2 });
-      const starts2 = buildCareerDispositorStartsFromStructural(horoscopeWithBhavas2, structural2);
-      const result2 = buildCareerDispositorAnalysis({ horoscope: horoscopeWithBhavas2, starts: starts2 });
+      const structural2 = buildCareerStructuralReasoning({ horoscope: horoscope2 });
+      const starts2 = buildCareerDispositorStartsFromStructural(horoscope2, structural2);
+      const result2 = buildCareerDispositorAnalysis({ horoscope: horoscope2, starts: starts2 });
 
       // Assert determinism: both runs must produce identical output
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
@@ -1116,55 +1305,63 @@ describe('CareerDispositor', () => {
       // IMPLEMENTED — VERIFICATION PENDING
       expect(result1.chains).toHaveLength(5);
 
-      // Chain 1: SUN (CAREER_HOUSE_OCCUPANT)
-      expect(result1.chains[0].startPlanet).toBe(Planet.SUN);
-      expect(result1.chains[0].startRole).toBe('CAREER_HOUSE_OCCUPANT');
-      expect(result1.chains[0].identityKey).toBe('CAREER_DISPOSITOR:CAREER_HOUSE_OCCUPANT:SUN:SUN>MARS>SATURN>JUPITER:CYCLE:Y:MUTUAL:N');
-      expect(result1.chains[0].termination).toBe('CYCLE');
-      expect(result1.chains[0].destination).toBe('UNAVAILABLE');
-      expect(result1.chains[0].cycleStartPlanet).toBe(Planet.MARS);
-      expect(result1.chains[0].mutualReception).toBe(false);
-      expect(result1.chains[0].depth).toBe(3);
+      // Build identity-keyed map for deterministic assertions
+      const chainMap = new Map(result1.chains.map(chain => [chain.identityKey, chain]));
 
-      // Chain 2: JUPITER (CAREER_LORD)
-      expect(result1.chains[1].startPlanet).toBe(Planet.JUPITER);
-      expect(result1.chains[1].startRole).toBe('CAREER_LORD');
-      expect(result1.chains[1].identityKey).toBe('CAREER_DISPOSITOR:CAREER_LORD:JUPITER:JUPITER>MARS>SATURN:CYCLE:Y:MUTUAL:N');
-      expect(result1.chains[1].termination).toBe('CYCLE');
-      expect(result1.chains[1].destination).toBe('UNAVAILABLE');
-      expect(result1.chains[1].cycleStartPlanet).toBe(Planet.JUPITER);
-      expect(result1.chains[1].mutualReception).toBe(false);
-      expect(result1.chains[1].depth).toBe(2);
+      // Chain: SUN (CAREER_HOUSE_OCCUPANT)
+      const sunChain = chainMap.get('CAREER_DISPOSITOR:CAREER_HOUSE_OCCUPANT:SUN:SUN>MARS>SATURN>JUPITER:CYCLE:Y:MUTUAL:N');
+      expect(sunChain).toBeDefined();
+      expect(sunChain!.startPlanet).toBe(Planet.SUN);
+      expect(sunChain!.startRole).toBe('CAREER_HOUSE_OCCUPANT');
+      expect(sunChain!.termination).toBe('CYCLE');
+      expect(sunChain!.destination).toBe('UNAVAILABLE');
+      expect(sunChain!.cycleStartPlanet).toBe(Planet.MARS);
+      expect(sunChain!.mutualReception).toBe(false);
+      expect(sunChain!.depth).toBe(3);
 
-      // Chain 3: MARS (CAREER_LORD)
-      expect(result1.chains[2].startPlanet).toBe(Planet.MARS);
-      expect(result1.chains[2].startRole).toBe('CAREER_LORD');
-      expect(result1.chains[2].identityKey).toBe('CAREER_DISPOSITOR:CAREER_LORD:MARS:MARS>SATURN>JUPITER:CYCLE:Y:MUTUAL:N');
-      expect(result1.chains[2].termination).toBe('CYCLE');
-      expect(result1.chains[2].destination).toBe('UNAVAILABLE');
-      expect(result1.chains[2].cycleStartPlanet).toBe(Planet.MARS);
-      expect(result1.chains[2].mutualReception).toBe(false);
-      expect(result1.chains[2].depth).toBe(2);
+      // Chain: JUPITER (CAREER_LORD)
+      const jupiterChain = chainMap.get('CAREER_DISPOSITOR:CAREER_LORD:JUPITER:JUPITER>MARS>SATURN:CYCLE:Y:MUTUAL:N');
+      expect(jupiterChain).toBeDefined();
+      expect(jupiterChain!.startPlanet).toBe(Planet.JUPITER);
+      expect(jupiterChain!.startRole).toBe('CAREER_LORD');
+      expect(jupiterChain!.termination).toBe('CYCLE');
+      expect(jupiterChain!.destination).toBe('UNAVAILABLE');
+      expect(jupiterChain!.cycleStartPlanet).toBe(Planet.JUPITER);
+      expect(jupiterChain!.mutualReception).toBe(false);
+      expect(jupiterChain!.depth).toBe(2);
 
-      // Chain 4: SATURN (CAREER_LORD)
-      expect(result1.chains[3].startPlanet).toBe(Planet.SATURN);
-      expect(result1.chains[3].startRole).toBe('CAREER_LORD');
-      expect(result1.chains[3].identityKey).toBe('CAREER_DISPOSITOR:CAREER_LORD:SATURN:SATURN>JUPITER>MARS:CYCLE:Y:MUTUAL:N');
-      expect(result1.chains[3].termination).toBe('CYCLE');
-      expect(result1.chains[3].destination).toBe('UNAVAILABLE');
-      expect(result1.chains[3].cycleStartPlanet).toBe(Planet.SATURN);
-      expect(result1.chains[3].mutualReception).toBe(false);
-      expect(result1.chains[3].depth).toBe(2);
+      // Chain: MARS (CAREER_LORD)
+      const marsChain = chainMap.get('CAREER_DISPOSITOR:CAREER_LORD:MARS:MARS>SATURN>JUPITER:CYCLE:Y:MUTUAL:N');
+      expect(marsChain).toBeDefined();
+      expect(marsChain!.startPlanet).toBe(Planet.MARS);
+      expect(marsChain!.startRole).toBe('CAREER_LORD');
+      expect(marsChain!.termination).toBe('CYCLE');
+      expect(marsChain!.destination).toBe('UNAVAILABLE');
+      expect(marsChain!.cycleStartPlanet).toBe(Planet.MARS);
+      expect(marsChain!.mutualReception).toBe(false);
+      expect(marsChain!.depth).toBe(2);
 
-      // Chain 5: VENUS (CAREER_LORD)
-      expect(result1.chains[4].startPlanet).toBe(Planet.VENUS);
-      expect(result1.chains[4].startRole).toBe('CAREER_LORD');
-      expect(result1.chains[4].identityKey).toBe('CAREER_DISPOSITOR:CAREER_LORD:VENUS:VENUS>MERCURY:CYCLE:Y:MUTUAL:Y');
-      expect(result1.chains[4].termination).toBe('MUTUAL_RECEPTION');
-      expect(result1.chains[4].destination).toBe('UNAVAILABLE');
-      expect(result1.chains[4].cycleStartPlanet).toBe(Planet.VENUS);
-      expect(result1.chains[4].mutualReception).toBe(true);
-      expect(result1.chains[4].depth).toBe(1);
+      // Chain: SATURN (CAREER_LORD)
+      const saturnChain = chainMap.get('CAREER_DISPOSITOR:CAREER_LORD:SATURN:SATURN>JUPITER>MARS:CYCLE:Y:MUTUAL:N');
+      expect(saturnChain).toBeDefined();
+      expect(saturnChain!.startPlanet).toBe(Planet.SATURN);
+      expect(saturnChain!.startRole).toBe('CAREER_LORD');
+      expect(saturnChain!.termination).toBe('CYCLE');
+      expect(saturnChain!.destination).toBe('UNAVAILABLE');
+      expect(saturnChain!.cycleStartPlanet).toBe(Planet.SATURN);
+      expect(saturnChain!.mutualReception).toBe(false);
+      expect(saturnChain!.depth).toBe(2);
+
+      // Chain: VENUS (CAREER_LORD)
+      const venusChain = chainMap.get('CAREER_DISPOSITOR:CAREER_LORD:VENUS:VENUS>MERCURY:CYCLE:Y:MUTUAL:Y');
+      expect(venusChain).toBeDefined();
+      expect(venusChain!.startPlanet).toBe(Planet.VENUS);
+      expect(venusChain!.startRole).toBe('CAREER_LORD');
+      expect(venusChain!.termination).toBe('MUTUAL_RECEPTION');
+      expect(venusChain!.destination).toBe('UNAVAILABLE');
+      expect(venusChain!.cycleStartPlanet).toBe(Planet.VENUS);
+      expect(venusChain!.mutualReception).toBe(true);
+      expect(venusChain!.depth).toBe(1);
 
       // Additional structural validation
       for (const chain of result1.chains) {
@@ -1178,5 +1375,71 @@ describe('CareerDispositor', () => {
       // The golden expectations are frozen as literal constants above
       // Future changes that break determinism or produce different chains will fail this test
     });
+
+    it('missing-target integration assertion (mid-chain planet fact absent)', () => {
+      const horoscope = createMockHoroscope({
+        planetFacts: {
+          [Planet.MARS]: {
+            planet: Planet.MARS,
+            position: {
+              planet: Planet.MARS,
+              longitude: 30,
+              sign: Sign.TAURUS,
+              house: 2,
+              signLongitude: 30,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.TAURUS,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          },
+          [Planet.VENUS]: {
+            planet: Planet.VENUS,
+            position: {
+              planet: Planet.VENUS,
+              longitude: 180,
+              sign: Sign.LEO,
+              house: 5,
+              signLongitude: 180,
+              motion: { speed: 0, retrograde: false, stationary: false }
+            },
+            sign: Sign.LEO,
+            dignity: { status: 'NEUTRAL' as any },
+            state: { condition: 'NORMAL' as any, motion: { speed: 0, retrograde: false, stationary: false } }
+          }
+          // Sun fact is missing (mid-chain)
+        },
+        houseAnalysis: {
+          houses: {
+            10: {
+              house: 10,
+              sign: Sign.TAURUS,
+              lord: Planet.VENUS,
+              occupants: []
+            }
+          }
+        }
+      });
+
+      const starts: readonly CareerDispositorStart[] = Object.freeze([
+        {
+          planet: Planet.VENUS,
+          role: 'CAREER_LORD',
+          sourceIds: []
+        }
+      ]);
+
+      const result = buildCareerDispositorAnalysis({ horoscope: horoscope as Horoscope, starts });
+
+      expect(result.chains).toHaveLength(1);
+      // Venus in Leo -> Sun (ruler of Leo) - Sun fact missing
+      // Should have UNAVAILABLE termination/destination with no fabricated terminalPlanet
+      expect(result.chains[0].termination).toBe('UNAVAILABLE');
+      expect(result.chains[0].destination).toBe('UNAVAILABLE');
+      expect(result.chains[0].terminalPlanet).toBeUndefined();
+      expect(result.chains[0].links).toHaveLength(1);
+      expect(result.chains[0].links[0].targetSign).toBeUndefined(); // No fabrication
+    });
   });
+});
 });
