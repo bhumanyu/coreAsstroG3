@@ -41,6 +41,16 @@ export interface CareerNetworkDetectionResult {
 export type CareerHouseConnectionKind = 'DIRECT' | 'SHARED_PARTICIPANT';
 
 /**
+ * Internal type representing a directed connection between two houses.
+ * Preserves the actual source/target from the original edge.
+ */
+export interface CareerDirectedHouseConnection {
+  readonly sourceHouse: number;
+  readonly targetHouse: number;
+  readonly sourceEdgeIds: readonly string[];
+}
+
+/**
  * Internal type representing a connection between two houses.
  * Exported for use in detection rules module.
  */
@@ -50,4 +60,5 @@ export interface CareerHouseConnection {
   readonly kind: CareerHouseConnectionKind;
   readonly sourceEdgeIds: readonly string[];
   readonly participantNodeIds: readonly string[];
+  readonly directedConnections: readonly CareerDirectedHouseConnection[];
 }

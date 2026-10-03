@@ -1,8 +1,9 @@
 # P2-02 — Career House Networks
 
-> **STATUS: IMPLEMENTED**
+> **STATUS: IMPLEMENTED — VERIFICATION PENDING**
 >
 > Network detection layer implemented as deterministic adapter-only system.
+> Direction resolution and SHARED_PARTICIPANT topology rules now properly defined.
 
 ## Purpose
 
@@ -35,7 +36,8 @@ Pattern Classification (P2-03, future)
 - `CareerNetworkDetectionInput { graph: CareerAstroGraph }`
 - `CareerNetworkDetectionResult { networks: readonly CareerHouseNetwork[] }`
 - Internal `CareerHouseConnectionKind = 'DIRECT' | 'SHARED_PARTICIPANT'`
-- Internal `CareerHouseConnection` with houseA, houseB, kind, sourceEdgeIds, participantNodeIds
+- Internal `CareerDirectedHouseConnection` with sourceHouse, targetHouse, sourceEdgeIds (preserves directed flow)
+- Internal `CareerHouseConnection` with houseA, houseB, kind, sourceEdgeIds, participantNodeIds, directedConnections
 
 **2. Topology Resolution (`careerNetworkDetectionRules.ts`)**
 - `resolveCareerNetworkTopology(houses, adjacency)` with strict precedence
@@ -77,6 +79,41 @@ Pattern Classification (P2-03, future)
 6. **CLUSTER** (fallback for any other configuration)
 
 The TRIANGLE → LOOP precedence is semantically required: a triangle is technically a loop (all nodes have degree 2), but we classify it as TRIANGLE for its special significance.
+
+### SHARED_PARTICIPANT Topology Rule
+
+A component connected purely through one shared participant (pairwise clique of n houses) classifies as **STAR** (participant-mediated hub), NOT TRIANGLE/LOOP.
+
+**Implementation Details:**
+- When computing degree for topology, count only DIRECT connections toward CHAIN/TRIANGLE/LOOP eligibility
+- SHARED_PARTICIPANT-only components resolve to:
+  - **STAR** (single participant connecting all houses)
+  - **CLUSTER** (multiple participants)
+
+This rule ensures that participant-mediated connections are distinguished from direct house-to-house structural connections.
+
+### Direction Resolution Rule
+
+Network direction is resolved from directed house connections with the following deterministic contract:
+
+**Deterministic Contract:**
+- **BIDIRECTIONAL**: if any house pair has directed connections in both directions
+- **FORWARD**: if directed connections flow predominantly from lower-numbered to higher-numbered houses
+- **REVERSE**: if directed connections flow predominantly from higher-numbered to lower-numbered houses
+- For **SHARED_PARTICIPANT-only** connections: direction is derived from participant edge orientation
+  - PLANET→HOUSE edges = FORWARD semantics (flow into house)
+  - HOUSE→PLANET edges = REVERSE semantics (flow from house)
+
+**Golden Tests:**
+- 6→10→11 produces FORWARD
+- 11→10→6 produces REVERSE
+- A two-way pair produces BIDIRECTIONAL
+
+**Implementation Details:**
+- Directed connections are preserved through the house projection layer via `CareerDirectedHouseConnection`
+- Each directed connection records the actual `sourceHouse`/`targetHouse` from the original edge
+- Direction resolution analyzes these directed connections to determine the dominant flow direction
+- The contract is deterministic and order-independent
 
 ### Boundary Enforcement
 
@@ -141,21 +178,24 @@ export {
 
 `careerNetworkDetection.test.ts` covers:
 - DIRECT_LINK (6→10)
-- CHAIN (6→10→11 and 3→6→10→11 golden case)
+- CHAIN (6→10→11 → CLUSTER per SHARED_PARTICIPANT rule)
 - TRIANGLE (5→9→10)
-- LOOP (6→10→11→6 canonical loop)
-- STAR (10 connected to 2,6,11,5)
-- CLUSTER
+- LOOP (6→10→11→6 → CLUSTER per SHARED_PARTICIPANT rule)
+- STAR (single participant connecting multiple houses)
+- CLUSTER (multiple participants)
 - Disconnected components → 2 networks in deterministic order
 - Neutral houses (1,4) excluded from components
 - Input-order independence (JSON equality across input permutations)
+- True permutation tests (permuted fact arrays produce identical output)
 - Duplicate edges → no duplicate networks/relationships
 - Provenance preservation (sourceIds carried through, none invented)
 - evidenceIds unique+sorted
 - Topology precedence (triangle not reported as LOOP)
+- Direction resolution (FORWARD/REVERSE/BIDIRECTIONAL golden tests)
 - Deep immutability of result/networks/relationships/provenance
 - Forbidden-field assertions (no pattern/mechanism/score/confidence/prediction/qualification)
 - Real-engine test: full chain from calculateHoroscope → buildCareerStructuralReasoning → buildCareerGraphFactsFromStructural → buildCareerAstroGraph → detectCareerHouseNetworks
+- Real-engine permutation test (permuted facts produce identical output)
 
 ## Cross-References
 

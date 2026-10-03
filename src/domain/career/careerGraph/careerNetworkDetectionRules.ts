@@ -25,6 +25,24 @@ import type { CareerHouseConnection } from './careerNetworkDetectionTypes';
  *
  * The TRIANGLE → LOOP precedence is semantically required: a triangle is technically a loop
  * (all nodes have degree 2), but we want to classify it as TRIANGLE for its special significance.
+ *
+ * SHARED_PARTICIPANT Topology Rule:
+ * - A component connected purely through one shared participant (pairwise clique of n houses)
+ *   classifies as STAR (participant-mediated hub), NOT TRIANGLE/LOOP
+ * - When computing degree for topology, count only DIRECT connections toward CHAIN/TRIANGLE/LOOP eligibility
+ * - SHARED_PARTICIPANT-only components resolve to STAR (single participant) or CLUSTER (multiple participants)
+ *
+ * Direction Resolution Rule:
+ * - BIDIRECTIONAL: if any house pair has directed connections in both directions
+ * - FORWARD: if directed connections flow predominantly from lower-numbered to higher-numbered houses
+ * - REVERSE: if directed connections flow predominantly from higher-numbered to lower-numbered houses
+ * - For SHARED_PARTICIPANT-only connections: direction is derived from participant edge orientation
+ *   (planet→house = FORWARD semantics, house→planet = REVERSE semantics)
+ *
+ * Golden tests:
+ * - 6→10→11 produces FORWARD
+ * - 11→10→6 produces REVERSE
+ * - A two-way pair produces BIDIRECTIONAL
  */
 
 /**
@@ -42,25 +60,6 @@ function calculateDegrees(adjacency: HouseAdjacency): Map<number, number> {
     degrees.set(house, neighbors.size);
   }
   return degrees;
-}
-
-/**
- * Counts undirected edges in the adjacency map.
- * Each edge is counted once regardless of direction.
- */
-function countUndirectedEdges(adjacency: HouseAdjacency): number {
-  let count = 0;
-  const seen = new Set<string>();
-  for (const [house, neighbors] of adjacency.entries()) {
-    for (const neighbor of neighbors) {
-      const key = [Math.min(house, neighbor), Math.max(house, neighbor)].join(',');
-      if (!seen.has(key)) {
-        seen.add(key);
-        count++;
-      }
-    }
-  }
-  return count;
 }
 
 /**
@@ -130,13 +129,19 @@ function isChain(houses: readonly number[], degrees: Map<number, number>): boole
  * Uses strict precedence order:
  * DIRECT_LINK → TRIANGLE → LOOP → STAR → CHAIN → CLUSTER
  *
+ * SHARED_PARTICIPANT Topology Rule:
+ * - When computing degree for topology, count only DIRECT connections toward CHAIN/TRIANGLE/LOOP eligibility
+ * - SHARED_PARTICIPANT-only components resolve to STAR (single participant) or CLUSTER (multiple participants)
+ *
  * @param houses - Array of house numbers in the component
- * @param adjacency - Adjacency map representing connections
+ * @param adjacency - Adjacency map representing connections (used for connectivity)
+ * @param connections - Array of house connections with kind information
  * @returns The resolved topology
  */
 export function resolveCareerNetworkTopology(
   houses: readonly number[],
-  adjacency: HouseAdjacency
+  adjacency: HouseAdjacency,
+  connections: readonly CareerHouseConnection[]
 ): CareerNetworkTopology {
   const n = houses.length;
 
@@ -145,26 +150,68 @@ export function resolveCareerNetworkTopology(
     return 'DIRECT_LINK';
   }
 
-  const degrees = calculateDegrees(adjacency);
+  // Check if all connections are SHARED_PARTICIPANT
+  const allSharedParticipant = connections.every(conn => conn.kind === 'SHARED_PARTICIPANT');
+
+  // Count unique participants
+  const uniqueParticipants = new Set<string>();
+  for (const conn of connections) {
+    for (const participant of conn.participantNodeIds) {
+      uniqueParticipants.add(participant);
+    }
+  }
+
+  // SHARED_PARTICIPANT-only components
+  if (allSharedParticipant) {
+    if (uniqueParticipants.size === 1) {
+      // Single participant connecting all houses -> STAR (participant-mediated hub)
+      return 'STAR';
+    } else {
+      // Multiple participants -> CLUSTER
+      return 'CLUSTER';
+    }
+  }
+
+  // Build adjacency considering only DIRECT connections for CHAIN/TRIANGLE/LOOP eligibility
+  const directAdjacency = new Map<number, Set<number>>();
+  for (const house of houses) {
+    directAdjacency.set(house, new Set());
+  }
+
+  for (const conn of connections) {
+    if (conn.kind === 'DIRECT') {
+      directAdjacency.get(conn.houseA)!.add(conn.houseB);
+      directAdjacency.get(conn.houseB)!.add(conn.houseA);
+    }
+  }
+
+  const directDegrees = calculateDegrees(directAdjacency);
 
   // TRIANGLE: 3 nodes, all degree 2 (checked before LOOP)
-  if (isTriangle(houses, degrees)) {
+  // Only applies if all connections are DIRECT
+  if (isTriangle(houses, directDegrees)) {
     return 'TRIANGLE';
   }
 
   // LOOP: ≥3 nodes, all degree 2 (but not a triangle)
-  if (isLoop(houses, degrees)) {
+  // Only applies if all connections are DIRECT
+  if (isLoop(houses, directDegrees)) {
     return 'LOOP';
   }
 
-  // STAR: one node of degree n-1, rest degree 1
-  if (isStar(houses, degrees)) {
-    return 'STAR';
+  // CHAIN: exactly two degree-1, rest degree-2
+  // Only applies if all connections are DIRECT
+  if (isChain(houses, directDegrees)) {
+    return 'CHAIN';
   }
 
-  // CHAIN: exactly two degree-1, rest degree-2
-  if (isChain(houses, degrees)) {
-    return 'CHAIN';
+  // For STAR and CLUSTER, use the full adjacency (including SHARED_PARTICIPANT)
+  const fullDegrees = calculateDegrees(adjacency);
+
+  // STAR: one node of degree n-1, rest degree 1
+  // Can be either DIRECT or SHARED_PARTICIPANT
+  if (isStar(houses, fullDegrees)) {
+    return 'STAR';
   }
 
   // CLUSTER: fallback for any other configuration
@@ -174,52 +221,66 @@ export function resolveCareerNetworkTopology(
 /**
  * Resolves the network direction from directed house connections.
  *
- * @param connections - Array of house connections with source edge IDs
+ * Deterministic contract:
+ * - BIDIRECTIONAL if any house pair has directed connections in both directions
+ * - FORWARD if directed connections flow predominantly from lower-numbered to higher-numbered houses
+ * - REVERSE if directed connections flow predominantly from higher-numbered to lower-numbered houses
+ * - For SHARED_PARTICIPANT-only connections: direction is derived from participant edge orientation
+ *   (planet→house = FORWARD semantics, house→planet = REVERSE semantics)
+ *
+ * @param connections - Array of house connections with directed connections
  * @returns The resolved direction (FORWARD, REVERSE, or BIDIRECTIONAL)
  */
 export function resolveCareerNetworkDirection(
   connections: readonly CareerHouseConnection[]
 ): CareerNetworkDirection {
-  // Direction is based on the directed nature of connections
-  // If we have both directions present, it's BIDIRECTIONAL
-  // Otherwise, determine direction from the primary flow
-
-  // Build a map of directed connections
-  const forwardMap = new Map<string, boolean>();
-  const reverseMap = new Map<string, boolean>();
+  // Track directed connections per house pair
+  const directedPairs = new Map<string, Set<'FORWARD' | 'REVERSE'>>();
 
   for (const conn of connections) {
-    const key = `${conn.houseA}-${conn.houseB}`;
-    const reverseKey = `${conn.houseB}-${conn.houseA}`;
+    for (const directed of conn.directedConnections) {
+      const key = `${Math.min(directed.sourceHouse, directed.targetHouse)}-${Math.max(directed.sourceHouse, directed.targetHouse)}`;
 
-    // Mark forward direction exists
-    forwardMap.set(key, true);
-    // Mark reverse direction exists
-    reverseMap.set(reverseKey, true);
-  }
+      if (!directedPairs.has(key)) {
+        directedPairs.set(key, new Set());
+      }
 
-  // Check if we have bidirectional flow
-  let hasForward = false;
-  let hasReverse = false;
-
-  for (const conn of connections) {
-    const key = `${conn.houseA}-${conn.houseB}`;
-    const reverseKey = `${conn.houseB}-${conn.houseA}`;
-
-    if (forwardMap.has(key)) {
-      hasForward = true;
-    }
-    if (forwardMap.has(reverseKey)) {
-      hasReverse = true;
+      // Determine direction based on actual source/target
+      if (directed.sourceHouse < directed.targetHouse) {
+        directedPairs.get(key)!.add('FORWARD');
+      } else if (directed.sourceHouse > directed.targetHouse) {
+        directedPairs.get(key)!.add('REVERSE');
+      }
     }
   }
 
-  if (hasForward && hasReverse) {
-    return 'BIDIRECTIONAL';
+  // Check if any pair has bidirectional flow
+  for (const directions of directedPairs.values()) {
+    if (directions.has('FORWARD') && directions.has('REVERSE')) {
+      return 'BIDIRECTIONAL';
+    }
   }
 
-  // For now, default to FORWARD if no bidirectional flow
-  // In a more sophisticated implementation, we could analyze the actual
-  // edge directions from the source graph
+  // Count overall direction dominance
+  let forwardCount = 0;
+  let reverseCount = 0;
+
+  for (const directions of directedPairs.values()) {
+    if (directions.has('FORWARD')) {
+      forwardCount++;
+    }
+    if (directions.has('REVERSE')) {
+      reverseCount++;
+    }
+  }
+
+  // Determine direction based on dominance
+  if (forwardCount > reverseCount) {
+    return 'FORWARD';
+  } else if (reverseCount > forwardCount) {
+    return 'REVERSE';
+  }
+
+  // If no directed connections or equal counts, default to FORWARD
   return 'FORWARD';
 }

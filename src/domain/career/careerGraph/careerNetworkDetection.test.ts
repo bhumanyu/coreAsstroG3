@@ -93,13 +93,10 @@ describe('CareerNetworkDetection', () => {
       const detectionInput: CareerNetworkDetectionInput = { graph };
       const result = detectCareerHouseNetworks(detectionInput);
 
-      // With SHARED_PARTICIPANT, this creates a STAR topology (all 3 houses connect to planets)
-      // For a true CHAIN we need house-to-house connections or different planet distribution
-      // Let's test what we actually get
+      // With SHARED_PARTICIPANT rule: multiple participants (Saturn, Mercury) -> CLUSTER
       expect(result.networks).toHaveLength(1);
       expect(result.networks[0].houses).toEqual([6, 10, 11]);
-      // This will be STAR due to SHARED_PARTICIPANT pattern
-      expect(result.networks[0].topology).toBe('STAR');
+      expect(result.networks[0].topology).toBe('CLUSTER');
     });
 
     it('detects CHAIN for 2→6→10→11 (with 2 included)', () => {
@@ -158,13 +155,53 @@ describe('CareerNetworkDetection', () => {
 
       expect(result.networks).toHaveLength(1);
       expect(result.networks[0].houses).toEqual([2, 6, 10, 11]);
-      // This creates a complex topology
-      expect(['CHAIN', 'CLUSTER', 'STAR']).toContain(result.networks[0].topology);
+      // Multiple participants (Jupiter, Saturn, Mercury) -> CLUSTER
+      expect(result.networks[0].topology).toBe('CLUSTER');
     });
   });
 
   describe('TRIANGLE topology', () => {
-    it('detects TRIANGLE for 2→6→10', () => {
+    it('detects TRIANGLE for 2→6→10 with DIRECT connections', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      // To test TRIANGLE, we need DIRECT house-to-house connections
+      // This simulates a scenario where houses are directly linked
+      const facts: CareerGraphFact[] = [
+        {
+          sourceNode: { type: 'HOUSE', key: '2' },
+          targetNode: { type: 'HOUSE', key: '6' },
+          relationship: 'CONJUNCT',
+          provenance
+        },
+        {
+          sourceNode: { type: 'HOUSE', key: '6' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'CONJUNCT',
+          provenance
+        },
+        {
+          sourceNode: { type: 'HOUSE', key: '10' },
+          targetNode: { type: 'HOUSE', key: '2' },
+          relationship: 'CONJUNCT',
+          provenance
+        }
+      ];
+
+      const input: CareerAstroGraphInput = { facts };
+      const graph = buildCareerAstroGraph(input);
+      const detectionInput: CareerNetworkDetectionInput = { graph };
+      const result = detectCareerHouseNetworks(detectionInput);
+
+      expect(result.networks).toHaveLength(1);
+      expect(result.networks[0].topology).toBe('TRIANGLE');
+      expect(result.networks[0].houses).toEqual([2, 6, 10]);
+    });
+
+    it('detects CLUSTER for 2→6→10 with SHARED_PARTICIPANT', () => {
       const provenance: CareerGraphProvenance = {
         sourceIds: ['evidence-1'],
         ruleIds: [],
@@ -216,7 +253,8 @@ describe('CareerNetworkDetection', () => {
       const result = detectCareerHouseNetworks(detectionInput);
 
       expect(result.networks).toHaveLength(1);
-      expect(result.networks[0].topology).toBe('TRIANGLE');
+      // Multiple participants (Jupiter, Saturn, Mercury) -> CLUSTER
+      expect(result.networks[0].topology).toBe('CLUSTER');
       expect(result.networks[0].houses).toEqual([2, 6, 10]);
     });
   });
@@ -291,13 +329,13 @@ describe('CareerNetworkDetection', () => {
 
       expect(result.networks).toHaveLength(1);
       expect(result.networks[0].houses).toEqual([2, 6, 10, 11]);
-      // With SHARED_PARTICIPANT, this will likely be CLUSTER
-      expect(['LOOP', 'CLUSTER']).toContain(result.networks[0].topology);
+      // Multiple participants (Jupiter, Saturn, Mercury, Venus) -> CLUSTER
+      expect(result.networks[0].topology).toBe('CLUSTER');
     });
   });
 
   describe('STAR topology', () => {
-    it('detects multi-house network (STAR or CLUSTER based on connectivity)', () => {
+    it('detects STAR for single participant connecting multiple houses', () => {
       const provenance: CareerGraphProvenance = {
         sourceIds: ['evidence-1'],
         ruleIds: [],
@@ -344,9 +382,8 @@ describe('CareerNetworkDetection', () => {
 
       expect(result.networks).toHaveLength(1);
       expect(result.networks[0].houses).toEqual([2, 6, 8, 10, 11]);
-      // With SHARED_PARTICIPANT, a single planet connecting all houses creates CLUSTER
-      // A true STAR would require house-to-house connections or different planet distribution
-      expect(['STAR', 'CLUSTER']).toContain(result.networks[0].topology);
+      // Single participant (Saturn) connecting all houses -> STAR
+      expect(result.networks[0].topology).toBe('STAR');
     });
   });
 
@@ -407,6 +444,150 @@ describe('CareerNetworkDetection', () => {
       expect(result.networks).toHaveLength(1);
       // This complex topology should be CLUSTER
       expect(result.networks[0].topology).toBe('CLUSTER');
+    });
+  });
+
+  describe('Direction resolution', () => {
+    it('produces BIDIRECTIONAL for SHARED_PARTICIPANT with PLANET→HOUSE edges', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const facts: CareerGraphFact[] = [
+        // Saturn connects 6 and 10
+        {
+          sourceNode: { type: 'PLANET', key: 'SATURN' },
+          targetNode: { type: 'HOUSE', key: '6' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
+          sourceNode: { type: 'PLANET', key: 'SATURN' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        // Mercury connects 10 and 11
+        {
+          sourceNode: { type: 'PLANET', key: 'MERCURY' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
+          sourceNode: { type: 'PLANET', key: 'MERCURY' },
+          targetNode: { type: 'HOUSE', key: '11' },
+          relationship: 'LORD_OF',
+          provenance
+        }
+      ];
+
+      const input: CareerAstroGraphInput = { facts };
+      const graph = buildCareerAstroGraph(input);
+      const detectionInput: CareerNetworkDetectionInput = { graph };
+      const result = detectCareerHouseNetworks(detectionInput);
+
+      expect(result.networks).toHaveLength(1);
+      // With SHARED_PARTICIPANT and PLANET→HOUSE edges, this is BIDIRECTIONAL
+      expect(result.networks[0].direction).toBe('BIDIRECTIONAL');
+    });
+
+    it('produces FORWARD for DIRECT house-to-house connections 6→10→11', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const facts: CareerGraphFact[] = [
+        // DIRECT connections: 6→10, 10→11
+        {
+          sourceNode: { type: 'HOUSE', key: '6' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'CONJUNCT',
+          provenance
+        },
+        {
+          sourceNode: { type: 'HOUSE', key: '10' },
+          targetNode: { type: 'HOUSE', key: '11' },
+          relationship: 'CONJUNCT',
+          provenance
+        }
+      ];
+
+      const input: CareerAstroGraphInput = { facts };
+      const graph = buildCareerAstroGraph(input);
+      const detectionInput: CareerNetworkDetectionInput = { graph };
+      const result = detectCareerHouseNetworks(detectionInput);
+
+      expect(result.networks).toHaveLength(1);
+      expect(result.networks[0].direction).toBe('FORWARD');
+    });
+
+    it('produces REVERSE for DIRECT house-to-house connections 11→10→6', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const facts: CareerGraphFact[] = [
+        // DIRECT connections: 11→10, 10→6
+        {
+          sourceNode: { type: 'HOUSE', key: '11' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'CONJUNCT',
+          provenance
+        },
+        {
+          sourceNode: { type: 'HOUSE', key: '10' },
+          targetNode: { type: 'HOUSE', key: '6' },
+          relationship: 'CONJUNCT',
+          provenance
+        }
+      ];
+
+      const input: CareerAstroGraphInput = { facts };
+      const graph = buildCareerAstroGraph(input);
+      const detectionInput: CareerNetworkDetectionInput = { graph };
+      const result = detectCareerHouseNetworks(detectionInput);
+
+      expect(result.networks).toHaveLength(1);
+      expect(result.networks[0].direction).toBe('REVERSE');
+    });
+
+    it('produces BIDIRECTIONAL for two-way DIRECT pair', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const facts: CareerGraphFact[] = [
+        // Create bidirectional flow with DIRECT connections
+        {
+          sourceNode: { type: 'HOUSE', key: '6' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'CONJUNCT',
+          provenance
+        },
+        {
+          sourceNode: { type: 'HOUSE', key: '10' },
+          targetNode: { type: 'HOUSE', key: '6' },
+          relationship: 'CONJUNCT',
+          provenance
+        }
+      ];
+
+      const input: CareerAstroGraphInput = { facts };
+      const graph = buildCareerAstroGraph(input);
+      const detectionInput: CareerNetworkDetectionInput = { graph };
+      const result = detectCareerHouseNetworks(detectionInput);
+
+      expect(result.networks).toHaveLength(1);
+      expect(result.networks[0].direction).toBe('BIDIRECTIONAL');
     });
   });
 
@@ -547,6 +728,56 @@ describe('CareerNetworkDetection', () => {
 
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
     });
+
+    it('produces identical JSON output for permuted fact arrays', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const facts: CareerGraphFact[] = [
+        {
+          sourceNode: { type: 'PLANET', key: 'SATURN' },
+          targetNode: { type: 'HOUSE', key: '6' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
+          sourceNode: { type: 'PLANET', key: 'SATURN' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
+          sourceNode: { type: 'PLANET', key: 'MERCURY' },
+          targetNode: { type: 'HOUSE', key: '10' },
+          relationship: 'LORD_OF',
+          provenance
+        },
+        {
+          sourceNode: { type: 'PLANET', key: 'MERCURY' },
+          targetNode: { type: 'HOUSE', key: '11' },
+          relationship: 'LORD_OF',
+          provenance
+        }
+      ];
+
+      // Create two permutations
+      const factsA = [...facts];
+      const factsB = [facts[3], facts[1], facts[0], facts[2]];
+
+      const inputA: CareerAstroGraphInput = { facts: factsA };
+      const inputB: CareerAstroGraphInput = { facts: factsB };
+
+      const graphA = buildCareerAstroGraph(inputA);
+      const graphB = buildCareerAstroGraph(inputB);
+
+      const resultA = detectCareerHouseNetworks({ graph: graphA });
+      const resultB = detectCareerHouseNetworks({ graph: graphB });
+
+      expect(JSON.stringify(resultA)).toBe(JSON.stringify(resultB));
+    });
   });
 
   describe('Duplicate edges', () => {
@@ -674,48 +905,31 @@ describe('CareerNetworkDetection', () => {
   });
 
   describe('Topology precedence', () => {
-    it('classifies triangle as TRIANGLE not LOOP', () => {
+    it('classifies triangle as TRIANGLE not LOOP with DIRECT connections', () => {
       const provenance: CareerGraphProvenance = {
         sourceIds: ['evidence-1'],
         ruleIds: [],
         parentIds: []
       };
 
+      // Use DIRECT connections to test TRIANGLE topology
       const facts: CareerGraphFact[] = [
         {
-          sourceNode: { type: 'PLANET', key: 'JUPITER' },
-          targetNode: { type: 'HOUSE', key: '2' },
-          relationship: 'LORD_OF',
-          provenance
-        },
-        {
-          sourceNode: { type: 'PLANET', key: 'JUPITER' },
+          sourceNode: { type: 'HOUSE', key: '2' },
           targetNode: { type: 'HOUSE', key: '6' },
-          relationship: 'LORD_OF',
+          relationship: 'CONJUNCT',
           provenance
         },
         {
-          sourceNode: { type: 'PLANET', key: 'SATURN' },
-          targetNode: { type: 'HOUSE', key: '6' },
-          relationship: 'LORD_OF',
-          provenance
-        },
-        {
-          sourceNode: { type: 'PLANET', key: 'SATURN' },
+          sourceNode: { type: 'HOUSE', key: '6' },
           targetNode: { type: 'HOUSE', key: '10' },
-          relationship: 'LORD_OF',
+          relationship: 'CONJUNCT',
           provenance
         },
         {
-          sourceNode: { type: 'PLANET', key: 'MERCURY' },
-          targetNode: { type: 'HOUSE', key: '10' },
-          relationship: 'LORD_OF',
-          provenance
-        },
-        {
-          sourceNode: { type: 'PLANET', key: 'MERCURY' },
+          sourceNode: { type: 'HOUSE', key: '10' },
           targetNode: { type: 'HOUSE', key: '2' },
-          relationship: 'LORD_OF',
+          relationship: 'CONJUNCT',
           provenance
         }
       ];
@@ -860,6 +1074,23 @@ describe('CareerNetworkDetection', () => {
 
       const result1 = detectCareerHouseNetworks({ graph });
       const result2 = detectCareerHouseNetworks({ graph });
+
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+    });
+
+    it('produces deterministic output on permuted facts', () => {
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const facts = buildCareerGraphFactsFromStructural(structural);
+
+      // Create a permutation of the facts array
+      const factsPermuted = [...facts].reverse();
+
+      const graph1 = buildCareerAstroGraph({ facts });
+      const graph2 = buildCareerAstroGraph({ facts: factsPermuted });
+
+      const result1 = detectCareerHouseNetworks({ graph: graph1 });
+      const result2 = detectCareerHouseNetworks({ graph: graph2 });
 
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
     });

@@ -7,7 +7,8 @@ import type {
 import type {
   CareerNetworkDetectionInput,
   CareerNetworkDetectionResult,
-  CareerHouseConnection
+  CareerHouseConnection,
+  CareerDirectedHouseConnection
 } from './careerNetworkDetectionTypes';
 import type { CareerHouseNetwork } from './careerHouseNetworkTypes';
 import { Planet } from '../../../types';
@@ -132,6 +133,7 @@ function extractRelevantEdges(
 
 /**
  * Builds a house-projection graph with DIRECT and SHARED_PARTICIPANT connections.
+ * Records directed connections to preserve flow through projection.
  */
 function buildHouseProjection(
   relevantHouseNodes: Map<number, CareerGraphNode>,
@@ -142,8 +144,9 @@ function buildHouseProjection(
     Array.from(relevantHouseNodes.values()).map(n => n.nodeId)
   );
 
-  // Track planet nodes that connect to houses
-  const planetToHouses = new Map<string, Set<number>>();
+  // Track planet nodes that connect to houses, with direction info
+  // Map: planetNodeId -> Set<{houseNum, direction: 'PLANET_TO_HOUSE' | 'HOUSE_TO_PLANET'}>
+  const planetToHouses = new Map<string, Set<{ houseNum: number, direction: 'PLANET_TO_HOUSE' | 'HOUSE_TO_PLANET' }>>();
 
   for (const edge of relevantEdges) {
     const sourceNode = edge.sourceNodeId;
@@ -160,6 +163,12 @@ function buildHouseProjection(
       const key = `${Math.min(houseA, houseB)}-${Math.max(houseA, houseB)}`;
 
       const existing = connections.get(key);
+      const directedConnection: CareerDirectedHouseConnection = {
+        sourceHouse: houseA,
+        targetHouse: houseB,
+        sourceEdgeIds: [edge.edgeId]
+      };
+
       connections.set(key, {
         houseA: Math.min(houseA, houseB),
         houseB: Math.max(houseA, houseB),
@@ -167,7 +176,10 @@ function buildHouseProjection(
         sourceEdgeIds: existing
           ? [...existing.sourceEdgeIds, edge.edgeId]
           : [edge.edgeId],
-        participantNodeIds: existing?.participantNodeIds ?? []
+        participantNodeIds: existing?.participantNodeIds ?? [],
+        directedConnections: existing
+          ? [...existing.directedConnections, directedConnection]
+          : [directedConnection]
       });
     } else if (sourceIsHouse || targetIsHouse) {
       // One endpoint is a house, the other is a planet
@@ -175,18 +187,19 @@ function buildHouseProjection(
       const planetNodeId = sourceIsHouse ? targetNode : sourceNode;
 
       const houseNum = parseHouseNode(houseNodeId);
+      const direction = sourceIsHouse ? 'HOUSE_TO_PLANET' : 'PLANET_TO_HOUSE';
 
-      // Track this planet-house connection
+      // Track this planet-house connection with direction
       if (!planetToHouses.has(planetNodeId)) {
         planetToHouses.set(planetNodeId, new Set());
       }
-      planetToHouses.get(planetNodeId)!.add(houseNum);
+      planetToHouses.get(planetNodeId)!.add({ houseNum, direction });
     }
   }
 
   // Build SHARED_PARTICIPANT connections from planet-to-houses mappings
-  for (const [planetNodeId, houses] of planetToHouses.entries()) {
-    const houseArray = Array.from(houses).sort((a, b) => a - b);
+  for (const [planetNodeId, houseInfos] of planetToHouses.entries()) {
+    const houseArray = Array.from(houseInfos).map(h => h.houseNum).sort((a, b) => a - b);
 
     // Create pairwise connections between all houses sharing this planet
     for (let i = 0; i < houseArray.length; i++) {
@@ -194,6 +207,52 @@ function buildHouseProjection(
         const houseA = houseArray[i];
         const houseB = houseArray[j];
         const key = `${houseA}-${houseB}`;
+
+        // Build directed connections based on planet edge directions
+        // Rule: PLANET→HOUSE edges mean flow into each house
+        // For SHARED_PARTICIPANT, we record both directions if both houses have PLANET→HOUSE edges
+        // Otherwise, we record the dominant direction or HOUSE_TO_PLANET if that's the only direction
+        const houseAInfo = Array.from(houseInfos).find(h => h.houseNum === houseA);
+        const houseBInfo = Array.from(houseInfos).find(h => h.houseNum === houseB);
+
+        const directedConnections: CareerDirectedHouseConnection[] = [];
+
+        // If both have PLANET→HOUSE, this indicates flow into both houses (bidirectional participant flow)
+        if (houseAInfo?.direction === 'PLANET_TO_HOUSE' && houseBInfo?.direction === 'PLANET_TO_HOUSE') {
+          // Record both directions as the planet flows into both houses
+          directedConnections.push({
+            sourceHouse: houseA,
+            targetHouse: houseB,
+            sourceEdgeIds: []
+          });
+          directedConnections.push({
+            sourceHouse: houseB,
+            targetHouse: houseA,
+            sourceEdgeIds: []
+          });
+        } else if (houseAInfo?.direction === 'PLANET_TO_HOUSE') {
+          // Flow from planet to houseA, so treat as houseA receiving influence
+          directedConnections.push({
+            sourceHouse: houseB,
+            targetHouse: houseA,
+            sourceEdgeIds: []
+          });
+        } else if (houseBInfo?.direction === 'PLANET_TO_HOUSE') {
+          // Flow from planet to houseB, so treat as houseB receiving influence
+          directedConnections.push({
+            sourceHouse: houseA,
+            targetHouse: houseB,
+            sourceEdgeIds: []
+          });
+        } else {
+          // Both are HOUSE_TO_PLANET, treat as no clear directional flow
+          // Default to houseA→houseB for determinism
+          directedConnections.push({
+            sourceHouse: houseA,
+            targetHouse: houseB,
+            sourceEdgeIds: []
+          });
+        }
 
         const existing = connections.get(key);
         connections.set(key, {
@@ -203,7 +262,10 @@ function buildHouseProjection(
           sourceEdgeIds: existing?.sourceEdgeIds ?? [],
           participantNodeIds: existing
             ? [...existing.participantNodeIds, planetNodeId]
-            : [planetNodeId]
+            : [planetNodeId],
+          directedConnections: existing
+            ? [...existing.directedConnections, ...directedConnections]
+            : directedConnections
         });
       }
     }
@@ -298,15 +360,11 @@ function extractLordsForComponent(
     if (componentHouseNodeIds.has(edge.sourceNodeId) ||
       componentHouseNodeIds.has(edge.targetNodeId)) {
       // Extract planet nodes from this edge
-      try {
-        if (edge.sourceNodeId.startsWith('PLANET:')) {
-          lords.add(parsePlanetNode(edge.sourceNodeId));
-        }
-        if (edge.targetNodeId.startsWith('PLANET:')) {
-          lords.add(parsePlanetNode(edge.targetNodeId));
-        }
-      } catch {
-        // Skip invalid planet nodes
+      if (edge.sourceNodeId.startsWith('PLANET:')) {
+        lords.add(parsePlanetNode(edge.sourceNodeId));
+      }
+      if (edge.targetNodeId.startsWith('PLANET:')) {
+        lords.add(parsePlanetNode(edge.targetNodeId));
       }
     }
   }
@@ -398,13 +456,14 @@ export function detectCareerHouseNetworks(
       }
     }
 
-    // Resolve topology
-    const topology = resolveCareerNetworkTopology(component, componentAdjacency);
-
     // Resolve direction from connections
     const componentConnections = Array.from(connections.values()).filter(
       conn => component.includes(conn.houseA) && component.includes(conn.houseB)
     );
+
+    // Resolve topology
+    const topology = resolveCareerNetworkTopology(component, componentAdjacency, componentConnections);
+
     const direction = resolveCareerNetworkDirection(componentConnections);
 
     // Extract lords
