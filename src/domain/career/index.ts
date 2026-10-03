@@ -26,3 +26,33 @@ export * from './careerFinalSynthesis';
 export * from './careerGraph';
 export * from './careerPattern';
 export * from './careerPatternQualification';
+export {
+    // Type exports
+    type CareerDispositorStartRole,
+    type CareerDispositorRelationship,
+    type CareerDispositorTermination,
+    type CareerDispositorDestination,
+    type CareerDispositorLink,
+    type CareerDispositorChain,
+    type CareerDispositorProvenance,
+    type CareerDispositorStart,
+    type CareerDispositorIntegrationInput,
+    type CareerDispositorResult,
+    // Identity exports
+    buildCareerDispositorIdentityKey,
+    buildCareerDispositorChainId,
+    // Rules exports (renamed to avoid conflict with careerPattern)
+    CAREER_HOUSES as DISPOSITOR_CAREER_HOUSES,
+    CAREER_LORD_START_HOUSES,
+    MAX_DISPOSITOR_DEPTH,
+    isCareerHouse as dispositorIsCareerHouse,
+    resolveCareerDestination,
+    resolveTermination,
+    // Core dispositor exports
+    traverseDispositorChain,
+    detectMutualReception,
+    // Integration exports
+    buildCareerDispositorStartPlanets,
+    buildCareerDispositorStartsFromStructural,
+    buildCareerDispositorAnalysis
+} from './careerDispositor';
