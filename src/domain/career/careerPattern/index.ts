@@ -18,6 +18,7 @@
 
 export * from './careerPatternTypes';
 export * from './careerPatternIdentity';
+export * from './careerPatternPredicates';
 export * from './careerPatternClassificationRules';
 export * from './careerPatternClassification';
 export * from './dusthanaTransformationDetector';

@@ -1,6 +1,14 @@
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerPatternClassification, CareerPatternHouseRole, CareerMechanism } from './careerPatternTypes';
 import type { ParivartanaCareerType } from './careerPatternTypes';
+import {
+  hasDirectHouseRelationship,
+  isDirectChain,
+  isStar,
+  isTriangle,
+  isLoop,
+  isSharedParticipant
+} from './careerPatternPredicates';
 
 /**
  * P2-03 Career Pattern Classification Rules
@@ -17,6 +25,21 @@ import type { ParivartanaCareerType } from './careerPatternTypes';
  * - careerFinalSynthesis
  * - careerExpression*
  * - domain/timing
+ *
+ * PATHWAY VALIDATION CONTRACT:
+ * Each specialized classification rule requires a structural pathway predicate before emitting
+ * its semantic name. When the house set matches but the pathway is not structurally established,
+ * the rule falls back to generic CAREER_HOUSE_NETWORK classification only.
+ *
+ * Predicate mapping:
+ * - classifySixTenEleven: requires isDirectChain([6, 10, 11]) or CHAIN topology
+ * - classifyTwoSixTenEleven: requires isDirectChain([2, 6, 10, 11]) or CHAIN topology
+ * - classifyThreeSixTenEleven: requires isDirectChain([3, 6, 10, 11]) or CHAIN topology
+ * - classifyFiveNineTen: requires isDirectChain([5, 9, 10]) or TRIANGLE topology
+ * - classifyNineTenEleven: requires isDirectChain([9, 10, 11]) or CHAIN topology
+ * - classifyTwoThreeSixTenEleven: requires isDirectChain([2, 3, 6, 10, 11]) or CHAIN topology
+ * - classifyTenEleven: requires hasDirectHouseRelationship(10, 11) or DIRECT_LINK topology
+ * - classifyNineTen: requires hasDirectHouseRelationship(9, 10) or DIRECT_LINK topology
  */
 
 /**
@@ -125,18 +148,25 @@ export interface CareerPatternRuleMatch {
 
 /**
  * Classifies a 2-6-10-11 network as WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS.
+ * PREDICATE: requires isDirectChain([2, 6, 10, 11]) or CHAIN topology.
+ * Falls back to CAREER_HOUSE_NETWORK if pathway not established.
  */
 export function classifyTwoSixTenEleven(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
   if (sortedHouses.join(',') === '2,6,10,11') {
-    return [{
-      ruleId: 'RULE_2_6_10_11',
-      classification: 'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS',
-      family: 'CAREER_HOUSE_NETWORK',
-      houseRoles: HOUSE_ROLES_2_6_10_11
-    }];
+    // Check pathway predicate: require direct chain 2→6→10→11
+    if (isDirectChain(network, [2, 6, 10, 11]) || network.topology === 'CHAIN') {
+      return [{
+        ruleId: 'RULE_2_6_10_11',
+        classification: 'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS',
+        family: 'CAREER_HOUSE_NETWORK',
+        houseRoles: HOUSE_ROLES_2_6_10_11
+      }];
+    }
+    // Pathway not established - fall back to generic
+    return [];
   }
 
   return [];
@@ -147,6 +177,8 @@ export function classifyTwoSixTenEleven(network: CareerHouseNetwork): readonly C
  * Per spec §12: extended with ordered-path semantics and mechanism chain.
  * 3→6→10→11 → SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS
  * 6→10→11 → WORK_TO_PROFESSION_TO_GAINS
+ * PREDICATE: requires isDirectChain for the respective pathway.
+ * Falls back to CAREER_HOUSE_NETWORK if pathway not established.
  */
 export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
@@ -154,22 +186,32 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
 
   // Full 3-6-10-11 pathway
   if (sortedHouses.join(',') === UPACHAYA_HOUSES.join(',')) {
-    return [{
-      ruleId: 'RULE_3_6_10_11_FULL_PATH',
-      classification: 'UPACHAYA_PROGRESSION',
-      family: 'UPACHAYA',
-      houseRoles: HOUSE_ROLES_3_6_10_11
-    }];
+    // Check pathway predicate: require direct chain 3→6→10→11
+    if (isDirectChain(network, [3, 6, 10, 11]) || network.topology === 'CHAIN') {
+      return [{
+        ruleId: 'RULE_3_6_10_11_FULL_PATH',
+        classification: 'UPACHAYA_PROGRESSION',
+        family: 'UPACHAYA',
+        houseRoles: HOUSE_ROLES_3_6_10_11
+      }];
+    }
+    // Pathway not established - fall back to generic
+    return [];
   }
 
   // 6-10-11 pathway (subset)
   if (sortedHouses.join(',') === '6,10,11') {
-    return [{
-      ruleId: 'RULE_6_10_11_SUB_PATH',
-      classification: 'UPACHAYA_PROGRESSION',
-      family: 'UPACHAYA',
-      houseRoles: HOUSE_ROLES_6_10_11
-    }];
+    // Check pathway predicate: require direct chain 6→10→11
+    if (isDirectChain(network, [6, 10, 11]) || network.topology === 'CHAIN') {
+      return [{
+        ruleId: 'RULE_6_10_11_SUB_PATH',
+        classification: 'UPACHAYA_PROGRESSION',
+        family: 'UPACHAYA',
+        houseRoles: HOUSE_ROLES_6_10_11
+      }];
+    }
+    // Pathway not established - fall back to generic
+    return [];
   }
 
   return [];
@@ -180,18 +222,25 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
  * NOT Raja Yoga - no lordship/functional info yet.
  * NOTE: Kendra-Trikona verification with real lord relationships is handled by
  * the dedicated kendraTrikonaDetector.ts (P2-06D). This remains a structural carrier.
+ * PREDICATE: requires isDirectChain([5, 9, 10]) or TRIANGLE topology.
+ * Falls back to CAREER_HOUSE_NETWORK if pathway not established.
  */
 export function classifyFiveNineTen(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
   if (sortedHouses.join(',') === '5,9,10') {
-    return [{
-      ruleId: 'RULE_5_9_10',
-      classification: 'CREATIVE_DHARMA_TO_PROFESSION',
-      family: 'CAREER_HOUSE_NETWORK',
-      houseRoles: HOUSE_ROLES_5_9_10
-    }];
+    // Check pathway predicate: require direct chain 5→9→10 or TRIANGLE topology
+    if (isDirectChain(network, [5, 9, 10]) || network.topology === 'TRIANGLE') {
+      return [{
+        ruleId: 'RULE_5_9_10',
+        classification: 'CREATIVE_DHARMA_TO_PROFESSION',
+        family: 'CAREER_HOUSE_NETWORK',
+        houseRoles: HOUSE_ROLES_5_9_10
+      }];
+    }
+    // Pathway not established - fall back to generic
+    return [];
   }
 
   return [];
