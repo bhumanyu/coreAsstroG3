@@ -1065,7 +1065,7 @@ describe('Career Pattern Qualification', () => {
       expect(saturnParticipant?.condition).toBe('WEAK');
     });
 
-    it('relevance: first-wins on equal precedence', () => {
+    it('relevance: canonical representative on equal precedence', () => {
       const pattern = makePattern({ planets: [Planet.SATURN] });
 
       const relevance1 = makeRelevance(Planet.SATURN, 'PRIMARY', { statement: 'First PRIMARY' });
@@ -1086,22 +1086,18 @@ describe('Career Pattern Qualification', () => {
       const result1 = qualifyCareerPatterns(input1);
       const result2 = qualifyCareerPatterns(input2);
 
-      // Different order produces different statement (first-wins on ties)
-      expect(JSON.stringify(result1)).not.toBe(JSON.stringify(result2));
+      // Same output regardless of input order (canonical tie-break)
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
 
-      // Both use PRIMARY, but different source objects
+      // Both use PRIMARY with lexicographically smallest statement
       const qualified1 = result1.qualifiedPatterns[0];
-      const qualified2 = result2.qualifiedPatterns[0];
       const saturn1 = qualified1.participants.find(p => p.planet === Planet.SATURN);
-      const saturn2 = qualified2.participants.find(p => p.planet === Planet.SATURN);
 
       expect(saturn1?.relevance).toBe('PRIMARY');
-      expect(saturn2?.relevance).toBe('PRIMARY');
-      expect(saturn1?.relevanceSource?.statement).toBe('First PRIMARY');
-      expect(saturn2?.relevanceSource?.statement).toBe('Second PRIMARY');
+      expect(saturn1?.relevanceSource?.statement).toBe('First PRIMARY'); // 'First' < 'Second' lexicographically
     });
 
-    it('condition: first-wins on equal precedence', () => {
+    it('condition: canonical representative on equal precedence', () => {
       const pattern = makePattern({ planets: [Planet.SATURN] });
 
       const condition1 = makeCondition(Planet.SATURN, 'STRONG', { statement: 'First STRONG' });
@@ -1122,19 +1118,15 @@ describe('Career Pattern Qualification', () => {
       const result1 = qualifyCareerPatterns(input1);
       const result2 = qualifyCareerPatterns(input2);
 
-      // Different order produces different statement (first-wins on ties)
-      expect(JSON.stringify(result1)).not.toBe(JSON.stringify(result2));
+      // Same output regardless of input order (canonical tie-break)
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
 
-      // Both use STRONG, but different source objects
+      // Both use STRONG with lexicographically smallest statement
       const qualified1 = result1.qualifiedPatterns[0];
-      const qualified2 = result2.qualifiedPatterns[0];
       const saturn1 = qualified1.participants.find(p => p.planet === Planet.SATURN);
-      const saturn2 = qualified2.participants.find(p => p.planet === Planet.SATURN);
 
       expect(saturn1?.condition).toBe('STRONG');
-      expect(saturn2?.condition).toBe('STRONG');
-      expect(saturn1?.conditionSource?.statement).toBe('First STRONG');
-      expect(saturn2?.conditionSource?.statement).toBe('Second STRONG');
+      expect(saturn1?.conditionSource?.statement).toBe('First STRONG'); // 'First' < 'Second' lexicographically
     });
 
     it('single record case is unchanged', () => {

@@ -122,12 +122,12 @@ The qualification layer includes deterministic normalization for malformed input
 
 **Relevance Normalization** (highest precedence wins):
 - Precedence order: `PRIMARY` > `SUPPORTING` > `SECONDARY` > `CONDITIONAL` > `NEUTRAL`
-- On ties (same precedence), first-wins (preserves input order for equal values)
+- On ties (same precedence), selects canonical representative by sorting on a stable ordering (relevance, then statement, then full-record JSON as fallback) and taking the lexicographically smallest
 - Applied when building `relevanceByPlanet` map from input relevance array
 
 **Condition Normalization** (most severe wins):
 - Precedence order: `AFFLICTED` > `WEAK` > `MODERATE` > `STRONG` > `NEUTRAL` > `UNAVAILABLE`
-- On ties (same precedence), first-wins (preserves input order for equal values)
+- On ties (same precedence), selects canonical representative by sorting on a stable ordering (condition, then statement, then full-record JSON as fallback) and taking the lexicographically smallest
 - Applied when building `conditionByPlanet` map from input condition array
 
 **Note**: Canonical upstream output (C5 relevance and C6 condition) is already unique per planet, so this normalization only applies to malformed/edge-case input. Unit tests verify that different input orders for duplicates produce identical qualified output.
@@ -189,7 +189,8 @@ The real-engine golden test builds the full chain from `CANONICAL_BIRTH_DETAILS`
 - Added deterministic duplicate normalization for relevance and condition records:
   - Relevance precedence: PRIMARY > SUPPORTING > SECONDARY > CONDITIONAL > NEUTRAL
   - Condition precedence: AFFLICTED > WEAK > MODERATE > STRONG > NEUTRAL > UNAVAILABLE
-  - First-wins on ties to maintain input-order independence for equal precedence values
+  - On ties, selects canonical representative by sorting on a stable ordering (relevance/condition, then statement, then full-record JSON as fallback) and taking the lexicographically smallest
+  - Full output (including retained source records) is input-order independent for equal-precedence duplicates
 - Added unit tests for duplicate record order independence
 - Added real-engine golden test (full chain closure test) to verify end-to-end integration
 

@@ -66,7 +66,9 @@ const CONDITION_PRECEDENCE: ReadonlyMap<CareerPlanetaryCondition, number> = new 
 /**
  * Returns the relevance record with highest precedence from duplicates.
  * If only one record exists, returns it. If multiple exist, selects the one
- * with highest precedence per RELEVANCE_PRECEDENCE; first-wins on ties.
+ * with highest precedence per RELEVANCE_PRECEDENCE. On ties, selects the
+ * canonical representative by sorting on a stable ordering (relevance, then
+ * statement, then full-record JSON as fallback) and taking the lexicographically smallest.
  */
 function normalizeRelevanceDuplicates(
   records: CareerPlanetaryRelevance[]
@@ -75,28 +77,48 @@ function normalizeRelevanceDuplicates(
     return records[0];
   }
 
-  // Find record with highest precedence
-  let highest = records[0];
-  let highestScore = RELEVANCE_PRECEDENCE.get(highest.relevance) ?? 0;
-
+  // Find highest precedence score
+  let highestScore = RELEVANCE_PRECEDENCE.get(records[0].relevance) ?? 0;
   for (let i = 1; i < records.length; i++) {
-    const current = records[i];
-    const currentScore = RELEVANCE_PRECEDENCE.get(current.relevance) ?? 0;
-
+    const currentScore = RELEVANCE_PRECEDENCE.get(records[i].relevance) ?? 0;
     if (currentScore > highestScore) {
-      highest = current;
       highestScore = currentScore;
     }
-    // On tie, keep first-wins (don't replace)
   }
 
-  return highest;
+  // Collect all records with highest precedence
+  const highestPrecedenceRecords = records.filter(
+    r => (RELEVANCE_PRECEDENCE.get(r.relevance) ?? 0) === highestScore
+  );
+
+  // If only one, return it
+  if (highestPrecedenceRecords.length === 1) {
+    return highestPrecedenceRecords[0];
+  }
+
+  // Canonical tie-break: sort by relevance, then statement, then full-record JSON
+  const sorted = [...highestPrecedenceRecords].sort((a, b) => {
+    // Compare by relevance first (should be equal, but for stability)
+    if (a.relevance !== b.relevance) {
+      return a.relevance.localeCompare(b.relevance);
+    }
+    // Compare by statement
+    if (a.statement !== b.statement) {
+      return a.statement.localeCompare(b.statement);
+    }
+    // Fallback to full-record JSON for total order
+    return JSON.stringify(a).localeCompare(JSON.stringify(b));
+  });
+
+  return sorted[0];
 }
 
 /**
  * Returns the condition record with highest precedence (most severe) from duplicates.
  * If only one record exists, returns it. If multiple exist, selects the one
- * with highest precedence per CONDITION_PRECEDENCE; first-wins on ties.
+ * with highest precedence per CONDITION_PRECEDENCE. On ties, selects the
+ * canonical representative by sorting on a stable ordering (condition, then
+ * statement, then full-record JSON as fallback) and taking the lexicographically smallest.
  */
 function normalizeConditionDuplicates(
   records: CareerPlanetaryConditionResult[]
@@ -105,22 +127,40 @@ function normalizeConditionDuplicates(
     return records[0];
   }
 
-  // Find record with highest precedence (most severe)
-  let highest = records[0];
-  let highestScore = CONDITION_PRECEDENCE.get(highest.condition) ?? 0;
-
+  // Find highest precedence score
+  let highestScore = CONDITION_PRECEDENCE.get(records[0].condition) ?? 0;
   for (let i = 1; i < records.length; i++) {
-    const current = records[i];
-    const currentScore = CONDITION_PRECEDENCE.get(current.condition) ?? 0;
-
+    const currentScore = CONDITION_PRECEDENCE.get(records[i].condition) ?? 0;
     if (currentScore > highestScore) {
-      highest = current;
       highestScore = currentScore;
     }
-    // On tie, keep first-wins (don't replace)
   }
 
-  return highest;
+  // Collect all records with highest precedence
+  const highestPrecedenceRecords = records.filter(
+    r => (CONDITION_PRECEDENCE.get(r.condition) ?? 0) === highestScore
+  );
+
+  // If only one, return it
+  if (highestPrecedenceRecords.length === 1) {
+    return highestPrecedenceRecords[0];
+  }
+
+  // Canonical tie-break: sort by condition, then statement, then full-record JSON
+  const sorted = [...highestPrecedenceRecords].sort((a, b) => {
+    // Compare by condition first (should be equal, but for stability)
+    if (a.condition !== b.condition) {
+      return a.condition.localeCompare(b.condition);
+    }
+    // Compare by statement
+    if (a.statement !== b.statement) {
+      return a.statement.localeCompare(b.statement);
+    }
+    // Fallback to full-record JSON for total order
+    return JSON.stringify(a).localeCompare(JSON.stringify(b));
+  });
+
+  return sorted[0];
 }
 
 // Re-export types for convenience
