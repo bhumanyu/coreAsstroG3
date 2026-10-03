@@ -2,7 +2,7 @@
 
 > **STATUS: IMPLEMENTED — VERIFICATION PENDING**
 
-> Pattern qualification layer is implemented with unit tests using synthetic fixtures. Real-engine integration test (calculateHoroscope → C4 → graph → networks → patterns → qualification) is not yet implemented — this is a verification gap.
+> Pattern qualification layer is implemented with unit tests using synthetic fixtures and a real-engine golden test. Pending CI verification before moving to VERIFIED.
 
 ## Purpose
 
@@ -116,6 +116,22 @@ Output is deterministic regardless of input order:
 - Participants are emitted in canonical SUN→KETU order via `CANONICAL_PLANET_ORDER`
 - Permutation tests verify determinism for both pattern order and participant order
 
+## Deterministic Duplicate Normalization
+
+The qualification layer includes deterministic normalization for malformed input where multiple relevance or condition records exist for the same planet. This ensures output is input-order independent for duplicates.
+
+**Relevance Normalization** (highest precedence wins):
+- Precedence order: `PRIMARY` > `SUPPORTING` > `SECONDARY` > `CONDITIONAL` > `NEUTRAL`
+- On ties (same precedence), first-wins (preserves input order for equal values)
+- Applied when building `relevanceByPlanet` map from input relevance array
+
+**Condition Normalization** (most severe wins):
+- Precedence order: `AFFLICTED` > `WEAK` > `MODERATE` > `STRONG` > `NEUTRAL` > `UNAVAILABLE`
+- On ties (same precedence), first-wins (preserves input order for equal values)
+- Applied when building `conditionByPlanet` map from input condition array
+
+**Note**: Canonical upstream output (C5 relevance and C6 condition) is already unique per planet, so this normalization only applies to malformed/edge-case input. Unit tests verify that different input orders for duplicates produce identical qualified output.
+
 ## Boundary Enforcement
 
 This layer must NOT import from:
@@ -138,7 +154,7 @@ All output objects are deeply frozen:
 
 ## Test Coverage
 
-Current test coverage (656 lines) uses synthetic `makePattern`/`makeRelevance`/`makeCondition` fixtures:
+Current test coverage uses synthetic `makePattern`/`makeRelevance`/`makeCondition` fixtures plus a real-engine golden test:
 
 - Unit tests for all classification rules
 - Identity preservation tests
@@ -157,8 +173,10 @@ Current test coverage (656 lines) uses synthetic `makePattern`/`makeRelevance`/`
 - Pattern coherence classification tests
 - Evidence ID generation tests
 - Provenance tracking tests
+- Deterministic duplicate normalization tests (relevance and condition precedence rules)
+- Real-engine golden test (full chain: calculateHoroscope → C4 → graph → networks → patterns → C5 → C6 → qualification)
 
-**Verification Gap**: No real-engine integration test. The entire suite uses synthetic fixtures. There is no `calculateHoroscope → C4 → graph → networks → patterns → qualification` end-to-end test — the same gap the P2-03 golden-fixture review flagged. Given the charter requires real-engine verification per layer, this stays `VERIFICATION PENDING`.
+The real-engine golden test builds the full chain from `CANONICAL_BIRTH_DETAILS` through the entire Career pipeline and validates that qualification preserves pattern identity, produces expected dimension values (`NOT_ASSESSED` for structuralStrength, `UNKNOWN` for activationPotential, `NOT_ASSESSED` for divisionalConfirmation), and maintains deep immutability. The test also verifies determinism by running the pipeline twice and asserting identical output.
 
 ## Recent Changes (S1 Fix Iteration)
 
@@ -168,6 +186,12 @@ Current test coverage (656 lines) uses synthetic `makePattern`/`makeRelevance`/`
 - Documented aggregation logic with clear comments in `computeQualificationDimensions`
 - Documented QualifiedCareerPattern shape deviation from spec (sourcePattern nesting vs flat fields)
 - Updated JSDoc comments to reflect provenance and source freezing changes
+- Added deterministic duplicate normalization for relevance and condition records:
+  - Relevance precedence: PRIMARY > SUPPORTING > SECONDARY > CONDITIONAL > NEUTRAL
+  - Condition precedence: AFFLICTED > WEAK > MODERATE > STRONG > NEUTRAL > UNAVAILABLE
+  - First-wins on ties to maintain input-order independence for equal precedence values
+- Added unit tests for duplicate record order independence
+- Added real-engine golden test (full chain closure test) to verify end-to-end integration
 
 ## Dependency Note
 

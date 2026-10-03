@@ -1,6 +1,6 @@
 import type { CareerPattern } from '../careerPattern/careerPatternTypes';
-import type { CareerPlanetaryRelevance } from '../careerPlanetaryRelevance';
-import type { CareerPlanetaryConditionResult } from '../careerPlanetaryCondition';
+import type { CareerPlanetaryRelevance, CareerPlanetRelevance } from '../careerPlanetaryRelevance';
+import type { CareerPlanetaryConditionResult, CareerPlanetaryCondition } from '../careerPlanetaryCondition';
 import type { Planet } from '../../../types';
 import type {
   CareerPatternQualificationInput,
@@ -35,6 +35,93 @@ import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
  * - careerExpression*
  * - domain/timing
  */
+
+/**
+ * Precedence order for CareerPlanetRelevance (highest to lowest).
+ * Used for deterministic duplicate normalization when multiple relevance records
+ * exist for the same planet. The highest precedence value is kept.
+ */
+const RELEVANCE_PRECEDENCE: ReadonlyMap<CareerPlanetRelevance, number> = new Map([
+  ['PRIMARY', 5],
+  ['SUPPORTING', 4],
+  ['SECONDARY', 3],
+  ['CONDITIONAL', 2],
+  ['NEUTRAL', 1]
+]);
+
+/**
+ * Precedence order for CareerPlanetaryCondition (most severe to least severe).
+ * Used for deterministic duplicate normalization when multiple condition records
+ * exist for the same planet. The most severe (highest precedence) value is kept.
+ */
+const CONDITION_PRECEDENCE: ReadonlyMap<CareerPlanetaryCondition, number> = new Map([
+  ['AFFLICTED', 6],
+  ['WEAK', 5],
+  ['MODERATE', 4],
+  ['STRONG', 3],
+  ['NEUTRAL', 2],
+  ['UNAVAILABLE', 1]
+]);
+
+/**
+ * Returns the relevance record with highest precedence from duplicates.
+ * If only one record exists, returns it. If multiple exist, selects the one
+ * with highest precedence per RELEVANCE_PRECEDENCE; first-wins on ties.
+ */
+function normalizeRelevanceDuplicates(
+  records: CareerPlanetaryRelevance[]
+): CareerPlanetaryRelevance {
+  if (records.length === 1) {
+    return records[0];
+  }
+
+  // Find record with highest precedence
+  let highest = records[0];
+  let highestScore = RELEVANCE_PRECEDENCE.get(highest.relevance) ?? 0;
+
+  for (let i = 1; i < records.length; i++) {
+    const current = records[i];
+    const currentScore = RELEVANCE_PRECEDENCE.get(current.relevance) ?? 0;
+
+    if (currentScore > highestScore) {
+      highest = current;
+      highestScore = currentScore;
+    }
+    // On tie, keep first-wins (don't replace)
+  }
+
+  return highest;
+}
+
+/**
+ * Returns the condition record with highest precedence (most severe) from duplicates.
+ * If only one record exists, returns it. If multiple exist, selects the one
+ * with highest precedence per CONDITION_PRECEDENCE; first-wins on ties.
+ */
+function normalizeConditionDuplicates(
+  records: CareerPlanetaryConditionResult[]
+): CareerPlanetaryConditionResult {
+  if (records.length === 1) {
+    return records[0];
+  }
+
+  // Find record with highest precedence (most severe)
+  let highest = records[0];
+  let highestScore = CONDITION_PRECEDENCE.get(highest.condition) ?? 0;
+
+  for (let i = 1; i < records.length; i++) {
+    const current = records[i];
+    const currentScore = CONDITION_PRECEDENCE.get(current.condition) ?? 0;
+
+    if (currentScore > highestScore) {
+      highest = current;
+      highestScore = currentScore;
+    }
+    // On tie, keep first-wins (don't replace)
+  }
+
+  return highest;
+}
 
 // Re-export types for convenience
 export type { CareerPatternQualificationInput, CareerPatternQualificationResult };
@@ -280,15 +367,29 @@ export function qualifyCareerPatterns(
 ): CareerPatternQualificationResult {
   const { patterns, relevance, condition } = input;
 
-  // Build maps for efficient lookup
-  const relevanceByPlanet = new Map<Planet, CareerPlanetaryRelevance>();
+  // Build maps with deterministic duplicate normalization
+  // Collect all records per planet first
+  const relevanceRecordsByPlanet = new Map<Planet, CareerPlanetaryRelevance[]>();
   for (const item of relevance) {
-    relevanceByPlanet.set(item.planet, item);
+    const existing = relevanceRecordsByPlanet.get(item.planet) ?? [];
+    relevanceRecordsByPlanet.set(item.planet, [...existing, item]);
+  }
+
+  const conditionRecordsByPlanet = new Map<Planet, CareerPlanetaryConditionResult[]>();
+  for (const item of condition) {
+    const existing = conditionRecordsByPlanet.get(item.planet) ?? [];
+    conditionRecordsByPlanet.set(item.planet, [...existing, item]);
+  }
+
+  // Normalize duplicates using precedence rules
+  const relevanceByPlanet = new Map<Planet, CareerPlanetaryRelevance>();
+  for (const [planet, records] of relevanceRecordsByPlanet) {
+    relevanceByPlanet.set(planet, normalizeRelevanceDuplicates(records));
   }
 
   const conditionByPlanet = new Map<Planet, CareerPlanetaryConditionResult>();
-  for (const item of condition) {
-    conditionByPlanet.set(item.planet, item);
+  for (const [planet, records] of conditionRecordsByPlanet) {
+    conditionByPlanet.set(planet, normalizeConditionDuplicates(records));
   }
 
   // Sort patterns by identityKey for determinism

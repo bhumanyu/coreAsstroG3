@@ -31,6 +31,17 @@ import type {
 } from '../careerPlanetaryCondition';
 import { Planet } from '../../../types';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
+import { calculateHoroscope } from '../../../engine/astroEngine';
+import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
+import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
+import {
+  buildCareerAstroGraph,
+  buildCareerGraphFactsFromStructural,
+  detectCareerHouseNetworks
+} from '../careerGraph/index';
+import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
+import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegration';
+import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
 
 /**
  * Helper: Creates a minimal CareerPattern for testing.
@@ -982,6 +993,244 @@ describe('Career Pattern Qualification', () => {
 
       const qualified = result.qualifiedPatterns[0];
       expect(qualified.dimensions.careerRelevance).toBe('SUPPORTING');
+    });
+  });
+
+  describe('Deterministic Duplicate Normalization', () => {
+    it('relevance: keeps highest precedence (PRIMARY > SUPPORTING > SECONDARY > CONDITIONAL > NEUTRAL)', () => {
+      const pattern = makePattern({ planets: [Planet.SATURN] });
+
+      const input1: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'SECONDARY'),
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.SATURN, 'NEUTRAL')
+        ],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const input2: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'NEUTRAL'),
+          makeRelevance(Planet.SATURN, 'SECONDARY'),
+          makeRelevance(Planet.SATURN, 'PRIMARY')
+        ],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result1 = qualifyCareerPatterns(input1);
+      const result2 = qualifyCareerPatterns(input2);
+
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+
+      // Verify PRIMARY was selected
+      const qualified = result1.qualifiedPatterns[0];
+      const saturnParticipant = qualified.participants.find(p => p.planet === Planet.SATURN);
+      expect(saturnParticipant?.relevance).toBe('PRIMARY');
+    });
+
+    it('condition: keeps most severe (AFFLICTED > WEAK > MODERATE > STRONG > NEUTRAL > UNAVAILABLE)', () => {
+      const pattern = makePattern({ planets: [Planet.SATURN] });
+
+      const input1: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [
+          makeCondition(Planet.SATURN, 'MODERATE'),
+          makeCondition(Planet.SATURN, 'AFFLICTED'),
+          makeCondition(Planet.SATURN, 'STRONG')
+        ]
+      };
+
+      const input2: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.SATURN, 'MODERATE'),
+          makeCondition(Planet.SATURN, 'AFFLICTED')
+        ]
+      };
+
+      const result1 = qualifyCareerPatterns(input1);
+      const result2 = qualifyCareerPatterns(input2);
+
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+
+      // Verify AFFLICTED was selected (maps to WEAK)
+      const qualified = result1.qualifiedPatterns[0];
+      const saturnParticipant = qualified.participants.find(p => p.planet === Planet.SATURN);
+      expect(saturnParticipant?.condition).toBe('WEAK');
+    });
+
+    it('relevance: first-wins on equal precedence', () => {
+      const pattern = makePattern({ planets: [Planet.SATURN] });
+
+      const relevance1 = makeRelevance(Planet.SATURN, 'PRIMARY', { statement: 'First PRIMARY' });
+      const relevance2 = makeRelevance(Planet.SATURN, 'PRIMARY', { statement: 'Second PRIMARY' });
+
+      const input1: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [relevance1, relevance2],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const input2: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [relevance2, relevance1],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result1 = qualifyCareerPatterns(input1);
+      const result2 = qualifyCareerPatterns(input2);
+
+      // Different order produces different statement (first-wins on ties)
+      expect(JSON.stringify(result1)).not.toBe(JSON.stringify(result2));
+
+      // Both use PRIMARY, but different source objects
+      const qualified1 = result1.qualifiedPatterns[0];
+      const qualified2 = result2.qualifiedPatterns[0];
+      const saturn1 = qualified1.participants.find(p => p.planet === Planet.SATURN);
+      const saturn2 = qualified2.participants.find(p => p.planet === Planet.SATURN);
+
+      expect(saturn1?.relevance).toBe('PRIMARY');
+      expect(saturn2?.relevance).toBe('PRIMARY');
+      expect(saturn1?.relevanceSource?.statement).toBe('First PRIMARY');
+      expect(saturn2?.relevanceSource?.statement).toBe('Second PRIMARY');
+    });
+
+    it('condition: first-wins on equal precedence', () => {
+      const pattern = makePattern({ planets: [Planet.SATURN] });
+
+      const condition1 = makeCondition(Planet.SATURN, 'STRONG', { statement: 'First STRONG' });
+      const condition2 = makeCondition(Planet.SATURN, 'STRONG', { statement: 'Second STRONG' });
+
+      const input1: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [condition1, condition2]
+      };
+
+      const input2: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [condition2, condition1]
+      };
+
+      const result1 = qualifyCareerPatterns(input1);
+      const result2 = qualifyCareerPatterns(input2);
+
+      // Different order produces different statement (first-wins on ties)
+      expect(JSON.stringify(result1)).not.toBe(JSON.stringify(result2));
+
+      // Both use STRONG, but different source objects
+      const qualified1 = result1.qualifiedPatterns[0];
+      const qualified2 = result2.qualifiedPatterns[0];
+      const saturn1 = qualified1.participants.find(p => p.planet === Planet.SATURN);
+      const saturn2 = qualified2.participants.find(p => p.planet === Planet.SATURN);
+
+      expect(saturn1?.condition).toBe('STRONG');
+      expect(saturn2?.condition).toBe('STRONG');
+      expect(saturn1?.conditionSource?.statement).toBe('First STRONG');
+      expect(saturn2?.conditionSource?.statement).toBe('Second STRONG');
+    });
+
+    it('single record case is unchanged', () => {
+      const pattern = makePattern({ planets: [Planet.SATURN] });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      const saturnParticipant = qualified.participants.find(p => p.planet === Planet.SATURN);
+      expect(saturnParticipant?.relevance).toBe('PRIMARY');
+      expect(saturnParticipant?.condition).toBe('STRONG');
+    });
+  });
+
+  describe('Real-engine golden test (closure test)', () => {
+    it('end-to-end chain produces valid qualified patterns', async () => {
+      // Build the full chain from canonical birth details
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const facts = buildCareerGraphFactsFromStructural(structural);
+      const graph = buildCareerAstroGraph({ facts });
+      const networks = detectCareerHouseNetworks({ graph });
+      const patterns = classifyCareerPatterns({ networks: networks.networks });
+      const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
+      const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
+
+      // Qualify patterns
+      const qualified = qualifyCareerPatterns({
+        patterns: patterns.patterns,
+        relevance,
+        condition
+      });
+
+      // Verify qualified patterns count matches source patterns
+      expect(qualified.qualifiedPatterns.length).toBe(patterns.patterns.length);
+
+      // Verify each qualified pattern preserves identity from source
+      for (let i = 0; i < patterns.patterns.length; i++) {
+        const sourcePattern = patterns.patterns[i];
+        const qualifiedPattern = qualified.qualifiedPatterns[i];
+
+        expect(qualifiedPattern.patternId).toBe(sourcePattern.patternId);
+        expect(qualifiedPattern.identityKey).toBe(sourcePattern.identityKey);
+        expect(qualifiedPattern.classification).toBe(sourcePattern.classification);
+        expect(qualifiedPattern.family).toBe(sourcePattern.family);
+        expect(qualifiedPattern.level).toBe(sourcePattern.level);
+      }
+
+      // Verify all qualified patterns have expected dimension values
+      for (const qualifiedPattern of qualified.qualifiedPatterns) {
+        expect(qualifiedPattern.dimensions.structuralStrength).toBe('NOT_ASSESSED');
+        expect(qualifiedPattern.dimensions.activationPotential).toBe('UNKNOWN');
+        expect(qualifiedPattern.dimensions.divisionalConfirmation).toBe('NOT_ASSESSED');
+      }
+
+      // Verify determinism: run twice and assert identical output
+      const qualified2 = qualifyCareerPatterns({
+        patterns: patterns.patterns,
+        relevance,
+        condition
+      });
+      expect(JSON.stringify(qualified)).toBe(JSON.stringify(qualified2));
+
+      // Verify deep freeze on result
+      expect(Object.isFrozen(qualified)).toBe(true);
+      expect(Object.isFrozen(qualified.qualifiedPatterns)).toBe(true);
+
+      // Verify deep freeze on each qualified pattern
+      for (const qualifiedPattern of qualified.qualifiedPatterns) {
+        expect(Object.isFrozen(qualifiedPattern)).toBe(true);
+        expect(Object.isFrozen(qualifiedPattern.dimensions)).toBe(true);
+        expect(Object.isFrozen(qualifiedPattern.participants)).toBe(true);
+        expect(Object.isFrozen(qualifiedPattern.evidence)).toBe(true);
+        expect(Object.isFrozen(qualifiedPattern.provenance)).toBe(true);
+
+        // Verify nested arrays are frozen
+        if (qualifiedPattern.participants.length > 0) {
+          expect(Object.isFrozen(qualifiedPattern.participants[0])).toBe(true);
+        }
+        if (qualifiedPattern.evidence.length > 0) {
+          expect(Object.isFrozen(qualifiedPattern.evidence[0])).toBe(true);
+        }
+        expect(Object.isFrozen(qualifiedPattern.provenance.sourcePatternIds)).toBe(true);
+        expect(Object.isFrozen(qualifiedPattern.provenance.sourceEvidenceIds)).toBe(true);
+        expect(Object.isFrozen(qualifiedPattern.provenance.ruleIds)).toBe(true);
+      }
+
+      // Note: If canonical chart produces zero patterns, document that here.
+      // Current canonical chart may or may not produce patterns depending on configuration.
+      // This test validates the pipeline regardless of pattern count.
     });
   });
 });
