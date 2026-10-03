@@ -665,4 +665,88 @@ describe('CareerPatternClassification', () => {
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
     });
   });
+
+  describe('Golden test: full chain on CANONICAL_BIRTH_DETAILS', () => {
+    it('produces deterministic, frozen pattern output for canonical chart', async () => {
+      // First verify determinism by running the chain twice
+      const horoscope1 = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural1 = buildCareerStructuralReasoning({ horoscope: horoscope1 });
+      const facts1 = buildCareerGraphFactsFromStructural(structural1);
+      const graph1 = buildCareerAstroGraph({ facts: facts1 });
+      const networks1 = detectCareerHouseNetworks({ graph: graph1 });
+      const patterns1 = classifyCareerPatterns({ networks: networks1.networks });
+
+      const horoscope2 = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const structural2 = buildCareerStructuralReasoning({ horoscope: horoscope2 });
+      const facts2 = buildCareerGraphFactsFromStructural(structural2);
+      const graph2 = buildCareerAstroGraph({ facts: facts2 });
+      const networks2 = detectCareerHouseNetworks({ graph: graph2 });
+      const patterns2 = classifyCareerPatterns({ networks: networks2.networks });
+
+      // Assert determinism: both runs must produce identical output
+      expect(JSON.stringify(patterns1)).toBe(JSON.stringify(patterns2));
+
+      // Now assert against frozen expected values
+      // The canonical chart (Gemini ascendant, 1988-05-08) has:
+      // - House 6: Lord MARS (in House 8)
+      // - House 8: Lord SATURN (in House 7), Occupants: MOON, MARS
+      // - House 11: Lord MARS (in House 8), Occupants: SUN, JUPITER
+      // This creates a STAR topology network 6-8-11 centered on MARS
+      const expectedPattern = {
+        patternId: 'CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:ASPECTS:PLANET:MARS→HOUSE:11|ASPECTS:PLANET:MARS→HOUSE:6|LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6|OCCUPIES:PLANET:JUPITER→HOUSE:11|OCCUPIES:PLANET:MARS→HOUSE:8|OCCUPIES:PLANET:MOON→HOUSE:8',
+        identityKey: 'CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:ASPECTS:PLANET:MARS→HOUSE:11|ASPECTS:PLANET:MARS→HOUSE:6|LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6|OCCUPIES:PLANET:JUPITER→HOUSE:11|OCCUPIES:PLANET:MARS→HOUSE:8|OCCUPIES:PLANET:MOON→HOUSE:8',
+        family: 'CAREER_HOUSE_NETWORK',
+        level: 'HOUSE_NETWORK',
+        classification: 'CAREER_HOUSE_NETWORK',
+        name: 'Career House Network',
+        topology: 'STAR',
+        direction: 'BIDIRECTIONAL',
+        houses: [6, 8, 11],
+        houseRoles: {
+          6: 'SERVICE_HOUSE',
+          8: 'UNKNOWN',
+          11: 'GAINS_HOUSE'
+        },
+        planets: ['MOON', 'MARS', 'JUPITER'],
+        networkIds: [
+          '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8'
+        ],
+        relationshipIds: [
+          'ASPECTS:PLANET:MARS→HOUSE:11',
+          'ASPECTS:PLANET:MARS→HOUSE:6',
+          'LORD_OF:PLANET:MARS→HOUSE:11',
+          'LORD_OF:PLANET:MARS→HOUSE:6',
+          'OCCUPIES:PLANET:JUPITER→HOUSE:11',
+          'OCCUPIES:PLANET:MARS→HOUSE:8',
+          'OCCUPIES:PLANET:MOON→HOUSE:8'
+        ],
+        evidence: [
+          {
+            evidenceId: 'P2-03-EVIDENCE:RULE_GENERIC:6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8',
+            ruleId: 'RULE_GENERIC',
+            sourceNetworkId: '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8',
+            sourceNetworkIdentityKey: '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8'
+          }
+        ],
+        provenance: {
+          sourceNetworkIds: [
+            '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8'
+          ],
+          relationshipIds: [
+            'ASPECTS:PLANET:MARS→HOUSE:11',
+            'ASPECTS:PLANET:MARS→HOUSE:6',
+            'LORD_OF:PLANET:MARS→HOUSE:11',
+            'LORD_OF:PLANET:MARS→HOUSE:6',
+            'OCCUPIES:PLANET:JUPITER→HOUSE:11',
+            'OCCUPIES:PLANET:MARS→HOUSE:8',
+            'OCCUPIES:PLANET:MOON→HOUSE:8'
+          ],
+          ruleIds: ['RULE_GENERIC']
+        }
+      };
+
+      expect(patterns1.patterns).toHaveLength(1);
+      expect(patterns1.patterns[0]).toEqual(expectedPattern);
+    });
+  });
 });

@@ -1,8 +1,8 @@
 # P2-03 — Pattern Identity/Classification
 
-> **STATUS: IMPLEMENTED — VERIFICATION PENDING**
->
-> Pattern identity/classification layer (CareerPattern) is implemented. Pattern qualification (next layer) is not yet implemented.
+> **STATUS: IMPLEMENTED**
+
+> Pattern identity/classification layer (CareerPattern) is implemented and verified with deterministic golden test. Pattern qualification (next layer) is not yet implemented.
 
 ## Purpose
 
@@ -53,14 +53,15 @@ These extensions and removals were made during P2-03 implementation and are froz
 
 ## Golden Test Status
 
-A deterministic golden fixture (fixed chart → expected classification → expected identity/provenance) is deferred per Phase 2 acceptance rules. Current test coverage includes:
+A deterministic golden fixture (fixed chart → expected classification → expected identity/provenance) is implemented. The test exercises the full chain: `calculateHoroscope(CANONICAL_BIRTH_DETAILS)` → `buildCareerStructuralReasoning` → `buildCareerGraphFactsFromStructural` → `buildCareerAstroGraph` → `detectCareerHouseNetworks` → `classifyCareerPatterns`. It first verifies determinism by running the chain twice and asserting equality, then asserts the full serialized result against frozen expected constants.
+
+Current test coverage includes:
 - Unit tests for all classification rules
 - Determinism tests (input-order independence, evidence/relationship sort order)
 - Real-engine end-to-end chain test
 - Deep-freeze immutability tests
 - Boundary enforcement tests (no forbidden properties)
-
-Golden fixture testing will be added in a later phase when the qualification layer is implemented.
+- **Golden test with frozen expected pattern output for CANONICAL_BIRTH_DETAILS**
 
 ## P2-03 Implementation Notes
 
