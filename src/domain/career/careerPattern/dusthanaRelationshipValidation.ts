@@ -1,5 +1,4 @@
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
-import type { CareerGraphEdge } from '../careerGraph/careerAstroGraphTypes';
 import { Planet } from '../../../types';
 import {
   hasCommonLordRelationship,
@@ -8,7 +7,8 @@ import {
   hasExchangeRelationship,
   hasDirectedHouseRelationship,
   hasPlanetMediatedRelationship,
-  getLordsOfHouse
+  getLordsOfHouse,
+  buildLordshipMap
 } from './careerPatternPredicates';
 import type {
   DusthanaRelationshipType,
@@ -126,14 +126,37 @@ function generateValidationId(
 
 /**
  * Detects COMMON_LORD relationship between two houses.
+ * Returns the exact LORD_OF edge identity keys for the shared planet.
  * Uses hasCommonLordRelationship from P2-06A predicates.
  */
 function detectCommonLord(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
-  return hasCommonLordRelationship(network, dusthanaHouse, careerAnchorHouse);
+): readonly string[] {
+  if (!hasCommonLordRelationship(network, dusthanaHouse, careerAnchorHouse)) {
+    return [];
+  }
+
+  const lordshipMap = buildLordshipMap(network.relationships);
+  const matchedKeys: string[] = [];
+
+  for (const [planet, houses] of lordshipMap) {
+    if (houses.has(dusthanaHouse) && houses.has(careerAnchorHouse)) {
+      // Find the LORD_OF edges for this planet to both houses
+      for (const edge of network.relationships) {
+        if (edge.type === 'LORD_OF') {
+          const edgePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
+          const edgeHouse = parseHouseFromNodeKey(edge.targetNodeId);
+          if (edgePlanet === planet && (edgeHouse === dusthanaHouse || edgeHouse === careerAnchorHouse)) {
+            matchedKeys.push(edge.identityKey);
+          }
+        }
+      }
+    }
+  }
+
+  return Object.freeze(matchedKeys);
 }
 
 /**
