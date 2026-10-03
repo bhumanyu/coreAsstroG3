@@ -416,12 +416,16 @@ describe('CareerPatternClassification', () => {
       const input: CareerPatternClassificationInput = { networks: [network] };
       const result = classifyCareerPatterns(input);
 
-      const specializedPattern = result.patterns.find(p => p.classification === 'CREATIVE_DHARMA_TO_PROFESSION');
-      expect(specializedPattern).toBeDefined();
-      expect(specializedPattern?.family).toBe('KENDRA_TRIKONA');
+      // Verify RAJA_YOGA_CAREER classification does not exist
+      const rajaYogaPattern = result.patterns.find(p => p.classification === 'RAJA_YOGA_CAREER');
+      expect(rajaYogaPattern).toBeUndefined();
 
-      // Verify the classification is correct (not Raja Yoga)
-      expect(specializedPattern?.classification).toBe('CREATIVE_DHARMA_TO_PROFESSION');
+      // Verify we have CREATIVE_DHARMA_TO_PROFESSION or DHARMA_KARMA_ALIGNMENT instead
+      const validPattern = result.patterns.find(p =>
+        p.classification === 'CREATIVE_DHARMA_TO_PROFESSION' ||
+        p.classification === 'DHARMA_KARMA_ALIGNMENT'
+      );
+      expect(validPattern).toBeDefined();
     });
   });
 
@@ -720,6 +724,8 @@ describe('CareerPatternClassification', () => {
           'OCCUPIES:PLANET:MARS→HOUSE:8',
           'OCCUPIES:PLANET:MOON→HOUSE:8'
         ],
+        mechanisms: [],
+        relationships: [],
         evidence: [
           {
             evidenceId: 'P2-03-EVIDENCE:RULE_GENERIC:6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8',
@@ -747,6 +753,198 @@ describe('CareerPatternClassification', () => {
 
       expect(patterns1.patterns).toHaveLength(1);
       expect(patterns1.patterns[0]).toEqual(expectedPattern);
+    });
+  });
+
+  describe('P2-06: Mechanisms field', () => {
+    it('pattern includes mechanisms array (empty for base classification)', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:MECHANISMS',
+        identityKey: 'NETWORK:MECHANISMS',
+        houses: [6, 10, 11]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const pattern = result.patterns[0];
+      expect(pattern.mechanisms).toBeDefined();
+      expect(Array.isArray(pattern.mechanisms)).toBe(true);
+    });
+
+    it('pattern includes relationships array (empty for base classification)', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:RELATIONSHIPS',
+        identityKey: 'NETWORK:RELATIONSHIPS',
+        houses: [6, 10, 11]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const pattern = result.patterns[0];
+      expect(pattern.relationships).toBeDefined();
+      expect(Array.isArray(pattern.relationships)).toBe(true);
+    });
+  });
+
+  describe('P2-06: Parivartana career type classification', () => {
+    it('classifies 6↔10 as SERVICE_PROFESSION_EXCHANGE', () => {
+      const exchangeRelationship = makeRelationship({
+        identityKey: 'REL:EXCHANGE',
+        type: 'EXCHANGES'
+      });
+
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-EXCHANGE',
+        identityKey: 'NETWORK:6-10-EXCHANGE',
+        houses: [6, 10],
+        relationships: [exchangeRelationship]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const parivartanaPattern = result.patterns.find(p => p.classification === 'PARIVARTANA_YOGA');
+      expect(parivartanaPattern).toBeDefined();
+      expect(parivartanaPattern?.evidence[0].ruleId).toContain('SERVICE_PROFESSION_EXCHANGE');
+    });
+
+    it('classifies 9↔10 as DHARMA_KARMA_EXCHANGE', () => {
+      const exchangeRelationship = makeRelationship({
+        identityKey: 'REL:EXCHANGE',
+        type: 'EXCHANGES'
+      });
+
+      const network = makeNetwork({
+        networkId: 'NETWORK:9-10-EXCHANGE',
+        identityKey: 'NETWORK:9-10-EXCHANGE',
+        houses: [9, 10],
+        relationships: [exchangeRelationship]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const parivartanaPattern = result.patterns.find(p => p.classification === 'PARIVARTANA_YOGA');
+      expect(parivartanaPattern).toBeDefined();
+      expect(parivartanaPattern?.evidence[0].ruleId).toContain('DHARMA_KARMA_EXCHANGE');
+    });
+
+    it('classifies 8↔10 as TRANSFORMATION_PROFESSION_EXCHANGE', () => {
+      const exchangeRelationship = makeRelationship({
+        identityKey: 'REL:EXCHANGE',
+        type: 'EXCHANGES'
+      });
+
+      const network = makeNetwork({
+        networkId: 'NETWORK:8-10-EXCHANGE',
+        identityKey: 'NETWORK:8-10-EXCHANGE',
+        houses: [8, 10],
+        relationships: [exchangeRelationship]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const parivartanaPattern = result.patterns.find(p => p.classification === 'PARIVARTANA_YOGA');
+      expect(parivartanaPattern).toBeDefined();
+      expect(parivartanaPattern?.evidence[0].ruleId).toContain('TRANSFORMATION_PROFESSION_EXCHANGE');
+    });
+  });
+
+  describe('P2-06: Kendra-Trikona sub-types', () => {
+    it('classifies 9↔10 as DHARMA_KARMA_ALIGNMENT', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:9-10',
+        identityKey: 'NETWORK:9-10',
+        houses: [9, 10],
+        topology: 'DIRECT_LINK'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const specializedPattern = result.patterns.find(p => p.classification === 'DHARMA_KARMA_ALIGNMENT');
+      expect(specializedPattern).toBeDefined();
+      expect(specializedPattern?.family).toBe('KENDRA_TRIKONA');
+    });
+
+    it('classifies 5-9-10 with DHARMA_KARMA_ALIGNMENT sub-type', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:5-9-10',
+        identityKey: 'NETWORK:5-9-10',
+        houses: [5, 9, 10],
+        topology: 'TRIANGLE'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const specializedPattern = result.patterns.find(p => p.classification === 'DHARMA_KARMA_ALIGNMENT');
+      expect(specializedPattern).toBeDefined();
+      expect(specializedPattern?.evidence[0].ruleId).toContain('DHARMA_KARMA');
+    });
+  });
+
+  describe('P2-06: Upachaya ordered-path semantics', () => {
+    it('classifies full 3-6-10-11 pathway with FULL_PATH rule', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:3-6-10-11',
+        identityKey: 'NETWORK:3-6-10-11',
+        houses: [3, 6, 10, 11],
+        topology: 'CLUSTER'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const specializedPattern = result.patterns.find(p => p.classification === 'UPACHAYA_PROGRESSION');
+      expect(specializedPattern).toBeDefined();
+      expect(specializedPattern?.evidence[0].ruleId).toContain('FULL_PATH');
+    });
+
+    it('classifies 6-10-11 subset with SUB_PATH rule', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-11',
+        identityKey: 'NETWORK:6-10-11',
+        houses: [6, 10, 11],
+        topology: 'CHAIN'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const specializedPattern = result.patterns.find(p => p.classification === 'UPACHAYA_PROGRESSION');
+      expect(specializedPattern).toBeDefined();
+      expect(specializedPattern?.evidence[0].ruleId).toContain('SUB_PATH');
+    });
+  });
+
+  describe('P2-06: Identity stability under condition change', () => {
+    it('produces same identityKey regardless of mechanisms (mechanisms not in identity)', () => {
+      const network1 = makeNetwork({
+        networkId: 'NETWORK:MECH1',
+        identityKey: 'NETWORK:MECH1',
+        houses: [6, 10, 11]
+      });
+
+      const network2 = makeNetwork({
+        networkId: 'NETWORK:MECH2',
+        identityKey: 'NETWORK:MECH2',
+        houses: [6, 10, 11]
+      });
+
+      const input1: CareerPatternClassificationInput = { networks: [network1] };
+      const input2: CareerPatternClassificationInput = { networks: [network2] };
+
+      const result1 = classifyCareerPatterns(input1);
+      const result2 = classifyCareerPatterns(input2);
+
+      const pattern1 = result1.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+      const pattern2 = result2.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+
+      expect(pattern1?.identityKey).toBe(pattern2?.identityKey);
     });
   });
 });

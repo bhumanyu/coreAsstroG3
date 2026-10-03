@@ -20,3 +20,6 @@ export * from './careerPatternTypes';
 export * from './careerPatternIdentity';
 export * from './careerPatternClassificationRules';
 export * from './careerPatternClassification';
+export * from './dusthanaTransformationDetector';
+export * from './careerYogaDetector';
+export * from './careerPatternAnalysis';

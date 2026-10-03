@@ -1,5 +1,6 @@
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerPatternClassification, CareerPatternHouseRole } from './careerPatternTypes';
+import type { ParivartanaCareerType } from './careerPatternTypes';
 
 /**
  * P2-03 Career Pattern Classification Rules
@@ -83,6 +84,17 @@ export const HOUSE_ROLES_6_10_11: Readonly<Record<number, CareerPatternHouseRole
 });
 
 /**
+ * Mechanism chain for Upachaya progression.
+ * Per spec §12: SELF_EFFORT → SKILL_DEVELOPMENT → PROFESSIONALIZATION → PROFESSIONAL_GAINS
+ */
+export const UPACHAYA_MECHANISM_CHAIN: readonly string[] = Object.freeze([
+  'SELF_EFFORT',
+  'SKILL_DEVELOPMENT',
+  'PROFESSIONALIZATION',
+  'PROFESSIONAL_GAINS'
+]);
+
+/**
  * Frozen house-role map for 2-3-6-10-11 pattern.
  */
 export const HOUSE_ROLES_2_3_6_10_11: Readonly<Record<number, CareerPatternHouseRole>> = Object.freeze({
@@ -132,17 +144,31 @@ export function classifyTwoSixTenEleven(network: CareerHouseNetwork): readonly C
 
 /**
  * Classifies a 3-6-10-11 network as UPACHAYA progression.
+ * Per spec §12: extended with ordered-path semantics and mechanism chain.
+ * 3→6→10→11 → SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS
+ * 6→10→11 → WORK_TO_PROFESSION_TO_GAINS
  */
 export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
+  // Full 3-6-10-11 pathway
   if (sortedHouses.join(',') === UPACHAYA_HOUSES.join(',')) {
     return [{
-      ruleId: 'RULE_3_6_10_11',
+      ruleId: 'RULE_3_6_10_11_FULL_PATH',
       classification: 'UPACHAYA_PROGRESSION',
       family: 'UPACHAYA',
       houseRoles: HOUSE_ROLES_3_6_10_11
+    }];
+  }
+
+  // 6-10-11 pathway (subset)
+  if (sortedHouses.join(',') === '6,10,11') {
+    return [{
+      ruleId: 'RULE_6_10_11_SUB_PATH',
+      classification: 'UPACHAYA_PROGRESSION',
+      family: 'UPACHAYA',
+      houseRoles: HOUSE_ROLES_6_10_11
     }];
   }
 
@@ -150,19 +176,81 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
 }
 
 /**
+ * Classifies Kendra-Trikona sub-types.
+ * Per spec §9: DHARMA_KARMA_ALIGNMENT for 9↔10, AUTHORITY_PATTERN for kendraHouse=10, else PROFESSIONAL_RISE_PATTERN.
+ */
+export function classifyKendraTrikona(
+  network: CareerHouseNetwork
+): { ruleId: string; classification: string } | null {
+  const houses = network.houses;
+  const houseSet = new Set(houses);
+
+  // 9↔10 → DHARMA_KARMA_ALIGNMENT
+  if (houseSet.has(9) && houseSet.has(10)) {
+    return {
+      ruleId: 'RULE_KENDRA_TRIKONA_DHARMA_KARMA',
+      classification: 'DHARMA_KARMA_ALIGNMENT'
+    };
+  }
+
+  // Kendra house is 10 → AUTHORITY_PATTERN
+  const kendraHouses = [1, 4, 7, 10];
+  if (houseSet.has(10) && kendraHouses.some(h => houseSet.has(h))) {
+    return {
+      ruleId: 'RULE_KENDRA_TRIKONA_AUTHORITY',
+      classification: 'AUTHORITY_PATTERN'
+    };
+  }
+
+  // Default: PROFESSIONAL_RISE_PATTERN
+  return {
+    ruleId: 'RULE_KENDRA_TRIKONA_RISE',
+    classification: 'PROFESSIONAL_RISE_PATTERN'
+  };
+}
+
+/**
  * Classifies a 5-9-10 network as CREATIVE_DHARMA_TO_PROFESSION.
  * NOT Raja Yoga - no lordship/functional info yet.
+ * Per spec §9: enhanced with classifyKendraTrikona sub-types.
  */
 export function classifyFiveNineTen(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houses = network.houses;
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
   if (sortedHouses.join(',') === '5,9,10') {
+    const kendraTrikonaType = classifyKendraTrikona(network);
+
     return [{
-      ruleId: 'RULE_5_9_10',
-      classification: 'CREATIVE_DHARMA_TO_PROFESSION',
+      ruleId: kendraTrikonaType?.ruleId || 'RULE_5_9_10',
+      classification: kendraTrikonaType?.classification === 'DHARMA_KARMA_ALIGNMENT'
+        ? 'DHARMA_KARMA_ALIGNMENT'
+        : 'CREATIVE_DHARMA_TO_PROFESSION',
       family: 'KENDRA_TRIKONA',
       houseRoles: HOUSE_ROLES_5_9_10
+    }];
+  }
+
+  return [];
+}
+
+/**
+ * Classifies a 9-10 network as DHARMA_KARMA_ALIGNMENT.
+ * Per spec §9: Kendra-Trikona sub-type for 9↔10.
+ */
+export function classifyNineTen(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
+  const houses = network.houses;
+  const sortedHouses = [...houses].sort((a, b) => a - b);
+
+  if (sortedHouses.join(',') === '9,10') {
+    return [{
+      ruleId: 'RULE_9_10_DHARMA_KARMA',
+      classification: 'DHARMA_KARMA_ALIGNMENT',
+      family: 'KENDRA_TRIKONA',
+      houseRoles: Object.freeze({
+        9: 'DHARMA_HOUSE',
+        10: 'CAREER_HOUSE'
+      })
     }];
   }
 
@@ -246,8 +334,52 @@ export function classifyTenEleven(network: CareerHouseNetwork): readonly CareerP
 }
 
 /**
+ * Classifies the specific type of Parivartana career exchange.
+ * Per spec §19: specific exchange types based on house pairs.
+ */
+export function classifyParivartanaCareerType(
+  houses: readonly number[]
+): ParivartanaCareerType {
+  const houseSet = new Set(houses);
+
+  // 6↔10 → SERVICE_PROFESSION_EXCHANGE
+  if (houseSet.has(6) && houseSet.has(10)) {
+    return 'SERVICE_PROFESSION_EXCHANGE';
+  }
+
+  // 9↔10 → DHARMA_KARMA_EXCHANGE
+  if (houseSet.has(9) && houseSet.has(10)) {
+    return 'DHARMA_KARMA_EXCHANGE';
+  }
+
+  // 8↔10 → TRANSFORMATION_PROFESSION_EXCHANGE
+  if (houseSet.has(8) && houseSet.has(10)) {
+    return 'TRANSFORMATION_PROFESSION_EXCHANGE';
+  }
+
+  // 10↔11 → GAINS_PROFESSION_EXCHANGE
+  if (houseSet.has(10) && houseSet.has(11)) {
+    return 'GAINS_PROFESSION_EXCHANGE';
+  }
+
+  // 3↔10 → SELF_EFFORT_PROFESSION_EXCHANGE
+  if (houseSet.has(3) && houseSet.has(10)) {
+    return 'SELF_EFFORT_PROFESSION_EXCHANGE';
+  }
+
+  // 2↔10 → RESOURCE_PROFESSION_EXCHANGE
+  if (houseSet.has(2) && houseSet.has(10)) {
+    return 'RESOURCE_PROFESSION_EXCHANGE';
+  }
+
+  // Default: GENERIC_CAREER_EXCHANGE
+  return 'GENERIC_CAREER_EXCHANGE';
+}
+
+/**
  * Classifies a Parivartana (exchange) network.
  * Requires BOTH an EXCHANGES edge AND a career-relevant house in {2,6,10,11}.
+ * Per spec §19: enhanced with ParivartanaCareerType classification.
  */
 export function classifyParivartana(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const hasExchange = network.relationships.some(r => r.type === 'EXCHANGES');
@@ -257,14 +389,20 @@ export function classifyParivartana(network: CareerHouseNetwork): readonly Caree
     const houseRoles: Record<number, CareerPatternHouseRole> = {};
     for (const house of network.houses) {
       if (house === 2) houseRoles[house] = 'WEALTH_HOUSE';
+      else if (house === 3) houseRoles[house] = 'EFFORT_HOUSE';
       else if (house === 6) houseRoles[house] = 'SERVICE_HOUSE';
+      else if (house === 8) houseRoles[house] = 'UNKNOWN';
+      else if (house === 9) houseRoles[house] = 'DHARMA_HOUSE';
       else if (house === 10) houseRoles[house] = 'CAREER_HOUSE';
       else if (house === 11) houseRoles[house] = 'GAINS_HOUSE';
+      else if (house === 12) houseRoles[house] = 'UNKNOWN';
       else houseRoles[house] = 'UNKNOWN';
     }
 
+    const parivartanaType = classifyParivartanaCareerType(network.houses);
+
     return [{
-      ruleId: 'RULE_PARIVARTANA',
+      ruleId: `RULE_PARIVARTANA_${parivartanaType}`,
       classification: 'PARIVARTANA_YOGA',
       family: 'PARIVARTANA',
       houseRoles: Object.freeze(houseRoles)
@@ -317,6 +455,7 @@ export function classifyCareerHouseNetwork(network: CareerHouseNetwork): readonl
   matches.push(...classifyTwoSixTenEleven(network));
   matches.push(...classifyThreeSixTenEleven(network));
   matches.push(...classifyFiveNineTen(network));
+  matches.push(...classifyNineTen(network));
   matches.push(...classifyNineTenEleven(network));
   matches.push(...classifySixTenEleven(network));
   matches.push(...classifyTwoThreeSixTenEleven(network));

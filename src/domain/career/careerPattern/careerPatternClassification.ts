@@ -50,7 +50,11 @@ function buildPatternName(classification: CareerPatternClassification): string {
     SERVICE_TO_PROFESSION_TO_GAINS: 'Service to Profession to Gains',
     PROFESSION_TO_GAINS: 'Profession to Gains',
     UPACHAYA_PROGRESSION: 'Upachaya Progression',
-    PARIVARTANA_YOGA: 'Parivartana Yoga'
+    PARIVARTANA_YOGA: 'Parivartana Yoga',
+    DUSTHANA_CAREER_TRANSFORMATION: 'Dusthana Career Transformation',
+    CAREER_YOGA_STRUCTURE: 'Career Yoga Structure',
+    AUTHORITY_PATTERN: 'Authority Pattern',
+    PROFESSIONAL_RISE_PATTERN: 'Professional Rise Pattern'
   };
   return nameMap[classification] || classification;
 }
@@ -103,6 +107,8 @@ function buildCareerPattern(
     planets: network.lords,
     networkIds: [network.networkId],
     relationshipIds,
+    mechanisms: [], // Will be populated by family-specific detectors
+    relationships: [], // Will be populated by analysis layer
     evidence,
     provenance
   });
@@ -111,6 +117,7 @@ function buildCareerPattern(
 /**
  * Deduplicates patterns by identityKey.
  * Merges networkIds/relationshipIds (sorted-unique), dedupes evidence by evidenceId and sorts.
+ * Merges mechanisms (sorted-unique) and relationships by relationshipId.
  */
 function deduplicatePatterns(patterns: readonly CareerPattern[]): readonly CareerPattern[] {
   const patternMap = new Map<string, CareerPattern>();
@@ -124,6 +131,16 @@ function deduplicatePatterns(patterns: readonly CareerPattern[]): readonly Caree
 
       // Merge relationshipIds (sorted-unique)
       const mergedRelationshipIds = [...new Set([...existing.relationshipIds, ...pattern.relationshipIds])].sort();
+
+      // Merge mechanisms (sorted-unique)
+      const mergedMechanisms = [...new Set([...existing.mechanisms, ...pattern.mechanisms])].sort();
+
+      // Merge relationships (dedup by relationshipId, sorted)
+      const relationshipMap = new Map<string, typeof pattern.relationships[0]>();
+      for (const r of [...existing.relationships, ...pattern.relationships]) {
+        relationshipMap.set(r.relationshipId, r);
+      }
+      const mergedRelationships = Array.from(relationshipMap.values()).sort((a, b) => a.relationshipId.localeCompare(b.relationshipId));
 
       // Merge evidence (dedup by evidenceId, sorted)
       const evidenceMap = new Map<string, CareerPatternClassificationEvidence>();
@@ -147,6 +164,8 @@ function deduplicatePatterns(patterns: readonly CareerPattern[]): readonly Caree
         ...existing,
         networkIds: mergedNetworkIds,
         relationshipIds: mergedRelationshipIds,
+        mechanisms: mergedMechanisms,
+        relationships: mergedRelationships,
         evidence: mergedEvidence,
         provenance: mergedProvenance
       });

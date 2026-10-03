@@ -27,7 +27,9 @@ export type CareerPatternFamily =
   | 'CAREER_HOUSE_NETWORK'
   | 'KENDRA_TRIKONA'
   | 'UPACHAYA'
-  | 'PARIVARTANA';
+  | 'PARIVARTANA'
+  | 'DUSTHANA_TRANSFORMATION'
+  | 'CAREER_YOGA';
 
 /**
  * Pattern hierarchy level.
@@ -51,7 +53,11 @@ export type CareerPatternClassification =
   | 'SERVICE_TO_PROFESSION_TO_GAINS'
   | 'PROFESSION_TO_GAINS'
   | 'UPACHAYA_PROGRESSION'
-  | 'PARIVARTANA_YOGA';
+  | 'PARIVARTANA_YOGA'
+  | 'DUSTHANA_CAREER_TRANSFORMATION'
+  | 'CAREER_YOGA_STRUCTURE'
+  | 'AUTHORITY_PATTERN'
+  | 'PROFESSIONAL_RISE_PATTERN';
 
 /**
  * House role in a pattern.
@@ -67,6 +73,49 @@ export type CareerPatternHouseRole =
   | 'DHARMA_HOUSE'
   | 'GAINS_HOUSE'
   | 'UNKNOWN';
+
+/**
+ * Career mechanism types.
+ * Represents the underlying mechanism of career activity in a pattern.
+ * Per spec §6: mechanism classifications only, no profession-specific values.
+ */
+export type CareerMechanism =
+  | 'SELF_EFFORT'
+  | 'SKILL_DEVELOPMENT'
+  | 'SERVICE_EMPLOYMENT'
+  | 'COMPETITION'
+  | 'PROFESSIONALIZATION'
+  | 'PROFESSIONAL_GAINS'
+  | 'CREATIVE_INTELLECTUAL'
+  | 'DHARMA_DRIVEN_PROFESSION'
+  | 'AUTHORITY_LEADERSHIP'
+  | 'TRANSFORMATION'
+  | 'RESEARCH'
+  | 'RISK_MANAGEMENT'
+  | 'INVESTIGATION'
+  | 'BANKING_FINANCE'
+  | 'INSURANCE'
+  | 'TAXATION'
+  | 'COMPLIANCE'
+  | 'CRISIS_MANAGEMENT'
+  | 'FOREIGN_WORK'
+  | 'REMOTE_WORK'
+  | 'INSTITUTIONAL_WORK'
+  | 'ISOLATED_ENVIRONMENT'
+  | 'MIXED';
+
+/**
+ * Parivartana career type classification.
+ * Per spec §19: specific exchange types based on house pairs.
+ */
+export type ParivartanaCareerType =
+  | 'SERVICE_PROFESSION_EXCHANGE'
+  | 'DHARMA_KARMA_EXCHANGE'
+  | 'TRANSFORMATION_PROFESSION_EXCHANGE'
+  | 'GAINS_PROFESSION_EXCHANGE'
+  | 'SELF_EFFORT_PROFESSION_EXCHANGE'
+  | 'RESOURCE_PROFESSION_EXCHANGE'
+  | 'GENERIC_CAREER_EXCHANGE';
 
 /**
  * Evidence for a pattern classification.
@@ -100,6 +149,31 @@ export interface CareerPatternClassificationProvenance {
 }
 
 /**
+ * Relationship between two patterns.
+ * Represents how patterns relate to each other in the analysis.
+ */
+export interface CareerPatternRelationship {
+  readonly relationshipId: string;
+  readonly sourcePatternId: string;
+  readonly targetPatternId: string;
+  readonly relationshipType: 'SUPPORTS' | 'CONFLICTS' | 'REINFORCES' | 'MODIFIES';
+  readonly description: string;
+}
+
+/**
+ * Conflict between patterns.
+ * Represents a detected conflict between patterns that coexist.
+ * Per spec §28: conflicts preserve coexisting patterns rather than eliminating them.
+ */
+export interface CareerPatternConflict {
+  readonly conflictId: string;
+  readonly patternIds: readonly string[];
+  readonly conflictType: 'SEMANTIC_CONFLICT' | 'MECHANISM_CONFLICT' | 'STRUCTURAL_CONFLICT';
+  readonly description: string;
+  readonly resolution?: string;
+}
+
+/**
  * A Career pattern representation.
  * Represents a classified pattern with its structural identity and classification metadata.
  *
@@ -122,6 +196,8 @@ export interface CareerPattern {
   readonly planets: readonly Planet[];
   readonly networkIds: readonly string[];
   readonly relationshipIds: readonly string[];
+  readonly mechanisms: readonly CareerMechanism[];
+  readonly relationships: readonly CareerPatternRelationship[];
   readonly evidence: readonly CareerPatternClassificationEvidence[];
   readonly provenance: CareerPatternClassificationProvenance;
 }
@@ -140,4 +216,54 @@ export interface CareerPatternClassificationInput {
  */
 export interface CareerPatternClassificationResult {
   readonly patterns: readonly CareerPattern[];
+}
+
+/**
+ * Career Yoga structural pattern.
+ * Per spec §20: structural-only representation with no strength/condition/dasha/d10 fields.
+ */
+export interface CareerYogaPattern {
+  readonly yogaId: string;
+  readonly identityKey: string;
+  readonly name: string;
+  readonly participants: readonly Planet[];
+  readonly houseRelationships: Readonly<Record<string, readonly number[]>>;
+  readonly lordships: Readonly<Partial<Record<Planet, readonly number[]>>>;
+  readonly careerRelevant: boolean;
+  readonly evidenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+}
+
+/**
+ * Evidence for a pattern analysis.
+ * Per spec §24: evidence with deduplication support keyed on underlying fact identity.
+ */
+export interface CareerPatternEvidence {
+  readonly evidenceId: string;
+  readonly identityKey: string;
+  readonly statement: string;
+  readonly sourcePatternIds: readonly string[];
+  readonly ruleIds: readonly string[];
+  readonly underlyingFactIds: readonly string[];
+}
+
+/**
+ * Result of pattern analysis.
+ * Per spec §23: contains patterns, evidence, relationships, mechanisms, conflicts, and provenance.
+ * Sorted deterministically by family then identityKey.
+ */
+export interface CareerPatternAnalysis {
+  readonly patterns: readonly CareerPattern[];
+  readonly careerYogaPatterns: readonly CareerYogaPattern[];
+  readonly evidence: readonly CareerPatternEvidence[];
+  readonly relationships: readonly CareerPatternRelationship[];
+  readonly mechanisms: readonly CareerMechanism[];
+  readonly conflicts: readonly CareerPatternConflict[];
+  readonly provenance: {
+    readonly sourceNetworkIds: readonly string[];
+    readonly totalPatterns: number;
+    readonly totalCareerYogaPatterns: number;
+    readonly totalEvidence: number;
+    readonly totalConflicts: number;
+  };
 }

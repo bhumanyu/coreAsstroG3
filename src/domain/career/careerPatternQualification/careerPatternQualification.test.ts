@@ -72,6 +72,8 @@ function makePattern(
     planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
     networkIds: ['network-1'],
     relationshipIds: ['rel-1', 'rel-2'],
+    mechanisms: [],
+    relationships: [],
     evidence,
     provenance: Object.freeze({
       sourceNetworkIds: ['network-1'],

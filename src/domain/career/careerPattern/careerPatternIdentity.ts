@@ -27,6 +27,12 @@ import type { CareerNetworkTopology } from '../careerGraph/careerHouseNetworkTyp
  * relationship edges legitimately produce different patterns. This is deliberate and matters before
  * P2-04 qualification.
  *
+ * MECHANISMS-NOT-IN-IDENTITY:
+ * Mechanisms are inferred from participating planets and relationships, not from structural identity.
+ * The same structural pattern can produce different mechanisms based on planetary attributes.
+ * Therefore, mechanisms are NOT included in the identity key - they are added as metadata during
+ * pattern detection and analysis. Identity remains condition-independent.
+ *
  * @param family - The pattern family
  * @param classification - The pattern classification
  * @param houses - The houses in the pattern (will be sorted)
