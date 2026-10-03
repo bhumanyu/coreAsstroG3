@@ -42,7 +42,7 @@ describe('CareerHouseNetwork', () => {
       expect(network.networkId).toBeDefined();
       expect(network.identityKey).toBeDefined();
       expect(network.houses).toEqual([6, 10]); // Sorted
-      expect(network.lords).toEqual([Planet.SATURN, Planet.MERCURY]);
+      expect(network.lords).toEqual([Planet.MERCURY, Planet.SATURN]); // Sorted by canonical order
       expect(network.relationships).toEqual([edge]);
       expect(network.topology).toBe('DIRECT_LINK');
       expect(network.direction).toBe('FORWARD');
@@ -85,9 +85,10 @@ describe('CareerHouseNetwork', () => {
       const houses = [10, 6, 11];
       const topology: CareerNetworkTopology = 'CHAIN';
       const relationships: CareerGraphEdge[] = [];
+      const direction: CareerNetworkDirection = 'FORWARD';
 
-      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, topology, relationships);
-      const identityKey2 = buildCareerHouseNetworkIdentityKey([6, 10, 11], topology, relationships);
+      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, topology, relationships, direction);
+      const identityKey2 = buildCareerHouseNetworkIdentityKey([6, 10, 11], topology, relationships, direction);
 
       expect(identityKey1).toBe(identityKey2);
     });
@@ -95,16 +96,68 @@ describe('CareerHouseNetwork', () => {
     it('identity key includes topology', () => {
       const houses = [10, 6];
       const relationships: CareerGraphEdge[] = [];
+      const direction: CareerNetworkDirection = 'FORWARD';
 
-      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, 'DIRECT_LINK', relationships);
-      const identityKey2 = buildCareerHouseNetworkIdentityKey(houses, 'CHAIN', relationships);
+      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, 'DIRECT_LINK', relationships, direction);
+      const identityKey2 = buildCareerHouseNetworkIdentityKey(houses, 'CHAIN', relationships, direction);
 
       expect(identityKey1).not.toBe(identityKey2);
+    });
+
+    it('identity key includes direction', () => {
+      const houses = [10, 6];
+      const topology: CareerNetworkTopology = 'DIRECT_LINK';
+      const relationships: CareerGraphEdge[] = [];
+
+      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, topology, relationships, 'FORWARD');
+      const identityKey2 = buildCareerHouseNetworkIdentityKey(houses, topology, relationships, 'REVERSE');
+
+      expect(identityKey1).not.toBe(identityKey2);
+    });
+
+    it('networks identical except for direction produce different identity keys', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: ['rule-1'],
+        parentIds: []
+      };
+
+      const edge: CareerGraphEdge = {
+        edgeId: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        identityKey: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        provenance
+      };
+
+      const network1 = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.SATURN],
+        [edge],
+        'DIRECT_LINK',
+        'FORWARD',
+        provenance,
+        ['evidence-1']
+      );
+
+      const network2 = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.SATURN],
+        [edge],
+        'DIRECT_LINK',
+        'REVERSE',
+        provenance,
+        ['evidence-1']
+      );
+
+      expect(network1.identityKey).not.toBe(network2.identityKey);
     });
 
     it('identity key includes sorted relationship identities', () => {
       const houses = [10, 6];
       const topology: CareerNetworkTopology = 'DIRECT_LINK';
+      const direction: CareerNetworkDirection = 'FORWARD';
 
       const provenance: CareerGraphProvenance = {
         sourceIds: ['evidence-1'],
@@ -130,8 +183,8 @@ describe('CareerHouseNetwork', () => {
         provenance
       };
 
-      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, topology, [edge1, edge2]);
-      const identityKey2 = buildCareerHouseNetworkIdentityKey(houses, topology, [edge2, edge1]);
+      const identityKey1 = buildCareerHouseNetworkIdentityKey(houses, topology, [edge1, edge2], direction);
+      const identityKey2 = buildCareerHouseNetworkIdentityKey(houses, topology, [edge2, edge1], direction);
 
       expect(identityKey1).toBe(identityKey2);
     });
@@ -181,8 +234,9 @@ describe('CareerHouseNetwork', () => {
       const houses = [10, 6];
       const topology: CareerNetworkTopology = 'DIRECT_LINK';
       const relationships: CareerGraphEdge[] = [];
+      const direction: CareerNetworkDirection = 'FORWARD';
 
-      const identityKey = buildCareerHouseNetworkIdentityKey(houses, topology, relationships);
+      const identityKey = buildCareerHouseNetworkIdentityKey(houses, topology, relationships, direction);
 
       // Identity key should only contain structural information
       expect(identityKey).not.toContain('STRONG');
@@ -497,6 +551,148 @@ describe('CareerHouseNetwork', () => {
       // do not contain semantic pattern classification logic
       // This is a structural requirement that is enforced at compile time
       expect(true).toBe(true);
+    });
+  });
+
+  describe('Canonical Planet Ordering', () => {
+    it('sorts lords using canonical planet order', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: ['rule-1'],
+        parentIds: []
+      };
+
+      const edge: CareerGraphEdge = {
+        edgeId: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        identityKey: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        provenance
+      };
+
+      const network1 = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.SATURN, Planet.MERCURY],
+        [edge],
+        'DIRECT_LINK',
+        'FORWARD',
+        provenance,
+        ['evidence-1']
+      );
+
+      const network2 = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.MERCURY, Planet.SATURN],
+        [edge],
+        'DIRECT_LINK',
+        'FORWARD',
+        provenance,
+        ['evidence-1']
+      );
+
+      // Both should produce identical serialized networks
+      expect(JSON.stringify(network1)).toBe(JSON.stringify(network2));
+      expect(network1.lords).toEqual([Planet.MERCURY, Planet.SATURN]);
+      expect(network2.lords).toEqual([Planet.MERCURY, Planet.SATURN]);
+    });
+  });
+
+  describe('Evidence ID Deduplication', () => {
+    it('deduplicates evidence IDs', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: ['rule-1'],
+        parentIds: []
+      };
+
+      const edge: CareerGraphEdge = {
+        edgeId: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        identityKey: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        provenance
+      };
+
+      const network = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.SATURN],
+        [edge],
+        'DIRECT_LINK',
+        'FORWARD',
+        provenance,
+        ['e1', 'e1', 'e2', 'e2', 'e3']
+      );
+
+      expect(network.evidenceIds).toEqual(['e1', 'e2', 'e3']);
+    });
+  });
+
+  describe('Deep Freezing', () => {
+    it('deep-freezes relationships and their provenance', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: ['rule-1'],
+        parentIds: []
+      };
+
+      const edge: CareerGraphEdge = {
+        edgeId: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        identityKey: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        provenance
+      };
+
+      const network = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.SATURN],
+        [edge],
+        'DIRECT_LINK',
+        'FORWARD',
+        provenance,
+        ['evidence-1']
+      );
+
+      // Assert that relationships are frozen
+      expect(Object.isFrozen(network.relationships)).toBe(true);
+      expect(Object.isFrozen(network.relationships[0])).toBe(true);
+      expect(Object.isFrozen(network.relationships[0].provenance)).toBe(true);
+    });
+
+    it('freezes unfrozen input edges', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['evidence-1'],
+        ruleIds: ['rule-1'],
+        parentIds: []
+      };
+
+      const edge: CareerGraphEdge = {
+        edgeId: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        identityKey: 'LORD_OF:PLANET:SATURN→HOUSE:10',
+        provenance
+      };
+
+      // Verify edge is not frozen before passing
+      expect(Object.isFrozen(edge)).toBe(false);
+
+      const network = buildCareerHouseNetwork(
+        [10, 6],
+        [Planet.SATURN],
+        [edge],
+        'DIRECT_LINK',
+        'FORWARD',
+        provenance,
+        ['evidence-1']
+      );
+
+      // Assert that the edge in the network is now frozen
+      expect(Object.isFrozen(network.relationships[0])).toBe(true);
     });
   });
 });

@@ -26,8 +26,10 @@ export type CareerNetworkDirection =
  * A Career house network representation.
  * Represents a set of houses and their structural relationships as a network.
  *
- * Identity is based on sorted house set + topology + structural relationship identity (per §26–27).
+ * Identity is based on sorted house set + topology + direction + structural relationship identity (per §26–27).
  * Identity must NOT include strength/dignity/condition/Dasha.
+ *
+ * Direction IS part of network identity (it is structural semantics, not qualification).
  */
 export interface CareerHouseNetwork {
   readonly networkId: string;

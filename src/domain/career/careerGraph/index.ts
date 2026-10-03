@@ -10,6 +10,9 @@
 // Main graph builder
 export { buildCareerAstroGraph } from './careerAstroGraphBuilder';
 
+// C4→graph adapter
+export { buildCareerGraphFactsFromStructural } from './careerAstroGraphAdapter';
+
 // Core graph types
 export type {
   CareerAstroGraph,

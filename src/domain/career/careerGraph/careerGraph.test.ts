@@ -1,5 +1,6 @@
 import {
   buildCareerAstroGraph,
+  buildCareerGraphFactsFromStructural,
   type CareerAstroGraph,
   type CareerAstroGraphInput,
   type CareerGraphFact,
@@ -633,56 +634,8 @@ describe('CareerAstroGraph', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const structural = buildCareerStructuralReasoning({ horoscope });
 
-      // Translate structural.evidence[].relationship into CareerGraphFact[]
-      const facts: CareerGraphFact[] = [];
-
-      for (const evidence of structural.evidence) {
-        const relationship = evidence.relationship;
-
-        // Extract source and target nodes from the relationship
-        // This is a simplified translation - in practice, you'd map the
-        // CareerHouseRelationship to appropriate graph facts
-        if (relationship.lordA && relationship.lordB) {
-          const sourceNode: CareerGraphNodeRef = {
-            type: 'PLANET',
-            key: relationship.lordA
-          };
-
-          const targetNode: CareerGraphNodeRef = {
-            type: 'PLANET',
-            key: relationship.lordB
-          };
-
-          // Map relationship type to graph edge type
-          let edgeType: 'LORD_OF' | 'OCCUPIES' | 'ASPECTS' | 'CONJUNCT' | 'EXCHANGES';
-          switch (relationship.type) {
-            case 'LORD_CONJUNCTION':
-              edgeType = 'CONJUNCT';
-              break;
-            case 'LORD_ASPECT':
-              edgeType = 'ASPECTS';
-              break;
-            case 'EXCHANGE':
-              edgeType = 'EXCHANGES';
-              break;
-            default:
-              edgeType = 'ASPECTS'; // Default fallback
-          }
-
-          const fact: CareerGraphFact = {
-            sourceNode,
-            targetNode,
-            relationship: edgeType,
-            provenance: {
-              sourceIds: [evidence.id],
-              ruleIds: [],
-              parentIds: []
-            }
-          };
-
-          facts.push(fact);
-        }
-      }
+      // Use the explicit adapter to translate structural reasoning to graph facts
+      const facts = buildCareerGraphFactsFromStructural(structural);
 
       const input: CareerAstroGraphInput = { facts };
       const graph = buildCareerAstroGraph(input);
@@ -694,7 +647,13 @@ describe('CareerAstroGraph', () => {
       // Assert that we have both HOUSE and PLANET nodes
       const houseNodes = graph.nodes.filter(n => n.type === 'HOUSE');
       const planetNodes = graph.nodes.filter(n => n.type === 'PLANET');
+      expect(houseNodes.length).toBeGreaterThan(0);
       expect(planetNodes.length).toBeGreaterThan(0);
+
+      // Assert that multiple edge types are produced from real data
+      const edgeTypes = new Set(graph.edges.map(e => e.type));
+      expect(edgeTypes.has('LORD_OF')).toBe(true);
+      expect(edgeTypes.has('OCCUPIES')).toBe(true);
 
       // Assert that edges have proper structure
       for (const edge of graph.edges) {

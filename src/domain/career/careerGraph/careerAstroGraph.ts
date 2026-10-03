@@ -1,5 +1,20 @@
 import type { CareerAstroGraph, CareerGraphNode, CareerGraphEdge } from './careerAstroGraphTypes';
 import { CANONICAL_CAREER_PLANET_ORDER } from './careerGraphConstants';
+import type { Planet } from '../../../types';
+
+/**
+ * Validates that a planet key is a valid Planet and returns its canonical index.
+ *
+ * @param planetKey - The planet key to validate
+ * @returns The index of the planet in CANONICAL_CAREER_PLANET_ORDER
+ * @throws Error if the key is not a valid Planet
+ */
+function getCanonicalPlanetIndex(planetKey: string): number {
+  if (!CANONICAL_CAREER_PLANET_ORDER.includes(planetKey as Planet)) {
+    throw new Error(`Invalid planet key: ${planetKey}. Must be one of: ${CANONICAL_CAREER_PLANET_ORDER.join(', ')}`);
+  }
+  return CANONICAL_CAREER_PLANET_ORDER.indexOf(planetKey as Planet);
+}
 
 /**
  * Validates referential integrity of a CareerAstroGraph.
@@ -82,8 +97,8 @@ export const compareCareerGraphNodes = (a: CareerGraphNode, b: CareerGraphNode):
 
   // Both are PLANET - sort by canonical order
   if (a.type === 'PLANET' && b.type === 'PLANET') {
-    const indexA = CANONICAL_CAREER_PLANET_ORDER.indexOf(a.key as any);
-    const indexB = CANONICAL_CAREER_PLANET_ORDER.indexOf(b.key as any);
+    const indexA = getCanonicalPlanetIndex(a.key);
+    const indexB = getCanonicalPlanetIndex(b.key);
     return indexA - indexB;
   }
 
