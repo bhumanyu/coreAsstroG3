@@ -29,6 +29,13 @@ export const CAREER_HOUSES = [2, 6, 10, 11] as const;
 export const UPACHAYA_HOUSES = [3, 6, 10, 11] as const;
 
 /**
+ * Type-safe helper to check if a house is a career house.
+ */
+export function isCareerHouse(house: number): boolean {
+  return (CAREER_HOUSES as readonly number[]).includes(house);
+}
+
+/**
  * Frozen house-role map for 2-6-10-11 pattern.
  */
 export const HOUSE_ROLES_2_6_10_11: Readonly<Record<number, CareerPatternHouseRole>> = Object.freeze({
@@ -130,7 +137,7 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
   const houses = network.houses;
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
-  if (sortedHouses.join(',') === '3,6,10,11') {
+  if (sortedHouses.join(',') === UPACHAYA_HOUSES.join(',')) {
     return [{
       ruleId: 'RULE_3_6_10_11',
       classification: 'UPACHAYA_PROGRESSION',
@@ -244,7 +251,7 @@ export function classifyTenEleven(network: CareerHouseNetwork): readonly CareerP
  */
 export function classifyParivartana(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const hasExchange = network.relationships.some(r => r.type === 'EXCHANGES');
-  const hasCareerHouse = network.houses.some(h => CAREER_HOUSES.includes(h as any));
+  const hasCareerHouse = network.houses.some(isCareerHouse);
 
   if (hasExchange && hasCareerHouse) {
     const houseRoles: Record<number, CareerPatternHouseRole> = {};
@@ -270,6 +277,11 @@ export function classifyParivartana(network: CareerHouseNetwork): readonly Caree
 /**
  * Generic fallback classification for networks that don't match specialized rules.
  * Never discard an unclassified network - always return at least CAREER_HOUSE_NETWORK.
+ *
+ * SEMANTIC NOTE: CAREER_HOUSE_NETWORK is a structural carrier classification — not a claim
+ * of career significance, strength, qualification, or positive outcome. This classification
+ * is structural only. Qualification (strength, relevance, coherence, activation potential)
+ * is a separate layer (P2-04, future).
  */
 export function classifyGenericCareerNetwork(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
   const houseRoles: Record<number, CareerPatternHouseRole> = {};

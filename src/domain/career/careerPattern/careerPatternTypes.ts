@@ -40,12 +40,11 @@ export type CareerPatternLevel =
 /**
  * Pattern classification categories.
  * Represents the semantic classification of the pattern.
- * 10 members as specified.
+ * 9 members as specified (SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS removed — unused).
  */
 export type CareerPatternClassification =
   | 'CAREER_HOUSE_NETWORK'
   | 'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS'
-  | 'SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS'
   | 'COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS'
   | 'CREATIVE_DHARMA_TO_PROFESSION'
   | 'DHARMA_KARMA_ALIGNMENT'
@@ -72,6 +71,11 @@ export type CareerPatternHouseRole =
 /**
  * Evidence for a pattern classification.
  * Tracks the source of evidence that led to this classification.
+ *
+ * BOUNDARY NOTE: This is a P2-03 local classification/provenance record — it is NOT canonical
+ * DomainEvidence and does not replace the W0.4 contract. Conversion to DomainEvidence happens at
+ * the pattern-evidence/canonical-evidence boundary (later wave). No new global dedup mechanism
+ * is introduced.
  */
 export interface CareerPatternClassificationEvidence {
   readonly evidenceId: string;

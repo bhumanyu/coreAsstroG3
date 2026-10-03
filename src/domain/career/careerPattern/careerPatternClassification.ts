@@ -44,7 +44,6 @@ function buildPatternName(classification: CareerPatternClassification): string {
   const nameMap: Record<CareerPatternClassification, string> = {
     CAREER_HOUSE_NETWORK: 'Career House Network',
     WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS: 'Wealth to Service to Profession to Gains',
-    SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS: 'Self Effort to Work to Profession to Gains',
     COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS: 'Communication to Work to Profession to Gains',
     CREATIVE_DHARMA_TO_PROFESSION: 'Creative Dharma to Profession',
     DHARMA_KARMA_ALIGNMENT: 'Dharma Karma Alignment',

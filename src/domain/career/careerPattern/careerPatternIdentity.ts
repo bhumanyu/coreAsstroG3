@@ -8,12 +8,24 @@ import type { CareerNetworkTopology } from '../careerGraph/careerHouseNetworkTyp
  *
  * Identity is based on family, classification, houses, topology, and relationshipIds.
  * Identity must NOT include direction, strength, dignity, condition, Dasha, D10, timing, qualification.
+ *
+ * NETWORK-VS-PATTERN IDENTITY INVARIANT:
+ * CareerHouseNetwork.identityKey (P2-02) includes direction, but CareerPattern.identityKey (P2-03) excludes it.
+ * Network direction may distinguish two CareerHouseNetworks, but it must not create two CareerPatterns when
+ * the underlying semantic pattern identity is otherwise identical. FORWARD/REVERSE networks over the same
+ * houses/topology/relationships map to one pattern. Changing either identity definition breaks the other layer.
  */
 
 /**
  * Builds an identity key for a Career pattern.
  *
  * Format: CAREER_PATTERN:<family>:<classification>:HOUSES:<sorted-csv>:TOPOLOGY:<t>:RELATIONSHIPS:<sorted-pipe-list>
+ *
+ * RELATIONSHIP-IDS-IN-IDENTITY SEMANTICS:
+ * Pattern identity contains relationship identity because the same house set can represent different
+ * structural mechanisms. Two networks with identical houses/classification/topology but different
+ * relationship edges legitimately produce different patterns. This is deliberate and matters before
+ * P2-04 qualification.
  *
  * @param family - The pattern family
  * @param classification - The pattern classification

@@ -608,4 +608,61 @@ describe('CareerPatternClassification', () => {
       }
     });
   });
+
+  describe('Relationship-order permutation', () => {
+    it('produces identical output when relationships array is shuffled', () => {
+      const relationship1 = makeRelationship({ identityKey: 'REL:A' });
+      const relationship2 = makeRelationship({ identityKey: 'REL:B' });
+      const relationship3 = makeRelationship({ identityKey: 'REL:C' });
+
+      const network1 = makeNetwork({
+        networkId: 'NETWORK:REL-ORDER',
+        identityKey: 'NETWORK:REL-ORDER',
+        houses: [6, 10, 11],
+        relationships: [relationship1, relationship2, relationship3]
+      });
+
+      const network2 = makeNetwork({
+        networkId: 'NETWORK:REL-ORDER',
+        identityKey: 'NETWORK:REL-ORDER',
+        houses: [6, 10, 11],
+        relationships: [relationship3, relationship1, relationship2] // shuffled
+      });
+
+      const input1: CareerPatternClassificationInput = { networks: [network1] };
+      const input2: CareerPatternClassificationInput = { networks: [network2] };
+
+      const result1 = classifyCareerPatterns(input1);
+      const result2 = classifyCareerPatterns(input2);
+
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+    });
+
+    it('produces identical output when relationships array is reversed', () => {
+      const relationship1 = makeRelationship({ identityKey: 'REL:X' });
+      const relationship2 = makeRelationship({ identityKey: 'REL:Y' });
+
+      const network1 = makeNetwork({
+        networkId: 'NETWORK:REL-REVERSE',
+        identityKey: 'NETWORK:REL-REVERSE',
+        houses: [6, 10],
+        relationships: [relationship1, relationship2]
+      });
+
+      const network2 = makeNetwork({
+        networkId: 'NETWORK:REL-REVERSE',
+        identityKey: 'NETWORK:REL-REVERSE',
+        houses: [6, 10],
+        relationships: [relationship2, relationship1] // reversed
+      });
+
+      const input1: CareerPatternClassificationInput = { networks: [network1] };
+      const input2: CareerPatternClassificationInput = { networks: [network2] };
+
+      const result1 = classifyCareerPatterns(input1);
+      const result2 = classifyCareerPatterns(input2);
+
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+    });
+  });
 });
