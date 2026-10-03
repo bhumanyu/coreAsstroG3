@@ -32,7 +32,7 @@ function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNe
     evidenceIds: []
   };
 
-  return { ...defaultNetwork, ...overrides } as CareerHouseNetwork;
+  return { ...defaultNetwork, ...overrides };
 }
 
 /**
@@ -54,7 +54,7 @@ function makeRelationship(overrides: Partial<CareerGraphEdge> = {}): CareerGraph
     provenance
   };
 
-  return { ...defaultRelationship, ...overrides } as CareerGraphEdge;
+  return { ...defaultRelationship, ...overrides };
 }
 
 describe('Dusthana Transformation Detector', () => {

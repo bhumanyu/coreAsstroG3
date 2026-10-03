@@ -22,10 +22,12 @@ import type { CareerGraphEdgeType } from '../careerGraph/careerAstroGraphTypes';
  */
 
 /**
- * Edge types that connect planets to houses in the graph.
+ * Edge types that establish lordship from planets to houses.
+ * Only LORD_OF edges create participants; CONJUNCT/ASPECTS/EXCHANGES
+ * are used for relationships between participants, not for participant creation.
  */
-const PLANET_TO_HOUSE_EDGE_TYPES: ReadonlySet<CareerGraphEdgeType> = Object.freeze(
-  new Set<CareerGraphEdgeType>(['LORD_OF', 'EXCHANGES', 'CONJUNCT', 'ASPECTS'])
+const LORDSHIP_EDGE_TYPES: ReadonlySet<CareerGraphEdgeType> = Object.freeze(
+  new Set<CareerGraphEdgeType>(['LORD_OF'])
 );
 
 /**
@@ -46,7 +48,9 @@ function isCareerRelevantNetwork(network: CareerHouseNetwork): boolean {
 
 /**
  * Extracts planets that have validated lordship edges into the network houses.
- * Per spec: requires planets connected via LORD_OF/EXCHANGES/CONJUNCT/ASPECTS edges to network houses.
+ * Per spec: requires planets connected via LORD_OF edges (PLANET → HOUSE) to network houses.
+ * CONJUNCT/ASPECTS/EXCHANGES edges are NOT used for participant creation - they only establish
+ * relationships between participants if needed.
  */
 function extractParticipantsWithLordship(
   network: CareerHouseNetwork
@@ -57,27 +61,16 @@ function extractParticipantsWithLordship(
   );
 
   for (const edge of network.relationships) {
-    // Check if this edge connects a planet to a network house
-    const sourceIsPlanet = edge.sourceNodeId.startsWith('PLANET:');
-    const targetIsPlanet = edge.targetNodeId?.startsWith('PLANET:');
-    const sourceIsHouse = networkHouseNodeIds.has(edge.sourceNodeId);
-    const targetIsHouse = edge.targetNodeId ? networkHouseNodeIds.has(edge.targetNodeId) : false;
-
-    // Only consider edges connecting planets to houses
-    if (!PLANET_TO_HOUSE_EDGE_TYPES.has(edge.type)) {
+    // Only process LORD_OF edges for participant creation
+    if (!LORDSHIP_EDGE_TYPES.has(edge.type)) {
       continue;
     }
 
-    // Extract planet from either source or target
-    let planetNodeId: string | null = null;
-    if (sourceIsPlanet && targetIsHouse) {
-      planetNodeId = edge.sourceNodeId;
-    } else if (targetIsPlanet && sourceIsHouse) {
-      planetNodeId = edge.targetNodeId!;
-    }
+    const sourceIsPlanet = edge.sourceNodeId.startsWith('PLANET:');
+    const targetIsHouse = networkHouseNodeIds.has(edge.targetNodeId);
 
-    if (planetNodeId) {
-      const planetKey = planetNodeId.replace('PLANET:', '');
+    if (sourceIsPlanet && targetIsHouse) {
+      const planetKey = edge.sourceNodeId.replace('PLANET:', '');
       if (isPlanet(planetKey)) {
         participants.add(planetKey);
       }

@@ -41,7 +41,7 @@ function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNe
     evidenceIds: []
   };
 
-  return { ...defaultNetwork, ...overrides } as CareerHouseNetwork;
+  return { ...defaultNetwork, ...overrides };
 }
 
 describe('Career Yoga Detector', () => {
@@ -78,6 +78,38 @@ describe('Career Yoga Detector', () => {
       expect(patterns[0].careerRelevant).toBe(true);
       // Participants are sorted alphabetically
       expect(patterns[0].participants).toEqual(['MARS', 'SATURN']);
+    });
+
+    it('does not include planets connected only via ASPECTS in participants', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-ASPECTS',
+        identityKey: 'NETWORK:6-10-ASPECTS',
+        houses: [6, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10-ASPECT',
+            identityKey: 'REL:MARS-10-ASPECT',
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+        ]
+      });
+
+      const patterns = detectCareerYogaPatterns([network]);
+
+      // Only SATURN should be a participant (has LORD_OF), MARS should not (only ASPECTS)
+      expect(patterns).toHaveLength(0); // < 2 participants with LORD_OF
     });
 
     it('does not detect yoga for network with single planet', () => {
@@ -138,11 +170,11 @@ describe('Career Yoga Detector', () => {
 
       const pattern = patterns[0];
 
-      expect(pattern as any).not.toHaveProperty('strength');
-      expect(pattern as any).not.toHaveProperty('condition');
-      expect(pattern as any).not.toHaveProperty('dasha');
-      expect(pattern as any).not.toHaveProperty('d10');
-      expect(pattern as any).not.toHaveProperty('qualification');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('strength');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('condition');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('dasha');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('d10');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('qualification');
     });
 
     it('contains participants, houseRelationships, lordships, careerRelevant, evidenceIds, ruleIds', () => {

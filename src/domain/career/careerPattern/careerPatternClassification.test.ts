@@ -41,7 +41,7 @@ function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNe
     networkId: 'NETWORK:TEST',
     identityKey: 'NETWORK:IDENTITY:TEST',
     houses: [6, 10],
-    lords: ['SATURN' as Planet],
+    lords: [Planet.SATURN],
     relationships: [],
     topology: 'DIRECT_LINK',
     direction: 'FORWARD',
@@ -49,7 +49,7 @@ function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNe
     evidenceIds: []
   };
 
-  return { ...defaultNetwork, ...overrides } as CareerHouseNetwork;
+  return { ...defaultNetwork, ...overrides };
 }
 
 /**
@@ -71,7 +71,7 @@ function makeRelationship(overrides: Partial<CareerGraphEdge> = {}): CareerGraph
     provenance
   };
 
-  return { ...defaultRelationship, ...overrides } as CareerGraphEdge;
+  return { ...defaultRelationship, ...overrides };
 }
 
 describe('CareerPatternClassification', () => {
@@ -266,10 +266,10 @@ describe('CareerPatternClassification', () => {
       expect(pattern.topology).toBe('CHAIN');
 
       // Verify no strength/confidence/score properties exist
-      expect(pattern as any).not.toHaveProperty('strength');
-      expect(pattern as any).not.toHaveProperty('confidence');
-      expect(pattern as any).not.toHaveProperty('score');
-      expect(pattern as any).not.toHaveProperty('weight');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('strength');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('confidence');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('score');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('weight');
     });
   });
 
@@ -286,11 +286,11 @@ describe('CareerPatternClassification', () => {
 
       const pattern = result.patterns[0];
 
-      expect(pattern as any).not.toHaveProperty('dasha');
-      expect(pattern as any).not.toHaveProperty('d10');
-      expect(pattern as any).not.toHaveProperty('transit');
-      expect(pattern as any).not.toHaveProperty('qualification');
-      expect(pattern as any).not.toHaveProperty('activation');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('dasha');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('d10');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('transit');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('qualification');
+      expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('activation');
     });
   });
 
@@ -395,11 +395,11 @@ describe('CareerPatternClassification', () => {
 
       // Attempt to modify should throw in strict mode
       expect(() => {
-        (result as any).patterns = [];
+        (result as unknown as Record<string, unknown>).patterns = [];
       }).toThrow();
 
       expect(() => {
-        (result.patterns[0] as any).classification = 'MODIFIED';
+        (result.patterns[0] as unknown as Record<string, unknown>).classification = 'MODIFIED';
       }).toThrow();
     });
   });
@@ -476,14 +476,14 @@ describe('CareerPatternClassification', () => {
         expect(pattern.provenance).toBeDefined();
 
         // Verify no forbidden properties
-        expect(pattern as any).not.toHaveProperty('strength');
-        expect(pattern as any).not.toHaveProperty('confidence');
-        expect(pattern as any).not.toHaveProperty('score');
-        expect(pattern as any).not.toHaveProperty('dasha');
-        expect(pattern as any).not.toHaveProperty('d10');
-        expect(pattern as any).not.toHaveProperty('transit');
-        expect(pattern as any).not.toHaveProperty('qualification');
-        expect(pattern as any).not.toHaveProperty('activation');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('strength');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('confidence');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('score');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('dasha');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('d10');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('transit');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('qualification');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('activation');
       }
     });
   });

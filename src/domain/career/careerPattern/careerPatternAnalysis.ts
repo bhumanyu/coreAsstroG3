@@ -37,28 +37,41 @@ export interface CareerPatternAnalysisInput {
 }
 
 /**
- * Deduplicates evidence by underlying fact identity.
+ * Deduplicates evidence by underlying fact identity using per-relationship-id merging.
  * Per spec §25: the same 6L→10H fact referenced by multiple families produces ONE evidence identity.
  *
- * Identity is based on lower-level fact identity (relationship/edge ids from the pattern's
- * relationshipIds/sourceIds), not sourceNetworkIdentityKey.
+ * Uses an inverted index (relationshipId → canonical evidence identity) to merge evidence
+ * whenever patterns share ANY relationship id. This matches the "same fact → one evidence" contract.
+ *
+ * Algorithm:
+ * 1. Build relationshipId → set of evidence records map
+ * 2. Group evidence records that share any relationship id (union-find style)
+ * 3. For each group, merge into a single evidence record with:
+ *    - identityKey: smallest sorted identityKey from the group (canonical representative)
+ *    - sourcePatternIds: union of all patternIds in the group
+ *    - ruleIds: union of all ruleIds in the group
+ *    - underlyingFactIds: union of all relationshipIds in the group
  *
  * When pattern.provenance.relationshipIds is empty, fall back to
  * pattern.evidence[].sourceNetworkIdentityKey + ruleId so the key is never ''.
- *
- * Dedup per-relationship-id: group patterns by each relationship id they share,
- * matching the "same fact → one evidence" contract.
  *
  * The statement carries the engine-generated statement from the pattern's evidence,
  * not a fabricated 'Pattern evidence for <classification>' string.
  */
 function deduplicateEvidence(patterns: readonly CareerPattern[]): readonly CareerPatternEvidence[] {
-  const evidenceMap = new Map<string, CareerPatternEvidence>();
+  // Build relationshipId → evidence index
+  const relationshipToEvidence = new Map<string, Set<number>>();
+
+  // First pass: collect all evidence records and build relationship index
+  const allEvidence: Array<{
+    record: CareerPatternEvidence;
+    patternId: string;
+    classification: string;
+    relationshipIds: readonly string[];
+  }> = [];
 
   for (const pattern of patterns) {
     for (const patternEvidence of pattern.evidence) {
-      // Build identity key from relationship/edge ids (lower-level fact identity)
-      // Use pattern.provenance.relationshipIds as the underlying fact identifiers
       const relationshipIds = [...pattern.provenance.relationshipIds].sort();
 
       // Fall back to sourceNetworkIdentityKey + ruleId if relationshipIds is empty
@@ -69,36 +82,125 @@ function deduplicateEvidence(patterns: readonly CareerPattern[]): readonly Caree
         underlyingFactId = relationshipIds.join('|');
       }
 
-      if (evidenceMap.has(underlyingFactId)) {
-        // Merge sourcePatternIds
-        const existing = evidenceMap.get(underlyingFactId)!;
-        const mergedSourcePatternIds = [...new Set([...existing.sourcePatternIds, pattern.patternId])].sort();
-        const mergedRuleIds = [...new Set([...existing.ruleIds, patternEvidence.ruleId])].sort();
+      const evidenceRecord: CareerPatternEvidence = Object.freeze({
+        evidenceId: patternEvidence.evidenceId,
+        identityKey: underlyingFactId,
+        statement: `Evidence for ${pattern.classification} (relationships: ${underlyingFactId})`,
+        sourcePatternIds: [pattern.patternId],
+        ruleIds: [patternEvidence.ruleId],
+        underlyingFactIds: relationshipIds
+      });
 
-        const mergedEvidence: CareerPatternEvidence = Object.freeze({
-          ...existing,
-          sourcePatternIds: mergedSourcePatternIds,
-          ruleIds: mergedRuleIds
-        });
+      const evidenceIndex = allEvidence.length;
+      allEvidence.push({
+        record: evidenceRecord,
+        patternId: pattern.patternId,
+        classification: pattern.classification,
+        relationshipIds
+      });
 
-        evidenceMap.set(underlyingFactId, mergedEvidence);
-      } else {
-        const newEvidence: CareerPatternEvidence = Object.freeze({
-          evidenceId: patternEvidence.evidenceId,
-          identityKey: underlyingFactId,
-          statement: `Evidence for ${pattern.classification} (relationships: ${underlyingFactId})`,
-          sourcePatternIds: [pattern.patternId],
-          ruleIds: [patternEvidence.ruleId],
-          underlyingFactIds: relationshipIds
-        });
+      // Build relationship index
+      for (const relId of relationshipIds) {
+        if (!relationshipToEvidence.has(relId)) {
+          relationshipToEvidence.set(relId, new Set());
+        }
+        relationshipToEvidence.get(relId)!.add(evidenceIndex);
+      }
 
-        evidenceMap.set(underlyingFactId, newEvidence);
+      // If no relationshipIds, index by the fallback key
+      if (relationshipIds.length === 0) {
+        if (!relationshipToEvidence.has(underlyingFactId)) {
+          relationshipToEvidence.set(underlyingFactId, new Set());
+        }
+        relationshipToEvidence.get(underlyingFactId)!.add(evidenceIndex);
       }
     }
   }
 
+  // Second pass: group evidence that shares any relationship id (union-find)
+  const visited = new Set<number>();
+  const groups: Array<Set<number>> = [];
+
+  for (let i = 0; i < allEvidence.length; i++) {
+    if (visited.has(i)) {
+      continue;
+    }
+
+    const group = new Set<number>();
+    const queue = [i];
+    visited.add(i);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      group.add(current);
+
+      // Find all evidence that shares any relationship id with current
+      const currentRelIds = allEvidence[current].relationshipIds;
+      if (currentRelIds.length === 0) {
+        // Use fallback key
+        const fallbackKey = allEvidence[current].record.identityKey;
+        const relatedIndices = relationshipToEvidence.get(fallbackKey) || new Set();
+        for (const idx of relatedIndices) {
+          if (!visited.has(idx)) {
+            visited.add(idx);
+            queue.push(idx);
+          }
+        }
+      } else {
+        for (const relId of currentRelIds) {
+          const relatedIndices = relationshipToEvidence.get(relId) || new Set();
+          for (const idx of relatedIndices) {
+            if (!visited.has(idx)) {
+              visited.add(idx);
+              queue.push(idx);
+            }
+          }
+        }
+      }
+    }
+
+    groups.push(group);
+  }
+
+  // Third pass: merge each group into a single evidence record
+  const mergedEvidence: CareerPatternEvidence[] = [];
+
+  for (const group of groups) {
+    const groupArray = Array.from(group);
+    const allRecords = groupArray.map(i => allEvidence[i].record);
+
+    // Find canonical representative (smallest identityKey)
+    const canonical = allRecords.reduce((min, current) =>
+      current.identityKey < min.identityKey ? current : min
+    );
+
+    // Merge sourcePatternIds and ruleIds
+    const mergedSourcePatternIds = [...new Set(
+      allRecords.flatMap(r => r.sourcePatternIds)
+    )].sort();
+
+    const mergedRuleIds = [...new Set(
+      allRecords.flatMap(r => r.ruleIds)
+    )].sort();
+
+    const mergedUnderlyingFactIds = [...new Set(
+      allRecords.flatMap(r => r.underlyingFactIds)
+    )].sort();
+
+    const merged: CareerPatternEvidence = Object.freeze({
+      evidenceId: canonical.evidenceId,
+      identityKey: canonical.identityKey,
+      statement: canonical.statement,
+      sourcePatternIds: mergedSourcePatternIds,
+      ruleIds: mergedRuleIds,
+      underlyingFactIds: mergedUnderlyingFactIds
+    });
+
+    mergedEvidence.push(merged);
+  }
+
   // Sort by identityKey for deterministic output
-  return Array.from(evidenceMap.values()).sort((a, b) => a.identityKey.localeCompare(b.identityKey));
+  return mergedEvidence.sort((a, b) => a.identityKey.localeCompare(b.identityKey));
 }
 
 /**

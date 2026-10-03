@@ -111,8 +111,13 @@ function getLordOfHouse(
 
 /**
  * Verifies if there is a real relationship edge between two planets.
- * Checks for EXCHANGES/CONJUNCT/ASPECTS edges connecting the planet nodes.
- * Also checks for LORD_OF crossing (planet A lords a house that planet B lords, or vice versa).
+ * Accepts only when:
+ * (a) An EXCHANGES/CONJUNCT/ASPECTS edge connects PLANET:lordA ↔ PLANET:lordB, OR
+ * (b) A LORD_OF edge lordA → HOUSE:houseB or lordB → HOUSE:houseA exists (cross-house lordship).
+ *
+ * DESIGN DECISION: Shared-house lordship (both planets lord the same house) is NOT accepted
+ * as a relationship. This prevents false positives from co-lordship scenarios without real
+ * planetary connections.
  */
 function hasPlanetRelationship(
   network: CareerHouseNetwork,
@@ -133,49 +138,15 @@ function hasPlanetRelationship(
     }
   }
 
-  // Check for LORD_OF crossing: if planet A and planet B both lord the same house,
-  // that's a lordship relationship between them
-  const housesOfA = new Set<number>();
-  const housesOfB = new Set<number>();
-
-  for (const edge of network.relationships) {
-    if (edge.type !== 'LORD_OF') {
-      continue;
-    }
-
-    const sourceIsPlanet = edge.sourceNodeId.startsWith('PLANET:');
-    const targetIsHouse = edge.targetNodeId.startsWith('HOUSE:');
-
-    if (sourceIsPlanet && targetIsHouse) {
-      const planetKey = edge.sourceNodeId.replace('PLANET:', '');
-      if (!isPlanet(planetKey)) {
-        continue;
-      }
-      const houseNum = parseInt(edge.targetNodeId.replace('HOUSE:', ''), 10);
-
-      if (planetKey === planetA) {
-        housesOfA.add(houseNum);
-      } else if (planetKey === planetB) {
-        housesOfB.add(houseNum);
-      }
-    }
-  }
-
-  // If planet A and planet B both lord the same house, that's a relationship
-  for (const house of housesOfA) {
-    if (housesOfB.has(house)) {
-      return true;
-    }
-  }
-
   return false;
 }
 
 /**
  * Verifies if there is a real lord relationship between two houses via their lords.
- * Resolves each house's lord from LORD_OF edges (PLANET → HOUSE), then verifies
- * a real relationship edge exists between the lords (EXCHANGES/CONJUNCT/ASPECTS on planet nodes,
- * or LORD_OF crossing the pair).
+ * Resolves each house's lord from LORD_OF edges (PLANET → HOUSE), then accepts only when:
+ * (a) An EXCHANGES/CONJUNCT/ASPECTS edge connects PLANET:lordA ↔ PLANET:lordB, OR
+ * (b) A LORD_OF edge lordA → HOUSE:houseB or lordB → HOUSE:houseA exists (cross-house lordship).
+ *
  * CONJUNCT/ASPECTS on HOUSE nodes alone must not qualify.
  */
 function hasLordRelationship(
@@ -191,8 +162,32 @@ function hasLordRelationship(
     return false;
   }
 
-  // Verify a real relationship exists between the lords
-  return hasPlanetRelationship(network, lordA, lordB);
+  // Check (a): direct planet-planet relationship edges
+  if (hasPlanetRelationship(network, lordA, lordB)) {
+    return true;
+  }
+
+  // Check (b): cross-house lordship (lordA lords houseB or lordB lords houseA)
+  const nodeHouseB = `HOUSE:${houseB}`;
+  const nodeHouseA = `HOUSE:${houseA}`;
+
+  for (const edge of network.relationships) {
+    if (edge.type !== 'LORD_OF') {
+      continue;
+    }
+
+    // Check if lordA lords houseB
+    if (edge.sourceNodeId === `PLANET:${lordA}` && edge.targetNodeId === nodeHouseB) {
+      return true;
+    }
+
+    // Check if lordB lords houseA
+    if (edge.sourceNodeId === `PLANET:${lordB}` && edge.targetNodeId === nodeHouseA) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -200,6 +195,10 @@ function hasLordRelationship(
  * This is the semantic verification requirement for DHARMA_KARMA_ALIGNMENT classification.
  * Uses planet-level verification: resolves lords from LORD_OF edges, then checks for
  * real relationship edges between the lords.
+ *
+ * DESIGN DECISION: Skips kendra === trikona (1↔1 self-pairing) unless methodology explicitly
+ * defines it. House 1 is both kendra and trikona, but self-relationships should not qualify
+ * as kendra-trikona lord relationships without explicit methodological justification.
  */
 function hasKendraTrikonaLordRelationship(network: CareerHouseNetwork): boolean {
   const kendraHousesInNetwork = network.houses.filter(isKendraHouse);
@@ -208,6 +207,11 @@ function hasKendraTrikonaLordRelationship(network: CareerHouseNetwork): boolean 
   // Check each kendra-trikona pair for a lord relationship
   for (const kendra of kendraHousesInNetwork) {
     for (const trikona of trikonaHousesInNetwork) {
+      // Skip self-pairing (kendra === trikona, e.g., house 1)
+      if (kendra === trikona) {
+        continue;
+      }
+
       if (hasLordRelationship(network, kendra, trikona)) {
         return true;
       }

@@ -1,4 +1,7 @@
 import { analyzeCareerPatterns } from './careerPatternAnalysis';
+import { detectDusthanaPatterns } from './dusthanaTransformationDetector';
+import { detectKendraTrikonaPatterns } from './kendraTrikonaDetector';
+import { detectCareerYogaPatterns } from './careerYogaDetector';
 import type { Horoscope } from '../../../types';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
@@ -130,15 +133,15 @@ describe('Career Pattern Analysis', () => {
         evidenceIds: []
       };
 
-      // This test verifies the analysis pipeline handles networks with missing data
-      // Since we can't easily inject synthetic networks into the full pipeline,
-      // we verify the system handles the canonical horoscope without errors
-      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const analysis = analyzeCareerPatterns({ horoscope });
+      // Call detectors directly with empty network to verify they handle missing data
+      const dusthanaPatterns = detectDusthanaPatterns([emptyNetwork]);
+      const kendraTrikonaPatterns = detectKendraTrikonaPatterns([emptyNetwork]);
+      const yogaPatterns = detectCareerYogaPatterns([emptyNetwork]);
 
-      // Should not crash and should produce valid output
-      expect(analysis.patterns).toBeDefined();
-      expect(Array.isArray(analysis.patterns)).toBe(true);
+      // Should return empty arrays without crashing
+      expect(dusthanaPatterns).toEqual([]);
+      expect(kendraTrikonaPatterns).toEqual([]);
+      expect(yogaPatterns).toEqual([]);
     });
   });
 
@@ -151,8 +154,8 @@ describe('Career Pattern Analysis', () => {
 
       // Verify patterns have no dasha/d10 fields
       analysis.patterns.forEach(pattern => {
-        expect(pattern as any).not.toHaveProperty('dasha');
-        expect(pattern as any).not.toHaveProperty('d10');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('dasha');
+        expect(pattern as unknown as Record<string, unknown>).not.toHaveProperty('d10');
       });
     });
   });
@@ -192,6 +195,27 @@ describe('Career Pattern Analysis', () => {
         expect(evidence.underlyingFactIds).toBeDefined();
         expect(Array.isArray(evidence.underlyingFactIds)).toBe(true);
       });
+    });
+
+    it('merges evidence when patterns share a relationship id', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const analysis = analyzeCareerPatterns({ horoscope });
+
+      // Find evidence records that reference multiple patterns
+      const multiPatternEvidence = analysis.evidence.filter(e => e.sourcePatternIds.length > 1);
+
+      // If such evidence exists, verify it's a proper merge
+      if (multiPatternEvidence.length > 0) {
+        multiPatternEvidence.forEach(evidence => {
+          // Should have merged sourcePatternIds
+          expect(evidence.sourcePatternIds.length).toBeGreaterThan(1);
+          // Should have sorted sourcePatternIds
+          const sorted = [...evidence.sourcePatternIds].sort();
+          expect(evidence.sourcePatternIds).toEqual(sorted);
+          // Should have merged ruleIds
+          expect(evidence.ruleIds.length).toBeGreaterThan(0);
+        });
+      }
     });
   });
 
@@ -258,26 +282,24 @@ describe('Career Pattern Analysis', () => {
       const careerHouseNetworkPatterns = analysis.patterns.filter(p => p.family === 'CAREER_HOUSE_NETWORK');
       expect(careerHouseNetworkPatterns.length).toBeGreaterThanOrEqual(1);
 
-      if (careerHouseNetworkPatterns.length > 0) {
-        const pattern = careerHouseNetworkPatterns[0];
-        expect(pattern.identityKey).toBe('CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:ASPECTS:PLANET:MARS→HOUSE:11|ASPECTS:PLANET:MARS→HOUSE:6|LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6|OCCUPIES:PLANET:JUPITER→HOUSE:11|OCCUPIES:PLANET:MARS→HOUSE:8|OCCUPIES:PLANET:MOON→HOUSE:8');
-        expect(pattern.family).toBe('CAREER_HOUSE_NETWORK');
-        expect(pattern.classification).toBe('CAREER_HOUSE_NETWORK');
-        expect(pattern.mechanisms).toEqual([]);
-        expect(pattern.evidence).toHaveLength(1);
-        expect(pattern.evidence[0].evidenceId).toBe('P2-03-EVIDENCE:RULE_GENERIC:6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8');
-        expect(pattern.provenance.sourceNetworkIds).toEqual(['6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8']);
-        expect(pattern.provenance.relationshipIds).toEqual([
-          'ASPECTS:PLANET:MARS→HOUSE:11',
-          'ASPECTS:PLANET:MARS→HOUSE:6',
-          'LORD_OF:PLANET:MARS→HOUSE:11',
-          'LORD_OF:PLANET:MARS→HOUSE:6',
-          'OCCUPIES:PLANET:JUPITER→HOUSE:11',
-          'OCCUPIES:PLANET:MARS→HOUSE:8',
-          'OCCUPIES:PLANET:MOON→HOUSE:8'
-        ]);
-        expect(pattern.provenance.ruleIds).toEqual(['RULE_GENERIC']);
-      }
+      const pattern = careerHouseNetworkPatterns[0];
+      expect(pattern.identityKey).toBe('CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:ASPECTS:PLANET:MARS→HOUSE:11|ASPECTS:PLANET:MARS→HOUSE:6|LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6|OCCUPIES:PLANET:JUPITER→HOUSE:11|OCCUPIES:PLANET:MARS→HOUSE:8|OCCUPIES:PLANET:MOON→HOUSE:8');
+      expect(pattern.family).toBe('CAREER_HOUSE_NETWORK');
+      expect(pattern.classification).toBe('CAREER_HOUSE_NETWORK');
+      expect(pattern.mechanisms).toEqual([]);
+      expect(pattern.evidence).toHaveLength(1);
+      expect(pattern.evidence[0].evidenceId).toBe('P2-03-EVIDENCE:RULE_GENERIC:6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8');
+      expect(pattern.provenance.sourceNetworkIds).toEqual(['6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8']);
+      expect(pattern.provenance.relationshipIds).toEqual([
+        'ASPECTS:PLANET:MARS→HOUSE:11',
+        'ASPECTS:PLANET:MARS→HOUSE:6',
+        'LORD_OF:PLANET:MARS→HOUSE:11',
+        'LORD_OF:PLANET:MARS→HOUSE:6',
+        'OCCUPIES:PLANET:JUPITER→HOUSE:11',
+        'OCCUPIES:PLANET:MARS→HOUSE:8',
+        'OCCUPIES:PLANET:MOON→HOUSE:8'
+      ]);
+      expect(pattern.provenance.ruleIds).toEqual(['RULE_GENERIC']);
 
       // Pin golden test literals for CAREER_YOGA family
       expect(analysis.careerYogaPatterns).toHaveLength(0);
