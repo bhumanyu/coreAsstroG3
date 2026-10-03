@@ -40,10 +40,11 @@ export type CareerPatternLevel =
 /**
  * Pattern classification categories.
  * Represents the semantic classification of the pattern.
- * 9 members as specified.
+ * 10 members as specified.
  */
 export type CareerPatternClassification =
   | 'CAREER_HOUSE_NETWORK'
+  | 'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS'
   | 'SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS'
   | 'COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS'
   | 'CREATIVE_DHARMA_TO_PROFESSION'
@@ -63,6 +64,7 @@ export type CareerPatternHouseRole =
   | 'SERVICE_HOUSE'
   | 'EFFORT_HOUSE'
   | 'COMMUNICATION_HOUSE'
+  | 'CREATIVE_HOUSE'
   | 'DHARMA_HOUSE'
   | 'GAINS_HOUSE'
   | 'UNKNOWN';
@@ -77,6 +79,11 @@ export interface CareerPatternClassificationEvidence {
   readonly sourceNetworkId: string;
   readonly sourceNetworkIdentityKey: string;
 }
+
+/**
+ * Array of evidence records.
+ */
+export type CareerPatternClassificationEvidenceArray = readonly CareerPatternClassificationEvidence[];
 
 /**
  * Provenance for a pattern classification.

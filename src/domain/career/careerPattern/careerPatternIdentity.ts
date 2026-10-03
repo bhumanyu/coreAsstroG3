@@ -1,4 +1,5 @@
-import type { CareerPatternFamily, CareerPatternClassification, CareerNetworkTopology } from './careerPatternTypes';
+import type { CareerPatternFamily, CareerPatternClassification } from './careerPatternTypes';
+import type { CareerNetworkTopology } from '../careerGraph/careerHouseNetworkTypes';
 
 /**
  * P2-03 Career Pattern Identity

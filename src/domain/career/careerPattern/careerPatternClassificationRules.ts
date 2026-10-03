@@ -76,6 +76,25 @@ export const HOUSE_ROLES_6_10_11: Readonly<Record<number, CareerPatternHouseRole
 });
 
 /**
+ * Frozen house-role map for 2-3-6-10-11 pattern.
+ */
+export const HOUSE_ROLES_2_3_6_10_11: Readonly<Record<number, CareerPatternHouseRole>> = Object.freeze({
+  2: 'WEALTH_HOUSE',
+  3: 'COMMUNICATION_HOUSE',
+  6: 'SERVICE_HOUSE',
+  10: 'CAREER_HOUSE',
+  11: 'GAINS_HOUSE'
+});
+
+/**
+ * Frozen house-role map for 10-11 pattern.
+ */
+export const HOUSE_ROLES_10_11: Readonly<Record<number, CareerPatternHouseRole>> = Object.freeze({
+  10: 'CAREER_HOUSE',
+  11: 'GAINS_HOUSE'
+});
+
+/**
  * Result of a pattern classification rule match.
  */
 export interface CareerPatternRuleMatch {
@@ -95,7 +114,7 @@ export function classifyTwoSixTenEleven(network: CareerHouseNetwork): readonly C
   if (sortedHouses.join(',') === '2,6,10,11') {
     return [{
       ruleId: 'RULE_2_6_10_11',
-      classification: 'SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS',
+      classification: 'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS',
       family: 'CAREER_HOUSE_NETWORK',
       houseRoles: HOUSE_ROLES_2_6_10_11
     }];
@@ -182,6 +201,44 @@ export function classifySixTenEleven(network: CareerHouseNetwork): readonly Care
 }
 
 /**
+ * Classifies a 2-3-6-10-11 network as COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS.
+ */
+export function classifyTwoThreeSixTenEleven(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
+  const houses = network.houses;
+  const sortedHouses = [...houses].sort((a, b) => a - b);
+
+  if (sortedHouses.join(',') === '2,3,6,10,11') {
+    return [{
+      ruleId: 'RULE_2_3_6_10_11',
+      classification: 'COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS',
+      family: 'CAREER_HOUSE_NETWORK',
+      houseRoles: HOUSE_ROLES_2_3_6_10_11
+    }];
+  }
+
+  return [];
+}
+
+/**
+ * Classifies a 10-11 network as PROFESSION_TO_GAINS.
+ */
+export function classifyTenEleven(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
+  const houses = network.houses;
+  const sortedHouses = [...houses].sort((a, b) => a - b);
+
+  if (sortedHouses.join(',') === '10,11') {
+    return [{
+      ruleId: 'RULE_10_11',
+      classification: 'PROFESSION_TO_GAINS',
+      family: 'CAREER_HOUSE_NETWORK',
+      houseRoles: HOUSE_ROLES_10_11
+    }];
+  }
+
+  return [];
+}
+
+/**
  * Classifies a Parivartana (exchange) network.
  * Requires BOTH an EXCHANGES edge AND a career-relevant house in {2,6,10,11}.
  */
@@ -218,12 +275,12 @@ export function classifyGenericCareerNetwork(network: CareerHouseNetwork): reado
   const houseRoles: Record<number, CareerPatternHouseRole> = {};
   for (const house of network.houses) {
     if (house === 2) houseRoles[house] = 'WEALTH_HOUSE';
-    else if (house === 6) houseRoles[house] = 'SERVICE_HOUSE';
-    else if (house === 10) houseRoles[house] = 'CAREER_HOUSE';
-    else if (house === 11) houseRoles[house] = 'GAINS_HOUSE';
     else if (house === 3) houseRoles[house] = 'EFFORT_HOUSE';
     else if (house === 5) houseRoles[house] = 'CREATIVE_HOUSE';
+    else if (house === 6) houseRoles[house] = 'SERVICE_HOUSE';
     else if (house === 9) houseRoles[house] = 'DHARMA_HOUSE';
+    else if (house === 10) houseRoles[house] = 'CAREER_HOUSE';
+    else if (house === 11) houseRoles[house] = 'GAINS_HOUSE';
     else houseRoles[house] = 'UNKNOWN';
   }
 
@@ -238,6 +295,7 @@ export function classifyGenericCareerNetwork(network: CareerHouseNetwork): reado
 /**
  * Classifies a CareerHouseNetwork using all applicable rules.
  * A network may produce multiple patterns (Option B: generic + specialized both retained).
+ * Always includes generic CAREER_HOUSE_NETWORK pattern plus any specialized rule matches.
  * Sorts matches by ruleId.
  */
 export function classifyCareerHouseNetwork(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
@@ -249,12 +307,12 @@ export function classifyCareerHouseNetwork(network: CareerHouseNetwork): readonl
   matches.push(...classifyFiveNineTen(network));
   matches.push(...classifyNineTenEleven(network));
   matches.push(...classifySixTenEleven(network));
+  matches.push(...classifyTwoThreeSixTenEleven(network));
+  matches.push(...classifyTenEleven(network));
   matches.push(...classifyParivartana(network));
 
-  // If no specialized rule matched, use generic fallback
-  if (matches.length === 0) {
-    matches.push(...classifyGenericCareerNetwork(network));
-  }
+  // Option B: Always include generic pattern (ensures every network produces at least CAREER_HOUSE_NETWORK)
+  matches.push(...classifyGenericCareerNetwork(network));
 
   // Sort by ruleId for deterministic output
   return matches.sort((a, b) => a.ruleId.localeCompare(b.ruleId));

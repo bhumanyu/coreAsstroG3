@@ -1,12 +1,26 @@
-# P2-03 — Pattern Qualification
+# P2-03 — Pattern Identity/Classification
 
-> **STATUS: PLACEHOLDER — not active until activated by P2-00 charter**
+> **STATUS: IMPLEMENTED — VERIFICATION PENDING**
 >
-> This document is a controlled placeholder. P2-00 must establish the Phase 2 authority before this document becomes active.
+> Pattern identity/classification layer (CareerPattern) is implemented. Pattern qualification (next layer) is not yet implemented.
 
 ## Purpose
 
-P2-03 will freeze the pattern qualification methodology, defining how patterns are qualified by planetary conditions, career relevance, pattern coherence, and divisional confirmation. It will establish semantic qualification dimensions without a numeric prediction score.
+P2-03 implements the pattern identity/classification layer that sits ABOVE the CareerHouseNetwork detection (P2-02) and BELOW the qualification layer. This is a pure structural pattern-identity/classification layer that does NOT calculate strength, confidence, scores, qualification, activation, Dasha, D10, transit, mechanism, or prediction anywhere in the output.
+
+**Implemented:**
+- CareerPattern type system (CareerPatternFamily, CareerPatternLevel, CareerPatternClassification, CareerPattern, etc.)
+- Pattern identity key builder (excludes direction, strength, dignity, condition, Dasha, D10, timing, qualification)
+- Classification rules for career house networks (2-6-10-11, 3-6-10-11, 5-9-10, 9-10-11, 6-10-11, 2-3-6-10-11, 10-11, Parivartana)
+- Generic fallback classification
+- Pattern deduplication and merging
+- Deterministic output with deep-freeze immutability
+
+**Not yet implemented (future work):**
+- Pattern qualification methodology (planetary conditions, career relevance, pattern coherence, divisional confirmation)
+- Qualification dimensions (semantic, not numeric)
+- Activation potential assessment
+- Divisional confirmation (D9/D10)
 
 ## Outline (to be frozen when activated)
 

@@ -43,6 +43,7 @@ function resolvePatternLevel(family: CareerPatternFamily): CareerPatternLevel {
 function buildPatternName(classification: CareerPatternClassification): string {
   const nameMap: Record<CareerPatternClassification, string> = {
     CAREER_HOUSE_NETWORK: 'Career House Network',
+    WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS: 'Wealth to Service to Profession to Gains',
     SELF_EFFORT_TO_WORK_TO_PROFESSION_TO_GAINS: 'Self Effort to Work to Profession to Gains',
     COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS: 'Communication to Work to Profession to Gains',
     CREATIVE_DHARMA_TO_PROFESSION: 'Creative Dharma to Profession',
@@ -76,12 +77,12 @@ function buildCareerPattern(
 
   const relationshipIds = network.relationships.map(r => r.identityKey).sort();
 
-  const evidence: CareerPatternClassificationEvidence = [{
+  const evidence = Object.freeze([{
     evidenceId: `P2-03-EVIDENCE:${match.ruleId}:${network.identityKey}`,
     ruleId: match.ruleId,
     sourceNetworkId: network.networkId,
     sourceNetworkIdentityKey: network.identityKey
-  }];
+  }]) as readonly CareerPatternClassificationEvidence[];
 
   const provenance: CareerPatternClassificationProvenance = {
     sourceNetworkIds: [network.networkId],
@@ -188,3 +189,6 @@ export function classifyCareerPatterns(input: CareerPatternClassificationInput):
 
   return result;
 }
+
+// Re-export types for external use
+export type { CareerPatternClassificationInput, CareerPatternClassificationResult };
