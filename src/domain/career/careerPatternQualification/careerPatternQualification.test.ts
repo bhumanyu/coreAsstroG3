@@ -16,7 +16,11 @@ import {
 } from './careerPatternQualificationRules';
 import type {
   CareerPattern,
-  CareerPatternClassificationEvidence
+  CareerPatternClassificationEvidence,
+  CareerPatternFamily,
+  CareerPatternLevel,
+  CareerPatternClassification,
+  CareerPatternHouseRole
 } from '../careerPattern/careerPatternTypes';
 import type {
   CareerPlanetaryRelevance,
@@ -154,6 +158,31 @@ describe('Career Pattern Qualification', () => {
       expect(qualified.patternId).toBe(pattern.patternId);
       expect(qualified.identityKey).toBe(pattern.identityKey);
       expect(qualified.sourcePattern).toBe(pattern);
+    });
+
+    it('populates flat fields from source pattern', () => {
+      const pattern = makePattern();
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [],
+        condition: []
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.family).toBe(pattern.family);
+      expect(qualified.level).toBe(pattern.level);
+      expect(qualified.classification).toBe(pattern.classification);
+      expect(qualified.name).toBe(pattern.name);
+      expect(qualified.topology).toBe(pattern.topology);
+      expect(qualified.direction).toBe(pattern.direction);
+      expect(qualified.houses).toEqual(pattern.houses);
+      expect(qualified.houseRoles).toEqual(pattern.houseRoles);
+      expect(qualified.planets).toEqual(pattern.planets);
+      expect(qualified.networkIds).toEqual(pattern.networkIds);
+      expect(qualified.relationshipIds).toEqual(pattern.relationshipIds);
     });
   });
 
@@ -604,6 +633,99 @@ describe('Career Pattern Qualification', () => {
 
       const qualified = result.qualifiedPatterns[0];
       expect(qualified.evidence[0].evidenceId).toMatch(/^P2-04:.*:TEST_PATTERN$/);
+    });
+
+    it('populates sourcePatternId in evidence records', () => {
+      const pattern = makePattern({ patternId: 'test-pattern-id' });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.evidence[0].sourcePatternId).toBe('test-pattern-id');
+    });
+
+    it('populates sourceEvidenceIds in evidence records (deduped and sorted)', () => {
+      const pattern = makePattern({
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: 'evidence-2',
+            ruleId: 'rule-1',
+            sourceNetworkId: 'network-1',
+            sourceNetworkIdentityKey: 'key-1'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-1',
+            ruleId: 'rule-2',
+            sourceNetworkId: 'network-2',
+            sourceNetworkIdentityKey: 'key-2'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-1', // Duplicate
+            ruleId: 'rule-3',
+            sourceNetworkId: 'network-3',
+            sourceNetworkIdentityKey: 'key-3'
+          })
+        ])
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.evidence[0].sourceEvidenceIds).toEqual(['evidence-1', 'evidence-2']);
+    });
+
+    it('populates ruleIds in evidence records (deduped and sorted)', () => {
+      const pattern = makePattern({
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: 'evidence-1',
+            ruleId: 'rule-3',
+            sourceNetworkId: 'network-1',
+            sourceNetworkIdentityKey: 'key-1'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-2',
+            ruleId: 'rule-1',
+            sourceNetworkId: 'network-2',
+            sourceNetworkIdentityKey: 'key-2'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-3',
+            ruleId: 'rule-2',
+            sourceNetworkId: 'network-3',
+            sourceNetworkIdentityKey: 'key-3'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-4',
+            ruleId: 'rule-1', // Duplicate
+            sourceNetworkId: 'network-4',
+            sourceNetworkIdentityKey: 'key-4'
+          })
+        ])
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.evidence[0].ruleIds).toEqual(['rule-1', 'rule-2', 'rule-3']);
     });
   });
 

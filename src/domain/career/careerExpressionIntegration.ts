@@ -23,6 +23,10 @@ import {
   Planet
 } from '../../types';
 
+import {
+  CANONICAL_PLANET_ORDER
+} from './careerPlanetOrder';
+
 /**
  * Input interface for C8 Career Expression integration.
  * Consumes the C4-C7 natal boundary aggregate.
@@ -31,21 +35,8 @@ export interface CareerExpressionIntegrationInput {
   readonly natal: CareerNatalAnalysis;
 }
 
-/**
- * Canonical planet order for Career expression processing.
- * Matches the 9-planet Vedic system: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu.
- */
-export const CANONICAL_PLANET_ORDER: readonly Planet[] = Object.freeze([
-  Planet.SUN,
-  Planet.MOON,
-  Planet.MARS,
-  Planet.MERCURY,
-  Planet.JUPITER,
-  Planet.VENUS,
-  Planet.SATURN,
-  Planet.RAHU,
-  Planet.KETU
-] as const);
+// Re-export CANONICAL_PLANET_ORDER from the neutral careerPlanetOrder module
+export { CANONICAL_PLANET_ORDER } from './careerPlanetOrder';
 
 /**
  * Builds the CareerExpressionContext from the natal analysis aggregate.

@@ -17,7 +17,7 @@ import {
   computeQualificationDimensions,
   classifyQualificationStatus
 } from './careerPatternQualificationRules';
-import { CANONICAL_PLANET_ORDER } from '../careerExpressionIntegration';
+import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
 
 /**
  * P2-04 Career Pattern Qualification Orchestration
@@ -98,6 +98,7 @@ function buildParticipantQualifications(
  * This function:
  * - Generates evidence IDs in format P2-04:<DIMENSION>:<identityKey>
  * - Creates evidence records for each dimension
+ * - Populates sourcePatternId, sourceEvidenceIds, and ruleIds from pattern
  * - Returns frozen evidence array
  */
 function buildDimensionEvidence(
@@ -114,6 +115,15 @@ function buildDimensionEvidence(
     'divisionalConfirmation'
   ];
 
+  // Extract provenance from pattern
+  const sourcePatternId = pattern.patternId;
+  const sourceEvidenceIds = Object.freeze(
+    [...new Set(pattern.evidence.map(e => e.evidenceId))].sort()
+  );
+  const ruleIds = Object.freeze(
+    [...new Set(pattern.evidence.map(e => e.ruleId))].sort()
+  );
+
   for (const dimension of dimensionKeys) {
     const value = dimensions[dimension];
     const evidenceId = generateEvidenceId(String(dimension), pattern.identityKey);
@@ -122,7 +132,10 @@ function buildDimensionEvidence(
       evidenceId,
       dimension,
       identityKey: pattern.identityKey,
-      statement: `Pattern ${pattern.identityKey} has ${String(value).toLowerCase()} ${String(dimension)}.`
+      statement: `Pattern ${pattern.identityKey} has ${String(value).toLowerCase()} ${String(dimension)}.`,
+      sourcePatternId,
+      sourceEvidenceIds,
+      ruleIds
     });
 
     evidence.push(evidenceRecord);
@@ -136,7 +149,7 @@ function buildDimensionEvidence(
  *
  * This function:
  * - Extracts sourcePatternIds from the input pattern
- * - Extracts sourceEvidenceIds from pattern.evidence[].evidenceId
+ * - Extracts sourceEvidenceIds from pattern.evidence[].evidenceId (deduped and sorted)
  * - Extracts ruleIds from pattern.evidence[].ruleId (deduped and sorted)
  * - Returns frozen provenance object
  *
@@ -148,10 +161,10 @@ function buildProvenance(
 ): CareerPatternQualificationProvenance {
   const sourcePatternIds = Object.freeze([pattern.patternId]);
   const sourceEvidenceIds = Object.freeze(
-    pattern.evidence.map(e => e.evidenceId)
+    [...new Set(pattern.evidence.map(e => e.evidenceId))].sort()
   );
   const ruleIds = Object.freeze(
-    Array.from(new Set(pattern.evidence.map(e => e.ruleId))).sort()
+    [...new Set(pattern.evidence.map(e => e.ruleId))].sort()
   );
 
   return Object.freeze({
@@ -223,6 +236,17 @@ function qualifyPattern(
   return Object.freeze({
     patternId: pattern.patternId,
     identityKey: pattern.identityKey,
+    family: pattern.family,
+    level: pattern.level,
+    classification: pattern.classification,
+    name: pattern.name,
+    topology: pattern.topology,
+    direction: pattern.direction,
+    houses: pattern.houses,
+    houseRoles: pattern.houseRoles,
+    planets: pattern.planets,
+    networkIds: pattern.networkIds,
+    relationshipIds: pattern.relationshipIds,
     sourcePattern: pattern,
     dimensions,
     participants,

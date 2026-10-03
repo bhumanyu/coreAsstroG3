@@ -33,6 +33,7 @@ Qualification uses semantic dimensions rather than numeric scores:
 
 - **Pattern Coherence** (how coherent are the relationships?)
   - Minimal structural assessment: `INSUFFICIENT_DATA` if houses or relationshipIds are empty, `MODERATE` otherwise
+  - **PROVISIONAL**: The `MODERATE` mapping is a provisional structural-completeness check, not canonical coherence
   - Topology ranking is deferred until methodology is frozen
 
 - **Activation Potential** (how likely is Dasha activation?)
@@ -60,17 +61,17 @@ Since structuralStrength will be `NOT_ASSESSED`, the insufficient-data guard ens
 - **Planetary Condition Mapping** (C6 → qualification):
   - `STRONG` → `STRONG`
   - `MODERATE` → `MODERATE`
-  - `NEUTRAL` → `MODERATE` (conservative: neutral dignity does not imply weak condition)
+  - `NEUTRAL` → `MODERATE` (**PROVISIONAL**: conservative mapping pending methodology freeze)
   - `WEAK` → `WEAK`
-  - `AFFLICTED` → `WEAK`
+  - `AFFLICTED` → `WEAK` (**PROVISIONAL**: mapping pending methodology freeze)
   - `UNAVAILABLE` or missing → `UNAVAILABLE`
   - Switches on `result.condition` (the C6-resolved condition), not `result.dignity`
 
 - **Career Relevance Mapping** (C5 → qualification):
   - `PRIMARY` → `PRIMARY`
   - `SUPPORTING` → `SUPPORTING`
-  - `SECONDARY` → `SUPPORTING` (secondary relevance is treated as supporting)
-  - `CONDITIONAL` → `MIXED` (conditional relevance has mixed implications)
+  - `SECONDARY` → `SUPPORTING` (**PROVISIONAL**: mapping pending methodology freeze)
+  - `CONDITIONAL` → `MIXED` (**PROVISIONAL**: conflates conditional with conflicting; may become `UNKNOWN` after methodology review)
   - `NEUTRAL` → `NEUTRAL`
   - missing → `UNAVAILABLE`
 
@@ -97,9 +98,7 @@ Identity is inherited from the source pattern — this module never mints new id
 
 ## QualifiedCareerPattern Shape
 
-The spec (§17) lists flat fields (`family`, `level`, `classification`, `name`, `topology`, `direction`, `houses`, `houseRoles`, `planets`) on the qualified output. This implementation carries only `patternId`/`identityKey` plus `sourcePattern` (through which the rest is reachable).
-
-This is a deliberate design choice for maintainability. Downstream consumers (P2-05 mechanism layer) should access these fields via `sourcePattern`.
+The qualified output includes flat fields (`family`, `level`, `classification`, `name`, `topology`, `direction`, `houses`, `houseRoles`, `planets`, `networkIds`, `relationshipIds`) populated verbatim from the source pattern for convenience. The `sourcePattern` is retained for full provenance and access to all source data.
 
 ## Evidence + Provenance
 
@@ -172,7 +171,7 @@ Current test coverage (656 lines) uses synthetic `makePattern`/`makeRelevance`/`
 
 ## Dependency Note
 
-P2-04 imports `CANONICAL_PLANET_ORDER` from `careerExpressionIntegration` (C8 adapter). This is a slightly odd dependency direction (P2 module importing a C8 adapter), but the constant exists there and is reused rather than redefined.
+P2-04 imports `CANONICAL_PLANET_ORDER` from the neutral `careerPlanetOrder` module, which provides the canonical SUN→KETU order used across Career domain modules.
 
 ## Cross-References
 

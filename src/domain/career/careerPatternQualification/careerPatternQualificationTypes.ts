@@ -1,4 +1,11 @@
-import type { CareerPattern } from '../careerPattern/careerPatternTypes';
+import type {
+  CareerPattern,
+  CareerPatternFamily,
+  CareerPatternLevel,
+  CareerPatternClassification,
+  CareerPatternHouseRole
+} from '../careerPattern/careerPatternTypes';
+import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerPlanetaryRelevance } from '../careerPlanetaryRelevance';
 import type { CareerPlanetaryConditionResult } from '../careerPlanetaryCondition';
 import type { Planet } from '../../../types';
@@ -133,6 +140,9 @@ export interface CareerPatternQualificationEvidence {
   readonly dimension: keyof CareerPatternQualificationDimensions;
   readonly identityKey: string;
   readonly statement: string;
+  readonly sourcePatternId: string;
+  readonly sourceEvidenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
 }
 
 /**
@@ -152,16 +162,25 @@ export interface CareerPatternQualificationProvenance {
  * Identity is inherited from the source pattern (patternId, identityKey) —
  * this module never mints new identity.
  *
- * Shape Note: The spec (§17) lists flat fields (family, level, classification,
- * name, topology, direction, houses, houseRoles, planets) on the qualified
- * output. This implementation carries only patternId/identityKey plus
- * sourcePattern (through which the rest is reachable). This is a deliberate
- * design choice for maintainability - downstream consumers should access these
- * fields via sourcePattern.
+ * Flat fields (family, level, classification, name, topology, direction, houses,
+ * houseRoles, planets, networkIds, relationshipIds) are populated verbatim from
+ * the source pattern for convenience. The sourcePattern is retained for full
+ * provenance and access to all source data.
  */
 export interface QualifiedCareerPattern {
   readonly patternId: string;
   readonly identityKey: string;
+  readonly family: CareerPatternFamily;
+  readonly level: CareerPatternLevel;
+  readonly classification: CareerPatternClassification;
+  readonly name: string;
+  readonly topology: CareerNetworkTopology;
+  readonly direction: CareerNetworkDirection;
+  readonly houses: readonly number[];
+  readonly houseRoles: Readonly<Record<number, CareerPatternHouseRole>>;
+  readonly planets: readonly Planet[];
+  readonly networkIds: readonly string[];
+  readonly relationshipIds: readonly string[];
   readonly sourcePattern: CareerPattern;
   readonly dimensions: CareerPatternQualificationDimensions;
   readonly participants: readonly CareerPatternParticipantQualification[];
