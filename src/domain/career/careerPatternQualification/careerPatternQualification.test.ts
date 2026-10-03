@@ -2,7 +2,8 @@ import {
   qualifyCareerPatterns
 } from './careerPatternQualification';
 import type {
-  CareerPatternQualificationInput
+  CareerPatternQualificationInput,
+  CareerPatternParticipantQualification
 } from './careerPatternQualificationTypes';
 import {
   mapPlanetaryCondition,
@@ -99,10 +100,9 @@ function makeCondition(
   condition: CareerPlanetaryConditionResult['condition'],
   overrides: Partial<CareerPlanetaryConditionResult> = {}
 ): CareerPlanetaryConditionResult {
-  const relevanceObj = makeRelevance(planet, 'PRIMARY' as CareerPlanetRelevance);
   return Object.freeze({
     planet,
-    relevance: relevanceObj,
+    relevance: 'PRIMARY' as CareerPlanetRelevance,
     condition,
     dignity: 'NEUTRAL_SIGN',
     affliction: 'NONE',
@@ -651,6 +651,215 @@ describe('Career Pattern Qualification', () => {
 
       const qualified = result.qualifiedPatterns[0];
       expect(qualified.provenance.sourcePatternIds).toEqual(['test-pattern-id']);
+    });
+
+    it('extracts ruleIds from pattern.evidence[].ruleId (deduped and sorted)', () => {
+      const pattern = makePattern({
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: 'evidence-1',
+            ruleId: 'rule-3',
+            sourceNetworkId: 'network-1',
+            sourceNetworkIdentityKey: 'key-1'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-2',
+            ruleId: 'rule-1',
+            sourceNetworkId: 'network-2',
+            sourceNetworkIdentityKey: 'key-2'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-3',
+            ruleId: 'rule-2',
+            sourceNetworkId: 'network-3',
+            sourceNetworkIdentityKey: 'key-3'
+          }),
+          Object.freeze({
+            evidenceId: 'evidence-4',
+            ruleId: 'rule-1', // Duplicate
+            sourceNetworkId: 'network-4',
+            sourceNetworkIdentityKey: 'key-4'
+          })
+        ])
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+        condition: [makeCondition(Planet.SATURN, 'STRONG')]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.provenance.ruleIds).toEqual(['rule-1', 'rule-2', 'rule-3']);
+    });
+  });
+
+  describe('Multi-Participant Aggregation', () => {
+    it('aggregates planetary condition: UNAVAILABLE in any participant yields UNAVAILABLE', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'PRIMARY'),
+          makeRelevance(Planet.JUPITER, 'PRIMARY')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'STRONG'),
+          makeCondition(Planet.JUPITER, 'UNAVAILABLE') // One unavailable
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.planetaryCondition).toBe('UNAVAILABLE');
+    });
+
+    it('aggregates planetary condition: WEAK in any participant yields WEAK', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'PRIMARY'),
+          makeRelevance(Planet.JUPITER, 'PRIMARY')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'WEAK'), // One weak
+          makeCondition(Planet.JUPITER, 'STRONG')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
+    });
+
+    it('aggregates planetary condition: MODERATE when all are STRONG or MODERATE', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'PRIMARY')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'MODERATE')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.planetaryCondition).toBe('MODERATE');
+    });
+
+    it('aggregates career relevance: MIXED in any participant yields MIXED (downgrades PRIMARY)', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'CONDITIONAL') // Yields MIXED
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'STRONG')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.careerRelevance).toBe('MIXED');
+    });
+
+    it('aggregates career relevance: MIXED in any participant yields MIXED (downgrades SUPPORTING)', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'SUPPORTING'),
+          makeRelevance(Planet.MERCURY, 'CONDITIONAL') // Yields MIXED
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'STRONG')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.careerRelevance).toBe('MIXED');
+    });
+
+    it('aggregates career relevance: NEUTRAL in any participant yields NEUTRAL', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'NEUTRAL')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'STRONG')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.careerRelevance).toBe('NEUTRAL');
+    });
+
+    it('aggregates career relevance: SUPPORTING downgrades PRIMARY', () => {
+      const pattern = makePattern({
+        planets: [Planet.SATURN, Planet.MERCURY]
+      });
+
+      const input: CareerPatternQualificationInput = {
+        patterns: [pattern],
+        relevance: [
+          makeRelevance(Planet.SATURN, 'PRIMARY'),
+          makeRelevance(Planet.MERCURY, 'SUPPORTING')
+        ],
+        condition: [
+          makeCondition(Planet.SATURN, 'STRONG'),
+          makeCondition(Planet.MERCURY, 'STRONG')
+        ]
+      };
+
+      const result = qualifyCareerPatterns(input);
+
+      const qualified = result.qualifiedPatterns[0];
+      expect(qualified.dimensions.careerRelevance).toBe('SUPPORTING');
     });
   });
 });

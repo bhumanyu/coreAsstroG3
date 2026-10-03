@@ -151,6 +151,13 @@ export interface CareerPatternQualificationProvenance {
  *
  * Identity is inherited from the source pattern (patternId, identityKey) —
  * this module never mints new identity.
+ *
+ * Shape Note: The spec (§17) lists flat fields (family, level, classification,
+ * name, topology, direction, houses, houseRoles, planets) on the qualified
+ * output. This implementation carries only patternId/identityKey plus
+ * sourcePattern (through which the rest is reachable). This is a deliberate
+ * design choice for maintainability - downstream consumers should access these
+ * fields via sourcePattern.
  */
 export interface QualifiedCareerPattern {
   readonly patternId: string;

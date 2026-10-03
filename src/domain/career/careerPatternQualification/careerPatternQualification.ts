@@ -56,7 +56,7 @@ function generateEvidenceId(
  * This function:
  * - Iterates over pattern.planets in canonical SUN→KETU order
  * - Maps C5 relevance and C6 condition to qualification-level assessments
- * - Preserves source relevance/condition objects for traceability
+ * - Preserves frozen source relevance/condition objects for traceability
  * - Returns frozen participant qualification objects
  */
 function buildParticipantQualifications(
@@ -82,8 +82,8 @@ function buildParticipantQualifications(
       planet,
       relevance,
       condition,
-      relevanceSource,
-      conditionSource
+      relevanceSource: relevanceSource ? Object.freeze(relevanceSource) : undefined,
+      conditionSource: conditionSource ? Object.freeze(conditionSource) : undefined
     });
 
     participants.push(participant);
@@ -137,8 +137,11 @@ function buildDimensionEvidence(
  * This function:
  * - Extracts sourcePatternIds from the input pattern
  * - Extracts sourceEvidenceIds from pattern.evidence[].evidenceId
- * - Sets ruleIds to empty array (rule tracking is deferred)
+ * - Extracts ruleIds from pattern.evidence[].ruleId (deduped and sorted)
  * - Returns frozen provenance object
+ *
+ * Note: ruleIds are now extracted from source pattern evidence rather than
+ * being hardcoded as empty array, preserving rule traceability through P2-04.
  */
 function buildProvenance(
   pattern: CareerPattern
@@ -147,7 +150,9 @@ function buildProvenance(
   const sourceEvidenceIds = Object.freeze(
     pattern.evidence.map(e => e.evidenceId)
   );
-  const ruleIds = Object.freeze([]);
+  const ruleIds = Object.freeze(
+    Array.from(new Set(pattern.evidence.map(e => e.ruleId))).sort()
+  );
 
   return Object.freeze({
     sourcePatternIds,

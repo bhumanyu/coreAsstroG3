@@ -238,6 +238,13 @@ export function classifyQualificationStatus(
  * Computes qualification dimensions for a pattern.
  *
  * Aggregates all dimension classifications into a single dimensions object.
+ *
+ * Aggregation logic:
+ * - Planetary condition: conservative (weakest participant condition wins)
+ *   - UNAVAILABLE or WEAK in any participant yields that result
+ * - Career relevance: conservative (lowest participant relevance wins)
+ *   - MIXED downgrades both PRIMARY and SUPPORTING (any MIXED yields MIXED)
+ *   - NEUTRAL or UNAVAILABLE in any participant yields that result
  */
 export function computeQualificationDimensions(
   pattern: CareerPattern,
@@ -250,24 +257,26 @@ export function computeQualificationDimensions(
   const coherence = classifyPatternCoherence(pattern);
 
   // Aggregate planetary condition (conservative: weakest participant condition)
+  // UNAVAILABLE or WEAK in any participant yields that result
   const planetaryCondition = participantConditions.length > 0
     ? participantConditions.reduce((weakest, condition) => {
-        if (condition === 'WEAK' || condition === 'UNAVAILABLE') return condition;
-        if (weakest === 'WEAK' || weakest === 'UNAVAILABLE') return weakest;
-        if (condition === 'MODERATE' && weakest === 'STRONG') return condition;
-        return weakest;
-      }, participantConditions[0])
+      if (condition === 'WEAK' || condition === 'UNAVAILABLE') return condition;
+      if (weakest === 'WEAK' || weakest === 'UNAVAILABLE') return weakest;
+      if (condition === 'MODERATE' && weakest === 'STRONG') return condition;
+      return weakest;
+    }, participantConditions[0])
     : 'UNAVAILABLE';
 
   // Aggregate career relevance (conservative: lowest participant relevance)
+  // MIXED downgrades both PRIMARY and SUPPORTING (any MIXED in the set yields MIXED)
   const careerRelevance = participantRelevance.length > 0
     ? participantRelevance.reduce((lowest, relevance) => {
-        if (relevance === 'NEUTRAL' || relevance === 'UNAVAILABLE') return relevance;
-        if (lowest === 'NEUTRAL' || lowest === 'UNAVAILABLE') return lowest;
-        if (relevance === 'SUPPORTING' && lowest === 'PRIMARY') return relevance;
-        if (relevance === 'MIXED' && lowest === 'PRIMARY') return relevance;
-        return lowest;
-      }, participantRelevance[0])
+      if (relevance === 'NEUTRAL' || relevance === 'UNAVAILABLE') return relevance;
+      if (lowest === 'NEUTRAL' || lowest === 'UNAVAILABLE') return lowest;
+      if (relevance === 'MIXED' || lowest === 'MIXED') return 'MIXED';
+      if (relevance === 'SUPPORTING' && lowest === 'PRIMARY') return relevance;
+      return lowest;
+    }, participantRelevance[0])
     : 'UNAVAILABLE';
 
   return Object.freeze({
