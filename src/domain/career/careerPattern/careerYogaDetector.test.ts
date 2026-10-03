@@ -4,6 +4,13 @@ import type { CareerGraphProvenance } from '../careerGraph/careerAstroGraphTypes
 import { Planet } from '../../../types';
 
 /**
+ * Type guard to check if a string is a valid Planet enum value.
+ */
+function isPlanet(value: string): value is Planet {
+  return Object.values(Planet).includes(value as Planet);
+}
+
+/**
  * Test factory for creating CareerHouseNetwork objects.
  */
 function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNetwork {
@@ -17,8 +24,17 @@ function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNe
     networkId: 'NETWORK:TEST',
     identityKey: 'NETWORK:IDENTITY:TEST',
     houses: [6, 10],
-    lords: ['SATURN' as Planet],
-    relationships: [],
+    lords: [Planet.SATURN],
+    relationships: [
+      {
+        edgeId: 'EDGE:TEST',
+        identityKey: 'RELATIONSHIP:TEST',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:6',
+        provenance
+      }
+    ],
     topology: 'DIRECT_LINK',
     direction: 'FORWARD',
     provenance,
@@ -35,14 +51,33 @@ describe('Career Yoga Detector', () => {
         networkId: 'NETWORK:6-10-MULTI',
         identityKey: 'NETWORK:6-10-MULTI',
         houses: [6, 10],
-        lords: ['SATURN' as Planet, 'MARS' as Planet]
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10',
+            identityKey: 'REL:MARS-10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+        ]
       });
 
       const patterns = detectCareerYogaPatterns([network]);
 
       expect(patterns).toHaveLength(1);
       expect(patterns[0].careerRelevant).toBe(true);
-      expect(patterns[0].participants).toEqual(['SATURN', 'MARS']);
+      // Participants are sorted alphabetically
+      expect(patterns[0].participants).toEqual(['MARS', 'SATURN']);
     });
 
     it('does not detect yoga for network with single planet', () => {
@@ -50,7 +85,7 @@ describe('Career Yoga Detector', () => {
         networkId: 'NETWORK:6-10-SINGLE',
         identityKey: 'NETWORK:6-10-SINGLE',
         houses: [6, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectCareerYogaPatterns([network]);
@@ -63,7 +98,7 @@ describe('Career Yoga Detector', () => {
         networkId: 'NETWORK:1-5',
         identityKey: 'NETWORK:1-5',
         houses: [1, 5],
-        lords: ['SATURN' as Planet, 'MARS' as Planet]
+        lords: [Planet.SATURN, Planet.MARS]
       });
 
       const patterns = detectCareerYogaPatterns([network]);
@@ -78,7 +113,25 @@ describe('Career Yoga Detector', () => {
         networkId: 'NETWORK:6-10-MULTI',
         identityKey: 'NETWORK:6-10-MULTI',
         houses: [6, 10],
-        lords: ['SATURN' as Planet, 'MARS' as Planet]
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10',
+            identityKey: 'REL:MARS-10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+        ]
       });
 
       const patterns = detectCareerYogaPatterns([network]);
@@ -97,8 +150,26 @@ describe('Career Yoga Detector', () => {
         networkId: 'NETWORK:6-10-MULTI',
         identityKey: 'NETWORK:6-10-MULTI',
         houses: [6, 10],
-        lords: ['SATURN' as Planet, 'MARS' as Planet],
-        evidenceIds: ['EVIDENCE:1', 'EVIDENCE:2']
+        lords: [Planet.SATURN, Planet.MARS],
+        evidenceIds: ['EVIDENCE:1', 'EVIDENCE:2'],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10',
+            identityKey: 'REL:MARS-10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+        ]
       });
 
       const patterns = detectCareerYogaPatterns([network]);
@@ -120,20 +191,56 @@ describe('Career Yoga Detector', () => {
         networkId: 'NETWORK:6-10-MULTI',
         identityKey: 'NETWORK:6-10-MULTI',
         houses: [6, 10],
-        lords: ['SATURN' as Planet, 'MARS' as Planet]
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10',
+            identityKey: 'REL:MARS-10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+        ]
       });
 
       const network2 = makeNetwork({
         networkId: 'NETWORK:2-10-MULTI',
         identityKey: 'NETWORK:2-10-MULTI',
         houses: [2, 10],
-        lords: ['JUPITER' as Planet, 'VENUS' as Planet]
+        lords: [Planet.JUPITER, Planet.VENUS],
+        relationships: [
+          {
+            edgeId: 'EDGE:JUPITER-2',
+            identityKey: 'REL:JUPITER-2',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:2',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:VENUS-10',
+            identityKey: 'REL:VENUS-10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+        ]
       });
 
       const patterns = detectCareerYogaPatterns([network2, network1]);
 
-      expect(patterns[0].identityKey).toBe(patterns[0].identityKey);
-      expect(patterns[1].identityKey).toBe(patterns[1].identityKey);
+      // Verify patterns are sorted by identityKey
+      expect(patterns[0].identityKey.localeCompare(patterns[1].identityKey)).toBeLessThan(0);
     });
   });
 });

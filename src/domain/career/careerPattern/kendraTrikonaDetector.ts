@@ -3,6 +3,7 @@ import type { CareerPattern, CareerPatternClassification, CareerPatternClassific
 import type { CareerPatternHouseRole } from './careerPatternTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import type { CareerGraphEdgeType } from '../careerGraph/careerAstroGraphTypes';
+import { Planet } from '../../../types';
 
 /**
  * P2-06D Kendra-Trikona Detector
@@ -72,23 +73,97 @@ function isTrikonaHouse(house: number): house is 1 | 5 | 9 {
 }
 
 /**
- * Verifies if there is a real lord relationship between two houses via graph edges.
- * Checks for LORD_OF/EXCHANGES/CONJUNCT/ASPECTS edges connecting the house nodes.
+ * Type guard to check if a string is a valid Planet enum value.
  */
-function hasLordRelationship(
+function isPlanet(value: string): value is Planet {
+  return Object.values(Planet).includes(value as Planet);
+}
+
+/**
+ * Extracts the lord of a house from LORD_OF edges (PLANET → HOUSE).
+ * Returns null if no lord is found or if the edge is not valid.
+ */
+function getLordOfHouse(
   network: CareerHouseNetwork,
-  houseA: number,
-  houseB: number
-): boolean {
-  const nodeA = `HOUSE:${houseA}`;
-  const nodeB = `HOUSE:${houseB}`;
+  house: number
+): Planet | null {
+  const houseNodeId = `HOUSE:${house}`;
 
   for (const edge of network.relationships) {
-    // Check if this edge connects the two houses
+    // Only process LORD_OF edges from planet to house
+    if (edge.type !== 'LORD_OF') {
+      continue;
+    }
+
+    const sourceIsPlanet = edge.sourceNodeId.startsWith('PLANET:');
+    const targetIsHouse = edge.targetNodeId === houseNodeId;
+
+    if (sourceIsPlanet && targetIsHouse) {
+      const planetKey = edge.sourceNodeId.replace('PLANET:', '');
+      if (isPlanet(planetKey)) {
+        return planetKey;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Verifies if there is a real relationship edge between two planets.
+ * Checks for EXCHANGES/CONJUNCT/ASPECTS edges connecting the planet nodes.
+ * Also checks for LORD_OF crossing (planet A lords a house that planet B lords, or vice versa).
+ */
+function hasPlanetRelationship(
+  network: CareerHouseNetwork,
+  planetA: Planet,
+  planetB: Planet
+): boolean {
+  const nodeA = `PLANET:${planetA}`;
+  const nodeB = `PLANET:${planetB}`;
+
+  for (const edge of network.relationships) {
+    // Check for direct planet-planet relationship edges
     const connectsAToB = edge.sourceNodeId === nodeA && edge.targetNodeId === nodeB;
     const connectsBToA = edge.sourceNodeId === nodeB && edge.targetNodeId === nodeA;
 
-    if ((connectsAToB || connectsBToA) && LORD_RELATIONSHIP_EDGE_TYPES.has(edge.type)) {
+    if ((connectsAToB || connectsBToA) &&
+      (edge.type === 'EXCHANGES' || edge.type === 'CONJUNCT' || edge.type === 'ASPECTS')) {
+      return true;
+    }
+  }
+
+  // Check for LORD_OF crossing: if planet A and planet B both lord the same house,
+  // that's a lordship relationship between them
+  const housesOfA = new Set<number>();
+  const housesOfB = new Set<number>();
+
+  for (const edge of network.relationships) {
+    if (edge.type !== 'LORD_OF') {
+      continue;
+    }
+
+    const sourceIsPlanet = edge.sourceNodeId.startsWith('PLANET:');
+    const targetIsHouse = edge.targetNodeId.startsWith('HOUSE:');
+
+    if (sourceIsPlanet && targetIsHouse) {
+      const planetKey = edge.sourceNodeId.replace('PLANET:', '');
+      if (!isPlanet(planetKey)) {
+        continue;
+      }
+      const houseNum = parseInt(edge.targetNodeId.replace('HOUSE:', ''), 10);
+
+      if (planetKey === planetA) {
+        housesOfA.add(houseNum);
+      } else if (planetKey === planetB) {
+        housesOfB.add(houseNum);
+      }
+    }
+  }
+
+  // If planet A and planet B both lord the same house, that's a relationship
+  for (const house of housesOfA) {
+    if (housesOfB.has(house)) {
       return true;
     }
   }
@@ -97,8 +172,34 @@ function hasLordRelationship(
 }
 
 /**
+ * Verifies if there is a real lord relationship between two houses via their lords.
+ * Resolves each house's lord from LORD_OF edges (PLANET → HOUSE), then verifies
+ * a real relationship edge exists between the lords (EXCHANGES/CONJUNCT/ASPECTS on planet nodes,
+ * or LORD_OF crossing the pair).
+ * CONJUNCT/ASPECTS on HOUSE nodes alone must not qualify.
+ */
+function hasLordRelationship(
+  network: CareerHouseNetwork,
+  houseA: number,
+  houseB: number
+): boolean {
+  const lordA = getLordOfHouse(network, houseA);
+  const lordB = getLordOfHouse(network, houseB);
+
+  // If either house has no lord, no relationship exists
+  if (!lordA || !lordB) {
+    return false;
+  }
+
+  // Verify a real relationship exists between the lords
+  return hasPlanetRelationship(network, lordA, lordB);
+}
+
+/**
  * Verifies if there is a real lord relationship between any kendra and trikona house in the network.
  * This is the semantic verification requirement for DHARMA_KARMA_ALIGNMENT classification.
+ * Uses planet-level verification: resolves lords from LORD_OF edges, then checks for
+ * real relationship edges between the lords.
  */
 function hasKendraTrikonaLordRelationship(network: CareerHouseNetwork): boolean {
   const kendraHousesInNetwork = network.houses.filter(isKendraHouse);
@@ -168,7 +269,7 @@ function classifyKendraTrikona(network: CareerHouseNetwork): {
  */
 function buildKendraTrikonaPattern(
   network: CareerHouseNetwork,
-  classification: string,
+  classification: CareerPatternClassification,
   ruleId: string
 ): CareerPattern {
   const family = 'KENDRA_TRIKONA';
@@ -210,7 +311,7 @@ function buildKendraTrikonaPattern(
     identityKey,
     family,
     level: 'HOUSE_NETWORK',
-    classification: classification as any,
+    classification,
     name,
     topology,
     direction,

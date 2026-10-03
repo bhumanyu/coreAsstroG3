@@ -1,5 +1,5 @@
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
-import type { CareerPatternClassification, CareerPatternHouseRole } from './careerPatternTypes';
+import type { CareerPatternClassification, CareerPatternHouseRole, CareerMechanism } from './careerPatternTypes';
 import type { ParivartanaCareerType } from './careerPatternTypes';
 
 /**
@@ -87,7 +87,7 @@ export const HOUSE_ROLES_6_10_11: Readonly<Record<number, CareerPatternHouseRole
  * Mechanism chain for Upachaya progression.
  * Per spec §12: SELF_EFFORT → SKILL_DEVELOPMENT → PROFESSIONALIZATION → PROFESSIONAL_GAINS
  */
-export const UPACHAYA_MECHANISM_CHAIN: readonly string[] = Object.freeze([
+export const UPACHAYA_MECHANISM_CHAIN: readonly CareerMechanism[] = Object.freeze([
   'SELF_EFFORT',
   'SKILL_DEVELOPMENT',
   'PROFESSIONALIZATION',

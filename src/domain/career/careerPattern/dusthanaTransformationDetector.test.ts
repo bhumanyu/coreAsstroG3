@@ -4,6 +4,13 @@ import type { CareerGraphEdge, CareerGraphProvenance } from '../careerGraph/care
 import { Planet } from '../../../types';
 
 /**
+ * Type guard to check if a string is a valid Planet enum value.
+ */
+function isPlanet(value: string): value is Planet {
+  return Object.values(Planet).includes(value as Planet);
+}
+
+/**
  * Test factory for creating CareerHouseNetwork objects.
  */
 function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNetwork {
@@ -17,7 +24,7 @@ function makeNetwork(overrides: Partial<CareerHouseNetwork> = {}): CareerHouseNe
     networkId: 'NETWORK:TEST',
     identityKey: 'NETWORK:IDENTITY:TEST',
     houses: [6, 10],
-    lords: ['SATURN' as Planet],
+    lords: [Planet.SATURN],
     relationships: [],
     topology: 'DIRECT_LINK',
     direction: 'FORWARD',
@@ -57,7 +64,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:8-10',
         identityKey: 'NETWORK:8-10',
         houses: [8, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -73,7 +80,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:8-10-SATURN',
         identityKey: 'NETWORK:8-10-SATURN',
         houses: [8, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -83,7 +90,7 @@ describe('Dusthana Transformation Detector', () => {
       expect(patterns[0].mechanisms).toContain('TRANSFORMATION');
     });
 
-    it('infers MIXED mechanism when no planets present', () => {
+    it('infers structural mechanisms when no planets present', () => {
       const network = makeNetwork({
         networkId: 'NETWORK:8-10-NO-PLANETS',
         identityKey: 'NETWORK:8-10-NO-PLANETS',
@@ -93,7 +100,10 @@ describe('Dusthana Transformation Detector', () => {
 
       const patterns = detectDusthanaPatterns([network]);
 
-      expect(patterns[0].mechanisms).toEqual(['MIXED']);
+      // Mechanisms are derived from structural relationship type (8↔10), not from planets
+      expect(patterns[0].mechanisms).toContain('RESEARCH');
+      expect(patterns[0].mechanisms).toContain('INVESTIGATION');
+      expect(patterns[0].mechanisms).toContain('TRANSFORMATION');
     });
 
     it('never produces NEGATIVE direction for 8-10', () => {
@@ -101,7 +111,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:8-10',
         identityKey: 'NETWORK:8-10',
         houses: [8, 10],
-        lords: ['SATURN' as Planet],
+        lords: [Planet.SATURN],
         direction: 'FORWARD'
       });
 
@@ -118,7 +128,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10',
         identityKey: 'NETWORK:12-10',
         houses: [12, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -134,7 +144,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10-SATURN',
         identityKey: 'NETWORK:12-10-SATURN',
         houses: [12, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -148,7 +158,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10-JUPITER',
         identityKey: 'NETWORK:12-10-JUPITER',
         houses: [12, 10],
-        lords: ['JUPITER' as Planet]
+        lords: [Planet.JUPITER]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -162,7 +172,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10',
         identityKey: 'NETWORK:12-10',
         houses: [12, 10],
-        lords: ['SATURN' as Planet],
+        lords: [Planet.SATURN],
         direction: 'REVERSE'
       });
 
@@ -179,7 +189,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:6-10',
         identityKey: 'NETWORK:6-10',
         houses: [6, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -192,7 +202,7 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:6-10',
         identityKey: 'NETWORK:6-10',
         houses: [6, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network]);
@@ -207,20 +217,20 @@ describe('Dusthana Transformation Detector', () => {
         networkId: 'NETWORK:12-10',
         identityKey: 'NETWORK:12-10',
         houses: [12, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const network2 = makeNetwork({
         networkId: 'NETWORK:8-10',
         identityKey: 'NETWORK:8-10',
         houses: [8, 10],
-        lords: ['SATURN' as Planet]
+        lords: [Planet.SATURN]
       });
 
       const patterns = detectDusthanaPatterns([network2, network1]);
 
-      expect(patterns[0].identityKey).toBe(patterns[0].identityKey);
-      expect(patterns[1].identityKey).toBe(patterns[1].identityKey);
+      // Verify patterns are sorted by identityKey
+      expect(patterns[0].identityKey.localeCompare(patterns[1].identityKey)).toBeLessThan(0);
     });
   });
 });

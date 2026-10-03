@@ -1,6 +1,6 @@
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerYogaPattern } from './careerPatternTypes';
-import type { Planet } from '../../../types';
+import { Planet } from '../../../types';
 import type { CareerGraphEdgeType } from '../careerGraph/careerAstroGraphTypes';
 
 /**
@@ -27,6 +27,13 @@ import type { CareerGraphEdgeType } from '../careerGraph/careerAstroGraphTypes';
 const PLANET_TO_HOUSE_EDGE_TYPES: ReadonlySet<CareerGraphEdgeType> = Object.freeze(
   new Set<CareerGraphEdgeType>(['LORD_OF', 'EXCHANGES', 'CONJUNCT', 'ASPECTS'])
 );
+
+/**
+ * Type guard to check if a string is a valid Planet enum value.
+ */
+function isPlanet(value: string): value is Planet {
+  return Object.values(Planet).includes(value as Planet);
+}
 
 /**
  * Checks if a network is career-relevant.
@@ -70,8 +77,10 @@ function extractParticipantsWithLordship(
     }
 
     if (planetNodeId) {
-      const planetKey = planetNodeId.replace('PLANET:', '') as Planet;
-      participants.add(planetKey);
+      const planetKey = planetNodeId.replace('PLANET:', '');
+      if (isPlanet(planetKey)) {
+        participants.add(planetKey);
+      }
     }
   }
 
@@ -81,6 +90,8 @@ function extractParticipantsWithLordship(
 /**
  * Builds lordships map by reading LORD_OF edges (PLANET → HOUSE).
  * Per spec: derive lordships from real graph edges, not fabricated assignments.
+ * LORD_OF participation is distinguished from generic planet-house contact
+ * (CONJUNCT/ASPECTS on house nodes alone do not qualify as lordship).
  */
 function buildLordships(
   network: CareerHouseNetwork
@@ -91,7 +102,7 @@ function buildLordships(
   );
 
   for (const edge of network.relationships) {
-    // Only process LORD_OF edges
+    // Only process LORD_OF edges - distinguishes lordship from generic contact
     if (edge.type !== 'LORD_OF') {
       continue;
     }
@@ -100,7 +111,10 @@ function buildLordships(
     const targetIsHouse = networkHouseNodeIds.has(edge.targetNodeId);
 
     if (sourceIsPlanet && targetIsHouse) {
-      const planetKey = edge.sourceNodeId.replace('PLANET:', '') as Planet;
+      const planetKey = edge.sourceNodeId.replace('PLANET:', '');
+      if (!isPlanet(planetKey)) {
+        continue;
+      }
       const houseNum = parseInt(edge.targetNodeId!.replace('HOUSE:', ''), 10);
 
       if (!lordships[planetKey]) {
@@ -113,7 +127,9 @@ function buildLordships(
   // Convert Sets to sorted arrays
   const frozenLordships: Partial<Record<Planet, readonly number[]>> = {};
   for (const [planet, houses] of Object.entries(lordships)) {
-    frozenLordships[planet as Planet] = Object.freeze(Array.from(houses).sort((a, b) => a - b));
+    if (isPlanet(planet)) {
+      frozenLordships[planet] = Object.freeze(Array.from(houses).sort((a, b) => a - b));
+    }
   }
 
   return Object.freeze(frozenLordships);

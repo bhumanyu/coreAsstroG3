@@ -43,6 +43,12 @@ export interface CareerPatternAnalysisInput {
  * Identity is based on lower-level fact identity (relationship/edge ids from the pattern's
  * relationshipIds/sourceIds), not sourceNetworkIdentityKey.
  *
+ * When pattern.provenance.relationshipIds is empty, fall back to
+ * pattern.evidence[].sourceNetworkIdentityKey + ruleId so the key is never ''.
+ *
+ * Dedup per-relationship-id: group patterns by each relationship id they share,
+ * matching the "same fact → one evidence" contract.
+ *
  * The statement carries the engine-generated statement from the pattern's evidence,
  * not a fabricated 'Pattern evidence for <classification>' string.
  */
@@ -54,7 +60,14 @@ function deduplicateEvidence(patterns: readonly CareerPattern[]): readonly Caree
       // Build identity key from relationship/edge ids (lower-level fact identity)
       // Use pattern.provenance.relationshipIds as the underlying fact identifiers
       const relationshipIds = [...pattern.provenance.relationshipIds].sort();
-      const underlyingFactId = relationshipIds.join('|');
+
+      // Fall back to sourceNetworkIdentityKey + ruleId if relationshipIds is empty
+      let underlyingFactId: string;
+      if (relationshipIds.length === 0) {
+        underlyingFactId = `${patternEvidence.sourceNetworkIdentityKey}:${patternEvidence.ruleId}`;
+      } else {
+        underlyingFactId = relationshipIds.join('|');
+      }
 
       if (evidenceMap.has(underlyingFactId)) {
         // Merge sourcePatternIds
@@ -140,7 +153,7 @@ function extractAllMechanisms(patterns: readonly CareerPattern[]): readonly Care
   const hasUpachaya = patterns.some(p => p.family === 'UPACHAYA');
   if (hasUpachaya) {
     for (const mechanism of UPACHAYA_MECHANISM_CHAIN) {
-      mechanismSet.add(mechanism as CareerMechanism);
+      mechanismSet.add(mechanism);
     }
   }
 

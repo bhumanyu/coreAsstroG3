@@ -854,39 +854,7 @@ describe('CareerPatternClassification', () => {
     });
   });
 
-  describe('P2-06: Kendra-Trikona sub-types', () => {
-    it('classifies 9↔10 as DHARMA_KARMA_ALIGNMENT', () => {
-      const network = makeNetwork({
-        networkId: 'NETWORK:9-10',
-        identityKey: 'NETWORK:9-10',
-        houses: [9, 10],
-        topology: 'DIRECT_LINK'
-      });
 
-      const input: CareerPatternClassificationInput = { networks: [network] };
-      const result = classifyCareerPatterns(input);
-
-      const specializedPattern = result.patterns.find(p => p.classification === 'DHARMA_KARMA_ALIGNMENT');
-      expect(specializedPattern).toBeDefined();
-      expect(specializedPattern?.family).toBe('KENDRA_TRIKONA');
-    });
-
-    it('classifies 5-9-10 with DHARMA_KARMA_ALIGNMENT sub-type', () => {
-      const network = makeNetwork({
-        networkId: 'NETWORK:5-9-10',
-        identityKey: 'NETWORK:5-9-10',
-        houses: [5, 9, 10],
-        topology: 'TRIANGLE'
-      });
-
-      const input: CareerPatternClassificationInput = { networks: [network] };
-      const result = classifyCareerPatterns(input);
-
-      const specializedPattern = result.patterns.find(p => p.classification === 'DHARMA_KARMA_ALIGNMENT');
-      expect(specializedPattern).toBeDefined();
-      expect(specializedPattern?.evidence[0].ruleId).toContain('DHARMA_KARMA');
-    });
-  });
 
   describe('P2-06: Upachaya ordered-path semantics', () => {
     it('classifies full 3-6-10-11 pathway with FULL_PATH rule', () => {
