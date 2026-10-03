@@ -72,13 +72,23 @@ function buildLordshipMap(relationships: readonly CareerGraphEdge[]): Map<string
  * - OCCUPIES edge from a planet that lords house A to house B (or vice versa)
  * - ASPECTS edge from a planet that lords house A to house B (or vice versa)
  *
+ * DIRECT vs PLANET-MEDIATED CONTRACT:
+ * - Direct: an actual house↔house edge exists (this predicate)
+ * - Planet-mediated: same planet participates in both but no house edge (see hasPlanetMediatedRelationship)
+ *
+ * EXCHANGES BIDIRECTIONAL BEHAVIOR:
+ * EXCHANGES establishes bidirectional lord-exchange between two houses — it is valid for
+ * hasDirectedHouseRelationship(a,b) AND hasDirectedHouseRelationship(b,a) simultaneously
+ * (Parivartana is genuinely bidirectional). EXCHANGES is the only edge type that can satisfy
+ * both a→b and b→a; all other types are single-direction.
+ *
  * This predicate excludes planet-mediated-only connectivity where the same planet participates
  * but there is no direct house↔house link (e.g., Mars lords both 6 and 10, but no direct 6↔10 edge).
  *
  * @param network - The career house network to check
  * @param a - First house number
  * @param b - Second house number
- * @returns true if a direct house↔house relationship exists
+ * @returns true if a direct house↔house relationship exists (in either direction)
  */
 export function hasDirectHouseRelationship(
   network: CareerHouseNetwork,
@@ -157,9 +167,110 @@ export function hasDirectHouseRelationship(
 }
 
 /**
+ * Checks if there is a directed house-to-house relationship from fromHouse to toHouse.
+ * A directed relationship checks edges in one direction only — (sourceHouses.has(from) && targetHouses.has(to))
+ * without the || mirror check. This is used for ordered pathway validation.
+ *
+ * DIRECT vs PLANET-MEDIATED CONTRACT:
+ * - Direct: an actual house↔house edge exists (this predicate)
+ * - Planet-mediated: same planet participates in both but no house edge (see hasPlanetMediatedRelationship)
+ *
+ * EXCHANGES BIDIRECTIONAL BEHAVIOR:
+ * EXCHANGES establishes bidirectional lord-exchange between two houses — it is valid for
+ * hasDirectedHouseRelationship(a,b) AND hasDirectedHouseRelationship(b,a) simultaneously
+ * (Parivartana is genuinely bidirectional). EXCHANGES is the only edge type that can satisfy
+ * both a→b and b→a; all other types are single-direction.
+ *
+ * @param network - The career house network to check
+ * @param fromHouse - Source house number (directional source)
+ * @param toHouse - Target house number (directional target)
+ * @returns true if a directed house→house relationship exists from fromHouse to toHouse
+ */
+export function hasDirectedHouseRelationship(
+  network: CareerHouseNetwork,
+  fromHouse: number,
+  toHouse: number
+): boolean {
+  const lordshipMap = buildLordshipMap(network.relationships);
+
+  for (const edge of network.relationships) {
+    // EXCHANGES: direct planet-mediated exchange between houses (bidirectional)
+    if (edge.type === 'EXCHANGES') {
+      const sourcePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const targetPlanet = parsePlanetFromNodeKey(edge.targetNodeId);
+
+      if (sourcePlanet && targetPlanet) {
+        // EXCHANGES is bidirectional: check if source lords fromHouse and target lords toHouse
+        // OR if source lords toHouse and target lords fromHouse
+        const sourceHouses = lordshipMap.get(sourcePlanet);
+        const targetHouses = lordshipMap.get(targetPlanet);
+
+        if (sourceHouses && targetHouses) {
+          if ((sourceHouses.has(fromHouse) && targetHouses.has(toHouse)) ||
+            (sourceHouses.has(toHouse) && targetHouses.has(fromHouse))) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // LORD_OF: planet lords house - check if this planet lords both fromHouse and toHouse
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        const houses = lordshipMap.get(planet);
+        if (houses && houses.has(fromHouse) && houses.has(toHouse)) {
+          return true;
+        }
+      }
+    }
+
+    // OCCUPIES: planet occupies house - check if the planet lords fromHouse and occupies toHouse
+    if (edge.type === 'OCCUPIES') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        const houses = lordshipMap.get(planet);
+        if (houses) {
+          // If planet lords fromHouse and occupies toHouse
+          if (houses.has(fromHouse) && house === toHouse) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // ASPECTS: planet aspects house - check if the planet lords fromHouse and aspects toHouse
+    if (edge.type === 'ASPECTS') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        const houses = lordshipMap.get(planet);
+        if (houses) {
+          // If planet lords fromHouse and aspects toHouse
+          if (houses.has(fromHouse) && house === toHouse) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
  * Checks if there is a planet-mediated relationship between two houses.
  * A planet-mediated relationship exists when the same planet participates in relationships
  * with both houses, but there is no direct house↔house link.
+ *
+ * DIRECT vs PLANET-MEDIATED CONTRACT:
+ * - Direct: an actual house↔house edge exists (see hasDirectHouseRelationship)
+ * - Planet-mediated: same planet participates in both but no house edge (this predicate)
  *
  * This is the complement to hasDirectHouseRelationship - it returns true only when
  * connectivity is shared-participant only (not direct house↔house).
@@ -194,11 +305,15 @@ export function hasPlanetMediatedRelationship(
 /**
  * Checks if the ordered house sequence forms a direct chain.
  * A direct chain requires that every consecutive pair in the sequence satisfies
- * hasDirectHouseRelationship in the given order.
+ * hasDirectedHouseRelationship in the given order.
+ *
+ * ORDERED PATHWAY CONTRACT:
+ * isDirectChain([a,b,c]) means a→b AND b→c (directed edges), not just connectivity.
+ * This predicate uses ONLY directed relationships, never planet-mediated ones.
  *
  * @param network - The career house network to check
  * @param orderedHouses - Array of house numbers in sequence order
- * @returns true if every consecutive pair has a direct house relationship
+ * @returns true if every consecutive pair has a directed house relationship in sequence order
  */
 export function isDirectChain(
   network: CareerHouseNetwork,
@@ -209,7 +324,7 @@ export function isDirectChain(
   }
 
   for (let i = 0; i < orderedHouses.length - 1; i++) {
-    if (!hasDirectHouseRelationship(network, orderedHouses[i], orderedHouses[i + 1])) {
+    if (!hasDirectedHouseRelationship(network, orderedHouses[i], orderedHouses[i + 1])) {
       return false;
     }
   }
@@ -217,46 +332,4 @@ export function isDirectChain(
   return true;
 }
 
-/**
- * Thin wrapper over network.topology to check if the network is a STAR.
- * A STAR topology has one central node connected to all other nodes.
- *
- * @param network - The career house network to check
- * @returns true if topology is STAR
- */
-export function isStar(network: CareerHouseNetwork): boolean {
-  return network.topology === 'STAR';
-}
 
-/**
- * Thin wrapper over network.topology to check if the network is a TRIANGLE.
- * A TRIANGLE topology has three nodes with mutual connections.
- *
- * @param network - The career house network to check
- * @returns true if topology is TRIANGLE
- */
-export function isTriangle(network: CareerHouseNetwork): boolean {
-  return network.topology === 'TRIANGLE';
-}
-
-/**
- * Thin wrapper over network.topology to check if the network is a LOOP.
- * A LOOP topology has nodes forming a cycle.
- *
- * @param network - The career house network to check
- * @returns true if topology is LOOP
- */
-export function isLoop(network: CareerHouseNetwork): boolean {
-  return network.topology === 'LOOP';
-}
-
-/**
- * Thin wrapper over network.topology to check if the network is SHARED_PARTICIPANT.
- * A SHARED_PARTICIPANT topology has connectivity through shared planets only.
- *
- * @param network - The career house network to check
- * @returns true if topology is CLUSTER (represents shared-participant connectivity)
- */
-export function isSharedParticipant(network: CareerHouseNetwork): boolean {
-  return network.topology === 'CLUSTER';
-}

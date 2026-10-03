@@ -98,7 +98,29 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:6-10-11',
         identityKey: 'NETWORK:6-10-11',
         houses: [6, 10, 11],
-        topology: 'CHAIN'
+        topology: 'CHAIN',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -117,7 +139,39 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:2-6-10-11',
         identityKey: 'NETWORK:2-6-10-11',
         houses: [2, 6, 10, 11],
-        topology: 'CLUSTER'
+        topology: 'CLUSTER',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:2'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -139,7 +193,39 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:3-6-10-11',
         identityKey: 'NETWORK:3-6-10-11',
         houses: [3, 6, 10, 11],
-        topology: 'CLUSTER'
+        topology: 'CLUSTER',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:3'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -158,7 +244,39 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:3-6-10-11',
         identityKey: 'NETWORK:3-6-10-11',
         houses: [3, 6, 10, 11],
-        topology: 'CLUSTER'
+        topology: 'CLUSTER',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:3'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -178,7 +296,29 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:6-10-11',
         identityKey: 'NETWORK:6-10-11',
         houses: [6, 10, 11],
-        topology: 'CHAIN'
+        topology: 'CHAIN',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -410,7 +550,29 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:5-9-10',
         identityKey: 'NETWORK:5-9-10',
         houses: [5, 9, 10],
-        topology: 'TRIANGLE'
+        topology: 'TRIANGLE',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:5'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:9'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:9'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -494,7 +656,49 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:2-3-6-10-11',
         identityKey: 'NETWORK:2-3-6-10-11',
         houses: [2, 3, 6, 10, 11],
-        topology: 'CLUSTER'
+        topology: 'CLUSTER',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:2'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:3'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:3'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -510,7 +714,19 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:10-11',
         identityKey: 'NETWORK:10-11',
         houses: [10, 11],
-        topology: 'DIRECT_LINK'
+        topology: 'DIRECT_LINK',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -526,7 +742,29 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:9-10-11',
         identityKey: 'NETWORK:9-10-11',
         houses: [9, 10, 11],
-        topology: 'CHAIN'
+        topology: 'CHAIN',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:9'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -590,14 +828,58 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:DEDUP1',
         identityKey: 'NETWORK:DEDUP1',
         houses: [6, 10, 11],
-        relationships: [sharedRelationship]
+        relationships: [
+          sharedRelationship,
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const network2 = makeNetwork({
         networkId: 'NETWORK:DEDUP2',
         identityKey: 'NETWORK:DEDUP2',
         houses: [6, 10, 11],
-        relationships: [sharedRelationship]
+        relationships: [
+          sharedRelationship,
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network1, network2] };
@@ -862,7 +1144,39 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:3-6-10-11',
         identityKey: 'NETWORK:3-6-10-11',
         houses: [3, 6, 10, 11],
-        topology: 'CLUSTER'
+        topology: 'CLUSTER',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:3'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -878,7 +1192,29 @@ describe('CareerPatternClassification', () => {
         networkId: 'NETWORK:6-10-11',
         identityKey: 'NETWORK:6-10-11',
         houses: [6, 10, 11],
-        topology: 'CHAIN'
+        topology: 'CHAIN',
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
