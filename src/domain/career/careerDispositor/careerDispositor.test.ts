@@ -21,11 +21,11 @@ const MOCK_FULL_NATAL_ANALYSIS = Object.freeze({
   planets: {}
 } as any);
 
-function createMockHoroscope(planetFacts: any, houseAnalysis?: any): any {
+function createMockHoroscope(input: { planetFacts: any; houseAnalysis?: any }): any {
   return {
     birthDetails: MOCK_BIRTH_DETAILS,
-    planetFacts,
-    houseAnalysis,
+    planetFacts: input.planetFacts,
+    houseAnalysis: input.houseAnalysis,
     fullNatalAnalysis: MOCK_FULL_NATAL_ANALYSIS
   };
 }
