@@ -44,7 +44,7 @@ function parsePlanetFromNodeKey(key: string): string | null {
 /**
  * Builds a map of planets to the houses they lord from the network's relationships.
  */
-function buildLordshipMap(relationships: readonly CareerGraphEdge[]): Map<string, Set<number>> {
+export function buildLordshipMap(relationships: readonly CareerGraphEdge[]): Map<string, Set<number>> {
   const lordshipMap = new Map<string, Set<number>>();
 
   for (const edge of relationships) {
@@ -65,101 +65,31 @@ function buildLordshipMap(relationships: readonly CareerGraphEdge[]): Map<string
 }
 
 /**
- * Checks if there is a direct house-to-house relationship between two houses.
- * A direct relationship is established by:
- * - EXCHANGES edge between two planets (implies exchange between their houses)
- * - LORD_OF edge from a planet that lords both house A and house B
- * - OCCUPIES edge from a planet that lords house A to house B (or vice versa)
- * - ASPECTS edge from a planet that lords house A to house B (or vice versa)
+ * Checks if there is a common lord relationship between two houses.
+ * A common lord relationship exists when the same planet lords both houses.
+ * This is an undirected derived relationship — a common lord relates two houses
+ * without direction. It is NOT a literal house↔house edge in the CareerAstroGraph.
  *
- * DIRECT vs PLANET-MEDIATED CONTRACT:
- * - Direct: an actual house↔house edge exists (this predicate)
- * - Planet-mediated: same planet participates in both but no house edge (see hasPlanetMediatedRelationship)
- *
- * EXCHANGES BIDIRECTIONAL BEHAVIOR:
- * EXCHANGES establishes bidirectional lord-exchange between two houses — it is valid for
- * hasDirectedHouseRelationship(a,b) AND hasDirectedHouseRelationship(b,a) simultaneously
- * (Parivartana is genuinely bidirectional). EXCHANGES is the only edge type that can satisfy
- * both a→b and b→a; all other types are single-direction.
- *
- * This predicate excludes planet-mediated-only connectivity where the same planet participates
- * but there is no direct house↔house link (e.g., Mars lords both 6 and 10, but no direct 6↔10 edge).
+ * DERIVED RELATIONSHIP CONTRACT:
+ * This predicate checks for planet-derived relationships where the same planet
+ * participates in both houses. These are derived house relationships, not actual
+ * house↔house edges in the graph.
  *
  * @param network - The career house network to check
  * @param a - First house number
  * @param b - Second house number
- * @returns true if a direct house↔house relationship exists (in either direction)
+ * @returns true if both houses share a common lord (undirected)
  */
-export function hasDirectHouseRelationship(
+export function hasCommonLordRelationship(
   network: CareerHouseNetwork,
   a: number,
   b: number
 ): boolean {
   const lordshipMap = buildLordshipMap(network.relationships);
 
-  for (const edge of network.relationships) {
-    // EXCHANGES: direct planet-mediated exchange between houses
-    if (edge.type === 'EXCHANGES') {
-      const sourcePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
-      const targetPlanet = parsePlanetFromNodeKey(edge.targetNodeId);
-
-      if (sourcePlanet && targetPlanet) {
-        // Check if these planets lord houses a and b (in any order)
-        const sourceHouses = lordshipMap.get(sourcePlanet);
-        const targetHouses = lordshipMap.get(targetPlanet);
-
-        if (sourceHouses && targetHouses) {
-          if ((sourceHouses.has(a) && targetHouses.has(b)) ||
-            (sourceHouses.has(b) && targetHouses.has(a))) {
-            return true;
-          }
-        }
-      }
-    }
-
-    // LORD_OF: planet lords house - check if this planet lords both a and b
-    if (edge.type === 'LORD_OF') {
-      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
-      const house = parseHouseFromNodeKey(edge.targetNodeId);
-
-      if (planet && house !== null) {
-        const houses = lordshipMap.get(planet);
-        if (houses && houses.has(a) && houses.has(b)) {
-          return true;
-        }
-      }
-    }
-
-    // OCCUPIES: planet occupies house - check if the planet lords the other house
-    if (edge.type === 'OCCUPIES') {
-      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
-      const house = parseHouseFromNodeKey(edge.targetNodeId);
-
-      if (planet && house !== null) {
-        const houses = lordshipMap.get(planet);
-        if (houses) {
-          // If planet lords a and occupies b, or lords b and occupies a
-          if ((houses.has(a) && house === b) || (houses.has(b) && house === a)) {
-            return true;
-          }
-        }
-      }
-    }
-
-    // ASPECTS: planet aspects house - check if the planet lords the other house
-    if (edge.type === 'ASPECTS') {
-      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
-      const house = parseHouseFromNodeKey(edge.targetNodeId);
-
-      if (planet && house !== null) {
-        const houses = lordshipMap.get(planet);
-        if (houses) {
-          // If planet lords a and aspects b, or lords b and aspects a
-          if ((houses.has(a) && house === b) || (houses.has(b) && house === a)) {
-            return true;
-          }
-        }
-      }
+  for (const [planet, houses] of lordshipMap) {
+    if (houses.has(a) && houses.has(b)) {
+      return true;
     }
   }
 
@@ -168,18 +98,20 @@ export function hasDirectHouseRelationship(
 
 /**
  * Checks if there is a directed house-to-house relationship from fromHouse to toHouse.
- * A directed relationship checks edges in one direction only — (sourceHouses.has(from) && targetHouses.has(to))
- * without the || mirror check. This is used for ordered pathway validation.
+ * A directed relationship is established by:
+ * - LORD_OF edge from a planet that lords both fromHouse and toHouse (common lord)
+ * - OCCUPIES edge from a planet that lords fromHouse to toHouse
+ * - ASPECTS edge from a planet that lords fromHouse to toHouse
  *
- * DIRECT vs PLANET-MEDIATED CONTRACT:
- * - Direct: an actual house↔house edge exists (this predicate)
- * - Planet-mediated: same planet participates in both but no house edge (see hasPlanetMediatedRelationship)
+ * DERIVED RELATIONSHIP CONTRACT:
+ * This predicate checks for planet-derived directed relationships where a planet
+ * lords the source house and occupies/aspects the target house. These are derived
+ * house relationships, not actual house↔house edges in the graph.
  *
  * EXCHANGES BIDIRECTIONAL BEHAVIOR:
- * EXCHANGES establishes bidirectional lord-exchange between two houses — it is valid for
- * hasDirectedHouseRelationship(a,b) AND hasDirectedHouseRelationship(b,a) simultaneously
- * (Parivartana is genuinely bidirectional). EXCHANGES is the only edge type that can satisfy
- * both a→b and b→a; all other types are single-direction.
+ * EXCHANGES is the only bidirectional edge type; it proves a↔b, not a→b.
+ * EXCHANGES cannot satisfy ordered pathways (isDirectChain). It participates in
+ * PARIVARTANA pathways, which use their own bidirectional check instead.
  *
  * @param network - The career house network to check
  * @param fromHouse - Source house number (directional source)
@@ -194,26 +126,6 @@ export function hasDirectedHouseRelationship(
   const lordshipMap = buildLordshipMap(network.relationships);
 
   for (const edge of network.relationships) {
-    // EXCHANGES: direct planet-mediated exchange between houses (bidirectional)
-    if (edge.type === 'EXCHANGES') {
-      const sourcePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
-      const targetPlanet = parsePlanetFromNodeKey(edge.targetNodeId);
-
-      if (sourcePlanet && targetPlanet) {
-        // EXCHANGES is bidirectional: check if source lords fromHouse and target lords toHouse
-        // OR if source lords toHouse and target lords fromHouse
-        const sourceHouses = lordshipMap.get(sourcePlanet);
-        const targetHouses = lordshipMap.get(targetPlanet);
-
-        if (sourceHouses && targetHouses) {
-          if ((sourceHouses.has(fromHouse) && targetHouses.has(toHouse)) ||
-            (sourceHouses.has(toHouse) && targetHouses.has(fromHouse))) {
-            return true;
-          }
-        }
-      }
-    }
-
     // LORD_OF: planet lords house - check if this planet lords both fromHouse and toHouse
     if (edge.type === 'LORD_OF') {
       const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
@@ -264,13 +176,78 @@ export function hasDirectedHouseRelationship(
 }
 
 /**
+ * Checks if there is a direct house-to-house relationship between two houses.
+ * A direct relationship is established by:
+ * - EXCHANGES edge between two planets (implies exchange between their houses)
+ * - Common lord relationship (hasCommonLordRelationship)
+ * - Directed house relationship (hasDirectedHouseRelationship in either direction)
+ *
+ * DERIVED RELATIONSHIP CONTRACT:
+ * This predicate is a union helper that checks for any derived house relationship
+ * between two houses, including bidirectional EXCHANGES. These are derived house
+ * relationships, not actual house↔house edges in the graph.
+ *
+ * EXCHANGES BIDIRECTIONAL BEHAVIOR:
+ * EXCHANGES establishes bidirectional lord-exchange between two houses — it is valid for
+ * this predicate in either direction. EXCHANGES is the only edge type that can satisfy
+ * both a→b and b→a; all other types are single-direction.
+ *
+ * @param network - The career house network to check
+ * @param a - First house number
+ * @param b - Second house number
+ * @returns true if a derived house relationship exists (in either direction)
+ */
+export function hasDirectHouseRelationship(
+  network: CareerHouseNetwork,
+  a: number,
+  b: number
+): boolean {
+  const lordshipMap = buildLordshipMap(network.relationships);
+
+  for (const edge of network.relationships) {
+    // EXCHANGES: direct planet-mediated exchange between houses (bidirectional)
+    if (edge.type === 'EXCHANGES') {
+      const sourcePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const targetPlanet = parsePlanetFromNodeKey(edge.targetNodeId);
+
+      if (sourcePlanet && targetPlanet) {
+        // Check if these planets lord houses a and b (in any order)
+        const sourceHouses = lordshipMap.get(sourcePlanet);
+        const targetHouses = lordshipMap.get(targetPlanet);
+
+        if (sourceHouses && targetHouses) {
+          if ((sourceHouses.has(a) && targetHouses.has(b)) ||
+            (sourceHouses.has(b) && targetHouses.has(a))) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  // Check for common lord relationship (undirected)
+  if (hasCommonLordRelationship(network, a, b)) {
+    return true;
+  }
+
+  // Check for directed relationship in either direction
+  if (hasDirectedHouseRelationship(network, a, b) ||
+    hasDirectedHouseRelationship(network, b, a)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Checks if there is a planet-mediated relationship between two houses.
  * A planet-mediated relationship exists when the same planet participates in relationships
  * with both houses, but there is no direct house↔house link.
  *
- * DIRECT vs PLANET-MEDIATED CONTRACT:
- * - Direct: an actual house↔house edge exists (see hasDirectHouseRelationship)
- * - Planet-mediated: same planet participates in both but no house edge (this predicate)
+ * DERIVED RELATIONSHIP CONTRACT:
+ * This predicate checks for planet-derived relationships where the same planet
+ * participates in both houses. These are derived house relationships, not actual
+ * house↔house edges in the graph.
  *
  * This is the complement to hasDirectHouseRelationship - it returns true only when
  * connectivity is shared-participant only (not direct house↔house).
@@ -310,6 +287,11 @@ export function hasPlanetMediatedRelationship(
  * ORDERED PATHWAY CONTRACT:
  * isDirectChain([a,b,c]) means a→b AND b→c (directed edges), not just connectivity.
  * This predicate uses ONLY directed relationships, never planet-mediated ones.
+ *
+ * EXCHANGES BIDIRECTIONAL BEHAVIOR:
+ * EXCHANGES is the only bidirectional edge type; it proves a↔b, not a→b.
+ * EXCHANGES cannot satisfy ordered pathways (isDirectChain). It participates in
+ * PARIVARTANA pathways, which use their own bidirectional check instead.
  *
  * @param network - The career house network to check
  * @param orderedHouses - Array of house numbers in sequence order

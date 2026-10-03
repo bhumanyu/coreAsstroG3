@@ -778,16 +778,27 @@ describe('CareerPatternClassification', () => {
 
   describe('Parivartana classification', () => {
     it('classifies network with EXCHANGES relationship and career house as PARIVARTANA_YOGA', () => {
-      const exchangeRelationship = makeRelationship({
-        identityKey: 'REL:EXCHANGE',
-        type: 'EXCHANGES'
-      });
-
       const network = makeNetwork({
         networkId: 'NETWORK:PARIVARTANA',
         identityKey: 'NETWORK:PARIVARTANA',
         houses: [2, 10],
-        relationships: [exchangeRelationship]
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:2'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:SATURN'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -800,16 +811,27 @@ describe('CareerPatternClassification', () => {
     });
 
     it('does not classify network with EXCHANGES but no career house as PARIVARTANA_YOGA', () => {
-      const exchangeRelationship = makeRelationship({
-        identityKey: 'REL:EXCHANGE',
-        type: 'EXCHANGES'
-      });
-
       const network = makeNetwork({
         networkId: 'NETWORK:EXCHANGE-NO-CAREER',
         identityKey: 'NETWORK:EXCHANGE-NO-CAREER',
         houses: [1, 5],
-        relationships: [exchangeRelationship]
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:1'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SUN',
+            targetNodeId: 'HOUSE:5'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'PLANET:SUN'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -817,6 +839,73 @@ describe('CareerPatternClassification', () => {
 
       const parivartanaPattern = result.patterns.find(p => p.classification === 'PARIVARTANA_YOGA');
       expect(parivartanaPattern).toBeUndefined();
+    });
+
+    it('6↔10 exchange emits SERVICE_PROFESSION_EXCHANGE', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:PARIVARTANA-6-10',
+        identityKey: 'NETWORK:PARIVARTANA-6-10',
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const parivartanaPattern = result.patterns.find(p => p.classification === 'PARIVARTANA_YOGA');
+      expect(parivartanaPattern).toBeDefined();
+      // The evidence ruleId should contain SERVICE_PROFESSION_EXCHANGE
+      expect(parivartanaPattern?.evidence[0].ruleId).toContain('SERVICE_PROFESSION_EXCHANGE');
+    });
+
+    it('10↔11 exchange emits GAINS_PROFESSION_EXCHANGE (not SERVICE_PROFESSION_EXCHANGE)', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:PARIVARTANA-10-11',
+        identityKey: 'NETWORK:PARIVARTANA-10-11',
+        houses: [10, 11],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:11'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      const parivartanaPattern = result.patterns.find(p => p.classification === 'PARIVARTANA_YOGA');
+      expect(parivartanaPattern).toBeDefined();
+      // The evidence ruleId should contain GAINS_PROFESSION_EXCHANGE, not SERVICE_PROFESSION_EXCHANGE
+      expect(parivartanaPattern?.evidence[0].ruleId).toContain('GAINS_PROFESSION_EXCHANGE');
+      expect(parivartanaPattern?.evidence[0].ruleId).not.toContain('SERVICE_PROFESSION_EXCHANGE');
     });
   });
 
@@ -1073,16 +1162,27 @@ describe('CareerPatternClassification', () => {
 
   describe('P2-06: Parivartana career type classification', () => {
     it('classifies 6↔10 as SERVICE_PROFESSION_EXCHANGE', () => {
-      const exchangeRelationship = makeRelationship({
-        identityKey: 'REL:EXCHANGE',
-        type: 'EXCHANGES'
-      });
-
       const network = makeNetwork({
         networkId: 'NETWORK:6-10-EXCHANGE',
         identityKey: 'NETWORK:6-10-EXCHANGE',
         houses: [6, 10],
-        relationships: [exchangeRelationship]
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -1094,16 +1194,27 @@ describe('CareerPatternClassification', () => {
     });
 
     it('classifies 9↔10 as DHARMA_KARMA_EXCHANGE', () => {
-      const exchangeRelationship = makeRelationship({
-        identityKey: 'REL:EXCHANGE',
-        type: 'EXCHANGES'
-      });
-
       const network = makeNetwork({
         networkId: 'NETWORK:9-10-EXCHANGE',
         identityKey: 'NETWORK:9-10-EXCHANGE',
         houses: [9, 10],
-        relationships: [exchangeRelationship]
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:9'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:SATURN'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };
@@ -1115,16 +1226,27 @@ describe('CareerPatternClassification', () => {
     });
 
     it('classifies 8↔10 as TRANSFORMATION_PROFESSION_EXCHANGE', () => {
-      const exchangeRelationship = makeRelationship({
-        identityKey: 'REL:EXCHANGE',
-        type: 'EXCHANGES'
-      });
-
       const network = makeNetwork({
         networkId: 'NETWORK:8-10-EXCHANGE',
         identityKey: 'NETWORK:8-10-EXCHANGE',
         houses: [8, 10],
-        relationships: [exchangeRelationship]
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
       });
 
       const input: CareerPatternClassificationInput = { networks: [network] };

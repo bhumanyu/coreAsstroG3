@@ -2,6 +2,7 @@ import {
   hasDirectHouseRelationship,
   hasDirectedHouseRelationship,
   hasPlanetMediatedRelationship,
+  hasCommonLordRelationship,
   isDirectChain
 } from './careerPatternPredicates';
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
@@ -259,7 +260,7 @@ describe('careerPatternPredicates', () => {
       expect(hasDirectedHouseRelationship(network, 10, 6)).toBe(false);
     });
 
-    it('returns true for EXCHANGES edge in correct direction', () => {
+    it('returns false for EXCHANGES edge (bidirectional only, not directed)', () => {
       const network = makeNetwork({
         houses: [6, 10],
         relationships: [
@@ -281,32 +282,9 @@ describe('careerPatternPredicates', () => {
         ]
       });
 
-      expect(hasDirectedHouseRelationship(network, 6, 10)).toBe(true);
-    });
-
-    it('returns true for EXCHANGES edge in reverse direction (bidirectional)', () => {
-      const network = makeNetwork({
-        houses: [6, 10],
-        relationships: [
-          makeRelationship({
-            type: 'LORD_OF',
-            sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:6'
-          }),
-          makeRelationship({
-            type: 'LORD_OF',
-            sourceNodeId: 'PLANET:MERCURY',
-            targetNodeId: 'HOUSE:10'
-          }),
-          makeRelationship({
-            type: 'EXCHANGES',
-            sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'PLANET:MERCURY'
-          })
-        ]
-      });
-
-      expect(hasDirectedHouseRelationship(network, 10, 6)).toBe(true);
+      // EXCHANGES is bidirectional only, cannot satisfy directed relationships
+      expect(hasDirectedHouseRelationship(network, 6, 10)).toBe(false);
+      expect(hasDirectedHouseRelationship(network, 10, 6)).toBe(false);
     });
 
     it('returns false when no directed relationship exists', () => {
@@ -322,6 +300,27 @@ describe('careerPatternPredicates', () => {
       });
 
       expect(hasDirectedHouseRelationship(network, 6, 10)).toBe(false);
+    });
+
+    it('returns true for planet-mediated-only (SATURN lords 6, occupies 10)', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
+      });
+
+      // This yields directed 6→10 via occupies-from-lord semantics
+      expect(hasDirectedHouseRelationship(network, 6, 10)).toBe(true);
     });
   });
 
@@ -385,6 +384,63 @@ describe('careerPatternPredicates', () => {
       });
 
       expect(hasPlanetMediatedRelationship(network, 6, 10)).toBe(false);
+    });
+  });
+
+  describe('hasCommonLordRelationship', () => {
+    it('returns true when same planet lords both houses', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
+      });
+
+      expect(hasCommonLordRelationship(network, 6, 10)).toBe(true);
+    });
+
+    it('returns false when different planets lord each house', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          })
+        ]
+      });
+
+      expect(hasCommonLordRelationship(network, 6, 10)).toBe(false);
+    });
+
+    it('returns false when only one house has a lord', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          })
+        ]
+      });
+
+      expect(hasCommonLordRelationship(network, 6, 10)).toBe(false);
     });
   });
 
@@ -1177,6 +1233,113 @@ describe('careerPatternPredicates', () => {
 
         expect(isDirectChain(network, [2, 6, 10, 11])).toBe(true);
       });
+    });
+  });
+
+  describe('EXCHANGES-only network tests', () => {
+    it('EXCHANGES-only network: isDirectChain([6,10]) false', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
+      });
+
+      // EXCHANGES cannot satisfy ordered pathways
+      expect(isDirectChain(network, [6, 10])).toBe(false);
+    });
+
+    it('EXCHANGES-only network: hasDirectedHouseRelationship false for both directions', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
+      });
+
+      // EXCHANGES is bidirectional only, cannot satisfy directed relationships
+      expect(hasDirectedHouseRelationship(network, 6, 10)).toBe(false);
+      expect(hasDirectedHouseRelationship(network, 10, 6)).toBe(false);
+    });
+
+    it('EXCHANGES-only network: hasCommonLordRelationship false (different lords)', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
+      });
+
+      // Different planets lord each house, no common lord
+      expect(hasCommonLordRelationship(network, 6, 10)).toBe(false);
+    });
+
+    it('EXCHANGES-only network: hasDirectHouseRelationship true (bidirectional union)', () => {
+      const network = makeNetwork({
+        houses: [6, 10],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MERCURY',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MERCURY'
+          })
+        ]
+      });
+
+      // hasDirectHouseRelationship includes EXCHANGES in the union
+      expect(hasDirectHouseRelationship(network, 6, 10)).toBe(true);
     });
   });
 });

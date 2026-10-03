@@ -4,7 +4,8 @@ import type { ParivartanaCareerType } from './careerPatternTypes';
 import {
   hasDirectHouseRelationship,
   hasDirectedHouseRelationship,
-  isDirectChain
+  isDirectChain,
+  buildLordshipMap
 } from './careerPatternPredicates';
 
 /**
@@ -367,11 +368,14 @@ export function classifyTenEleven(network: CareerHouseNetwork): readonly CareerP
 /**
  * Classifies the specific type of Parivartana career exchange.
  * Per spec §19: specific exchange types based on house pairs.
+ * This function verifies the actual exchange pair from EXCHANGES edges,
+ * not just network.houses membership.
  */
 export function classifyParivartanaCareerType(
-  houses: readonly number[]
+  exchangeHouseA: number,
+  exchangeHouseB: number
 ): ParivartanaCareerType {
-  const houseSet = new Set(houses);
+  const houseSet = new Set([exchangeHouseA, exchangeHouseB]);
 
   // 6↔10 → SERVICE_PROFESSION_EXCHANGE
   if (houseSet.has(6) && houseSet.has(10)) {
@@ -411,33 +415,56 @@ export function classifyParivartanaCareerType(
  * Classifies a Parivartana (exchange) network.
  * Requires BOTH an EXCHANGES edge AND a career-relevant house in {2,6,10,11}.
  * Per spec §19: enhanced with ParivartanaCareerType classification.
+ * Verifies the actual exchange pair from EXCHANGES edges, not just network.houses membership.
  */
 export function classifyParivartana(network: CareerHouseNetwork): readonly CareerPatternRuleMatch[] {
-  const hasExchange = network.relationships.some(r => r.type === 'EXCHANGES');
+  const exchangeEdges = network.relationships.filter(r => r.type === 'EXCHANGES');
   const hasCareerHouse = network.houses.some(isCareerHouse);
 
-  if (hasExchange && hasCareerHouse) {
-    const houseRoles: Record<number, CareerPatternHouseRole> = {};
-    for (const house of network.houses) {
-      if (house === 2) houseRoles[house] = 'WEALTH_HOUSE';
-      else if (house === 3) houseRoles[house] = 'EFFORT_HOUSE';
-      else if (house === 6) houseRoles[house] = 'SERVICE_HOUSE';
-      else if (house === 8) houseRoles[house] = 'UNKNOWN';
-      else if (house === 9) houseRoles[house] = 'DHARMA_HOUSE';
-      else if (house === 10) houseRoles[house] = 'CAREER_HOUSE';
-      else if (house === 11) houseRoles[house] = 'GAINS_HOUSE';
-      else if (house === 12) houseRoles[house] = 'UNKNOWN';
-      else houseRoles[house] = 'UNKNOWN';
+  if (exchangeEdges.length > 0 && hasCareerHouse) {
+    const lordshipMap = buildLordshipMap(network.relationships);
+    const matches: CareerPatternRuleMatch[] = [];
+
+    for (const edge of exchangeEdges) {
+      const sourcePlanet = edge.sourceNodeId.startsWith('PLANET:') ? edge.sourceNodeId.slice(7) : null;
+      const targetPlanet = edge.targetNodeId.startsWith('PLANET:') ? edge.targetNodeId.slice(7) : null;
+
+      if (sourcePlanet && targetPlanet) {
+        const sourceHouses = lordshipMap.get(sourcePlanet);
+        const targetHouses = lordshipMap.get(targetPlanet);
+
+        if (sourceHouses && targetHouses) {
+          // Get the actual house pair this exchange connects
+          for (const sourceHouse of sourceHouses) {
+            for (const targetHouse of targetHouses) {
+              const houseRoles: Record<number, CareerPatternHouseRole> = {};
+              for (const house of network.houses) {
+                if (house === 2) houseRoles[house] = 'WEALTH_HOUSE';
+                else if (house === 3) houseRoles[house] = 'EFFORT_HOUSE';
+                else if (house === 6) houseRoles[house] = 'SERVICE_HOUSE';
+                else if (house === 8) houseRoles[house] = 'UNKNOWN';
+                else if (house === 9) houseRoles[house] = 'DHARMA_HOUSE';
+                else if (house === 10) houseRoles[house] = 'CAREER_HOUSE';
+                else if (house === 11) houseRoles[house] = 'GAINS_HOUSE';
+                else if (house === 12) houseRoles[house] = 'UNKNOWN';
+                else houseRoles[house] = 'UNKNOWN';
+              }
+
+              const parivartanaType = classifyParivartanaCareerType(sourceHouse, targetHouse);
+
+              matches.push({
+                ruleId: `RULE_PARIVARTANA_${parivartanaType}`,
+                classification: 'PARIVARTANA_YOGA',
+                family: 'PARIVARTANA',
+                houseRoles: Object.freeze(houseRoles)
+              });
+            }
+          }
+        }
+      }
     }
 
-    const parivartanaType = classifyParivartanaCareerType(network.houses);
-
-    return [{
-      ruleId: `RULE_PARIVARTANA_${parivartanaType}`,
-      classification: 'PARIVARTANA_YOGA',
-      family: 'PARIVARTANA',
-      houseRoles: Object.freeze(houseRoles)
-    }];
+    return matches;
   }
 
   return [];
