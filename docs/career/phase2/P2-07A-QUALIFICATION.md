@@ -97,9 +97,22 @@ interface QualificationPolicy {
 - `status`: CareerPatternQualificationStatus
 - `dimensions`: CareerPatternQualificationDimensions
 - `evidence`: QualificationEvidence[] (policy-level)
-- `insufficientDataReasons`: string[]
+- `missingDataReasons`: string[] (decision-blocking: structural strength, planetary condition, career relevance, coherence)
+- `deferredDimensions`: CareerPatternDeferredDimension[] (non-decision-blocking: ACTIVATION_POTENTIAL, DIVISIONAL_CONFIRMATION)
 - `ruleId`: string
 - `explanation`: string
+
+**Missing Data vs Deferred Dimensions:**
+- `missingDataReasons`: Structural assessment cannot be completed (NOT_ASSESSED strength, UNAVAILABLE condition/relevance, INSUFFICIENT_DATA coherence). These are decision-blocking for natal qualification status.
+- `deferredDimensions`: Intentionally deferred to later phases (ACTIVATION_POTENTIAL timing, DIVISIONAL_CONFIRMATION D10). These are non-decision-blocking and should not appear in insufficient-data explanation text.
+
+This split prevents C11/UI from interpreting deferred phases as incomplete charts.
+
+## Ownership Invariant
+
+**Policy owns qualification status.** The qualification policy for each pattern classification is the sole authority for determining `CareerPatternQualificationStatus`. The shared utility functions `computeQualificationDimensions` and `classifyQualificationStatus` in `careerPatternQualificationRules.ts` provide dimension computation only and must not be used as status authority outside of policy evaluation.
+
+The legacy path (patterns without a registered policy) uses `classifyQualificationStatus` as a fallback, but this is slated for removal in P2-07B/P2-07C once all pattern families have dedicated policies.
 
 ## Evidence Structure (Spec §25)
 

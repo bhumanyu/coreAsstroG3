@@ -104,19 +104,22 @@ export function hasAllEstablishingRelationships(
 }
 
 /**
- * Checks if the pattern has a directed house relationship from fromHouse to toHouse.
- * This is a semantic check that examines establishingRelationshipIds for the pattern
- * and determines if a relationship exists representing the directional flow.
+ * Checks if the pattern has a directed house relationship ID from fromHouse to toHouse.
+ * This is a temporary ID-string check that examines establishingRelationshipIds for the pattern.
  *
- * This avoids string-matching identity keys by explicitly checking for relationship
- * semantics in the establishing relationship IDs.
+ * TODO(P2-07B): Resolve via canonical edge semantics by extending QualificationPolicyContext
+ * to carry source CareerHouseNetwork[] and using the frozen P2-06A hasDirectedHouseRelationship
+ * predicate from careerPatternPredicates.ts.
+ *
+ * Note: The ID format `REL:...` is a temporary contract. This helper should be replaced with
+ * canonical relationship resolution once the context exposes networks.
  *
  * @param pattern - The career pattern to check
  * @param fromHouse - Source house number
  * @param toHouse - Target house number
- * @returns true if a directed relationship from fromHouse to toHouse exists
+ * @returns true if a directed relationship ID from fromHouse to toHouse exists
  */
-export function hasDirectedHouseRelationshipInPattern(
+export function hasDirectedHouseRelationshipId(
   pattern: CareerPattern,
   fromHouse: number,
   toHouse: number

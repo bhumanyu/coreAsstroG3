@@ -5,7 +5,8 @@ import type {
   PolicyEvaluationResult,
   CareerPatternQualificationStatus,
   CareerPatternQualificationDimensions,
-  QualificationEvidence
+  QualificationEvidence,
+  CareerPatternDeferredDimension
 } from '../careerPatternQualificationTypes';
 import {
   generatePolicyEvidenceId,
@@ -52,7 +53,8 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
     const establishingIds = getEstablishingRelationshipIds(pattern);
 
     const evidence: QualificationEvidence[] = [];
-    const insufficientDataReasons: string[] = [];
+    const missingDataReasons: string[] = [];
+    const deferredDimensions: CareerPatternDeferredDimension[] = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
     // Step 1: Check for any establishing relationships (structural prerequisite)
@@ -98,52 +100,57 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
 
     // Step 3: Apply frozen decision layer (only if prerequisites present)
     if (status !== 'UNQUALIFIED') {
-      // Check for missing/unevaluable data
-      if (dimensions.structuralStrength === 'NOT_ASSESSED') {
-        insufficientDataReasons.push('structural strength methodology not frozen');
-      }
-      if (dimensions.planetaryCondition === 'UNAVAILABLE') {
-        insufficientDataReasons.push('planetary condition data unavailable');
-      }
-      if (dimensions.careerRelevance === 'UNAVAILABLE') {
-        insufficientDataReasons.push('career relevance data unavailable');
-      }
-      if (dimensions.coherence === 'INSUFFICIENT_DATA') {
-        insufficientDataReasons.push('pattern coherence insufficient data');
-      }
+      // Track deferred dimensions (non-decision-blocking)
       if (dimensions.activationPotential === 'UNKNOWN') {
-        insufficientDataReasons.push('activation potential timing deferred');
+        deferredDimensions.push('ACTIVATION_POTENTIAL');
       }
       if (dimensions.divisionalConfirmation === 'NOT_ASSESSED') {
-        insufficientDataReasons.push('divisional confirmation (D10) deferred');
+        deferredDimensions.push('DIVISIONAL_CONFIRMATION');
       }
 
-      // Check for known disqualifiers
+      // Check for known disqualifiers (explicit negatives beat missing data)
       if (dimensions.planetaryCondition === 'WEAK') {
         status = 'UNQUALIFIED';
-        insufficientDataReasons.push('planetary condition is WEAK');
+        missingDataReasons.push('planetary condition is WEAK');
       } else if (dimensions.careerRelevance === 'NEUTRAL') {
         status = 'UNQUALIFIED';
-        insufficientDataReasons.push('career relevance is NEUTRAL');
-      } else if (insufficientDataReasons.length > 0) {
-        // Prerequisites present + evaluable dimensions OK, but NOT_ASSESSED/UNKNOWN/UNAVAILABLE block
-        status = 'INSUFFICIENT_DATA';
+        missingDataReasons.push('career relevance is NEUTRAL');
       } else {
-        // Prerequisites present + all evaluable dimensions positive
-        // QUALIFIED requires structural-strength freeze (currently unreachable)
-        status = 'INSUFFICIENT_DATA';
-        insufficientDataReasons.push('structural strength methodology not frozen');
+        // No disqualifiers - check for missing/unevaluable data (decision-blocking)
+        if (dimensions.structuralStrength === 'NOT_ASSESSED') {
+          missingDataReasons.push('structural strength methodology not frozen');
+        }
+        if (dimensions.planetaryCondition === 'UNAVAILABLE') {
+          missingDataReasons.push('planetary condition data unavailable');
+        }
+        if (dimensions.careerRelevance === 'UNAVAILABLE') {
+          missingDataReasons.push('career relevance data unavailable');
+        }
+        if (dimensions.coherence === 'INSUFFICIENT_DATA') {
+          missingDataReasons.push('pattern coherence insufficient data');
+        }
+
+        if (missingDataReasons.length > 0) {
+          // Prerequisites present + evaluable dimensions OK, but NOT_ASSESSED/UNAVAILABLE block
+          status = 'INSUFFICIENT_DATA';
+        } else {
+          // Prerequisites present + all evaluable dimensions positive
+          // QUALIFIED requires structural-strength freeze (currently unreachable)
+          status = 'INSUFFICIENT_DATA';
+          missingDataReasons.push('structural strength methodology not frozen');
+        }
       }
     }
 
     // Build explanation
-    const explanation = this.buildExplanation(status, dimensions, insufficientDataReasons);
+    const explanation = this.buildExplanation(status, dimensions, missingDataReasons);
 
     return Object.freeze({
       status,
       dimensions,
       evidence: Object.freeze(evidence),
-      insufficientDataReasons: Object.freeze(insufficientDataReasons),
+      missingDataReasons: Object.freeze(missingDataReasons),
+      deferredDimensions: Object.freeze(deferredDimensions),
       ruleId: this.policyId,
       explanation
     });
@@ -152,7 +159,7 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
   private buildExplanation(
     status: CareerPatternQualificationStatus,
     dimensions: CareerPatternQualificationDimensions,
-    insufficientDataReasons: readonly string[]
+    missingDataReasons: readonly string[]
   ): string {
     const parts = [
       `Career House Network pattern (${this.classification})`,
@@ -165,8 +172,8 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
       `Divisional confirmation: ${dimensions.divisionalConfirmation}.`
     ];
 
-    if (insufficientDataReasons.length > 0) {
-      parts.push(`Insufficient data reasons: ${insufficientDataReasons.join('; ')}.`);
+    if (missingDataReasons.length > 0) {
+      parts.push(`Missing data reasons: ${missingDataReasons.join('; ')}.`);
     }
 
     return parts.join(' ');

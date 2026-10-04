@@ -11,7 +11,8 @@ import type {
   CareerPatternQualificationProvenance,
   CareerPatternQualificationDimensions,
   CareerPatternQualificationStatus,
-  QualificationEvidence
+  QualificationEvidence,
+  CareerPatternDeferredDimension
 } from './careerPatternQualificationTypes';
 import {
   mapPlanetaryCondition,
@@ -37,6 +38,12 @@ import { getQualificationPolicy } from './qualificationRegistry';
  * - careerFinalSynthesis
  * - careerExpression*
  * - domain/timing
+ *
+ * OWNERSHIP INVARIANT: Policy owns qualification status. The functions
+ * `computeQualificationDimensions` and `classifyQualificationStatus` in
+ * careerPatternQualificationRules.ts provide shared dimension computation only
+ * and must not be used as status authority. The legacy path (no policy) is
+ * slated for removal in P2-07B/P2-07C.
  */
 
 /**
@@ -372,7 +379,8 @@ function qualifyPattern(
   const policy = getQualificationPolicy(pattern.classification);
 
   let policyEvidence: QualificationEvidence[] = [];
-  let insufficientDataReasons: string[] = [];
+  let missingDataReasons: string[] = [];
+  let deferredDimensions: CareerPatternDeferredDimension[] = [];
   let ruleId: string;
   let explanation: string;
   let status: CareerPatternQualificationStatus;
@@ -389,7 +397,8 @@ function qualifyPattern(
 
     // Use policy status and evidence, but keep legacy dimensions
     policyEvidence = [...policyResult.evidence];
-    insufficientDataReasons = [...policyResult.insufficientDataReasons];
+    missingDataReasons = [...policyResult.missingDataReasons];
+    deferredDimensions = [...policyResult.deferredDimensions];
     ruleId = policyResult.ruleId;
     explanation = policyResult.explanation;
     status = policyResult.status;
@@ -397,7 +406,8 @@ function qualifyPattern(
     // Fallback to legacy status classification
     status = classifyQualificationStatus(dimensions);
     policyEvidence = [];
-    insufficientDataReasons = [];
+    missingDataReasons = [];
+    deferredDimensions = [];
     ruleId = 'LEGACY';
     explanation = buildQualificationStatement(pattern, status, dimensions);
   }
@@ -428,7 +438,8 @@ function qualifyPattern(
     participants,
     evidence,
     policyEvidence: Object.freeze(policyEvidence),
-    insufficientDataReasons: Object.freeze(insufficientDataReasons),
+    missingDataReasons: Object.freeze(missingDataReasons),
+    deferredDimensions: Object.freeze(deferredDimensions),
     ruleId,
     explanation,
     provenance,

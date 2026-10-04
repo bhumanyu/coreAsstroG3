@@ -99,6 +99,18 @@ export type CareerPatternDivisionalConfirmation =
   | 'NOT_ASSESSED';
 
 /**
+ * Deferred dimensions that are intentionally deferred to later phases.
+ * These dimensions are not decision-blocking for natal qualification status.
+ *
+ * Per spec §9-10: ACTIVATION and D10 never raise natal status to QUALIFIED.
+ * These are tracked separately from missing data to prevent C11/UI from interpreting
+ * deferred phases as incomplete charts.
+ */
+export type CareerPatternDeferredDimension =
+  | 'ACTIVATION_POTENTIAL'
+  | 'DIVISIONAL_CONFIRMATION';
+
+/**
  * Qualification status of a Career pattern.
  * Represents the overall qualification based on all dimensions.
  */
@@ -200,7 +212,8 @@ export interface DimensionEvaluation {
   readonly dimension: keyof CareerPatternQualificationDimensions;
   readonly value: string;
   readonly evidence: readonly QualificationEvidence[];
-  readonly insufficientDataReasons: readonly string[];
+  readonly missingDataReasons: readonly string[];
+  readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
 }
 
 /**
@@ -211,7 +224,8 @@ export interface PolicyEvaluationResult {
   readonly status: CareerPatternQualificationStatus;
   readonly dimensions: CareerPatternQualificationDimensions;
   readonly evidence: readonly QualificationEvidence[];
-  readonly insufficientDataReasons: readonly string[];
+  readonly missingDataReasons: readonly string[];
+  readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;
 }
@@ -265,7 +279,8 @@ export interface QualifiedCareerPattern {
   readonly participants: readonly CareerPatternParticipantQualification[];
   readonly evidence: readonly CareerPatternQualificationEvidence[];
   readonly policyEvidence: readonly QualificationEvidence[];
-  readonly insufficientDataReasons: readonly string[];
+  readonly missingDataReasons: readonly string[];
+  readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;
   readonly provenance: CareerPatternQualificationProvenance;

@@ -219,7 +219,7 @@ describe('Career Pattern Qualification', () => {
       expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
     });
 
-    it('returns INSUFFICIENT_DATA when activationPotential is UNKNOWN', () => {
+    it('returns INSUFFICIENT_DATA when activationPotential is UNKNOWN (deferred dimension)', () => {
       const pattern = makePattern();
 
       const input: CareerPatternQualificationInput = {
@@ -233,9 +233,10 @@ describe('Career Pattern Qualification', () => {
       const qualified = result.qualifiedPatterns[0];
       expect(qualified.status).toBe('INSUFFICIENT_DATA');
       expect(qualified.dimensions.activationPotential).toBe('UNKNOWN');
+      expect(qualified.deferredDimensions).toContain('ACTIVATION_POTENTIAL');
     });
 
-    it('returns INSUFFICIENT_DATA when divisionalConfirmation is NOT_ASSESSED', () => {
+    it('returns INSUFFICIENT_DATA when divisionalConfirmation is NOT_ASSESSED (deferred dimension)', () => {
       const pattern = makePattern();
 
       const input: CareerPatternQualificationInput = {
@@ -249,6 +250,7 @@ describe('Career Pattern Qualification', () => {
       const qualified = result.qualifiedPatterns[0];
       expect(qualified.status).toBe('INSUFFICIENT_DATA');
       expect(qualified.dimensions.divisionalConfirmation).toBe('NOT_ASSESSED');
+      expect(qualified.deferredDimensions).toContain('DIVISIONAL_CONFIRMATION');
     });
 
     it('does NOT force QUALIFIED status — uses conservative rules', () => {
@@ -265,6 +267,9 @@ describe('Career Pattern Qualification', () => {
       const qualified = result.qualifiedPatterns[0];
       // Conservative rules produce INSUFFICIENT_DATA, not QUALIFIED
       expect(qualified.status).toBe('INSUFFICIENT_DATA');
+      // Verify deferred dimensions are tracked separately
+      expect(qualified.deferredDimensions).toContain('ACTIVATION_POTENTIAL');
+      expect(qualified.deferredDimensions).toContain('DIVISIONAL_CONFIRMATION');
     });
   });
 
@@ -637,6 +642,21 @@ describe('Career Pattern Qualification', () => {
 
     it('returns MODERATE when houses and establishingRelationshipIds are present', () => {
       const pattern = makePattern();
+
+      const result = classifyPatternCoherence(pattern);
+      expect(result).toBe('MODERATE');
+    });
+
+    it('returns MODERATE when both establishingRelationshipIds and supportingRelationshipIds are present', () => {
+      const pattern = makePattern({
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['rel-1', 'rel-2'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['rel-1'],
+          supportingRelationshipIds: ['rel-2']
+        })
+      });
 
       const result = classifyPatternCoherence(pattern);
       expect(result).toBe('MODERATE');
@@ -1340,7 +1360,7 @@ describe('Career Pattern Qualification', () => {
         const qualified = result.qualifiedPatterns[0];
 
         expect(qualified.status).toBe('UNQUALIFIED');
-        expect(qualified.insufficientDataReasons).toHaveLength(0);
+        expect(qualified.missingDataReasons).toHaveLength(0);
         expect(qualified.policyEvidence.length).toBeGreaterThan(0);
         expect(qualified.policyEvidence[0].explanation).toContain('6→10 and 10→11');
       });
@@ -1396,8 +1416,9 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
       });
 
-      it('returns INSUFFICIENT_DATA when planetary condition is WEAK (due to NOT_ASSESSED structural strength)', () => {
+      it('returns UNQUALIFIED when planetary condition is WEAK (negative beats missing data)', () => {
         const pattern = makePattern({
+          planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
             sourceNetworkIds: ['network-1'],
@@ -1417,13 +1438,17 @@ describe('Career Pattern Qualification', () => {
         const result = qualifyCareerPatterns(input);
         const qualified = result.qualifiedPatterns[0];
 
-        // Legacy rules: NOT_ASSESSED structural strength → INSUFFICIENT_DATA
-        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        // Verify policy was invoked (not legacy path)
+        expect(qualified.ruleId).toBe('SERVICE_TO_PROFESSION_TO_GAINS');
+
+        // Explicit negative (WEAK condition) beats unrelated missing data (NOT_ASSESSED structural strength)
+        expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
       });
 
-      it('returns INSUFFICIENT_DATA when career relevance is NEUTRAL (due to NOT_ASSESSED structural strength)', () => {
+      it('returns UNQUALIFIED when career relevance is NEUTRAL (negative beats missing data)', () => {
         const pattern = makePattern({
+          planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
             sourceNetworkIds: ['network-1'],
@@ -1443,9 +1468,40 @@ describe('Career Pattern Qualification', () => {
         const result = qualifyCareerPatterns(input);
         const qualified = result.qualifiedPatterns[0];
 
-        // Legacy rules: NOT_ASSESSED structural strength → INSUFFICIENT_DATA
-        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        // Explicit negative (NEUTRAL relevance) beats unrelated missing data (NOT_ASSESSED structural strength)
+        expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.dimensions.careerRelevance).toBe('NEUTRAL');
+      });
+
+      it('explicit negative beats unrelated missing data: WEAK condition + NOT_ASSESSED structural strength → UNQUALIFIED', () => {
+        const pattern = makePattern({
+          planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'WEAK')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Frozen invariant: explicit negative beats unrelated missing data
+        // WEAK condition (explicit negative) should result in UNQUALIFIED, not INSUFFICIENT_DATA
+        // even though structuralStrength is NOT_ASSESSED (missing data)
+        expect(qualified.status).toBe('UNQUALIFIED');
+        expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
+        expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
+        expect(qualified.ruleId).toBe('SERVICE_TO_PROFESSION_TO_GAINS'); // Verify policy was used
       });
     });
 
@@ -1503,7 +1559,7 @@ describe('Career Pattern Qualification', () => {
     });
 
     describe('Missing vs Absent Distinction (Spec §20-21)', () => {
-      it('missing prerequisite → INSUFFICIENT_DATA (not UNQUALIFIED)', () => {
+      it('missing prerequisite → UNQUALIFIED (explicitly absent, not missing data)', () => {
         const pattern = makePattern({
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
@@ -1529,7 +1585,7 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.status).toBe('UNQUALIFIED');
       });
 
-      it('missing planetary data → INSUFFICIENT_DATA (not UNQUALIFIED)', () => {
+      it('missing planetary data → INSUFFICIENT_DATA (decision-blocking)', () => {
         const pattern = makePattern({
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
@@ -1550,7 +1606,7 @@ describe('Career Pattern Qualification', () => {
         const result = qualifyCareerPatterns(input);
         const qualified = result.qualifiedPatterns[0];
 
-        // Legacy rules: UNAVAILABLE relevance → INSUFFICIENT_DATA
+        // Missing relevance data → INSUFFICIENT_DATA (decision-blocking)
         expect(qualified.status).toBe('INSUFFICIENT_DATA');
         expect(qualified.dimensions.careerRelevance).toBe('UNAVAILABLE');
       });
