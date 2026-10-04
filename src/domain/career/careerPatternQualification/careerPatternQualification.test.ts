@@ -1360,7 +1360,7 @@ describe('Career Pattern Qualification', () => {
         const qualified = result.qualifiedPatterns[0];
 
         expect(qualified.status).toBe('UNQUALIFIED');
-        expect(qualified.missingDataReasons).toHaveLength(0);
+        expect(qualified.decisionBlockingReasons).toHaveLength(0);
         expect(qualified.policyEvidence.length).toBeGreaterThan(0);
         expect(qualified.policyEvidence[0].explanation).toContain('6→10 and 10→11');
       });
@@ -1392,6 +1392,7 @@ describe('Career Pattern Qualification', () => {
 
       it('returns INSUFFICIENT_DATA when structural strength is NOT_ASSESSED', () => {
         const pattern = makePattern({
+          planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
             sourceNetworkIds: ['network-1'],
@@ -1414,6 +1415,12 @@ describe('Career Pattern Qualification', () => {
         // Legacy rules determine status based on NOT_ASSESSED dimensions
         expect(qualified.status).toBe('INSUFFICIENT_DATA');
         expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
+        // Verify structured decision blocking reasons
+        expect(qualified.decisionBlockingReasons.length).toBeGreaterThan(0);
+        // Should include METHODOLOGY_NOT_FROZEN for structural strength
+        const structuralReason = qualified.decisionBlockingReasons.find(r => r.kind === 'METHODOLOGY_NOT_FROZEN');
+        expect(structuralReason).toBeDefined();
+        expect(structuralReason?.reason).toContain('structural strength methodology not frozen');
       });
 
       it('returns UNQUALIFIED when planetary condition is WEAK (negative beats missing data)', () => {
@@ -1444,6 +1451,8 @@ describe('Career Pattern Qualification', () => {
         // Explicit negative (WEAK condition) beats unrelated missing data (NOT_ASSESSED structural strength)
         expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
+        // Disqualifiers (WEAK condition) are NOT in decisionBlockingReasons - they're explicit negatives
+        expect(qualified.decisionBlockingReasons).toHaveLength(0);
       });
 
       it('returns UNQUALIFIED when career relevance is NEUTRAL (negative beats missing data)', () => {
@@ -1471,6 +1480,8 @@ describe('Career Pattern Qualification', () => {
         // Explicit negative (NEUTRAL relevance) beats unrelated missing data (NOT_ASSESSED structural strength)
         expect(qualified.status).toBe('UNQUALIFIED');
         expect(qualified.dimensions.careerRelevance).toBe('NEUTRAL');
+        // Disqualifiers (NEUTRAL relevance) are NOT in decisionBlockingReasons - they're explicit negatives
+        expect(qualified.decisionBlockingReasons).toHaveLength(0);
       });
 
       it('explicit negative beats unrelated missing data: WEAK condition + NOT_ASSESSED structural strength → UNQUALIFIED', () => {
@@ -1502,6 +1513,8 @@ describe('Career Pattern Qualification', () => {
         expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
         expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
         expect(qualified.ruleId).toBe('SERVICE_TO_PROFESSION_TO_GAINS'); // Verify policy was used
+        // Disqualifiers (WEAK condition) are NOT in decisionBlockingReasons - they're explicit negatives
+        expect(qualified.decisionBlockingReasons).toHaveLength(0);
       });
     });
 
@@ -1533,6 +1546,7 @@ describe('Career Pattern Qualification', () => {
 
       it('returns INSUFFICIENT_DATA when establishing relationships exist (legacy rules apply)', () => {
         const pattern = makePattern({
+          planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets
           classification: 'CAREER_HOUSE_NETWORK',
           provenance: Object.freeze({
             sourceNetworkIds: ['network-1'],
@@ -1555,6 +1569,12 @@ describe('Career Pattern Qualification', () => {
         // Legacy rules determine status based on NOT_ASSESSED dimensions
         expect(qualified.status).toBe('INSUFFICIENT_DATA');
         expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
+        // Verify structured decision blocking reasons
+        expect(qualified.decisionBlockingReasons.length).toBeGreaterThan(0);
+        // Should include METHODOLOGY_NOT_FROZEN for structural strength
+        const structuralReason = qualified.decisionBlockingReasons.find(r => r.kind === 'METHODOLOGY_NOT_FROZEN');
+        expect(structuralReason).toBeDefined();
+        expect(structuralReason?.reason).toContain('structural strength methodology not frozen');
       });
     });
 
@@ -1587,6 +1607,7 @@ describe('Career Pattern Qualification', () => {
 
       it('missing planetary data → INSUFFICIENT_DATA (decision-blocking)', () => {
         const pattern = makePattern({
+          planets: [Planet.SATURN], // Only Saturn to avoid UNAVAILABLE from missing planets
           classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
           provenance: Object.freeze({
             sourceNetworkIds: ['network-1'],
@@ -1609,6 +1630,12 @@ describe('Career Pattern Qualification', () => {
         // Missing relevance data → INSUFFICIENT_DATA (decision-blocking)
         expect(qualified.status).toBe('INSUFFICIENT_DATA');
         expect(qualified.dimensions.careerRelevance).toBe('UNAVAILABLE');
+        // Verify structured decision blocking reasons
+        expect(qualified.decisionBlockingReasons.length).toBeGreaterThan(0);
+        // Should include MISSING_INPUT for career relevance
+        const relevanceReason = qualified.decisionBlockingReasons.find(r => r.kind === 'MISSING_INPUT' && r.reason.includes('career relevance'));
+        expect(relevanceReason).toBeDefined();
+        expect(relevanceReason?.reason).toContain('career relevance data unavailable');
       });
     });
 

@@ -6,7 +6,8 @@ import type {
   CareerPatternQualificationStatus,
   CareerPatternQualificationDimensions,
   QualificationEvidence,
-  CareerPatternDeferredDimension
+  CareerPatternDeferredDimension,
+  DecisionBlockingReason
 } from '../careerPatternQualificationTypes';
 import {
   generatePolicyEvidenceId,
@@ -51,7 +52,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
     const establishingIds = getEstablishingRelationshipIds(pattern);
 
     const evidence: QualificationEvidence[] = [];
-    const missingDataReasons: string[] = [];
+    const decisionBlockingReasons: DecisionBlockingReason[] = [];
     const deferredDimensions: CareerPatternDeferredDimension[] = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
@@ -128,45 +129,60 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       // Check for known disqualifiers (explicit negatives beat missing data)
       if (dimensions.planetaryCondition === 'WEAK') {
         status = 'UNQUALIFIED';
-        missingDataReasons.push('planetary condition is WEAK');
+        // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else if (dimensions.careerRelevance === 'NEUTRAL') {
         status = 'UNQUALIFIED';
-        missingDataReasons.push('career relevance is NEUTRAL');
+        // Disqualifier: kept in evidence only, not in decisionBlockingReasons
       } else {
         // No disqualifiers - check for missing/unevaluable data (decision-blocking)
         if (dimensions.structuralStrength === 'NOT_ASSESSED') {
-          missingDataReasons.push('structural strength methodology not frozen');
+          decisionBlockingReasons.push({
+            reason: 'structural strength methodology not frozen',
+            kind: 'METHODOLOGY_NOT_FROZEN'
+          });
         }
         if (dimensions.planetaryCondition === 'UNAVAILABLE') {
-          missingDataReasons.push('planetary condition data unavailable');
+          decisionBlockingReasons.push({
+            reason: 'planetary condition data unavailable',
+            kind: 'MISSING_INPUT'
+          });
         }
         if (dimensions.careerRelevance === 'UNAVAILABLE') {
-          missingDataReasons.push('career relevance data unavailable');
+          decisionBlockingReasons.push({
+            reason: 'career relevance data unavailable',
+            kind: 'MISSING_INPUT'
+          });
         }
         if (dimensions.coherence === 'INSUFFICIENT_DATA') {
-          missingDataReasons.push('pattern coherence insufficient data');
+          decisionBlockingReasons.push({
+            reason: 'pattern coherence insufficient data',
+            kind: 'INSUFFICIENT_STRUCTURAL_EVIDENCE'
+          });
         }
 
-        if (missingDataReasons.length > 0) {
+        if (decisionBlockingReasons.length > 0) {
           // Prerequisites present + evaluable dimensions OK, but NOT_ASSESSED/UNAVAILABLE block
           status = 'INSUFFICIENT_DATA';
         } else {
           // Prerequisites present + all evaluable dimensions positive
           // QUALIFIED requires structural-strength freeze (currently unreachable)
           status = 'INSUFFICIENT_DATA';
-          missingDataReasons.push('structural strength methodology not frozen');
+          decisionBlockingReasons.push({
+            reason: 'structural strength methodology not frozen',
+            kind: 'METHODOLOGY_NOT_FROZEN'
+          });
         }
       }
     }
 
     // Build explanation
-    const explanation = this.buildExplanation(status, dimensions, missingDataReasons);
+    const explanation = this.buildExplanation(status, dimensions, decisionBlockingReasons);
 
     return Object.freeze({
       status,
       dimensions,
       evidence: Object.freeze(evidence),
-      missingDataReasons: Object.freeze(missingDataReasons),
+      decisionBlockingReasons: Object.freeze(decisionBlockingReasons),
       deferredDimensions: Object.freeze(deferredDimensions),
       ruleId: this.policyId,
       explanation
@@ -176,7 +192,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
   private buildExplanation(
     status: CareerPatternQualificationStatus,
     dimensions: CareerPatternQualificationDimensions,
-    missingDataReasons: readonly string[]
+    decisionBlockingReasons: readonly DecisionBlockingReason[]
   ): string {
     const parts = [
       `Service-to-Profession-to-Gains pattern (${this.classification})`,
@@ -189,8 +205,9 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
       `Divisional confirmation: ${dimensions.divisionalConfirmation}.`
     ];
 
-    if (missingDataReasons.length > 0) {
-      parts.push(`Missing data reasons: ${missingDataReasons.join('; ')}.`);
+    if (decisionBlockingReasons.length > 0) {
+      const reasonTexts = decisionBlockingReasons.map(r => `${r.kind}: ${r.reason}`);
+      parts.push(`Decision blocking reasons: ${reasonTexts.join('; ')}.`);
     }
 
     return parts.join(' ');

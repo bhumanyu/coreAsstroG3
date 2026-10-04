@@ -12,7 +12,8 @@ import type {
   CareerPatternQualificationDimensions,
   CareerPatternQualificationStatus,
   QualificationEvidence,
-  CareerPatternDeferredDimension
+  CareerPatternDeferredDimension,
+  DecisionBlockingReason
 } from './careerPatternQualificationTypes';
 import {
   mapPlanetaryCondition,
@@ -379,7 +380,7 @@ function qualifyPattern(
   const policy = getQualificationPolicy(pattern.classification);
 
   let policyEvidence: QualificationEvidence[] = [];
-  let missingDataReasons: string[] = [];
+  let decisionBlockingReasons: DecisionBlockingReason[] = [];
   let deferredDimensions: CareerPatternDeferredDimension[] = [];
   let ruleId: string;
   let explanation: string;
@@ -397,7 +398,7 @@ function qualifyPattern(
 
     // Use policy status and evidence, but keep legacy dimensions
     policyEvidence = [...policyResult.evidence];
-    missingDataReasons = [...policyResult.missingDataReasons];
+    decisionBlockingReasons = [...policyResult.decisionBlockingReasons];
     deferredDimensions = [...policyResult.deferredDimensions];
     ruleId = policyResult.ruleId;
     explanation = policyResult.explanation;
@@ -406,7 +407,7 @@ function qualifyPattern(
     // Fallback to legacy status classification
     status = classifyQualificationStatus(dimensions);
     policyEvidence = [];
-    missingDataReasons = [];
+    decisionBlockingReasons = [];
     deferredDimensions = [];
     ruleId = 'LEGACY';
     explanation = buildQualificationStatement(pattern, status, dimensions);
@@ -438,7 +439,7 @@ function qualifyPattern(
     participants,
     evidence,
     policyEvidence: Object.freeze(policyEvidence),
-    missingDataReasons: Object.freeze(missingDataReasons),
+    decisionBlockingReasons: Object.freeze(decisionBlockingReasons),
     deferredDimensions: Object.freeze(deferredDimensions),
     ruleId,
     explanation,

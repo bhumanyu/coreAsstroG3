@@ -97,13 +97,36 @@ interface QualificationPolicy {
 - `status`: CareerPatternQualificationStatus
 - `dimensions`: CareerPatternQualificationDimensions
 - `evidence`: QualificationEvidence[] (policy-level)
-- `missingDataReasons`: string[] (decision-blocking: structural strength, planetary condition, career relevance, coherence)
+- `decisionBlockingReasons`: DecisionBlockingReason[] (decision-blocking: structural strength, planetary condition, career relevance, coherence)
 - `deferredDimensions`: CareerPatternDeferredDimension[] (non-decision-blocking: ACTIVATION_POTENTIAL, DIVISIONAL_CONFIRMATION)
 - `ruleId`: string
 - `explanation`: string
 
+**DecisionBlockingReason Structure:**
+```typescript
+interface DecisionBlockingReason {
+  readonly reason: string;
+  readonly kind: DecisionBlockingReasonKind;
+}
+
+type DecisionBlockingReasonKind =
+  | 'MISSING_INPUT'
+  | 'METHODOLOGY_NOT_FROZEN'
+  | 'INSUFFICIENT_STRUCTURAL_EVIDENCE';
+```
+
+**DecisionBlockingReason Mapping:**
+- `structuralStrength === 'NOT_ASSESSED'` → `METHODOLOGY_NOT_FROZEN` (methodology not yet frozen)
+- `planetaryCondition === 'UNAVAILABLE'` or `careerRelevance === 'UNAVAILABLE'` → `MISSING_INPUT` (C5/C6 input records missing)
+- `coherence === 'INSUFFICIENT_DATA'` or establishing-relationship checks that are unevaluable → `INSUFFICIENT_STRUCTURAL_EVIDENCE` (structural evidence insufficient)
+
+**Disqualifiers vs Decision-Blocking Reasons:**
+- Disqualifiers (WEAK condition, NEUTRAL relevance) are explicit negatives → `UNQUALIFIED` status
+- Disqualifiers are NOT pushed into `decisionBlockingReasons` — they are carried in `evidence`/`explanation` only
+- Decision-blocking reasons are for `INSUFFICIENT_DATA` status only (missing ≠ negative)
+
 **Missing Data vs Deferred Dimensions:**
-- `missingDataReasons`: Structural assessment cannot be completed (NOT_ASSESSED strength, UNAVAILABLE condition/relevance, INSUFFICIENT_DATA coherence). These are decision-blocking for natal qualification status.
+- `decisionBlockingReasons`: Structural assessment cannot be completed (NOT_ASSESSED strength, UNAVAILABLE condition/relevance, INSUFFICIENT_DATA coherence). These are decision-blocking for natal qualification status.
 - `deferredDimensions`: Intentionally deferred to later phases (ACTIVATION_POTENTIAL timing, DIVISIONAL_CONFIRMATION D10). These are non-decision-blocking and should not appear in insufficient-data explanation text.
 
 This split prevents C11/UI from interpreting deferred phases as incomplete charts.
@@ -175,6 +198,8 @@ Extended test suite in `careerPatternQualification.test.ts`:
 - Missing vs absent distinction tests
 - ACTIVATION/D10 cannot create qualification tests
 - Policy evidence structure tests (establishingRelationshipIds only)
+- DecisionBlockingReason structure tests (verify kind field: MISSING_INPUT, METHODOLOGY_NOT_FROZEN, INSUFFICIENT_STRUCTURAL_EVIDENCE)
+- Disqualifier exclusion tests (verify WEAK/NEUTRAL are NOT in decisionBlockingReasons)
 - Permutation invariance tests
 - Unrelated edge invariance tests
 - Real-engine golden test (existing, unchanged)
