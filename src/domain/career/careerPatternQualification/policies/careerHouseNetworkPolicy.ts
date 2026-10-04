@@ -4,7 +4,8 @@ import type {
   QualificationPolicyContext,
   PolicyEvaluationResult,
   CareerPatternQualificationStatus,
-  CareerPatternQualificationDimensions
+  CareerPatternQualificationDimensions,
+  QualificationEvidence
 } from '../careerPatternQualificationTypes';
 import {
   generatePolicyEvidenceId,
@@ -16,20 +17,20 @@ import { computeQualificationDimensions, mapPlanetaryCondition, mapCareerRelevan
 /**
  * P2-07A Career House Network Qualification Policy (Generic Carrier)
  *
- * Generic policy for CAREER_HOUSE_NETWORK classification.
+ * Generic carrier validation / deferred qualification policy for CAREER_HOUSE_NETWORK classification.
  * This is a conservative carrier policy that never auto-QUALIFIED.
  *
  * Per spec §15: no universal threshold. This policy serves as a fallback
- * for patterns without specific family policies. It evaluates dimensions
+ * for patterns without specific family policies. It validates structural presence
  * but routes to INSUFFICIENT_DATA until methodology is frozen.
  *
  * Required structural facts:
  * - Any establishing relationship in pattern.provenance.establishingRelationshipIds
  *
- * Status precedence (per spec §24):
- * - No establishing relationships → UNQUALIFIED
- * - Establishing relationships present + conditions met → INSUFFICIENT_DATA (methodology deferred)
- * - Known disqualifier → UNQUALIFIED
+ * Status precedence (per spec §24 decision chain):
+ * 1. No establishing relationships → UNQUALIFIED
+ * 2. Establishing relationships present + all evaluable dimensions positive → INSUFFICIENT_DATA (methodology deferred)
+ * 3. Known disqualifier (WEAK condition, NEUTRAL relevance) → UNQUALIFIED
  *
  * Dimension evaluation:
  * - structuralStrength: NOT_ASSESSED (methodology deferred)
@@ -38,6 +39,8 @@ import { computeQualificationDimensions, mapPlanetaryCondition, mapCareerRelevan
  * - coherence: MODERATE if establishing relationships present, INSUFFICIENT_DATA otherwise
  * - activationPotential: UNKNOWN (timing deferred)
  * - divisionalConfirmation: NOT_ASSESSED (D10 deferred)
+ *
+ * QUALIFIED is unreachable until structural-strength methodology freeze (intentional).
  */
 export class CareerHouseNetworkPolicy implements QualificationPolicy {
   readonly policyId = 'CAREER_HOUSE_NETWORK';
@@ -48,13 +51,13 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
     const { pattern, relevanceByPlanet, conditionByPlanet } = context;
     const establishingIds = getEstablishingRelationshipIds(pattern);
 
-    const evidence: any[] = [];
+    const evidence: QualificationEvidence[] = [];
     const insufficientDataReasons: string[] = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
-    // Check for any establishing relationships
+    // Step 1: Check for any establishing relationships (structural prerequisite)
     if (establishingIds.length === 0) {
-      // No establishing relationships
+      // No establishing relationships → UNQUALIFIED
       status = 'UNQUALIFIED';
       evidence.push(
         createQualificationEvidence(
@@ -67,7 +70,7 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
         )
       );
     } else {
-      // Has establishing relationships - defer to legacy dimension computation
+      // Has establishing relationships - proceed to dimension assessment
       evidence.push(
         createQualificationEvidence(
           generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
@@ -78,12 +81,9 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
           `Career House Network has ${establishingIds.length} establishing relationship(s).`
         )
       );
-
-      // Let legacy computeQualificationDimensions handle the actual status
-      status = 'INSUFFICIENT_DATA'; // Will be overridden by caller
     }
 
-    // Build dimensions using legacy computation
+    // Step 2: Build dimensions using legacy computation
     const participantConditions = pattern.planets.map(p => {
       const condition = conditionByPlanet.get(p);
       return mapPlanetaryCondition(condition);
@@ -95,6 +95,46 @@ export class CareerHouseNetworkPolicy implements QualificationPolicy {
     });
 
     const dimensions = computeQualificationDimensions(pattern, participantConditions, participantRelevance);
+
+    // Step 3: Apply frozen decision layer (only if prerequisites present)
+    if (status !== 'UNQUALIFIED') {
+      // Check for missing/unevaluable data
+      if (dimensions.structuralStrength === 'NOT_ASSESSED') {
+        insufficientDataReasons.push('structural strength methodology not frozen');
+      }
+      if (dimensions.planetaryCondition === 'UNAVAILABLE') {
+        insufficientDataReasons.push('planetary condition data unavailable');
+      }
+      if (dimensions.careerRelevance === 'UNAVAILABLE') {
+        insufficientDataReasons.push('career relevance data unavailable');
+      }
+      if (dimensions.coherence === 'INSUFFICIENT_DATA') {
+        insufficientDataReasons.push('pattern coherence insufficient data');
+      }
+      if (dimensions.activationPotential === 'UNKNOWN') {
+        insufficientDataReasons.push('activation potential timing deferred');
+      }
+      if (dimensions.divisionalConfirmation === 'NOT_ASSESSED') {
+        insufficientDataReasons.push('divisional confirmation (D10) deferred');
+      }
+
+      // Check for known disqualifiers
+      if (dimensions.planetaryCondition === 'WEAK') {
+        status = 'UNQUALIFIED';
+        insufficientDataReasons.push('planetary condition is WEAK');
+      } else if (dimensions.careerRelevance === 'NEUTRAL') {
+        status = 'UNQUALIFIED';
+        insufficientDataReasons.push('career relevance is NEUTRAL');
+      } else if (insufficientDataReasons.length > 0) {
+        // Prerequisites present + evaluable dimensions OK, but NOT_ASSESSED/UNKNOWN/UNAVAILABLE block
+        status = 'INSUFFICIENT_DATA';
+      } else {
+        // Prerequisites present + all evaluable dimensions positive
+        // QUALIFIED requires structural-strength freeze (currently unreachable)
+        status = 'INSUFFICIENT_DATA';
+        insufficientDataReasons.push('structural strength methodology not frozen');
+      }
+    }
 
     // Build explanation
     const explanation = this.buildExplanation(status, dimensions, insufficientDataReasons);

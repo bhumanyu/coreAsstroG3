@@ -10,7 +10,8 @@ import type {
   CareerPatternQualificationEvidence,
   CareerPatternQualificationProvenance,
   CareerPatternQualificationDimensions,
-  CareerPatternQualificationStatus
+  CareerPatternQualificationStatus,
+  QualificationEvidence
 } from './careerPatternQualificationTypes';
 import {
   mapPlanetaryCondition,
@@ -370,7 +371,7 @@ function qualifyPattern(
   // Look up qualification policy for this classification
   const policy = getQualificationPolicy(pattern.classification);
 
-  let policyEvidence: any[] = [];
+  let policyEvidence: QualificationEvidence[] = [];
   let insufficientDataReasons: string[] = [];
   let ruleId: string;
   let explanation: string;
@@ -403,12 +404,12 @@ function qualifyPattern(
 
   // Build legacy dimension evidence for backward compatibility
   const legacyEvidence = buildDimensionEvidence(pattern, dimensions);
-  const evidence = Object.freeze([...legacyEvidence, ...policyEvidence]);
+  const evidence = Object.freeze(legacyEvidence);
 
   const provenance = buildProvenance(pattern);
   const statement = explanation || buildQualificationStatement(pattern, status, dimensions);
 
-  return Object.freeze({
+  const result: QualifiedCareerPattern = Object.freeze({
     patternId: pattern.patternId,
     identityKey: pattern.identityKey,
     family: pattern.family,
@@ -434,6 +435,8 @@ function qualifyPattern(
     status,
     statement
   });
+
+  return result;
 }
 
 /**

@@ -20,6 +20,24 @@ Per spec §24 status precedence (frozen):
 - **INSUFFICIENT_DATA**: Mandatory prerequisite unevaluable (missing ≠ negative) OR any dimension NOT_ASSESSED/UNKNOWN/UNAVAILABLE
 - **QUALIFIED**: Prerequisites confirmed + conditions met (requires methodology freeze; currently blocked by NOT_ASSESSED dimensions)
 
+### Decision Chain (Spec §24)
+
+Policies implement status precedence via this decision chain:
+
+1. **Structural prerequisites check**: If mandatory establishing relationships are explicitly absent → `UNQUALIFIED`
+2. **Dimension assessment**: Compute all qualification dimensions via `computeQualificationDimensions`
+3. **Missing/negative evaluation**:
+   - If any dimension is `NOT_ASSESSED`, `UNKNOWN`, or `UNAVAILABLE` → `INSUFFICIENT_DATA` with specific reasons
+   - If `planetaryCondition === 'WEAK'` or `careerRelevance === 'NEUTRAL'` → `UNQUALIFIED`
+4. **Status determination**:
+   - If prerequisites present + all evaluable dimensions positive → `INSUFFICIENT_DATA` with reason "structural strength methodology not frozen"
+   - QUALIFIED requires the structural-strength methodology freeze (currently unreachable)
+
+**Critical**: `structuralStrength` is `NOT_ASSESSED` until methodology freeze. Therefore:
+- Prerequisites + all evaluable dimensions OK → `INSUFFICIENT_DATA` (reason: "structural strength methodology not frozen")
+- WEAK/NEUTRAL disqualifiers → `UNQUALIFIED`
+- QUALIFIED is unreachable until structural-strength freeze (intentional, not a placeholder oversight)
+
 No numeric scoring (`qualificationScore`) or universal thresholds (spec §15).
 
 ## Dimension Vocabulary (Spec §2/§13)
@@ -46,9 +64,10 @@ Existing dimension enum (already matches spec):
    - Status: UNQUALIFIED if prerequisites absent; INSUFFICIENT_DATA if NOT_ASSESSED dimensions block
 
 2. **CAREER_HOUSE_NETWORK** (`careerHouseNetworkPolicy.ts`)
-   - Generic carrier policy (never auto-QUALIFIED per spec)
+   - Generic carrier validation / deferred qualification policy (never auto-QUALIFIED per spec)
    - Required: Any establishing relationship
-   - Status: UNQUALIFIED if no establishing relationships; INSUFFICIENT_DATA otherwise (conservative)
+   - Status: UNQUALIFIED if no establishing relationships; INSUFFICIENT_DATA otherwise (deferred until methodology freeze)
+   - Note: This is a carrier validation policy, not a complete qualification policy. It validates structural presence but routes to INSUFFICIENT_DATA until methodology is frozen.
 
 ### Future Policies (Deferred)
 
@@ -124,7 +143,7 @@ Policies implement status precedence by:
 3. Evaluating conditions; if all met but NOT_ASSESSED dimensions block → INSUFFICIENT_DATA
 4. Known disqualifiers (WEAK condition, NEUTRAL relevance) → UNQUALIFIED (subject to NOT_ASSESSED override)
 
-Currently, `structuralStrength = NOT_ASSESSED` blocks all QUALIFIED outcomes, routing to `INSUFFICIENT_DATA` per spec §24.
+Currently, `structuralStrength = NOT_ASSESSED` blocks all QUALIFIED outcomes, routing to `INSUFFICIENT_DATA` per spec §24. This is intentional: QUALIFIED requires the structural-strength methodology freeze and is currently unreachable.
 
 ## Immutability & Determinism
 

@@ -160,16 +160,19 @@ export function classifyDivisionalConfirmation(
  * Classifies the coherence of a pattern.
  *
  * Keeps the assessment minimal and structural:
- * - INSUFFICIENT_DATA if houses or relationshipIds are empty
+ * - INSUFFICIENT_DATA if houses or establishingRelationshipIds are empty
  * - MODERATE otherwise
  *
  * Does NOT rank topologies (e.g., LOOP > CHAIN) due to the same
  * unfrozen-methodology concern as structural strength.
+ *
+ * Uses pattern.provenance.establishingRelationshipIds for structural completeness,
+ * consistent with the policy evidence contract from P2-06D.
  */
 export function classifyPatternCoherence(
   pattern: CareerPattern
 ): CareerPatternCoherence {
-  if (pattern.houses.length === 0 || pattern.relationshipIds.length === 0) {
+  if (pattern.houses.length === 0 || pattern.provenance.establishingRelationshipIds.length === 0) {
     return 'INSUFFICIENT_DATA';
   }
 
@@ -254,7 +257,7 @@ export function computeQualificationDimensions(
   const structuralStrength = classifyStructuralStrength(pattern, participantConditions);
   const activationPotential = classifyActivationPotential(pattern);
   const divisionalConfirmation = classifyDivisionalConfirmation(pattern);
-  const coherence = classifyPatternCoherence(pattern);
+  const coherence = classifyPatternCoherence(pattern); // Uses establishingRelationshipIds
 
   // Aggregate planetary condition (conservative: weakest participant condition)
   // UNAVAILABLE or WEAK in any participant yields that result

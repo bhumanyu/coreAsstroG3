@@ -104,6 +104,33 @@ export function hasAllEstablishingRelationships(
 }
 
 /**
+ * Checks if the pattern has a directed house relationship from fromHouse to toHouse.
+ * This is a semantic check that examines establishingRelationshipIds for the pattern
+ * and determines if a relationship exists representing the directional flow.
+ *
+ * This avoids string-matching identity keys by explicitly checking for relationship
+ * semantics in the establishing relationship IDs.
+ *
+ * @param pattern - The career pattern to check
+ * @param fromHouse - Source house number
+ * @param toHouse - Target house number
+ * @returns true if a directed relationship from fromHouse to toHouse exists
+ */
+export function hasDirectedHouseRelationshipInPattern(
+  pattern: CareerPattern,
+  fromHouse: number,
+  toHouse: number
+): boolean {
+  const establishingIds = pattern.provenance.establishingRelationshipIds;
+
+  // Check for relationship IDs that represent the directed flow fromHouse → toHouse
+  // Expected formats: REL:from→to, REL:from-to, from→to, from-to
+  const arrowPattern = new RegExp(`(?:REL:)?${fromHouse}[→-]${toHouse}\\b`);
+
+  return establishingIds.some(id => arrowPattern.test(id));
+}
+
+/**
  * Gets planetary relevance for a planet, returning UNAVAILABLE if missing.
  */
 export function getPlanetaryRelevance(
@@ -263,26 +290,4 @@ export function aggregateLowestRelevance(
   }
 
   return lowest;
-}
-
-/**
- * Creates a frozen dimensions object with placeholder values.
- * Used when policies are not yet fully implemented.
- */
-export function createPlaceholderDimensions(
-  structuralStrength: string = 'NOT_ASSESSED',
-  planetaryCondition: string = 'UNAVAILABLE',
-  careerRelevance: string = 'UNAVAILABLE',
-  coherence: string = 'INSUFFICIENT_DATA',
-  activationPotential: string = 'UNKNOWN',
-  divisionalConfirmation: string = 'NOT_ASSESSED'
-): CareerPatternQualificationDimensions {
-  return Object.freeze({
-    structuralStrength: structuralStrength as any,
-    planetaryCondition: planetaryCondition as any,
-    careerRelevance: careerRelevance as any,
-    coherence: coherence as any,
-    activationPotential: activationPotential as any,
-    divisionalConfirmation: divisionalConfirmation as any
-  });
 }

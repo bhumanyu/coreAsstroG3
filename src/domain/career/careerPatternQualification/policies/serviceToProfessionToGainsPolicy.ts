@@ -4,12 +4,14 @@ import type {
   QualificationPolicyContext,
   PolicyEvaluationResult,
   CareerPatternQualificationStatus,
-  CareerPatternQualificationDimensions
+  CareerPatternQualificationDimensions,
+  QualificationEvidence
 } from '../careerPatternQualificationTypes';
 import {
   generatePolicyEvidenceId,
   createQualificationEvidence,
-  getEstablishingRelationshipIds
+  getEstablishingRelationshipIds,
+  hasDirectedHouseRelationshipInPattern
 } from '../policyUtils';
 import { computeQualificationDimensions, mapPlanetaryCondition, mapCareerRelevance } from '../careerPatternQualificationRules';
 
@@ -22,11 +24,11 @@ import { computeQualificationDimensions, mapPlanetaryCondition, mapCareerRelevan
  * - Establishing relationship 6→10 (Service to Profession)
  * - Establishing relationship 10→11 (Profession to Gains)
  *
- * Status precedence (per spec §24):
- * - Prerequisite explicitly absent → UNQUALIFIED
- * - Prerequisite unevaluable → INSUFFICIENT_DATA
- * - Prerequisites confirmed + conditions met → QUALIFIED
- * - Known disqualifier → UNQUALIFIED
+ * Status precedence (per spec §24 decision chain):
+ * 1. Prerequisite explicitly absent → UNQUALIFIED
+ * 2. Prerequisite unevaluable → INSUFFICIENT_DATA
+ * 3. Prerequisites confirmed + all evaluable dimensions positive → INSUFFICIENT_DATA (structural strength methodology not frozen)
+ * 4. Known disqualifier (WEAK condition, NEUTRAL relevance) → UNQUALIFIED
  *
  * Dimension evaluation:
  * - structuralStrength: NOT_ASSESSED (methodology deferred)
@@ -35,6 +37,8 @@ import { computeQualificationDimensions, mapPlanetaryCondition, mapCareerRelevan
  * - coherence: MODERATE if both relationships present, INSUFFICIENT_DATA otherwise
  * - activationPotential: UNKNOWN (timing deferred)
  * - divisionalConfirmation: NOT_ASSESSED (D10 deferred)
+ *
+ * QUALIFIED is unreachable until structural-strength methodology freeze (intentional).
  */
 export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
   readonly policyId = 'SERVICE_TO_PROFESSION_TO_GAINS';
@@ -45,17 +49,18 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
     const { pattern, relevanceByPlanet, conditionByPlanet } = context;
     const establishingIds = getEstablishingRelationshipIds(pattern);
 
-    const evidence: any[] = [];
+    const evidence: QualificationEvidence[] = [];
     const insufficientDataReasons: string[] = [];
     let status: CareerPatternQualificationStatus = 'INSUFFICIENT_DATA';
 
-    // Check for required establishing relationships
+    // Step 1: Check for required establishing relationships (structural prerequisites)
     // For SERVICE_TO_PROFESSION_TO_GAINS, we need both 6→10 and 10→11
-    const has6to10 = establishingIds.some(id => id.includes('6→10') || id.includes('6-10'));
-    const has10to11 = establishingIds.some(id => id.includes('10→11') || id.includes('10-11'));
+    // Use semantic check instead of string-matching identity keys
+    const has6to10 = hasDirectedHouseRelationshipInPattern(pattern, 6, 10);
+    const has10to11 = hasDirectedHouseRelationshipInPattern(pattern, 10, 11);
 
     if (!has6to10 && !has10to11) {
-      // Both prerequisites explicitly absent
+      // Both prerequisites explicitly absent → UNQUALIFIED
       status = 'UNQUALIFIED';
       evidence.push(
         createQualificationEvidence(
@@ -68,7 +73,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
         )
       );
     } else if (!has6to10 || !has10to11) {
-      // One prerequisite absent, one present
+      // One prerequisite absent, one present → UNQUALIFIED
       status = 'UNQUALIFIED';
       const missing = !has6to10 ? '6→10' : '10→11';
       evidence.push(
@@ -82,7 +87,7 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
         )
       );
     } else {
-      // Both prerequisites present - defer to legacy dimension computation
+      // Both prerequisites present - proceed to dimension assessment
       evidence.push(
         createQualificationEvidence(
           generatePolicyEvidenceId(this.policyId, 'structuralStrength', pattern.identityKey, 1),
@@ -93,13 +98,9 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
           'Service-to-Profession-to-Gains has both required establishing relationships: 6→10 and 10→11.'
         )
       );
-
-      // Let legacy computeQualificationDimensions handle the actual status
-      // based on planetary condition, relevance, etc.
-      status = 'INSUFFICIENT_DATA'; // Will be overridden by caller
     }
 
-    // Build dimensions using legacy computation
+    // Step 2: Build dimensions using legacy computation
     const participantConditions = pattern.planets.map(p => {
       const condition = conditionByPlanet.get(p);
       return mapPlanetaryCondition(condition);
@@ -111,6 +112,46 @@ export class ServiceToProfessionToGainsPolicy implements QualificationPolicy {
     });
 
     const dimensions = computeQualificationDimensions(pattern, participantConditions, participantRelevance);
+
+    // Step 3: Apply frozen decision layer (only if prerequisites present)
+    if (status !== 'UNQUALIFIED') {
+      // Check for missing/unevaluable data
+      if (dimensions.structuralStrength === 'NOT_ASSESSED') {
+        insufficientDataReasons.push('structural strength methodology not frozen');
+      }
+      if (dimensions.planetaryCondition === 'UNAVAILABLE') {
+        insufficientDataReasons.push('planetary condition data unavailable');
+      }
+      if (dimensions.careerRelevance === 'UNAVAILABLE') {
+        insufficientDataReasons.push('career relevance data unavailable');
+      }
+      if (dimensions.coherence === 'INSUFFICIENT_DATA') {
+        insufficientDataReasons.push('pattern coherence insufficient data');
+      }
+      if (dimensions.activationPotential === 'UNKNOWN') {
+        insufficientDataReasons.push('activation potential timing deferred');
+      }
+      if (dimensions.divisionalConfirmation === 'NOT_ASSESSED') {
+        insufficientDataReasons.push('divisional confirmation (D10) deferred');
+      }
+
+      // Check for known disqualifiers
+      if (dimensions.planetaryCondition === 'WEAK') {
+        status = 'UNQUALIFIED';
+        insufficientDataReasons.push('planetary condition is WEAK');
+      } else if (dimensions.careerRelevance === 'NEUTRAL') {
+        status = 'UNQUALIFIED';
+        insufficientDataReasons.push('career relevance is NEUTRAL');
+      } else if (insufficientDataReasons.length > 0) {
+        // Prerequisites present + evaluable dimensions OK, but NOT_ASSESSED/UNKNOWN/UNAVAILABLE block
+        status = 'INSUFFICIENT_DATA';
+      } else {
+        // Prerequisites present + all evaluable dimensions positive
+        // QUALIFIED requires structural-strength freeze (currently unreachable)
+        status = 'INSUFFICIENT_DATA';
+        insufficientDataReasons.push('structural strength methodology not frozen');
+      }
+    }
 
     // Build explanation
     const explanation = this.buildExplanation(status, dimensions, insufficientDataReasons);

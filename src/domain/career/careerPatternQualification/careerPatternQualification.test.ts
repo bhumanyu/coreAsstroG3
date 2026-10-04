@@ -620,14 +620,22 @@ describe('Career Pattern Qualification', () => {
       expect(result).toBe('INSUFFICIENT_DATA');
     });
 
-    it('returns INSUFFICIENT_DATA when relationshipIds are empty', () => {
-      const pattern = makePattern({ relationshipIds: [] });
+    it('returns INSUFFICIENT_DATA when establishingRelationshipIds are empty', () => {
+      const pattern = makePattern({
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['rel-1', 'rel-2'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: [],
+          supportingRelationshipIds: ['rel-1', 'rel-2']
+        })
+      });
 
       const result = classifyPatternCoherence(pattern);
       expect(result).toBe('INSUFFICIENT_DATA');
     });
 
-    it('returns MODERATE when houses and relationshipIds are present', () => {
+    it('returns MODERATE when houses and establishingRelationshipIds are present', () => {
       const pattern = makePattern();
 
       const result = classifyPatternCoherence(pattern);
