@@ -82,34 +82,6 @@ function parsePlanetFromNodeKey(key: string): Planet | null {
 }
 
 /**
- * Normalizes a relationship identity key for undirected relationship types.
- * For undirected types, endpoints are sorted canonically (e.g., REL:CONJUNCT:MERCURY:SATURN).
- * For directed types, order is preserved (e.g., REL:HOUSE_PLACEMENT:H8:H10).
- */
-function normalizeRelationshipIdentity(
-  relationshipType: DusthanaRelationshipType,
-  source: string,
-  target: string
-): string {
-  const undirectedTypes: Set<DusthanaRelationshipType> = new Set([
-    'COMMON_LORD',
-    'CONJUNCTION',
-    'ASPECT',
-    'EXCHANGE',
-    'PLANET_MEDIATED'
-  ]);
-
-  if (undirectedTypes.has(relationshipType)) {
-    // Sort endpoints for undirected types
-    const [a, b] = [source, target].sort();
-    return `REL:${relationshipType}:${a}:${b}`;
-  } else {
-    // Preserve order for directed types
-    return `REL:${relationshipType}:${source}:${target}`;
-  }
-}
-
-/**
  * Generates a deterministic validationId from normalized identity + pair.
  */
 function generateValidationId(
@@ -162,70 +134,295 @@ function detectCommonLord(
 /**
  * Detects CROSS_LORDSHIP relationship.
  * Planet lords dusthana and occupies/aspects career anchor (and reverse).
+ * Returns the exact edge identity keys that establish the directed relationship in each direction.
  */
 function detectCrossLordship(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
-  // Check if dusthana lord occupies career anchor
-  if (hasDirectedHouseRelationship(network, dusthanaHouse, careerAnchorHouse)) {
-    return true;
+): readonly string[] {
+  const matchedKeys: string[] = [];
+  const dusthanaLords = getLordsOfHouse(network.relationships, dusthanaHouse);
+  const anchorLords = getLordsOfHouse(network.relationships, careerAnchorHouse);
+
+  // Check dusthana -> anchor direction
+  for (const edge of network.relationships) {
+    // (1) OCCUPIES: dusthana lord occupies anchor
+    if (edge.type === 'OCCUPIES') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        if (dusthanaLords.includes(planet) && house === careerAnchorHouse) {
+          matchedKeys.push(edge.identityKey);
+        }
+      }
+    }
+
+    // (2) ASPECTS: dusthana lord aspects anchor house
+    if (edge.type === 'ASPECTS') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        if (dusthanaLords.includes(planet) && house === careerAnchorHouse) {
+          matchedKeys.push(edge.identityKey);
+        }
+      }
+    }
   }
-  // Check if career anchor lord occupies dusthana
-  if (hasDirectedHouseRelationship(network, careerAnchorHouse, dusthanaHouse)) {
-    return true;
+
+  // (3) Planet-level ASPECTS: dusthana lord aspects anchor lord
+  for (const sourceLord of dusthanaLords) {
+    for (const targetLord of anchorLords) {
+      if (sourceLord !== targetLord) {
+        for (const edge of network.relationships) {
+          if (edge.type === 'ASPECTS') {
+            const edgePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const edgeTarget = parsePlanetFromNodeKey(edge.targetNodeId);
+            if (edgePlanet === sourceLord && edgeTarget === targetLord) {
+              matchedKeys.push(edge.identityKey);
+            }
+          }
+        }
+      }
+    }
   }
-  return false;
+
+  // Check anchor -> dusthana direction (same logic, swapped houses)
+  for (const edge of network.relationships) {
+    // (1) OCCUPIES: anchor lord occupies dusthana
+    if (edge.type === 'OCCUPIES') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        if (anchorLords.includes(planet) && house === dusthanaHouse) {
+          matchedKeys.push(edge.identityKey);
+        }
+      }
+    }
+
+    // (2) ASPECTS: anchor lord aspects dusthana house
+    if (edge.type === 'ASPECTS') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        if (anchorLords.includes(planet) && house === dusthanaHouse) {
+          matchedKeys.push(edge.identityKey);
+        }
+      }
+    }
+  }
+
+  // (3) Planet-level ASPECTS: anchor lord aspects dusthana lord
+  for (const sourceLord of anchorLords) {
+    for (const targetLord of dusthanaLords) {
+      if (sourceLord !== targetLord) {
+        for (const edge of network.relationships) {
+          if (edge.type === 'ASPECTS') {
+            const edgePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const edgeTarget = parsePlanetFromNodeKey(edge.targetNodeId);
+            if (edgePlanet === sourceLord && edgeTarget === targetLord) {
+              matchedKeys.push(edge.identityKey);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Object.freeze(matchedKeys);
 }
 
 /**
  * Detects CONJUNCTION relationship between lords of two houses.
- * Uses hasConjunctionRelationship from P2-06A predicates.
+ * Returns the CONJUNCT edges between the two houses' lord pairs plus the two LORD_OF edges identifying those lords.
  */
 function detectConjunction(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
-  return hasConjunctionRelationship(network, dusthanaHouse, careerAnchorHouse);
+): readonly string[] {
+  const matchedKeys: string[] = [];
+  const lordsA = getLordsOfHouse(network.relationships, dusthanaHouse);
+  const lordsB = getLordsOfHouse(network.relationships, careerAnchorHouse);
+
+  // First, collect all LORD_OF edges for the lords of both houses
+  const lordOfEdges = new Map<Planet, string>();
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+      if (planet && (house === dusthanaHouse || house === careerAnchorHouse)) {
+        lordOfEdges.set(planet, edge.identityKey);
+      }
+    }
+  }
+
+  // Then, check for CONJUNCT edges between lords
+  for (const lordA of lordsA) {
+    for (const lordB of lordsB) {
+      const nodeA = `PLANET:${lordA}`;
+      const nodeB = `PLANET:${lordB}`;
+
+      for (const edge of network.relationships) {
+        if (edge.type === 'CONJUNCT') {
+          const connectsAToB = edge.sourceNodeId === nodeA && edge.targetNodeId === nodeB;
+          const connectsBToA = edge.sourceNodeId === nodeB && edge.targetNodeId === nodeA;
+          if (connectsAToB || connectsBToA) {
+            // Add the CONJUNCT edge
+            matchedKeys.push(edge.identityKey);
+            // Add the LORD_OF edges for both lords
+            if (lordOfEdges.has(lordA)) {
+              matchedKeys.push(lordOfEdges.get(lordA)!);
+            }
+            if (lordOfEdges.has(lordB)) {
+              matchedKeys.push(lordOfEdges.get(lordB)!);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Object.freeze(matchedKeys);
 }
 
 /**
  * Detects ASPECT relationship between lords of two houses.
- * Uses hasLordAspectRelationship from P2-06A predicates.
+ * Returns the ASPECTS edges between the two houses' lord pairs plus the two LORD_OF edges identifying those lords.
  */
 function detectAspect(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
-  return hasLordAspectRelationship(network, dusthanaHouse, careerAnchorHouse);
+): readonly string[] {
+  const matchedKeys: string[] = [];
+  const lordsA = getLordsOfHouse(network.relationships, dusthanaHouse);
+  const lordsB = getLordsOfHouse(network.relationships, careerAnchorHouse);
+
+  // First, collect all LORD_OF edges for the lords of both houses
+  const lordOfEdges = new Map<Planet, string>();
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+      if (planet && (house === dusthanaHouse || house === careerAnchorHouse)) {
+        lordOfEdges.set(planet, edge.identityKey);
+      }
+    }
+  }
+
+  // Then, check for ASPECTS edges between lords (either direction)
+  for (const lordA of lordsA) {
+    for (const lordB of lordsB) {
+      const nodeA = `PLANET:${lordA}`;
+      const nodeB = `PLANET:${lordB}`;
+
+      for (const edge of network.relationships) {
+        if (edge.type === 'ASPECTS') {
+          const connectsAToB = edge.sourceNodeId === nodeA && edge.targetNodeId === nodeB;
+          const connectsBToA = edge.sourceNodeId === nodeB && edge.targetNodeId === nodeA;
+          if (connectsAToB || connectsBToA) {
+            // Add the ASPECTS edge
+            matchedKeys.push(edge.identityKey);
+            // Add the LORD_OF edges for both lords
+            if (lordOfEdges.has(lordA)) {
+              matchedKeys.push(lordOfEdges.get(lordA)!);
+            }
+            if (lordOfEdges.has(lordB)) {
+              matchedKeys.push(lordOfEdges.get(lordB)!);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Object.freeze(matchedKeys);
 }
 
 /**
  * Detects EXCHANGE relationship between lords of two houses.
- * Uses hasExchangeRelationship from P2-06A predicates.
+ * Returns the EXCHANGES edges between the two houses' lord pairs plus the two LORD_OF edges identifying those lords.
  */
 function detectExchange(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
-  return hasExchangeRelationship(network, dusthanaHouse, careerAnchorHouse);
+): readonly string[] {
+  const matchedKeys: string[] = [];
+  const lordsA = getLordsOfHouse(network.relationships, dusthanaHouse);
+  const lordsB = getLordsOfHouse(network.relationships, careerAnchorHouse);
+
+  // First, collect all LORD_OF edges for the lords of both houses
+  const lordOfEdges = new Map<Planet, string>();
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+      if (planet && (house === dusthanaHouse || house === careerAnchorHouse)) {
+        lordOfEdges.set(planet, edge.identityKey);
+      }
+    }
+  }
+
+  // Then, check for EXCHANGES edges between lords (bidirectional)
+  for (const lordA of lordsA) {
+    for (const lordB of lordsB) {
+      const nodeA = `PLANET:${lordA}`;
+      const nodeB = `PLANET:${lordB}`;
+
+      for (const edge of network.relationships) {
+        if (edge.type === 'EXCHANGES') {
+          const connectsAToB = edge.sourceNodeId === nodeA && edge.targetNodeId === nodeB;
+          const connectsBToA = edge.sourceNodeId === nodeB && edge.targetNodeId === nodeA;
+          if (connectsAToB || connectsBToA) {
+            // Add the EXCHANGES edge
+            matchedKeys.push(edge.identityKey);
+            // Add the LORD_OF edges for both lords
+            if (lordOfEdges.has(lordA)) {
+              matchedKeys.push(lordOfEdges.get(lordA)!);
+            }
+            if (lordOfEdges.has(lordB)) {
+              matchedKeys.push(lordOfEdges.get(lordB)!);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return Object.freeze(matchedKeys);
 }
 
 /**
  * Detects HOUSE_PLACEMENT relationship.
- * OCCUPIES of dusthana body/lord in anchor house.
+ * Returns the OCCUPIES edge(s) + the dusthana LORD_OF edge.
  */
 function detectHousePlacement(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
+): readonly string[] {
+  const matchedKeys: string[] = [];
   const dusthanaLords = getLordsOfHouse(network.relationships, dusthanaHouse);
 
+  // First, collect all LORD_OF edges for dusthana lords
+  const lordOfEdges = new Map<Planet, string>();
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+      if (planet && house === dusthanaHouse) {
+        lordOfEdges.set(planet, edge.identityKey);
+      }
+    }
+  }
+
+  // Then, check for OCCUPIES edges
   for (const edge of network.relationships) {
     if (edge.type === 'OCCUPIES') {
       const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
@@ -234,26 +431,41 @@ function detectHousePlacement(
       if (planet && house !== null) {
         // Check if dusthana lord occupies career anchor house
         if (dusthanaLords.includes(planet) && house === careerAnchorHouse) {
-          return true;
+          // Add the OCCUPIES edge
+          matchedKeys.push(edge.identityKey);
+          // Add the LORD_OF edge for this dusthana lord
+          if (lordOfEdges.has(planet)) {
+            matchedKeys.push(lordOfEdges.get(planet)!);
+          }
         }
       }
     }
   }
 
-  return false;
+  return Object.freeze(matchedKeys);
 }
 
 /**
  * Detects PLANET_MEDIATED relationship.
  * Shared planet participation with no direct edge.
  * Uses hasPlanetMediatedRelationship from P2-06A predicates.
+ *
+ * NOTE: This detector stays coarse (returns empty array when detected) because PLANET_MEDIATED
+ * is defined by the ABSENCE of direct house-to-house relationships. Collecting edge IDs would
+ * require tracking all participating edges (lordship, OCCUPIES, ASPECTS) that establish the
+ * shared participation, which is complex and potentially misleading since the relationship
+ * is semantically about what's NOT present rather than what IS present.
  */
 function detectPlanetMediated(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
-): boolean {
-  return hasPlanetMediatedRelationship(network, dusthanaHouse, careerAnchorHouse);
+): readonly string[] {
+  if (hasPlanetMediatedRelationship(network, dusthanaHouse, careerAnchorHouse)) {
+    // Return empty array to indicate detection without specific edge IDs
+    return Object.freeze([]);
+  }
+  return Object.freeze([]);
 }
 
 /**
@@ -294,7 +506,7 @@ function validatePair(
       validationId: `VALIDATION:NO_NETWORK:${pairKey}`,
       dusthanaHouse,
       careerAnchorHouse,
-      relationshipType: 'COMMON_LORD', // Placeholder - no relationship detected
+      relationshipType: 'NONE',
       status: 'NOT_VALIDATED',
       relationshipIds: [],
       evidenceIds: [],
@@ -321,7 +533,7 @@ function validatePair(
       validationId: `VALIDATION:INSUFFICIENT_DATA:${pairKey}`,
       dusthanaHouse,
       careerAnchorHouse,
-      relationshipType: 'COMMON_LORD', // Placeholder
+      relationshipType: 'NONE',
       status: 'INSUFFICIENT_DATA',
       relationshipIds: [],
       evidenceIds: [],
@@ -354,44 +566,59 @@ function validatePair(
     const detectedRelationshipIds: string[] = [];
 
     for (const network of relevantNetworks) {
-      let isDetected = false;
+      let ids: readonly string[] = [];
 
       switch (relType) {
         case 'COMMON_LORD':
-          isDetected = detectCommonLord(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectCommonLord(network, dusthanaHouse, careerAnchorHouse);
           break;
         case 'CROSS_LORDSHIP':
-          isDetected = detectCrossLordship(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectCrossLordship(network, dusthanaHouse, careerAnchorHouse);
           break;
         case 'CONJUNCTION':
-          isDetected = detectConjunction(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectConjunction(network, dusthanaHouse, careerAnchorHouse);
           break;
         case 'ASPECT':
-          isDetected = detectAspect(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectAspect(network, dusthanaHouse, careerAnchorHouse);
           break;
         case 'EXCHANGE':
-          isDetected = detectExchange(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectExchange(network, dusthanaHouse, careerAnchorHouse);
           break;
         case 'HOUSE_PLACEMENT':
-          isDetected = detectHousePlacement(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectHousePlacement(network, dusthanaHouse, careerAnchorHouse);
           break;
         case 'PLANET_MEDIATED':
-          isDetected = detectPlanetMediated(network, dusthanaHouse, careerAnchorHouse);
+          ids = detectPlanetMediated(network, dusthanaHouse, careerAnchorHouse);
           break;
         default:
-          isDetected = false;
+          ids = [];
       }
 
-      if (isDetected) {
+      if (ids.length > 0) {
         detected = true;
         detectedNetworkIds.push(network.networkId);
-        detectedRelationshipIds.push(...network.relationships.map(r => r.identityKey));
+        detectedRelationshipIds.push(...ids);
       }
     }
 
     if (detected) {
       // Dedup relationshipIds
       const uniqueRelationshipIds = Array.from(new Set(detectedRelationshipIds)).sort();
+
+      // Construct evidence records for each detected relationship
+      const evidenceIds: string[] = [];
+      const uniqueNetworkIds = Array.from(new Set(detectedNetworkIds)).sort();
+
+      for (const networkId of uniqueNetworkIds) {
+        // For each network that detected this relationship, create an evidence record
+        const networkIndex = relevantNetworks.findIndex(n => n.networkId === networkId);
+        if (networkIndex !== -1) {
+          const network = relevantNetworks[networkIndex];
+          // Use a unique delimiter that won't appear in network IDs
+          const evidenceId = `EVIDENCE|${relType}|H${dusthanaHouse}|H${careerAnchorHouse}|${networkId}`;
+          evidenceIds.push(evidenceId);
+        }
+      }
 
       const validation: DusthanaRelationshipValidation = {
         validationId: generateValidationId(relType, dusthanaHouse, careerAnchorHouse, 'AGGREGATED'),
@@ -400,12 +627,10 @@ function validatePair(
         relationshipType: relType,
         status: 'VALIDATED',
         relationshipIds: uniqueRelationshipIds,
-        evidenceIds: [
-          `EVIDENCE:${relType}:H${dusthanaHouse}:H${careerAnchorHouse}`
-        ],
-        sourceNetworkIds: Array.from(new Set(detectedNetworkIds)).sort(),
+        evidenceIds,
+        sourceNetworkIds: uniqueNetworkIds,
         provenance: {
-          sourceNetworkIds: Array.from(new Set(detectedNetworkIds)).sort(),
+          sourceNetworkIds: uniqueNetworkIds,
           relationshipIds: uniqueRelationshipIds,
           ruleIds: [`RULE_DETECT_${relType}`],
           parentIds: []
@@ -421,7 +646,7 @@ function validatePair(
       validationId: `VALIDATION:NOT_VALIDATED:${pairKey}`,
       dusthanaHouse,
       careerAnchorHouse,
-      relationshipType: 'COMMON_LORD', // Placeholder
+      relationshipType: 'NONE',
       status: 'NOT_VALIDATED',
       relationshipIds: [],
       evidenceIds: [],
@@ -500,12 +725,39 @@ export function validateDusthanaRelationships(
     allParentIds
   );
 
+  // Construct evidence records for all validated relationships
+  const evidence: DusthanaRelationshipEvidence[] = [];
+  for (const validation of allValidations) {
+    if (validation.status === 'VALIDATED') {
+      for (const evidenceId of validation.evidenceIds) {
+        // Parse the networkId from the evidenceId (format: EVIDENCE|TYPE|H#|H#|NETWORK_ID)
+        const parts = evidenceId.split('|');
+        const networkId = parts[4];
+        const network = networks.find(n => n.networkId === networkId);
+
+        if (network) {
+          const evidenceRecord: DusthanaRelationshipEvidence = {
+            evidenceId,
+            relationshipId: validation.relationshipIds.join(','), // Reference the establishing edges
+            relationshipType: validation.relationshipType,
+            dusthanaHouse: validation.dusthanaHouse,
+            careerAnchorHouse: validation.careerAnchorHouse,
+            sourceNetworkId: networkId,
+            sourceNetworkIdentityKey: network.identityKey
+          };
+          evidence.push(evidenceRecord);
+        }
+      }
+    }
+  }
+
   return Object.freeze({
     validations: Object.freeze(allValidations),
     validatedPairCount: validatedPairs.size,
     insufficientPairCount: insufficientPairs.size,
     relationshipIds: Object.freeze(allRelationshipIds),
-    provenance
+    provenance,
+    evidence: Object.freeze(evidence)
   });
 }
 
@@ -562,11 +814,16 @@ export function aggregateDusthanaRelationshipValidation(
     allParentIds
   );
 
+  // Note: aggregateDusthanaRelationshipValidation does not reconstruct evidence records
+  // since it only has validations, not the original networks. Evidence construction
+  // requires network access to resolve sourceNetworkIdentityKey.
+  // In this case, we return an empty evidence array.
   return Object.freeze({
     validations: Object.freeze(validations),
     validatedPairCount: validatedPairs.size,
     insufficientPairCount: insufficientPairs.size,
     relationshipIds: Object.freeze(allRelationshipIds),
-    provenance
+    provenance,
+    evidence: Object.freeze([])
   });
 }

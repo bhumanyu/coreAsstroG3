@@ -873,4 +873,457 @@ describe('Dusthana Relationship Validation', () => {
       expect(aggregated.insufficientPairCount).toBe(result.insufficientPairCount);
     });
   });
+
+  describe('Provenance regression - edge ID tracking', () => {
+    it('COMMON_LORD: relationshipIds contain only establishing LORD_OF edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:COMMON-LORD-PROVENANCE',
+        identityKey: 'NETWORK:COMMON-LORD-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN],
+        relationships: [
+          // Establishing edges
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:SATURN:10'
+          }),
+          // Unrelated edge
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:6',
+            identityKey: 'REL:OCCUPIES:MARS:6'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const commonLordValidation = result.validations.find(
+        v => v.relationshipType === 'COMMON_LORD' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(commonLordValidation).toBeDefined();
+      expect(commonLordValidation!.status).toBe('VALIDATED');
+      expect(commonLordValidation!.relationshipIds).toContain('REL:LORD_OF:SATURN:8');
+      expect(commonLordValidation!.relationshipIds).toContain('REL:LORD_OF:SATURN:10');
+      // Should NOT contain the unrelated OCCUPIES edge
+      expect(commonLordValidation!.relationshipIds).not.toContain('REL:OCCUPIES:MARS:6');
+    });
+
+    it('CROSS_LORDSHIP: relationshipIds contain only establishing OCCUPIES/ASPECTS edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:CROSS-LORDSHIP-PROVENANCE',
+        identityKey: 'NETWORK:CROSS-LORDSHIP-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          // Establishing edges
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
+          }),
+          // Unrelated edge
+          makeRelationship({
+            type: 'CONJUNCT',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:VENUS',
+            identityKey: 'REL:CONJUNCT:JUPITER:VENUS'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const crossLordshipValidation = result.validations.find(
+        v => v.relationshipType === 'CROSS_LORDSHIP' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(crossLordshipValidation).toBeDefined();
+      expect(crossLordshipValidation!.status).toBe('VALIDATED');
+      expect(crossLordshipValidation!.relationshipIds).toContain('REL:OCCUPIES:SATURN:10');
+      // CROSS_LORDSHIP returns only the directed edges (OCCUPIES/ASPECTS), not LORD_OF edges
+      // Should NOT contain the unrelated CONJUNCT edge
+      expect(crossLordshipValidation!.relationshipIds).not.toContain('REL:CONJUNCT:JUPITER:VENUS');
+    });
+
+    it('CONJUNCTION: relationshipIds contain only establishing CONJUNCT + LORD_OF edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:CONJUNCTION-PROVENANCE',
+        identityKey: 'NETWORK:CONJUNCTION-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          // Establishing edges
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'CONJUNCT',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MARS',
+            identityKey: 'REL:CONJUNCT:SATURN:MARS'
+          }),
+          // Unrelated edge
+          makeRelationship({
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:VENUS',
+            identityKey: 'REL:ASPECTS:JUPITER:VENUS'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const conjunctionValidation = result.validations.find(
+        v => v.relationshipType === 'CONJUNCTION' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(conjunctionValidation).toBeDefined();
+      expect(conjunctionValidation!.status).toBe('VALIDATED');
+      expect(conjunctionValidation!.relationshipIds).toContain('REL:CONJUNCT:SATURN:MARS');
+      expect(conjunctionValidation!.relationshipIds).toContain('REL:LORD_OF:SATURN:8');
+      expect(conjunctionValidation!.relationshipIds).toContain('REL:LORD_OF:MARS:10');
+      // Should NOT contain the unrelated ASPECTS edge
+      expect(conjunctionValidation!.relationshipIds).not.toContain('REL:ASPECTS:JUPITER:VENUS');
+    });
+
+    it('ASPECT: relationshipIds contain only establishing ASPECTS + LORD_OF edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:ASPECT-PROVENANCE',
+        identityKey: 'NETWORK:ASPECT-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          // Establishing edges
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MARS',
+            identityKey: 'REL:ASPECTS:SATURN:MARS'
+          }),
+          // Unrelated edge
+          makeRelationship({
+            type: 'CONJUNCT',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:VENUS',
+            identityKey: 'REL:CONJUNCT:JUPITER:VENUS'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const aspectValidation = result.validations.find(
+        v => v.relationshipType === 'ASPECT' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(aspectValidation).toBeDefined();
+      expect(aspectValidation!.status).toBe('VALIDATED');
+      expect(aspectValidation!.relationshipIds).toContain('REL:ASPECTS:SATURN:MARS');
+      expect(aspectValidation!.relationshipIds).toContain('REL:LORD_OF:SATURN:8');
+      expect(aspectValidation!.relationshipIds).toContain('REL:LORD_OF:MARS:10');
+      // Should NOT contain the unrelated CONJUNCT edge
+      expect(aspectValidation!.relationshipIds).not.toContain('REL:CONJUNCT:JUPITER:VENUS');
+    });
+
+    it('EXCHANGE: relationshipIds contain only establishing EXCHANGES + LORD_OF edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:EXCHANGE-PROVENANCE',
+        identityKey: 'NETWORK:EXCHANGE-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          // Establishing edges
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'EXCHANGES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'PLANET:MARS',
+            identityKey: 'REL:EXCHANGES:SATURN:MARS'
+          }),
+          // Unrelated edge
+          makeRelationship({
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:VENUS',
+            identityKey: 'REL:ASPECTS:JUPITER:VENUS'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const exchangeValidation = result.validations.find(
+        v => v.relationshipType === 'EXCHANGE' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(exchangeValidation).toBeDefined();
+      expect(exchangeValidation!.status).toBe('VALIDATED');
+      expect(exchangeValidation!.relationshipIds).toContain('REL:EXCHANGES:SATURN:MARS');
+      expect(exchangeValidation!.relationshipIds).toContain('REL:LORD_OF:SATURN:8');
+      expect(exchangeValidation!.relationshipIds).toContain('REL:LORD_OF:MARS:10');
+      // Should NOT contain the unrelated ASPECTS edge
+      expect(exchangeValidation!.relationshipIds).not.toContain('REL:ASPECTS:JUPITER:VENUS');
+    });
+
+    it('HOUSE_PLACEMENT: relationshipIds contain only establishing OCCUPIES + LORD_OF edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:HOUSE-PLACEMENT-PROVENANCE',
+        identityKey: 'NETWORK:HOUSE-PLACEMENT-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          // Establishing edges
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:SATURN:10'
+          }),
+          // Unrelated edge
+          makeRelationship({
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:VENUS',
+            identityKey: 'REL:ASPECTS:JUPITER:VENUS'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const housePlacementValidation = result.validations.find(
+        v => v.relationshipType === 'HOUSE_PLACEMENT' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(housePlacementValidation).toBeDefined();
+      expect(housePlacementValidation!.status).toBe('VALIDATED');
+      expect(housePlacementValidation!.relationshipIds).toContain('REL:OCCUPIES:SATURN:10');
+      expect(housePlacementValidation!.relationshipIds).toContain('REL:LORD_OF:SATURN:8');
+      // Should NOT contain the unrelated ASPECTS edge
+      expect(housePlacementValidation!.relationshipIds).not.toContain('REL:ASPECTS:JUPITER:VENUS');
+    });
+  });
+
+  describe('Evidence record provenance', () => {
+    it('evidence records reference exact relationshipIds from validation', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:EVIDENCE-PROVENANCE',
+        identityKey: 'NETWORK:EVIDENCE-PROVENANCE',
+        houses: [8, 10],
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:SATURN:10'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+      const commonLordValidation = result.validations.find(
+        v => v.relationshipType === 'COMMON_LORD' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(commonLordValidation).toBeDefined();
+      expect(commonLordValidation!.status).toBe('VALIDATED');
+
+      // Evidence should be created for validated relationships
+      expect(result.evidence.length).toBeGreaterThan(0);
+
+      // Find the evidence record for this validation
+      const evidenceRecord = result.evidence.find(
+        e => e.relationshipType === 'COMMON_LORD' &&
+          e.dusthanaHouse === 8 &&
+          e.careerAnchorHouse === 10
+      );
+
+      expect(evidenceRecord).toBeDefined();
+      expect(evidenceRecord!.sourceNetworkId).toBe('NETWORK:EVIDENCE-PROVENANCE');
+      expect(evidenceRecord!.sourceNetworkIdentityKey).toBe('NETWORK:EVIDENCE-PROVENANCE');
+      // The evidence relationshipId should reference the establishing edges
+      expect(evidenceRecord!.relationshipId).toContain('REL:LORD_OF:SATURN:8');
+      expect(evidenceRecord!.relationshipId).toContain('REL:LORD_OF:SATURN:10');
+    });
+  });
+
+  describe('6H golden coverage parity', () => {
+    it('detects COMMON_LORD for 6↔10 with shared planet', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-COMMON-LORD',
+        identityKey: 'NETWORK:6-10-COMMON-LORD',
+        houses: [6, 10],
+        lords: [Planet.VENUS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:6',
+            identityKey: 'REL:LORD_OF:VENUS:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:VENUS:10'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+
+      const commonLordValidations = result.validations.filter(
+        v => v.relationshipType === 'COMMON_LORD' && v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
+      );
+
+      expect(commonLordValidations).toHaveLength(1);
+      expect(commonLordValidations[0].status).toBe('VALIDATED');
+    });
+
+    it('detects CROSS_LORDSHIP when 6L occupies 10', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6L-OCCUPIES-10',
+        identityKey: 'NETWORK:6L-OCCUPIES-10',
+        houses: [6, 10],
+        lords: [Planet.VENUS, Planet.MARS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:6',
+            identityKey: 'REL:LORD_OF:VENUS:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:VENUS:10'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+
+      const crossLordshipValidations = result.validations.filter(
+        v => v.relationshipType === 'CROSS_LORDSHIP' && v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
+      );
+
+      expect(crossLordshipValidations).toHaveLength(1);
+      expect(crossLordshipValidations[0].status).toBe('VALIDATED');
+    });
+
+    it('detects CONJUNCTION between 6L and 10L', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6L-CONJUNCT-10L',
+        identityKey: 'NETWORK:6L-CONJUNCT-10L',
+        houses: [6, 10],
+        lords: [Planet.VENUS, Planet.MARS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'HOUSE:6',
+            identityKey: 'REL:LORD_OF:VENUS:6'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          makeRelationship({
+            type: 'CONJUNCT',
+            sourceNodeId: 'PLANET:VENUS',
+            targetNodeId: 'PLANET:MARS',
+            identityKey: 'REL:CONJUNCT:VENUS:MARS'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+
+      const conjunctionValidations = result.validations.filter(
+        v => v.relationshipType === 'CONJUNCTION' && v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
+      );
+
+      expect(conjunctionValidations).toHaveLength(1);
+      expect(conjunctionValidations[0].status).toBe('VALIDATED');
+    });
+  });
 });

@@ -21,8 +21,10 @@
  *
  * Initially enabled types: COMMON_LORD, CROSS_LORDSHIP, CONJUNCTION, ASPECT, EXCHANGE, HOUSE_PLACEMENT, PLANET_MEDIATED
  * Deferred/documented-not-emitted types: DISPOSITOR_CHAIN, DIGNITY_RELATION
+ * NONE: used when no relationship is detected (NOT_VALIDATED/INSUFFICIENT_DATA cases)
  */
 export type DusthanaRelationshipType =
+  | 'NONE'
   | 'COMMON_LORD'
   | 'CROSS_LORDSHIP'
   | 'CONJUNCTION'
@@ -94,7 +96,7 @@ export interface DusthanaRelationshipValidationConfig {
 
 /**
  * Result of dusthana relationship validation.
- * Contains validations for all dusthana-anchor pairs, counts, and provenance.
+ * Contains validations for all dusthana-anchor pairs, counts, provenance, and evidence records.
  */
 export interface DusthanaRelationshipValidationResult {
   readonly validations: readonly DusthanaRelationshipValidation[];
@@ -102,6 +104,7 @@ export interface DusthanaRelationshipValidationResult {
   readonly insufficientPairCount: number;
   readonly relationshipIds: readonly string[];
   readonly provenance: DusthanaRelationshipProvenance;
+  readonly evidence: readonly DusthanaRelationshipEvidence[];
 }
 
 /**
