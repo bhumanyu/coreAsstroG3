@@ -506,8 +506,7 @@ export function hasDirectHouseRelationship(
  *
  * FREEZE SEMANTICS: This is the complement to hasDirectHouseRelationship - it returns
  * true only when connectivity is shared-participant only (not direct house↔house).
- * Shared OCCUPIES/ASPECTS participation qualifies as planet-mediated.
- * Shared lordship is NOT included (stricter than general participation semantics).
+ * Shared LORD_OF/OCCUPIES/ASPECTS participation qualifies as planet-mediated.
  *
  * @param network - The career house network to check
  * @param a - First house number
@@ -522,6 +521,14 @@ export function hasPlanetMediatedRelationship(
   // If there's a direct relationship, this is not planet-mediated-only
   if (hasDirectHouseRelationship(network, a, b)) {
     return false;
+  }
+
+  // Check for shared LORD_OF participation (shared lordship)
+  const lordshipMap = buildLordshipMap(network.relationships);
+  for (const [planet, houses] of lordshipMap) {
+    if (houses.has(a) && houses.has(b)) {
+      return true;
+    }
   }
 
   // Check for shared OCCUPIES participation
