@@ -4,6 +4,7 @@ import { detectKendraTrikonaPatterns } from './kendraTrikonaDetector';
 import { detectCareerYogaPatterns } from './careerYogaDetector';
 import { classifyCareerPatterns } from './careerPatternClassification';
 import type { Horoscope } from '../../../types';
+import { Planet } from '../../../types';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
@@ -341,7 +342,7 @@ describe('Career Pattern Analysis', () => {
         networkId: 'NETWORK:TEST',
         identityKey: 'NETWORK:TEST',
         houses: [6, 10],
-        lords: ['SATURN' as const],
+        lords: [Planet.SATURN],
         relationships: [relationship1, relationship2, relationship3],
         topology: 'DIRECT_LINK',
         direction: 'FORWARD',
@@ -400,7 +401,7 @@ describe('Career Pattern Analysis', () => {
         networkId: 'NETWORK:TEST',
         identityKey: 'NETWORK:TEST',
         houses: [6, 10],
-        lords: ['SATURN' as const],
+        lords: [Planet.SATURN],
         relationships: [relationship1, relationship2],
         topology: 'DIRECT_LINK',
         direction: 'FORWARD',
@@ -450,7 +451,7 @@ describe('Career Pattern Analysis', () => {
         networkId: 'NETWORK:TEST',
         identityKey: 'NETWORK:TEST',
         houses: [6, 10],
-        lords: ['SATURN' as const],
+        lords: [Planet.SATURN],
         relationships: [relationship],
         topology: 'DIRECT_LINK',
         direction: 'FORWARD',
@@ -509,7 +510,7 @@ describe('Career Pattern Analysis', () => {
         networkId: 'NETWORK:TEST',
         identityKey: 'NETWORK:TEST',
         houses: [6, 10],
-        lords: ['SATURN' as const],
+        lords: [Planet.SATURN],
         relationships: [relationship1, relationship2, relationship3],
         topology: 'DIRECT_LINK',
         direction: 'FORWARD',
@@ -541,13 +542,7 @@ describe('Career Pattern Analysis', () => {
       expect(evidenceRelationshipIds).toEqual(result.provenance.establishingRelationshipIds);
     });
   });
-      ]);
-expect(pattern.provenance.ruleIds).toEqual(['RULE_GENERIC']);
-
-// Pin golden test literals for CAREER_YOGA family
-expect(analysis.careerYogaPatterns).toHaveLength(0);
-    });
-  });
+});
 
 describe('Mechanism extraction', () => {
   it('extracts all unique mechanisms from patterns', async () => {
@@ -627,5 +622,4 @@ describe('Dusthana double-emission contract', () => {
       });
     }
   });
-});
 });

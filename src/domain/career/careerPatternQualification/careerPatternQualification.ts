@@ -9,7 +9,8 @@ import type {
   CareerPatternParticipantQualification,
   CareerPatternQualificationEvidence,
   CareerPatternQualificationProvenance,
-  CareerPatternQualificationDimensions
+  CareerPatternQualificationDimensions,
+  CareerPatternQualificationStatus
 } from './careerPatternQualificationTypes';
 import {
   mapPlanetaryCondition,
@@ -18,6 +19,7 @@ import {
   classifyQualificationStatus
 } from './careerPatternQualificationRules';
 import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
+import { getQualificationPolicy } from './qualificationRegistry';
 
 /**
  * P2-04 Career Pattern Qualification Orchestration
@@ -328,12 +330,21 @@ function buildQualificationStatement(
  *
  * This function:
  * - Builds participant qualifications in canonical planet order
- * - Computes qualification dimensions from participant data
- * - Builds dimension evidence records
+ * - Computes qualification dimensions from participant data (legacy rules)
+ * - Looks up the qualification policy for the pattern's classification
+ * - If a policy exists, uses it to evaluate status with status precedence logic
+ * - If no policy exists, falls back to legacy status classification
+ * - Merges policy evidence with legacy dimension evidence
  * - Builds provenance from source pattern
- * - Classifies qualification status
  * - Generates summary statement
  * - Returns frozen QualifiedCareerPattern
+ *
+ * Status precedence (per spec §24):
+ * - Mandatory structural prerequisite explicitly absent → UNQUALIFIED
+ * - Mandatory prerequisite unevaluable → INSUFFICIENT_DATA (missing ≠ negative)
+ * - Prerequisites confirmed + conditions met → QUALIFIED
+ * - Known disqualifier → UNQUALIFIED
+ * - ACTIVATION/D10 dimensions never raise natal status (spec §9-10)
  */
 function qualifyPattern(
   pattern: CareerPattern,
@@ -349,16 +360,53 @@ function qualifyPattern(
   const participantConditions = participants.map(p => p.condition);
   const participantRelevance = participants.map(p => p.relevance);
 
+  // Always compute dimensions using legacy rules (for consistency)
   const dimensions = computeQualificationDimensions(
     pattern,
     participantConditions,
     participantRelevance
   );
 
-  const evidence = buildDimensionEvidence(pattern, dimensions);
+  // Look up qualification policy for this classification
+  const policy = getQualificationPolicy(pattern.classification);
+
+  let policyEvidence: any[] = [];
+  let insufficientDataReasons: string[] = [];
+  let ruleId: string;
+  let explanation: string;
+  let status: CareerPatternQualificationStatus;
+
+  if (policy) {
+    // Use policy-based evaluation with status precedence
+    const policyContext = Object.freeze({
+      pattern,
+      relevanceByPlanet: Object.freeze(new Map(relevanceByPlanet)),
+      conditionByPlanet: Object.freeze(new Map(conditionByPlanet))
+    });
+
+    const policyResult = policy.evaluate(policyContext);
+
+    // Use policy status and evidence, but keep legacy dimensions
+    policyEvidence = [...policyResult.evidence];
+    insufficientDataReasons = [...policyResult.insufficientDataReasons];
+    ruleId = policyResult.ruleId;
+    explanation = policyResult.explanation;
+    status = policyResult.status;
+  } else {
+    // Fallback to legacy status classification
+    status = classifyQualificationStatus(dimensions);
+    policyEvidence = [];
+    insufficientDataReasons = [];
+    ruleId = 'LEGACY';
+    explanation = buildQualificationStatement(pattern, status, dimensions);
+  }
+
+  // Build legacy dimension evidence for backward compatibility
+  const legacyEvidence = buildDimensionEvidence(pattern, dimensions);
+  const evidence = Object.freeze([...legacyEvidence, ...policyEvidence]);
+
   const provenance = buildProvenance(pattern);
-  const status = classifyQualificationStatus(dimensions);
-  const statement = buildQualificationStatement(pattern, status, dimensions);
+  const statement = explanation || buildQualificationStatement(pattern, status, dimensions);
 
   return Object.freeze({
     patternId: pattern.patternId,
@@ -378,6 +426,10 @@ function qualifyPattern(
     dimensions,
     participants,
     evidence,
+    policyEvidence: Object.freeze(policyEvidence),
+    insufficientDataReasons: Object.freeze(insufficientDataReasons),
+    ruleId,
+    explanation,
     provenance,
     status,
     statement

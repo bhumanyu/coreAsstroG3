@@ -2102,8 +2102,8 @@ describe('P2-06D Provenance Validation', () => {
     expect(() => {
       buildPatternProvenance(
         {
+          sourceNetworkIds: ['NETWORK:TEST'],
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:DOES_NOT_EXIST']
         },
         network

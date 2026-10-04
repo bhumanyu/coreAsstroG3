@@ -1,0 +1,170 @@
+# P2-07A — Career Pattern Qualification (Policy-Based)
+
+> **STATUS: IMPLEMENTED — VERIFICATION PENDING**
+
+P2-07A extends the P2-04 qualification shell with real deterministic policy-based evaluation per pattern family, replacing the placeholder `INSUFFICIENT_DATA` routing with explainable, per-family qualification logic.
+
+## Purpose
+
+P2-07A implements policy-based qualification for Career patterns, where each `CareerPatternClassification` has a dedicated `QualificationPolicy` that:
+- Declares required structural facts (establishing relationships, topology, etc.)
+- Evaluates dimensions dimension-by-dimension
+- Applies status precedence rules (missing ≠ negative)
+- Generates explainable evidence with proper provenance
+- Never auto-QUALIFIED generic patterns (conservative carrier policy)
+
+## QualificationStatus
+
+Per spec §24 status precedence (frozen):
+- **UNQUALIFIED**: Mandatory structural prerequisite explicitly absent OR known disqualifier
+- **INSUFFICIENT_DATA**: Mandatory prerequisite unevaluable (missing ≠ negative) OR any dimension NOT_ASSESSED/UNKNOWN/UNAVAILABLE
+- **QUALIFIED**: Prerequisites confirmed + conditions met (requires methodology freeze; currently blocked by NOT_ASSESSED dimensions)
+
+No numeric scoring (`qualificationScore`) or universal thresholds (spec §15).
+
+## Dimension Vocabulary (Spec §2/§13)
+
+Existing dimension enum (already matches spec):
+- `structuralStrength`: STRONG | MODERATE | WEAK | NOT_ASSESSED
+- `planetaryCondition`: STRONG | MODERATE | WEAK | UNAVAILABLE
+- `careerRelevance`: PRIMARY | SUPPORTING | MIXED | NEUTRAL | UNAVAILABLE
+- `patternCoherence`: HIGH | MODERATE | LOW | INSUFFICIENT_DATA
+- `activationPotential`: HIGH | MODERATE | LOW | UNKNOWN
+- `divisionalConfirmation`: CONFIRMED | NOT_CONFIRMED | NOT_ASSESSED
+
+**ACTIVATION/D10 contract (spec §9-10):** ACTIVATION stays `UNKNOWN`, D10 stays `NOT_ASSESSED`. These dimensions never raise natal status to QUALIFIED—Dasha strong + natal UNQUALIFIED → UNQUALIFIED.
+
+## Policy Registry
+
+`qualificationRegistry.ts` maintains a `Record<CareerPatternClassification, QualificationPolicy>` map.
+
+### Implemented Policies
+
+1. **SERVICE_TO_PROFESSION_TO_GAINS** (`serviceToProfessionToGainsPolicy.ts`)
+   - Required: Establishing relationships 6→10 AND 10→11
+   - Evaluates: structural prerequisite presence, planetary condition, career relevance, coherence
+   - Status: UNQUALIFIED if prerequisites absent; INSUFFICIENT_DATA if NOT_ASSESSED dimensions block
+
+2. **CAREER_HOUSE_NETWORK** (`careerHouseNetworkPolicy.ts`)
+   - Generic carrier policy (never auto-QUALIFIED per spec)
+   - Required: Any establishing relationship
+   - Status: UNQUALIFIED if no establishing relationships; INSUFFICIENT_DATA otherwise (conservative)
+
+### Future Policies (Deferred)
+
+- WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS
+- COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS
+- CREATIVE_DHARMA_TO_PROFESSION
+- DHARMA_KARMA_ALIGNMENT
+- KENDRA_TRIKONA_CAREER
+- UPACHAYA_CAREER_NETWORK
+- PARIVARTANA_CAREER_NETWORK
+- DUSTHANA_CAREER_TRANSFORMATION
+- CAREER_YOGA_STRUCTURE
+
+## Policy Contract
+
+Each `QualificationPolicy` implements:
+```typescript
+interface QualificationPolicy {
+  readonly policyId: string;
+  readonly classification: CareerPatternClassification;
+  readonly description: string;
+  evaluate(context: QualificationPolicyContext): PolicyEvaluationResult;
+}
+```
+
+`PolicyEvaluationResult` includes:
+- `status`: CareerPatternQualificationStatus
+- `dimensions`: CareerPatternQualificationDimensions
+- `evidence`: QualificationEvidence[] (policy-level)
+- `insufficientDataReasons`: string[]
+- `ruleId`: string
+- `explanation`: string
+
+## Evidence Structure (Spec §25)
+
+New `QualificationEvidence` for policy-level explainability:
+```typescript
+interface QualificationEvidence {
+  readonly evidenceId: string;
+  readonly dimension: keyof CareerPatternQualificationDimensions;
+  readonly sourceType: QualificationEvidenceSourceType;
+  readonly sourceId: string;
+  readonly relationshipIds: readonly string[];  // ONLY from pattern.provenance.establishingRelationshipIds
+  readonly explanation: string;
+}
+```
+
+**Critical:** `relationshipIds` sourced ONLY from `pattern.provenance.establishingRelationshipIds`, never from `network.relationships` bulk copy (avoids the P2-06 provenance bug).
+
+## Source Consumption
+
+Consume existing sources only—no new engines:
+- **C5 CareerPlanetaryRelevance** → `careerRelevance` dimension (via existing `mapCareerRelevance`)
+- **C6 CareerPlanetaryConditionResult** → `planetaryCondition` dimension (via existing `mapPlanetaryCondition`)
+- **CareerPattern + establishing relationships** → structural/coherence dimensions
+
+No new planetary-strength engine (spec §6/§26). No imports from careerDasha/careerD10/timing/C11.
+
+## Missing vs Absent (Spec §20-21)
+
+- **Missing** (unevaluable): Data not available → `INSUFFICIENT_DATA`
+- **Absent** (explicitly negative): Structural prerequisite not present → `UNQUALIFIED`
+
+Example:
+- Missing relevance data for a planet → `INSUFFICIENT_DATA` (we can't evaluate)
+- Required 6→10 relationship not in establishingRelationshipIds → `UNQUALIFIED` (explicitly absent)
+
+## Status Precedence Implementation
+
+Policies implement status precedence by:
+1. Checking explicit absence of mandatory prerequisites → UNQUALIFIED
+2. Checking for missing/unevaluable data → INSUFFICIENT_DATA
+3. Evaluating conditions; if all met but NOT_ASSESSED dimensions block → INSUFFICIENT_DATA
+4. Known disqualifiers (WEAK condition, NEUTRAL relevance) → UNQUALIFIED (subject to NOT_ASSESSED override)
+
+Currently, `structuralStrength = NOT_ASSESSED` blocks all QUALIFIED outcomes, routing to `INSUFFICIENT_DATA` per spec §24.
+
+## Immutability & Determinism
+
+- All outputs frozen (`Object.freeze`)
+- Canonical ordering of evidence/reasons (sorted)
+- Input-order independent (permutation invariance per spec §33)
+- Duplicate invariance (spec §37): unrelated relationships don't change qualification
+- Establishing vs supporting evidence (spec §35): supporting evidence never changes identity/status
+
+## Test Coverage
+
+Extended test suite in `careerPatternQualification.test.ts`:
+- Policy registry lookup tests
+- Service-to-Profession-to-Gains policy tests (prerequisite checks, status outcomes)
+- Career House Network generic carrier tests
+- Missing vs absent distinction tests
+- ACTIVATION/D10 cannot create qualification tests
+- Policy evidence structure tests (establishingRelationshipIds only)
+- Permutation invariance tests
+- Unrelated edge invariance tests
+- Real-engine golden test (existing, unchanged)
+
+## Integration with Legacy
+
+P2-07A maintains backward compatibility:
+- Legacy `CareerPatternQualificationEvidence` retained for dimension evidence
+- New `QualificationEvidence` in `policyEvidence` field for policy-specific evidence
+- Legacy `computeQualificationDimensions` used for dimension values (consistency)
+- Policies provide status/evidence on top of legacy dimension computation
+
+## Deferred Items (Future Phases)
+
+- **P2-07B:** Role assignment per pattern
+- **P2-07C/D:** Mechanism integration
+- **P2-07E:** Dispositor integration
+- **10H foundation:** House 10 strength baseline
+- **Upachaya methodology:** 3-6-11 progression rules (frozen per spec §40)
+
+## Cross-References
+
+- [`P2-04-PATTERN-QUALIFICATION.md`](./P2-04-PATTERN-QUALIFICATION.md) — P2-04 placeholder shell
+- [`P2-00-CAREER-INTELLIGENCE-CHARTER.md`](./P2-00-CAREER-INTELLIGENCE-CHARTER.md) — Master charter
+- [`CW-R1-C1-CAREER-SEMANTIC-FREEZE.md`](../CW-R1-C1-CAREER-SEMANTIC-FREEZE.md) — C1 invariants (MISSING ≠ NEGATIVE)

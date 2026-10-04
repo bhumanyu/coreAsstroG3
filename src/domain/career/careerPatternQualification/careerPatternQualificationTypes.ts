@@ -146,6 +146,33 @@ export interface CareerPatternQualificationEvidence {
 }
 
 /**
+ * Source type for qualification evidence.
+ * Indicates the origin of the evidence fact.
+ */
+export type QualificationEvidenceSourceType =
+  | 'PLANETARY_RELEVANCE'
+  | 'PLANETARY_CONDITION'
+  | 'STRUCTURAL_RELATIONSHIP'
+  | 'PATTERN_TOPOLOGY'
+  | 'POLICY_RULE';
+
+/**
+ * Policy-level evidence record for qualification decisions.
+ * Used by per-family qualification policies to provide explainable output.
+ *
+ * Per spec §25: relationshipIds are sourced ONLY from pattern.provenance.establishingRelationshipIds,
+ * never from network.relationships bulk copy (avoids the P2-06 provenance bug).
+ */
+export interface QualificationEvidence {
+  readonly evidenceId: string;
+  readonly dimension: keyof CareerPatternQualificationDimensions;
+  readonly sourceType: QualificationEvidenceSourceType;
+  readonly sourceId: string;
+  readonly relationshipIds: readonly string[];
+  readonly explanation: string;
+}
+
+/**
  * Provenance for a qualification result.
  * Tracks the source patterns, evidence, and rules that led to this qualification.
  */
@@ -153,6 +180,58 @@ export interface CareerPatternQualificationProvenance {
   readonly sourcePatternIds: readonly string[];
   readonly sourceEvidenceIds: readonly string[];
   readonly ruleIds: readonly string[];
+}
+
+/**
+ * Policy evaluation context for a single pattern.
+ * Provides the data needed by per-family qualification policies.
+ */
+export interface QualificationPolicyContext {
+  readonly pattern: CareerPattern;
+  readonly relevanceByPlanet: ReadonlyMap<Planet, CareerPlanetaryRelevance>;
+  readonly conditionByPlanet: ReadonlyMap<Planet, CareerPlanetaryConditionResult>;
+}
+
+/**
+ * Dimension evaluation result from a policy.
+ * Used by policies to report per-dimension assessments.
+ */
+export interface DimensionEvaluation {
+  readonly dimension: keyof CareerPatternQualificationDimensions;
+  readonly value: string;
+  readonly evidence: readonly QualificationEvidence[];
+  readonly insufficientDataReasons: readonly string[];
+}
+
+/**
+ * Policy evaluation result.
+ * Returned by a QualificationPolicy after evaluating a pattern.
+ */
+export interface PolicyEvaluationResult {
+  readonly status: CareerPatternQualificationStatus;
+  readonly dimensions: CareerPatternQualificationDimensions;
+  readonly evidence: readonly QualificationEvidence[];
+  readonly insufficientDataReasons: readonly string[];
+  readonly ruleId: string;
+  readonly explanation: string;
+}
+
+/**
+ * Qualification policy interface.
+ * Implemented by per-family policy files to evaluate pattern qualification.
+ */
+export interface QualificationPolicy {
+  readonly policyId: string;
+  readonly classification: CareerPatternClassification;
+  readonly description: string;
+
+  /**
+   * Evaluates whether a pattern qualifies under this policy.
+   *
+   * @param context - The pattern and planetary data to evaluate
+   * @returns Policy evaluation result with status, dimensions, evidence, and explanation
+   */
+  evaluate(context: QualificationPolicyContext): PolicyEvaluationResult;
 }
 
 /**
@@ -185,6 +264,10 @@ export interface QualifiedCareerPattern {
   readonly dimensions: CareerPatternQualificationDimensions;
   readonly participants: readonly CareerPatternParticipantQualification[];
   readonly evidence: readonly CareerPatternQualificationEvidence[];
+  readonly policyEvidence: readonly QualificationEvidence[];
+  readonly insufficientDataReasons: readonly string[];
+  readonly ruleId: string;
+  readonly explanation: string;
   readonly provenance: CareerPatternQualificationProvenance;
   readonly status: CareerPatternQualificationStatus;
   readonly statement: string;

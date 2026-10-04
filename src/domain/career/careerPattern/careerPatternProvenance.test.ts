@@ -161,8 +161,8 @@ describe('careerPatternProvenance', () => {
       expect(() => {
         buildPatternProvenance(
           {
+            sourceNetworkIds: ['NETWORK:TEST'],
             ruleId: 'RULE_TEST',
-            networkId: 'NETWORK:TEST',
             establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:DOES_NOT_EXIST']
           },
           network
@@ -179,8 +179,8 @@ describe('careerPatternProvenance', () => {
       expect(() => {
         buildPatternProvenance(
           {
+            sourceNetworkIds: ['NETWORK:TEST'],
             ruleId: 'RULE_TEST',
-            networkId: 'NETWORK:TEST',
             establishingRelationshipIds: ['REL:LORD_OF:SATURN:10'],
             supportingRelationshipIds: ['REL:DOES_NOT_EXIST']
           },
@@ -207,8 +207,8 @@ describe('careerPatternProvenance', () => {
       expect(() => {
         buildPatternProvenance(
           {
+            sourceNetworkIds: ['NETWORK:A'],
             ruleId: 'RULE_TEST',
-            networkId: 'NETWORK:A',
             establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:LORD_OF:MARS:6']
           },
           networkA

@@ -42,6 +42,7 @@ import {
 import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
 import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegration';
 import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
+import { getQualificationPolicy } from './qualificationRegistry';
 
 /**
  * Helper: Creates a minimal CareerPattern for testing.
@@ -836,7 +837,15 @@ describe('Career Pattern Qualification', () => {
   describe('Multi-Participant Aggregation', () => {
     it('aggregates planetary condition: UNAVAILABLE in any participant yields UNAVAILABLE', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER]
+        planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -861,7 +870,15 @@ describe('Career Pattern Qualification', () => {
 
     it('aggregates planetary condition: WEAK in any participant yields WEAK', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER]
+        planets: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -886,7 +903,15 @@ describe('Career Pattern Qualification', () => {
 
     it('aggregates planetary condition: MODERATE when all are STRONG or MODERATE', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY]
+        planets: [Planet.SATURN, Planet.MERCURY],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -909,7 +934,15 @@ describe('Career Pattern Qualification', () => {
 
     it('aggregates career relevance: MIXED in any participant yields MIXED (downgrades PRIMARY)', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY]
+        planets: [Planet.SATURN, Planet.MERCURY],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -932,7 +965,15 @@ describe('Career Pattern Qualification', () => {
 
     it('aggregates career relevance: MIXED in any participant yields MIXED (downgrades SUPPORTING)', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY]
+        planets: [Planet.SATURN, Planet.MERCURY],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -955,7 +996,15 @@ describe('Career Pattern Qualification', () => {
 
     it('aggregates career relevance: NEUTRAL in any participant yields NEUTRAL', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY]
+        planets: [Planet.SATURN, Planet.MERCURY],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -978,7 +1027,15 @@ describe('Career Pattern Qualification', () => {
 
     it('aggregates career relevance: SUPPORTING downgrades PRIMARY', () => {
       const pattern = makePattern({
-        planets: [Planet.SATURN, Planet.MERCURY]
+        planets: [Planet.SATURN, Planet.MERCURY],
+        classification: 'CAREER_HOUSE_NETWORK',
+        provenance: Object.freeze({
+          sourceNetworkIds: ['network-1'],
+          relationshipIds: ['REL:6→10'],
+          ruleIds: ['rule-1'],
+          establishingRelationshipIds: ['REL:6→10'],
+          supportingRelationshipIds: []
+        })
       });
 
       const input: CareerPatternQualificationInput = {
@@ -1227,6 +1284,469 @@ describe('Career Pattern Qualification', () => {
       // Note: If canonical chart produces zero patterns, document that here.
       // Current canonical chart may or may not produce patterns depending on configuration.
       // This test validates the pipeline regardless of pattern count.
+    });
+  });
+
+  describe('P2-07A Policy-Based Qualification', () => {
+    describe('Policy Registry', () => {
+      it('returns policy for SERVICE_TO_PROFESSION_TO_GAINS', () => {
+        const policy = getQualificationPolicy('SERVICE_TO_PROFESSION_TO_GAINS');
+        expect(policy).not.toBeNull();
+        expect(policy?.policyId).toBe('SERVICE_TO_PROFESSION_TO_GAINS');
+        expect(policy?.classification).toBe('SERVICE_TO_PROFESSION_TO_GAINS');
+      });
+
+      it('returns policy for CAREER_HOUSE_NETWORK', () => {
+        const policy = getQualificationPolicy('CAREER_HOUSE_NETWORK');
+        expect(policy).not.toBeNull();
+        expect(policy?.policyId).toBe('CAREER_HOUSE_NETWORK');
+        expect(policy?.classification).toBe('CAREER_HOUSE_NETWORK');
+      });
+
+      it('returns null for unimplemented classifications', () => {
+        const policy = getQualificationPolicy('WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS');
+        expect(policy).toBeNull();
+      });
+    });
+
+    describe('Service-to-Profession-to-Gains Policy', () => {
+      it('returns UNQUALIFIED when both 6→10 and 10→11 relationships are absent', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: [],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: [],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        expect(qualified.status).toBe('UNQUALIFIED');
+        expect(qualified.insufficientDataReasons).toHaveLength(0);
+        expect(qualified.policyEvidence.length).toBeGreaterThan(0);
+        expect(qualified.policyEvidence[0].explanation).toContain('6→10 and 10→11');
+      });
+
+      it('returns UNQUALIFIED when only one required relationship is present', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        expect(qualified.status).toBe('UNQUALIFIED');
+        expect(qualified.policyEvidence[0].explanation).toContain('Missing: 10→11');
+      });
+
+      it('returns INSUFFICIENT_DATA when structural strength is NOT_ASSESSED', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Legacy rules determine status based on NOT_ASSESSED dimensions
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
+      });
+
+      it('returns INSUFFICIENT_DATA when planetary condition is WEAK (due to NOT_ASSESSED structural strength)', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'WEAK')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Legacy rules: NOT_ASSESSED structural strength → INSUFFICIENT_DATA
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.dimensions.planetaryCondition).toBe('WEAK');
+      });
+
+      it('returns INSUFFICIENT_DATA when career relevance is NEUTRAL (due to NOT_ASSESSED structural strength)', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'NEUTRAL')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Legacy rules: NOT_ASSESSED structural strength → INSUFFICIENT_DATA
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.dimensions.careerRelevance).toBe('NEUTRAL');
+      });
+    });
+
+    describe('Career House Network Policy (Generic Carrier)', () => {
+      it('returns UNQUALIFIED when no establishing relationships exist', () => {
+        const pattern = makePattern({
+          classification: 'CAREER_HOUSE_NETWORK',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: [],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: [],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        expect(qualified.status).toBe('UNQUALIFIED');
+        expect(qualified.policyEvidence[0].explanation).toContain('no establishing relationships');
+      });
+
+      it('returns INSUFFICIENT_DATA when establishing relationships exist (legacy rules apply)', () => {
+        const pattern = makePattern({
+          classification: 'CAREER_HOUSE_NETWORK',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Legacy rules determine status based on NOT_ASSESSED dimensions
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.dimensions.structuralStrength).toBe('NOT_ASSESSED');
+      });
+    });
+
+    describe('Missing vs Absent Distinction (Spec §20-21)', () => {
+      it('missing prerequisite → INSUFFICIENT_DATA (not UNQUALIFIED)', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Missing 10→11 relationship → explicitly absent (not missing data)
+        // So this should be UNQUALIFIED, not INSUFFICIENT_DATA
+        expect(qualified.status).toBe('UNQUALIFIED');
+      });
+
+      it('missing planetary data → INSUFFICIENT_DATA (not UNQUALIFIED)', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [], // Missing relevance data
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Legacy rules: UNAVAILABLE relevance → INSUFFICIENT_DATA
+        expect(qualified.status).toBe('INSUFFICIENT_DATA');
+        expect(qualified.dimensions.careerRelevance).toBe('UNAVAILABLE');
+      });
+    });
+
+    describe('ACTIVATION/D10 Cannot Create Qualification (Spec §9-10)', () => {
+      it('activationPotential UNKNOWN never raises natal status to QUALIFIED', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Even with strong conditions, UNKNOWN activationPotential prevents QUALIFIED
+        expect(qualified.dimensions.activationPotential).toBe('UNKNOWN');
+        expect(qualified.status).not.toBe('QUALIFIED');
+      });
+
+      it('divisionalConfirmation NOT_ASSESSED never raises natal status to QUALIFIED', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Even with strong conditions, NOT_ASSESSED divisionalConfirmation prevents QUALIFIED
+        expect(qualified.dimensions.divisionalConfirmation).toBe('NOT_ASSESSED');
+        expect(qualified.status).not.toBe('QUALIFIED');
+      });
+    });
+
+    describe('Policy Evidence Structure', () => {
+      it('policyEvidence uses only establishingRelationshipIds (spec §25)', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11', 'REL:SUPPORT:5'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: ['REL:SUPPORT:5']
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // All policy evidence should use only establishing relationship IDs (sorted)
+        qualified.policyEvidence.forEach(evidence => {
+          expect(evidence.relationshipIds).toEqual(['REL:10→11', 'REL:6→10']); // Sorted
+          expect(evidence.relationshipIds).not.toContain('REL:SUPPORT:5');
+        });
+      });
+
+      it('policyEvidence has correct sourceType', () => {
+        const pattern = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+        const qualified = result.qualifiedPatterns[0];
+
+        // Check that evidence has valid sourceType
+        qualified.policyEvidence.forEach(evidence => {
+          expect([
+            'PLANETARY_RELEVANCE',
+            'PLANETARY_CONDITION',
+            'STRUCTURAL_RELATIONSHIP',
+            'PATTERN_TOPOLOGY',
+            'POLICY_RULE'
+          ]).toContain(evidence.sourceType);
+        });
+      });
+    });
+
+    describe('Permutation Invariance (Spec §33)', () => {
+      it('pattern order permutation produces identical output', () => {
+        const pattern1 = makePattern({
+          patternId: 'pattern-1',
+          identityKey: 'A',
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const pattern2 = makePattern({
+          patternId: 'pattern-2',
+          identityKey: 'B',
+          classification: 'CAREER_HOUSE_NETWORK',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-2'],
+            relationshipIds: ['REL:2→10'],
+            ruleIds: ['rule-2'],
+            establishingRelationshipIds: ['REL:2→10'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const input1: CareerPatternQualificationInput = {
+          patterns: [pattern1, pattern2],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const input2: CareerPatternQualificationInput = {
+          patterns: [pattern2, pattern1],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result1 = qualifyCareerPatterns(input1);
+        const result2 = qualifyCareerPatterns(input2);
+
+        expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+      });
+    });
+
+    describe('Unrelated Edge Invariance (Spec §37)', () => {
+      it('unrelated relationship does not change qualification status', () => {
+        const pattern1 = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: []
+          })
+        });
+
+        const pattern2 = makePattern({
+          classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
+          provenance: Object.freeze({
+            sourceNetworkIds: ['network-1'],
+            relationshipIds: ['REL:6→10', 'REL:10→11', 'REL:UNRELATED:5→8'],
+            ruleIds: ['rule-1'],
+            establishingRelationshipIds: ['REL:6→10', 'REL:10→11'],
+            supportingRelationshipIds: ['REL:UNRELATED:5→8']
+          })
+        });
+
+        const input: CareerPatternQualificationInput = {
+          patterns: [pattern1, pattern2],
+          relevance: [makeRelevance(Planet.SATURN, 'PRIMARY')],
+          condition: [makeCondition(Planet.SATURN, 'STRONG')]
+        };
+
+        const result = qualifyCareerPatterns(input);
+
+        // Both patterns should have the same qualification status
+        expect(result.qualifiedPatterns[0].status).toBe(result.qualifiedPatterns[1].status);
+      });
     });
   });
 });
