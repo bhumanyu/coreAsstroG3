@@ -107,6 +107,11 @@ export function hasAllEstablishingRelationships(
  * Checks if the pattern has a directed house relationship ID from fromHouse to toHouse.
  * This is a temporary ID-string check that examines establishingRelationshipIds for the pattern.
  *
+ * CONTRACT: This helper depends on identity-key format and should be removed when
+ * QualificationPolicyContext gains canonical relationship access in P2-07B. At that point,
+ * policies should call the real P2-06 predicates (hasDirectedHouseRelationship(network, 6, 10)
+ * style) from careerPatternPredicates.ts instead of parsing identity strings.
+ *
  * TODO(P2-07B): Resolve via canonical edge semantics by extending QualificationPolicyContext
  * to carry source CareerHouseNetwork[] and using the frozen P2-06A hasDirectedHouseRelationship
  * predicate from careerPatternPredicates.ts.

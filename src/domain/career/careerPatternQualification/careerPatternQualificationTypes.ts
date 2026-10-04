@@ -30,6 +30,29 @@ import type { Planet } from '../../../types';
  */
 
 /**
+ * Category of a decision-blocking reason.
+ * Used to distinguish between different types of blocking conditions.
+ *
+ * Per P2-07A spec:
+ * - MISSING_INPUT: Input data is unavailable (e.g., planetary condition/relevance not calculated)
+ * - METHODOLOGY_NOT_FROZEN: The methodology for this dimension is not yet frozen (e.g., structural strength)
+ * - INSUFFICIENT_STRUCTURAL_EVIDENCE: Structural evidence is insufficient to make a decision
+ */
+export type DecisionBlockingReasonKind =
+  | 'MISSING_INPUT'
+  | 'METHODOLOGY_NOT_FROZEN'
+  | 'INSUFFICIENT_STRUCTURAL_EVIDENCE';
+
+/**
+ * A decision-blocking reason with its category.
+ * Used to explain why a pattern's qualification status is INSUFFICIENT_DATA.
+ */
+export interface DecisionBlockingReason {
+  readonly reason: string;
+  readonly kind: DecisionBlockingReasonKind;
+}
+
+/**
  * Structural strength of a Career pattern.
  * Represents the overall strength of the pattern based on participant conditions.
  *
@@ -212,7 +235,7 @@ export interface DimensionEvaluation {
   readonly dimension: keyof CareerPatternQualificationDimensions;
   readonly value: string;
   readonly evidence: readonly QualificationEvidence[];
-  readonly missingDataReasons: readonly string[];
+  readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
 }
 
@@ -224,7 +247,7 @@ export interface PolicyEvaluationResult {
   readonly status: CareerPatternQualificationStatus;
   readonly dimensions: CareerPatternQualificationDimensions;
   readonly evidence: readonly QualificationEvidence[];
-  readonly missingDataReasons: readonly string[];
+  readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;
@@ -279,7 +302,7 @@ export interface QualifiedCareerPattern {
   readonly participants: readonly CareerPatternParticipantQualification[];
   readonly evidence: readonly CareerPatternQualificationEvidence[];
   readonly policyEvidence: readonly QualificationEvidence[];
-  readonly missingDataReasons: readonly string[];
+  readonly decisionBlockingReasons: readonly DecisionBlockingReason[];
   readonly deferredDimensions: readonly CareerPatternDeferredDimension[];
   readonly ruleId: string;
   readonly explanation: string;
