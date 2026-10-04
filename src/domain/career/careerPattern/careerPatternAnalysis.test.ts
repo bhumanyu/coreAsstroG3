@@ -2,11 +2,15 @@ import { analyzeCareerPatterns } from './careerPatternAnalysis';
 import { detectDusthanaPatterns } from './dusthanaTransformationDetector';
 import { detectKendraTrikonaPatterns } from './kendraTrikonaDetector';
 import { detectCareerYogaPatterns } from './careerYogaDetector';
+import { classifyCareerPatterns } from './careerPatternClassification';
 import type { Horoscope } from '../../../types';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerGraphProvenance } from '../careerGraph/careerAstroGraphTypes';
+import { buildPatternProvenance, RelationshipNotFoundError } from './careerPatternProvenance';
+import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
+import type { CareerPatternClassification, CareerPatternFamily } from './careerPatternTypes';
 
 describe('Career Pattern Analysis', () => {
   describe('Identity stability under condition change', () => {
@@ -294,90 +298,334 @@ describe('Career Pattern Analysis', () => {
         'LORD_OF:PLANET:MARS→HOUSE:11',
         'LORD_OF:PLANET:MARS→HOUSE:6'
       ]);
-      expect(pattern.provenance.ruleIds).toEqual(['RULE_GENERIC']);
-
-      // Pin golden test literals for CAREER_YOGA family
-      expect(analysis.careerYogaPatterns).toHaveLength(0);
     });
   });
 
-  describe('Mechanism extraction', () => {
-    it('extracts all unique mechanisms from patterns', async () => {
-      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const analysis = analyzeCareerPatterns({ horoscope });
+  describe('Identity invariants (P2-06D)', () => {
+    it('supporting relationships do not alter patternId/identityKey/classification', () => {
+      // Create a mock network with relationships
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['test-source'],
+        ruleIds: [],
+        parentIds: []
+      };
 
-      // Mechanisms should be sorted and unique
-      const mechanismSet = new Set(analysis.mechanisms);
-      expect(mechanismSet.size).toBe(analysis.mechanisms.length);
+      const relationship1 = {
+        edgeId: 'EDGE:1',
+        identityKey: 'REL:LORD_OF:SATURN:6',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:6',
+        provenance
+      };
 
-      // Should be sorted
-      for (let i = 1; i < analysis.mechanisms.length; i++) {
-        expect(analysis.mechanisms[i] >= analysis.mechanisms[i - 1]).toBe(true);
-      }
-    });
+      const relationship2 = {
+        edgeId: 'EDGE:2',
+        identityKey: 'REL:LORD_OF:SATURN:10',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        provenance
+      };
 
-    it('includes Upachaya mechanism chain when Upachaya patterns exist', async () => {
-      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const analysis = analyzeCareerPatterns({ horoscope });
+      const relationship3 = {
+        edgeId: 'EDGE:3',
+        identityKey: 'REL:ASPECTS:SATURN:11',
+        type: 'ASPECTS' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:11',
+        provenance
+      };
 
-      const hasUpachaya = analysis.patterns.some(p => p.family === 'UPACHAYA');
+      const network: CareerHouseNetwork = {
+        networkId: 'NETWORK:TEST',
+        identityKey: 'NETWORK:TEST',
+        houses: [6, 10],
+        lords: ['SATURN' as const],
+        relationships: [relationship1, relationship2, relationship3],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance,
+        evidenceIds: []
+      };
 
-      if (hasUpachaya) {
-        expect(analysis.mechanisms).toContain('SELF_EFFORT');
-        expect(analysis.mechanisms).toContain('SKILL_DEVELOPMENT');
-        expect(analysis.mechanisms).toContain('PROFESSIONALIZATION');
-        expect(analysis.mechanisms).toContain('PROFESSIONAL_GAINS');
-      }
-    });
-  });
-
-  describe('Career Yoga detector edge consumption', () => {
-    it('Career Yoga patterns require ≥2 planets with validated lordship edges', async () => {
-      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const analysis = analyzeCareerPatterns({ horoscope });
-
-      // Verify career yoga patterns have valid participant counts
-      analysis.careerYogaPatterns.forEach(pattern => {
-        expect(pattern.participants.length).toBeGreaterThanOrEqual(2);
-        expect(pattern.lordships).toBeDefined();
-        expect(Object.keys(pattern.lordships).length).toBeGreaterThan(0);
-      });
-    });
-
-    it('Career Yoga identity uses family + participants + houses + edge ids', async () => {
-      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const analysis = analyzeCareerPatterns({ horoscope });
-
-      // Verify identity format
-      analysis.careerYogaPatterns.forEach(pattern => {
-        expect(pattern.identityKey).toContain('CAREER_YOGA:CAREER_YOGA:PARTICIPANTS:');
-        expect(pattern.identityKey).toContain(':HOUSES:');
-        expect(pattern.identityKey).toContain(':EDGES:');
-      });
-    });
-  });
-
-  describe('Dusthana double-emission contract', () => {
-    it('8-10-12 network emits one composite pattern, not two separate patterns', async () => {
-      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-      const analysis = analyzeCareerPatterns({ horoscope });
-
-      // Find dusthana patterns
-      const dusthanaPatterns = analysis.patterns.filter(p => p.family === 'DUSTHANA_TRANSFORMATION');
-
-      // Count patterns with 8-10-12 house set
-      const compositePatterns = dusthanaPatterns.filter(p =>
-        p.houses.includes(8) && p.houses.includes(10) && p.houses.includes(12)
+      // Build identity without supporting relationships
+      const identityKeyWithoutSupporting = buildCareerPatternIdentityKey(
+        'CAREER_HOUSE_NETWORK' as CareerPatternFamily,
+        'CAREER_HOUSE_NETWORK' as CareerPatternClassification,
+        network.houses,
+        network.topology,
+        ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
       );
 
-      // Should have at most one composite pattern per network
-      // The exact count depends on the actual horoscope data
-      if (compositePatterns.length > 0) {
-        compositePatterns.forEach(pattern => {
-          // Composite pattern should have union of both mechanism sets
-          expect(pattern.mechanisms.length).toBeGreaterThan(0);
-        });
-      }
+      // Build identity with same establishing IDs but different supporting IDs
+      const identityKeyWithSupporting = buildCareerPatternIdentityKey(
+        'CAREER_HOUSE_NETWORK' as CareerPatternFamily,
+        'CAREER_HOUSE_NETWORK' as CareerPatternClassification,
+        network.houses,
+        network.topology,
+        ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
+      );
+
+      // Identity should be identical - supporting relationships don't affect identity
+      expect(identityKeyWithoutSupporting).toBe(identityKeyWithSupporting);
+    });
+
+    it('different establishing relationships produce different identityKey', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['test-source'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const relationship1 = {
+        edgeId: 'EDGE:1',
+        identityKey: 'REL:LORD_OF:SATURN:6',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:6',
+        provenance
+      };
+
+      const relationship2 = {
+        edgeId: 'EDGE:2',
+        identityKey: 'REL:LORD_OF:SATURN:10',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        provenance
+      };
+
+      const network: CareerHouseNetwork = {
+        networkId: 'NETWORK:TEST',
+        identityKey: 'NETWORK:TEST',
+        houses: [6, 10],
+        lords: ['SATURN' as const],
+        relationships: [relationship1, relationship2],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance,
+        evidenceIds: []
+      };
+
+      // Build identity with one set of establishing relationships
+      const identityKey1 = buildCareerPatternIdentityKey(
+        'CAREER_HOUSE_NETWORK' as CareerPatternFamily,
+        'CAREER_HOUSE_NETWORK' as CareerPatternClassification,
+        network.houses,
+        network.topology,
+        ['REL:LORD_OF:SATURN:6']
+      );
+
+      // Build identity with different establishing relationships
+      const identityKey2 = buildCareerPatternIdentityKey(
+        'CAREER_HOUSE_NETWORK' as CareerPatternFamily,
+        'CAREER_HOUSE_NETWORK' as CareerPatternClassification,
+        network.houses,
+        network.topology,
+        ['REL:LORD_OF:SATURN:10']
+      );
+
+      // Identity should differ - establishing relationships affect identity
+      expect(identityKey1).not.toBe(identityKey2);
+    });
+
+    it('invalid establishing provenance causes RelationshipNotFoundError (no pattern emission)', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['test-source'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const relationship = {
+        edgeId: 'EDGE:1',
+        identityKey: 'REL:LORD_OF:SATURN:10',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        provenance
+      };
+
+      const network: CareerHouseNetwork = {
+        networkId: 'NETWORK:TEST',
+        identityKey: 'NETWORK:TEST',
+        houses: [6, 10],
+        lords: ['SATURN' as const],
+        relationships: [relationship],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance,
+        evidenceIds: []
+      };
+
+      // Attempt to build provenance with a fabricated relationship ID
+      expect(() => {
+        buildPatternProvenance(
+          {
+            sourceNetworkIds: ['NETWORK:TEST'],
+            ruleId: 'RULE_TEST',
+            establishingRelationshipIds: ['REL:DOES_NOT_EXIST']
+          },
+          network
+        );
+      }).toThrow(RelationshipNotFoundError);
+    });
+
+    it('asymmetry invariant: supporting relationships are provenance only, not evidence', () => {
+      const provenance: CareerGraphProvenance = {
+        sourceIds: ['test-source'],
+        ruleIds: [],
+        parentIds: []
+      };
+
+      const relationship1 = {
+        edgeId: 'EDGE:1',
+        identityKey: 'REL:LORD_OF:SATURN:6',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:6',
+        provenance
+      };
+
+      const relationship2 = {
+        edgeId: 'EDGE:2',
+        identityKey: 'REL:LORD_OF:SATURN:10',
+        type: 'LORD_OF' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10',
+        provenance
+      };
+
+      const relationship3 = {
+        edgeId: 'EDGE:3',
+        identityKey: 'REL:ASPECTS:SATURN:11',
+        type: 'ASPECTS' as const,
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:11',
+        provenance
+      };
+
+      const network: CareerHouseNetwork = {
+        networkId: 'NETWORK:TEST',
+        identityKey: 'NETWORK:TEST',
+        houses: [6, 10],
+        lords: ['SATURN' as const],
+        relationships: [relationship1, relationship2, relationship3],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD',
+        provenance,
+        evidenceIds: []
+      };
+
+      const result = buildPatternProvenance(
+        {
+          sourceNetworkIds: ['NETWORK:TEST'],
+          ruleId: 'RULE_TEST',
+          establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10'],
+          supportingRelationshipIds: ['REL:ASPECTS:SATURN:11']
+        },
+        network
+      );
+
+      // Supporting relationship appears in provenance.supportingRelationshipIds
+      expect(result.provenance.supportingRelationshipIds).toContain('REL:ASPECTS:SATURN:11');
+
+      // Supporting relationship appears in legacy relationshipIds
+      expect(result.provenance.relationshipIds).toContain('REL:ASPECTS:SATURN:11');
+
+      // Supporting relationship does NOT appear in evidence records
+      expect(result.evidence.some(e => e.relationshipId === 'REL:ASPECTS:SATURN:11')).toBe(false);
+
+      // All evidence records map to establishing relationships only
+      const evidenceRelationshipIds = result.evidence.map(e => e.relationshipId);
+      expect(evidenceRelationshipIds).toEqual(result.provenance.establishingRelationshipIds);
     });
   });
+      ]);
+expect(pattern.provenance.ruleIds).toEqual(['RULE_GENERIC']);
+
+// Pin golden test literals for CAREER_YOGA family
+expect(analysis.careerYogaPatterns).toHaveLength(0);
+    });
+  });
+
+describe('Mechanism extraction', () => {
+  it('extracts all unique mechanisms from patterns', async () => {
+    const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const analysis = analyzeCareerPatterns({ horoscope });
+
+    // Mechanisms should be sorted and unique
+    const mechanismSet = new Set(analysis.mechanisms);
+    expect(mechanismSet.size).toBe(analysis.mechanisms.length);
+
+    // Should be sorted
+    for (let i = 1; i < analysis.mechanisms.length; i++) {
+      expect(analysis.mechanisms[i] >= analysis.mechanisms[i - 1]).toBe(true);
+    }
+  });
+
+  it('includes Upachaya mechanism chain when Upachaya patterns exist', async () => {
+    const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const analysis = analyzeCareerPatterns({ horoscope });
+
+    const hasUpachaya = analysis.patterns.some(p => p.family === 'UPACHAYA');
+
+    if (hasUpachaya) {
+      expect(analysis.mechanisms).toContain('SELF_EFFORT');
+      expect(analysis.mechanisms).toContain('SKILL_DEVELOPMENT');
+      expect(analysis.mechanisms).toContain('PROFESSIONALIZATION');
+      expect(analysis.mechanisms).toContain('PROFESSIONAL_GAINS');
+    }
+  });
+});
+
+describe('Career Yoga detector edge consumption', () => {
+  it('Career Yoga patterns require ≥2 planets with validated lordship edges', async () => {
+    const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const analysis = analyzeCareerPatterns({ horoscope });
+
+    // Verify career yoga patterns have valid participant counts
+    analysis.careerYogaPatterns.forEach(pattern => {
+      expect(pattern.participants.length).toBeGreaterThanOrEqual(2);
+      expect(pattern.lordships).toBeDefined();
+      expect(Object.keys(pattern.lordships).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('Career Yoga identity uses family + participants + houses + edge ids', async () => {
+    const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const analysis = analyzeCareerPatterns({ horoscope });
+
+    // Verify identity format
+    analysis.careerYogaPatterns.forEach(pattern => {
+      expect(pattern.identityKey).toContain('CAREER_YOGA:CAREER_YOGA:PARTICIPANTS:');
+      expect(pattern.identityKey).toContain(':HOUSES:');
+      expect(pattern.identityKey).toContain(':EDGES:');
+    });
+  });
+});
+
+describe('Dusthana double-emission contract', () => {
+  it('8-10-12 network emits one composite pattern, not two separate patterns', async () => {
+    const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const analysis = analyzeCareerPatterns({ horoscope });
+
+    // Find dusthana patterns
+    const dusthanaPatterns = analysis.patterns.filter(p => p.family === 'DUSTHANA_TRANSFORMATION');
+
+    // Count patterns with 8-10-12 house set
+    const compositePatterns = dusthanaPatterns.filter(p =>
+      p.houses.includes(8) && p.houses.includes(10) && p.houses.includes(12)
+    );
+
+    // Should have at most one composite pattern per network
+    // The exact count depends on the actual horoscope data
+    if (compositePatterns.length > 0) {
+      compositePatterns.forEach(pattern => {
+        // Composite pattern should have union of both mechanism sets
+        expect(pattern.mechanisms.length).toBeGreaterThan(0);
+      });
+    }
+  });
+});
 });

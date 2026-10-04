@@ -33,8 +33,8 @@ import type { CareerPatternClassificationProvenance, CareerPatternClassification
  * Input for building pattern provenance.
  */
 export interface BuildPatternProvenanceInput {
+  readonly sourceNetworkIds: readonly string[];
   readonly ruleId: string;
-  readonly networkId: string;
   readonly establishingRelationshipIds: readonly string[];
   readonly supportingRelationshipIds?: readonly string[];
 }
@@ -108,13 +108,16 @@ function dedupeAndSort(ids: readonly string[]): readonly string[] {
 }
 
 /**
- * Derives an evidence ID from a relationship ID using the frozen deterministic formula.
- * Formula: P2-06D-EVIDENCE:{relationshipId}
+ * Derives an evidence ID from rule, network, and relationship using the frozen deterministic formula.
+ * Formula: P2-06D-EVIDENCE:{ruleId}:{networkId}:{relationshipId}
+ *
+ * Evidence identity is the tuple (ruleId, networkId, relationshipId) with evidenceId as its
+ * deterministic rendering — not independently meaningful.
  *
  * This formula is stable and must not be changed without a migration plan.
  */
-function deriveEvidenceId(relationshipId: string): string {
-  return `P2-06D-EVIDENCE:${relationshipId}`;
+function deriveEvidenceId(ruleId: string, networkId: string, relationshipId: string): string {
+  return `P2-06D-EVIDENCE:${ruleId}:${networkId}:${relationshipId}`;
 }
 
 /**
@@ -127,7 +130,7 @@ function deriveEvidenceId(relationshipId: string): string {
  * (d) Derives per-relationship evidence IDs using the frozen deterministic formula
  * (e) Returns deeply frozen collections and provenance object
  *
- * @param input - The provenance input with rule ID, network ID, and relationship IDs
+ * @param input - The provenance input with source network IDs, rule ID, and relationship IDs
  * @param network - The career house network to validate against
  * @returns BuildPatternProvenanceResult with provenance and evidence records
  * @throws RelationshipNotFoundError if any relationship ID is not found in the network
@@ -146,7 +149,7 @@ export function buildPatternProvenance(
   // Deduplicate and sort all ID collections
   const establishingIds = dedupeAndSort(input.establishingRelationshipIds);
   const supportingIds = dedupeAndSort(input.supportingRelationshipIds || []);
-  const sourceNetworkIds = dedupeAndSort([input.networkId]);
+  const sourceNetworkIds = dedupeAndSort(input.sourceNetworkIds);
   const ruleIds = dedupeAndSort([input.ruleId]);
 
   // For backward compatibility, relationshipIds = establishing ∪ supporting
@@ -164,10 +167,12 @@ export function buildPatternProvenance(
   // Build evidence records - one per establishing relationship
   const evidence: CareerPatternClassificationEvidence[] = [];
   for (const relationshipId of establishingIds) {
+    // Use the first networkId for evidence ID derivation (for single-network patterns)
+    const networkId = sourceNetworkIds[0];
     const evidenceRecord: CareerPatternClassificationEvidence = Object.freeze({
-      evidenceId: deriveEvidenceId(relationshipId),
+      evidenceId: deriveEvidenceId(input.ruleId, networkId, relationshipId),
       ruleId: input.ruleId,
-      sourceNetworkId: input.networkId,
+      sourceNetworkId: networkId,
       sourceNetworkIdentityKey: network.identityKey,
       relationshipId
     });

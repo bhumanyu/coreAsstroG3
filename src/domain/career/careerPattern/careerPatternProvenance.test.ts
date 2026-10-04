@@ -65,8 +65,8 @@ describe('careerPatternProvenance', () => {
 
       const result = buildPatternProvenance(
         {
+          sourceNetworkIds: ['NETWORK:TEST'],
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -91,7 +91,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -113,7 +113,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -133,7 +133,7 @@ describe('careerPatternProvenance', () => {
       const result1 = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -142,7 +142,7 @@ describe('careerPatternProvenance', () => {
       const result2 = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:LORD_OF:SATURN:6']
         },
         network
@@ -224,14 +224,14 @@ describe('careerPatternProvenance', () => {
 
       const result = buildPatternProvenance(
         {
+          sourceNetworkIds: ['NETWORK:TEST'],
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10']
         },
         network
       );
 
-      expect(result.evidence[0].evidenceId).toBe('P2-06D-EVIDENCE:REL:LORD_OF:SATURN:10');
+      expect(result.evidence[0].evidenceId).toBe('P2-06D-EVIDENCE:RULE_TEST:NETWORK:TEST:REL:LORD_OF:SATURN:10');
       expect(result.evidence[0].relationshipId).toBe('REL:LORD_OF:SATURN:10');
     });
 
@@ -245,7 +245,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -266,7 +266,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -286,7 +286,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10']
         },
         network
@@ -307,7 +307,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10']
         },
         network
@@ -335,7 +335,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10']
         },
         network
@@ -361,7 +361,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10'],
           supportingRelationshipIds: ['REL:ASPECTS:SATURN:11']
         },
@@ -384,7 +384,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10']
         },
         network
@@ -404,7 +404,7 @@ describe('careerPatternProvenance', () => {
       const result = buildPatternProvenance(
         {
           ruleId: 'RULE_TEST',
-          networkId: 'NETWORK:TEST',
+          sourceNetworkIds: ['NETWORK:TEST'],
           establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:LORD_OF:SATURN:6'],
           supportingRelationshipIds: ['REL:ASPECTS:SATURN:11']
         },
@@ -416,6 +416,131 @@ describe('careerPatternProvenance', () => {
         'REL:LORD_OF:SATURN:6'
       ]);
       expect(result.provenance.supportingRelationshipIds).toEqual(['REL:ASPECTS:SATURN:11']);
+    });
+
+    it('creates evidence only for establishing relationships, not supporting', () => {
+      const relationship1 = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:6' });
+      const relationship2 = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:10' });
+      const relationship3 = makeRelationship({ identityKey: 'REL:ASPECTS:SATURN:11' });
+      const network = makeNetwork({
+        relationships: [relationship1, relationship2, relationship3]
+      });
+
+      const result = buildPatternProvenance(
+        {
+          sourceNetworkIds: ['NETWORK:TEST'],
+          ruleId: 'RULE_TEST',
+          establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10'],
+          supportingRelationshipIds: ['REL:ASPECTS:SATURN:11']
+        },
+        network
+      );
+
+      // Evidence count matches establishing relationships only
+      expect(result.evidence).toHaveLength(2);
+      expect(result.evidence[0].relationshipId).toBe('REL:LORD_OF:SATURN:10');
+      expect(result.evidence[1].relationshipId).toBe('REL:LORD_OF:SATURN:6');
+
+      // No evidence for supporting relationship
+      expect(result.evidence.some(e => e.relationshipId === 'REL:ASPECTS:SATURN:11')).toBe(false);
+    });
+
+    it('supporting relationships do not alter identity - same establishing IDs produce same identity', () => {
+      const relationship1 = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:6' });
+      const relationship2 = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:10' });
+      const relationship3 = makeRelationship({ identityKey: 'REL:ASPECTS:SATURN:11' });
+      const network = makeNetwork({
+        relationships: [relationship1, relationship2, relationship3]
+      });
+
+      const resultWithoutSupporting = buildPatternProvenance(
+        {
+          sourceNetworkIds: ['NETWORK:TEST'],
+          ruleId: 'RULE_TEST',
+          establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10'],
+          supportingRelationshipIds: []
+        },
+        network
+      );
+
+      const resultWithSupporting = buildPatternProvenance(
+        {
+          sourceNetworkIds: ['NETWORK:TEST'],
+          ruleId: 'RULE_TEST',
+          establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10'],
+          supportingRelationshipIds: ['REL:ASPECTS:SATURN:11']
+        },
+        network
+      );
+
+      // Establishing IDs should be identical
+      expect(resultWithoutSupporting.provenance.establishingRelationshipIds)
+        .toEqual(resultWithSupporting.provenance.establishingRelationshipIds);
+
+      // Supporting IDs differ
+      expect(resultWithoutSupporting.provenance.supportingRelationshipIds).toEqual([]);
+      expect(resultWithSupporting.provenance.supportingRelationshipIds).toEqual(['REL:ASPECTS:SATURN:11']);
+
+      // Legacy relationshipIds includes supporting
+      expect(resultWithoutSupporting.provenance.relationshipIds).toEqual([
+        'REL:LORD_OF:SATURN:10',
+        'REL:LORD_OF:SATURN:6'
+      ]);
+      expect(resultWithSupporting.provenance.relationshipIds).toEqual([
+        'REL:ASPECTS:SATURN:11',
+        'REL:LORD_OF:SATURN:10',
+        'REL:LORD_OF:SATURN:6'
+      ]);
+    });
+
+    it('asymmetry invariant: supporting relationships are provenance only, not evidence', () => {
+      const relationship1 = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:6' });
+      const relationship2 = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:10' });
+      const relationship3 = makeRelationship({ identityKey: 'REL:ASPECTS:SATURN:11' });
+      const network = makeNetwork({
+        relationships: [relationship1, relationship2, relationship3]
+      });
+
+      const result = buildPatternProvenance(
+        {
+          sourceNetworkIds: ['NETWORK:TEST'],
+          ruleId: 'RULE_TEST',
+          establishingRelationshipIds: ['REL:LORD_OF:SATURN:6', 'REL:LORD_OF:SATURN:10'],
+          supportingRelationshipIds: ['REL:ASPECTS:SATURN:11']
+        },
+        network
+      );
+
+      // Supporting relationship appears in provenance.supportingRelationshipIds
+      expect(result.provenance.supportingRelationshipIds).toContain('REL:ASPECTS:SATURN:11');
+
+      // Supporting relationship appears in legacy relationshipIds
+      expect(result.provenance.relationshipIds).toContain('REL:ASPECTS:SATURN:11');
+
+      // Supporting relationship does NOT appear in evidence records
+      expect(result.evidence.some(e => e.relationshipId === 'REL:ASPECTS:SATURN:11')).toBe(false);
+
+      // All evidence records map to establishing relationships only
+      const evidenceRelationshipIds = result.evidence.map(e => e.relationshipId);
+      expect(evidenceRelationshipIds).toEqual(result.provenance.establishingRelationshipIds);
+    });
+
+    it('throws RelationshipNotFoundError for fabricated establishing relationship ID (no fallback)', () => {
+      const relationship = makeRelationship({ identityKey: 'REL:LORD_OF:SATURN:10' });
+      const network = makeNetwork({
+        relationships: [relationship]
+      });
+
+      expect(() => {
+        buildPatternProvenance(
+          {
+            sourceNetworkIds: ['NETWORK:TEST'],
+            ruleId: 'RULE_TEST',
+            establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:DOES_NOT_EXIST']
+          },
+          network
+        );
+      }).toThrow(RelationshipNotFoundError);
     });
   });
 

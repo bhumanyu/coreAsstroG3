@@ -12,6 +12,7 @@ import {
 import type {
   DusthanaRelationshipValidationResult
 } from './dusthanaRelationshipTypes';
+import { buildPatternProvenance } from './careerPatternProvenance';
 
 /**
  * P2-06B Dusthana Transformation Detector
@@ -121,7 +122,7 @@ function hasValidated12to10Relationship(
  * Mechanisms are derived from structural facts (dusthana-house↔career-house relationship),
  * not from participating planets. Planet-level refinement is deferred to P2-04 qualification.
  *
- * Attaches validation's relationshipIds/evidenceIds/network provenance to pattern.
+ * Uses buildPatternProvenance for strict validation and canonical provenance construction.
  */
 function buildDusthanaPattern(
   network: CareerHouseNetwork,
@@ -133,21 +134,6 @@ function buildDusthanaPattern(
   const topology = network.topology;
   const direction = network.direction;
 
-  const identityKey = buildCareerPatternIdentityKey(
-    family,
-    classification,
-    network.houses,
-    topology,
-    network.relationships.map(r => r.identityKey)
-  );
-
-  const patternId = buildCareerPatternId(identityKey);
-  const name = 'Dusthana Career Transformation';
-
-  // Derive mechanisms from structural relationship type (8↔10 or 12↔10)
-  // Planet-level refinement happens in P2-04 qualification
-  const mechanisms = dusthanaHouse === 8 ? MECHANISMS_8_TO_10 : MECHANISMS_12_TO_10;
-
   // Get validated relationship IDs for this pair
   const validatedRelationships = validationResult.validations.filter(
     (v) =>
@@ -157,30 +143,41 @@ function buildDusthanaPattern(
       v.sourceNetworkIds.includes(network.networkId)
   );
 
-  const relationshipIds: string[] = Array.from(
+  const establishingRelationshipIds: string[] = Array.from(
     new Set(validatedRelationships.flatMap((v) => v.relationshipIds))
   ).sort();
 
-  const evidenceIds: string[] = Array.from(
-    new Set(validatedRelationships.flatMap((v) => v.evidenceIds))
-  ).sort();
+  const ruleIds = Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort();
+  const ruleId = ruleIds[0] || `RULE_DUSTHANA_${dusthanaHouse}_TO_10`;
 
-  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze(
-    validatedRelationships.map((v) => ({
-      evidenceId: v.evidenceIds[0] || `EVIDENCE:${v.validationId}`,
-      ruleId: v.provenance.ruleIds[0] || `RULE_DUSTHANA_${dusthanaHouse}_TO_10`,
-      sourceNetworkId: network.networkId,
-      sourceNetworkIdentityKey: network.identityKey
-    }))
+  // Use buildPatternProvenance for validation and canonical construction
+  const provenanceResult = buildPatternProvenance(
+    {
+      sourceNetworkIds: [network.networkId],
+      ruleId,
+      establishingRelationshipIds,
+      supportingRelationshipIds: []
+    },
+    network
   );
 
-  const provenance: CareerPatternClassificationProvenance = {
-    sourceNetworkIds: [network.networkId],
-    relationshipIds,
-    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort(),
-    establishingRelationshipIds: relationshipIds,
-    supportingRelationshipIds: []
-  };
+  const relationshipIds = provenanceResult.provenance.relationshipIds;
+
+  // P2-06D: Identity consumes establishingRelationshipIds ONLY (not all network edges)
+  const identityKey = buildCareerPatternIdentityKey(
+    family,
+    classification,
+    network.houses,
+    topology,
+    establishingRelationshipIds
+  );
+
+  const patternId = buildCareerPatternId(identityKey);
+  const name = 'Dusthana Career Transformation';
+
+  // Derive mechanisms from structural relationship type (8↔10 or 12↔10)
+  // Planet-level refinement happens in P2-04 qualification
+  const mechanisms = dusthanaHouse === 8 ? MECHANISMS_8_TO_10 : MECHANISMS_12_TO_10;
 
   return Object.freeze({
     patternId,
@@ -198,8 +195,8 @@ function buildDusthanaPattern(
     relationshipIds,
     mechanisms,
     relationships: [],
-    evidence,
-    provenance
+    evidence: provenanceResult.evidence,
+    provenance: provenanceResult.provenance
   });
 }
 
@@ -261,7 +258,7 @@ export function detectDusthanaPatterns(
  * Builds a composite dusthana pattern for networks with both 8↔10 and 12↔10 relationships.
  * Mechanisms are the union of both mechanism sets.
  *
- * Attaches validation's relationshipIds/evidenceIds/network provenance to pattern.
+ * Uses buildPatternProvenance for strict validation and canonical provenance construction.
  */
 function buildCompositeDusthanaPattern(
   network: CareerHouseNetwork,
@@ -272,20 +269,6 @@ function buildCompositeDusthanaPattern(
   const topology = network.topology;
   const direction = network.direction;
 
-  const identityKey = buildCareerPatternIdentityKey(
-    family,
-    classification,
-    network.houses,
-    topology,
-    network.relationships.map(r => r.identityKey)
-  );
-
-  const patternId = buildCareerPatternId(identityKey);
-  const name = 'Dusthana Career Transformation (Composite)';
-
-  // Union of both mechanism sets
-  const mechanisms = [...new Set([...MECHANISMS_8_TO_10, ...MECHANISMS_12_TO_10])].sort();
-
   // Get validated relationship IDs for both pairs
   const validatedRelationships = validationResult.validations.filter(
     (v) =>
@@ -295,30 +278,40 @@ function buildCompositeDusthanaPattern(
       v.sourceNetworkIds.includes(network.networkId))
   );
 
-  const relationshipIds: string[] = Array.from(
+  const establishingRelationshipIds: string[] = Array.from(
     new Set(validatedRelationships.flatMap((v) => v.relationshipIds))
   ).sort();
 
-  const evidenceIds: string[] = Array.from(
-    new Set(validatedRelationships.flatMap((v) => v.evidenceIds))
-  ).sort();
+  const ruleIds = Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort();
+  const ruleId = ruleIds[0] || 'RULE_DUSTHANA_COMPOSITE_8_12_TO_10';
 
-  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze(
-    validatedRelationships.map((v) => ({
-      evidenceId: v.evidenceIds[0] || `EVIDENCE:${v.validationId}`,
-      ruleId: v.provenance.ruleIds[0] || 'RULE_DUSTHANA_COMPOSITE_8_12_TO_10',
-      sourceNetworkId: network.networkId,
-      sourceNetworkIdentityKey: network.identityKey
-    }))
+  // Use buildPatternProvenance for validation and canonical construction
+  const provenanceResult = buildPatternProvenance(
+    {
+      sourceNetworkIds: [network.networkId],
+      ruleId,
+      establishingRelationshipIds,
+      supportingRelationshipIds: []
+    },
+    network
   );
 
-  const provenance: CareerPatternClassificationProvenance = {
-    sourceNetworkIds: [network.networkId],
-    relationshipIds,
-    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort(),
-    establishingRelationshipIds: relationshipIds,
-    supportingRelationshipIds: []
-  };
+  const relationshipIds = provenanceResult.provenance.relationshipIds;
+
+  // P2-06D: Identity consumes establishingRelationshipIds ONLY (not all network edges)
+  const identityKey = buildCareerPatternIdentityKey(
+    family,
+    classification,
+    network.houses,
+    topology,
+    establishingRelationshipIds
+  );
+
+  const patternId = buildCareerPatternId(identityKey);
+  const name = 'Dusthana Career Transformation (Composite)';
+
+  // Union of both mechanism sets
+  const mechanisms = [...new Set([...MECHANISMS_8_TO_10, ...MECHANISMS_12_TO_10])].sort();
 
   return Object.freeze({
     patternId,
@@ -336,7 +329,7 @@ function buildCompositeDusthanaPattern(
     relationshipIds,
     mechanisms,
     relationships: [],
-    evidence,
-    provenance
+    evidence: provenanceResult.evidence,
+    provenance: provenanceResult.provenance
   });
 }

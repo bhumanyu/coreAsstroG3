@@ -13,6 +13,7 @@ import { detectDusthanaPatterns } from './dusthanaTransformationDetector';
 import { detectCareerYogaPatterns } from './careerYogaDetector';
 import { detectKendraTrikonaPatterns } from './kendraTrikonaDetector';
 import { UPACHAYA_MECHANISM_CHAIN } from './careerPatternClassificationRules';
+import { canonicalizeProvenance } from './careerPatternProvenance';
 
 /**
  * P2-06D Career Pattern Analysis Orchestrator
@@ -327,11 +328,52 @@ export function analyzeCareerPatterns(
   for (const pattern of allPatterns) {
     const existing = patternMap.get(pattern.identityKey);
     if (existing) {
+      // Merge networkIds (sorted-unique)
+      const mergedNetworkIds = [...new Set([...existing.networkIds, ...pattern.networkIds])].sort();
+
+      // Merge relationshipIds (sorted-unique)
+      const mergedRelationshipIds = [...new Set([...existing.relationshipIds, ...pattern.relationshipIds])].sort();
+
       // Merge mechanisms (sorted-unique)
       const mergedMechanisms = [...new Set([...existing.mechanisms, ...pattern.mechanisms])].sort();
+
+      // Merge relationships (dedup by relationshipId, sorted)
+      const relationshipMap = new Map<string, typeof pattern.relationships[0]>();
+      for (const r of [...existing.relationships, ...pattern.relationships]) {
+        relationshipMap.set(r.relationshipId, r);
+      }
+      const mergedRelationships = Array.from(relationshipMap.values()).sort((a, b) => a.relationshipId.localeCompare(b.relationshipId));
+
+      // Merge evidence (dedup by evidenceId, sorted)
+      const evidenceMap = new Map<string, typeof pattern.evidence[0]>();
+      for (const e of [...existing.evidence, ...pattern.evidence]) {
+        evidenceMap.set(e.evidenceId, e);
+      }
+      const mergedEvidence = Array.from(evidenceMap.values()).sort((a, b) => a.evidenceId.localeCompare(b.evidenceId));
+
+      // Merge provenance using canonicalizeProvenance
+      const mergedSourceNetworkIds = [...new Set([...existing.provenance.sourceNetworkIds, ...pattern.provenance.sourceNetworkIds])].sort();
+      const mergedEstablishingRelationshipIds = [...new Set([...existing.provenance.establishingRelationshipIds, ...pattern.provenance.establishingRelationshipIds])].sort();
+      const mergedSupportingRelationshipIds = [...new Set([...existing.provenance.supportingRelationshipIds, ...pattern.provenance.supportingRelationshipIds])].sort();
+      const mergedRuleIds = [...new Set([...existing.provenance.ruleIds, ...pattern.provenance.ruleIds])].sort();
+      const mergedProvenanceRelationshipIds = [...new Set([...existing.provenance.relationshipIds, ...pattern.provenance.relationshipIds])].sort();
+
+      const mergedProvenance = Object.freeze({
+        sourceNetworkIds: mergedSourceNetworkIds,
+        relationshipIds: mergedProvenanceRelationshipIds,
+        ruleIds: mergedRuleIds,
+        establishingRelationshipIds: mergedEstablishingRelationshipIds,
+        supportingRelationshipIds: mergedSupportingRelationshipIds
+      });
+
       const mergedPattern: CareerPattern = Object.freeze({
         ...existing,
-        mechanisms: mergedMechanisms
+        networkIds: mergedNetworkIds,
+        relationshipIds: mergedRelationshipIds,
+        mechanisms: mergedMechanisms,
+        relationships: mergedRelationships,
+        evidence: mergedEvidence,
+        provenance: mergedProvenance
       });
       patternMap.set(pattern.identityKey, mergedPattern);
     } else {

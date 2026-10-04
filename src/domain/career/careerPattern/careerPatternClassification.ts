@@ -11,7 +11,7 @@ import type {
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import { classifyCareerHouseNetwork, type CareerPatternRuleMatch } from './careerPatternClassificationRules';
-import { buildPatternProvenance } from './careerPatternProvenance';
+import { buildPatternProvenance, canonicalizeProvenance } from './careerPatternProvenance';
 
 /**
  * P2-03 Career Pattern Classification
@@ -75,8 +75,8 @@ function buildCareerPattern(
   // Use buildPatternProvenance to construct provenance with validation
   const provenanceResult = buildPatternProvenance(
     {
+      sourceNetworkIds: [network.networkId],
       ruleId: match.ruleId,
-      networkId: network.networkId,
       establishingRelationshipIds: match.establishingRelationshipIds,
       supportingRelationshipIds: match.supportingRelationshipIds || []
     },
@@ -84,13 +84,15 @@ function buildCareerPattern(
   );
 
   const relationshipIds = provenanceResult.provenance.relationshipIds;
+  const establishingRelationshipIds = provenanceResult.provenance.establishingRelationshipIds;
 
+  // P2-06D: Identity consumes establishingRelationshipIds ONLY (not all network edges)
   const identityKey = buildCareerPatternIdentityKey(
     match.family,
     match.classification,
     network.houses,
     network.topology,
-    relationshipIds
+    establishingRelationshipIds
   );
 
   const patternId = buildCareerPatternId(identityKey);
@@ -137,6 +139,7 @@ function buildCareerPattern(
  * Merges mechanisms (sorted-unique) and relationships by relationshipId.
  *
  * P2-06D: Extended to merge establishingRelationshipIds and supportingRelationshipIds (sorted-unique).
+ * Uses canonicalizeProvenance to normalize provenance during merge.
  */
 function deduplicatePatterns(patterns: readonly CareerPattern[]): readonly CareerPattern[] {
   const patternMap = new Map<string, CareerPattern>();

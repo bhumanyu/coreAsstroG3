@@ -3,6 +3,7 @@ import type { CareerPattern, CareerPatternClassification, CareerPatternClassific
 import type { CareerPatternHouseRole } from './careerPatternTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import { Planet } from '../../../types';
+import { buildPatternProvenance } from './careerPatternProvenance';
 
 /**
  * P2-06D Kendra-Trikona Detector
@@ -267,6 +268,7 @@ function classifyKendraTrikona(network: CareerHouseNetwork): {
 
 /**
  * Builds a Kendra-Trikona pattern from a network.
+ * Uses buildPatternProvenance for strict validation and canonical provenance construction.
  */
 function buildKendraTrikonaPattern(
   network: CareerHouseNetwork,
@@ -277,12 +279,27 @@ function buildKendraTrikonaPattern(
   const topology = network.topology;
   const direction = network.direction;
 
+  // Use buildPatternProvenance for validation and canonical construction
+  const establishingRelationshipIds = network.relationships.map(r => r.identityKey).sort();
+  const provenanceResult = buildPatternProvenance(
+    {
+      sourceNetworkIds: [network.networkId],
+      ruleId,
+      establishingRelationshipIds,
+      supportingRelationshipIds: []
+    },
+    network
+  );
+
+  const relationshipIds = provenanceResult.provenance.relationshipIds;
+
+  // P2-06D: Identity consumes establishingRelationshipIds ONLY (not all network edges)
   const identityKey = buildCareerPatternIdentityKey(
     family,
     classification,
     network.houses,
     topology,
-    network.relationships.map(r => r.identityKey)
+    establishingRelationshipIds
   );
 
   const patternId = buildCareerPatternId(identityKey);
@@ -291,23 +308,6 @@ function buildKendraTrikonaPattern(
   // Kendra-Trikona patterns don't have specific mechanisms at this layer
   // Mechanisms are inferred in the qualification layer
   const mechanisms: readonly CareerMechanism[] = [];
-
-  const relationshipIds = network.relationships.map(r => r.identityKey).sort();
-
-  const evidence: readonly CareerPatternClassificationEvidence[] = Object.freeze([{
-    evidenceId: `P2-06D-EVIDENCE:KENDRA_TRIKONA:${ruleId}:${network.identityKey}`,
-    ruleId,
-    sourceNetworkId: network.networkId,
-    sourceNetworkIdentityKey: network.identityKey
-  }]);
-
-  const provenance: CareerPatternClassificationProvenance = {
-    sourceNetworkIds: [network.networkId],
-    relationshipIds,
-    ruleIds: [ruleId],
-    establishingRelationshipIds: relationshipIds,
-    supportingRelationshipIds: []
-  };
 
   return Object.freeze({
     patternId,
@@ -325,8 +325,8 @@ function buildKendraTrikonaPattern(
     relationshipIds,
     mechanisms,
     relationships: [],
-    evidence,
-    provenance
+    evidence: provenanceResult.evidence,
+    provenance: provenanceResult.provenance
   });
 }
 
