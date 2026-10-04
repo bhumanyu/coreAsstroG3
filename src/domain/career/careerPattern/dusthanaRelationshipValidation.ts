@@ -32,6 +32,8 @@ import {
  *
  * Follows P2-06A's frozen relationship semantics in careerPatternPredicates.ts.
  *
+ * See docs/career/phase2/P2-06B-DUSTHANA-RELATIONSHIP-VALIDATION.md for detailed semantics.
+ *
  * BOUNDARY ENFORCEMENT: This module must NOT import from:
  * - careerDasha
  * - careerD10
@@ -450,22 +452,83 @@ function detectHousePlacement(
  * Shared planet participation with no direct edge.
  * Uses hasPlanetMediatedRelationship from P2-06A predicates.
  *
- * NOTE: This detector stays coarse (returns empty array when detected) because PLANET_MEDIATED
- * is defined by the ABSENCE of direct house-to-house relationships. Collecting edge IDs would
- * require tracking all participating edges (lordship, OCCUPIES, ASPECTS) that establish the
- * shared participation, which is complex and potentially misleading since the relationship
- * is semantically about what's NOT present rather than what IS present.
+ * Returns the establishing edge IDs: the shared planet's LORD_OF/OCCUPIES/ASPECTS edges
+ * into both dusthanaHouse and careerAnchorHouse. These shared-participation edges are the
+ * establishing evidence for the PLANET_MEDIATED relationship.
  */
 function detectPlanetMediated(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
 ): readonly string[] {
-  if (hasPlanetMediatedRelationship(network, dusthanaHouse, careerAnchorHouse)) {
-    // Return empty array to indicate detection without specific edge IDs
+  if (!hasPlanetMediatedRelationship(network, dusthanaHouse, careerAnchorHouse)) {
     return Object.freeze([]);
   }
-  return Object.freeze([]);
+
+  const matchedKeys: string[] = [];
+  const lordshipMap = buildLordshipMap(network.relationships);
+
+  // Find planets that participate in both houses via lordship
+  const sharedPlanets: Set<Planet> = new Set();
+  for (const [planet, houses] of lordshipMap) {
+    if (houses.has(dusthanaHouse) && houses.has(careerAnchorHouse)) {
+      sharedPlanets.add(planet);
+    }
+  }
+
+  // Find planets that participate in both houses via OCCUPIES
+  const occupiedByDusthana: Set<Planet> = new Set();
+  const occupiedByAnchor: Set<Planet> = new Set();
+  for (const edge of network.relationships) {
+    if (edge.type === 'OCCUPIES') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+      if (planet && house !== null) {
+        if (house === dusthanaHouse) occupiedByDusthana.add(planet);
+        if (house === careerAnchorHouse) occupiedByAnchor.add(planet);
+      }
+    }
+  }
+  for (const planet of occupiedByDusthana) {
+    if (occupiedByAnchor.has(planet)) {
+      sharedPlanets.add(planet);
+    }
+  }
+
+  // Find planets that participate in both houses via ASPECTS
+  const aspectedByDusthana: Set<Planet> = new Set();
+  const aspectedByAnchor: Set<Planet> = new Set();
+  for (const edge of network.relationships) {
+    if (edge.type === 'ASPECTS') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+      if (planet && house !== null) {
+        if (house === dusthanaHouse) aspectedByDusthana.add(planet);
+        if (house === careerAnchorHouse) aspectedByAnchor.add(planet);
+      }
+    }
+  }
+  for (const planet of aspectedByDusthana) {
+    if (aspectedByAnchor.has(planet)) {
+      sharedPlanets.add(planet);
+    }
+  }
+
+  // Collect all edges from shared planets to either house
+  for (const edge of network.relationships) {
+    const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+    const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+    if (planet && house !== null && sharedPlanets.has(planet)) {
+      if (house === dusthanaHouse || house === careerAnchorHouse) {
+        if (edge.type === 'LORD_OF' || edge.type === 'OCCUPIES' || edge.type === 'ASPECTS') {
+          matchedKeys.push(edge.identityKey);
+        }
+      }
+    }
+  }
+
+  return Object.freeze(Array.from(new Set(matchedKeys)).sort());
 }
 
 /**
@@ -485,14 +548,29 @@ function hasSufficientData(
 }
 
 /**
+ * Structured evidence candidate for a detected relationship.
+ * Tracks which edge established the relationship in which network.
+ */
+interface EvidenceCandidate {
+  networkId: string;
+  networkIdentityKey: string;
+  relationshipId: string;
+  relationshipType: DusthanaRelationshipType;
+  dusthanaHouse: number;
+  careerAnchorHouse: number;
+}
+
+/**
  * Validates relationships for a specific dusthana-anchor pair across all networks.
+ * Returns validations with structured evidence candidates attached.
  */
 function validatePair(
   networks: readonly CareerHouseNetwork[],
   dusthanaHouse: number,
   careerAnchorHouse: number
-): DusthanaRelationshipValidation[] {
+): { validations: DusthanaRelationshipValidation[]; evidenceCandidates: EvidenceCandidate[] } {
   const validations: DusthanaRelationshipValidation[] = [];
+  const evidenceCandidates: EvidenceCandidate[] = [];
   const pairKey = `H${dusthanaHouse}:H${careerAnchorHouse}`;
 
   // Find networks containing both houses
@@ -519,7 +597,7 @@ function validatePair(
       }
     };
     validations.push(validation);
-    return validations;
+    return { validations, evidenceCandidates };
   }
 
   // Check for sufficient data in relevant networks
@@ -546,7 +624,7 @@ function validatePair(
       }
     };
     validations.push(validation);
-    return validations;
+    return { validations, evidenceCandidates };
   }
 
   // Detect each relationship type across all relevant networks
@@ -598,6 +676,18 @@ function validatePair(
         detected = true;
         detectedNetworkIds.push(network.networkId);
         detectedRelationshipIds.push(...ids);
+
+        // Create one evidence candidate per (edge, network) pair
+        for (const relationshipId of ids) {
+          evidenceCandidates.push({
+            networkId: network.networkId,
+            networkIdentityKey: network.identityKey,
+            relationshipId,
+            relationshipType: relType,
+            dusthanaHouse,
+            careerAnchorHouse
+          });
+        }
       }
     }
 
@@ -605,19 +695,15 @@ function validatePair(
       // Dedup relationshipIds
       const uniqueRelationshipIds = Array.from(new Set(detectedRelationshipIds)).sort();
 
-      // Construct evidence records for each detected relationship
+      // Generate evidenceIds deterministically from evidence candidates
       const evidenceIds: string[] = [];
       const uniqueNetworkIds = Array.from(new Set(detectedNetworkIds)).sort();
 
       for (const networkId of uniqueNetworkIds) {
-        // For each network that detected this relationship, create an evidence record
-        const networkIndex = relevantNetworks.findIndex(n => n.networkId === networkId);
-        if (networkIndex !== -1) {
-          const network = relevantNetworks[networkIndex];
-          // Use a unique delimiter that won't appear in network IDs
-          const evidenceId = `EVIDENCE|${relType}|H${dusthanaHouse}|H${careerAnchorHouse}|${networkId}`;
-          evidenceIds.push(evidenceId);
-        }
+        // For each network that detected this relationship, create an evidenceId
+        // Format: EVIDENCE|<type>|H<dusthana>|H<anchor>|<networkId>
+        const evidenceId = `EVIDENCE|${relType}|H${dusthanaHouse}|H${careerAnchorHouse}|${networkId}`;
+        evidenceIds.push(evidenceId);
       }
 
       const validation: DusthanaRelationshipValidation = {
@@ -661,7 +747,7 @@ function validatePair(
     validations.push(validation);
   }
 
-  return validations;
+  return { validations, evidenceCandidates };
 }
 
 /**
@@ -686,12 +772,14 @@ export function validateDusthanaRelationships(
   config: DusthanaRelationshipValidationConfig = DEFAULT_DUSTHANA_RELATIONSHIP_VALIDATION_CONFIG
 ): DusthanaRelationshipValidationResult {
   const allValidations: DusthanaRelationshipValidation[] = [];
+  const allEvidenceCandidates: EvidenceCandidate[] = [];
 
   // Validate each dusthana-anchor pair
   for (const dusthanaHouse of config.dusthanaHouses) {
     for (const careerAnchorHouse of config.careerAnchorHouses) {
-      const pairValidations = validatePair(networks, dusthanaHouse, careerAnchorHouse);
-      allValidations.push(...pairValidations);
+      const { validations, evidenceCandidates } = validatePair(networks, dusthanaHouse, careerAnchorHouse);
+      allValidations.push(...validations);
+      allEvidenceCandidates.push(...evidenceCandidates);
     }
   }
 
@@ -725,30 +813,22 @@ export function validateDusthanaRelationships(
     allParentIds
   );
 
-  // Construct evidence records for all validated relationships
+  // Construct evidence records from structured candidates - one per relationshipId
   const evidence: DusthanaRelationshipEvidence[] = [];
-  for (const validation of allValidations) {
-    if (validation.status === 'VALIDATED') {
-      for (const evidenceId of validation.evidenceIds) {
-        // Parse the networkId from the evidenceId (format: EVIDENCE|TYPE|H#|H#|NETWORK_ID)
-        const parts = evidenceId.split('|');
-        const networkId = parts[4];
-        const network = networks.find(n => n.networkId === networkId);
+  for (const candidate of allEvidenceCandidates) {
+    // Generate evidenceId deterministically from structured fields
+    const evidenceId = `EVIDENCE|${candidate.relationshipType}|H${candidate.dusthanaHouse}|H${candidate.careerAnchorHouse}|${candidate.networkId}|${candidate.relationshipId}`;
 
-        if (network) {
-          const evidenceRecord: DusthanaRelationshipEvidence = {
-            evidenceId,
-            relationshipId: validation.relationshipIds.join(','), // Reference the establishing edges
-            relationshipType: validation.relationshipType,
-            dusthanaHouse: validation.dusthanaHouse,
-            careerAnchorHouse: validation.careerAnchorHouse,
-            sourceNetworkId: networkId,
-            sourceNetworkIdentityKey: network.identityKey
-          };
-          evidence.push(evidenceRecord);
-        }
-      }
-    }
+    const evidenceRecord: DusthanaRelationshipEvidence = {
+      evidenceId,
+      relationshipId: candidate.relationshipId, // Single relationshipId, no commas
+      relationshipType: candidate.relationshipType,
+      dusthanaHouse: candidate.dusthanaHouse,
+      careerAnchorHouse: candidate.careerAnchorHouse,
+      sourceNetworkId: candidate.networkId,
+      sourceNetworkIdentityKey: candidate.networkIdentityKey
+    };
+    evidence.push(evidenceRecord);
   }
 
   return Object.freeze({
@@ -762,16 +842,22 @@ export function validateDusthanaRelationships(
 }
 
 /**
- * Aggregates dusthana relationship validation results.
+ * Summarizes dusthana relationship validation results.
+ *
+ * This is a summary-only projection that computes counts and provenance from validations.
+ * It does NOT reconstruct evidence records since it only has validations, not the original networks.
+ * Evidence construction requires network access to resolve sourceNetworkIdentityKey.
+ *
+ * For the canonical validation object with full evidence, use validateDusthanaRelationships directly.
  *
  * Per-pair results are never merged across pairs.
  * Returns counts + deduped sorted relationshipIds.
  * No overall score.
  *
- * @param validations - The validations to aggregate
- * @returns Aggregated validation result
+ * @param validations - The validations to summarize
+ * @returns Summary validation result (evidence array is empty)
  */
-export function aggregateDusthanaRelationshipValidation(
+export function summarizeDusthanaRelationshipValidation(
   validations: readonly DusthanaRelationshipValidation[]
 ): DusthanaRelationshipValidationResult {
   // Count validated and insufficient pairs
@@ -814,10 +900,10 @@ export function aggregateDusthanaRelationshipValidation(
     allParentIds
   );
 
-  // Note: aggregateDusthanaRelationshipValidation does not reconstruct evidence records
+  // Note: summarizeDusthanaRelationshipValidation does not reconstruct evidence records
   // since it only has validations, not the original networks. Evidence construction
   // requires network access to resolve sourceNetworkIdentityKey.
-  // In this case, we return an empty evidence array.
+  // This is a summary-only projection; for full evidence use validateDusthanaRelationships.
   return Object.freeze({
     validations: Object.freeze(validations),
     validatedPairCount: validatedPairs.size,
@@ -826,4 +912,14 @@ export function aggregateDusthanaRelationshipValidation(
     provenance,
     evidence: Object.freeze([])
   });
+}
+
+/**
+ * @deprecated Use summarizeDusthanaRelationshipValidation instead.
+ * This function is kept for backward compatibility but will be removed in a future version.
+ */
+export function aggregateDusthanaRelationshipValidation(
+  validations: readonly DusthanaRelationshipValidation[]
+): DusthanaRelationshipValidationResult {
+  return summarizeDusthanaRelationshipValidation(validations);
 }
