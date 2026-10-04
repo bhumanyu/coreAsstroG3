@@ -511,6 +511,86 @@ describe('Dusthana Relationship Validation', () => {
         expect(evidence.relationshipId).toMatch(/^REL:LORD_OF:SATURN:(8|10)$/);
       }
     });
+
+    it('PLANET_MEDIATED: shared planet with additional participation edges to one house includes all edges as evidence', () => {
+      // Regression test to freeze current behavior:
+      // When a shared planet participates in both houses via OCCUPIES (not lordship), and also has additional
+      // participation edges to one house only (e.g., ASPECTS to house 10), ALL its participation
+      // edges into the pair count as evidence. This is the current implementation behavior.
+      //
+      // Note: We use OCCUPIES for shared participation (not lordship) to avoid triggering COMMON_LORD
+      // detection, which would suppress PLANET_MEDIATED.
+      //
+      // Scenario: Jupiter occupies both 8 and 10 (establishes sharedness via OCCUPIES, not lordship),
+      // and also ASPECTS house 10 only
+      // Expected: All three edges (OCCUPIES:8, OCCUPIES:10, ASPECTS:10) are included as evidence
+      const network = makeNetwork({
+        networkId: 'NETWORK:PLANET-MEDIATED-ADDITIONAL-EDGES',
+        identityKey: 'NETWORK:PLANET-MEDIATED-ADDITIONAL-EDGES',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          // Jupiter occupies both houses (establishes sharedness via OCCUPIES, not lordship)
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:OCCUPIES:JUPITER:8'
+          }),
+          makeRelationship({
+            type: 'OCCUPIES',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:OCCUPIES:JUPITER:10'
+          }),
+          // Jupiter also aspects house 10 (additional participation edge to one house only)
+          makeRelationship({
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:ASPECTS:JUPITER:10'
+          }),
+          // Other lords to provide sufficient data (Saturn lords 8, Mars lords 10)
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+
+      // Should detect PLANET_MEDIATED (no direct house-to-house relationship)
+      const planetMediatedValidations = result.validations.filter(
+        v => v.relationshipType === 'PLANET_MEDIATED' && v.dusthanaHouse === 8 && v.careerAnchorHouse === 10
+      );
+
+      expect(planetMediatedValidations).toHaveLength(1);
+      expect(planetMediatedValidations[0].status).toBe('VALIDATED');
+
+      // Evidence should include ALL Jupiter's participation edges to both houses
+      // (OCCUPIES:8, OCCUPIES:10, ASPECTS:10) - this is the frozen behavior
+      const planetMediatedEvidence = result.evidence.filter(
+        e => e.relationshipType === 'PLANET_MEDIATED' &&
+          e.dusthanaHouse === 8 &&
+          e.careerAnchorHouse === 10
+      );
+
+      expect(planetMediatedEvidence).toHaveLength(3);
+
+      const relationshipIds = planetMediatedEvidence.map(e => e.relationshipId);
+      expect(relationshipIds).toContain('REL:OCCUPIES:JUPITER:8');
+      expect(relationshipIds).toContain('REL:OCCUPIES:JUPITER:10');
+      expect(relationshipIds).toContain('REL:ASPECTS:JUPITER:10');
+    });
   });
 
   describe('Negative cases', () => {
@@ -673,8 +753,73 @@ describe('Dusthana Relationship Validation', () => {
       const result1 = validateDusthanaRelationships([network1, network2]);
       const result2 = validateDusthanaRelationships([network2, network1]);
 
-      // Should produce identical serialized output
+      // Should produce identical serialized output (including evidence)
       expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+
+      // Direct assertion on evidence array equality
+      expect(result1.evidence).toEqual(result2.evidence);
+    });
+
+    it('evidence records are deterministically ordered', () => {
+      const network1 = makeNetwork({
+        networkId: 'NETWORK:8-10',
+        identityKey: 'NETWORK:8-10',
+        houses: [8, 10],
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:SATURN:10'
+          })
+        ]
+      });
+
+      const network2 = makeNetwork({
+        networkId: 'NETWORK:12-10',
+        identityKey: 'NETWORK:12-10',
+        houses: [12, 10],
+        lords: [Planet.JUPITER],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:12',
+            identityKey: 'REL:LORD_OF:JUPITER:12'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:JUPITER:10'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network1, network2]);
+
+      // Evidence should be sorted by: relationshipType, dusthanaHouse, careerAnchorHouse, networkId, relationshipId
+      // For this test:
+      // - COMMON_LORD type
+      // - dusthanaHouse: 8 < 12
+      // - So H8 should come before H12
+      const evidenceIds = result.evidence.map(e => e.evidenceId);
+
+      // Find indices of H8 and H12 evidence
+      const h8EvidenceIndex = evidenceIds.findIndex(id => id.includes('H8|H10'));
+      const h12EvidenceIndex = evidenceIds.findIndex(id => id.includes('H12|H10'));
+
+      // H8 evidence should come before H12 evidence (8 < 12)
+      expect(h8EvidenceIndex).toBeLessThan(h12EvidenceIndex);
+      expect(h8EvidenceIndex).not.toBe(-1);
+      expect(h12EvidenceIndex).not.toBe(-1);
     });
   });
 
@@ -727,6 +872,53 @@ describe('Dusthana Relationship Validation', () => {
       // Relationship IDs should be deduped
       const uniqueRelationshipIds = new Set(result.relationshipIds);
       expect(uniqueRelationshipIds.size).toBe(result.relationshipIds.length);
+    });
+
+    it('dedups evidence candidates: same edge discovered twice yields one evidence record', () => {
+      // Scenario: a network where an edge satisfies multiple detector loops
+      // The same LORD_OF edge REL:LORD_OF:SATURN:8 establishes COMMON_LORD
+      // It should only appear once in evidence, even if multiple detection paths find it
+      const network = makeNetwork({
+        networkId: 'NETWORK:DUPLICATE-DETECTION',
+        identityKey: 'NETWORK:DUPLICATE-DETECTION',
+        houses: [8, 10],
+        lords: [Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:SATURN:10'
+          })
+        ]
+      });
+
+      const result = validateDusthanaRelationships([network]);
+
+      // Evidence records for COMMON_LORD 8↔10
+      const commonLordEvidence = result.evidence.filter(
+        e => e.relationshipType === 'COMMON_LORD' &&
+          e.dusthanaHouse === 8 &&
+          e.careerAnchorHouse === 10
+      );
+
+      // Should have exactly 2 evidence records (one per unique edge)
+      expect(commonLordEvidence).toHaveLength(2);
+
+      // Each should have a unique relationshipId
+      const relationshipIds = commonLordEvidence.map(e => e.relationshipId);
+      const uniqueRelationshipIds = new Set(relationshipIds);
+      expect(uniqueRelationshipIds.size).toBe(2);
+
+      // Verify the relationshipIds are the expected edges
+      expect(relationshipIds).toContain('REL:LORD_OF:SATURN:8');
+      expect(relationshipIds).toContain('REL:LORD_OF:SATURN:10');
     });
   });
 

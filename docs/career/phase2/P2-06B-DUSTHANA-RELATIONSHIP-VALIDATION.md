@@ -44,6 +44,16 @@ The establishing evidence for PLANET_MEDIATED is the shared-participation edges 
 
 These edges are the establishing evidence because they demonstrate the shared participation that defines the relationship, even though the relationship is semantically about what's NOT present (direct edges).
 
+**Frozen Behavior: Additional Participation Edges**
+
+When a shared planet has additional participation edges to one house only (e.g., shared via OCCUPIES to both 8 and 10, plus an ASPECTS edge to house 10 only), ALL its participation edges into the pair count as evidence. This includes:
+- Edges that established the sharedness (OCCUPIES to both houses)
+- Additional edges to either house (ASPECTS to one house, OCCUPIES to one house, etc.)
+
+The current implementation collects all LORD_OF/OCCUPIES/ASPECTS edges from shared planets to either house, regardless of which edges initially established the sharedness. This behavior is frozen and tested via the PLANET_MEDIATED participation regression test.
+
+Note: The test uses OCCUPIES for shared participation (not lordship) to avoid triggering COMMON_LORD detection, which would suppress PLANET_MEDIATED.
+
 ### Evidence Construction
 
 Evidence records are constructed directly from structured evidence candidates generated during validation. The encode-then-parse pattern (previously used to embed metadata in evidenceId strings) has been removed in favor of:
@@ -51,6 +61,39 @@ Evidence records are constructed directly from structured evidence candidates ge
 1. `validatePair` returns structured `EvidenceCandidate` objects containing networkId, networkIdentityKey, relationshipId, relationshipType, and house information
 2. `validateDusthanaRelationships` constructs `DusthanaRelationshipEvidence` records directly from these candidates
 3. evidenceId is generated deterministically from structured fields for identity purposes but never parsed back
+
+**Evidence Idempotency and Ordering**
+
+Evidence candidates are deduplicated by the tuple `(relationshipType, dusthanaHouse, careerAnchorHouse, networkId, relationshipId)` before constructing evidence records. This ensures exactly one `DusthanaRelationshipEvidence` per unique establishing edge, even if an edge is discovered multiple times (e.g., through different detector loops or across networks sharing relationship identities).
+
+After deduplication, evidence candidates are sorted deterministically before evidence construction:
+1. By `relationshipType` (alphabetical)
+2. By `dusthanaHouse` (numeric ascending)
+3. By `careerAnchorHouse` (numeric ascending)
+4. By `networkId` (alphabetical)
+5. By `relationshipId` (alphabetical)
+
+This ensures deterministic output regardless of input network order or detection order.
+
+**evidenceId Opaque Identity Key**
+
+The `evidenceId` field is an opaque deterministic identity key. Consumers must use the structured fields (`relationshipType`, `dusthanaHouse`, `careerAnchorHouse`, `sourceNetworkId`, `relationshipId`) and must not parse the `evidenceId` string. The format is subject to change without notice.
+
+**Two Key Shapes for evidenceId**
+
+There are two distinct evidenceId formats serving different purposes:
+
+1. **Validation-level evidenceId** (in `DusthanaRelationshipValidation.evidenceIds`): Per-network key
+   - Format: `EVIDENCE|<type>|H<dusthana>|H<anchor>|<networkId>`
+   - Omits `relationshipId` to group evidence by network
+   - Used for grouping evidence records at the validation level
+
+2. **Evidence record evidenceId** (in `DusthanaRelationshipEvidence.evidenceId`): Per-edge key
+   - Format: `EVIDENCE|<type>|H<dusthana>|H<anchor>|<networkId>|<relationshipId>`
+   - Includes `relationshipId` to identify specific establishing edges
+   - Used for unique identification of individual evidence records
+
+Both formats are opaque and should not be parsed by consumers.
 
 ### Aggregate vs Summarize
 
@@ -92,12 +135,15 @@ Comprehensive test suite covers:
 - All relationship type detection with correct establishing edge IDs
 - PLANET_MEDIATED detection with shared participation and no direct edge
 - PLANET_MEDIATED suppression when direct relationship exists
+- PLANET_MEDIATED participation regression test (additional edges to one house included as evidence)
 - One evidence record per relationshipId invariant (no comma-separated relationshipIds)
+- Evidence candidate deduplication (same edge discovered twice yields one evidence record)
+- Deterministic evidence ordering (sorted by relationshipType, dusthanaHouse, careerAnchorHouse, networkId, relationshipId)
 - Provenance tracking (evidence records reference exact establishing edges)
 - Multi-lord handling
 - INSUFFICIENT_DATA vs NOT_VALIDATED distinction
 - Deduplication across networks
-- Determinism with permuted network order
+- Determinism with permuted network order (including evidence array equality)
 
 ## Boundary Enforcement
 
@@ -115,3 +161,6 @@ Run `npm run lint` (`tsc --noEmit`) and the `careerPattern` test suite to verify
 - All validation tests pass
 - Evidence records have single-valued relationshipId
 - PLANET_MEDIATED returns establishing edge IDs
+- Evidence candidate deduplication works correctly
+- Evidence ordering is deterministic
+- PLANET_MEDIATED participation regression test passes

@@ -696,6 +696,9 @@ function validatePair(
       const uniqueRelationshipIds = Array.from(new Set(detectedRelationshipIds)).sort();
 
       // Generate evidenceIds deterministically from evidence candidates
+      // Validation-level evidenceId is a per-network key (omits relationshipId) for grouping evidence by network
+      // Evidence record evidenceId is a per-edge key (includes relationshipId) for identifying specific edges
+      // Both are opaque deterministic identity keys; consumers must use structured fields and must not parse the string
       const evidenceIds: string[] = [];
       const uniqueNetworkIds = Array.from(new Set(detectedNetworkIds)).sort();
 
@@ -813,9 +816,31 @@ export function validateDusthanaRelationships(
     allParentIds
   );
 
-  // Construct evidence records from structured candidates - one per relationshipId
-  const evidence: DusthanaRelationshipEvidence[] = [];
+  // Deduplicate evidence candidates by tuple (relationshipType, dusthanaHouse, careerAnchorHouse, networkId, relationshipId)
+  // This ensures exactly one DusthanaRelationshipEvidence per unique establishing edge
+  const dedupedCandidatesMap = new Map<string, EvidenceCandidate>();
   for (const candidate of allEvidenceCandidates) {
+    const dedupKey = `${candidate.relationshipType}|${candidate.dusthanaHouse}|${candidate.careerAnchorHouse}|${candidate.networkId}|${candidate.relationshipId}`;
+    if (!dedupedCandidatesMap.has(dedupKey)) {
+      dedupedCandidatesMap.set(dedupKey, candidate);
+    }
+  }
+
+  // Sort deduplicated candidates deterministically before evidence construction
+  // Order: relationshipType, dusthanaHouse, careerAnchorHouse, networkId, relationshipId
+  const dedupedCandidates = Array.from(dedupedCandidatesMap.values()).sort((a, b) => {
+    if (a.relationshipType !== b.relationshipType) return a.relationshipType.localeCompare(b.relationshipType);
+    if (a.dusthanaHouse !== b.dusthanaHouse) return a.dusthanaHouse - b.dusthanaHouse;
+    if (a.careerAnchorHouse !== b.careerAnchorHouse) return a.careerAnchorHouse - b.careerAnchorHouse;
+    if (a.networkId !== b.networkId) return a.networkId.localeCompare(b.networkId);
+    return a.relationshipId.localeCompare(b.relationshipId);
+  });
+
+  // Construct evidence records from deduplicated, sorted candidates - one per relationshipId
+  // evidenceId is an opaque deterministic identity key; consumers must use structured fields
+  // (relationshipType, dusthanaHouse, careerAnchorHouse, sourceNetworkId, relationshipId) and must not parse the string
+  const evidence: DusthanaRelationshipEvidence[] = [];
+  for (const candidate of dedupedCandidates) {
     // Generate evidenceId deterministically from structured fields
     const evidenceId = `EVIDENCE|${candidate.relationshipType}|H${candidate.dusthanaHouse}|H${candidate.careerAnchorHouse}|${candidate.networkId}|${candidate.relationshipId}`;
 
