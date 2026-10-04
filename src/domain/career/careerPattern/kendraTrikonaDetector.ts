@@ -304,7 +304,9 @@ function buildKendraTrikonaPattern(
   const provenance: CareerPatternClassificationProvenance = {
     sourceNetworkIds: [network.networkId],
     relationshipIds,
-    ruleIds: [ruleId]
+    ruleIds: [ruleId],
+    establishingRelationshipIds: relationshipIds,
+    supportingRelationshipIds: []
   };
 
   return Object.freeze({

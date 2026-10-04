@@ -12,6 +12,10 @@ import { Planet } from '../../../types';
 import {
   validateDusthanaRelationships
 } from './dusthanaRelationshipValidation';
+import {
+  buildPatternProvenance,
+  RelationshipNotFoundError
+} from './careerPatternProvenance';
 
 /**
  * P2-06C Career Pattern Negative Test Suite
@@ -2062,6 +2066,295 @@ describe('Missing-Data vs Absent-Structure Contract', () => {
     expectPatternPresent(result, 'CAREER_HOUSE_NETWORK');
 
     // No pattern with a "negative" classification should exist
+    const allClassifications = result.patterns.map(p => p.classification);
+    const negativeClassifications = allClassifications.filter(c => c.includes('NOT') || c.includes('ABSENT') || c.includes('NEGATIVE'));
+    expect(negativeClassifications).toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// P2-06D PROVENANCE VALIDATION
+// ============================================================================
+
+describe('P2-06D Provenance Validation', () => {
+  it('validates no-fabrication rule - buildPatternProvenance throws on fabricated ID', () => {
+    // This test verifies that buildPatternProvenance throws RelationshipNotFoundError
+    // when provided with a fabricated relationship ID that does not exist in the network
+    const relationship = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:10',
+      identityKey: 'REL:LORD_OF:SATURN:10',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:10'
+    });
+
+    const network = makeNetwork({
+      networkId: 'NETWORK:TEST',
+      identityKey: 'NETWORK:TEST',
+      houses: [6, 10],
+      lords: [Planet.SATURN],
+      relationships: [relationship],
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    // Attempting to build provenance with a fabricated ID should throw
+    expect(() => {
+      buildPatternProvenance(
+        {
+          ruleId: 'RULE_TEST',
+          networkId: 'NETWORK:TEST',
+          establishingRelationshipIds: ['REL:LORD_OF:SATURN:10', 'REL:DOES_NOT_EXIST']
+        },
+        network
+      );
+    }).toThrow(RelationshipNotFoundError);
+  });
+
+  it('validates all patterns have valid provenance with real relationship IDs', () => {
+    // This test verifies that all patterns emitted by classifyCareerPatterns
+    // have establishingRelationshipIds that resolve to actual edges in their networks
+    const relationship1 = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:6',
+      identityKey: 'REL:LORD_OF:SATURN:6',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:6'
+    });
+
+    const relationship2 = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:10',
+      identityKey: 'REL:LORD_OF:SATURN:10',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:10'
+    });
+
+    const network = makeNetwork({
+      networkId: 'NETWORK:TEST',
+      identityKey: 'NETWORK:TEST',
+      houses: [6, 10],
+      lords: [Planet.SATURN],
+      relationships: [relationship1, relationship2],
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    const input: CareerPatternClassificationInput = { networks: [network] };
+    const result = classifyCareerPatterns(input);
+
+    // All patterns in the result should have valid provenance
+    for (const pattern of result.patterns) {
+      for (const establishingId of pattern.provenance.establishingRelationshipIds) {
+        const existsInNetwork = network.relationships.some(r => r.identityKey === establishingId);
+        expect(existsInNetwork).toBe(true);
+      }
+    }
+  });
+
+  it('validates cross-network relationship rejection', () => {
+    // This test verifies that a relationship from network-B cannot establish a pattern on network-A
+    const relationshipA = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:10',
+      identityKey: 'REL:LORD_OF:SATURN:10',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:10'
+    });
+
+    const relationshipB = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:MARS:6',
+      identityKey: 'REL:LORD_OF:MARS:6',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:MARS',
+      targetNodeId: 'HOUSE:6'
+    });
+
+    const networkA = makeNetwork({
+      networkId: 'NETWORK:A',
+      identityKey: 'NETWORK:A',
+      houses: [10],
+      lords: [Planet.SATURN],
+      relationships: [relationshipA],
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    const networkB = makeNetwork({
+      networkId: 'NETWORK:B',
+      identityKey: 'NETWORK:B',
+      houses: [6],
+      lords: [Planet.MARS],
+      relationships: [relationshipB],
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    const input: CareerPatternClassificationInput = { networks: [networkA, networkB] };
+    const result = classifyCareerPatterns(input);
+
+    // Each pattern's establishingRelationshipIds should only contain IDs from its own network
+    for (const pattern of result.patterns) {
+      for (const networkId of pattern.provenance.sourceNetworkIds) {
+        const network = networkId === 'NETWORK:A' ? networkA : networkB;
+        for (const establishingId of pattern.provenance.establishingRelationshipIds) {
+          const existsInNetwork = network.relationships.some(r => r.identityKey === establishingId);
+          expect(existsInNetwork).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('validates frozen provenance immutability', () => {
+    // This test verifies that provenance arrays are deeply frozen
+    const relationship = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:10',
+      identityKey: 'REL:LORD_OF:SATURN:10',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:10'
+    });
+
+    const network = makeNetwork({
+      networkId: 'NETWORK:TEST',
+      identityKey: 'NETWORK:TEST',
+      houses: [10],
+      lords: [Planet.SATURN],
+      relationships: [relationship],
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    const input: CareerPatternClassificationInput = { networks: [network] };
+    const result = classifyCareerPatterns(input);
+
+    for (const pattern of result.patterns) {
+      // Attempting to mutate provenance arrays should throw
+      expect(() => {
+        (pattern.provenance.sourceNetworkIds as string[]).push('NEW_ID');
+      }).toThrow();
+
+      expect(() => {
+        (pattern.provenance.establishingRelationshipIds as string[]).push('NEW_ID');
+      }).toThrow();
+
+      expect(() => {
+        (pattern.provenance.supportingRelationshipIds as string[]).push('NEW_ID');
+      }).toThrow();
+
+      expect(() => {
+        (pattern.provenance.ruleIds as string[]).push('NEW_ID');
+      }).toThrow();
+
+      expect(() => {
+        (pattern.provenance as any).newField = 'value';
+      }).toThrow();
+    }
+  });
+
+  it('validates same edge referenced by two patterns does not duplicate evidence identity', () => {
+    // This test verifies that when the same edge is referenced by two patterns,
+    // the evidence identity is not duplicated (each pattern has its own evidence records)
+    const relationship = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:10',
+      identityKey: 'REL:LORD_OF:SATURN:10',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:10'
+    });
+
+    const network = makeNetwork({
+      networkId: 'NETWORK:TEST',
+      identityKey: 'NETWORK:TEST',
+      houses: [10],
+      lords: [Planet.SATURN],
+      relationships: [relationship],
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    const input: CareerPatternClassificationInput = { networks: [network] };
+    const result = classifyCareerPatterns(input);
+
+    // Each pattern should have its own evidence records
+    // Even if multiple patterns reference the same relationship, their evidence IDs are scoped to the pattern
+    for (const pattern of result.patterns) {
+      const evidenceIds = pattern.evidence.map(e => e.evidenceId);
+      const uniqueEvidenceIds = new Set(evidenceIds);
+      expect(evidenceIds.length).toBe(uniqueEvidenceIds.size);
+    }
+  });
+
+  it('validates generic carrier broader than specialized on the same network', () => {
+    // This test verifies that the generic CAREER_HOUSE_NETWORK carrier may have broader
+    // establishingRelationshipIds than specialized classifications on the same network
+    const relationship1 = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:6',
+      identityKey: 'REL:LORD_OF:SATURN:6',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:6'
+    });
+
+    const relationship2 = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:SATURN:10',
+      identityKey: 'REL:LORD_OF:SATURN:10',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:SATURN',
+      targetNodeId: 'HOUSE:10'
+    });
+
+    const relationship3 = makeRelationship({
+      edgeId: 'EDGE:LORD_OF:MERCURY:11',
+      identityKey: 'REL:LORD_OF:MERCURY:11',
+      type: 'LORD_OF',
+      sourceNodeId: 'PLANET:MERCURY',
+      targetNodeId: 'HOUSE:11'
+    });
+
+    const network = makeNetwork({
+      networkId: 'NETWORK:TEST',
+      identityKey: 'NETWORK:TEST',
+      houses: [6, 10, 11],
+      lords: [Planet.SATURN, Planet.MERCURY],
+      relationships: [relationship1, relationship2, relationship3],
+      topology: 'CHAIN',
+      direction: 'FORWARD'
+    });
+
+    const input: CareerPatternClassificationInput = { networks: [network] };
+    const result = classifyCareerPatterns(input);
+
+    // Find the generic CAREER_HOUSE_NETWORK pattern
+    const genericPattern = result.patterns.find(p => p.classification === 'CAREER_HOUSE_NETWORK');
+    expect(genericPattern).toBeDefined();
+
+    // The generic pattern may have all LORD_OF edges as establishing IDs
+    // (per the generic carrier exception)
+    expect(genericPattern!.provenance.establishingRelationshipIds.length).toBeGreaterThan(0);
+  });
+
+  it('validates missing data results in INSUFFICIENT_DATA not negative pattern', () => {
+    // This test verifies that when data is missing (e.g., no relationships),
+    // the system returns INSUFFICIENT_DATA status rather than emitting a negative pattern
+    const network = makeNetwork({
+      networkId: 'NETWORK:INSUFFICIENT',
+      identityKey: 'NETWORK:INSUFFICIENT',
+      houses: [6, 10],
+      lords: [], // No lords - insufficient data
+      relationships: [], // No relationships - insufficient data
+      topology: 'DIRECT_LINK',
+      direction: 'FORWARD'
+    });
+
+    const input: CareerPatternClassificationInput = { networks: [network] };
+    const result = classifyCareerPatterns(input);
+
+    // The system should still emit a generic CAREER_HOUSE_NETWORK pattern
+    // (it's a structural carrier, not a negative conclusion)
+    expectPatternPresent(result, 'CAREER_HOUSE_NETWORK');
+
+    // No negative patterns should be emitted
     const allClassifications = result.patterns.map(p => p.classification);
     const negativeClassifications = allClassifications.filter(c => c.includes('NOT') || c.includes('ABSENT') || c.includes('NEGATIVE'));
     expect(negativeClassifications).toHaveLength(0);

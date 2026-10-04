@@ -139,6 +139,9 @@ export const HOUSE_ROLES_10_11: Readonly<Record<number, CareerPatternHouseRole>>
 
 /**
  * Result of a pattern classification rule match.
+ *
+ * P2-06D: Added supportingRelationshipIds for fine-grained provenance tracking.
+ * Classifiers may provide supportingRelationshipIds; defaults to empty array if not provided.
  */
 export interface CareerPatternRuleMatch {
   readonly ruleId: string;
@@ -146,6 +149,7 @@ export interface CareerPatternRuleMatch {
   readonly family: 'CAREER_HOUSE_NETWORK' | 'KENDRA_TRIKONA' | 'UPACHAYA' | 'PARIVARTANA';
   readonly houseRoles: Readonly<Record<number, CareerPatternHouseRole>>;
   readonly establishingRelationshipIds: readonly string[];
+  readonly supportingRelationshipIds?: readonly string[];
 }
 
 /**

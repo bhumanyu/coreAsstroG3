@@ -177,7 +177,9 @@ function buildDusthanaPattern(
   const provenance: CareerPatternClassificationProvenance = {
     sourceNetworkIds: [network.networkId],
     relationshipIds,
-    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort()
+    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort(),
+    establishingRelationshipIds: relationshipIds,
+    supportingRelationshipIds: []
   };
 
   return Object.freeze({
@@ -313,7 +315,9 @@ function buildCompositeDusthanaPattern(
   const provenance: CareerPatternClassificationProvenance = {
     sourceNetworkIds: [network.networkId],
     relationshipIds,
-    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort()
+    ruleIds: Array.from(new Set(validatedRelationships.flatMap((v) => v.provenance.ruleIds))).sort(),
+    establishingRelationshipIds: relationshipIds,
+    supportingRelationshipIds: []
   };
 
   return Object.freeze({

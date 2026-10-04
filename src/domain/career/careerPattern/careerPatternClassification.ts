@@ -11,6 +11,7 @@ import type {
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import { classifyCareerHouseNetwork, type CareerPatternRuleMatch } from './careerPatternClassificationRules';
+import { buildPatternProvenance } from './careerPatternProvenance';
 
 /**
  * P2-03 Career Pattern Classification
@@ -61,13 +62,28 @@ function buildPatternName(classification: CareerPatternClassification): string {
 
 /**
  * Builds a CareerPattern from a network and rule match.
+ *
+ * P2-06D: Uses buildPatternProvenance to construct provenance with strict validation.
+ * Emits one CareerPatternClassificationEvidence per establishing relationship (with relationshipId).
+ * The pattern-level evidence record is retained for backward compatibility.
+ * supportingRelationshipIds is populated when classifiers provide it; defaults to empty array.
  */
 function buildCareerPattern(
   network: CareerHouseNetwork,
   match: CareerPatternRuleMatch
 ): CareerPattern {
-  // Use establishingRelationshipIds from the match (sorted-unique via Set)
-  const relationshipIds = [...new Set(match.establishingRelationshipIds)].sort();
+  // Use buildPatternProvenance to construct provenance with validation
+  const provenanceResult = buildPatternProvenance(
+    {
+      ruleId: match.ruleId,
+      networkId: network.networkId,
+      establishingRelationshipIds: match.establishingRelationshipIds,
+      supportingRelationshipIds: match.supportingRelationshipIds || []
+    },
+    network
+  );
+
+  const relationshipIds = provenanceResult.provenance.relationshipIds;
 
   const identityKey = buildCareerPatternIdentityKey(
     match.family,
@@ -81,18 +97,18 @@ function buildCareerPattern(
   const level = resolvePatternLevel(match.family);
   const name = buildPatternName(match.classification);
 
-  const evidence = Object.freeze([{
+  // Combine pattern-level evidence (for backward compatibility) with relationship-level evidence
+  const patternLevelEvidence: CareerPatternClassificationEvidence = Object.freeze({
     evidenceId: `P2-03-EVIDENCE:${match.ruleId}:${network.identityKey}`,
     ruleId: match.ruleId,
     sourceNetworkId: network.networkId,
     sourceNetworkIdentityKey: network.identityKey
-  }]) as readonly CareerPatternClassificationEvidence[];
+  });
 
-  const provenance: CareerPatternClassificationProvenance = {
-    sourceNetworkIds: [network.networkId],
-    relationshipIds,
-    ruleIds: [match.ruleId]
-  };
+  const evidence = Object.freeze([
+    patternLevelEvidence,
+    ...provenanceResult.evidence
+  ]) as readonly CareerPatternClassificationEvidence[];
 
   return Object.freeze({
     patternId,
@@ -111,7 +127,7 @@ function buildCareerPattern(
     mechanisms: [], // Will be populated by family-specific detectors
     relationships: [], // Will be populated by analysis layer
     evidence,
-    provenance
+    provenance: provenanceResult.provenance
   });
 }
 
@@ -119,6 +135,8 @@ function buildCareerPattern(
  * Deduplicates patterns by identityKey.
  * Merges networkIds/relationshipIds (sorted-unique), dedupes evidence by evidenceId and sorts.
  * Merges mechanisms (sorted-unique) and relationships by relationshipId.
+ *
+ * P2-06D: Extended to merge establishingRelationshipIds and supportingRelationshipIds (sorted-unique).
  */
 function deduplicatePatterns(patterns: readonly CareerPattern[]): readonly CareerPattern[] {
   const patternMap = new Map<string, CareerPattern>();
@@ -150,15 +168,19 @@ function deduplicatePatterns(patterns: readonly CareerPattern[]): readonly Caree
       }
       const mergedEvidence = Array.from(evidenceMap.values()).sort((a, b) => a.evidenceId.localeCompare(b.evidenceId));
 
-      // Merge provenance
+      // Merge provenance (P2-06D: extended with establishing/supporting IDs)
       const mergedSourceNetworkIds = [...new Set([...existing.provenance.sourceNetworkIds, ...pattern.provenance.sourceNetworkIds])].sort();
       const mergedProvenanceRelationshipIds = [...new Set([...existing.provenance.relationshipIds, ...pattern.provenance.relationshipIds])].sort();
+      const mergedEstablishingRelationshipIds = [...new Set([...existing.provenance.establishingRelationshipIds, ...pattern.provenance.establishingRelationshipIds])].sort();
+      const mergedSupportingRelationshipIds = [...new Set([...existing.provenance.supportingRelationshipIds, ...pattern.provenance.supportingRelationshipIds])].sort();
       const mergedRuleIds = [...new Set([...existing.provenance.ruleIds, ...pattern.provenance.ruleIds])].sort();
 
       const mergedProvenance: CareerPatternClassificationProvenance = Object.freeze({
         sourceNetworkIds: mergedSourceNetworkIds,
         relationshipIds: mergedProvenanceRelationshipIds,
-        ruleIds: mergedRuleIds
+        ruleIds: mergedRuleIds,
+        establishingRelationshipIds: mergedEstablishingRelationshipIds,
+        supportingRelationshipIds: mergedSupportingRelationshipIds
       });
 
       const mergedPattern: CareerPattern = Object.freeze({

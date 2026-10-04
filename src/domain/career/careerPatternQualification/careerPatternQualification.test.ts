@@ -78,7 +78,9 @@ function makePattern(
     provenance: Object.freeze({
       sourceNetworkIds: ['network-1'],
       relationshipIds: ['rel-1', 'rel-2'],
-      ruleIds: ['rule-1']
+      ruleIds: ['rule-1'],
+      establishingRelationshipIds: ['rel-1', 'rel-2'],
+      supportingRelationshipIds: []
     }),
     ...overrides
   });

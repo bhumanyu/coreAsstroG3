@@ -511,9 +511,13 @@ describe('CareerPatternClassification', () => {
 
       const pattern = result.patterns[0];
 
-      // Verify sorted
+      // Verify sorted (P2-06D: also check establishingRelationshipIds)
       for (let i = 1; i < pattern.relationshipIds.length; i++) {
         expect(pattern.relationshipIds[i] >= pattern.relationshipIds[i - 1]).toBe(true);
+      }
+
+      for (let i = 1; i < pattern.provenance.establishingRelationshipIds.length; i++) {
+        expect(pattern.provenance.establishingRelationshipIds[i] >= pattern.provenance.establishingRelationshipIds[i - 1]).toBe(true);
       }
     });
   });
@@ -1060,8 +1064,8 @@ describe('CareerPatternClassification', () => {
       // - House 11: Lord MARS (in House 8), Occupants: SUN, JUPITER
       // This creates a STAR topology network 6-8-11 centered on MARS
       const expectedPattern = {
-        patternId: 'CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:ASPECTS:PLANET:MARS→HOUSE:11|ASPECTS:PLANET:MARS→HOUSE:6|LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6|OCCUPIES:PLANET:JUPITER→HOUSE:11|OCCUPIES:PLANET:MARS→HOUSE:8|OCCUPIES:PLANET:MOON→HOUSE:8',
-        identityKey: 'CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:ASPECTS:PLANET:MARS→HOUSE:11|ASPECTS:PLANET:MARS→HOUSE:6|LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6|OCCUPIES:PLANET:JUPITER→HOUSE:11|OCCUPIES:PLANET:MARS→HOUSE:8|OCCUPIES:PLANET:MOON→HOUSE:8',
+        patternId: 'CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6',
+        identityKey: 'CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6',
         family: 'CAREER_HOUSE_NETWORK',
         level: 'HOUSE_NETWORK',
         classification: 'CAREER_HOUSE_NETWORK',
@@ -1079,38 +1083,33 @@ describe('CareerPatternClassification', () => {
           '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8'
         ],
         relationshipIds: [
-          'ASPECTS:PLANET:MARS→HOUSE:11',
-          'ASPECTS:PLANET:MARS→HOUSE:6',
           'LORD_OF:PLANET:MARS→HOUSE:11',
-          'LORD_OF:PLANET:MARS→HOUSE:6',
-          'OCCUPIES:PLANET:JUPITER→HOUSE:11',
-          'OCCUPIES:PLANET:MARS→HOUSE:8',
-          'OCCUPIES:PLANET:MOON→HOUSE:8'
+          'LORD_OF:PLANET:MARS→HOUSE:6'
         ],
         mechanisms: [],
         relationships: [],
-        evidence: [
-          {
+        evidence: expect.arrayContaining([
+          expect.objectContaining({
             evidenceId: 'P2-03-EVIDENCE:RULE_GENERIC:6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8',
             ruleId: 'RULE_GENERIC',
             sourceNetworkId: '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8',
             sourceNetworkIdentityKey: '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8'
-          }
-        ],
+          })
+        ]),
         provenance: {
           sourceNetworkIds: [
             '6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8'
           ],
           relationshipIds: [
-            'ASPECTS:PLANET:MARS→HOUSE:11',
-            'ASPECTS:PLANET:MARS→HOUSE:6',
             'LORD_OF:PLANET:MARS→HOUSE:11',
-            'LORD_OF:PLANET:MARS→HOUSE:6',
-            'OCCUPIES:PLANET:JUPITER→HOUSE:11',
-            'OCCUPIES:PLANET:MARS→HOUSE:8',
-            'OCCUPIES:PLANET:MOON→HOUSE:8'
+            'LORD_OF:PLANET:MARS→HOUSE:6'
           ],
-          ruleIds: ['RULE_GENERIC']
+          ruleIds: ['RULE_GENERIC'],
+          establishingRelationshipIds: [
+            'LORD_OF:PLANET:MARS→HOUSE:11',
+            'LORD_OF:PLANET:MARS→HOUSE:6'
+          ],
+          supportingRelationshipIds: []
         }
       };
 

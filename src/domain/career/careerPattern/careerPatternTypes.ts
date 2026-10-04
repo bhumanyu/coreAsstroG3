@@ -125,12 +125,15 @@ export type ParivartanaCareerType =
  * DomainEvidence and does not replace the W0.4 contract. Conversion to DomainEvidence happens at
  * the pattern-evidence/canonical-evidence boundary (later wave). No new global dedup mechanism
  * is introduced.
+ *
+ * P2-06D: Added relationshipId to reference the establishing relationship for this evidence.
  */
 export interface CareerPatternClassificationEvidence {
   readonly evidenceId: string;
   readonly ruleId: string;
   readonly sourceNetworkId: string;
   readonly sourceNetworkIdentityKey: string;
+  readonly relationshipId?: string;
 }
 
 /**
@@ -141,11 +144,17 @@ export type CareerPatternClassificationEvidenceArray = readonly CareerPatternCla
 /**
  * Provenance for a pattern classification.
  * Tracks the source networks, relationships, and rules that led to this pattern.
+ *
+ * P2-06D: Extended with establishingRelationshipIds and supportingRelationshipIds for
+ * fine-grained provenance tracking. The legacy relationshipIds field is retained for
+ * backward compatibility and populated as establishingRelationshipIds ∪ supportingRelationshipIds.
  */
 export interface CareerPatternClassificationProvenance {
   readonly sourceNetworkIds: readonly string[];
   readonly relationshipIds: readonly string[];
   readonly ruleIds: readonly string[];
+  readonly establishingRelationshipIds: readonly string[];
+  readonly supportingRelationshipIds: readonly string[];
 }
 
 /**
