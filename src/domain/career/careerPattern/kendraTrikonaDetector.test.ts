@@ -71,6 +71,92 @@ function expectPatternAbsent(
 }
 
 describe('Kendra-Trikona Detector Negative Suite', () => {
+  /**
+   * P2-06A freeze note: Ordered career pathways are directional (requires hasDirectedHouseRelationship).
+   * Kendra-Trikona planet relationships are NOT directional - they accept ASPECTS/CONJUNCT/EXCHANGES
+   * in either direction between lords. The "Reversed relationship" test below documents this bidirectional
+   * contract explicitly.
+   */
+
+  describe('Positive accepted relationships', () => {
+    it('accepts planet-planet ASPECTS in either direction', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:ASPECTS_BIDIRECTIONAL',
+        identityKey: 'NETWORK:ASPECTS_BIDIRECTIONAL',
+        houses: [9, 10],
+        lords: [Planet.JUPITER, Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            edgeId: 'EDGE:LORD_OF:JUPITER:9',
+            identityKey: 'REL:LORD_OF:JUPITER:9',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:9'
+          }),
+          makeRelationship({
+            edgeId: 'EDGE:LORD_OF:SATURN:10',
+            identityKey: 'REL:LORD_OF:SATURN:10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          // Trikona lord aspects kendra lord (reverse direction accepted)
+          makeRelationship({
+            edgeId: 'EDGE:ASPECTS:JUPITER:SATURN',
+            identityKey: 'REL:ASPECTS:JUPITER:SATURN',
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:SATURN'
+          })
+        ],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const result = detectKendraTrikonaPatterns([network]);
+      // ASPECTS is bidirectional for planet-planet relationships
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    it('accepts CONJUNCT as qualifying planet relationship', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:CONJUNCT_ONLY',
+        identityKey: 'NETWORK:CONJUNCT_ONLY',
+        houses: [9, 10],
+        lords: [Planet.JUPITER, Planet.SATURN],
+        relationships: [
+          makeRelationship({
+            edgeId: 'EDGE:LORD_OF:JUPITER:9',
+            identityKey: 'REL:LORD_OF:JUPITER:9',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:9'
+          }),
+          makeRelationship({
+            edgeId: 'EDGE:LORD_OF:SATURN:10',
+            identityKey: 'REL:LORD_OF:SATURN:10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:10'
+          }),
+          makeRelationship({
+            edgeId: 'EDGE:CONJUNCT:JUPITER:SATURN',
+            identityKey: 'REL:CONJUNCT:JUPITER:SATURN',
+            type: 'CONJUNCT',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'PLANET:SATURN'
+          })
+        ],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const result = detectKendraTrikonaPatterns([network]);
+      // CONJUNCT qualifies as a valid planet-planet relationship
+      expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('House-set-only (no lord relationship)', () => {
     it('rejects 9-10 house set without any lord relationship', () => {
       const network = makeNetwork({
@@ -176,48 +262,6 @@ describe('Kendra-Trikona Detector Negative Suite', () => {
     });
   });
 
-  describe('Reversed relationship', () => {
-    it('rejects when relationship is trikona → kendra instead of kendra → trikona', () => {
-      const network = makeNetwork({
-        networkId: 'NETWORK:REVERSED',
-        identityKey: 'NETWORK:REVERSED',
-        houses: [9, 10],
-        lords: [Planet.JUPITER, Planet.SATURN],
-        relationships: [
-          makeRelationship({
-            edgeId: 'EDGE:LORD_OF:JUPITER:9',
-            identityKey: 'REL:LORD_OF:JUPITER:9',
-            type: 'LORD_OF',
-            sourceNodeId: 'PLANET:JUPITER',
-            targetNodeId: 'HOUSE:9'
-          }),
-          makeRelationship({
-            edgeId: 'EDGE:LORD_OF:SATURN:10',
-            identityKey: 'REL:LORD_OF:SATURN:10',
-            type: 'LORD_OF',
-            sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
-          }),
-          // Reversed: Jupiter (trikona lord) aspects Saturn (kendra lord)
-          makeRelationship({
-            edgeId: 'EDGE:ASPECTS:JUPITER:SATURN',
-            identityKey: 'REL:ASPECTS:JUPITER:SATURN',
-            type: 'ASPECTS',
-            sourceNodeId: 'PLANET:JUPITER',
-            targetNodeId: 'PLANET:SATURN'
-          })
-        ],
-        topology: 'DIRECT_LINK',
-        direction: 'FORWARD'
-      });
-
-      const result = detectKendraTrikonaPatterns([network]);
-      // This should still qualify (bidirectional ASPECTS accepts either direction)
-      // The detector checks for planet-planet relationship in either direction
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
   describe('Common-lord-only (no planetary relationship)', () => {
     it('rejects when both houses share a lord but no EXCHANGES/CONJUNCT/ASPECTS edge', () => {
       const network = makeNetwork({
@@ -247,49 +291,11 @@ describe('Kendra-Trikona Detector Negative Suite', () => {
       });
 
       const result = detectKendraTrikonaPatterns([network]);
-      // Current implementation may accept common lord - this test documents actual behavior
-      // To match spec intent, this should be expectPatternAbsent
-      expect(result.length).toBeGreaterThanOrEqual(0);
-    });
-  });
-
-  describe('Conjunction-only', () => {
-    it('rejects when lords are in CONJUNCT but no other relationship', () => {
-      const network = makeNetwork({
-        networkId: 'NETWORK:CONJUNCT_ONLY',
-        identityKey: 'NETWORK:CONJUNCT_ONLY',
-        houses: [9, 10],
-        lords: [Planet.JUPITER, Planet.SATURN],
-        relationships: [
-          makeRelationship({
-            edgeId: 'EDGE:LORD_OF:JUPITER:9',
-            identityKey: 'REL:LORD_OF:JUPITER:9',
-            type: 'LORD_OF',
-            sourceNodeId: 'PLANET:JUPITER',
-            targetNodeId: 'HOUSE:9'
-          }),
-          makeRelationship({
-            edgeId: 'EDGE:LORD_OF:SATURN:10',
-            identityKey: 'REL:LORD_OF:SATURN:10',
-            type: 'LORD_OF',
-            sourceNodeId: 'PLANET:SATURN',
-            targetNodeId: 'HOUSE:10'
-          }),
-          makeRelationship({
-            edgeId: 'EDGE:CONJUNCT:JUPITER:SATURN',
-            identityKey: 'REL:CONJUNCT:JUPITER:SATURN',
-            type: 'CONJUNCT',
-            sourceNodeId: 'PLANET:JUPITER',
-            targetNodeId: 'PLANET:SATURN'
-          })
-        ],
-        topology: 'DIRECT_LINK',
-        direction: 'FORWARD'
-      });
-
-      const result = detectKendraTrikonaPatterns([network]);
-      // CONJUNCT should qualify as a valid planet-planet relationship
-      expect(result.length).toBeGreaterThan(0);
+      // P2-06A freeze: COMMON_LORD does NOT constitute a planetary relationship
+      // Detector requires EXCHANGES/CONJUNCT/ASPECTS edge between lords
+      expectPatternAbsent(result, 'DHARMA_KARMA_ALIGNMENT');
+      expectPatternAbsent(result, 'AUTHORITY_PATTERN');
+      expectPatternAbsent(result, 'PROFESSIONAL_RISE_PATTERN');
     });
   });
 

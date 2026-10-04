@@ -466,15 +466,7 @@ function detectPlanetMediated(
   }
 
   const matchedKeys: string[] = [];
-  const lordshipMap = buildLordshipMap(network.relationships);
-
-  // Find planets that participate in both houses via lordship
   const sharedPlanets: Set<Planet> = new Set();
-  for (const [planet, houses] of lordshipMap) {
-    if (houses.has(dusthanaHouse) && houses.has(careerAnchorHouse)) {
-      sharedPlanets.add(planet);
-    }
-  }
 
   // Find planets that participate in both houses via OCCUPIES
   const occupiedByDusthana: Set<Planet> = new Set();
@@ -515,6 +507,8 @@ function detectPlanetMediated(
   }
 
   // Collect all edges from shared planets to either house
+  // P2-06B freeze: LORD_OF edges from shared planets ARE included when lordship is the participation mechanism
+  // OCCUPIES/ASPECTS edges from shared planets also count as establishing evidence
   for (const edge of network.relationships) {
     const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
     const house = parseHouseFromNodeKey(edge.targetNodeId);

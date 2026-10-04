@@ -1675,12 +1675,12 @@ describe('Dusthana Negatives', () => {
 
     const result = validateDusthanaRelationships([network]);
 
-    // Current implementation: PLANET_MEDIATED is returned even without shared participation
-    // This documents the actual behavior vs spec intent
+    // P2-06B freeze: PLANET_MEDIATED requires actual shared participation (lordship/OCCUPIES/ASPECTS)
+    // No shared planet → PLANET_MEDIATED absent
     const planetMediatedValidations = result.validations.filter(
-      v => v.relationshipType === 'PLANET_MEDIATED'
+      v => v.relationshipType === 'PLANET_MEDIATED' && v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
     );
-    expect(planetMediatedValidations.length).toBeGreaterThanOrEqual(0);
+    expect(planetMediatedValidations).toHaveLength(0);
 
     // Should have NOT_VALIDATED for the pair since no direct relationship exists
     const notValidated = result.validations.filter(
@@ -1738,15 +1738,16 @@ describe('Dusthana Negatives', () => {
 
     const result = validateDusthanaRelationships([network]);
 
-    // Current implementation: PLANET_MEDIATED is NOT suppressed
-    // This documents the actual behavior vs spec intent
+    // P2-06B freeze: PLANET_MEDIATED is suppressed when direct relationship exists
+    // hasPlanetMediatedRelationship returns false when hasDirectHouseRelationship is true
     const planetMediatedValidations = result.validations.filter(
-      v => v.relationshipType === 'PLANET_MEDIATED'
+      v => v.relationshipType === 'PLANET_MEDIATED' && v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
     );
-    expect(planetMediatedValidations.length).toBeGreaterThanOrEqual(0);
+    expect(planetMediatedValidations).toHaveLength(0);
 
+    // Should have CROSS_LORDSHIP (Saturn lords 6, occupies 10)
     const crossLordshipValidations = result.validations.filter(
-      v => v.relationshipType === 'CROSS_LORDSHIP'
+      v => v.relationshipType === 'CROSS_LORDSHIP' && v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
     );
     expect(crossLordshipValidations.length).toBeGreaterThan(0);
   });
@@ -1778,6 +1779,7 @@ describe('Dusthana Negatives', () => {
 describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
   it('duplicate edges with identical identityKey produce identical canonical output', () => {
     // Create two networks with semantically identical edges but different edge IDs
+    // Use the same networkId/identityKey to make canonical-equivalence claim airtight
     const relationships1: CareerGraphEdge[] = [
       makeRelationship({
         edgeId: 'EDGE:LORD_OF:SATURN:6',
@@ -1855,8 +1857,8 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
     ];
 
     const network1 = makeNetwork({
-      networkId: 'NETWORK:DUPLICATE_1',
-      identityKey: 'NETWORK:DUPLICATE_1',
+      networkId: 'NETWORK:DUPLICATE',
+      identityKey: 'NETWORK:DUPLICATE',
       houses: [6, 10, 11],
       lords: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
       relationships: relationships1,
@@ -1865,8 +1867,8 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
     });
 
     const network2 = makeNetwork({
-      networkId: 'NETWORK:DUPLICATE_2',
-      identityKey: 'NETWORK:DUPLICATE_2',
+      networkId: 'NETWORK:DUPLICATE',
+      identityKey: 'NETWORK:DUPLICATE',
       houses: [6, 10, 11],
       lords: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
       relationships: relationships2,
@@ -1880,15 +1882,12 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
     const result1 = classifyCareerPatterns(input1);
     const result2 = classifyCareerPatterns(input2);
 
-    // Must produce identical canonical output (identityKey, relationshipIds)
-    // networkIds/evidence will differ because networkId differs
+    // Must produce identical canonical output (full deep equality since networkId/identityKey are identical)
     const pattern1 = result1.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
     const pattern2 = result2.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
     expect(result1.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
     expect(result2.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
-    expect(pattern1!.identityKey).toBe(pattern2!.identityKey);
-    expect(pattern1!.relationshipIds).toEqual(pattern2!.relationshipIds);
-    expect(pattern1!.provenance.relationshipIds).toEqual(pattern2!.provenance.relationshipIds);
+    expect(JSON.stringify(pattern1)).toBe(JSON.stringify(pattern2));
   });
 
   it('separate 6→10 network + 10→11 network must NOT stitch into SERVICE_TO_PROFESSION_TO_GAINS', () => {

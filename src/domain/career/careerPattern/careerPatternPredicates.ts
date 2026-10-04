@@ -263,6 +263,11 @@ export function hasDirectedHouseRelationship(
  * (2) lord(from) ASPECTS→toHouse (house target)
  * (3) lord(from) ASPECTS→lord(to) planet-level, requiring sourceLord !== targetLord
  *
+ * NOTE: Returned IDs include LORD_OF prerequisite edges alongside establishing OCCUPIES/ASPECTS edges.
+ * These LORD_OF edges are prerequisite context (supporting evidence) rather than establishing
+ * the directed relationship itself. A future wave may split establishingRelationshipIds vs
+ * supportingRelationshipIds for finer-grained evidence attribution.
+ *
  * FREEZE SEMANTICS: Common lordship, conjunction, and exchange are EXPLICITLY EXCLUDED
  * from directed relationships. These are undirected/bidirectional and cannot satisfy
  * ordered pathways.
@@ -281,7 +286,7 @@ export function getDirectedHouseRelationshipIds(
   const fromLords = getLordsOfHouse(network.relationships, fromHouse);
   const toLords = getLordsOfHouse(network.relationships, toHouse);
 
-  // Include LORD_OF edges for both houses
+  // Include LORD_OF edges for both houses (prerequisite supporting evidence)
   for (const edge of network.relationships) {
     if (edge.type === 'LORD_OF') {
       const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
@@ -502,6 +507,7 @@ export function hasDirectHouseRelationship(
  * FREEZE SEMANTICS: This is the complement to hasDirectHouseRelationship - it returns
  * true only when connectivity is shared-participant only (not direct house↔house).
  * Shared OCCUPIES/ASPECTS participation qualifies as planet-mediated.
+ * Shared lordship is NOT included (stricter than general participation semantics).
  *
  * @param network - The career house network to check
  * @param a - First house number
@@ -516,15 +522,6 @@ export function hasPlanetMediatedRelationship(
   // If there's a direct relationship, this is not planet-mediated-only
   if (hasDirectHouseRelationship(network, a, b)) {
     return false;
-  }
-
-  const lordshipMap = buildLordshipMap(network.relationships);
-
-  // Check for shared planet participation via lordship
-  for (const [planet, houses] of lordshipMap) {
-    if (houses.has(a) && houses.has(b)) {
-      return true;
-    }
   }
 
   // Check for shared OCCUPIES participation
@@ -599,6 +596,11 @@ export function isDirectChain(
  * A direct chain requires that every consecutive pair in the sequence satisfies
  * hasDirectedHouseRelationship in the given order.
  *
+ * NOTE: Returned IDs include LORD_OF prerequisite edges alongside establishing OCCUPIES/ASPECTS edges.
+ * These LORD_OF edges are prerequisite context (supporting evidence) rather than establishing
+ * the directed chain itself. A future wave may split establishingRelationshipIds vs
+ * supportingRelationshipIds for finer-grained evidence attribution.
+ *
  * FREEZE SEMANTICS: This predicate uses ONLY directed relationships. Undirected
  * relationships (common lord, conjunction, exchange) cannot satisfy ordered pathways.
  * Rejects duplicates and sequences with length < 2.
@@ -626,7 +628,7 @@ export function getDirectChainRelationshipIds(
 
   const establishingIds: string[] = [];
 
-  // Include LORD_OF edges for all houses in the chain
+  // Include LORD_OF edges for all houses in the chain (prerequisite supporting evidence)
   for (const house of orderedHouses) {
     const lords = getLordsOfHouse(network.relationships, house);
     for (const lord of lords) {

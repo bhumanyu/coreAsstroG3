@@ -93,6 +93,13 @@ Current test coverage includes:
 - Conversion to canonical `DomainEvidence` happens at the pattern-evidence/canonical-evidence boundary (later wave).
 - No new global dedup mechanism is introduced in P2-03 — dedup occurs at the pattern identity level only.
 
+**Establishing vs Supporting Relationship Semantics:**
+
+- Relationship ID collections (e.g., from `getDirectedHouseRelationshipIds`, `getDirectChainRelationshipIds`) include LORD_OF prerequisite edges alongside establishing OCCUPIES/ASPECTS edges.
+- These LORD_OF edges are prerequisite context (supporting evidence) rather than establishing the directed relationship itself.
+- A future wave may split `establishingRelationshipIds` vs `supportingRelationshipIds` for finer-grained evidence attribution.
+- Current implementation bundles both for simplicity — this is a documented implementation detail, not a frozen semantic requirement.
+
 **Not yet implemented (future work):**
 - Pattern qualification methodology (planetary conditions, career relevance, pattern coherence, divisional confirmation)
 - Qualification dimensions (semantic, not numeric)

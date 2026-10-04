@@ -74,7 +74,9 @@ Tests against `validateDusthanaRelationships`:
 - 6/8/12 + 2/6/10/11 house membership alone → `NOT_VALIDATED`
 - Wrong-direction lordship → `NOT_VALIDATED`
 - Conjunction-only qualifies only the family that explicitly accepts it, must not surface as CROSS_LORDSHIP or HOUSE_PLACEMENT
-- PLANET_MEDIATED requires actual shared participation (documented current behavior vs spec intent)
+- PLANET_MEDIATED requires actual shared participation (OCCUPIES/ASPECTS participation only)
+  - Implementation choice: shared lordship is NOT included in PLANET_MEDIATED detection (stricter than P2-06A freeze which includes it in hasPlanetMediatedRelationship)
+  - PLANET_MEDIATED suppressed when direct relationship exists (hasPlanetMediatedRelationship returns false when hasDirectHouseRelationship is true)
 - Missing lordship data → Returns both `INSUFFICIENT_DATA` and `NOT_VALIDATED` depending on pair (documented actual behavior)
 
 ### 5. Duplicate, Multi-Network, Provenance, Determinism

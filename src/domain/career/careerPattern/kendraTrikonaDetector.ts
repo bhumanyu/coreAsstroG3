@@ -160,6 +160,11 @@ function hasLordRelationship(
   }
 
   // Check (b): cross-house lordship (lordA lords houseB or lordB lords houseA)
+  // P2-06A freeze: Shared lordship (lordA === lordB) does NOT qualify as a relationship
+  if (lordA === lordB) {
+    return false;
+  }
+
   const nodeHouseB = `HOUSE:${houseB}`;
   const nodeHouseA = `HOUSE:${houseA}`;
 
