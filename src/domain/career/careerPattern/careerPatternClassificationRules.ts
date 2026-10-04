@@ -5,6 +5,8 @@ import {
   hasDirectHouseRelationship,
   hasDirectedHouseRelationship,
   isDirectChain,
+  getDirectChainRelationshipIds,
+  getDirectedHouseRelationshipIds,
   buildLordshipMap
 } from './careerPatternPredicates';
 import { Planet } from '../../../types';
@@ -143,6 +145,7 @@ export interface CareerPatternRuleMatch {
   readonly classification: CareerPatternClassification;
   readonly family: 'CAREER_HOUSE_NETWORK' | 'KENDRA_TRIKONA' | 'UPACHAYA' | 'PARIVARTANA';
   readonly houseRoles: Readonly<Record<number, CareerPatternHouseRole>>;
+  readonly establishingRelationshipIds: readonly string[];
 }
 
 /**
@@ -155,12 +158,14 @@ export function classifyTwoSixTenEleven(network: CareerHouseNetwork): readonly C
 
   if (sortedHouses.join(',') === '2,6,10,11') {
     // Check pathway predicate: require direct chain 2→6→10→11
-    if (isDirectChain(network, [2, 6, 10, 11])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [2, 6, 10, 11]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_2_6_10_11',
         classification: 'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS',
         family: 'CAREER_HOUSE_NETWORK',
-        houseRoles: HOUSE_ROLES_2_6_10_11
+        houseRoles: HOUSE_ROLES_2_6_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -184,12 +189,14 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
   // Full 3-6-10-11 pathway
   if (sortedHouses.join(',') === UPACHAYA_HOUSES.join(',')) {
     // Check pathway predicate: require direct chain 3→6→10→11
-    if (isDirectChain(network, [3, 6, 10, 11])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [3, 6, 10, 11]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_3_6_10_11_FULL_PATH',
         classification: 'UPACHAYA_PROGRESSION',
         family: 'UPACHAYA',
-        houseRoles: HOUSE_ROLES_3_6_10_11
+        houseRoles: HOUSE_ROLES_3_6_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -199,12 +206,14 @@ export function classifyThreeSixTenEleven(network: CareerHouseNetwork): readonly
   // 6-10-11 pathway (subset)
   if (sortedHouses.join(',') === '6,10,11') {
     // Check pathway predicate: require direct chain 6→10→11
-    if (isDirectChain(network, [6, 10, 11])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [6, 10, 11]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_6_10_11_SUB_PATH',
         classification: 'UPACHAYA_PROGRESSION',
         family: 'UPACHAYA',
-        houseRoles: HOUSE_ROLES_6_10_11
+        houseRoles: HOUSE_ROLES_6_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -227,12 +236,14 @@ export function classifyFiveNineTen(network: CareerHouseNetwork): readonly Caree
 
   if (sortedHouses.join(',') === '5,9,10') {
     // Check pathway predicate: require direct chain 5→9→10
-    if (isDirectChain(network, [5, 9, 10])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [5, 9, 10]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_5_9_10',
         classification: 'CREATIVE_DHARMA_TO_PROFESSION',
         family: 'CAREER_HOUSE_NETWORK',
-        houseRoles: HOUSE_ROLES_5_9_10
+        houseRoles: HOUSE_ROLES_5_9_10,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -252,6 +263,11 @@ export function classifyNineTen(network: CareerHouseNetwork): readonly CareerPat
   const sortedHouses = [...houses].sort((a, b) => a - b);
 
   if (sortedHouses.join(',') === '9,10') {
+    // Structural carrier only - no pathway predicate, return all LORD_OF edges
+    const lordOfIds = network.relationships
+      .filter(r => r.type === 'LORD_OF')
+      .map(r => r.identityKey)
+      .sort();
     return [{
       ruleId: 'RULE_9_10',
       classification: 'CAREER_HOUSE_NETWORK',
@@ -259,7 +275,8 @@ export function classifyNineTen(network: CareerHouseNetwork): readonly CareerPat
       houseRoles: Object.freeze({
         9: 'DHARMA_HOUSE',
         10: 'CAREER_HOUSE'
-      })
+      }),
+      establishingRelationshipIds: lordOfIds
     }];
   }
 
@@ -276,12 +293,14 @@ export function classifyNineTenEleven(network: CareerHouseNetwork): readonly Car
 
   if (sortedHouses.join(',') === '9,10,11') {
     // Check pathway predicate: require direct chain 9→10→11
-    if (isDirectChain(network, [9, 10, 11])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [9, 10, 11]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_9_10_11',
         classification: 'DHARMA_KARMA_ALIGNMENT',
         family: 'CAREER_HOUSE_NETWORK',
-        houseRoles: HOUSE_ROLES_9_10_11
+        houseRoles: HOUSE_ROLES_9_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -301,12 +320,14 @@ export function classifySixTenEleven(network: CareerHouseNetwork): readonly Care
 
   if (sortedHouses.join(',') === '6,10,11') {
     // Check pathway predicate: require direct chain 6→10→11
-    if (isDirectChain(network, [6, 10, 11])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [6, 10, 11]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_6_10_11',
         classification: 'SERVICE_TO_PROFESSION_TO_GAINS',
         family: 'CAREER_HOUSE_NETWORK',
-        houseRoles: HOUSE_ROLES_6_10_11
+        houseRoles: HOUSE_ROLES_6_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -326,12 +347,14 @@ export function classifyTwoThreeSixTenEleven(network: CareerHouseNetwork): reado
 
   if (sortedHouses.join(',') === '2,3,6,10,11') {
     // Check pathway predicate: require direct chain 2→3→6→10→11
-    if (isDirectChain(network, [2, 3, 6, 10, 11])) {
+    const establishingIds = getDirectChainRelationshipIds(network, [2, 3, 6, 10, 11]);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_2_3_6_10_11',
         classification: 'COMMUNICATION_TO_WORK_TO_PROFESSION_TO_GAINS',
         family: 'CAREER_HOUSE_NETWORK',
-        houseRoles: HOUSE_ROLES_2_3_6_10_11
+        houseRoles: HOUSE_ROLES_2_3_6_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -351,12 +374,14 @@ export function classifyTenEleven(network: CareerHouseNetwork): readonly CareerP
 
   if (sortedHouses.join(',') === '10,11') {
     // Check pathway predicate: require directed relationship 10→11
-    if (hasDirectedHouseRelationship(network, 10, 11)) {
+    const establishingIds = getDirectedHouseRelationshipIds(network, 10, 11);
+    if (establishingIds.length > 0) {
       return [{
         ruleId: 'RULE_10_11',
         classification: 'PROFESSION_TO_GAINS',
         family: 'CAREER_HOUSE_NETWORK',
-        houseRoles: HOUSE_ROLES_10_11
+        houseRoles: HOUSE_ROLES_10_11,
+        establishingRelationshipIds: establishingIds
       }];
     }
     // No specialized match — generic fallback handled by orchestrator
@@ -453,11 +478,27 @@ export function classifyParivartana(network: CareerHouseNetwork): readonly Caree
 
               const parivartanaType = classifyParivartanaCareerType(sourceHouse, targetHouse);
 
+              // Establishing IDs: EXCHANGES edge + LORD_OF edges for both planets
+              const establishingIds: string[] = [edge.identityKey];
+              for (const house of sourceHouses) {
+                const lordOfId = `REL:LORD_OF:${sourcePlanet}:${house}`;
+                if (network.relationships.some(r => r.identityKey === lordOfId)) {
+                  establishingIds.push(lordOfId);
+                }
+              }
+              for (const house of targetHouses) {
+                const lordOfId = `REL:LORD_OF:${targetPlanet}:${house}`;
+                if (network.relationships.some(r => r.identityKey === lordOfId)) {
+                  establishingIds.push(lordOfId);
+                }
+              }
+
               matches.push({
                 ruleId: `RULE_PARIVARTANA_${parivartanaType}`,
                 classification: 'PARIVARTANA_YOGA',
                 family: 'PARIVARTANA',
-                houseRoles: Object.freeze(houseRoles)
+                houseRoles: Object.freeze(houseRoles),
+                establishingRelationshipIds: establishingIds.sort()
               });
             }
           }
@@ -493,11 +534,18 @@ export function classifyGenericCareerNetwork(network: CareerHouseNetwork): reado
     else houseRoles[house] = 'UNKNOWN';
   }
 
+  // Generic: return all LORD_OF edges as establishing
+  const lordOfIds = network.relationships
+    .filter(r => r.type === 'LORD_OF')
+    .map(r => r.identityKey)
+    .sort();
+
   return [{
     ruleId: 'RULE_GENERIC',
     classification: 'CAREER_HOUSE_NETWORK',
     family: 'CAREER_HOUSE_NETWORK',
-    houseRoles: Object.freeze(houseRoles)
+    houseRoles: Object.freeze(houseRoles),
+    establishingRelationshipIds: lordOfIds
   }];
 }
 

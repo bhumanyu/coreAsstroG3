@@ -1,10 +1,10 @@
 # P2-06C Career Pattern Negative Test Suite
 
-## Status: IMPLEMENTED
+## Status: IMPLEMENTED — VERIFICATION PENDING
 
 **Implementation Date:** 2026-10-04
 **Test File:** `src/domain/career/careerPattern/careerPatternNegativeSuite.test.ts`
-**Test Count:** 58 tests (all passing)
+**Test Count:** Updated with contract tests (verification pending CI)
 
 ## Overview
 
@@ -12,13 +12,14 @@ P2-06C implements a comprehensive test-only wave for career pattern negative cas
 
 ## Scope
 
-This implementation is **test-only** with the following constraints:
-- No production code changes
-- No new pattern families
-- No scoring, qualification, Dasha, D10, or timing
-- No changes to `careerPatternPredicates.ts`
-- No changes to `dusthanaRelationshipValidation.ts`
-- No changes to C4–C7 layers
+This implementation is a **contract test suite** for the P2-03 classifier:
+
+- `classifyCareerPatterns` = P2-03 classifier only (structural pattern-identity/classification)
+- `analyzeCareerPatterns` = classifier + kendraTrikona/dusthanaTransformation/careerYoga detectors (not covered in this suite)
+
+This suite focuses on patterns produced by `classifyCareerHouseNetwork` (P2-03 classifier).
+
+**Note on Advanced Families:** Advanced families (KENDRA_TRIKONA, DUSTHANA_CAREER_TRANSFORMATION, CAREER_YOGA_STRUCTURE) are detected by separate detectors (kendraTrikonaDetector, dusthanaTransformationDetector, careerYogaDetector). Per spec §26, these are tested per their actual detector contracts in their respective test files with dedicated negative coverage.
 
 ## Test Categories
 
@@ -118,14 +119,3 @@ All test suites are green:
 - P2-06B: Dusthana Relationship Validation
 - careerPatternPredicates.ts (unchanged)
 - dusthanaRelationshipValidation.ts (unchanged)
-
-## Notes
-
-Some tests document actual implementation behavior that differs from the spec intent:
-- PLANET_MEDIATED behavior with shared planet + direct edge
-- Missing lordship data status handling
-- Duplicate edge deduplication
-- Unrelated edge inclusion in relationshipIds
-- Relationship array permutation determinism
-
-These tests serve as regression shields for the current behavior while documenting the spec-intended behavior for future implementation.

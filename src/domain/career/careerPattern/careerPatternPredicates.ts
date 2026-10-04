@@ -253,9 +253,48 @@ export function hasDirectedHouseRelationship(
   fromHouse: number,
   toHouse: number
 ): boolean {
-  const lordshipMap = buildLordshipMap(network.relationships);
+  return getDirectedHouseRelationshipIds(network, fromHouse, toHouse).length > 0;
+}
+
+/**
+ * Returns the edge IDs that establish a directed house-to-house relationship from fromHouse to toHouse.
+ * A directed relationship is established by:
+ * (1) lord(from) OCCUPIES→toHouse
+ * (2) lord(from) ASPECTS→toHouse (house target)
+ * (3) lord(from) ASPECTS→lord(to) planet-level, requiring sourceLord !== targetLord
+ *
+ * FREEZE SEMANTICS: Common lordship, conjunction, and exchange are EXPLICITLY EXCLUDED
+ * from directed relationships. These are undirected/bidirectional and cannot satisfy
+ * ordered pathways.
+ *
+ * @param network - The career house network to check
+ * @param fromHouse - Source house number (directional source)
+ * @param toHouse - Target house number (directional target)
+ * @returns Array of edge identityKeys that establish the directed relationship (sorted)
+ */
+export function getDirectedHouseRelationshipIds(
+  network: CareerHouseNetwork,
+  fromHouse: number,
+  toHouse: number
+): readonly string[] {
+  const establishingIds: string[] = [];
   const fromLords = getLordsOfHouse(network.relationships, fromHouse);
   const toLords = getLordsOfHouse(network.relationships, toHouse);
+
+  // Include LORD_OF edges for both houses
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        if ((fromLords.includes(planet) && house === fromHouse) ||
+          (toLords.includes(planet) && house === toHouse)) {
+          establishingIds.push(edge.identityKey);
+        }
+      }
+    }
+  }
 
   for (const edge of network.relationships) {
     // (1) OCCUPIES: planet occupies house - check if the planet lords fromHouse and occupies toHouse
@@ -265,7 +304,7 @@ export function hasDirectedHouseRelationship(
 
       if (planet && house !== null) {
         if (fromLords.includes(planet) && house === toHouse) {
-          return true;
+          establishingIds.push(edge.identityKey);
         }
       }
     }
@@ -277,7 +316,7 @@ export function hasDirectedHouseRelationship(
 
       if (planet && house !== null) {
         if (fromLords.includes(planet) && house === toHouse) {
-          return true;
+          establishingIds.push(edge.identityKey);
         }
       }
     }
@@ -286,13 +325,23 @@ export function hasDirectedHouseRelationship(
   // (3) Planet-level ASPECTS: lord(from) ASPECTS→lord(to), requiring sourceLord !== targetLord
   for (const sourceLord of fromLords) {
     for (const targetLord of toLords) {
-      if (sourceLord !== targetLord && hasPlanetAspect(network.relationships, sourceLord, targetLord)) {
-        return true;
+      if (sourceLord !== targetLord) {
+        for (const edge of network.relationships) {
+          if (edge.type === 'ASPECTS') {
+            const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const targetPlanet = parsePlanetFromNodeKey(edge.targetNodeId);
+
+            if (planet === sourceLord && targetPlanet === targetLord) {
+              establishingIds.push(edge.identityKey);
+            }
+          }
+        }
       }
     }
   }
 
-  return false;
+  // Return sorted-unique for determinism
+  return [...new Set(establishingIds)].sort();
 }
 
 /**
@@ -542,24 +591,65 @@ export function isDirectChain(
   network: CareerHouseNetwork,
   orderedHouses: readonly number[]
 ): boolean {
+  return getDirectChainRelationshipIds(network, orderedHouses).length > 0;
+}
+
+/**
+ * Returns the edge IDs that establish a direct chain for the ordered house sequence.
+ * A direct chain requires that every consecutive pair in the sequence satisfies
+ * hasDirectedHouseRelationship in the given order.
+ *
+ * FREEZE SEMANTICS: This predicate uses ONLY directed relationships. Undirected
+ * relationships (common lord, conjunction, exchange) cannot satisfy ordered pathways.
+ * Rejects duplicates and sequences with length < 2.
+ *
+ * @param network - The career house network to check
+ * @param orderedHouses - Array of house numbers in sequence order
+ * @returns Array of edge identityKeys that establish the chain (sorted-unique), empty if not a chain
+ */
+export function getDirectChainRelationshipIds(
+  network: CareerHouseNetwork,
+  orderedHouses: readonly number[]
+): readonly string[] {
   if (orderedHouses.length < 2) {
-    return false;
+    return [];
   }
 
   // Reject duplicate houses in sequence
   const seen = new Set<number>();
   for (const house of orderedHouses) {
     if (seen.has(house)) {
-      return false;
+      return [];
     }
     seen.add(house);
   }
 
-  for (let i = 0; i < orderedHouses.length - 1; i++) {
-    if (!hasDirectedHouseRelationship(network, orderedHouses[i], orderedHouses[i + 1])) {
-      return false;
+  const establishingIds: string[] = [];
+
+  // Include LORD_OF edges for all houses in the chain
+  for (const house of orderedHouses) {
+    const lords = getLordsOfHouse(network.relationships, house);
+    for (const lord of lords) {
+      for (const edge of network.relationships) {
+        if (edge.type === 'LORD_OF') {
+          const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+          const targetHouse = parseHouseFromNodeKey(edge.targetNodeId);
+          if (planet === lord && targetHouse === house) {
+            establishingIds.push(edge.identityKey);
+          }
+        }
+      }
     }
   }
 
-  return true;
+  for (let i = 0; i < orderedHouses.length - 1; i++) {
+    const pairIds = getDirectedHouseRelationshipIds(network, orderedHouses[i], orderedHouses[i + 1]);
+    if (pairIds.length === 0) {
+      return []; // Chain broken
+    }
+    establishingIds.push(...pairIds);
+  }
+
+  // Return sorted-unique for determinism
+  return [...new Set(establishingIds)].sort();
 }

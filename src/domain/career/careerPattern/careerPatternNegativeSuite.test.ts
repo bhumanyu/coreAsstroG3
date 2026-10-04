@@ -765,8 +765,9 @@ describe('Specialized Pathway Negative Suite', () => {
       expectPatternAbsent(result, 'SERVICE_TO_PROFESSION_TO_GAINS');
     });
 
-    it('rejects unrelated edges (6→2 + 10→11)', () => {
+    it('unrelated edges are excluded from relationshipIds when pattern established', () => {
       const relationships: CareerGraphEdge[] = [
+        // Required edges for 6→10→11
         makeRelationship({
           edgeId: 'EDGE:LORD_OF:SATURN:6',
           identityKey: 'REL:LORD_OF:SATURN:6',
@@ -775,11 +776,11 @@ describe('Specialized Pathway Negative Suite', () => {
           targetNodeId: 'HOUSE:6'
         }),
         makeRelationship({
-          edgeId: 'EDGE:OCCUPIES:SATURN:2',
-          identityKey: 'REL:OCCUPIES:SATURN:2',
+          edgeId: 'EDGE:OCCUPIES:SATURN:10',
+          identityKey: 'REL:OCCUPIES:SATURN:10',
           type: 'OCCUPIES',
           sourceNodeId: 'PLANET:SATURN',
-          targetNodeId: 'HOUSE:2'
+          targetNodeId: 'HOUSE:10'
         }),
         makeRelationship({
           edgeId: 'EDGE:LORD_OF:MERCURY:10',
@@ -796,18 +797,26 @@ describe('Specialized Pathway Negative Suite', () => {
           targetNodeId: 'HOUSE:11'
         }),
         makeRelationship({
-          edgeId: 'EDGE:LORD_OF:JUPITER:2',
-          identityKey: 'REL:LORD_OF:JUPITER:2',
+          edgeId: 'EDGE:LORD_OF:JUPITER:11',
+          identityKey: 'REL:LORD_OF:JUPITER:11',
           type: 'LORD_OF',
           sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:11'
+        }),
+        // UNRELATED edges (Venus in house 2, not part of 6→10→11 pathway)
+        makeRelationship({
+          edgeId: 'EDGE:OCCUPIES:VENUS:2',
+          identityKey: 'REL:OCCUPIES:VENUS:2',
+          type: 'OCCUPIES',
+          sourceNodeId: 'PLANET:VENUS',
           targetNodeId: 'HOUSE:2'
         }),
         makeRelationship({
-          edgeId: 'EDGE:LORD_OF:VENUS:11',
-          identityKey: 'REL:LORD_OF:VENUS:11',
+          edgeId: 'EDGE:LORD_OF:VENUS:2',
+          identityKey: 'REL:LORD_OF:VENUS:2',
           type: 'LORD_OF',
           sourceNodeId: 'PLANET:VENUS',
-          targetNodeId: 'HOUSE:11'
+          targetNodeId: 'HOUSE:2'
         })
       ];
 
@@ -824,7 +833,22 @@ describe('Specialized Pathway Negative Suite', () => {
       const input: CareerPatternClassificationInput = { networks: [network] };
       const result = classifyCareerPatterns(input);
 
-      expectPatternAbsent(result, 'SERVICE_TO_PROFESSION_TO_GAINS');
+      const servicePattern = result.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+      expect(result.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
+
+      // Unrelated Venus edges must NOT be in relationshipIds
+      expect(servicePattern!.relationshipIds).not.toContain('REL:OCCUPIES:VENUS:2');
+      expect(servicePattern!.relationshipIds).not.toContain('REL:LORD_OF:VENUS:2');
+
+      // Must contain the edges establishing 6→10 and 10→11 (LORD_OF + OCCUPIES)
+      expect(servicePattern!.relationshipIds).toContain('REL:LORD_OF:SATURN:6');
+      expect(servicePattern!.relationshipIds).toContain('REL:OCCUPIES:SATURN:10');
+      expect(servicePattern!.relationshipIds).toContain('REL:LORD_OF:MERCURY:10');
+      expect(servicePattern!.relationshipIds).toContain('REL:OCCUPIES:MERCURY:11');
+      expect(servicePattern!.relationshipIds).toContain('REL:LORD_OF:JUPITER:11');
+
+      // Total count should be exactly 5 (2 OCCUPIES + 3 LORD_OF)
+      expect(servicePattern!.relationshipIds).toHaveLength(5);
     });
 
     it('rejects exchange-only (6↔10 + 10↔11)', () => {
@@ -1595,11 +1619,11 @@ describe('Dusthana Negatives', () => {
     const result = validateDusthanaRelationships([network]);
 
     // Should have NOT_VALIDATED for 6-10 pair (no directed relationship)
-    const sixTenValidation = result.validations.find(
+    const sixTenValidations = result.validations.filter(
       v => v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
     );
-    expect(sixTenValidation).toBeDefined();
-    expect(sixTenValidation!.status).toBe('NOT_VALIDATED');
+    expect(sixTenValidations).toHaveLength(1);
+    expect(sixTenValidations[0].status).toBe('NOT_VALIDATED');
   });
 
   it('conjunction-only qualifies only family that explicitly accepts it', () => {
@@ -1651,19 +1675,18 @@ describe('Dusthana Negatives', () => {
 
     const result = validateDusthanaRelationships([network]);
 
-    // The actual behavior: PLANET_MEDIATED is still returned even without shared participation
-    // This documents the current implementation behavior vs spec intent
+    // Current implementation: PLANET_MEDIATED is returned even without shared participation
+    // This documents the actual behavior vs spec intent
     const planetMediatedValidations = result.validations.filter(
       v => v.relationshipType === 'PLANET_MEDIATED'
     );
-    // Currently returns PLANET_MEDIATED even without shared participation
     expect(planetMediatedValidations.length).toBeGreaterThanOrEqual(0);
 
     // Should have NOT_VALIDATED for the pair since no direct relationship exists
-    const notValidated = result.validations.find(
+    const notValidated = result.validations.filter(
       v => v.dusthanaHouse === 6 && v.careerAnchorHouse === 10 && v.status === 'NOT_VALIDATED'
     );
-    expect(notValidated).toBeDefined();
+    expect(notValidated).toHaveLength(1);
   });
 
   it('PLANET_MEDIATED suppressed when shared planet + direct edge', () => {
@@ -1715,14 +1738,11 @@ describe('Dusthana Negatives', () => {
 
     const result = validateDusthanaRelationships([network]);
 
-    // The actual behavior: PLANET_MEDIATED is NOT suppressed in current implementation
-    // This test documents the current behavior rather than the ideal spec
-    // The spec says it should be suppressed, but the implementation allows both
+    // Current implementation: PLANET_MEDIATED is NOT suppressed
+    // This documents the actual behavior vs spec intent
     const planetMediatedValidations = result.validations.filter(
       v => v.relationshipType === 'PLANET_MEDIATED'
     );
-    // Currently, PLANET_MEDIATED is present even with direct edge
-    // This documents the actual behavior vs spec intent
     expect(planetMediatedValidations.length).toBeGreaterThanOrEqual(0);
 
     const crossLordshipValidations = result.validations.filter(
@@ -1731,7 +1751,7 @@ describe('Dusthana Negatives', () => {
     expect(crossLordshipValidations.length).toBeGreaterThan(0);
   });
 
-  it('missing lordship data → INSUFFICIENT_DATA returned for some pairs', () => {
+  it('missing lordship data → INSUFFICIENT_DATA returned for specific pair', () => {
     const network = makeNetwork({
       networkId: 'NETWORK:MISSING_LORDSHIP',
       identityKey: 'NETWORK:MISSING_LORDSHIP',
@@ -1742,16 +1762,12 @@ describe('Dusthana Negatives', () => {
 
     const result = validateDusthanaRelationships([network]);
 
-    // The actual behavior: some pairs return INSUFFICIENT_DATA when lordship is missing
-    const insufficientDataValidations = result.validations.filter(
-      v => v.status === 'INSUFFICIENT_DATA'
+    // The 6-10 pair must return INSUFFICIENT_DATA when lordship is missing
+    const sixTenValidations = result.validations.filter(
+      v => v.dusthanaHouse === 6 && v.careerAnchorHouse === 10
     );
-    // Currently returns INSUFFICIENT_DATA for some pairs
-    expect(insufficientDataValidations.length).toBeGreaterThan(0);
-
-    // Also may return NOT_VALIDATED for other pairs
-    const notValidatedCount = result.validations.filter(v => v.status === 'NOT_VALIDATED').length;
-    expect(notValidatedCount).toBeGreaterThanOrEqual(0);
+    expect(sixTenValidations).toHaveLength(1);
+    expect(sixTenValidations[0].status).toBe('INSUFFICIENT_DATA');
   });
 });
 
@@ -1760,44 +1776,9 @@ describe('Dusthana Negatives', () => {
 // ============================================================================
 
 describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
-  it('duplicate 6→10 edge produces identical classification but different relationshipIds', () => {
-    const networkWithDuplicates = makeDuplicateEdgeNetwork([6, 10, 11]);
-    const networkDeduplicated = makeDirectedChainNetwork([6, 10, 11]);
-
-    const input1: CareerPatternClassificationInput = { networks: [networkWithDuplicates] };
-    const input2: CareerPatternClassificationInput = { networks: [networkDeduplicated] };
-
-    const result1 = classifyCareerPatterns(input1);
-    const result2 = classifyCareerPatterns(input2);
-
-    // Both should produce same number of patterns
-    expect(result1.patterns.length).toBe(result2.patterns.length);
-
-    // Both should have the same classifications (even if identityKeys differ due to duplicate edges)
-    const classifications1 = result1.patterns.map(p => p.classification).sort();
-    const classifications2 = result2.patterns.map(p => p.classification).sort();
-    expect(classifications1).toEqual(classifications2);
-
-    // But relationshipIds will differ because duplicates are included
-    // This documents the actual behavior
-  });
-
-  it('separate 6→10 network + 10→11 network must NOT stitch into SERVICE_TO_PROFESSION_TO_GAINS', () => {
-    const network1 = makeDirectedChainNetwork([6, 10]);
-    const network2 = makeDirectedChainNetwork([10, 11]);
-
-    const input: CareerPatternClassificationInput = { networks: [network1, network2] };
-    const result = classifyCareerPatterns(input);
-
-    // Should NOT produce SERVICE_TO_PROFESSION_TO_GAINS (cross-network composition not supported)
-    expectPatternAbsent(result, 'SERVICE_TO_PROFESSION_TO_GAINS');
-  });
-
-  it('unrelated edges in same network are included in relationshipIds if in network', () => {
-    // This test documents the actual behavior: if edges are in the network's relationships array,
-    // they WILL be included in the pattern's relationshipIds, even if unrelated to the pathway
-    const relationships: CareerGraphEdge[] = [
-      // Required edges for 6→10→11
+  it('duplicate edges with identical identityKey produce identical canonical output', () => {
+    // Create two networks with semantically identical edges but different edge IDs
+    const relationships1: CareerGraphEdge[] = [
       makeRelationship({
         edgeId: 'EDGE:LORD_OF:SATURN:6',
         identityKey: 'REL:LORD_OF:SATURN:6',
@@ -1806,7 +1787,7 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
         targetNodeId: 'HOUSE:6'
       }),
       makeRelationship({
-        edgeId: 'EDGE:OCCUPIES:SATURN:10',
+        edgeId: 'EDGE:OCCUPIES:SATURN:10-1',
         identityKey: 'REL:OCCUPIES:SATURN:10',
         type: 'OCCUPIES',
         sourceNodeId: 'PLANET:SATURN',
@@ -1832,45 +1813,96 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
         type: 'LORD_OF',
         sourceNodeId: 'PLANET:JUPITER',
         targetNodeId: 'HOUSE:11'
-      }),
-      // UNRELATED edge (will be included in relationshipIds if in network)
-      makeRelationship({
-        edgeId: 'EDGE:OCCUPIES:VENUS:2',
-        identityKey: 'REL:OCCUPIES:VENUS:2',
-        type: 'OCCUPIES',
-        sourceNodeId: 'PLANET:VENUS',
-        targetNodeId: 'HOUSE:2'
-      }),
-      makeRelationship({
-        edgeId: 'EDGE:LORD_OF:VENUS:2',
-        identityKey: 'REL:LORD_OF:VENUS:2',
-        type: 'LORD_OF',
-        sourceNodeId: 'PLANET:VENUS',
-        targetNodeId: 'HOUSE:2'
       })
     ];
 
-    const network = makeNetwork({
-      networkId: 'NETWORK:UNRELATED_EDGES',
-      identityKey: 'NETWORK:UNRELATED_EDGES',
+    const relationships2: CareerGraphEdge[] = [
+      makeRelationship({
+        edgeId: 'EDGE:LORD_OF:SATURN:6',
+        identityKey: 'REL:LORD_OF:SATURN:6',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:6'
+      }),
+      makeRelationship({
+        edgeId: 'EDGE:OCCUPIES:SATURN:10-2',
+        identityKey: 'REL:OCCUPIES:SATURN:10',
+        type: 'OCCUPIES',
+        sourceNodeId: 'PLANET:SATURN',
+        targetNodeId: 'HOUSE:10'
+      }),
+      makeRelationship({
+        edgeId: 'EDGE:LORD_OF:MERCURY:10',
+        identityKey: 'REL:LORD_OF:MERCURY:10',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:MERCURY',
+        targetNodeId: 'HOUSE:10'
+      }),
+      makeRelationship({
+        edgeId: 'EDGE:OCCUPIES:MERCURY:11',
+        identityKey: 'REL:OCCUPIES:MERCURY:11',
+        type: 'OCCUPIES',
+        sourceNodeId: 'PLANET:MERCURY',
+        targetNodeId: 'HOUSE:11'
+      }),
+      makeRelationship({
+        edgeId: 'EDGE:LORD_OF:JUPITER:11',
+        identityKey: 'REL:LORD_OF:JUPITER:11',
+        type: 'LORD_OF',
+        sourceNodeId: 'PLANET:JUPITER',
+        targetNodeId: 'HOUSE:11'
+      })
+    ];
+
+    const network1 = makeNetwork({
+      networkId: 'NETWORK:DUPLICATE_1',
+      identityKey: 'NETWORK:DUPLICATE_1',
       houses: [6, 10, 11],
-      lords: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER, Planet.VENUS],
-      relationships,
+      lords: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
+      relationships: relationships1,
       topology: 'CHAIN',
       direction: 'FORWARD'
     });
 
-    const input: CareerPatternClassificationInput = { networks: [network] };
+    const network2 = makeNetwork({
+      networkId: 'NETWORK:DUPLICATE_2',
+      identityKey: 'NETWORK:DUPLICATE_2',
+      houses: [6, 10, 11],
+      lords: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER],
+      relationships: relationships2,
+      topology: 'CHAIN',
+      direction: 'FORWARD'
+    });
+
+    const input1: CareerPatternClassificationInput = { networks: [network1] };
+    const input2: CareerPatternClassificationInput = { networks: [network2] };
+
+    const result1 = classifyCareerPatterns(input1);
+    const result2 = classifyCareerPatterns(input2);
+
+    // Must produce identical canonical output (identityKey, relationshipIds)
+    // networkIds/evidence will differ because networkId differs
+    const pattern1 = result1.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+    const pattern2 = result2.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+    expect(result1.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
+    expect(result2.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
+    expect(pattern1!.identityKey).toBe(pattern2!.identityKey);
+    expect(pattern1!.relationshipIds).toEqual(pattern2!.relationshipIds);
+    expect(pattern1!.provenance.relationshipIds).toEqual(pattern2!.provenance.relationshipIds);
+  });
+
+  it('separate 6→10 network + 10→11 network must NOT stitch into SERVICE_TO_PROFESSION_TO_GAINS', () => {
+    const network1 = makeDirectedChainNetwork([6, 10]);
+    const network2 = makeDirectedChainNetwork([10, 11]);
+
+    const input: CareerPatternClassificationInput = { networks: [network1, network2] };
     const result = classifyCareerPatterns(input);
 
-    const servicePattern = result.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
-    if (servicePattern) {
-      // Actual behavior: ALL relationships in the network are included in relationshipIds
-      // This documents that the system does not filter out unrelated edges
-      expect(servicePattern.relationshipIds).toContain('REL:OCCUPIES:VENUS:2');
-      expect(servicePattern.relationshipIds).toContain('REL:LORD_OF:VENUS:2');
-    }
+    // Should NOT produce SERVICE_TO_PROFESSION_TO_GAINS (cross-network composition not supported)
+    expectPatternAbsent(result, 'SERVICE_TO_PROFESSION_TO_GAINS');
   });
+
+
 
   it('determinism: network order permutation produces identical result', () => {
     const network1 = makeDirectedChainNetwork([6, 10, 11]);
@@ -1883,10 +1915,11 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
     const result1 = classifyCareerPatterns(input1);
     const result2 = classifyCareerPatterns(input2);
 
-    expect(JSON.stringify(result1.patterns)).toBe(JSON.stringify(result2.patterns));
+    // Compare full patterns, not just classifications
+    expect(result1.patterns).toEqual(result2.patterns);
   });
 
-  it('determinism: relationship array permutation produces same classifications', () => {
+  it('determinism: relationship array permutation produces identical canonical output', () => {
     const relationships: CareerGraphEdge[] = [
       makeRelationship({
         edgeId: 'EDGE:LORD_OF:SATURN:6',
@@ -1954,10 +1987,17 @@ describe('Duplicate, Multi-Network, Provenance, Determinism', () => {
     const result1 = classifyCareerPatterns(input1);
     const result2 = classifyCareerPatterns(input2);
 
-    // Should produce same classifications (even if identityKeys differ due to networkId)
-    const classifications1 = result1.patterns.map(p => p.classification).sort();
-    const classifications2 = result2.patterns.map(p => p.classification).sort();
-    expect(classifications1).toEqual(classifications2);
+    // Compare full patterns including classification, identityKey, relationshipIds, provenance, evidence
+    // NetworkId differs but canonical output (identityKey, relationshipIds) must be identical
+    const pattern1 = result1.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+    const pattern2 = result2.patterns.find(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS');
+    expect(result1.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
+    expect(result2.patterns.filter(p => p.classification === 'SERVICE_TO_PROFESSION_TO_GAINS')).toHaveLength(1);
+    expect(pattern1!.classification).toBe(pattern2!.classification);
+    expect(pattern1!.identityKey).toBe(pattern2!.identityKey);
+    expect(pattern1!.relationshipIds).toEqual(pattern2!.relationshipIds);
+    expect(pattern1!.provenance.relationshipIds).toEqual(pattern2!.provenance.relationshipIds);
+    expect(pattern1!.evidence.length).toBe(pattern2!.evidence.length);
   });
 });
 

@@ -496,3 +496,149 @@ describe('Deterministic sorting', () => {
     expect(patterns[0].identityKey.localeCompare(patterns[1].identityKey)).toBeLessThan(0);
   });
 });
+
+describe('Dusthana Detector Negative Suite', () => {
+  describe('House-set-only (no relationship)', () => {
+    it('rejects 8-10 house set without any relationship', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:8_10_HOUSE_SET_ONLY',
+        identityKey: 'NETWORK:8_10_HOUSE_SET_ONLY',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          })
+          // No OCCUPIES/ASPECTS/EXCHANGES/CONJUNCT relationship
+        ],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const patterns = detectDusthanaPatterns([network]);
+      expect(patterns).toHaveLength(0);
+    });
+
+    it('rejects 12-10 house set without any relationship', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:12_10_HOUSE_SET_ONLY',
+        identityKey: 'NETWORK:12_10_HOUSE_SET_ONLY',
+        houses: [12, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:12',
+            identityKey: 'REL:LORD_OF:SATURN:12'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          })
+        ],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const patterns = detectDusthanaPatterns([network]);
+      expect(patterns).toHaveLength(0);
+    });
+  });
+
+  describe('Wrong relationship', () => {
+    it('rejects 8-10 with wrong relationship type (ASPECTS on wrong house)', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:8_10_WRONG_RELATIONSHIP',
+        identityKey: 'NETWORK:8_10_WRONG_RELATIONSHIP',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          }),
+          // Wrong: Mars (10L) aspects 8 instead of 8L connecting to 10
+          makeRelationship({
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:ASPECTS:MARS:8'
+          })
+        ],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const patterns = detectDusthanaPatterns([network]);
+      expect(patterns).toHaveLength(0);
+    });
+  });
+
+  describe('No relationship', () => {
+    it('rejects 8-10 with only LORD_OF edges, no connecting relationship', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:8_10_NO_RELATIONSHIP',
+        identityKey: 'NETWORK:8_10_NO_RELATIONSHIP',
+        houses: [8, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:8',
+            identityKey: 'REL:LORD_OF:SATURN:8'
+          }),
+          makeRelationship({
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            identityKey: 'REL:LORD_OF:MARS:10'
+          })
+          // No OCCUPIES/ASPECTS/EXCHANGES/CONJUNCT connecting the houses
+        ],
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const patterns = detectDusthanaPatterns([network]);
+      expect(patterns).toHaveLength(0);
+    });
+  });
+
+  describe('Missing data', () => {
+    it('rejects 8-10 with missing lordship data', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:8_10_MISSING_DATA',
+        identityKey: 'NETWORK:8_10_MISSING_DATA',
+        houses: [8, 10],
+        lords: [], // No lords defined
+        relationships: [], // No LORD_OF edges
+        topology: 'DIRECT_LINK',
+        direction: 'FORWARD'
+      });
+
+      const patterns = detectDusthanaPatterns([network]);
+      expect(patterns).toHaveLength(0);
+    });
+  });
+});

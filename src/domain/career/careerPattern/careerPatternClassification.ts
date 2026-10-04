@@ -66,19 +66,20 @@ function buildCareerPattern(
   network: CareerHouseNetwork,
   match: CareerPatternRuleMatch
 ): CareerPattern {
+  // Use establishingRelationshipIds from the match (sorted-unique via Set)
+  const relationshipIds = [...new Set(match.establishingRelationshipIds)].sort();
+
   const identityKey = buildCareerPatternIdentityKey(
     match.family,
     match.classification,
     network.houses,
     network.topology,
-    network.relationships.map(r => r.identityKey)
+    relationshipIds
   );
 
   const patternId = buildCareerPatternId(identityKey);
   const level = resolvePatternLevel(match.family);
   const name = buildPatternName(match.classification);
-
-  const relationshipIds = network.relationships.map(r => r.identityKey).sort();
 
   const evidence = Object.freeze([{
     evidenceId: `P2-03-EVIDENCE:${match.ruleId}:${network.identityKey}`,

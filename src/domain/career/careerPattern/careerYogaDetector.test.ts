@@ -276,3 +276,116 @@ describe('Career Yoga Detector', () => {
     });
   });
 });
+
+describe('Career Yoga Detector Negative Suite', () => {
+  describe('Participant via generic edge', () => {
+    it('rejects participant connected only via generic edge (not LORD_OF)', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-GENERIC',
+        identityKey: 'NETWORK:6-10-GENERIC',
+        houses: [6, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10-ASPECT',
+            identityKey: 'REL:MARS-10-ASPECT',
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+          // MARS only connected via ASPECTS, not LORD_OF
+        ]
+      });
+
+      const patterns = detectCareerYogaPatterns([network]);
+      expect(patterns).toHaveLength(0); // Only one LORD_OF participant
+    });
+  });
+
+  describe('No LORD_OF participation', () => {
+    it('rejects network with no LORD_OF edges', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-NO_LORD',
+        identityKey: 'NETWORK:6-10-NO_LORD',
+        houses: [6, 10],
+        lords: [Planet.SATURN, Planet.MARS],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6-ASPECT',
+            identityKey: 'REL:SATURN-6-ASPECT',
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10-ASPECT',
+            identityKey: 'REL:MARS-10-ASPECT',
+            type: 'ASPECTS',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+          // No LORD_OF edges at all
+        ]
+      });
+
+      const patterns = detectCareerYogaPatterns([network]);
+      expect(patterns).toHaveLength(0);
+    });
+  });
+
+  describe('Unrelated planet', () => {
+    it('rejects planet with no relationship to career houses', () => {
+      const network = makeNetwork({
+        networkId: 'NETWORK:6-10-UNRELATED',
+        identityKey: 'NETWORK:6-10-UNRELATED',
+        houses: [6, 10],
+        lords: [Planet.SATURN, Planet.MARS, Planet.JUPITER],
+        relationships: [
+          {
+            edgeId: 'EDGE:SATURN-6',
+            identityKey: 'REL:SATURN-6',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:SATURN',
+            targetNodeId: 'HOUSE:6',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:MARS-10',
+            identityKey: 'REL:MARS-10',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:MARS',
+            targetNodeId: 'HOUSE:10',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          },
+          {
+            edgeId: 'EDGE:JUPITER-1',
+            identityKey: 'REL:JUPITER-1',
+            type: 'LORD_OF',
+            sourceNodeId: 'PLANET:JUPITER',
+            targetNodeId: 'HOUSE:1',
+            provenance: { sourceIds: ['test'], ruleIds: [], parentIds: [] }
+          }
+          // JUPITER lords house 1 (unrelated to 6, 10)
+        ]
+      });
+
+      const patterns = detectCareerYogaPatterns([network]);
+      // Should detect yoga for SATURN and MARS (career-relevant)
+      // JUPITER should not be a participant (not in career houses)
+      expect(patterns).toHaveLength(1);
+      expect(patterns[0].participants).toEqual(['MARS', 'SATURN']);
+      expect(patterns[0].participants).not.toContain('JUPITER');
+    });
+  });
+});
