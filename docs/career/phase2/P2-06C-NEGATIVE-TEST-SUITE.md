@@ -4,7 +4,7 @@
 
 **Implementation Date:** 2026-10-04
 **Test File:** `src/domain/career/careerPattern/careerPatternNegativeSuite.test.ts`
-**Test Count:** 51 tests (all passing)
+**Test Count:** 58 tests (all passing)
 
 ## Overview
 
@@ -50,8 +50,12 @@ Tests for each specialized classification using actual `CareerPatternClassificat
 - **CREATIVE_DHARMA_TO_PROFESSION** (5→9→10): House-set-only, reverse direction, partial chain
 - **DHARMA_KARMA_ALIGNMENT** (9→10→11): House-set-only, reverse direction, partial chain
 - **PROFESSION_TO_GAINS** (10→11): Reverse direction (11→10), undirected-only (10↔11 via CONJUNCT/EXCHANGES)
+- **UPACHAYA_PROGRESSION** (3→6→10→11): House-set-only, reverse direction, partial chain, skip intermediates (3→10)
+- **PARIVARTANA_YOGA**: House-set-only without EXCHANGES edges, non-career house exchange (1↔5), EXCHANGES edge without career-relevant house
 
 **Critical Invariant:** Asserts the SPECIALIZED classification is absent, not that all patterns are absent. The generic `CAREER_HOUSE_NETWORK` carrier may legitimately remain.
+
+**Note on Advanced Families:** Advanced families (KENDRA_TRIKONA, DUSTHANA_CAREER_TRANSFORMATION, CAREER_YOGA_STRUCTURE) are detected by separate detectors (kendraTrikonaDetector, dusthanaTransformationDetector, careerYogaDetector) that are not integrated into the main classifyCareerPatterns flow yet. Per spec §26, these are tested per their actual detector contracts in their respective test files. This suite focuses on patterns produced by classifyCareerHouseNetwork.
 
 ### 3. Relationship-Semantics Negatives (P2-06A Freeze Regression Shield)
 
@@ -92,12 +96,21 @@ Tests against `validateDusthanaRelationships`:
 
 Missing any one of these conditions → specialized pattern not emitted, never a negative conclusion.
 
+## Verification
+
+All test suites are green:
+- `npm run lint` (tsc --noEmit): ✅ PASSED
+- `careerPattern` suite: ✅ 286 tests passed
+- `careerGraph` suite: ✅ 76 tests passed
+- `careerDispositor` suite: ✅ 29 tests passed
+- `careerPatternQualification` suite: ✅ 58 tests passed
+
 ## Test Results
 
-- **Total Tests:** 51
-- **Passing:** 51
+- **Total Tests:** 58
+- **Passing:** 58
 - **Failing:** 0
-- **Duration:** ~35ms
+- **Duration:** ~112ms
 
 ## Related Documentation
 

@@ -1186,6 +1186,185 @@ describe('Specialized Pathway Negative Suite', () => {
       expectPatternAbsent(result, 'PROFESSION_TO_GAINS');
     });
   });
+
+  describe('UPACHAYA_PROGRESSION (3→6→10→11)', () => {
+    it('rejects house-set-only STAR topology', () => {
+      const network = makeStarNetwork([3, 6, 10, 11]);
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'UPACHAYA_PROGRESSION');
+    });
+
+    it('rejects reverse direction (11→10→6→3)', () => {
+      const network = makeReverseChainNetwork([3, 6, 10, 11]);
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'UPACHAYA_PROGRESSION');
+    });
+
+    it('rejects partial chain (3→6 only)', () => {
+      const network = makePartialChainNetwork([3, 6, 10, 11]);
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'UPACHAYA_PROGRESSION');
+    });
+
+    it('rejects skip intermediates (3→10)', () => {
+      const relationships: CareerGraphEdge[] = [
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:SATURN:3',
+          identityKey: 'REL:LORD_OF:SATURN:3',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:3'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:OCCUPIES:SATURN:10',
+          identityKey: 'REL:OCCUPIES:SATURN:10',
+          type: 'OCCUPIES',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:MERCURY:6',
+          identityKey: 'REL:LORD_OF:MERCURY:6',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MERCURY',
+          targetNodeId: 'HOUSE:6'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:JUPITER:10',
+          identityKey: 'REL:LORD_OF:JUPITER:10',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:10'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:VENUS:11',
+          identityKey: 'REL:LORD_OF:VENUS:11',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:VENUS',
+          targetNodeId: 'HOUSE:11'
+        })
+      ];
+
+      const network = makeNetwork({
+        networkId: 'NETWORK:SKIP_3_10',
+        identityKey: 'NETWORK:SKIP_3_10',
+        houses: [3, 6, 10, 11],
+        lords: [Planet.SATURN, Planet.MERCURY, Planet.JUPITER, Planet.VENUS],
+        relationships,
+        topology: 'CHAIN',
+        direction: 'FORWARD'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'UPACHAYA_PROGRESSION');
+    });
+  });
+
+  describe('PARIVARTANA_YOGA', () => {
+    it('house-set-only without EXCHANGES edges → no PARIVARTANA_YOGA', () => {
+      const network = makeStarNetwork([6, 10]);
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'PARIVARTANA_YOGA');
+    });
+
+    it('non-career house exchange (1↔5) → no PARIVARTANA_YOGA', () => {
+      const relationships: CareerGraphEdge[] = [
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:SATURN:1',
+          identityKey: 'REL:LORD_OF:SATURN:1',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:1'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:MERCURY:5',
+          identityKey: 'REL:LORD_OF:MERCURY:5',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MERCURY',
+          targetNodeId: 'HOUSE:5'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:EXCHANGES:SATURN:MERCURY',
+          identityKey: 'REL:EXCHANGES:SATURN:MERCURY',
+          type: 'EXCHANGES',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'PLANET:MERCURY'
+        })
+      ];
+
+      const network = makeNetwork({
+        networkId: 'NETWORK:NON_CAREER_EXCHANGE',
+        identityKey: 'NETWORK:NON_CAREER_EXCHANGE',
+        houses: [1, 5],
+        lords: [Planet.SATURN, Planet.MERCURY],
+        relationships,
+        topology: 'DIRECT_LINK',
+        direction: 'BIDIRECTIONAL'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'PARIVARTANA_YOGA');
+    });
+
+    it('EXCHANGES edge without career-relevant house → no PARIVARTANA_YOGA', () => {
+      const relationships: CareerGraphEdge[] = [
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:SATURN:1',
+          identityKey: 'REL:LORD_OF:SATURN:1',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:1'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:LORD_OF:MERCURY:5',
+          identityKey: 'REL:LORD_OF:MERCURY:5',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MERCURY',
+          targetNodeId: 'HOUSE:5'
+        }),
+        makeRelationship({
+          edgeId: 'EDGE:EXCHANGES:SATURN:MERCURY',
+          identityKey: 'REL:EXCHANGES:SATURN:MERCURY',
+          type: 'EXCHANGES',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'PLANET:MERCURY'
+        })
+      ];
+
+      const network = makeNetwork({
+        networkId: 'NETWORK:EXCHANGE_NO_CAREER',
+        identityKey: 'NETWORK:EXCHANGE_NO_CAREER',
+        houses: [1, 5],
+        lords: [Planet.SATURN, Planet.MERCURY],
+        relationships,
+        topology: 'DIRECT_LINK',
+        direction: 'BIDIRECTIONAL'
+      });
+
+      const input: CareerPatternClassificationInput = { networks: [network] };
+      const result = classifyCareerPatterns(input);
+
+      expectPatternAbsent(result, 'PARIVARTANA_YOGA');
+    });
+  });
+
+  // NOTE: Advanced families (KENDRA_TRIKONA, DUSTHANA_CAREER_TRANSFORMATION, CAREER_YOGA_STRUCTURE)
+  // are detected by separate detectors (kendraTrikonaDetector, dusthanaTransformationDetector, careerYogaDetector)
+  // that are not integrated into the main classifyCareerPatterns flow yet. Per spec §26, these should be
+  // tested per their actual detector contracts in their respective test files.
+  // This suite focuses on patterns produced by classifyCareerHouseNetwork.
 });
 
 // ============================================================================
