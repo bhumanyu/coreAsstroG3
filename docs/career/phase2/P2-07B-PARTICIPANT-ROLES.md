@@ -12,7 +12,7 @@ P2-07B is the participant roles layer that sits ABOVE the pattern qualification 
 Participants that resolve from `establishingRelationshipIds` edges' `sourceNodeId`/`targetNodeId` where the node is `PLANET:*`. A participant appearing in establishing evidence is CORE, not because of planetary importance.
 
 ### SUPPORTING
-Participants that appear only in `supportingRelationshipIds` edges and are not CORE/MODIFIER/CHALLENGING.
+Participants that appear only in `supportingRelationshipIds` edges and are not CORE/MODIFIER.
 
 ### MODIFIER
 Participants with an explicit deterministic relationship (CONJUNCT or ASPECTS edge) to an already-established CORE participant. Never semantic interpretation (no "Mercury = communication career").
@@ -32,7 +32,7 @@ Natural maleficence alone never produces CHALLENGING. Missing evidence never pro
 | SUPPORTING_RELATIONSHIP | Participant only in supporting relationships | Participant appears only in pattern.provenance.supportingRelationshipIds |
 | MODIFIER_RELATIONSHIP | CONJUNCT/ASPECTS edge to CORE participant | Edge between candidate and CORE planet |
 | ADVERSE_CONDITION | Adverse planetary condition | WEAK/AFFLICTED/DEBILITATED/SEVERE condition on participant |
-| ADVERSE_EDGE | Adverse relationship to CORE participant | Explicit adverse edge to CORE planet |
+| ADVERSE_EDGE | Adverse relationship to CORE participant | DEFERRED — requires frozen P2-06 adverse-edge taxonomy |
 
 ## Primary Role Model
 
@@ -55,9 +55,13 @@ The qualification status from P2-07A gates role assignment:
 
 - **QUALIFIED** → Full role assignment
 - **UNQUALIFIED** → No role assignments (empty result)
-- **INSUFFICIENT_DATA** → Only fully-evidenced assignments
+- **INSUFFICIENT_DATA** → Only assignments with resolved edge identity (evidence-only or inferred MODIFIER/SUPPORTING assignments are suppressed)
 
 P2-07B NEVER mutates or reinterprets the P2-07A status.
+
+## Candidate Set Contract
+
+`pattern.planets` is the authoritative participant candidate set; graph edges classify candidates, they never create participants not already in `pattern.planets`. The role assignment logic iterates over `pattern.planets` using the canonical planet order, and only participants present in that array are considered for role assignment.
 
 ## Missing Evidence Semantics
 

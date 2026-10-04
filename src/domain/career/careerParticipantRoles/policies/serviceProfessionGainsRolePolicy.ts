@@ -11,7 +11,9 @@ import type {
 } from '../participantRoleTypes';
 import {
   generateParticipantRoleEvidenceId,
-  createParticipantId
+  createParticipantId,
+  resolveRelationshipEdges,
+  extractPlanetFromParticipantId
 } from '../participantRoleUtils';
 import {
   isEstablishingParticipant,
@@ -67,9 +69,9 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
       if (isEstablishingParticipant(context, participantId)) {
         coreParticipants.push(participantId);
 
-        // Create CORE evidence
+        // Create CORE evidence (one per edge)
         const evidence = this.createCoreEvidence(context, participantId);
-        allEvidence.push(evidence);
+        allEvidence.push(...evidence);
       }
     }
 
@@ -90,7 +92,7 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
       const hasModifier = hasModifierRelationship(context, participantId, coreParticipants);
       if (hasModifier) {
         const evidence = this.createModifierEvidence(context, participantId, coreParticipants);
-        allEvidence.push(evidence);
+        allEvidence.push(...evidence);
         continue;
       }
 
@@ -98,7 +100,7 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
       const hasSupporting = isSupportingParticipant(context, participantId);
       if (hasSupporting) {
         const evidence = this.createSupportingEvidence(context, participantId);
-        allEvidence.push(evidence);
+        allEvidence.push(...evidence);
         continue;
       }
 
@@ -113,14 +115,25 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
 
       const participantId = createParticipantId(planet);
 
-      // Collect evidence for this participant by checking evidenceId
+      // Collect evidence for this participant using the participantId field
       const participantEvidence = allEvidence.filter(e =>
-        e.evidenceId.includes(participantId)
+        e.participantId === participantId
       );
 
       if (participantEvidence.length === 0) {
         // No evidence - no assignment (per spec §26)
         continue;
+      }
+
+      // INSUFFICIENT_DATA gate: require at least one resolved (non-UNKNOWN) edge identity
+      if (qualification.status === 'INSUFFICIENT_DATA') {
+        const hasResolvedEdge = participantEvidence.some(e =>
+          e.relationshipIds.length > 0 && e.relationshipIds[0] !== 'UNKNOWN'
+        );
+        if (!hasResolvedEdge) {
+          // Evidence-only or inferred MODIFIER/SUPPORTING assignments are suppressed
+          continue;
+        }
       }
 
       // Determine primary role (precedence: CORE > MODIFIER > SUPPORTING)
@@ -143,8 +156,8 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
       if (hasChallengingRelationship(context, participantId, coreParticipants)) {
         isChallenging = true;
         const challengingEvidence = this.createChallengingEdgeEvidence(context, participantId, coreParticipants);
-        allEvidence.push(challengingEvidence);
-        participantEvidence.push(challengingEvidence);
+        allEvidence.push(...challengingEvidence);
+        participantEvidence.push(...challengingEvidence);
       }
 
       // Deduplicate evidence by evidenceId
@@ -163,10 +176,10 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
 
     // Sort assignments by canonical planet order
     assignments.sort((a, b) => {
-      const planetA = a.participantId.replace('PLANET:', '');
-      const planetB = b.participantId.replace('PLANET:', '');
-      const indexA = CANONICAL_PLANET_ORDER.indexOf(planetA as any);
-      const indexB = CANONICAL_PLANET_ORDER.indexOf(planetB as any);
+      const planetA = extractPlanetFromParticipantId(a.participantId);
+      const planetB = extractPlanetFromParticipantId(b.participantId);
+      const indexA = CANONICAL_PLANET_ORDER.indexOf(planetA);
+      const indexB = CANONICAL_PLANET_ORDER.indexOf(planetB);
       return indexA - indexB;
     });
 
@@ -184,68 +197,106 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
   private createCoreEvidence(
     context: ParticipantRoleContext,
     participantId: ParticipantId
-  ): ParticipantRoleEvidence {
+  ): ParticipantRoleEvidence[] {
     const establishingIds = context.pattern.provenance.establishingRelationshipIds;
-    const edgeIdentityKey = establishingIds[0] || 'UNKNOWN';
+    const edges = resolveRelationshipEdges(context, establishingIds);
 
-    return Object.freeze({
-      evidenceId: generateParticipantRoleEvidenceId(
-        this.ruleId,
+    // Filter to edges where this participant is involved
+    const participantEdges = edges.filter(
+      edge => edge.sourceNodeId === participantId || edge.targetNodeId === participantId
+    );
+
+    // Emit one evidence record per edge
+    return participantEdges.map(edge =>
+      Object.freeze({
+        evidenceId: generateParticipantRoleEvidenceId(
+          this.ruleId,
+          participantId,
+          'CORE',
+          edge.identityKey
+        ),
         participantId,
-        'CORE',
-        edgeIdentityKey
-      ),
-      role: 'CORE',
-      relationshipIds: Object.freeze([...establishingIds]),
-      source: 'ESTABLISHING_RELATIONSHIP' as ParticipantRoleEvidenceSource,
-      explanation: `Participant ${participantId} appears in establishing relationships for the pattern.`
-    });
+        role: 'CORE' as const,
+        relationshipIds: Object.freeze([edge.identityKey]),
+        source: 'ESTABLISHING_RELATIONSHIP' as ParticipantRoleEvidenceSource,
+        explanation: `Participant ${participantId} appears in establishing relationship ${edge.identityKey} for the pattern.`
+      })
+    );
   }
 
   private createSupportingEvidence(
     context: ParticipantRoleContext,
     participantId: ParticipantId
-  ): ParticipantRoleEvidence {
+  ): ParticipantRoleEvidence[] {
     const supportingIds = context.pattern.provenance.supportingRelationshipIds ?? [];
-    const edgeIdentityKey = supportingIds[0] || 'UNKNOWN';
+    if (supportingIds.length === 0) {
+      return [];
+    }
 
-    return Object.freeze({
-      evidenceId: generateParticipantRoleEvidenceId(
-        this.ruleId,
+    const edges = resolveRelationshipEdges(context, supportingIds);
+
+    // Filter to edges where this participant is involved
+    const participantEdges = edges.filter(
+      edge => edge.sourceNodeId === participantId || edge.targetNodeId === participantId
+    );
+
+    // Emit one evidence record per edge
+    return participantEdges.map(edge =>
+      Object.freeze({
+        evidenceId: generateParticipantRoleEvidenceId(
+          this.ruleId,
+          participantId,
+          'SUPPORTING',
+          edge.identityKey
+        ),
         participantId,
-        'SUPPORTING',
-        edgeIdentityKey
-      ),
-      role: 'SUPPORTING',
-      relationshipIds: Object.freeze([...supportingIds]),
-      source: 'SUPPORTING_RELATIONSHIP' as ParticipantRoleEvidenceSource,
-      explanation: `Participant ${participantId} appears only in supporting relationships for the pattern.`
-    });
+        role: 'SUPPORTING' as const,
+        relationshipIds: Object.freeze([edge.identityKey]),
+        source: 'SUPPORTING_RELATIONSHIP' as ParticipantRoleEvidenceSource,
+        explanation: `Participant ${participantId} appears in supporting relationship ${edge.identityKey} for the pattern.`
+      })
+    );
   }
 
   private createModifierEvidence(
     context: ParticipantRoleContext,
     participantId: ParticipantId,
     coreParticipants: readonly ParticipantId[]
-  ): ParticipantRoleEvidence {
+  ): ParticipantRoleEvidence[] {
+    // Resolve all establishing and supporting edges
     const allRelationshipIds = [
       ...context.pattern.provenance.establishingRelationshipIds,
       ...(context.pattern.provenance.supportingRelationshipIds ?? [])
     ];
-    const edgeIdentityKey = allRelationshipIds[0] || 'UNKNOWN';
+    const edges = resolveRelationshipEdges(context, allRelationshipIds);
 
-    return Object.freeze({
-      evidenceId: generateParticipantRoleEvidenceId(
-        this.ruleId,
-        participantId,
-        'MODIFIER',
-        edgeIdentityKey
-      ),
-      role: 'MODIFIER',
-      relationshipIds: Object.freeze([...allRelationshipIds]),
-      source: 'MODIFIER_RELATIONSHIP' as ParticipantRoleEvidenceSource,
-      explanation: `Participant ${participantId} has a CONJUNCT or ASPECTS relationship to CORE participants.`
+    // Filter to CONJUNCT or ASPECTS edges involving the candidate AND a CORE participant
+    const modifierEdges = edges.filter(edge => {
+      const isModifierEdge = edge.type === 'CONJUNCT' || edge.type === 'ASPECTS';
+      const involvesCandidate = edge.sourceNodeId === participantId || edge.targetNodeId === participantId;
+      const involvesCore = coreParticipants.some(coreId =>
+        edge.sourceNodeId === coreId || edge.targetNodeId === coreId
+      );
+
+      return isModifierEdge && involvesCandidate && involvesCore;
     });
+
+    // Emit one evidence record per modifier edge
+    return modifierEdges.map(edge =>
+      Object.freeze({
+        evidenceId: generateParticipantRoleEvidenceId(
+          this.ruleId,
+          participantId,
+          'MODIFIER',
+          edge.identityKey
+        ),
+        participantId,
+        role: 'MODIFIER' as const,
+        relationshipIds: Object.freeze([edge.identityKey]),
+        source: 'MODIFIER_RELATIONSHIP' as ParticipantRoleEvidenceSource,
+        explanation: `Participant ${participantId} has a ${edge.type} relationship ${edge.identityKey} to a CORE participant.`
+      })
+    );
   }
 
   private createChallengingConditionEvidence(
@@ -259,36 +310,57 @@ export class ServiceProfessionGainsRolePolicy implements ParticipantRolePolicy {
         'CHALLENGING',
         'ADVERSE_CONDITION'
       ),
-      role: 'CHALLENGING',
+      participantId,
+      role: 'CHALLENGING' as const,
       relationshipIds: Object.freeze([]),
       source: 'ADVERSE_CONDITION' as ParticipantRoleEvidenceSource,
       explanation: `Participant ${participantId} has an adverse planetary condition (WEAK/AFFLICTED/DEBILITATED/SEVERE).`
     });
   }
 
+  // DEFERRED: ADVERSE_EDGE evidence source requires frozen P2-06 adverse-edge taxonomy
+  // This function is marked unreachable - hasChallengingRelationship always returns false
   private createChallengingEdgeEvidence(
     context: ParticipantRoleContext,
     participantId: ParticipantId,
     coreParticipants: readonly ParticipantId[]
-  ): ParticipantRoleEvidence {
+  ): ParticipantRoleEvidence[] {
+    // Resolve all establishing and supporting edges
     const allRelationshipIds = [
       ...context.pattern.provenance.establishingRelationshipIds,
       ...(context.pattern.provenance.supportingRelationshipIds ?? [])
     ];
-    const edgeIdentityKey = allRelationshipIds[0] || 'UNKNOWN';
+    const edges = resolveRelationshipEdges(context, allRelationshipIds);
 
-    return Object.freeze({
-      evidenceId: generateParticipantRoleEvidenceId(
-        this.ruleId,
-        participantId,
-        'CHALLENGING',
-        edgeIdentityKey
-      ),
-      role: 'CHALLENGING',
-      relationshipIds: Object.freeze([...allRelationshipIds]),
-      source: 'ADVERSE_EDGE' as ParticipantRoleEvidenceSource,
-      explanation: `Participant ${participantId} has an adverse relationship to CORE participants.`
+    // Filter to adverse edges involving the participant AND a CORE participant
+    // This is a placeholder - actual adverse edge detection requires P2-06 taxonomy
+    const adverseEdges = edges.filter(edge => {
+      const involvesParticipant = edge.sourceNodeId === participantId || edge.targetNodeId === participantId;
+      const involvesCore = coreParticipants.some(coreId =>
+        edge.sourceNodeId === coreId || edge.targetNodeId === coreId
+      );
+
+      // Placeholder: no adverse edge types defined yet in P2-06
+      // When taxonomy is frozen, add: && isAdverseEdgeType(edge.type)
+      return involvesParticipant && involvesCore;
     });
+
+    // Emit one evidence record per adverse edge
+    return adverseEdges.map(edge =>
+      Object.freeze({
+        evidenceId: generateParticipantRoleEvidenceId(
+          this.ruleId,
+          participantId,
+          'CHALLENGING',
+          edge.identityKey
+        ),
+        participantId,
+        role: 'CHALLENGING' as const,
+        relationshipIds: Object.freeze([edge.identityKey]),
+        source: 'ADVERSE_EDGE' as ParticipantRoleEvidenceSource,
+        explanation: `Participant ${participantId} has an adverse relationship ${edge.identityKey} to a CORE participant.`
+      })
+    );
   }
 
   private deduplicateEvidence(evidence: readonly ParticipantRoleEvidence[]): ParticipantRoleEvidence[] {

@@ -80,6 +80,7 @@ export type ParticipantRoleEvidenceSource =
  */
 export interface ParticipantRoleEvidence {
   readonly evidenceId: string;
+  readonly participantId: ParticipantId;
   readonly role: ParticipantRole;
   readonly relationshipIds: readonly string[];
   readonly source: ParticipantRoleEvidenceSource;

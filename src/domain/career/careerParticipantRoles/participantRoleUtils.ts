@@ -2,6 +2,7 @@ import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes'
 import type { CareerGraphEdge } from '../careerGraph/careerAstroGraphTypes';
 import type { ParticipantRoleContext } from './participantRoleTypes';
 import type { ParticipantRole, ParticipantId } from './participantRoleTypes';
+import type { Planet } from '../../../types';
 
 /**
  * P2-07B Participant Role Utility Functions
@@ -67,8 +68,10 @@ export function generateParticipantRoleEvidenceId(
  */
 export function extractPlanetFromParticipantId(
   participantId: ParticipantId
-): string {
-  return participantId.replace('PLANET:', '');
+): Planet {
+  const planet = participantId.replace('PLANET:', '');
+  // This is safe because ParticipantId is guaranteed to be PLANET:{Planet}
+  return planet as Planet;
 }
 
 /**
@@ -77,6 +80,6 @@ export function extractPlanetFromParticipantId(
  * @param planet - The Planet enum value
  * @returns The participant ID (PLANET:{Planet})
  */
-export function createParticipantId(planet: string): ParticipantId {
+export function createParticipantId(planet: Planet): ParticipantId {
   return `PLANET:${planet}` as ParticipantId;
 }

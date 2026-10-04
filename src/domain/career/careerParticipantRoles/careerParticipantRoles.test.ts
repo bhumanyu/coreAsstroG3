@@ -9,32 +9,41 @@ import type {
 } from './participantRoleTypes';
 import type {
   CareerPattern,
-  CareerPatternClassificationEvidence
+  CareerPatternClassificationEvidence,
+  CareerPatternClassification
 } from '../careerPattern/careerPatternTypes';
 import type {
   QualifiedCareerPattern,
   CareerPatternQualificationStatus
 } from '../careerPatternQualification/careerPatternQualificationTypes';
 import type {
-  CareerHouseNetwork
+  CareerHouseNetwork,
+  CareerNetworkTopology,
+  CareerNetworkDirection
 } from '../careerGraph/careerHouseNetworkTypes';
 import type {
-  CareerGraphEdge
+  CareerGraphEdge,
+  CareerGraphEdgeType
 } from '../careerGraph/careerAstroGraphTypes';
 import type {
-  CareerPlanetaryConditionResult
+  CareerPlanetaryConditionResult,
+  CareerPlanetaryCondition,
+  CareerPlanetaryDignity,
+  CareerPlanetaryAffliction,
+  CareerPlanetaryMotion,
+  CareerPlanetaryCombustion
 } from '../careerPlanetaryCondition';
 import type {
-  CareerPlanetaryRelevance
+  CareerPlanetaryRelevance,
+  CareerPlanetRelevance
 } from '../careerPlanetaryRelevance';
 import { Planet } from '../../../types';
-import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
 
 /**
  * Helper: Creates a minimal CareerPattern for testing.
  */
 function makePattern(
-  classification: string,
+  classification: CareerPatternClassification,
   planets: Planet[],
   establishingIds: string[],
   supportingIds: string[] = []
@@ -53,7 +62,7 @@ function makePattern(
     identityKey: 'TEST_PATTERN',
     family: 'CAREER_HOUSE_NETWORK',
     level: 'HOUSE_NETWORK',
-    classification: classification as any,
+    classification,
     name: 'Test Pattern',
     topology: 'LOOP' as CareerNetworkTopology,
     direction: 'DIRECT' as CareerNetworkDirection,
@@ -152,11 +161,11 @@ function makeEdge(
   identityKey: string,
   sourceNodeId: string,
   targetNodeId: string,
-  type: string
+  type: CareerGraphEdgeType
 ): CareerGraphEdge {
   return Object.freeze({
     edgeId: `edge-${identityKey}`,
-    type: type as any,
+    type,
     sourceNodeId,
     targetNodeId,
     identityKey,
@@ -173,18 +182,18 @@ function makeEdge(
  */
 function makeCondition(
   planet: Planet,
-  condition: string = 'MODERATE',
-  dignity: string = 'OWN_SIGN',
-  affliction: string = 'NONE'
+  condition: CareerPlanetaryCondition = 'MODERATE',
+  dignity: CareerPlanetaryDignity = 'OWN_SIGN',
+  affliction: CareerPlanetaryAffliction = 'NONE'
 ): CareerPlanetaryConditionResult {
   return Object.freeze({
     planet,
-    relevance: 'PRIMARY' as any,
-    condition: condition as any,
-    dignity: dignity as any,
-    affliction: affliction as any,
-    motion: 'DIRECT' as any,
-    combustion: 'NOT_COMBUST' as any,
+    relevance: 'PRIMARY' as CareerPlanetRelevance,
+    condition,
+    dignity,
+    affliction,
+    motion: 'DIRECT' as CareerPlanetaryMotion,
+    combustion: 'NOT_COMBUST' as CareerPlanetaryCombustion,
     positiveFactors: [],
     negativeFactors: [],
     relatedPlanets: [],
@@ -198,11 +207,11 @@ function makeCondition(
  */
 function makeRelevance(
   planet: Planet,
-  relevance: string = 'PRIMARY'
+  relevance: CareerPlanetRelevance = 'PRIMARY'
 ): CareerPlanetaryRelevance {
   return Object.freeze({
     planet,
-    relevance: relevance as any,
+    relevance,
     roles: [],
     reasons: [],
     effect: 'SUPPORT',
@@ -243,7 +252,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY, Planet.JUPITER],
         establishingIds
       );
@@ -266,7 +275,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.VENUS],
         [],
         supportingIds
@@ -290,7 +299,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.VENUS],
         [],
         supportingIds
@@ -313,7 +322,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds,
         supportingIds
@@ -330,14 +339,127 @@ describe('P2-07B Participant Roles', () => {
   });
 
   describe('MODIFIER role assignment', () => {
-    test.skip('positive: participant with CONJUNCT edge to CORE is MODIFIER', () => {
-      // Skipped: Requires proper edge setup with CONJUNCT/ASPECTS edges
-      // This test will be enabled when edge detection is fully implemented
+    test('positive: participant with CONJUNCT edge to CORE is MODIFIER', () => {
+      const establishingIds = ['REL:6→10'];
+      const supportingIds = ['REL:CONJUNCT'];
+      const edges = [
+        makeEdge('REL:6→10', 'PLANET:MERCURY', 'HOUSE:10', 'LORD_OF'),
+        makeEdge('REL:CONJUNCT', 'PLANET:VENUS', 'PLANET:MERCURY', 'CONJUNCT')
+      ];
+
+      const pattern = makePattern(
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
+        [Planet.MERCURY, Planet.VENUS],
+        establishingIds,
+        supportingIds
+      );
+      const qualification = makeQualifiedPattern(pattern, 'QUALIFIED');
+      const context = makeContext(pattern, qualification, edges);
+
+      const result = assignParticipantRoles(context);
+
+      expect(result.assignments).toHaveLength(2);
+      const mercuryAssignment = result.assignments.find(a => a.participantId === 'PLANET:MERCURY');
+      const venusAssignment = result.assignments.find(a => a.participantId === 'PLANET:VENUS');
+
+      expect(mercuryAssignment?.primaryRole).toBe('CORE');
+      expect(venusAssignment?.primaryRole).toBe('MODIFIER');
+      expect(venusAssignment?.roleEvidence).toHaveLength(1);
+      expect(venusAssignment?.roleEvidence[0].relationshipIds).toEqual(['REL:CONJUNCT']);
     });
 
-    test.skip('negative: participant with unrelated edge is not MODIFIER', () => {
-      // Skipped: Requires proper edge setup
-      // This test will be enabled when edge detection is fully implemented
+    test('positive: participant with ASPECTS edge to CORE is MODIFIER', () => {
+      const establishingIds = ['REL:6→10'];
+      const supportingIds = ['REL:ASPECTS'];
+      const edges = [
+        makeEdge('REL:6→10', 'PLANET:MERCURY', 'HOUSE:10', 'LORD_OF'),
+        makeEdge('REL:ASPECTS', 'PLANET:VENUS', 'PLANET:MERCURY', 'ASPECTS')
+      ];
+
+      const pattern = makePattern(
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
+        [Planet.MERCURY, Planet.VENUS],
+        establishingIds,
+        supportingIds
+      );
+      const qualification = makeQualifiedPattern(pattern, 'QUALIFIED');
+      const context = makeContext(pattern, qualification, edges);
+
+      const result = assignParticipantRoles(context);
+
+      expect(result.assignments).toHaveLength(2);
+      const venusAssignment = result.assignments.find(a => a.participantId === 'PLANET:VENUS');
+      expect(venusAssignment?.primaryRole).toBe('MODIFIER');
+      expect(venusAssignment?.roleEvidence[0].relationshipIds).toEqual(['REL:ASPECTS']);
+    });
+
+    test('negative: participant with unrelated edge is not MODIFIER', () => {
+      const establishingIds = ['REL:6→10'];
+      const supportingIds = ['REL:SUPPORT'];
+      const edges = [
+        makeEdge('REL:6→10', 'PLANET:MERCURY', 'HOUSE:10', 'LORD_OF'),
+        makeEdge('REL:SUPPORT', 'PLANET:VENUS', 'HOUSE:6', 'LORD_OF')
+      ];
+
+      const pattern = makePattern(
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
+        [Planet.MERCURY, Planet.VENUS],
+        establishingIds,
+        supportingIds
+      );
+      const qualification = makeQualifiedPattern(pattern, 'QUALIFIED');
+      const context = makeContext(pattern, qualification, edges);
+
+      const result = assignParticipantRoles(context);
+
+      expect(result.assignments).toHaveLength(2);
+      const venusAssignment = result.assignments.find(a => a.participantId === 'PLANET:VENUS');
+      expect(venusAssignment?.primaryRole).toBe('SUPPORTING');
+      expect(venusAssignment?.primaryRole).not.toBe('MODIFIER');
+    });
+
+    test('negative: participant with edge to non-CORE participant is not MODIFIER', () => {
+      const establishingIds = ['REL:6→10'];
+      const supportingIds = ['REL:CONJUNCT'];
+      const edges = [
+        makeEdge('REL:6→10', 'PLANET:MERCURY', 'HOUSE:10', 'LORD_OF'),
+        makeEdge('REL:SUPPORT', 'PLANET:VENUS', 'HOUSE:6', 'LORD_OF'),
+        makeEdge('REL:CONJUNCT', 'PLANET:JUPITER', 'PLANET:VENUS', 'CONJUNCT')
+      ];
+
+      const pattern = makePattern(
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
+        [Planet.MERCURY, Planet.VENUS, Planet.JUPITER],
+        establishingIds,
+        supportingIds
+      );
+      const qualification = makeQualifiedPattern(pattern, 'QUALIFIED');
+      const context = makeContext(pattern, qualification, edges);
+
+      const result = assignParticipantRoles(context);
+
+      const jupiterAssignment = result.assignments.find(a => a.participantId === 'PLANET:JUPITER');
+      expect(jupiterAssignment?.primaryRole).not.toBe('MODIFIER');
+    });
+
+    test('negative: participant with no edge is not MODIFIER', () => {
+      const establishingIds = ['REL:6→10'];
+      const edges = [
+        makeEdge('REL:6→10', 'PLANET:MERCURY', 'HOUSE:10', 'LORD_OF')
+      ];
+
+      const pattern = makePattern(
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
+        [Planet.MERCURY, Planet.VENUS],
+        establishingIds
+      );
+      const qualification = makeQualifiedPattern(pattern, 'QUALIFIED');
+      const context = makeContext(pattern, qualification, edges);
+
+      const result = assignParticipantRoles(context);
+
+      expect(result.assignments).toHaveLength(1);
+      expect(result.assignments[0].participantId).toBe('PLANET:MERCURY');
     });
   });
 
@@ -352,7 +474,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds
       );
@@ -375,7 +497,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.SATURN],
         establishingIds
       );
@@ -401,7 +523,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds
       );
@@ -419,7 +541,7 @@ describe('P2-07B Participant Roles', () => {
   describe('Missing data semantics', () => {
     test('missing evidence produces no role assignment, not CHALLENGING', () => {
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         []
       );
@@ -440,7 +562,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds
       );
@@ -460,7 +582,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY, Planet.VENUS],
         establishingIds
       );
@@ -478,7 +600,7 @@ describe('P2-07B Participant Roles', () => {
   describe('No policy', () => {
     test('classification without policy returns empty result', () => {
       const pattern = makePattern(
-        'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS',
+        'WEALTH_TO_SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         ['REL:6→10']
       );
@@ -502,7 +624,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.JUPITER, Planet.MERCURY],
         establishingIds
       );
@@ -524,7 +646,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY, Planet.JUPITER],
         establishingIds
       );
@@ -547,7 +669,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY, Planet.JUPITER],
         establishingIds
       );
@@ -569,7 +691,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds
       );
@@ -592,7 +714,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds
       );
@@ -619,7 +741,7 @@ describe('P2-07B Participant Roles', () => {
       ];
 
       const pattern = makePattern(
-        'SERVICE_TO_PROFESSION_TO_GAINS',
+        'SERVICE_TO_PROFESSION_TO_GAINS' as CareerPatternClassification,
         [Planet.MERCURY],
         establishingIds,
         supportingIds
