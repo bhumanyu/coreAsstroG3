@@ -2,7 +2,7 @@ import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes'
 import type { CareerPattern } from './careerPatternTypes';
 import type { CareerPatternClassificationEvidence, CareerPatternClassificationProvenance } from './careerPatternTypes';
 import type { CareerPatternHouseRole } from './careerPatternTypes';
-import type { CareerMechanism } from './careerPatternTypes';
+import type { CareerMechanismType } from '../careerMechanism/careerMechanismTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
 import { hasDirectHouseRelationship } from './careerPatternPredicates';
@@ -60,7 +60,7 @@ const DUSTHANA_HOUSE_ROLES: Readonly<Record<number, CareerPatternHouseRole>> = O
  * Derived from the structural fact that house 8 (transformation/death) connects to house 10 (career).
  * These are candidate mechanisms; planet-level refinement happens in P2-04 qualification.
  */
-const MECHANISMS_8_TO_10: readonly CareerMechanism[] = Object.freeze([
+const MECHANISMS_8_TO_10: readonly CareerMechanismType[] = Object.freeze([
   'RESEARCH',
   'INVESTIGATION',
   'TRANSFORMATION',
@@ -76,7 +76,7 @@ const MECHANISMS_8_TO_10: readonly CareerMechanism[] = Object.freeze([
  * Derived from the structural fact that house 12 (loss/foreign) connects to house 10 (career).
  * These are candidate mechanisms; planet-level refinement happens in P2-04 qualification.
  */
-const MECHANISMS_12_TO_10: readonly CareerMechanism[] = Object.freeze([
+const MECHANISMS_12_TO_10: readonly CareerMechanismType[] = Object.freeze([
   'FOREIGN_WORK',
   'REMOTE_WORK',
   'INSTITUTIONAL_WORK',

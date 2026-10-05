@@ -1,5 +1,6 @@
 import type { Horoscope } from '../../../types';
-import type { CareerPattern, CareerPatternAnalysis, CareerPatternEvidence, CareerPatternConflict, CareerPatternRelationship, CareerMechanism, CareerYogaPattern } from './careerPatternTypes';
+import type { CareerPattern, CareerPatternAnalysis, CareerPatternEvidence, CareerPatternConflict, CareerPatternRelationship, CareerYogaPattern } from './careerPatternTypes';
+import type { CareerMechanismType } from '../careerMechanism/careerMechanismTypes';
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
 import type { CareerAstroGraph } from '../careerGraph/careerAstroGraphTypes';
 import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
@@ -243,8 +244,8 @@ function buildPatternRelationships(patterns: readonly CareerPattern[]): readonly
 /**
  * Extracts all unique mechanisms from patterns.
  */
-function extractAllMechanisms(patterns: readonly CareerPattern[]): readonly CareerMechanism[] {
-  const mechanismSet = new Set<CareerMechanism>();
+function extractAllMechanisms(patterns: readonly CareerPattern[]): readonly CareerMechanismType[] {
+  const mechanismSet = new Set<CareerMechanismType>();
 
   for (const pattern of patterns) {
     for (const mechanism of pattern.mechanisms) {

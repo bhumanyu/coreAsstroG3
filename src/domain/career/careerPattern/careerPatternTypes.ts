@@ -1,5 +1,6 @@
 import type { CareerHouseNetwork, CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
 import type { Planet } from '../../../types';
+import type { CareerMechanismType } from '../careerMechanism/careerMechanismTypes';
 
 /**
  * P2-03 Career Pattern Classification Types
@@ -78,31 +79,11 @@ export type CareerPatternHouseRole =
  * Career mechanism types.
  * Represents the underlying mechanism of career activity in a pattern.
  * Per spec §6: mechanism classifications only, no profession-specific values.
+ *
+ * DEPRECATED: This type has been moved to careerMechanism/careerMechanismTypes.ts
+ * as CareerMechanismType. Import from there instead.
  */
-export type CareerMechanism =
-  | 'SELF_EFFORT'
-  | 'SKILL_DEVELOPMENT'
-  | 'SERVICE_EMPLOYMENT'
-  | 'COMPETITION'
-  | 'PROFESSIONALIZATION'
-  | 'PROFESSIONAL_GAINS'
-  | 'CREATIVE_INTELLECTUAL'
-  | 'DHARMA_DRIVEN_PROFESSION'
-  | 'AUTHORITY_LEADERSHIP'
-  | 'TRANSFORMATION'
-  | 'RESEARCH'
-  | 'RISK_MANAGEMENT'
-  | 'INVESTIGATION'
-  | 'BANKING_FINANCE'
-  | 'INSURANCE'
-  | 'TAXATION'
-  | 'COMPLIANCE'
-  | 'CRISIS_MANAGEMENT'
-  | 'FOREIGN_WORK'
-  | 'REMOTE_WORK'
-  | 'INSTITUTIONAL_WORK'
-  | 'ISOLATED_ENVIRONMENT'
-  | 'MIXED';
+export type CareerMechanism = CareerMechanismType;
 
 /**
  * Parivartana career type classification.
@@ -205,7 +186,7 @@ export interface CareerPattern {
   readonly planets: readonly Planet[];
   readonly networkIds: readonly string[];
   readonly relationshipIds: readonly string[];
-  readonly mechanisms: readonly CareerMechanism[];
+  readonly mechanisms: readonly CareerMechanismType[];
   readonly relationships: readonly CareerPatternRelationship[];
   readonly evidence: readonly CareerPatternClassificationEvidence[];
   readonly provenance: CareerPatternClassificationProvenance;
@@ -269,7 +250,7 @@ export interface CareerPatternAnalysis {
   readonly careerYogaPatterns: readonly CareerYogaPattern[];
   readonly evidence: readonly CareerPatternEvidence[];
   readonly relationships: readonly CareerPatternRelationship[];
-  readonly mechanisms: readonly CareerMechanism[];
+  readonly mechanisms: readonly CareerMechanismType[];
   readonly conflicts: readonly CareerPatternConflict[];
   readonly provenance: {
     readonly sourceNetworkIds: readonly string[];

@@ -1,6 +1,7 @@
 import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes';
-import type { CareerPattern, CareerPatternClassification, CareerPatternClassificationEvidence, CareerPatternClassificationProvenance, CareerMechanism } from './careerPatternTypes';
+import type { CareerPattern, CareerPatternClassification, CareerPatternClassificationEvidence, CareerPatternClassificationProvenance } from './careerPatternTypes';
 import type { CareerPatternHouseRole } from './careerPatternTypes';
+import type { CareerMechanismType } from '../careerMechanism/careerMechanismTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import { Planet } from '../../../types';
 import { buildPatternProvenance } from './careerPatternProvenance';
@@ -307,7 +308,7 @@ function buildKendraTrikonaPattern(
 
   // Kendra-Trikona patterns don't have specific mechanisms at this layer
   // Mechanisms are inferred in the qualification layer
-  const mechanisms: readonly CareerMechanism[] = [];
+  const mechanisms: readonly CareerMechanismType[] = [];
 
   return Object.freeze({
     patternId,
