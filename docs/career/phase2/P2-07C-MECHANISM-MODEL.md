@@ -31,12 +31,12 @@ The canonical mechanism vocabulary union. These are structural classifications o
 - Expression family: AGENCY, SELF_DIRECTION, INITIATIVE, VISIBILITY, STATUS, AUTHORITY, LEADERSHIP, STRATEGY, ADVISORY, TEACHING, INNOVATION, DECISION_MAKING, COMMUNICATION, WRITING, PUBLIC_INTERFACE, CLIENT_INTERACTION, CONTRACTUAL_INTERACTION, PARTNERSHIP, COMMERCIAL_INTERACTION, ENTREPRENEURIAL_EFFORT
 - Execution family: EXECUTION, HANDS_ON_CAPABILITY, COURAGE, SELF_EFFORT, SKILL_DEVELOPMENT, SERVICE_EMPLOYMENT, COMPETITION, PROFESSIONALIZATION, PROFESSIONAL_GAINS, CREATIVE_INTELLECTUAL, DHARMA_DRIVEN_PROFESSION, AUTHORITY_LEADERSHIP, STABILITY, WORK_ENVIRONMENT, ADMINISTRATIVE_FOUNDATION, EXPENDITURE
 - Knowledge family: INTELLIGENCE, SPECIALIZED_KNOWLEDGE, RESEARCH, INVESTIGATION, TRANSFORMATION
-- Communication family: TEACHING, COMMUNICATION, WRITING, PUBLIC_INTERFACE, CLIENT_INTERACTION, CONTRACTUAL_INTERACTION, PARTNERSHIP, COMMERCIAL_INTERACTION
-- Business family: BUSINESS, CONSULTING, BANKING_FINANCE, INSURANCE, TAXATION, COMPLIANCE, RISK, CRISIS, CRISIS_MANAGEMENT, ENTREPRENEURIAL_EFFORT, COMMERCIAL_INTERACTION, PARTNERSHIP, CONTRACTUAL_INTERACTION, CLIENT_INTERACTION
-- Institutional family: INSTITUTIONAL_BASE, INSTITUTIONAL_SERVICE, INSTITUTIONAL_WORK, ISOLATION, STABILITY, WORK_ENVIRONMENT, ADMINISTRATIVE_FOUNDATION
-- Transformation family: TRANSFORMATION, RESEARCH, INVESTIGATION, RISK, CRISIS, CRISIS_MANAGEMENT
+- Business family: BUSINESS, CONSULTING, BANKING_FINANCE, INSURANCE, TAXATION, COMPLIANCE, RISK, CRISIS, CRISIS_MANAGEMENT
+- Institutional family: INSTITUTIONAL_BASE, INSTITUTIONAL_SERVICE, INSTITUTIONAL_WORK, ISOLATED_ENVIRONMENT, STABILITY, WORK_ENVIRONMENT, ADMINISTRATIVE_FOUNDATION
+- Transformation family: RISK, CRISIS, CRISIS_MANAGEMENT
 - Foreign family: FOREIGN, FOREIGN_WORK, REMOTE_WORK
-- Legacy: MIXED
+
+**Note:** MIXED was removed from the union. Mixed resolution should be represented structurally on the candidate/result model (e.g., a set containing multiple candidates) rather than as a mechanism type.
 
 ### CareerMechanismFamily (§3)
 
@@ -85,6 +85,13 @@ Where evidence for a mechanism comes from:
 - D10
 
 **Invariant:** 'D10' is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant is enforced at the builder level (buildCareerMechanismEvidence throws for D10).
+
+### CareerMechanismRefinementSource (§8)
+
+Sources that can ONLY be used for refinement evidence, never establishing:
+- D10
+
+Currently only 'D10' is a refinement-only source. Future refinement sources are added to this union. The `buildRefiningMechanismEvidence` and `buildRefiningMechanismEvidenceArray` functions are restricted to accept only this type.
 
 ### CareerMechanismEvidenceRole (§9)
 
@@ -235,7 +242,9 @@ Default implementation of the registry interface. Provides canonical lookup oper
 
 - `createCareerMechanismId(patternId, mechanismType)` → `CAREER_MECHANISM:{patternId}:{type}`
 - `createCareerMechanismCandidateId(patternId, mechanismType)` → `CAREER_MECHANISM_CANDIDATE:{patternId}:{type}`
-- `createCareerMechanismEvidenceId(mechanismId, source, participantIds, relationshipIds)` → `CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:{canonical participants joined}:{canonical relationships joined}` (omits trailing segments when arrays are empty)
+- `createCareerMechanismEvidenceId(mechanismId, source, participantIds, relationshipIds)` → `CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:P[{participants}]:R[{relationships}]`
+
+**Evidence ID encoding:** The P[] and R[] segment markers are always emitted (with empty brackets when empty) to ensure segment position is unambiguous. This prevents boundary collisions where participant and relationship data could be misinterpreted (e.g., `['A'], ['B']` vs `[], ['A:B']`).
 
 **Evidence ID canonicalization rule:** Two evidence units differing in any array member must produce different IDs.
 
@@ -257,9 +266,9 @@ Default implementation of the registry interface. Provides canonical lookup oper
 ## Evidence Helpers (§9)
 
 - `buildCareerMechanismEvidence(input)` — Builds evidence record with validation (role: 'ESTABLISHING')
-- `buildRefiningMechanismEvidence(input)` — Builds refining evidence record (role: 'REFINING', for D10 and other refinement-only sources)
+- `buildRefiningMechanismEvidence(input)` — Builds refining evidence record (role: 'REFINING', source restricted to CareerMechanismRefinementSource)
 - `buildCareerMechanismEvidenceArray(inputs)` — Builds multiple evidence records
-- `buildRefiningMechanismEvidenceArray(inputs)` — Builds multiple refining evidence records
+- `buildRefiningMechanismEvidenceArray(inputs)` — Builds multiple refining evidence records (source restricted to CareerMechanismRefinementSource)
 
 ### Per-Source Validation Matrix
 
@@ -293,6 +302,7 @@ The module exports exactly the following:
 - CareerMechanismPathway
 - CareerMechanismStatus
 - CareerMechanismEvidenceSource
+- CareerMechanismRefinementSource
 - CareerMechanismEvidenceRole
 - CareerMechanismSourceStage
 - CareerMechanismDefinition
@@ -334,7 +344,10 @@ The module exports exactly the following:
 
 ### §23 Deterministic Identity
 
-Tests that mechanism IDs, candidate IDs, and evidence IDs are deterministic and reproducible.
+Tests that mechanism IDs, candidate IDs, and evidence IDs are deterministic and reproducible. Includes regression tests for:
+- Changing only participant membership changes the ID
+- Changing only relationship membership changes the ID
+- Boundary collision cases (e.g., `['A'], ['B']` vs `[], ['A:B']`) produce different IDs with P[]/R[] encoding
 
 ### §24 Distinct Identity Per Type
 
@@ -374,27 +387,29 @@ Tests that the model does not contain score, strength, confidence, or weight fie
 
 ## Guardrails (§33)
 
-1. **Evidence-Role Invariant Enforcement:** The ESTABLISHING vs REFINING evidence role invariant is enforced at the builder level, not deferred to P2-07D. `buildCareerMechanismEvidence` assigns `role: 'ESTABLISHING'` and throws for `source: 'D10'`. `buildRefiningMechanismEvidence` assigns `role: 'REFINING'` and accepts D10 and other refinement-only sources.
+1. **Evidence-Role Invariant Enforcement:** The ESTABLISHING vs REFINING evidence role invariant is enforced at the builder level, not deferred to P2-07D. `buildCareerMechanismEvidence` assigns `role: 'ESTABLISHING'` and throws for `source: 'D10'`. `buildRefiningMechanismEvidence` assigns `role: 'REFINING'` and accepts only CareerMechanismRefinementSource (currently only 'D10').
 
 2. **Mechanism ≠ Profession:** Mechanism types do NOT contain profession-specific values like SOFTWARE_ENGINEER, BANKER, DOCTOR. Those belong in a later synthesis layer.
 
-2. **No DASHA Evidence Source:** DASHA is not included in CareerMechanismEvidenceSource. Timing-related evidence is handled in a separate layer.
+3. **No DASHA Evidence Source:** DASHA is not included in CareerMechanismEvidenceSource. Timing-related evidence is handled in a separate layer.
 
-3. **D10 as Refinement Only:** 'D10' in CareerMechanismEvidenceSource is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant is enforced at the builder level (buildCareerMechanismEvidence throws for D10).
+4. **D10 as Refinement Only:** 'D10' in CareerMechanismEvidenceSource is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant is enforced at the builder level (buildCareerMechanismEvidence throws for D10) and by the CareerMechanismRefinementSource type restriction on buildRefiningMechanismEvidence.
 
-4. **No Scoring Fields:** The model does not contain score, strength, confidence, weight, or qualificationScore fields anywhere.
+5. **No Scoring Fields:** The model does not contain score, strength, confidence, weight, or qualificationScore fields anywhere.
 
-5. **No Silent Conversion:** There is no API that silently converts candidates to qualified mechanisms. Conversion must be explicit.
+6. **No Silent Conversion:** There is no API that silently converts candidates to qualified mechanisms. Conversion must be explicit.
 
-6. **Missing ≠ Negative:** Missing evidence results in INSUFFICIENT_DATA status with empty evidence array. Negative evidence is explicit evidence with negative findings.
+7. **Missing ≠ Negative:** Missing evidence results in INSUFFICIENT_DATA status with empty evidence array. Negative evidence is explicit evidence with negative findings.
 
-7. **Deterministic IDs:** All IDs are deterministic and derived from input data. No Date/random/UUID usage.
+8. **Deterministic IDs:** All IDs are deterministic and derived from input data. No Date/random/UUID usage.
 
-8. **Evidence Citation:** Evidence records cite real participant/relationship IDs. No fabrication of evidence.
+9. **Evidence Citation:** Evidence records cite real participant/relationship IDs. No fabrication of evidence.
 
-9. **Boundary Enforcement:** The module must NOT import from careerDasha, careerD10, careerExpression, careerFinalSynthesis, or domain/timing.
+10. **Boundary Enforcement:** The module must NOT import from careerDasha, careerD10, careerExpression, careerFinalSynthesis, or domain/timing.
 
-10. **Registry ≠ Resolver:** The registry is a static lookup table for mechanism metadata, not a mechanism resolution engine. Resolution logic is in P2-07D.
+11. **Registry ≠ Resolver:** The registry is a static lookup table for mechanism metadata, not a mechanism resolution engine. Resolution logic is in P2-07D.
+
+12. **Builders as Sole Construction Path:** CareerMechanismEvidence should be constructed only through the builder functions (buildCareerMechanismEvidence, buildRefiningMechanismEvidence). Manual construction may violate the evidence-role invariant. The type system does not currently enforce this invariant at the type level (discriminated union), so builders are the canonical construction path.
 
 ## Migration Notes
 
@@ -428,11 +443,10 @@ The following mechanism types are marked as borderline-domain (mechanism vs doma
 - REMOTE_WORK
 - INSTITUTIONAL_WORK
 - PROFESSIONAL_GAINS
-- MIXED
 
 These types are annotated with `@review P2-07D` comments in the registry and type definitions. The decision should be made before the resolver consumes the union:
 - If mechanism: keep as-is
 - If domain: move to a separate domain taxonomy
 - If outcome: move to a separate outcome/impact taxonomy
 
-`MIXED` in particular should either be renamed to reflect its actual semantics or documented as a fallback-bucket, not a mechanism.
+**MIXED removal:** MIXED was removed from the union and registry. Mixed resolution should be represented structurally on the candidate/result model (e.g., a set containing multiple candidates) rather than as a mechanism type.

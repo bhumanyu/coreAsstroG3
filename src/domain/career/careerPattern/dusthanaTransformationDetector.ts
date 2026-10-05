@@ -32,7 +32,7 @@ import { buildPatternProvenance } from './careerPatternProvenance';
  * Methodology chain: dusthana → relationship → condition → career connection → mechanism
  *
  * MISSING RELATIONSHIP → no pattern (changed from membership-only to validation-based)
- * Missing planet data → mechanism MIXED (not negative)
+ * Missing planet data → emit multiple mechanism candidates (structurally represent mixed resolution)
  *
  * VALIDATION REQUIREMENT: Emits patterns ONLY for pairs with VALIDATED status from
  * validateDusthanaRelationships. Attaches validation's relationshipIds/evidenceIds/network
@@ -206,7 +206,7 @@ function buildDusthanaPattern(
  *
  * Hard rule: never maps house 8/12/6 to NEGATIVE direction.
  * Missing relationship → no pattern.
- * Missing planet data → mechanism MIXED (not negative).
+ * Missing planet data → emit multiple mechanism candidates (structurally represent mixed resolution)
  *
  * VALIDATION REQUIREMENT: Emits patterns ONLY for pairs with VALIDATED status from
  * validateDusthanaRelationships.

@@ -36,9 +36,11 @@ export type { ParticipantId };
  *   DHARMA_DRIVEN_PROFESSION, AUTHORITY_LEADERSHIP, TRANSFORMATION,
  *   RESEARCH, RISK_MANAGEMENT, INVESTIGATION, BANKING_FINANCE, INSURANCE,
  *   TAXATION, COMPLIANCE, CRISIS_MANAGEMENT, FOREIGN_WORK, REMOTE_WORK,
- *   INSTITUTIONAL_WORK, ISOLATED_ENVIRONMENT, MIXED
+ *   INSTITUTIONAL_WORK, ISOLATED_ENVIRONMENT
  *
  * Note: ISOLATION was removed as it duplicates ISOLATED_ENVIRONMENT
+ * Note: MIXED was removed - mixed resolution should be represented structurally on the candidate/result model
+ *   (e.g., a set containing multiple candidates) rather than as a mechanism type
  *
  * New members added per spec §4:
  * - AGENCY, SELF_DIRECTION, INITIATIVE, VISIBILITY, STATUS, AUTHORITY,
@@ -50,7 +52,7 @@ export type { ParticipantId };
  *
  * Borderline-domain types (mechanism vs domain vs outcome - to be decided in P2-07D):
  * - BANKING_FINANCE, INSURANCE, TAXATION, COMPLIANCE, FOREIGN_WORK, REMOTE_WORK,
- *   INSTITUTIONAL_WORK, PROFESSIONAL_GAINS, MIXED
+ *   INSTITUTIONAL_WORK, PROFESSIONAL_GAINS
  */
 export type CareerMechanismType =
   // Expression family
@@ -97,15 +99,6 @@ export type CareerMechanismType =
   | 'RESEARCH'
   | 'INVESTIGATION'
   | 'TRANSFORMATION'
-  // Communication family
-  | 'TEACHING'
-  | 'COMMUNICATION'
-  | 'WRITING'
-  | 'PUBLIC_INTERFACE'
-  | 'CLIENT_INTERACTION'
-  | 'CONTRACTUAL_INTERACTION'
-  | 'PARTNERSHIP'
-  | 'COMMERCIAL_INTERACTION'
   // Business family
   | 'BUSINESS'
   | 'CONSULTING'
@@ -116,32 +109,19 @@ export type CareerMechanismType =
   | 'RISK'
   | 'CRISIS'
   | 'CRISIS_MANAGEMENT'
-  | 'ENTREPRENEURIAL_EFFORT'
-  | 'COMMERCIAL_INTERACTION'
-  | 'PARTNERSHIP'
-  | 'CONTRACTUAL_INTERACTION'
-  | 'CLIENT_INTERACTION'
   // Institutional family
   | 'INSTITUTIONAL_BASE'
   | 'INSTITUTIONAL_SERVICE'
   | 'INSTITUTIONAL_WORK'
   | 'ISOLATED_ENVIRONMENT'
-  | 'STABILITY'
-  | 'WORK_ENVIRONMENT'
-  | 'ADMINISTRATIVE_FOUNDATION'
   // Transformation family
-  | 'TRANSFORMATION'
-  | 'RESEARCH'
-  | 'INVESTIGATION'
   | 'RISK'
   | 'CRISIS'
   | 'CRISIS_MANAGEMENT'
   // Foreign family
   | 'FOREIGN'
   | 'FOREIGN_WORK'
-  | 'REMOTE_WORK'
-  // Legacy from careerPatternTypes.ts (to be migrated)
-  | 'MIXED';
+  | 'REMOTE_WORK';
 
 /**
  * Career mechanism families.
@@ -198,6 +178,14 @@ export type CareerMechanismEvidenceSource =
   | 'YOGA'
   | 'DISPOSITOR'
   | 'D10'; // Allowed ONLY as refinement evidence, NEVER as establishing source
+
+/**
+ * Career mechanism refinement source.
+ * Per spec §8: sources that can ONLY be used for refinement evidence, never establishing.
+ *
+ * Currently only 'D10' is a refinement-only source. Future refinement sources are added to this union.
+ */
+export type CareerMechanismRefinementSource = 'D10';
 
 /**
  * Career mechanism evidence role.

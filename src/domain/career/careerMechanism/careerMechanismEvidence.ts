@@ -2,6 +2,7 @@ import type {
   CareerMechanismEvidence,
   CareerMechanismEvidenceSource,
   CareerMechanismEvidenceRole,
+  CareerMechanismRefinementSource,
   CareerMechanismType,
   ParticipantId
 } from './careerMechanismTypes';
@@ -156,7 +157,7 @@ export function buildRefiningMechanismEvidence({
 }: {
   mechanismId: string;
   mechanismType: CareerMechanismType;
-  source: 'D10' | CareerMechanismEvidenceSource;
+  source: CareerMechanismRefinementSource;
   participantIds?: readonly ParticipantId[];
   relationshipIds?: readonly string[];
   patternId?: string;
@@ -227,7 +228,7 @@ export function buildRefiningMechanismEvidenceArray(
   inputs: ReadonlyArray<{
     mechanismId: string;
     mechanismType: CareerMechanismType;
-    source: 'D10' | CareerMechanismEvidenceSource;
+    source: CareerMechanismRefinementSource;
     participantIds?: readonly ParticipantId[];
     relationshipIds?: readonly string[];
     patternId?: string;

@@ -12,6 +12,7 @@ import {
   defaultCareerMechanismRegistry,
   buildCareerMechanismEvidence,
   buildCareerMechanismEvidenceArray,
+  buildRefiningMechanismEvidence,
   buildCareerMechanismProvenance,
   mergeCareerMechanismProvenances,
   areProvenancesEqual
@@ -68,7 +69,32 @@ describe('careerMechanismTypes', () => {
 
       expect(id1).toBe(id2);
       expect(id1).not.toBe(id3);
-      expect(id1).toBe('CAREER_MECHANISM_EVIDENCE:mech-1:PATTERN:PLANET:SUN:rel-1');
+      expect(id1).toBe('CAREER_MECHANISM_EVIDENCE:mech-1:PATTERN:P[PLANET:SUN]:R[rel-1]');
+    });
+
+    it('should emit different IDs when only participant membership changes', () => {
+      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-1']);
+      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:MOON'], ['rel-1']);
+
+      expect(id1).not.toBe(id2);
+    });
+
+    it('should emit different IDs when only relationship membership changes', () => {
+      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-1']);
+      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-2']);
+
+      expect(id1).not.toBe(id2);
+    });
+
+    it('should prevent boundary collision between participants and relationships', () => {
+      // Boundary collision case: participantIds=['A'], relationshipIds=['B'] vs participantIds=[], relationshipIds=['A:B']
+      // With P[]/R[] markers, these should produce different IDs
+      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['A'], ['B']);
+      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', [], ['A:B']);
+
+      expect(id1).not.toBe(id2);
+      expect(id1).toContain('P[A]:R[B]');
+      expect(id2).toContain('P[]:R[A:B]');
     });
   });
 
@@ -194,7 +220,7 @@ describe('careerMechanismTypes', () => {
       const evidence1 = buildCareerMechanismEvidence({
         mechanismId: 'mech-1',
         mechanismType: 'AGENCY',
-        source: 'PATTERN',
+        source: 'PARTICIPANT_ROLE',
         participantIds: ['PLANET:SUN' as ParticipantId],
         relationshipIds: ['rel-1'],
         explanation: 'Evidence 1'
@@ -203,7 +229,7 @@ describe('careerMechanismTypes', () => {
       const evidence2 = buildCareerMechanismEvidence({
         mechanismId: 'mech-1',
         mechanismType: 'AGENCY',
-        source: 'PATTERN',
+        source: 'PARTICIPANT_ROLE',
         participantIds: ['PLANET:SUN' as ParticipantId],
         relationshipIds: ['rel-1'],
         explanation: 'Evidence 2'
@@ -212,7 +238,7 @@ describe('careerMechanismTypes', () => {
       const evidence3 = buildCareerMechanismEvidence({
         mechanismId: 'mech-1',
         mechanismType: 'LEADERSHIP',
-        source: 'PATTERN',
+        source: 'PARTICIPANT_ROLE',
         participantIds: ['PLANET:MOON' as ParticipantId],
         relationshipIds: ['rel-2'],
         explanation: 'Evidence 3'
@@ -238,7 +264,7 @@ describe('careerMechanismTypes', () => {
       const evidence1 = buildCareerMechanismEvidence({
         mechanismId: 'mech-1',
         mechanismType: 'AGENCY',
-        source: 'PATTERN',
+        source: 'PARTICIPANT_ROLE',
         participantIds: ['PLANET:SUN' as ParticipantId],
         relationshipIds: ['rel-1'],
         explanation: 'Evidence 1'
@@ -247,7 +273,7 @@ describe('careerMechanismTypes', () => {
       const evidence2 = buildCareerMechanismEvidence({
         mechanismId: 'mech-1',
         mechanismType: 'LEADERSHIP',
-        source: 'PATTERN',
+        source: 'PARTICIPANT_ROLE',
         participantIds: ['PLANET:MOON' as ParticipantId],
         relationshipIds: ['rel-2'],
         explanation: 'Evidence 2'
@@ -256,7 +282,7 @@ describe('careerMechanismTypes', () => {
       const evidence3 = buildCareerMechanismEvidence({
         mechanismId: 'mech-1',
         mechanismType: 'RESEARCH',
-        source: 'PATTERN',
+        source: 'PARTICIPANT_ROLE',
         participantIds: ['PLANET:MARS' as ParticipantId],
         relationshipIds: ['rel-3'],
         explanation: 'Evidence 3'
@@ -492,8 +518,7 @@ describe('careerMechanismTypes', () => {
         'ISOLATED_ENVIRONMENT',
         'FOREIGN',
         'FOREIGN_WORK',
-        'REMOTE_WORK',
-        'MIXED'
+        'REMOTE_WORK'
       ] as const satisfies readonly CareerMechanismType[];
 
       // Runtime check: all types in ALL_MECHANISM_TYPES must be in the registry
@@ -552,14 +577,14 @@ describe('careerMechanismTypes', () => {
           'PLANET:SUN' as ParticipantId
         ],
         evidenceIds: ['ev-2', 'ev-1', 'ev-1'],
-        sourceStages: ['stage-2', 'stage-1', 'stage-1']
+        sourceStages: ['PATTERN', 'RELATIONSHIP', 'RELATIONSHIP']
       });
 
       expect(provenance.patternIds).toEqual(['pattern-1', 'pattern-2']);
       expect(provenance.relationshipIds).toEqual(['rel-1', 'rel-2']);
       expect(provenance.participantIds).toEqual(['PLANET:SUN', 'PLANET:RAHU']);
       expect(provenance.evidenceIds).toEqual(['ev-1', 'ev-2']);
-      expect(provenance.sourceStages).toEqual(['stage-1', 'stage-2']);
+      expect(provenance.sourceStages).toEqual(['PATTERN', 'RELATIONSHIP']);
     });
 
     it('should merge provenances', () => {
@@ -568,7 +593,7 @@ describe('careerMechanismTypes', () => {
         relationshipIds: ['rel-1'],
         participantIds: ['PLANET:SUN' as ParticipantId],
         evidenceIds: ['ev-1'],
-        sourceStages: ['stage-1']
+        sourceStages: ['PATTERN']
       });
 
       const p2 = buildCareerMechanismProvenance({
@@ -576,7 +601,7 @@ describe('careerMechanismTypes', () => {
         relationshipIds: ['rel-2'],
         participantIds: ['PLANET:MOON' as ParticipantId],
         evidenceIds: ['ev-2'],
-        sourceStages: ['stage-2']
+        sourceStages: ['RELATIONSHIP']
       });
 
       const merged = mergeCareerMechanismProvenances([p1, p2]);
@@ -585,7 +610,7 @@ describe('careerMechanismTypes', () => {
       expect(merged.relationshipIds).toEqual(['rel-1', 'rel-2']);
       expect(merged.participantIds).toEqual(['PLANET:SUN', 'PLANET:MOON']);
       expect(merged.evidenceIds).toEqual(['ev-1', 'ev-2']);
-      expect(merged.sourceStages).toEqual(['stage-1', 'stage-2']);
+      expect(merged.sourceStages).toEqual(['PATTERN', 'RELATIONSHIP']);
     });
 
     it('should check provenance equality', () => {
@@ -594,7 +619,7 @@ describe('careerMechanismTypes', () => {
         relationshipIds: ['rel-1'],
         participantIds: ['PLANET:SUN' as ParticipantId],
         evidenceIds: ['ev-1'],
-        sourceStages: ['stage-1']
+        sourceStages: ['PATTERN']
       });
 
       const p2 = buildCareerMechanismProvenance({
@@ -602,7 +627,7 @@ describe('careerMechanismTypes', () => {
         relationshipIds: ['rel-1'],
         participantIds: ['PLANET:SUN' as ParticipantId],
         evidenceIds: ['ev-1'],
-        sourceStages: ['stage-1']
+        sourceStages: ['PATTERN']
       });
 
       const p3 = buildCareerMechanismProvenance({
@@ -610,7 +635,7 @@ describe('careerMechanismTypes', () => {
         relationshipIds: ['rel-1'],
         participantIds: ['PLANET:SUN' as ParticipantId],
         evidenceIds: ['ev-1'],
-        sourceStages: ['stage-1']
+        sourceStages: ['PATTERN']
       });
 
       expect(areProvenancesEqual(p1, p2)).toBe(true);
@@ -722,7 +747,7 @@ describe('careerMechanismTypes', () => {
         {
           mechanismId: 'mech-1',
           mechanismType: 'AGENCY',
-          source: 'PATTERN',
+          source: 'PARTICIPANT_ROLE',
           participantIds: ['PLANET:SUN' as ParticipantId],
           relationshipIds: ['rel-1'],
           explanation: 'Evidence 1'
@@ -730,7 +755,7 @@ describe('careerMechanismTypes', () => {
         {
           mechanismId: 'mech-1',
           mechanismType: 'LEADERSHIP',
-          source: 'PATTERN',
+          source: 'PARTICIPANT_ROLE',
           participantIds: ['PLANET:MOON' as ParticipantId],
           relationshipIds: ['rel-2'],
           explanation: 'Evidence 2'
@@ -739,6 +764,25 @@ describe('careerMechanismTypes', () => {
 
       expect(evidenceArray.length).toBe(2);
       expect(Object.isFrozen(evidenceArray)).toBe(true);
+    });
+
+    it('should restrict buildRefiningMechanismEvidence to refinement-only sources', () => {
+      // Type-level assertion: buildRefiningMechanismEvidence should only accept CareerMechanismRefinementSource
+      // Since TypeScript's type system prevents this at compile time, we verify by documentation and usage
+      // The type signature restricts source to CareerMechanismRefinementSource (currently only 'D10')
+
+      // Valid: D10 is a refinement source
+      const validEvidence = buildRefiningMechanismEvidence({
+        mechanismId: 'mech-1',
+        mechanismType: 'AGENCY',
+        source: 'D10',
+        participantIds: ['PLANET:SUN' as ParticipantId],
+        relationshipIds: [],
+        explanation: 'Test'
+      });
+
+      expect(validEvidence.role).toBe('REFINING');
+      expect(validEvidence.source).toBe('D10');
     });
   });
 });

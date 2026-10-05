@@ -343,14 +343,6 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     family: 'FOREIGN',
     description: 'Work performed from a distance, outside the traditional office environment.'
     // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
-  }),
-
-  // Legacy from careerPatternTypes.ts
-  MIXED: Object.freeze({
-    type: 'MIXED',
-    family: 'EXECUTION',
-    description: 'A combination of multiple mechanism types without a single dominant mode.'
-    // @review P2-07D: Borderline-domain type - should be renamed to reflect actual semantics or documented as fallback-bucket, not a mechanism
   })
 });
 

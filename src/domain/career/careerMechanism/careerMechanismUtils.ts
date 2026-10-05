@@ -59,8 +59,8 @@ export function createCareerMechanismCandidateId(
 
 /**
  * Creates a career mechanism evidence ID.
- * Format: CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:{canonical participants joined}:{canonical relationships joined}
- * Omits trailing segments when arrays are empty.
+ * Format: CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:P[{participants}]:R[{relationships}]
+ * Always emits both P[...] and R[...] segments (empty brackets when empty) so segment position is unambiguous.
  *
  * @param mechanismId - The mechanism ID
  * @param source - The evidence source
@@ -74,23 +74,8 @@ export function createCareerMechanismEvidenceId(
   participantIds: readonly string[] = [],
   relationshipIds: readonly string[] = []
 ): string {
-  const parts = [
-    'CAREER_MECHANISM_EVIDENCE',
-    mechanismId,
-    source
-  ];
-
-  // Add participants if non-empty
-  if (participantIds.length > 0) {
-    parts.push(participantIds.join(','));
-  }
-
-  // Add relationships if non-empty
-  if (relationshipIds.length > 0) {
-    parts.push(relationshipIds.join(','));
-  }
-
-  return parts.join(':');
+  return ['CAREER_MECHANISM_EVIDENCE', mechanismId, source,
+    `P[${participantIds.join(',')}]`, `R[${relationshipIds.join(',')}]`].join(':');
 }
 
 /**

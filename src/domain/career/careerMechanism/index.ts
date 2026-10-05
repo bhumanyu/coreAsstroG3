@@ -16,6 +16,7 @@ export type {
   CareerMechanismPathway,
   CareerMechanismStatus,
   CareerMechanismEvidenceSource,
+  CareerMechanismRefinementSource,
   CareerMechanismEvidenceRole,
   CareerMechanismSourceStage,
   CareerMechanismDefinition,
