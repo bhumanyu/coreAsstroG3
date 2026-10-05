@@ -263,10 +263,11 @@ export function hasDirectedHouseRelationship(
  * (2) lord(from) ASPECTS→toHouse (house target)
  * (3) lord(from) ASPECTS→lord(to) planet-level, requiring sourceLord !== targetLord
  *
- * NOTE: Returned IDs include LORD_OF prerequisite edges alongside establishing OCCUPIES/ASPECTS edges.
- * These LORD_OF edges are prerequisite context (supporting evidence) rather than establishing
- * the directed relationship itself. A future wave may split establishingRelationshipIds vs
- * supportingRelationshipIds for finer-grained evidence attribution.
+ * NOTE: LORD_OF edges are included only as supporting context alongside a real establishing edge,
+ * never alone. If no OCCUPIES/ASPECTS establishing edge exists, this function returns [].
+ * When at least one directed establishing edge exists, relevant LORD_OF edges are appended
+ * (lords of fromHouse participating in establishing edges, plus lords of toHouse for planet-level ASPECTS)
+ * to keep evidence complete.
  *
  * FREEZE SEMANTICS: Common lordship, conjunction, and exchange are EXPLICITLY EXCLUDED
  * from directed relationships. These are undirected/bidirectional and cannot satisfy
@@ -282,24 +283,9 @@ export function getDirectedHouseRelationshipIds(
   fromHouse: number,
   toHouse: number
 ): readonly string[] {
-  const establishingIds: string[] = [];
+  const directedIds: string[] = [];
   const fromLords = getLordsOfHouse(network.relationships, fromHouse);
   const toLords = getLordsOfHouse(network.relationships, toHouse);
-
-  // Include LORD_OF edges for both houses (prerequisite supporting evidence)
-  for (const edge of network.relationships) {
-    if (edge.type === 'LORD_OF') {
-      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
-      const house = parseHouseFromNodeKey(edge.targetNodeId);
-
-      if (planet && house !== null) {
-        if ((fromLords.includes(planet) && house === fromHouse) ||
-          (toLords.includes(planet) && house === toHouse)) {
-          establishingIds.push(edge.identityKey);
-        }
-      }
-    }
-  }
 
   for (const edge of network.relationships) {
     // (1) OCCUPIES: planet occupies house - check if the planet lords fromHouse and occupies toHouse
@@ -309,7 +295,7 @@ export function getDirectedHouseRelationshipIds(
 
       if (planet && house !== null) {
         if (fromLords.includes(planet) && house === toHouse) {
-          establishingIds.push(edge.identityKey);
+          directedIds.push(edge.identityKey);
         }
       }
     }
@@ -321,7 +307,7 @@ export function getDirectedHouseRelationshipIds(
 
       if (planet && house !== null) {
         if (fromLords.includes(planet) && house === toHouse) {
-          establishingIds.push(edge.identityKey);
+          directedIds.push(edge.identityKey);
         }
       }
     }
@@ -337,7 +323,7 @@ export function getDirectedHouseRelationshipIds(
             const targetPlanet = parsePlanetFromNodeKey(edge.targetNodeId);
 
             if (planet === sourceLord && targetPlanet === targetLord) {
-              establishingIds.push(edge.identityKey);
+              directedIds.push(edge.identityKey);
             }
           }
         }
@@ -345,8 +331,33 @@ export function getDirectedHouseRelationshipIds(
     }
   }
 
+  // If no directed establishing edge exists, return [] (do NOT include LORD_OF alone)
+  if (directedIds.length === 0) {
+    return [];
+  }
+
+  // Append LORD_OF edges as supporting context for the establishing edges
+  const lordIds: string[] = [];
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        // Include lords of fromHouse that participate in establishing edges
+        if (fromLords.includes(planet) && house === fromHouse) {
+          lordIds.push(edge.identityKey);
+        }
+        // Include lords of toHouse for planet-level ASPECTS establishing edges
+        if (toLords.includes(planet) && house === toHouse) {
+          lordIds.push(edge.identityKey);
+        }
+      }
+    }
+  }
+
   // Return sorted-unique for determinism
-  return [...new Set(establishingIds)].sort();
+  return [...new Set([...directedIds, ...lordIds])].sort();
 }
 
 /**
@@ -603,10 +614,10 @@ export function isDirectChain(
  * A direct chain requires that every consecutive pair in the sequence satisfies
  * hasDirectedHouseRelationship in the given order.
  *
- * NOTE: Returned IDs include LORD_OF prerequisite edges alongside establishing OCCUPIES/ASPECTS edges.
- * These LORD_OF edges are prerequisite context (supporting evidence) rather than establishing
- * the directed chain itself. A future wave may split establishingRelationshipIds vs
- * supportingRelationshipIds for finer-grained evidence attribution.
+ * NOTE: LORD_OF edges are included only as supporting context alongside real establishing edges,
+ * never alone. If any consecutive pair lacks a directed establishing edge, the chain is broken
+ * and this function returns []. After all pairs verify, LORD_OF context edges for chain houses
+ * are appended to keep evidence complete.
  *
  * FREEZE SEMANTICS: This predicate uses ONLY directed relationships. Undirected
  * relationships (common lord, conjunction, exchange) cannot satisfy ordered pathways.
@@ -633,9 +644,19 @@ export function getDirectChainRelationshipIds(
     seen.add(house);
   }
 
-  const establishingIds: string[] = [];
+  const pairIds: string[] = [];
 
-  // Include LORD_OF edges for all houses in the chain (prerequisite supporting evidence)
+  // First, collect establishing edges for each consecutive pair
+  for (let i = 0; i < orderedHouses.length - 1; i++) {
+    const currentPairIds = getDirectedHouseRelationshipIds(network, orderedHouses[i], orderedHouses[i + 1]);
+    if (currentPairIds.length === 0) {
+      return []; // Chain broken - no directed establishing edge for this pair
+    }
+    pairIds.push(...currentPairIds);
+  }
+
+  // Only after all pairs verify, append LORD_OF context edges for chain houses
+  const lordIds: string[] = [];
   for (const house of orderedHouses) {
     const lords = getLordsOfHouse(network.relationships, house);
     for (const lord of lords) {
@@ -644,21 +665,13 @@ export function getDirectChainRelationshipIds(
           const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
           const targetHouse = parseHouseFromNodeKey(edge.targetNodeId);
           if (planet === lord && targetHouse === house) {
-            establishingIds.push(edge.identityKey);
+            lordIds.push(edge.identityKey);
           }
         }
       }
     }
   }
 
-  for (let i = 0; i < orderedHouses.length - 1; i++) {
-    const pairIds = getDirectedHouseRelationshipIds(network, orderedHouses[i], orderedHouses[i + 1]);
-    if (pairIds.length === 0) {
-      return []; // Chain broken
-    }
-    establishingIds.push(...pairIds);
-  }
-
   // Return sorted-unique for determinism
-  return [...new Set(establishingIds)].sort();
+  return [...new Set([...pairIds, ...lordIds])].sort();
 }

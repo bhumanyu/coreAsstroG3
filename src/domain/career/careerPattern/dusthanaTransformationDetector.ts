@@ -5,7 +5,13 @@ import type { CareerPatternHouseRole } from './careerPatternTypes';
 import type { CareerMechanismType } from '../careerMechanism/careerMechanismTypes';
 import { buildCareerPatternIdentityKey, buildCareerPatternId } from './careerPatternIdentity';
 import type { CareerNetworkTopology, CareerNetworkDirection } from '../careerGraph/careerHouseNetworkTypes';
-import { hasDirectHouseRelationship } from './careerPatternPredicates';
+import {
+  hasDirectHouseRelationship,
+  hasDirectedHouseRelationship,
+  hasCommonLordRelationship,
+  hasConjunctionRelationship,
+  hasExchangeRelationship
+} from './careerPatternPredicates';
 import {
   validateDusthanaRelationships
 } from './dusthanaRelationshipValidation';
@@ -86,35 +92,81 @@ const MECHANISMS_12_TO_10: readonly CareerMechanismType[] = Object.freeze([
 /**
  * Checks if a network contains a VALIDATED 8↔10 relationship.
  * Uses validation output to confirm VALIDATED status.
+ * Also requires either a directed relationship from dusthana→anchor or an undirected relationship.
+ * Rejects cases where the only relationship is directed from anchor→dusthana.
  */
 function hasValidated8to10Relationship(
   validationResult: DusthanaRelationshipValidationResult,
-  networkId: string
+  networkId: string,
+  network: CareerHouseNetwork
 ): boolean {
-  return validationResult.validations.some(
+  const hasValidation = validationResult.validations.some(
     v =>
       v.dusthanaHouse === 8 &&
       v.careerAnchorHouse === 10 &&
       v.status === 'VALIDATED' &&
       v.sourceNetworkIds.includes(networkId)
   );
+
+  if (!hasValidation) {
+    return false;
+  }
+
+  // Check for directed relationship from dusthana (8) to anchor (10)
+  const hasForwardDirected = hasDirectedHouseRelationship(network, 8, 10);
+
+  // Check for directed relationship from anchor (10) to dusthana (8)
+  const hasReverseDirected = hasDirectedHouseRelationship(network, 10, 8);
+
+  // Check for undirected relationships (common lord, conjunction, exchange)
+  const hasUndirected =
+    hasCommonLordRelationship(network, 8, 10) ||
+    hasConjunctionRelationship(network, 8, 10) ||
+    hasExchangeRelationship(network, 8, 10);
+
+  // Accept if there's a forward directed relationship OR an undirected relationship
+  // Reject if the only relationship is reverse directed (anchor→dusthana)
+  return hasForwardDirected || hasUndirected;
 }
 
 /**
  * Checks if a network contains a VALIDATED 12↔10 relationship.
  * Uses validation output to confirm VALIDATED status.
+ * Also requires either a directed relationship from dusthana→anchor or an undirected relationship.
+ * Rejects cases where the only relationship is directed from anchor→dusthana.
  */
 function hasValidated12to10Relationship(
   validationResult: DusthanaRelationshipValidationResult,
-  networkId: string
+  networkId: string,
+  network: CareerHouseNetwork
 ): boolean {
-  return validationResult.validations.some(
+  const hasValidation = validationResult.validations.some(
     v =>
       v.dusthanaHouse === 12 &&
       v.careerAnchorHouse === 10 &&
       v.status === 'VALIDATED' &&
       v.sourceNetworkIds.includes(networkId)
   );
+
+  if (!hasValidation) {
+    return false;
+  }
+
+  // Check for directed relationship from dusthana (12) to anchor (10)
+  const hasForwardDirected = hasDirectedHouseRelationship(network, 12, 10);
+
+  // Check for directed relationship from anchor (10) to dusthana (12)
+  const hasReverseDirected = hasDirectedHouseRelationship(network, 10, 12);
+
+  // Check for undirected relationships (common lord, conjunction, exchange)
+  const hasUndirected =
+    hasCommonLordRelationship(network, 12, 10) ||
+    hasConjunctionRelationship(network, 12, 10) ||
+    hasExchangeRelationship(network, 12, 10);
+
+  // Accept if there's a forward directed relationship OR an undirected relationship
+  // Reject if the only relationship is reverse directed (anchor→dusthana)
+  return hasForwardDirected || hasUndirected;
 }
 
 /**
@@ -229,8 +281,8 @@ export function detectDusthanaPatterns(
   const validationResult = validateDusthanaRelationships(networks);
 
   for (const network of networks) {
-    const has8to10 = hasValidated8to10Relationship(validationResult, network.networkId);
-    const has12to10 = hasValidated12to10Relationship(validationResult, network.networkId);
+    const has8to10 = hasValidated8to10Relationship(validationResult, network.networkId, network);
+    const has12to10 = hasValidated12to10Relationship(validationResult, network.networkId, network);
 
     // If neither relationship is validated, skip
     if (!has8to10 && !has12to10) {

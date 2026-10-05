@@ -137,13 +137,14 @@ function detectCommonLord(
  * Detects CROSS_LORDSHIP relationship.
  * Planet lords dusthana and occupies/aspects career anchor (and reverse).
  * Returns the exact edge identity keys that establish the directed relationship in each direction.
+ * LORD_OF edges are included only as supporting context alongside establishing edges, never alone.
  */
 function detectCrossLordship(
   network: CareerHouseNetwork,
   dusthanaHouse: number,
   careerAnchorHouse: number
 ): readonly string[] {
-  const matchedKeys: string[] = [];
+  const establishingIds: string[] = [];
   const dusthanaLords = getLordsOfHouse(network.relationships, dusthanaHouse);
   const anchorLords = getLordsOfHouse(network.relationships, careerAnchorHouse);
 
@@ -156,7 +157,7 @@ function detectCrossLordship(
 
       if (planet && house !== null) {
         if (dusthanaLords.includes(planet) && house === careerAnchorHouse) {
-          matchedKeys.push(edge.identityKey);
+          establishingIds.push(edge.identityKey);
         }
       }
     }
@@ -168,7 +169,7 @@ function detectCrossLordship(
 
       if (planet && house !== null) {
         if (dusthanaLords.includes(planet) && house === careerAnchorHouse) {
-          matchedKeys.push(edge.identityKey);
+          establishingIds.push(edge.identityKey);
         }
       }
     }
@@ -183,7 +184,7 @@ function detectCrossLordship(
             const edgePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
             const edgeTarget = parsePlanetFromNodeKey(edge.targetNodeId);
             if (edgePlanet === sourceLord && edgeTarget === targetLord) {
-              matchedKeys.push(edge.identityKey);
+              establishingIds.push(edge.identityKey);
             }
           }
         }
@@ -200,7 +201,7 @@ function detectCrossLordship(
 
       if (planet && house !== null) {
         if (anchorLords.includes(planet) && house === dusthanaHouse) {
-          matchedKeys.push(edge.identityKey);
+          establishingIds.push(edge.identityKey);
         }
       }
     }
@@ -212,7 +213,7 @@ function detectCrossLordship(
 
       if (planet && house !== null) {
         if (anchorLords.includes(planet) && house === dusthanaHouse) {
-          matchedKeys.push(edge.identityKey);
+          establishingIds.push(edge.identityKey);
         }
       }
     }
@@ -227,7 +228,7 @@ function detectCrossLordship(
             const edgePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
             const edgeTarget = parsePlanetFromNodeKey(edge.targetNodeId);
             if (edgePlanet === sourceLord && edgeTarget === targetLord) {
-              matchedKeys.push(edge.identityKey);
+              establishingIds.push(edge.identityKey);
             }
           }
         }
@@ -235,7 +236,32 @@ function detectCrossLordship(
     }
   }
 
-  return Object.freeze(matchedKeys);
+  // If no establishing edge exists, return [] (do NOT include LORD_OF alone)
+  if (establishingIds.length === 0) {
+    return Object.freeze([]);
+  }
+
+  // Append LORD_OF edges as supporting context for the establishing edges
+  const lordIds: string[] = [];
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        // Include lords of dusthana house that participate in establishing edges
+        if (dusthanaLords.includes(planet) && house === dusthanaHouse) {
+          lordIds.push(edge.identityKey);
+        }
+        // Include lords of career anchor house for planet-level ASPECTS establishing edges
+        if (anchorLords.includes(planet) && house === careerAnchorHouse) {
+          lordIds.push(edge.identityKey);
+        }
+      }
+    }
+  }
+
+  return Object.freeze(Array.from(new Set([...establishingIds, ...lordIds])).sort());
 }
 
 /**
