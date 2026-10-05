@@ -450,3 +450,29 @@ These types are annotated with `@review P2-07D` comments in the registry and typ
 - If outcome: move to a separate outcome/impact taxonomy
 
 **MIXED removal:** MIXED was removed from the union and registry. Mixed resolution should be represented structurally on the candidate/result model (e.g., a set containing multiple candidates) rather than as a mechanism type.
+
+## Taxonomy Decisions Deferred to P2-07D
+
+The following taxonomy ambiguities are intentionally frozen in P2-07C and deferred to P2-07D for resolution:
+
+### Multi-Family Mechanism Types
+
+The following mechanism types currently appear in multiple families in the `CareerMechanismType` union. This represents an intentional design decision that a mechanism can belong to multiple families, rather than an error requiring deduplication:
+
+- **RISK**: Appears in both BUSINESS and TRANSFORMATION families
+- **CRISIS**: Appears in both BUSINESS and TRANSFORMATION families
+- **CRISIS_MANAGEMENT**: Appears in both BUSINESS and TRANSFORMATION families
+
+This overlap allows mechanisms to be classified from multiple perspectives (e.g., a crisis can be both a business challenge and a transformational trigger). P2-07D should confirm whether this multi-family classification is the intended design or whether consolidation is needed.
+
+### TRANSFORMATION as Both Type and Family
+
+`TRANSFORMATION` currently has dual roles in the taxonomy:
+1. As a mechanism type under the KNOWLEDGE family in the `CareerMechanismType` union
+2. As a family label in the `CareerMechanismFamily` union
+
+P2-07D should determine whether this is:
+- A deliberate classification (TRANSFORMATION as a mechanism type happens to be categorized under KNOWLEDGE, while also being a higher-level family concept)
+- An inconsistency that should be resolved before the resolver consumes the union
+
+This decision affects how the P2-07D resolver interprets the union and constructs mechanism-family mappings.

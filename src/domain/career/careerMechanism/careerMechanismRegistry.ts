@@ -243,6 +243,7 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'TRANSFORMATION',
     family: 'KNOWLEDGE',
     description: 'Fundamental change in form, nature, or function, often involving deep personal or professional shifts.'
+    // @review P2-07D: Also exists as a family label - deliberate classification or inconsistency to resolve?
   }),
 
   // Communication family (already defined in Expression, but included for completeness)
@@ -288,16 +289,19 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'RISK',
     family: 'BUSINESS',
     description: 'The identification, assessment, and management of uncertainty and potential negative outcomes.'
+    // @review P2-07D: Also appears in Transformation family - intentional overlap or dedup needed?
   }),
   CRISIS: Object.freeze({
     type: 'CRISIS',
     family: 'BUSINESS',
     description: 'Work involving emergency situations, urgent problems, or critical turning points.'
+    // @review P2-07D: Also appears in Transformation family - intentional overlap or dedup needed?
   }),
   CRISIS_MANAGEMENT: Object.freeze({
     type: 'CRISIS_MANAGEMENT',
     family: 'BUSINESS',
     description: 'The strategic handling of crises to minimize damage and enable recovery.'
+    // @review P2-07D: Also appears in Transformation family - intentional overlap or dedup needed?
   }),
 
   // Institutional family

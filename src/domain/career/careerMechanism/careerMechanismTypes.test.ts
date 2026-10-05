@@ -96,6 +96,26 @@ describe('careerMechanismTypes', () => {
       expect(id1).toContain('P[A]:R[B]');
       expect(id2).toContain('P[]:R[A:B]');
     });
+
+    it('should canonicalize participant IDs regardless of input order', () => {
+      // Self-canonicalizing: different input orders should produce identical IDs
+      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN', 'PLANET:MARS'], ['rel-1']);
+      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:MARS', 'PLANET:SUN'], ['rel-1']);
+
+      expect(id1).toBe(id2);
+      // Should be sorted by canonical planet order (SUN before MARS)
+      expect(id1).toContain('P[PLANET:SUN,PLANET:MARS]');
+    });
+
+    it('should canonicalize relationship IDs regardless of input order', () => {
+      // Self-canonicalizing: different input orders should produce identical IDs
+      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-2', 'rel-1']);
+      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-1', 'rel-2']);
+
+      expect(id1).toBe(id2);
+      // Should be sorted lexicographically
+      expect(id1).toContain('R[rel-1,rel-2]');
+    });
   });
 
   describe('§24 Distinct identity per type', () => {
@@ -424,6 +444,72 @@ describe('careerMechanismTypes', () => {
       expect(mechanism).not.toHaveProperty('confidence');
       expect(mechanism).not.toHaveProperty('weight');
       expect(mechanism).not.toHaveProperty('qualificationScore');
+    });
+  });
+
+  describe('Deep freeze assertions', () => {
+    it('should freeze mechanism provenance and its arrays', () => {
+      const mechanism = createCareerMechanism({
+        patternId: 'pattern-1',
+        mechanismType: 'AGENCY',
+        pathway: 'PATTERN',
+        participants: ['PLANET:SUN' as ParticipantId],
+        coreParticipants: ['PLANET:SUN' as ParticipantId],
+        supportingParticipants: [],
+        challengingParticipants: [],
+        status: 'QUALIFIED',
+        explanation: 'Test explanation',
+        evidence: [],
+        provenance: buildCareerMechanismProvenance({
+          patternIds: ['pattern-1'],
+          relationshipIds: ['rel-1'],
+          participantIds: ['PLANET:SUN' as ParticipantId],
+          evidenceIds: ['ev-1'],
+          sourceStages: ['PATTERN']
+        })
+      });
+
+      expect(Object.isFrozen(mechanism.provenance)).toBe(true);
+      expect(Object.isFrozen(mechanism.provenance.patternIds)).toBe(true);
+      expect(Object.isFrozen(mechanism.provenance.relationshipIds)).toBe(true);
+      expect(Object.isFrozen(mechanism.provenance.participantIds)).toBe(true);
+      expect(Object.isFrozen(mechanism.provenance.evidenceIds)).toBe(true);
+      expect(Object.isFrozen(mechanism.provenance.sourceStages)).toBe(true);
+    });
+
+    it('should freeze participant arrays', () => {
+      const mechanism = createCareerMechanism({
+        patternId: 'pattern-1',
+        mechanismType: 'AGENCY',
+        pathway: 'PATTERN',
+        participants: ['PLANET:SUN' as ParticipantId, 'PLANET:MOON' as ParticipantId],
+        coreParticipants: ['PLANET:SUN' as ParticipantId],
+        supportingParticipants: ['PLANET:MOON' as ParticipantId],
+        challengingParticipants: ['PLANET:MARS' as ParticipantId],
+        status: 'QUALIFIED',
+        explanation: 'Test explanation',
+        evidence: [],
+        provenance: buildCareerMechanismProvenance({})
+      });
+
+      expect(Object.isFrozen(mechanism.coreParticipants)).toBe(true);
+      expect(Object.isFrozen(mechanism.supportingParticipants)).toBe(true);
+      expect(Object.isFrozen(mechanism.challengingParticipants)).toBe(true);
+      expect(Object.isFrozen(mechanism.participants)).toBe(true);
+    });
+
+    it('should freeze evidence record arrays', () => {
+      const evidence = buildCareerMechanismEvidence({
+        mechanismId: 'mech-1',
+        mechanismType: 'AGENCY',
+        source: 'PARTICIPANT_ROLE',
+        participantIds: ['PLANET:SUN' as ParticipantId, 'PLANET:MOON' as ParticipantId],
+        relationshipIds: ['rel-1', 'rel-2'],
+        explanation: 'Test explanation'
+      });
+
+      expect(Object.isFrozen(evidence.participantIds)).toBe(true);
+      expect(Object.isFrozen(evidence.relationshipIds)).toBe(true);
     });
   });
 
@@ -767,10 +853,6 @@ describe('careerMechanismTypes', () => {
     });
 
     it('should restrict buildRefiningMechanismEvidence to refinement-only sources', () => {
-      // Type-level assertion: buildRefiningMechanismEvidence should only accept CareerMechanismRefinementSource
-      // Since TypeScript's type system prevents this at compile time, we verify by documentation and usage
-      // The type signature restricts source to CareerMechanismRefinementSource (currently only 'D10')
-
       // Valid: D10 is a refinement source
       const validEvidence = buildRefiningMechanismEvidence({
         mechanismId: 'mech-1',
@@ -783,6 +865,7 @@ describe('careerMechanismTypes', () => {
 
       expect(validEvidence.role).toBe('REFINING');
       expect(validEvidence.source).toBe('D10');
+      // Type-level assertions are in careerMechanismTypes.type-test.ts
     });
   });
 });

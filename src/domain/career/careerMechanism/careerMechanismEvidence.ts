@@ -106,16 +106,16 @@ export function buildCareerMechanismEvidence({
     }
   }
 
-  // Sort and freeze arrays first
+  // Sort and freeze arrays for storage (createCareerMechanismEvidenceId handles sorting internally)
   const sortedParticipantIds = [...participantIds].sort();
   const sortedRelationshipIds = [...relationshipIds].sort();
 
-  // Generate deterministic evidence ID with full sorted arrays
+  // Generate deterministic evidence ID (sorting happens inside the function)
   const evidenceId = createCareerMechanismEvidenceId(
     mechanismId,
     source,
-    sortedParticipantIds,
-    sortedRelationshipIds
+    participantIds,
+    relationshipIds
   );
 
   const evidence: CareerMechanismEvidence = Object.freeze({
@@ -163,16 +163,16 @@ export function buildRefiningMechanismEvidence({
   patternId?: string;
   explanation: string;
 }): CareerMechanismEvidence {
-  // Sort and freeze arrays first
+  // Sort and freeze arrays for storage (createCareerMechanismEvidenceId handles sorting internally)
   const sortedParticipantIds = [...participantIds].sort();
   const sortedRelationshipIds = [...relationshipIds].sort();
 
-  // Generate deterministic evidence ID with full sorted arrays
+  // Generate deterministic evidence ID (sorting happens inside the function)
   const evidenceId = createCareerMechanismEvidenceId(
     mechanismId,
     source,
-    sortedParticipantIds,
-    sortedRelationshipIds
+    participantIds,
+    relationshipIds
   );
 
   const evidence: CareerMechanismEvidence = Object.freeze({

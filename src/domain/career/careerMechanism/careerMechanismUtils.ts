@@ -62,10 +62,14 @@ export function createCareerMechanismCandidateId(
  * Format: CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:P[{participants}]:R[{relationships}]
  * Always emits both P[...] and R[...] segments (empty brackets when empty) so segment position is unambiguous.
  *
+ * This function is self-canonicalizing: it sorts participantIds (via compareParticipantIds for planet IDs,
+ * localeCompare fallback for non-planet IDs) and relationshipIds (lexicographic) before joining, ensuring
+ * identical IDs regardless of caller-provided order.
+ *
  * @param mechanismId - The mechanism ID
  * @param source - The evidence source
- * @param participantIds - Array of participant IDs (sorted, canonical order)
- * @param relationshipIds - Array of relationship IDs (sorted)
+ * @param participantIds - Array of participant IDs (will be sorted internally)
+ * @param relationshipIds - Array of relationship IDs (will be sorted internally)
  * @returns Deterministic evidence ID
  */
 export function createCareerMechanismEvidenceId(
@@ -74,8 +78,13 @@ export function createCareerMechanismEvidenceId(
   participantIds: readonly string[] = [],
   relationshipIds: readonly string[] = []
 ): string {
+  // Sort participantIds using compareParticipantIds for canonical order
+  const sortedParticipantIds = [...participantIds as ParticipantId[]].sort(compareParticipantIds);
+  // Sort relationshipIds lexicographically
+  const sortedRelationshipIds = [...relationshipIds].sort();
+
   return ['CAREER_MECHANISM_EVIDENCE', mechanismId, source,
-    `P[${participantIds.join(',')}]`, `R[${relationshipIds.join(',')}]`].join(':');
+    `P[${sortedParticipantIds.join(',')}]`, `R[${sortedRelationshipIds.join(',')}]`].join(':');
 }
 
 /**
