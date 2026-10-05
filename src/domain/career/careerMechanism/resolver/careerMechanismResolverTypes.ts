@@ -1,5 +1,7 @@
 import type { CareerPattern } from '../../careerPattern/careerPatternTypes';
 import type { ParticipantRoleAssignment } from '../../careerParticipantRoles/participantRoleTypes';
+import type { QualifiedCareerPattern } from '../../careerPatternQualification/careerPatternQualificationTypes';
+import type { CareerHouseNetwork } from '../../careerGraph/careerHouseNetworkTypes';
 import type {
   CareerMechanismCandidateSet,
   CareerMechanismEvidence,
@@ -32,14 +34,19 @@ import type {
 
 /**
  * Input for mechanism resolution.
- * Contains the pattern, participant roles, and establishing evidence.
+ * Contains the pattern, qualification, participant roles, establishing evidence,
+ * and source network(s) for canonical edge resolution.
  *
  * Per spec §25: uses ParticipantRoleAssignment from careerParticipantRoles.
+ * Extended to carry qualification for gating and source networks for canonical
+ * edge resolution (replaces ID-string checks with P2-06A predicates).
  */
 export interface CareerMechanismResolutionInput {
   readonly pattern: CareerPattern;
+  readonly qualification: QualifiedCareerPattern;
   readonly participantRoles: readonly ParticipantRoleAssignment[];
   readonly establishingEvidence: readonly CareerMechanismEvidence[];
+  readonly networks: readonly CareerHouseNetwork[];
 }
 
 /**

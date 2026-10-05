@@ -3,6 +3,11 @@ import type {
   CareerMechanismResolutionInput,
   CareerMechanismResolutionRule
 } from './careerMechanismResolverTypes';
+import {
+  hasDirectedHouseRelationship,
+  hasCommonLordRelationship,
+  hasDirectHouseRelationship
+} from '../../careerPattern/careerPatternPredicates';
 
 /**
  * P2-07D Career Mechanism Resolver Rules
@@ -58,47 +63,78 @@ const MECHANISMS_COMPOSITE_8_12_10: readonly CareerMechanismType[] = Object.free
 ]);
 
 /**
- * Helper to check if a pattern has a relationship involving specific houses.
- * Checks pattern.provenance.establishingRelationshipIds (or pattern.relationshipIds)
- * for the required houses/edges — never just pattern.houses.
+ * Helper to check if a specific house-pair relationship exists among the pattern's
+ * establishing relationships using canonical edge resolution.
  *
- * This is a simplified check for the dusthana rules. In a full implementation,
- * this would parse relationship IDs to extract house information.
- * For now, we check if the pattern's houses contain the required houses AND
- * the pattern has establishing relationship IDs (ensuring it's not just a house membership).
+ * This function uses the frozen P2-06A predicates (hasDirectedHouseRelationship,
+ * hasCommonLordRelationship, hasDirectHouseRelationship) to verify the *specific*
+ * house-pair relationship exists in the source networks, not just "any edge present".
+ *
+ * DUSTHANA SEMANTICS (from dusthanaRelationshipValidation.ts):
+ * - 8↔10: uses hasDirectedHouseRelationship or hasCommonLordRelationship as appropriate
+ * - 12↔10: uses hasDirectedHouseRelationship or hasCommonLordRelationship as appropriate
+ * - Composite 8-12-10: checks both 8↔10 and 12↔10 relationships
+ *
+ * NOTE: This is a canonical resolution using P2-06A predicates. The prior
+ * hasDirectedHouseRelationshipId precedent in careerPatternQualification/policyUtils.ts
+ * was a temporary ID-string bridge that should be replaced with this approach.
+ *
+ * @param input - The resolution input containing networks
+ * @param houseA - First house number
+ * @param houseB - Second house number
+ * @returns true if the specific house-pair relationship exists in establishing relationships
  */
-function hasHouseRelationship(
+function hasCanonicalHousePairRelationship(
   input: CareerMechanismResolutionInput,
-  requiredHouses: readonly number[]
+  houseA: number,
+  houseB: number
 ): boolean {
-  const { pattern } = input;
+  const { networks, pattern } = input;
 
   // Check if pattern has the required houses
-  const hasHouses = requiredHouses.every((house) => pattern.houses.includes(house));
-  if (!hasHouses) {
+  if (!pattern.houses.includes(houseA) || !pattern.houses.includes(houseB)) {
     return false;
   }
 
-  // Check if pattern has establishing relationship IDs (not just house membership)
-  const hasEstablishingRelationships =
-    pattern.provenance.establishingRelationshipIds.length > 0 ||
-    pattern.relationshipIds.length > 0;
+  // Check if pattern has establishing relationship IDs
+  if (pattern.provenance.establishingRelationshipIds.length === 0) {
+    return false;
+  }
 
-  return hasEstablishingRelationships;
+  // Use canonical P2-06A predicates to verify the specific house-pair relationship
+  // Check all networks for the relationship
+  for (const network of networks) {
+    // Check if network contains both houses
+    if (!network.houses.includes(houseA) || !network.houses.includes(houseB)) {
+      continue;
+    }
+
+    // Use hasDirectHouseRelationship (umbrella predicate that includes directed,
+    // common lord, conjunction, aspect, and exchange relationships)
+    // This matches the dusthana relationship semantics from P2-06B
+    if (hasDirectHouseRelationship(network, houseA, houseB)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
  * Rule for 8↔10 dusthana transformation patterns.
  * Emits RESEARCH, INVESTIGATION, TRANSFORMATION, INSURANCE, TAXATION,
  * BANKING_FINANCE, COMPLIANCE, CRISIS_MANAGEMENT.
+ *
+ * Uses canonical edge resolution via hasCanonicalHousePairRelationship to verify
+ * the specific 8↔10 relationship exists in establishing relationships.
  */
 const RULE_MECHANISM_PATTERN_DUSTHANA_8_10: CareerMechanismResolutionRule = Object.freeze({
   ruleId: 'RULE_MECHANISM_PATTERN_DUSTHANA_8_10',
   pathway: 'PATTERN',
 
   applies(input: CareerMechanismResolutionInput): boolean {
-    // Check for 8↔10 relationship (houses 8 and 10 present with establishing relationships)
-    return hasHouseRelationship(input, [8, 10]);
+    // Check for 8↔10 relationship using canonical edge resolution
+    return hasCanonicalHousePairRelationship(input, 8, 10);
   },
 
   resolve(input: CareerMechanismResolutionInput): readonly CareerMechanismType[] {
@@ -109,14 +145,17 @@ const RULE_MECHANISM_PATTERN_DUSTHANA_8_10: CareerMechanismResolutionRule = Obje
 /**
  * Rule for 12↔10 dusthana transformation patterns.
  * Emits FOREIGN_WORK, REMOTE_WORK, INSTITUTIONAL_WORK, ISOLATED_ENVIRONMENT.
+ *
+ * Uses canonical edge resolution via hasCanonicalHousePairRelationship to verify
+ * the specific 12↔10 relationship exists in establishing relationships.
  */
 const RULE_MECHANISM_PATTERN_DUSTHANA_12_10: CareerMechanismResolutionRule = Object.freeze({
   ruleId: 'RULE_MECHANISM_PATTERN_DUSTHANA_12_10',
   pathway: 'PATTERN',
 
   applies(input: CareerMechanismResolutionInput): boolean {
-    // Check for 12↔10 relationship (houses 12 and 10 present with establishing relationships)
-    return hasHouseRelationship(input, [12, 10]);
+    // Check for 12↔10 relationship using canonical edge resolution
+    return hasCanonicalHousePairRelationship(input, 12, 10);
   },
 
   resolve(input: CareerMechanismResolutionInput): readonly CareerMechanismType[] {
@@ -127,14 +166,30 @@ const RULE_MECHANISM_PATTERN_DUSTHANA_12_10: CareerMechanismResolutionRule = Obj
 /**
  * Rule for composite 8-12-10 dusthana transformation patterns.
  * Emits union of both 8↔10 and 12↔10 mechanism sets (no MIXED, no duplicates).
+ *
+ * Uses canonical edge resolution via hasCanonicalHousePairRelationship to verify
+ * both 8↔10 and 12↔10 relationships exist in establishing relationships.
+ *
+ * COMPOSITE-SUBSUMPTION PRECEDENCE:
+ * In the resolver, if this composite rule applies for a pattern, the pair rules
+ * (RULE_MECHANISM_PATTERN_DUSTHANA_8_10 and RULE_MECHANISM_PATTERN_DUSTHANA_12_10)
+ * should NOT also apply for the same pattern. This is enforced in the resolver's
+ * resolve() method by checking composite precedence before applying pair rules.
+ *
+ * Alternatively, pair rules can be emitted only when the composite does not apply.
+ * The chosen approach (composite-first or pair-exclusion) is documented in the
+ * resolver implementation.
  */
 const RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10: CareerMechanismResolutionRule = Object.freeze({
   ruleId: 'RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10',
   pathway: 'PATTERN',
 
   applies(input: CareerMechanismResolutionInput): boolean {
-    // Check for composite 8-12-10 relationship (houses 8, 12, and 10 present with establishing relationships)
-    return hasHouseRelationship(input, [8, 12, 10]);
+    // Check for composite 8-12-10 relationship using canonical edge resolution
+    // Both 8↔10 and 12↔10 must be present
+    const has8to10 = hasCanonicalHousePairRelationship(input, 8, 10);
+    const has12to10 = hasCanonicalHousePairRelationship(input, 12, 10);
+    return has8to10 && has12to10;
   },
 
   resolve(input: CareerMechanismResolutionInput): readonly CareerMechanismType[] {
