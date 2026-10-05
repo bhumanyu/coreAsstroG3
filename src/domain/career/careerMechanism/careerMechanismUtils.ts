@@ -3,9 +3,12 @@ import type {
   CareerMechanismCandidate,
   CareerMechanismEvidence,
   CareerMechanismInput,
+  CareerMechanismPathway,
   CareerMechanismProvenance,
+  CareerMechanismType,
   ParticipantId
 } from './careerMechanismTypes';
+import { extractPlanetFromParticipantId } from '../careerParticipantRoles/participantRoleUtils';
 import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
 
 /**
@@ -56,27 +59,37 @@ export function createCareerMechanismCandidateId(
 
 /**
  * Creates a career mechanism evidence ID.
- * Format: CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:{participantId}:{relationshipId}
+ * Format: CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:{canonical participants joined}:{canonical relationships joined}
+ * Omits trailing segments when arrays are empty.
  *
  * @param mechanismId - The mechanism ID
  * @param source - The evidence source
- * @param participantId - The participant ID (optional)
- * @param relationshipId - The relationship ID (optional)
+ * @param participantIds - Array of participant IDs (sorted, canonical order)
+ * @param relationshipIds - Array of relationship IDs (sorted)
  * @returns Deterministic evidence ID
  */
 export function createCareerMechanismEvidenceId(
   mechanismId: string,
   source: string,
-  participantId?: string,
-  relationshipId?: string
+  participantIds: readonly string[] = [],
+  relationshipIds: readonly string[] = []
 ): string {
   const parts = [
     'CAREER_MECHANISM_EVIDENCE',
     mechanismId,
-    source,
-    participantId || 'NONE',
-    relationshipId || 'NONE'
+    source
   ];
+
+  // Add participants if non-empty
+  if (participantIds.length > 0) {
+    parts.push(participantIds.join(','));
+  }
+
+  // Add relationships if non-empty
+  if (relationshipIds.length > 0) {
+    parts.push(relationshipIds.join(','));
+  }
+
   return parts.join(':');
 }
 
@@ -89,11 +102,11 @@ export function createCareerMechanismEvidenceId(
  * @returns Comparison result (-1, 0, 1)
  */
 export function compareParticipantIds(a: ParticipantId, b: ParticipantId): number {
-  const planetA = a.replace('PLANET:', '');
-  const planetB = b.replace('PLANET:', '');
+  const planetA = extractPlanetFromParticipantId(a);
+  const planetB = extractPlanetFromParticipantId(b);
 
-  const indexA = CANONICAL_PLANET_ORDER.indexOf(planetA as any);
-  const indexB = CANONICAL_PLANET_ORDER.indexOf(planetB as any);
+  const indexA = CANONICAL_PLANET_ORDER.indexOf(planetA);
+  const indexB = CANONICAL_PLANET_ORDER.indexOf(planetB);
 
   if (indexA === -1 && indexB === -1) {
     return a.localeCompare(b);
@@ -230,8 +243,8 @@ export function createCareerMechanism(
  */
 export function createCareerMechanismCandidate(
   patternId: string,
-  mechanismType: string,
-  pathway: string,
+  mechanismType: CareerMechanismType,
+  pathway: CareerMechanismPathway,
   evidence: readonly CareerMechanismEvidence[],
   provenance: CareerMechanismProvenance,
   explanation: string
@@ -259,8 +272,8 @@ export function createCareerMechanismCandidate(
   const candidate: CareerMechanismCandidate = Object.freeze({
     candidateId,
     patternId,
-    mechanismType: mechanismType as any,
-    pathway: pathway as any,
+    mechanismType,
+    pathway,
     evidence: Object.freeze(deduplicatedEvidence),
     provenance: rebuiltProvenance,
     explanation

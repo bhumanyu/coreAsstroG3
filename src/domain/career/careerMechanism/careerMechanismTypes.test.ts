@@ -62,9 +62,9 @@ describe('careerMechanismTypes', () => {
     });
 
     it('should create deterministic evidence IDs', () => {
-      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', 'PLANET:SUN', 'rel-1');
-      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', 'PLANET:SUN', 'rel-1');
-      const id3 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', 'PLANET:MOON', 'rel-1');
+      const id1 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-1']);
+      const id2 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:SUN'], ['rel-1']);
+      const id3 = createCareerMechanismEvidenceId('mech-1', 'PATTERN', ['PLANET:MOON'], ['rel-1']);
 
       expect(id1).toBe(id2);
       expect(id1).not.toBe(id3);
@@ -116,9 +116,6 @@ describe('careerMechanismTypes', () => {
       // They are different types with different ID formats
       expect(candidate.candidateId).toContain('CANDIDATE');
       expect(mechanism.mechanismId).not.toContain('CANDIDATE');
-
-      // There is no convertCandidateToMechanism function
-      expect(typeof (global as any).convertCandidateToMechanism).toBe('undefined');
     });
   });
 
@@ -378,10 +375,6 @@ describe('careerMechanismTypes', () => {
 
       expect(evidenceSources).not.toContain('DASHA');
     });
-
-    it('should not have createMechanismFromD10 API', () => {
-      expect(typeof (global as any).createMechanismFromD10).toBe('undefined');
-    });
   });
 
   describe('No scoring fields on the model', () => {
@@ -441,19 +434,78 @@ describe('careerMechanismTypes', () => {
 
   describe('Registry', () => {
     it('should have definitions for all mechanism types', () => {
-      const registry = new DefaultCareerMechanismRegistry();
+      // Compile-time assertion: ALL_MECHANISM_TYPES must satisfy CareerMechanismType[]
+      const ALL_MECHANISM_TYPES = [
+        'AGENCY',
+        'SELF_DIRECTION',
+        'INITIATIVE',
+        'VISIBILITY',
+        'STATUS',
+        'AUTHORITY',
+        'LEADERSHIP',
+        'STRATEGY',
+        'ADVISORY',
+        'TEACHING',
+        'INNOVATION',
+        'DECISION_MAKING',
+        'COMMUNICATION',
+        'WRITING',
+        'PUBLIC_INTERFACE',
+        'CLIENT_INTERACTION',
+        'CONTRACTUAL_INTERACTION',
+        'PARTNERSHIP',
+        'COMMERCIAL_INTERACTION',
+        'ENTREPRENEURIAL_EFFORT',
+        'EXECUTION',
+        'HANDS_ON_CAPABILITY',
+        'COURAGE',
+        'SELF_EFFORT',
+        'SKILL_DEVELOPMENT',
+        'SERVICE_EMPLOYMENT',
+        'COMPETITION',
+        'PROFESSIONALIZATION',
+        'PROFESSIONAL_GAINS',
+        'CREATIVE_INTELLECTUAL',
+        'DHARMA_DRIVEN_PROFESSION',
+        'AUTHORITY_LEADERSHIP',
+        'STABILITY',
+        'WORK_ENVIRONMENT',
+        'ADMINISTRATIVE_FOUNDATION',
+        'EXPENDITURE',
+        'INTELLIGENCE',
+        'SPECIALIZED_KNOWLEDGE',
+        'RESEARCH',
+        'INVESTIGATION',
+        'TRANSFORMATION',
+        'BUSINESS',
+        'CONSULTING',
+        'BANKING_FINANCE',
+        'INSURANCE',
+        'TAXATION',
+        'COMPLIANCE',
+        'RISK',
+        'CRISIS',
+        'CRISIS_MANAGEMENT',
+        'INSTITUTIONAL_BASE',
+        'INSTITUTIONAL_SERVICE',
+        'INSTITUTIONAL_WORK',
+        'ISOLATED_ENVIRONMENT',
+        'FOREIGN',
+        'FOREIGN_WORK',
+        'REMOTE_WORK',
+        'MIXED'
+      ] as const satisfies readonly CareerMechanismType[];
 
-      expect(registry.has('AGENCY')).toBe(true);
-      expect(registry.has('LEADERSHIP')).toBe(true);
-      expect(registry.has('RESEARCH')).toBe(true);
-      expect(registry.has('TEACHING')).toBe(true);
-      expect(registry.has('BUSINESS')).toBe(true);
-      expect(registry.has('CONSULTING')).toBe(true);
-      expect(registry.has('BANKING_FINANCE')).toBe(true);
-      expect(registry.has('TRANSFORMATION')).toBe(true);
-      expect(registry.has('FOREIGN_WORK')).toBe(true);
-      expect(registry.has('INSTITUTIONAL_WORK')).toBe(true);
-      expect(registry.has('ISOLATED_ENVIRONMENT')).toBe(true);
+      // Runtime check: all types in ALL_MECHANISM_TYPES must be in the registry
+      const registry = new DefaultCareerMechanismRegistry();
+      for (const type of ALL_MECHANISM_TYPES) {
+        expect(registry.has(type)).toBe(true);
+      }
+
+      // Runtime check: registry keys must match ALL_MECHANISM_TYPES
+      expect(Object.keys(CAREER_MECHANISM_DEFINITIONS).sort()).toEqual(
+        [...ALL_MECHANISM_TYPES].sort()
+      );
     });
 
     it('should throw on unknown mechanism type', () => {
@@ -610,6 +662,59 @@ describe('careerMechanismTypes', () => {
           explanation: 'Test'
         })
       ).toThrow('RELATIONSHIP source requires at least one relationship ID');
+    });
+
+    it('should throw when D10 source is used in buildCareerMechanismEvidence', () => {
+      expect(() =>
+        buildCareerMechanismEvidence({
+          mechanismId: 'mech-1',
+          mechanismType: 'AGENCY',
+          source: 'D10',
+          participantIds: ['PLANET:SUN' as ParticipantId],
+          relationshipIds: [],
+          explanation: 'Test'
+        })
+      ).toThrow('D10 source is not allowed in buildCareerMechanismEvidence');
+    });
+
+    it('should assign ESTABLISHING role to evidence from buildCareerMechanismEvidence', () => {
+      const evidence = buildCareerMechanismEvidence({
+        mechanismId: 'mech-1',
+        mechanismType: 'AGENCY',
+        source: 'PATTERN',
+        participantIds: ['PLANET:SUN' as ParticipantId],
+        relationshipIds: [],
+        patternId: 'pattern-1',
+        explanation: 'Test'
+      });
+
+      expect(evidence.role).toBe('ESTABLISHING');
+    });
+
+    it('should throw when PATTERN source has no patternId', () => {
+      expect(() =>
+        buildCareerMechanismEvidence({
+          mechanismId: 'mech-1',
+          mechanismType: 'AGENCY',
+          source: 'PATTERN',
+          participantIds: ['PLANET:SUN' as ParticipantId],
+          relationshipIds: [],
+          explanation: 'Test'
+        })
+      ).toThrow('PATTERN source requires patternId');
+    });
+
+    it('should throw when DISPOSITOR source has no participant IDs', () => {
+      expect(() =>
+        buildCareerMechanismEvidence({
+          mechanismId: 'mech-1',
+          mechanismType: 'AGENCY',
+          source: 'DISPOSITOR',
+          participantIds: [],
+          relationshipIds: ['rel-1'],
+          explanation: 'Test'
+        })
+      ).toThrow('DISPOSITOR source requires at least one participant ID');
     });
 
     it('should build evidence array', () => {

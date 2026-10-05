@@ -180,6 +180,7 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'PROFESSIONAL_GAINS',
     family: 'EXECUTION',
     description: 'The acquisition of financial rewards, recognition, or other benefits from professional work.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   CREATIVE_INTELLECTUAL: Object.freeze({
     type: 'CREATIVE_INTELLECTUAL',
@@ -263,21 +264,25 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'BANKING_FINANCE',
     family: 'BUSINESS',
     description: 'Work involving financial services, banking, money management, or capital allocation.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   INSURANCE: Object.freeze({
     type: 'INSURANCE',
     family: 'BUSINESS',
     description: 'The business of risk management through protection policies and financial safeguards.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   TAXATION: Object.freeze({
     type: 'TAXATION',
     family: 'BUSINESS',
     description: 'Work related to tax assessment, compliance, planning, or administration.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   COMPLIANCE: Object.freeze({
     type: 'COMPLIANCE',
     family: 'BUSINESS',
     description: 'Ensuring adherence to regulations, standards, and legal requirements in professional operations.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   RISK: Object.freeze({
     type: 'RISK',
@@ -310,6 +315,7 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'INSTITUTIONAL_WORK',
     family: 'INSTITUTIONAL',
     description: 'Career activities embedded within institutional or organizational frameworks.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   ISOLATED_ENVIRONMENT: Object.freeze({
     type: 'ISOLATED_ENVIRONMENT',
@@ -330,11 +336,13 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'FOREIGN_WORK',
     family: 'FOREIGN',
     description: 'Career activity performed in foreign locations or involving cross-border operations.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
   REMOTE_WORK: Object.freeze({
     type: 'REMOTE_WORK',
     family: 'FOREIGN',
     description: 'Work performed from a distance, outside the traditional office environment.'
+    // @review P2-07D: Borderline-domain type - decide if mechanism, domain, or outcome
   }),
 
   // Legacy from careerPatternTypes.ts
@@ -342,6 +350,7 @@ export const CAREER_MECHANISM_DEFINITIONS: Readonly<
     type: 'MIXED',
     family: 'EXECUTION',
     description: 'A combination of multiple mechanism types without a single dominant mode.'
+    // @review P2-07D: Borderline-domain type - should be renamed to reflect actual semantics or documented as fallback-bucket, not a mechanism
   })
 });
 

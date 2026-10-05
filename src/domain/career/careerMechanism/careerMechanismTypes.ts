@@ -47,6 +47,10 @@ export type { ParticipantId };
  *   CONTRACTUAL_INTERACTION, PARTNERSHIP, COMMERCIAL_INTERACTION,
  *   ENTREPRENEURIAL_EFFORT, STABILITY, WORK_ENVIRONMENT,
  *   ADMINISTRATIVE_FOUNDATION, RISK, CRISIS, EXPENDITURE
+ *
+ * Borderline-domain types (mechanism vs domain vs outcome - to be decided in P2-07D):
+ * - BANKING_FINANCE, INSURANCE, TAXATION, COMPLIANCE, FOREIGN_WORK, REMOTE_WORK,
+ *   INSTITUTIONAL_WORK, PROFESSIONAL_GAINS, MIXED
  */
 export type CareerMechanismType =
   // Expression family
@@ -182,7 +186,7 @@ export type CareerMechanismStatus =
  * Per spec §8: where evidence for a mechanism comes from.
  *
  * IMPORTANT: 'D10' is allowed ONLY as refinement evidence, NEVER as an establishing source.
- * This invariant must be documented and enforced by the mechanism resolution layer (P2-07D).
+ * This invariant is enforced at the builder level (buildCareerMechanismEvidence throws for D10).
  */
 export type CareerMechanismEvidenceSource =
   | 'PATTERN'
@@ -194,6 +198,27 @@ export type CareerMechanismEvidenceSource =
   | 'YOGA'
   | 'DISPOSITOR'
   | 'D10'; // Allowed ONLY as refinement evidence, NEVER as establishing source
+
+/**
+ * Career mechanism evidence role.
+ * Per spec §9: distinguishes between establishing and refinement evidence.
+ *
+ * ESTABLISHING: Evidence that initially establishes a mechanism candidate (structural sources).
+ * REFINING: Evidence that refines or qualifies an existing mechanism (e.g., D10).
+ *
+ * Invariant: ESTABLISHING evidence can never carry source: 'D10'.
+ */
+export type CareerMechanismEvidenceRole = 'ESTABLISHING' | 'REFINING';
+
+/**
+ * Career mechanism source stage.
+ * Per spec §10: tracks the stage or source type that contributed to a mechanism.
+ *
+ * This is currently aliased to CareerMechanismEvidenceSource as stages and sources
+ * are identical in the current model. If stages diverge from sources in the future,
+ * this should be changed to an explicit union.
+ */
+export type CareerMechanismSourceStage = CareerMechanismEvidenceSource;
 
 /**
  * Career mechanism definition.
@@ -214,6 +239,7 @@ export interface CareerMechanismEvidence {
   readonly evidenceId: string;
   readonly mechanismType: CareerMechanismType;
   readonly source: CareerMechanismEvidenceSource;
+  readonly role: CareerMechanismEvidenceRole;
   readonly participantIds: readonly ParticipantId[];
   readonly relationshipIds: readonly string[];
   readonly patternId?: string;
@@ -229,7 +255,7 @@ export interface CareerMechanismProvenance {
   readonly relationshipIds: readonly string[];
   readonly participantIds: readonly ParticipantId[];
   readonly evidenceIds: readonly string[];
-  readonly sourceStages: readonly string[];
+  readonly sourceStages: readonly CareerMechanismSourceStage[];
 }
 
 /**
@@ -285,9 +311,14 @@ export interface CareerMechanismCandidate {
 
 /**
  * Career mechanism candidate set.
- * Per spec §15: collection of mechanism candidates.
+ * Per spec §15: collection of mechanism candidates with set-level provenance.
+ *
+ * The evidence and provenance fields represent the aggregate of all candidates,
+ * deduplicated and sorted via mergeCareerMechanismProvenances.
  */
 export interface CareerMechanismCandidateSet {
   readonly patternId: string;
   readonly candidates: readonly CareerMechanismCandidate[];
+  readonly evidence: readonly CareerMechanismEvidence[];
+  readonly provenance: CareerMechanismProvenance;
 }

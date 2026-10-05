@@ -80,8 +80,8 @@ export type CareerPatternHouseRole =
  * Represents the underlying mechanism of career activity in a pattern.
  * Per spec §6: mechanism classifications only, no profession-specific values.
  *
- * DEPRECATED: This type has been moved to careerMechanism/careerMechanismTypes.ts
- * as CareerMechanismType. Import from there instead.
+ * @deprecated Use CareerMechanismType from careerMechanism/careerMechanismTypes.ts instead.
+ * This alias exists only for backward compatibility with external callers.
  */
 export type CareerMechanism = CareerMechanismType;
 

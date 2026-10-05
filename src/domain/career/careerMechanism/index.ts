@@ -16,6 +16,8 @@ export type {
   CareerMechanismPathway,
   CareerMechanismStatus,
   CareerMechanismEvidenceSource,
+  CareerMechanismEvidenceRole,
+  CareerMechanismSourceStage,
   CareerMechanismDefinition,
   CareerMechanismEvidence,
   CareerMechanismProvenance,
@@ -48,7 +50,9 @@ export {
 // Evidence helpers (§9)
 export {
   buildCareerMechanismEvidence,
-  buildCareerMechanismEvidenceArray
+  buildCareerMechanismEvidenceArray,
+  buildRefiningMechanismEvidence,
+  buildRefiningMechanismEvidenceArray
 } from './careerMechanismEvidence';
 
 // Provenance helpers (§10)

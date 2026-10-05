@@ -1,5 +1,6 @@
 import type {
   CareerMechanismProvenance,
+  CareerMechanismSourceStage,
   ParticipantId
 } from './careerMechanismTypes';
 import { sortParticipantIds } from './careerMechanismUtils';
@@ -41,7 +42,7 @@ export function buildCareerMechanismProvenance({
   relationshipIds?: readonly string[];
   participantIds?: readonly ParticipantId[];
   evidenceIds?: readonly string[];
-  sourceStages?: readonly string[];
+  sourceStages?: readonly CareerMechanismSourceStage[];
 }): CareerMechanismProvenance {
   // Sort-unique pattern IDs
   const uniquePatternIds = Array.from(new Set(patternIds)).sort();

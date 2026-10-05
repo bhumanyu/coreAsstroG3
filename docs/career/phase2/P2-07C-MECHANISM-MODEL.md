@@ -84,7 +84,15 @@ Where evidence for a mechanism comes from:
 - DISPOSITOR
 - D10
 
-**Invariant:** 'D10' is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant must be documented and enforced by the mechanism resolution layer (P2-07D).
+**Invariant:** 'D10' is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant is enforced at the builder level (buildCareerMechanismEvidence throws for D10).
+
+### CareerMechanismEvidenceRole (§9)
+
+Distinguishes between establishing and refinement evidence:
+- ESTABLISHING: Evidence that initially establishes a mechanism candidate (structural sources)
+- REFINING: Evidence that refines or qualifies an existing mechanism (e.g., D10)
+
+**Invariant:** ESTABLISHING evidence can never carry source: 'D10'. This is enforced by the evidence builders.
 
 ### CareerMechanismDefinition (§11)
 
@@ -105,12 +113,17 @@ interface CareerMechanismEvidence {
   readonly evidenceId: string;
   readonly mechanismType: CareerMechanismType;
   readonly source: CareerMechanismEvidenceSource;
+  readonly role: CareerMechanismEvidenceRole;
   readonly participantIds: readonly ParticipantId[];
   readonly relationshipIds: readonly string[];
   readonly patternId?: string;
   readonly explanation: string;
 }
 ```
+
+### CareerMechanismSourceStage (§10)
+
+Tracks the stage or source type that contributed to a mechanism. Currently aliased to CareerMechanismEvidenceSource as stages and sources are identical in the current model. If stages diverge from sources in the future, this should be changed to an explicit union.
 
 ### CareerMechanismProvenance (§10)
 
@@ -121,7 +134,7 @@ interface CareerMechanismProvenance {
   readonly relationshipIds: readonly string[];
   readonly participantIds: readonly ParticipantId[];
   readonly evidenceIds: readonly string[];
-  readonly sourceStages: readonly string[];
+  readonly sourceStages: readonly CareerMechanismSourceStage[];
 }
 ```
 
@@ -181,13 +194,17 @@ interface CareerMechanismCandidate {
 
 ### CareerMechanismCandidateSet (§15)
 
-Collection of mechanism candidates:
+Collection of mechanism candidates with set-level provenance:
 ```typescript
 interface CareerMechanismCandidateSet {
   readonly patternId: string;
   readonly candidates: readonly CareerMechanismCandidate[];
+  readonly evidence: readonly CareerMechanismEvidence[];
+  readonly provenance: CareerMechanismProvenance;
 }
 ```
+
+The evidence and provenance fields represent the aggregate of all candidates, deduplicated and sorted via mergeCareerMechanismProvenances.
 
 ## Registry (§18)
 
@@ -218,7 +235,9 @@ Default implementation of the registry interface. Provides canonical lookup oper
 
 - `createCareerMechanismId(patternId, mechanismType)` → `CAREER_MECHANISM:{patternId}:{type}`
 - `createCareerMechanismCandidateId(patternId, mechanismType)` → `CAREER_MECHANISM_CANDIDATE:{patternId}:{type}`
-- `createCareerMechanismEvidenceId(mechanismId, source, participantId, relationshipId)` → `CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:{participantId}:{relationshipId}`
+- `createCareerMechanismEvidenceId(mechanismId, source, participantIds, relationshipIds)` → `CAREER_MECHANISM_EVIDENCE:{mechanismId}:{source}:{canonical participants joined}:{canonical relationships joined}` (omits trailing segments when arrays are empty)
+
+**Evidence ID canonicalization rule:** Two evidence units differing in any array member must produce different IDs.
 
 ### Participant Ordering
 
@@ -237,8 +256,26 @@ Default implementation of the registry interface. Provides canonical lookup oper
 
 ## Evidence Helpers (§9)
 
-- `buildCareerMechanismEvidence(input)` — Builds evidence record with validation
+- `buildCareerMechanismEvidence(input)` — Builds evidence record with validation (role: 'ESTABLISHING')
+- `buildRefiningMechanismEvidence(input)` — Builds refining evidence record (role: 'REFINING', for D10 and other refinement-only sources)
 - `buildCareerMechanismEvidenceArray(inputs)` — Builds multiple evidence records
+- `buildRefiningMechanismEvidenceArray(inputs)` — Builds multiple refining evidence records
+
+### Per-Source Validation Matrix
+
+The following validation rules are enforced by `buildCareerMechanismEvidence`:
+
+| Source | Required Fields |
+|--------|-----------------|
+| PATTERN | patternId |
+| PARTICIPANT_ROLE | participantIds (non-empty) |
+| PLANETARY_RELEVANCE | participantIds (non-empty) |
+| PLANETARY_CONDITION | participantIds (non-empty) |
+| LORDSHIP | relationshipIds (non-empty) |
+| RELATIONSHIP | relationshipIds (non-empty) |
+| YOGA | relationshipIds (non-empty) |
+| DISPOSITOR | relationshipIds (non-empty) AND participantIds (non-empty) |
+| D10 | Not allowed in buildCareerMechanismEvidence (use buildRefiningMechanismEvidence) |
 
 ## Provenance Helpers (§10)
 
@@ -256,6 +293,8 @@ The module exports exactly the following:
 - CareerMechanismPathway
 - CareerMechanismStatus
 - CareerMechanismEvidenceSource
+- CareerMechanismEvidenceRole
+- CareerMechanismSourceStage
 - CareerMechanismDefinition
 - CareerMechanismEvidence
 - CareerMechanismProvenance
@@ -282,7 +321,9 @@ The module exports exactly the following:
 
 **Evidence helpers:**
 - buildCareerMechanismEvidence
+- buildRefiningMechanismEvidence
 - buildCareerMechanismEvidenceArray
+- buildRefiningMechanismEvidenceArray
 
 **Provenance helpers:**
 - buildCareerMechanismProvenance
@@ -333,11 +374,13 @@ Tests that the model does not contain score, strength, confidence, or weight fie
 
 ## Guardrails (§33)
 
-1. **Mechanism ≠ Profession:** Mechanism types do NOT contain profession-specific values like SOFTWARE_ENGINEER, BANKER, DOCTOR. Those belong in a later synthesis layer.
+1. **Evidence-Role Invariant Enforcement:** The ESTABLISHING vs REFINING evidence role invariant is enforced at the builder level, not deferred to P2-07D. `buildCareerMechanismEvidence` assigns `role: 'ESTABLISHING'` and throws for `source: 'D10'`. `buildRefiningMechanismEvidence` assigns `role: 'REFINING'` and accepts D10 and other refinement-only sources.
+
+2. **Mechanism ≠ Profession:** Mechanism types do NOT contain profession-specific values like SOFTWARE_ENGINEER, BANKER, DOCTOR. Those belong in a later synthesis layer.
 
 2. **No DASHA Evidence Source:** DASHA is not included in CareerMechanismEvidenceSource. Timing-related evidence is handled in a separate layer.
 
-3. **D10 as Refinement Only:** 'D10' in CareerMechanismEvidenceSource is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant is enforced by the mechanism resolution layer (P2-07D).
+3. **D10 as Refinement Only:** 'D10' in CareerMechanismEvidenceSource is allowed ONLY as refinement evidence, NEVER as an establishing source. This invariant is enforced at the builder level (buildCareerMechanismEvidence throws for D10).
 
 4. **No Scoring Fields:** The model does not contain score, strength, confidence, weight, or qualificationScore fields anywhere.
 
@@ -360,15 +403,36 @@ Tests that the model does not contain score, strength, confidence, or weight fie
 The existing `CareerMechanism` type in `src/domain/career/careerPattern/careerPatternTypes.ts` has been renamed to `CareerMechanismType` and moved to `careerMechanism/careerMechanismTypes.ts`.
 
 **Updated files:**
-- `careerPatternTypes.ts` — Added import of CareerMechanismType, changed export to type alias
+- `careerPatternTypes.ts` — Added import of CareerMechanismType, changed export to deprecated type alias
 - `kendraTrikonaDetector.ts` — Updated import and type references
 - `dusthanaTransformationDetector.ts` — Updated import and type references
 - `careerPatternAnalysis.ts` — Updated import and type references
 - `careerPatternClassificationRules.ts` — Updated import and type references
 
-The old `CareerMechanism` name is retained as a type alias in `careerPatternTypes.ts` for backward compatibility:
+The old `CareerMechanism` name is retained as a deprecated type alias in `careerPatternTypes.ts` for backward compatibility:
 ```typescript
+/** @deprecated Use CareerMechanismType from careerMechanism/careerMechanismTypes.ts instead. */
 export type CareerMechanism = CareerMechanismType;
 ```
 
-This alias can be removed in a future cleanup wave after all call sites have been updated to use `CareerMechanismType` directly.
+This alias exists only for external callers until removal. Internal consumers have been migrated to use `CareerMechanismType` directly.
+
+### Taxonomy Freeze Note
+
+The following mechanism types are marked as borderline-domain (mechanism vs domain vs outcome) and should be reviewed in P2-07D:
+- BANKING_FINANCE
+- INSURANCE
+- TAXATION
+- COMPLIANCE
+- FOREIGN_WORK
+- REMOTE_WORK
+- INSTITUTIONAL_WORK
+- PROFESSIONAL_GAINS
+- MIXED
+
+These types are annotated with `@review P2-07D` comments in the registry and type definitions. The decision should be made before the resolver consumes the union:
+- If mechanism: keep as-is
+- If domain: move to a separate domain taxonomy
+- If outcome: move to a separate outcome/impact taxonomy
+
+`MIXED` in particular should either be renamed to reflect its actual semantics or documented as a fallback-bucket, not a mechanism.
