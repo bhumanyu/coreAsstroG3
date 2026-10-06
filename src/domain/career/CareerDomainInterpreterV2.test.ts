@@ -1611,9 +1611,9 @@ describe('CareerDomainInterpreterV2', () => {
           overallStrength: 'STRONG' as const,
           dominantLevel: 'MD' as const,
           statement: 'Dasha activates',
-          md: { level: 'MD' as const, planet: Planet.JUPITER, role: 'PRIMARY_DRIVER' as const, effect: 'ACTIVATES' as const, direction: 'SUPPORT' as const, strength: 'STRONG' as const, evidence: [], activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '', start: '2024-01-01', end: '2024-12-31' },
-          ad: { level: 'AD' as const, planet: Planet.SATURN, role: 'MODIFIER' as const, effect: 'ACTIVATES' as const, direction: 'SUPPORT' as const, strength: 'STRONG' as const, evidence: [], activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '', start: '2024-01-01', end: '2024-12-31' },
-          pd: { level: 'PD' as const, planet: Planet.MERCURY, role: 'REFINEMENT' as const, effect: 'INSUFFICIENT_DATA' as const, direction: 'UNAVAILABLE' as const, strength: 'UNDETERMINED' as const, evidence: [], activatedPromiseEvidenceIds: [], evidenceIds: [], statement: '', start: '2024-01-01', end: '2024-12-31' }
+          md: { level: 'MD' as const, planet: Planet.JUPITER, role: 'PRIMARY_DRIVER' as const, effect: 'ACTIVATES' as const, direction: 'SUPPORT' as const, strength: 'STRONG' as const, evidence: [], activatedPromiseEvidenceIds: [], challengedPromiseEvidenceIds: [], expressionEvidenceIds: [], statement: '', start: '2024-01-01', end: '2024-12-31', active: true },
+          ad: { level: 'AD' as const, planet: Planet.SATURN, role: 'MODIFIER' as const, effect: 'ACTIVATES' as const, direction: 'SUPPORT' as const, strength: 'STRONG' as const, evidence: [], activatedPromiseEvidenceIds: [], challengedPromiseEvidenceIds: [], expressionEvidenceIds: [], statement: '', start: '2024-01-01', end: '2024-12-31', active: true },
+          pd: { level: 'PD' as const, planet: Planet.MERCURY, role: 'REFINEMENT' as const, effect: 'INSUFFICIENT_DATA' as const, direction: 'UNAVAILABLE' as const, strength: 'UNDETERMINED' as const, evidence: [], activatedPromiseEvidenceIds: [], challengedPromiseEvidenceIds: [], expressionEvidenceIds: [], statement: '', start: '2024-01-01', end: '2024-12-31', active: false }
         },
         d10Effect: 'REINFORCES' as const,
         d10Direction: 'SUPPORT' as const,

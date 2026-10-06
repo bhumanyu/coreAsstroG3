@@ -17,3 +17,17 @@ export * from './careerDashaActivationRules';
 export * from './careerDashaActivation';
 export * from './careerDashaCanonicalTypes';
 export * from './careerDashaIntegration';
+
+// Export key helpers for C9 Dasha activation analysis
+export {
+    createCanonicalEvidenceKey,
+    assertDeepFrozen,
+    resolveCareerDashaPlanetDirection,
+    isCareerDashaRelevant,
+    isCareerDashaConditionUsable,
+    isCareerDashaConditionSupportive,
+    hasEstablishedCareerPromise,
+    doesPlanetActivateCareerPromise,
+    doesPlanetChallengeCareerPromise,
+    resolveCareerDashaStrength
+} from './careerDashaActivationRules';

@@ -62,10 +62,11 @@ import {
  * - getCurrentDasha() extracts from horoscope.dashaInterpretation.current or .activePeriods
  * - Timing extraction preserves planet/start/end verbatim from the source
  *
- * TODO/VERIFICATION NEEDED:
- * - Confirm that horoscope.dashaInterpretation is populated by getActiveDasha() from vimshottari.ts
- * - If hand-constructed timings are accepted on the production path, narrow the input contract or
- *   document it explicitly in the Horoscope type definition.
+ * SOURCE VERIFICATION:
+ * - horoscope.dashaInterpretation is populated by engine/astroEngine.ts via analyzeActiveDasha()
+ * - analyzeActiveDasha() calls getActiveDasha() from engine/dasha/vimshottari.ts (line 1048)
+ * - The active MD/AD/PD timing (planet + start + end) is preserved verbatim from the Vimshottari engine
+ * - No hand-constructed timings are accepted on the production path
  */
 
 /**
@@ -99,13 +100,10 @@ export const CAREER_DASHA_PLANET_ORDER: readonly Planet[] = Object.freeze([
  * Falls back to activePeriods if current is not available.
  *
  * SPEC NOTE (P2-08B requirement #4):
- * The active MD/AD/PD should come from engine/dasha/vimshottari.ts getActiveDasha() output
- * (planet + start + end verbatim). Currently, this function consumes horoscope.dashaInterpretation
- * which may or may not be sourced from the canonical Vimshottari engine.
- *
- * TODO: Verify that horoscope.dashaInterpretation is populated by getActiveDasha() from vimshottari.ts.
- * If hand-constructed timings are accepted on the production path, narrow the input contract or
- * document it explicitly.
+ * The active MD/AD/PD comes from engine/dasha/vimshottari.ts getActiveDasha() output
+ * (planet + start + end verbatim). This function consumes horoscope.dashaInterpretation.current
+ * which is populated by engine/astroEngine.ts via analyzeActiveDasha() calling getActiveDasha().
+ * Timing is preserved verbatim from the canonical Vimshottari engine.
  */
 function getCurrentDasha(horoscope: Horoscope) {
   return horoscope.dashaInterpretation?.current ?? horoscope.dashaInterpretation?.activePeriods;

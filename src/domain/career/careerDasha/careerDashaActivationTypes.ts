@@ -81,7 +81,7 @@ export interface CareerDashaActivationEvidence {
   readonly direction?: CareerDashaActivationDirection;
   readonly strength?: CareerDashaActivationStrength;
   readonly level: CareerDashaActivationLevel;
-  readonly relationshipIds: readonly string[];
+  readonly relatedPlanetIds: readonly string[];
   readonly relevanceEvidenceIds: readonly string[];
   readonly conditionEvidenceIds: readonly string[];
   readonly expressionEvidenceIds: readonly string[];

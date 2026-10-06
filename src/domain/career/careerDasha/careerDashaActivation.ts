@@ -134,7 +134,8 @@ function resolveLevel(
 
   // Determine active status and collect evidence IDs from consumed sources
   const active = effect !== 'INSUFFICIENT_DATA' && effect !== 'UNKNOWN';
-  const activatedPromiseEvidenceIds = planetActivates
+  // Only populate activatedPromiseEvidenceIds when there's an established career promise
+  const activatedPromiseEvidenceIds = (hasCareerPromise && planetActivates)
     ? extractActivatedPromiseEvidenceIds(evidence)
     : Object.freeze([]);
   const challengedPromiseEvidenceIds = planetChallenges
@@ -225,12 +226,15 @@ function buildActivationEvidence(
   );
   const sortedExpressionEvidenceIds = Object.freeze(Array.from(new Set(expressionEvidenceIds)).sort());
 
-  // C6 and C7 do not expose evidence IDs - return empty arrays (never fabricate)
+  // C6/C7 EVIDENCE GAP: relevanceEvidenceIds and conditionEvidenceIds are empty pending upstream evidence-ID exposure.
+  // C6 (CareerPlanetaryRelevance) and C7 (CareerPlanetaryCondition) do not currently expose individual evidence IDs
+  // in their data contracts. These fields are reserved for future W1 work that establishes a root evidence tree structure.
+  // Do NOT fabricate evidence IDs via string matching or other heuristics — this would create false provenance.
   const relevanceEvidenceIds = Object.freeze([]);
   const conditionEvidenceIds = Object.freeze([]);
 
-  // Relationship IDs from planet context (relatedPlanets as string representations)
-  const relationshipIds = Object.freeze(
+  // Related planet IDs from planet context (relatedPlanets as string representations)
+  const relatedPlanetIds = Object.freeze(
     planetContext.relatedPlanets.map(p => p).sort()
   );
 
@@ -268,7 +272,7 @@ function buildActivationEvidence(
       statement: `Structural direction: ${context.structuralDirection}, strength: ${context.structuralStrength}, primary support: ${context.structuralPrimarySupport}.`,
       direction: structuralDirection,
       level,
-      relationshipIds,
+      relatedPlanetIds,
       relevanceEvidenceIds,
       conditionEvidenceIds,
       expressionEvidenceIds: Object.freeze([]),
@@ -287,7 +291,7 @@ function buildActivationEvidence(
       statement: `Planet ${planetContext.planet} has ${planetContext.relevance.toLowerCase()} career relevance with roles: ${planetContext.roles.join(', ')}.`,
       planet: planetContext.planet,
       level,
-      relationshipIds,
+      relatedPlanetIds,
       relevanceEvidenceIds,
       conditionEvidenceIds,
       expressionEvidenceIds: Object.freeze([]),
@@ -300,14 +304,21 @@ function buildActivationEvidence(
 
   const conditionKey = createCanonicalEvidenceKey(level, planetContext.planet, role, direction, `CONDITION:${planetContext.condition}`);
   if (!seenKeys.has(conditionKey)) {
+    // Set direction to CHALLENGE when planet challenges career promise, otherwise SUPPORT for supportive conditions
+    const conditionDirection = doesPlanetChallengeCareerPromise(planetContext)
+      ? 'CHALLENGE'
+      : isCareerDashaConditionSupportive(planetContext.condition)
+        ? 'SUPPORT'
+        : 'NEUTRAL';
+
     evidence.push(Object.freeze({
       id: conditionKey,
       role: 'PLANETARY_CONDITION',
       statement: `Planet ${planetContext.planet} has ${planetContext.condition.toLowerCase()} condition.`,
       planet: planetContext.planet,
-      direction: isCareerDashaConditionSupportive(planetContext.condition) ? 'SUPPORT' : 'NEUTRAL',
+      direction: conditionDirection,
       level,
-      relationshipIds,
+      relatedPlanetIds,
       relevanceEvidenceIds,
       conditionEvidenceIds,
       expressionEvidenceIds: Object.freeze([]),
@@ -333,7 +344,7 @@ function buildActivationEvidence(
         planet: planetContext.planet,
         direction: expression.direction === 'SUPPORTED' ? 'SUPPORT' : expression.direction === 'CONDITIONAL' ? 'NEUTRAL' : 'UNAVAILABLE',
         level,
-        relationshipIds,
+        relatedPlanetIds,
         relevanceEvidenceIds,
         conditionEvidenceIds,
         expressionEvidenceIds: exprEvidenceIds,
@@ -352,7 +363,7 @@ function buildActivationEvidence(
       role: 'TIMING',
       statement: `${level} period role: ${role}.`,
       level,
-      relationshipIds,
+      relatedPlanetIds,
       relevanceEvidenceIds,
       conditionEvidenceIds,
       expressionEvidenceIds: Object.freeze([]),
@@ -373,7 +384,7 @@ function buildActivationEvidence(
       direction,
       strength,
       level,
-      relationshipIds,
+      relatedPlanetIds,
       relevanceEvidenceIds,
       conditionEvidenceIds,
       expressionEvidenceIds: sortedExpressionEvidenceIds,

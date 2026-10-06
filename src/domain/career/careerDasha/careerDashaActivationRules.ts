@@ -275,8 +275,7 @@ export function resolveCareerDashaStrength(
 
 /**
  * Generates a canonical evidence key for deduplication.
- * Format: level:planet:role:direction:id
- * Deduplicates and sorts all nested arrays.
+ * Format: level:planet:role:direction:id (positional, no sorting)
  * Freezes the result recursively.
  *
  * @param level - The Dasha activation level (MD/AD/PD)
@@ -293,18 +292,13 @@ export function createCanonicalEvidenceKey(
   direction: CareerDashaActivationDirection,
   id: string
 ): string {
-  const parts = [
+  const key = [
     level,
     planet ?? 'none',
     role,
     direction,
     id
-  ];
-
-  // Sort and dedupe parts (though in practice these are already ordered)
-  const sortedParts = Array.from(new Set(parts)).sort();
-
-  const key = sortedParts.join(':');
+  ].join(':');
 
   // Freeze the key string (strings are immutable by default, but this documents intent)
   return Object.freeze(key);

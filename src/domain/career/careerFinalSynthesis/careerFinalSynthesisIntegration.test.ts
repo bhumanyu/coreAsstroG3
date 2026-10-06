@@ -323,7 +323,11 @@ describe('C11 Final Career Synthesis Integration', () => {
           evidence: Object.freeze([]),
           start: '2020-01-01',
           end: '2025-01-01',
-          statement: 'MD SUPPORT'
+          statement: 'MD SUPPORT',
+          active: true,
+          activatedPromiseEvidenceIds: Object.freeze([]),
+          challengedPromiseEvidenceIds: Object.freeze([]),
+          expressionEvidenceIds: Object.freeze([])
         }),
         ad: Object.freeze({
           level: 'AD',
@@ -335,7 +339,11 @@ describe('C11 Final Career Synthesis Integration', () => {
           evidence: Object.freeze([]),
           start: '2020-01-01',
           end: '2022-01-01',
-          statement: 'AD CHALLENGE'
+          statement: 'AD CHALLENGE',
+          active: true,
+          activatedPromiseEvidenceIds: Object.freeze([]),
+          challengedPromiseEvidenceIds: Object.freeze([]),
+          expressionEvidenceIds: Object.freeze([])
         }),
         pd: Object.freeze({
           level: 'PD',
@@ -347,7 +355,11 @@ describe('C11 Final Career Synthesis Integration', () => {
           evidence: Object.freeze([]),
           start: '2020-01-01',
           end: '2021-01-01',
-          statement: 'PD CHALLENGE'
+          statement: 'PD CHALLENGE',
+          active: true,
+          activatedPromiseEvidenceIds: Object.freeze([]),
+          challengedPromiseEvidenceIds: Object.freeze([]),
+          expressionEvidenceIds: Object.freeze([])
         })
       });
 

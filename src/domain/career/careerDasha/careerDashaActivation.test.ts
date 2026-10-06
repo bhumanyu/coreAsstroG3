@@ -707,6 +707,7 @@ describe('Career Dasha Activation', () => {
       const result = resolveCareerDashaActivation(context);
 
       expect(result.md.active).toBe(false);
+      // activatedPromiseEvidenceIds is empty when structural direction is UNAVAILABLE
       expect(result.md.activatedPromiseEvidenceIds).toEqual(Object.freeze([]));
       expect(result.md.challengedPromiseEvidenceIds).toEqual(Object.freeze([]));
       expect(result.md.expressionEvidenceIds).toEqual(Object.freeze([]));
@@ -729,10 +730,11 @@ describe('Career Dasha Activation', () => {
 
       expect(result.md.active).toBe(true);
       expect(result.md.activatedPromiseEvidenceIds.length).toBeGreaterThan(0);
-      expect(result.md.expressionEvidenceIds).toContain('expr1');
+      // expressionEvidenceIds contains canonical evidence keys for EXPRESSION rows, not raw C8 IDs
+      expect(result.md.expressionEvidenceIds.length).toBeGreaterThan(0);
     });
 
-    it('expressionEvidenceIds carries real C8 evidence IDs', () => {
+    it('expressionEvidenceIds carries canonical EXPRESSION evidence keys', () => {
       const exprIds = Object.freeze(['expr_a', 'expr_b', 'expr_c']);
       const context = makeContext({
         planetContexts: Object.freeze([
@@ -748,7 +750,12 @@ describe('Career Dasha Activation', () => {
 
       const result = resolveCareerDashaActivation(context);
 
-      expect(result.md.expressionEvidenceIds).toEqual(expect.arrayContaining(['expr_a', 'expr_b', 'expr_c']));
+      // expressionEvidenceIds contains canonical evidence keys for EXPRESSION rows
+      expect(result.md.expressionEvidenceIds.length).toBeGreaterThan(0);
+      // The EXPRESSION evidence row itself contains the raw C8 IDs in its expressionEvidenceIds field
+      const exprEvidence = result.md.evidence.find(e => e.role === 'EXPRESSION');
+      expect(exprEvidence).toBeDefined();
+      expect(exprEvidence?.expressionEvidenceIds).toEqual(expect.arrayContaining(['expr_a', 'expr_b', 'expr_c']));
     });
 
     it('CONDITIONAL expression never produces ACTIVATES effect (§25 invariant)', () => {
@@ -770,7 +777,7 @@ describe('Career Dasha Activation', () => {
       expect(result.md.effect).toBe('PARTIALLY_ACTIVATES');
     });
 
-    it('evidence objects include new fields: level, relationshipIds, relevanceEvidenceIds, conditionEvidenceIds, expressionEvidenceIds, activationRuleIds, sourceIds', () => {
+    it('evidence objects include new fields: level, relatedPlanetIds, relevanceEvidenceIds, conditionEvidenceIds, expressionEvidenceIds, activationRuleIds, sourceIds', () => {
       const context = makeContext({
         planetContexts: Object.freeze([
           makePlanet(
@@ -787,7 +794,7 @@ describe('Career Dasha Activation', () => {
 
       result.md.evidence.forEach(ev => {
         expect(ev).toHaveProperty('level');
-        expect(ev).toHaveProperty('relationshipIds');
+        expect(ev).toHaveProperty('relatedPlanetIds');
         expect(ev).toHaveProperty('relevanceEvidenceIds');
         expect(ev).toHaveProperty('conditionEvidenceIds');
         expect(ev).toHaveProperty('expressionEvidenceIds');
@@ -845,13 +852,15 @@ describe('Career Dasha Activation', () => {
 
       const result = resolveCareerDashaActivation(context);
 
-      // MD evidence should reference Saturn expression
-      const mdExprIds = result.md.expressionEvidenceIds;
-      expect(mdExprIds).toContain('saturn_expr');
+      // MD evidence should have independent expression evidence
+      const mdExprEvidence = result.md.evidence.find(e => e.role === 'EXPRESSION');
+      expect(mdExprEvidence).toBeDefined();
+      expect(mdExprEvidence?.expressionEvidenceIds).toContain('saturn_expr');
 
-      // AD evidence should reference Jupiter expression
-      const adExprIds = result.ad.expressionEvidenceIds;
-      expect(adExprIds).toContain('jupiter_expr');
+      // AD evidence should have independent expression evidence
+      const adExprEvidence = result.ad.evidence.find(e => e.role === 'EXPRESSION');
+      expect(adExprEvidence).toBeDefined();
+      expect(adExprEvidence?.expressionEvidenceIds).toContain('jupiter_expr');
     });
 
     it('MD/AD/PD independence: changing one level does not affect others', () => {
@@ -890,6 +899,29 @@ describe('Career Dasha Activation', () => {
       expect(result1.ad.effect).toBe(result2.ad.effect);
       expect(result1.pd.planet).toBe(result2.pd.planet);
       expect(result1.pd.effect).toBe(result2.pd.effect);
+    });
+
+    it('AFFLICTED challenger planet populates challengedPromiseEvidenceIds', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'AFFLICTED',
+            Object.freeze([])
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.effect).toBe('CHALLENGES');
+      expect(result.md.challengedPromiseEvidenceIds.length).toBeGreaterThan(0);
+      // Verify that the PLANETARY_CONDITION evidence has direction: 'CHALLENGE'
+      const conditionEvidence = result.md.evidence.find(e => e.role === 'PLANETARY_CONDITION');
+      expect(conditionEvidence).toBeDefined();
+      expect(conditionEvidence?.direction).toBe('CHALLENGE');
     });
   });
 });
