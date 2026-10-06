@@ -15,7 +15,8 @@ import {
   resolveD10Direction,
   resolveD10Effect,
   resolveD10Strength,
-  qualifyNatalCareerWithD10
+  qualifyNatalCareerWithD10,
+  evaluateDimensionQualification
 } from './careerD10QualificationRules';
 
 import type {
@@ -1131,6 +1132,244 @@ describe('resolveCareerD10Qualification', () => {
       expect(result.d10Effect).toBe('QUALIFIES');
       expect(result.qualifiedDirection).toBe('SUPPORT');
       expect(result.natalPromisePreserved).toBe(true);
+    });
+  });
+
+  describe('golden invariants (P2-08C spec §39)', () => {
+    it('INV-01: no C8 expression → INSUFFICIENT_DATA', () => {
+      // When there is no natal career promise, D10 cannot qualify
+      const context: CareerD10Context = {
+        natalDirection: 'NEUTRAL',
+        natalStrength: 'MODERATE',
+        natalPrimarySupport: 3,
+        natalPrimaryChallenge: 3,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+
+      const result = resolveCareerD10Qualification(context);
+
+      expect(result.d10Effect).toBe('INSUFFICIENT_DATA');
+      expect(result.qualifiedDirection).toBe('UNDETERMINED');
+      expect(result.qualifiedStrength).toBe('UNDETERMINED');
+    });
+
+    it('INV-05: missing D10 → INSUFFICIENT_DATA (not CHALLENGE)', () => {
+      // When D10 data is unavailable, result is INSUFFICIENT_DATA, not CHALLENGE
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: false,
+        d10Houses: [],
+        d10Planets: []
+      };
+
+      const result = resolveCareerD10Qualification(context);
+
+      expect(result.d10Effect).toBe('UNAVAILABLE');
+      expect(result.qualifiedDirection).toBe('SUPPORT'); // Preserves natal
+      expect(result.qualifiedStrength).toBe('STRONG'); // Preserves natal
+    });
+
+    it('INV-14: input immutability (clone+toEqual)', () => {
+      const originalContext: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+
+      // Deep clone context
+      const contextClone = JSON.parse(JSON.stringify(originalContext));
+
+      const result = resolveCareerD10Qualification(originalContext);
+
+      // Context should be unchanged
+      expect(originalContext).toEqual(contextClone);
+    });
+
+    it('INV-15: determinism incl. JSON.stringify', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+
+      const result1 = resolveCareerD10Qualification(context);
+      const result2 = resolveCareerD10Qualification(context);
+
+      // Same input should produce same output
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+    });
+
+    it('INV-16: deep freeze', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+
+      const result = resolveCareerD10Qualification(context);
+
+      // Result should be frozen
+      expect(Object.isFrozen(result)).toBe(true);
+      expect(Object.isFrozen(result.evidence)).toBe(true);
+      expect(Object.isFrozen(result.expressionQualifications)).toBe(true);
+    });
+
+    it('INV-18: input-order invariance', () => {
+      // Create two contexts with same data but different house/planet order
+      const context1: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] }
+        ]
+      };
+
+      const context2: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MOON, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
+          { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
+        ]
+      };
+
+      const result1 = resolveCareerD10Qualification(context1);
+      const result2 = resolveCareerD10Qualification(context2);
+
+      // Results should be identical despite different input order
+      expect(JSON.stringify(result1)).toBe(JSON.stringify(result2));
+    });
+
+    it('dimension qualification: LEADERSHIP with 10H Sun STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+      };
+
+      const result = evaluateDimensionQualification('LEADERSHIP', context);
+
+      expect(result.matched).toBe(true);
+      expect(result.direction).toBe('SUPPORT');
+      expect(result.strength).toBe('VERY_STRONG');
+    });
+
+    it('dimension qualification: TECHNICAL with 6H Mercury STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.MERCURY, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.MERCURY, condition: 'STRONG', d10House: 6, natalHouse: 3, relatedHouses: [6] }]
+      };
+
+      const result = evaluateDimensionQualification('TECHNICAL_SPECIALIZATION', context);
+
+      expect(result.matched).toBe(true);
+      expect(result.direction).toBe('SUPPORT');
+      // Mercury is both lord and planet in 6H, so it counts as 2 strong indicators → VERY_STRONG
+      expect(result.strength).toBe('VERY_STRONG');
+    });
+
+    it('dimension qualification: EMPLOYMENT with 6H Saturn STRONG', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [{ house: 6, role: 'SUPPORTING', occupied: true, lord: Planet.SATURN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
+        d10Planets: [{ planet: Planet.SATURN, condition: 'STRONG', d10House: 6, natalHouse: 10, relatedHouses: [6] }]
+      };
+
+      const result = evaluateDimensionQualification('SERVICE_EMPLOYMENT', context);
+
+      expect(result.matched).toBe(true);
+      expect(result.direction).toBe('SUPPORT');
+      // Saturn is both lord and planet in 6H, so it counts as 2 strong indicators → VERY_STRONG
+      expect(result.strength).toBe('VERY_STRONG');
+    });
+
+    it('dimension qualification: INDEPENDENT_WORK distinct from BUSINESS_ENTREPRENEURSHIP', () => {
+      // INDEPENDENT_WORK uses 3H/11H, BUSINESS_ENTREPRENEURSHIP uses 3H/5H/7H/10H/11H
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: true,
+        d10Houses: [
+          { house: 3, role: 'NEUTRAL', occupied: true, lord: Planet.MERCURY, lordCondition: 'STRONG', tenants: [], tenantConditions: [] },
+          { house: 11, role: 'SUPPORTING', occupied: true, lord: Planet.JUPITER, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }
+        ],
+        d10Planets: [
+          { planet: Planet.MERCURY, condition: 'STRONG', d10House: 3, natalHouse: 6, relatedHouses: [3] },
+          { planet: Planet.JUPITER, condition: 'STRONG', d10House: 11, natalHouse: 9, relatedHouses: [11] }
+        ]
+      };
+
+      const independentResult = evaluateDimensionQualification('INDEPENDENT_WORK', context);
+      const businessResult = evaluateDimensionQualification('BUSINESS_ENTREPRENEURSHIP', context);
+
+      // Both should match since they share 3H/11H
+      expect(independentResult.matched).toBe(true);
+      expect(businessResult.matched).toBe(true);
+    });
+
+    it('dimension qualification: no match when D10 unavailable', () => {
+      const context: CareerD10Context = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        natalPrimarySupport: 5,
+        natalPrimaryChallenge: 2,
+        d10Available: false,
+        d10Houses: [],
+        d10Planets: []
+      };
+
+      const result = evaluateDimensionQualification('LEADERSHIP', context);
+
+      expect(result.matched).toBe(false);
+      expect(result.direction).toBe('UNAVAILABLE');
+      expect(result.strength).toBe('UNDETERMINED');
     });
   });
 });

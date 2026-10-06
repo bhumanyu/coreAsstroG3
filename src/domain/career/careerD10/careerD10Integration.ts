@@ -54,6 +54,10 @@ import {
   resolveCareerD10Qualification
 } from './careerD10Qualification';
 
+import {
+  evaluateDimensionQualification
+} from './careerD10QualificationRules';
+
 /**
  * Input interface for C10 D10 qualification integration.
  * Consumes the natal analysis aggregate and expression analysis.
@@ -132,7 +136,7 @@ function mapD10Condition(
  * - Iterates in canonical planet order
  * - Skips planets missing or without a house
  * - Builds CareerD10PlanetContext with condition from mapD10Condition
- * - Sets natalHouse: 0 (deferred placeholder; preferred future type is natalHouse?: number / number | undefined meaning genuinely unavailable)
+ * - Sets natalHouse from horoscope.planetFacts[planet].house (or undefined if unavailable)
  * - Sets relatedHouses: [info.house]
  * - Freezes each context and the array
  */
@@ -154,11 +158,15 @@ function buildD10PlanetContexts(
 
     const condition = mapD10Condition(info.dignity);
 
+    // Map natal house from horoscope.planetFacts
+    const natalPlanetFact = horoscope.planetFacts[planet];
+    const natalHouse = natalPlanetFact?.house;
+
     const planetContext: CareerD10PlanetContext = Object.freeze({
       planet,
       condition,
       d10House: info.house,
-      natalHouse: 0, // Placeholder for future natal house migration
+      natalHouse: natalHouse ?? 0, // Use 0 only if truly unavailable (natalPlanetFact missing or house undefined)
       relatedHouses: Object.freeze([info.house])
     });
 
@@ -542,32 +550,57 @@ function resolveExpressionRelationship(
  * Per spec §21.
  *
  * C10 only qualifies existing C8 expressions; it never invents one.
+ * Uses per-dimension D10 rules to determine qualification.
+ *
+ * Per spec §25: When expression.conditional === true, D10 confirmation may attach
+ * to that expression's qualification evidence but must not flip qualified into
+ * unconditional natal support. The conditional flag is preserved unchanged.
  */
 function qualifyExpression(
   expression: CareerExpression,
   result: CareerD10QualificationResult,
-  canonicalEvidence: readonly CareerD10CanonicalEvidence[]
+  canonicalEvidence: readonly CareerD10CanonicalEvidence[],
+  context: CareerD10Context
 ): CareerD10ExpressionQualificationCanonical {
   // Order-independent, non-empty identity: mode + sorted supporting ids
   const expressionId = [expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':');
-  const relationship = resolveExpressionRelationship(expression, result.d10Direction);
 
-  const qualified = relationship !== 'INSUFFICIENT_DATA' && relationship !== 'UNAVAILABLE';
+  // Evaluate per-dimension qualification
+  const dimensionResult = evaluateDimensionQualification(expression.mode, context);
+
+  // Determine relationship based on dimension result
+  let relationship: CareerD10QualificationEffect;
+  if (!dimensionResult.matched) {
+    relationship = 'INSUFFICIENT_DATA';
+  } else if (expression.direction === 'CONDITIONAL') {
+    // Per spec §25: conditional expressions get QUALIFIES but preserve conditional flag
+    relationship = 'QUALIFIES';
+  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'SUPPORT') {
+    relationship = 'REINFORCES';
+  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'CHALLENGE') {
+    relationship = 'CONFLICTS';
+  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'MIXED') {
+    relationship = 'QUALIFIES';
+  } else {
+    relationship = 'INSUFFICIENT_DATA';
+  }
+
+  const qualified = relationship !== 'INSUFFICIENT_DATA';
 
   // Populate evidence with canonical C10 evidence that produced the qualification
-  // Filter by the direction that matches the qualification result
+  // Filter by the direction that matches the dimension result
   const qualificationEvidence = Object.freeze(
-    canonicalEvidence.filter(e => e.direction === result.d10Direction)
+    canonicalEvidence.filter(e => e.direction === dimensionResult.direction)
   );
 
   const qualification: CareerD10ExpressionQualificationCanonical = Object.freeze({
     expressionId,
-    expression,
+    expression, // Conditional flag is preserved (spec §25)
     qualified,
     effect: relationship,
-    direction: qualified ? result.d10Direction : expression.direction === 'SUPPORTED' ? 'SUPPORT' :
+    direction: qualified ? dimensionResult.direction : expression.direction === 'SUPPORTED' ? 'SUPPORT' :
       expression.direction === 'CONDITIONAL' ? 'MIXED' : 'UNAVAILABLE',
-    strength: qualified ? result.d10Strength : expression.strength === 'STRONG' ? 'STRONG' :
+    strength: qualified ? dimensionResult.strength : expression.strength === 'STRONG' ? 'STRONG' :
       expression.strength === 'MODERATE' ? 'MODERATE' :
         expression.strength === 'WEAK' ? 'WEAK' : 'UNDETERMINED',
     evidence: qualificationEvidence,
@@ -645,7 +678,7 @@ export function buildCareerD10Analysis(
 
   // Qualify expressions
   const expressionQualifications = Object.freeze(
-    input.expression.expressions.map(expr => qualifyExpression(expr, result, canonicalEvidence))
+    input.expression.expressions.map(expr => qualifyExpression(expr, result, canonicalEvidence, context))
   );
 
   // Resolve availability

@@ -75,6 +75,9 @@ export function resolveCareerD10Qualification(
 
   const dashaEffect = context.dashaEffect ?? 'UNAVAILABLE';
   const dashaDirection = context.dashaDirection ?? 'UNAVAILABLE';
+  // Note: dashaPreserved indicates whether dasha fields were provided in context.
+  // C10 is parallel to C9 and does not use dasha fields in qualification logic.
+  // These fields are retained for backward compatibility and will be removed in future waves.
   const dashaPreserved = context.dashaEffect !== undefined;
 
   if (natalDirection === 'UNAVAILABLE') {

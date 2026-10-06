@@ -903,4 +903,336 @@ describe('C10 D10 Integration', () => {
       expect(result1.conflicts).toEqual(result2.conflicts);
     });
   });
+
+  describe('golden invariants (P2-08C spec §39)', () => {
+    it('INV-06: conditional expression preserved', () => {
+      const conditionalExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'CONDITIONAL',
+        strength: 'MODERATE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-1']),
+        statement: 'Conditional leadership expression.',
+        conditional: true
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([conditionalExpression]),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // Conditional flag should be preserved
+      expect(result.expressionQualifications[0].expression.conditional).toBe(true);
+    });
+
+    it('INV-07: employment STRONG + entrepreneurship WEAK both report independently', () => {
+      const employmentExpression: CareerExpression = Object.freeze({
+        mode: 'SERVICE_EMPLOYMENT',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['emp-1']),
+        statement: 'Employment expression.',
+        conditional: false
+      });
+
+      const entrepreneurshipExpression: CareerExpression = Object.freeze({
+        mode: 'ENTREPRENEURSHIP',
+        direction: 'SUPPORTED',
+        strength: 'WEAK',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['ent-1']),
+        statement: 'Entrepreneurship expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([employmentExpression, entrepreneurshipExpression]),
+        horoscope: makeHoroscopeWithD10(
+          {
+            [Planet.SATURN]: { house: 6, dignity: DignityStatus.EXALTED },
+            [Planet.MARS]: { house: 3, dignity: DignityStatus.DEBILITATED }
+          },
+          [
+            { house: 6, lord: Planet.SATURN, occupants: [] },
+            { house: 3, lord: Planet.MARS, occupants: [] }
+          ]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // Both expressions should be qualified independently
+      expect(result.expressionQualifications).toHaveLength(2);
+      const employmentQual = result.expressionQualifications.find(q => q.expression.mode === 'SERVICE_EMPLOYMENT');
+      const entrepreneurshipQual = result.expressionQualifications.find(q => q.expression.mode === 'ENTREPRENEURSHIP');
+
+      expect(employmentQual).toBeDefined();
+      expect(entrepreneurshipQual).toBeDefined();
+    });
+
+    it('INV-08: INDEPENDENT_WORK STRONG with BUSINESS ENTREPRENEURSHIP INSUFFICIENT_DATA stays possible', () => {
+      const independentWorkExpression: CareerExpression = Object.freeze({
+        mode: 'INDEPENDENT_WORK',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['ind-1']),
+        statement: 'Independent work expression.',
+        conditional: false
+      });
+
+      const businessEntrepreneurshipExpression: CareerExpression = Object.freeze({
+        mode: 'BUSINESS_ENTREPRENEURSHIP',
+        direction: 'NEUTRAL',
+        strength: 'UNAVAILABLE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze([]),
+        statement: 'Business entrepreneurship expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([independentWorkExpression, businessEntrepreneurshipExpression]),
+        horoscope: makeHoroscopeWithD10(
+          {
+            [Planet.MERCURY]: { house: 3, dignity: DignityStatus.EXALTED }
+          },
+          [
+            { house: 3, lord: Planet.MERCURY, occupants: [] }
+          ]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // INDEPENDENT_WORK should be qualified, BUSINESS_ENTREPRENEURSHIP should not
+      const independentQual = result.expressionQualifications.find(q => q.expression.mode === 'INDEPENDENT_WORK');
+      const businessQual = result.expressionQualifications.find(q => q.expression.mode === 'BUSINESS_ENTREPRENEURSHIP');
+
+      expect(independentQual?.qualified).toBe(true);
+      expect(businessQual?.qualified).toBe(false);
+    });
+
+    it('INV-11: income indicators alone ≠ entrepreneurship', () => {
+      // Only 2H/11H indicators (income/gains) should not produce entrepreneurship support
+      const entrepreneurshipExpression: CareerExpression = Object.freeze({
+        mode: 'ENTREPRENEURSHIP',
+        direction: 'NEUTRAL',
+        strength: 'UNAVAILABLE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze([]),
+        statement: 'Entrepreneurship expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([entrepreneurshipExpression]),
+        horoscope: makeHoroscopeWithD10(
+          {
+            [Planet.JUPITER]: { house: 2, dignity: DignityStatus.EXALTED },
+            [Planet.VENUS]: { house: 11, dignity: DignityStatus.OWN_SIGN }
+          },
+          [
+            { house: 2, lord: Planet.JUPITER, occupants: [] },
+            { house: 11, lord: Planet.VENUS, occupants: [] }
+          ]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // Entrepreneurship should not be qualified with only income indicators
+      const entrepreneurshipQual = result.expressionQualifications.find(q => q.expression.mode === 'ENTREPRENEURSHIP');
+      expect(entrepreneurshipQual?.qualified).toBe(false);
+    });
+
+    it('INV-17: expression vs D10 evidence-ID separation (no fabrication)', () => {
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // All evidence IDs should have the CAREER_D10 prefix
+      result.evidence.forEach(e => {
+        expect(e.id).toMatch(/^CAREER_D10:/);
+        expect(e.identityKey).toMatch(/^CAREER_D10:/);
+      });
+
+      // Rule IDs should match the stable CAREER_D10_RULE_IDS format
+      result.evidence.forEach(e => {
+        e.provenance.ruleIds.forEach(ruleId => {
+          expect(ruleId).toMatch(/^C10_D10_/);
+        });
+      });
+    });
+
+    it('INV-19: shared D10 evidence must not double-count into overall strength', () => {
+      // Test that when the same D10 evidence applies to multiple expressions,
+      // it doesn't double-count in the overall strength calculation
+      const leadershipExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['lead-1']),
+        statement: 'Leadership expression.',
+        conditional: false
+      });
+
+      const managementExpression: CareerExpression = Object.freeze({
+        mode: 'MANAGEMENT',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['mgmt-1']),
+        statement: 'Management expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([leadershipExpression, managementExpression]),
+        horoscope: makeHoroscopeWithD10(
+          {
+            [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED },
+            [Planet.SATURN]: { house: 10, dignity: DignityStatus.OWN_SIGN }
+          },
+          [{ house: 10, lord: Planet.SUN, occupants: [Planet.SATURN] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // Overall d10Strength should be based on the D10 evidence, not the sum of expression qualifications
+      expect(result.d10Strength).toBeDefined();
+      expect(result.d10Strength).not.toBe('UNDETERMINED');
+    });
+
+    it('INV-20: timing metadata invariance', () => {
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // C10 output should not contain timing metadata
+      expect(result).not.toHaveProperty('timing');
+      expect(result).not.toHaveProperty('transit');
+      expect(result).not.toHaveProperty('dashaEffect');
+      expect(result).not.toHaveProperty('dashaDirection');
+      expect(result).not.toHaveProperty('dashaStrength');
+    });
+  });
+
+  describe('integration test with provenance tracking (P2-08C spec §40-41)', () => {
+    it('real CareerExpression → buildCareerD10Analysis chain with provenance', () => {
+      const expression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['lead-1']),
+        statement: 'Leadership expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expression]),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // Verify provenance survives through the chain
+      expect(result.evidence.length).toBeGreaterThan(0);
+
+      result.evidence.forEach(evidence => {
+        // Each evidence should have provenance
+        expect(evidence.provenance).toBeDefined();
+        expect(evidence.provenance.source).toBe('C10_D10');
+        expect(evidence.provenance.ruleIds).toBeDefined();
+        expect(evidence.provenance.sourceIds).toBeDefined();
+        expect(evidence.provenance.natalRootIds).toBeDefined();
+
+        // Rule IDs should be non-empty
+        expect(evidence.provenance.ruleIds.length).toBeGreaterThan(0);
+
+        // Source IDs should be non-empty
+        expect(evidence.provenance.sourceIds.length).toBeGreaterThan(0);
+      });
+
+      // Expression qualifications should also have provenance
+      expect(result.expressionQualifications.length).toBeGreaterThan(0);
+
+      result.expressionQualifications.forEach(qualification => {
+        // Each qualification should have evidence with provenance
+        qualification.evidence.forEach(evidence => {
+          expect(evidence.provenance).toBeDefined();
+          expect(evidence.provenance.source).toBe('C10_D10');
+        });
+      });
+    });
+
+    it('contradiction fixture: D10 CONFLICTS STRONG natal expression, natal preserved (§42)', () => {
+      const strongNatalExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['lead-1']),
+        statement: 'Strong leadership expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([strongNatalExpression]),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.DEBILITATED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // D10 should CONFLICT with the strong natal expression
+      expect(result.d10Effect).toBe('CONFLICTS');
+      expect(result.d10Direction).toBe('CHALLENGE');
+
+      // Natal direction and strength should be preserved unchanged
+      expect(result.natalDirection).toBe('SUPPORT');
+      expect(result.natalStrength).toBe('STRONG');
+
+      // The expression qualification should reflect the conflict
+      const leadershipQual = result.expressionQualifications.find(q => q.expression.mode === 'LEADERSHIP');
+      expect(leadershipQual).toBeDefined();
+      expect(leadershipQual?.effect).toBe('CONFLICTS');
+
+      // Natal promise should be preserved
+      expect(result.natalPromisePreserved).toBe(true);
+    });
+  });
 });

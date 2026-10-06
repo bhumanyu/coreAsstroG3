@@ -28,7 +28,11 @@ import {
   CAREER_HOUSE_PORTFOLIO
 } from '../careerTypes';
 
-import type { Planet } from '../../../types';
+import { Planet } from '../../../types';
+
+import type {
+  CareerManifestationMode
+} from '../careerTypes';
 
 interface CanonicalD10Fact {
   planet: Planet;
@@ -743,4 +747,314 @@ function weakenCareerStrength(
   }
 
   return 'UNDETERMINED';
+}
+
+// ============================================================================
+// Per-Dimension D10 Qualification Rules (P2-08C Spec §12-17)
+// ============================================================================
+
+/**
+ * Stable rule IDs for D10 dimension qualification.
+ * Per spec §44 - never reuse evidence IDs as rule IDs.
+ */
+export const CAREER_D10_RULE_IDS = Object.freeze({
+  // Leadership dimension rules
+  D10_LEADERSHIP_10H_LORD: 'C10_D10_LEADERSHIP_10H_LORD',
+  D10_LEADERSHIP_10H_OCCUPANT: 'C10_D10_LEADERSHIP_10H_OCCUPANT',
+  D10_LEADERSHIP_SUN: 'C10_D10_LEADERSHIP_SUN',
+  D10_LEADERSHIP_MARS: 'C10_D10_LEADERSHIP_MARS',
+  D10_LEADERSHIP_JUPITER: 'C10_D10_LEADERSHIP_JUPITER',
+  D10_LEADERSHIP_11H: 'C10_D10_LEADERSHIP_11H',
+
+  // Management dimension rules
+  D10_MANAGEMENT_10H_LORD: 'C10_D10_MANAGEMENT_10H_LORD',
+  D10_MANAGEMENT_10H_OCCUPANT: 'C10_D10_MANAGEMENT_10H_OCCUPANT',
+  D10_MANAGEMENT_SUN: 'C10_D10_MANAGEMENT_SUN',
+  D10_MANAGEMENT_SATURN: 'C10_D10_MANAGEMENT_SATURN',
+  D10_MANAGEMENT_JUPITER: 'C10_D10_MANAGEMENT_JUPITER',
+  D10_MANAGEMENT_11H: 'C10_D10_MANAGEMENT_11H',
+
+  // Technical dimension rules
+  D10_TECHNICAL_10H_LORD: 'C10_D10_TECHNICAL_10H_LORD',
+  D10_TECHNICAL_10H_OCCUPANT: 'C10_D10_TECHNICAL_10H_OCCUPANT',
+  D10_TECHNICAL_6H_LORD: 'C10_D10_TECHNICAL_6H_LORD',
+  D10_TECHNICAL_6H_OCCUPANT: 'C10_D10_TECHNICAL_6H_OCCUPANT',
+  D10_TECHNICAL_3H_LORD: 'C10_D10_TECHNICAL_3H_LORD',
+  D10_TECHNICAL_3H_OCCUPANT: 'C10_D10_TECHNICAL_3H_OCCUPANT',
+  D10_TECHNICAL_MERCURY: 'C10_D10_TECHNICAL_MERCURY',
+  D10_TECHNICAL_MARS: 'C10_D10_TECHNICAL_MARS',
+  D10_TECHNICAL_SATURN: 'C10_D10_TECHNICAL_SATURN',
+
+  // Employment dimension rules
+  D10_EMPLOYMENT_6H_LORD: 'C10_D10_EMPLOYMENT_6H_LORD',
+  D10_EMPLOYMENT_6H_OCCUPANT: 'C10_D10_EMPLOYMENT_6H_OCCUPANT',
+  D10_EMPLOYMENT_10H_LORD: 'C10_D10_EMPLOYMENT_10H_LORD',
+  D10_EMPLOYMENT_10H_OCCUPANT: 'C10_D10_EMPLOYMENT_10H_OCCUPANT',
+  D10_EMPLOYMENT_2H: 'C10_D10_EMPLOYMENT_2H',
+  D10_EMPLOYMENT_11H: 'C10_D10_EMPLOYMENT_11H',
+  D10_EMPLOYMENT_SATURN: 'C10_D10_EMPLOYMENT_SATURN',
+  D10_EMPLOYMENT_MERCURY: 'C10_D10_EMPLOYMENT_MERCURY',
+
+  // Entrepreneurship dimension rules
+  D10_ENTREPRENEURSHIP_3H_LORD: 'C10_D10_ENTREPRENEURSHIP_3H_LORD',
+  D10_ENTREPRENEURSHIP_3H_OCCUPANT: 'C10_D10_ENTREPRENEURSHIP_3H_OCCUPANT',
+  D10_ENTREPRENEURSHIP_5H_LORD: 'C10_D10_ENTREPRENEURSHIP_5H_LORD',
+  D10_ENTREPRENEURSHIP_5H_OCCUPANT: 'C10_D10_ENTREPRENEURSHIP_5H_OCCUPANT',
+  D10_ENTREPRENEURSHIP_7H_LORD: 'C10_D10_ENTREPRENEURSHIP_7H_LORD',
+  D10_ENTREPRENEURSHIP_7H_OCCUPANT: 'C10_D10_ENTREPRENEURSHIP_7H_OCCUPANT',
+  D10_ENTREPRENEURSHIP_10H_LORD: 'C10_D10_ENTREPRENEURSHIP_10H_LORD',
+  D10_ENTREPRENEURSHIP_10H_OCCUPANT: 'C10_D10_ENTREPRENEURSHIP_10H_OCCUPANT',
+  D10_ENTREPRENEURSHIP_11H_LORD: 'C10_D10_ENTREPRENEURSHIP_11H_LORD',
+  D10_ENTREPRENEURSHIP_11H_OCCUPANT: 'C10_D10_ENTREPRENEURSHIP_11H_OCCUPANT',
+  D10_ENTREPRENEURSHIP_MARS: 'C10_D10_ENTREPRENEURSHIP_MARS',
+  D10_ENTREPRENEURSHIP_MERCURY: 'C10_D10_ENTREPRENEURSHIP_MERCURY',
+  D10_ENTREPRENEURSHIP_SUN: 'C10_D10_ENTREPRENEURSHIP_SUN',
+
+  // Independent Work dimension rules (distinct from BUSINESS_ENTREPRENEURSHIP)
+  D10_INDEPENDENT_WORK_3H: 'C10_D10_INDEPENDENT_WORK_3H',
+  D10_INDEPENDENT_WORK_11H: 'C10_D10_INDEPENDENT_WORK_11H',
+  D10_INDEPENDENT_WORK_MERCURY: 'C10_D10_INDEPENDENT_WORK_MERCURY'
+} as const);
+
+/**
+ * Per-dimension D10 qualification rule.
+ * Per spec §44 - stable rule IDs, never reuse evidence IDs.
+ */
+export interface CareerD10QualificationRule {
+  readonly ruleId: string;
+  readonly expression: CareerManifestationMode;
+  evaluate(context: CareerD10Context): {
+    matched: boolean;
+    direction: CareerD10QualificationDirection;
+    strength: CareerD10QualificationStrength;
+    sourceIds: readonly string[];
+    ruleIds: readonly string[];
+  };
+}
+
+/**
+ * Dimension factor sets per spec §12-17.
+ * Each dimension has specific D10 house and planet indicators.
+ */
+interface DimensionFactorSet {
+  readonly houses: readonly number[];
+  readonly planets: readonly Planet[];
+}
+
+const DIMENSION_FACTORS: Readonly<Record<CareerManifestationMode, DimensionFactorSet>> = Object.freeze({
+  LEADERSHIP: Object.freeze({
+    houses: Object.freeze([10, 11]), // 10H/10L, 11H
+    planets: Object.freeze([Planet.SUN, Planet.MARS, Planet.JUPITER])
+  }),
+  MANAGEMENT: Object.freeze({
+    houses: Object.freeze([10, 11]), // 10H/10L, 11H
+    planets: Object.freeze([Planet.SUN, Planet.SATURN, Planet.JUPITER])
+  }),
+  TECHNICAL_SPECIALIZATION: Object.freeze({
+    houses: Object.freeze([10, 6, 3]), // 10H/10L, 6H/6L, 3H/3L
+    planets: Object.freeze([Planet.MERCURY, Planet.MARS, Planet.SATURN])
+  }),
+  SERVICE_EMPLOYMENT: Object.freeze({
+    houses: Object.freeze([6, 10, 2, 11]), // 6H/6L, 10H/10L, 2H, 11H
+    planets: Object.freeze([Planet.SATURN, Planet.MERCURY])
+  }),
+  EMPLOYMENT: Object.freeze({
+    houses: Object.freeze([6, 10, 2, 11]), // 6H/6L, 10H/10L, 2H, 11H
+    planets: Object.freeze([Planet.SATURN, Planet.MERCURY])
+  }),
+  ENTREPRENEURSHIP: Object.freeze({
+    houses: Object.freeze([3, 5, 7, 10, 11]), // 3H/3L, 5H/5L, 7H/7L, 10H/10L, 11H/11L
+    planets: Object.freeze([Planet.MARS, Planet.MERCURY, Planet.SUN])
+  }),
+  BUSINESS_ENTREPRENEURSHIP: Object.freeze({
+    houses: Object.freeze([3, 5, 7, 10, 11]), // Same houses as ENTREPRENEURSHIP
+    planets: Object.freeze([Planet.MARS, Planet.MERCURY, Planet.SUN])
+  }),
+  INDEPENDENT_WORK: Object.freeze({
+    houses: Object.freeze([3, 11]), // Distinct from BUSINESS_ENTREPRENEURSHIP
+    planets: Object.freeze([Planet.MERCURY])
+  }),
+  AUTHORITY: Object.freeze({
+    houses: Object.freeze([10, 11]),
+    planets: Object.freeze([Planet.SUN, Planet.SATURN])
+  }),
+  SPECIALIZATION: Object.freeze({
+    houses: Object.freeze([10, 6, 3]),
+    planets: Object.freeze([Planet.MERCURY, Planet.MARS])
+  }),
+  PUBLIC_INSTITUTIONAL: Object.freeze({
+    houses: Object.freeze([10, 11]),
+    planets: Object.freeze([Planet.SUN, Planet.JUPITER])
+  })
+});
+
+/**
+ * Evaluates a dimension against D10 context.
+ * Returns matched status, direction, strength, and source/rule IDs.
+ */
+export function evaluateDimensionQualification(
+  mode: CareerManifestationMode,
+  context: CareerD10Context
+): {
+  matched: boolean;
+  direction: CareerD10QualificationDirection;
+  strength: CareerD10QualificationStrength;
+  sourceIds: readonly string[];
+  ruleIds: readonly string[];
+} {
+  if (!isD10DataAvailable(context)) {
+    return {
+      matched: false,
+      direction: 'UNAVAILABLE',
+      strength: 'UNDETERMINED',
+      sourceIds: Object.freeze([]),
+      ruleIds: Object.freeze([])
+    };
+  }
+
+  const factors = DIMENSION_FACTORS[mode];
+  if (!factors) {
+    return {
+      matched: false,
+      direction: 'UNAVAILABLE',
+      strength: 'UNDETERMINED',
+      sourceIds: Object.freeze([]),
+      ruleIds: Object.freeze([])
+    };
+  }
+
+  const sourceIds: string[] = [];
+  const ruleIds: string[] = [];
+  let supportCount = 0;
+  let challengeCount = 0;
+  let strongCount = 0;
+  let weakCount = 0;
+
+  // Check house lords and occupants
+  for (const house of context.d10Houses) {
+    if (factors.houses.includes(house.house)) {
+      // Check lord
+      if (factors.planets.includes(house.lord)) {
+        const lordDirection = resolveD10PlanetDirection({
+          planet: house.lord,
+          condition: house.lordCondition,
+          d10House: house.house,
+          natalHouse: 0,
+          relatedHouses: [house.house]
+        });
+
+        if (lordDirection === 'SUPPORT') {
+          supportCount++;
+          if (house.lordCondition === 'STRONG') strongCount++;
+        } else if (lordDirection === 'CHALLENGE') {
+          challengeCount++;
+          if (house.lordCondition === 'WEAK' || house.lordCondition === 'AFFLICTED') weakCount++;
+        }
+
+        sourceIds.push(`D10_HOUSE_${house.house}_LORD_${house.lord}`);
+        ruleIds.push(`C10_D10_${mode}_${house.house}_LORD`);
+      }
+
+      // Check occupants
+      for (let i = 0; i < house.tenants.length; i++) {
+        const tenant = house.tenants[i];
+        const tenantCondition = house.tenantConditions[i];
+
+        if (factors.planets.includes(tenant)) {
+          const tenantDirection = resolveD10PlanetDirection({
+            planet: tenant,
+            condition: tenantCondition,
+            d10House: house.house,
+            natalHouse: 0,
+            relatedHouses: [house.house]
+          });
+
+          if (tenantDirection === 'SUPPORT') {
+            supportCount++;
+            if (tenantCondition === 'STRONG') strongCount++;
+          } else if (tenantDirection === 'CHALLENGE') {
+            challengeCount++;
+            if (tenantCondition === 'WEAK' || tenantCondition === 'AFFLICTED') weakCount++;
+          }
+
+          sourceIds.push(`D10_HOUSE_${house.house}_OCCUPANT_${tenant}`);
+          ruleIds.push(`C10_D10_${mode}_${house.house}_OCCUPANT`);
+        }
+      }
+    }
+  }
+
+  // Check planets in D10
+  for (const planetContext of context.d10Planets) {
+    if (factors.planets.includes(planetContext.planet) && factors.houses.includes(planetContext.d10House)) {
+      const planetDirection = resolveD10PlanetDirection(planetContext);
+
+      if (planetDirection === 'SUPPORT') {
+        supportCount++;
+        if (planetContext.condition === 'STRONG') strongCount++;
+      } else if (planetDirection === 'CHALLENGE') {
+        challengeCount++;
+        if (planetContext.condition === 'WEAK' || planetContext.condition === 'AFFLICTED') weakCount++;
+      }
+
+      sourceIds.push(`D10_PLANET_${planetContext.planet}_HOUSE_${planetContext.d10House}`);
+      ruleIds.push(`C10_D10_${mode}_${planetContext.planet}`);
+    }
+  }
+
+  const matched = supportCount > 0 || challengeCount > 0;
+
+  if (!matched) {
+    return {
+      matched: false,
+      direction: 'UNAVAILABLE',
+      strength: 'UNDETERMINED',
+      sourceIds: Object.freeze([]),
+      ruleIds: Object.freeze([])
+    };
+  }
+
+  // Resolve direction
+  let direction: CareerD10QualificationDirection;
+  if (supportCount > challengeCount) {
+    direction = 'SUPPORT';
+  } else if (challengeCount > supportCount) {
+    direction = 'CHALLENGE';
+  } else {
+    direction = 'MIXED';
+  }
+
+  // Resolve strength
+  let strength: CareerD10QualificationStrength;
+  if (direction === 'SUPPORT') {
+    if (strongCount >= 2) {
+      strength = 'VERY_STRONG';
+    } else if (strongCount >= 1) {
+      strength = 'STRONG';
+    } else if (supportCount >= 2) {
+      strength = 'MODERATE';
+    } else {
+      strength = 'WEAK';
+    }
+  } else if (direction === 'CHALLENGE') {
+    if (weakCount >= 2) {
+      strength = 'VERY_WEAK';
+    } else if (weakCount >= 1) {
+      strength = 'WEAK';
+    } else if (challengeCount >= 2) {
+      strength = 'MODERATE';
+    } else {
+      strength = 'WEAK';
+    }
+  } else {
+    strength = 'MODERATE';
+  }
+
+  return {
+    matched,
+    direction,
+    strength,
+    sourceIds: Object.freeze(sourceIds),
+    ruleIds: Object.freeze(ruleIds)
+  };
 }

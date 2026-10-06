@@ -63,7 +63,9 @@ C10 follows the C9 Dasha integration pattern: an adapter-only wave over the exis
 
 **mapD10Condition Decision**: Neutral dignity (NEUTRAL, NEUTRAL_SIGN, undefined) maps to `UNAVAILABLE` condition, not `MODERATE`. This is a conservative decision: neutral dignity does not imply moderate planetary condition.
 
-**NatalHouse Placeholder**: The `natalHouse` field in `CareerD10PlanetContext` is set to 0 as a documented placeholder for future migration. Real natal house mapping is deferred.
+**NatalHouse Mapping**: The `natalHouse` field in `CareerD10PlanetContext` is now mapped from `horoscope.planetFacts[planet].house`. If the natal planet fact is missing or has no house, it defaults to 0 (truly unavailable).
+
+**dashaPreserved Semantics**: The `dashaPreserved` field indicates whether dasha fields were provided in context. C10 is parallel to C9 and does not use dasha fields in qualification logic. These fields are retained for backward compatibility and will be removed in future waves.
 
 **Tenant Population**: D10 house contexts populate `tenants` and `tenantConditions` from the real `occupants` array in the D10 house interpretation, not hardcoded empty arrays.
 
@@ -101,17 +103,57 @@ C10 follows the C9 Dasha integration pattern: an adapter-only wave over the exis
 - `transit` fields
 - `finalConclusion` (C11 field)
 
-### Deferred Items
+### Spec P2-08C Mapping
+
+### Spec vs Implementation Vocabulary Mapping
+
+The P2-08C spec uses a different vocabulary than the existing C10 implementation. The following table documents the mapping:
+
+| Spec Term | Implementation Term | Notes |
+|-----------|---------------------|-------|
+| `CONFIRMS` | `QUALIFIES` | Semantic equivalence - D10 confirms a natal expression |
+| `REFINES` | `REINFORCES` or `QUALIFIES`+moderate | Depends on strength - REFINES maps to REINFORCES when strong, QUALIFIES when moderate |
+| `DIFFERENTIATES` | Per-expression divergence | Context-dependent on expression mode and evidence |
+| `CHALLENGES` | `CONFLICTS` | Direct semantic equivalence |
+| `DOES_NOT_QUALIFY` | `UNAVAILABLE` or `INSUFFICIENT_DATA` | Context-dependent on data availability |
+| `QUALIFIED` | `expressionQualifications[].qualified = true` + strength mapping | Status maps to qualified flag + strength in expressionQualifications |
+| `REFINED` | `expressionQualifications[].qualified = true` + moderate strength | Refined state uses qualified flag with moderate strength |
+| `LIMITED` | `expressionQualifications[].qualified = true` + weak strength | Limited state uses qualified flag with weak strength |
+| `UNQUALIFIED` | `expressionQualifications[].qualified = false` | Direct semantic equivalence |
+
+**Note**: The existing enum values in `careerD10QualificationTypes.ts` are preserved as-is to maintain test compatibility. The semantic equivalence is documented here rather than renaming the enums.
+
+## Deferred Items
 
 The following items are deferred to future waves:
 
-1. **NatalHouse Migration**: The `natalHouse` field is currently set to 0 as a placeholder. Future migration will map D10 planet positions to their natal house positions.
+1. **Dasha Field Removal**: C10 is parallel to C9 (no Dasha dependency). The `dashaEffect`, `dashaDirection`, and `dashaStrength` fields in `CareerD10Context` and `CareerD10QualificationResult` are retained for backward compatibility but are not used in qualification logic. Future waves will remove these fields entirely from C10's context and output.
 
 2. **d10CareerManifestation Integration**: Existing `d10CareerManifestation` logic in `src/domain/career/d10/` will feed into C10's context in a future wave.
 
 3. **VargaRelationship Migration**: Legacy `VargaRelationship` logic will be migrated to use C10's semantic model.
 
 4. **Legacy D10 Removal**: After A/B testing, legacy D10 logic will be removed from `careerConclusion.ts`.
+
+### Completed Items (P2-08C Wave)
+
+1. **Spec Mapping Documentation**: Added P2-08C spec vocabulary mapping table to C10_ARCHITECTURE.md (CONFIRMS→QUALIFIES, REFINES→REINFORCES/QUALIFIES+moderate, etc.).
+
+2. **Per-Dimension D10 Rules**: Implemented `CAREER_D10_RULE_IDS` and `evaluateDimensionQualification` in `careerD10QualificationRules.ts` with dimension factor sets per spec §12-17 (LEADERSHIP, MANAGEMENT, TECHNICAL, EMPLOYMENT, ENTREPRENEURSHIP, INDEPENDENT_WORK).
+
+3. **Conditional-Expression Guardrail**: Per spec §25, D10 confirmation may attach to conditional expressions but must not flip `qualified` into unconditional natal support. The conditional flag is preserved unchanged in `qualifyExpression`.
+
+4. **NatalHouse Mapping**: Fixed the `natalHouse` placeholder in `buildD10PlanetContexts` to map from `horoscope.planetFacts[planet].house` instead of hardcoding 0.
+
+5. **dashaPreserved Semantics**: Documented that `dashaPreserved` indicates whether dasha fields were provided, but C10 does not use them in qualification logic (parallel to C9).
+
+6. **Golden Invariant Tests**: Added spec §39 invariant tests to `careerD10Qualification.test.ts` (INV-01, INV-05, INV-14, INV-15, INV-16, INV-18) and `careerD10Integration.test.ts` (INV-06, INV-07, INV-08, INV-11, INV-17, INV-19, INV-20).
+
+7. **Boundary Test**: Added `careerD10Boundary.test.ts` with forbidden import checks (transit/timing modules, AI, D10 calculation engines).
+
+8. **Integration Test**: Added provenance tracking test (§40-41) and contradiction fixture test (§42) to `careerD10Integration.test.ts`.
+
+9. **Verification**: All tests passing - `npm run lint` (tsc --noEmit) and test suites for `careerD10`, `careerExpression`, and `careerDasha` all green.
 
 ## Relationship to Existing D10 Logic
 
