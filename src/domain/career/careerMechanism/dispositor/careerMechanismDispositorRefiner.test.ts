@@ -10,6 +10,7 @@ import type {
 } from './careerMechanismDispositorTypes';
 import { defaultCareerMechanismDispositorRefiner } from './defaultCareerMechanismDispositorRefiner';
 import { assertValidDispositorRefinementSource } from './careerMechanismDispositorUtils';
+import { Planet } from '../../../../types';
 
 /**
  * P2-07E Career Mechanism Dispositor Refiner Tests
@@ -42,7 +43,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -51,7 +52,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -60,8 +61,11 @@ describe('CareerMechanismDispositorRefiner', () => {
 
       // Create a dispositor context with Mercury terminal
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury', 'Jupiter', 'Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -99,7 +103,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -108,7 +112,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -116,8 +120,11 @@ describe('CareerMechanismDispositorRefiner', () => {
       };
 
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury', 'Jupiter', 'Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -139,7 +146,7 @@ describe('CareerMechanismDispositorRefiner', () => {
   });
 
   describe('Cycle handling', () => {
-    it('returns UNCHANGED for MUTUAL_RECEPTION, no invented terminal', () => {
+    it('returns UNCHANGED for MUTUAL_RECEPTION with sufficientData: true, no invented terminal', () => {
       const candidate: CareerMechanismCandidate = {
         candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:RESEARCH',
         patternId: 'pattern-1',
@@ -151,7 +158,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -160,20 +167,77 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
         explanation: 'Research candidate'
       };
 
-      // Create a context with cycle (no terminal)
+      // Create a context with MUTUAL_RECEPTION outcome
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury', 'Jupiter', 'Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: undefined,
+        outcome: 'MUTUAL_RECEPTION',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
-        sufficientData: false // Simulate cycle by marking insufficient
+        sufficientData: true
+      };
+
+      const input: CareerMechanismDispositorRefinementInput = {
+        candidate,
+        dispositorContexts: [context]
+      };
+
+      const result = defaultCareerMechanismDispositorRefiner.refine(input);
+
+      // Should be UNCHANGED
+      expect(result.status).toBe('UNCHANGED');
+
+      // Should have no mechanisms
+      expect(result.mechanisms.length).toBe(0);
+    });
+
+    it('returns UNCHANGED for CYCLE with sufficientData: true, no invented terminal', () => {
+      const candidate: CareerMechanismCandidate = {
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:RESEARCH',
+        patternId: 'pattern-1',
+        mechanismType: 'RESEARCH',
+        pathway: 'PATTERN',
+        evidence: [
+          {
+            evidenceId: 'ev-1',
+            mechanismType: 'RESEARCH',
+            source: 'PATTERN',
+            role: 'ESTABLISHING',
+            participantIds: ['PLANET:MERCURY'],
+            relationshipIds: [],
+            patternId: 'pattern-1',
+            explanation: 'Research mechanism from pattern'
+          }
+        ],
+        provenance: {
+          patternIds: ['pattern-1'],
+          relationshipIds: [],
+          participantIds: ['PLANET:MERCURY'],
+          evidenceIds: ['ev-1'],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Research candidate'
+      };
+
+      // Create a context with CYCLE outcome
+      const context: CareerDispositorContext = {
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: undefined,
+        outcome: 'CYCLE',
+        chainId: 'chain-1',
+        sourceEvidenceIds: ['ev-1'],
+        relevantHouseIds: [],
+        sufficientData: true
       };
 
       const input: CareerMechanismDispositorRefinementInput = {
@@ -204,7 +268,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -213,7 +277,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -222,8 +286,11 @@ describe('CareerMechanismDispositorRefiner', () => {
 
       // Self-dispositor context (chain of length 1)
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'SELF_DISPOSITOR',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -255,7 +322,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -264,7 +331,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -272,8 +339,11 @@ describe('CareerMechanismDispositorRefiner', () => {
       };
 
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury', 'Jupiter', 'Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1', 'ev-2'], // Specific evidence IDs
         relevantHouseIds: [],
         sufficientData: true
@@ -335,6 +405,56 @@ describe('CareerMechanismDispositorRefiner', () => {
         assertValidDispositorRefinementSource('DISPOSITOR');
       }).not.toThrow();
     });
+
+    it('rejects D10-sourced evidence through refine()', () => {
+      const candidate: CareerMechanismCandidate = {
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:RESEARCH',
+        patternId: 'pattern-1',
+        mechanismType: 'RESEARCH',
+        pathway: 'PATTERN',
+        evidence: [
+          {
+            evidenceId: 'ev-d10',
+            mechanismType: 'RESEARCH',
+            source: 'D10', // Forbidden source
+            role: 'ESTABLISHING',
+            participantIds: ['PLANET:MERCURY'],
+            relationshipIds: [],
+            patternId: 'pattern-1',
+            explanation: 'Research mechanism from D10'
+          }
+        ],
+        provenance: {
+          patternIds: ['pattern-1'],
+          relationshipIds: [],
+          participantIds: ['PLANET:MERCURY'],
+          evidenceIds: ['ev-d10'],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Research candidate'
+      };
+
+      const context: CareerDispositorContext = {
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
+        sourceEvidenceIds: ['ev-d10'],
+        relevantHouseIds: [],
+        sufficientData: true
+      };
+
+      const input: CareerMechanismDispositorRefinementInput = {
+        candidate,
+        dispositorContexts: [context]
+      };
+
+      // Should throw due to D10 source in evidence
+      expect(() => {
+        defaultCareerMechanismDispositorRefiner.refine(input);
+      }).toThrow('Invalid dispositor refinement source: D10');
+    });
   });
 
   describe('Order determinism', () => {
@@ -350,7 +470,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury', 'PLANET:Jupiter'],
+            participantIds: ['PLANET:MERCURY', 'PLANET:JUPITER'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -359,7 +479,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury', 'PLANET:Jupiter'],
+          participantIds: ['PLANET:MERCURY', 'PLANET:JUPITER'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -367,16 +487,22 @@ describe('CareerMechanismDispositorRefiner', () => {
       };
 
       const context1: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury', 'Jupiter', 'Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
       };
 
       const context2: CareerDispositorContext = {
-        startPlanetId: 'Jupiter',
-        chain: ['Jupiter', 'Mercury', 'Jupiter'],
+        startPlanetId: Planet.JUPITER,
+        chain: [Planet.JUPITER, Planet.MERCURY, Planet.JUPITER],
+        terminalPlanetId: Planet.JUPITER,
+        outcome: 'TERMINAL',
+        chainId: 'chain-2',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -426,7 +552,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         mechanismType: 'RESEARCH',
         source: 'PATTERN',
         role: 'ESTABLISHING',
-        participantIds: ['PLANET:Mercury'],
+        participantIds: ['PLANET:MERCURY'],
         relationshipIds: [],
         patternId: 'pattern-1',
         explanation: 'Research mechanism from pattern'
@@ -441,7 +567,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -449,8 +575,11 @@ describe('CareerMechanismDispositorRefiner', () => {
       };
 
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
-        chain: ['Mercury', 'Jupiter', 'Mercury'],
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -478,6 +607,78 @@ describe('CareerMechanismDispositorRefiner', () => {
     });
   });
 
+  describe('Evidence vs relationship separation', () => {
+    it('asserts no evidence ID appears in any relationshipIds array', () => {
+      const candidate: CareerMechanismCandidate = {
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:RESEARCH',
+        patternId: 'pattern-1',
+        mechanismType: 'RESEARCH',
+        pathway: 'PATTERN',
+        evidence: [
+          {
+            evidenceId: 'ev-1',
+            mechanismType: 'RESEARCH',
+            source: 'PATTERN',
+            role: 'ESTABLISHING',
+            participantIds: ['PLANET:MERCURY'],
+            relationshipIds: [],
+            patternId: 'pattern-1',
+            explanation: 'Research mechanism from pattern'
+          }
+        ],
+        provenance: {
+          patternIds: ['pattern-1'],
+          relationshipIds: [],
+          participantIds: ['PLANET:MERCURY'],
+          evidenceIds: ['ev-1'],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Research candidate'
+      };
+
+      const context: CareerDispositorContext = {
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
+        terminalPlanetId: Planet.MERCURY,
+        outcome: 'TERMINAL',
+        chainId: 'chain-1',
+        sourceEvidenceIds: ['ev-1', 'ev-2'],
+        relevantHouseIds: [],
+        sufficientData: true
+      };
+
+      const input: CareerMechanismDispositorRefinementInput = {
+        candidate,
+        dispositorContexts: [context]
+      };
+
+      const result = defaultCareerMechanismDispositorRefiner.refine(input);
+
+      // Collect all evidence IDs from all mechanisms
+      const allEvidenceIds = new Set<string>();
+      for (const mechanism of result.mechanisms) {
+        for (const evidence of mechanism.evidence) {
+          allEvidenceIds.add(evidence.evidenceId);
+        }
+      }
+
+      // Collect all relationship IDs from all mechanisms
+      const allRelationshipIds = new Set<string>();
+      for (const mechanism of result.mechanisms) {
+        for (const evidence of mechanism.evidence) {
+          for (const relId of evidence.relationshipIds) {
+            allRelationshipIds.add(relId);
+          }
+        }
+      }
+
+      // Assert no evidence ID appears in relationshipIds
+      for (const evidenceId of allEvidenceIds) {
+        expect(allRelationshipIds.has(evidenceId)).toBe(false);
+      }
+    });
+  });
+
   describe('INSUFFICIENT_DATA handling', () => {
     it('returns INSUFFICIENT_DATA when no usable context', () => {
       const candidate: CareerMechanismCandidate = {
@@ -491,7 +692,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -500,7 +701,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -534,7 +735,7 @@ describe('CareerMechanismDispositorRefiner', () => {
             mechanismType: 'RESEARCH',
             source: 'PATTERN',
             role: 'ESTABLISHING',
-            participantIds: ['PLANET:Mercury'],
+            participantIds: ['PLANET:MERCURY'],
             relationshipIds: [],
             patternId: 'pattern-1',
             explanation: 'Research mechanism from pattern'
@@ -543,7 +744,7 @@ describe('CareerMechanismDispositorRefiner', () => {
         provenance: {
           patternIds: ['pattern-1'],
           relationshipIds: [],
-          participantIds: ['PLANET:Mercury'],
+          participantIds: ['PLANET:MERCURY'],
           evidenceIds: ['ev-1'],
           sourceStages: ['PATTERN']
         },
@@ -551,8 +752,11 @@ describe('CareerMechanismDispositorRefiner', () => {
       };
 
       const context: CareerDispositorContext = {
-        startPlanetId: 'Mercury',
+        startPlanetId: Planet.MERCURY,
         chain: [], // Empty chain
+        terminalPlanetId: undefined,
+        outcome: 'INSUFFICIENT_DATA',
+        chainId: 'chain-1',
         sourceEvidenceIds: [],
         relevantHouseIds: [],
         sufficientData: false

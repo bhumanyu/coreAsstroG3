@@ -63,10 +63,21 @@ export interface CareerDispositorChain {
  *
  * sourceEvidenceIds carries the specific evidence responsible for the start planet being
  * career-relevant (e.g. the 10L evidence), NOT the whole candidate evidence list.
+ *
+ * outcome, terminalPlanetId, and chainId are derived from the resolved CareerDispositorChain.
  */
 export interface CareerDispositorContext {
   readonly startPlanetId: Planet;
   readonly chain: readonly Planet[];
+  readonly terminalPlanetId?: Planet;
+  readonly outcome:
+  | 'TERMINAL'
+  | 'SELF_DISPOSITOR'
+  | 'CYCLE'
+  | 'MUTUAL_RECEPTION'
+  | 'DEPTH_LIMIT'
+  | 'INSUFFICIENT_DATA';
+  readonly chainId: string;
   readonly sourceEvidenceIds: readonly string[];
   readonly relevantHouseIds: readonly number[];
   readonly sufficientData: boolean;
@@ -114,10 +125,16 @@ export interface CareerMechanismDispositorRule {
  * Input for dispositor-based mechanism refinement.
  * Accepts ONLY an existing CareerMechanismCandidate; there is no planet-only entry point
  * (structural guarantee that refinement never manufactures natal promise).
+ *
+ * coreParticipants, supportingParticipants, and challengingParticipants are optional
+ * and override the default "all-as-core" behavior when provided.
  */
 export interface CareerMechanismDispositorRefinementInput {
   readonly candidate: CareerMechanismCandidate;
   readonly dispositorContexts: readonly CareerDispositorContext[];
+  readonly coreParticipants?: readonly string[];
+  readonly supportingParticipants?: readonly string[];
+  readonly challengingParticipants?: readonly string[];
 }
 
 /**

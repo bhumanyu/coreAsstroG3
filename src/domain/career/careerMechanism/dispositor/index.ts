@@ -46,18 +46,22 @@ export {
 } from './careerMechanismDispositorRules';
 
 // Adapter exports
-export {
+export type {
   CareerDispositorEngineAdapter,
   DefaultCareerDispositorEngineAdapter,
   CareerDispositorContextFactory,
-  DefaultCareerDispositorContextFactory,
+  DefaultCareerDispositorContextFactory
+} from './careerMechanismDispositorAdapter';
+export {
   defaultCareerDispositorEngineAdapter,
   defaultCareerDispositorContextFactory
 } from './careerMechanismDispositorAdapter';
 
 // Refiner exports
-export {
+export type {
   CareerMechanismDispositorRefiner,
-  DefaultCareerMechanismDispositorRefiner,
+  DefaultCareerMechanismDispositorRefiner
+} from './defaultCareerMechanismDispositorRefiner';
+export {
   defaultCareerMechanismDispositorRefiner
 } from './defaultCareerMechanismDispositorRefiner';

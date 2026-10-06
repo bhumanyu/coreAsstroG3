@@ -4,6 +4,10 @@ import type {
 } from './careerMechanismDispositorTypes';
 import type { CareerMechanismCandidate } from '../careerMechanismTypes';
 import { sortParticipantIds as sortCanonicalParticipantIds } from '../careerMechanismUtils';
+import { createParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
+
+// Type alias for internal use - matches the adapter's import
+type NormalizedDispositorChain = CareerDispositorChain;
 
 /**
  * P2-07E Career Mechanism Dispositor Utility Functions
@@ -31,7 +35,7 @@ export function sortStrings(arr: readonly string[]): readonly string[] {
  * Reuses sortParticipantIds from careerMechanismUtils.
  */
 export function sortParticipantIds(arr: readonly string[]): readonly string[] {
-  return sortCanonicalParticipantIds(arr);
+  return sortCanonicalParticipantIds(arr as any);
 }
 
 /**
@@ -43,14 +47,15 @@ export function uniqueNumbers(arr: readonly number[]): readonly number[] {
 
 /**
  * Checks if a dispositor context is usable for refinement.
- * Requires sufficientData + chainId + non-empty chain.
+ * Requires sufficientData + non-empty chain + outcome is not INSUFFICIENT_DATA.
  */
 export function hasUsableDispositorContext(
   context: CareerDispositorContext
 ): boolean {
   return (
     context.sufficientData &&
-    context.chain.length > 0
+    context.chain.length > 0 &&
+    context.outcome !== 'INSUFFICIENT_DATA'
   );
 }
 
@@ -94,9 +99,11 @@ export function collectRelevantDispositorContexts(
   const candidateParticipantIds = new Set(candidate.provenance.participantIds);
 
   // Filter contexts where startPlanetId is in candidate participants
-  const relevant = dispositorContexts.filter(context =>
-    candidateParticipantIds.has(context.startPlanetId)
-  );
+  // Convert startPlanetId to participant ID format for comparison
+  const relevant = dispositorContexts.filter(context => {
+    const planetParticipantId = createParticipantId(context.startPlanetId);
+    return candidateParticipantIds.has(planetParticipantId);
+  });
 
   // Sort by startPlanetId
   const sorted = [...relevant].sort((a, b) =>

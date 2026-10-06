@@ -17,7 +17,8 @@ import { CAREER_DISPOSITOR_MECHANISM_RULES } from './careerMechanismDispositorRu
 import {
   collectRelevantDispositorContexts,
   hasUsableDispositorContext,
-  isCycle
+  isCycle,
+  assertValidDispositorRefinementSource
 } from './careerMechanismDispositorUtils';
 import { buildCareerMechanismEvidence } from '../careerMechanismEvidence';
 import { buildCareerMechanismProvenance } from '../careerMechanismProvenance';
@@ -61,7 +62,13 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
    * Refines a mechanism candidate using dispositor contexts.
    */
   refine(input: CareerMechanismDispositorRefinementInput): CareerMechanismDispositorRefinementResult {
-    const { candidate, dispositorContexts } = input;
+    const { candidate, dispositorContexts, coreParticipants, supportingParticipants, challengingParticipants } = input;
+
+    // Step 0: Enforce firewall - validate all evidence sources
+    // Check candidate evidence sources
+    for (const evidence of candidate.evidence) {
+      assertValidDispositorRefinementSource(evidence.source);
+    }
 
     // Step 1: Collect relevant usable contexts
     const relevantContexts = collectRelevantDispositorContexts(candidate, dispositorContexts);
@@ -75,17 +82,20 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
     }
 
     // Step 3: Skip CYCLE/MUTUAL_RECEPTION contexts (never invent a terminal per spec §13)
-    const terminalContexts = usableContexts.filter(context => {
-      // Check if the chain is a cycle by looking at the outcome
-      // For now, we assume terminalContexts are those with sufficient data and no cycle
-      // The adapter should have already normalized the outcome
-      return context.sufficientData && context.chain.length > 0;
-    });
+    // Check if any usable context is a cycle - if all are cycles, return UNCHANGED
+    const hasNonCycleContext = usableContexts.some(context =>
+      context.outcome !== 'CYCLE' && context.outcome !== 'MUTUAL_RECEPTION'
+    );
 
-    // If no terminal contexts, return UNCHANGED
-    if (terminalContexts.length === 0) {
+    if (!hasNonCycleContext) {
+      // All contexts are cycles - return UNCHANGED
       return this.buildUnchangedResult(candidate);
     }
+
+    // Filter to terminal contexts (keep TERMINAL, SELF_DISPOSITOR, DEPTH_LIMIT)
+    const terminalContexts = usableContexts.filter(context => {
+      return context.outcome !== 'CYCLE' && context.outcome !== 'MUTUAL_RECEPTION';
+    });
 
     // Step 4: Apply rules in registry order
     const refinedMechanismTypes = new Set<CareerMechanismType>();
@@ -131,7 +141,10 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
         candidate,
         mechanismType,
         allEvidenceIds,
-        explanations
+        explanations,
+        coreParticipants,
+        supportingParticipants,
+        challengingParticipants
       );
       mechanisms.push(mechanism);
     }
@@ -210,21 +223,25 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
     candidate: CareerMechanismCandidate,
     mechanismType: CareerMechanismType,
     sourceEvidenceIds: readonly string[],
-    explanations: readonly string[]
+    explanations: readonly string[],
+    coreParticipants?: readonly string[],
+    supportingParticipants?: readonly string[],
+    challengingParticipants?: readonly string[]
   ): CareerMechanism {
     const mechanismId = createCareerMechanismId(candidate.patternId, mechanismType);
     const pathway: CareerMechanismPathway = 'DISPOSITOR';
 
     // Build DISPOSITOR evidence with role: 'REFINING'
-    // Use sourceEvidenceIds as relationshipIds for DISPOSITOR source (dispositor chain provenance)
+    // sourceEvidenceIds are carried in explanation, NOT in relationshipIds
+    // relationshipIds should only contain actual relationship IDs (edge IDs)
     const dispositorEvidence = buildCareerMechanismEvidence({
       mechanismId,
       mechanismType,
       source: 'DISPOSITOR',
       participantIds: candidate.provenance.participantIds,
-      relationshipIds: sourceEvidenceIds,
+      relationshipIds: [], // Empty - sourceEvidenceIds are not relationship IDs
       patternId: candidate.patternId,
-      explanation: `Dispositor refinement evidence for ${mechanismType}. ${explanations.join(' ')}`
+      explanation: `Dispositor refinement evidence for ${mechanismType}. Source evidence: [${sourceEvidenceIds.join(', ')}]. ${explanations.join(' ')}`
     });
 
     // Merge candidate evidence with new dispositor evidence
@@ -242,16 +259,20 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
     // Build explanation
     const explanation = `Refined mechanism ${mechanismType} from candidate ${candidate.candidateId}. ${explanations.join(' ')}`;
 
-    // Create mechanism using candidate's participant structure
-    // Since candidate doesn't have core/supporting/challenging split, use all as core
+    // Use provided participant roles if available, otherwise all-as-core
+    const finalCoreParticipants = (coreParticipants ?? candidate.provenance.participantIds) as any;
+    const finalSupportingParticipants = (supportingParticipants ?? Object.freeze([])) as any;
+    const finalChallengingParticipants = (challengingParticipants ?? Object.freeze([])) as any;
+
+    // Create mechanism
     const mechanism = createCareerMechanism({
       patternId: candidate.patternId,
       mechanismType,
       pathway,
       participants: candidate.provenance.participantIds,
-      coreParticipants: candidate.provenance.participantIds,
-      supportingParticipants: Object.freeze([]),
-      challengingParticipants: Object.freeze([]),
+      coreParticipants: finalCoreParticipants,
+      supportingParticipants: finalSupportingParticipants,
+      challengingParticipants: finalChallengingParticipants,
       status: 'REFINED',
       explanation,
       evidence: mergedEvidence,

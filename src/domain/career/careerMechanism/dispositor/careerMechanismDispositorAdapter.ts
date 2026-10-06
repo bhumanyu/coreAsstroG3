@@ -6,6 +6,8 @@ import type {
 import type { CareerMechanismCandidate } from '../careerMechanismTypes';
 import { traverseDispositorChain, detectChainMutualReception } from '../../careerDispositor/careerDispositor';
 import { buildCareerDispositorChainId } from '../../careerDispositor/careerDispositorIdentity';
+import { MAX_DISPOSITOR_DEPTH, resolveTermination } from '../../careerDispositor/careerDispositorRules';
+import { createParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
 
 /**
  * P2-07E Career Mechanism Dispositor Adapter Boundary
@@ -56,13 +58,26 @@ export class DefaultCareerDispositorEngineAdapter implements CareerDispositorEng
     // Detect mutual reception using the engine's function
     const hasMutualReception = detectChainMutualReception(horoscope, engineResult.chain);
 
-    // Map termination enum to normalized outcome
-    const outcome = this.mapTerminationToOutcome(
-      engineResult.terminalPlanet !== undefined,
-      engineResult.cycleStartPlanet !== undefined,
+    const cycle = engineResult.cycleStartPlanet !== undefined;
+
+    // Determine if it's a self-dispositor
+    const isSelfDispositor = !cycle && engineResult.terminalPlanet === planetId && engineResult.depth === 0;
+
+    // Determine if terminal is career-relevant (simplified - always treat as career terminal for now)
+    // In a full implementation, this would check if the terminal planet is career-relevant
+    const isCareerTerminal = engineResult.terminalPlanet !== undefined;
+
+    // Compute termination using the engine's resolveTermination function
+    const termination = resolveTermination(
+      cycle,
       hasMutualReception,
-      engineResult.depth
+      isSelfDispositor,
+      isCareerTerminal,
+      engineResult.terminalPlanet !== undefined
     );
+
+    // Map termination enum to normalized outcome
+    const outcome = this.mapTerminationToOutcome(termination, engineResult.depth);
 
     // Build chainId using the engine's identity function
     const chainId = buildCareerDispositorChainId(planetId, engineResult.chain);
@@ -82,35 +97,38 @@ export class DefaultCareerDispositorEngineAdapter implements CareerDispositorEng
   }
 
   /**
-   * Maps engine termination conditions to normalized outcome.
-   * Per spec: CAREER_TERMINAL/NON_CAREER_TERMINAL → TERMINAL, UNAVAILABLE → INSUFFICIENT_DATA,
-   * depth limit → DEPTH_LIMIT.
+   * Maps engine termination enum to normalized outcome.
+   * Per spec:
+   * - CAREER_TERMINAL / NON_CAREER_TERMINAL → TERMINAL
+   * - SELF_DISPOSITOR → SELF_DISPOSITOR
+   * - CYCLE → CYCLE
+   * - MUTUAL_RECEPTION → MUTUAL_RECEPTION
+   * - UNAVAILABLE → INSUFFICIENT_DATA
+   * - depth limit → DEPTH_LIMIT
    */
   private mapTerminationToOutcome(
-    hasTerminal: boolean,
-    hasCycle: boolean,
-    hasMutualReception: boolean,
+    termination: 'SELF_DISPOSITOR' | 'CYCLE' | 'MUTUAL_RECEPTION' | 'CAREER_TERMINAL' | 'NON_CAREER_TERMINAL' | 'UNAVAILABLE',
     depth: number
   ): NormalizedDispositorChain['outcome'] {
-    if (hasMutualReception) {
-      return 'MUTUAL_RECEPTION';
-    }
-
-    if (hasCycle) {
-      return 'CYCLE';
-    }
-
-    if (hasTerminal) {
-      // Has terminal planet (could be self-dispositor or terminal)
-      if (depth === 0) {
+    switch (termination) {
+      case 'SELF_DISPOSITOR':
         return 'SELF_DISPOSITOR';
-      }
-      return 'TERMINAL';
+      case 'CYCLE':
+        return 'CYCLE';
+      case 'MUTUAL_RECEPTION':
+        return 'MUTUAL_RECEPTION';
+      case 'CAREER_TERMINAL':
+      case 'NON_CAREER_TERMINAL':
+        return 'TERMINAL';
+      case 'UNAVAILABLE':
+        return 'INSUFFICIENT_DATA';
+      default:
+        // If depth reached MAX_DISPOSITOR_DEPTH without termination, treat as DEPTH_LIMIT
+        if (depth >= MAX_DISPOSITOR_DEPTH) {
+          return 'DEPTH_LIMIT';
+        }
+        return 'INSUFFICIENT_DATA';
     }
-
-    // No terminal planet - in practice this is INSUFFICIENT_DATA
-    // DEPTH_LIMIT is rare in practice with MAX_DISPOSITOR_DEPTH=9
-    return 'INSUFFICIENT_DATA';
   }
 }
 
@@ -165,6 +183,9 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
       const context: CareerDispositorContext = Object.freeze({
         startPlanetId: planet,
         chain: chain.chain,
+        terminalPlanetId: chain.terminalPlanetId,
+        outcome: chain.outcome,
+        chainId: chain.chainId,
         sourceEvidenceIds,
         relevantHouseIds,
         sufficientData
@@ -184,6 +205,7 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
   /**
    * Extracts participant planets from a candidate.
    * Parses participant IDs to extract planet names.
+   * Normalizes to canonical PLANET: format.
    */
   private extractParticipantPlanets(candidate: CareerMechanismCandidate): Planet[] {
     const planets = new Set<Planet>();
@@ -202,6 +224,7 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
   /**
    * Extracts source evidence IDs for a specific planet from candidate evidence.
    * This carries the specific evidence responsible for the planet being career-relevant.
+   * Uses canonical PLANET: format for matching.
    */
   private extractSourceEvidenceIds(
     candidate: CareerMechanismCandidate,
@@ -210,8 +233,8 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
     const evidenceIds: string[] = [];
 
     for (const evidence of candidate.evidence) {
-      // Check if this evidence mentions the planet
-      const planetId = `PLANET:${planet}`;
+      // Check if this evidence mentions the planet (canonical PLANET: format)
+      const planetId = createParticipantId(planet);
       if (evidence.participantIds.includes(planetId)) {
         evidenceIds.push(evidence.evidenceId);
       }

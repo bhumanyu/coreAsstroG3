@@ -96,11 +96,8 @@ export function buildCareerMechanismEvidence({
     throw new Error('YOGA source requires at least one relationship ID');
   }
 
-  // DISPOSITOR → relationshipIds non-empty AND participantIds non-empty
+  // DISPOSITOR → participantIds non-empty (relationshipIds optional)
   if (source === 'DISPOSITOR') {
-    if (relationshipIds.length === 0) {
-      throw new Error('DISPOSITOR source requires at least one relationship ID');
-    }
     if (participantIds.length === 0) {
       throw new Error('DISPOSITOR source requires at least one participant ID');
     }
