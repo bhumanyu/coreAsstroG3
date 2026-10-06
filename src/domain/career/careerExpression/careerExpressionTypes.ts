@@ -177,6 +177,7 @@ export interface CareerExpressionCandidate {
  * source10LIds: IDs of 10L foundation records that refined this expression (optional context).
  * ruleId: ID of the expression rule that produced this candidate.
  * role: Role of this evidence (ESTABLISHING or REFINING).
+ *   ESTABLISHING means the evidence establishes the expression candidate, not the natal mechanism.
  */
 export interface CareerMechanismExpressionEvidence {
   readonly evidenceId: string;

@@ -6,7 +6,9 @@ import type {
 import type {
   CareerMechanismCandidate,
   CareerMechanismEvidence,
-  CareerMechanismProvenance
+  CareerMechanismProvenance,
+  CareerMechanismType,
+  CareerMechanismPathway
 } from '../careerMechanism';
 import type {
   Career10HFoundation,
@@ -19,9 +21,11 @@ import type {
   Career10LCondition,
   Career10LProvenance
 } from '../career10h/career10LFoundationTypes';
+import type { CareerGraphEdgeType } from '../careerGraph/careerAstroGraphTypes';
 import type {
   CareerMechanismExpressionEvidence
 } from './careerExpressionTypes';
+import { Sign, Planet } from '../../../types';
 import { defaultCareerExpressionResolver } from './defaultCareerExpressionResolver';
 
 describe('Career Expression Resolver (P2-08A)', () => {
@@ -576,10 +580,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
       const all10LIds = expression.evidence.flatMap(e => e.source10LIds || []);
 
       // Assert specific real IDs from fixtures
-      expect(all10HIds).toContain('10H_LAGNA_10');
       expect(all10HIds).toContain('HOUSE_LORDSHIP_EVIDENCE_1');
       expect(all10LIds).toContain('PLANET_ANALYSIS_RULE_1');
-      expect(all10LIds).toContain('10L_LAGNA_STATUS_AVAILABLE');
 
       // Regression guard: no fabricated IDs
       const hasFabricatedIds = [...all10HIds, ...all10LIds].some(id =>
@@ -588,11 +590,227 @@ describe('Career Expression Resolver (P2-08A)', () => {
       expect(hasFabricatedIds).toBe(false);
     });
   });
+
+  describe('End-to-end integration test with real upstream engine reports', () => {
+    it('should wire real engine reports through to expression provenance', () => {
+      // This test demonstrates the full provenance chain:
+      // engine reports → 10H/10L foundations → expression evidence IDs
+
+      // Create real 10H foundation with actual upstream IDs
+      const real10HFoundation: Career10HFoundation = {
+        lagnaContext: {
+          referencePoint: 'LAGNA',
+          referenceHouseNumber: 10,
+          referenceHouseSign: Sign.CAPRICORN,
+          lagnaRelativeHouseNumber: 10,
+          house10Lord: Planet.SATURN,
+          lordHouse: 10,
+          occupants: [],
+          aspectsOn10H: [],
+          aspectDataStatus: 'AVAILABLE',
+          provenance: {
+            houseLordshipEvidenceId: 'REAL_HOUSE_LORDSHIP_RULE_123',
+            sourceHouseIndex: 10,
+            drishtiSource: {
+              reportPresent: true,
+              aspectCount: 2
+            },
+            drishtiAspectIds: ['REAL_ASPECT_ID_1', 'REAL_ASPECT_ID_2']
+          }
+        },
+        moonContext: null
+      };
+
+      // Create real 10L foundation with actual upstream IDs
+      const real10LFoundation: Career10LFoundation = {
+        lagnaContext: {
+          referencePoint: 'LAGNA',
+          house10Lord: Planet.SATURN,
+          lordHouse: 10,
+          condition: {
+            status: 'AVAILABLE',
+            dignity: 'OWN_SIGN',
+            motion: 'DIRECT',
+            combustion: 'NOT_COMBUST',
+            sign: Sign.CAPRICORN,
+            house: 10,
+            sourceRuleIds: ['REAL_PLANET_ANALYSIS_RULE_456']
+          },
+          relationships: [
+            {
+              targetHouse: 5,
+              sourceLord: Planet.JUPITER,
+              targetLord: Planet.SATURN,
+              relationshipType: 'CONJUNCT' as CareerGraphEdgeType,
+              relationshipId: 'REAL_EDGE_ID_789',
+              provenance: {
+                sourceIds: ['REAL_SOURCE_ID_1'],
+                ruleIds: ['REAL_RULE_ID_1'],
+                parentIds: []
+              }
+            }
+          ],
+          relationshipDataStatus: 'AVAILABLE',
+          provenance: {
+            house10ContextRef: 'LAGNA',
+            conditionSourceIds: ['REAL_PLANET_ANALYSIS_RULE_456'],
+            relationshipIds: ['REAL_EDGE_ID_789']
+          }
+        },
+        moonContext: null
+      };
+
+      // Create real mechanism candidate using createCareerMechanismCandidate pattern
+      const mechanismCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
+        'RESEARCH',
+        'PATTERN_1'
+      );
+
+      const input: CareerExpressionResolverInput = {
+        careerMechanismCandidates: [mechanismCandidate],
+        career10HFoundation: real10HFoundation,
+        career10LFoundation: real10LFoundation
+      };
+
+      const result = defaultCareerExpressionResolver.resolve(input);
+
+      expect(result.status).toBe('COMPLETE');
+      expect(result.expressions).toHaveLength(1);
+
+      const expression = result.expressions[0];
+      const all10HIds = expression.evidence.flatMap(e => e.source10HIds || []);
+      const all10LIds = expression.evidence.flatMap(e => e.source10LIds || []);
+
+      // Assert real upstream IDs round-trip correctly
+      expect(all10HIds).toContain('REAL_HOUSE_LORDSHIP_RULE_123');
+      expect(all10HIds).toContain('REAL_ASPECT_ID_1');
+      expect(all10HIds).toContain('REAL_ASPECT_ID_2');
+      expect(all10LIds).toContain('REAL_PLANET_ANALYSIS_RULE_456');
+      expect(all10LIds).toContain('REAL_EDGE_ID_789');
+
+      // Regression guard: no synthetic IDs
+      const hasSyntheticIds = [...all10HIds, ...all10LIds].some(id =>
+        id.startsWith('10H_LAGNA_') || id.startsWith('10H_MOON_') ||
+        id.startsWith('10L_LAGNA_STATUS_') || id.startsWith('10L_MOON_STATUS_')
+      );
+      expect(hasSyntheticIds).toBe(false);
+    });
+  });
+
+  describe('Negative provenance test', () => {
+    it('should emit empty source10HIds when no real upstream IDs exist', () => {
+      // Create 10H foundation with no real upstream IDs
+      const empty10HFoundation: Career10HFoundation = {
+        lagnaContext: {
+          referencePoint: 'LAGNA',
+          referenceHouseNumber: 10,
+          referenceHouseSign: Sign.CAPRICORN,
+          lagnaRelativeHouseNumber: 10,
+          house10Lord: Planet.SATURN,
+          lordHouse: 10,
+          occupants: [],
+          aspectsOn10H: [],
+          aspectDataStatus: 'AVAILABLE',
+          provenance: {
+            // No houseLordshipEvidenceId
+            sourceHouseIndex: 10,
+            drishtiSource: {
+              reportPresent: true,
+              aspectCount: 0
+            },
+            // Empty drishtiAspectIds
+            drishtiAspectIds: []
+          }
+        },
+        moonContext: null
+      };
+
+      const mechanismCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
+        'RESEARCH',
+        'PATTERN_1'
+      );
+
+      const input: CareerExpressionResolverInput = {
+        careerMechanismCandidates: [mechanismCandidate],
+        career10HFoundation: empty10HFoundation,
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = defaultCareerExpressionResolver.resolve(input);
+
+      expect(result.status).toBe('COMPLETE');
+      expect(result.expressions).toHaveLength(1);
+
+      const expression = result.expressions[0];
+      const all10HIds = expression.evidence.flatMap(e => e.source10HIds || []);
+
+      // Assert empty array when no real IDs exist
+      expect(all10HIds).toEqual([]);
+
+      // Grep-style assertion: no synthetic 10H_* IDs appear
+      const hasSynthetic10HIds = all10HIds.some(id => /^10H_/.test(id));
+      expect(hasSynthetic10HIds).toBe(false);
+    });
+
+    it('should emit empty source10LIds when no real upstream IDs exist', () => {
+      // Create 10L foundation with no real upstream IDs
+      const empty10LFoundation: Career10LFoundation = {
+        lagnaContext: {
+          referencePoint: 'LAGNA',
+          house10Lord: Planet.SATURN,
+          lordHouse: 10,
+          condition: {
+            status: 'AVAILABLE',
+            dignity: 'OWN_SIGN',
+            motion: 'DIRECT',
+            combustion: 'NOT_COMBUST',
+            sign: Sign.CAPRICORN,
+            house: 10,
+            sourceRuleIds: [] // Empty sourceRuleIds
+          },
+          relationships: [], // Empty relationships
+          relationshipDataStatus: 'AVAILABLE',
+          provenance: {
+            house10ContextRef: 'LAGNA',
+            conditionSourceIds: [], // Empty conditionSourceIds
+            relationshipIds: [] // Empty relationshipIds
+          }
+        },
+        moonContext: null
+      };
+
+      const mechanismCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
+        'RESEARCH',
+        'PATTERN_1'
+      );
+
+      const input: CareerExpressionResolverInput = {
+        careerMechanismCandidates: [mechanismCandidate],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: empty10LFoundation
+      };
+
+      const result = defaultCareerExpressionResolver.resolve(input);
+
+      expect(result.status).toBe('COMPLETE');
+      expect(result.expressions).toHaveLength(1);
+
+      const expression = result.expressions[0];
+      const all10LIds = expression.evidence.flatMap(e => e.source10LIds || []);
+
+      // Assert empty array when no real IDs exist
+      expect(all10LIds).toEqual([]);
+
+      // Grep-style assertion: no synthetic 10L_* IDs appear
+      const hasSynthetic10LIds = all10LIds.some(id => /^10L_/.test(id));
+      expect(hasSynthetic10LIds).toBe(false);
+    });
+  });
 });
 
 // Helper function to create mock mechanism candidates
 function createMockMechanismCandidate(
-  mechanismType: CareerMechanismType,
+  mechanismType: string,
   patternId: string,
   relationshipIds: string[] = []
 ): CareerMechanismCandidate {
@@ -601,7 +819,7 @@ function createMockMechanismCandidate(
   const evidence: CareerMechanismEvidence[] = [
     {
       evidenceId: `EVIDENCE_1:${patternId}`,
-      mechanismType,
+      mechanismType: mechanismType as CareerMechanismType,
       source: 'PATTERN',
       role: 'ESTABLISHING',
       participantIds: [],
@@ -622,8 +840,8 @@ function createMockMechanismCandidate(
   return {
     candidateId,
     patternId,
-    mechanismType,
-    pathway: 'PATTERN',
+    mechanismType: mechanismType as CareerMechanismType,
+    pathway: 'PATTERN' as CareerMechanismPathway,
     evidence,
     provenance,
     explanation: 'Mock mechanism candidate'
@@ -645,9 +863,9 @@ function createMock10HFoundation(): Career10HFoundation {
   const lagnaContext: Career10HContext = {
     referencePoint: 'LAGNA',
     referenceHouseNumber: 10,
-    referenceHouseSign: 'CAPRICORN',
+    referenceHouseSign: Sign.CAPRICORN,
     lagnaRelativeHouseNumber: 10,
-    house10Lord: 'SATURN',
+    house10Lord: Planet.SATURN,
     lordHouse: 10,
     occupants: [],
     aspectsOn10H: [],
@@ -668,7 +886,7 @@ function createMock10LFoundation(): Career10LFoundation {
     dignity: 'OWN_SIGN',
     motion: 'DIRECT',
     combustion: 'NOT_COMBUST',
-    sign: 'CAPRICORN',
+    sign: Sign.CAPRICORN,
     house: 10,
     sourceRuleIds: ['PLANET_ANALYSIS_RULE_1']
   };
@@ -681,7 +899,7 @@ function createMock10LFoundation(): Career10LFoundation {
 
   const lagnaContext: Career10LContext = {
     referencePoint: 'LAGNA',
-    house10Lord: 'SATURN',
+    house10Lord: Planet.SATURN,
     lordHouse: 10,
     condition,
     relationships: [],

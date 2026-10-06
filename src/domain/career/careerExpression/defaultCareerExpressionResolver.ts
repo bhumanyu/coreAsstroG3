@@ -7,7 +7,8 @@ import type {
 } from './careerExpressionTypes';
 import type {
   CareerMechanismCandidate,
-  CareerMechanismType
+  CareerMechanismType,
+  CareerMechanismPathway
 } from '../careerMechanism';
 import type {
   Career10HFoundation
@@ -33,8 +34,8 @@ import {
  *
  * Per spec §8:
  * - Normalize candidates → match rules against mechanismTypes → emit candidate per matched rule
- * - 10H/10L refine-only (context may add source10HIds/source10LIds to evidence/provenance but
- *   NEVER emit an expression without a source mechanism)
+ * - 10H/10L refine-only (optional provenance context may add source10HIds/source10LIds to
+ *   evidence/provenance but NEVER emit an expression without a source mechanism)
  * - Dedupe by (expressionType, canonical-source-set) merging provenance
  * - Canonical sort using compareParticipantIds-style ordering
  * - Immutable output (deep-frozen)
@@ -179,8 +180,8 @@ export class DefaultCareerExpressionResolver {
    * Dominance/primacy belongs to P2-08B convergence, not the resolver.
    *
    * @param mechanismCandidates - Mechanism candidates to match against rules
-   * @param career10HFoundation - Optional 10H foundation for context refinement
-   * @param career10LFoundation - Optional 10L foundation for context refinement
+   * @param career10HFoundation - Optional 10H foundation for provenance context
+   * @param career10LFoundation - Optional 10L foundation for provenance context
    * @returns Array of expression candidates
    */
   private matchRulesAndEmitCandidates(
@@ -242,12 +243,12 @@ export class DefaultCareerExpressionResolver {
 
   /**
    * Creates an expression candidate from a rule and matching mechanisms.
-   * 10H/10L context is added as optional refinement to evidence/provenance only.
+   * 10H/10L provenance context is added as optional provenance to evidence/provenance only.
    *
    * @param rule - The expression rule that matched
    * @param matchingMechanisms - The mechanism candidates that matched the rule
-   * @param career10HFoundation - Optional 10H foundation for context refinement
-   * @param career10LFoundation - Optional 10L foundation for context refinement
+   * @param career10HFoundation - Optional 10H foundation for provenance context
+   * @param career10LFoundation - Optional 10L foundation for provenance context
    * @returns Expression candidate
    */
   private createExpressionCandidate(
@@ -348,11 +349,14 @@ export class DefaultCareerExpressionResolver {
 
   /**
    * Extracts real provenance IDs from Career10HFoundation.
-   * Extracts context identity keys, houseLordship evidence IDs, and drishtiAspectIds.
-   * Returns empty array if foundation is absent or has no relevant IDs.
+   * Extracts houseLordship evidence IDs and drishtiAspectIds from upstream provenance.
+   * Returns empty array if foundation is absent or has no real upstream IDs.
+   *
+   * Per no-fabrication rule: does NOT emit synthetic IDs like 10H_LAGNA_* or 10H_MOON_*.
+  * lagnaRelativeHouseNumber stays in the context object as a locator, never in an ID field.
    *
    * @param foundation - Optional 10H foundation
-   * @returns Array of real provenance IDs
+   * @returns Array of real provenance IDs (deduped and canonically sorted)
    */
   private extract10HProvenanceIds(
     foundation?: Career10HFoundation
@@ -366,39 +370,39 @@ export class DefaultCareerExpressionResolver {
     // Extract from lagna context
     if (foundation.lagnaContext) {
       const ctx = foundation.lagnaContext;
-      // Context identity key (lagnaRelativeHouseNumber as string)
-      ids.push(`10H_LAGNA_${ctx.lagnaRelativeHouseNumber}`);
-      // House lordship evidence ID
+      // House lordship evidence ID (real upstream ID when present)
       if (ctx.provenance.houseLordshipEvidenceId) {
         ids.push(ctx.provenance.houseLordshipEvidenceId);
       }
-      // Drishti aspect IDs
+      // Drishti aspect IDs (real upstream IDs)
       ids.push(...ctx.provenance.drishtiAspectIds);
     }
 
     // Extract from moon context
     if (foundation.moonContext) {
       const ctx = foundation.moonContext;
-      // Context identity key (lagnaRelativeHouseNumber as string)
-      ids.push(`10H_MOON_${ctx.lagnaRelativeHouseNumber}`);
-      // House lordship evidence ID
+      // House lordship evidence ID (real upstream ID when present)
       if (ctx.provenance.houseLordshipEvidenceId) {
         ids.push(ctx.provenance.houseLordshipEvidenceId);
       }
-      // Drishti aspect IDs
+      // Drishti aspect IDs (real upstream IDs)
       ids.push(...ctx.provenance.drishtiAspectIds);
     }
 
-    return Object.freeze(ids.sort());
+    // Dedupe and canonical sort
+    return Object.freeze([...new Set(ids)].sort());
   }
 
   /**
    * Extracts real provenance IDs from Career10LFoundation.
-   * Extracts condition provenanceIds, relationship identityKeys, and statuses.
-   * Returns empty array if foundation is absent or has no relevant IDs.
+   * Extracts conditionSourceIds and relationshipIds from upstream provenance.
+   * Returns empty array if foundation is absent or has no real upstream IDs.
+   *
+   * Per no-fabrication rule: does NOT emit synthetic IDs like 10L_*_STATUS_*.
+   * Status is metadata on the context, not identity.
    *
    * @param foundation - Optional 10L foundation
-   * @returns Array of real provenance IDs
+   * @returns Array of real provenance IDs (deduped and canonically sorted)
    */
   private extract10LProvenanceIds(
     foundation?: Career10LFoundation
@@ -412,26 +416,23 @@ export class DefaultCareerExpressionResolver {
     // Extract from lagna context
     if (foundation.lagnaContext) {
       const ctx = foundation.lagnaContext;
-      // Condition source rule IDs
-      ids.push(...ctx.condition.sourceRuleIds);
-      // Relationship identity keys
-      ids.push(...ctx.relationships.map(r => r.relationshipId));
-      // Status marker
-      ids.push(`10L_LAGNA_STATUS_${ctx.condition.status}`);
+      // Condition source IDs (real upstream ruleIds/IDs)
+      ids.push(...ctx.provenance.conditionSourceIds);
+      // Relationship identity keys (real upstream edge identityKeys)
+      ids.push(...ctx.provenance.relationshipIds);
     }
 
     // Extract from moon context
     if (foundation.moonContext) {
       const ctx = foundation.moonContext;
-      // Condition source rule IDs
-      ids.push(...ctx.condition.sourceRuleIds);
-      // Relationship identity keys
-      ids.push(...ctx.relationships.map(r => r.relationshipId));
-      // Status marker
-      ids.push(`10L_MOON_STATUS_${ctx.condition.status}`);
+      // Condition source IDs (real upstream ruleIds/IDs)
+      ids.push(...ctx.provenance.conditionSourceIds);
+      // Relationship identity keys (real upstream edge identityKeys)
+      ids.push(...ctx.provenance.relationshipIds);
     }
 
-    return Object.freeze(ids.sort());
+    // Dedupe and canonical sort
+    return Object.freeze([...new Set(ids)].sort());
   }
 
   /**

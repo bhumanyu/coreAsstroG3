@@ -2,7 +2,7 @@
 
 ## Overview
 
-P2-08A implements the career expression resolver that maps career mechanism candidates (P2-07C/D/E) to career expression candidates. Expressions are domain-level classifications of HOW career activity manifests in observable work patterns, derived from but distinct from the structural mechanism layer.
+P2-08A implements the career expression resolver that maps career mechanism candidates (P2-07C/D/E) to career expression candidates. P2-08A performs mechanism→expression mapping plus 10H/10L provenance/context attachment to evidence. Contextual expression refinement (10H/10L influencing rule matching) is deferred to P2-08B. Expressions are domain-level classifications of HOW career activity manifests in observable work patterns, derived from but distinct from the structural mechanism layer.
 
 ## Three Core Invariants (§40)
 
@@ -103,7 +103,7 @@ The new P2-08A module needed to avoid shadowing these types.
     - Normalize candidates (base + refinements)
     - Match rules against mechanismTypes
     - Emit candidate per matched rule
-    - 10H/10L refine-only (add to evidence/provenance, never establish)
+    - 10H/10L provenance context (add real upstream IDs to evidence/provenance, never establish)
     - Dedupe by (expressionType, canonical-source-set) merging provenance
     - Canonical sort
     - Immutable output (deep-frozen)
@@ -179,11 +179,12 @@ Composite rules are included only where justified. The exemplar from spec §23:
 
 Composite rules have higher precedence (200) to take priority over individual mechanism mappings.
 
-### 3. 10H/10L Refinement-Only
-10H and 10L foundations are optional context that can refine expressions but never establish them:
-- When present: added to evidence as `source10HIds`/`source10LIds`
+### 3. 10H/10L Provenance Context
+10H and 10L foundations are optional provenance context that attach upstream identity to expression evidence:
+- When present: added to evidence as `source10HIds`/`source10LIds` (real upstream IDs only)
 - When absent: treated as missing input (PARTIAL status), never as weakening
 - Invariant: expressions are never emitted without a source mechanism
+- P2-08A does NOT perform contextual expression refinement (10H/10L influencing rule matching) — that belongs to P2-08B
 
 ### 4. Missing Input ≠ Negative
 Missing optional inputs (10H/10L) do not weaken expressions:
