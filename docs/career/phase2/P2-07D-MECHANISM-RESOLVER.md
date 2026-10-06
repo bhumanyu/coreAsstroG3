@@ -79,11 +79,24 @@ This replaces the prior ID-string check approach (`hasDirectedHouseRelationshipI
 
 The resolver enforces an intersection invariant in `hasCanonicalHousePairRelationship`:
 
-1. Collect establishing edge IDs for the house pair using `getDirectHouseRelationshipIds` (or the directed variants)
+1. Collect establishing edge IDs for the house pair using `getDirectHouseRelationshipIdsWithSeparation` (or the directed variants)
 2. Compute the intersection: `pairEstablishingIds ∩ pattern.provenance.establishingRelationshipIds`
 3. Return true only if the intersection is non-empty
 
 This ensures that the relationship satisfying the predicate is among the pattern's establishing edges. The current `establishingRelationshipIds.length > 0` + independent predicate check is insufficient — the relationship must be provenanced.
+
+**CRITICAL: Establishing vs Supporting LORD_OF Context**
+
+The `getDirectHouseRelationshipIdsWithSeparation` function distinguishes between:
+- **establishingIds**: Edges that directly establish the relationship (OCCUPIES, ASPECTS, CONJUNCT, EXCHANGES, or common lord LORD_OF edges when common lord is the only relationship)
+- **supportingIds**: LORD_OF context edges that accompany establishing edges but do not themselves establish the relationship
+
+The intersection invariant uses ONLY `establishingIds`. LORD_OF context edges (in `supportingIds`) are never included in the intersection. This ensures that:
+- A LORD_OF edge alone cannot satisfy the invariant
+- Patterns with only supporting LORD_OF context (e.g., `establishingRelationshipIds = ['LORD_OF:SUN:8']` but no real establishing edge) do not produce mechanism candidates
+- Only real establishing edges can satisfy the intersection requirement
+
+This prevents false positives where LORD_OF context edges are incorrectly treated as establishing evidence.
 
 ## Evidence Construction
 

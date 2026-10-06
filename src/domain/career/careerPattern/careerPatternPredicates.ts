@@ -485,7 +485,19 @@ export function hasDirectHouseRelationship(
 }
 
 /**
- * Returns the edge IDs that establish a direct house-to-house relationship between two houses.
+ * Result of getDirectHouseRelationshipIdsWithSeparation.
+ * Distinguishes between establishing edges (directly establish the relationship)
+ * and supporting edges (LORD_OF context that accompanies establishing edges).
+ */
+export interface DirectHouseRelationshipIdsResult {
+  readonly establishingIds: readonly string[];
+  readonly supportingIds: readonly string[];
+  readonly hasCommonLord: boolean;
+}
+
+/**
+ * Returns the edge IDs that establish a direct house-to-house relationship between two houses,
+ * separated into establishing and supporting edges.
  * A direct relationship is established by:
  * - Common lord relationship (hasCommonLordRelationship) — undirected
  * - Directed house relationship (hasDirectedHouseRelationship in either direction) — directional
@@ -495,8 +507,15 @@ export function hasDirectHouseRelationship(
  *
  * NOTE: LORD_OF edges are included only as supporting context alongside real establishing edges,
  * never alone. If no establishing edge exists (directed, common lord, conjunction, aspect, or exchange),
- * this function returns []. When at least one establishing edge exists, relevant LORD_OF edges
- * (lords of both houses) are appended to keep evidence complete.
+ * this function returns empty arrays. When at least one establishing edge exists, relevant LORD_OF edges
+ * (lords of both houses) are included in supportingIds to keep evidence complete.
+ *
+ * COMMON LORD DECISION: When common lord is the ONLY relationship (no directed, conjunction, aspect, or exchange edges),
+ * we treat it as establishing for the undirected umbrella predicate. The shared planet's LORD_OF edge IDs are emitted
+ * as establishingIds. This allows patterns based purely on common lordship to participate in mechanism resolution.
+ * Rationale: Common lordship is a structural relationship between houses that can establish patterns, even though it's
+ * undirected and cannot satisfy ordered pathways. For mechanism resolution, we need to distinguish establishing from
+ * supporting to ensure LORD_OF context edges don't satisfy the intersection invariant.
  *
  * FREEZE SEMANTICS: This is an undirected umbrella predicate. It includes both directional
  * and non-directional relationships. For ordered pathway validation, use getDirectedHouseRelationshipIds
@@ -505,25 +524,27 @@ export function hasDirectHouseRelationship(
  * @param network - The career house network to check
  * @param a - First house number
  * @param b - Second house number
- * @returns Array of edge identityKeys that establish the direct relationship (sorted), empty if no relationship
+ * @returns DirectHouseRelationshipIdsResult with establishingIds, supportingIds, and hasCommonLord flag
  */
-export function getDirectHouseRelationshipIds(
+export function getDirectHouseRelationshipIdsWithSeparation(
   network: CareerHouseNetwork,
   a: number,
   b: number
-): readonly string[] {
+): DirectHouseRelationshipIdsResult {
   const establishingIds: string[] = [];
+  const supportingIds: string[] = [];
 
-  // Common lord (undirected) - no edge IDs for this derived relationship
-  if (hasCommonLordRelationship(network, a, b)) {
-    // Mark that a relationship exists, but we'll add LORD_OF context later
-    establishingIds.push('COMMON_LORD_RELATIONSHIP');
-  }
+  // Check for common lord (undirected)
+  const hasCommonLord = hasCommonLordRelationship(network, a, b);
 
   // Directed relationship in either direction
+  // We need to extract the establishing edges (OCCUPIES, ASPECTS) from getDirectedHouseRelationshipIds
+  // which returns establishing + LORD_OF context mixed together
   const directedAtoB = getDirectedHouseRelationshipIds(network, a, b);
   const directedBtoA = getDirectedHouseRelationshipIds(network, b, a);
-  establishingIds.push(...directedAtoB, ...directedBtoA);
+  // Filter out LORD_OF edges from directed results - they're context, not establishing
+  const directedEstablishing = [...directedAtoB, ...directedBtoA].filter(id => !id.startsWith('LORD_OF:'));
+  establishingIds.push(...directedEstablishing);
 
   // Lord conjunction (undirected)
   if (hasConjunctionRelationship(network, a, b)) {
@@ -585,9 +606,29 @@ export function getDirectHouseRelationshipIds(
     }
   }
 
-  // If no establishing edge exists, return [] (do NOT include LORD_OF alone)
-  if (establishingIds.length === 0) {
-    return [];
+  // If no establishing edge exists (including common lord case), return empty
+  if (establishingIds.length === 0 && !hasCommonLord) {
+    return { establishingIds: [], supportingIds: [], hasCommonLord: false };
+  }
+
+  // Handle common lord as the only relationship case
+  if (establishingIds.length === 0 && hasCommonLord) {
+    // Emit the shared planet's LORD_OF edge IDs as establishing
+    const lordshipMap = buildLordshipMap(network.relationships);
+    for (const [planet, houses] of lordshipMap) {
+      if (houses.has(a) && houses.has(b)) {
+        // Find the LORD_OF edge for this planet and house
+        for (const edge of network.relationships) {
+          if (edge.type === 'LORD_OF') {
+            const edgePlanet = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const edgeHouse = parseHouseFromNodeKey(edge.targetNodeId);
+            if (edgePlanet === planet && (edgeHouse === a || edgeHouse === b)) {
+              establishingIds.push(edge.identityKey);
+            }
+          }
+        }
+      }
+    }
   }
 
   // Append LORD_OF edges as supporting context for both houses
@@ -606,10 +647,53 @@ export function getDirectHouseRelationshipIds(
     }
   }
 
-  // Return sorted-unique for determinism, filtering out the marker string
-  return [...new Set([...establishingIds, ...lordIds])]
-    .filter(id => id !== 'COMMON_LORD_RELATIONSHIP')
-    .sort();
+  // Separate establishing from supporting: LORD_OF edges are always supporting
+  // unless they're the common lord case (already added to establishingIds above)
+  const establishingSet = new Set(establishingIds);
+  for (const lordId of lordIds) {
+    if (!establishingSet.has(lordId)) {
+      supportingIds.push(lordId);
+    }
+  }
+
+  // Return sorted-unique for determinism
+  return {
+    establishingIds: [...new Set(establishingIds)].sort(),
+    supportingIds: [...new Set(supportingIds)].sort(),
+    hasCommonLord
+  };
+}
+
+/**
+ * Returns the edge IDs that establish a direct house-to-house relationship between two houses.
+ * A direct relationship is established by:
+ * - Common lord relationship (hasCommonLordRelationship) — undirected
+ * - Directed house relationship (hasDirectedHouseRelationship in either direction) — directional
+ * - Lord conjunction between distinct lords — undirected
+ * - Lord aspect (either direction) between distinct lords — undirected
+ * - Exchange between distinct lords — bidirectional (undirected for ordered pathways)
+ *
+ * NOTE: LORD_OF edges are included only as supporting context alongside real establishing edges,
+ * never alone. If no establishing edge exists (directed, common lord, conjunction, aspect, or exchange),
+ * this function returns []. When at least one establishing edge exists, relevant LORD_OF edges
+ * (lords of both houses) are appended to keep evidence complete.
+ *
+ * FREEZE SEMANTICS: This is an undirected umbrella predicate. It includes both directional
+ * and non-directional relationships. For ordered pathway validation, use getDirectedHouseRelationshipIds
+ * and getDirectChainRelationshipIds which enforce direction.
+ *
+ * @param network - The career house network to check
+ * @param a - First house number
+ * @param b - Second house number
+ * @returns Array of edge identityKeys that establish the direct relationship (sorted), empty if no relationship
+ */
+export function getDirectHouseRelationshipIds(
+  network: CareerHouseNetwork,
+  a: number,
+  b: number
+): readonly string[] {
+  const result = getDirectHouseRelationshipIdsWithSeparation(network, a, b);
+  return [...result.establishingIds, ...result.supportingIds].sort();
 }
 
 /**

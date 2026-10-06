@@ -542,6 +542,60 @@ describe('careerMechanismResolver', () => {
       }
     });
   });
+
+  describe('Regression tests - supporting LORD_OF edges cannot satisfy intersection (Test D)', () => {
+    it('should not emit candidates when pattern establishing IDs contain only supporting LORD_OF edges', () => {
+      // Network has a real 8→10 aspect edge plus LORD_OF:SUN:8
+      // Pattern establishingRelationshipIds = ['LORD_OF:SUN:8'] (only the supporting edge)
+      // This should produce zero candidates because LORD_OF context edges cannot satisfy the intersection
+      // Even though the network has a real establishing edge (ASPECTS), it's not in the pattern's establishing IDs
+      const networkRelationships: CareerGraphEdge[] = [
+        // Real 8→10 aspect edge exists in network (establishing edge)
+        {
+          edgeId: 'EDGE:REL:8→10:ASPECTS',
+          type: 'ASPECTS',
+          sourceNodeId: 'PLANET:SUN',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:8→10:ASPECTS',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // LORD_OF for house 8 (supporting context)
+        {
+          edgeId: 'EDGE:LORD_OF:SUN:8',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SUN',
+          targetNodeId: 'HOUSE:8',
+          identityKey: 'LORD_OF:SUN:8',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['LORD_OF:SUN:8'], // Only the supporting LORD_OF edge, NOT the ASPECTS edge
+        status: 'QUALIFIED',
+        networkRelationships,
+        networkHouses: [8, 10]
+      });
+
+      const result = resolver.resolve(input);
+
+      // Should emit zero candidates because:
+      // - getDirectHouseRelationshipIdsWithSeparation returns establishingIds=['REL:8→10:ASPECTS'], supportingIds=['LORD_OF:SUN:8']
+      // - pattern.provenance.establishingRelationshipIds = ['LORD_OF:SUN:8']
+      // - Intersection = [] (empty, because LORD_OF:SUN:8 is in supportingIds, not establishingIds)
+      // - Therefore, no candidates should be emitted
+      expect(result.candidates.length).toBe(0);
+    });
+  });
 });
 
 /**

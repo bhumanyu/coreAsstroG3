@@ -292,7 +292,9 @@ describe('Career Pattern Analysis', () => {
       expect(pattern.family).toBe('CAREER_HOUSE_NETWORK');
       expect(pattern.classification).toBe('CAREER_HOUSE_NETWORK');
       expect(pattern.mechanisms).toEqual([]);
-      expect(pattern.evidence).toHaveLength(1);
+      // P2-06D: Evidence now includes individual records for each establishing relationship
+      // 1 P2-03-EVIDENCE (legacy) + 2 P2-06D-EVIDENCE (one per LORD_OF establishing relationship)
+      expect(pattern.evidence).toHaveLength(3);
       expect(pattern.evidence[0].evidenceId).toBe('P2-03-EVIDENCE:RULE_GENERIC:6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8');
       expect(pattern.provenance.sourceNetworkIds).toEqual(['6,8,11:STAR:BIDIRECTIONAL:ASPECTS:PLANET:MARS→HOUSE:11,ASPECTS:PLANET:MARS→HOUSE:6,LORD_OF:PLANET:MARS→HOUSE:11,LORD_OF:PLANET:MARS→HOUSE:6,OCCUPIES:PLANET:JUPITER→HOUSE:11,OCCUPIES:PLANET:MARS→HOUSE:8,OCCUPIES:PLANET:MOON→HOUSE:8']);
       expect(pattern.provenance.relationshipIds).toEqual([

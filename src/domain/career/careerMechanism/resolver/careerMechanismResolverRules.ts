@@ -7,7 +7,8 @@ import {
   hasDirectedHouseRelationship,
   hasCommonLordRelationship,
   hasDirectHouseRelationship,
-  getDirectHouseRelationshipIds
+  getDirectHouseRelationshipIds,
+  getDirectHouseRelationshipIdsWithSeparation
 } from '../../careerPattern/careerPatternPredicates';
 
 /**
@@ -67,7 +68,7 @@ const MECHANISMS_COMPOSITE_8_12_10: readonly CareerMechanismType[] = Object.free
  * Helper to check if a specific house-pair relationship exists among the pattern's
  * establishing relationships using canonical edge resolution.
  *
- * This function uses the frozen P2-06A predicates (getDirectHouseRelationshipIds)
+ * This function uses the frozen P2-06A predicates (getDirectHouseRelationshipIdsWithSeparation)
  * to verify the *specific* house-pair relationship exists in the source networks,
  * and that the establishing edges intersect with the pattern's establishing edges.
  *
@@ -80,6 +81,12 @@ const MECHANISMS_COMPOSITE_8_12_10: readonly CareerMechanismType[] = Object.free
  * the pattern's establishing edges. This is enforced by computing:
  * pairEstablishingIds ∩ pattern.provenance.establishingRelationshipIds
  * and requiring the intersection to be non-empty.
+ *
+ * CRITICAL: Only establishing IDs are intersected. LORD_OF context edges (supportingIds)
+ * are never included in the intersection. A LORD_OF edge alone cannot satisfy the invariant.
+ * This ensures that patterns with only supporting LORD_OF context (e.g., pattern with
+ * establishingRelationshipIds = ['LORD_OF:SUN:8'] but no real establishing edge) do not
+ * produce mechanism candidates.
  *
  * NOTE: This is a canonical resolution using P2-06A predicates. The prior
  * hasDirectedHouseRelationshipId precedent in careerPatternQualification/policyUtils.ts
@@ -115,11 +122,10 @@ function hasCanonicalHousePairRelationship(
       continue;
     }
 
-    // Use getDirectHouseRelationshipIds (umbrella predicate that includes directed,
-    // common lord, conjunction, aspect, and exchange relationships)
+    // Use getDirectHouseRelationshipIdsWithSeparation to get only establishing IDs
     // This matches the dusthana relationship semantics from P2-06B
-    const ids = getDirectHouseRelationshipIds(network, houseA, houseB);
-    pairEstablishingIds.push(...ids);
+    const result = getDirectHouseRelationshipIdsWithSeparation(network, houseA, houseB);
+    pairEstablishingIds.push(...result.establishingIds);
   }
 
   // Compute intersection: pairEstablishingIds ∩ pattern.provenance.establishingRelationshipIds
