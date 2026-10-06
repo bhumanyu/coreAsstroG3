@@ -77,6 +77,7 @@ The new P2-08A module needed to avoid shadowing these types.
 - `CareerExpressionPathway`: Passthrough of CareerMechanismPathway
 - `CareerExpressionCandidate`: Canonical expression record
 - `CareerExpressionEvidence`: Mechanism-source-based evidence
+  - `role`: 'ESTABLISHING' means "establishes the expression candidate" (the mechanism source that caused this expression to be emitted), not "establishes the natal mechanism"
 - `CareerExpressionProvenance`: Provenance tracking (expression→mechanism→pattern→relationship)
 - `CareerExpressionAnalysisResult`: Resolution result (expressions, status, missingInputs, provenance)
 - `CareerExpressionResolverInput`: Resolver input (mechanism candidates, optional 10H/10L context)
@@ -184,7 +185,12 @@ Composite rules have higher precedence (200) to take priority over individual me
 - When present: added to evidence as `source10HIds`/`source10LIds` (real upstream IDs only)
 - When absent: treated as missing input (PARTIAL status), never as weakening
 - Invariant: expressions are never emitted without a source mechanism
-- P2-08A does NOT perform contextual expression refinement (10H/10L influencing rule matching) — that belongs to P2-08B
+- **Provenance-only scoping**: 10H/10L foundations contribute refining provenance only — they do not affect rule matching or expression type selection in P2-08A. Contextual refinement (10H/10L influencing which expressions are emitted or how they are weighted) is deferred to P2-08B.
+- **Real upstream IDs only**: P2-08A extracts only actual upstream IDs from foundations:
+  - From 10H: `houseLordshipEvidenceId` and `drishtiAspectIds` (real engine report IDs)
+  - From 10L: `conditionSourceIds` and `relationshipIds` (real rule/edge IDs)
+  - Synthetic IDs like `10H_LAGNA_*`, `10H_MOON_*`, `10L_*_STATUS_*` are never emitted
+  - Reference point (LAGNA/MOON) and house number remain as metadata on the context object, not as identity
 
 ### 4. Missing Input ≠ Negative
 Missing optional inputs (10H/10L) do not weaken expressions:
@@ -206,3 +212,81 @@ All resolver output is deep-frozen:
 - Integrate with profession layer (future P2-09)
 - Add Dasha activation support (future P2-10)
 - Add D10 refinement support (future P2-11)
+
+## CareerMechanismType Mapping Status
+
+The following table shows which `CareerMechanismType`s are currently mapped to expressions in P2-08A and which are intentionally unmapped pending P2-08B contextual refinement.
+
+| CareerMechanismType | Expression Type | Status | Notes |
+|-------------------|-----------------|--------|-------|
+| **Expression Family** | | | |
+| AGENCY | — | Unmapped | Pending P2-08B |
+| SELF_DIRECTION | — | Unmapped | Pending P2-08B |
+| INITIATIVE | — | Unmapped | Pending P2-08B |
+| VISIBILITY | — | Unmapped | Pending P2-08B |
+| STATUS | — | Unmapped | Pending P2-08B |
+| AUTHORITY | AUTHORITY_EXPRESSION | Mapped | 1:1 mapping |
+| LEADERSHIP | LEADERSHIP_EXPRESSION | Mapped | 1:1 mapping |
+| STRATEGY | — | Unmapped | Pending P2-08B |
+| ADVISORY | — | Unmapped | Pending P2-08B |
+| TEACHING | TEACHING_EXPRESSION | Mapped | 1:1 mapping |
+| INNOVATION | INNOVATION_WORK | Mapped | 1:1 mapping |
+| DECISION_MAKING | — | Unmapped | Pending P2-08B |
+| COMMUNICATION | COMMUNICATION_WORK | Mapped | 1:1 mapping |
+| WRITING | WRITING_WORK | Mapped | 1:1 mapping |
+| PUBLIC_INTERFACE | — | Unmapped | Pending P2-08B |
+| CLIENT_INTERACTION | — | Unmapped | Pending P2-08B |
+| CONTRACTUAL_INTERACTION | — | Unmapped | Pending P2-08B |
+| PARTNERSHIP | — | Unmapped | Pending P2-08B |
+| COMMERCIAL_INTERACTION | — | Unmapped | Pending P2-08B |
+| ENTREPRENEURIAL_EFFORT | — | Unmapped | Pending P2-08B |
+| **Execution Family** | | | |
+| EXECUTION | — | Unmapped | Pending P2-08B |
+| HANDS_ON_CAPABILITY | — | Unmapped | Pending P2-08B |
+| COURAGE | — | Unmapped | Pending P2-08B |
+| SELF_EFFORT | — | Unmapped | Pending P2-08B |
+| SKILL_DEVELOPMENT | — | Unmapped | Pending P2-08B |
+| SERVICE_EMPLOYMENT | SERVICE_WORK | Mapped | 1:1 mapping |
+| COMPETITION | — | Unmapped | Pending P2-08B |
+| PROFESSIONALIZATION | — | Unmapped | Pending P2-08B |
+| PROFESSIONAL_GAINS | — | Unmapped | Pending P2-08B |
+| CREATIVE_INTELLECTUAL | — | Unmapped | Pending P2-08B |
+| DHARMA_DRIVEN_PROFESSION | — | Unmapped | Pending P2-08B |
+| AUTHORITY_LEADERSHIP | — | Unmapped | Pending P2-08B |
+| STABILITY | — | Unmapped | Pending P2-08B |
+| WORK_ENVIRONMENT | — | Unmapped | Pending P2-08B |
+| ADMINISTRATIVE_FOUNDATION | — | Unmapped | Pending P2-08B |
+| EXPENDITURE | — | Unmapped | Pending P2-08B |
+| **Knowledge Family** | | | |
+| INTELLIGENCE | — | Unmapped | Pending P2-08B |
+| SPECIALIZED_KNOWLEDGE | — | Unmapped | Used in composite only |
+| RESEARCH | RESEARCH_WORK | Mapped | 1:1 mapping + composite |
+| INVESTIGATION | — | Unmapped | Pending P2-08B |
+| TRANSFORMATION | — | Unmapped | Pending P2-08B |
+| **Business Family** | | | |
+| BUSINESS | — | Unmapped | Pending P2-08B |
+| CONSULTING | — | Unmapped | Pending P2-08B |
+| BANKING_FINANCE | FINANCIAL_WORK | Mapped | 1:1 mapping |
+| INSURANCE | INSURANCE_WORK | Mapped | 1:1 mapping |
+| TAXATION | TAXATION_WORK | Mapped | 1:1 mapping |
+| COMPLIANCE | COMPLIANCE_WORK | Mapped | 1:1 mapping |
+| RISK | — | Unmapped | Pending P2-08B |
+| CRISIS | — | Unmapped | Pending P2-08B |
+| CRISIS_MANAGEMENT | CRISIS_MANAGEMENT_WORK | Mapped | 1:1 mapping |
+| **Institutional Family** | | | |
+| INSTITUTIONAL_BASE | — | Unmapped | Pending P2-08B |
+| INSTITUTIONAL_SERVICE | — | Unmapped | Pending P2-08B |
+| INSTITUTIONAL_WORK | INSTITUTIONAL_WORK_EXPRESSION | Mapped | 1:1 mapping |
+| ISOLATED_ENVIRONMENT | ISOLATED_WORK_EXPRESSION | Mapped | 1:1 mapping |
+| **Foreign Family** | | | |
+| FOREIGN | — | Unmapped | Pending P2-08B |
+| FOREIGN_WORK | FOREIGN_WORK_EXPRESSION | Mapped | 1:1 mapping |
+| REMOTE_WORK | REMOTE_WORK_EXPRESSION | Mapped | 1:1 mapping |
+
+**Composite Rules:**
+- RESEARCH + SPECIALIZED_KNOWLEDGE → ANALYTICAL_SPECIALIZED_WORK
+
+**Notes:**
+- Unmapped mechanism types are reported in `unmappedMechanismTypes` in the analysis result
+- This is the correct contract for incomplete vocabulary — weak rules invented for coverage would be worse
+- P2-08B contextual refinement will determine when and how unmapped types should be incorporated
