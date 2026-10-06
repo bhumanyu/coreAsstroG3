@@ -6,7 +6,8 @@ import type {
 import {
   hasDirectedHouseRelationship,
   hasCommonLordRelationship,
-  hasDirectHouseRelationship
+  hasDirectHouseRelationship,
+  getDirectHouseRelationshipIds
 } from '../../careerPattern/careerPatternPredicates';
 
 /**
@@ -66,14 +67,19 @@ const MECHANISMS_COMPOSITE_8_12_10: readonly CareerMechanismType[] = Object.free
  * Helper to check if a specific house-pair relationship exists among the pattern's
  * establishing relationships using canonical edge resolution.
  *
- * This function uses the frozen P2-06A predicates (hasDirectedHouseRelationship,
- * hasCommonLordRelationship, hasDirectHouseRelationship) to verify the *specific*
- * house-pair relationship exists in the source networks, not just "any edge present".
+ * This function uses the frozen P2-06A predicates (getDirectHouseRelationshipIds)
+ * to verify the *specific* house-pair relationship exists in the source networks,
+ * and that the establishing edges intersect with the pattern's establishing edges.
  *
  * DUSTHANA SEMANTICS (from dusthanaRelationshipValidation.ts):
  * - 8↔10: uses hasDirectedHouseRelationship or hasCommonLordRelationship as appropriate
  * - 12↔10: uses hasDirectedHouseRelationship or hasCommonLordRelationship as appropriate
  * - Composite 8-12-10: checks both 8↔10 and 12↔10 relationships
+ *
+ * INTERSECTION INVARIANT: The relationship that satisfies the predicate must be among
+ * the pattern's establishing edges. This is enforced by computing:
+ * pairEstablishingIds ∩ pattern.provenance.establishingRelationshipIds
+ * and requiring the intersection to be non-empty.
  *
  * NOTE: This is a canonical resolution using P2-06A predicates. The prior
  * hasDirectedHouseRelationshipId precedent in careerPatternQualification/policyUtils.ts
@@ -101,23 +107,27 @@ function hasCanonicalHousePairRelationship(
     return false;
   }
 
-  // Use canonical P2-06A predicates to verify the specific house-pair relationship
-  // Check all networks for the relationship
+  // Collect establishing edge IDs for the house pair across all networks
+  const pairEstablishingIds: string[] = [];
   for (const network of networks) {
     // Check if network contains both houses
     if (!network.houses.includes(houseA) || !network.houses.includes(houseB)) {
       continue;
     }
 
-    // Use hasDirectHouseRelationship (umbrella predicate that includes directed,
+    // Use getDirectHouseRelationshipIds (umbrella predicate that includes directed,
     // common lord, conjunction, aspect, and exchange relationships)
     // This matches the dusthana relationship semantics from P2-06B
-    if (hasDirectHouseRelationship(network, houseA, houseB)) {
-      return true;
-    }
+    const ids = getDirectHouseRelationshipIds(network, houseA, houseB);
+    pairEstablishingIds.push(...ids);
   }
 
-  return false;
+  // Compute intersection: pairEstablishingIds ∩ pattern.provenance.establishingRelationshipIds
+  const patternEstablishingIds = new Set(pattern.provenance.establishingRelationshipIds);
+  const intersection = pairEstablishingIds.filter(id => patternEstablishingIds.has(id));
+
+  // Return true only if intersection is non-empty
+  return intersection.length > 0;
 }
 
 /**

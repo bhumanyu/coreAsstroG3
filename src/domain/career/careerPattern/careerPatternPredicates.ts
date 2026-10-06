@@ -481,33 +481,135 @@ export function hasDirectHouseRelationship(
   a: number,
   b: number
 ): boolean {
-  // Common lord (undirected)
+  return getDirectHouseRelationshipIds(network, a, b).length > 0;
+}
+
+/**
+ * Returns the edge IDs that establish a direct house-to-house relationship between two houses.
+ * A direct relationship is established by:
+ * - Common lord relationship (hasCommonLordRelationship) — undirected
+ * - Directed house relationship (hasDirectedHouseRelationship in either direction) — directional
+ * - Lord conjunction between distinct lords — undirected
+ * - Lord aspect (either direction) between distinct lords — undirected
+ * - Exchange between distinct lords — bidirectional (undirected for ordered pathways)
+ *
+ * NOTE: LORD_OF edges are included only as supporting context alongside real establishing edges,
+ * never alone. If no establishing edge exists (directed, common lord, conjunction, aspect, or exchange),
+ * this function returns []. When at least one establishing edge exists, relevant LORD_OF edges
+ * (lords of both houses) are appended to keep evidence complete.
+ *
+ * FREEZE SEMANTICS: This is an undirected umbrella predicate. It includes both directional
+ * and non-directional relationships. For ordered pathway validation, use getDirectedHouseRelationshipIds
+ * and getDirectChainRelationshipIds which enforce direction.
+ *
+ * @param network - The career house network to check
+ * @param a - First house number
+ * @param b - Second house number
+ * @returns Array of edge identityKeys that establish the direct relationship (sorted), empty if no relationship
+ */
+export function getDirectHouseRelationshipIds(
+  network: CareerHouseNetwork,
+  a: number,
+  b: number
+): readonly string[] {
+  const establishingIds: string[] = [];
+
+  // Common lord (undirected) - no edge IDs for this derived relationship
   if (hasCommonLordRelationship(network, a, b)) {
-    return true;
+    // Mark that a relationship exists, but we'll add LORD_OF context later
+    establishingIds.push('COMMON_LORD_RELATIONSHIP');
   }
 
   // Directed relationship in either direction
-  if (hasDirectedHouseRelationship(network, a, b) ||
-    hasDirectedHouseRelationship(network, b, a)) {
-    return true;
-  }
+  const directedAtoB = getDirectedHouseRelationshipIds(network, a, b);
+  const directedBtoA = getDirectedHouseRelationshipIds(network, b, a);
+  establishingIds.push(...directedAtoB, ...directedBtoA);
 
   // Lord conjunction (undirected)
   if (hasConjunctionRelationship(network, a, b)) {
-    return true;
+    const lordsA = getLordsOfHouse(network.relationships, a);
+    const lordsB = getLordsOfHouse(network.relationships, b);
+    for (const lordA of lordsA) {
+      for (const lordB of lordsB) {
+        for (const edge of network.relationships) {
+          if (edge.type === 'CONJUNCT') {
+            const planetA = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const planetB = parsePlanetFromNodeKey(edge.targetNodeId);
+            if ((planetA === lordA && planetB === lordB) ||
+              (planetA === lordB && planetB === lordA)) {
+              establishingIds.push(edge.identityKey);
+            }
+          }
+        }
+      }
+    }
   }
 
   // Lord aspect (either direction, undirected for this predicate)
   if (hasLordAspectRelationship(network, a, b)) {
-    return true;
+    const lordsA = getLordsOfHouse(network.relationships, a);
+    const lordsB = getLordsOfHouse(network.relationships, b);
+    for (const lordA of lordsA) {
+      for (const lordB of lordsB) {
+        for (const edge of network.relationships) {
+          if (edge.type === 'ASPECTS') {
+            const planetA = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const planetB = parsePlanetFromNodeKey(edge.targetNodeId);
+            if ((planetA === lordA && planetB === lordB) ||
+              (planetA === lordB && planetB === lordA)) {
+              establishingIds.push(edge.identityKey);
+            }
+          }
+        }
+      }
+    }
   }
 
   // Exchange (bidirectional, undirected for ordered pathways)
   if (hasExchangeRelationship(network, a, b)) {
-    return true;
+    const lordsA = getLordsOfHouse(network.relationships, a);
+    const lordsB = getLordsOfHouse(network.relationships, b);
+    for (const lordA of lordsA) {
+      for (const lordB of lordsB) {
+        for (const edge of network.relationships) {
+          if (edge.type === 'EXCHANGES') {
+            const planetA = parsePlanetFromNodeKey(edge.sourceNodeId);
+            const planetB = parsePlanetFromNodeKey(edge.targetNodeId);
+            if ((planetA === lordA && planetB === lordB) ||
+              (planetA === lordB && planetB === lordA)) {
+              establishingIds.push(edge.identityKey);
+            }
+          }
+        }
+      }
+    }
   }
 
-  return false;
+  // If no establishing edge exists, return [] (do NOT include LORD_OF alone)
+  if (establishingIds.length === 0) {
+    return [];
+  }
+
+  // Append LORD_OF edges as supporting context for both houses
+  const lordIds: string[] = [];
+  for (const edge of network.relationships) {
+    if (edge.type === 'LORD_OF') {
+      const planet = parsePlanetFromNodeKey(edge.sourceNodeId);
+      const house = parseHouseFromNodeKey(edge.targetNodeId);
+
+      if (planet && house !== null) {
+        // Include lords of both houses
+        if (house === a || house === b) {
+          lordIds.push(edge.identityKey);
+        }
+      }
+    }
+  }
+
+  // Return sorted-unique for determinism, filtering out the marker string
+  return [...new Set([...establishingIds, ...lordIds])]
+    .filter(id => id !== 'COMMON_LORD_RELATIONSHIP')
+    .sort();
 }
 
 /**

@@ -380,10 +380,173 @@ describe('careerMechanismResolver', () => {
       expect(() => resolver.resolve(input)).toThrow('Pattern is required');
     });
   });
+
+  describe('Regression tests - intersection invariant (Test A)', () => {
+    it('should not emit candidates when pattern establishing IDs do not intersect with actual network edges', () => {
+      // Pattern houses [8,10], establishing = ['REL:6→10'], but mock network contains
+      // real REL:8→10 edge AND the 6→10 edges. The intersection should be empty because:
+      // - getDirectHouseRelationshipIds(8, 10) returns ['REL:8→10:OCCUPIES'] (only edges between 8 and 10)
+      // - pattern.provenance.establishingRelationshipIds = ['REL:6→10:OCCUPIES']
+      // - Intersection is empty, so no candidates should be emitted.
+      const networkRelationships: CareerGraphEdge[] = [
+        // Real 8→10 edge exists in network
+        {
+          edgeId: 'EDGE:REL:8→10:OCCUPIES',
+          type: 'OCCUPIES',
+          sourceNodeId: 'PLANET:SUN',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:8→10:OCCUPIES',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // LORD_OF for house 8
+        {
+          edgeId: 'EDGE:LORD_OF:SUN:8',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SUN',
+          targetNodeId: 'HOUSE:8',
+          identityKey: 'LORD_OF:SUN:8',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // 6→10 edge also exists in network (but not in establishing IDs)
+        {
+          edgeId: 'EDGE:REL:6→10:OCCUPIES',
+          type: 'OCCUPIES',
+          sourceNodeId: 'PLANET:MOON',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:6→10:OCCUPIES',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // LORD_OF for house 6
+        {
+          edgeId: 'EDGE:LORD_OF:MOON:6',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:MOON',
+          targetNodeId: 'HOUSE:6',
+          identityKey: 'LORD_OF:MOON:6',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:6→10:OCCUPIES'], // Only 6→10 in establishing, not 8→10
+        status: 'QUALIFIED',
+        networkRelationships,
+        networkHouses: [6, 8, 10] // Network contains all three houses for the edges
+      });
+
+      const result = resolver.resolve(input);
+
+      // Should emit zero candidates because establishing IDs (6→10) do not intersect
+      // with the actual 8→10 relationship edge in the network
+      expect(result.candidates.length).toBe(0);
+    });
+  });
+
+  describe('Regression tests - establishing-evidence source firewall (Test B)', () => {
+    it('should filter out non-structural evidence sources from establishingEvidence', () => {
+      const mockEvidence: CareerMechanismEvidence[] = [
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:D10:1',
+          mechanismType: 'RESEARCH',
+          source: 'D10',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'D10 evidence (should be filtered out)'
+        },
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:DISPOSITOR:1',
+          mechanismType: 'RESEARCH',
+          source: 'DISPOSITOR',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Dispositor evidence (should be filtered out)'
+        },
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:PATTERN:1',
+          mechanismType: 'RESEARCH',
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Pattern evidence (should be included)'
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence: mockEvidence
+      });
+
+      const result = resolver.resolve(input);
+
+      // Candidates should be emitted
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      for (const candidate of result.candidates) {
+        // D10 and DISPOSITOR evidence should NOT appear in candidate.evidence
+        const evidenceSources = candidate.evidence.map(e => e.source);
+        expect(evidenceSources).not.toContain('D10');
+        expect(evidenceSources).not.toContain('DISPOSITOR');
+
+        // D10 and DISPOSITOR evidence IDs should NOT appear in provenance.evidenceIds
+        const evidenceIds = candidate.provenance.evidenceIds;
+        expect(evidenceIds).not.toContain('CAREER_MECHANISM_EVIDENCE:D10:1');
+        expect(evidenceIds).not.toContain('CAREER_MECHANISM_EVIDENCE:DISPOSITOR:1');
+
+        // PATTERN evidence should be included
+        expect(evidenceSources).toContain('PATTERN');
+      }
+    });
+  });
+
+  describe('Regression tests - provenance↔evidence set equality (Test C)', () => {
+    it('should maintain invariant: candidate.evidence[*].evidenceId equals candidate.provenance.evidenceIds', () => {
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED'
+      });
+
+      const result = resolver.resolve(input);
+
+      // For every emitted candidate, assert the invariant
+      for (const candidate of result.candidates) {
+        const evidenceIds = candidate.evidence.map(e => e.evidenceId).sort();
+        const provenanceIds = candidate.provenance.evidenceIds.slice().sort();
+
+        expect(evidenceIds).toEqual(provenanceIds);
+      }
+    });
+  });
 });
 
 /**
  * Helper function to create mock resolution input.
+ * Refactored to accept explicit networkRelationships and networkHouses overrides for testing edge cases.
  */
 function createMockInput(overrides: {
   patternId?: string;
@@ -391,6 +554,9 @@ function createMockInput(overrides: {
   establishingRelationshipIds: string[];
   status: CareerPatternQualificationStatus;
   participantRoles?: ParticipantRoleAssignment[];
+  establishingEvidence?: CareerMechanismEvidence[];
+  networkRelationships?: CareerGraphEdge[];
+  networkHouses?: number[];
 }): CareerMechanismResolutionInput {
   const patternId = overrides.patternId || 'pattern-1';
 
@@ -461,45 +627,64 @@ function createMockInput(overrides: {
 
   const participantRoles = overrides.participantRoles || [];
 
-  const establishingEvidence: CareerMechanismEvidence[] = [];
+  const establishingEvidence = overrides.establishingEvidence || [];
 
   // Create a mock network with the required relationships
-  // Build relationship edges that match the establishing relationship IDs
-  const relationships: CareerGraphEdge[] = [];
+  // If networkRelationships override is provided, use it directly
+  // Otherwise, build relationship edges that match the establishing relationship IDs
+  let relationships: CareerGraphEdge[] = [];
 
-  for (const relId of overrides.establishingRelationshipIds) {
-    // Parse the relationship ID to extract the relationship type
-    // Format: REL:from→to:TYPE
-    const match = relId.match(/REL:(\d+)→(\d+):(\w+)/);
-    if (match) {
-      const fromHouse = parseInt(match[1], 10);
-      const toHouse = parseInt(match[2], 10);
-      const relType = match[3];
+  if (overrides.networkRelationships) {
+    relationships = overrides.networkRelationships;
+  } else {
+    for (const relId of overrides.establishingRelationshipIds) {
+      // Parse the relationship ID to extract the relationship type
+      // Format: REL:from→to:TYPE
+      const match = relId.match(/REL:(\d+)→(\d+):(\w+)/);
+      if (match) {
+        const fromHouse = parseInt(match[1], 10);
+        const toHouse = parseInt(match[2], 10);
+        const relType = match[3];
 
-      // Find a lord for the source house
-      const fromLord = Planet.SUN; // Use SUN as default lord
+        // Find a lord for the source house
+        const fromLord = Planet.SUN; // Use SUN as default lord
 
-      // Create the relationship edge
-      if (relType === 'OCCUPIES') {
+        // Create the relationship edge
+        if (relType === 'OCCUPIES') {
+          relationships.push({
+            edgeId: `EDGE:${relId}`,
+            type: 'OCCUPIES',
+            sourceNodeId: `PLANET:${fromLord}`,
+            targetNodeId: `HOUSE:${toHouse}`,
+            identityKey: relId,
+            provenance: {
+              sourceIds: [],
+              ruleIds: [],
+              parentIds: []
+            }
+          });
+        } else if (relType === 'ASPECTS') {
+          relationships.push({
+            edgeId: `EDGE:${relId}`,
+            type: 'ASPECTS',
+            sourceNodeId: `PLANET:${fromLord}`,
+            targetNodeId: `HOUSE:${toHouse}`,
+            identityKey: relId,
+            provenance: {
+              sourceIds: [],
+              ruleIds: [],
+              parentIds: []
+            }
+          });
+        }
+
+        // Add LORD_OF edges for the lord
         relationships.push({
-          edgeId: `EDGE:${relId}`,
-          type: 'OCCUPIES',
+          edgeId: `EDGE:LORD_OF:${fromLord}:${fromHouse}`,
+          type: 'LORD_OF',
           sourceNodeId: `PLANET:${fromLord}`,
-          targetNodeId: `HOUSE:${toHouse}`,
-          identityKey: relId,
-          provenance: {
-            sourceIds: [],
-            ruleIds: [],
-            parentIds: []
-          }
-        });
-      } else if (relType === 'ASPECTS') {
-        relationships.push({
-          edgeId: `EDGE:${relId}`,
-          type: 'ASPECTS',
-          sourceNodeId: `PLANET:${fromLord}`,
-          targetNodeId: `HOUSE:${toHouse}`,
-          identityKey: relId,
+          targetNodeId: `HOUSE:${fromHouse}`,
+          identityKey: `LORD_OF:${fromLord}:${fromHouse}`,
           provenance: {
             sourceIds: [],
             ruleIds: [],
@@ -507,27 +692,13 @@ function createMockInput(overrides: {
           }
         });
       }
-
-      // Add LORD_OF edges for the lord
-      relationships.push({
-        edgeId: `EDGE:LORD_OF:${fromLord}:${fromHouse}`,
-        type: 'LORD_OF',
-        sourceNodeId: `PLANET:${fromLord}`,
-        targetNodeId: `HOUSE:${fromHouse}`,
-        identityKey: `LORD_OF:${fromLord}:${fromHouse}`,
-        provenance: {
-          sourceIds: [],
-          ruleIds: [],
-          parentIds: []
-        }
-      });
     }
   }
 
   const network: CareerHouseNetwork = {
     networkId: 'network-1',
     identityKey: 'network-key-1',
-    houses: overrides.houses,
+    houses: overrides.networkHouses || overrides.houses,
     lords: [Planet.SUN, Planet.MOON],
     relationships,
     topology: 'DIRECT_LINK' as CareerNetworkTopology,

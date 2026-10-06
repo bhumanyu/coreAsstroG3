@@ -69,10 +69,21 @@ The resolver uses canonical P2-06A predicates from `careerPatternPredicates.ts` 
 - **hasDirectHouseRelationship:** Umbrella predicate that includes directed, common lord, conjunction, aspect, and exchange relationships
 - **hasDirectedHouseRelationship:** Directed relationships only (OCCUPIES, ASPECTS)
 - **hasCommonLordRelationship:** Common lord relationships
+- **getDirectHouseRelationshipIds:** ID-returning umbrella predicate that returns edge IDs for direct relationships
 
 This replaces the prior ID-string check approach (`hasDirectedHouseRelationshipId` in `careerPatternQualification/policyUtils.ts`) with canonical relationship resolution.
 
 **Prior precedent:** The ID-string check was a temporary bridge. The canonical resolution using P2-06A predicates is the correct approach.
+
+### Intersection Invariant
+
+The resolver enforces an intersection invariant in `hasCanonicalHousePairRelationship`:
+
+1. Collect establishing edge IDs for the house pair using `getDirectHouseRelationshipIds` (or the directed variants)
+2. Compute the intersection: `pairEstablishingIds ∩ pattern.provenance.establishingRelationshipIds`
+3. Return true only if the intersection is non-empty
+
+This ensures that the relationship satisfying the predicate is among the pattern's establishing edges. The current `establishingRelationshipIds.length > 0` + independent predicate check is insufficient — the relationship must be provenanced.
 
 ## Evidence Construction
 
@@ -88,6 +99,25 @@ Evidence is built using the P2-07C `buildCareerMechanismEvidence` helper, ensuri
 - Source 'PARTICIPANT_ROLE' where participant roles contributed
 - Source 'RELATIONSHIP' for establishing relationships
 - Provenance traces to real relationship/participant/evidence IDs, never fabricated
+
+### Establishing-Evidence Source Firewall
+
+The resolver enforces a source firewall in `buildCandidateEvidence` when copying `input.establishingEvidence`:
+
+- Only structural sources are allowed: `PATTERN`, `PARTICIPANT_ROLE`, `RELATIONSHIP`
+- Later-stage inputs are filtered out: `D10`, `DISPOSITOR`, `PLANETARY_RELEVANCE`, `PLANETARY_CONDITION`, `LORDSHIP`, `YOGA`, `DASHA`
+- This firewall applies anywhere input evidence feeds provenance
+
+The constant `ESTABLISHING_EVIDENCE_SOURCES` defines the allowed structural sources.
+
+### Evidence↔Provenance Set Equality Invariant
+
+The resolver enforces an equality invariant between evidence and provenance:
+
+- In `buildCandidateProvenance`, `evidenceIds` is set to the IDs of the evidence actually attached to the candidate
+- Evidence is built before provenance in the resolve() pipeline
+- Invariant: `candidate.evidence[*].evidenceId` (sorted) equals `candidate.provenance.evidenceIds` (sorted)
+- This ensures provenance traces to the actual evidence, not the input evidence stream
 
 ## Per-Pattern Isolation
 
@@ -189,6 +219,9 @@ The test suite (`resolver/careerMechanismResolver.test.ts`) covers:
 - **Mechanism type validation:** Every emitted `mechanismType` exists in `CAREER_MECHANISM_DEFINITIONS`
 - **Provenance traceability:** Provenance traces to real relationship/participant/evidence IDs, never fabricated
 - **Boundary enforcement:** Asserts no forbidden imports in resolver directory
+- **Regression test A (intersection invariant):** Pattern houses [8,10], establishing = `['REL:6→10']`, but mock network contains real `REL:8→10` edge AND the 6→10 edges → asserts zero candidates because intersection is empty
+- **Regression test B (establishing-evidence source firewall):** Pass `establishingEvidence` containing records with `source: 'D10'` and `'DISPOSITOR'` → asserts they do not appear in `candidate.evidence` nor in `provenance.evidenceIds`
+- **Regression test C (provenance linkage):** Asserts `candidate.evidence.map(e=>e.evidenceId).sort()` equals `candidate.provenance.evidenceIds.slice().sort()` for every emitted candidate
 
 ## Future Work
 

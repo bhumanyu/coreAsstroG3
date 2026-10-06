@@ -2,6 +2,7 @@ import type {
   CareerMechanismCandidate,
   CareerMechanismCandidateSet,
   CareerMechanismEvidence,
+  CareerMechanismEvidenceSource,
   CareerMechanismPathway,
   CareerMechanismProvenance,
   CareerMechanismType
@@ -18,6 +19,16 @@ import {
 import { buildCareerMechanismEvidence } from '../careerMechanismEvidence';
 import { buildCareerMechanismProvenance } from '../careerMechanismProvenance';
 import { createCareerMechanismCandidateSet } from './careerMechanismResolverUtils';
+
+/**
+ * Structural evidence sources allowed for establishing evidence.
+ * These are the only sources that can flow into provenance as establishing evidence.
+ * Later-stage inputs (D10, DISPOSITOR, PLANETARY_RELEVANCE, PLANETARY_CONDITION,
+ * LORDSHIP, YOGA, DASHA) are filtered out at the firewall.
+ */
+const ESTABLISHING_EVIDENCE_SOURCES: ReadonlySet<CareerMechanismEvidenceSource> = Object.freeze(
+  new Set<CareerMechanismEvidenceSource>(['PATTERN', 'PARTICIPANT_ROLE', 'RELATIONSHIP'])
+);
 
 /**
  * P2-07D Default Career Mechanism Resolver
@@ -115,7 +126,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       const candidateId = createCareerMechanismCandidateId(pattern.patternId, mechanismType);
       const pathway: CareerMechanismPathway = 'PATTERN';
 
-      // Build evidence for this candidate
+      // Build evidence for this candidate (must be built before provenance)
       const evidence = this.buildCandidateEvidence(
         pattern.patternId,
         candidateId,
@@ -124,10 +135,11 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
         input
       );
 
-      // Build provenance for this candidate
+      // Build provenance for this candidate (uses evidence IDs from built evidence)
       const provenance = this.buildCandidateProvenance(
         pattern.patternId,
-        input
+        input,
+        evidence
       );
 
       // Build explanation
@@ -171,7 +183,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
    * Builds evidence for a mechanism candidate.
    * Uses source 'PATTERN' for pattern-derived evidence and 'PARTICIPANT_ROLE'
    * where participant roles contributed. Incorporates establishingEvidence from
-   * the input if present.
+   * the input if present, filtered to structural sources only.
    *
    * @param patternId - The pattern ID
    * @param candidateId - The candidate ID
@@ -227,12 +239,14 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       evidence.push(relationshipEvidence);
     }
 
-    // Incorporate establishingEvidence from input if present
-    // This allows upstream layers to pre-build evidence that flows into the resolver
+    // Incorporate establishingEvidence from input if present, filtered to structural sources only
+    // This firewall ensures only PATTERN, PARTICIPANT_ROLE, and RELATIONSHIP sources flow into provenance
+    // Later-stage inputs (D10, DISPOSITOR, PLANETARY_RELEVANCE, PLANETARY_CONDITION, LORDSHIP, YOGA, DASHA)
+    // are filtered out here.
     if (input.establishingEvidence.length > 0) {
       for (const ev of input.establishingEvidence) {
-        // Only include evidence that matches this mechanism type
-        if (ev.mechanismType === mechanismType) {
+        // Only include evidence that matches this mechanism type AND is from a structural source
+        if (ev.mechanismType === mechanismType && ESTABLISHING_EVIDENCE_SOURCES.has(ev.source)) {
           evidence.push(ev);
         }
       }
@@ -248,11 +262,13 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
    *
    * @param patternId - The pattern ID
    * @param input - The resolution input
+   * @param evidence - The evidence built for this candidate (must be built before provenance)
    * @returns Frozen provenance record
    */
   private buildCandidateProvenance(
     patternId: string,
-    input: CareerMechanismResolutionInput
+    input: CareerMechanismResolutionInput,
+    evidence: readonly CareerMechanismEvidence[]
   ): CareerMechanismProvenance {
     // Extract participant IDs from participant roles
     const participantIds = input.participantRoles.map((role) => role.participantId);
@@ -260,15 +276,19 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
     // Extract relationship IDs from pattern provenance
     const relationshipIds = input.pattern.provenance.establishingRelationshipIds;
 
-    // Extract source stages from evidence
-    const sourceStages = input.establishingEvidence.map((ev) => ev.source);
+    // Extract source stages from the actual evidence attached to the candidate
+    const sourceStages = evidence.map((ev) => ev.source);
+
+    // Extract evidence IDs from the actual evidence attached to the candidate
+    // Invariant: candidate.evidence[*].evidenceId (sorted) equals candidate.provenance.evidenceIds (sorted)
+    const evidenceIds = evidence.map((ev) => ev.evidenceId);
 
     // Build provenance using P2-07C builder
     return buildCareerMechanismProvenance({
       patternIds: [patternId],
       relationshipIds,
       participantIds,
-      evidenceIds: input.establishingEvidence.map((ev) => ev.evidenceId),
+      evidenceIds,
       sourceStages
     });
   }
@@ -289,7 +309,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
     const houses = pattern.houses.join(', ');
     const patternName = pattern.name;
 
-    return `Mechism ${mechanismType} candidate for pattern ${patternName} (houses ${houses}). ` +
+    return `Mechanism ${mechanismType} candidate for pattern ${patternName} (houses ${houses}). ` +
       `Qualification status: ${qualification.status}. ` +
       `Derived from pattern structural facts and establishing relationships.`;
   }
