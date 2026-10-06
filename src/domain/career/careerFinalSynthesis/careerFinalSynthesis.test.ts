@@ -138,18 +138,7 @@ describe('C11 Final Synthesis', () => {
   describe('C11-INV-02: Dasha hierarchy from canonical C9', () => {
     it('should accept dashaHierarchy input without re-deriving', () => {
       const hierarchy: CareerDashaActivationHierarchy = {
-        md: {
-          level: 'MD',
-          planet: Planet.JUPITER,
-          role: 'PRIMARY_DRIVER',
-          effect: 'ACTIVATES',
-          direction: 'SUPPORT',
-          strength: 'STRONG',
-          evidence: [],
-          statement: 'Jupiter MD activates career',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
+        md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates career', '2024-01-01', '2024-12-31'),
         ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'PARTIALLY_ACTIVATES', 'MIXED', 'MODERATE', 'Saturn AD partially activates', '2024-01-01', '2024-12-31'),
         pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'DOES_NOT_ACTIVATE', 'NEUTRAL', 'WEAK', 'Mercury PD does not activate', '2024-01-01', '2024-12-31'),
         overallEffect: 'ACTIVATES',
@@ -398,18 +387,7 @@ describe('C11 Final Synthesis', () => {
   describe('C11-INV-09: Dasha hierarchy MD > AD > PD canonical', () => {
     it('should respect dashaHierarchy input without re-deriving', () => {
       const hierarchy: CareerDashaActivationHierarchy = {
-        md: {
-          level: 'MD',
-          planet: Planet.JUPITER,
-          role: 'PRIMARY_DRIVER',
-          effect: 'ACTIVATES',
-          direction: 'SUPPORT',
-          strength: 'STRONG',
-          evidence: [],
-          statement: 'Jupiter MD activates career',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
+        md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates career', '2024-01-01', '2024-12-31'),
         ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'PARTIALLY_ACTIVATES', 'MIXED', 'MODERATE', 'Saturn AD partially activates', '2024-01-01', '2024-12-31'),
         pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'DOES_NOT_ACTIVATE', 'NEUTRAL', 'WEAK', 'Mercury PD does not activate', '2024-01-01', '2024-12-31'),
         overallEffect: 'ACTIVATES',
@@ -575,18 +553,7 @@ describe('C11 Final Synthesis', () => {
   describe('Integration tests', () => {
     it('should handle complete input with all layers', () => {
       const hierarchy: CareerDashaActivationHierarchy = {
-        md: {
-          level: 'MD',
-          planet: Planet.JUPITER,
-          role: 'PRIMARY_DRIVER',
-          effect: 'ACTIVATES',
-          direction: 'SUPPORT',
-          strength: 'STRONG',
-          evidence: [],
-          statement: 'Jupiter MD activates career',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
+        md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates career', '2024-01-01', '2024-12-31'),
         ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'PARTIALLY_ACTIVATES', 'MIXED', 'MODERATE', 'Saturn AD partially activates', '2024-01-01', '2024-12-31'),
         pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'DOES_NOT_ACTIVATE', 'NEUTRAL', 'WEAK', 'Mercury PD does not activate', '2024-01-01', '2024-12-31'),
         overallEffect: 'ACTIVATES',
@@ -665,18 +632,7 @@ describe('C11 Final Synthesis', () => {
   describe('Golden scenarios for C11 fixes', () => {
     it('should preserve C8 CONDITIONAL as CONDITIONAL, not CHALLENGE', () => {
       const hierarchy: CareerDashaActivationHierarchy = {
-        md: {
-          level: 'MD',
-          planet: Planet.JUPITER,
-          role: 'PRIMARY_DRIVER',
-          effect: 'ACTIVATES',
-          direction: 'SUPPORT',
-          strength: 'STRONG',
-          evidence: [],
-          statement: 'Jupiter MD activates career',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
+        md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates career', '2024-01-01', '2024-12-31'),
         ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'PARTIALLY_ACTIVATES', 'MIXED', 'MODERATE', 'Saturn AD partially activates', '2024-01-01', '2024-12-31'),
         pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'DOES_NOT_ACTIVATE', 'NEUTRAL', 'WEAK', 'Mercury PD does not activate', '2024-01-01', '2024-12-31'),
         overallEffect: 'ACTIVATES',
@@ -709,42 +665,9 @@ describe('C11 Final Synthesis', () => {
 
     it('should respect dashaHierarchy over convenience fields', () => {
       const hierarchy: CareerDashaActivationHierarchy = {
-        md: {
-          level: 'MD',
-          planet: Planet.SATURN,
-          role: 'PRIMARY_DRIVER',
-          effect: 'CHALLENGES',
-          direction: 'CHALLENGE',
-          strength: 'STRONG',
-          evidence: [],
-          statement: 'Saturn MD challenges career',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
-        ad: {
-          level: 'AD',
-          planet: Planet.JUPITER,
-          role: 'MODIFIER',
-          effect: 'ACTIVATES',
-          direction: 'SUPPORT',
-          strength: 'MODERATE',
-          evidence: [],
-          statement: 'Jupiter AD activates',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
-        pd: {
-          level: 'PD',
-          planet: Planet.MERCURY,
-          role: 'REFINEMENT',
-          effect: 'DOES_NOT_ACTIVATE',
-          direction: 'NEUTRAL',
-          strength: 'WEAK',
-          evidence: [],
-          statement: 'Mercury PD does not activate',
-          start: '2024-01-01',
-          end: '2024-12-31'
-        },
+        md: makeActivation('MD', Planet.SATURN, 'PRIMARY_DRIVER', 'CHALLENGES', 'CHALLENGE', 'STRONG', 'Saturn MD challenges career', '2024-01-01', '2024-12-31'),
+        ad: makeActivation('AD', Planet.JUPITER, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'MODERATE', 'Jupiter AD activates', '2024-01-01', '2024-12-31'),
+        pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'DOES_NOT_ACTIVATE', 'NEUTRAL', 'WEAK', 'Mercury PD does not activate', '2024-01-01', '2024-12-31'),
         overallEffect: 'CHALLENGES',
         overallDirection: 'CHALLENGE',
         overallStrength: 'STRONG',
@@ -776,18 +699,7 @@ describe('C11 Final Synthesis', () => {
         dashaHierarchy: {
           md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates', '2024-01-01', '2024-12-31'),
           ad: makeActivation('AD', Planet.VENUS, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Venus AD activates', '2024-01-01', '2024-12-31'),
-          pd: {
-            level: 'PD',
-            planet: Planet.MERCURY,
-            role: 'REFINEMENT',
-            effect: 'ACTIVATES',
-            direction: 'SUPPORT',
-            strength: 'MODERATE',
-            evidence: [],
-            statement: 'Mercury PD activates',
-            start: '2024-01-01',
-            end: '2024-12-31'
-          },
+          pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'ACTIVATES', 'SUPPORT', 'MODERATE', 'Mercury PD activates', '2024-01-01', '2024-12-31'),
           overallEffect: 'ACTIVATES',
           overallDirection: 'SUPPORT',
           overallStrength: 'STRONG',
@@ -808,18 +720,7 @@ describe('C11 Final Synthesis', () => {
         natalStrength: 'VERY_STRONG',
         dashaHierarchy: {
           md: makeActivation('MD', Planet.SATURN, 'PRIMARY_DRIVER', 'CHALLENGES', 'CHALLENGE', 'STRONG', 'Saturn MD challenges', '2024-01-01', '2024-12-31'),
-          ad: {
-            level: 'AD',
-            planet: Planet.JUPITER,
-            role: 'MODIFIER',
-            effect: 'ACTIVATES',
-            direction: 'SUPPORT',
-            strength: 'STRONG',
-            evidence: [],
-            statement: 'Jupiter AD activates',
-            start: '2024-01-01',
-            end: '2024-12-31'
-          },
+          ad: makeActivation('AD', Planet.JUPITER, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter AD activates', '2024-01-01', '2024-12-31'),
           pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'CHALLENGES', 'CHALLENGE', 'WEAK', 'Mercury PD challenges', '2024-01-01', '2024-12-31'),
           overallEffect: 'CHALLENGES',
           overallDirection: 'CHALLENGE',
