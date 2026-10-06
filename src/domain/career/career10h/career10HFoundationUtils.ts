@@ -80,7 +80,7 @@ export function freezeCareer10HContext(context: Career10HContext): Career10HCont
   return Object.freeze({
     ...context,
     occupants: Object.freeze([...context.occupants]),
-    aspectsOn10H: Object.freeze([...context.aspectsOn10H].map(aspect =>
+    aspectsOn10H: Object.freeze(context.aspectsOn10H.map(aspect =>
       Object.freeze({ ...aspect })
     )),
     provenance: Object.freeze({

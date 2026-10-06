@@ -2,11 +2,11 @@ import type {
   Sign,
   Planet,
   Horoscope,
-  HouseLordshipReport,
   HouseAnalysisReport,
   NatalGrahaDrishtiReport
 } from '../../../types';
-import type { ParticipantId } from '../careerParticipantRoles';
+import type { HouseLordshipReport } from '../../../engine/houseLordship/houseLordship';
+import type { ParticipantId } from '../careerParticipantRoles/participantRoleTypes';
 
 /**
  * P2-07F Career 10H Structural Context Types
@@ -56,7 +56,7 @@ export interface Career10HContext {
   /** Planets occupying the 10th house (as ParticipantId array) */
   readonly occupants: readonly ParticipantId[];
   /** Aspects on the 10th house from NatalGrahaDrishtiReport */
-  readonly aspectsOn10H: readonly Career10HAspect;
+  readonly aspectsOn10H: readonly Career10HAspect[];
   /** Provenance tracking - source report IDs */
   readonly provenance: Career10HProvenance;
 }

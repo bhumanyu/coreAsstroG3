@@ -1,10 +1,10 @@
 import type {
   Horoscope,
-  HouseLordshipReport,
   HouseAnalysisReport,
   NatalGrahaDrishtiReport,
   Planet
 } from '../../../types';
+import type { HouseLordshipReport } from '../../../engine/houseLordship/houseLordship';
 import type {
   Career10HFoundationInput,
   Career10HFoundationResult,
@@ -97,31 +97,31 @@ function extractReports(
 
   // Try to get from pre-computed reports first
   if (input.houseLordship) {
-    reports.houseLordship = input.houseLordship;
+    (reports as any).houseLordship = input.houseLordship;
   } else if (input.horoscope?.houseLordship) {
-    reports.houseLordship = input.horoscope.houseLordship;
+    (reports as any).houseLordship = input.horoscope.houseLordship;
   } else {
     missingInputs.push('houseLordship');
   }
 
   if (input.houseAnalysis) {
-    reports.houseAnalysis = input.houseAnalysis;
+    (reports as any).houseAnalysis = input.houseAnalysis;
   } else if (input.horoscope?.houseAnalysis) {
-    reports.houseAnalysis = input.horoscope.houseAnalysis;
+    (reports as any).houseAnalysis = input.horoscope.houseAnalysis;
   } else {
     missingInputs.push('houseAnalysis');
   }
 
   if (input.natalGrahaDrishti) {
-    reports.natalGrahaDrishti = input.natalGrahaDrishti;
+    (reports as any).natalGrahaDrishti = input.natalGrahaDrishti;
   } else if (input.horoscope?.natalGrahaDrishti || input.horoscope?.grahaDrishti) {
-    reports.natalGrahaDrishti = input.horoscope.natalGrahaDrishti || input.horoscope.grahaDrishti;
+    (reports as any).natalGrahaDrishti = input.horoscope.natalGrahaDrishti || input.horoscope.grahaDrishti;
   } else {
     missingInputs.push('natalGrahaDrishti');
   }
 
   if (input.horoscope?.planetFacts) {
-    reports.planetFacts = input.horoscope.planetFacts;
+    (reports as any).planetFacts = input.horoscope.planetFacts;
   } else {
     missingInputs.push('planetFacts');
   }

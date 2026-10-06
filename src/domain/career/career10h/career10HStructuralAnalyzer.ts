@@ -1,18 +1,21 @@
+import {
+  Planet
+} from '../../../types';
 import type {
   Sign,
-  Planet,
-  HouseLordshipReport,
   HouseAnalysisReport,
   NatalGrahaDrishtiReport,
   PlanetFact,
   PlanetFacts
 } from '../../../types';
+import type { HouseLordshipReport } from '../../../engine/houseLordship/houseLordship';
 import type {
   CareerReferencePoint,
   Career10HContext,
   Career10HAspect,
   Career10HProvenance
 } from './career10HFoundationTypes';
+import type { ParticipantId } from '../careerParticipantRoles/participantRoleTypes';
 import {
   SIGNS_METADATA
 } from '../../../data/astroData';
@@ -86,7 +89,7 @@ export function analyzeCareer10HContext(
     house10Number = 10;
   } else if (referencePoint === 'MOON') {
     // For Moon, derive 10th-from-Moon house via sign arithmetic
-    const moonFact = planetFacts[Planet.MOON];
+    const moonFact = planetFacts['MOON' as Planet];
     if (!moonFact) {
       return null;
     }
@@ -124,13 +127,13 @@ export function analyzeCareer10HContext(
   }
 
   // Convert occupants to ParticipantId array
-  const occupants = convertOccupantsToParticipantIds(house10Data.occupants);
+  const occupants = convertOccupantsToParticipantIds(house10Data.occupants) as readonly ParticipantId[];
 
   // Extract aspects on 10th house from NatalGrahaDrishtiReport
   const aspectsOn10H = extractAspectsOnHouse(
     natalGrahaDrishti,
     house10Number
-  );
+  ) as readonly Career10HAspect[];
 
   // Build provenance
   const provenance = buildProvenance(
@@ -247,7 +250,7 @@ function buildProvenance(
 ): Career10HProvenance {
   // Find house lordship evidence for this house
   const houseLordshipEvidence = houseLordship.evidence.find(
-    e => e.house === house10Number
+    (e: any) => e.house === house10Number
   );
 
   // Get drishti aspect IDs
