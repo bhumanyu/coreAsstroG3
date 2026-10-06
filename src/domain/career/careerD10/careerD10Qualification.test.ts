@@ -35,7 +35,14 @@ import type {
   CareerDashaActivationStrength
 } from '../careerDasha';
 
+import type {
+  CareerExpression
+} from '../careerExpression';
+
 import { Planet } from '../../../types';
+
+// Helper to create empty expressions array for tests
+const emptyExpressions: readonly CareerExpression[] = Object.freeze([]);
 
 describe('careerD10QualificationRules', () => {
   describe('hasNatalCareerPromise', () => {

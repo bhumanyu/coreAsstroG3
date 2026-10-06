@@ -20,6 +20,10 @@ import type {
 } from './careerD10CanonicalTypes';
 
 import type {
+  CareerD10ExpressionQualification
+} from './careerD10QualificationTypes';
+
+import type {
   CareerD10Context,
   CareerD10PlanetContext,
   CareerD10HouseContext,
@@ -231,16 +235,17 @@ function buildD10HouseContexts(
 
 /**
  * Builds the CareerD10Context from the integration input.
- * 
+ *
  * This function:
  * - Computes d10Available from presence of non-empty houses+planets
  * - Maps natal.direction/strength/structural.primarySupport/structural.primaryChallenge
+ * - Includes expressions for per-expression qualification in the semantic resolver
  * - Does NOT set dashaEffect/dashaDirection/dashaStrength (C10 is parallel to C9)
  */
 function buildCareerD10Context(
   input: CareerD10IntegrationInput
 ): CareerD10Context {
-  const { horoscope, natal } = input;
+  const { horoscope, natal, expression } = input;
 
   const d10Planets = buildD10PlanetContexts(horoscope);
   const d10Houses = buildD10HouseContexts(horoscope);
@@ -254,7 +259,8 @@ function buildCareerD10Context(
     natalPrimaryChallenge: natal.structural.primaryChallenge,
     d10Available,
     d10Houses,
-    d10Planets
+    d10Planets,
+    expressions: expression.expressions
   });
 
   return context;
@@ -509,110 +515,6 @@ export function buildD10Conflicts(
 }
 
 /**
- * Resolves expression relationship with D10.
- * Per spec §20.
- */
-function resolveExpressionRelationship(
-  expression: CareerExpression,
-  d10Direction: CareerD10QualificationDirection
-): CareerD10QualificationEffect {
-  // If D10 is unavailable, preserve expression as-is
-  if (d10Direction === 'UNAVAILABLE') {
-    return 'INSUFFICIENT_DATA';
-  }
-
-  // If expression is NEUTRAL or UNAVAILABLE, D10 cannot qualify it
-  if (expression.direction === 'NEUTRAL' || expression.direction === 'UNAVAILABLE') {
-    return 'INSUFFICIENT_DATA';
-  }
-
-  // SUPPORT + SUPPORT → REINFORCES
-  if (expression.direction === 'SUPPORTED' && d10Direction === 'SUPPORT') {
-    return 'REINFORCES';
-  }
-
-  // SUPPORT + CHALLENGE → CONFLICTS
-  if (expression.direction === 'SUPPORTED' && d10Direction === 'CHALLENGE') {
-    return 'CONFLICTS';
-  }
-
-  // CONDITIONAL + anything → QUALIFIES
-  if (expression.direction === 'CONDITIONAL') {
-    return 'QUALIFIES';
-  }
-
-  // Default: preserve
-  return 'INSUFFICIENT_DATA';
-}
-
-/**
- * Qualifies an expression with D10.
- * Per spec §21.
- *
- * C10 only qualifies existing C8 expressions; it never invents one.
- * Uses per-dimension D10 rules to determine qualification.
- *
- * Per spec §25: When expression.conditional === true, D10 confirmation may attach
- * to that expression's qualification evidence but must not flip qualified into
- * unconditional natal support. The conditional flag is preserved unchanged.
- */
-function qualifyExpression(
-  expression: CareerExpression,
-  result: CareerD10QualificationResult,
-  canonicalEvidence: readonly CareerD10CanonicalEvidence[],
-  context: CareerD10Context
-): CareerD10ExpressionQualificationCanonical {
-  // Order-independent, non-empty identity: mode + sorted supporting ids
-  const expressionId = [expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':');
-
-  // Evaluate per-dimension qualification
-  const dimensionResult = evaluateDimensionQualification(expression.mode, context);
-
-  // Determine relationship based on dimension result
-  let relationship: CareerD10QualificationEffect;
-  if (!dimensionResult.matched) {
-    relationship = 'INSUFFICIENT_DATA';
-  } else if (expression.direction === 'CONDITIONAL') {
-    // Per spec §25: conditional expressions get QUALIFIES but preserve conditional flag
-    relationship = 'QUALIFIES';
-  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'SUPPORT') {
-    relationship = 'REINFORCES';
-  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'CHALLENGE') {
-    relationship = 'CONFLICTS';
-  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'MIXED') {
-    relationship = 'QUALIFIES';
-  } else {
-    relationship = 'INSUFFICIENT_DATA';
-  }
-
-  const qualified = relationship !== 'INSUFFICIENT_DATA';
-
-  // Populate evidence with canonical C10 evidence that produced the qualification
-  // Filter by the direction that matches the dimension result
-  const qualificationEvidence = Object.freeze(
-    canonicalEvidence.filter(e => e.direction === dimensionResult.direction)
-  );
-
-  const qualification: CareerD10ExpressionQualificationCanonical = Object.freeze({
-    expressionId,
-    expression, // Conditional flag is preserved (spec §25)
-    qualified,
-    effect: relationship,
-    direction: qualified ? dimensionResult.direction : expression.direction === 'SUPPORTED' ? 'SUPPORT' :
-      expression.direction === 'CONDITIONAL' ? 'MIXED' : 'UNAVAILABLE',
-    strength: qualified ? dimensionResult.strength : expression.strength === 'STRONG' ? 'STRONG' :
-      expression.strength === 'MODERATE' ? 'MODERATE' :
-        expression.strength === 'WEAK' ? 'WEAK' : 'UNDETERMINED',
-    evidence: qualificationEvidence,
-    statement: qualified
-      ? `Expression ${expressionId} qualified by D10 with effect ${relationship}.`
-      : `Expression ${expressionId} not qualified by D10; preserved original direction.`
-  });
-
-  return qualification;
-}
-
-/**
  * Resolves availability from the qualification result.
  * Per spec §23.
  */
@@ -621,6 +523,34 @@ function resolveAvailability(
 ): 'AVAILABLE' | 'UNAVAILABLE' {
   // D10 is available if it produced a non-UNAVAILABLE effect
   return result.d10Effect !== 'UNAVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE';
+}
+
+/**
+ * Converts semantic expression qualification to canonical format.
+ * This is assembly/formatting over the resolver's per-expression results.
+ */
+function canonicalizeExpressionQualification(
+  semanticQual: CareerD10ExpressionQualification,
+  expression: CareerExpression,
+  canonicalEvidence: readonly CareerD10CanonicalEvidence[]
+): CareerD10ExpressionQualificationCanonical {
+  // Filter canonical evidence by semantic evidence IDs
+  const qualificationEvidence = Object.freeze(
+    canonicalEvidence.filter(e =>
+      semanticQual.evidence.some(se => e.sourceIds.includes(se.id))
+    )
+  );
+
+  return Object.freeze({
+    expressionId: semanticQual.expressionId,
+    expression, // Preserve the original expression (including conditional flag)
+    qualified: semanticQual.qualified,
+    effect: semanticQual.effect,
+    direction: semanticQual.direction,
+    strength: semanticQual.strength,
+    evidence: qualificationEvidence,
+    statement: semanticQual.statement
+  });
 }
 
 /**
@@ -676,9 +606,18 @@ export function buildCareerD10Analysis(
   // Dedup canonical evidence for output (resolves combined state)
   const canonicalEvidence = dedupCanonicalEvidence(rawOccurrences);
 
-  // Qualify expressions
+  // Convert semantic expression qualifications to canonical format
+  // The semantic resolver already populated expressionQualifications in result
   const expressionQualifications = Object.freeze(
-    input.expression.expressions.map(expr => qualifyExpression(expr, result, canonicalEvidence, context))
+    result.expressionQualifications.map(semanticQual => {
+      // Find the original expression by mode (first part of expressionId)
+      const mode = semanticQual.expressionId.split(':')[0];
+      const expression = input.expression.expressions.find(e => e.mode === mode);
+      if (!expression) {
+        throw new Error(`Expression with mode ${mode} not found in input`);
+      }
+      return canonicalizeExpressionQualification(semanticQual, expression, canonicalEvidence);
+    })
   );
 
   // Resolve availability

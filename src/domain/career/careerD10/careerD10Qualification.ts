@@ -13,8 +13,14 @@ import type {
   CareerD10Context,
   CareerD10QualificationResult,
   CareerD10Evidence,
-  CareerD10ExpressionQualification
+  CareerD10ExpressionQualification,
+  CareerD10QualificationDirection,
+  CareerD10QualificationEffect
 } from './careerD10QualificationTypes';
+
+import type {
+  CareerExpression
+} from '../careerExpression';
 
 import {
   hasNatalCareerPromise,
@@ -22,7 +28,8 @@ import {
   resolveD10Direction,
   resolveD10Effect,
   resolveD10Strength,
-  qualifyNatalCareerWithD10
+  qualifyNatalCareerWithD10,
+  evaluateDimensionQualification
 } from './careerD10QualificationRules';
 
 function createEvidence(
@@ -63,6 +70,70 @@ function createQualificationStatement(
   ];
 
   return parts.join(' ');
+}
+
+/**
+ * Qualifies a single expression with D10 dimension rules.
+ * This is the authoritative semantic resolver for per-expression qualification.
+ */
+function qualifyExpressionSemantically(
+  expression: CareerExpression,
+  context: CareerD10Context,
+  d10Direction: CareerD10QualificationDirection,
+  d10Effect: CareerD10QualificationEffect
+): CareerD10ExpressionQualification {
+  // Order-independent, non-empty identity: mode + sorted supporting ids
+  const expressionId = [expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':');
+
+  // Evaluate per-dimension qualification
+  const dimensionResult = evaluateDimensionQualification(expression.mode, context);
+
+  // Determine relationship based on dimension result
+  let relationship: CareerD10QualificationEffect;
+  if (!dimensionResult.matched) {
+    relationship = 'INSUFFICIENT_DATA';
+  } else if (expression.direction === 'CONDITIONAL') {
+    // Per spec §25: conditional expressions get QUALIFIES but preserve conditional flag
+    relationship = 'QUALIFIES';
+  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'SUPPORT') {
+    relationship = 'REINFORCES';
+  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'CHALLENGE') {
+    relationship = 'CONFLICTS';
+  } else if (expression.direction === 'SUPPORTED' && dimensionResult.direction === 'MIXED') {
+    relationship = 'QUALIFIES';
+  } else {
+    relationship = 'INSUFFICIENT_DATA';
+  }
+
+  const qualified = relationship !== 'INSUFFICIENT_DATA';
+
+  // Build evidence from dimension result sourceIds
+  const qualificationEvidence: CareerD10Evidence[] = dimensionResult.sourceIds.map((sourceId, idx) =>
+    createEvidence(
+      'PRIMARY',
+      dimensionResult.direction,
+      1,
+      `Expression ${expressionId} qualified by D10 factor ${sourceId}.`,
+      sourceId
+    )
+  );
+
+  const qualification: CareerD10ExpressionQualification = Object.freeze({
+    expressionId,
+    qualified,
+    effect: relationship,
+    direction: qualified ? dimensionResult.direction : expression.direction === 'SUPPORTED' ? 'SUPPORT' :
+      expression.direction === 'CONDITIONAL' ? 'MIXED' : 'UNAVAILABLE',
+    strength: qualified ? dimensionResult.strength : expression.strength === 'STRONG' ? 'STRONG' :
+      expression.strength === 'MODERATE' ? 'MODERATE' :
+        expression.strength === 'WEAK' ? 'WEAK' : 'UNDETERMINED',
+    evidence: Object.freeze(qualificationEvidence),
+    statement: qualified
+      ? `Expression ${expressionId} qualified by D10 with effect ${relationship}.`
+      : `Expression ${expressionId} not qualified by D10; preserved original direction.`
+  });
+
+  return qualification;
 }
 
 export function resolveCareerD10Qualification(
@@ -222,7 +293,12 @@ export function resolveCareerD10Qualification(
   );
   evidence.push(qualificationEvidence);
 
-  const expressionQualifications: readonly CareerD10ExpressionQualification[] = Object.freeze([]);
+  // Populate expressionQualifications using the semantic resolver
+  const expressionQualifications: readonly CareerD10ExpressionQualification[] = Object.freeze(
+    context.expressions.map(expr =>
+      qualifyExpressionSemantically(expr, context, d10Direction, d10Effect)
+    )
+  );
 
   const statement = createQualificationStatement(
     d10Effect,

@@ -15,6 +15,10 @@ import type {
 
 import type { Planet } from '../../../types';
 
+import type {
+  CareerExpression
+} from '../careerExpression';
+
 export type CareerD10QualificationEffect =
   | 'QUALIFIES'
   | 'WEAKENS'
@@ -86,6 +90,7 @@ export interface CareerD10Context {
   readonly d10Available: boolean;
   readonly d10Houses: readonly CareerD10HouseContext[];
   readonly d10Planets: readonly CareerD10PlanetContext[];
+  readonly expressions: readonly CareerExpression[];
 }
 
 export interface CareerD10Evidence {
