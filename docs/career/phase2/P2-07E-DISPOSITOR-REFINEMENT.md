@@ -12,45 +12,47 @@ This module implements dispositor-based refinement of career mechanism candidate
 
 The engine's `CareerDispositorTermination` enum is mapped to the normalized `CareerDispositorChain.outcome` as follows:
 
-| Engine Termination | Normalized Outcome | Notes |
-|-------------------|-------------------|-------|
-| `CAREER_TERMINAL` | `TERMINAL` | Terminal planet is career-relevant |
-| `NON_CAREER_TERMINAL` | `TERMINAL` | Terminal planet exists (not career-relevant) |
-| `SELF_DISPOSITOR` | `SELF_DISPOSITOR` | Planet is its own dispositor |
-| `CYCLE` | `CYCLE` | Cycle detected (no terminal) |
-| `MUTUAL_RECEPTION` | `MUTUAL_RECEPTION` | Mutual reception detected |
-| `UNAVAILABLE` | `INSUFFICIENT_DATA` | No terminal planet (missing data) |
-| Depth limit | `DEPTH_LIMIT` | Chain exhausted at MAX_DISPOSITOR_DEPTH |
+| Engine Termination | Normalized Outcome | Refines? | Notes |
+|-------------------|-------------------|----------|-------|
+| `CAREER_TERMINAL` | `TERMINAL` | Yes | Terminal planet is career-relevant |
+| `NON_CAREER_TERMINAL` | `TERMINAL` | Yes | Terminal planet exists (not career-relevant) |
+| `SELF_DISPOSITOR` | `SELF_DISPOSITOR` | Yes | Planet is its own dispositor |
+| `CYCLE` | `CYCLE` | No | Cycle detected (no terminal) |
+| `MUTUAL_RECEPTION` | `MUTUAL_RECEPTION` | No | Mutual reception detected |
+| `UNAVAILABLE` | `INSUFFICIENT_DATA` | No | No terminal planet (missing data) |
+| Depth limit | `DEPTH_LIMIT` | No | Chain exhausted at MAX_DISPOSITOR_DEPTH |
 
-The mapping is implemented in `mapTerminationToOutcome` in `careerMechanismDispositorAdapter.ts`.
+The mapping is implemented in `mapTerminationToOutcome` in `careerMechanismDispositorAdapter.ts`. Note that `DEPTH_LIMIT` is now computed directly (depth >= MAX with no terminal/cycle) and is checked before mapping `UNAVAILABLE → INSUFFICIENT_DATA`, ensuring depth exhaustion is distinguishable from genuine missing data.
 
-### 2. Cycle → UNCHANGED Invariant
+### 2. Non-Refining Outcomes → UNCHANGED Invariant
 
-Per spec §13, cycles (CYCLE or MUTUAL_RECEPTION) must never be treated as terminal. The refiner's Step 3 filters contexts with:
+Per spec §13, non-refining outcomes (CYCLE, MUTUAL_RECEPTION, DEPTH_LIMIT) must never be treated as terminal. The refiner's Step 3 filters contexts with:
 
 ```typescript
 const terminalContexts = usableContexts.filter(context => {
-  return context.outcome !== 'CYCLE' && context.outcome !== 'MUTUAL_RECEPTION';
+  return context.outcome === 'TERMINAL' || context.outcome === 'SELF_DISPOSITOR';
 });
 ```
 
 This ensures that:
 - CYCLE contexts → UNCHANGED status, zero mechanisms
 - MUTUAL_RECEPTION contexts → UNCHANGED status, zero mechanisms
-- No terminal is invented for cycles
+- DEPTH_LIMIT contexts → UNCHANGED status, zero mechanisms (chain-tail is never treated as terminal)
+- INSUFFICIENT_DATA contexts → INSUFFICIENT_DATA status (distinguishable from DEPTH_LIMIT)
+- No terminal is invented for cycles or depth-limited chains
 
 ### 3. Evidence vs Relationship Field Separation
 
 Evidence IDs are NOT placed in `relationshipIds`. Instead:
 
-- `sourceEvidenceIds` are carried in the `explanation` field of DISPOSITOR evidence
+- `sourceEvidenceIds` are carried in the `explanation` field of DISPOSITOR evidence (temporary stopgap pending structural refinement-provenance)
 - `relationshipIds` is left empty for DISPOSITOR evidence (only contains actual relationship edge IDs)
 - The invariant is enforced by a regression test in the test suite
 
 This separation ensures that:
 - `relationshipIds` only contains edge IDs (e.g., from the CareerAstroGraph)
 - Evidence IDs are tracked in `evidenceIds` in provenance
-- Source evidence provenance is preserved in the explanation for traceability
+- Source evidence provenance is preserved in the explanation for traceability (until a dedicated refinement-provenance structure is added)
 
 ### 4. Boundary Enforcement
 
@@ -91,6 +93,27 @@ All participant IDs use the canonical `PLANET:{Planet}` format (matching `create
 - `extractParticipantPlanets` in the adapter
 - `extractSourceEvidenceIds` in the adapter
 
+### 7. Canonical Terminal Accessor
+
+The `getContextTerminalPlanet` utility function in `careerMechanismDispositorUtils.ts` is the **only** correct way to access the terminal planet from a context:
+
+```typescript
+export function getContextTerminalPlanet(context: CareerDispositorContext): Planet | undefined {
+  if (context.outcome === 'SELF_DISPOSITOR') {
+    return context.startPlanetId;
+  }
+  return context.terminalPlanetId;
+}
+```
+
+This function:
+- Returns `startPlanetId` for `SELF_DISPOSITOR` outcomes
+- Returns `terminalPlanetId` for all other outcomes
+- Returns `undefined` if neither is available
+- Never uses `chain[chain.length - 1]` (which incorrectly treats the chain tail as terminal)
+
+All 8 rules in `careerMechanismDispositorRules.ts` use this accessor, and their `applies` methods return `false` when the result is `undefined`.
+
 ## Context Structure
 
 The `CareerDispositorContext` now includes:
@@ -100,6 +123,7 @@ export interface CareerDispositorContext {
   readonly startPlanetId: Planet;
   readonly chain: readonly Planet[];
   readonly terminalPlanetId?: Planet;
+  readonly depth: number;
   readonly outcome:
     | 'TERMINAL'
     | 'SELF_DISPOSITOR'
@@ -108,13 +132,14 @@ export interface CareerDispositorContext {
     | 'DEPTH_LIMIT'
     | 'INSUFFICIENT_DATA';
   readonly chainId: string;
+  readonly provenanceIds: readonly string[];
   readonly sourceEvidenceIds: readonly string[];
   readonly relevantHouseIds: readonly number[];
   readonly sufficientData: boolean;
 }
 ```
 
-The `outcome`, `terminalPlanetId`, and `chainId` are populated from the resolved `CareerDispositorChain` in `DefaultCareerDispositorContextFactory.create`.
+The `outcome`, `terminalPlanetId`, `chainId`, `depth`, and `provenanceIds` are populated from the resolved `CareerDispositorChain` in `DefaultCareerDispositorContextFactory.create`. The `provenanceIds` field carries chain-level provenance from the engine (currently empty pending engine exposure of per-link IDs).
 
 ## Test Coverage
 
@@ -131,6 +156,9 @@ The test suite (`careerMechanismDispositorRefiner.test.ts`) includes:
 9. **INSUFFICIENT_DATA handling**: Tests behavior when no usable context exists
 10. **Evidence vs relationship separation**: Regression test asserting no evidence ID appears in any `relationshipIds` array
 11. **D10-sourced evidence rejection**: Tests that D10-sourced evidence through `refine()` is rejected
+12. **DEPTH_LIMIT handling**: Verifies DEPTH_LIMIT contexts return UNCHANGED with zero mechanisms (chain-tail never treated as terminal)
+13. **INSUFFICIENT_DATA vs DEPTH_LIMIT distinction**: Ensures genuine missing data (INSUFFICIENT_DATA) is distinguishable from depth exhaustion (DEPTH_LIMIT)
+14. **DISPOSITOR evidence structure**: Asserts DISPOSITOR evidence has empty `relationshipIds` and non-empty `participantIds`
 
 ## Implementation Notes
 
@@ -138,3 +166,5 @@ The test suite (`careerMechanismDispositorRefiner.test.ts`) includes:
 - `chainId` is built using `buildCareerDispositorChainId` from the engine's identity module
 - The termination mapping uses `resolveTermination` from `careerDispositorRules` for consistency
 - `DISPOSITOR` is a valid `CareerMechanismPathway` (defined in `careerMechanismTypes.ts`)
+- DISPOSITOR evidence is built using `buildRefiningMechanismEvidence` (not `buildCareerMechanismEvidence`) to emit `role: 'REFINING'`
+- `DISPOSITOR` is now included in the `CareerMechanismRefinementSource` union (alongside `D10`)

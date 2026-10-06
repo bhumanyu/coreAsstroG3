@@ -4,7 +4,8 @@ import type {
   CareerMechanismType,
   CareerMechanismPathway,
   CareerMechanismEvidence,
-  CareerMechanismProvenance
+  CareerMechanismProvenance,
+  ParticipantId
 } from '../careerMechanismTypes';
 import type {
   DispositorRefinementStatus,
@@ -20,7 +21,7 @@ import {
   isCycle,
   assertValidDispositorRefinementSource
 } from './careerMechanismDispositorUtils';
-import { buildCareerMechanismEvidence } from '../careerMechanismEvidence';
+import { buildRefiningMechanismEvidence } from '../careerMechanismEvidence';
 import { buildCareerMechanismProvenance } from '../careerMechanismProvenance';
 import { createCareerMechanism, createCareerMechanismId } from '../careerMechanismUtils';
 
@@ -92,9 +93,10 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
       return this.buildUnchangedResult(candidate);
     }
 
-    // Filter to terminal contexts (keep TERMINAL, SELF_DISPOSITOR, DEPTH_LIMIT)
+    // Filter to terminal contexts (keep TERMINAL, SELF_DISPOSITOR only)
+    // DEPTH_LIMIT, CYCLE, MUTUAL_RECEPTION do not refine per spec
     const terminalContexts = usableContexts.filter(context => {
-      return context.outcome !== 'CYCLE' && context.outcome !== 'MUTUAL_RECEPTION';
+      return context.outcome === 'TERMINAL' || context.outcome === 'SELF_DISPOSITOR';
     });
 
     // Step 4: Apply rules in registry order
@@ -234,14 +236,15 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
     // Build DISPOSITOR evidence with role: 'REFINING'
     // sourceEvidenceIds are carried in explanation, NOT in relationshipIds
     // relationshipIds should only contain actual relationship IDs (edge IDs)
-    const dispositorEvidence = buildCareerMechanismEvidence({
+    const explanation = `Dispositor refinement evidence for ${mechanismType}. Source evidence: [${sourceEvidenceIds.join(', ')}]. ${explanations.join(' ')}`;
+    const dispositorEvidence = buildRefiningMechanismEvidence({
       mechanismId,
       mechanismType,
       source: 'DISPOSITOR',
       participantIds: candidate.provenance.participantIds,
       relationshipIds: [], // Empty - sourceEvidenceIds are not relationship IDs
       patternId: candidate.patternId,
-      explanation: `Dispositor refinement evidence for ${mechanismType}. Source evidence: [${sourceEvidenceIds.join(', ')}]. ${explanations.join(' ')}`
+      explanation
     });
 
     // Merge candidate evidence with new dispositor evidence
@@ -256,13 +259,13 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
       sourceStages: [...candidate.provenance.sourceStages, 'DISPOSITOR']
     });
 
-    // Build explanation
-    const explanation = `Refined mechanism ${mechanismType} from candidate ${candidate.candidateId}. ${explanations.join(' ')}`;
+    // Build explanation for the mechanism
+    const mechanismExplanation = `Refined mechanism ${mechanismType} from candidate ${candidate.candidateId}. ${explanations.join(' ')}`;
 
     // Use provided participant roles if available, otherwise all-as-core
-    const finalCoreParticipants = (coreParticipants ?? candidate.provenance.participantIds) as any;
-    const finalSupportingParticipants = (supportingParticipants ?? Object.freeze([])) as any;
-    const finalChallengingParticipants = (challengingParticipants ?? Object.freeze([])) as any;
+    const finalCoreParticipants = (coreParticipants ?? candidate.provenance.participantIds) as ParticipantId[];
+    const finalSupportingParticipants = (supportingParticipants ?? Object.freeze([])) as ParticipantId[];
+    const finalChallengingParticipants = (challengingParticipants ?? Object.freeze([])) as ParticipantId[];
 
     // Create mechanism
     const mechanism = createCareerMechanism({
@@ -274,7 +277,7 @@ export class DefaultCareerMechanismDispositorRefiner implements CareerMechanismD
       supportingParticipants: finalSupportingParticipants,
       challengingParticipants: finalChallengingParticipants,
       status: 'REFINED',
-      explanation,
+      explanation: mechanismExplanation,
       evidence: mergedEvidence,
       provenance
     });

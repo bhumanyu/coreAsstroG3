@@ -2,9 +2,10 @@ import type {
   CareerDispositorChain,
   CareerDispositorContext
 } from './careerMechanismDispositorTypes';
-import type { CareerMechanismCandidate } from '../careerMechanismTypes';
+import type { CareerMechanismCandidate, ParticipantId } from '../careerMechanismTypes';
 import { sortParticipantIds as sortCanonicalParticipantIds } from '../careerMechanismUtils';
 import { createParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
+import type { Planet } from '../../../../types';
 
 // Type alias for internal use - matches the adapter's import
 type NormalizedDispositorChain = CareerDispositorChain;
@@ -35,7 +36,7 @@ export function sortStrings(arr: readonly string[]): readonly string[] {
  * Reuses sortParticipantIds from careerMechanismUtils.
  */
 export function sortParticipantIds(arr: readonly string[]): readonly string[] {
-  return sortCanonicalParticipantIds(arr as any);
+  return sortCanonicalParticipantIds(arr as ParticipantId[]);
 }
 
 /**
@@ -133,4 +134,19 @@ export function assertValidDispositorRefinementSource(source: string): void {
       `Invalid dispositor refinement source: ${source}. Sources ${forbiddenSources.join(', ')} are forbidden per spec §18.`
     );
   }
+}
+
+/**
+ * Gets the terminal planet from a dispositor context.
+ * For SELF_DISPOSITOR outcome, returns startPlanetId.
+ * For other outcomes, returns terminalPlanetId.
+ * Returns undefined if neither is available.
+ *
+ * This is the canonical terminal accessor - never use chain[chain.length - 1].
+ */
+export function getContextTerminalPlanet(context: CareerDispositorContext): Planet | undefined {
+  if (context.outcome === 'SELF_DISPOSITOR') {
+    return context.startPlanetId;
+  }
+  return context.terminalPlanetId;
 }

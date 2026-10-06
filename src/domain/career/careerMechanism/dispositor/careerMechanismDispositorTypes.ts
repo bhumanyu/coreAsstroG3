@@ -70,6 +70,7 @@ export interface CareerDispositorContext {
   readonly startPlanetId: Planet;
   readonly chain: readonly Planet[];
   readonly terminalPlanetId?: Planet;
+  readonly depth: number;
   readonly outcome:
   | 'TERMINAL'
   | 'SELF_DISPOSITOR'
@@ -78,6 +79,7 @@ export interface CareerDispositorContext {
   | 'DEPTH_LIMIT'
   | 'INSUFFICIENT_DATA';
   readonly chainId: string;
+  readonly provenanceIds: readonly string[];
   readonly sourceEvidenceIds: readonly string[];
   readonly relevantHouseIds: readonly number[];
   readonly sufficientData: boolean;

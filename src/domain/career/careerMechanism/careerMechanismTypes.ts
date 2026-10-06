@@ -183,9 +183,9 @@ export type CareerMechanismEvidenceSource =
  * Career mechanism refinement source.
  * Per spec §8: sources that can ONLY be used for refinement evidence, never establishing.
  *
- * Currently only 'D10' is a refinement-only source. Future refinement sources are added to this union.
+ * Currently 'D10' and 'DISPOSITOR' are refinement-only sources. Future refinement sources are added to this union.
  */
-export type CareerMechanismRefinementSource = 'D10';
+export type CareerMechanismRefinementSource = 'D10' | 'DISPOSITOR';
 
 /**
  * Career mechanism evidence role.

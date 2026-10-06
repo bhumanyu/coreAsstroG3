@@ -67,6 +67,11 @@ export class DefaultCareerDispositorEngineAdapter implements CareerDispositorEng
     // In a full implementation, this would check if the terminal planet is career-relevant
     const isCareerTerminal = engineResult.terminalPlanet !== undefined;
 
+    // Compute depth-limit exhaustion directly
+    const depthLimited = engineResult.terminalPlanet === undefined &&
+      engineResult.cycleStartPlanet === undefined &&
+      engineResult.depth >= MAX_DISPOSITOR_DEPTH;
+
     // Compute termination using the engine's resolveTermination function
     const termination = resolveTermination(
       cycle,
@@ -76,8 +81,8 @@ export class DefaultCareerDispositorEngineAdapter implements CareerDispositorEng
       engineResult.terminalPlanet !== undefined
     );
 
-    // Map termination enum to normalized outcome
-    const outcome = this.mapTerminationToOutcome(termination, engineResult.depth);
+    // Map termination enum to normalized outcome, checking depthLimited before UNAVAILABLE
+    const outcome = this.mapTerminationToOutcome(termination, engineResult.depth, depthLimited);
 
     // Build chainId using the engine's identity function
     const chainId = buildCareerDispositorChainId(planetId, engineResult.chain);
@@ -103,12 +108,13 @@ export class DefaultCareerDispositorEngineAdapter implements CareerDispositorEng
    * - SELF_DISPOSITOR → SELF_DISPOSITOR
    * - CYCLE → CYCLE
    * - MUTUAL_RECEPTION → MUTUAL_RECEPTION
-   * - UNAVAILABLE → INSUFFICIENT_DATA
+   * - UNAVAILABLE → INSUFFICIENT_DATA (only if not depth-limited)
    * - depth limit → DEPTH_LIMIT
    */
   private mapTerminationToOutcome(
     termination: 'SELF_DISPOSITOR' | 'CYCLE' | 'MUTUAL_RECEPTION' | 'CAREER_TERMINAL' | 'NON_CAREER_TERMINAL' | 'UNAVAILABLE',
-    depth: number
+    depth: number,
+    depthLimited: boolean
   ): NormalizedDispositorChain['outcome'] {
     switch (termination) {
       case 'SELF_DISPOSITOR':
@@ -121,10 +127,14 @@ export class DefaultCareerDispositorEngineAdapter implements CareerDispositorEng
       case 'NON_CAREER_TERMINAL':
         return 'TERMINAL';
       case 'UNAVAILABLE':
+        // Check depthLimited before mapping to INSUFFICIENT_DATA
+        if (depthLimited) {
+          return 'DEPTH_LIMIT';
+        }
         return 'INSUFFICIENT_DATA';
       default:
         // If depth reached MAX_DISPOSITOR_DEPTH without termination, treat as DEPTH_LIMIT
-        if (depth >= MAX_DISPOSITOR_DEPTH) {
+        if (depthLimited) {
           return 'DEPTH_LIMIT';
         }
         return 'INSUFFICIENT_DATA';
@@ -184,8 +194,10 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
         startPlanetId: planet,
         chain: chain.chain,
         terminalPlanetId: chain.terminalPlanetId,
+        depth: chain.depth,
         outcome: chain.outcome,
         chainId: chain.chainId,
+        provenanceIds: chain.provenanceIds,
         sourceEvidenceIds,
         relevantHouseIds,
         sufficientData

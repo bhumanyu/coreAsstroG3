@@ -5,6 +5,7 @@ import type {
 } from './careerMechanismDispositorTypes';
 import type { CareerMechanismType } from '../careerMechanismTypes';
 import { Planet } from '../../../../types';
+import { getContextTerminalPlanet } from './careerMechanismDispositorUtils';
 
 /**
  * P2-07E Career Mechanism Dispositor Rules
@@ -52,8 +53,8 @@ const ruleResearchToSpecializedKnowledge: CareerMechanismDispositorRule = Object
       return false;
     }
 
-    // Terminal planet must be Mercury (use terminalPlanetId if available, otherwise fallback to chain end)
-    const terminalPlanet = context.terminalPlanetId ?? context.chain[context.chain.length - 1];
+    // Terminal planet must be Mercury (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
     return terminalPlanet === Planet.MERCURY;
   },
 
@@ -88,8 +89,8 @@ const ruleResearchToTransformation: CareerMechanismDispositorRule = Object.freez
       return false;
     }
 
-    // Terminal planet must be Saturn (use terminalPlanetId if available, otherwise fallback to chain end)
-    const terminalPlanet = context.terminalPlanetId ?? context.chain[context.chain.length - 1];
+    // Terminal planet must be Saturn (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
     return terminalPlanet === Planet.SATURN;
   },
 
@@ -124,15 +125,18 @@ const ruleTransformationReinforcement: CareerMechanismDispositorRule = Object.fr
       return false;
     }
 
-    // Terminal planet must be Saturn, Mars, or Ketu (use terminalPlanetId if available, otherwise fallback to chain end)
-    const terminalPlanet = context.terminalPlanetId ?? context.chain[context.chain.length - 1];
+    // Terminal planet must be Saturn, Mars, or Ketu (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
+    if (!terminalPlanet) {
+      return false;
+    }
     return terminalPlanet === Planet.SATURN || terminalPlanet === Planet.MARS || terminalPlanet === Planet.KETU;
   },
 
   refine(input: CareerMechanismDispositorRuleInput): CareerMechanismDispositorRuleResult {
     const { context } = input;
 
-    const terminalPlanet = context.chain[context.chain.length - 1];
+    const terminalPlanet = getContextTerminalPlanet(context);
 
     return Object.freeze({
       mechanismTypes: Object.freeze(['TRANSFORMATION' as CareerMechanismType]),
@@ -163,8 +167,8 @@ const ruleFinanceToCommunication: CareerMechanismDispositorRule = Object.freeze(
       return false;
     }
 
-    // Terminal planet must be Mercury (use terminalPlanetId if available, otherwise fallback to chain end)
-    const terminalPlanet = context.terminalPlanetId ?? context.chain[context.chain.length - 1];
+    // Terminal planet must be Mercury (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
     return terminalPlanet === Planet.MERCURY;
   },
 
@@ -200,8 +204,8 @@ const ruleFinanceToSpecializedKnowledge: CareerMechanismDispositorRule = Object.
       return false;
     }
 
-    // Terminal planet must be Jupiter
-    const terminalPlanet = context.chain[context.chain.length - 1];
+    // Terminal planet must be Jupiter (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
     return terminalPlanet === Planet.JUPITER;
   },
 
@@ -237,8 +241,8 @@ const ruleFinanceToRisk: CareerMechanismDispositorRule = Object.freeze({
       return false;
     }
 
-    // Terminal planet must be Saturn
-    const terminalPlanet = context.chain[context.chain.length - 1];
+    // Terminal planet must be Saturn (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
     return terminalPlanet === Planet.SATURN;
   },
 
@@ -274,17 +278,22 @@ const ruleForeignToIsolated: CareerMechanismDispositorRule = Object.freeze({
       return false;
     }
 
-    // Terminal planet must be Saturn or Ketu
-    const terminalPlanet = context.chain[context.chain.length - 1];
+    // Terminal planet must be Saturn or Ketu (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
+    if (!terminalPlanet) {
+      return false;
+    }
     return terminalPlanet === Planet.SATURN || terminalPlanet === Planet.KETU;
   },
 
   refine(input: CareerMechanismDispositorRuleInput): CareerMechanismDispositorRuleResult {
     const { mechanismType, context } = input;
 
+    const terminalPlanet = getContextTerminalPlanet(context);
+
     return Object.freeze({
       mechanismTypes: Object.freeze(['ISOLATED_ENVIRONMENT' as CareerMechanismType]),
-      explanation: `${mechanismType} refined to ISOLATED_ENVIRONMENT via ${context.chain[context.chain.length - 1]} terminal dispositor chain`,
+      explanation: `${mechanismType} refined to ISOLATED_ENVIRONMENT via ${terminalPlanet} terminal dispositor chain`,
       evidence: Object.freeze(context.sourceEvidenceIds)
     });
   }
@@ -311,8 +320,8 @@ const ruleForeignToRemote: CareerMechanismDispositorRule = Object.freeze({
       return false;
     }
 
-    // Terminal planet must be Mercury (use terminalPlanetId if available, otherwise fallback to chain end)
-    const terminalPlanet = context.terminalPlanetId ?? context.chain[context.chain.length - 1];
+    // Terminal planet must be Mercury (use canonical terminal accessor)
+    const terminalPlanet = getContextTerminalPlanet(context);
     return terminalPlanet === Planet.MERCURY;
   },
 

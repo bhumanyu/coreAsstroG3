@@ -64,8 +64,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -89,6 +91,14 @@ describe('CareerMechanismDispositorRefiner', () => {
         mech.evidence.some(ev => ev.source === 'DISPOSITOR' && ev.role === 'REFINING')
       );
       expect(hasDispositorEvidence).toBe(true);
+
+      // Verify DISPOSITOR evidence has empty relationshipIds and non-empty participantIds
+      const dispositorEvidence = result.mechanisms
+        .flatMap(mech => mech.evidence)
+        .find(ev => ev.source === 'DISPOSITOR');
+      expect(dispositorEvidence).toBeDefined();
+      expect(dispositorEvidence!.relationshipIds).toEqual([]);
+      expect(dispositorEvidence!.participantIds.length).toBeGreaterThan(0);
     });
 
     it('refines RESEARCH to SPECIALIZED_KNOWLEDGE via Mercury terminal', () => {
@@ -123,8 +133,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -179,8 +191,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: undefined,
+        depth: 2,
         outcome: 'MUTUAL_RECEPTION',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -233,8 +247,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: undefined,
+        depth: 2,
         outcome: 'CYCLE',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -289,8 +305,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 0,
         outcome: 'SELF_DISPOSITOR',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -342,8 +360,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1', 'ev-2'], // Specific evidence IDs
         relevantHouseIds: [],
         sufficientData: true
@@ -438,8 +458,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-d10'],
         relevantHouseIds: [],
         sufficientData: true
@@ -490,8 +512,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -501,8 +525,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.JUPITER,
         chain: [Planet.JUPITER, Planet.MERCURY, Planet.JUPITER],
         terminalPlanetId: Planet.JUPITER,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-2',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -578,8 +604,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1'],
         relevantHouseIds: [],
         sufficientData: true
@@ -640,8 +668,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [Planet.MERCURY, Planet.JUPITER, Planet.MERCURY],
         terminalPlanetId: Planet.MERCURY,
+        depth: 2,
         outcome: 'TERMINAL',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: ['ev-1', 'ev-2'],
         relevantHouseIds: [],
         sufficientData: true
@@ -755,8 +785,10 @@ describe('CareerMechanismDispositorRefiner', () => {
         startPlanetId: Planet.MERCURY,
         chain: [], // Empty chain
         terminalPlanetId: undefined,
+        depth: 0,
         outcome: 'INSUFFICIENT_DATA',
         chainId: 'chain-1',
+        provenanceIds: [],
         sourceEvidenceIds: [],
         relevantHouseIds: [],
         sufficientData: false
@@ -771,6 +803,118 @@ describe('CareerMechanismDispositorRefiner', () => {
 
       // Should be INSUFFICIENT_DATA
       expect(result.status).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('returns UNCHANGED for DEPTH_LIMIT context (sufficientData true, terminalPlanetId undefined, depth >= MAX)', () => {
+      const candidate: CareerMechanismCandidate = {
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:RESEARCH',
+        patternId: 'pattern-1',
+        mechanismType: 'RESEARCH',
+        pathway: 'PATTERN',
+        evidence: [
+          {
+            evidenceId: 'ev-1',
+            mechanismType: 'RESEARCH',
+            source: 'PATTERN',
+            role: 'ESTABLISHING',
+            participantIds: ['PLANET:MERCURY'],
+            relationshipIds: [],
+            patternId: 'pattern-1',
+            explanation: 'Research mechanism from pattern'
+          }
+        ],
+        provenance: {
+          patternIds: ['pattern-1'],
+          relationshipIds: [],
+          participantIds: ['PLANET:MERCURY'],
+          evidenceIds: ['ev-1'],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Research candidate'
+      };
+
+      // DEPTH_LIMIT context: sufficientData true, terminalPlanetId undefined, depth >= MAX
+      const context: CareerDispositorContext = {
+        startPlanetId: Planet.MERCURY,
+        chain: [Planet.MERCURY, Planet.JUPITER, Planet.SATURN, Planet.MERCURY], // Long chain
+        terminalPlanetId: undefined, // No terminal
+        depth: 10, // >= MAX_DISPOSITOR_DEPTH
+        outcome: 'DEPTH_LIMIT',
+        chainId: 'chain-1',
+        provenanceIds: [],
+        sourceEvidenceIds: ['ev-1'],
+        relevantHouseIds: [],
+        sufficientData: true
+      };
+
+      const input: CareerMechanismDispositorRefinementInput = {
+        candidate,
+        dispositorContexts: [context]
+      };
+
+      const result = defaultCareerMechanismDispositorRefiner.refine(input);
+
+      // Should be UNCHANGED (DEPTH_LIMIT does not refine)
+      expect(result.status).toBe('UNCHANGED');
+
+      // Should have no mechanisms (chain-tail is never treated as terminal)
+      expect(result.mechanisms.length).toBe(0);
+    });
+
+    it('distinguishes INSUFFICIENT_DATA from DEPTH_LIMIT in outcome', () => {
+      const candidate: CareerMechanismCandidate = {
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:RESEARCH',
+        patternId: 'pattern-1',
+        mechanismType: 'RESEARCH',
+        pathway: 'PATTERN',
+        evidence: [
+          {
+            evidenceId: 'ev-1',
+            mechanismType: 'RESEARCH',
+            source: 'PATTERN',
+            role: 'ESTABLISHING',
+            participantIds: ['PLANET:MERCURY'],
+            relationshipIds: [],
+            patternId: 'pattern-1',
+            explanation: 'Research mechanism from pattern'
+          }
+        ],
+        provenance: {
+          patternIds: ['pattern-1'],
+          relationshipIds: [],
+          participantIds: ['PLANET:MERCURY'],
+          evidenceIds: ['ev-1'],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Research candidate'
+      };
+
+      // INSUFFICIENT_DATA context: missing data, not depth-limited
+      const context: CareerDispositorContext = {
+        startPlanetId: Planet.MERCURY,
+        chain: [], // Empty chain - missing data
+        terminalPlanetId: undefined,
+        depth: 0,
+        outcome: 'INSUFFICIENT_DATA',
+        chainId: 'chain-1',
+        provenanceIds: [],
+        sourceEvidenceIds: [],
+        relevantHouseIds: [],
+        sufficientData: false
+      };
+
+      const input: CareerMechanismDispositorRefinementInput = {
+        candidate,
+        dispositorContexts: [context]
+      };
+
+      const result = defaultCareerMechanismDispositorRefiner.refine(input);
+
+      // Should be INSUFFICIENT_DATA (not UNCHANGED)
+      expect(result.status).toBe('INSUFFICIENT_DATA');
+
+      // Should have no mechanisms
+      expect(result.mechanisms.length).toBe(0);
     });
   });
 });
