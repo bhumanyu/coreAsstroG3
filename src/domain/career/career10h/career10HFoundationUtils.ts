@@ -8,7 +8,7 @@ import type {
   Career10HFoundation
 } from './career10HFoundationTypes';
 import type { ParticipantId } from '../careerParticipantRoles/participantRoleTypes';
-import { compareParticipantIds } from '../careerMechanism/careerMechanismUtils';
+import { compareParticipantIds } from '../careerPlanetOrder';
 
 /**
  * P2-07F Career 10H Foundation Utility Functions
@@ -97,7 +97,7 @@ export function freezeCareer10HFoundation(foundation: Career10HFoundation): Care
 
 /**
  * Sorts participant IDs in canonical order using compareParticipantIds.
- * Uses canonical planet order from careerMechanism for determinism.
+ * Uses canonical planet order from careerPlanetOrder for determinism.
  */
 export function sortParticipantIds(ids: readonly ParticipantId[]): readonly ParticipantId[] {
   return [...ids].sort(compareParticipantIds);

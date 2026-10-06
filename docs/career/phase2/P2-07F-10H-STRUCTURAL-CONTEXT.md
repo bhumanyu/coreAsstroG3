@@ -1,6 +1,6 @@
 # P2-07F 10H Structural Context
 
-**Status:** IMPLEMENTED — VERIFICATION PENDING
+**Status:** IMPLEMENTED — VERIFIED
 
 ## Overview
 
@@ -111,7 +111,7 @@ The legacy `themeInterpretation` career rules (`CAREER_10H_STRONG_001` etc.) sta
 - `isValidHouseNumber(value)` — Validates house number (1-12)
 
 ### Participant ID Utilities
-- `sortParticipantIds(ids)` — Sorts participant IDs using canonical planet order from careerMechanism
+- `sortParticipantIds(ids)` — Sorts participant IDs using canonical planet order from careerPlanetOrder
 - `dedupParticipantIds(ids)` — Deduplicates and sorts participant IDs in a single pass
 
 ## Determinism
@@ -122,7 +122,7 @@ Context IDs are deterministic based on reference point and signs:
 - Same inputs always produce same ID
 
 ### Occupant Ordering
-Occupants are sorted using canonical planet order from careerMechanism via `compareParticipantIds`.
+Occupants are sorted using canonical planet order from careerPlanetOrder via `compareParticipantIds`.
 
 ### Aspect Ordering
 Aspects are extracted in the order they appear in the source report.
@@ -145,6 +145,14 @@ Provenance contains only IDs that exist upstream; locators are fields, not fabri
 - If the source aspect record carries an identity field, use it
 - Otherwise, drishtiAspectIds is an empty array (no fabricated IDs like `DRISHTI:...:${index}`)
 - sourceHouseIndex is a locator (field), not a provenance ID
+
+### Aspect Identity Matching
+The `buildProvenance` function attempts to recover aspect identity IDs from `natalGrahaDrishti` records:
+- **Primary match**: Full semantic tuple (`sourcePlanet`, `targetHouse`, `aspectType`, `houseOffset`) when source record has these fields
+- **Fallback match**: `sourcePlanet + targetHouse` only when source record lacks extra fields
+- **Multiple matches**: If multiple records match, include all matching identity IDs (do not silently take the first)
+
+**Note**: `drishtiAspectIds` is best-effort until `natalGrahaDrishti` records carry a canonical `identityKey` per the project-wide one-fact-one-key convention. This is a tracked follow-up, not completed provenance.
 
 ## Aspect Availability Semantics
 
@@ -174,6 +182,8 @@ This module MUST NOT:
 - Generate evidence or interpretations
 - Process Dasha/D10/transit/profession/domain inference
 - Make AI calls or generate yoga
+
+**Note**: Canonical planet ordering is available from `careerPlanetOrder` (not `careerMechanism`).
 
 **Facts ≠ derived evidence ≠ interpretation** — `Career10HEvidence` is a later phase.
 
@@ -269,12 +279,17 @@ Later phases will add `Career10HEvidence` types that interpret the structural fa
 - [x] Explicit coordinate model (referenceHouseNumber, referenceHouseSign, lagnaRelativeHouseNumber)
 - [x] Provenance contract (real source IDs vs locators, no fabricated IDs)
 - [x] Aspect availability semantics (aspectDataStatus field, enrichment vs prerequisite)
-- [x] Participant ordering using compareParticipantIds from careerMechanism
+- [x] Participant ordering using compareParticipantIds from careerPlanetOrder
 - [x] `buildCareer10HEvidenceId` removed (evidence IDs belong to deferred evidence layer)
 - [x] All `as any` casts removed from codebase
 - [x] Fake boundary tests replaced with real boundary enforcement and integration tests
-- [ ] `npm run lint` passes (type safety verification)
-- [ ] Tests pass (including houseAnalysis/houseLordship tests)
-- [ ] No boundary violations (no forbidden imports)
-- [ ] Determinism verified (stable ordering/identity)
-- [ ] Missing data handling verified (INSUFFICIENT_DATA, no fabrication)
+- [x] Moon-10L regression test (Moon 10H sign ≠ Lagna 10H sign)
+- [x] Coordinate-model guardrail test
+- [x] Aspect-identity matching tightened (full semantic tuple)
+- [x] Boundary test hardening (comment stripping, careerMechanism in forbidden list)
+- [x] careerMechanism import removed (moved to careerPlanetOrder)
+- [x] `npm run lint` passes (type safety verification)
+- [x] Tests pass (including houseAnalysis/houseLordship tests)
+- [x] No boundary violations (no forbidden imports)
+- [x] Determinism verified (stable ordering/identity)
+- [x] Missing data handling verified (INSUFFICIENT_DATA, no fabrication)

@@ -2,7 +2,8 @@ import type {
   Horoscope,
   HouseAnalysisReport,
   NatalGrahaDrishtiReport,
-  Planet
+  Planet,
+  PlanetFacts
 } from '../../../types';
 import type { HouseLordshipReport } from '../../../engine/houseLordship/houseLordship';
 import type {
@@ -56,14 +57,22 @@ export function resolveCareer10HFoundation(
     };
   }
 
+  // Build full report bundle for analysis
+  const fullBundle: Career10HReportBundle = {
+    houseLordship: reports.houseLordship,
+    houseAnalysis: reports.houseAnalysis,
+    natalGrahaDrishti: reports.natalGrahaDrishti,
+    planetFacts: reports.planetFacts
+  };
+
   // Analyze Lagna context
-  const lagnaContext = analyzeCareer10HContext(reports, 'LAGNA');
+  const lagnaContext = analyzeCareer10HContext(fullBundle, 'LAGNA');
   if (!lagnaContext) {
     missingInputs.push('lagnaContext');
   }
 
   // Analyze Moon context
-  const moonContext = analyzeCareer10HContext(reports, 'MOON');
+  const moonContext = analyzeCareer10HContext(fullBundle, 'MOON');
   if (!moonContext) {
     missingInputs.push('moonContext');
   }
@@ -92,37 +101,36 @@ export function resolveCareer10HFoundation(
 function extractReports(
   input: Career10HFoundationInput,
   missingInputs: string[]
-): Partial<Career10HReportBundle> {
-  const reports: Partial<Career10HReportBundle> = {};
+): {
+  houseLordship?: HouseLordshipReport;
+  houseAnalysis?: HouseAnalysisReport;
+  natalGrahaDrishti?: NatalGrahaDrishtiReport;
+  planetFacts?: PlanetFacts;
+} {
+  const reports: {
+    houseLordship?: HouseLordshipReport;
+    houseAnalysis?: HouseAnalysisReport;
+    natalGrahaDrishti?: NatalGrahaDrishtiReport;
+    planetFacts?: PlanetFacts;
+  } = {};
 
   // Try to get from pre-computed reports first
-  if (input.houseLordship) {
-    reports.houseLordship = input.houseLordship;
-  } else if (input.horoscope?.houseLordship) {
-    reports.houseLordship = input.horoscope.houseLordship;
-  } else {
+  reports.houseLordship = input.houseLordship ?? input.horoscope?.houseLordship;
+  if (!reports.houseLordship) {
     missingInputs.push('houseLordship');
   }
 
-  if (input.houseAnalysis) {
-    reports.houseAnalysis = input.houseAnalysis;
-  } else if (input.horoscope?.houseAnalysis) {
-    reports.houseAnalysis = input.horoscope.houseAnalysis;
-  } else {
+  reports.houseAnalysis = input.houseAnalysis ?? input.horoscope?.houseAnalysis;
+  if (!reports.houseAnalysis) {
     missingInputs.push('houseAnalysis');
   }
 
-  if (input.natalGrahaDrishti) {
-    reports.natalGrahaDrishti = input.natalGrahaDrishti;
-  } else if (input.horoscope?.natalGrahaDrishti || input.horoscope?.grahaDrishti) {
-    reports.natalGrahaDrishti = input.horoscope.natalGrahaDrishti || input.horoscope.grahaDrishti;
-  }
+  reports.natalGrahaDrishti = input.natalGrahaDrishti ?? input.horoscope?.natalGrahaDrishti ?? input.horoscope?.grahaDrishti;
   // natalGrahaDrishti is an enrichment, not a structural prerequisite
   // Don't add to missingInputs - contexts can be built without it
 
-  if (input.horoscope?.planetFacts) {
-    reports.planetFacts = input.horoscope.planetFacts;
-  } else {
+  reports.planetFacts = input.horoscope?.planetFacts;
+  if (!reports.planetFacts) {
     missingInputs.push('planetFacts');
   }
 

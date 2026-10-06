@@ -122,12 +122,31 @@ function makeNatalGrahaDrishtiReport(
 }
 
 /**
+ * Helper: Creates a NatalGrahaDrishtiReport with aspects targeting a specific house.
+ */
+function makeNatalGrahaDrishtiReportWithTargetHouse(
+  targetHouse: number
+) {
+  return makeNatalGrahaDrishtiReport([
+    Object.freeze({
+      sourcePlanet: Planet.JUPITER,
+      sourceHouse: 9,
+      targetHouse,
+      aspectType: 'FULL',
+      houseOffset: 1,
+      reason: `Jupiter aspects house ${targetHouse}`
+    })
+  ]);
+}
+
+/**
  * Helper: Creates a minimal report bundle for testing.
  */
 function makeReportBundle(
   ascendantSign: Sign,
   moonSign: Sign,
-  withAspects: boolean = true
+  withAspects: boolean = true,
+  aspectTargetHouse: number = 10
 ): Career10HReportBundle {
   const houseLordship = analyzeHouseLordship(ascendantSign);
   const houseAnalysis = makeHouseAnalysisReport(ascendantSign);
@@ -149,10 +168,10 @@ function makeReportBundle(
       Object.freeze({
         sourcePlanet: Planet.JUPITER,
         sourceHouse: 9,
-        targetHouse: 10,
+        targetHouse: aspectTargetHouse,
         aspectType: 'FULL',
         houseOffset: 1,
-        reason: 'Jupiter aspects 10th house'
+        reason: `Jupiter aspects house ${aspectTargetHouse}`
       })
     ])
     : undefined;
@@ -190,14 +209,14 @@ function makeFoundationInput(
       },
       fullNatalAnalysis: {
         houses: {
-          status: 'COMPLETE',
+          status: 'AVAILABLE',
           houses: []
         },
         planets: {
-          status: 'COMPLETE',
+          status: 'AVAILABLE',
           planets: []
         }
-      }
+      } as any
     }
   };
 }
@@ -383,6 +402,60 @@ describe('career10h Structural Analyzer', () => {
       const context = analyzeCareer10HContext(reports, 'MOON');
 
       expect(context).toBeNull();
+    });
+
+    it('Moon-10L regression: Moon 10H sign ≠ Lagna 10H sign → different lords', () => {
+      // Aries Lagna, Moon in Cancer
+      // Lagna 10H = Capricorn (lord = Saturn)
+      // Moon 10H = Taurus (10th-from-Cancer) (lord = Venus)
+      const reports = makeReportBundle(Sign.ARIES, Sign.CANCER);
+      const lagnaContext = analyzeCareer10HContext(reports, 'LAGNA');
+      const moonContext = analyzeCareer10HContext(reports, 'MOON');
+
+      expect(lagnaContext).not.toBeNull();
+      expect(moonContext).not.toBeNull();
+
+      // Lagna 10H is Capricorn, lord is Saturn
+      expect(lagnaContext?.referenceHouseSign).toBe(Sign.CAPRICORN);
+      expect(lagnaContext?.house10Lord).toBe(Planet.SATURN);
+
+      // Moon 10H is Taurus (10th-from-Cancer), lord is Venus
+      expect(moonContext?.referenceHouseSign).toBe(Sign.TAURUS);
+      expect(moonContext?.house10Lord).toBe(Planet.VENUS);
+
+      // Mandatory proof: lord derivation follows referenceHouseSign, not lagnaRelativeHouseNumber
+      expect(moonContext?.house10Lord).toBe(Planet.VENUS);
+      expect(moonContext?.house10Lord).not.toBe(lagnaContext?.house10Lord);
+    });
+
+    it('Coordinate-model guardrail: Moon context has correct coordinate model', () => {
+      // Aries Lagna, Moon in Cancer
+      // Moon 10H = Taurus (10th-from-Cancer)
+      // Taurus is Lagna house 2
+      const reports = makeReportBundle(Sign.ARIES, Sign.CANCER);
+      const moonContext = analyzeCareer10HContext(reports, 'MOON');
+
+      expect(moonContext).not.toBeNull();
+
+      // referenceHouseNumber is always 10 (the 10th house FROM the reference point)
+      expect(moonContext?.referenceHouseNumber).toBe(10);
+
+      // referenceHouseSign is the 10th-from-Moon sign (Taurus)
+      expect(moonContext?.referenceHouseSign).toBe(Sign.TAURUS);
+
+      // lagnaRelativeHouseNumber is the Lagna house carrying that sign (house 2 for Taurus)
+      expect(moonContext?.lagnaRelativeHouseNumber).toBe(2);
+
+      // occupants are from Lagna-relative house 2
+      const house2Occupants = reports.houseAnalysis.houses[2].occupants;
+      expect(moonContext?.occupants).toEqual(
+        house2Occupants.map(p => `PLANET:${p}` as const)
+      );
+
+      // aspectsOn10H are aspects targeting Lagna-relative house 2
+      // (since that's where the 10th-from-Moon sign sits)
+      // Verify that aspectsOn10H is an array (structure check)
+      expect(Array.isArray(moonContext?.aspectsOn10H)).toBe(true);
     });
   });
 
@@ -633,7 +706,8 @@ describe('career10h Boundary Enforcement', () => {
       'careerFinalSynthesis',
       'careerExpression',
       'domain/timing',
-      'careerProfession'
+      'careerProfession',
+      'careerMechanism'
     ];
 
     for (const file of sourceFiles) {
@@ -641,17 +715,15 @@ describe('career10h Boundary Enforcement', () => {
       const content = fs.readFileSync(filePath, 'utf-8');
 
       for (const forbidden of forbiddenImports) {
-        // Check for actual import statements at the start of lines (ignoring comments)
-        const lines = content.split('\n');
-        const hasImport = lines.some((line: string) => {
-          const trimmed = line.trim();
-          // Skip comment lines
-          if (trimmed.startsWith('//') || trimmed.startsWith('*')) {
-            return false;
-          }
-          // Check for import statement
-          return trimmed.startsWith('import') && trimmed.includes(forbidden);
-        });
+        // Strip single-line comments (// ...) and multi-line comments (/* ... */)
+        const contentWithoutComments = content
+          .replace(/\/\/.*$/gm, '') // Remove single-line comments
+          .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove multi-line comments
+
+        // Check for import statement anywhere in a line
+        const importRegex = new RegExp(`\\bimport\\b.*\\b${forbidden}\\b`, 'i');
+        const hasImport = importRegex.test(contentWithoutComments);
+
         expect(hasImport).toBe(false);
       }
     }

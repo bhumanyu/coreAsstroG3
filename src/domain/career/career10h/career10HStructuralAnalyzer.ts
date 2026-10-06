@@ -284,16 +284,36 @@ function buildProvenance(
   // Extract real aspect identity IDs if the source aspect records carry them
   // Otherwise, use empty array (no fabricated IDs)
   const drishtiAspectIds: readonly string[] = Object.freeze(
-    aspectsOn10H
-      .map((aspect) => {
-        // Check if the source aspect has an identity field
-        const sourceAspect = natalGrahaDrishti?.aspects?.find(
-          (a: { sourcePlanet?: Planet; targetHouse?: number; identity?: string }) =>
-            a.sourcePlanet === aspect.sourcePlanet && a.targetHouse === aspect.targetHouse
-        );
-        return sourceAspect?.identity;
-      })
-      .filter((id): id is string => id !== undefined)
+    aspectsOn10H.flatMap((aspect) => {
+      // Try to match using full semantic tuple (sourcePlanet, targetHouse, aspectType, houseOffset)
+      // when the source record has these fields
+      const sourceAspects = natalGrahaDrishti?.aspects?.filter(
+        (a: { sourcePlanet?: Planet; targetHouse?: number; aspectType?: string; houseOffset?: number; identity?: string }) => {
+          // Check if source has the extra fields for tight matching
+          const hasExtraFields = a.aspectType !== undefined && a.houseOffset !== undefined;
+          if (hasExtraFields) {
+            // Tight match: full semantic tuple
+            return a.sourcePlanet === aspect.sourcePlanet &&
+              a.targetHouse === aspect.targetHouse &&
+              a.aspectType === aspect.aspectType &&
+              a.houseOffset === aspect.houseOffset;
+          } else {
+            // Fallback: match on sourcePlanet + targetHouse only
+            return a.sourcePlanet === aspect.sourcePlanet &&
+              a.targetHouse === aspect.targetHouse;
+          }
+        }
+      );
+
+      // If multiple records match, include all matching identity IDs
+      if (sourceAspects && sourceAspects.length > 0) {
+        return sourceAspects
+          .map((a: { identity?: string }) => a.identity)
+          .filter((id): id is string => id !== undefined);
+      }
+
+      return [];
+    })
   );
 
   return Object.freeze({
