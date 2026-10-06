@@ -1,6 +1,6 @@
 # P2-07F 10H Structural Context
 
-**Status:** IMPLEMENTED — VERIFIED
+**Status:** IMPLEMENTED — VERIFICATION PENDING
 
 ## Overview
 
@@ -17,15 +17,22 @@ This module provides the foundational 10th house facts needed for career analysi
 - `MOON` — 10th house from Moon sign
 
 ### Career10HContext
-Structural context for the 10th house from a reference point:
+Structural context for the 10th house from a reference point with explicit coordinate model:
 - `referencePoint` — LAGNA or MOON
-- `house10Number` — The house number (1-12) that is the 10th house from the reference point
-- `house10Sign` — The sign occupying the 10th house
-- `house10Lord` — The lord of the 10th house (10L)
-- `lordHouse` — The house number where the 10L is placed
-- `occupants` — Planets occupying the 10th house (as ParticipantId array)
-- `aspectsOn10H` — Aspects on the 10th house from NatalGrahaDrishtiReport
-- `provenance` — Source report IDs for tracking
+- `referenceHouseNumber` — Always 10 (the 10th house FROM the reference point)
+- `referenceHouseSign` — The sign occupying the 10th house from the reference point
+- `lagnaRelativeHouseNumber` — The Lagna-relative house number where referenceHouseSign sits (lookup key into houseAnalysis.houses)
+- `house10Lord` — The lord of the 10th house (10L) — lord of referenceHouseSign
+- `lordHouse` — The house number where the 10L is placed (from houseAnalysis.houses[lagnaRelativeHouseNumber].lordAnalysis.house)
+- `occupants` — Planets occupying the 10th house (as ParticipantId array) — from houseAnalysis.houses[lagnaRelativeHouseNumber]
+- `aspectsOn10H` — Aspects on the 10th house from NatalGrahaDrishtiReport — from houseAnalysis.houses[lagnaRelativeHouseNumber]
+- `aspectDataStatus` — Status of aspect data ('AVAILABLE' if report present, 'UNAVAILABLE' if report absent)
+- `provenance` — Source report IDs and locators for tracking
+
+**Coordinate Model:**
+- For LAGNA: referenceHouseSign = sign of Lagna house 10, lagnaRelativeHouseNumber = 10
+- For MOON: referenceHouseSign = 10th-from-Moon sign, lagnaRelativeHouseNumber = calculated via sign arithmetic
+- Occupants and aspects are always Lagna-relative by design, since HouseAnalysisReport is keyed on Lagna-relative houses
 
 ### Career10HFoundation
 Complete 10H foundation containing both Lagna and Moon contexts:
@@ -51,18 +58,23 @@ Result of 10H foundation resolution:
 
 ### LAGNA Reference Point
 For LAGNA reference:
-- House 10 is simply the 10th house from Ascendant
-- Sign and lord from `HouseLordshipReport.houseLords[10]`
-- Occupants and aspects from `HouseAnalysisReport.houses[10]`
+- `referenceHouseNumber` = 10 (always)
+- `referenceHouseSign` = sign of Lagna house 10 from `HouseAnalysisReport.houses[10].sign`
+- `lagnaRelativeHouseNumber` = 10
+- `house10Lord` = lord of referenceHouseSign from `SIGNS_METADATA[referenceHouseSign].ruler`
+- Occupants and aspects from `HouseAnalysisReport.houses[10]` (via lagnaRelativeHouseNumber)
 - Lord's house placement from `houseAnalysis.houses[10].lordAnalysis.house`
 
 ### MOON Reference Point
 For MOON reference:
+- `referenceHouseNumber` = 10 (always)
 - Derive Moon's sign from `planetFacts[Planet.MOON].sign` or `.position.sign`
-- Calculate 10th-from-Moon house via sign arithmetic:
+- Calculate 10th-from-Moon sign via sign arithmetic:
   - 10th-from-Moon sign = (MoonSignNumber + 9) mod 12 + 1
-  - Map that sign back to Lagna-relative house number
-- Occupants and aspects from the corresponding house in `HouseAnalysisReport`
+- `referenceHouseSign` = 10th-from-Moon sign
+- `lagnaRelativeHouseNumber` = map referenceHouseSign back to Lagna-relative house number
+- `house10Lord` = lord of referenceHouseSign from `SIGNS_METADATA[referenceHouseSign].ruler`
+- Occupants and aspects from `HouseAnalysisReport.houses[lagnaRelativeHouseNumber]`
 
 ### Sign Arithmetic
 The 10th-from-Moon calculation uses sign arithmetic:
@@ -73,7 +85,7 @@ The 10th-from-Moon calculation uses sign arithmetic:
 
 Example: Lagna = Aries (1), Moon = Cancer (4)
 - 10th-from-Moon = (4 + 9) mod 12 + 1 = 13 mod 12 + 1 = 1 + 1 = 2 (Taurus)
-- Taurus is Lagna house 2, so house10Number = 2
+- Taurus is Lagna house 2, so lagnaRelativeHouseNumber = 2
 
 ## Reuse Contract
 
@@ -89,7 +101,6 @@ The legacy `themeInterpretation` career rules (`CAREER_10H_STRONG_001` etc.) sta
 ### ID Builders
 - `buildCareer10HContextId(referencePoint, ascendantSign, moonSign?)` — Builds deterministic context ID
 - `buildCareer10HFoundationId(ascendantSign, moonSign)` — Builds foundation ID
-- `buildCareer10HEvidenceId(referencePoint, evidenceType, detail)` — Builds evidence ID
 
 ### Frozen Builders
 - `freezeCareer10HContext(context)` — Creates frozen copy of context
@@ -100,8 +111,8 @@ The legacy `themeInterpretation` career rules (`CAREER_10H_STRONG_001` etc.) sta
 - `isValidHouseNumber(value)` — Validates house number (1-12)
 
 ### Participant ID Utilities
-- `sortParticipantIds(ids)` — Sorts participant IDs in canonical order
-- `dedupParticipantIds(ids)` — Deduplicates and sorts participant IDs
+- `sortParticipantIds(ids)` — Sorts participant IDs using canonical planet order from careerMechanism
+- `dedupParticipantIds(ids)` — Deduplicates and sorts participant IDs in a single pass
 
 ## Determinism
 
@@ -111,13 +122,46 @@ Context IDs are deterministic based on reference point and signs:
 - Same inputs always produce same ID
 
 ### Occupant Ordering
-Occupants are sorted alphabetically by ParticipantId for determinism.
+Occupants are sorted using canonical planet order from careerMechanism via `compareParticipantIds`.
 
 ### Aspect Ordering
 Aspects are extracted in the order they appear in the source report.
 
 ### Output Freezing
 All outputs are `Object.freeze` deeply (freeze contexts, arrays, nested objects).
+
+## Provenance Contract
+
+Provenance tracking distinguishes between real source IDs and locators:
+
+### Career10HProvenance Structure
+- `houseLordshipEvidenceId?: string` — Real ruleId from HouseLordshipReport (if available)
+- `sourceHouseIndex: number` — Locator - the Lagna-relative house number used to fetch data from HouseAnalysisReport
+- `drishtiSource: { reportPresent: boolean; aspectCount: number }` — Structural reference to aspect data
+- `drishtiAspectIds: readonly string[]` — Real aspect identity IDs from source report (if available), empty array if absent
+
+### Provenance Rule
+Provenance contains only IDs that exist upstream; locators are fields, not fabricated IDs:
+- If the source aspect record carries an identity field, use it
+- Otherwise, drishtiAspectIds is an empty array (no fabricated IDs like `DRISHTI:...:${index}`)
+- sourceHouseIndex is a locator (field), not a provenance ID
+
+## Aspect Availability Semantics
+
+Aspect data is treated as an enrichment, not a structural prerequisite:
+
+### aspectDataStatus Field
+- `'AVAILABLE'` — NatalGrahaDrishtiReport is present and was processed
+- `'UNAVAILABLE'` — NatalGrahaDrishtiReport is absent or invalid
+
+### Status Impact
+- COMPLETE status means structural data is complete; aspect-unavailable is expressed via aspectDataStatus
+- Missing aspect report does NOT cause INSUFFICIENT_DATA status
+- contexts can be built without aspect data (aspectsOn10H will be empty array, aspectDataStatus will be 'UNAVAILABLE')
+
+### Missing Data Handling
+- When aspect report is absent: aspectsOn10H = [], aspectDataStatus = 'UNAVAILABLE'
+- When aspect report is present but has no aspects for target house: aspectsOn10H = [], aspectDataStatus = 'AVAILABLE'
 
 ## Boundary Enforcement
 
@@ -152,9 +196,10 @@ When Moon context cannot be resolved but Lagna context can:
 
 ### No Fabrication
 The module NEVER fabricates missing data:
-- If aspect report is missing, `aspectsOn10H` is empty array (not fabricated)
+- If aspect report is missing, `aspectsOn10H` is empty array and `aspectDataStatus` is 'UNAVAILABLE' (not fabricated)
 - If lord house is missing, context is `null` (not fabricated)
 - If Moon sign is missing, Moon context is `null` (not fabricated)
+- natalGrahaDrishti is an enrichment, not a structural prerequisite — missing it does not cause INSUFFICIENT_DATA
 
 ## Module Structure
 
@@ -171,17 +216,21 @@ src/domain/career/career10h/
 ## Testing
 
 ### Test Coverage
-- Lagna context extraction
-- Moon context extraction
+- Lagna context extraction with explicit coordinate model
+- Moon context extraction with sign arithmetic
 - Same horoscope different reference points
 - 10H sign/lord/occupants/aspects verification
 - 10L identification + house placement
 - Determinism (stable ordering/identity/dup-free/frozen)
-- Boundary (no Dasha/D10/transit/profession/AI imports)
-- Missing data (no Moon / no aspect report → clean INSUFFICIENT_DATA, no fabricated evidence)
+- Boundary enforcement (no forbidden imports in source files)
+- Integration tests with real analyzeHouseLordship output
+- Missing data (no Moon / no aspect report → correct status, no fabricated evidence)
+- Aspect availability semantics (AVAILABLE vs UNAVAILABLE)
 
 ### Test Strategy
-Tests use minimal fixtures that replicate the structure of engine reports without requiring full horoscope calculation. This ensures fast, isolated unit tests.
+Tests use a mix of:
+- Minimal fixtures that replicate the structure of engine reports for fast, isolated unit tests
+- Integration tests that call real engine functions (analyzeHouseLordship) to verify compatibility
 
 ## Integration Points
 
@@ -210,15 +259,22 @@ Later phases will add `Career10HEvidence` types that interpret the structural fa
 ## Verification Checklist
 
 - [x] Module directory structure created
-- [x] `career10HFoundationTypes.ts` implemented with core types
-- [x] `career10HFoundationUtils.ts` implemented with ID builders
-- [x] `career10HStructuralAnalyzer.ts` implemented with `analyzeCareer10HContext`
+- [x] `career10HFoundationTypes.ts` implemented with core types and explicit coordinate model
+- [x] `career10HFoundationUtils.ts` implemented with ID builders and canonical participant ordering
+- [x] `career10HStructuralAnalyzer.ts` implemented with `analyzeCareer10HContext` and real provenance
 - [x] `defaultCareer10HFoundation.ts` implemented with `resolveCareer10HFoundation`
 - [x] `index.ts` created for module exports
 - [x] Comprehensive tests written in `career10HFoundation.test.ts`
 - [x] Documentation created in `P2-07F-10H-STRUCTURAL-CONTEXT.md`
-- [x] `npm run lint` passes (type safety verification)
-- [x] Tests pass (including houseAnalysis/houseLordship tests)
-- [x] No boundary violations (no forbidden imports)
-- [x] Determinism verified (stable ordering/identity)
-- [x] Missing data handling verified (INSUFFICIENT_DATA, no fabrication)
+- [x] Explicit coordinate model (referenceHouseNumber, referenceHouseSign, lagnaRelativeHouseNumber)
+- [x] Provenance contract (real source IDs vs locators, no fabricated IDs)
+- [x] Aspect availability semantics (aspectDataStatus field, enrichment vs prerequisite)
+- [x] Participant ordering using compareParticipantIds from careerMechanism
+- [x] `buildCareer10HEvidenceId` removed (evidence IDs belong to deferred evidence layer)
+- [x] All `as any` casts removed from codebase
+- [x] Fake boundary tests replaced with real boundary enforcement and integration tests
+- [ ] `npm run lint` passes (type safety verification)
+- [ ] Tests pass (including houseAnalysis/houseLordship tests)
+- [ ] No boundary violations (no forbidden imports)
+- [ ] Determinism verified (stable ordering/identity)
+- [ ] Missing data handling verified (INSUFFICIENT_DATA, no fabrication)

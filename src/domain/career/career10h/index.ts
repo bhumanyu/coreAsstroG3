@@ -35,7 +35,6 @@ export {
   buildCareer10HContextId,
   buildCareer10HContextIdFromHoroscope,
   buildCareer10HFoundationId,
-  buildCareer10HEvidenceId,
   freezeCareer10HContext,
   freezeCareer10HFoundation,
   sortParticipantIds,

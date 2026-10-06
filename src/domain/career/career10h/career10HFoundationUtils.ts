@@ -7,6 +7,8 @@ import type {
   Career10HContext,
   Career10HFoundation
 } from './career10HFoundationTypes';
+import type { ParticipantId } from '../careerParticipantRoles/participantRoleTypes';
+import { compareParticipantIds } from '../careerMechanism/careerMechanismUtils';
 
 /**
  * P2-07F Career 10H Foundation Utility Functions
@@ -61,18 +63,6 @@ export function buildCareer10HFoundationId(
 }
 
 /**
- * Builds an evidence ID for 10H context evidence.
- * Format: CAREER_10H_EVIDENCE:{refPoint}:{evidenceType}:{detail}
- */
-export function buildCareer10HEvidenceId(
-  referencePoint: CareerReferencePoint,
-  evidenceType: string,
-  detail: string
-): string {
-  return `CAREER_10H_EVIDENCE:${referencePoint}:${evidenceType}:${detail}`;
-}
-
-/**
  * Creates a frozen copy of a 10H context.
  * Ensures immutability for all nested arrays and objects.
  */
@@ -106,18 +96,18 @@ export function freezeCareer10HFoundation(foundation: Career10HFoundation): Care
 }
 
 /**
- * Sorts participant IDs in canonical order.
- * Uses the Planet enum order for determinism.
+ * Sorts participant IDs in canonical order using compareParticipantIds.
+ * Uses canonical planet order from careerMechanism for determinism.
  */
-export function sortParticipantIds(ids: readonly string[]): readonly string[] {
-  return [...ids].sort();
+export function sortParticipantIds(ids: readonly ParticipantId[]): readonly ParticipantId[] {
+  return [...ids].sort(compareParticipantIds);
 }
 
 /**
- * Deduplicates and sorts participant IDs.
+ * Deduplicates and sorts participant IDs in a single pass.
  */
-export function dedupParticipantIds(ids: readonly string[]): readonly string[] {
-  return sortParticipantIds([...new Set(ids)]);
+export function dedupParticipantIds(ids: readonly ParticipantId[]): readonly ParticipantId[] {
+  return [...new Set(ids)].sort(compareParticipantIds);
 }
 
 /**

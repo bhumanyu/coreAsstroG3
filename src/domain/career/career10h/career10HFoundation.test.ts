@@ -12,7 +12,6 @@ import {
 import {
   buildCareer10HContextId,
   buildCareer10HFoundationId,
-  buildCareer10HEvidenceId,
   freezeCareer10HContext,
   freezeCareer10HFoundation,
   sortParticipantIds,
@@ -30,7 +29,8 @@ import type {
 
 import {
   Planet,
-  Sign
+  Sign,
+  AyanamsaType
 } from '../../../types';
 
 import {
@@ -45,7 +45,7 @@ function makePlanetFact(
   planet: Planet,
   sign: Sign,
   house: number
-): any {
+) {
   return {
     planet,
     sign,
@@ -64,9 +64,20 @@ function makePlanetFact(
  */
 function makeHouseAnalysisReport(
   ascendantSign: Sign
-): any {
+) {
   const houseLords = resolveHouseLords(ascendantSign);
-  const houses: Record<number, any> = {};
+  const houses: Record<number, {
+    house: number;
+    sign: Sign;
+    lord: Planet;
+    occupants: Planet[];
+    lordAnalysis: {
+      house: number;
+      sign: Sign;
+    };
+    receivedAspects: unknown[];
+    evidence: unknown[];
+  }> = {};
 
   for (let h = 1; h <= 12; h++) {
     const lord = houseLords[h as keyof typeof houseLords];
@@ -96,11 +107,18 @@ function makeHouseAnalysisReport(
  * Helper: Creates a minimal NatalGrahaDrishtiReport for testing.
  */
 function makeNatalGrahaDrishtiReport(
-  aspects: any[] = []
-): any {
-  return Object.freeze({
-    aspects: Object.freeze(aspects)
-  });
+  aspects: Array<{
+    sourcePlanet: Planet;
+    sourceHouse: number;
+    targetHouse: number;
+    aspectType: string;
+    houseOffset: number;
+    reason: string;
+  }> = []
+) {
+  return {
+    aspects: aspects as any[]
+  };
 }
 
 /**
@@ -163,8 +181,23 @@ function makeFoundationInput(
     natalGrahaDrishti: reports.natalGrahaDrishti,
     horoscope: {
       planetFacts: reports.planetFacts,
-      birthDetails: {} as any,
-      fullNatalAnalysis: {} as any
+      birthDetails: {
+        latitude: 0,
+        longitude: 0,
+        timeZone: 'UTC',
+        ayanamsa: AyanamsaType.LAHIRI,
+        dateTimeStr: '2000-01-01T00:00:00Z'
+      },
+      fullNatalAnalysis: {
+        houses: {
+          status: 'COMPLETE',
+          houses: []
+        },
+        planets: {
+          status: 'COMPLETE',
+          planets: []
+        }
+      }
     }
   };
 }
@@ -193,26 +226,22 @@ describe('career10h Foundation Utils', () => {
     });
   });
 
-  describe('buildCareer10HEvidenceId', () => {
-    it('should build correct evidence ID', () => {
-      const id = buildCareer10HEvidenceId('LAGNA', 'LORD_PLACEMENT', 'SATURN');
-      expect(id).toBe('CAREER_10H_EVIDENCE:LAGNA:LORD_PLACEMENT:SATURN');
-    });
-  });
-
   describe('sortParticipantIds', () => {
-    it('should sort participant IDs alphabetically', () => {
-      const ids = ['PLANET:JUPITER', 'PLANET:SATURN', 'PLANET:MARS'];
+    it('should sort participant IDs using canonical planet order', () => {
+      const ids = ['PLANET:JUPITER' as const, 'PLANET:SATURN' as const, 'PLANET:MARS' as const];
       const sorted = sortParticipantIds(ids);
-      expect(sorted).toEqual(['PLANET:JUPITER', 'PLANET:MARS', 'PLANET:SATURN']);
+      // Canonical order: SUN, MOON, MARS, MERCURY, JUPITER, VENUS, SATURN, RAHU, KETU
+      // So MARS comes before JUPITER, and JUPITER comes before SATURN
+      expect(sorted).toEqual(['PLANET:MARS', 'PLANET:JUPITER', 'PLANET:SATURN']);
     });
   });
 
   describe('dedupParticipantIds', () => {
     it('should deduplicate and sort participant IDs', () => {
-      const ids = ['PLANET:JUPITER', 'PLANET:SATURN', 'PLANET:JUPITER', 'PLANET:MARS'];
+      const ids = ['PLANET:JUPITER' as const, 'PLANET:SATURN' as const, 'PLANET:JUPITER' as const, 'PLANET:MARS' as const];
       const deduped = dedupParticipantIds(ids);
-      expect(deduped).toEqual(['PLANET:JUPITER', 'PLANET:MARS', 'PLANET:SATURN']);
+      // Canonical order: MARS, JUPITER, SATURN
+      expect(deduped).toEqual(['PLANET:MARS', 'PLANET:JUPITER', 'PLANET:SATURN']);
     });
   });
 
@@ -254,13 +283,20 @@ describe('career10h Foundation Utils', () => {
     it('should freeze context and nested arrays', () => {
       const context: Career10HContext = {
         referencePoint: 'LAGNA',
-        house10Number: 10,
-        house10Sign: Sign.CAPRICORN,
+        referenceHouseNumber: 10,
+        referenceHouseSign: Sign.CAPRICORN,
+        lagnaRelativeHouseNumber: 10,
         house10Lord: Planet.SATURN,
         lordHouse: 8,
         occupants: ['PLANET:MARS' as const, 'PLANET:JUPITER' as const],
         aspectsOn10H: [],
+        aspectDataStatus: 'UNAVAILABLE',
         provenance: {
+          sourceHouseIndex: 10,
+          drishtiSource: {
+            reportPresent: false,
+            aspectCount: 0
+          },
           drishtiAspectIds: []
         }
       };
@@ -297,12 +333,14 @@ describe('career10h Structural Analyzer', () => {
 
       expect(context).not.toBeNull();
       expect(context?.referencePoint).toBe('LAGNA');
-      expect(context?.house10Number).toBe(10);
+      expect(context?.referenceHouseNumber).toBe(10);
+      expect(context?.lagnaRelativeHouseNumber).toBe(10);
       expect(context?.house10Lord).toBe(Planet.SATURN);
       expect(context?.lordHouse).toBe(10);
       expect(context?.occupants).toEqual([]);
       expect(context?.aspectsOn10H).toHaveLength(1);
       expect(context?.aspectsOn10H[0].sourcePlanet).toBe(Planet.JUPITER);
+      expect(context?.aspectDataStatus).toBe('AVAILABLE');
     });
 
     it('should identify correct 10L for Lagna reference', () => {
@@ -310,7 +348,7 @@ describe('career10h Structural Analyzer', () => {
       const context = analyzeCareer10HContext(reports, 'LAGNA');
 
       // For Aries Lagna, 10th house is Capricorn, lord is Saturn
-      expect(context?.house10Sign).toBe(Sign.CAPRICORN);
+      expect(context?.referenceHouseSign).toBe(Sign.CAPRICORN);
       expect(context?.house10Lord).toBe(Planet.SATURN);
     });
   });
@@ -322,8 +360,9 @@ describe('career10h Structural Analyzer', () => {
 
       expect(context).not.toBeNull();
       expect(context?.referencePoint).toBe('MOON');
-      expect(context?.house10Number).toBeGreaterThan(0);
-      expect(context?.house10Number).toBeLessThanOrEqual(12);
+      expect(context?.referenceHouseNumber).toBe(10);
+      expect(context?.lagnaRelativeHouseNumber).toBeGreaterThan(0);
+      expect(context?.lagnaRelativeHouseNumber).toBeLessThanOrEqual(12);
     });
 
     it('should calculate correct 10th-from-Moon house', () => {
@@ -332,14 +371,14 @@ describe('career10h Structural Analyzer', () => {
 
       // Moon in Cancer (4), 10th-from-Moon is (4 + 9) mod 12 + 1 = 2 (Taurus)
       // For Aries Lagna, Taurus is house 2
-      expect(context?.house10Number).toBe(2);
+      expect(context?.lagnaRelativeHouseNumber).toBe(2);
     });
 
     it('should return null if Moon sign is missing', () => {
       const reports = makeReportBundle(Sign.ARIES, Sign.CANCER);
       // Remove Moon sign
-      (reports.planetFacts as any)[Planet.MOON].sign = undefined;
-      (reports.planetFacts as any)[Planet.MOON].position = undefined;
+      reports.planetFacts[Planet.MOON].sign = undefined;
+      reports.planetFacts[Planet.MOON].position = undefined as any;
 
       const context = analyzeCareer10HContext(reports, 'MOON');
 
@@ -357,7 +396,7 @@ describe('career10h Structural Analyzer', () => {
       expect(moonContext).not.toBeNull();
       expect(lagnaContext?.referencePoint).toBe('LAGNA');
       expect(moonContext?.referencePoint).toBe('MOON');
-      expect(lagnaContext?.house10Number).not.toBe(moonContext?.house10Number);
+      expect(lagnaContext?.lagnaRelativeHouseNumber).not.toBe(moonContext?.lagnaRelativeHouseNumber);
     });
   });
 
@@ -369,6 +408,7 @@ describe('career10h Structural Analyzer', () => {
       expect(context?.aspectsOn10H).toHaveLength(1);
       expect(context?.aspectsOn10H[0].targetHouse).toBe(10);
       expect(context?.aspectsOn10H[0].sourcePlanet).toBe(Planet.JUPITER);
+      expect(context?.aspectDataStatus).toBe('AVAILABLE');
     });
 
     it('should return empty aspects array when no drishti report', () => {
@@ -376,6 +416,7 @@ describe('career10h Structural Analyzer', () => {
       const context = analyzeCareer10HContext(reports, 'LAGNA');
 
       expect(context?.aspectsOn10H).toEqual([]);
+      expect(context?.aspectDataStatus).toBe('UNAVAILABLE');
     });
   });
 
@@ -389,7 +430,8 @@ describe('career10h Structural Analyzer', () => {
       const context2 = analyzeCareer10HContext(reports, 'LAGNA');
 
       expect(context1?.occupants).toEqual(context2?.occupants);
-      expect(context1?.occupants).toEqual(['PLANET:JUPITER', 'PLANET:MARS', 'PLANET:SATURN']);
+      // Canonical order: MARS, JUPITER, SATURN
+      expect(context1?.occupants).toEqual(['PLANET:MARS', 'PLANET:JUPITER', 'PLANET:SATURN']);
     });
 
     it('should deduplicate occupants', () => {
@@ -399,7 +441,8 @@ describe('career10h Structural Analyzer', () => {
 
       const context = analyzeCareer10HContext(reports, 'LAGNA');
 
-      expect(context?.occupants).toEqual(['PLANET:JUPITER', 'PLANET:MARS']);
+      // Canonical order: MARS, JUPITER
+      expect(context?.occupants).toEqual(['PLANET:MARS', 'PLANET:JUPITER']);
     });
 
     it('should produce stable context ID', () => {
@@ -475,10 +518,10 @@ describe('career10h Foundation Resolver', () => {
             ...input.horoscope!.planetFacts,
             [Planet.MOON]: {
               ...input.horoscope!.planetFacts[Planet.MOON],
-              sign: undefined,
+              sign: undefined as any,
               position: {
                 ...input.horoscope!.planetFacts[Planet.MOON].position,
-                sign: undefined
+                sign: undefined as any
               }
             }
           } as any
@@ -493,14 +536,16 @@ describe('career10h Foundation Resolver', () => {
       expect(result.missingInputs).toContain('moonContext');
     });
 
-    it('should return INSUFFICIENT_DATA when no aspect report', () => {
+    it('should return COMPLETE when no aspect report (enrichment is optional)', () => {
       const input = makeFoundationInput(Sign.ARIES, Sign.CANCER, false);
 
       const result = resolveCareer10HFoundation(input);
 
       // Missing aspect report should still allow contexts to be built
-      // but should be marked in missingInputs
-      expect(result.missingInputs).toContain('natalGrahaDrishti');
+      // natalGrahaDrishti is an enrichment, not a structural prerequisite
+      expect(result.status).toBe('COMPLETE');
+      expect(result.foundation.lagnaContext?.aspectDataStatus).toBe('UNAVAILABLE');
+      expect(result.foundation.moonContext?.aspectDataStatus).toBe('UNAVAILABLE');
     });
 
     it('should return INSUFFICIENT_DATA when houseLordship is missing', () => {
@@ -535,6 +580,9 @@ describe('career10h Foundation Resolver', () => {
       // Should not fabricate aspects when report is missing
       expect(result.foundation.lagnaContext?.aspectsOn10H).toEqual([]);
       expect(result.foundation.moonContext?.aspectsOn10H).toEqual([]);
+      // Should mark aspect data as unavailable
+      expect(result.foundation.lagnaContext?.aspectDataStatus).toBe('UNAVAILABLE');
+      expect(result.foundation.moonContext?.aspectDataStatus).toBe('UNAVAILABLE');
     });
 
     it('should freeze foundation', () => {
@@ -558,40 +606,97 @@ describe('career10h Foundation Resolver', () => {
   });
 });
 
+// Helper function to escape special regex characters
+function escapedRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 describe('career10h Boundary Enforcement', () => {
-  it('should not import from careerDasha', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    // The test itself is just a marker for the boundary
-    expect(true).toBe(true);
-  });
+  it('should not import forbidden modules in source files', () => {
+    // This test ensures the module does not import from forbidden modules
+    // by checking the actual source file contents for import statements
+    const fs = require('fs');
+    const path = require('path');
 
-  it('should not import from careerD10', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    expect(true).toBe(true);
-  });
+    const sourceDir = path.join(__dirname);
+    const sourceFiles = [
+      'career10HFoundationTypes.ts',
+      'career10HFoundationUtils.ts',
+      'career10HStructuralAnalyzer.ts',
+      'defaultCareer10HFoundation.ts',
+      'index.ts'
+    ];
 
-  it('should not import from careerFinalSynthesis', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    expect(true).toBe(true);
-  });
+    const forbiddenImports = [
+      'careerDasha',
+      'careerD10',
+      'careerFinalSynthesis',
+      'careerExpression',
+      'domain/timing',
+      'careerProfession'
+    ];
 
-  it('should not import from careerExpression', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    expect(true).toBe(true);
-  });
+    for (const file of sourceFiles) {
+      const filePath = path.join(sourceDir, file);
+      const content = fs.readFileSync(filePath, 'utf-8');
 
-  it('should not import from domain/timing', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    expect(true).toBe(true);
+      for (const forbidden of forbiddenImports) {
+        // Check for actual import statements at the start of lines (ignoring comments)
+        const lines = content.split('\n');
+        const hasImport = lines.some((line: string) => {
+          const trimmed = line.trim();
+          // Skip comment lines
+          if (trimmed.startsWith('//') || trimmed.startsWith('*')) {
+            return false;
+          }
+          // Check for import statement
+          return trimmed.startsWith('import') && trimmed.includes(forbidden);
+        });
+        expect(hasImport).toBe(false);
+      }
+    }
   });
+});
 
-  it('should not import from careerMechanism', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    expect(true).toBe(true);
-  });
+describe('career10h Integration Tests', () => {
+  it('should use real analyzeHouseLordship output for at least one Lagna', () => {
+    // This integration test verifies that the module works with real engine output
+    const ascendantSign = Sign.ARIES;
+    const houseLordship = analyzeHouseLordship(ascendantSign);
 
-  it('should not import from careerProfession', () => {
-    // This is a compile-time check - if the import exists, TypeScript will fail
-    expect(true).toBe(true);
+    // Verify houseLordship has the expected structure
+    expect(houseLordship).toBeDefined();
+    expect(houseLordship.ascendantSign).toBe(ascendantSign);
+    expect(houseLordship.houseLords).toBeDefined();
+    expect(houseLordship.houseLords[10]).toBe(Planet.SATURN); // 10th house from Aries is Capricorn
+
+    // Create a minimal report bundle using real houseLordship
+    const planetFacts: Record<Planet, any> = {
+      [Planet.SUN]: { planet: Planet.SUN, sign: Sign.LEO, position: { sign: Sign.LEO, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.MOON]: { planet: Planet.MOON, sign: Sign.CANCER, position: { sign: Sign.CANCER, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.MARS]: { planet: Planet.MARS, sign: Sign.ARIES, position: { sign: Sign.ARIES, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.MERCURY]: { planet: Planet.MERCURY, sign: Sign.GEMINI, position: { sign: Sign.GEMINI, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.JUPITER]: { planet: Planet.JUPITER, sign: Sign.SAGITTARIUS, position: { sign: Sign.SAGITTARIUS, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.VENUS]: { planet: Planet.VENUS, sign: Sign.TAURUS, position: { sign: Sign.TAURUS, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.SATURN]: { planet: Planet.SATURN, sign: Sign.CAPRICORN, position: { sign: Sign.CAPRICORN, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.RAHU]: { planet: Planet.RAHU, sign: Sign.AQUARIUS, position: { sign: Sign.AQUARIUS, longitude: 0 }, dignity: {}, state: {} },
+      [Planet.KETU]: { planet: Planet.KETU, sign: Sign.SCORPIO, position: { sign: Sign.SCORPIO, longitude: 0 }, dignity: {}, state: {} }
+    };
+
+    const houseAnalysis = makeHouseAnalysisReport(ascendantSign);
+
+    const reports: Career10HReportBundle = {
+      houseLordship,
+      houseAnalysis,
+      planetFacts
+    };
+
+    const context = analyzeCareer10HContext(reports, 'LAGNA');
+
+    expect(context).not.toBeNull();
+    expect(context?.referencePoint).toBe('LAGNA');
+    expect(context?.referenceHouseNumber).toBe(10);
+    expect(context?.lagnaRelativeHouseNumber).toBe(10);
+    expect(context?.house10Lord).toBe(Planet.SATURN);
   });
 });

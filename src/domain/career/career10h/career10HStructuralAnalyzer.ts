@@ -81,15 +81,20 @@ export function analyzeCareer10HContext(
     return null;
   }
 
-  let house10Number: number;
+  // referenceHouseNumber is always 10 (the 10th house FROM the reference point)
+  const referenceHouseNumber = 10;
+
+  let referenceHouseSign: Sign;
+  let lagnaRelativeHouseNumber: number;
   let moonSign: Sign | undefined;
 
   if (referencePoint === 'LAGNA') {
     // For Lagna, 10th house is simply house 10
-    house10Number = 10;
+    referenceHouseSign = houseAnalysis.houses[10].sign;
+    lagnaRelativeHouseNumber = 10;
   } else if (referencePoint === 'MOON') {
     // For Moon, derive 10th-from-Moon house via sign arithmetic
-    const moonFact = planetFacts['MOON' as Planet];
+    const moonFact = planetFacts[Planet.MOON];
     if (!moonFact) {
       return null;
     }
@@ -103,56 +108,65 @@ export function analyzeCareer10HContext(
     // Calculate 10th house from Moon
     // If Moon is in sign S, 10th-from-Moon is sign (S + 9) mod 12
     // We need to map this back to Lagna-relative house number
-    house10Number = calculate10thFromMoonHouse(ascendantSign, moonSign);
+    lagnaRelativeHouseNumber = calculate10thFromMoonHouse(ascendantSign, moonSign);
+    referenceHouseSign = houseAnalysis.houses[lagnaRelativeHouseNumber].sign;
   } else {
     return null;
   }
 
-  // Get 10th house data from HouseAnalysisReport
-  const house10Data = houseAnalysis.houses[house10Number];
-  if (!house10Data) {
+  // Get house data from HouseAnalysisReport using lagnaRelativeHouseNumber
+  const houseData = houseAnalysis.houses[lagnaRelativeHouseNumber];
+  if (!houseData) {
     return null;
   }
 
-  // Extract 10th house lord from HouseLordshipReport
-  const house10Lord = houseLordship.houseLords[house10Number as House];
-  if (!house10Lord) {
+  // Extract 10th house lord from the sign metadata
+  // The lord of referenceHouseSign is the 10L (10th lord)
+  const signMetadata = SIGNS_METADATA[referenceHouseSign];
+  if (!signMetadata || !signMetadata.ruler) {
     return null;
   }
+  const house10Lord = signMetadata.ruler;
 
-  // Get lord's house placement from house10Data
-  const lordHouse = house10Data.lordAnalysis?.house;
+  // Get lord's house placement from houseData
+  const lordHouse = houseData.lordAnalysis?.house;
   if (typeof lordHouse !== 'number' || lordHouse < 1 || lordHouse > 12) {
     return null;
   }
 
   // Convert occupants to ParticipantId array
-  const occupants = convertOccupantsToParticipantIds(house10Data.occupants) as readonly ParticipantId[];
+  const occupants = convertOccupantsToParticipantIds(houseData.occupants);
 
   // Extract aspects on 10th house from NatalGrahaDrishtiReport
   const aspectsOn10H = extractAspectsOnHouse(
     natalGrahaDrishti,
-    house10Number
-  ) as readonly Career10HAspect[];
+    lagnaRelativeHouseNumber
+  );
+
+  // Determine aspect data status
+  const aspectDataStatus: 'AVAILABLE' | 'UNAVAILABLE' =
+    natalGrahaDrishti && natalGrahaDrishti.aspects ? 'AVAILABLE' : 'UNAVAILABLE';
 
   // Build provenance
   const provenance = buildProvenance(
     houseLordship,
     houseAnalysis,
     natalGrahaDrishti,
-    house10Number,
+    lagnaRelativeHouseNumber,
     aspectsOn10H
   );
 
   // Build context
   const context: Career10HContext = {
     referencePoint,
-    house10Number,
-    house10Sign: house10Data.sign,
+    referenceHouseNumber,
+    referenceHouseSign,
+    lagnaRelativeHouseNumber,
     house10Lord,
     lordHouse,
     occupants,
     aspectsOn10H,
+    aspectDataStatus,
     provenance
   };
 
@@ -201,11 +215,11 @@ function calculate10thFromMoonHouse(
  */
 function convertOccupantsToParticipantIds(
   occupants: readonly Planet[] | Planet[]
-): readonly string[] {
+): readonly ParticipantId[] {
   const participantIds = occupants.map(planet =>
     createParticipantId(planet)
   );
-  return dedupParticipantIds(sortParticipantIds(participantIds));
+  return dedupParticipantIds(participantIds);
 }
 
 /**
@@ -240,27 +254,52 @@ function extractAspectsOnHouse(
 
 /**
  * Builds provenance tracking for the 10H context.
+ *
+ * Provenance contract:
+ * - houseLordshipEvidenceId: Real ruleId from HouseLordshipReport (if available)
+ * - sourceHouseIndex: Locator - the Lagna-relative house number used to fetch data
+ * - drishtiSource: Structural reference to aspect data (reportPresent + aspectCount)
+ * - drishtiAspectIds: Real aspect identity IDs from source report (if available), empty array if absent
+ *
+ * Rule: Provenance contains only IDs that exist upstream; locators are fields, not fabricated IDs.
  */
 function buildProvenance(
   houseLordship: HouseLordshipReport,
   houseAnalysis: HouseAnalysisReport,
   natalGrahaDrishti: NatalGrahaDrishtiReport | undefined,
-  house10Number: number,
+  lagnaRelativeHouseNumber: number,
   aspectsOn10H: readonly Career10HAspect[]
 ): Career10HProvenance {
   // Find house lordship evidence for this house
-  const houseLordshipEvidence = houseLordship.evidence.find(
-    (e: any) => e.house === house10Number
+  const houseLordshipEvidence = houseLordship.evidence?.find(
+    (e: { house?: number; ruleId?: string }) => e.house === lagnaRelativeHouseNumber
   );
 
-  // Get drishti aspect IDs
-  const drishtiAspectIds = aspectsOn10H.map((aspect, index) =>
-    `DRISHTI:${aspect.sourcePlanet}:${aspect.targetHouse}:${index}`
+  // Build drishti source reference (structural, not an ID)
+  const drishtiSource = Object.freeze({
+    reportPresent: natalGrahaDrishti !== undefined,
+    aspectCount: aspectsOn10H.length
+  });
+
+  // Extract real aspect identity IDs if the source aspect records carry them
+  // Otherwise, use empty array (no fabricated IDs)
+  const drishtiAspectIds: readonly string[] = Object.freeze(
+    aspectsOn10H
+      .map((aspect) => {
+        // Check if the source aspect has an identity field
+        const sourceAspect = natalGrahaDrishti?.aspects?.find(
+          (a: { sourcePlanet?: Planet; targetHouse?: number; identity?: string }) =>
+            a.sourcePlanet === aspect.sourcePlanet && a.targetHouse === aspect.targetHouse
+        );
+        return sourceAspect?.identity;
+      })
+      .filter((id): id is string => id !== undefined)
   );
 
   return Object.freeze({
     houseLordshipEvidenceId: houseLordshipEvidence?.ruleId,
-    houseAnalysisHouseId: `HOUSE_ANALYSIS:${house10Number}`,
-    drishtiAspectIds: Object.freeze(drishtiAspectIds)
+    sourceHouseIndex: lagnaRelativeHouseNumber,
+    drishtiSource,
+    drishtiAspectIds
   });
 }

@@ -92,39 +92,41 @@ export function resolveCareer10HFoundation(
 function extractReports(
   input: Career10HFoundationInput,
   missingInputs: string[]
-): Career10HReportBundle {
+): Partial<Career10HReportBundle> {
   const reports: Partial<Career10HReportBundle> = {};
 
   // Try to get from pre-computed reports first
   if (input.houseLordship) {
-    (reports as any).houseLordship = input.houseLordship;
+    reports.houseLordship = input.houseLordship;
   } else if (input.horoscope?.houseLordship) {
-    (reports as any).houseLordship = input.horoscope.houseLordship;
+    reports.houseLordship = input.horoscope.houseLordship;
   } else {
     missingInputs.push('houseLordship');
   }
 
   if (input.houseAnalysis) {
-    (reports as any).houseAnalysis = input.houseAnalysis;
+    reports.houseAnalysis = input.houseAnalysis;
   } else if (input.horoscope?.houseAnalysis) {
-    (reports as any).houseAnalysis = input.horoscope.houseAnalysis;
+    reports.houseAnalysis = input.horoscope.houseAnalysis;
   } else {
     missingInputs.push('houseAnalysis');
   }
 
   if (input.natalGrahaDrishti) {
-    (reports as any).natalGrahaDrishti = input.natalGrahaDrishti;
+    reports.natalGrahaDrishti = input.natalGrahaDrishti;
   } else if (input.horoscope?.natalGrahaDrishti || input.horoscope?.grahaDrishti) {
-    (reports as any).natalGrahaDrishti = input.horoscope.natalGrahaDrishti || input.horoscope.grahaDrishti;
-  } else {
-    missingInputs.push('natalGrahaDrishti');
+    reports.natalGrahaDrishti = input.horoscope.natalGrahaDrishti || input.horoscope.grahaDrishti;
   }
+  // natalGrahaDrishti is an enrichment, not a structural prerequisite
+  // Don't add to missingInputs - contexts can be built without it
 
   if (input.horoscope?.planetFacts) {
-    (reports as any).planetFacts = input.horoscope.planetFacts;
+    reports.planetFacts = input.horoscope.planetFacts;
   } else {
     missingInputs.push('planetFacts');
   }
 
-  return reports as Career10HReportBundle;
+  // At this point, we've populated all available fields
+  // The resolver will check for required fields before proceeding
+  return reports;
 }
