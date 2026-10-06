@@ -21,3 +21,6 @@ coverage/
 
 # Build artifacts
 *.tsbuildinfo
+
+# Vite timestamp files
+vite.config.ts.timestamp-*.mjs

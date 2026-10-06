@@ -139,7 +139,9 @@ export interface CareerDispositorContext {
 }
 ```
 
-The `outcome`, `terminalPlanetId`, `chainId`, `depth`, and `provenanceIds` are populated from the resolved `CareerDispositorChain` in `DefaultCareerDispositorContextFactory.create`. The `provenanceIds` field carries chain-level provenance from the engine (currently empty pending engine exposure of per-link IDs).
+The `outcome`, `terminalPlanetId`, `chainId`, `depth`, and `provenanceIds` are populated from the resolved `CareerDispositorChain` in `DefaultCareerDispositorContextFactory.create`. 
+
+**Important:** `chainId` is the canonical dispositor-chain identity, while `provenanceIds` is currently empty pending engine exposure of per-link IDs. The `provenanceIds` field exists structurally so downstream code doesn't need migration when the engine provides these IDs.
 
 ## Test Coverage
 
@@ -151,14 +153,13 @@ The test suite (`careerMechanismDispositorRefiner.test.ts`) includes:
 4. **sourceEvidenceIds propagation**: Verifies source evidence IDs are carried through
 5. **Source firewall**: Tests rejection of D10, DASHA, TRANSIT, TIMING, FINAL_SYNTHESIS, AI sources
 6. **Order determinism**: Ensures permuted contexts produce identical results
-7. **Type safety**: Validates that no-candidate path is impossible by type
-8. **Original candidate preservation**: Verifies original candidate mechanism and evidence are preserved
-9. **INSUFFICIENT_DATA handling**: Tests behavior when no usable context exists
-10. **Evidence vs relationship separation**: Regression test asserting no evidence ID appears in any `relationshipIds` array
-11. **D10-sourced evidence rejection**: Tests that D10-sourced evidence through `refine()` is rejected
-12. **DEPTH_LIMIT handling**: Verifies DEPTH_LIMIT contexts return UNCHANGED with zero mechanisms (chain-tail never treated as terminal)
-13. **INSUFFICIENT_DATA vs DEPTH_LIMIT distinction**: Ensures genuine missing data (INSUFFICIENT_DATA) is distinguishable from depth exhaustion (DEPTH_LIMIT)
-14. **DISPOSITOR evidence structure**: Asserts DISPOSITOR evidence has empty `relationshipIds` and non-empty `participantIds`
+7. **Original candidate preservation**: Verifies original candidate mechanism and evidence are preserved
+8. **INSUFFICIENT_DATA handling**: Tests behavior when no usable context exists
+9. **Evidence vs relationship separation**: Regression test asserting no evidence ID appears in any `relationshipIds` array
+10. **D10-sourced evidence rejection**: Tests that D10-sourced evidence through `refine()` is rejected
+11. **DEPTH_LIMIT handling**: Verifies DEPTH_LIMIT contexts return UNCHANGED with zero mechanisms (chain-tail never treated as terminal)
+12. **INSUFFICIENT_DATA vs DEPTH_LIMIT distinction**: Ensures genuine missing data (INSUFFICIENT_DATA) is distinguishable from depth exhaustion (DEPTH_LIMIT)
+13. **DISPOSITOR evidence structure**: Asserts DISPOSITOR evidence has empty `relationshipIds` and non-empty `participantIds`
 
 ## Implementation Notes
 
@@ -168,3 +169,7 @@ The test suite (`careerMechanismDispositorRefiner.test.ts`) includes:
 - `DISPOSITOR` is a valid `CareerMechanismPathway` (defined in `careerMechanismTypes.ts`)
 - DISPOSITOR evidence is built using `buildRefiningMechanismEvidence` (not `buildCareerMechanismEvidence`) to emit `role: 'REFINING'`
 - `DISPOSITOR` is now included in the `CareerMechanismRefinementSource` union (alongside `D10`)
+
+## Deferred Follow-ups
+
+- **Structural refinement provenance:** Replace the explanation-string stopgap with a dedicated `chainId` → `sourceEvidenceIds` mapping on `CareerMechanismProvenance` to track refinement-provenance structurally

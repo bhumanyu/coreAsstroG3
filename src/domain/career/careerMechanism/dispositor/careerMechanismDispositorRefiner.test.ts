@@ -23,7 +23,6 @@ import { Planet } from '../../../../types';
  * - sourceEvidenceIds propagated into provenance
  * - D10/DASHA source rejection
  * - Order-determinism (permuted contexts → identical result)
- * - No-candidate path impossible by type (input accepts candidate only)
  * - Original candidate mechanism + evidence preserved
  * - INSUFFICIENT_DATA when no usable context
  */
@@ -554,20 +553,6 @@ describe('CareerMechanismDispositorRefiner', () => {
       expect(result1.status).toBe(result2.status);
       expect(result1.mechanisms.length).toBe(result2.mechanisms.length);
       expect(result1.originalCandidateId).toBe(result2.originalCandidateId);
-    });
-  });
-
-  describe('Type safety', () => {
-    it('no-candidate path is impossible by type (input accepts candidate only)', () => {
-      // This is a compile-time type check - the input type requires a candidate
-      // There's no way to call refine without a candidate
-      const input: CareerMechanismDispositorRefinementInput = {
-        candidate: {} as CareerMechanismCandidate,
-        dispositorContexts: []
-      };
-
-      // This validates the type structure
-      expect(input.candidate).toBeDefined();
     });
   });
 
