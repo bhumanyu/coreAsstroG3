@@ -870,6 +870,33 @@ describe('career10L Foundation Resolver', () => {
       expect(result.foundation.moonContext?.relationshipDataStatus).toBe('UNAVAILABLE');
     });
 
+    it('regression: Lagna context with both houseLordship and careerGraph omitted should return INSUFFICIENT_DATA', () => {
+      const lagnaContext = makeCareer10HContext('LAGNA', Planet.SATURN, 10);
+      const foundation = makeCareer10HFoundation(lagnaContext, null);
+      const planetAnalysis = makePlanetAnalysisReport(
+        Planet.SATURN,
+        DignityStatus.OWN_SIGN,
+        false,
+        undefined,
+        Sign.CAPRICORN,
+        10
+      );
+
+      const input: Career10LFoundationInput = {
+        foundation,
+        planetAnalysis
+        // houseLordship omitted
+        // careerGraph omitted
+      };
+
+      const result = resolveCareer10LFoundation(input);
+
+      // Both HOUSE_LORDSHIP and CAREER_GRAPH should be in missingInputs
+      expect(result.status).toBe('INSUFFICIENT_DATA');
+      expect(result.missingInputs).toContain('HOUSE_LORDSHIP');
+      expect(result.missingInputs).toContain('CAREER_GRAPH');
+    });
+
     it('should handle missing planetAnalysis gracefully (UNAVAILABLE)', () => {
       const lagnaContext = makeCareer10HContext('LAGNA', Planet.SATURN, 10);
       const foundation = makeCareer10HFoundation(lagnaContext, null);
