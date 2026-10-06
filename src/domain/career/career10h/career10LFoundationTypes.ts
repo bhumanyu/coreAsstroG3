@@ -53,7 +53,7 @@ export type Career10LDataStatus = 'AVAILABLE' | 'UNAVAILABLE';
  */
 export interface Career10LRelationship {
   /** The counterpart house (1|5|6|8|9|12) */
-  readonly targetHouse: number;
+  readonly targetHouse: 1 | 5 | 6 | 8 | 9 | 12;
   /** Lord of targetHouse (source lord in the relationship) */
   readonly sourceLord: Planet;
   /** Always the 10L (target lord in the relationship) */
@@ -134,11 +134,17 @@ export interface Career10LProvenance {
 /**
  * Input for resolving 10L foundation.
  * Consumes Career10HFoundation from P2-07F and optional engine reports.
+ *
+ * Status contract:
+ * - foundation: required (missing → INSUFFICIENT_DATA)
+ * - houseLordship: required for relationships stage (missing → INSUFFICIENT_DATA)
+ * - planetAnalysis: optional enrichment (missing → condition status UNAVAILABLE, overall status COMPLETE)
+ * - careerGraph: optional (missing → relationshipDataStatus UNAVAILABLE, recorded in missingInputs, overall status COMPLETE)
  */
 export interface Career10LFoundationInput {
   /** Required: 10H foundation from P2-07F */
   readonly foundation: Career10HFoundation;
-  /** Optional: House lordship report for relationship resolution */
+  /** Required for relationships: House lordship report for relationship resolution */
   readonly houseLordship?: HouseLordshipReport;
   /** Optional: Planet analysis report for condition resolution */
   readonly planetAnalysis?: PlanetAnalysisReport;

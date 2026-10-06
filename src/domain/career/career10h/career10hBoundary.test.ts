@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 describe('career10h Boundary Enforcement', () => {
@@ -14,18 +14,10 @@ describe('career10h Boundary Enforcement', () => {
   ];
 
   const modulePath = join(__dirname);
-  const sourceFiles = [
-    'career10HFoundationTypes.ts',
-    'career10HFoundationUtils.ts',
-    'career10HStructuralAnalyzer.ts',
-    'defaultCareer10HFoundation.ts',
-    'career10LFoundationTypes.ts',
-    'career10LCondition.ts',
-    'career10LRelationships.ts',
-    'defaultCareer10LFoundation.ts',
-    'career10HFoundation.test.ts',
-    'career10LFoundation.test.ts'
-  ];
+
+  // Dynamic enumeration: automatically include all .ts files in the directory
+  const sourceFiles = readdirSync(modulePath)
+    .filter(file => file.endsWith('.ts'));
 
   for (const file of sourceFiles) {
     describe(file, () => {

@@ -15,10 +15,12 @@ import type { CareerAstroGraph, CareerGraphEdgeType } from '../careerGraph/caree
  * - LORD_OF and OCCUPIES are planet→house edges and cannot join two lords
  * - Dedupe by identityKey (same semantic relationship from both directions → one record)
  * - Deterministic ordering: targetHouse order, then edge.type canonical order, then identityKey
- * - For Moon context: uses Lagna-relative house lords from D1 lordship table
- *   NOTE: Moon chart lordship is not canonical in this codebase.
- *   P2-07G evaluates the Moon-10L against Lagna lords.
- *   This is a deferred semantic question flagged for future consideration.
+ *
+ * MOON-CONTEXT LORDSHIP CONTRACT (CANONICAL):
+ * - Moon context 10L identity/placement comes from P2-07F Moon-relative coordinates
+ * - Target-lord relationships are evaluated against the D1/Lagna lordship table (houseLordship.houseLords)
+ * - Moon-relative lordship is out of scope pending a canonical Moon-chart lordship report
+ * - This is the canonical contract; not a deferred question
  */
 
 /**
@@ -61,8 +63,8 @@ export function resolveCareer10LRelationships(
   // Iterate through target houses in canonical order
   for (const targetHouse of CAREER_10L_RELATIONSHIP_HOUSES) {
     // Get the lord of the target house from D1 lordship table
-    // NOTE: For Moon context, we still use Lagna-relative lords (D1 table)
-    // Moon chart lordship is not canonical in this codebase
+    // CANONICAL CONTRACT: houseLordship.houseLords is the D1 table for both Lagna and Moon contexts
+    // Moon-relative lordship is out of scope pending a canonical Moon-chart lordship report
     const sourceLord = houseLordship.houseLords[targetHouse as keyof typeof houseLordship.houseLords];
     if (!sourceLord) {
       continue;
@@ -123,8 +125,8 @@ export function resolveCareer10LRelationships(
 
   relationships.sort((a, b) => {
     // Sort by targetHouse index in CAREER_10L_RELATIONSHIP_HOUSES
-    const aHouseIndex = CAREER_10L_RELATIONSHIP_HOUSES.indexOf(a.targetHouse as any);
-    const bHouseIndex = CAREER_10L_RELATIONSHIP_HOUSES.indexOf(b.targetHouse as any);
+    const aHouseIndex = CAREER_10L_RELATIONSHIP_HOUSES.indexOf(a.targetHouse);
+    const bHouseIndex = CAREER_10L_RELATIONSHIP_HOUSES.indexOf(b.targetHouse);
     if (aHouseIndex !== bHouseIndex) {
       return aHouseIndex - bHouseIndex;
     }

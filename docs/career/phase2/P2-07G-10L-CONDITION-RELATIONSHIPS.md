@@ -1,6 +1,6 @@
 # P2-07G: 10L Condition and Relationships
 
-**Status:** IMPLEMENTED — VERIFIED
+**Status:** IMPLEMENTED — LOCAL VERIFICATION REPORTED — CI VERIFICATION PENDING
 
 ## Architecture Position
 
@@ -36,13 +36,15 @@ The engine's `DignityStatus` enum includes `MOOLATRIKONA`, but `CareerPlanetaryD
 
 **Implementation:** In `career10LCondition.ts`, the `mapDignityStatus` function explicitly maps `MOOLATRIKONA` → `OWN_SIGN` with a code comment documenting the decision.
 
-### Moon-Lordship Caveat
+### Moon-Lordship Contract (CANONICAL)
 
-For Moon context, the six target house lords are still **Lagna-relative** house lords from `houseLordship.houseLords` (the D1 lordship table).
+For Moon context, the six target house lords are **Lagna-relative** house lords from `houseLordship.houseLords` (the D1 lordship table).
 
-**Rationale:** Moon chart lordship is not canonical in this codebase. P2-07G evaluates the Moon-10L against Lagna lords.
-
-**Deferred Semantic Question:** Whether to use Moon-relative lords for Moon context is a semantic question deferred for future consideration. The current implementation uses D1 lords for both Lagna and Moon contexts.
+**CANONICAL CONTRACT:**
+- Moon context 10L identity/placement comes from P2-07F Moon-relative coordinates
+- Target-lord relationships are evaluated against the D1/Lagna lordship table (houseLordship.houseLords)
+- Moon-relative lordship is out of scope pending a canonical Moon-chart lordship report
+- This is the canonical contract; not a deferred question
 
 ### "UNAVAILABLE ≠ None" Status Rule
 
@@ -99,7 +101,7 @@ Defines all type interfaces for the module:
 **Logic:**
 1. If `graph` or `houseLordship` absent → `dataStatus: UNAVAILABLE`, empty relationships
 2. For each target house in `CAREER_10L_RELATIONSHIP_HOUSES = [1, 5, 6, 8, 9, 12]`:
-   - `sourceLord = houseLordship.houseLords[targetHouse]`
+   - `sourceLord = houseLordship.houseLords[targetHouse]` (canonical lord identity from analyzeHouseLordship)
    - Find edges in `graph.edges` where the pair `{sourceNodeId, targetNodeId}` connects `PLANET:${sourceLord}` and `PLANET:${tenL}` in either direction
    - Filter by edge type ∈ `{ASPECTS, CONJUNCT, EXCHANGES}` (planet-to-planet only)
    - Each match → one `Career10LRelationship` with `relationshipId = edge.identityKey`, `relationshipType = edge.type`, `provenance = edge.provenance` (verbatim)
@@ -108,6 +110,11 @@ Defines all type interfaces for the module:
    - By `CAREER_10L_RELATIONSHIP_HOUSES` order
    - By edge type canonical order (LORD_OF < OCCUPIES < ASPECTS < CONJUNCT < EXCHANGES)
    - By `identityKey` lexicographic
+
+**Relationship Contract (Explicit Chain):**
+- Target house → `houseLordship.houseLords[house]` (canonical lord identity from analyzeHouseLordship)
+- Planet↔planet graph edges (ASPECTS|CONJUNCT|EXCHANGES, either direction, dedup by identityKey) → `Career10LRelationship`
+- LORD_OF/OCCUPIES are planet→house edges and cannot join two lords by definition
 
 **Constraints:**
 - LORD_OF and OCCUPIES are planet→house edges and cannot join two lords (excluded)
@@ -214,13 +221,13 @@ Replicates P2-07F static boundary test:
 
 ## Verification
 
-**Status:** IMPLEMENTED — VERIFIED
+**Status:** IMPLEMENTED — LOCAL VERIFICATION REPORTED — CI VERIFICATION PENDING
 
-Verification completed:
+Local verification completed:
 ```bash
 npm run lint          # tsc --noEmit - PASSED
 npm test -- career10h # career10h + engine planetAnalysis/houseLordship/careerGraph suites - PASSED
 npm test              # Full test suite - PASSED (3961 tests, 3 skipped)
 ```
 
-All tests passed successfully.
+All tests passed successfully locally. CI verification pending.

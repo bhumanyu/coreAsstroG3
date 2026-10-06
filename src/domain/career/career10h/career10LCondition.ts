@@ -1,4 +1,5 @@
 import type { Planet, Sign, DignityStatus, PlanetAnalysisReport, PlanetAnalysisEvidence, PlanetAnalysisEvidenceType } from '../../../types';
+import { PlanetStateCondition } from '../../../types';
 import type { Career10HContext } from './career10HFoundationTypes';
 import type { Career10LCondition, Career10LDataStatus } from './career10LFoundationTypes';
 import type { CareerPlanetaryDignity, CareerPlanetaryMotion, CareerPlanetaryCombustion } from '../careerPlanetaryCondition';
@@ -128,14 +129,14 @@ function mapMotionState(
  * Maps combustion state to CareerPlanetaryCombustion.
  */
 function mapCombustionState(
-  condition: string | undefined
+  condition: PlanetStateCondition | undefined
 ): CareerPlanetaryCombustion | undefined {
   if (!condition) {
     return undefined;
   }
 
   // PlanetStateCondition.NORMAL | COMBUST | DEEP_COMBUST
-  if (condition === 'COMBUST' || condition === 'DEEP_COMBUST') {
+  if (condition === PlanetStateCondition.COMBUST || condition === PlanetStateCondition.DEEP_COMBUST) {
     return 'COMBUST';
   }
 
@@ -145,6 +146,7 @@ function mapCombustionState(
 /**
  * Extracts real ruleIds from PlanetAnalysisEvidence.
  * Only includes evidence for SIGN_PLACEMENT, DIGNITY, RETROGRADE, COMBUSTION.
+ * Returns canonically sorted unique ruleIds.
  */
 function extractSourceRuleIds(
   evidence: readonly PlanetAnalysisEvidence[] | undefined
@@ -156,14 +158,12 @@ function extractSourceRuleIds(
   const ruleIds = new Set<string>();
 
   for (const ev of evidence) {
-    const type = ev.type as PlanetAnalysisEvidenceType;
-
     // Only include evidence for the facts we copy
     if (
-      type === 'SIGN_PLACEMENT' ||
-      type === 'DIGNITY' ||
-      type === 'RETROGRADE' ||
-      type === 'COMBUSTION'
+      ev.type === 'SIGN_PLACEMENT' ||
+      ev.type === 'DIGNITY' ||
+      ev.type === 'RETROGRADE' ||
+      ev.type === 'COMBUSTION'
     ) {
       if (ev.ruleId) {
         ruleIds.add(ev.ruleId);
@@ -171,5 +171,5 @@ function extractSourceRuleIds(
     }
   }
 
-  return Object.freeze(Array.from(ruleIds));
+  return Object.freeze([...ruleIds].sort());
 }

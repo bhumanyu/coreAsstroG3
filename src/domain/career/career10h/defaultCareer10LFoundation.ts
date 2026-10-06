@@ -7,6 +7,9 @@ import type {
   Career10LProvenance
 } from './career10LFoundationTypes';
 import type { Career10HFoundation, Career10HContext } from './career10HFoundationTypes';
+import type { HouseLordshipReport } from '../../../engine/houseLordship/houseLordship';
+import type { PlanetAnalysisReport } from '../../../types';
+import type { CareerAstroGraph } from '../careerGraph/careerAstroGraphTypes';
 import { resolveCareer10LCondition } from './career10LCondition';
 import { resolveCareer10LRelationships } from './career10LRelationships';
 
@@ -24,6 +27,12 @@ import { resolveCareer10LRelationships } from './career10LRelationships';
  * - Handle INSUFFICIENT_DATA gracefully by declaring missing inputs
  * - Deep-freeze all output objects
  * - Mirror P2-07F's aspectDataStatus convention: UNAVAILABLE when engine absent ≠ no data
+ *
+ * Status contract:
+ * - foundation: required (missing → INSUFFICIENT_DATA)
+ * - houseLordship: required for relationships stage (missing → INSUFFICIENT_DATA)
+ * - planetAnalysis: optional enrichment (missing → condition status UNAVAILABLE, overall status COMPLETE)
+ * - careerGraph: optional (missing → relationshipDataStatus UNAVAILABLE, recorded in missingInputs, overall status COMPLETE)
  */
 
 /**
@@ -103,10 +112,10 @@ export class DefaultCareer10LFoundation {
    * Builds a Career10LContext from a Career10HContext.
    */
   private static buildCareer10LContext(
-    context10H: any,
-    houseLordship: any,
-    planetAnalysis: any,
-    careerGraph: any,
+    context10H: Career10HContext,
+    houseLordship: HouseLordshipReport | undefined,
+    planetAnalysis: PlanetAnalysisReport | undefined,
+    careerGraph: CareerAstroGraph | undefined,
     missingInputs: string[]
   ): Career10LContext | null {
     // Consume 10L identity and placement verbatim from Career10HContext
@@ -126,9 +135,11 @@ export class DefaultCareer10LFoundation {
       careerGraph
     );
     if (relationshipResult.dataStatus === 'UNAVAILABLE') {
+      // houseLordship is required for relationships stage
       if (!houseLordship) {
         missingInputs.push('HOUSE_LORDSHIP');
       }
+      // careerGraph is optional - record in missingInputs but doesn't affect overall status
       if (!careerGraph) {
         missingInputs.push('CAREER_GRAPH');
       }
@@ -138,7 +149,7 @@ export class DefaultCareer10LFoundation {
     const provenance: Career10LProvenance = {
       house10ContextRef: referencePoint,
       conditionSourceIds: condition.sourceRuleIds,
-      relationshipIds: relationshipResult.relationships.map(r => r.relationshipId)
+      relationshipIds: [...relationshipResult.relationships.map(r => r.relationshipId)].sort()
     };
 
     // Build context
