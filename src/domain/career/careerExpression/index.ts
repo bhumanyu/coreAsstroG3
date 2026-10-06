@@ -10,8 +10,8 @@
  * - Legacy careerExpression.ts (C8 layer) exports CareerExpression, CareerExpressionAnalysis,
  *   CareerExpressionEvidence for mode/strength/weight-based analysis.
  * - This module uses CareerExpressionCandidate and CareerExpressionAnalysisResult to avoid collision.
- * - CareerExpressionEvidence is reused but with incompatible structure (mechanism-source-based vs
- *   mode/strength-based). The divergence is documented in careerExpressionTypes.ts.
+ * - CareerMechanismExpressionEvidence (renamed from CareerExpressionEvidence) is mechanism-source-based
+ *   to avoid collision with legacy mode/strength-based type.
  *
  * BOUNDARY ENFORCEMENT: This module must NOT import from:
  * - careerDasha
@@ -31,7 +31,7 @@ export type {
   CareerExpressionStatus,
   CareerExpressionPathway,
   CareerExpressionCandidate,
-  CareerExpressionEvidence,
+  CareerMechanismExpressionEvidence,
   CareerExpressionProvenance,
   CareerExpressionAnalysisResult,
   CareerExpressionResolverInput

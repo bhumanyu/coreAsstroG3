@@ -1,6 +1,6 @@
 import type {
   CareerExpressionCandidate,
-  CareerExpressionEvidence,
+  CareerMechanismExpressionEvidence,
   CareerExpressionProvenance,
   CareerExpressionAnalysisResult,
   CareerExpressionResolverInput
@@ -9,7 +9,14 @@ import type {
   CareerMechanismCandidate,
   CareerMechanismType
 } from '../careerMechanism';
+import type {
+  Career10HFoundation
+} from '../career10h/career10HFoundationTypes';
+import type {
+  Career10LFoundation
+} from '../career10h/career10LFoundationTypes';
 import { CAREER_EXPRESSION_RULES } from './careerExpressionRules';
+import type { CareerExpressionRule } from './careerExpressionRules';
 import {
   createCareerExpressionId,
   createExpressionEvidenceId,
@@ -82,7 +89,7 @@ export class DefaultCareerExpressionResolver {
       careerMechanismRefinements
     );
 
-    // Check for insufficient data
+    // Check for insufficient data (no mechanism candidates at all)
     if (allMechanismCandidates.length === 0) {
       return this.createInsufficientDataResult(missingInputs);
     }
@@ -111,12 +118,19 @@ export class DefaultCareerExpressionResolver {
       allMechanismCandidates.map(c => c.candidateId).sort()
     );
 
+    // Find unmapped mechanism types (those with no matching rule)
+    const unmappedMechanismTypes = this.findUnmappedMechanismTypes(
+      allMechanismCandidates,
+      sortedCandidates
+    );
+
     // Return frozen result
     return Object.freeze({
       expressions: sortedCandidates,
       status,
       sourceMechanismIds,
       missingInputs: Object.freeze(missingInputs),
+      unmappedMechanismTypes,
       provenance: aggregateProvenance
     });
   }
@@ -161,7 +175,8 @@ export class DefaultCareerExpressionResolver {
    *
    * For composite rules, all matching mechanisms are grouped into one expression.
    * For 1:1 rules, all matching mechanisms of the same type are grouped into one expression.
-   * Composite rules have precedence over 1:1 rules for the same mechanism types.
+   * Composite rules do NOT suppress 1:1 rules - both are emitted (additive behavior).
+   * Dominance/primacy belongs to P2-08B convergence, not the resolver.
    *
    * @param mechanismCandidates - Mechanism candidates to match against rules
    * @param career10HFoundation - Optional 10H foundation for context refinement
@@ -170,8 +185,8 @@ export class DefaultCareerExpressionResolver {
    */
   private matchRulesAndEmitCandidates(
     mechanismCandidates: readonly CareerMechanismCandidate[],
-    career10HFoundation?: unknown,
-    career10LFoundation?: unknown
+    career10HFoundation?: Career10HFoundation,
+    career10LFoundation?: Career10LFoundation
   ): CareerExpressionCandidate[] {
     const expressionCandidates: CareerExpressionCandidate[] = [];
 
@@ -180,15 +195,8 @@ export class DefaultCareerExpressionResolver {
       mechanismCandidates.map(c => c.mechanismType)
     );
 
-    // Track which mechanism types have been used by composite rules
-    const mechanismTypesUsedByComposite = new Set<CareerMechanismType>();
-
-    // First, process composite rules (higher precedence)
+    // Process all rules (both composite and 1:1) - additive behavior
     for (const rule of CAREER_EXPRESSION_RULES) {
-      if (!rule.requiredContext?.composite) {
-        continue;
-      }
-
       // Check if all required mechanism types are present
       const hasAllMechanismTypes = rule.mechanismTypes.every(type =>
         mechanismTypes.has(type)
@@ -198,59 +206,19 @@ export class DefaultCareerExpressionResolver {
         continue;
       }
 
-      // Check minimum mechanism count
-      const minCount = rule.requiredContext.minMechanismCount ?? 2;
-      const matchingCount = rule.mechanismTypes.filter(type =>
-        mechanismTypes.has(type)
-      ).length;
+      // For composite rules, check minimum mechanism count
+      if (rule.requiredContext?.composite) {
+        const minCount = rule.requiredContext.minMechanismCount ?? 2;
+        const matchingCount = rule.mechanismTypes.filter(type =>
+          mechanismTypes.has(type)
+        ).length;
 
-      if (matchingCount < minCount) {
-        continue;
+        if (matchingCount < minCount) {
+          continue;
+        }
       }
 
       // Group all matching mechanisms into one expression
-      const matchingMechanisms = mechanismCandidates.filter(c =>
-        rule.mechanismTypes.includes(c.mechanismType)
-      );
-
-      if (matchingMechanisms.length === 0) {
-        continue;
-      }
-
-      const expressionCandidate = this.createExpressionCandidate(
-        rule,
-        matchingMechanisms,
-        career10HFoundation,
-        career10LFoundation
-      );
-
-      expressionCandidates.push(expressionCandidate);
-
-      // Mark these mechanism types as used by composite
-      rule.mechanismTypes.forEach(type => mechanismTypesUsedByComposite.add(type));
-    }
-
-    // Then, process 1:1 rules (only for mechanism types not used by composite)
-    for (const rule of CAREER_EXPRESSION_RULES) {
-      if (rule.requiredContext?.composite) {
-        continue;
-      }
-
-      // Skip if any of this rule's mechanism types were used by a composite rule
-      if (rule.mechanismTypes.some(type => mechanismTypesUsedByComposite.has(type))) {
-        continue;
-      }
-
-      // Check if all required mechanism types are present
-      const hasAllMechanismTypes = rule.mechanismTypes.every(type =>
-        mechanismTypes.has(type)
-      );
-
-      if (!hasAllMechanismTypes) {
-        continue;
-      }
-
-      // Group all matching mechanisms of this type into one expression
       const matchingMechanisms = mechanismCandidates.filter(c =>
         rule.mechanismTypes.includes(c.mechanismType)
       );
@@ -283,21 +251,18 @@ export class DefaultCareerExpressionResolver {
    * @returns Expression candidate
    */
   private createExpressionCandidate(
-    rule: {
-      readonly ruleId: string;
-      readonly expressionType: string;
-      readonly mechanismTypes: readonly CareerMechanismType[];
-    },
+    rule: CareerExpressionRule,
     matchingMechanisms: readonly CareerMechanismCandidate[],
-    career10HFoundation?: unknown,
-    career10LFoundation?: unknown
+    career10HFoundation?: Career10HFoundation,
+    career10LFoundation?: Career10LFoundation
   ): CareerExpressionCandidate {
     const sourceMechanismIds = Object.freeze(
       matchingMechanisms.map(m => m.candidateId).sort()
     );
 
+    // Canonicalize mechanismTypes: dedupe + sort + freeze
     const mechanismTypes = Object.freeze(
-      matchingMechanisms.map(m => m.mechanismType)
+      [...new Set(matchingMechanisms.map(m => m.mechanismType))].sort()
     );
 
     const expressionId = createCareerExpressionId(
@@ -305,11 +270,15 @@ export class DefaultCareerExpressionResolver {
       sourceMechanismIds
     );
 
-    // Determine pathway (use the first matching mechanism's pathway)
-    const pathway = matchingMechanisms[0].pathway;
+    // Determine pathway: use shared pathway if all match, otherwise COMBINED
+    const pathway = this.determineExpressionPathway(matchingMechanisms);
+
+    // Extract real 10H/10L provenance IDs from typed foundations
+    const source10HIds = this.extract10HProvenanceIds(career10HFoundation);
+    const source10LIds = this.extract10LProvenanceIds(career10LFoundation);
 
     // Create evidence for each matching mechanism
-    const evidence: CareerExpressionEvidence[] = matchingMechanisms.map(mechanism => {
+    const evidence: CareerMechanismExpressionEvidence[] = matchingMechanisms.map(mechanism => {
       const sourceEvidenceIds = Object.freeze(
         mechanism.evidence.map(e => e.evidenceId).sort()
       );
@@ -320,21 +289,12 @@ export class DefaultCareerExpressionResolver {
         sourceEvidenceIds
       );
 
-      // Add 10H/10L context as optional refinement (never establishes expression)
-      const source10HIds = career10HFoundation
-        ? Object.freeze([`10H_REF:${expressionId}`])
-        : undefined;
-
-      const source10LIds = career10LFoundation
-        ? Object.freeze([`10L_REF:${expressionId}`])
-        : undefined;
-
       return Object.freeze({
         evidenceId,
         sourceMechanismId: mechanism.candidateId,
         sourceEvidenceIds,
-        source10HIds,
-        source10LIds,
+        source10HIds: source10HIds.length > 0 ? source10HIds : undefined,
+        source10LIds: source10LIds.length > 0 ? source10LIds : undefined,
         ruleId: rule.ruleId,
         role: 'ESTABLISHING'
       });
@@ -345,7 +305,7 @@ export class DefaultCareerExpressionResolver {
 
     return Object.freeze({
       expressionId,
-      expressionType: rule.expressionType as any,
+      expressionType: rule.expressionType,
       sourceMechanismIds,
       mechanismTypes,
       status: 'CANDIDATE',
@@ -353,6 +313,125 @@ export class DefaultCareerExpressionResolver {
       evidence: Object.freeze(evidence),
       provenance
     });
+  }
+
+  /**
+   * Determines the expression pathway from source mechanisms.
+   * If all mechanisms share the same pathway, use it.
+   * If they differ, use 'COMBINED'.
+   *
+   * @param mechanisms - Source mechanism candidates
+   * @returns Expression pathway
+   */
+  private determineExpressionPathway(
+    mechanisms: readonly CareerMechanismCandidate[]
+  ): 'COMBINED' | CareerMechanismPathway {
+    if (mechanisms.length === 0) {
+      return 'PATTERN'; // Fallback, should never happen
+    }
+
+    if (mechanisms.length === 1) {
+      return mechanisms[0].pathway;
+    }
+
+    // Check if all pathways are the same
+    const firstPathway = mechanisms[0].pathway;
+    const allSame = mechanisms.every(m => m.pathway === firstPathway);
+
+    if (allSame) {
+      return firstPathway;
+    }
+
+    // Pathways differ, use COMBINED
+    return 'COMBINED';
+  }
+
+  /**
+   * Extracts real provenance IDs from Career10HFoundation.
+   * Extracts context identity keys, houseLordship evidence IDs, and drishtiAspectIds.
+   * Returns empty array if foundation is absent or has no relevant IDs.
+   *
+   * @param foundation - Optional 10H foundation
+   * @returns Array of real provenance IDs
+   */
+  private extract10HProvenanceIds(
+    foundation?: Career10HFoundation
+  ): readonly string[] {
+    if (!foundation) {
+      return Object.freeze([]);
+    }
+
+    const ids: string[] = [];
+
+    // Extract from lagna context
+    if (foundation.lagnaContext) {
+      const ctx = foundation.lagnaContext;
+      // Context identity key (lagnaRelativeHouseNumber as string)
+      ids.push(`10H_LAGNA_${ctx.lagnaRelativeHouseNumber}`);
+      // House lordship evidence ID
+      if (ctx.provenance.houseLordshipEvidenceId) {
+        ids.push(ctx.provenance.houseLordshipEvidenceId);
+      }
+      // Drishti aspect IDs
+      ids.push(...ctx.provenance.drishtiAspectIds);
+    }
+
+    // Extract from moon context
+    if (foundation.moonContext) {
+      const ctx = foundation.moonContext;
+      // Context identity key (lagnaRelativeHouseNumber as string)
+      ids.push(`10H_MOON_${ctx.lagnaRelativeHouseNumber}`);
+      // House lordship evidence ID
+      if (ctx.provenance.houseLordshipEvidenceId) {
+        ids.push(ctx.provenance.houseLordshipEvidenceId);
+      }
+      // Drishti aspect IDs
+      ids.push(...ctx.provenance.drishtiAspectIds);
+    }
+
+    return Object.freeze(ids.sort());
+  }
+
+  /**
+   * Extracts real provenance IDs from Career10LFoundation.
+   * Extracts condition provenanceIds, relationship identityKeys, and statuses.
+   * Returns empty array if foundation is absent or has no relevant IDs.
+   *
+   * @param foundation - Optional 10L foundation
+   * @returns Array of real provenance IDs
+   */
+  private extract10LProvenanceIds(
+    foundation?: Career10LFoundation
+  ): readonly string[] {
+    if (!foundation) {
+      return Object.freeze([]);
+    }
+
+    const ids: string[] = [];
+
+    // Extract from lagna context
+    if (foundation.lagnaContext) {
+      const ctx = foundation.lagnaContext;
+      // Condition source rule IDs
+      ids.push(...ctx.condition.sourceRuleIds);
+      // Relationship identity keys
+      ids.push(...ctx.relationships.map(r => r.relationshipId));
+      // Status marker
+      ids.push(`10L_LAGNA_STATUS_${ctx.condition.status}`);
+    }
+
+    // Extract from moon context
+    if (foundation.moonContext) {
+      const ctx = foundation.moonContext;
+      // Condition source rule IDs
+      ids.push(...ctx.condition.sourceRuleIds);
+      // Relationship identity keys
+      ids.push(...ctx.relationships.map(r => r.relationshipId));
+      // Status marker
+      ids.push(`10L_MOON_STATUS_${ctx.condition.status}`);
+    }
+
+    return Object.freeze(ids.sort());
   }
 
   /**
@@ -364,7 +443,7 @@ export class DefaultCareerExpressionResolver {
    */
   private buildExpressionProvenance(
     mechanismCandidates: readonly CareerMechanismCandidate[],
-    evidence: readonly CareerExpressionEvidence[]
+    evidence: readonly CareerMechanismExpressionEvidence[]
   ): CareerExpressionProvenance {
     const mechanismIds = Object.freeze(
       mechanismCandidates.map(m => m.candidateId).sort()
@@ -412,6 +491,9 @@ export class DefaultCareerExpressionResolver {
   /**
    * Determines the analysis status based on missing inputs and candidates.
    * Per spec: missing input ≠ negative, emit PARTIAL/INSUFFICIENT_DATA only.
+   * Status is INSUFFICIENT_DATA only when no mechanism candidates exist.
+   * When mechanism candidates exist but no rules match, status is COMPLETE/PARTIAL
+   * with unmappedMechanismTypes populated.
    *
    * @param missingInputs - Array of missing input names
    * @param candidates - Expression candidates
@@ -421,10 +503,8 @@ export class DefaultCareerExpressionResolver {
     missingInputs: readonly string[],
     candidates: readonly CareerExpressionCandidate[]
   ): 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA' {
-    if (candidates.length === 0) {
-      return 'INSUFFICIENT_DATA';
-    }
-
+    // Status is determined by missing inputs, not by lack of expressions
+    // (no expressions can be valid if mechanisms exist but have no matching rules)
     if (missingInputs.length > 0) {
       return 'PARTIAL';
     }
@@ -446,6 +526,7 @@ export class DefaultCareerExpressionResolver {
       status: 'INSUFFICIENT_DATA',
       sourceMechanismIds: Object.freeze([]),
       missingInputs: Object.freeze(missingInputs),
+      unmappedMechanismTypes: Object.freeze([]),
       provenance: Object.freeze({
         mechanismIds: Object.freeze([]),
         patternIds: Object.freeze([]),
@@ -454,6 +535,42 @@ export class DefaultCareerExpressionResolver {
         sourceStages: Object.freeze([])
       })
     });
+  }
+
+  /**
+   * Finds mechanism types that have no matching expression rule.
+   * Distinguishes no-rule from insufficient-data scenarios.
+   *
+   * @param mechanismCandidates - All mechanism candidates
+   * @param expressionCandidates - Emitted expression candidates
+   * @returns Array of unmapped mechanism types
+   */
+  private findUnmappedMechanismTypes(
+    mechanismCandidates: readonly CareerMechanismCandidate[],
+    expressionCandidates: readonly CareerExpressionCandidate[]
+  ): readonly CareerMechanismType[] {
+    // Collect all mechanism types from candidates
+    const inputMechanismTypes = new Set<CareerMechanismType>(
+      mechanismCandidates.map(c => c.mechanismType)
+    );
+
+    // Collect all mechanism types that were used in expressions
+    const mappedMechanismTypes = new Set<CareerMechanismType>();
+    for (const expression of expressionCandidates) {
+      for (const type of expression.mechanismTypes) {
+        mappedMechanismTypes.add(type);
+      }
+    }
+
+    // Find unmapped types
+    const unmapped: CareerMechanismType[] = [];
+    for (const type of inputMechanismTypes) {
+      if (!mappedMechanismTypes.has(type)) {
+        unmapped.push(type);
+      }
+    }
+
+    return Object.freeze(unmapped.sort());
   }
 }
 

@@ -3,6 +3,12 @@ import type {
   CareerMechanismPathway,
   CareerMechanismCandidate
 } from '../careerMechanism';
+import type {
+  Career10HFoundation
+} from '../career10h/career10HFoundationTypes';
+import type {
+  Career10LFoundation
+} from '../career10h/career10LFoundationTypes';
 
 /**
  * P2-08A Career Expression Model Types
@@ -18,8 +24,8 @@ import type {
  * - Legacy careerExpression.ts (C8 layer) exports CareerExpression, CareerExpressionAnalysis,
  *   CareerExpressionEvidence for mode/strength/weight-based analysis.
  * - This module uses CareerExpressionCandidate and CareerExpressionAnalysisResult to avoid collision.
- * - CareerExpressionEvidence is reused but with incompatible structure (mechanism-source-based vs
- *   mode/strength-based). The divergence is documented in this file's header.
+ * - CareerMechanismExpressionEvidence (renamed from CareerExpressionEvidence) is mechanism-source-based
+ *   to avoid collision with legacy mode/strength-based type.
  *
  * BOUNDARY ENFORCEMENT: This module must NOT import from:
  * - careerDasha
@@ -150,18 +156,18 @@ export interface CareerExpressionCandidate {
   readonly mechanismTypes: readonly CareerMechanismType[];
   readonly status: CareerExpressionStatus;
   readonly pathway: CareerExpressionPathway;
-  readonly evidence: readonly CareerExpressionEvidence[];
+  readonly evidence: readonly CareerMechanismExpressionEvidence[];
   readonly provenance: CareerExpressionProvenance;
 }
 
 /**
- * Career expression evidence.
+ * Career mechanism expression evidence.
  * Per spec §8: evidence record for an expression.
  *
  * DIVERGENCE FROM LEGACY:
  * - Legacy CareerExpressionEvidence (careerExpression.ts C8 layer): mode/strength/weight-based,
  *   with fields: id, mode, role, statement, weight, planets, houses.
- * - This CareerExpressionEvidence: mechanism-source-based, with fields: evidenceId, sourceMechanismId,
+ * - This CareerMechanismExpressionEvidence: mechanism-source-based, with fields: evidenceId, sourceMechanismId,
  *   sourceEvidenceIds, source10HIds, source10LIds, ruleId, role.
  *
  * evidenceId: Unique identifier for this evidence record.
@@ -172,7 +178,7 @@ export interface CareerExpressionCandidate {
  * ruleId: ID of the expression rule that produced this candidate.
  * role: Role of this evidence (ESTABLISHING or REFINING).
  */
-export interface CareerExpressionEvidence {
+export interface CareerMechanismExpressionEvidence {
   readonly evidenceId: string;
   readonly sourceMechanismId: string;
   readonly sourceEvidenceIds: readonly string[];
@@ -212,6 +218,7 @@ export interface CareerExpressionProvenance {
  *   INSUFFICIENT_DATA (required inputs missing).
  * sourceMechanismIds: IDs of all mechanism candidates used in this resolution.
  * missingInputs: List of missing input types (e.g., 'career10HFoundation', 'career10LFoundation').
+ * unmappedMechanismTypes: Mechanism types with no matching rule (distinguishes no-rule from insufficient-data).
  * provenance: Aggregate provenance for the entire analysis.
  */
 export interface CareerExpressionAnalysisResult {
@@ -219,6 +226,7 @@ export interface CareerExpressionAnalysisResult {
   readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
   readonly sourceMechanismIds: readonly string[];
   readonly missingInputs: readonly string[];
+  readonly unmappedMechanismTypes: readonly CareerMechanismType[];
   readonly provenance: CareerExpressionProvenance;
 }
 
@@ -234,6 +242,6 @@ export interface CareerExpressionAnalysisResult {
 export interface CareerExpressionResolverInput {
   readonly careerMechanismCandidates: readonly CareerMechanismCandidate[];
   readonly careerMechanismRefinements?: readonly CareerMechanismCandidate[];
-  readonly career10HFoundation?: unknown;
-  readonly career10LFoundation?: unknown;
+  readonly career10HFoundation?: Career10HFoundation;
+  readonly career10LFoundation?: Career10LFoundation;
 }

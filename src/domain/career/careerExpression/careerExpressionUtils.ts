@@ -1,6 +1,6 @@
 import type {
   CareerExpressionCandidate,
-  CareerExpressionEvidence,
+  CareerMechanismExpressionEvidence,
   CareerExpressionProvenance
 } from './careerExpressionTypes';
 import type { ParticipantId } from '../careerParticipantRoles';
@@ -145,9 +145,9 @@ export function deduplicateExpressionCandidates(
  * @returns Deduplicated and frozen evidence array
  */
 export function deduplicateExpressionEvidence(
-  evidence: readonly CareerExpressionEvidence[]
-): readonly CareerExpressionEvidence[] {
-  const evidenceMap = new Map<string, CareerExpressionEvidence>();
+  evidence: readonly CareerMechanismExpressionEvidence[]
+): readonly CareerMechanismExpressionEvidence[] {
+  const evidenceMap = new Map<string, CareerMechanismExpressionEvidence>();
 
   for (const ev of evidence) {
     if (!evidenceMap.has(ev.evidenceId)) {

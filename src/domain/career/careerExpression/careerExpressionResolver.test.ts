@@ -8,6 +8,20 @@ import type {
   CareerMechanismEvidence,
   CareerMechanismProvenance
 } from '../careerMechanism';
+import type {
+  Career10HFoundation,
+  Career10HContext,
+  Career10HProvenance
+} from '../career10h/career10HFoundationTypes';
+import type {
+  Career10LFoundation,
+  Career10LContext,
+  Career10LCondition,
+  Career10LProvenance
+} from '../career10h/career10LFoundationTypes';
+import type {
+  CareerMechanismExpressionEvidence
+} from './careerExpressionTypes';
 import { defaultCareerExpressionResolver } from './defaultCareerExpressionResolver';
 
 describe('Career Expression Resolver (P2-08A)', () => {
@@ -20,8 +34,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -40,8 +54,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -60,8 +74,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -85,13 +99,16 @@ describe('Career Expression Resolver (P2-08A)', () => {
         'PATTERN_1'
       );
       // Simulate refinement by using same pattern but different candidate ID
-      (refinedCandidate as any).candidateId = 'CAREER_MECHANISM_CANDIDATE:PATTERN_1:RESEARCH:REFINED';
+      const refinedCandidateWithCustomId: CareerMechanismCandidate = {
+        ...refinedCandidate,
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:PATTERN_1:RESEARCH:REFINED'
+      };
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [baseCandidate],
-        careerMechanismRefinements: [refinedCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        careerMechanismRefinements: [refinedCandidateWithCustomId],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -119,8 +136,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [researchCandidate, communicationCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -149,19 +166,25 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [researchCandidate, specializedKnowledgeCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
 
       expect(result.status).toBe('COMPLETE');
-      // Composite rule groups both mechanisms into one expression
-      expect(result.expressions).toHaveLength(1);
-      expect(result.expressions[0].expressionType).toBe('ANALYTICAL_SPECIALIZED_WORK');
-      expect(result.expressions[0].mechanismTypes).toContain('RESEARCH');
-      expect(result.expressions[0].mechanismTypes).toContain('SPECIALIZED_KNOWLEDGE');
-      expect(result.expressions[0].sourceMechanismIds).toHaveLength(2);
+      // Additive behavior: emit composite AND constituent 1:1 expressions
+      expect(result.expressions).toHaveLength(2);
+
+      const expressionTypes = result.expressions.map(e => e.expressionType);
+      expect(expressionTypes).toContain('ANALYTICAL_SPECIALIZED_WORK');
+      expect(expressionTypes).toContain('RESEARCH_WORK');
+
+      const compositeExpression = result.expressions.find(e => e.expressionType === 'ANALYTICAL_SPECIALIZED_WORK');
+      expect(compositeExpression).toBeDefined();
+      expect(compositeExpression!.mechanismTypes).toContain('RESEARCH');
+      expect(compositeExpression!.mechanismTypes).toContain('SPECIALIZED_KNOWLEDGE');
+      expect(compositeExpression!.sourceMechanismIds).toHaveLength(2);
     });
 
     it('should not emit composite expression when only one mechanism is present', () => {
@@ -172,8 +195,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [researchCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -199,8 +222,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [candidate1, candidate2],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -223,12 +246,15 @@ describe('Career Expression Resolver (P2-08A)', () => {
         'PATTERN_1'
       );
       // Same pattern ID should create same canonical source set
-      (candidate2 as any).candidateId = candidate1.candidateId;
+      const candidate2WithCustomId: CareerMechanismCandidate = {
+        ...candidate2,
+        candidateId: candidate1.candidateId
+      };
 
       const input: CareerExpressionResolverInput = {
-        careerMechanismCandidates: [candidate1, candidate2],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        careerMechanismCandidates: [candidate1, candidate2WithCustomId],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -357,8 +383,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -375,8 +401,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -390,6 +416,16 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       expect(has10HContext).toBe(true);
       expect(has10LContext).toBe(true);
+
+      // Regression guard: no fabricated 10H_REF:/10L_REF: IDs
+      const allEvidenceIds = expression.evidence.flatMap(e => [
+        ...(e.source10HIds || []),
+        ...(e.source10LIds || [])
+      ]);
+      const hasFabricatedIds = allEvidenceIds.some(id =>
+        id.startsWith('10H_REF:') || id.startsWith('10L_REF:')
+      );
+      expect(hasFabricatedIds).toBe(false);
     });
 
     it('should not treat missing 10H/10L as weakening', () => {
@@ -404,8 +440,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const inputWithContext: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const resultWithout = defaultCareerExpressionResolver.resolve(inputWithoutContext);
@@ -459,8 +495,8 @@ describe('Career Expression Resolver (P2-08A)', () => {
       const input: CareerExpressionResolverInput = {
         careerMechanismCandidates: [mechanismCandidate],
         careerMechanismRefinements: [],
-        career10HFoundation: {},
-        career10LFoundation: {}
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
       };
 
       const result = defaultCareerExpressionResolver.resolve(input);
@@ -472,7 +508,7 @@ describe('Career Expression Resolver (P2-08A)', () => {
     it('should handle mechanism types with no matching rules', () => {
       // Create a mechanism type that doesn't have a corresponding expression rule
       const unknownCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
-        'UNKNOWN_TYPE' as any,
+        'AGENCY',
         'PATTERN_1'
       );
 
@@ -482,16 +518,81 @@ describe('Career Expression Resolver (P2-08A)', () => {
 
       const result = defaultCareerExpressionResolver.resolve(input);
 
-      // Should emit INSUFFICIENT_DATA since no expressions were produced
-      expect(result.status).toBe('INSUFFICIENT_DATA');
+      // Should emit PARTIAL status (missing 10H/10L) but with unmappedMechanismTypes
+      expect(result.status).toBe('PARTIAL');
       expect(result.expressions).toHaveLength(0);
+      expect(result.unmappedMechanismTypes).toContain('AGENCY');
+    });
+
+    it('should handle mixed mapped and unmapped mechanism types', () => {
+      const researchCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
+        'RESEARCH',
+        'PATTERN_1'
+      );
+
+      const agencyCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
+        'AGENCY',
+        'PATTERN_2'
+      );
+
+      const input: CareerExpressionResolverInput = {
+        careerMechanismCandidates: [researchCandidate, agencyCandidate],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = defaultCareerExpressionResolver.resolve(input);
+
+      // Should emit RESEARCH_WORK expression with COMPLETE status
+      expect(result.status).toBe('COMPLETE');
+      expect(result.expressions).toHaveLength(1);
+      expect(result.expressions[0].expressionType).toBe('RESEARCH_WORK');
+      // AGENCY should be in unmappedMechanismTypes
+      expect(result.unmappedMechanismTypes).toContain('AGENCY');
+      expect(result.unmappedMechanismTypes).not.toContain('RESEARCH');
+    });
+  });
+
+  describe('Real integration test with typed foundations', () => {
+    it('should extract real provenance IDs from typed 10H/10L foundations', () => {
+      const mechanismCandidate: CareerMechanismCandidate = createMockMechanismCandidate(
+        'RESEARCH',
+        'PATTERN_1'
+      );
+
+      const input: CareerExpressionResolverInput = {
+        careerMechanismCandidates: [mechanismCandidate],
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = defaultCareerExpressionResolver.resolve(input);
+
+      expect(result.status).toBe('COMPLETE');
+      expect(result.expressions).toHaveLength(1);
+
+      const expression = result.expressions[0];
+      const all10HIds = expression.evidence.flatMap(e => e.source10HIds || []);
+      const all10LIds = expression.evidence.flatMap(e => e.source10LIds || []);
+
+      // Assert specific real IDs from fixtures
+      expect(all10HIds).toContain('10H_LAGNA_10');
+      expect(all10HIds).toContain('HOUSE_LORDSHIP_EVIDENCE_1');
+      expect(all10LIds).toContain('PLANET_ANALYSIS_RULE_1');
+      expect(all10LIds).toContain('10L_LAGNA_STATUS_AVAILABLE');
+
+      // Regression guard: no fabricated IDs
+      const hasFabricatedIds = [...all10HIds, ...all10LIds].some(id =>
+        id.startsWith('10H_REF:') || id.startsWith('10L_REF:')
+      );
+      expect(hasFabricatedIds).toBe(false);
     });
   });
 });
 
 // Helper function to create mock mechanism candidates
 function createMockMechanismCandidate(
-  mechanismType: string,
+  mechanismType: CareerMechanismType,
   patternId: string,
   relationshipIds: string[] = []
 ): CareerMechanismCandidate {
@@ -500,11 +601,12 @@ function createMockMechanismCandidate(
   const evidence: CareerMechanismEvidence[] = [
     {
       evidenceId: `EVIDENCE_1:${patternId}`,
-      mechanismType: mechanismType as any,
-      source: 'PATTERN' as any,
+      mechanismType,
+      source: 'PATTERN',
       role: 'ESTABLISHING',
       participantIds: [],
       relationshipIds,
+      patternId,
       explanation: 'Mock evidence'
     }
   ];
@@ -520,10 +622,75 @@ function createMockMechanismCandidate(
   return {
     candidateId,
     patternId,
-    mechanismType: mechanismType as any,
+    mechanismType,
     pathway: 'PATTERN',
     evidence,
     provenance,
     explanation: 'Mock mechanism candidate'
+  };
+}
+
+// Helper function to create minimal typed 10H foundation fixture
+function createMock10HFoundation(): Career10HFoundation {
+  const lagnaProvenance: Career10HProvenance = {
+    houseLordshipEvidenceId: 'HOUSE_LORDSHIP_EVIDENCE_1',
+    sourceHouseIndex: 10,
+    drishtiSource: {
+      reportPresent: true,
+      aspectCount: 0
+    },
+    drishtiAspectIds: []
+  };
+
+  const lagnaContext: Career10HContext = {
+    referencePoint: 'LAGNA',
+    referenceHouseNumber: 10,
+    referenceHouseSign: 'CAPRICORN',
+    lagnaRelativeHouseNumber: 10,
+    house10Lord: 'SATURN',
+    lordHouse: 10,
+    occupants: [],
+    aspectsOn10H: [],
+    aspectDataStatus: 'AVAILABLE',
+    provenance: lagnaProvenance
+  };
+
+  return {
+    lagnaContext,
+    moonContext: null
+  };
+}
+
+// Helper function to create minimal typed 10L foundation fixture
+function createMock10LFoundation(): Career10LFoundation {
+  const condition: Career10LCondition = {
+    status: 'AVAILABLE',
+    dignity: 'OWN_SIGN',
+    motion: 'DIRECT',
+    combustion: 'NOT_COMBUST',
+    sign: 'CAPRICORN',
+    house: 10,
+    sourceRuleIds: ['PLANET_ANALYSIS_RULE_1']
+  };
+
+  const lagnaProvenance: Career10LProvenance = {
+    house10ContextRef: 'LAGNA',
+    conditionSourceIds: condition.sourceRuleIds,
+    relationshipIds: []
+  };
+
+  const lagnaContext: Career10LContext = {
+    referencePoint: 'LAGNA',
+    house10Lord: 'SATURN',
+    lordHouse: 10,
+    condition,
+    relationships: [],
+    relationshipDataStatus: 'UNAVAILABLE',
+    provenance: lagnaProvenance
+  };
+
+  return {
+    lagnaContext,
+    moonContext: null
   };
 }
