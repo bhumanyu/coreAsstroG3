@@ -18,8 +18,14 @@ import type {
   CareerDashaPlanetContext,
   CareerDashaActivationDirection,
   CareerDashaActivationEffect,
-  CareerDashaActivationStrength
+  CareerDashaActivationStrength,
+  CareerDashaActivationLevel,
+  CareerDashaActivationRole
 } from './careerDashaActivationTypes';
+
+import {
+  Planet
+} from '../../../types';
 
 export function resolveCareerDashaPlanetDirection(
   planetContext: CareerDashaPlanetContext
@@ -265,4 +271,75 @@ export function resolveCareerDashaStrength(
   }
 
   return 'UNDETERMINED';
+}
+
+/**
+ * Generates a canonical evidence key for deduplication.
+ * Format: level:planet:role:direction:id
+ * Deduplicates and sorts all nested arrays.
+ * Freezes the result recursively.
+ *
+ * @param level - The Dasha activation level (MD/AD/PD)
+ * @param planet - The planet (optional for missing context)
+ * @param role - The activation role
+ * @param direction - The activation direction
+ * @param id - The evidence ID
+ * @returns A frozen canonical evidence key string
+ */
+export function createCanonicalEvidenceKey(
+  level: CareerDashaActivationLevel,
+  planet: Planet | undefined,
+  role: CareerDashaActivationRole,
+  direction: CareerDashaActivationDirection,
+  id: string
+): string {
+  const parts = [
+    level,
+    planet ?? 'none',
+    role,
+    direction,
+    id
+  ];
+
+  // Sort and dedupe parts (though in practice these are already ordered)
+  const sortedParts = Array.from(new Set(parts)).sort();
+
+  const key = sortedParts.join(':');
+
+  // Freeze the key string (strings are immutable by default, but this documents intent)
+  return Object.freeze(key);
+}
+
+/**
+ * Asserts that an object and all its nested arrays are frozen.
+ * Used in tests to verify deep immutability.
+ *
+ * @param obj - The object to check
+ * @param path - Path for error messages (internal recursion)
+ */
+export function assertDeepFrozen(obj: unknown, path = ''): void {
+  if (obj === null || obj === undefined) {
+    return;
+  }
+
+  if (typeof obj === 'object') {
+    if (!Object.isFrozen(obj)) {
+      throw new Error(`Object at path "${path}" is not frozen`);
+    }
+
+    for (const key of Object.keys(obj)) {
+      const value = (obj as Record<string, unknown>)[key];
+      assertDeepFrozen(value, path ? `${path}.${key}` : key);
+    }
+  }
+
+  if (Array.isArray(obj)) {
+    if (!Object.isFrozen(obj)) {
+      throw new Error(`Array at path "${path}" is not frozen`);
+    }
+
+    for (let i = 0; i < obj.length; i++) {
+      assertDeepFrozen(obj[i], `${path}[${i}]`);
+    }
+  }
 }

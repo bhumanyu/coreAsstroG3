@@ -2,6 +2,11 @@ import {
   resolveCareerDashaActivation
 } from './careerDashaActivation';
 
+import {
+  assertDeepFrozen,
+  createCanonicalEvidenceKey
+} from './careerDashaActivationRules';
+
 import type {
   CareerDashaActivationContext,
   CareerDashaPlanetContext,
@@ -83,14 +88,27 @@ function makePlanet(
 
 function makeExpression(
   mode: CareerManifestationMode,
-  direction: CareerExpressionDirection = 'SUPPORTED'
+  direction: CareerExpressionDirection = 'SUPPORTED',
+  evidenceIds: readonly string[] = Object.freeze([])
 ): CareerExpression {
+  const evidence = evidenceIds.map(id =>
+    Object.freeze({
+      id,
+      mode,
+      role: 'PLANETARY' as const,
+      statement: `${mode} evidence.`,
+      weight: 1,
+      planets: Object.freeze([]),
+      houses: Object.freeze([])
+    })
+  );
+
   return Object.freeze({
     mode,
     direction,
     strength: 'STRONG',
-    evidence: Object.freeze([]),
-    supportingEvidenceIds: Object.freeze([]),
+    evidence: Object.freeze(evidence),
+    supportingEvidenceIds: evidenceIds,
     statement: `${mode} expression.`,
     conditional: direction === 'CONDITIONAL'
   });
@@ -673,6 +691,205 @@ describe('Career Dasha Activation', () => {
       expect(result.md.effect).toBe('ACTIVATES');
       expect(result.md.direction).toBe('SUPPORT');
       expect(result.overallEffect).toBe('ACTIVATES');
+    });
+  });
+
+  describe('Test 18: P2-08B Golden Tests - Evidence IDs and Deep Freeze', () => {
+    it('active is false when effect is INSUFFICIENT_DATA', () => {
+      const context = makeContext({
+        structuralDirection: 'UNAVAILABLE',
+        structuralPrimarySupport: 0,
+        planetContexts: Object.freeze([
+          makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'STRONG')
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.active).toBe(false);
+      expect(result.md.activatedPromiseEvidenceIds).toEqual(Object.freeze([]));
+      expect(result.md.challengedPromiseEvidenceIds).toEqual(Object.freeze([]));
+      expect(result.md.expressionEvidenceIds).toEqual(Object.freeze([]));
+    });
+
+    it('active is true when planet activates career promise', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED', Object.freeze(['expr1']))])
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.active).toBe(true);
+      expect(result.md.activatedPromiseEvidenceIds.length).toBeGreaterThan(0);
+      expect(result.md.expressionEvidenceIds).toContain('expr1');
+    });
+
+    it('expressionEvidenceIds carries real C8 evidence IDs', () => {
+      const exprIds = Object.freeze(['expr_a', 'expr_b', 'expr_c']);
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED', exprIds)])
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.expressionEvidenceIds).toEqual(expect.arrayContaining(['expr_a', 'expr_b', 'expr_c']));
+    });
+
+    it('CONDITIONAL expression never produces ACTIVATES effect (§25 invariant)', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'MODERATE',
+            Object.freeze([makeExpression('MANAGEMENT', 'CONDITIONAL')])
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      expect(result.md.effect).not.toBe('ACTIVATES');
+      expect(result.md.effect).toBe('PARTIALLY_ACTIVATES');
+    });
+
+    it('evidence objects include new fields: level, relationshipIds, relevanceEvidenceIds, conditionEvidenceIds, expressionEvidenceIds, activationRuleIds, sourceIds', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED', Object.freeze(['expr1']))])
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      result.md.evidence.forEach(ev => {
+        expect(ev).toHaveProperty('level');
+        expect(ev).toHaveProperty('relationshipIds');
+        expect(ev).toHaveProperty('relevanceEvidenceIds');
+        expect(ev).toHaveProperty('conditionEvidenceIds');
+        expect(ev).toHaveProperty('expressionEvidenceIds');
+        expect(ev).toHaveProperty('activationRuleIds');
+        expect(ev).toHaveProperty('sourceIds');
+      });
+    });
+
+    it('canonical evidence key format is level:planet:role:direction:id', () => {
+      const key = createCanonicalEvidenceKey('MD', Planet.SATURN, 'PRIMARY_DRIVER', 'SUPPORT', 'STRUCTURAL');
+      expect(key).toBe('MD:SATURN:PRIMARY_DRIVER:SUPPORT:STRUCTURAL');
+    });
+
+    it('deep freeze: all objects and nested arrays are frozen', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED')])
+          )
+        ])
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      // Assert deep freeze using the utility function
+      expect(() => assertDeepFrozen(result)).not.toThrow();
+      expect(() => assertDeepFrozen(result.md)).not.toThrow();
+      expect(() => assertDeepFrozen(result.md.evidence)).not.toThrow();
+    });
+
+    it('planet-evidence isolation: each planet has independent evidence', () => {
+      const context = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(
+            Planet.SATURN,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED', Object.freeze(['saturn_expr']))])
+          ),
+          makePlanet(
+            Planet.JUPITER,
+            'PRIMARY',
+            Object.freeze(['CAREER_LORD']),
+            'STRONG',
+            Object.freeze([makeExpression('MANAGEMENT', 'SUPPORTED', Object.freeze(['jupiter_expr']))])
+          )
+        ]),
+        adTiming: makeTiming(Planet.JUPITER, '2020-01-01', '2022-01-01')
+      });
+
+      const result = resolveCareerDashaActivation(context);
+
+      // MD evidence should reference Saturn expression
+      const mdExprIds = result.md.expressionEvidenceIds;
+      expect(mdExprIds).toContain('saturn_expr');
+
+      // AD evidence should reference Jupiter expression
+      const adExprIds = result.ad.expressionEvidenceIds;
+      expect(adExprIds).toContain('jupiter_expr');
+    });
+
+    it('MD/AD/PD independence: changing one level does not affect others', () => {
+      const context1 = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'STRONG'),
+          makePlanet(Planet.JUPITER, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'AFFLICTED'),
+          makePlanet(Planet.MARS, 'SUPPORTING', Object.freeze(['SUPPORTING_LORD']), 'STRONG')
+        ]),
+        mdTiming: makeTiming(Planet.SATURN, '2020-01-01', '2025-01-01'),
+        adTiming: makeTiming(Planet.JUPITER, '2020-01-01', '2022-01-01'),
+        pdTiming: makeTiming(Planet.MARS, '2020-01-01', '2021-01-01')
+      });
+
+      const context2 = makeContext({
+        planetContexts: Object.freeze([
+          makePlanet(Planet.SATURN, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'STRONG'),
+          makePlanet(Planet.JUPITER, 'PRIMARY', Object.freeze(['CAREER_LORD']), 'AFFLICTED'),
+          makePlanet(Planet.MARS, 'SUPPORTING', Object.freeze(['SUPPORTING_LORD']), 'STRONG')
+        ]),
+        mdTiming: makeTiming(Planet.JUPITER, '2020-01-01', '2025-01-01'), // Changed MD planet
+        adTiming: makeTiming(Planet.JUPITER, '2020-01-01', '2022-01-01'),
+        pdTiming: makeTiming(Planet.MARS, '2020-01-01', '2021-01-01')
+      });
+
+      const result1 = resolveCareerDashaActivation(context1);
+      const result2 = resolveCareerDashaActivation(context2);
+
+      // MD should change
+      expect(result1.md.planet).toBe(Planet.SATURN);
+      expect(result2.md.planet).toBe(Planet.JUPITER);
+      expect(result1.md.effect).not.toBe(result2.md.effect);
+
+      // AD and PD should remain the same
+      expect(result1.ad.planet).toBe(result2.ad.planet);
+      expect(result1.ad.effect).toBe(result2.ad.effect);
+      expect(result1.pd.planet).toBe(result2.pd.planet);
+      expect(result1.pd.effect).toBe(result2.pd.effect);
     });
   });
 });

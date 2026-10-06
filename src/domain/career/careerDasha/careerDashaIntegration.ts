@@ -53,6 +53,22 @@ import {
 } from './careerDashaActivation';
 
 /**
+ * P2-08B SPEC REQUIREMENT #4: Vimshottari Consumption Verification
+ *
+ * This module must consume active MD/AD/PD from engine/dasha/vimshottari.ts getActiveDasha() output
+ * (planet + start + end verbatim).
+ *
+ * Current implementation:
+ * - getCurrentDasha() extracts from horoscope.dashaInterpretation.current or .activePeriods
+ * - Timing extraction preserves planet/start/end verbatim from the source
+ *
+ * TODO/VERIFICATION NEEDED:
+ * - Confirm that horoscope.dashaInterpretation is populated by getActiveDasha() from vimshottari.ts
+ * - If hand-constructed timings are accepted on the production path, narrow the input contract or
+ *   document it explicitly in the Horoscope type definition.
+ */
+
+/**
  * Input interface for C9 Dasha activation integration.
  * Consumes the natal analysis aggregate and expression analysis.
  */
@@ -81,6 +97,15 @@ export const CAREER_DASHA_PLANET_ORDER: readonly Planet[] = Object.freeze([
 /**
  * Gets the current Dasha period from the horoscope.
  * Falls back to activePeriods if current is not available.
+ *
+ * SPEC NOTE (P2-08B requirement #4):
+ * The active MD/AD/PD should come from engine/dasha/vimshottari.ts getActiveDasha() output
+ * (planet + start + end verbatim). Currently, this function consumes horoscope.dashaInterpretation
+ * which may or may not be sourced from the canonical Vimshottari engine.
+ *
+ * TODO: Verify that horoscope.dashaInterpretation is populated by getActiveDasha() from vimshottari.ts.
+ * If hand-constructed timings are accepted on the production path, narrow the input contract or
+ * document it explicitly.
  */
 function getCurrentDasha(horoscope: Horoscope) {
   return horoscope.dashaInterpretation?.current ?? horoscope.dashaInterpretation?.activePeriods;
@@ -208,6 +233,8 @@ function buildCareerDashaActivationContext(
   }
 
   // Extract timing from current Dasha
+  // SPEC NOTE (P2-08B requirement #4): Preserve planet + start + end verbatim from upstream source.
+  // These should come from engine/dasha/vimshottari.ts getActiveDasha() output.
   const mdTiming: CareerDashaTiming = Object.freeze({
     planet: currentDasha.mahadasha?.planet,
     start: currentDasha.mahadasha?.start,
