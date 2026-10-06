@@ -95,9 +95,10 @@ export class DefaultCareer10LFoundation {
 
     // Determine status
     // INSUFFICIENT_DATA when a required input is missing
-    // Mirror P2-07F: UNAVAILABLE status for optional inputs doesn't affect overall status
+    // CAREER_GRAPH is optional - it's recorded in missingInputs but doesn't affect status
+    const requiredMissingInputs = missingInputs.filter(input => input !== 'CAREER_GRAPH');
     const status: Career10LStatus =
-      missingInputs.length === 0 ? 'COMPLETE' : 'INSUFFICIENT_DATA';
+      requiredMissingInputs.length === 0 ? 'COMPLETE' : 'INSUFFICIENT_DATA';
 
     // Deep-freeze and return
     const frozenResult = {

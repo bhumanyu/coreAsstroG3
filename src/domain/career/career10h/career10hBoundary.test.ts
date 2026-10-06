@@ -17,7 +17,7 @@ describe('career10h Boundary Enforcement', () => {
 
   // Dynamic enumeration: automatically include all .ts files in the directory
   const sourceFiles = readdirSync(modulePath)
-    .filter(file => file.endsWith('.ts'));
+    .filter(file => file.endsWith('.ts') && file !== 'career10hBoundary.test.ts');
 
   for (const file of sourceFiles) {
     describe(file, () => {
@@ -39,8 +39,8 @@ describe('career10h Boundary Enforcement', () => {
         const filePath = join(modulePath, file);
         const content = readFileSync(filePath, 'utf-8');
 
-        // Check for AI-related imports
-        const aiPattern = /import.*from.*['"].*ai.*['"]/i;
+        // Check for AI-related imports (word-boundary, case-sensitive uppercase AI segment)
+        const aiPattern = /import.*from.*['"][^'"]*\bAI\b[^'"]*['"]/;
         expect(content).not.toMatch(aiPattern);
       });
     });

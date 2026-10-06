@@ -843,6 +843,33 @@ describe('career10L Foundation Resolver', () => {
       expect(result.foundation.lagnaContext?.relationshipDataStatus).toBe('UNAVAILABLE');
     });
 
+    it('should record CAREER_GRAPH in missingInputs for Moon context but status remains COMPLETE', () => {
+      const moonContext = makeCareer10HContext('MOON', Planet.MARS, 8);
+      const foundation = makeCareer10HFoundation(null, moonContext);
+      const houseLordship = analyzeHouseLordship(Sign.ARIES);
+      const planetAnalysis = makePlanetAnalysisReport(
+        Planet.MARS,
+        DignityStatus.OWN_SIGN,
+        false,
+        undefined,
+        Sign.ARIES,
+        1
+      );
+
+      const input: Career10LFoundationInput = {
+        foundation,
+        houseLordship,
+        planetAnalysis
+      };
+
+      const result = resolveCareer10LFoundation(input);
+
+      // careerGraph is optional - status is COMPLETE, but missingInputs records it
+      expect(result.status).toBe('COMPLETE');
+      expect(result.missingInputs).toContain('CAREER_GRAPH');
+      expect(result.foundation.moonContext?.relationshipDataStatus).toBe('UNAVAILABLE');
+    });
+
     it('should handle missing planetAnalysis gracefully (UNAVAILABLE)', () => {
       const lagnaContext = makeCareer10HContext('LAGNA', Planet.SATURN, 10);
       const foundation = makeCareer10HFoundation(lagnaContext, null);
@@ -954,13 +981,13 @@ describe('career10L Relationship Contract Test', () => {
       expect(typeof lord).toBe('string');
     });
 
-    // For Aries Lagna, verify known lords
-    expect(houseLordship.houseLords[1]).toBe(Planet.MARS); // 1L = Mars
-    expect(houseLordship.houseLords[5]).toBe(Planet.SUN); // 5L = Sun
-    expect(houseLordship.houseLords[6]).toBe(Planet.VENUS); // 6L = Venus
-    expect(houseLordship.houseLords[8]).toBe(Planet.SATURN); // 8L = Saturn
-    expect(houseLordship.houseLords[9]).toBe(Planet.JUPITER); // 9L = Jupiter
-    expect(houseLordship.houseLords[12]).toBe(Planet.JUPITER); // 12L = Jupiter
+    // For Aries Lagna, verify known lords from SIGNS_METADATA
+    expect(houseLordship.houseLords[1]).toBe(Planet.MARS); // 1L = Mars (Aries)
+    expect(houseLordship.houseLords[5]).toBe(Planet.SUN); // 5L = Sun (Leo)
+    expect(houseLordship.houseLords[6]).toBe(Planet.MERCURY); // 6L = Mercury (Virgo)
+    expect(houseLordship.houseLords[8]).toBe(Planet.MARS); // 8L = Mars (Scorpio - traditional ruler)
+    expect(houseLordship.houseLords[9]).toBe(Planet.JUPITER); // 9L = Jupiter (Sagittarius)
+    expect(houseLordship.houseLords[12]).toBe(Planet.JUPITER); // 12L = Jupiter (Pisces)
   });
 
   it('real integration test: build through real upstream reports', () => {
