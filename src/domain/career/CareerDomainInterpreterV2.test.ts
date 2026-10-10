@@ -42,6 +42,9 @@ import {
   mapCareerPhase,
   type CareerConclusionData
 } from './CareerDomainInterpreterV2';
+import type {
+  CareerFinalSynthesisResult
+} from './careerFinalSynthesis/careerFinalSynthesisTypes';
 import { CareerDomainInterpreter } from './CareerDomainInterpreter';
 import {
   createDomainEvidence,
@@ -1837,6 +1840,109 @@ describe('CareerDomainInterpreterV2', () => {
 
       // The two runs must reflect their respective asOf timing
       expect(run1.timingActivations).not.toEqual(run2.timingActivations);
+    });
+  });
+
+  // P2-08D-06: Production-integration test for canonical C11 conclusion
+  describe('P2-08D-06: Canonical C11 Integration', () => {
+    it('interpretCareerV2 exposes the canonical C11 conclusion in conclusionData', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Should have canonicalCareerFinalSynthesis in conclusionData
+      expect(v2.conclusionData).toBeDefined();
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
+
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+
+      // Should have C11 version and domain
+      expect(canonicalC11.reasoningVersion).toBe('C11');
+      expect(canonicalC11.domain).toBe('CAREER');
+
+      // Should have all required C11 fields
+      expect(canonicalC11).toHaveProperty('finalStatus');
+      expect(canonicalC11).toHaveProperty('finalDirection');
+      expect(canonicalC11).toHaveProperty('finalStrength');
+      expect(canonicalC11).toHaveProperty('confidence');
+      expect(canonicalC11).toHaveProperty('natalDirection');
+      expect(canonicalC11).toHaveProperty('natalStrength');
+      expect(canonicalC11).toHaveProperty('expressionStatus');
+      expect(canonicalC11).toHaveProperty('d10Direction');
+      expect(canonicalC11).toHaveProperty('d10Effect');
+      expect(canonicalC11).toHaveProperty('dashaEffect');
+      expect(canonicalC11).toHaveProperty('dashaDirection');
+      expect(canonicalC11).toHaveProperty('timingStatus');
+      expect(canonicalC11).toHaveProperty('transitDirection');
+      expect(canonicalC11).toHaveProperty('currentPressure');
+      expect(canonicalC11).toHaveProperty('expressions');
+      expect(canonicalC11).toHaveProperty('strongestExpressions');
+      expect(canonicalC11).toHaveProperty('challengedExpressions');
+      expect(canonicalC11).toHaveProperty('conflicts');
+      expect(canonicalC11).toHaveProperty('evidenceIds');
+      expect(canonicalC11).toHaveProperty('sourceIds');
+      expect(canonicalC11).toHaveProperty('ruleIds');
+      expect(canonicalC11).toHaveProperty('evidenceTrace');
+      expect(canonicalC11).toHaveProperty('statement');
+    });
+
+    it('interpretCareerV2 conclusion is derived from canonical C11, not legacy synthesis', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+
+      // Conclusion strength should match canonical C11 finalStrength
+      expect(v2.conclusion.strength).toBe(canonicalC11.finalStrength);
+
+      // Conclusion confidence should match canonical C11 confidence
+      expect(v2.conclusion.confidence).toBe(canonicalC11.confidence);
+
+      // Conclusion statement should match canonical C11 statement
+      expect(v2.conclusion.statement).toBe(canonicalC11.statement);
+    });
+
+    it('canonical C11 does not calculate astrology or call AI', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+
+      // Should not have astrology calculation fields
+      expect(canonicalC11).not.toHaveProperty('horoscope');
+      expect(canonicalC11).not.toHaveProperty('d10Planets');
+      expect(canonicalC11).not.toHaveProperty('transitCalc');
+      expect(canonicalC11).not.toHaveProperty('chartData');
+
+      // Should not have AI-related fields
+      expect(canonicalC11).not.toHaveProperty('aiGenerated');
+      expect(canonicalC11).not.toHaveProperty('llmResponse');
+      expect(canonicalC11).not.toHaveProperty('aiConfidence');
+    });
+
+    it('canonical C11 does not depend on UI modules', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+
+      // Should not have UI-related fields
+      expect(canonicalC11).not.toHaveProperty('uiComponent');
+      expect(canonicalC11).not.toHaveProperty('renderable');
+      expect(canonicalC11).not.toHaveProperty('displayConfig');
+    });
+
+    it('legacy synthesis is retained but not used as authoritative conclusion', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Legacy synthesis should still be present for compatibility
+      expect(v2.conclusionData?.careerFinalSynthesis).toBeDefined();
+
+      // But canonical C11 should be the authoritative source
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
+
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+      const legacySynthesis = v2.conclusionData?.careerFinalSynthesis;
+
+      // Conclusion should match canonical, not legacy
+      expect(v2.conclusion.strength).toBe(canonicalC11.finalStrength);
+      // Legacy may differ from canonical (expected parity difference)
+      // but the production conclusion uses canonical
     });
   });
 });

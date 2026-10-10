@@ -223,11 +223,16 @@ function collectDashaSourceIds(
 /**
  * Collects rule IDs from Dasha analysis.
  * From dasha.evidence (CareerDashaCanonicalEvidence does not expose ruleIds in provenance — return empty array).
+ *
+ * P2-08D-03: This is genuinely-unavailable, not fabricated. The canonical Dasha provenance
+ * does not expose ruleIds in its current contract. We return an empty array rather than
+ * inventing rule IDs, which would violate traceability invariants.
  */
 function collectDashaRuleIds(
   _dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
   // CareerDashaCanonicalProvenance does not expose ruleIds in current contract
+  // This is genuinely-unavailable, not fabricated (P2-08D-03)
   return Object.freeze([]);
 }
 
@@ -314,8 +319,9 @@ function mergeEvidenceIds(
 
 /**
  * Builds final conflicts diagnostically.
- * Emits conflicts when secondary layers challenge natal support.
+ * Emits conflicts when secondary layers challenge natal support or support natal challenge.
  * Conflicts never set finalDirection — that stays with the engine.
+ * Missing layers (UNAVAILABLE) do not generate conflicts.
  */
 function buildFinalConflicts(
   natalDirection: string,
@@ -349,6 +355,31 @@ function buildFinalConflicts(
       severity: 'MODERATE',
       evidenceIds: dashaEvidenceIds,
       statement: 'Dasha activation challenges natal support, creating timing pressure.'
+    }));
+  }
+
+  // D10 diagnostic: natal CHALLENGE with D10 SUPPORT (qualifies execution despite natal challenge)
+  if (natalDirection === 'CHALLENGE' && d10Direction === 'SUPPORT') {
+    const severity = d10Strength === 'VERY_STRONG' || d10Strength === 'STRONG' ? 'HIGH' :
+      d10Strength === 'MODERATE' ? 'MODERATE' : 'LOW';
+
+    conflicts.push(Object.freeze({
+      source: 'D10' as const,
+      direction: 'SUPPORT' as const,
+      severity,
+      evidenceIds: d10EvidenceIds,
+      statement: `D10 qualification supports career execution despite natal challenge with ${severity} severity.`
+    }));
+  }
+
+  // Dasha diagnostic: natal CHALLENGE with Dasha SUPPORT (timing support despite natal challenge)
+  if (natalDirection === 'CHALLENGE' && dashaDirection === 'SUPPORT') {
+    conflicts.push(Object.freeze({
+      source: 'DASHA' as const,
+      direction: 'SUPPORT' as const,
+      severity: 'MODERATE',
+      evidenceIds: dashaEvidenceIds,
+      statement: 'Dasha activation provides timing support despite natal challenge.'
     }));
   }
 

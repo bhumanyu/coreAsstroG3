@@ -663,6 +663,87 @@ describe('C11 Final Career Synthesis Integration', () => {
     });
   });
 
+  describe('P2-08D-03: Extended conflict coverage', () => {
+    it('natal CHALLENGE vs D10 SUPPORT generates diagnostic conflict', () => {
+      const d10Evidence1 = Object.freeze({
+        identityKey: 'd10-evidence-1',
+        id: 'd10-evidence-1',
+        role: 'PRIMARY' as const,
+        direction: 'SUPPORT' as const,
+        d10Effect: 'REINFORCES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence 1.',
+        sourceIds: Object.freeze(['d10-source-1']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source-1']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('CHALLENGE', 'STRONG'),
+        d10: makeMinimalD10('SUPPORT', 'STRONG', Object.freeze([d10Evidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Should have a D10 conflict with direction SUPPORT
+      const d10Conflict = result.conflicts.find(c => c.source === 'D10');
+      expect(d10Conflict).toBeDefined();
+      expect(d10Conflict?.direction).toBe('SUPPORT');
+      expect(d10Conflict?.statement).toContain('supports career execution despite natal challenge');
+    });
+
+    it('natal CHALLENGE vs Dasha SUPPORT generates diagnostic conflict', () => {
+      const dashaEvidence1 = Object.freeze({
+        identityKey: 'dasha-evidence-1',
+        id: 'dasha-evidence-1',
+        level: 'MD' as const,
+        planet: Planet.JUPITER,
+        role: 'PRIMARY_DRIVER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 1.',
+        sourceIds: Object.freeze(['dasha-source-1']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'MD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('CHALLENGE', 'STRONG'),
+        dasha: makeMinimalDasha('SUPPORT', undefined, Object.freeze([dashaEvidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Should have a Dasha conflict with direction SUPPORT
+      const dashaConflict = result.conflicts.find(c => c.source === 'DASHA');
+      expect(dashaConflict).toBeDefined();
+      expect(dashaConflict?.direction).toBe('SUPPORT');
+      expect(dashaConflict?.statement).toContain('provides timing support despite natal challenge');
+    });
+
+    it('missing layer does not generate conflict', () => {
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        d10: makeMinimalD10('UNAVAILABLE', 'UNDETERMINED'),
+        dasha: makeMinimalDasha('UNAVAILABLE')
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Should not have conflicts for missing layers
+      expect(result.conflicts).toHaveLength(0);
+    });
+  });
+
   describe('Test Group O: Real-engine test (full chain)', () => {
     it('real-engine chain produces coherent C11 result', () => {
       const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -739,6 +820,8 @@ describe('C11 Final Career Synthesis Integration', () => {
       expect(new Set(result.expressions.map(e => e.mode))).toEqual(new Set(expression.expressions.map(e => e.mode)));
       expect(result.d10Direction).toBe(d10.d10Direction);
       expect(result.d10Effect).toBe(d10.d10Effect);
+      // dashaStrength is not exposed in CareerFinalSynthesisResult
+      // It's an internal field derived from the hierarchy
 
       // Determinism assertion: run twice and assert byte-identical output
       const result2 = buildCareerFinalAnalysis(c11Input);
@@ -765,6 +848,444 @@ describe('C11 Final Career Synthesis Integration', () => {
       const r2 = buildCareerFinalAnalysis(input);
 
       expect(JSON.stringify(r1)).toBe(JSON.stringify(r2));
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Strong natal + D10 challenge', () => {
+    it('strong natal + D10 challenge → natal direction/strength intact, challenge retained in conflicts', () => {
+      const d10Evidence1 = Object.freeze({
+        identityKey: 'd10-evidence-1',
+        id: 'd10-evidence-1',
+        role: 'PRIMARY' as const,
+        direction: 'CHALLENGE' as const,
+        d10Effect: 'CHALLENGES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence 1.',
+        sourceIds: Object.freeze(['d10-source-1']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source-1']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'VERY_STRONG'),
+        d10: makeMinimalD10('CHALLENGE', 'STRONG', Object.freeze([d10Evidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Natal direction and strength should be intact
+      expect(result.natalDirection).toBe('SUPPORT');
+      expect(result.natalStrength).toBe('VERY_STRONG');
+      // Final direction should not be CHALLENGE
+      expect(result.finalDirection).not.toBe('CHALLENGE');
+      // Challenge should be retained in conflicts
+      expect(result.conflicts.length).toBeGreaterThan(0);
+      expect(result.conflicts.some(c => c.source === 'D10')).toBe(true);
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Natal challenge + Dasha support', () => {
+    it('natal challenge + Dasha support → Dasha does not reverse natal', () => {
+      const input = makeInput({
+        natal: makeMinimalNatal('CHALLENGE', 'STRONG'),
+        dasha: makeMinimalDasha('SUPPORT')
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Natal direction should remain CHALLENGE
+      expect(result.natalDirection).toBe('CHALLENGE');
+      // Final direction should be CHALLENGE
+      expect(result.finalDirection).toBe('CHALLENGE');
+      // Dasha direction should be SUPPORT (separate field)
+      expect(result.dashaDirection).toBe('SUPPORT');
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Conditional C8 expression', () => {
+    it('conditional C8 expression stays distinguishable from challenge', () => {
+      const expr: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'CONDITIONAL',
+        strength: 'MODERATE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-1']),
+        statement: 'Leadership (conditional).',
+        conditional: true
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expr])
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Expression should be CONDITIONAL, not CHALLENGE
+      const leadershipExpr = result.expressions.find(e => e.mode === 'LEADERSHIP');
+      expect(leadershipExpr?.direction).toBe('CONDITIONAL');
+      // Expression status should be CONDITIONAL
+      expect(result.expressionStatus).toBe('CONDITIONAL');
+      // Final status should reflect conditionality
+      expect(result.finalStatus).toBe('CONDITIONALLY_SUPPORTED');
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Dasha hierarchy consumed not reconstructed', () => {
+    it('dasha hierarchy consumed directly, not reconstructed from individual periods', () => {
+      const hierarchy: CareerDashaActivationHierarchy = Object.freeze({
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT',
+        overallStrength: 'STRONG',
+        dominantLevel: 'MD',
+        statement: 'Dasha hierarchy with MD SUPPORT, AD/PD CHALLENGE.',
+        md: Object.freeze({
+          level: 'MD',
+          planet: Planet.SATURN,
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          role: 'PRIMARY_DRIVER',
+          evidence: Object.freeze([]),
+          start: '2020-01-01',
+          end: '2025-01-01',
+          statement: 'MD SUPPORT',
+          active: true,
+          activatedPromiseEvidenceIds: Object.freeze([]),
+          challengedPromiseEvidenceIds: Object.freeze([]),
+          expressionEvidenceIds: Object.freeze([])
+        }),
+        ad: Object.freeze({
+          level: 'AD',
+          planet: Planet.JUPITER,
+          effect: 'CHALLENGES',
+          direction: 'CHALLENGE',
+          strength: 'STRONG',
+          role: 'MODIFIER',
+          evidence: Object.freeze([]),
+          start: '2020-01-01',
+          end: '2022-01-01',
+          statement: 'AD CHALLENGE',
+          active: true,
+          activatedPromiseEvidenceIds: Object.freeze([]),
+          challengedPromiseEvidenceIds: Object.freeze([]),
+          expressionEvidenceIds: Object.freeze([])
+        }),
+        pd: Object.freeze({
+          level: 'PD',
+          planet: Planet.MERCURY,
+          effect: 'CHALLENGES',
+          direction: 'CHALLENGE',
+          strength: 'STRONG',
+          role: 'REFINEMENT',
+          evidence: Object.freeze([]),
+          start: '2020-01-01',
+          end: '2021-01-01',
+          statement: 'PD CHALLENGE',
+          active: true,
+          activatedPromiseEvidenceIds: Object.freeze([]),
+          challengedPromiseEvidenceIds: Object.freeze([]),
+          expressionEvidenceIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        dasha: makeMinimalDasha('SUPPORT', hierarchy)
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Should use hierarchy's overall values, not reconstruct from individual periods
+      expect(result.dashaEffect).toBe('ACTIVATES');
+      expect(result.dashaDirection).toBe('SUPPORT');
+      expect(result.dashaStrength).toBe('STRONG');
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Transit invariance', () => {
+    it('transit-only change cannot alter natal direction/strength', () => {
+      const baseInput = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        dasha: makeMinimalDasha('SUPPORT'),
+        d10: makeMinimalD10('SUPPORT', 'STRONG')
+      });
+
+      const resultSupport = buildCareerFinalAnalysis({
+        ...baseInput,
+        timing: makeMinimalTiming('SUPPORTS')
+      });
+
+      const resultChallenge = buildCareerFinalAnalysis({
+        ...baseInput,
+        timing: makeMinimalTiming('CHALLENGES')
+      });
+
+      // Natal direction and strength should be unchanged
+      expect(resultSupport.natalDirection).toBe(resultChallenge.natalDirection);
+      expect(resultSupport.natalStrength).toBe(resultChallenge.natalStrength);
+      // Final direction should be unchanged
+      expect(resultSupport.finalDirection).toBe(resultChallenge.finalDirection);
+      // Transit direction should differ
+      expect(resultSupport.transitDirection).toBe('SUPPORT');
+      expect(resultChallenge.transitDirection).toBe('CHALLENGE');
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Conflicting layers survive in conflicts', () => {
+    it('conflicting layers survive in conflicts with provenance', () => {
+      const d10Evidence1 = Object.freeze({
+        identityKey: 'd10-evidence-1',
+        id: 'd10-evidence-1',
+        role: 'PRIMARY' as const,
+        direction: 'CHALLENGE' as const,
+        d10Effect: 'CHALLENGES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence 1.',
+        sourceIds: Object.freeze(['d10-source-1']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source-1']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const dashaEvidence1 = Object.freeze({
+        identityKey: 'dasha-evidence-1',
+        id: 'dasha-evidence-1',
+        level: 'MD' as const,
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER' as const,
+        effect: 'CHALLENGES' as const,
+        direction: 'CHALLENGE' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 1.',
+        sourceIds: Object.freeze(['dasha-source-1']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'MD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        d10: makeMinimalD10('CHALLENGE', 'STRONG', Object.freeze([d10Evidence1])),
+        dasha: makeMinimalDasha('CHALLENGE', undefined, Object.freeze([dashaEvidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Both conflicts should be present
+      expect(result.conflicts.length).toBeGreaterThanOrEqual(2);
+      // D10 conflict should have evidence IDs
+      const d10Conflict = result.conflicts.find(c => c.source === 'D10');
+      expect(d10Conflict).toBeDefined();
+      expect(d10Conflict?.evidenceIds).toContain('d10-evidence-1');
+      // Dasha conflict should have evidence IDs
+      const dashaConflict = result.conflicts.find(c => c.source === 'DASHA');
+      expect(dashaConflict).toBeDefined();
+      expect(dashaConflict?.evidenceIds).toContain('dasha-evidence-1');
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Expression independence', () => {
+    it('expression independence - multiple expressions preserved independently', () => {
+      const expr1: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-1']),
+        statement: 'Leadership.',
+        conditional: false
+      });
+
+      const expr2: CareerExpression = Object.freeze({
+        mode: 'ENTREPRENEURSHIP',
+        direction: 'CONDITIONAL',
+        strength: 'MODERATE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-2']),
+        statement: 'Entrepreneurship.',
+        conditional: true
+      });
+
+      const expr3: CareerExpression = Object.freeze({
+        mode: 'SERVICE',
+        direction: 'SUPPORTED',
+        strength: 'WEAK',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-3']),
+        statement: 'Service.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expr1, expr2, expr3])
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // All three expressions should be present
+      expect(result.expressions).toHaveLength(3);
+      // Each should preserve its own direction and strength
+      const leadership = result.expressions.find(e => e.mode === 'LEADERSHIP');
+      expect(leadership?.direction).toBe('SUPPORT');
+      expect(leadership?.strength).toBe('STRONG');
+
+      const entrepreneurship = result.expressions.find(e => e.mode === 'ENTREPRENEURSHIP');
+      expect(entrepreneurship?.direction).toBe('CONDITIONAL');
+      expect(entrepreneurship?.strength).toBe('MODERATE');
+
+      const service = result.expressions.find(e => e.mode === 'SERVICE');
+      expect(service?.direction).toBe('SUPPORT');
+      expect(service?.strength).toBe('WEAK');
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Evidence-identity determinism', () => {
+    it('array-order invariance → deterministically sorted/deduped IDs', () => {
+      const natalEvidence1: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'natal-evidence-1',
+        evidenceId: 'natal-evidence-1',
+        ruleId: 'rule-1',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 5,
+        statement: 'Natal evidence 1.',
+        relatedEvidenceIds: Object.freeze([]),
+        sourceIds: Object.freeze(['source-1'])
+      });
+
+      const natalEvidence2: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'natal-evidence-2',
+        evidenceId: 'natal-evidence-2',
+        ruleId: 'rule-2',
+        layer: 'SECONDARY_SUPPORT',
+        direction: 'SUPPORT',
+        strength: 'MODERATE',
+        priority: 2,
+        weight: 3,
+        statement: 'Natal evidence 2.',
+        relatedEvidenceIds: Object.freeze([]),
+        sourceIds: Object.freeze(['source-2'])
+      });
+
+      // Input 1: evidence in forward order
+      const input1 = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG', Object.freeze([natalEvidence1, natalEvidence2]))
+      });
+
+      // Input 2: evidence in reverse order
+      const input2 = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG', Object.freeze([natalEvidence2, natalEvidence1]))
+      });
+
+      const result1 = buildCareerFinalAnalysis(input1);
+      const result2 = buildCareerFinalAnalysis(input2);
+
+      // Evidence IDs should be sorted deterministically
+      expect(result1.evidenceIds).toEqual(result2.evidenceIds);
+      expect(result1.evidenceIds).toEqual(['natal-evidence-1', 'natal-evidence-2']);
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Provenance distinction', () => {
+    it('evidenceIds/sourceIds/ruleIds remain distinct arrays', () => {
+      const natalEvidence1: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'natal-evidence-1',
+        evidenceId: 'natal-evidence-1',
+        ruleId: 'rule-1',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 5,
+        statement: 'Natal evidence 1.',
+        relatedEvidenceIds: Object.freeze([]),
+        sourceIds: Object.freeze(['source-1', 'source-2']) // Multiple source IDs
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG', Object.freeze([natalEvidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // All three arrays should be present
+      expect(result.evidenceIds).toBeDefined();
+      expect(result.sourceIds).toBeDefined();
+      expect(result.ruleIds).toBeDefined();
+
+      // They should be separate array instances
+      expect(result.evidenceIds).not.toBe(result.sourceIds);
+      expect(result.evidenceIds).not.toBe(result.ruleIds);
+      expect(result.sourceIds).not.toBe(result.ruleIds);
+
+      // evidenceTrace should have all three
+      expect(result.evidenceTrace.evidenceIds).toBeDefined();
+      expect(result.evidenceTrace.sourceIds).toBeDefined();
+      expect(result.evidenceTrace.ruleIds).toBeDefined();
+    });
+  });
+
+  describe('P2-08D-04: Invariant tests - Nested immutability', () => {
+    it('Object.isFrozen on result, arrays, nested conflict/expression/evidenceTrace objects', () => {
+      const expr: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-1']),
+        statement: 'Leadership.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expr])
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // Result should be frozen
+      expect(Object.isFrozen(result)).toBe(true);
+
+      // Top-level arrays should be frozen
+      expect(Object.isFrozen(result.expressions)).toBe(true);
+      expect(Object.isFrozen(result.conflicts)).toBe(true);
+      expect(Object.isFrozen(result.evidenceIds)).toBe(true);
+      expect(Object.isFrozen(result.sourceIds)).toBe(true);
+      expect(Object.isFrozen(result.ruleIds)).toBe(true);
+
+      // Nested objects should be frozen
+      expect(Object.isFrozen(result.evidenceTrace)).toBe(true);
+      expect(Object.isFrozen(result.evidenceTrace.evidenceIds)).toBe(true);
+      expect(Object.isFrozen(result.evidenceTrace.sourceIds)).toBe(true);
+      expect(Object.isFrozen(result.evidenceTrace.ruleIds)).toBe(true);
+
+      // Expression objects should be frozen
+      if (result.expressions.length > 0) {
+        expect(Object.isFrozen(result.expressions[0])).toBe(true);
+        expect(Object.isFrozen(result.expressions[0].evidenceIds)).toBe(true);
+      }
+
+      // Conflict objects should be frozen
+      if (result.conflicts.length > 0) {
+        expect(Object.isFrozen(result.conflicts[0])).toBe(true);
+        expect(Object.isFrozen(result.conflicts[0].evidenceIds)).toBe(true);
+      }
     });
   });
 });

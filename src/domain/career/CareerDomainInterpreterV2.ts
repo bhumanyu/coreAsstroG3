@@ -98,6 +98,37 @@ import {
 } from './careerStructuralReasoningIntegration';
 
 /**
+ * P2-08D: Canonical C11 Final Synthesis Integration
+ *
+ * Import the canonical C11 integration adapter and types.
+ * This provides the authoritative career conclusion from the canonical C11 module.
+ */
+import {
+  buildCareerFinalAnalysis
+} from './careerFinalSynthesis/careerFinalSynthesisIntegration';
+import type {
+  CareerFinalSynthesisIntegrationInput
+} from './careerFinalSynthesis/careerFinalSynthesisCanonicalTypes';
+import type {
+  CareerFinalSynthesisResult
+} from './careerFinalSynthesis/careerFinalSynthesisTypes';
+import type {
+  CareerNatalAnalysis
+} from './careerNatalAnalysis';
+import {
+  buildCareerNatalAnalysis
+} from './careerNatalConvergence';
+import {
+  buildCareerExpression
+} from './careerExpressionIntegration';
+import {
+  buildCareerDashaAnalysis
+} from './careerDasha/careerDashaIntegration';
+import {
+  buildCareerD10Analysis
+} from './careerD10/careerD10Integration';
+
+/**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
  *
  * The canonical type contract for Career Final Synthesis is now defined at:
@@ -417,7 +448,84 @@ export function interpretCareerV2(
     horoscope
   );
 
-  const careerFinalSynthesis = synthesizeCareerFinal({
+  /**
+   * P2-08D: Canonical C11 Final Synthesis Integration
+   *
+   * Build the canonical C4-C7 natal analysis, C8 expression, C9 Dasha, and C10 D10
+   * to produce the authoritative career conclusion via the canonical C11 module.
+   *
+   * This replaces the legacy synthesis from careerConclusion.ts as the single
+   * authoritative career conclusion source in the production path.
+   */
+  const canonicalNatalAnalysis: CareerNatalAnalysis = buildCareerNatalAnalysis({
+    horoscope
+  });
+
+  const canonicalExpressionAnalysis = buildCareerExpression({
+    natal: canonicalNatalAnalysis
+  });
+
+  const canonicalDashaAnalysis = buildCareerDashaAnalysis({
+    horoscope,
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis
+  });
+
+  const canonicalD10Analysis = buildCareerD10Analysis({
+    horoscope,
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis
+  });
+
+  const canonicalC11Input: CareerFinalSynthesisIntegrationInput = Object.freeze({
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis,
+    dasha: canonicalDashaAnalysis,
+    d10: canonicalD10Analysis,
+    timing: careerTimingSynthesis
+  });
+
+  const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(canonicalC11Input);
+
+  /**
+   * P2-08D: Presentation/Compatibility Adapter
+   *
+   * Map the canonical C11 result to the existing DomainInterpretation structure.
+   * This adapter:
+   * - Does NOT call legacy resolveCareerConclusionStrength
+   * - Does NOT call legacy final synthesis to decide the conclusion again
+   * - Does NOT combine canonical + legacy into a third conclusion
+   * - Maps C11 fields to existing DomainConclusion fields for compatibility
+   *
+   * Confidence mapping: C11 (HIGH/MEDIUM/LOW) → DomainInterpretation (HIGH/MODERATE/LOW)
+   */
+  const mapC11ConfidenceToDomain = (c11Confidence: 'HIGH' | 'MEDIUM' | 'LOW'): 'VERY_HIGH' | 'HIGH' | 'MODERATE' | 'LOW' | 'UNDETERMINED' => {
+    switch (c11Confidence) {
+      case 'HIGH': return 'HIGH';
+      case 'MEDIUM': return 'MODERATE';
+      case 'LOW': return 'LOW';
+      default: return 'UNDETERMINED';
+    }
+  };
+
+  const c11AdaptedConclusion = createDomainConclusion({
+    domain: 'CAREER',
+    strength: canonicalC11Result.finalStrength as DomainStrength,
+    confidence: mapC11ConfidenceToDomain(canonicalC11Result.confidence),
+    statement: canonicalC11Result.statement,
+    primaryEvidenceIds: canonicalC11Result.evidenceIds,
+    supportingEvidenceIds: canonicalC11Result.evidenceIds, // Simplified mapping
+    challengingEvidenceIds: [], // Conflicts are tracked separately in C11
+    unresolvedQuestions: [],
+    primarySourceIds: canonicalC11Result.sourceIds,
+    supportingSourceIds: canonicalC11Result.sourceIds, // Simplified mapping
+    challengingSourceIds: [],
+    unresolvedSourceIds: []
+  });
+
+  // Legacy synthesis retained for compatibility/parity tests only
+  // This is NOT used as the authoritative conclusion in the production path
+  const legacyCareerFinalSynthesis = synthesizeCareerFinal({
     natalPromise: cw01Result.natalStrength,
     dashaSynthesis: careerDashaSynthesis,
     timingSynthesis: careerTimingSynthesis,
@@ -435,7 +543,7 @@ export function interpretCareerV2(
     careerTimingSynthesis,
     d10Relationship,
     careerManifestationSynthesis,
-    careerFinalSynthesis
+    careerFinalSynthesis: legacyCareerFinalSynthesis // Still use legacy for trace graph compatibility
   });
 
   return buildDomainInterpretation({
@@ -447,7 +555,7 @@ export function interpretCareerV2(
     vargaConfirmations,
     manifestations: cw01Result.manifestations,
     conflicts,
-    conclusion,
+    conclusion: c11AdaptedConclusion, // P2-08D: Use canonical C11 conclusion
     timingActivations,
     dataCompleteness,
     conclusionData: {
@@ -457,11 +565,12 @@ export function interpretCareerV2(
       careerDashaSynthesis,
       careerTimingSynthesis,
       careerManifestationSynthesis,
-      careerFinalSynthesis,
+      careerFinalSynthesis: legacyCareerFinalSynthesis, // Legacy retained for trace graph
+      canonicalCareerFinalSynthesis: canonicalC11Result, // P2-08D: Expose canonical C11 result
       reasoningTraceGraph
     },
     reasoningTrace: cw01Result.reasoningTrace,
-    reasoningVersion: 'CW-01'
+    reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility
   }, {
     asOf: context.asOf
   });

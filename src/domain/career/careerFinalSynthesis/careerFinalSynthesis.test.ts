@@ -629,6 +629,190 @@ describe('C11 Final Synthesis', () => {
     });
   });
 
+  describe('P2-08D-02: Confidence policy pinning', () => {
+    it('should return HIGH confidence for strong natal alone with no conflicts', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        // No secondary layers at all
+        conflicts: []
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      // Strong natal with no conflicts = HIGH confidence regardless of layer count
+      expect(result.confidence).toBe('HIGH');
+    });
+
+    it('should return HIGH confidence for VERY_STRONG natal alone with no conflicts', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'VERY_STRONG',
+        // No secondary layers at all
+        conflicts: []
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.confidence).toBe('HIGH');
+    });
+
+    it('should return MEDIUM confidence for strong natal with moderate conflicts', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        conflicts: [
+          {
+            source: 'D10',
+            direction: 'CHALLENGE',
+            severity: 'MODERATE',
+            evidenceIds: ['ev-1'],
+            statement: 'D10 conflict'
+          }
+        ]
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.confidence).toBe('MEDIUM');
+    });
+
+    it('should return MEDIUM confidence for strong natal with high conflicts', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        conflicts: [
+          {
+            source: 'D10',
+            direction: 'CHALLENGE',
+            severity: 'HIGH',
+            evidenceIds: ['ev-1'],
+            statement: 'D10 conflict'
+          }
+        ]
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.confidence).toBe('MEDIUM');
+    });
+  });
+
+  describe('P2-08D-02: Missing-data handling pinning', () => {
+    it('should return INSUFFICIENT_DATA when natal is UNAVAILABLE', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'UNAVAILABLE',
+        natalStrength: 'UNDETERMINED',
+        dashaHierarchy: {
+          md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates', '2024-01-01', '2024-12-31'),
+          ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'MODERATE', 'Saturn AD activates', '2024-01-01', '2024-12-31'),
+          pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'ACTIVATES', 'SUPPORT', 'WEAK', 'Mercury PD activates', '2024-01-01', '2024-12-31'),
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
+        expressionStrength: 'STRONG',
+        transitDirection: 'SUPPORT'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.finalStatus).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('should return INSUFFICIENT_DATA when natal is UNDETERMINED', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'UNDETERMINED',
+        dashaHierarchy: {
+          md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates', '2024-01-01', '2024-12-31'),
+          ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'MODERATE', 'Saturn AD activates', '2024-01-01', '2024-12-31'),
+          pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'ACTIVATES', 'SUPPORT', 'WEAK', 'Mercury PD activates', '2024-01-01', '2024-12-31'),
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
+        expressionStrength: 'STRONG',
+        transitDirection: 'SUPPORT'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.finalStatus).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('should treat missing Dasha as UNAVAILABLE, not CHALLENGE', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        // No dashaHierarchy provided
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.finalStatus).toBe('SUPPORTED');
+      expect(result.dashaDirection).toBe('UNAVAILABLE');
+    });
+
+    it('should treat missing D10 as UNAVAILABLE, not CHALLENGE', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        // No d10Direction provided
+        dashaHierarchy: {
+          md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates', '2024-01-01', '2024-12-31'),
+          ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'MODERATE', 'Saturn AD activates', '2024-01-01', '2024-12-31'),
+          pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'ACTIVATES', 'SUPPORT', 'WEAK', 'Mercury PD activates', '2024-01-01', '2024-12-31'),
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        }
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.finalStatus).toBe('SUPPORTED');
+      expect(result.d10Direction).toBe('UNAVAILABLE');
+    });
+
+    it('should treat missing transit as UNAVAILABLE, not CHALLENGE', () => {
+      const input: CareerFinalSynthesisInput = {
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        // No transitDirection provided
+        dashaHierarchy: {
+          md: makeActivation('MD', Planet.JUPITER, 'PRIMARY_DRIVER', 'ACTIVATES', 'SUPPORT', 'STRONG', 'Jupiter MD activates', '2024-01-01', '2024-12-31'),
+          ad: makeActivation('AD', Planet.SATURN, 'MODIFIER', 'ACTIVATES', 'SUPPORT', 'MODERATE', 'Saturn AD activates', '2024-01-01', '2024-12-31'),
+          pd: makeActivation('PD', Planet.MERCURY, 'REFINEMENT', 'ACTIVATES', 'SUPPORT', 'WEAK', 'Mercury PD activates', '2024-01-01', '2024-12-31'),
+          overallEffect: 'ACTIVATES',
+          overallDirection: 'SUPPORT',
+          overallStrength: 'STRONG',
+          dominantLevel: 'MD',
+          statement: 'Dasha activates'
+        },
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG'
+      };
+
+      const result = synthesizeCareerFinal(input);
+
+      expect(result.finalStatus).toBe('SUPPORTED');
+      expect(result.transitDirection).toBe('UNAVAILABLE');
+    });
+  });
+
   describe('Golden scenarios for C11 fixes', () => {
     it('should preserve C8 CONDITIONAL as CONDITIONAL, not CHALLENGE', () => {
       const hierarchy: CareerDashaActivationHierarchy = {
