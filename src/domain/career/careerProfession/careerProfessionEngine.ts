@@ -292,7 +292,8 @@ function resolveRulesInPattern(
         satisfyingMechanisms,
         career10HFoundation,
         career10LFoundation,
-        domainEvidence
+        domainEvidence,
+        patternMechanismIds
       );
       candidates.push(candidate);
     }
@@ -376,32 +377,49 @@ function evaluateRule(
         mechanismIdToType.set(mech.candidateId, mech.mechanismType);
       }
 
-      // Check if any expression references multiple required mechanism types
-      let hasSharedSourceLinkage = false;
+      // Capture the exact mechanism instances referenced by qualifying expressions
+      const referencedMechanismIds = new Set<string>();
       for (const expr of patternExpressions) {
         const referencedMechanismTypes = new Set<CareerMechanismType>();
+        const exprReferencedIds: string[] = [];
         for (const mechId of expr.sourceMechanismIds) {
           const mechType = mechanismIdToType.get(mechId);
           if (mechType && rule.requiredMechanismTypes!.includes(mechType)) {
             referencedMechanismTypes.add(mechType);
+            exprReferencedIds.push(mechId);
           }
         }
-        // If this expression references all required mechanism types, we have shared linkage
+        // If this expression references all required mechanism types, capture its referenced IDs
+        // (only the IDs that match required types, not all sourceMechanismIds)
         if (referencedMechanismTypes.size === rule.requiredMechanismTypes.length) {
-          hasSharedSourceLinkage = true;
-          break;
+          for (const id of exprReferencedIds) {
+            referencedMechanismIds.add(id);
+          }
         }
       }
 
-      if (!hasSharedSourceLinkage) {
+      // If no expression references all required mechanism types together, reject
+      if (referencedMechanismIds.size === 0) {
         return null;
       }
-    }
 
-    // Collect the satisfying mechanisms
-    for (const mech of patternMechanisms) {
-      if (rule.requiredMechanismTypes.includes(mech.mechanismType)) {
-        satisfyingMechanisms.push(mech);
+      // Build satisfyingMechanisms from only the captured instance IDs
+      const mechanismIdToMechanism = new Map<string, CareerMechanismCandidate>();
+      for (const mech of patternMechanisms) {
+        mechanismIdToMechanism.set(mech.candidateId, mech);
+      }
+      for (const id of referencedMechanismIds) {
+        const mech = mechanismIdToMechanism.get(id);
+        if (mech) {
+          satisfyingMechanisms.push(mech);
+        }
+      }
+    } else {
+      // Single mechanism type: collect all mechanisms of that type
+      for (const mech of patternMechanisms) {
+        if (rule.requiredMechanismTypes.includes(mech.mechanismType)) {
+          satisfyingMechanisms.push(mech);
+        }
       }
     }
   }
@@ -420,7 +438,8 @@ function buildCandidateFromRule(
   satisfyingMechanisms: readonly CareerMechanismCandidate[],
   career10HFoundation?: Career10HFoundation,
   career10LFoundation?: Career10LFoundation,
-  domainEvidence?: readonly DomainEvidence[]
+  domainEvidence?: readonly DomainEvidence[],
+  patternMechanismIds?: Set<string>
 ): CareerProfessionCandidate {
   // Collect expression types that match the rule
   const matchedExpressionTypes: CareerExpressionType[] = [];
@@ -444,7 +463,8 @@ function buildCandidateFromRule(
     satisfyingExpressions,
     satisfyingMechanisms,
     career10HFoundation,
-    career10LFoundation
+    career10LFoundation,
+    patternMechanismIds
   );
 
   // Collect source IDs from satisfying expressions and mechanisms only
@@ -500,13 +520,17 @@ function buildCandidateFromRule(
  * Build evidence for a candidate.
  * For expression-based evidence, sourceIds include only the expression IDs themselves.
  * Mechanism source linkage is validated during rule evaluation, not included in evidence sourceIds.
+ * For expression-based evidence, linkage metadata is computed to distinguish COMPLETE from PARTIAL resolution.
+ * For mechanism-based evidence, patternMechanisms is the already-narrowed satisfyingMechanisms set
+ * (only the exact instances referenced by qualifying expressions for composites).
  */
 function buildEvidence(
   rule: CareerProfessionRule,
   patternExpressions: readonly CareerExpressionCandidate[],
   patternMechanisms: readonly CareerMechanismCandidate[],
   career10HFoundation?: Career10HFoundation,
-  career10LFoundation?: Career10LFoundation
+  career10LFoundation?: Career10LFoundation,
+  patternMechanismIds?: Set<string>
 ): CareerProfessionEvidence[] {
   const evidence: CareerProfessionEvidence[] = [];
 
@@ -517,20 +541,55 @@ function buildEvidence(
       .map(e => e.expressionId);
 
     if (expressionIds.length > 0) {
+      // Compute linkage metadata for expression-based evidence
+      let linkage: 'COMPLETE' | 'PARTIAL' | undefined;
+      let resolvedMechanismIds: readonly string[] | undefined;
+      let unresolvedMechanismIds: readonly string[] | undefined;
+
+      if (patternMechanismIds) {
+        const allResolved: string[] = [];
+        const allUnresolved: string[] = [];
+
+        for (const expr of patternExpressions) {
+          if (rule.requiredExpressionTypes!.includes(expr.expressionType)) {
+            for (const mechId of expr.sourceMechanismIds) {
+              if (patternMechanismIds.has(mechId)) {
+                allResolved.push(mechId);
+              } else {
+                allUnresolved.push(mechId);
+              }
+            }
+          }
+        }
+
+        // Deduplicate and sort
+        const uniqueResolved = Object.freeze([...new Set(allResolved)].sort(codePointCompare));
+        const uniqueUnresolved = Object.freeze([...new Set(allUnresolved)].sort(codePointCompare));
+
+        // Determine linkage: COMPLETE if no unresolved IDs, PARTIAL otherwise
+        linkage = uniqueUnresolved.length === 0 ? 'COMPLETE' : 'PARTIAL';
+        resolvedMechanismIds = uniqueResolved;
+        unresolvedMechanismIds = uniqueUnresolved;
+      }
+
       evidence.push(Object.freeze({
         evidenceId: createProfessionEvidenceId('EXPRESSION', rule.ruleId, expressionIds),
         basis: 'EXPRESSION',
         sourceIds: Object.freeze(expressionIds.sort(codePointCompare)),
         ruleId: rule.ruleId,
-        statement: `Expression types ${rule.requiredExpressionTypes.join(', ')} establish ${rule.domain}/${rule.family}`
+        statement: `Expression types ${rule.requiredExpressionTypes.join(', ')} establish ${rule.domain}/${rule.family}`,
+        linkage,
+        resolvedMechanismIds,
+        unresolvedMechanismIds
       }));
     }
   }
 
   // Mechanism-based evidence
   if (rule.basis === 'MECHANISM' && rule.requiredMechanismTypes) {
+    // Use the already-narrowed satisfyingMechanisms set directly
+    // (satisfyingMechanisms already contains only the exact instances referenced by qualifying expressions)
     const mechanismIds = patternMechanisms
-      .filter(m => rule.requiredMechanismTypes!.includes(m.mechanismType))
       .map(m => m.candidateId);
 
     if (mechanismIds.length > 0) {

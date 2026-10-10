@@ -151,6 +151,10 @@ export type CareerProfessionD10Status =
  * sourceIds: IDs of the source records that produced this evidence.
  * ruleId: ID of the profession rule that produced this candidate.
  * statement: Human-readable statement of the evidence.
+ * linkage: Linkage completeness metadata for expression-based evidence. COMPLETE if all
+ *   sourceMechanismIds resolve to pattern mechanisms, PARTIAL if only some resolve.
+ * resolvedMechanismIds: Source mechanism IDs that resolved to pattern mechanisms.
+ * unresolvedMechanismIds: Source mechanism IDs that did not resolve to pattern mechanisms.
  *
  * Provenance discipline: evidenceIds, sourceIds, ruleIds are in separate namespaces.
  * Do not fabricate source IDs. Carry real upstream source IDs where they genuinely exist,
@@ -162,6 +166,9 @@ export interface CareerProfessionEvidence {
   readonly sourceIds: readonly string[];
   readonly ruleId: string;
   readonly statement: string;
+  readonly linkage?: 'COMPLETE' | 'PARTIAL';
+  readonly resolvedMechanismIds?: readonly string[];
+  readonly unresolvedMechanismIds?: readonly string[];
 }
 
 /**

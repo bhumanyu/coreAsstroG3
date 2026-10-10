@@ -1008,6 +1008,125 @@ describe('Career Profession Engine (P2-10A)', () => {
       expect(result.candidates.length).toBe(0);
     });
   });
+
+  describe('P2 Hardening: Composite scope and linkage metadata', () => {
+    it('should emit evidence with only the exact mechanism instances referenced by qualifying expression (composite scope)', () => {
+      // Pattern with two INNOVATION mechanisms and one AUTHORITY
+      const innovationMechanism1 = createMockMechanismCandidate('INNOVATION', 'PATTERN_1', 'INSTANCE_1');
+      const innovationMechanism2 = createMockMechanismCandidate('INNOVATION', 'PATTERN_1', 'INSTANCE_2');
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
+      // Qualifying expression references only one INNOVATION + the AUTHORITY
+      const compositeExpression = createMockExpressionCandidate(
+        'INNOVATION_WORK',
+        'PATTERN_1',
+        [innovationMechanism1.candidateId, authorityMechanism.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        compositeExpression
+      ]);
+
+      const mechanisms = [innovationMechanism1, innovationMechanism2, authorityMechanism];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // Should emit technical-leadership composite candidate (mechanism-based rule)
+      const technicalLeadershipCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+      );
+      expect(technicalLeadershipCandidate).toBeDefined();
+
+      // Assert evidence sourceIds contain only the referenced INNOVATION instance, not the second one
+      const mechanismEvidence = technicalLeadershipCandidate!.evidence.find(e => e.basis === 'MECHANISM');
+      expect(mechanismEvidence).toBeDefined();
+      expect(mechanismEvidence!.sourceIds).toContain(innovationMechanism1.candidateId);
+      expect(mechanismEvidence!.sourceIds).toContain(authorityMechanism.candidateId);
+      expect(mechanismEvidence!.sourceIds).not.toContain(innovationMechanism2.candidateId);
+      expect(mechanismEvidence!.sourceIds.length).toBe(2); // Exactly 2 mechanisms
+    });
+
+    it('should emit COMPLETE linkage metadata when all sourceMechanismIds resolve', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
+      // Expression with complete resolution (all sourceMechanismIds exist)
+      const expressionWithCompleteResolution = createMockExpressionCandidate(
+        'AUTHORITY_EXPRESSION',
+        'PATTERN_1',
+        [authorityMechanism.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        expressionWithCompleteResolution
+      ]);
+
+      const mechanisms = [authorityMechanism];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      const authorityCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_AUTHORITY'
+      );
+      expect(authorityCandidate).toBeDefined();
+
+      const expressionEvidence = authorityCandidate!.evidence.find(e => e.basis === 'EXPRESSION');
+      expect(expressionEvidence).toBeDefined();
+      expect(expressionEvidence!.linkage).toBe('COMPLETE');
+      expect(expressionEvidence!.resolvedMechanismIds).toContain(authorityMechanism.candidateId);
+      expect(expressionEvidence!.unresolvedMechanismIds).toEqual([]);
+    });
+
+    it('should emit PARTIAL linkage metadata when only some sourceMechanismIds resolve', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
+      // Expression with partial resolution (one real mechanism + one non-existent)
+      const expressionWithPartialResolution = createMockExpressionCandidate(
+        'AUTHORITY_EXPRESSION',
+        'PATTERN_1',
+        [authorityMechanism.candidateId, 'NON_EXISTENT_MECH_ID']
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        expressionWithPartialResolution
+      ]);
+
+      const mechanisms = [authorityMechanism];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      const authorityCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_AUTHORITY'
+      );
+      expect(authorityCandidate).toBeDefined();
+
+      const expressionEvidence = authorityCandidate!.evidence.find(e => e.basis === 'EXPRESSION');
+      expect(expressionEvidence).toBeDefined();
+      expect(expressionEvidence!.linkage).toBe('PARTIAL');
+      expect(expressionEvidence!.resolvedMechanismIds).toContain(authorityMechanism.candidateId);
+      expect(expressionEvidence!.unresolvedMechanismIds).toContain('NON_EXISTENT_MECH_ID');
+    });
+  });
 });
 
 // Helper function to create mock expression analysis result
@@ -1074,13 +1193,16 @@ function createLinkedExpressionAndMechanism(
 // Helper function to create mock mechanism candidate
 function createMockMechanismCandidate(
   mechanismType: string,
-  patternId: string
+  patternId: string,
+  uniqueId?: string
 ): CareerMechanismCandidate {
-  const candidateId = `CAREER_MECHANISM_CANDIDATE:${patternId}:${mechanismType}`;
+  const candidateId = uniqueId
+    ? `CAREER_MECHANISM_CANDIDATE:${patternId}:${mechanismType}:${uniqueId}`
+    : `CAREER_MECHANISM_CANDIDATE:${patternId}:${mechanismType}`;
 
   const evidence: CareerMechanismEvidence[] = [
     {
-      evidenceId: `EVIDENCE_1:${patternId}`,
+      evidenceId: `EVIDENCE_1:${patternId}:${uniqueId || 'default'}`,
       mechanismType: mechanismType as CareerMechanismType,
       source: 'PATTERN',
       role: 'ESTABLISHING',

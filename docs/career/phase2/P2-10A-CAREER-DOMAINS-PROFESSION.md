@@ -7,6 +7,8 @@
 - Defined partial source resolution policy for expressions: valid if at least one sourceMechanismId resolves
 - Fixed buildProvenance() to derive patternIds strictly from emitted candidates (not all input patterns)
 - Added regression tests for unlinked mechanisms, partial resolution, and consumed pattern provenance
+- **P2 Hardening Fix 1:** Composite candidate/evidence now uses only the exact mechanism instances referenced by qualifying expressions (not all type-matching mechanisms in the pattern)
+- **P2 Hardening Fix 2:** Added linkage-completeness metadata to expression-based evidence: `linkage` ('COMPLETE' | 'PARTIAL'), `resolvedMechanismIds`, and `unresolvedMechanismIds`
 
 ## Overview
 
@@ -111,10 +113,23 @@ Canonical profession record derived from career outputs.
 - `mechanismTypes`: Mechanism types that contributed to this candidate
 - `patternIds`: Pattern IDs from which this candidate was derived (pattern-scoped)
 - `d10Status`: D10 qualification status
-- `evidence`: Evidence records linking this candidate to its sources
+- `evidence`: Evidence records linking this candidate to its sources. For composite mechanism rules, evidence contains only the exact mechanism instances referenced by qualifying expressions, not all type-matching mechanisms in the pattern.
 - `domainEvidenceIds`: IDs of DomainEvidence records that support this candidate
 - `relatedEvidenceIds`: IDs of related evidence records
 - `ruleId`: ID of the profession rule that produced this candidate
+
+#### CareerProfessionEvidence
+
+Evidence record for a profession candidate.
+
+- `evidenceId`: Unique identifier for this evidence record
+- `basis`: What establishes this evidence (EXPRESSION, MECHANISM, etc.)
+- `sourceIds`: IDs of the source records that produced this evidence
+- `ruleId`: ID of the profession rule that produced this candidate
+- `statement`: Human-readable statement of the evidence
+- `linkage`: (Expression-based evidence only) Linkage completeness metadata: 'COMPLETE' if all sourceMechanismIds resolve to pattern mechanisms, 'PARTIAL' if only some resolve
+- `resolvedMechanismIds`: (Expression-based evidence only) Source mechanism IDs that resolved to pattern mechanisms
+- `unresolvedMechanismIds`: (Expression-based evidence only) Source mechanism IDs that did not resolve to pattern mechanisms
 
 #### CareerProfessionAnalysis
 
@@ -203,7 +218,8 @@ Main entry point for profession resolution.
 **Source-Linkage Resolution (P1):**
 - For expression-driven rules: expressions must reference at least one mechanism in the pattern via `sourceMechanismIds`.
 - **Partial resolution policy**: An expression is valid if at least one of its `sourceMechanismIds` resolves to a pattern mechanism. Unresolved source references are ignored for validity, but evidence `sourceIds` include only expression IDs (not mechanism IDs) to avoid implying full linkage when only partial resolution occurred.
-- For mechanism composites: STRONG source-linkage contract - required mechanisms must be referenced together by at least one expression in the pattern, indicating they share a deterministic source relationship.
+- **Linkage metadata**: Expression-based evidence includes linkage-completeness metadata: `linkage` ('COMPLETE' | 'PARTIAL'), `resolvedMechanismIds`, and `unresolvedMechanismIds`. This allows downstream consumers to distinguish complete from partial linkage without implying every source was validated.
+- For mechanism composites: STRONG source-linkage contract - required mechanisms must be referenced together by at least one expression in the pattern, indicating they share a deterministic source relationship. **Composite scope**: The emitted evidence contains only the exact mechanism instances referenced by qualifying expressions, not all type-matching mechanisms in the pattern. If multiple expressions independently establish linkage, their referenced instances are unioned.
 
 **D10 Status Resolution (Critical Trap):**
 - The P2-08A `expressionId` is built from `createCareerExpressionId(expressionType, sourceMechanismIds)`.
@@ -274,6 +290,9 @@ Main entry point for profession resolution.
 14. **STRONG source-linkage for mechanism composites**: Mechanism composites require shared source linkage (referenced together by at least one expression)
 15. **Partial source resolution for expressions**: Expressions are valid if at least one sourceMechanismId resolves; evidence sourceIds include only expression IDs
 16. **Consumed pattern IDs in provenance**: Provenance patternIds derived from emitted candidates only, not all input patterns
+17. **P2 Hardening - Composite scope**: Composite evidence contains only the exact mechanism instances referenced by qualifying expressions (not all type-matching mechanisms)
+18. **P2 Hardening - COMPLETE linkage metadata**: Expression-based evidence with all sourceMechanismIds resolved emits linkage='COMPLETE' and empty unresolvedMechanismIds
+19. **P2 Hardening - PARTIAL linkage metadata**: Expression-based evidence with partial resolution emits linkage='PARTIAL' with resolved/unresolved IDs populated
 
 ### Boundary Enforcement (§9)
 
