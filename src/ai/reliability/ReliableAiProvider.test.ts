@@ -23,7 +23,7 @@ const DEFAULT_POLICY = {
 function createDummyRequest(): AiRequest {
   return {
     requestId: 'req-reliable-test',
-    schemaVersion: '1.0.0',
+    schemaVersion: '1.1.0',
     task: 'CAREER_ANALYSIS',
     context: {} as any,
     responseFormat: 'NARRATIVE'

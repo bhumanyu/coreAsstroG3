@@ -32,7 +32,7 @@ describe('providerCapabilityMap', () => {
   it('should append STRUCTURED_OUTPUT capability when responseFormat is STRUCTURED', () => {
     const narrativeRequest: AiRequest = {
       requestId: 'req-1',
-      schemaVersion: '1.0.0',
+      schemaVersion: '1.1.0',
       task: 'CAREER_ANALYSIS',
       context: dummyContext,
       responseFormat: 'NARRATIVE'
@@ -41,7 +41,7 @@ describe('providerCapabilityMap', () => {
 
     const structuredRequest: AiRequest = {
       requestId: 'req-2',
-      schemaVersion: '1.0.0',
+      schemaVersion: '1.1.0',
       task: 'CAREER_ANALYSIS',
       context: dummyContext,
       responseFormat: 'STRUCTURED'
@@ -55,7 +55,7 @@ describe('providerCapabilityMap', () => {
   it('should handle GENERAL_QUERY with structured output without duplicating capabilities', () => {
     const structuredGeneral: AiRequest = {
       requestId: 'req-3',
-      schemaVersion: '1.0.0',
+      schemaVersion: '1.1.0',
       task: 'GENERAL_QUERY',
       context: dummyContext,
       responseFormat: 'STRUCTURED'

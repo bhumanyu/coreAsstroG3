@@ -274,7 +274,16 @@ describe('localVedicRulesEngine', () => {
         d10Relationship: 'CONFLICTS',
         confidence: 'HIGH',
         supportingFactors: Object.freeze([]),
-        challengingFactors: Object.freeze(['conflicting varga'])
+        challengingFactors: Object.freeze(['conflicting varga']),
+        profession: {
+          availability: 'UNAVAILABLE',
+          status: 'INSUFFICIENT_DATA',
+          candidates: [],
+          unresolvedExpressionTypes: [],
+          mappedTypes: [],
+          missingInputs: ['careerProfessionAnalysis'],
+          d10Status: 'NOT_PROVIDED'
+        }
       },
       evidence: Object.freeze([
         {

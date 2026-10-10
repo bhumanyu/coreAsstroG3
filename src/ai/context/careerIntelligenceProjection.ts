@@ -12,9 +12,9 @@ import type {
   AiCareerCanonicalConflictFact,
   AiCareerProfessionFact,
   AiCareerProfessionCandidateFact,
-  AiCareerProfessionEvidenceFact,
-  AiAvailability
+  AiCareerProfessionEvidenceFact
 } from '../types/aiContextTypes';
+import type { AiAvailability } from '../types/aiTypes';
 
 /**
  * P2-10B Projection Layer: Career Intelligence
@@ -94,14 +94,14 @@ export function projectCanonicalCareerC11(
       mode: expr.mode,
       direction: expr.direction,
       strength: expr.strength,
-      statement: expr.statement
+      statement: `${expr.mode} expression: ${expr.direction} direction, ${expr.strength} strength`
     })
   );
 
   const conflicts: readonly AiCareerCanonicalConflictFact[] = canonicalC11.conflicts.map(
     (conflict) => ({
-      layers: conflict.layers,
-      description: conflict.description
+      layers: [conflict.source, conflict.direction, conflict.severity],
+      description: conflict.statement
     })
   );
 

@@ -10,7 +10,7 @@ describe('AiProviderSelector', () => {
 
   const careerRequest: AiRequest = {
     requestId: 'req-career-1',
-    schemaVersion: '1.0.0',
+    schemaVersion: '1.1.0',
     task: 'CAREER_ANALYSIS',
     context: dummyContext,
     responseFormat: 'STRUCTURED'

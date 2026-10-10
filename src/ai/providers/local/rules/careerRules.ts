@@ -117,5 +117,67 @@ export const CAREER_RULES: readonly LocalRuleDefinition[] = Object.freeze([
 
       return triggered(effect, statement, supportingIds, challengingIds);
     }
+  },
+  {
+    id: 'LOCAL-CAREER-004',
+    domain: 'CAREER',
+    priority: 75,
+    evaluate(context: AiContext) {
+      const canonicalC11 = context.career?.canonicalC11;
+      if (!canonicalC11) {
+        return notTriggered();
+      }
+
+      const statement =
+        `Canonical C11 synthesis: final status ${canonicalC11.finalStatus}, ` +
+        `final direction ${canonicalC11.finalDirection}, final strength ${canonicalC11.finalStrength}, ` +
+        `confidence ${canonicalC11.confidence}. ` +
+        `Natal direction ${canonicalC11.natalDirection}, natal strength ${canonicalC11.natalStrength}. ` +
+        `Expression status ${canonicalC11.expressionStatus}, D10 direction ${canonicalC11.d10Direction}, ` +
+        `Dasha effect ${canonicalC11.dashaEffect}, timing status ${canonicalC11.timingStatus}. ` +
+        `${canonicalC11.conflicts.length > 0 ? `${canonicalC11.conflicts.length} conflict(s) detected. ` : ''}` +
+        `${canonicalC11.strongestExpressions.length > 0 ? `Strongest expressions: ${canonicalC11.strongestExpressions.join(', ')}. ` : ''}`;
+
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (canonicalC11.finalDirection === 'SUPPORT') {
+        effect = 'SUPPORT';
+      } else if (canonicalC11.finalDirection === 'CHALLENGE') {
+        effect = 'CHALLENGE';
+      } else if (canonicalC11.finalDirection === 'MIXED') {
+        effect = 'MIXED';
+      }
+
+      return triggered(effect, statement, [], []);
+    }
+  },
+  {
+    id: 'LOCAL-CAREER-005',
+    domain: 'CAREER',
+    priority: 70,
+    evaluate(context: AiContext) {
+      const profession = context.career?.profession;
+      if (!profession) {
+        return notTriggered();
+      }
+
+      const statement =
+        `Profession analysis: availability ${profession.availability}, status ${profession.status}. ` +
+        `D10 status ${profession.d10Status}. ` +
+        `${profession.candidates.length > 0 ? `${profession.candidates.length} profession candidate(s) identified. ` : 'No profession candidates identified. '}` +
+        `${profession.missingInputs.length > 0 ? `Missing inputs: ${profession.missingInputs.join(', ')}. ` : ''}` +
+        `${profession.unresolvedExpressionTypes.length > 0 ? `Unresolved expression types: ${profession.unresolvedExpressionTypes.join(', ')}. ` : ''}` +
+        `${profession.mappedTypes.length > 0 ? `Mapped expression types: ${profession.mappedTypes.join(', ')}. ` : ''}`;
+
+      let effect: LocalRuleEffect = 'NEUTRAL';
+      if (profession.availability === 'AVAILABLE' && profession.status === 'COMPLETE') {
+        effect = 'SUPPORT';
+      } else if (profession.availability === 'UNAVAILABLE' || profession.status === 'INSUFFICIENT_DATA') {
+        effect = 'NEUTRAL';
+      } else if (profession.status === 'PARTIAL') {
+        effect = 'MIXED';
+      }
+
+      return triggered(effect, statement, [], []);
+    }
   }
 ]);

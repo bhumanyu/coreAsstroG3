@@ -13,7 +13,7 @@ import type { RemoteAiProviderConfig } from './remoteAiTypes';
 function createRequest(): AiRequest {
   return {
     requestId: 'remote-test-1',
-    schemaVersion: '1.0.0',
+    schemaVersion: '1.1.0',
     task: 'CAREER_ANALYSIS',
     context: {} as AiContext,
     responseFormat: 'STRUCTURED'

@@ -51,7 +51,7 @@ describe('AI Context Factory', () => {
 
   it('should include correct schema version and source engine metadata', () => {
     expect(context.schemaVersion).toBe(AI_CONTEXT_SCHEMA_VERSION);
-    expect(context.schemaVersion).toBe('1.0.0');
+    expect(context.schemaVersion).toBe('1.1.0');
     expect(context.source).toEqual({
       engine: 'CORE_ASTRO',
       deterministic: true,
@@ -466,7 +466,7 @@ describe('AI Context Factory', () => {
     const request = createAiRequest('CAREER_ANALYSIS', context, 'STRUCTURED', customId);
 
     expect(request.requestId).toBe(customId);
-    expect(request.schemaVersion).toBe('1.0.0');
+    expect(request.schemaVersion).toBe('1.1.0');
     expect(request.task).toBe('CAREER_ANALYSIS');
     expect(request.context).toBe(context);
     expect(request.responseFormat).toBe('STRUCTURED');

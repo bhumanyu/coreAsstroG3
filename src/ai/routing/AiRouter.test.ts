@@ -11,7 +11,7 @@ describe('AiRouter', () => {
 
   const testRequest: AiRequest = {
     requestId: 'req-router-test-1',
-    schemaVersion: '1.0.0',
+    schemaVersion: '1.1.0',
     task: 'CHART_SYNTHESIS',
     context: dummyContext,
     responseFormat: 'STRUCTURED'
