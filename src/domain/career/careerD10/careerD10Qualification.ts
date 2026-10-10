@@ -157,7 +157,7 @@ export function resolveCareerD10Qualification(
       'UNAVAILABLE',
       0,
       'Natal career direction is unavailable; D10 qualification cannot proceed.',
-      'NATAL_DIRECTION_CHECK'
+      'C10_D10_NATAL_DIRECTION_CHECK'
     );
     evidence.push(unavailableEvidence);
 
@@ -185,7 +185,7 @@ export function resolveCareerD10Qualification(
       'UNDETERMINED',
       0,
       'Natal career has no promise; D10 cannot create promise where none exists.',
-      'NATAL_PROMISE_CHECK'
+      'C10_D10_NATAL_PROMISE_CHECK'
     );
     evidence.push(insufficientEvidence);
 
@@ -213,7 +213,7 @@ export function resolveCareerD10Qualification(
       'UNAVAILABLE',
       0,
       'D10 data is unavailable; qualification cannot proceed.',
-      'D10_DATA_CHECK'
+      'C10_D10_DATA_CHECK'
     );
     evidence.push(unavailableEvidence);
 
@@ -250,7 +250,7 @@ export function resolveCareerD10Qualification(
     d10Direction,
     1,
     `D10 resolves to direction ${d10Direction}.`,
-    'D10_DIRECTION_RESOLUTION'
+    'C10_D10_DIRECTION_RESOLUTION'
   );
   evidence.push(d10DirectionEvidence);
 
@@ -259,7 +259,7 @@ export function resolveCareerD10Qualification(
     d10Direction,
     1,
     `D10 qualification effect is ${d10Effect}.`,
-    'D10_EFFECT_RESOLUTION'
+    'C10_D10_EFFECT_RESOLUTION'
   );
   evidence.push(d10EffectEvidence);
 
@@ -268,7 +268,7 @@ export function resolveCareerD10Qualification(
     d10Direction,
     0.5,
     `D10 strength is ${d10Strength}.`,
-    'D10_STRENGTH_RESOLUTION'
+    'C10_D10_STRENGTH_RESOLUTION'
   );
   evidence.push(d10StrengthEvidence);
 
@@ -289,7 +289,7 @@ export function resolveCareerD10Qualification(
     qualifiedDirection,
     1,
     `Qualified direction is ${qualifiedDirection} (natal: ${natalDirection}, D10: ${d10Direction}).`,
-    'QUALIFICATION_RESOLUTION'
+    'C10_D10_QUALIFICATION_RESOLUTION'
   );
   evidence.push(qualificationEvidence);
 

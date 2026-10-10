@@ -6,9 +6,12 @@ import type {
 import type {
   CareerDashaActivationEffect,
   CareerDashaActivationDirection,
-  CareerDashaActivationStrength,
   CareerDashaActivationHierarchy
 } from '../careerDasha';
+
+import type {
+  DomainStrength
+} from '../../reasoning/reasoningTypes';
 
 import type {
   CareerD10QualificationDirection,
@@ -153,11 +156,33 @@ export interface CareerFinalSynthesisInput {
   readonly expressionStrength?: CareerExpressionStrength;
 
   /**
+   * C8 Career Expression output: overall expression direction.
+   * Used to qualify natal promise and distinguish CONDITIONAL from CHALLENGE.
+   */
+  readonly expressionDirection?: CareerExpressionDirection;
+
+  /**
    * C9 Career Dasha output: canonical activation hierarchy (MD > AD > PD).
-   * REQUIRED for C11-INV-02 and C11-INV-09 compliance.
-   * C11 derives dashaEffect/dashaDirection/dashaStrength from this hierarchy's overallEffect/overallDirection/overallStrength.
+   * When available, C11 derives dashaEffect/dashaDirection/dashaStrength from this hierarchy's overallEffect/overallDirection/overallStrength.
+   * For minimal inputs without hierarchy, these can be provided directly via dashaEffect/dashaDirection/dashaStrength fields.
    */
   readonly dashaHierarchy?: CareerDashaActivationHierarchy;
+
+  /**
+   * C9 Career Dasha output: overall effect (fallback when hierarchy unavailable).
+   */
+  readonly dashaEffect?: CareerDashaActivationEffect;
+
+  /**
+   * C9 Career Dasha output: overall direction (fallback when hierarchy unavailable).
+   */
+  readonly dashaDirection?: CareerDashaActivationDirection;
+
+  /**
+   * C9 Career Dasha output: overall strength (fallback when hierarchy unavailable).
+   * Uses DomainStrength from reasoningTypes (matches CareerDashaCanonicalAnalysis).
+   */
+  readonly dashaStrength?: DomainStrength;
 
   /**
    * C10 Career D10 output: qualification effect.

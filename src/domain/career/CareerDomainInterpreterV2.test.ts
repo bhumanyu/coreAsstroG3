@@ -2042,21 +2042,7 @@ describe('CareerDomainInterpreterV2', () => {
     it('missing natal foundation produces INSUFFICIENT_DATA final status regardless of strong secondary inputs', () => {
       // Construct a canonical C11 integration input with UNAVAILABLE natal foundation
       // and strong secondary inputs to verify that natal is authoritative
-      const {
-        buildCareerFinalAnalysis
-      } = require('./careerFinalSynthesis/careerFinalSynthesisIntegration');
-      const {
-        EMPTY_CAREER_NATAL_ANALYSIS
-      } = require('./careerNatalAnalysis');
-      const {
-        buildCareerExpression
-      } = require('./careerExpressionIntegration');
-      const {
-        buildCareerDashaAnalysis
-      } = require('./careerDasha/careerDashaIntegration');
-      const {
-        buildCareerD10Analysis
-      } = require('./careerD10/careerD10Integration');
+      // Note: These are already imported at the top of the file
 
       // Use empty natal analysis (direction: NEUTRAL, strength: UNDETERMINED)
       const emptyNatal = EMPTY_CAREER_NATAL_ANALYSIS;
@@ -2122,21 +2108,7 @@ describe('CareerDomainInterpreterV2', () => {
     describe('Trace adapter status mappers', () => {
       // Helper to extract the mapper function from the interpreter implementation
       // Since it's not exported, we test it indirectly through the interpreter output
-      const {
-        buildCareerFinalAnalysis
-      } = require('./careerFinalSynthesis/careerFinalSynthesisIntegration');
-      const {
-        EMPTY_CAREER_NATAL_ANALYSIS
-      } = require('./careerNatalAnalysis');
-      const {
-        buildCareerExpression
-      } = require('./careerExpressionIntegration');
-      const {
-        buildCareerDashaAnalysis
-      } = require('./careerDasha/careerDashaIntegration');
-      const {
-        buildCareerD10Analysis
-      } = require('./careerD10/careerD10Integration');
+      // Note: These are already imported at the top of the file
 
       // Test cases for mapC11DirectionToLegacyStatus
       // Format: [direction, strength, expectedLegacyStatus]

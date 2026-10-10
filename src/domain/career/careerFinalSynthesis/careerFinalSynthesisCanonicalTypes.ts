@@ -55,6 +55,8 @@ export interface CareerFinalSynthesisIntegrationInput {
   /**
    * C9 Dasha canonical analysis.
    * Provides dashaHierarchy from dasha.hierarchy (optional — undefined if unavailable).
+   * The top-level overallEffect/overallDirection/overallStrength fields are also available
+   * as fallback when hierarchy is unavailable (e.g., minimal test fixtures).
    */
   readonly dasha: CareerDashaCanonicalAnalysis;
 

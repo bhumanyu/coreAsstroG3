@@ -37,6 +37,10 @@ import type {
   CareerD10CanonicalAnalysis
 } from '../careerD10';
 
+import type {
+  DomainStrength
+} from '../../reasoning/reasoningTypes';
+
 import {
   synthesizeCareerFinal
 } from './careerFinalSynthesis';
@@ -416,11 +420,39 @@ export function buildCareerFinalAnalysis(
   const natalDirection = natal.structural.direction;
   const natalStrength = natal.structural.strength;
 
-  // Map expression: expressionStrength from primaryExpression
-  const expressionStrength = expression.primaryExpression?.strength;
+  // Map expression: derive expressionStrength and expressionDirection from expressions array
+  // For minimal inputs without primaryExpression, select the primary/strongest expression deterministically
   const expressions = mapExpressions(expression);
+  let expressionStrength: CareerExpressionStrength | undefined;
+  let expressionDirection: CareerExpressionDirection | undefined;
 
-  // Map dasha: dashaHierarchy from dasha.hierarchy (undefined if missing)
+  if (expression.primaryExpression) {
+    // Use primaryExpression if available (real-engine path)
+    expressionStrength = expression.primaryExpression.strength;
+    expressionDirection = expression.primaryExpression.direction;
+  } else if (expression.expressions.length > 0) {
+    // For minimal inputs, derive from expressions array
+    // Select the strongest expression by strength (STRONG > MODERATE > WEAK > UNAVAILABLE)
+    // If strength ties, prefer SUPPORTED over CONDITIONAL over NEUTRAL
+    const sortedExprs = [...expression.expressions].sort((a, b) => {
+      const strengthOrder = { 'STRONG': 3, 'MODERATE': 2, 'WEAK': 1, 'UNAVAILABLE': 0 };
+      const aStrength = strengthOrder[a.strength] ?? 0;
+      const bStrength = strengthOrder[b.strength] ?? 0;
+      if (aStrength !== bStrength) return bStrength - aStrength;
+      const directionOrder = { 'SUPPORTED': 2, 'CONDITIONAL': 1, 'NEUTRAL': 0, 'UNAVAILABLE': 0 };
+      const aDirection = directionOrder[a.direction] ?? 0;
+      const bDirection = directionOrder[b.direction] ?? 0;
+      return bDirection - aDirection;
+    });
+    const primary = sortedExprs[0];
+    expressionStrength = primary.strength;
+    expressionDirection = primary.direction;
+  }
+
+  // Map dasha: use top-level overallDirection from CareerDashaCanonicalAnalysis, fall back to hierarchy
+  const dashaDirection = dasha.overallDirection ?? dasha.hierarchy?.overallDirection;
+  const dashaEffect = dasha.overallEffect ?? dasha.hierarchy?.overallEffect;
+  const dashaStrength: DomainStrength | undefined = dasha.overallStrength ?? dasha.hierarchy?.overallStrength;
   const dashaHierarchy: CareerDashaActivationHierarchy | undefined = dasha.hierarchy;
 
   // Map d10: pass d10Effect, d10Direction, d10Strength unchanged
@@ -456,7 +488,7 @@ export function buildCareerFinalAnalysis(
     natalDirection,
     d10Direction,
     d10Strength,
-    dashaHierarchy?.overallDirection,
+    dashaDirection,
     d10EvidenceIds,
     dashaEvidenceIds
   );
@@ -466,7 +498,11 @@ export function buildCareerFinalAnalysis(
     natalDirection,
     natalStrength,
     expressionStrength,
+    expressionDirection,
     dashaHierarchy,
+    dashaEffect,
+    dashaDirection,
+    dashaStrength,
     d10Effect,
     d10Direction,
     d10Strength,

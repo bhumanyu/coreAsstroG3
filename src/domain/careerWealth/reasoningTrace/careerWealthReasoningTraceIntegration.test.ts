@@ -72,29 +72,38 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     expect(finalNode?.type).toBe('SYNTHESIS');
 
     // Assert specific conclusion -> final synthesis edges match CW-05 synthesis
-    const finalSynthesis = conclusionData.careerFinalSynthesis;
+    // P2-08D: Use canonicalCareerFinalSynthesis (authoritative) instead of legacy careerFinalSynthesis
+    const finalSynthesis = (conclusionData as any).canonicalCareerFinalSynthesis || conclusionData.careerFinalSynthesis;
     if (finalSynthesis) {
       const edgesToFinal = graph.edges.filter((e) => e.toNodeId === finalNode?.nodeId);
       expect(edgesToFinal.length).toBeGreaterThan(0);
 
       const natalEdge = edgesToFinal.find((e) => e.fromNodeId === natalNode?.nodeId);
-      if (finalSynthesis.promiseStatus === 'STRONG' || finalSynthesis.promiseStatus === 'VERY_STRONG' || finalSynthesis.promiseStatus === 'MODERATE') {
+      // Check canonical C11 natalDirection and natalStrength to determine edge type
+      const natalDirection = finalSynthesis.natalDirection;
+      const natalStrength = finalSynthesis.natalStrength;
+      if (natalDirection === 'SUPPORT' && (natalStrength === 'STRONG' || natalStrength === 'VERY_STRONG' || natalStrength === 'MODERATE')) {
         expect(natalEdge?.type).toBe('SUPPORTS');
       }
 
       const dashaEdge = edgesToFinal.find((e) => e.fromNodeId === dashaNode?.nodeId);
-      if (finalSynthesis.activationStatus === 'SUPPORT') {
+      // Check canonical C11 dashaDirection and dashaEffect
+      const dashaDirection = finalSynthesis.dashaDirection;
+      const dashaEffect = finalSynthesis.dashaEffect;
+      if (dashaDirection === 'SUPPORT' || dashaEffect === 'ACTIVATES') {
         expect(dashaEdge?.type).toBe('ACTIVATES');
-      } else if (finalSynthesis.activationStatus === 'CHALLENGE') {
+      } else if (dashaDirection === 'CHALLENGE' || dashaEffect === 'CHALLENGES') {
         expect(dashaEdge?.type).toBe('CHALLENGES');
-      } else if (finalSynthesis.activationStatus === 'MIXED') {
+      } else if (dashaDirection === 'MIXED') {
         expect(dashaEdge?.type).toBe('MODIFIES');
       }
 
       const divisionalEdge = edgesToFinal.find((e) => e.fromNodeId === divisionalNode?.nodeId);
-      if (finalSynthesis.divisionalStatus === 'CONFIRMS' || finalSynthesis.divisionalStatus === 'PARTIALLY_CONFIRMS') {
+      // Check canonical C11 d10Direction
+      const d10Direction = finalSynthesis.d10Direction;
+      if (d10Direction === 'SUPPORT') {
         expect(divisionalEdge?.type).toBe('CONFIRMS');
-      } else if (finalSynthesis.divisionalStatus === 'UNAVAILABLE' || finalSynthesis.divisionalStatus === 'MODIFIES') {
+      } else if (d10Direction === 'UNAVAILABLE' || d10Direction === 'NEUTRAL') {
         expect(divisionalEdge).toBeUndefined();
       }
     }
@@ -137,7 +146,8 @@ describe('Career & Wealth ReasoningTraceGraph Integration (CW-06B)', () => {
     expect(finalNode).toBeDefined();
     expect(finalNode?.type).toBe('SYNTHESIS');
 
-    const finalSynthesis = conclusionData.wealthFinalSynthesis;
+    // P2-08D: Use canonicalCareerFinalSynthesis (authoritative) instead of legacy wealthFinalSynthesis
+    const finalSynthesis = (conclusionData as any).canonicalCareerFinalSynthesis || conclusionData.wealthFinalSynthesis;
     if (finalSynthesis) {
       const edgesToFinal = graph.edges.filter((e) => e.toNodeId === finalNode?.nodeId);
       expect(edgesToFinal.length).toBeGreaterThan(0);

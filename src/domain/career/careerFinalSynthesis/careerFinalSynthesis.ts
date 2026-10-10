@@ -14,9 +14,11 @@ import type {
 } from '../careerStructuralReasoning';
 import type {
   CareerDashaActivationEffect,
-  CareerDashaActivationDirection,
-  CareerDashaActivationStrength
+  CareerDashaActivationDirection
 } from '../careerDasha';
+import type {
+  DomainStrength
+} from '../../reasoning/reasoningTypes';
 import type {
   CareerD10QualificationDirection,
   CareerD10QualificationStrength
@@ -454,10 +456,22 @@ function deriveConfidence(
 
 /**
  * Derive Expression Status
+ *
+ * Now accepts both expressionStrength and expressionDirection to properly handle
+ * CONDITIONAL expressions from the C8 layer. When expressionDirection is 'CONDITIONAL',
+ * the status should be 'CONDITIONAL' regardless of strength.
  */
 function deriveExpressionStatus(
-  expressionStrength: CareerExpressionStrength | undefined
+  expressionStrength: CareerExpressionStrength | undefined,
+  expressionDirection: CareerExpressionDirection | undefined
 ): CareerFinalDirection {
+  // If direction is explicitly CONDITIONAL, preserve it
+  if (expressionDirection === 'CONDITIONAL') return 'CONDITIONAL';
+  if (expressionDirection === 'SUPPORTED') return 'SUPPORT';
+  if (expressionDirection === 'NEUTRAL') return 'NEUTRAL';
+  if (expressionDirection === 'UNAVAILABLE') return 'UNAVAILABLE';
+
+  // Fall back to strength-based derivation for backwards compatibility
   if (!expressionStrength) return 'UNAVAILABLE';
   if (expressionStrength === 'STRONG') return 'SUPPORT';
   if (expressionStrength === 'MODERATE') return 'SUPPORT';
@@ -541,7 +555,11 @@ export function synthesizeCareerFinal(
     natalDirection,
     natalStrength,
     expressionStrength,
+    expressionDirection,
     dashaHierarchy,
+    dashaEffect: inputDashaEffect,
+    dashaDirection: inputDashaDirection,
+    dashaStrength: inputDashaStrength,
     d10Effect,
     d10Direction,
     d10Strength,
@@ -554,9 +572,11 @@ export function synthesizeCareerFinal(
   } = input;
 
   // C11-INV-02: Derive Dasha values from canonical hierarchy (MD > AD > PD)
-  const dashaEffect = dashaHierarchy?.overallEffect;
-  const dashaDirection = dashaHierarchy?.overallDirection;
-  const dashaStrength = dashaHierarchy?.overallStrength;
+  // When hierarchy is unavailable (e.g., minimal test fixtures), fall back to the
+  // top-level dashaEffect/dashaDirection/dashaStrength fields from the canonical analysis.
+  const dashaEffect = dashaHierarchy?.overallEffect ?? inputDashaEffect;
+  const dashaDirection = dashaHierarchy?.overallDirection ?? inputDashaDirection;
+  const dashaStrength: DomainStrength | undefined = dashaHierarchy?.overallStrength ?? inputDashaStrength;
 
   // DESIGN NOTE: dashaStrength is derived but not currently used in final synthesis
   // The Dasha hierarchy remains authoritative through dashaEffect and dashaDirection.
@@ -568,7 +588,7 @@ export function synthesizeCareerFinal(
   const mappedNatalStrength = mapStructuralStrengthToFinal(natalStrength);
   const mappedDashaDirection = mapDashaDirectionToFinal(dashaDirection);
   const mappedD10Direction = mapD10DirectionToFinal(d10Direction);
-  const mappedExpressionStatus = deriveExpressionStatus(expressionStrength);
+  const mappedExpressionStatus = deriveExpressionStatus(expressionStrength, expressionDirection);
 
   // Derive final status
   const finalStatus = deriveFinalStatus(
