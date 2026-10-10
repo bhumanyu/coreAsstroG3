@@ -101,8 +101,8 @@ Opportunity-window candidates require:
    - `effect === 'ACTIVATES'` or `effect === 'PARTIALLY_ACTIVATES'`
    - `direction === 'SUPPORT'`
 
-3. Compatibility check: The period must have matching Dasha evidence (same level, planet, effect, direction, role).
-   This ensures the activation evidence relates to the opportunity rather than merely overlapping temporally.
+3. Period-evidence consistency check: The period must have matching Dasha evidence (same level, planet, effect, direction, role).
+   This verifies period-evidence consistency only — it does NOT verify any relationship between the opportunity and the activation.
 
 Dasha cannot manufacture an opportunity. Never emit an event with zero supporting evidence.
 
@@ -117,7 +117,9 @@ These are not treated as challenges — missing evidence is not negative evidenc
 
 ### Challenge Semantics
 
-Challenge events are generated from the period's own canonical CHALLENGE evidence (matched by level, planet, effect, direction, role). They do NOT include the opportunity's SUPPORT evidenceIds. This preserves separate supporting/challenging evidence roles.
+Challenge events are independent of qualified opportunities. They are generated whenever a period has matching canonical CHALLENGE evidence (matched by level, planet, effect, direction, role), regardless of whether any qualified opportunity exists. Challenge events use ONLY the period's canonical CHALLENGE evidence. They do NOT include any opportunity evidenceIds. This preserves separate supporting/challenging evidence roles.
+
+The challenge event's eventId is derived from the period identity alone (no dependency on opportunity.mode or opportunity.evidenceIds).
 
 If no matching CHALLENGE evidence exists for a challenging period, the event is suppressed rather than attaching unrelated evidence.
 
@@ -159,21 +161,24 @@ If no matching CHALLENGE evidence exists for a challenging period, the event is 
 
 ### Event ID Generation
 
-Event IDs are stable and derived from domain inputs:
+Event IDs are stable and derived from domain inputs using a collision-free JSON encoding:
 
 ```
-CAREER_EVENT:{eventType}:{opportunityMode}:{opportunityEvidenceDiscriminator}:{periodLevel}:{periodPlanet}:{periodStart}:{periodEnd}
+CAREER_EVENT:JSON.stringify([eventType, opportunityMode, sortedEvidenceIds, periodLevel, periodPlanet, periodStart, periodEnd])
 ```
 
-Example: `CAREER_EVENT:CAREER_OPPORTUNITY_WINDOW:MANAGEMENT:evidence-1|evidence-2:MD:SUN:2020-01-01:2030-01-01`
+Example: `CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1","evidence-2"],"MD","SUN","2020-01-01","2030-01-01"]`
 
 Discriminator components (all stable semantic inputs, no UUIDs/timestamps):
+- Event type (e.g., 'CAREER_OPPORTUNITY_WINDOW')
 - Opportunity mode (e.g., 'MANAGEMENT')
-- Opportunity semantic discriminator (sorted evidenceIds joined with '|')
+- Opportunity evidence IDs (sorted array, nested for structural boundaries)
 - Period level (e.g., 'MD')
 - Period planet (e.g., 'SUN')
 - Period start date (if available, from source)
 - Period end date (if available, from source)
+
+The JSON encoding with nested arrays provides structural delimiters, making the ID unambiguous even if evidence IDs contain literal ':' or '|' characters. Evidence IDs are sorted inside `generateEventId` to ensure deterministic output.
 
 This ensures distinct semantic opportunities and distinct period windows cannot collapse.
 
@@ -225,24 +230,31 @@ This module must NOT:
 **IMPLEMENTED — VERIFICATION PENDING**
 
 P1 fixes implemented:
-1. Event identity generation now includes opportunity semantic identity (sorted evidenceIds) and period dates.
-2. Dasha evidence matching now filters by level, planet, effect, direction, and role.
-3. Challenge semantics finalized: challenge events use only period-specific CHALLENGE evidence, not opportunity SUPPORT evidence.
-4. Date validation standardized with strict parsing for ISO and YYYY-MM-DD formats, rejecting impossible calendar dates.
+1. Event identity generation now uses collision-free JSON encoding with nested arrays (unambiguous even with literal ':' or '|' in evidenceIds).
+2. Evidence IDs are sorted inside generateEventId for deterministic output.
+3. Dasha evidence matching now filters by level, planet, effect, direction, and role.
+4. Challenge semantics finalized: challenge events are independent of qualified opportunities (generated from challenging periods directly).
+5. Challenge event eventId derived from period identity only (no opportunity dependency).
+6. Date validation standardized with strict parsing for ISO and YYYY-MM-DD formats, rejecting impossible calendar dates.
 
 P2 features implemented:
-5. Opportunity↔activation compatibility rule added (period must have matching Dasha evidence).
-6. RuleIds field added to CareerEvent type, populated with stable rule identifiers (P2-09B-EVT-01, P2-09B-EVT-02).
+7. Period-evidence consistency check added (period must have matching Dasha evidence; renamed from isOpportunityCompatibleWithPeriod to periodHasMatchingEvidence).
+8. RuleIds field added to CareerEvent type, populated with stable rule identifiers (P2-09B-EVT-01, P2-09B-EVT-02).
+9. dedupeEvents exported for direct unit testing.
 
 Input validation implemented:
-7. Dasha input contract validation added (periods must be present and well-formed).
-8. Events require matching canonical Dasha evidence for their period.
+10. Dasha input contract validation extended with semantic checks:
+    - Period level must match slot (MD/AD/PD).
+    - Effect, direction, and role must be valid union members.
+    - Evidence items must have non-empty identityKey and valid level.
+11. Events require matching canonical Dasha evidence for their period.
 
 Test strengthening implemented:
-9. Deep immutability assertions added (nested freeze).
-10. Input non-mutation test added.
-11. Conflict detection test improved to actually construct conflicting payloads.
-12. Regression tests added for all P1 fixes.
+12. Deep immutability assertions added (nested freeze).
+13. Input non-mutation test added.
+14. Conflict detection test improved to use exported dedupeEvents function directly.
+15. Regression tests added for all P1 fixes including collision-free encoding (evidence IDs with ':' or '|').
+16. Regression test added for independent challenge model (challenging period with no qualified opportunity).
 
 Files:
 - `src/domain/career/careerEvents/careerEventTypes.ts`

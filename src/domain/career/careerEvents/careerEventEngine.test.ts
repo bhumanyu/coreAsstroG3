@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  buildCareerEvents
+  buildCareerEvents,
+  dedupeEvents
 } from './careerEventEngine';
 
 import type {
-  CareerEventsInput
+  CareerEventsInput,
+  CareerEvent
 } from './careerEventTypes';
 
 import type {
@@ -184,9 +186,9 @@ describe('CareerEventEngine', () => {
       expect(result.events[0].timing.end).toBe('2030-01-01');
     });
 
-    it('generates challenge window for qualified opportunity + challenging period', () => {
+    it('generates challenge window for challenging period (independent of opportunities)', () => {
       const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity()]
+        opportunities: [] // No opportunities - challenge is independent
       });
 
       const dasha = createDashaFixture({
@@ -621,8 +623,8 @@ describe('CareerEventEngine', () => {
       const result2 = buildCareerEvents(input);
 
       expect(result1.events[0].eventId).toBe(result2.events[0].eventId);
-      // New format includes opportunity evidence, start/end dates
-      expect(result1.events[0].eventId).toContain('CAREER_EVENT:CAREER_OPPORTUNITY_WINDOW:MANAGEMENT:evidence-1:MD:SUN:2020-01-01:2030-01-01');
+      // New format is JSON-encoded with CAREER_EVENT: prefix
+      expect(result1.events[0].eventId).toMatch(/^CAREER_EVENT:\["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",\["evidence-1"\],"MD","SUN","2020-01-01","2030-01-01"\]$/);
     });
 
     it('sorts evidence IDs uniquely', () => {
@@ -666,51 +668,80 @@ describe('CareerEventEngine', () => {
       ]);
     });
 
-    it('throws on same eventId with conflicting payloads', () => {
-      const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity({ mode: 'MANAGEMENT', evidenceIds: ['evidence-1'] })]
-      });
-
-      const dasha = createDashaFixture({
-        md: createPeriod('MD', {
-          effect: 'ACTIVATES',
-          direction: 'SUPPORT',
-          planet: Planet.SUN,
-          start: '2020-01-01',
-          end: '2030-01-01'
-        }),
-        evidence: [createDashaEvidence('MD')]
-      });
-
-      const input = createEventsInput(trajectory, dasha);
-      const result1 = buildCareerEvents(input);
-
-      // Manually create a conflicting event with same eventId but different eventType
-      const conflictingEvent = {
-        ...result1.events[0],
-        eventType: 'CAREER_CHALLENGE_WINDOW' as const // Different eventType
+    it('dedupeEvents merges evidenceIds and ruleIds for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1'
       };
 
-      // Manually merge events to trigger conflict detection
-      const mergedEvents = [result1.events[0], conflictingEvent];
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Test event 2'
+      };
 
-      // This should throw when deduped due to conflicting eventType
-      expect(() => {
-        const eventMap = new Map<string, typeof result1.events[0]>();
-        for (const event of mergedEvents) {
-          const existing = eventMap.get(event.eventId);
-          if (existing) {
-            if (
-              existing.eventType !== event.eventType ||
-              JSON.stringify(existing.timing) !== JSON.stringify(event.timing)
-            ) {
-              throw new Error(`Conflicting payloads for same eventId: ${event.eventId}`);
-            }
-          } else {
-            eventMap.set(event.eventId, event);
-          }
-        }
-      }).toThrow('Conflicting payloads for same eventId');
+      const result = dedupeEvents([event1, event2]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].evidenceIds).toEqual(['evidence-1', 'evidence-2']);
+      expect(result[0].ruleIds).toEqual(['P2-09B-EVT-01', 'P2-09B-EVT-02']);
+    });
+
+    it('dedupeEvents throws on conflicting eventType for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1'
+      };
+
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_CHALLENGE_WINDOW', // Different eventType
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Test event 2'
+      };
+
+      expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
+    });
+
+    it('dedupeEvents throws on conflicting timing for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1'
+      };
+
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'UNTIMED' }, // Different timing
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Test event 2'
+      };
+
+      expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
     });
 
     it('sorts events by eventId with code-point comparator', () => {
@@ -767,6 +798,65 @@ describe('CareerEventEngine', () => {
       const result2 = buildCareerEvents(createEventsInput(trajectory2, dasha));
 
       expect(result1.events).toEqual(result2.events);
+    });
+
+    it('evidence IDs with literal | or : produce distinct eventIds (collision-free encoding)', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [
+          createOpportunity({ mode: 'MANAGEMENT', evidenceIds: ['a|b'] }),
+          createOpportunity({ mode: 'MANAGEMENT', evidenceIds: ['a', 'b'] })
+        ]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD')]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      // Should produce 2 distinct events with different eventIds
+      expect(result.events).toHaveLength(2);
+      expect(result.events[0].eventId).not.toBe(result.events[1].eventId);
+    });
+
+    it('evidence IDs are sorted inside generateEventId (deterministic)', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [
+          createOpportunity({ mode: 'MANAGEMENT', evidenceIds: ['zebra', 'apple', 'banana'] }),
+          createOpportunity({ mode: 'MANAGEMENT', evidenceIds: ['banana', 'apple', 'zebra'] })
+        ]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD')]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      // Same evidenceIds in different order should produce same eventId
+      expect(result.events).toHaveLength(1);
+    });
+
+    it('challenging period with no qualified opportunity still produces challenge event (independent model)', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [] // No opportunities at all
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'CHALLENGES', direction: 'CHALLENGE' }),
+        evidence: [createDashaEvidence('MD', { effect: 'CHALLENGES', direction: 'CHALLENGE' })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      // Challenge event should be produced even without any opportunities
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0].eventType).toBe('CAREER_CHALLENGE_WINDOW');
     });
   });
 
@@ -1107,7 +1197,7 @@ describe('CareerEventEngine', () => {
 
     it('challenging period event carries only challenge-matched evidence', () => {
       const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity({ evidenceIds: ['opp-evidence'] })]
+        opportunities: [] // Challenge is independent
       });
 
       const dasha = createDashaFixture({
@@ -1121,9 +1211,8 @@ describe('CareerEventEngine', () => {
       const input = createEventsInput(trajectory, dasha);
       const result = buildCareerEvents(input);
 
-      // Challenge event should only have CHALLENGE evidence, not opportunity SUPPORT evidence
+      // Challenge event should only have CHALLENGE evidence
       expect(result.events[0].evidenceIds).toContain('challenge-evidence');
-      expect(result.events[0].evidenceIds).not.toContain('opp-evidence');
       expect(result.events[0].evidenceIds).not.toContain('support-evidence');
     });
 
@@ -1256,6 +1345,120 @@ describe('CareerEventEngine', () => {
       const input = createEventsInput(trajectory, dasha);
 
       expect(() => buildCareerEvents(input)).toThrow('Dasha analysis must include md, ad, and pd periods');
+    });
+
+    it('mismatched MD period level throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { level: 'AD' as any }) // Wrong level
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid MD period level: expected 'MD', got 'AD'");
+    });
+
+    it('mismatched AD period level throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        ad: createPeriod('AD', { level: 'MD' as any }) // Wrong level
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid AD period level: expected 'AD', got 'MD'");
+    });
+
+    it('mismatched PD period level throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        pd: createPeriod('PD', { level: 'MD' as any }) // Wrong level
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid PD period level: expected 'PD', got 'MD'");
+    });
+
+    it('empty evidence identityKey throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD'),
+        evidence: [createDashaEvidence('MD', { identityKey: '' })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow('Evidence at index 0 has empty or invalid identityKey');
+    });
+
+    it('invalid evidence level throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD'),
+        evidence: [createDashaEvidence('MD', { level: 'INVALID' as any })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Evidence at index 0 has invalid level: 'INVALID'");
+    });
+
+    it('invalid period effect throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'INVALID' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period effect: 'INVALID' is not a valid effect");
+    });
+
+    it('invalid period direction throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { direction: 'INVALID' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period direction: 'INVALID' is not a valid direction");
+    });
+
+    it('invalid period role throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { role: 'INVALID' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period role: 'INVALID' is not a valid role");
     });
 
     it('empty Dasha evidence produces no events for activating periods', () => {

@@ -130,13 +130,13 @@ function isQualifiedOpportunity(opportunity: CareerTrajectoryOpportunity): boole
 }
 
 /**
- * Checks if an opportunity is compatible with an activating period.
+ * Checks if a period has matching Dasha evidence.
  *
- * Compatibility rule: The period must have matching Dasha evidence (same level, planet,
- * effect, direction, role). This ensures the activation evidence relates to the opportunity
- * rather than merely overlapping temporally.
+ * This verifies period-evidence consistency only by checking if the period
+ * has matching Dasha evidence (same level, planet, effect, direction, role).
+ * It does NOT verify any relationship between the opportunity and the activation.
  */
-function isOpportunityCompatibleWithPeriod(
+function periodHasMatchingEvidence(
   period: CareerDashaCanonicalPeriod,
   dashaEvidence: readonly CareerDashaCanonicalEvidence[]
 ): boolean {
@@ -215,15 +215,20 @@ function collectDashaEvidenceIds(
  * Generates a stable event ID from domain inputs.
  *
  * Format: 'CAREER_EVENT:{eventType}:{sourceKey}'
- * Where sourceKey is derived from the opportunity's semantic identity and the period's identity.
+ * Where sourceKey is a collision-free JSON encoding of the identity tuple.
  *
  * Discriminator components (all stable semantic inputs, no UUIDs/timestamps):
+ * - Event type (e.g., 'CAREER_OPPORTUNITY_WINDOW')
  * - Opportunity mode (e.g., 'MANAGEMENT')
- * - Opportunity semantic discriminator (sorted evidenceIds joined with '|')
+ * - Opportunity evidence IDs (sorted array)
  * - Period level (e.g., 'MD')
  * - Period planet (e.g., 'SUN')
  * - Period start date (if available, from source)
  * - Period end date (if available, from source)
+ *
+ * Uses JSON.stringify with a fixed-order tuple, where evidenceIds is a nested array.
+ * Array boundaries provide structural delimiters, making the encoding unambiguous
+ * even if evidence IDs contain literal ':' or '|' characters.
  *
  * This ensures distinct semantic opportunities and distinct period windows cannot collapse.
  */
@@ -236,17 +241,23 @@ function generateEventId(
   periodStart: string | undefined,
   periodEnd: string | undefined
 ): string {
-  const planetPart = periodPlanet ?? 'none';
-  const startPart = periodStart ?? 'none';
-  const endPart = periodEnd ?? 'none';
+  // Sort evidenceIds inside this function to ensure deterministic output
+  const sortedEvidenceIds = [...opportunityEvidenceIds].sort();
 
-  // Use sorted evidenceIds as opportunity semantic discriminator
-  const oppDiscriminator = opportunityEvidenceIds.length > 0
-    ? opportunityEvidenceIds.join('|')
-    : 'none';
+  // Encode identity tuple as JSON with fixed field order
+  // Nested array for evidenceIds provides structural boundaries
+  const identityTuple = [
+    eventType,
+    opportunityMode,
+    sortedEvidenceIds,
+    periodLevel,
+    periodPlanet ?? 'none',
+    periodStart ?? 'none',
+    periodEnd ?? 'none'
+  ] as const;
 
-  const sourceKey = `${opportunityMode}:${oppDiscriminator}:${periodLevel}:${planetPart}:${startPart}:${endPart}`;
-  return `CAREER_EVENT:${eventType}:${sourceKey}`;
+  const sourceKey = JSON.stringify(identityTuple);
+  return `CAREER_EVENT:${sourceKey}`;
 }
 
 /**
@@ -299,17 +310,17 @@ function buildOpportunityEvent(
 }
 
 /**
- * Builds a challenge event from a trajectory opportunity and challenging period.
+ * Builds a challenge event from a challenging period.
  *
- * Requires qualified opportunity (qualified trajectories can face challenges during challenging periods).
  * EVT-02: Only CHALLENGES effect with CHALLENGE direction produces a challenge event.
  *
- * CHALLENGE SEMANTICS: Challenge events use ONLY the period's canonical CHALLENGE evidence
- * (matched by level, planet, effect, direction, role). They do NOT include the opportunity's
- * SUPPORT evidenceIds. This preserves separate supporting/challenging evidence roles.
+ * CHALLENGE SEMANTICS: Challenge events are independent of qualified opportunities.
+ * They are generated whenever a period has matching canonical CHALLENGE evidence,
+ * regardless of whether any qualified opportunity exists. Challenge events use ONLY
+ * the period's canonical CHALLENGE evidence (matched by level, planet, effect, direction, role).
+ * They do NOT include any opportunity evidenceIds. This preserves separate evidence roles.
  */
 function buildChallengeEvent(
-  opportunity: CareerTrajectoryOpportunity,
   period: CareerDashaCanonicalPeriod,
   dashaEvidence: readonly CareerDashaCanonicalEvidence[]
 ): CareerEvent {
@@ -317,14 +328,14 @@ function buildChallengeEvent(
   const timing = buildTiming(period);
 
   // Collect evidence IDs: ONLY Dasha CHALLENGE evidence (matched to period)
-  // Do NOT include trajectory opportunity evidenceIds to preserve separate evidence roles
   const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period);
   const sortedEvidenceIds = Object.freeze([...dashaEvidenceIds]);
 
+  // EventId derived from period identity only (no opportunity dependency)
   const eventId = generateEventId(
     eventType,
-    opportunity.mode,
-    opportunity.evidenceIds, // Still use opportunity evidence for identity, but not for event evidence
+    'CHALLENGE', // Fixed mode for challenge events
+    [], // No opportunity evidenceIds
     period.level,
     period.planet,
     period.start,
@@ -333,7 +344,6 @@ function buildChallengeEvent(
 
   const statement = [
     `Career challenge window during ${period.level} Dasha.`,
-    `Mode: ${opportunity.mode}.`,
     timing.type === 'DASHA_PERIOD_WINDOW'
       ? `Timing: ${timing.start} to ${timing.end}.`
       : 'Timing: untimed (dates unavailable).'
@@ -403,6 +413,7 @@ function buildConditionalEvent(
  *
  * EVT-01: Opportunity-window candidates require qualified opportunity AND activating period.
  * EVT-02: Periods with UNKNOWN/INSUFFICIENT_DATA/UNAVAILABLE/NEUTRAL produce NO event.
+ * Challenge events are independent of qualified opportunities (generated from challenging periods directly).
  * Never emits an event with zero supporting evidence.
  */
 function generateEvents(
@@ -430,39 +441,40 @@ function generateEvents(
     const isActivating = isActivatingPeriod(period);
     const isChallenging = isChallengingPeriod(period);
 
-    for (const opportunity of opportunities) {
-      // EVT-01: Only qualified opportunities can produce events
-      if (!isQualifiedOpportunity(opportunity)) {
-        continue;
+    // Generate challenge events independently of opportunities
+    if (isChallenging) {
+      const challengeEvidenceIds = collectDashaEvidenceIds(dashaAnalysis.evidence, period);
+      if (challengeEvidenceIds.length > 0) {
+        events.push(buildChallengeEvent(period, dashaAnalysis.evidence));
       }
+    }
 
-      // For activating periods, require opportunity evidence
-      if (isActivating && opportunity.evidenceIds.length === 0) {
-        continue;
-      }
-
-      // Determine event type based on period effect and opportunity direction
-      if (isActivating) {
-        // Compatibility check: period must have matching Dasha evidence
-        if (!isOpportunityCompatibleWithPeriod(period, dashaAnalysis.evidence)) {
+    // Generate opportunity events from qualified opportunities
+    if (isActivating) {
+      for (const opportunity of opportunities) {
+        // EVT-01: Only qualified opportunities can produce events
+        if (!isQualifiedOpportunity(opportunity)) {
           continue;
         }
+
+        // For activating periods, require opportunity evidence
+        if (opportunity.evidenceIds.length === 0) {
+          continue;
+        }
+
+        // Check if period has matching Dasha evidence
+        if (!periodHasMatchingEvidence(period, dashaAnalysis.evidence)) {
+          continue;
+        }
+
         if (opportunity.direction === 'CONDITIONAL') {
           events.push(buildConditionalEvent(opportunity, period, dashaAnalysis.evidence));
         } else {
           events.push(buildOpportunityEvent(opportunity, period, dashaAnalysis.evidence));
         }
-      } else if (isChallenging) {
-        // For challenging periods, only require matching CHALLENGE Dasha evidence
-        const challengeEvidenceIds = collectDashaEvidenceIds(dashaAnalysis.evidence, period);
-        if (challengeEvidenceIds.length === 0) {
-          // No matching CHALLENGE evidence - suppress the event
-          continue;
-        }
-        events.push(buildChallengeEvent(opportunity, period, dashaAnalysis.evidence));
       }
-      // Other effect/direction combinations (e.g., MIXED, NEUTRAL) produce no event
     }
+    // Other effect/direction combinations (e.g., MIXED, NEUTRAL) produce no event
   }
 
   return events;
@@ -473,8 +485,10 @@ function generateEvents(
  *
  * Merges evidenceIds and ruleIds when events have the same eventId.
  * Throws if same eventId has conflicting payloads (different eventType or timing).
+ *
+ * Exported for direct unit testing.
  */
-function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEvent[] {
+export function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEvent[] {
   const eventMap = new Map<string, CareerEvent>();
 
   for (const event of events) {
@@ -527,6 +541,9 @@ function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEvent[] {
  * Validates Dasha canonical analysis structure.
  *
  * Ensures periods are present and well-formed.
+ * Validates that each period's level matches its slot.
+ * Validates that effect, direction, and role are members of their respective unions.
+ * Validates that each evidence item has a non-empty identityKey and valid level.
  */
 function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
   if (!dasha.md || !dasha.ad || !dasha.pd) {
@@ -535,6 +552,72 @@ function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
 
   if (!Array.isArray(dasha.evidence)) {
     throw new Error('Dasha analysis must include evidence array');
+  }
+
+  // Validate period level matches slot
+  if (dasha.md.level !== 'MD') {
+    throw new Error(`Invalid MD period level: expected 'MD', got '${dasha.md.level}'`);
+  }
+  if (dasha.ad.level !== 'AD') {
+    throw new Error(`Invalid AD period level: expected 'AD', got '${dasha.ad.level}'`);
+  }
+  if (dasha.pd.level !== 'PD') {
+    throw new Error(`Invalid PD period level: expected 'PD', got '${dasha.pd.level}'`);
+  }
+
+  // Validate effect values
+  const validEffects = new Set(['ACTIVATES', 'PARTIALLY_ACTIVATES', 'CHALLENGES', 'DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA']);
+  for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
+    if (!validEffects.has(period.effect)) {
+      throw new Error(`Invalid ${slot} period effect: '${period.effect}' is not a valid effect`);
+    }
+  }
+
+  // Validate direction values
+  const validDirections = new Set(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'UNAVAILABLE']);
+  for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
+    if (!validDirections.has(period.direction)) {
+      throw new Error(`Invalid ${slot} period direction: '${period.direction}' is not a valid direction`);
+    }
+  }
+
+  // Validate role values
+  const validRoles = new Set(['PRIMARY_DRIVER', 'MODIFIER', 'REFINEMENT', 'TRIGGER']);
+  for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
+    if (!validRoles.has(period.role)) {
+      throw new Error(`Invalid ${slot} period role: '${period.role}' is not a valid role`);
+    }
+  }
+
+  // Validate evidence items
+  const validLevels = new Set(['MD', 'AD', 'PD']);
+  for (let i = 0; i < dasha.evidence.length; i++) {
+    const evidence = dasha.evidence[i];
+
+    // Check non-empty identityKey
+    if (!evidence.identityKey || typeof evidence.identityKey !== 'string' || evidence.identityKey.trim() === '') {
+      throw new Error(`Evidence at index ${i} has empty or invalid identityKey`);
+    }
+
+    // Check valid level
+    if (!validLevels.has(evidence.level)) {
+      throw new Error(`Evidence at index ${i} has invalid level: '${evidence.level}' (must be MD, AD, or PD)`);
+    }
+
+    // Validate evidence effect
+    if (!validEffects.has(evidence.effect)) {
+      throw new Error(`Evidence at index ${i} has invalid effect: '${evidence.effect}' is not a valid effect`);
+    }
+
+    // Validate evidence direction
+    if (!validDirections.has(evidence.direction)) {
+      throw new Error(`Evidence at index ${i} has invalid direction: '${evidence.direction}' is not a valid direction`);
+    }
+
+    // Validate evidence role
+    if (!validRoles.has(evidence.role)) {
+      throw new Error(`Evidence at index ${i} has invalid role: '${evidence.role}' is not a valid role`);
+    }
   }
 }
 
