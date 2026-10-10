@@ -19,11 +19,13 @@ import type {
 } from '../careerMechanism/careerMechanismTypes';
 import type {
   Career10HFoundation,
-  Career10HFoundationStatus
+  Career10HFoundationStatus,
+  Career10HFoundationResult
 } from '../career10h/career10HFoundationTypes';
 import type {
   Career10LFoundation,
-  Career10LStatus
+  Career10LStatus,
+  Career10LFoundationResult
 } from '../career10h/career10LFoundationTypes';
 
 /**
@@ -300,8 +302,9 @@ export interface CanonicalCareerOrchestrationInput {
   readonly networks: readonly CareerHouseNetwork[];
 
   // 10H/10L supplements (P2-07F/G)
-  readonly foundation10H?: Career10HFoundation;
-  readonly foundation10L?: Career10LFoundation;
+  // Accept result objects to get status and missingInputs for accurate availability reporting
+  readonly result10H?: Career10HFoundationResult;
+  readonly result10L?: Career10LFoundationResult;
 }
 
 /**
