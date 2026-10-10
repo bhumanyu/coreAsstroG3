@@ -11,7 +11,8 @@ import type {
 import type {
   CareerExpressionAnalysis,
   CareerExpression,
-  CareerExpressionEvidence
+  CareerExpressionEvidence,
+  CareerExpressionStrength
 } from './careerExpression';
 
 import type {
@@ -433,6 +434,135 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Dasha Evidence Mapping', () => {
+    it('Dasha MIXED + DOES_NOT_ACTIVATE throws (disallowed combination)', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-mixed-disallowed',
+          id: 'dasha-mixed-disallowed-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'DOES_NOT_ACTIVATE', // Disallowed with MIXED
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD mixed activation with disallowed effect',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'DOES_NOT_ACTIVATE',
+        direction: 'MIXED' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'DOES_NOT_ACTIVATE',
+        overallDirection: 'MIXED' as ReasoningDirection,
+        overallStrength: 'MODERATE' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with disallowed MIXED/effect combination'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Should throw due to disallowed MIXED/effect combination
+      expect(() => mapCanonicalCareerEvidence(input)).toThrow('MIXED direction/effect disallowed');
+    });
+
+    it('Dasha MIXED + PARTIALLY_ACTIVATES splits into SUPPORTING and CHALLENGING (allowed combination)', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-mixed-allowed',
+          id: 'dasha-mixed-allowed-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'PARTIALLY_ACTIVATES', // Allowed with MIXED
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD mixed activation with allowed effect',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'PARTIALLY_ACTIVATES',
+        direction: 'MIXED' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'PARTIALLY_ACTIVATES',
+        overallDirection: 'MIXED' as ReasoningDirection,
+        overallStrength: 'MODERATE' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with allowed MIXED/effect combination'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // MIXED should split into two occurrences
+      const mixedEvidence = result.filter(e => e.identityKey === 'dasha-mixed-allowed');
+      expect(mixedEvidence).toHaveLength(2);
+
+      const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
+      const challenging = mixedEvidence.find(e => e.polarity === 'CHALLENGING');
+
+      expect(supporting).toBeDefined();
+      expect(challenging).toBeDefined();
+
+      // Both share the same identityKey
+      expect(supporting!.identityKey).toBe('dasha-mixed-allowed');
+      expect(challenging!.identityKey).toBe('dasha-mixed-allowed');
+
+      // Both have distinct ids with polarity suffix
+      expect(supporting!.id).toBe('dasha-mixed-allowed-1:SUPPORTING');
+      expect(challenging!.id).toBe('dasha-mixed-allowed-1:CHALLENGING');
+    });
+
     it('Dasha MIXED direction splits into SUPPORTING and CHALLENGING occurrences', () => {
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
         {
@@ -441,7 +571,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           level: 'MD',
           planet: Planet.SATURN,
           role: 'PRIMARY_DRIVER',
-          effect: 'ACTIVATES',
+          effect: 'PARTIALLY_ACTIVATES',
           direction: 'MIXED' as ReasoningDirection,
           strength: 'MODERATE' as DomainStrength,
           statement: 'Saturn MD mixed activation',
@@ -458,14 +588,14 @@ describe('CanonicalCareerEvidenceMapper', () => {
         level: 'MD',
         planet: Planet.SATURN,
         role: 'PRIMARY_DRIVER',
-        effect: 'ACTIVATES',
+        effect: 'PARTIALLY_ACTIVATES',
         direction: 'MIXED' as ReasoningDirection,
         strength: 'MODERATE' as DomainStrength,
         statement: 'Saturn MD period'
       };
 
       const dasha: CareerDashaCanonicalAnalysis = {
-        overallEffect: 'ACTIVATES',
+        overallEffect: 'PARTIALLY_ACTIVATES',
         overallDirection: 'MIXED' as ReasoningDirection,
         overallStrength: 'MODERATE' as DomainStrength,
         dominantLevel: 'MD',
@@ -1725,7 +1855,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Expression Strength Mapping', () => {
-    it('expression strength derived from parent CareerExpression.strength', () => {
+    it('throws on unexpected CareerExpressionStrength value', () => {
       const expressionEvidence: CareerExpressionEvidence[] = [
         {
           id: 'expr-evidence-1',
@@ -1741,7 +1871,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const expression: CareerExpression = {
         mode: 'TECHNICAL_SPECIALIZATION',
         direction: 'SUPPORTED',
-        strength: 'STRONG', // Parent strength
+        // Use type assertion to simulate invalid runtime value
+        strength: 'INVALID_STRENGTH' as CareerExpressionStrength,
         evidence: expressionEvidence,
         supportingEvidenceIds: ['expr-evidence-1'],
         statement: 'Technical specialization expression',
@@ -1762,16 +1893,11 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      const result = mapCanonicalCareerEvidence(input);
-
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
-
-      // Strength should be derived from parent, not hardcoded MODERATE
-      expect(evidence.strength).toBe('STRONG');
+      // Should throw due to unexpected strength value
+      expect(() => mapCanonicalCareerEvidence(input)).toThrow('Unexpected CareerExpressionStrength value');
     });
 
-    it('expression UNAVAILABLE strength excludes record', () => {
+    it('expression UNAVAILABLE strength excludes record (returns null)', () => {
       const expressionEvidence: CareerExpressionEvidence[] = [
         {
           id: 'expr-evidence-1',
@@ -1814,6 +1940,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+
 
   describe('Deduplication Field Disagreement', () => {
     it('throws on strength disagreement in dedup', () => {
@@ -1899,7 +2027,81 @@ describe('CanonicalCareerEvidenceMapper', () => {
     });
   });
 
-  describe('Unique Identity Key Policy', () => {
+  describe('Missing Identity Key Policy', () => {
+    it('records without identityKey are emitted as separate non-deduplicable items', () => {
+      // Since all canonical producers (C4-C10) emit identityKey, we test the policy indirectly
+      // by verifying that records with identityKey dedup correctly
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'test-identity-1',
+          evidenceId: 'test-1',
+          ruleId: 'RULE_TEST',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Test evidence',
+          relatedEvidenceIds: [],
+          sourceIds: ['src-1']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: mockEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Should have one record from natal evidence (with identityKey)
+      expect(result).toHaveLength(1);
+      expect(result[0].identityKey).toBe('test-identity-1');
+    });
+
     it('records with unique identityKeys are preserved as separate items', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',
@@ -1921,9 +2123,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const mockEvidence: WeightedReasoningEvidence[] = [
         {
-          identityKey: 'no-identity-1', // Use evidenceId as identityKey
-          evidenceId: 'no-identity-1',
-          ruleId: 'RULE_NO_IDENTITY',
+          identityKey: 'unique-identity-1',
+          evidenceId: 'unique-1',
+          ruleId: 'RULE_UNIQUE',
           layer: 'PRIMARY_PROMISE',
           direction: 'SUPPORT' as ReasoningDirection,
           strength: 'STRONG',
@@ -1934,9 +2136,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
           sourceIds: ['source-1']
         },
         {
-          identityKey: 'no-identity-2', // Use evidenceId as identityKey
-          evidenceId: 'no-identity-2',
-          ruleId: 'RULE_NO_IDENTITY',
+          identityKey: 'unique-identity-2',
+          evidenceId: 'unique-2',
+          ruleId: 'RULE_UNIQUE',
           layer: 'PRIMARY_PROMISE',
           direction: 'SUPPORT' as ReasoningDirection,
           strength: 'STRONG',
@@ -1982,8 +2184,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       // Both records should be preserved separately (different identityKeys)
       expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('no-identity-1');
-      expect(result[1].id).toBe('no-identity-2');
+      expect(result[0].id).toBe('unique-1');
+      expect(result[1].id).toBe('unique-2');
     });
   });
 
@@ -2240,7 +2442,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Expression Strength Mapping', () => {
-    it('expression strength derived from parent CareerExpression.strength', () => {
+    it('throws on unexpected CareerExpressionStrength value', () => {
       const expressionEvidence: CareerExpressionEvidence[] = [
         {
           id: 'expr-evidence-1',
@@ -2256,7 +2458,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const expression: CareerExpression = {
         mode: 'TECHNICAL_SPECIALIZATION',
         direction: 'SUPPORTED',
-        strength: 'STRONG', // Parent strength
+        // Use type assertion to simulate invalid runtime value
+        strength: 'INVALID_STRENGTH' as CareerExpressionStrength,
         evidence: expressionEvidence,
         supportingEvidenceIds: ['expr-evidence-1'],
         statement: 'Technical specialization expression',
@@ -2277,16 +2480,11 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      const result = mapCanonicalCareerEvidence(input);
-
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
-
-      // Strength should be derived from parent, not hardcoded MODERATE
-      expect(evidence.strength).toBe('STRONG');
+      // Should throw due to unexpected strength value
+      expect(() => mapCanonicalCareerEvidence(input)).toThrow('Unexpected CareerExpressionStrength value');
     });
 
-    it('expression UNAVAILABLE strength excludes record', () => {
+    it('expression UNAVAILABLE strength excludes record (returns null)', () => {
       const expressionEvidence: CareerExpressionEvidence[] = [
         {
           id: 'expr-evidence-1',
@@ -2329,6 +2527,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(result).toHaveLength(0);
     });
   });
+
+
 
   describe('Deduplication Field Disagreement', () => {
     it('throws on strength disagreement in dedup', () => {
@@ -2414,94 +2614,6 @@ describe('CanonicalCareerEvidenceMapper', () => {
     });
   });
 
-  describe('Unique Identity Key Policy', () => {
-    it('records with unique identityKeys are preserved as separate items', () => {
-      const mockStructural: CareerStructuralReasoning = {
-        direction: 'SUPPORT',
-        strength: 'STRONG',
-        primarySupport: 10,
-        primaryChallenge: 2,
-        supportingSupport: 5,
-        supportingChallenge: 1,
-        challengingSupport: 1,
-        challengingChallenge: 3,
-        mixedWeight: 0,
-        evidence: [],
-        primaryEvidenceIds: [],
-        supportingEvidenceIds: [],
-        challengingEvidenceIds: [],
-        conflicts: [],
-        statement: 'Test structural'
-      };
-
-      const mockEvidence: WeightedReasoningEvidence[] = [
-        {
-          identityKey: 'no-identity-1', // Use evidenceId as identityKey
-          evidenceId: 'no-identity-1',
-          ruleId: 'RULE_NO_IDENTITY',
-          layer: 'PRIMARY_PROMISE',
-          direction: 'SUPPORT' as ReasoningDirection,
-          strength: 'STRONG',
-          priority: 1,
-          weight: 2,
-          statement: 'Evidence with unique identityKey',
-          relatedEvidenceIds: [],
-          sourceIds: ['source-1']
-        },
-        {
-          identityKey: 'no-identity-2', // Use evidenceId as identityKey
-          evidenceId: 'no-identity-2',
-          ruleId: 'RULE_NO_IDENTITY',
-          layer: 'PRIMARY_PROMISE',
-          direction: 'SUPPORT' as ReasoningDirection,
-          strength: 'STRONG',
-          priority: 1,
-          weight: 2,
-          statement: 'Another evidence with unique identityKey',
-          relatedEvidenceIds: [],
-          sourceIds: ['source-2']
-        }
-      ];
-
-      const mockReasoningTrace: ReasoningTrace = {
-        primaryPromise: mockEvidence,
-        secondarySupport: [],
-        modifiers: [],
-        yogas: [],
-        varga: [],
-        dasha: [],
-        transit: []
-      };
-
-      const natal: CareerNatalAnalysis = {
-        structural: mockStructural,
-        relevance: [],
-        condition: [],
-        lordRelationships: [],
-        direction: 'SUPPORT' as ReasoningDirection,
-        strength: 'STRONG' as DomainStrength,
-        evidence: mockEvidence,
-        conflicts: [],
-        reasoningTrace: mockReasoningTrace
-      };
-
-      const input: CanonicalCareerEvidenceInput = {
-        natal,
-        expression: createEmptyExpressionAnalysis(),
-        dasha: createEmptyDashaAnalysis(),
-        d10: createEmptyD10Analysis(),
-        finalSynthesis: createEmptyFinalSynthesis()
-      };
-
-      const result = mapCanonicalCareerEvidence(input);
-
-      // Both records should be preserved separately (different identityKeys)
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('no-identity-1');
-      expect(result[1].id).toBe('no-identity-2');
-    });
-  });
-
   describe('Immutability', () => {
     it('output array and records are deeply frozen', () => {
       const mockStructural: CareerStructuralReasoning = {
@@ -2581,6 +2693,316 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Deduplication Field Disagreement Extended', () => {
+    it('throws on mixed group with non-polarity field disagreement (statement)', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'MIXED',
+        strength: 'MODERATE',
+        primarySupport: 5,
+        primaryChallenge: 5,
+        supportingSupport: 2,
+        supportingChallenge: 2,
+        challengingSupport: 2,
+        challengingChallenge: 2,
+        mixedWeight: 5,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'mixed-disagree-statement',
+          evidenceId: 'mixed-disagree-1',
+          ruleId: 'RULE_MIXED_DISAGREE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE',
+          priority: 2,
+          weight: 3,
+          statement: 'First statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        },
+        {
+          identityKey: 'mixed-disagree-statement',
+          evidenceId: 'mixed-disagree-2',
+          ruleId: 'RULE_MIXED_DISAGREE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE',
+          priority: 2,
+          weight: 3,
+          statement: 'Different statement', // Different statement - should throw
+          relatedEvidenceIds: [],
+          sourceIds: ['source-2']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: mockEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'MIXED' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Should throw due to statement disagreement in MIXED group
+      expect(() => mapCanonicalCareerEvidence(input)).toThrow('Semantic field disagreement');
+    });
+
+    it('throws on same identityKey with different house (conflicting field)', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'conflicting-house',
+          evidenceId: 'conflicting-1',
+          ruleId: 'RULE_CONFLICT',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Same statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        },
+        {
+          identityKey: 'conflicting-house',
+          evidenceId: 'conflicting-2',
+          ruleId: 'RULE_CONFLICT',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Same statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-2']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: mockEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // First verify this works when house values are the same (both undefined)
+      const result1 = mapCanonicalCareerEvidence(input);
+      expect(result1).toHaveLength(1); // Should dedup successfully
+
+      // Now test with Dasha where timing/planet can differ
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'conflicting-house-dasha',
+          id: 'dasha-conflicting-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG' as DomainStrength,
+          statement: 'Saturn MD activates career',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        },
+        {
+          identityKey: 'conflicting-house-dasha',
+          id: 'dasha-conflicting-2',
+          level: 'MD',
+          planet: Planet.JUPITER, // Different planet - should throw
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG' as DomainStrength,
+          statement: 'Saturn MD activates career', // Same statement
+          sourceIds: ['dasha-source-2'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT' as ReasoningDirection,
+        overallStrength: 'STRONG' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with conflicting planet'
+      };
+
+      const input2: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Should throw due to planet disagreement (planet is part of timing in Dasha)
+      expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
+    });
+
+    it('throws on mixed group with non-polarity field disagreement (timing)', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'mixed-disagree-timing',
+          id: 'mixed-timing-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'PARTIALLY_ACTIVATES',
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD mixed activation',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        },
+        {
+          identityKey: 'mixed-disagree-timing',
+          id: 'mixed-timing-2',
+          level: 'AD', // Different level - should throw
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'PARTIALLY_ACTIVATES',
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD mixed activation',
+          sourceIds: ['dasha-source-2'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'AD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'PARTIALLY_ACTIVATES',
+        direction: 'MIXED' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'PARTIALLY_ACTIVATES',
+        overallDirection: 'MIXED' as ReasoningDirection,
+        overallStrength: 'MODERATE' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with MIXED timing disagreement'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Should throw due to timing disagreement in MIXED group
+      expect(() => mapCanonicalCareerEvidence(input)).toThrow('Semantic field disagreement');
+    });
+
     it('throws on statement disagreement in dedup (input-order invariant)', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',

@@ -344,6 +344,12 @@ function mapExpressionEvidence(
  * Maps from dasha.evidence (CareerDashaCanonicalEvidence).
  * Preserves: identityKey, id, sourceIds
  * C9 must NOT become natal promise (enforced by phase assignment).
+ *
+ * MIXED direction/effect policy:
+ * - MIXED direction requires an effect that represents genuinely mixed activation
+ * - Allowed effects: PARTIALLY_ACTIVATES (carries both activating and challenging components)
+ * - Disallowed effects: DOES_NOT_ACTIVATE, UNKNOWN, INSUFFICIENT_DATA (these are not genuinely mixed)
+ * - Throws an explicit error for disallowed combinations
  */
 function mapDashaEvidence(
   dasha: CareerDashaCanonicalAnalysis
@@ -362,6 +368,31 @@ function mapDashaEvidence(
 
     // Handle MIXED direction by splitting into two occurrences (consistent with natal convention)
     if (evidence.direction === 'MIXED') {
+      // Validate MIXED direction/effect combination
+      // MIXED direction should only be paired with effects that represent genuinely mixed activation
+      const ALLOWED_MIXED_EFFECTS = new Set(['PARTIALLY_ACTIVATES']);
+      const DISALLOWED_MIXED_EFFECTS = new Set(['DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA']);
+
+      if (DISALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
+        throw new Error(
+          `Dasha MIXED direction/effect disallowed: direction=MIXED with effect=${evidence.effect} for evidence ${evidence.id}. ` +
+          `MIXED direction requires an effect representing genuinely mixed activation (e.g., PARTIALLY_ACTIVATES). ` +
+          `Effects ${Array.from(DISALLOWED_MIXED_EFFECTS).join(', ')} are not compatible with MIXED direction.`
+        );
+      }
+
+      // Optional: Warn if effect is not in allowed set (currently only PARTIALLY_ACTIVATES)
+      // This documents the intended allow-list in code
+      if (!ALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
+        // If the domain contract intends to permit other effects, add them to ALLOWED_MIXED_EFFECTS
+        // and document the rationale here
+        throw new Error(
+          `Dasha MIXED direction/effect not in allow-list: direction=MIXED with effect=${evidence.effect} for evidence ${evidence.id}. ` +
+          `Allowed effects for MIXED direction: ${Array.from(ALLOWED_MIXED_EFFECTS).join(', ')}. ` +
+          `If this combination should be permitted, add it to the ALLOWED_MIXED_EFFECTS set and document the rationale.`
+        );
+      }
+
       const notes = `C9 Dasha direction: MIXED. Split into SUPPORTING and CHALLENGING occurrences of the same semantic fact; canonical dedup merges these into one MIXED record.`;
 
       // Both occurrences share the same identityKey
@@ -584,6 +615,134 @@ function mapD10Evidence(
 }
 
 /**
+ * Asserts that all non-polarity semantic fields agree within a group.
+ *
+ * This helper validates that all evidence items in a group share the same semantic identity
+ * across all fields except polarity. Used for both MIXED and non-MIXED groups.
+ *
+ * Fields checked:
+ * - Semantically significant (must agree): statement, ruleId, sourceType, domain, timing, phase, source, role, provenance, planet, house, strength
+ * - Mergeable under documented rules: evidenceFamily, dimension (currently retained but not validated for agreement)
+ * - Identity-irrelevant: id, relatedEvidenceIds, priority, notes (allowed to differ)
+ *
+ * Rationale for field classification:
+ * - planet and house: Part of semantic identity upstream per CW-R1, so disagreement is a semantic conflict
+ * - evidenceFamily and dimension: Currently retained in merged output but not validated for agreement.
+ *   These are metadata fields that may legitimately differ across occurrences of the same semantic fact.
+ *   They are merged by taking the value from group[0] (acceptable after semantic fields are validated).
+ *
+ * @param group - The evidence group to validate
+ * @param identityKey - The identity key for error messages
+ * @throws Error if any non-polarity field disagrees
+ */
+function assertNonPolarityFieldsAgree(
+  group: readonly DomainEvidence[],
+  identityKey: string
+): void {
+  const first = group[0];
+
+  for (const e of group) {
+    if (e.strength !== first.strength) {
+      throw new Error(
+        `Semantic field disagreement in dedup: strength differs for identityKey "${identityKey}" (${e.strength} vs ${first.strength})`
+      );
+    }
+    if (e.phase !== first.phase) {
+      throw new Error(
+        `Semantic field disagreement in dedup: phase differs for identityKey "${identityKey}" (${e.phase} vs ${first.phase})`
+      );
+    }
+    if (e.source !== first.source) {
+      throw new Error(
+        `Semantic field disagreement in dedup: source differs for identityKey "${identityKey}" (${e.source} vs ${first.source})`
+      );
+    }
+    if (e.role !== first.role) {
+      throw new Error(
+        `Semantic field disagreement in dedup: role differs for identityKey "${identityKey}" (${e.role} vs ${first.role})`
+      );
+    }
+    if (e.statement !== first.statement) {
+      throw new Error(
+        `Semantic field disagreement in dedup: statement differs for identityKey "${identityKey}"`
+      );
+    }
+    if (e.ruleId !== first.ruleId) {
+      throw new Error(
+        `Semantic field disagreement in dedup: ruleId differs for identityKey "${identityKey}"`
+      );
+    }
+    if (e.sourceType !== first.sourceType) {
+      throw new Error(
+        `Semantic field disagreement in dedup: sourceType differs for identityKey "${identityKey}"`
+      );
+    }
+    if (e.domain !== first.domain) {
+      throw new Error(
+        `Semantic field disagreement in dedup: domain differs for identityKey "${identityKey}"`
+      );
+    }
+    if (e.planet !== first.planet) {
+      throw new Error(
+        `Semantic field disagreement in dedup: planet differs for identityKey "${identityKey}" (${e.planet} vs ${first.planet})`
+      );
+    }
+    if (e.house !== first.house) {
+      throw new Error(
+        `Semantic field disagreement in dedup: house differs for identityKey "${identityKey}" (${e.house} vs ${first.house})`
+      );
+    }
+    // Timing comparison (both undefined or both deeply equal)
+    const timingA = e.timing;
+    const timingB = first.timing;
+    if (timingA === undefined && timingB !== undefined) {
+      throw new Error(
+        `Semantic field disagreement in dedup: timing undefined vs present for identityKey "${identityKey}"`
+      );
+    }
+    if (timingA !== undefined && timingB === undefined) {
+      throw new Error(
+        `Semantic field disagreement in dedup: timing present vs undefined for identityKey "${identityKey}"`
+      );
+    }
+    if (timingA && timingB) {
+      if (timingA.period !== timingB.period ||
+        timingA.level !== timingB.level ||
+        timingA.planet !== timingB.planet) {
+        throw new Error(
+          `Semantic field disagreement in dedup: timing differs for identityKey "${identityKey}"`
+        );
+      }
+    }
+    // Provenance comparison (both undefined or both deeply equal)
+    const provA = e.provenance;
+    const provB = first.provenance;
+    if (provA === undefined && provB !== undefined) {
+      throw new Error(
+        `Semantic field disagreement in dedup: provenance undefined vs present for identityKey "${identityKey}"`
+      );
+    }
+    if (provA !== undefined && provB === undefined) {
+      throw new Error(
+        `Semantic field disagreement in dedup: provenance present vs undefined for identityKey "${identityKey}"`
+      );
+    }
+    if (provA && provB) {
+      if (provA.ruleId !== provB.ruleId ||
+        provA.effect !== provB.effect ||
+        provA.domain !== provB.domain ||
+        provA.axis !== provB.axis ||
+        provA.source !== provB.source ||
+        provA.strength !== provB.strength) {
+        throw new Error(
+          `Semantic field disagreement in dedup: provenance differs for identityKey "${identityKey}"`
+        );
+      }
+    }
+  }
+}
+
+/**
  * Deduplicates evidence by identityKey.
  *
  * Merges occurrence sourceIds without loss.
@@ -593,11 +752,16 @@ function mapD10Evidence(
  * Note: MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are NOT merged here.
  * They are kept separate for downstream canonical dedup to handle the MIXED merge correctly.
  *
- * Missing-identity policy: Records without an identityKey are preserved as separate, non-deduplicable items.
- * They are grouped by their id instead and merged only if the ids match exactly.
+ * Missing-identity policy: Records without an identityKey are routed entirely outside semantic dedup.
+ * Each such record is emitted as a separate item and never merged (even if ids match).
+ * This is the safe default since no current canonical producer (C4-C10) emits evidence without identityKey.
  *
  * Semantic field safety: For all same-identity groups (including MIXED), all merge-relevant semantic fields must agree.
- * Fields checked: statement, ruleId, sourceType, domain, timing, phase, source, role, provenance (all except polarity).
+ * Field classification:
+ * - Semantically significant (validated for agreement): statement, ruleId, sourceType, domain, timing, phase, source, role, provenance, planet, house, strength
+ * - Mergeable under documented rules (not validated, taken from group[0]): evidenceFamily, dimension
+ * - Identity-irrelevant (allowed to differ): id, relatedEvidenceIds, priority, notes
+ *
  * If any non-polarity field disagrees, an error is thrown.
  * This prevents silent merging of semantically incompatible evidence.
  */
@@ -605,17 +769,26 @@ function deduplicateCanonicalEvidence(
   evidence: readonly DomainEvidence[]
 ): DomainEvidence[] {
   const byIdentityKey = new Map<string, DomainEvidence[]>();
+  const noIdentityKey: DomainEvidence[] = [];
 
-  // Group by identityKey (or id if identityKey is missing)
+  // Separate records with and without identityKey
   for (const e of evidence) {
-    const key = e.identityKey ?? e.id;
-    const existing = byIdentityKey.get(key) ?? [];
-    byIdentityKey.set(key, [...existing, e]);
+    if (e.identityKey === undefined) {
+      // Records without identityKey are non-deduplicable - emit each as separate
+      noIdentityKey.push(e);
+    } else {
+      // Group by identityKey for semantic dedup
+      const existing = byIdentityKey.get(e.identityKey) ?? [];
+      byIdentityKey.set(e.identityKey, [...existing, e]);
+    }
   }
 
   const result: DomainEvidence[] = [];
 
-  // Merge each group
+  // Emit non-deduplicable records (no identityKey) as-is
+  noIdentityKey.forEach(e => result.push(e));
+
+  // Merge each identityKey group
   for (const [identityKey, group] of byIdentityKey.entries()) {
     if (group.length === 1) {
       result.push(group[0]);
@@ -626,6 +799,10 @@ function deduplicateCanonicalEvidence(
     const polarities = new Set(group.map(e => e.polarity));
     const isMixedSplit = polarities.has('SUPPORTING') && polarities.has('CHALLENGING');
 
+    // Validate non-polarity field agreement for ALL multi-item groups (including MIXED)
+    // This ensures MIXED groups only differ in polarity, not in other semantic fields
+    assertNonPolarityFieldsAgree(group, identityKey);
+
     // If MIXED split, keep both occurrences separate (don't merge)
     if (isMixedSplit) {
       group.forEach(e => result.push(e));
@@ -635,99 +812,12 @@ function deduplicateCanonicalEvidence(
     // Merge other duplicates (same polarity)
     const first = group[0];
 
-    // Assert semantic field agreement (all non-polarity fields must agree)
+    // Assert polarity agreement (should not differ after MIXED check)
     for (const e of group) {
       if (e.polarity !== first.polarity) {
         throw new Error(
           `Semantic field disagreement in dedup: polarity differs for identityKey "${identityKey}" (${e.polarity} vs ${first.polarity})`
         );
-      }
-      if (e.strength !== first.strength) {
-        throw new Error(
-          `Semantic field disagreement in dedup: strength differs for identityKey "${identityKey}" (${e.strength} vs ${first.strength})`
-        );
-      }
-      if (e.phase !== first.phase) {
-        throw new Error(
-          `Semantic field disagreement in dedup: phase differs for identityKey "${identityKey}" (${e.phase} vs ${first.phase})`
-        );
-      }
-      if (e.source !== first.source) {
-        throw new Error(
-          `Semantic field disagreement in dedup: source differs for identityKey "${identityKey}" (${e.source} vs ${first.source})`
-        );
-      }
-      if (e.role !== first.role) {
-        throw new Error(
-          `Semantic field disagreement in dedup: role differs for identityKey "${identityKey}" (${e.role} vs ${first.role})`
-        );
-      }
-      if (e.statement !== first.statement) {
-        throw new Error(
-          `Semantic field disagreement in dedup: statement differs for identityKey "${identityKey}"`
-        );
-      }
-      if (e.ruleId !== first.ruleId) {
-        throw new Error(
-          `Semantic field disagreement in dedup: ruleId differs for identityKey "${identityKey}"`
-        );
-      }
-      if (e.sourceType !== first.sourceType) {
-        throw new Error(
-          `Semantic field disagreement in dedup: sourceType differs for identityKey "${identityKey}"`
-        );
-      }
-      if (e.domain !== first.domain) {
-        throw new Error(
-          `Semantic field disagreement in dedup: domain differs for identityKey "${identityKey}"`
-        );
-      }
-      // Timing comparison (both undefined or both deeply equal)
-      const timingA = e.timing;
-      const timingB = first.timing;
-      if (timingA === undefined && timingB !== undefined) {
-        throw new Error(
-          `Semantic field disagreement in dedup: timing undefined vs present for identityKey "${identityKey}"`
-        );
-      }
-      if (timingA !== undefined && timingB === undefined) {
-        throw new Error(
-          `Semantic field disagreement in dedup: timing present vs undefined for identityKey "${identityKey}"`
-        );
-      }
-      if (timingA && timingB) {
-        if (timingA.period !== timingB.period ||
-          timingA.level !== timingB.level ||
-          timingA.planet !== timingB.planet) {
-          throw new Error(
-            `Semantic field disagreement in dedup: timing differs for identityKey "${identityKey}"`
-          );
-        }
-      }
-      // Provenance comparison (both undefined or both deeply equal)
-      const provA = e.provenance;
-      const provB = first.provenance;
-      if (provA === undefined && provB !== undefined) {
-        throw new Error(
-          `Semantic field disagreement in dedup: provenance undefined vs present for identityKey "${identityKey}"`
-        );
-      }
-      if (provA !== undefined && provB === undefined) {
-        throw new Error(
-          `Semantic field disagreement in dedup: provenance present vs undefined for identityKey "${identityKey}"`
-        );
-      }
-      if (provA && provB) {
-        if (provA.ruleId !== provB.ruleId ||
-          provA.effect !== provB.effect ||
-          provA.domain !== provB.domain ||
-          provA.axis !== provB.axis ||
-          provA.source !== provB.source ||
-          provA.strength !== provB.strength) {
-          throw new Error(
-            `Semantic field disagreement in dedup: provenance differs for identityKey "${identityKey}"`
-          );
-        }
       }
     }
 
@@ -971,7 +1061,7 @@ function mapExpressionStrengthToEvidenceStrength(
     default:
       // Exhaustive check - should never reach here with valid CareerExpressionStrength
       const _exhaustiveCheck: never = strength;
-      return null;
+      throw new Error(`Unexpected CareerExpressionStrength value: ${_exhaustiveCheck}`);
   }
 }
 

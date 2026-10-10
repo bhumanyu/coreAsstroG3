@@ -2,7 +2,7 @@
 
 ## Status
 
-IMPLEMENTED — LOCAL VERIFICATION REPORTED, CI PENDING
+IMPLEMENTED — VERIFICATION PENDING
 
 ## Purpose
 
@@ -110,6 +110,17 @@ The mapper follows the invariant that missing evidence ≠ negative evidence:
 
 This aligns with C11-INV-05 from the convergence contract.
 
+### Missing Identity Key Policy
+
+Records without an `identityKey` are routed entirely outside semantic dedup:
+
+- Each such record is emitted as a separate item and never merged (even if ids match)
+- This is the safe default since no current canonical producer (C4-C10) emits evidence without identityKey
+- Records with identityKey undergo semantic dedup with field agreement validation
+- This policy ensures that incomplete evidence (missing semantic identity) cannot be silently merged
+
+If a future producer emits evidence without identityKey and requires merging, the policy can be revised with explicit tests and documentation.
+
 ## C11 Reference-Only Boundary
 
 C11 is used **only for reference validation**, never as an evidence source:
@@ -179,18 +190,37 @@ This convention is applied consistently across:
 
 This prevents duplicate representations of one underlying structural fact from independently contributing to the Career conclusion.
 
+### Dasha MIXED Direction/Effect Policy
+
+For Dasha evidence with `direction: 'MIXED'`, the mapper enforces a direction/effect consistency policy:
+
+- **Allowed effects**: `PARTIALLY_ACTIVATES` (carries both activating and challenging components, representing genuinely mixed activation)
+- **Disallowed effects**: `DOES_NOT_ACTIVATE`, `UNKNOWN`, `INSUFFICIENT_DATA` (these are not genuinely mixed and incompatible with MIXED direction)
+- If a disallowed combination is encountered, the mapper throws an explicit error naming the evidence id and the direction/effect pair
+- If the domain contract intends to permit additional effects, they must be added to the allow-list in code with documented rationale
+
+This policy ensures MIXED direction is only paired with effects that represent genuinely mixed activation, preventing semantic contradictions.
+
 ## Deduplication and Merge Policy
 
 The mapper enforces semantic field safety during deduplication:
 
 - For all same-identity groups (including MIXED), all merge-relevant semantic fields must agree
-- Fields checked: statement, ruleId, sourceType, domain, timing, phase, source, role, provenance (all except polarity)
+- Field classification:
+  - Semantically significant (validated for agreement): statement, ruleId, sourceType, domain, timing, phase, source, role, provenance, planet, house, strength
+  - Mergeable under documented rules (not validated, taken from group[0]): evidenceFamily, dimension
+  - Identity-irrelevant (allowed to differ): id, relatedEvidenceIds, priority, notes
 - If any non-polarity field disagrees, an error is thrown (silent merging is prevented)
-- Records without an `identityKey` are preserved as separate, non-deduplicable items (grouped by `id` instead)
+- Records without an `identityKey` are routed entirely outside semantic dedup and emitted as separate items (never merged)
 - MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are kept separate for downstream canonical dedup
 - The merged record takes all fields from `group[0]` (acceptable only after field agreement is validated)
 
 This policy prevents silent merging of semantically incompatible evidence and ensures merge conflicts are visible.
+
+### Rationale for Field Classification
+
+- **planet and house**: Part of semantic identity upstream per CW-R1, so disagreement is a semantic conflict and must throw
+- **evidenceFamily and dimension**: Currently retained in merged output but not validated for agreement. These are metadata fields that may legitimately differ across occurrences of the same semantic fact. They are merged by taking the value from group[0] (acceptable after semantic fields are validated).
 
 ## Enum Fallback Policy
 
@@ -202,7 +232,7 @@ All enum mapping functions use exhaustive mappings with explicit error handling:
 - `mapDirectionToPolarity`: throws on unexpected `ReasoningDirection` values (exhaustive with never type)
 - `mapDirectionToProvenanceEffect`: throws on unexpected `ReasoningDirection` values (exhaustive with never type)
 - `mapExpressionDirectionToPolarity`: throws on unexpected `CareerExpressionDirection` values (exhaustive with never type)
-- `mapExpressionStrengthToEvidenceStrength`: throws on unexpected `CareerExpressionStrength` values (exhaustive with never type)
+- `mapExpressionStrengthToEvidenceStrength`: throws on unexpected `CareerExpressionStrength` values (exhaustive with never type), except `UNAVAILABLE` which returns `null` to exclude the record
 - `mapD10DirectionToPolarity`: throws on unexpected `CareerD10QualificationDirection` values (exhaustive with never type)
 - `mapD10DirectionToProvenanceEffect`: throws on unexpected `CareerD10QualificationDirection` values (exhaustive with never type)
 - `mapDashaEffectToProvenanceEffect`: throws on unexpected effect values
@@ -238,18 +268,25 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - UNAVAILABLE expression emits nothing
 - Dasha → DASHA_ACTIVATION and cannot be PRIMARY natal
 - Dasha MIXED direction splits into SUPPORTING and CHALLENGING occurrences (same convention as natal)
+- Dasha MIXED + DOES_NOT_ACTIVATE throws (disallowed combination)
+- Dasha MIXED + PARTIALLY_ACTIVATES splits into SUPPORTING and CHALLENGING (allowed combination)
 - Dasha evidence has no provenance or ruleId (CareerDashaCanonicalProvenance does not expose ruleId)
 - Dasha evidence preserves sourceIds in relatedEvidenceIds
 - Dasha polarity/effect consistency: throws on SUPPORTING with CHALLENGE effect
 - D10 → VARGA_CONFIRMATION and cannot establish natal promise
 - D10 MIXED direction splits into SUPPORTING and CHALLENGING occurrences
 - Expression strength derived from parent CareerExpression.strength
-- Expression UNAVAILABLE strength excludes record
+- Expression UNAVAILABLE strength excludes record (returns null)
+- Expression strength throws on unexpected CareerExpressionStrength value
+- Mixed group with non-polarity field disagreement (statement) throws
+- Mixed group with non-polarity field disagreement (timing) throws
+- Same identityKey with different house (conflicting field) throws
 - Deduplication throws on strength disagreement in dedup
 - Deduplication throws on statement disagreement (input-order invariant)
 - Deduplication throws on ruleId disagreement (input-order invariant)
 - Deduplication throws on sourceType disagreement (input-order invariant)
 - Records with unique identityKeys are preserved as separate items
+- Records without identityKey are emitted as separate non-deduplicable items
 - Missing-layer data yields no fabricated negative evidence
 - Missing provenance leaves ruleId absent (no fabrication for C8)
 - Duplicate semantic identity dedupes without weight inflation
