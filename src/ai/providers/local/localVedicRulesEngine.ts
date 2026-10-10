@@ -67,6 +67,11 @@ function buildConclusion(task: AiTask, context: AiContext): string {
       if (context.career.profession && context.career.profession.availability === 'AVAILABLE') {
         const prof = context.career.profession;
         parts.push(`Profession analysis indicates ${prof.status} status with ${prof.candidates.length} candidate professions and D10 qualification status of ${prof.d10Status}.`);
+        // Append each candidate's identity
+        const candidateIdentities = prof.candidates.map(
+          (c) => `${c.domain} / ${c.family} — D10 ${c.d10Status}`
+        ).join('; ');
+        parts.push(candidateIdentities);
       } else {
         parts.push('Profession analysis is unavailable.');
       }

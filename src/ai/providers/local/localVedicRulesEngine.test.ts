@@ -179,6 +179,10 @@ describe('localVedicRulesEngine', () => {
     expect(result.conclusion).toContain('COMPLETE status');
     expect(result.conclusion).toContain('1 candidate professions');
     expect(result.conclusion).toContain('QUALIFIED');
+    // Assert candidate identity is included
+    expect(result.conclusion).toContain('LEADERSHIP');
+    expect(result.conclusion).toContain('EXECUTIVE');
+    expect(result.conclusion).toContain('D10 QUALIFIED');
   });
 
   it('should state when canonical C11 or profession analysis is unavailable', () => {

@@ -122,6 +122,26 @@ export function isCareerFinalSynthesisResult(
     return false;
   }
 
+  // Validate element types of string arrays
+  const stringArrays = [
+    obj.strongestExpressions,
+    obj.challengedExpressions,
+    obj.evidenceIds,
+    obj.sourceIds,
+    obj.ruleIds,
+    (evidenceTrace as Record<string, unknown>).evidenceIds,
+    (evidenceTrace as Record<string, unknown>).sourceIds,
+    (evidenceTrace as Record<string, unknown>).ruleIds
+  ];
+
+  for (const arr of stringArrays) {
+    for (const elem of arr as unknown[]) {
+      if (typeof elem !== 'string') {
+        return false;
+      }
+    }
+  }
+
   return true;
 }
 
@@ -140,23 +160,27 @@ export function projectCanonicalCareerC11(
     return undefined;
   }
 
-  const expressions: readonly AiCareerCanonicalExpressionFact[] = canonicalC11.expressions.map(
-    (expr) => ({
-      mode: expr.mode,
-      direction: expr.direction,
-      strength: expr.strength,
-      statement: `${expr.mode} expression: ${expr.direction} direction, ${expr.strength} strength`
-    })
+  const expressions: readonly AiCareerCanonicalExpressionFact[] = Object.freeze(
+    canonicalC11.expressions.map(
+      (expr) => ({
+        mode: expr.mode,
+        direction: expr.direction,
+        strength: expr.strength,
+        statement: `${expr.mode} expression: ${expr.direction} direction, ${expr.strength} strength`
+      })
+    )
   );
 
-  const conflicts: readonly AiCareerCanonicalConflictFact[] = canonicalC11.conflicts.map(
-    (conflict) => ({
-      layers: [conflict.source, conflict.direction, conflict.severity],
-      description: conflict.statement
-    })
+  const conflicts: readonly AiCareerCanonicalConflictFact[] = Object.freeze(
+    canonicalC11.conflicts.map(
+      (conflict) => ({
+        layers: [conflict.source, conflict.direction, conflict.severity],
+        description: conflict.statement
+      })
+    )
   );
 
-  return {
+  return Object.freeze({
     reasoningVersion: canonicalC11.reasoningVersion,
     finalStatus: canonicalC11.finalStatus,
     finalDirection: canonicalC11.finalDirection,
@@ -185,7 +209,7 @@ export function projectCanonicalCareerC11(
       sourceIds: Object.freeze([...canonicalC11.evidenceTrace.sourceIds]),
       ruleIds: Object.freeze([...canonicalC11.evidenceTrace.ruleIds])
     }
-  };
+  });
 }
 
 /**
@@ -194,7 +218,7 @@ export function projectCanonicalCareerC11(
 function projectProfessionEvidence(
   evidence: CareerProfessionEvidence
 ): AiCareerProfessionEvidenceFact {
-  return {
+  return Object.freeze({
     evidenceId: evidence.evidenceId,
     basis: evidence.basis,
     sourceIds: Object.freeze([...evidence.sourceIds]),
@@ -207,7 +231,7 @@ function projectProfessionEvidence(
     ...(evidence.unresolvedMechanismIds
       ? { unresolvedMechanismIds: Object.freeze([...evidence.unresolvedMechanismIds]) }
       : {})
-  };
+  });
 }
 
 /**
@@ -216,7 +240,7 @@ function projectProfessionEvidence(
 function projectProfessionCandidate(
   candidate: CareerProfessionCandidate
 ): AiCareerProfessionCandidateFact {
-  return {
+  return Object.freeze({
     candidateId: candidate.candidateId,
     domain: candidate.domain,
     family: candidate.family,
@@ -225,11 +249,11 @@ function projectProfessionCandidate(
     mechanismTypes: Object.freeze([...candidate.mechanismTypes]),
     patternIds: Object.freeze([...candidate.patternIds]),
     d10Status: candidate.d10Status,
-    evidence: candidate.evidence.map(projectProfessionEvidence),
+    evidence: Object.freeze(candidate.evidence.map(projectProfessionEvidence)),
     domainEvidenceIds: Object.freeze([...candidate.domainEvidenceIds]),
     relatedEvidenceIds: Object.freeze([...candidate.relatedEvidenceIds]),
     ruleId: candidate.ruleId
-  };
+  });
 }
 
 /**
@@ -253,8 +277,8 @@ export function projectCareerProfessionAnalysis(
     };
   }
 
-  const candidates: readonly AiCareerProfessionCandidateFact[] = analysis.candidates.map(
-    projectProfessionCandidate
+  const candidates: readonly AiCareerProfessionCandidateFact[] = Object.freeze(
+    analysis.candidates.map(projectProfessionCandidate)
   );
 
   // Determine aggregate D10 status from candidates
@@ -276,7 +300,7 @@ export function projectCareerProfessionAnalysis(
     }
   }
 
-  return {
+  return Object.freeze({
     availability: 'AVAILABLE' as AiAvailability,
     status: analysis.status,
     candidates,
@@ -284,5 +308,5 @@ export function projectCareerProfessionAnalysis(
     mappedTypes: Object.freeze([...analysis.mappedTypes]),
     missingInputs: Object.freeze([...analysis.missingInputs]),
     d10Status: aggregateD10Status
-  };
+  });
 }

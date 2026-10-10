@@ -276,6 +276,76 @@ describe('careerIntelligenceProjection', () => {
       } as any;
       expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
     });
+
+    it('should return false for non-string element in strongestExpressions', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: ['LEADERSHIP', 123], // Non-string element
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
+    });
+
+    it('should return false for non-string element in evidenceTrace.evidenceIds', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['ev1', null], // Non-string element
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
+    });
   });
 
   describe('projectCanonicalCareerC11', () => {
@@ -575,7 +645,7 @@ describe('careerIntelligenceProjection', () => {
         domain: 'LEADERSHIP' as CareerProfessionDomain,
         family: 'EXECUTIVE_MANAGEMENT' as CareerProfessionFamily,
         basis: 'EXPRESSION' as CareerProfessionBasis,
-        expressionTypes: ['LEADERSHIP' as CareerExpressionType],
+        expressionTypes: ['LEADERSHIP_EXPRESSION' as CareerExpressionType],
         mechanismTypes: ['AUTHORITY'],
         patternIds: ['pattern1'],
         d10Status: 'QUALIFIED' as CareerProfessionD10Status,
@@ -589,7 +659,7 @@ describe('careerIntelligenceProjection', () => {
         status: 'COMPLETE',
         candidates: [candidate],
         unresolvedExpressionTypes: [],
-        mappedTypes: ['LEADERSHIP' as CareerExpressionType],
+        mappedTypes: ['LEADERSHIP_EXPRESSION' as CareerExpressionType],
         missingInputs: [],
         provenance: {
           expressionIds: [],
@@ -612,7 +682,7 @@ describe('careerIntelligenceProjection', () => {
             domain: 'LEADERSHIP',
             family: 'EXECUTIVE_MANAGEMENT',
             basis: 'EXPRESSION',
-            expressionTypes: ['LEADERSHIP'],
+            expressionTypes: ['LEADERSHIP_EXPRESSION'],
             mechanismTypes: ['AUTHORITY'],
             patternIds: ['pattern1'],
             d10Status: 'QUALIFIED',
@@ -631,7 +701,7 @@ describe('careerIntelligenceProjection', () => {
           }
         ],
         unresolvedExpressionTypes: [],
-        mappedTypes: ['LEADERSHIP'],
+        mappedTypes: ['LEADERSHIP_EXPRESSION'],
         missingInputs: [],
         d10Status: 'QUALIFIED'
       });
@@ -804,8 +874,8 @@ describe('careerIntelligenceProjection', () => {
       const analysis: CareerProfessionAnalysis = {
         status: 'PARTIAL',
         candidates: [],
-        unresolvedExpressionTypes: ['LEADERSHIP' as CareerExpressionType],
-        mappedTypes: ['LEADERSHIP' as CareerExpressionType, 'MANAGEMENT' as CareerExpressionType],
+        unresolvedExpressionTypes: ['LEADERSHIP_EXPRESSION' as CareerExpressionType],
+        mappedTypes: ['LEADERSHIP_EXPRESSION' as CareerExpressionType, 'TEACHING_EXPRESSION' as CareerExpressionType],
         missingInputs: ['INPUT_1', 'INPUT_2'],
         provenance: {
           expressionIds: [],
@@ -820,8 +890,8 @@ describe('careerIntelligenceProjection', () => {
       const result = projectCareerProfessionAnalysis(analysis);
 
       expect(result.status).toBe('PARTIAL');
-      expect(result.unresolvedExpressionTypes).toEqual(['LEADERSHIP']);
-      expect(result.mappedTypes).toEqual(['LEADERSHIP', 'MANAGEMENT']);
+      expect(result.unresolvedExpressionTypes).toEqual(['LEADERSHIP_EXPRESSION']);
+      expect(result.mappedTypes).toEqual(['LEADERSHIP_EXPRESSION', 'TEACHING_EXPRESSION']);
       expect(result.missingInputs).toEqual(['INPUT_1', 'INPUT_2']);
       expect(result.d10Status).toBe('NOT_PROVIDED'); // No candidates
     });
@@ -850,8 +920,8 @@ describe('careerIntelligenceProjection', () => {
     });
 
     it('should isolate arrays at projection boundary for profession candidate', () => {
-      const mutableExpressionTypes = ['LEADERSHIP' as CareerExpressionType];
-      const mutableMechanismTypes = ['AUTHORITY'];
+      const mutableExpressionTypes = ['LEADERSHIP_EXPRESSION' as CareerExpressionType];
+      const mutableMechanismTypes = ['AUTHORITY' as const];
       const mutablePatternIds = ['pattern1'];
       const mutableDomainEvidenceIds = ['domain1'];
       const mutableRelatedEvidenceIds = ['related1'];
@@ -891,14 +961,14 @@ describe('careerIntelligenceProjection', () => {
       const projectedCandidate = result.candidates[0];
 
       // Mutate source arrays after projection
-      mutableExpressionTypes.push('MANAGEMENT');
-      mutableMechanismTypes.push('TEAMWORK');
+      mutableExpressionTypes.push('LEADERSHIP_EXPRESSION');
+      mutableMechanismTypes.push('AUTHORITY');
       mutablePatternIds.push('pattern2');
       mutableDomainEvidenceIds.push('domain2');
       mutableRelatedEvidenceIds.push('related2');
 
       // Projected DTO should be unchanged
-      expect(projectedCandidate.expressionTypes).toEqual(['LEADERSHIP']);
+      expect(projectedCandidate.expressionTypes).toEqual(['LEADERSHIP_EXPRESSION']);
       expect(projectedCandidate.mechanismTypes).toEqual(['AUTHORITY']);
       expect(projectedCandidate.patternIds).toEqual(['pattern1']);
       expect(projectedCandidate.domainEvidenceIds).toEqual(['domain1']);
@@ -910,6 +980,58 @@ describe('careerIntelligenceProjection', () => {
       expect(Object.isFrozen(projectedCandidate.patternIds)).toBe(true);
       expect(Object.isFrozen(projectedCandidate.domainEvidenceIds)).toBe(true);
       expect(Object.isFrozen(projectedCandidate.relatedEvidenceIds)).toBe(true);
+
+      // Candidate object should be frozen
+      expect(Object.isFrozen(projectedCandidate)).toBe(true);
+    });
+
+    it('should freeze the candidates array in profession analysis projection', () => {
+      const evidence: CareerProfessionEvidence = {
+        evidenceId: 'ev1',
+        basis: 'EXPRESSION' as CareerProfessionBasis,
+        sourceIds: ['src1'],
+        ruleId: 'rule1',
+        statement: 'Test evidence'
+      };
+
+      const candidate: CareerProfessionCandidate = {
+        candidateId: 'c1',
+        domain: 'LEADERSHIP' as CareerProfessionDomain,
+        family: 'EXECUTIVE_MANAGEMENT' as CareerProfessionFamily,
+        basis: 'EXPRESSION' as CareerProfessionBasis,
+        expressionTypes: [],
+        mechanismTypes: [],
+        patternIds: [],
+        d10Status: 'QUALIFIED' as CareerProfessionD10Status,
+        evidence: [evidence],
+        domainEvidenceIds: [],
+        relatedEvidenceIds: [],
+        ruleId: 'rule1'
+      };
+
+      const analysis: CareerProfessionAnalysis = {
+        status: 'COMPLETE',
+        candidates: [candidate],
+        unresolvedExpressionTypes: [],
+        mappedTypes: [],
+        missingInputs: [],
+        provenance: {
+          expressionIds: [],
+          mechanismIds: [],
+          patternIds: [],
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        }
+      };
+
+      const result = projectCareerProfessionAnalysis(analysis);
+
+      // Candidates array should be frozen
+      expect(Object.isFrozen(result.candidates)).toBe(true);
+
+      // Evidence array within candidate should be frozen
+      expect(Object.isFrozen(result.candidates[0].evidence)).toBe(true);
     });
 
     it('should isolate arrays at projection boundary for profession evidence', () => {
@@ -976,6 +1098,9 @@ describe('careerIntelligenceProjection', () => {
       expect(Object.isFrozen(projectedEvidence.sourceIds)).toBe(true);
       expect(Object.isFrozen(projectedEvidence.resolvedMechanismIds)).toBe(true);
       expect(Object.isFrozen(projectedEvidence.unresolvedMechanismIds)).toBe(true);
+
+      // Evidence object should be frozen
+      expect(Object.isFrozen(projectedEvidence)).toBe(true);
     });
 
     it('should isolate arrays at projection boundary for canonical C11', () => {
@@ -1056,11 +1181,18 @@ describe('careerIntelligenceProjection', () => {
       expect(Object.isFrozen(result?.canonicalEvidenceTrace.evidenceIds)).toBe(true);
       expect(Object.isFrozen(result?.canonicalEvidenceTrace.sourceIds)).toBe(true);
       expect(Object.isFrozen(result?.canonicalEvidenceTrace.ruleIds)).toBe(true);
+
+      // Mapped expressions and conflicts arrays should be frozen
+      expect(Object.isFrozen(result?.expressions)).toBe(true);
+      expect(Object.isFrozen(result?.conflicts)).toBe(true);
+
+      // Returned DTO object should be frozen
+      expect(Object.isFrozen(result)).toBe(true);
     });
 
     it('should isolate arrays at projection boundary for analysis-level fields', () => {
-      const mutableUnresolvedExpressionTypes = ['LEADERSHIP' as CareerExpressionType];
-      const mutableMappedTypes = ['MANAGEMENT' as CareerExpressionType];
+      const mutableUnresolvedExpressionTypes = ['LEADERSHIP_EXPRESSION' as CareerExpressionType];
+      const mutableMappedTypes = ['LEADERSHIP_EXPRESSION' as CareerExpressionType, 'TEACHING_EXPRESSION' as CareerExpressionType];
       const mutableMissingInputs = ['INPUT_1'];
 
       const analysis: CareerProfessionAnalysis = {
@@ -1082,19 +1214,22 @@ describe('careerIntelligenceProjection', () => {
       const result = projectCareerProfessionAnalysis(analysis);
 
       // Mutate source arrays after projection
-      mutableUnresolvedExpressionTypes.push('TEACHING');
-      mutableMappedTypes.push('RESEARCH');
+      mutableUnresolvedExpressionTypes.push('TEACHING_EXPRESSION');
+      mutableMappedTypes.push('LEADERSHIP_EXPRESSION');
       mutableMissingInputs.push('INPUT_2');
 
       // Projected DTO should be unchanged
-      expect(result.unresolvedExpressionTypes).toEqual(['LEADERSHIP']);
-      expect(result.mappedTypes).toEqual(['MANAGEMENT']);
+      expect(result.unresolvedExpressionTypes).toEqual(['LEADERSHIP_EXPRESSION']);
+      expect(result.mappedTypes).toEqual(['LEADERSHIP_EXPRESSION', 'TEACHING_EXPRESSION']);
       expect(result.missingInputs).toEqual(['INPUT_1']);
 
       // Arrays should be frozen
       expect(Object.isFrozen(result.unresolvedExpressionTypes)).toBe(true);
       expect(Object.isFrozen(result.mappedTypes)).toBe(true);
       expect(Object.isFrozen(result.missingInputs)).toBe(true);
+
+      // Returned DTO object should be frozen
+      expect(Object.isFrozen(result)).toBe(true);
     });
   });
 });

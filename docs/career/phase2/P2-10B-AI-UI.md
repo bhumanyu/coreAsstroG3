@@ -136,6 +136,20 @@ These inputs are not currently exposed in `DomainInterpretation.conclusionData`.
 
 ## Hardening Changes (Follow-up to commit 16ec3526)
 
+### Per-Candidate Identity Reporting in Career Conclusion
+
+**File:** `src/ai/providers/local/localVedicRulesEngine.ts`
+
+**Changes:**
+- `buildConclusion()` CAREER_ANALYSIS branch now includes per-candidate identities when profession analysis is available
+- Keeps the existing aggregate summary line (status + candidate count + aggregate `d10Status`)
+- Appends each candidate's own identity: for every candidate in `prof.candidates`, emits its `domain`, `family`, and its own `d10Status` — formatted as `LEADERSHIP / EXECUTIVE_MANAGEMENT — D10 QUALIFIED`
+- Candidates are joined deterministically (candidates are already canonically sorted upstream)
+- No selection logic added; only reports what the projected DTO already contains
+
+**Test coverage:**
+- Test `should report profession analysis when available` updated to assert the conclusion contains the candidate's `domain`, `family`, and per-candidate `d10Status`
+
 ### Canonical-First Career Conclusion
 
 **File:** `src/ai/providers/local/localVedicRulesEngine.ts`
@@ -175,11 +189,14 @@ These inputs are not currently exposed in `DomainInterpretation.conclusionData`.
   - Each `expressions` element has string `mode`/`direction`/`strength`
   - Each `conflicts` element has `source`, `direction`, `severity`, `statement`
   - `evidenceTrace` is a non-null object with array `evidenceIds`/`sourceIds`/`ruleIds`
+- **New:** After existing `Array.isArray` checks, also validates that every element of `strongestExpressions`, `challengedExpressions`, `evidenceIds`, `sourceIds`, `ruleIds`, and `evidenceTrace.evidenceIds`/`sourceIds`/`ruleIds` is a `string`
+- Returns `false` on any non-string element
 
 **Test coverage:**
 - Tests for malformed nested values (e.g., `expressions: [null]`, conflict missing `source`)
 - Tests for null/missing `evidenceTrace`
 - Tests for malformed `evidenceTrace` (missing required arrays)
+- **New:** Regression tests for non-string element in `strongestExpressions` and in `evidenceTrace.evidenceIds`
 
 ### Array Isolation at Projection Boundary
 
@@ -187,15 +204,25 @@ These inputs are not currently exposed in `DomainInterpretation.conclusionData`.
 
 **Changes:**
 - Every passed-through array is cloned with a frozen copy (`Object.freeze([...arr])`)
+- **New:** Mapped arrays (`expressions`, `conflicts`) are also frozen with `Object.freeze([...])`
+- **New:** Returned DTO objects are frozen with `Object.freeze` for consistency with how the C11 producer freezes its `expressions`/`conflicts` in `careerFinalSynthesis.ts`
 - Applied in:
-  - `projectProfessionCandidate`: `expressionTypes`, `mechanismTypes`, `patternIds`, `domainEvidenceIds`, `relatedEvidenceIds`
-  - `projectProfessionEvidence`: `sourceIds`, `resolvedMechanismIds`, `unresolvedMechanismIds`
-  - `projectCanonicalCareerC11`: `strongestExpressions`, `challengedExpressions`, `canonicalEvidenceIds`, `canonicalSourceIds`, `canonicalRuleIds`, `canonicalEvidenceTrace.*`
-  - `projectCareerProfessionAnalysis`: `unresolvedExpressionTypes`, `mappedTypes`, `missingInputs`
+  - `projectProfessionCandidate`: `expressionTypes`, `mechanismTypes`, `patternIds`, `domainEvidenceIds`, `relatedEvidenceIds`, `evidence` array, and the returned candidate object
+  - `projectProfessionEvidence`: `sourceIds`, `resolvedMechanismIds`, `unresolvedMechanismIds`, and the returned evidence object
+  - `projectCanonicalCareerC11`: `expressions`, `conflicts`, `strongestExpressions`, `challengedExpressions`, `canonicalEvidenceIds`, `canonicalSourceIds`, `canonicalRuleIds`, `canonicalEvidenceTrace.*`, and the returned DTO object
+  - `projectCareerProfessionAnalysis`: `candidates`, `unresolvedExpressionTypes`, `mappedTypes`, `missingInputs`, and the returned DTO object
+
+**Immutability guarantee:**
+- All returned DTO objects are frozen
+- All array properties (including mapped arrays) are frozen
+- Primitive-array isolation is enforced through freezing
 
 **Test coverage:**
 - Tests mutate source arrays after projection and assert projected DTO is unchanged
 - Tests verify arrays are frozen with `Object.isFrozen()`
+- **New:** Tests verify returned DTO objects are frozen with `Object.isFrozen()`
+- **New:** Tests verify mapped `expressions` and `conflicts` arrays are frozen
+- **New:** Tests verify `candidates` array and nested `evidence` arrays are frozen
 
 ## Boundary Contracts
 
@@ -252,12 +279,21 @@ These inputs are not currently exposed in `DomainInterpretation.conclusionData`.
 - ✓ Malformed conflicts element (missing source) → false
 - ✓ Null or missing evidenceTrace → false
 - ✓ Malformed evidenceTrace (missing evidenceIds array) → false
+- ✓ Non-string element in strongestExpressions → false
+- ✓ Non-string element in evidenceTrace.evidenceIds → false
 
 ### Array Isolation
 - ✓ Profession candidate arrays frozen and isolated from source mutations
+- ✓ Profession candidate object frozen
 - ✓ Profession evidence arrays frozen and isolated from source mutations
+- ✓ Profession evidence object frozen
 - ✓ Canonical C11 arrays frozen and isolated from source mutations
+- ✓ Canonical C11 mapped expressions and conflicts arrays frozen
+- ✓ Canonical C11 DTO object frozen
 - ✓ Analysis-level arrays frozen and isolated from source mutations
+- ✓ Analysis DTO object frozen
+- ✓ Candidates array frozen
+- ✓ Evidence array within candidate frozen
 
 ## Schema Version
 
