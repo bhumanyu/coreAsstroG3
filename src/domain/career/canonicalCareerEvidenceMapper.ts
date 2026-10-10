@@ -132,6 +132,116 @@ export function validateC11References(
 }
 
 /**
+ * Exposed deduplication function for testing the no-identityKey path.
+ *
+ * This allows tests to directly unit-test the dedup helper's behavior with records
+ * that have identityKey: undefined, which cannot be produced by current canonical producers (C4-C10).
+ *
+ * Deduplicates evidence by identityKey with deterministic merge behavior:
+ * - Merges occurrence sourceIds without loss
+ * - Does NOT inflate weight/priority (max single-occurrence, not sum)
+ * - Consistent with C4 MIXED contract (W0.2)
+ * - MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are NOT merged
+ * - Records without identityKey are emitted as separate items (non-deduplicable)
+ * - Mergeable metadata fields (evidenceFamily, dimension) use lexicographically-smallest selection
+ *   to ensure input order does not affect merged output
+ */
+export function deduplicateCanonicalEvidence(
+  evidence: readonly DomainEvidence[]
+): DomainEvidence[] {
+  const byIdentityKey = new Map<string, DomainEvidence[]>();
+  const noIdentityKey: DomainEvidence[] = [];
+
+  // Separate records with and without identityKey
+  for (const e of evidence) {
+    if (e.identityKey === undefined) {
+      // Records without identityKey are non-deduplicable - emit each as separate
+      noIdentityKey.push(e);
+    } else {
+      // Group by identityKey for semantic dedup
+      const existing = byIdentityKey.get(e.identityKey) ?? [];
+      byIdentityKey.set(e.identityKey, [...existing, e]);
+    }
+  }
+
+  const result: DomainEvidence[] = [];
+
+  // Emit non-deduplicable records (no identityKey) as-is
+  noIdentityKey.forEach(e => result.push(e));
+
+  // Merge each identityKey group
+  for (const [identityKey, group] of byIdentityKey.entries()) {
+    if (group.length === 1) {
+      result.push(group[0]);
+      continue;
+    }
+
+    // Check if this is a MIXED split (SUPPORTING + CHALLENGING with same identityKey)
+    const polarities = new Set(group.map(e => e.polarity));
+    const isMixedSplit = polarities.has('SUPPORTING') && polarities.has('CHALLENGING');
+
+    // Validate non-polarity field agreement for ALL multi-item groups (including MIXED)
+    // This ensures MIXED groups only differ in polarity, not in other semantic fields
+    assertNonPolarityFieldsAgree(group, identityKey);
+
+    // If MIXED split, keep both occurrences separate (don't merge)
+    if (isMixedSplit) {
+      group.forEach(e => result.push(e));
+      continue;
+    }
+
+    // Merge other duplicates (same polarity)
+    const first = group[0];
+
+    // Assert polarity agreement (should not differ after MIXED check)
+    for (const e of group) {
+      if (e.polarity !== first.polarity) {
+        throw new Error(
+          `Semantic field disagreement in dedup: polarity differs for identityKey "${identityKey}" (${e.polarity} vs ${first.polarity})`
+        );
+      }
+    }
+
+    const allSourceIds = group.flatMap(e => e.relatedEvidenceIds);
+    const maxPriority = Math.max(...group.map(e => e.priority));
+
+    // Deterministic selection for mergeable metadata fields
+    // Use lexicographically-smallest value to ensure order-independence
+    const allEvidenceFamilies = group.map(e => e.evidenceFamily).filter((f): f is string => f !== undefined);
+    const allDimensions = group.map(e => e.dimension).filter((d): d is 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION' => d !== undefined);
+    const evidenceFamily = allEvidenceFamilies.length > 0 ? allEvidenceFamilies.sort()[0] : undefined;
+    const dimension = allDimensions.length > 0 ? allDimensions.sort()[0] : undefined;
+
+    const mergedEvidence = createDomainEvidence({
+      id: first.id,
+      sourceType: first.sourceType,
+      domain: first.domain,
+      role: first.role,
+      phase: first.phase,
+      source: first.source,
+      statement: first.statement,
+      polarity: first.polarity,
+      strength: first.strength,
+      priority: maxPriority,
+      ruleId: first.ruleId,
+      relatedEvidenceIds: Array.from(new Set(allSourceIds)).sort(),
+      notes: `Merged ${group.length} occurrences with identityKey: ${identityKey}`,
+      provenance: first.provenance,
+      timing: first.timing,
+      evidenceFamily,
+      dimension,
+      planet: first.planet,
+      house: first.house,
+      identityKey
+    });
+
+    result.push(mergedEvidence);
+  }
+
+  return result;
+}
+
+/**
  * Maps natal evidence (C4–C7) to DomainEvidence.
  *
  * Phase: NATAL_PROMISE
@@ -622,14 +732,16 @@ function mapD10Evidence(
  *
  * Fields checked:
  * - Semantically significant (must agree): statement, ruleId, sourceType, domain, timing, phase, source, role, provenance, planet, house, strength
- * - Mergeable under documented rules: evidenceFamily, dimension (currently retained but not validated for agreement)
+ * - Mergeable under documented rules (deterministic selection): evidenceFamily, dimension
+ *   - Selection rule: lexicographically-smallest value among all occurrences
+ *   - If all occurrences have undefined, result is undefined
+ *   - This ensures input order does not affect merged output
  * - Identity-irrelevant: id, relatedEvidenceIds, priority, notes (allowed to differ)
  *
  * Rationale for field classification:
  * - planet and house: Part of semantic identity upstream per CW-R1, so disagreement is a semantic conflict
- * - evidenceFamily and dimension: Currently retained in merged output but not validated for agreement.
- *   These are metadata fields that may legitimately differ across occurrences of the same semantic fact.
- *   They are merged by taking the value from group[0] (acceptable after semantic fields are validated).
+ * - evidenceFamily and dimension: Metadata fields that may legitimately differ across occurrences of the same semantic fact.
+ *   Merged using deterministic lexicographic selection to ensure order-independence.
  *
  * @param group - The evidence group to validate
  * @param identityKey - The identity key for error messages
@@ -742,116 +854,7 @@ function assertNonPolarityFieldsAgree(
   }
 }
 
-/**
- * Deduplicates evidence by identityKey.
- *
- * Merges occurrence sourceIds without loss.
- * Does NOT inflate weight/priority (max single-occurrence, not sum).
- * Consistent with C4 MIXED contract (W0.2).
- *
- * Note: MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are NOT merged here.
- * They are kept separate for downstream canonical dedup to handle the MIXED merge correctly.
- *
- * Missing-identity policy: Records without an identityKey are routed entirely outside semantic dedup.
- * Each such record is emitted as a separate item and never merged (even if ids match).
- * This is the safe default since no current canonical producer (C4-C10) emits evidence without identityKey.
- *
- * Semantic field safety: For all same-identity groups (including MIXED), all merge-relevant semantic fields must agree.
- * Field classification:
- * - Semantically significant (validated for agreement): statement, ruleId, sourceType, domain, timing, phase, source, role, provenance, planet, house, strength
- * - Mergeable under documented rules (not validated, taken from group[0]): evidenceFamily, dimension
- * - Identity-irrelevant (allowed to differ): id, relatedEvidenceIds, priority, notes
- *
- * If any non-polarity field disagrees, an error is thrown.
- * This prevents silent merging of semantically incompatible evidence.
- */
-function deduplicateCanonicalEvidence(
-  evidence: readonly DomainEvidence[]
-): DomainEvidence[] {
-  const byIdentityKey = new Map<string, DomainEvidence[]>();
-  const noIdentityKey: DomainEvidence[] = [];
 
-  // Separate records with and without identityKey
-  for (const e of evidence) {
-    if (e.identityKey === undefined) {
-      // Records without identityKey are non-deduplicable - emit each as separate
-      noIdentityKey.push(e);
-    } else {
-      // Group by identityKey for semantic dedup
-      const existing = byIdentityKey.get(e.identityKey) ?? [];
-      byIdentityKey.set(e.identityKey, [...existing, e]);
-    }
-  }
-
-  const result: DomainEvidence[] = [];
-
-  // Emit non-deduplicable records (no identityKey) as-is
-  noIdentityKey.forEach(e => result.push(e));
-
-  // Merge each identityKey group
-  for (const [identityKey, group] of byIdentityKey.entries()) {
-    if (group.length === 1) {
-      result.push(group[0]);
-      continue;
-    }
-
-    // Check if this is a MIXED split (SUPPORTING + CHALLENGING with same identityKey)
-    const polarities = new Set(group.map(e => e.polarity));
-    const isMixedSplit = polarities.has('SUPPORTING') && polarities.has('CHALLENGING');
-
-    // Validate non-polarity field agreement for ALL multi-item groups (including MIXED)
-    // This ensures MIXED groups only differ in polarity, not in other semantic fields
-    assertNonPolarityFieldsAgree(group, identityKey);
-
-    // If MIXED split, keep both occurrences separate (don't merge)
-    if (isMixedSplit) {
-      group.forEach(e => result.push(e));
-      continue;
-    }
-
-    // Merge other duplicates (same polarity)
-    const first = group[0];
-
-    // Assert polarity agreement (should not differ after MIXED check)
-    for (const e of group) {
-      if (e.polarity !== first.polarity) {
-        throw new Error(
-          `Semantic field disagreement in dedup: polarity differs for identityKey "${identityKey}" (${e.polarity} vs ${first.polarity})`
-        );
-      }
-    }
-
-    const allSourceIds = group.flatMap(e => e.relatedEvidenceIds);
-    const maxPriority = Math.max(...group.map(e => e.priority));
-
-    const mergedEvidence = createDomainEvidence({
-      id: first.id,
-      sourceType: first.sourceType,
-      domain: first.domain,
-      role: first.role,
-      phase: first.phase,
-      source: first.source,
-      statement: first.statement,
-      polarity: first.polarity,
-      strength: first.strength,
-      priority: maxPriority,
-      ruleId: first.ruleId,
-      relatedEvidenceIds: Array.from(new Set(allSourceIds)).sort(),
-      notes: `Merged ${group.length} occurrences with identityKey: ${identityKey}`,
-      provenance: first.provenance,
-      timing: first.timing,
-      evidenceFamily: first.evidenceFamily,
-      dimension: first.dimension,
-      planet: first.planet,
-      house: first.house,
-      identityKey
-    });
-
-    result.push(mergedEvidence);
-  }
-
-  return result;
-}
 
 /**
  * Sorts evidence deterministically.

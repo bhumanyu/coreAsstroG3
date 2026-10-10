@@ -1,8 +1,13 @@
 import {
   mapCanonicalCareerEvidence,
   validateC11References,
+  deduplicateCanonicalEvidence,
   type CanonicalCareerEvidenceInput
 } from './canonicalCareerEvidenceMapper';
+
+import {
+  createDomainEvidence
+} from '../interpretation/DomainEvidence';
 
 import type {
   CareerNatalAnalysis
@@ -2029,77 +2034,50 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
   describe('Missing Identity Key Policy', () => {
     it('records without identityKey are emitted as separate non-deduplicable items', () => {
-      // Since all canonical producers (C4-C10) emit identityKey, we test the policy indirectly
-      // by verifying that records with identityKey dedup correctly
-      const mockStructural: CareerStructuralReasoning = {
-        direction: 'SUPPORT',
+      // Direct unit test of the dedup helper's no-identityKey branch
+      // Construct two DomainEvidence records with identityKey: undefined
+      // Make them otherwise merge-compatible (same statement, ruleId, etc.)
+      // Use distinct ids since identityKey is absent
+      const evidence1 = createDomainEvidence({
+        id: 'no-identity-1',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Evidence without identityKey',
+        polarity: 'SUPPORTING',
         strength: 'STRONG',
-        primarySupport: 10,
-        primaryChallenge: 2,
-        supportingSupport: 5,
-        supportingChallenge: 1,
-        challengingSupport: 1,
-        challengingChallenge: 3,
-        mixedWeight: 0,
-        evidence: [],
-        primaryEvidenceIds: [],
-        supportingEvidenceIds: [],
-        challengingEvidenceIds: [],
-        conflicts: [],
-        statement: 'Test structural'
-      };
+        priority: 1,
+        ruleId: 'RULE_NO_IDENTITY',
+        relatedEvidenceIds: ['src-1'],
+        // identityKey is intentionally undefined
+      });
 
-      const mockEvidence: WeightedReasoningEvidence[] = [
-        {
-          identityKey: 'test-identity-1',
-          evidenceId: 'test-1',
-          ruleId: 'RULE_TEST',
-          layer: 'PRIMARY_PROMISE',
-          direction: 'SUPPORT' as ReasoningDirection,
-          strength: 'STRONG',
-          priority: 1,
-          weight: 2,
-          statement: 'Test evidence',
-          relatedEvidenceIds: [],
-          sourceIds: ['src-1']
-        }
-      ];
+      const evidence2 = createDomainEvidence({
+        id: 'no-identity-2',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Evidence without identityKey',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        ruleId: 'RULE_NO_IDENTITY',
+        relatedEvidenceIds: ['src-2'],
+        // identityKey is intentionally undefined
+      });
 
-      const mockReasoningTrace: ReasoningTrace = {
-        primaryPromise: mockEvidence,
-        secondarySupport: [],
-        modifiers: [],
-        yogas: [],
-        varga: [],
-        dasha: [],
-        transit: []
-      };
+      const result = deduplicateCanonicalEvidence([evidence1, evidence2]);
 
-      const natal: CareerNatalAnalysis = {
-        structural: mockStructural,
-        relevance: [],
-        condition: [],
-        lordRelationships: [],
-        direction: 'SUPPORT' as ReasoningDirection,
-        strength: 'STRONG' as DomainStrength,
-        evidence: mockEvidence,
-        conflicts: [],
-        reasoningTrace: mockReasoningTrace
-      };
-
-      const input: CanonicalCareerEvidenceInput = {
-        natal,
-        expression: createEmptyExpressionAnalysis(),
-        dasha: createEmptyDashaAnalysis(),
-        d10: createEmptyD10Analysis(),
-        finalSynthesis: createEmptyFinalSynthesis()
-      };
-
-      const result = mapCanonicalCareerEvidence(input);
-
-      // Should have one record from natal evidence (with identityKey)
-      expect(result).toHaveLength(1);
-      expect(result[0].identityKey).toBe('test-identity-1');
+      // Both should survive as separate output items (not merged)
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('no-identity-1');
+      expect(result[1].id).toBe('no-identity-2');
+      expect(result[0].identityKey).toBeUndefined();
+      expect(result[1].identityKey).toBeUndefined();
     });
 
     it('records with unique identityKeys are preserved as separate items', () => {
