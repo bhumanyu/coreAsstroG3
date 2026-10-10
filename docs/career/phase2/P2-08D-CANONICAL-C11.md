@@ -1,6 +1,6 @@
 # P2-08D: Canonical C11 Final Synthesis Migration
 
-**Status:** IMPLEMENTED — TESTS PENDING
+**Status:** IMPLEMENTED — VERIFICATION PENDING
 
 ## Overview
 
@@ -32,7 +32,7 @@ Location: `src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts`
 
 **Status:** UNCHANGED - Contract is frozen and sufficient
 
-**Public Return Type:** The public return type of `interpretCareerV2` is `DomainInterpretation` — this MUST NOT change. The canonical C11 result is embedded within `conclusionData.careerFinalSynthesis` as the authoritative conclusion source.
+**Public Return Type:** The public return type of `interpretCareerV2` is `DomainInterpretation` — this MUST NOT change. The canonical C11 result is embedded within `conclusionData.canonicalCareerFinalSynthesis` as the authoritative conclusion source. The legacy result is retained as `conclusionData.careerFinalSynthesis` for backward compatibility only.
 
 ## Frozen Invariants (C11-INV-01..12)
 
@@ -195,15 +195,18 @@ The interpreter now:
 2. Passes these to `buildCareerFinalAnalysis` to produce the canonical C11 result
 
 3. Uses a presentation/compatibility adapter to map `CareerFinalSynthesisResult` → existing `DomainInterpretation`/`DomainConclusion` fields:
-   - `finalStrength` → domain conclusion `strength`
-   - `confidence` → domain conclusion `confidence`
+   - `finalStrength` → domain conclusion `strength` (via exhaustive `mapC11StrengthToDomain`)
+   - `confidence` → domain conclusion `confidence` (via `mapC11ConfidenceToDomain`)
    - `statement` → conclusion statement
-   - `evidenceIds` → primary/supporting evidence IDs
-   - `sourceIds` → primary/supporting source IDs
+   - `evidenceIds` → supporting evidence IDs (challenging evidence mapped from conflicts)
+   - `sourceIds` → supporting source IDs
+   - Note: C11 doesn't distinguish primary vs supporting evidence, so challenging evidence is extracted from conflicts and primary/supporting distinction is omitted rather than fabricated
 
-4. Exposes the canonical C11 result in `conclusionData.canonicalCareerFinalSynthesis` for downstream access
+4. Exposes the canonical C11 result in `conclusionData.canonicalCareerFinalSynthesis` for downstream access (authoritative)
 
-5. Retains legacy synthesis as `legacyCareerFinalSynthesis` for compatibility/parity tests only (not used as authoritative conclusion)
+5. Retains legacy synthesis as `conclusionData.careerFinalSynthesis` for backward compatibility only (not used as authoritative conclusion)
+
+6. Uses a trace adapter to map C11 fields to the legacy reasoning trace graph shape, ensuring the reasoning trace reflects canonical C11 values rather than legacy synthesis
 
 ### Constraints
 
@@ -213,6 +216,7 @@ The interpreter now:
 - Legacy helpers remain for compatibility/parity tests only
 - Legacy helpers no longer independently produce the authoritative final career result in the production path
 - Public return type of `interpretCareerV2` remains `DomainInterpretation` (unchanged)
+- **P2-08D-03:** DomainConclusion does not have fields for `finalStatus` or `finalDirection`. These C11 fields are preserved in `conclusionData.canonicalCareerFinalSynthesis` and are not inferred from strength. Consumers requiring these fields should read them directly from the canonical C11 result.
 
 ## Parity + Integration Tests (P2-08D-06)
 

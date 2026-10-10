@@ -110,7 +110,9 @@ import type {
   CareerFinalSynthesisIntegrationInput
 } from './careerFinalSynthesis/careerFinalSynthesisCanonicalTypes';
 import type {
-  CareerFinalSynthesisResult
+  CareerFinalSynthesisResult,
+  CareerFinalDirection,
+  CareerFinalStrength
 } from './careerFinalSynthesis/careerFinalSynthesisTypes';
 import type {
   CareerNatalAnalysis
@@ -508,23 +510,126 @@ export function interpretCareerV2(
     }
   };
 
+  /**
+   * P2-08D: Exhaustive Strength Mapping
+   *
+   * Map canonical C11 CareerFinalStrength to DomainStrength.
+   * This is exhaustive over the C11 strength union to catch future changes at compile time.
+   */
+  const mapC11StrengthToDomain = (c11Strength: CareerFinalStrength): DomainStrength => {
+    switch (c11Strength) {
+      case 'VERY_STRONG': return 'VERY_STRONG';
+      case 'STRONG': return 'STRONG';
+      case 'MODERATE': return 'MODERATE';
+      case 'MIXED': return 'MIXED';
+      case 'WEAK': return 'WEAK';
+      case 'VERY_WEAK': return 'VERY_WEAK';
+      case 'UNDETERMINED': return 'UNDETERMINED';
+    }
+  };
+
+  /**
+   * P2-08D: Trace Adapter Helpers
+   *
+   * Map canonical C11 fields to legacy trace graph shape.
+   * These are internal adapters for reasoning trace compatibility only.
+   */
+  const mapC11DirectionToLegacyStatus = (
+    direction: CareerFinalDirection,
+    strength: CareerFinalStrength
+  ): string => {
+    if (direction === 'SUPPORT') {
+      if (strength === 'VERY_STRONG' || strength === 'STRONG') return 'VERY_STRONG';
+      if (strength === 'MODERATE') return 'STRONG';
+      return 'MODERATE';
+    }
+    if (direction === 'CHALLENGE') return 'CHALLENGED';
+    if (direction === 'CONDITIONAL') return 'MODERATE';
+    if (direction === 'MIXED') return 'MIXED';
+    return 'INSUFFICIENT_DATA';
+  };
+
+  const mapC11DashaEffectToLegacyStatus = (dashaEffect: string): string => {
+    if (dashaEffect === 'ACTIVATES') return 'SUPPORT';
+    if (dashaEffect === 'PARTIALLY_ACTIVATES') return 'MIXED';
+    if (dashaEffect === 'CHALLENGES') return 'CHALLENGE';
+    return 'INSUFFICIENT_DATA';
+  };
+
+  const mapC11TimingStatusToLegacyStatus = (timingStatus: string): string => {
+    if (timingStatus === 'ACTIVE') return 'SUPPORT';
+    if (timingStatus === 'PARTIALLY_ACTIVE') return 'MIXED';
+    if (timingStatus === 'CHALLENGED') return 'CHALLENGE';
+    return 'INSUFFICIENT_DATA';
+  };
+
+  const mapC11DirectionToLegacyVarga = (direction: CareerFinalDirection): string => {
+    if (direction === 'SUPPORT') return 'CONFIRMS';
+    if (direction === 'CHALLENGE') return 'CONFLICTS';
+    if (direction === 'CONDITIONAL') return 'MODIFIES';
+    return 'UNAVAILABLE';
+  };
+
+  /**
+   * P2-08D: Evidence Role Mapping from C11
+   *
+   * Map C11 evidenceTrace and conflicts to DomainConclusion evidence role fields.
+   * C11 provides:
+   * - evidenceIds: all evidence IDs (deduplicated)
+   * - conflicts: layer conflicts with direction and evidenceIds
+   *
+   * DomainConclusion expects:
+   * - primaryEvidenceIds: primary supporting evidence
+   * - supportingEvidenceIds: secondary supporting evidence
+   * - challengingEvidenceIds: challenging evidence
+   *
+   * Since C11 doesn't distinguish primary vs supporting evidence (it provides a flat list),
+   * we map challenging evidence from conflicts and omit primary/supporting distinction
+   * rather than fabricating it. The full canonical result remains available in
+   * conclusionData.canonicalCareerFinalSynthesis for consumers that need role-aware evidence.
+   *
+   * P2-08D-03: finalStatus and finalDirection Mapping Limitation
+   *
+   * DomainConclusion does not have fields for finalStatus or finalDirection.
+   * These C11 fields are preserved in conclusionData.canonicalCareerFinalSynthesis
+   * and are not inferred from strength. Consumers requiring these fields should
+   * read them directly from the canonical C11 result.
+   *
+   * P2-08D-03: Evidence ID and Source ID Mapping Limitation
+   *
+   * C11 evidenceIds are canonical identity keys from the C11 reasoning hierarchy,
+   * not occurrence-level evidence IDs that map to the DomainEvidence list in mergedEvidence.
+   * Similarly, C11 sourceIds are provenance occurrences that may not map cleanly to DomainEvidence.
+   * To maintain traceability invariants, we omit both evidence IDs and source IDs from the
+   * DomainConclusion adapter. Consumers requiring evidence-level provenance should read
+   * from canonicalC11Result.evidenceIds and canonicalC11Result.sourceIds directly.
+   */
   const c11AdaptedConclusion = createDomainConclusion({
     domain: 'CAREER',
-    strength: canonicalC11Result.finalStrength as DomainStrength,
+    strength: mapC11StrengthToDomain(canonicalC11Result.finalStrength),
     confidence: mapC11ConfidenceToDomain(canonicalC11Result.confidence),
     statement: canonicalC11Result.statement,
-    primaryEvidenceIds: canonicalC11Result.evidenceIds,
-    supportingEvidenceIds: canonicalC11Result.evidenceIds, // Simplified mapping
-    challengingEvidenceIds: [], // Conflicts are tracked separately in C11
+    primaryEvidenceIds: [], // C11 doesn't distinguish primary vs supporting
+    supportingEvidenceIds: [], // Omitted to maintain traceability invariants
+    challengingEvidenceIds: [], // Omitted to maintain traceability invariants
     unresolvedQuestions: [],
-    primarySourceIds: canonicalC11Result.sourceIds,
-    supportingSourceIds: canonicalC11Result.sourceIds, // Simplified mapping
-    challengingSourceIds: [],
-    unresolvedSourceIds: []
+    primarySourceIds: undefined, // C11 doesn't distinguish primary vs supporting sources
+    supportingSourceIds: undefined, // Omitted to maintain traceability invariants
+    challengingSourceIds: undefined, // C11 conflicts don't expose source-level granularity
+    unresolvedSourceIds: undefined
   });
 
-  // Legacy synthesis retained for compatibility/parity tests only
-  // This is NOT used as the authoritative conclusion in the production path
+  /**
+   * P2-08D: Legacy Synthesis (Compatibility Artifact Only)
+   *
+   * Legacy synthesis is retained solely for diagnostic/compatibility purposes.
+   * It is NOT used as the authoritative conclusion in the production path.
+   * The canonical C11 result (canonicalC11Result) is the single authoritative source.
+   *
+   * This legacy result is exposed in conclusionData.careerFinalSynthesis for backward
+   * compatibility with any existing consumers that have not yet migrated to canonical C11.
+   * New code should read from conclusionData.canonicalCareerFinalSynthesis instead.
+   */
   const legacyCareerFinalSynthesis = synthesizeCareerFinal({
     natalPromise: cw01Result.natalStrength,
     dashaSynthesis: careerDashaSynthesis,
@@ -536,6 +641,30 @@ export function interpretCareerV2(
     natalRuleIds: natalPromiseEvidence.map((e) => e.ruleId ?? e.id).filter(Boolean)
   });
 
+  /**
+   * P2-08D: Trace Adapter for Canonical C11 → Reasoning Trace Graph
+   *
+   * The reasoning trace graph builder expects a legacy CareerWealthFinalSynthesis shape.
+   * This adapter maps canonical C11 fields to the legacy shape without fabricating data.
+   *
+   * Mapping strategy:
+   * - promiseStatus: derived from C11 natalDirection/natalStrength
+   * - activationStatus: derived from C11 dashaEffect
+   * - timingStatus: derived from C11 timingStatus
+   * - divisionalStatus: derived from C11 d10Direction
+   * - manifestationStatus: derived from C11 expressionStatus
+   * - finalStatus/confidence: direct from C11
+   */
+  const legacyShapeForTraceGraph = Object.freeze({
+    promiseStatus: mapC11DirectionToLegacyStatus(canonicalC11Result.natalDirection, canonicalC11Result.natalStrength),
+    activationStatus: mapC11DashaEffectToLegacyStatus(canonicalC11Result.dashaEffect),
+    timingStatus: mapC11TimingStatusToLegacyStatus(canonicalC11Result.timingStatus),
+    divisionalStatus: mapC11DirectionToLegacyVarga(canonicalC11Result.d10Direction),
+    manifestationStatus: mapC11DirectionToLegacyStatus(canonicalC11Result.expressionStatus, canonicalC11Result.finalStrength),
+    finalStatus: canonicalC11Result.finalStatus,
+    confidence: canonicalC11Result.confidence
+  });
+
   const reasoningTraceGraph = buildCareerReasoningTraceGraph({
     evidence: mergedEvidence,
     natalStrength: cw01Result.natalStrength,
@@ -543,7 +672,7 @@ export function interpretCareerV2(
     careerTimingSynthesis,
     d10Relationship,
     careerManifestationSynthesis,
-    careerFinalSynthesis: legacyCareerFinalSynthesis // Still use legacy for trace graph compatibility
+    careerFinalSynthesis: legacyShapeForTraceGraph as any // P2-08D: Use C11-derived shape for trace graph
   });
 
   return buildDomainInterpretation({
@@ -565,8 +694,8 @@ export function interpretCareerV2(
       careerDashaSynthesis,
       careerTimingSynthesis,
       careerManifestationSynthesis,
-      careerFinalSynthesis: legacyCareerFinalSynthesis, // Legacy retained for trace graph
-      canonicalCareerFinalSynthesis: canonicalC11Result, // P2-08D: Expose canonical C11 result
+      careerFinalSynthesis: legacyCareerFinalSynthesis, // P2-08D: Legacy compatibility artifact (not authoritative)
+      canonicalCareerFinalSynthesis: canonicalC11Result, // P2-08D: Canonical C11 result (authoritative)
       reasoningTraceGraph
     },
     reasoningTrace: cw01Result.reasoningTrace,

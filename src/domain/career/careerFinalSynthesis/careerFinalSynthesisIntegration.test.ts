@@ -1004,7 +1004,7 @@ describe('C11 Final Career Synthesis Integration', () => {
       // Should use hierarchy's overall values, not reconstruct from individual periods
       expect(result.dashaEffect).toBe('ACTIVATES');
       expect(result.dashaDirection).toBe('SUPPORT');
-      expect(result.dashaStrength).toBe('STRONG');
+      // Note: C11 does not have a dashaStrength field - dashaDirection and dashaEffect are sufficient
     });
   });
 

@@ -80,7 +80,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
       expect(isD10DataAvailable(context)).toBe(false);
     });
@@ -93,7 +94,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [],
-        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }]
+        d10Planets: [{ planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }],
+        expressions: emptyExpressions
       };
       expect(isD10DataAvailable(context)).toBe(false);
     });
@@ -106,7 +108,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: true,
         d10Houses: [{ house: 10, role: 'PRIMARY', occupied: true, lord: Planet.SUN, lordCondition: 'STRONG', tenants: [], tenantConditions: [] }],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
       expect(isD10DataAvailable(context)).toBe(false);
     });
@@ -257,7 +260,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('UNAVAILABLE');
     });
@@ -278,7 +282,8 @@ describe('careerD10QualificationRules', () => {
           { planet: Planet.MOON, condition: 'WEAK', d10House: 8, natalHouse: 4, relatedHouses: [8] },
           { planet: Planet.MARS, condition: 'WEAK', d10House: 12, natalHouse: 1, relatedHouses: [12] },
           { planet: Planet.JUPITER, condition: 'WEAK', d10House: 5, natalHouse: 9, relatedHouses: [5] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
@@ -299,7 +304,8 @@ describe('careerD10QualificationRules', () => {
           { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] },
           { planet: Planet.MARS, condition: 'STRONG', d10House: 2, natalHouse: 1, relatedHouses: [2] },
           { planet: Planet.JUPITER, condition: 'STRONG', d10House: 5, natalHouse: 9, relatedHouses: [5] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('CHALLENGE');
     });
@@ -318,7 +324,8 @@ describe('careerD10QualificationRules', () => {
         d10Planets: [
           { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] },
           { planet: Planet.MOON, condition: 'STRONG', d10House: 6, natalHouse: 4, relatedHouses: [6] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
@@ -336,7 +343,8 @@ describe('careerD10QualificationRules', () => {
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('SUPPORT');
     });
@@ -355,7 +363,8 @@ describe('careerD10QualificationRules', () => {
         d10Planets: [
           { planet: Planet.SUN, condition: 'MODERATE', d10House: 10, natalHouse: 1, relatedHouses: [10] },
           { planet: Planet.JUPITER, condition: 'MODERATE', d10House: 5, natalHouse: 9, relatedHouses: [5] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('NEUTRAL');
     });
@@ -374,7 +383,8 @@ describe('careerD10QualificationRules', () => {
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
           { planet: Planet.MOON, condition: 'WEAK', d10House: 10, natalHouse: 4, relatedHouses: [10] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Direction(context)).toBe('MIXED');
     });
@@ -392,7 +402,8 @@ describe('careerD10QualificationRules', () => {
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
 
       // Context expressing the same fact once (only as lord, plus a different planet to satisfy d10Planets requirement)
@@ -407,7 +418,8 @@ describe('careerD10QualificationRules', () => {
         ],
         d10Planets: [
           { planet: Planet.MOON, condition: 'MODERATE', d10House: 6, natalHouse: 4, relatedHouses: [6] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
 
       const directionWithDuplicate = resolveD10Direction(contextWithDuplicate);
@@ -439,7 +451,8 @@ describe('careerD10QualificationRules', () => {
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] },
           { planet: Planet.MOON, condition: 'WEAK', d10House: 10, natalHouse: 4, relatedHouses: [10] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
 
       const direction = resolveD10Direction(context);
@@ -490,7 +503,8 @@ describe('careerD10QualificationRules', () => {
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       // Tenants are MODIFIER evidence, should not override PRIMARY support
       expect(resolveD10Direction(context)).toBe('SUPPORT');
@@ -508,7 +522,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
       expect(resolveD10Effect('SUPPORT', 'SUPPORT', context)).toBe('UNAVAILABLE');
     });
@@ -601,7 +616,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
       expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('UNDETERMINED');
     });
@@ -618,7 +634,8 @@ describe('careerD10QualificationRules', () => {
         ],
         d10Planets: [
           { planet: Planet.SUN, condition: 'STRONG', d10House: 10, natalHouse: 1, relatedHouses: [10] }
-        ]
+        ],
+        expressions: emptyExpressions
       };
       expect(resolveD10Strength('STRONG', 'SUPPORT', context)).toBe('VERY_STRONG');
     });
@@ -740,7 +757,8 @@ describe('careerD10QualificationRules', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
       const result = qualifyNatalCareerWithD10('SUPPORT', 'STRONG', 'UNAVAILABLE', 'UNDETERMINED', context);
       expect(result.qualifiedDirection).toBe('SUPPORT');
@@ -1112,7 +1130,8 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -1171,7 +1190,8 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
 
       const result = resolveCareerD10Qualification(context);
@@ -1369,7 +1389,8 @@ describe('resolveCareerD10Qualification', () => {
         natalPrimaryChallenge: 2,
         d10Available: false,
         d10Houses: [],
-        d10Planets: []
+        d10Planets: [],
+        expressions: emptyExpressions
       };
 
       const result = evaluateDimensionQualification('LEADERSHIP', context);
