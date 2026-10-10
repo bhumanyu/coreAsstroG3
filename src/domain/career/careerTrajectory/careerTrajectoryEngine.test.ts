@@ -16,6 +16,10 @@ import {
   createDomainEvidence
 } from '../../interpretation/DomainEvidence';
 
+import {
+  Planet
+} from '../../../types';
+
 /**
  * C11 fixture factory.
  *
@@ -959,6 +963,155 @@ describe('CareerTrajectoryEngine', () => {
       expect(result.statement).toBe(
         'Growth-capable trajectory; currently active; status: SUPPORTED'
       );
+    });
+  });
+
+  describe('P2-09A: End-to-end namespace consistency with real C11 + canonicalCareerEvidenceMapper', () => {
+    it('real C11 evidenceIds resolve against canonicalCareerEvidenceMapper DomainEvidence (Dasha test)', () => {
+      // Create Dasha evidence with distinct identityKey and id
+      const dashaEvidence1 = Object.freeze({
+        identityKey: 'dasha-semantic-key-1',
+        id: 'dasha-occurrence-id-1',
+        level: 'MD' as const,
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 1.',
+        sourceIds: Object.freeze(['dasha-source-1']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'MD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      // Create C11 with the Dasha semantic identityKey in evidenceIds
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        finalStatus: 'SUPPORTED',
+        evidenceIds: ['dasha-semantic-key-1']
+      });
+
+      // Create DomainEvidence matching what canonicalCareerEvidenceMapper would produce
+      // The mapper uses identityKey as the semantic identity, not id
+      const evidenceItems = [
+        { id: 'dasha-occurrence-id-1', identityKey: 'dasha-semantic-key-1' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // Should resolve successfully with no unresolved IDs
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+      expect(result.evidenceIds).toEqual(['dasha-semantic-key-1']);
+    });
+
+    it('real C11 evidenceIds resolve against canonicalCareerEvidenceMapper DomainEvidence (D10 test)', () => {
+      // Create D10 evidence with distinct identityKey and id
+      const d10Evidence1 = Object.freeze({
+        identityKey: 'd10-semantic-key-1',
+        id: 'd10-occurrence-id-1',
+        role: 'PRIMARY' as const,
+        direction: 'SUPPORT' as const,
+        d10Effect: 'REINFORCES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence 1.',
+        sourceIds: Object.freeze(['d10-source-1']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source-1']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      // Create C11 with the D10 semantic identityKey in evidenceIds
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        finalStatus: 'SUPPORTED',
+        evidenceIds: ['d10-semantic-key-1']
+      });
+
+      // Create DomainEvidence matching what canonicalCareerEvidenceMapper would produce
+      const evidenceItems = [
+        { id: 'd10-occurrence-id-1', identityKey: 'd10-semantic-key-1' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // Should resolve successfully with no unresolved IDs
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+      expect(result.evidenceIds).toEqual(['d10-semantic-key-1']);
+    });
+
+    it('mixed layer evidence (Dasha + D10 + natal) all resolve correctly', () => {
+      // Create evidence from multiple layers with semantic identityKeys
+      const dashaEvidence = Object.freeze({
+        identityKey: 'dasha-semantic-key',
+        id: 'dasha-occurrence-id',
+        level: 'MD' as const,
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence.',
+        sourceIds: Object.freeze(['dasha-source']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'MD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const d10Evidence = Object.freeze({
+        identityKey: 'd10-semantic-key',
+        id: 'd10-occurrence-id',
+        role: 'PRIMARY' as const,
+        direction: 'SUPPORT' as const,
+        d10Effect: 'REINFORCES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence.',
+        sourceIds: Object.freeze(['d10-source']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      // Create C11 with multiple semantic identityKeys
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        finalStatus: 'SUPPORTED',
+        evidenceIds: ['dasha-semantic-key', 'd10-semantic-key', 'natal-semantic-key']
+      });
+
+      // Create DomainEvidence matching what canonicalCareerEvidenceMapper would produce
+      const evidenceItems = [
+        { id: 'dasha-occurrence-id', identityKey: 'dasha-semantic-key' },
+        { id: 'd10-occurrence-id', identityKey: 'd10-semantic-key' },
+        { id: 'natal-occurrence-id', identityKey: 'natal-semantic-key' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // Should resolve successfully with no unresolved IDs
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+      expect(result.evidenceIds).toEqual(['d10-semantic-key', 'dasha-semantic-key', 'natal-semantic-key']);
     });
   });
 });

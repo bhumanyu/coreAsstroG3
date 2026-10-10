@@ -1096,6 +1096,152 @@ describe('C11 Final Career Synthesis Integration', () => {
     });
   });
 
+  describe('P2-09A: Evidence ID namespace consistency', () => {
+    it('C11 evidenceIds match canonicalCareerEvidenceMapper identityKey for Dasha evidence', () => {
+      // Create Dasha evidence with distinct identityKey and id
+      const dashaEvidence1 = Object.freeze({
+        identityKey: 'dasha-semantic-key-1',
+        id: 'dasha-occurrence-id-1',
+        level: 'MD' as const,
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 1.',
+        sourceIds: Object.freeze(['dasha-source-1']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'MD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const dashaEvidence2 = Object.freeze({
+        identityKey: 'dasha-semantic-key-2',
+        id: 'dasha-occurrence-id-2',
+        level: 'AD' as const,
+        planet: Planet.JUPITER,
+        role: 'MODIFIER' as const,
+        effect: 'ACTIVATES' as const,
+        direction: 'SUPPORT' as const,
+        strength: 'STRONG' as const,
+        statement: 'Dasha evidence 2.',
+        sourceIds: Object.freeze(['dasha-source-2']),
+        provenance: Object.freeze({
+          source: 'C9_DASHA' as const,
+          activationLevel: 'AD' as const,
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        dasha: makeMinimalDasha('SUPPORT', undefined, Object.freeze([dashaEvidence1, dashaEvidence2]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // C11 evidenceIds should contain the semantic identityKey, NOT the occurrence id
+      expect(result.evidenceIds).toContain('dasha-semantic-key-1');
+      expect(result.evidenceIds).toContain('dasha-semantic-key-2');
+      // Should NOT contain occurrence IDs
+      expect(result.evidenceIds).not.toContain('dasha-occurrence-id-1');
+      expect(result.evidenceIds).not.toContain('dasha-occurrence-id-2');
+    });
+
+    it('C11 evidenceIds match canonicalCareerEvidenceMapper identityKey for D10 evidence', () => {
+      // Create D10 evidence with distinct identityKey and id
+      const d10Evidence1 = Object.freeze({
+        identityKey: 'd10-semantic-key-1',
+        id: 'd10-occurrence-id-1',
+        role: 'PRIMARY' as const,
+        direction: 'SUPPORT' as const,
+        d10Effect: 'REINFORCES' as const,
+        d10Strength: 'STRONG' as const,
+        weight: 5,
+        statement: 'D10 evidence 1.',
+        sourceIds: Object.freeze(['d10-source-1']),
+        provenance: Object.freeze({
+          source: 'C10_D10' as const,
+          ruleIds: Object.freeze(['rule-1']),
+          sourceIds: Object.freeze(['d10-source-1']),
+          natalRootIds: Object.freeze([])
+        })
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        d10: makeMinimalD10('SUPPORT', 'STRONG', Object.freeze([d10Evidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // C11 evidenceIds should contain the semantic identityKey, NOT the occurrence id
+      expect(result.evidenceIds).toContain('d10-semantic-key-1');
+      // Should NOT contain occurrence ID
+      expect(result.evidenceIds).not.toContain('d10-occurrence-id-1');
+    });
+
+    it('C11 evidenceIds use expression evidence.id as semantic identity (no separate identityKey in C8)', () => {
+      // Expression evidence uses id as its semantic identity (no separate identityKey field)
+      const expr: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([
+          Object.freeze({
+            id: 'expr-evidence-id-1',
+            mode: 'LEADERSHIP',
+            role: 'PLANETARY' as const,
+            statement: 'Expression evidence 1.',
+            weight: 2,
+            planets: Object.freeze([Planet.SUN]),
+            houses: Object.freeze([10])
+          })
+        ]),
+        supportingEvidenceIds: Object.freeze(['expr-evidence-id-1']),
+        statement: 'Leadership.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expr])
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // C11 evidenceIds should contain the expression evidence id (which is its semantic identity)
+      expect(result.evidenceIds).toContain('expr-evidence-id-1');
+    });
+
+    it('C11 evidenceIds use natal evidenceId as semantic identity', () => {
+      const natalEvidence1: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'natal-semantic-key-1',
+        evidenceId: 'natal-semantic-key-1',
+        ruleId: 'rule-1',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 1,
+        weight: 5,
+        statement: 'Natal evidence 1.',
+        relatedEvidenceIds: Object.freeze([]),
+        sourceIds: Object.freeze(['source-1'])
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG', Object.freeze([natalEvidence1]))
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      // C11 evidenceIds should contain the natal evidenceId (which is the semantic identity)
+      expect(result.evidenceIds).toContain('natal-semantic-key-1');
+    });
+  });
+
   describe('P2-08D-04: Invariant tests - Expression independence', () => {
     it('expression independence - multiple expressions preserved independently', () => {
       const expr1: CareerExpression = Object.freeze({

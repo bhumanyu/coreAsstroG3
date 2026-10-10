@@ -65,6 +65,14 @@ Location: `src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts`
 - `ruleIds`: Rule identity (deduplicated)
 - These three arrays are kept distinct with no new global dedup mechanism
 
+**P2-09A NAMESPACE CONTRACT:** C11 `evidenceIds` are canonical semantic identity keys (P2-09A fix):
+- **Natal:** `evidenceId` (semantic identity, matches `identityKey` in `WeightedReasoningEvidence`)
+- **Dasha:** `identityKey` (semantic identity from `CareerDashaCanonicalEvidence`)
+- **D10:** `identityKey` (semantic identity from `CareerD10CanonicalEvidence`)
+- **Expression:** `supportingEvidenceIds` (CareerExpressionEvidence.id, used as semantic identity — no separate `identityKey` field in C8 contract)
+
+All collectors in `careerFinalSynthesisIntegration.ts` emit the semantic identity field, NOT the occurrence ID. This ensures C11 `evidenceIds` resolve against `DomainEvidence.identityKey` in the P2-09A trajectory engine.
+
 ### C11-INV-07: Dasha Challenge Modifies Timing Status
 - Dasha challenge modifies `timingStatus`, not `natalDirection`
 - `natalDirection` is preserved regardless of dasha challenge
@@ -355,7 +363,8 @@ P2-08D is complete when:
 5. ✅ Production cutover is implemented with presentation adapter
 6. ✅ Parity + integration tests are updated and passing
 7. ✅ Documentation is complete (this file)
-8. ⏳ CI is observable and all tests are green (pending verification)
+8. ✅ P2-09A namespace contract fixed (evidence IDs now use semantic identity keys)
+9. ⏳ CI is observable and all tests are green (pending verification)
 
 ## Verification
 

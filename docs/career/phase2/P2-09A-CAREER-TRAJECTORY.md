@@ -100,6 +100,16 @@ Resolution logic:
 - Occurrence IDs (`id`) are NOT matched directly unless the evidence has no `identityKey`.
 - This ensures C11 references semantic identities, not specific occurrences.
 
+**P2-09A NAMESPACE CONTRACT FIX:**
+The C11 producer (`buildCareerFinalAnalysis` in `careerFinalSynthesisIntegration.ts`) now guarantees that `evidenceIds` are canonical semantic identity keys:
+
+- **Natal:** `evidenceId` (semantic identity, matches `identityKey` in `WeightedReasoningEvidence`)
+- **Dasha:** `identityKey` (semantic identity from `CareerDashaCanonicalEvidence`)
+- **D10:** `identityKey` (semantic identity from `CareerD10CanonicalEvidence`)
+- **Expression:** `supportingEvidenceIds` (CareerExpressionEvidence.id, used as semantic identity — no separate `identityKey` field in C8 contract)
+
+All collectors emit the semantic identity field, NOT the occurrence ID. This fix resolves the P2-09A review finding where the trajectory engine's identity resolution could misreport valid references as unresolved due to namespace mismatch.
+
 - `evidenceIds`: All evidence IDs referenced by C11 (deduplicated and sorted).
 - `unresolvedEvidenceIds`: Evidence IDs referenced by C11 but not present in the supplied evidence set.
 - Evidence supplied but NOT referenced by C11 must never become a trajectory signal.
@@ -145,7 +155,19 @@ Files:
 - `src/domain/career/careerTrajectory/careerTrajectoryEngine.test.ts`
 - `src/domain/career/careerTrajectory/index.ts`
 
+**P2-09A NAMESPACE CONTRACT FIX:**
+The C11 producer (`buildCareerFinalAnalysis` in `careerFinalSynthesisIntegration.ts`) now guarantees that `evidenceIds` are canonical semantic identity keys:
+
+- **Natal:** `evidenceId` (semantic identity, matches `identityKey` in `WeightedReasoningEvidence`)
+- **Dasha:** `identityKey` (semantic identity from `CareerDashaCanonicalEvidence`)
+- **D10:** `identityKey` (semantic identity from `CareerD10CanonicalEvidence`)
+- **Expression:** `supportingEvidenceIds` (CareerExpressionEvidence.id, used as semantic identity — no separate `identityKey` field in C8 contract)
+
+All collectors emit the semantic identity field, NOT the occurrence ID. This fix resolves the P2-09A review finding where the trajectory engine's identity resolution could misreport valid references as unresolved due to namespace mismatch.
+
 Verification:
 - Lint: `npm run lint` (tsc --noEmit)
 - Tests: `npm test -- careerTrajectoryEngine.test.ts`
-- Regression: `careerFinalSynthesisIntegration` and `CareerDomainInterpreterV2` suites
+- Tests: `npm test -- careerFinalSynthesisIntegration.test.ts`
+- Tests: `npm test -- canonicalCareerEvidenceMapper.test.ts`
+- Regression: `CareerDomainInterpreterV2` suite

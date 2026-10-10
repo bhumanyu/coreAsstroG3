@@ -150,6 +150,15 @@ function mapTransitEffectToFinalDirection(
  * Collects evidence IDs from natal analysis.
  * From natal.evidence (WeightedReasoningEvidence.evidenceId).
  * These are semantic identity IDs (one per evidence item).
+ *
+ * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
+ * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Dasha: identityKey (semantic identity)
+ * - D10: identityKey (semantic identity)
+ * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
+ *
+ * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
+ * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  */
 function collectNatalEvidenceIds(
   natal: CareerNatalAnalysis
@@ -194,14 +203,24 @@ function collectNatalRuleIds(
 
 /**
  * Collects evidence IDs from Dasha analysis.
- * From dasha.evidence (CareerDashaCanonicalEvidence.id).
+ * From dasha.evidence (CareerDashaCanonicalEvidence.identityKey).
+ * These are semantic identity IDs (one per evidence item).
+ *
+ * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
+ * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Dasha: identityKey (semantic identity)
+ * - D10: identityKey (semantic identity)
+ * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
+ *
+ * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
+ * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  */
 function collectDashaEvidenceIds(
   dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of dasha.evidence) {
-    allIds.push(e.id);
+    allIds.push(e.identityKey);
   }
   return Object.freeze(
     allIds.sort((a, b) => a.localeCompare(b))
@@ -242,14 +261,24 @@ function collectDashaRuleIds(
 
 /**
  * Collects evidence IDs from D10 analysis.
- * From d10.evidence (CareerD10CanonicalEvidence.id).
+ * From d10.evidence (CareerD10CanonicalEvidence.identityKey).
+ * These are semantic identity IDs (one per evidence item).
+ *
+ * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
+ * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Dasha: identityKey (semantic identity)
+ * - D10: identityKey (semantic identity)
+ * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
+ *
+ * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
+ * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  */
 function collectD10EvidenceIds(
   d10: CareerD10CanonicalAnalysis
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of d10.evidence) {
-    allIds.push(e.id);
+    allIds.push(e.identityKey);
   }
   return Object.freeze(
     allIds.sort((a, b) => a.localeCompare(b))
@@ -290,7 +319,18 @@ function collectD10RuleIds(
 
 /**
  * Collects evidence IDs from expression analysis.
- * From expression.expressions[].supportingEvidenceIds.
+ * From expression.expressions[].supportingEvidenceIds (CareerExpressionEvidence.id).
+ * These are semantic identity IDs (CareerExpressionEvidence uses id as its semantic identity;
+ * there is no separate identityKey field in the C8 contract).
+ *
+ * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
+ * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Dasha: identityKey (semantic identity)
+ * - D10: identityKey (semantic identity)
+ * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
+ *
+ * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
+ * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  */
 function collectExpressionEvidenceIds(
   expression: CareerExpressionAnalysis
