@@ -29,7 +29,8 @@ import type {
 } from '../reasoning/reasoningTypes';
 
 import type {
-  CareerExpressionDirection
+  CareerExpressionDirection,
+  CareerExpressionStrength
 } from './careerExpression';
 
 import type {
@@ -112,16 +113,32 @@ export function mapCanonicalCareerEvidence(
   const sorted = sortCanonicalEvidence(deduplicated);
 
   // Optional C11 validation: check that produced evidence IDs are cross-referenceable
+  // Validation result is not surfaced in the main return (non-fatal)
   validateAgainstFinalSynthesis(sorted, input.finalSynthesis);
 
   return Object.freeze(sorted);
 }
 
 /**
+ * Exposed validation function for testing C11 reference checking.
+ *
+ * This allows tests to assert on the validation result without affecting the main mapper output.
+ */
+export function validateC11References(
+  evidence: readonly DomainEvidence[],
+  finalSynthesis: CareerFinalSynthesisResult
+): C11ValidationResult {
+  return validateAgainstFinalSynthesis(evidence, finalSynthesis);
+}
+
+/**
  * Maps natal evidence (C4–C7) to DomainEvidence.
  *
  * Phase: NATAL_PROMISE
- * Source: C4_STRUCTURAL_REASONING (or D1 for compatibility)
+ * Source: C4_STRUCTURAL_REASONING (aggregate source for all C4-C7 natal components)
+ * SourceType: derived from layer (YOGA→YOGA, others→STRUCTURAL)
+ *   - Note: WeightedReasoningEvidence does not distinguish between structural/relevance/condition/lordRelationships producers.
+ *   - Conservative mapping: use STRUCTURAL for most layers, YOGA for yoga evidence. Do not assert PLANET for non-planetary factors.
  * Role: from WeightedReasoningEvidence.layer (PRIMARY_PROMISE→PRIMARY, SECONDARY_SUPPORT→SECONDARY, etc.)
  * Polarity: from direction (SUPPORT→SUPPORTING, CHALLENGE→CHALLENGING, NEUTRAL→NEUTRAL)
  * MIXED: via C4 split convention preserving one shared identityKey
@@ -134,10 +151,17 @@ function mapNatalEvidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of natal.evidence) {
+    const sourceType = mapLayerToSourceType(evidence.layer);
+    const strength = mapStrength(evidence.strength);
+
+    // Exclude records with unmappable strength
+    if (strength === null) {
+      continue;
+    }
+
     // Handle MIXED direction by splitting into two occurrences (reusing C4 convention)
     if (evidence.direction === 'MIXED') {
       const role = mapLayerToRole(evidence.layer);
-      const strength = mapStrength(evidence.strength);
       const polaritySupporting = 'SUPPORTING' as const;
       const polarityChallenging = 'CHALLENGING' as const;
 
@@ -149,7 +173,7 @@ function mapNatalEvidence(
       // Create SUPPORTING occurrence
       const supportingEvidence = createDomainEvidence({
         id: `${evidence.evidenceId}:SUPPORTING`,
-        sourceType: 'PLANET',
+        sourceType,
         domain: 'CAREER',
         role,
         phase: 'NATAL_PROMISE',
@@ -176,7 +200,7 @@ function mapNatalEvidence(
       // Create CHALLENGING occurrence
       const challengingEvidence = createDomainEvidence({
         id: `${evidence.evidenceId}:CHALLENGING`,
-        sourceType: 'PLANET',
+        sourceType,
         domain: 'CAREER',
         role,
         phase: 'NATAL_PROMISE',
@@ -205,11 +229,10 @@ function mapNatalEvidence(
       // Non-MIXED directions: map directly
       const role = mapLayerToRole(evidence.layer);
       const polarity = mapDirectionToPolarity(evidence.direction);
-      const strength = mapStrength(evidence.strength);
 
       const domainEvidence = createDomainEvidence({
         id: evidence.evidenceId,
-        sourceType: 'PLANET',
+        sourceType,
         domain: 'CAREER',
         role,
         phase: 'NATAL_PROMISE',
@@ -250,6 +273,11 @@ function mapNatalEvidence(
  *   - CONDITIONAL → SUPPORTING (preserve conditional via notes)
  *   - NEUTRAL → NEUTRAL
  *   - UNAVAILABLE → emit nothing
+ * Strength: derived from parent CareerExpression.strength via exhaustive mapping
+ *   - STRONG → STRONG
+ *   - MODERATE → MODERATE
+ *   - WEAK → WEAK
+ *   - UNAVAILABLE → exclude record (not negative evidence)
  *
  * Maps each expression's actual CareerExpressionEvidence records.
  * Does NOT fabricate a ruleId (expression evidence has none).
@@ -267,6 +295,13 @@ function mapExpressionEvidence(
     }
 
     const polarity = mapExpressionDirectionToPolarity(expr.direction);
+    const strength = mapExpressionStrengthToEvidenceStrength(expr.strength);
+
+    // Exclude records with unmappable strength (UNAVAILABLE)
+    if (strength === null) {
+      continue;
+    }
+
     const notes = expr.direction === 'CONDITIONAL'
       ? `Expression direction: CONDITIONAL. Treated as SUPPORTING with conditional flag.`
       : undefined;
@@ -281,7 +316,7 @@ function mapExpressionEvidence(
         source: 'D1',
         statement: evidence.statement,
         polarity,
-        strength: 'MODERATE', // Expression evidence has no strength field; use default
+        strength,
         priority: evidence.weight,
         relatedEvidenceIds: [],
         notes,
@@ -323,6 +358,24 @@ function mapDashaEvidence(
       continue;
     }
 
+    const provenanceEffect = mapDashaEffectToProvenanceEffect(evidence.effect);
+
+    // Consistency check: polarity and provenance effect must agree
+    // SUPPORTING polarity should not have CHALLENGE or NEUTRAL effect
+    // CHALLENGING polarity should not have SUPPORT or NEUTRAL effect
+    if (polarity === 'SUPPORTING' && (provenanceEffect === 'CHALLENGE' || provenanceEffect === 'NEUTRAL')) {
+      throw new Error(
+        `Dasha polarity/effect inconsistency: SUPPORTING polarity with ${provenanceEffect} effect for evidence ${evidence.id}`
+      );
+    }
+    if (polarity === 'CHALLENGING' && (provenanceEffect === 'SUPPORT' || provenanceEffect === 'NEUTRAL')) {
+      throw new Error(
+        `Dasha polarity/effect inconsistency: CHALLENGING polarity with ${provenanceEffect} effect for evidence ${evidence.id}`
+      );
+    }
+
+    // Dasha provenance does not expose a ruleId (CareerDashaCanonicalProvenance only has source, activationLevel, natalRootIds)
+    // Mirror D10 path: omit ruleId when no real ruleId exists
     const domainEvidence = createDomainEvidence({
       id: evidence.id,
       sourceType: 'PLANET',
@@ -334,14 +387,13 @@ function mapDashaEvidence(
       polarity,
       strength,
       priority: 1,
-      relatedEvidenceIds: [],
+      relatedEvidenceIds: evidence.sourceIds,
       provenance: {
         evidenceId: evidence.id,
-        ruleId: `C9_DASHA_${evidence.level}_${evidence.role}`,
         domain: 'CAREER',
         axis: 'DASHA',
         source: 'DASHA',
-        effect: mapDashaEffectToProvenanceEffect(evidence.effect),
+        effect: provenanceEffect,
         strength: 'SECONDARY'
       },
       timing: {
@@ -377,7 +429,6 @@ function mapD10Evidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of d10.evidence) {
-    const polarity = mapD10DirectionToPolarity(evidence.direction);
     const strength = mapD10StrengthToEvidenceStrength(evidence.d10Strength);
 
     // Exclude records with unmappable strength
@@ -385,32 +436,99 @@ function mapD10Evidence(
       continue;
     }
 
-    const domainEvidence = createDomainEvidence({
-      id: evidence.id,
-      sourceType: 'HOUSE',
-      domain: 'CAREER',
-      role: 'CONFIRMATION',
-      phase: 'VARGA_CONFIRMATION',
-      source: 'D10',
-      statement: evidence.statement,
-      polarity,
-      strength,
-      priority: evidence.weight,
-      ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
-      relatedEvidenceIds: evidence.sourceIds,
-      provenance: evidence.provenance.ruleIds.length > 0 ? {
-        evidenceId: evidence.id,
-        ruleId: evidence.provenance.ruleIds[0], // Use first ruleId
-        domain: 'CAREER',
-        axis: 'DIVISIONAL',
-        source: 'D10',
-        effect: mapD10DirectionToProvenanceEffect(evidence.direction),
-        strength: 'SECONDARY'
-      } : undefined,
-      identityKey: evidence.identityKey
-    });
+    // Handle MIXED direction by splitting into two occurrences (consistent with natal convention)
+    if (evidence.direction === 'MIXED') {
+      const notes = `D10 direction: MIXED. Split into SUPPORTING and CHALLENGING occurrences of the same semantic fact; canonical dedup merges these into one MIXED record.`;
 
-    result.push(domainEvidence);
+      // Both occurrences share the same identityKey
+      const identityKey = evidence.identityKey;
+
+      // Create SUPPORTING occurrence
+      const supportingEvidence = createDomainEvidence({
+        id: `${evidence.id}:SUPPORTING`,
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'CONFIRMATION',
+        phase: 'VARGA_CONFIRMATION',
+        source: 'D10',
+        statement: evidence.statement,
+        polarity: 'SUPPORTING' as const,
+        strength,
+        priority: evidence.weight,
+        ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
+        relatedEvidenceIds: evidence.sourceIds,
+        notes,
+        provenance: evidence.provenance.ruleIds.length > 0 ? {
+          evidenceId: `${evidence.id}:SUPPORTING`,
+          ruleId: evidence.provenance.ruleIds[0],
+          domain: 'CAREER',
+          axis: 'DIVISIONAL',
+          source: 'D10',
+          effect: 'MIXED',
+          strength: 'SECONDARY'
+        } : undefined,
+        identityKey
+      });
+
+      // Create CHALLENGING occurrence
+      const challengingEvidence = createDomainEvidence({
+        id: `${evidence.id}:CHALLENGING`,
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'CONFIRMATION',
+        phase: 'VARGA_CONFIRMATION',
+        source: 'D10',
+        statement: evidence.statement,
+        polarity: 'CHALLENGING' as const,
+        strength,
+        priority: evidence.weight,
+        ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
+        relatedEvidenceIds: evidence.sourceIds,
+        notes,
+        provenance: evidence.provenance.ruleIds.length > 0 ? {
+          evidenceId: `${evidence.id}:CHALLENGING`,
+          ruleId: evidence.provenance.ruleIds[0],
+          domain: 'CAREER',
+          axis: 'DIVISIONAL',
+          source: 'D10',
+          effect: 'MIXED',
+          strength: 'SECONDARY'
+        } : undefined,
+        identityKey
+      });
+
+      result.push(supportingEvidence, challengingEvidence);
+    } else {
+      // Non-MIXED directions: map directly
+      const polarity = mapD10DirectionToPolarity(evidence.direction);
+
+      const domainEvidence = createDomainEvidence({
+        id: evidence.id,
+        sourceType: 'HOUSE',
+        domain: 'CAREER',
+        role: 'CONFIRMATION',
+        phase: 'VARGA_CONFIRMATION',
+        source: 'D10',
+        statement: evidence.statement,
+        polarity,
+        strength,
+        priority: evidence.weight,
+        ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
+        relatedEvidenceIds: evidence.sourceIds,
+        provenance: evidence.provenance.ruleIds.length > 0 ? {
+          evidenceId: evidence.id,
+          ruleId: evidence.provenance.ruleIds[0],
+          domain: 'CAREER',
+          axis: 'DIVISIONAL',
+          source: 'D10',
+          effect: mapD10DirectionToProvenanceEffect(evidence.direction),
+          strength: 'SECONDARY'
+        } : undefined,
+        identityKey: evidence.identityKey
+      });
+
+      result.push(domainEvidence);
+    }
   }
 
   return result;
@@ -425,13 +543,20 @@ function mapD10Evidence(
  *
  * Note: MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are NOT merged here.
  * They are kept separate for downstream canonical dedup to handle the MIXED merge correctly.
+ *
+ * Missing-identity policy: Records without an identityKey are preserved as separate, non-deduplicable items.
+ * They are grouped by their id instead and merged only if the ids match exactly.
+ *
+ * Semantic field safety: For non-MIXED same-identity groups, all merge-relevant semantic fields must agree.
+ * If polarity, strength, phase, source, role, or provenance disagree, an error is thrown.
+ * This prevents silent merging of semantically incompatible evidence.
  */
 function deduplicateCanonicalEvidence(
   evidence: readonly DomainEvidence[]
 ): DomainEvidence[] {
   const byIdentityKey = new Map<string, DomainEvidence[]>();
 
-  // Group by identityKey
+  // Group by identityKey (or id if identityKey is missing)
   for (const e of evidence) {
     const key = e.identityKey ?? e.id;
     const existing = byIdentityKey.get(key) ?? [];
@@ -459,6 +584,61 @@ function deduplicateCanonicalEvidence(
 
     // Merge other duplicates (same polarity)
     const first = group[0];
+
+    // Assert semantic field agreement
+    for (const e of group) {
+      if (e.polarity !== first.polarity) {
+        throw new Error(
+          `Semantic field disagreement in dedup: polarity differs for identityKey "${identityKey}" (${e.polarity} vs ${first.polarity})`
+        );
+      }
+      if (e.strength !== first.strength) {
+        throw new Error(
+          `Semantic field disagreement in dedup: strength differs for identityKey "${identityKey}" (${e.strength} vs ${first.strength})`
+        );
+      }
+      if (e.phase !== first.phase) {
+        throw new Error(
+          `Semantic field disagreement in dedup: phase differs for identityKey "${identityKey}" (${e.phase} vs ${first.phase})`
+        );
+      }
+      if (e.source !== first.source) {
+        throw new Error(
+          `Semantic field disagreement in dedup: source differs for identityKey "${identityKey}" (${e.source} vs ${first.source})`
+        );
+      }
+      if (e.role !== first.role) {
+        throw new Error(
+          `Semantic field disagreement in dedup: role differs for identityKey "${identityKey}" (${e.role} vs ${first.role})`
+        );
+      }
+      // Provenance comparison (both undefined or both deeply equal)
+      const provA = e.provenance;
+      const provB = first.provenance;
+      if (provA === undefined && provB !== undefined) {
+        throw new Error(
+          `Semantic field disagreement in dedup: provenance undefined vs present for identityKey "${identityKey}"`
+        );
+      }
+      if (provA !== undefined && provB === undefined) {
+        throw new Error(
+          `Semantic field disagreement in dedup: provenance present vs undefined for identityKey "${identityKey}"`
+        );
+      }
+      if (provA && provB) {
+        if (provA.ruleId !== provB.ruleId ||
+          provA.effect !== provB.effect ||
+          provA.domain !== provB.domain ||
+          provA.axis !== provB.axis ||
+          provA.source !== provB.source ||
+          provA.strength !== provB.strength) {
+          throw new Error(
+            `Semantic field disagreement in dedup: provenance differs for identityKey "${identityKey}"`
+          );
+        }
+      }
+    }
+
     const allSourceIds = group.flatMap(e => e.relatedEvidenceIds);
     const maxPriority = Math.max(...group.map(e => e.priority));
 
@@ -522,36 +702,69 @@ function sortCanonicalEvidence(
 }
 
 /**
+ * Validation result for C11 reference checking.
+ */
+export interface C11ValidationResult {
+  /**
+   * Evidence IDs produced by the mapper that are not referenced in C11.
+   * These are valid evidence items that C11 may not have aggregated.
+   */
+  readonly unreferenced: readonly string[];
+  /**
+   * Evidence IDs referenced in C11 that are not produced by the mapper.
+   * These may be evidence from other sources not in this mapper's scope.
+   */
+  readonly missing: readonly string[];
+}
+
+/**
  * Validates that produced evidence IDs are cross-referenceable against finalSynthesis.evidenceIds.
  *
  * Handles unknown references explicitly (ignores them, never fabricates).
  * This is a lightweight validation; it does not affect the mapping output.
+ *
+ * Returns a structured result with unreferenced and missing IDs for observability.
  */
 function validateAgainstFinalSynthesis(
   evidence: readonly DomainEvidence[],
   finalSynthesis: CareerFinalSynthesisResult
-): void {
+): C11ValidationResult {
   const producedIds = new Set(evidence.map(e => e.id));
   const finalIds = new Set(finalSynthesis.evidenceIds);
 
   // Check for produced IDs not referenced in C11 (informational only)
   const unreferenced = [...producedIds].filter(id => !finalIds.has(id));
-  if (unreferenced.length > 0) {
-    // Log warning but do not fail validation
-    // These are valid evidence items that C11 may not have aggregated
-  }
 
   // Check for C11 IDs not produced by mapper (informational only)
   const missing = [...finalIds].filter(id => !producedIds.has(id));
-  if (missing.length > 0) {
-    // Log warning but do not fail validation
-    // These may be evidence from other sources not in this mapper's scope
-  }
+
+  return Object.freeze({
+    unreferenced,
+    missing
+  });
 }
 
 // ============================================================================
 // Mapping Helpers
 // ============================================================================
+
+function mapLayerToSourceType(
+  layer: string
+): 'STRUCTURAL' | 'YOGA' {
+  switch (layer) {
+    case 'YOGA':
+      return 'YOGA';
+    case 'PRIMARY_PROMISE':
+    case 'SECONDARY_SUPPORT':
+    case 'MODIFIER':
+    case 'DASHA':
+    case 'VARGA':
+    case 'TRANSIT':
+      return 'STRUCTURAL';
+    default:
+      return 'STRUCTURAL';
+  }
+}
 
 function mapLayerToRole(
   layer: string
@@ -571,7 +784,7 @@ function mapLayerToRole(
     case 'TRANSIT':
       return 'MODIFIER';
     default:
-      return 'MODIFIER';
+      throw new Error(`Unexpected layer value: ${layer}`);
   }
 }
 
@@ -642,6 +855,23 @@ function mapExpressionDirectionToPolarity(
   }
 }
 
+function mapExpressionStrengthToEvidenceStrength(
+  strength: CareerExpressionStrength
+): EvidenceStrength | null {
+  switch (strength) {
+    case 'STRONG':
+      return 'STRONG';
+    case 'MODERATE':
+      return 'MODERATE';
+    case 'WEAK':
+      return 'WEAK';
+    case 'UNAVAILABLE':
+      return null; // Exclude record
+    default:
+      return null;
+  }
+}
+
 function mapD10DirectionToPolarity(
   direction: string
 ): EvidencePolarity {
@@ -655,10 +885,10 @@ function mapD10DirectionToPolarity(
     case 'UNAVAILABLE':
       return 'NEUTRAL';
     case 'MIXED':
-      // D10 MIXED not split in this mapper; treat as SUPPORTING
-      return 'SUPPORTING';
+      // MIXED should be split before calling this
+      throw new Error('MIXED direction should be split into two occurrences');
     default:
-      return 'NEUTRAL';
+      throw new Error(`Unexpected D10 direction value: ${direction}`);
   }
 }
 
@@ -677,7 +907,7 @@ function mapD10DirectionToProvenanceEffect(
     case 'UNAVAILABLE':
       return 'NEUTRAL';
     default:
-      return 'NEUTRAL';
+      throw new Error(`Unexpected D10 direction value: ${direction}`);
   }
 }
 
@@ -695,7 +925,7 @@ function mapDashaEffectToProvenanceEffect(
     case 'INSUFFICIENT_DATA':
       return 'NEUTRAL';
     default:
-      return 'NEUTRAL';
+      throw new Error(`Unexpected Dasha effect value: ${effect}`);
   }
 }
 
@@ -766,7 +996,7 @@ function mapD10StrengthToEvidenceStrength(
 
 function mapStrength(
   strength: string
-): EvidenceStrength {
+): EvidenceStrength | null {
   switch (strength) {
     case 'VERY_STRONG':
       return 'VERY_STRONG';
@@ -777,6 +1007,6 @@ function mapStrength(
     case 'WEAK':
       return 'WEAK';
     default:
-      return 'MODERATE';
+      return null; // Exclude record with unmappable strength
   }
 }

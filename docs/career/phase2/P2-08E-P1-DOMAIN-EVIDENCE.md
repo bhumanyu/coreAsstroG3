@@ -2,7 +2,7 @@
 
 ## Status
 
-IMPLEMENTED — VERIFICATION PENDING
+IMPLEMENTED — VERIFIED
 
 ## Purpose
 
@@ -23,13 +23,13 @@ The C4 structural evidence already enters `mergedEvidence` via `toDomainEvidence
 
 ## Per-Layer Mapping Table
 
-| Layer | Phase | Source | Role | Polarity Source | Strength Source | Notes |
-|-------|-------|--------|------|-----------------|-----------------|-------|
-| C4–C7 (Natal) | `NATAL_PROMISE` | `C4_STRUCTURAL_REASONING` | From `layer` (PRIMARY_PROMISE→PRIMARY, SECONDARY_SUPPORT→SECONDARY, etc.) | From `direction` (SUPPORT→SUPPORTING, CHALLENGE→CHALLENGING, NEUTRAL→NEUTRAL) | From `strength` (VERY_STRONG/STRONG/MODERATE/WEAK) | MIXED split via C4 convention preserving shared identityKey |
-| C8 (Expression) | `MODIFIER` | `D1` | `MODIFIER` | From parent `CareerExpression.direction` (SUPPORTED→SUPPORTING, CONDITIONAL→SUPPORTING with notes, NEUTRAL→NEUTRAL) | Fixed `MODERATE` (expression evidence has no strength field) | UNAVAILABLE emits nothing; no ruleId fabricated |
-| C9 (Dasha) | `DASHA_ACTIVATION` | `DASHA` | `TIMING` | From `direction` | From `strength` via exhaustive mapping | Cannot be PRIMARY natal (enforced by phase) |
-| C10 (D10) | `VARGA_CONFIRMATION` | `D10` | `CONFIRMATION` | From `direction` | From `d10Strength` via exhaustive mapping | Cannot establish natal promise (enforced by phase) |
-| Transit | N/A | N/A | N/A | N/A | N/A | No canonical transit evidence producer; intentionally not mapped |
+| Layer | Phase | Source | SourceType | Role | Polarity Source | Strength Source | Notes |
+|-------|-------|--------|-----------|------|-----------------|-----------------|-------|
+| C4–C7 (Natal) | `NATAL_PROMISE` | `C4_STRUCTURAL_REASONING` | From `layer` (YOGA→YOGA, others→STRUCTURAL) | From `layer` (PRIMARY_PROMISE→PRIMARY, SECONDARY_SUPPORT→SECONDARY, etc.) | From `direction` (SUPPORT→SUPPORTING, CHALLENGE→CHALLENGING, NEUTRAL→NEUTRAL) | From `strength` (VERY_STRONG/STRONG/MODERATE/WEAK) | MIXED split via C4 convention preserving shared identityKey; unmappable strength excluded |
+| C8 (Expression) | `MODIFIER` | `D1` | `PLANET` | `MODIFIER` | From parent `CareerExpression.direction` (SUPPORTED→SUPPORTING, CONDITIONAL→SUPPORTING with notes, NEUTRAL→NEUTRAL) | From parent `CareerExpression.strength` (STRONG/MODERATE/WEAK) | UNAVAILABLE strength excludes record; no ruleId fabricated |
+| C9 (Dasha) | `DASHA_ACTIVATION` | `DASHA` | `PLANET` | `TIMING` | From `direction` | From `strength` via exhaustive mapping | Cannot be PRIMARY natal (enforced by phase); no fabricated ruleId (CareerDashaCanonicalProvenance does not expose ruleId); polarity/effect consistency enforced |
+| C10 (D10) | `VARGA_CONFIRMATION` | `D10` | `HOUSE` | `CONFIRMATION` | From `direction` (MIXED split into SUPPORTING+CHALLENGING) | From `d10Strength` via exhaustive mapping | Cannot establish natal promise (enforced by phase); MIXED split via natal convention |
+| Transit | N/A | N/A | N/A | N/A | N/A | N/A | No canonical transit evidence producer; intentionally not mapped |
 
 ## Three-Level Identity Contract
 
@@ -65,6 +65,8 @@ sourceIds = [occurrenceId(SUPPORT), occurrenceId(CHALLENGE), ...]
 - Distinct from occurrence ID and semantic identity
 - Mapped to `DomainEvidence.ruleId`
 - Expression evidence has no ruleId (not fabricated)
+- Dasha evidence has no ruleId (CareerDashaCanonicalProvenance does not expose ruleId)
+- D10 evidence uses first ruleId from `provenance.ruleIds` if present
 
 ## Exhaustive Strength Mapping
 
@@ -112,8 +114,9 @@ This aligns with C11-INV-05 from the convergence contract.
 
 C11 is used **only for reference validation**, never as an evidence source:
 
-- The mapper optionally validates that produced evidence IDs are cross-referenceable against `finalSynthesis.evidenceIds`
+- The mapper validates that produced evidence IDs are cross-referenceable against `finalSynthesis.evidenceIds`
 - Unknown references are handled explicitly (ignored, never fabricated)
+- Validation result is returned as a structured `{ unreferenced: string[]; missing: string[] }` via `validateC11References()`
 - The mapper does **not** create `DomainEvidence` from:
   - `finalSynthesis.statement`
   - `finalSynthesis.finalStatus`
@@ -168,6 +171,31 @@ The mapper reuses the C4 MIXED evidence identity contract (§9 of CW-R1):
 
 This prevents duplicate representations of one underlying structural fact from independently contributing to the Career conclusion.
 
+## Deduplication and Merge Policy
+
+The mapper enforces semantic field safety during deduplication:
+
+- For non-MIXED same-identity groups, all merge-relevant semantic fields must agree
+- Fields checked: polarity, strength, phase, source, role, provenance
+- If fields disagree, an error is thrown (silent merging is prevented)
+- Records without an `identityKey` are preserved as separate, non-deduplicable items (grouped by `id` instead)
+- MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are kept separate for downstream canonical dedup
+
+This policy prevents silent merging of semantically incompatible evidence and ensures merge conflicts are visible.
+
+## Enum Fallback Policy
+
+All enum mapping functions use exhaustive mappings with explicit error handling:
+
+- `mapLayerToRole`: throws on unexpected layer values
+- `mapStrength`: returns `null` for unmappable strengths (excludes record)
+- `mapLayerToSourceType`: returns STRUCTURAL for most layers, YOGA for yoga evidence
+- `mapD10DirectionToPolarity`: throws on unexpected direction values
+- `mapD10DirectionToProvenanceEffect`: throws on unexpected direction values
+- `mapDashaEffectToProvenanceEffect`: throws on unexpected effect values
+
+This ensures contract drift fails loudly rather than defaulting to incorrect values.
+
 ## Determinism
 
 The mapper guarantees deterministic output:
@@ -196,7 +224,15 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - CONDITIONAL expression maps to SUPPORTING with notes
 - UNAVAILABLE expression emits nothing
 - Dasha → DASHA_ACTIVATION and cannot be PRIMARY natal
+- Dasha evidence has no fabricated ruleId (omitted when real ruleId does not exist)
+- Dasha evidence preserves sourceIds in relatedEvidenceIds
+- Dasha polarity/effect consistency: throws on SUPPORTING with CHALLENGE effect
 - D10 → VARGA_CONFIRMATION and cannot establish natal promise
+- D10 MIXED direction splits into SUPPORTING and CHALLENGING occurrences
+- Expression strength derived from parent CareerExpression.strength
+- Expression UNAVAILABLE strength excludes record
+- Deduplication throws on polarity disagreement in dedup
+- Records without identityKey are preserved as separate items
 - Missing-layer data yields no fabricated negative evidence
 - Missing provenance leaves ruleId absent (no fabrication for C8)
 - Duplicate semantic identity dedupes without weight inflation
@@ -204,6 +240,7 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - Input-order invariance (determinism)
 - Distinct id, sourceIds, and ruleId as separate concepts
 - Unknown C11 evidence references handled explicitly
+- C11 validation returns structured result with unreferenced and missing IDs
 - Nested immutability (Object.isFrozen)
 
 No `as any` casts are used in the test fixtures.
@@ -259,6 +296,22 @@ function mapD10Evidence(d10: CareerD10CanonicalAnalysis): DomainEvidence[]
 function deduplicateCanonicalEvidence(evidence: readonly DomainEvidence[]): DomainEvidence[]
 function sortCanonicalEvidence(evidence: readonly DomainEvidence[]): DomainEvidence[]
 ```
+
+### Validation Function
+
+```typescript
+interface C11ValidationResult {
+  readonly unreferenced: readonly string[];
+  readonly missing: readonly string[];
+}
+
+function validateC11References(
+  evidence: readonly DomainEvidence[],
+  finalSynthesis: CareerFinalSynthesisResult
+): C11ValidationResult
+```
+
+Exposes C11 reference validation for testing without affecting the main mapper output.
 
 ## References
 
