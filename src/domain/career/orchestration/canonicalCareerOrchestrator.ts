@@ -423,6 +423,7 @@ export class CanonicalCareerOrchestrator {
         readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
         readonly establishingEvidence: readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
         readonly networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[];
+        readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
       }[] = [];
 
       for (const pattern of patternCandidates) {
@@ -447,17 +448,43 @@ export class CanonicalCareerOrchestrator {
 
         const roles = rolesByPattern.get(pattern.patternId) ?? [];
 
-        // Extract establishing evidence from qualification if available
-        // For now, use empty array if qualification doesn't provide explicit establishing evidence
-        // This will be documented as a diagnostic when evidence is expected but unavailable
-        const establishingEvidence: import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[] = [];
+        // Derive establishing evidence from upstream producer output (pattern/qualification evidence)
+        // Convert pattern evidence to CareerMechanismEvidence format
+        let establishingEvidence: import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
+        let establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
+
+        if (pattern.sourcePattern.evidence.length > 0) {
+          establishingEvidence = pattern.sourcePattern.evidence.map(ev => ({
+            evidenceId: ev.evidenceId,
+            mechanismType: 'AGENCY' as any, // Placeholder - actual type resolved by resolver
+            source: 'PATTERN' as const,
+            role: 'ESTABLISHING' as const,
+            participantIds: [],
+            relationshipIds: ev.relationshipId ? [ev.relationshipId] : [],
+            patternId: pattern.patternId,
+            explanation: `Pattern classification evidence from network ${ev.sourceNetworkId}`
+          }));
+          establishingEvidenceStatus = 'RESOLVED';
+        } else {
+          establishingEvidence = [];
+          establishingEvidenceStatus = 'UNAVAILABLE';
+          diagnostics.push({
+            diagnosticId: `ORCHESTRATION_ESTABLISHING_EVIDENCE_UNAVAILABLE_${pattern.patternId}`,
+            severity: 'WARNING',
+            category: 'MISSING_DATA',
+            message: `Pattern ${pattern.patternId} has no establishing evidence - marked as UNAVAILABLE`,
+            relatedIds: [pattern.patternId],
+            stage: 'MECHANISM'
+          });
+        }
 
         resolutionInputs.push({
           pattern: pattern.sourcePattern,
           qualification: qualification.qualifiedPattern,
           participantRoles: roles,
           establishingEvidence: Object.freeze(establishingEvidence),
-          networks
+          networks,
+          establishingEvidenceStatus
         });
       }
 
@@ -469,6 +496,12 @@ export class CanonicalCareerOrchestrator {
       // Convert to resolved mechanisms
       const resolvedMechanisms: ResolvedMechanism[] = [];
       for (const candidateSet of candidateSets) {
+        // Look up the pattern to get the establishing evidence status
+        const pattern = patternCandidates.find(p => p.patternId === candidateSet.patternId);
+        const establishingEvidenceStatus = pattern && pattern.sourcePattern.evidence.length > 0
+          ? 'RESOLVED' as const
+          : 'UNAVAILABLE' as const;
+
         for (const candidate of candidateSet.candidates) {
           // Convert candidate evidence to stage evidence
           const stageEvidence: StageEvidence[] = candidate.evidence.map(ev =>
@@ -487,6 +520,7 @@ export class CanonicalCareerOrchestrator {
             mechanismType: candidate.mechanismType,
             candidate,
             candidateSet,
+            establishingEvidenceStatus,
             stageEvidence: Object.freeze(stageEvidence)
           });
         }

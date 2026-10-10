@@ -217,6 +217,26 @@ describe('CanonicalCareerOrchestrator', () => {
           explanation: 'Stub refinement'
         })
       } as any
+      mechanismRefiner: {
+        refine: vi.fn().mockReturnValue({
+          status: 'UNCHANGED',
+          originalCandidateId: 'CANDIDATE_1',
+          mechanisms: [],
+          evidence: [],
+          provenance: {
+            originalProvenance: {
+              patternIds: [],
+              relationshipIds: [],
+              participantIds: [],
+              evidenceIds: [],
+              sourceStages: []
+            },
+            newEvidenceIds: [],
+            sourceStages: []
+          },
+          explanation: 'Stub refinement'
+        })
+      } as any
     };
   }
 

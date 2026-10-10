@@ -145,6 +145,14 @@ export interface ParticipantRoleAssignment {
 }
 
 /**
+ * Status of establishing evidence resolution.
+ */
+export type EstablishingEvidenceStatus =
+  | 'RESOLVED'
+  | 'UNRESOLVED'
+  | 'UNAVAILABLE';
+
+/**
  * Resolved mechanism from the mechanism resolver (P2-07D).
  * Wraps the producer's CareerMechanismCandidate with orchestration-level metadata.
  */
@@ -154,6 +162,7 @@ export interface ResolvedMechanism {
   readonly mechanismType: CareerMechanismType;
   readonly candidate: CareerMechanismCandidate;
   readonly candidateSet: CareerMechanismCandidateSet;
+  readonly establishingEvidenceStatus: EstablishingEvidenceStatus;
   readonly stageEvidence: readonly StageEvidence[];
 }
 
@@ -354,6 +363,7 @@ export interface MechanismResolverPort {
     readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
     readonly establishingEvidence: readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
     readonly networks: readonly CareerHouseNetwork[];
+    readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
   }): import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet;
 
   /**
@@ -368,6 +378,7 @@ export interface MechanismResolverPort {
     readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
     readonly establishingEvidence: readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
     readonly networks: readonly CareerHouseNetwork[];
+    readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
   }[]): readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet[];
 }
 
