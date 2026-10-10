@@ -298,11 +298,18 @@ export interface CareerMechanismCandidate {
   /**
    * IDs of establishing evidence records that were accepted for this candidate.
    * This explicitly identifies which supplied establishing evidence was validated
-   * (matching source + ESTABLISHING role + expected pattern reference + provenance agreement).
+   * (matching source + ESTABLISHING role + expected pattern reference + mechanism-type match).
    * When present, this should be used to derive establishingEvidenceStatus instead of
    * naive evidence ID intersection.
    */
   readonly acceptedEstablishingEvidenceIds?: readonly string[];
+  /**
+   * IDs of establishing evidence records that were rejected for this candidate.
+   * This explicitly identifies which supplied establishing evidence failed validation
+   * (non-matching source, non-ESTABLISHING role, wrong pattern reference, or wrong mechanism type).
+   * When present, this distinguishes "explicitly rejected" from "signal absent" in the orchestrator.
+   */
+  readonly rejectedEstablishingEvidenceIds?: readonly string[];
 }
 
 /**

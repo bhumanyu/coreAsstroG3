@@ -129,7 +129,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       const pathway: CareerMechanismPathway = 'PATTERN';
 
       // Build evidence for this candidate (must be built before provenance)
-      const [evidence, acceptedEstablishingEvidenceIds] = this.buildCandidateEvidence(
+      const [evidence, acceptedEstablishingEvidenceIds, _rejectedEstablishingEvidenceIds] = this.buildCandidateEvidence(
         pattern.patternId,
         candidateId,
         mechanismType,
@@ -147,7 +147,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       // Build explanation
       const explanation = this.buildExplanation(mechanismType, input);
 
-      // Create candidate with accepted establishing evidence IDs
+      // Create candidate with accepted and rejected establishing evidence IDs
       const candidate = createCareerMechanismCandidate(
         pattern.patternId,
         mechanismType,
@@ -155,7 +155,8 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
         evidence,
         provenance,
         explanation,
-        acceptedEstablishingEvidenceIds.length > 0 ? acceptedEstablishingEvidenceIds : undefined
+        acceptedEstablishingEvidenceIds.length > 0 ? acceptedEstablishingEvidenceIds : undefined,
+        _rejectedEstablishingEvidenceIds.length > 0 ? _rejectedEstablishingEvidenceIds : undefined
       );
 
       candidates.push(candidate);
@@ -193,16 +194,29 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
    * mechanismType) is attached only to matching mechanism types. Both are gated
    * by ESTABLISHING_EVIDENCE_SOURCES on the source field.
    *
-   * Returns a tuple of [evidence array, accepted establishing evidence IDs].
-   * The accepted IDs track which supplied establishing evidence was validated
-   * and attached to this candidate (used by orchestrator to derive status).
+   * ESTABLISHING EVIDENCE VALIDATION:
+   * Before accepting supplied establishing evidence, validates:
+   * (a) ev.source passes ESTABLISHING_EVIDENCE_SOURCES (structural sources only)
+   * (b) ev.role === 'ESTABLISHING'
+   * (c) ev.patternId matches the current candidate's patternId
+   * (d) mechanismType match (for typed evidence)
+   *
+   * Evidence failing any validation is rejected (not marked accepted) and not
+   * used to derive establishingEvidenceStatus. This prevents silent acceptance
+   * of evidence that doesn't meet the contract.
+   *
+   * Returns a tuple of [evidence array, accepted establishing evidence IDs,
+   * rejected establishing evidence IDs]. The accepted IDs track which supplied
+   * establishing evidence was validated and attached to this candidate (used by
+   * orchestrator to derive status). The rejected IDs track evidence that was
+   * supplied but failed validation (used to distinguish "rejected" from "signal absent").
    *
    * @param patternId - The pattern ID
    * @param candidateId - The candidate ID
    * @param mechanismType - The mechanism type
    * @param pathway - The mechanism pathway
    * @param input - The resolution input
-   * @returns Frozen array of evidence records and accepted establishing evidence IDs
+   * @returns Frozen array of evidence records, accepted establishing evidence IDs, and rejected establishing evidence IDs
    */
   private buildCandidateEvidence(
     patternId: string,
@@ -210,9 +224,10 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
     mechanismType: CareerMechanismType,
     pathway: CareerMechanismPathway,
     input: CareerMechanismResolutionInput
-  ): readonly [readonly CareerMechanismEvidence[], readonly string[]] {
+  ): readonly [readonly CareerMechanismEvidence[], readonly string[], readonly string[]] {
     const evidence: CareerMechanismEvidence[] = [];
     const acceptedEstablishingEvidenceIds: string[] = [];
+    const rejectedEstablishingEvidenceIds: string[] = [];
 
     // Add PATTERN evidence (pattern-derived)
     const patternEvidence = buildCareerMechanismEvidence({
@@ -263,6 +278,18 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
           continue;
         }
 
+        // Validate role: must be ESTABLISHING
+        if (ev.role !== 'ESTABLISHING') {
+          rejectedEstablishingEvidenceIds.push(ev.evidenceId);
+          continue;
+        }
+
+        // Validate patternId: must match current candidate's patternId
+        if (ev.patternId !== patternId) {
+          rejectedEstablishingEvidenceIds.push(ev.evidenceId);
+          continue;
+        }
+
         // Pattern-level evidence (no mechanismType): attach to all candidates
         if (ev.mechanismType === undefined) {
           evidence.push({
@@ -292,12 +319,15 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
           });
           // Track this as accepted establishing evidence
           acceptedEstablishingEvidenceIds.push(ev.evidenceId);
+        } else {
+          // Typed evidence with non-matching mechanismType - reject
+          rejectedEstablishingEvidenceIds.push(ev.evidenceId);
         }
       }
     }
 
-    // Return frozen array and accepted IDs
-    return Object.freeze([Object.freeze(evidence), Object.freeze(acceptedEstablishingEvidenceIds)]);
+    // Return frozen array, accepted IDs, and rejected IDs
+    return Object.freeze([Object.freeze(evidence), Object.freeze(acceptedEstablishingEvidenceIds), Object.freeze(rejectedEstablishingEvidenceIds)]);
   }
 
   /**

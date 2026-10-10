@@ -158,6 +158,7 @@ export interface ParticipantRoleAssignment {
 export type EstablishingEvidenceStatus =
   | 'SOURCE_EVIDENCE_PRESENT'
   | 'RESOLVED_FOR_MECHANISM'
+  | 'REJECTED'
   | 'UNRESOLVED'
   | 'UNAVAILABLE';
 

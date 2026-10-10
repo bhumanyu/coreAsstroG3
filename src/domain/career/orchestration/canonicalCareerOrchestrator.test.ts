@@ -946,6 +946,299 @@ describe('CanonicalCareerOrchestrator', () => {
 
     // Note: resolver-reported acceptance tests are in careerMechanismResolver.test.ts
     // The orchestrator consumes the resolver's acceptedEstablishingEvidenceIds output
+
+    it('should call refiner with candidate-specific dispositor contexts when provided', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      // Capture the refine call to check arguments
+      let capturedRefineInputs: any[] = [];
+      (ports.mechanismRefiner.refine as any).mockImplementation((input: any) => {
+        capturedRefineInputs.push(input);
+        return {
+          status: 'REFINED',
+          originalCandidateId: 'CANDIDATE_1',
+          mechanisms: [
+            {
+              mechanismId: 'MECHANISM_REAL_1',
+              patternId: 'PATTERN_1',
+              mechanismType: 'AGENCY',
+              pathway: 'PATTERN',
+              participants: [],
+              coreParticipants: [],
+              supportingParticipants: [],
+              challengingParticipants: [],
+              status: 'REFINED',
+              explanation: 'Refined mechanism',
+              evidence: [],
+              provenance: {
+                patternIds: [],
+                relationshipIds: [],
+                participantIds: [],
+                evidenceIds: [],
+                sourceStages: []
+              }
+            }
+          ],
+          evidence: ['EVIDENCE_1'],
+          provenance: {
+            originalProvenance: {},
+            newEvidenceIds: ['EVIDENCE_1'],
+            sourceStages: ['DISPOSITOR']
+          },
+          explanation: 'Refinement successful'
+        };
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      // Provide non-empty dispositor contexts
+      const dispositorContexts = [
+        { candidateId: 'CANDIDATE_1', dispositorData: 'DISPOSITOR_DATA_1' } as any
+      ];
+
+      orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts
+      });
+
+      // Verify refiner was called with correct candidate-specific context
+      expect(capturedRefineInputs).toHaveLength(1);
+      expect(capturedRefineInputs[0].candidate.candidateId).toBe('CANDIDATE_1');
+      expect(capturedRefineInputs[0].dispositorContexts).toEqual(dispositorContexts);
+    });
+
+    it('should produce RESOLVED refinement with REFINED status and correct mechanism ID', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      (ports.mechanismRefiner.refine as any).mockReturnValue({
+        status: 'REFINED',
+        originalCandidateId: 'CANDIDATE_1',
+        mechanisms: [
+          {
+            mechanismId: 'MECHANISM_REAL_1',
+            patternId: 'PATTERN_1',
+            mechanismType: 'AGENCY',
+            pathway: 'PATTERN',
+            participants: [],
+            coreParticipants: [],
+            supportingParticipants: [],
+            challengingParticipants: [],
+            status: 'REFINED',
+            explanation: 'Refined mechanism',
+            evidence: [],
+            provenance: {
+              patternIds: [],
+              relationshipIds: [],
+              participantIds: [],
+              evidenceIds: [],
+              sourceStages: []
+            }
+          }
+        ],
+        evidence: ['EVIDENCE_1'],
+        provenance: {
+          originalProvenance: {},
+          newEvidenceIds: ['EVIDENCE_1'],
+          sourceStages: ['DISPOSITOR']
+        },
+        explanation: 'Refinement successful'
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      const refinement = foundation.mechanismRefinements[0];
+      expect(refinement.resolution).toBe('RESOLVED');
+      expect(refinement.status).toBe('REFINED');
+      expect(refinement.candidateId).toBe('CANDIDATE_1');
+      expect(refinement.mechanismId).toBe('MECHANISM_REAL_1');
+      expect(refinement.mechanism).not.toBeNull();
+    });
+
+    it('should produce RESOLVED refinement with UNCHANGED status and correct mechanism ID', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      (ports.mechanismRefiner.refine as any).mockReturnValue({
+        status: 'UNCHANGED',
+        originalCandidateId: 'CANDIDATE_1',
+        mechanisms: [
+          {
+            mechanismId: 'MECHANISM_UNCHANGED_1',
+            patternId: 'PATTERN_1',
+            mechanismType: 'AGENCY',
+            pathway: 'PATTERN',
+            participants: [],
+            coreParticipants: [],
+            supportingParticipants: [],
+            challengingParticipants: [],
+            status: 'REFINED',
+            explanation: 'Unchanged mechanism',
+            evidence: [],
+            provenance: {
+              patternIds: [],
+              relationshipIds: [],
+              participantIds: [],
+              evidenceIds: [],
+              sourceStages: []
+            }
+          }
+        ],
+        evidence: ['EVIDENCE_1'],
+        provenance: {
+          originalProvenance: {},
+          newEvidenceIds: ['EVIDENCE_1'],
+          sourceStages: ['DISPOSITOR']
+        },
+        explanation: 'Refinement unchanged'
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      const refinement = foundation.mechanismRefinements[0];
+      expect(refinement.resolution).toBe('RESOLVED');
+      expect(refinement.status).toBe('UNCHANGED');
+      expect(refinement.candidateId).toBe('CANDIDATE_1');
+      expect(refinement.mechanismId).toBe('MECHANISM_UNCHANGED_1');
+      expect(refinement.mechanism).not.toBeNull();
+    });
+
+    it('should produce UNRESOLVED refinement with UNAVAILABLE status for INSUFFICIENT_DATA result', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      (ports.mechanismRefiner.refine as any).mockReturnValue({
+        status: 'INSUFFICIENT_DATA',
+        originalCandidateId: 'CANDIDATE_1',
+        mechanisms: [],
+        evidence: [],
+        provenance: {
+          originalProvenance: {},
+          newEvidenceIds: [],
+          sourceStages: []
+        },
+        explanation: 'Insufficient data for refinement'
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      const refinement = foundation.mechanismRefinements[0];
+      expect(refinement.resolution).toBe('UNRESOLVED');
+      expect(refinement.status).toBe('UNAVAILABLE');
+      expect(refinement.candidateId).toBe('CANDIDATE_1');
+      expect(refinement.mechanism).toBeNull();
+      expect(foundation.diagnostics).toContainEqual(
+        expect.objectContaining({
+          diagnosticId: 'ORCHESTRATION_MECHANISM_REFINER_INSUFFICIENT_DATA_CANDIDATE_1',
+          severity: 'WARNING',
+          category: 'MISSING_DATA'
+        })
+      );
+    });
+
+    it('should produce UNRESOLVED refinement with UNAVAILABLE status when mechanism ID is missing', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      (ports.mechanismRefiner.refine as any).mockReturnValue({
+        status: 'REFINED',
+        originalCandidateId: 'CANDIDATE_1',
+        mechanisms: [], // Empty mechanisms array - no mechanism ID available
+        evidence: ['EVIDENCE_1'],
+        provenance: {
+          originalProvenance: {},
+          newEvidenceIds: ['EVIDENCE_1'],
+          sourceStages: ['DISPOSITOR']
+        },
+        explanation: 'Refinement result without mechanism'
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      const refinement = foundation.mechanismRefinements[0];
+      expect(refinement.resolution).toBe('UNRESOLVED');
+      expect(refinement.status).toBe('UNAVAILABLE');
+      expect(refinement.candidateId).toBe('CANDIDATE_1');
+      expect(refinement.mechanism).toBeNull();
+      expect(foundation.diagnostics).toContainEqual(
+        expect.objectContaining({
+          diagnosticId: 'ORCHESTRATION_MECHANISM_ID_MISSING_CANDIDATE_1',
+          severity: 'WARNING',
+          category: 'MISSING_DATA'
+        })
+      );
+    });
   });
 
   describe('Identity mappings deferred', () => {

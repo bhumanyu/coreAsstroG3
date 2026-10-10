@@ -234,6 +234,7 @@ export function createCareerMechanism(
  * @param provenance - The provenance object
  * @param explanation - The explanation text
  * @param acceptedEstablishingEvidenceIds - Optional IDs of establishing evidence accepted for this candidate
+ * @param rejectedEstablishingEvidenceIds - Optional IDs of establishing evidence rejected for this candidate
  * @returns Frozen career mechanism candidate
  */
 export function createCareerMechanismCandidate(
@@ -243,7 +244,8 @@ export function createCareerMechanismCandidate(
   evidence: readonly CareerMechanismEvidence[],
   provenance: CareerMechanismProvenance,
   explanation: string,
-  acceptedEstablishingEvidenceIds?: readonly string[]
+  acceptedEstablishingEvidenceIds?: readonly string[],
+  rejectedEstablishingEvidenceIds?: readonly string[]
 ): CareerMechanismCandidate {
   const candidateId = createCareerMechanismCandidateId(patternId, mechanismType);
 
@@ -275,6 +277,9 @@ export function createCareerMechanismCandidate(
     explanation,
     acceptedEstablishingEvidenceIds: acceptedEstablishingEvidenceIds
       ? Object.freeze([...acceptedEstablishingEvidenceIds].sort())
+      : undefined,
+    rejectedEstablishingEvidenceIds: rejectedEstablishingEvidenceIds
+      ? Object.freeze([...rejectedEstablishingEvidenceIds].sort())
       : undefined
   });
 

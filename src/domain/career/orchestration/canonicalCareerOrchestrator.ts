@@ -513,21 +513,34 @@ export class CanonicalCareerOrchestrator {
         const suppliedEstablishingEvidence = establishingEvidenceByPattern.get(candidateSet.patternId) ?? [];
 
         for (const candidate of candidateSet.candidates) {
-          // Determine establishing evidence status using resolver-reported acceptance signal
+          // Determine establishing evidence status using resolver-reported acceptance/rejection signals
           // RESOLVED_FOR_MECHANISM: resolver explicitly accepted establishing evidence for this candidate
-          // SOURCE_EVIDENCE_PRESENT: source evidence exists but resolver did not accept it for this candidate
+          // REJECTED: source evidence exists but resolver explicitly rejected it for this candidate
+          // SOURCE_EVIDENCE_PRESENT: source evidence exists but resolver produced no acceptance/rejection metadata
           // UNRESOLVED: no source evidence exists
           // UNAVAILABLE: source evidence unavailable from qualification
-          let establishingEvidenceStatus: 'SOURCE_EVIDENCE_PRESENT' | 'RESOLVED_FOR_MECHANISM' | 'UNRESOLVED' | 'UNAVAILABLE';
+          let establishingEvidenceStatus: 'SOURCE_EVIDENCE_PRESENT' | 'RESOLVED_FOR_MECHANISM' | 'REJECTED' | 'UNRESOLVED' | 'UNAVAILABLE';
 
           if (suppliedEstablishingEvidence.length === 0) {
             establishingEvidenceStatus = 'UNAVAILABLE';
           } else {
-            // Use resolver-reported acceptedEstablishingEvidenceIds if available
+            // Use resolver-reported acceptedEstablishingEvidenceIds and rejectedEstablishingEvidenceIds if available
             if (candidate.acceptedEstablishingEvidenceIds && candidate.acceptedEstablishingEvidenceIds.length > 0) {
               establishingEvidenceStatus = 'RESOLVED_FOR_MECHANISM';
+            } else if (candidate.rejectedEstablishingEvidenceIds && candidate.rejectedEstablishingEvidenceIds.length > 0) {
+              // Explicitly rejected by resolver
+              establishingEvidenceStatus = 'REJECTED';
             } else {
-              // Source evidence exists but resolver did not accept it for this candidate
+              // Source evidence exists but resolver produced no acceptance/rejection metadata
+              // This is a missing-metadata case - emit diagnostic
+              diagnostics.push({
+                diagnosticId: `ORCHESTRATION_RESOLVER_ACCEPTANCE_METADATA_MISSING_${candidate.candidateId}`,
+                severity: 'WARNING',
+                category: 'MISSING_DATA',
+                message: `Resolver produced no acceptance/rejection metadata for candidate ${candidate.candidateId} despite source evidence being present - treating as SOURCE_EVIDENCE_PRESENT`,
+                relatedIds: [candidate.candidateId],
+                stage: 'MECHANISM'
+              });
               establishingEvidenceStatus = 'SOURCE_EVIDENCE_PRESENT';
             }
           }
