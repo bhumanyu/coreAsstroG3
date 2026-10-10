@@ -2,7 +2,7 @@
 
 ## Status
 
-IMPLEMENTED — VERIFIED
+IMPLEMENTED — LOCAL VERIFICATION REPORTED, CI PENDING
 
 ## Purpose
 
@@ -27,7 +27,7 @@ The C4 structural evidence already enters `mergedEvidence` via `toDomainEvidence
 |-------|-------|--------|-----------|------|-----------------|-----------------|-------|
 | C4–C7 (Natal) | `NATAL_PROMISE` | `C4_STRUCTURAL_REASONING` | From `layer` (YOGA→YOGA, others→STRUCTURAL) | From `layer` (PRIMARY_PROMISE→PRIMARY, SECONDARY_SUPPORT→SECONDARY, etc.) | From `direction` (SUPPORT→SUPPORTING, CHALLENGE→CHALLENGING, NEUTRAL→NEUTRAL) | From `strength` (VERY_STRONG/STRONG/MODERATE/WEAK) | MIXED split via C4 convention preserving shared identityKey; unmappable strength excluded |
 | C8 (Expression) | `MODIFIER` | `D1` | `PLANET` | `MODIFIER` | From parent `CareerExpression.direction` (SUPPORTED→SUPPORTING, CONDITIONAL→SUPPORTING with notes, NEUTRAL→NEUTRAL) | From parent `CareerExpression.strength` (STRONG/MODERATE/WEAK) | UNAVAILABLE strength excludes record; no ruleId fabricated |
-| C9 (Dasha) | `DASHA_ACTIVATION` | `DASHA` | `PLANET` | `TIMING` | From `direction` | From `strength` via exhaustive mapping | Cannot be PRIMARY natal (enforced by phase); no fabricated ruleId (CareerDashaCanonicalProvenance does not expose ruleId); polarity/effect consistency enforced |
+| C9 (Dasha) | `DASHA_ACTIVATION` | `DASHA` | `PLANET` | `TIMING` | From `direction` | From `strength` via exhaustive mapping | Cannot be PRIMARY natal (enforced by phase); no provenance or ruleId (CareerDashaCanonicalProvenance does not expose ruleId); polarity/effect consistency enforced |
 | C10 (D10) | `VARGA_CONFIRMATION` | `D10` | `HOUSE` | `CONFIRMATION` | From `direction` (MIXED split into SUPPORTING+CHALLENGING) | From `d10Strength` via exhaustive mapping | Cannot establish natal promise (enforced by phase); MIXED split via natal convention |
 | Transit | N/A | N/A | N/A | N/A | N/A | N/A | No canonical transit evidence producer; intentionally not mapped |
 
@@ -65,7 +65,7 @@ sourceIds = [occurrenceId(SUPPORT), occurrenceId(CHALLENGE), ...]
 - Distinct from occurrence ID and semantic identity
 - Mapped to `DomainEvidence.ruleId`
 - Expression evidence has no ruleId (not fabricated)
-- Dasha evidence has no ruleId (CareerDashaCanonicalProvenance does not expose ruleId)
+- Dasha evidence has no ruleId or provenance (CareerDashaCanonicalProvenance does not expose ruleId)
 - D10 evidence uses first ruleId from `provenance.ruleIds` if present
 
 ## Exhaustive Strength Mapping
@@ -114,9 +114,10 @@ This aligns with C11-INV-05 from the convergence contract.
 
 C11 is used **only for reference validation**, never as an evidence source:
 
-- The mapper validates that produced evidence IDs are cross-referenceable against `finalSynthesis.evidenceIds`
+- The mapper computes a check that produced evidence IDs are cross-referenceable against `finalSynthesis.evidenceIds`, returning `{ unreferenced: string[]; missing: string[] }`
+- In the production path (`mapCanonicalCareerEvidence`), this check is computed but the result is discarded (not surfaced or acted upon)
+- The validation result is exposed to tests via `validateC11References()`, which allows test observability of the cross-reference check
 - Unknown references are handled explicitly (ignored, never fabricated)
-- Validation result is returned as a structured `{ unreferenced: string[]; missing: string[] }` via `validateC11References()`
 - The mapper does **not** create `DomainEvidence` from:
   - `finalSynthesis.statement`
   - `finalSynthesis.finalStatus`
@@ -224,15 +225,15 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - CONDITIONAL expression maps to SUPPORTING with notes
 - UNAVAILABLE expression emits nothing
 - Dasha → DASHA_ACTIVATION and cannot be PRIMARY natal
-- Dasha evidence has no fabricated ruleId (omitted when real ruleId does not exist)
+- Dasha evidence has no provenance or ruleId (CareerDashaCanonicalProvenance does not expose ruleId)
 - Dasha evidence preserves sourceIds in relatedEvidenceIds
 - Dasha polarity/effect consistency: throws on SUPPORTING with CHALLENGE effect
 - D10 → VARGA_CONFIRMATION and cannot establish natal promise
 - D10 MIXED direction splits into SUPPORTING and CHALLENGING occurrences
 - Expression strength derived from parent CareerExpression.strength
 - Expression UNAVAILABLE strength excludes record
-- Deduplication throws on polarity disagreement in dedup
-- Records without identityKey are preserved as separate items
+- Deduplication throws on strength disagreement in dedup
+- Records with unique identityKeys are preserved as separate items
 - Missing-layer data yields no fabricated negative evidence
 - Missing provenance leaves ruleId absent (no fabrication for C8)
 - Duplicate semantic identity dedupes without weight inflation

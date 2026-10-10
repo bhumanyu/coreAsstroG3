@@ -375,7 +375,7 @@ function mapDashaEvidence(
     }
 
     // Dasha provenance does not expose a ruleId (CareerDashaCanonicalProvenance only has source, activationLevel, natalRootIds)
-    // Mirror D10 path: omit ruleId when no real ruleId exists
+    // Omit provenance entirely since ruleId is required by EvidenceProvenance
     const domainEvidence = createDomainEvidence({
       id: evidence.id,
       sourceType: 'PLANET',
@@ -388,14 +388,6 @@ function mapDashaEvidence(
       strength,
       priority: 1,
       relatedEvidenceIds: evidence.sourceIds,
-      provenance: {
-        evidenceId: evidence.id,
-        domain: 'CAREER',
-        axis: 'DASHA',
-        source: 'DASHA',
-        effect: provenanceEffect,
-        strength: 'SECONDARY'
-      },
       timing: {
         period: evidence.level,
         level: evidence.level,
@@ -762,7 +754,7 @@ function mapLayerToSourceType(
     case 'TRANSIT':
       return 'STRUCTURAL';
     default:
-      return 'STRUCTURAL';
+      throw new Error(`Unexpected layer value: ${layer}`);
   }
 }
 

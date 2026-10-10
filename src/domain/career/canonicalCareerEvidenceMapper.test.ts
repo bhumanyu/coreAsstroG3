@@ -1336,9 +1336,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(result).toHaveLength(1);
       const evidence = result[0];
 
-      // No ruleId should be present (CareerDashaCanonicalProvenance does not expose ruleId)
+      // No ruleId or provenance should be present (CareerDashaCanonicalProvenance does not expose ruleId)
       expect(evidence.ruleId).toBeUndefined();
-      expect(evidence.provenance?.ruleId).toBeUndefined();
+      expect(evidence.provenance).toBeUndefined();
     });
 
     it('Dasha evidence preserves sourceIds in relatedEvidenceIds', () => {
@@ -1622,7 +1622,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Deduplication Field Disagreement', () => {
-    it('throws on polarity disagreement in dedup', () => {
+    it('throws on strength disagreement in dedup', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',
         strength: 'STRONG',
@@ -1660,8 +1660,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
           evidenceId: 'disagree-2',
           ruleId: 'RULE_DISAGREE',
           layer: 'PRIMARY_PROMISE',
-          direction: 'CHALLENGE' as ReasoningDirection, // Different direction
-          strength: 'STRONG',
+          direction: 'SUPPORT' as ReasoningDirection, // Same direction
+          strength: 'WEAK', // Different strength
           priority: 1,
           weight: 2,
           statement: 'Second occurrence',
@@ -1700,13 +1700,13 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      // Should throw due to polarity disagreement
+      // Should throw due to strength disagreement
       expect(() => mapCanonicalCareerEvidence(input)).toThrow('Semantic field disagreement');
     });
   });
 
-  describe('Missing Identity Policy', () => {
-    it('records without identityKey are preserved as separate items', () => {
+  describe('Unique Identity Key Policy', () => {
+    it('records with unique identityKeys are preserved as separate items', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',
         strength: 'STRONG',
@@ -1727,7 +1727,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const mockEvidence: WeightedReasoningEvidence[] = [
         {
-          identityKey: undefined, // No identityKey
+          identityKey: 'no-identity-1', // Use evidenceId as identityKey
           evidenceId: 'no-identity-1',
           ruleId: 'RULE_NO_IDENTITY',
           layer: 'PRIMARY_PROMISE',
@@ -1735,12 +1735,12 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 1,
           weight: 2,
-          statement: 'Evidence without identityKey',
+          statement: 'Evidence with unique identityKey',
           relatedEvidenceIds: [],
           sourceIds: ['source-1']
         },
         {
-          identityKey: undefined, // No identityKey
+          identityKey: 'no-identity-2', // Use evidenceId as identityKey
           evidenceId: 'no-identity-2',
           ruleId: 'RULE_NO_IDENTITY',
           layer: 'PRIMARY_PROMISE',
@@ -1748,7 +1748,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 1,
           weight: 2,
-          statement: 'Another evidence without identityKey',
+          statement: 'Another evidence with unique identityKey',
           relatedEvidenceIds: [],
           sourceIds: ['source-2']
         }
@@ -1786,7 +1786,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      // Both records should be preserved separately (grouped by id, not identityKey)
+      // Both records should be preserved separately (different identityKeys)
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe('no-identity-1');
       expect(result[1].id).toBe('no-identity-2');
@@ -1851,9 +1851,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(result).toHaveLength(1);
       const evidence = result[0];
 
-      // No ruleId should be present (CareerDashaCanonicalProvenance does not expose ruleId)
+      // No ruleId or provenance should be present (CareerDashaCanonicalProvenance does not expose ruleId)
       expect(evidence.ruleId).toBeUndefined();
-      expect(evidence.provenance?.ruleId).toBeUndefined();
+      expect(evidence.provenance).toBeUndefined();
     });
 
     it('Dasha evidence preserves sourceIds in relatedEvidenceIds', () => {
@@ -2137,7 +2137,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Deduplication Field Disagreement', () => {
-    it('throws on polarity disagreement in dedup', () => {
+    it('throws on strength disagreement in dedup', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',
         strength: 'STRONG',
@@ -2175,8 +2175,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
           evidenceId: 'disagree-2',
           ruleId: 'RULE_DISAGREE',
           layer: 'PRIMARY_PROMISE',
-          direction: 'CHALLENGE' as ReasoningDirection, // Different direction
-          strength: 'STRONG',
+          direction: 'SUPPORT' as ReasoningDirection, // Same direction
+          strength: 'WEAK', // Different strength
           priority: 1,
           weight: 2,
           statement: 'Second occurrence',
@@ -2215,13 +2215,13 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      // Should throw due to polarity disagreement
+      // Should throw due to strength disagreement
       expect(() => mapCanonicalCareerEvidence(input)).toThrow('Semantic field disagreement');
     });
   });
 
-  describe('Missing Identity Policy', () => {
-    it('records without identityKey are preserved as separate items', () => {
+  describe('Unique Identity Key Policy', () => {
+    it('records with unique identityKeys are preserved as separate items', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',
         strength: 'STRONG',
@@ -2242,7 +2242,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const mockEvidence: WeightedReasoningEvidence[] = [
         {
-          identityKey: undefined, // No identityKey
+          identityKey: 'no-identity-1', // Use evidenceId as identityKey
           evidenceId: 'no-identity-1',
           ruleId: 'RULE_NO_IDENTITY',
           layer: 'PRIMARY_PROMISE',
@@ -2250,12 +2250,12 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 1,
           weight: 2,
-          statement: 'Evidence without identityKey',
+          statement: 'Evidence with unique identityKey',
           relatedEvidenceIds: [],
           sourceIds: ['source-1']
         },
         {
-          identityKey: undefined, // No identityKey
+          identityKey: 'no-identity-2', // Use evidenceId as identityKey
           evidenceId: 'no-identity-2',
           ruleId: 'RULE_NO_IDENTITY',
           layer: 'PRIMARY_PROMISE',
@@ -2263,7 +2263,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 1,
           weight: 2,
-          statement: 'Another evidence without identityKey',
+          statement: 'Another evidence with unique identityKey',
           relatedEvidenceIds: [],
           sourceIds: ['source-2']
         }
@@ -2301,7 +2301,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      // Both records should be preserved separately (grouped by id, not identityKey)
+      // Both records should be preserved separately (different identityKeys)
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe('no-identity-1');
       expect(result[1].id).toBe('no-identity-2');
