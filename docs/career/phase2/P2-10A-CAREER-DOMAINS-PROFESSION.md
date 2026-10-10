@@ -144,7 +144,7 @@ Rule descriptor for expression/mechanism → profession mapping.
 - `basis`: What establishes this candidate
 - `requiredExpressionTypes`: Expression types that trigger this rule (optional)
 - `requiredMechanismTypes`: Mechanism types that trigger this rule (optional)
-- `precedence`: Rule precedence for conflict resolution (higher = higher priority)
+- `precedence`: Ordering metadata for rule evaluation order (higher = evaluated first). Current behavior emits every match; precedence does not suppress lower-precedence matches.
 
 #### Rule Semantics
 
@@ -280,13 +280,21 @@ The boundary test (`careerProfessionBoundary.test.ts`) enforces these restrictio
 
 ### Deferred Work
 
-#### D10 Expression Identity Namespace Reconciliation
+#### D10 Expression Identity Namespace Reconciliation (Known Qualification Gap)
 
 The P2-08A `expressionId` (e.g., `EXPR:RESEARCH_WORK:MECH1,MECH2`) does not match the D10 canonical `expressionId` (legacy mode-based `CareerExpression` identity). Without a documented mapping between these namespaces, D10 per-expression qualification is deferred.
+
+**Current Behavior:**
+- `applyD10Qualification` returns `NOT_PROVIDED` when D10 data is missing
+- `applyD10Qualification` returns `UNAVAILABLE` when D10 data is provided but identity namespaces are not reconciled
+- `UNAVAILABLE` is never read as negative evidence downstream
+- D10 only qualifies existing candidates; it never creates them
 
 **Resolution Path:**
 1. Implement and unit-test a documented mapping between P2-08A expression identity and D10 canonical expression identity
 2. OR: If no reliable mapping exists, continue to return `NOT_PROVIDED`/`UNAVAILABLE` and document that D10 per-expression qualification is deferred
+
+**Status:** This is a known qualification gap. Functional D10 qualification will be implemented once a tested P2-08A↔D10 expression-identity mapping exists.
 
 #### Refinement Adapters
 

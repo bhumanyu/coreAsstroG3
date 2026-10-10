@@ -26,19 +26,21 @@ import type {
 
 /**
  * Create a stable profession candidate ID.
- * Combines domain, family, pattern IDs, and basis into a deterministic ID.
+ * Combines domain, family, pattern IDs, basis, and ruleId into a deterministic ID.
  *
  * Pattern-scoped: includes patternIds so candidates from distinct patterns are not collapsed.
+ * Rule-scoped: includes ruleId so candidates from different rules are not collapsed.
  */
 export function createProfessionCandidateId(
   domain: string,
   family: string,
   patternIds: readonly string[],
-  basis: string
+  basis: string,
+  ruleId: string
 ): string {
   const sortedPatternIds = [...patternIds].sort(codePointCompare);
   const patternKey = sortedPatternIds.join('|');
-  return `PROF:${domain}:${family}:${basis}:${patternKey}`;
+  return `PROF:${domain}:${family}:${basis}:${ruleId}:${patternKey}`;
 }
 
 /**
@@ -87,7 +89,8 @@ export function canonicalSortProfessionEvidence(
 
 /**
  * Deduplicate profession candidates by candidateId.
- * Returns the first occurrence of each unique candidateId.
+ * Returns the first occurrence of each unique candidateId (keep-first behavior).
+ * Safe for all call sites after identity fix (post-fix, colliding IDs should be genuinely identical or merged).
  */
 export function deduplicateProfessionCandidates(
   candidates: readonly CareerProfessionCandidate[]
@@ -107,7 +110,8 @@ export function deduplicateProfessionCandidates(
 
 /**
  * Deduplicate profession evidence by evidenceId.
- * Returns the first occurrence of each unique evidenceId.
+ * Returns the first occurrence of each unique evidenceId (keep-first behavior).
+ * Safe for all call sites after identity fix (post-fix, colliding IDs should be genuinely identical or merged).
  */
 export function deduplicateProfessionEvidence(
   evidence: readonly CareerProfessionEvidence[]

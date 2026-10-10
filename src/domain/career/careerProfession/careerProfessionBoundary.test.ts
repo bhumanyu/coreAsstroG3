@@ -9,7 +9,7 @@ describe('careerProfession Boundary Enforcement', () => {
     'careerFinalSynthesis',
     'domain/timing',
     'transit',
-    'ai'
+    'AI'
   ];
 
   const modulePath = join(__dirname);
@@ -38,10 +38,9 @@ describe('careerProfession Boundary Enforcement', () => {
         const filePath = join(modulePath, file);
         const content = readFileSync(filePath, 'utf-8');
 
-        // Check for AI-related imports (word-boundary, case-sensitive uppercase AI segment)
-        // Current pattern /\bAI\b/ matches standalone uppercase AI path segments only (e.g. '../AI/engine')
-        // It deliberately does not match lowercase 'ai' or names like 'openai'/'ai-engine'
-        // If a broader policy is intended, update the regex to /['"][^'"]*\b(?:ai|AI)\b[^'"]*['"]/
+        // Check for AI-related imports (uppercase-only, case-sensitive)
+        // Pattern matches standalone uppercase AI path segments only (e.g. '../AI/engine')
+        // Does not match lowercase 'ai' or names like 'openai'/'ai-engine'
         // The 's' flag allows '.' to match newlines for multi-line import statements
         const aiPattern = /import\s+.*\s+from\s+['"][^'"]*\bAI\b[^'"]*['"]/s;
         expect(content).not.toMatch(aiPattern);

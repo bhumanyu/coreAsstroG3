@@ -98,6 +98,7 @@ export function buildCareerProfessionAnalysis(
   // Resolve candidates within each pattern scope
   const candidates: CareerProfessionCandidate[] = [];
   const allConsumedExpressionTypes = new Set<CareerExpressionType>();
+  let anyCandidateEstablished = false;
 
   for (const patternId of allPatternIds) {
     const patternExpressions = expressionsByPattern[patternId] || [];
@@ -122,6 +123,9 @@ export function buildCareerProfessionAnalysis(
 
     candidates.push(...patternResult.candidates);
   }
+
+  // Track whether any candidate was established (for status determination)
+  anyCandidateEstablished = candidates.length > 0;
 
   // Apply D10 qualification to existing candidates only
   const d10QualifiedCandidates = applyD10Qualification(candidates, careerD10CanonicalAnalysis);
@@ -153,9 +157,12 @@ export function buildCareerProfessionAnalysis(
     missingInputs.push('domainEvidence');
   }
 
-  // Compute status
+  // Compute status based on minimum-input contract
+  // INSUFFICIENT_DATA: no candidate-establishing input was present/consumed
+  // PARTIAL: candidates established but some optional inputs missing
+  // COMPLETE: candidates established and all optional inputs present
   let status: CareerProfessionAnalysisStatus;
-  if (expressions.expressions.length === 0) {
+  if (!anyCandidateEstablished) {
     status = 'INSUFFICIENT_DATA';
   } else if (missingInputs.length > 0) {
     status = 'PARTIAL';
@@ -163,10 +170,8 @@ export function buildCareerProfessionAnalysis(
     status = 'COMPLETE';
   }
 
-  // Build provenance
+  // Build provenance from emitted candidates' evidence only
   const provenance = buildProvenance(
-    expressions.expressions,
-    mechanisms,
     d10QualifiedCandidates,
     allPatternIds
   );
@@ -238,10 +243,16 @@ function indexMechanismsByPattern(
 
 /**
  * Resolve rules within a single pattern scope.
- * Per spec §6: pattern-scoped resolution.
+ * Per spec §6: pattern-scoped resolution with source-linked rule resolution.
  *
  * Mechanisms and expressions from different patterns are NOT combined to satisfy a rule.
  * Candidate identity includes the source-pattern set so candidates from distinct patterns are not collapsed.
+ *
+ * Source-linked resolution (P1):
+ * - For expression-driven rules: select only expressions whose expressionType matches the rule
+ *   AND verify their sourceMechanismIds reference the pattern's mechanism candidates
+ * - For mechanism composites: require all requiredMechanismTypes to be present in the source-linked mechanism set
+ * - Pass only the satisfying expressions/mechanisms into buildCandidateFromRule and buildEvidence
  */
 function resolveRulesInPattern(
   patternId: string,
@@ -253,12 +264,13 @@ function resolveRulesInPattern(
 ): { candidates: CareerProfessionCandidate[] } {
   const candidates: CareerProfessionCandidate[] = [];
 
-  // Collect expression types and mechanism types in this pattern
-  const expressionTypes = new Set<CareerExpressionType>();
-  for (const expr of patternExpressions) {
-    expressionTypes.add(expr.expressionType);
+  // Build mechanism ID set for source linkage verification
+  const patternMechanismIds = new Set<string>();
+  for (const mech of patternMechanisms) {
+    patternMechanismIds.add(mech.candidateId);
   }
 
+  // Build mechanism type set for mechanism composite rules
   const mechanismTypes = new Set<CareerMechanismType>();
   for (const mech of patternMechanisms) {
     mechanismTypes.add(mech.mechanismType);
@@ -266,13 +278,20 @@ function resolveRulesInPattern(
 
   // Evaluate each rule in precedence order
   for (const rule of CAREER_PROFESSION_RULES) {
-    const match = evaluateRule(rule, expressionTypes, mechanismTypes);
+    const match = evaluateRule(
+      rule,
+      patternExpressions,
+      patternMechanisms,
+      patternMechanismIds,
+      mechanismTypes
+    );
     if (match) {
+      const { satisfyingExpressions, satisfyingMechanisms } = match;
       const candidate = buildCandidateFromRule(
         rule,
         patternId,
-        patternExpressions,
-        patternMechanisms,
+        satisfyingExpressions,
+        satisfyingMechanisms,
         career10HFoundation,
         career10LFoundation,
         domainEvidence
@@ -285,53 +304,83 @@ function resolveRulesInPattern(
 }
 
 /**
- * Evaluate a rule against available expression and mechanism types.
+ * Evaluate a rule against available expression and mechanism types with source linkage.
  * Per spec §4: composite rules require ALL listed mechanism types (every check).
+ * Per spec P1: source-linked resolution - expressions must reference pattern mechanisms.
+ *
+ * Returns null if rule does not match, or the satisfying expressions/mechanisms if it does.
  */
 function evaluateRule(
   rule: CareerProfessionRule,
-  expressionTypes: Set<CareerExpressionType>,
+  patternExpressions: readonly CareerExpressionCandidate[],
+  patternMechanisms: readonly CareerMechanismCandidate[],
+  patternMechanismIds: Set<string>,
   mechanismTypes: Set<CareerMechanismType>
-): boolean {
-  // If rule requires expression types, all must be present
-  if (rule.requiredExpressionTypes && rule.requiredExpressionTypes.length > 0) {
-    const hasAllExpressions = rule.requiredExpressionTypes.every(type =>
-      expressionTypes.has(type)
-    );
-    if (!hasAllExpressions) {
-      return false;
-    }
-  }
-
-  // If rule requires mechanism types, all must be present
-  if (rule.requiredMechanismTypes && rule.requiredMechanismTypes.length > 0) {
-    const hasAllMechanisms = rule.requiredMechanismTypes.every(type =>
-      mechanismTypes.has(type)
-    );
-    if (!hasAllMechanisms) {
-      return false;
-    }
-  }
-
+): { satisfyingExpressions: readonly CareerExpressionCandidate[]; satisfyingMechanisms: readonly CareerMechanismCandidate[] } | null {
   // At least one of requiredExpressionTypes or requiredMechanismTypes must be specified
   if (
     (!rule.requiredExpressionTypes || rule.requiredExpressionTypes.length === 0) &&
     (!rule.requiredMechanismTypes || rule.requiredMechanismTypes.length === 0)
   ) {
-    return false;
+    return null;
   }
 
-  return true;
+  // Source-linked expression resolution
+  const satisfyingExpressions: CareerExpressionCandidate[] = [];
+  if (rule.requiredExpressionTypes && rule.requiredExpressionTypes.length > 0) {
+    // Select only expressions whose expressionType matches the rule
+    // AND verify their sourceMechanismIds reference the pattern's mechanism candidates
+    for (const expr of patternExpressions) {
+      if (rule.requiredExpressionTypes.includes(expr.expressionType)) {
+        // Verify source linkage: expression must reference at least one mechanism in this pattern
+        const hasSourceLinkage = expr.sourceMechanismIds.some(id => patternMechanismIds.has(id));
+        if (hasSourceLinkage) {
+          satisfyingExpressions.push(expr);
+        }
+      }
+    }
+
+    // All required expression types must be present with source linkage
+    const presentExpressionTypes = new Set(satisfyingExpressions.map(e => e.expressionType));
+    const hasAllExpressions = rule.requiredExpressionTypes.every(type =>
+      presentExpressionTypes.has(type)
+    );
+    if (!hasAllExpressions) {
+      return null;
+    }
+  }
+
+  // Source-linked mechanism resolution
+  const satisfyingMechanisms: CareerMechanismCandidate[] = [];
+  if (rule.requiredMechanismTypes && rule.requiredMechanismTypes.length > 0) {
+    // Require all requiredMechanismTypes to be present in the source-linked mechanism set
+    const hasAllMechanisms = rule.requiredMechanismTypes.every(type =>
+      mechanismTypes.has(type)
+    );
+    if (!hasAllMechanisms) {
+      return null;
+    }
+
+    // Collect the satisfying mechanisms
+    for (const mech of patternMechanisms) {
+      if (rule.requiredMechanismTypes.includes(mech.mechanismType)) {
+        satisfyingMechanisms.push(mech);
+      }
+    }
+  }
+
+  return { satisfyingExpressions, satisfyingMechanisms };
 }
 
 /**
  * Build a profession candidate from a matching rule.
+ * Uses only the satisfying expressions/mechanisms that passed source-linked evaluation.
  */
 function buildCandidateFromRule(
   rule: CareerProfessionRule,
   patternId: string,
-  patternExpressions: readonly CareerExpressionCandidate[],
-  patternMechanisms: readonly CareerMechanismCandidate[],
+  satisfyingExpressions: readonly CareerExpressionCandidate[],
+  satisfyingMechanisms: readonly CareerMechanismCandidate[],
   career10HFoundation?: Career10HFoundation,
   career10LFoundation?: Career10LFoundation,
   domainEvidence?: readonly DomainEvidence[]
@@ -352,18 +401,18 @@ function buildCandidateFromRule(
     }
   }
 
-  // Build evidence
+  // Build evidence using only satisfying expressions/mechanisms
   const evidence = buildEvidence(
     rule,
-    patternExpressions,
-    patternMechanisms,
+    satisfyingExpressions,
+    satisfyingMechanisms,
     career10HFoundation,
     career10LFoundation
   );
 
-  // Collect source IDs from expressions and mechanisms
-  const expressionIds = patternExpressions.map(e => e.expressionId);
-  const mechanismIds = patternMechanisms.map(m => m.candidateId);
+  // Collect source IDs from satisfying expressions and mechanisms only
+  const expressionIds = satisfyingExpressions.map(e => e.expressionId);
+  const mechanismIds = satisfyingMechanisms.map(m => m.candidateId);
   const sourceIds = mergeSourceIds([expressionIds, mechanismIds]);
 
   // Collect related evidence IDs from DomainEvidence
@@ -384,12 +433,13 @@ function buildCandidateFromRule(
     }
   }
 
-  // Build candidate ID (pattern-scoped)
+  // Build candidate ID (pattern-scoped with ruleId for identity)
   const candidateId = createProfessionCandidateId(
     rule.domain,
     rule.family,
     [patternId],
-    rule.basis
+    rule.basis,
+    rule.ruleId
   );
 
   // Build candidate
@@ -455,16 +505,20 @@ function buildEvidence(
     }
   }
 
-  // 10H foundation evidence (context only, never establishes)
+  // 10H foundation (accepted-but-unused context this pass)
+  // 10H provides context but does not establish candidates
+  // This is not tracked in provenance or as establishing evidence
+  // Actual refinement rules are deferred to a scoped follow-up
   if (career10HFoundation) {
-    // 10H provides context but does not establish candidates
-    // This is tracked in provenance, not as establishing evidence
+    // Context accepted but not used in this pass
   }
 
-  // 10L foundation evidence (context only, never establishes)
+  // 10L foundation (accepted-but-unused context this pass)
+  // 10L provides context but does not establish candidates
+  // This is not tracked in provenance or as establishing evidence
+  // Actual refinement rules are deferred to a scoped follow-up
   if (career10LFoundation) {
-    // 10L provides context but does not establish candidates
-    // This is tracked in provenance, not as establishing evidence
+    // Context accepted but not used in this pass
   }
 
   return evidence;
@@ -516,23 +570,32 @@ function applyD10Qualification(
 
 /**
  * Build provenance for the analysis.
+ * Derived only from emitted candidates' evidence to reflect consumed/causal sources.
+ * Separate observed/input IDs from consumed/causal source IDs.
  */
 function buildProvenance(
-  expressions: readonly CareerExpressionCandidate[],
-  mechanisms: readonly CareerMechanismCandidate[],
   candidates: readonly CareerProfessionCandidate[],
   patternIds: Set<string>
 ): CareerProfessionProvenance {
-  const expressionIds = expressions.map(e => e.expressionId);
-  const mechanismIds = mechanisms.map(m => m.candidateId);
+  // Derive consumed/causal source IDs from candidates' evidence only
+  const consumedExpressionIds = candidates.flatMap(c =>
+    c.evidence
+      .filter(e => e.basis === 'EXPRESSION')
+      .flatMap(e => e.sourceIds)
+  );
+  const consumedMechanismIds = candidates.flatMap(c =>
+    c.evidence
+      .filter(e => e.basis === 'MECHANISM')
+      .flatMap(e => e.sourceIds)
+  );
   const candidatePatternIds = [...patternIds].sort(codePointCompare);
   const evidenceIds = candidates.flatMap(c => c.evidence.map(e => e.evidenceId));
   const sourceIds = candidates.flatMap(c => c.evidence.flatMap(e => e.sourceIds));
   const ruleIds = candidates.map(c => c.ruleId);
 
   return Object.freeze({
-    expressionIds: Object.freeze(expressionIds.sort(codePointCompare)),
-    mechanismIds: Object.freeze(mechanismIds.sort(codePointCompare)),
+    expressionIds: Object.freeze(consumedExpressionIds.sort(codePointCompare)),
+    mechanismIds: Object.freeze(consumedMechanismIds.sort(codePointCompare)),
     patternIds: Object.freeze(candidatePatternIds),
     evidenceIds: Object.freeze(evidenceIds.sort(codePointCompare)),
     sourceIds: Object.freeze(sourceIds.sort(codePointCompare)),
