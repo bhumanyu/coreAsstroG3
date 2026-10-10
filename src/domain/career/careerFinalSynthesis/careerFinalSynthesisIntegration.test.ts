@@ -1119,7 +1119,7 @@ describe('C11 Final Career Synthesis Integration', () => {
       });
 
       const expr3: CareerExpression = Object.freeze({
-        mode: 'SERVICE',
+        mode: 'SERVICE_EMPLOYMENT',
         direction: 'SUPPORTED',
         strength: 'WEAK',
         evidence: Object.freeze([]),
@@ -1146,7 +1146,7 @@ describe('C11 Final Career Synthesis Integration', () => {
       expect(entrepreneurship?.direction).toBe('CONDITIONAL');
       expect(entrepreneurship?.strength).toBe('MODERATE');
 
-      const service = result.expressions.find(e => e.mode === 'SERVICE');
+      const service = result.expressions.find(e => e.mode === 'SERVICE_EMPLOYMENT');
       expect(service?.direction).toBe('SUPPORT');
       expect(service?.strength).toBe('WEAK');
     });
@@ -1244,7 +1244,7 @@ describe('C11 Final Career Synthesis Integration', () => {
     it('Object.isFrozen on result, arrays, nested conflict/expression/evidenceTrace objects', () => {
       const expr: CareerExpression = Object.freeze({
         mode: 'LEADERSHIP',
-        direction: 'SUPPORT',
+        direction: 'SUPPORTED',
         strength: 'STRONG',
         evidence: Object.freeze([]),
         supportingEvidenceIds: Object.freeze(['evidence-1']),
