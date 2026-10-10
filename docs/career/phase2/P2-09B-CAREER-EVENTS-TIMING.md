@@ -174,9 +174,9 @@ Discriminator components (all stable semantic inputs, no UUIDs/timestamps):
 - Opportunity mode (e.g., 'MANAGEMENT')
 - Opportunity evidence IDs (sorted array, nested for structural boundaries)
 - Period level (e.g., 'MD')
-- Period planet (e.g., 'SUN')
-- Period start date (if available, from source)
-- Period end date (if available, from source)
+- Period planet (e.g., 'SUN') - null if missing
+- Period start date (if available, from source) - null if missing
+- Period end date (if available, from source) - null if missing
 
 The JSON encoding with nested arrays provides structural delimiters, making the ID unambiguous even if evidence IDs contain literal ':' or '|' characters. Evidence IDs are sorted inside `generateEventId` to ensure deterministic output.
 
@@ -185,6 +185,8 @@ This ensures distinct semantic opportunities and distinct period windows cannot 
 **Event ID vs Timing Identity Contract:**
 
 Event ID identity reflects the SOURCE period (raw periodStart/periodEnd strings), NOT the normalized timing. Two periods with different invalid/partial date strings will produce distinct eventIds even though `buildTiming` collapses both to `UNTIMED` timing. This is intentional: identity captures the source period specification, while timing represents the normalized result. A period with 'invalid-date' and a period with 'partial-date' are distinct source inputs even if both become `UNTIMED` after normalization.
+
+Missing period fields (planet, start, end) are encoded as `null` in the identity tuple, not as the string `'none'`. This distinguishes a genuinely missing value from a literal source value of `'none'`.
 
 ### Evidence ID Handling
 

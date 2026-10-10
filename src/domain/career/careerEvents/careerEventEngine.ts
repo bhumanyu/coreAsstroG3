@@ -235,9 +235,9 @@ function collectDashaEvidenceIds(
  * - Opportunity mode (e.g., 'MANAGEMENT')
  * - Opportunity evidence IDs (sorted array)
  * - Period level (e.g., 'MD')
- * - Period planet (e.g., 'SUN')
- * - Period start date (if available, from source)
- * - Period end date (if available, from source)
+ * - Period planet (e.g., 'SUN') - null if missing
+ * - Period start date (if available, from source) - null if missing
+ * - Period end date (if available, from source) - null if missing
  *
  * Uses JSON.stringify with a fixed-order tuple, where evidenceIds is a nested array.
  * Array boundaries provide structural delimiters, making the encoding unambiguous
@@ -271,9 +271,9 @@ function generateEventId(
     opportunityMode,
     sortedEvidenceIds,
     periodLevel,
-    periodPlanet ?? 'none',
-    periodStart ?? 'none',
-    periodEnd ?? 'none'
+    periodPlanet ?? null,
+    periodStart ?? null,
+    periodEnd ?? null
   ] as const;
 
   const sourceKey = JSON.stringify(identityTuple);

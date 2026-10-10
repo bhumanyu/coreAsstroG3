@@ -685,7 +685,7 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
-        statement: 'Test event 1'
+        statement: 'Test event'
       };
 
       const event2: CareerEvent = {
@@ -695,7 +695,7 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
-        statement: 'Test event 2'
+        statement: 'Test event'
       };
 
       const result = dedupeEvents([event1, event2]);
@@ -1772,4 +1772,59 @@ describe('Input non-mutation tests', () => {
     expect(dasha.evidence[0].identityKey).toBe(originalEvidenceId);
   });
 });
+
+describe('Event ID null vs literal "none" distinction', () => {
+  it('distinguishes undefined start from literal "none" string', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity()]
+    });
+
+    // Period with undefined start
+    const dashaUndefined = createDashaFixture({
+      md: createPeriod('MD', { planet: Planet.SUN, start: undefined, end: '2030-01-01' }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    // Period with literal "none" as start
+    const dashaLiteralNone = createDashaFixture({
+      md: createPeriod('MD', { planet: Planet.SUN, start: 'none' as any, end: '2030-01-01' }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    const inputUndefined = createEventsInput(trajectory, dashaUndefined);
+    const resultUndefined = buildCareerEvents(inputUndefined);
+
+    const inputLiteralNone = createEventsInput(trajectory, dashaLiteralNone);
+    const resultLiteralNone = buildCareerEvents(inputLiteralNone);
+
+    // Event IDs should be different
+    expect(resultUndefined.events[0].eventId).not.toBe(resultLiteralNone.events[0].eventId);
+  });
+
+  it('distinguishes undefined end from literal "none" string', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity()]
+    });
+
+    // Period with undefined end
+    const dashaUndefined = createDashaFixture({
+      md: createPeriod('MD', { planet: Planet.SUN, start: '2020-01-01', end: undefined }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    // Period with literal "none" as end
+    const dashaLiteralNone = createDashaFixture({
+      md: createPeriod('MD', { planet: Planet.SUN, start: '2020-01-01', end: 'none' as any }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    const inputUndefined = createEventsInput(trajectory, dashaUndefined);
+    const resultUndefined = buildCareerEvents(inputUndefined);
+
+    const inputLiteralNone = createEventsInput(trajectory, dashaLiteralNone);
+    const resultLiteralNone = buildCareerEvents(inputLiteralNone);
+
+    // Event IDs should be different
+    expect(resultUndefined.events[0].eventId).not.toBe(resultLiteralNone.events[0].eventId);
+  });
 });
