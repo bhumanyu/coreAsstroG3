@@ -34,8 +34,12 @@ import type {
   PatternLevelEstablishingEvidence
 } from '../careerMechanism/resolver';
 import type {
-  CareerMechanismDispositorRefinementResult
+  CareerMechanismDispositorRefinementResult,
+  CareerDispositorContext
 } from '../careerMechanism/dispositor/careerMechanismDispositorTypes';
+import {
+  defaultCareerMechanismDispositorRefiner
+} from '../careerMechanism/dispositor/defaultCareerMechanismDispositorRefiner';
 import type {
   Career10HFoundation,
   Career10HFoundationResult
@@ -45,6 +49,7 @@ import type {
   Career10LFoundationResult
 } from '../career10h/career10LFoundationTypes';
 import type { ParticipantId } from '../careerParticipantRoles/participantRoleTypes';
+import { Planet } from '../../../types';
 
 /**
  * P2-11B Canonical Career Orchestrator Tests
@@ -159,7 +164,10 @@ describe('CanonicalCareerOrchestrator', () => {
         evidenceIds: [],
         sourceStages: ['PATTERN']
       },
-      explanation: 'Stub mechanism candidate'
+      explanation: 'Stub mechanism candidate',
+      acceptedEstablishingEvidenceIds: undefined,
+      rejectedEstablishingEvidenceIds: undefined,
+      firewallExcludedEstablishingEvidenceIds: undefined
     };
   }
 
@@ -392,6 +400,51 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(ports.mechanismResolver.resolveAll).toHaveBeenCalled();
       expect(foundation.resolvedMechanisms).toHaveLength(1);
       expect(foundation.resolvedMechanisms[0].candidateId).toBe('CANDIDATE_1');
+    });
+
+    it('should expose mixed accepted/rejected/firewall-excluded evidence IDs on ResolvedMechanism', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+
+      const candidateWithMixedEvidence: CareerMechanismCandidate = {
+        candidateId: 'CANDIDATE_1',
+        patternId: 'PATTERN_1',
+        mechanismType: 'AGENCY',
+        pathway: 'PATTERN',
+        evidence: [],
+        provenance: {
+          patternIds: ['PATTERN_1'],
+          relationshipIds: [],
+          participantIds: [],
+          evidenceIds: [],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Stub mechanism candidate',
+        acceptedEstablishingEvidenceIds: ['EVIDENCE_ACCEPTED_1', 'EVIDENCE_ACCEPTED_2'],
+        rejectedEstablishingEvidenceIds: ['EVIDENCE_REJECTED_1'],
+        firewallExcludedEstablishingEvidenceIds: ['EVIDENCE_EXCLUDED_1']
+      };
+
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [candidateWithMixedEvidence])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.resolvedMechanisms).toHaveLength(1);
+      const resolved = foundation.resolvedMechanisms[0];
+      expect(resolved.acceptedEstablishingEvidenceIds).toEqual(['EVIDENCE_ACCEPTED_1', 'EVIDENCE_ACCEPTED_2']);
+      expect(resolved.rejectedEstablishingEvidenceIds).toEqual(['EVIDENCE_REJECTED_1']);
+      expect(resolved.firewallExcludedEstablishingEvidenceIds).toEqual(['EVIDENCE_EXCLUDED_1']);
     });
   });
 
@@ -1077,8 +1130,10 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(refinement.resolution).toBe('RESOLVED');
       expect(refinement.status).toBe('REFINED');
       expect(refinement.candidateId).toBe('CANDIDATE_1');
-      expect(refinement.mechanismId).toBe('MECHANISM_REAL_1');
-      expect(refinement.mechanism).not.toBeNull();
+      if (refinement.resolution === 'RESOLVED') {
+        expect(refinement.mechanismId).toBe('MECHANISM_REAL_1');
+        expect(refinement.mechanism).not.toBeNull();
+      }
     });
 
     it('should produce RESOLVED refinement with UNCHANGED status and correct mechanism ID', () => {
@@ -1140,8 +1195,10 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(refinement.resolution).toBe('RESOLVED');
       expect(refinement.status).toBe('UNCHANGED');
       expect(refinement.candidateId).toBe('CANDIDATE_1');
-      expect(refinement.mechanismId).toBe('MECHANISM_UNCHANGED_1');
-      expect(refinement.mechanism).not.toBeNull();
+      if (refinement.resolution === 'RESOLVED') {
+        expect(refinement.mechanismId).toBe('MECHANISM_UNCHANGED_1');
+        expect(refinement.mechanism).not.toBeNull();
+      }
     });
 
     it('should produce UNRESOLVED refinement with UNAVAILABLE status for INSUFFICIENT_DATA result', () => {
@@ -1863,6 +1920,65 @@ describe('CanonicalCareerOrchestrator', () => {
           stage: 'IDENTITY_MAPPINGS'
         })
       );
+    });
+  });
+
+  describe('Real dispositor integration test (Finding 4)', () => {
+    it('should use real defaultCareerMechanismDispositorRefiner with properly-typed CareerDispositorContext', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      // Replace the mock refiner with the real implementation
+      ports.mechanismRefiner.refine = defaultCareerMechanismDispositorRefiner.refine.bind(defaultCareerMechanismDispositorRefiner);
+
+      // Create a properly-typed CareerDispositorContext (no 'as any')
+      const dispositorContext: CareerDispositorContext = {
+        startPlanetId: Planet.SUN,
+        chain: [Planet.SUN, Planet.MARS],
+        terminalPlanetId: Planet.MARS,
+        depth: 2,
+        outcome: 'TERMINAL',
+        chainId: 'CHAIN:SUN:MARS',
+        provenanceIds: ['PROVENANCE_1'],
+        sourceEvidenceIds: ['SOURCE_EVIDENCE_1'],
+        relevantHouseIds: [10],
+        sufficientData: true
+      };
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [dispositorContext]
+      });
+
+      // Verify the refiner was called and produced a result
+      expect(foundation.mechanismRefinements).toHaveLength(1);
+      const refinement = foundation.mechanismRefinements[0];
+
+      // The real refiner should accept the properly-typed context
+      // Result status depends on whether the rule applies to AGENCY with this context
+      // The orchestrator maps:
+      // - REFINED/UNCHANGED from refiner → RESOLVED with same status
+      // - INSUFFICIENT_DATA from refiner → UNRESOLVED with UNAVAILABLE status
+      expect(['REFINED', 'UNCHANGED', 'UNAVAILABLE']).toContain(refinement.status);
+
+      // If RESOLVED, verify the refinement result flows back correctly
+      if (refinement.resolution === 'RESOLVED') {
+        expect(refinement.candidateId).toBe('CANDIDATE_1');
+        expect(refinement.mechanismId).toBeDefined();
+        expect(refinement.mechanism).not.toBeNull();
+      }
     });
   });
 });

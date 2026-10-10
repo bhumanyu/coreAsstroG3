@@ -522,6 +522,73 @@ describe('careerMechanismResolver', () => {
         expect(evidenceSources).toContain('PATTERN');
       }
     });
+
+    it('should track firewall-excluded evidence in firewallExcludedEstablishingEvidenceIds', () => {
+      const mockEvidence: PatternLevelEstablishingEvidence[] = [
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:D10:1',
+          mechanismType: undefined, // Pattern-level evidence (no mechanismType)
+          source: 'D10',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'D10 evidence (should be firewall-excluded)'
+        },
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:DISPOSITOR:1',
+          mechanismType: undefined, // Pattern-level evidence (no mechanismType)
+          source: 'DISPOSITOR',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Dispositor evidence (should be firewall-excluded)'
+        },
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:PATTERN:1',
+          mechanismType: undefined, // Pattern-level evidence (no mechanismType)
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Pattern evidence (should be accepted)'
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence: mockEvidence
+      });
+
+      const result = resolver.resolve(input);
+
+      // Candidates should be emitted
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      for (const candidate of result.candidates) {
+        // Firewall-excluded evidence should be tracked in firewallExcludedEstablishingEvidenceIds
+        expect(candidate.firewallExcludedEstablishingEvidenceIds).toBeDefined();
+        expect(candidate.firewallExcludedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:D10:1');
+        expect(candidate.firewallExcludedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:DISPOSITOR:1');
+
+        // Accepted evidence should be tracked in acceptedEstablishingEvidenceIds
+        expect(candidate.acceptedEstablishingEvidenceIds).toBeDefined();
+        expect(candidate.acceptedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:PATTERN:1');
+
+        // Firewall-excluded IDs should NOT be in accepted or rejected lists
+        expect(candidate.acceptedEstablishingEvidenceIds).not.toContain('CAREER_MECHANISM_EVIDENCE:D10:1');
+        expect(candidate.acceptedEstablishingEvidenceIds).not.toContain('CAREER_MECHANISM_EVIDENCE:DISPOSITOR:1');
+        // rejectedEstablishingEvidenceIds may be undefined if no evidence was rejected
+        if (candidate.rejectedEstablishingEvidenceIds) {
+          expect(candidate.rejectedEstablishingEvidenceIds).not.toContain('CAREER_MECHANISM_EVIDENCE:D10:1');
+          expect(candidate.rejectedEstablishingEvidenceIds).not.toContain('CAREER_MECHANISM_EVIDENCE:DISPOSITOR:1');
+        }
+      }
+    });
   });
 
   describe('Regression tests - provenance↔evidence set equality (Test C)', () => {

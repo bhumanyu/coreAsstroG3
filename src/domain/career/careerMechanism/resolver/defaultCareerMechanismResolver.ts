@@ -129,7 +129,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       const pathway: CareerMechanismPathway = 'PATTERN';
 
       // Build evidence for this candidate (must be built before provenance)
-      const [evidence, acceptedEstablishingEvidenceIds, _rejectedEstablishingEvidenceIds] = this.buildCandidateEvidence(
+      const [evidence, acceptedEstablishingEvidenceIds, _rejectedEstablishingEvidenceIds, _firewallExcludedEstablishingEvidenceIds] = this.buildCandidateEvidence(
         pattern.patternId,
         candidateId,
         mechanismType,
@@ -147,7 +147,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       // Build explanation
       const explanation = this.buildExplanation(mechanismType, input);
 
-      // Create candidate with accepted and rejected establishing evidence IDs
+      // Create candidate with accepted, rejected, and firewall-excluded establishing evidence IDs
       const candidate = createCareerMechanismCandidate(
         pattern.patternId,
         mechanismType,
@@ -156,7 +156,8 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
         provenance,
         explanation,
         acceptedEstablishingEvidenceIds.length > 0 ? acceptedEstablishingEvidenceIds : undefined,
-        _rejectedEstablishingEvidenceIds.length > 0 ? _rejectedEstablishingEvidenceIds : undefined
+        _rejectedEstablishingEvidenceIds.length > 0 ? _rejectedEstablishingEvidenceIds : undefined,
+        _firewallExcludedEstablishingEvidenceIds.length > 0 ? _firewallExcludedEstablishingEvidenceIds : undefined
       );
 
       candidates.push(candidate);
@@ -205,18 +206,31 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
    * used to derive establishingEvidenceStatus. This prevents silent acceptance
    * of evidence that doesn't meet the contract.
    *
+   * NOTE: The resolver validates structural eligibility only (source + role + pattern reference
+   * + mechanism-type match). It does NOT validate full provenance agreement (e.g., relationshipIds/
+   * participantIds against the pattern's establishingRelationshipIds/participants). Full provenance
+   * validation is a separate concern performed at the pattern qualification layer.
+   *
+   * FIREWALL EXCLUSION:
+   * Evidence whose source is not in ESTABLISHING_EVIDENCE_SOURCES is excluded
+   * by the firewall and tracked separately in firewallExcludedEstablishingEvidenceIds.
+   * This is distinct from validation rejection: firewall-excluded evidence is
+   * structurally valid for later stages but ineligible for establishing provenance.
+   *
    * Returns a tuple of [evidence array, accepted establishing evidence IDs,
-   * rejected establishing evidence IDs]. The accepted IDs track which supplied
-   * establishing evidence was validated and attached to this candidate (used by
-   * orchestrator to derive status). The rejected IDs track evidence that was
-   * supplied but failed validation (used to distinguish "rejected" from "signal absent").
+   * rejected establishing evidence IDs, firewall-excluded establishing evidence IDs].
+   * The accepted IDs track which supplied establishing evidence was validated and
+   * attached to this candidate (used by orchestrator to derive status). The rejected
+   * IDs track evidence that was supplied but failed validation (used to distinguish
+   * "rejected" from "signal absent"). The firewall-excluded IDs track evidence that
+   * was filtered out by the source firewall (used to distinguish "excluded" from "rejected").
    *
    * @param patternId - The pattern ID
    * @param candidateId - The candidate ID
    * @param mechanismType - The mechanism type
    * @param pathway - The mechanism pathway
    * @param input - The resolution input
-   * @returns Frozen array of evidence records, accepted establishing evidence IDs, and rejected establishing evidence IDs
+   * @returns Frozen array of evidence records, accepted establishing evidence IDs, rejected establishing evidence IDs, and firewall-excluded establishing evidence IDs
    */
   private buildCandidateEvidence(
     patternId: string,
@@ -224,10 +238,11 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
     mechanismType: CareerMechanismType,
     pathway: CareerMechanismPathway,
     input: CareerMechanismResolutionInput
-  ): readonly [readonly CareerMechanismEvidence[], readonly string[], readonly string[]] {
+  ): readonly [readonly CareerMechanismEvidence[], readonly string[], readonly string[], readonly string[]] {
     const evidence: CareerMechanismEvidence[] = [];
     const acceptedEstablishingEvidenceIds: string[] = [];
     const rejectedEstablishingEvidenceIds: string[] = [];
+    const firewallExcludedEstablishingEvidenceIds: string[] = [];
 
     // Add PATTERN evidence (pattern-derived)
     const patternEvidence = buildCareerMechanismEvidence({
@@ -275,6 +290,8 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       for (const ev of input.establishingEvidence) {
         // Source firewall: only structural sources allowed
         if (!ESTABLISHING_EVIDENCE_SOURCES.has(ev.source)) {
+          // Track as firewall-excluded (distinct from validation rejection)
+          firewallExcludedEstablishingEvidenceIds.push(ev.evidenceId);
           continue;
         }
 
@@ -326,8 +343,13 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       }
     }
 
-    // Return frozen array, accepted IDs, and rejected IDs
-    return Object.freeze([Object.freeze(evidence), Object.freeze(acceptedEstablishingEvidenceIds), Object.freeze(rejectedEstablishingEvidenceIds)]);
+    // Return frozen array, accepted IDs, rejected IDs, and firewall-excluded IDs
+    return Object.freeze([
+      Object.freeze(evidence),
+      Object.freeze(acceptedEstablishingEvidenceIds),
+      Object.freeze(rejectedEstablishingEvidenceIds),
+      Object.freeze(firewallExcludedEstablishingEvidenceIds)
+    ]);
   }
 
   /**

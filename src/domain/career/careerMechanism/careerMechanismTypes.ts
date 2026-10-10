@@ -299,6 +299,10 @@ export interface CareerMechanismCandidate {
    * IDs of establishing evidence records that were accepted for this candidate.
    * This explicitly identifies which supplied establishing evidence was validated
    * (matching source + ESTABLISHING role + expected pattern reference + mechanism-type match).
+   * The accepted signal confirms "structural eligibility" only - it does NOT validate
+   * full provenance agreement (e.g., relationshipIds/participantIds against the pattern's
+   * establishingRelationshipIds/participants). Full provenance validation is a separate
+   * concern performed at the pattern qualification layer.
    * When present, this should be used to derive establishingEvidenceStatus instead of
    * naive evidence ID intersection.
    */
@@ -306,10 +310,19 @@ export interface CareerMechanismCandidate {
   /**
    * IDs of establishing evidence records that were rejected for this candidate.
    * This explicitly identifies which supplied establishing evidence failed validation
-   * (non-matching source, non-ESTABLISHING role, wrong pattern reference, or wrong mechanism type).
+   * (non-ESTABLISHING role, wrong pattern reference, or wrong mechanism type).
    * When present, this distinguishes "explicitly rejected" from "signal absent" in the orchestrator.
    */
   readonly rejectedEstablishingEvidenceIds?: readonly string[];
+  /**
+   * IDs of establishing evidence records that were excluded by the source firewall.
+   * This explicitly identifies which supplied establishing evidence was filtered out because
+   * its source is not in ESTABLISHING_EVIDENCE_SOURCES (i.e., it's a later-stage source like
+   * D10, DISPOSITOR, PLANETARY_RELEVANCE, etc. that cannot flow into provenance as establishing evidence).
+   * This is distinct from validation rejection: firewall-excluded evidence is structurally valid
+   * for later stages but ineligible for establishing provenance.
+   */
+  readonly firewallExcludedEstablishingEvidenceIds?: readonly string[];
 }
 
 /**

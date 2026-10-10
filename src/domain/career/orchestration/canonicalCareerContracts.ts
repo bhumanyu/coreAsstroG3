@@ -186,6 +186,21 @@ export interface ResolvedMechanism {
   readonly candidate: CareerMechanismCandidate;
   readonly candidateSet: CareerMechanismCandidateSet;
   readonly establishingEvidenceStatus: EstablishingEvidenceStatus;
+  /**
+   * Accepted establishing evidence IDs from the resolver (mirrored from candidate.acceptedEstablishingEvidenceIds).
+   * When present, downstream consumers can inspect which evidence was accepted for this mechanism.
+   */
+  readonly acceptedEstablishingEvidenceIds?: readonly string[];
+  /**
+   * Rejected establishing evidence IDs from the resolver (mirrored from candidate.rejectedEstablishingEvidenceIds).
+   * When present, downstream consumers can inspect which evidence was rejected for this mechanism.
+   */
+  readonly rejectedEstablishingEvidenceIds?: readonly string[];
+  /**
+   * Firewall-excluded establishing evidence IDs from the resolver (mirrored from candidate.firewallExcludedEstablishingEvidenceIds).
+   * When present, downstream consumers can inspect which evidence was excluded by the source firewall.
+   */
+  readonly firewallExcludedEstablishingEvidenceIds?: readonly string[];
   readonly stageEvidence: readonly StageEvidence[];
 }
 

@@ -524,20 +524,24 @@ export class CanonicalCareerOrchestrator {
           if (suppliedEstablishingEvidence.length === 0) {
             establishingEvidenceStatus = 'UNAVAILABLE';
           } else {
-            // Use resolver-reported acceptedEstablishingEvidenceIds and rejectedEstablishingEvidenceIds if available
+            // Use resolver-reported acceptedEstablishingEvidenceIds, rejectedEstablishingEvidenceIds, and firewallExcludedEstablishingEvidenceIds if available
             if (candidate.acceptedEstablishingEvidenceIds && candidate.acceptedEstablishingEvidenceIds.length > 0) {
               establishingEvidenceStatus = 'RESOLVED_FOR_MECHANISM';
             } else if (candidate.rejectedEstablishingEvidenceIds && candidate.rejectedEstablishingEvidenceIds.length > 0) {
               // Explicitly rejected by resolver
               establishingEvidenceStatus = 'REJECTED';
+            } else if (candidate.firewallExcludedEstablishingEvidenceIds && candidate.firewallExcludedEstablishingEvidenceIds.length > 0) {
+              // All source evidence was firewall-excluded (later-stage sources like D10, DISPOSITOR, etc.)
+              // This is an expected outcome, not a missing-metadata case
+              establishingEvidenceStatus = 'SOURCE_EVIDENCE_PRESENT';
             } else {
-              // Source evidence exists but resolver produced no acceptance/rejection metadata
+              // Source evidence exists but resolver produced no acceptance/rejection/firewall-exclusion metadata
               // This is a missing-metadata case - emit diagnostic
               diagnostics.push({
                 diagnosticId: `ORCHESTRATION_RESOLVER_ACCEPTANCE_METADATA_MISSING_${candidate.candidateId}`,
                 severity: 'WARNING',
                 category: 'MISSING_DATA',
-                message: `Resolver produced no acceptance/rejection metadata for candidate ${candidate.candidateId} despite source evidence being present - treating as SOURCE_EVIDENCE_PRESENT`,
+                message: `Resolver produced no acceptance/rejection/firewall-exclusion metadata for candidate ${candidate.candidateId} despite source evidence being present - treating as SOURCE_EVIDENCE_PRESENT`,
                 relatedIds: [candidate.candidateId],
                 stage: 'MECHANISM'
               });
@@ -565,6 +569,9 @@ export class CanonicalCareerOrchestrator {
             candidate,
             candidateSet,
             establishingEvidenceStatus,
+            acceptedEstablishingEvidenceIds: candidate.acceptedEstablishingEvidenceIds,
+            rejectedEstablishingEvidenceIds: candidate.rejectedEstablishingEvidenceIds,
+            firewallExcludedEstablishingEvidenceIds: candidate.firewallExcludedEstablishingEvidenceIds,
             stageEvidence: Object.freeze(stageEvidence)
           });
         }
