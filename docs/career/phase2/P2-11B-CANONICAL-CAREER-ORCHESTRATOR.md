@@ -48,6 +48,8 @@ interface CanonicalCareerFoundation {
 
   // Identity mappings
   readonly identityMappings: readonly IdentityMapping[];
+  // NOTE: Currently empty - producers do not yet supply explicit cross-stage mappings.
+  // Documented via diagnostic ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED.
 
   // Stage references
   readonly stageReferences: readonly StageReference[];
@@ -73,6 +75,9 @@ interface CanonicalCareerFoundation {
 3. **Identity Preservation:** Identity keys are preserved from producers (never modified)
 4. **Explicit Missing Data:** Missing data is represented explicitly (never fabricated)
 5. **Provenance Tracking:** All provenance is tracked (patternIds, evidenceIds, ruleIds, mechanismIds)
+6. **No Fabricated Types:** Establishing evidence does not fabricate mechanismType - it is optional and determined by the resolver
+7. **Empty Contexts = UNAVAILABLE:** When dispositor contexts are unavailable, refinements are marked UNAVAILABLE without calling the refiner
+8. **Unresolved Identity:** When the refiner provides no mechanism ID, mechanismId is empty string (unresolved), not aliased to candidateId
 
 ## Port Adapter Mapping
 
@@ -140,6 +145,7 @@ The orchestrator uses dependency injection via ports. The adapter file wires rea
     challengingParticipants?: readonly string[];
   }): CareerMechanismDispositorRefinementResult
   ```
+- **DEFERRED:** Dispositor contexts are not yet provided in the orchestration input. When unavailable, all refinements are marked `UNAVAILABLE` without calling the refiner. This is documented via diagnostic `ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE`. When dispositor contexts are wired in, the refiner will be called normally.
 
 ### 10H/10L Supplements
 
@@ -227,11 +233,30 @@ The orchestrator enforces the following boundary invariants:
 
 - Identity equivalence is validated from explicit `IdentityMapping` records only
 - Never infers identity equivalence from string similarity
+- **DEFERRED:** Cross-stage identity mappings are not yet implemented. Producers do not supply explicit mappings, so `identityMappings` is empty. This is documented via diagnostic `ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED`. When producers provide explicit mappings, they will be populated here.
 
 ### Stage References
 
 - Cross-stage references are validated (e.g., qualification patternId must exist in patterns)
 - Orphaned references produce error diagnostics
+
+### Foundation ID Contract
+
+The `foundationId` is a **CONTENT FINGERPRINT**, not an INPUT IDENTITY. It changes when the logical content of the input changes.
+
+**Fingerprinted Fields:**
+- `patternIds`: Sorted list of pattern IDs
+- `relevanceData`: Planet:relevance pairs (sorted)
+- `conditionData`: Planet:condition pairs (sorted)
+- `networkIds`: Sorted list of network IDs
+- `10H status`: COMPLETE or INSUFFICIENT_DATA (or NO_10H if not provided)
+- `10L status`: COMPLETE or INSUFFICIENT_DATA (or NO_10L if not provided)
+- `10H missingInputs`: Sorted list of missing input names (if any)
+- `10L missingInputs`: Sorted list of missing input names (if any)
+
+**Note:** The 10H/10L foundation payloads themselves are NOT included in the fingerprint. Including the full payloads would make the ID sensitive to internal representation changes that don't affect the logical content. The status and missingInputs capture the logical availability state.
+
+**Determinism:** The same logical input produces the same foundation ID regardless of input order.
 
 ## Usage
 

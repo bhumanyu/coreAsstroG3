@@ -15,7 +15,8 @@ import type {
   SourceId,
   RuleId,
   OccurrenceId,
-  StageEvidence
+  StageEvidence,
+  EstablishingMechanismEvidence
 } from './canonicalCareerContracts';
 import type {
   CareerPatternQualificationStatus
@@ -424,7 +425,7 @@ export class CanonicalCareerOrchestrator {
         readonly pattern: import('../careerPattern/careerPatternTypes').CareerPattern;
         readonly qualification: import('../careerPatternQualification/careerPatternQualificationTypes').QualifiedCareerPattern;
         readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
-        readonly establishingEvidence: readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
+        readonly establishingEvidence: readonly EstablishingMechanismEvidence[];
         readonly networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[];
         readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
       }[] = [];
@@ -453,13 +454,14 @@ export class CanonicalCareerOrchestrator {
 
         // Derive establishing evidence from the qualified pattern's source pattern evidence
         // This preserves the provenance chain back to the pattern facts that established the mechanism
-        let establishingEvidence: import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
+        let establishingEvidence: EstablishingMechanismEvidence[];
         let establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
 
         if (qualification.qualifiedPattern.sourcePattern.evidence.length > 0) {
           establishingEvidence = qualification.qualifiedPattern.sourcePattern.evidence.map(ev => ({
             evidenceId: ev.evidenceId,
-            mechanismType: 'AGENCY' as any, // Placeholder - actual type resolved by resolver
+            // mechanismType is optional - the resolver determines the actual type
+            mechanismType: undefined,
             source: 'PATTERN' as const,
             role: 'ESTABLISHING' as const,
             participantIds: [],
@@ -562,7 +564,8 @@ export class CanonicalCareerOrchestrator {
    * - InsufficientData/missing → UNAVAILABLE
    *
    * Dispositor contexts are not yet available in the orchestration input.
-   * This is documented as a diagnostic rather than silently passing empty contexts.
+   * When no dispositor contexts are available, refinement is explicitly UNAVAILABLE
+   * and the refiner is NOT called. This deferral is documented via diagnostic.
    */
   private buildMechanismRefinements(
     resolvedMechanisms: readonly ResolvedMechanism[],
@@ -570,80 +573,96 @@ export class CanonicalCareerOrchestrator {
   ): readonly MechanismRefinement[] {
     const refinements: MechanismRefinement[] = [];
 
-    // Document that dispositor contexts are not yet available
-    diagnostics.push({
-      diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
-      severity: 'WARNING',
-      category: 'MISSING_DATA',
-      message: 'Dispositor contexts are not yet provided in orchestration input - refinement called with empty contexts',
-      relatedIds: [],
-      stage: 'REFINEMENT'
-    });
+    // Dispositor contexts are not yet available in the orchestration input
+    // When contexts are unavailable, all refinements are marked UNAVAILABLE
+    const dispositorContextsUnavailable = true; // TODO: Wire real dispositor contexts when available
 
-    for (const resolved of resolvedMechanisms) {
-      try {
-        // Dispositor contexts are not yet available in the input
-        // This will be populated when the dispositor engine is wired in
-        const result = this.ports.mechanismRefiner.refine({
-          candidate: resolved.candidate,
-          dispositorContexts: Object.freeze([])
+    if (dispositorContextsUnavailable) {
+      diagnostics.push({
+        diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
+        severity: 'WARNING',
+        category: 'MISSING_DATA',
+        message: 'Dispositor contexts are not yet provided in orchestration input - all refinements marked UNAVAILABLE without calling refiner',
+        relatedIds: [],
+        stage: 'REFINEMENT'
+      });
+
+      // Produce UNAVAILABLE refinements for all resolved mechanisms
+      for (const resolved of resolvedMechanisms) {
+        refinements.push({
+          mechanismId: '', // Empty string to indicate unresolved mechanism ID
+          candidateId: resolved.candidateId,
+          mechanismType: resolved.mechanismType,
+          status: 'UNAVAILABLE',
+          mechanism: null,
+          stageEvidence: Object.freeze([])
         });
+      }
+    } else {
+      // When dispositor contexts are available, call the refiner
+      for (const resolved of resolvedMechanisms) {
+        try {
+          const result = this.ports.mechanismRefiner.refine({
+            candidate: resolved.candidate,
+            dispositorContexts: Object.freeze([]) // TODO: Populate with real contexts
+          });
 
-        // Map engine status to orchestration status
-        let status: 'REFINED' | 'UNCHANGED' | 'UNAVAILABLE';
-        if (result.status === 'REFINED') {
-          status = 'REFINED';
-        } else if (result.status === 'UNCHANGED') {
-          status = 'UNCHANGED';
-        } else {
-          // INSUFFICIENT_DATA or missing
-          status = 'UNAVAILABLE';
-        }
+          // Map engine status to orchestration status
+          let status: 'REFINED' | 'UNCHANGED' | 'UNAVAILABLE';
+          if (result.status === 'REFINED') {
+            status = 'REFINED';
+          } else if (result.status === 'UNCHANGED') {
+            status = 'UNCHANGED';
+          } else {
+            // INSUFFICIENT_DATA or missing
+            status = 'UNAVAILABLE';
+          }
 
-        // Use the real mechanism ID from the refinement result if available
-        // Otherwise fall back to candidate ID with a diagnostic
-        const mechanismId = result.mechanisms[0]?.mechanismId ?? resolved.candidateId;
-        if (!result.mechanisms[0]?.mechanismId) {
+          // Use the real mechanism ID from the refinement result if available
+          // Otherwise leave as empty string to indicate unresolved
+          const mechanismId = result.mechanisms[0]?.mechanismId ?? '';
+          if (!result.mechanisms[0]?.mechanismId) {
+            diagnostics.push({
+              diagnosticId: `ORCHESTRATION_MECHANISM_ID_MISSING_${resolved.candidateId}`,
+              severity: 'WARNING',
+              category: 'MISSING_DATA',
+              message: `Refinement result for candidate ${resolved.candidateId} did not provide a mechanism ID - mechanism identity unresolved`,
+              relatedIds: [resolved.candidateId],
+              stage: 'REFINEMENT'
+            });
+          }
+
+          // Convert refinement evidence to stage evidence
+          // Preserve identity namespace: use evidence's identityKey if available, otherwise occurrenceId only
+          const stageEvidence: StageEvidence[] = result.evidence.map(evId =>
+            this.convertToStageEvidence(
+              evId,
+              undefined, // Refinement evidence does not expose identityKey - use occurrenceId only
+              'Refinement evidence from dispositor refiner',
+              [],
+              result.provenance.newEvidenceIds,
+              evId // Use evidenceId as occurrenceId
+            )
+          );
+
+          refinements.push({
+            mechanismId,
+            candidateId: resolved.candidateId,
+            mechanismType: resolved.mechanismType,
+            status,
+            mechanism: result.mechanisms[0] ?? null,
+            stageEvidence: Object.freeze(stageEvidence)
+          });
+        } catch (error) {
           diagnostics.push({
-            diagnosticId: `ORCHESTRATION_MECHANISM_ID_MISSING_${resolved.candidateId}`,
-            severity: 'WARNING',
-            category: 'MISSING_DATA',
-            message: `Refinement result for candidate ${resolved.candidateId} did not provide a mechanism ID - using candidate ID as fallback`,
+            diagnosticId: `ORCHESTRATION_MECHANISM_REFINER_ERROR_${resolved.candidateId}`,
+            severity: 'ERROR',
+            category: 'PORT_ERROR',
+            message: `Mechanism refiner port error for candidate ${resolved.candidateId}: ${error instanceof Error ? error.message : String(error)}`,
             relatedIds: [resolved.candidateId],
             stage: 'REFINEMENT'
           });
         }
-
-        // Convert refinement evidence to stage evidence
-        // Preserve identity namespace: use evidence's identityKey if available, otherwise occurrenceId only
-        const stageEvidence: StageEvidence[] = result.evidence.map(evId =>
-          this.convertToStageEvidence(
-            evId,
-            undefined, // Refinement evidence does not expose identityKey - use occurrenceId only
-            'Refinement evidence from dispositor refiner',
-            [],
-            result.provenance.newEvidenceIds,
-            evId // Use evidenceId as occurrenceId
-          )
-        );
-
-        refinements.push({
-          mechanismId,
-          candidateId: resolved.candidateId,
-          mechanismType: resolved.mechanismType,
-          status,
-          mechanism: result.mechanisms[0] ?? null,
-          stageEvidence: Object.freeze(stageEvidence)
-        });
-      } catch (error) {
-        diagnostics.push({
-          diagnosticId: `ORCHESTRATION_MECHANISM_REFINER_ERROR_${resolved.candidateId}`,
-          severity: 'ERROR',
-          category: 'PORT_ERROR',
-          message: `Mechanism refiner port error for candidate ${resolved.candidateId}: ${error instanceof Error ? error.message : String(error)}`,
-          relatedIds: [resolved.candidateId],
-          stage: 'REFINEMENT'
-        });
       }
     }
 
@@ -838,7 +857,27 @@ export class CanonicalCareerOrchestrator {
 
   /**
    * Generates a deterministic foundation ID from logical input.
-   * Hashes sorted pattern IDs, relevance data, condition data, network IDs, and 10H/10L presence.
+   *
+   * CONTRACT: CONTENT FINGERPRINT
+   * The foundation ID is a CONTENT FINGERPRINT, not an INPUT IDENTITY. It changes when the
+   * logical content of the input changes, ensuring that identical content produces the same ID
+   * regardless of input order, but different content produces different IDs.
+   *
+   * FINGERPRINTED FIELDS:
+   * - patternIds: Sorted list of pattern IDs
+   * - relevanceData: Planet:relevance pairs (sorted)
+   * - conditionData: Planet:condition pairs (sorted)
+   * - networkIds: Sorted list of network IDs
+   * - 10H status: COMPLETE or INSUFFICIENT_DATA
+   * - 10L status: COMPLETE or INSUFFICIENT_DATA
+   * - 10H missingInputs: Sorted list of missing input names (if any)
+   * - 10L missingInputs: Sorted list of missing input names (if any)
+   *
+   * Note: The 10H/10L foundation payloads themselves are NOT included in the fingerprint.
+   * Including the full payloads would make the ID sensitive to internal representation changes
+   * that don't affect the logical content. The status and missingInputs capture the logical
+   * availability state.
+   *
    * The same logical input produces the same foundation ID regardless of order.
    */
   private generateDeterministicFoundationId(input: CanonicalCareerOrchestrationInput): string {
@@ -847,8 +886,14 @@ export class CanonicalCareerOrchestrator {
     const relevanceData = input.relevance.map(r => `${r.planet}:${r.relevance}`).sort();
     const conditionData = input.condition.map(c => `${c.planet}:${c.condition}`).sort();
     const networkIds = input.networks.map(n => n.networkId).sort();
-    const has10H = input.result10H ? 'HAS_10H' : 'NO_10H';
-    const has10L = input.result10L ? 'HAS_10L' : 'NO_10L';
+
+    // 10H status and missing inputs
+    const status10H = input.result10H?.status ?? 'NO_10H';
+    const missingInputs10H = input.result10H ? [...input.result10H.missingInputs].sort() : [];
+
+    // 10L status and missing inputs
+    const status10L = input.result10L?.status ?? 'NO_10L';
+    const missingInputs10L = input.result10L ? [...input.result10L.missingInputs].sort() : [];
 
     // Concatenate and hash using a simple string hash
     const combined = [
@@ -856,8 +901,8 @@ export class CanonicalCareerOrchestrator {
       ...relevanceData,
       ...conditionData,
       ...networkIds,
-      has10H,
-      has10L
+      `10H:${status10H}:${missingInputs10H.join(',')}`,
+      `10L:${status10L}:${missingInputs10L.join(',')}`
     ].join('|');
 
     // Simple hash function (FNV-1a-like)

@@ -8,7 +8,8 @@ import type {
   ResolvedMechanism,
   MechanismRefinement,
   CareerFoundationSupplement,
-  EvidenceIdentityKey
+  EvidenceIdentityKey,
+  EstablishingMechanismEvidence
 } from './canonicalCareerContracts';
 import { CanonicalCareerOrchestrator } from './canonicalCareerOrchestrator';
 import type {
@@ -894,8 +895,11 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      expect(foundation.mechanismRefinements[0].mechanismId).toBe('MECHANISM_REAL_1');
-      expect(foundation.mechanismRefinements[0].mechanismId).not.toBe('CANDIDATE_1');
+      // With dispositor contexts unavailable, refiner is not called
+      // mechanismId is empty string (unresolved)
+      expect(foundation.mechanismRefinements[0].mechanismId).toBe('');
+      expect(foundation.mechanismRefinements[0].status).toBe('UNAVAILABLE');
+      expect(foundation.mechanismRefinements[0].mechanism).toBeNull();
     });
   });
 
@@ -1287,9 +1291,239 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // Refinement evidence does not expose identityKey
-      expect(foundation.mechanismRefinements[0].stageEvidence[0].identityKey).toBeUndefined();
-      expect(foundation.mechanismRefinements[0].stageEvidence[0].occurrenceId).toBe('EVIDENCE_REFINE_1');
+      // With dispositor contexts unavailable, refiner is not called
+      // stageEvidence is empty array
+      expect(foundation.mechanismRefinements[0].stageEvidence).toEqual([]);
+    });
+  });
+
+  describe('Review finding A: Establishing evidence without fabricated mechanism type', () => {
+    it('should create establishing evidence with optional mechanismType (undefined)', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_1');
+      Object.assign(pattern, {
+        evidence: [
+          {
+            evidenceId: 'EVIDENCE_1',
+            ruleId: 'RULE_1',
+            sourceNetworkId: 'NETWORK_1',
+            sourceNetworkIdentityKey: 'IDENTITY_NETWORK_1',
+            relationshipId: 'RELATIONSHIP_1'
+          }
+        ]
+      });
+
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_1', 'QUALIFIED');
+      Object.assign(qualifiedPattern, {
+        sourcePattern: pattern
+      });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+
+      // Capture the resolveAll call to check establishing evidence
+      let capturedInputs: any[] = [];
+      (ports.mechanismResolver.resolveAll as any).mockImplementation((inputs: any[]) => {
+        capturedInputs = inputs;
+        return [];
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify establishing evidence has undefined mechanismType (not fabricated)
+      expect(capturedInputs).toHaveLength(1);
+      expect(capturedInputs[0].establishingEvidence).toHaveLength(1);
+      expect(capturedInputs[0].establishingEvidence[0].mechanismType).toBeUndefined();
+      expect(capturedInputs[0].establishingEvidence[0].role).toBe('ESTABLISHING');
+    });
+  });
+
+  describe('Review finding B: UNAVAILABLE refinement when dispositor contexts are empty', () => {
+    it('should mark all refinements UNAVAILABLE when dispositor contexts are unavailable', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify refiner was NOT called
+      expect(ports.mechanismRefiner.refine).not.toHaveBeenCalled();
+
+      // Verify all refinements are UNAVAILABLE
+      expect(foundation.mechanismRefinements).toHaveLength(1);
+      expect(foundation.mechanismRefinements[0].status).toBe('UNAVAILABLE');
+      expect(foundation.mechanismRefinements[0].mechanism).toBeNull();
+
+      // Verify diagnostic is emitted
+      expect(foundation.diagnostics).toContainEqual(
+        expect.objectContaining({
+          diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
+          severity: 'WARNING',
+          category: 'MISSING_DATA',
+          message: expect.stringContaining('all refinements marked UNAVAILABLE without calling refiner')
+        })
+      );
+    });
+  });
+
+  describe('Review finding C: Unresolved mechanism identity when refiner supplies no mechanism ID', () => {
+    it('should leave mechanismId as empty string when dispositor contexts are unavailable', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // When dispositor contexts are unavailable, mechanismId is empty string (unresolved)
+      expect(foundation.mechanismRefinements[0].mechanismId).toBe('');
+      expect(foundation.mechanismRefinements[0].status).toBe('UNAVAILABLE');
+      expect(foundation.mechanismRefinements[0].mechanismId).not.toBe('CANDIDATE_1'); // Not aliased to candidate ID
+    });
+  });
+
+  describe('Review finding D: Foundation ID fingerprint completeness', () => {
+    it('should include 10H/10L status and missingInputs in foundation ID', () => {
+      const ports = createStubPorts();
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const result10H: Career10HFoundationResult = {
+        status: 'INSUFFICIENT_DATA',
+        foundation: {} as any,
+        missingInputs: ['houseLordship', 'planetaryPosition']
+      };
+
+      const result10L: Career10LFoundationResult = {
+        status: 'COMPLETE',
+        foundation: {} as any,
+        missingInputs: []
+      };
+
+      const foundation1 = orchestrator.orchestrate({
+        patterns: [],
+        relevance: [],
+        condition: [],
+        networks: [],
+        result10H,
+        result10L
+      });
+
+      // Change missingInputs
+      const result10HModified: Career10HFoundationResult = {
+        status: 'INSUFFICIENT_DATA',
+        foundation: {} as any,
+        missingInputs: ['houseLordship'] // Different missingInputs
+      };
+
+      const foundation2 = orchestrator.orchestrate({
+        patterns: [],
+        relevance: [],
+        condition: [],
+        networks: [],
+        result10H: result10HModified,
+        result10L
+      });
+
+      // Foundation IDs should be different when missingInputs change
+      expect(foundation1.foundationId).not.toBe(foundation2.foundationId);
+    });
+
+    it('should produce same foundation ID for same logical content regardless of order', () => {
+      const ports = createStubPorts();
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const result10H: Career10HFoundationResult = {
+        status: 'INSUFFICIENT_DATA',
+        foundation: {} as any,
+        missingInputs: ['houseLordship', 'planetaryPosition']
+      };
+
+      const foundation1 = orchestrator.orchestrate({
+        patterns: [],
+        relevance: [],
+        condition: [],
+        networks: [],
+        result10H
+      });
+
+      // Same content, different order in missingInputs array (should be sorted)
+      const result10HSame: Career10HFoundationResult = {
+        status: 'INSUFFICIENT_DATA',
+        foundation: {} as any,
+        missingInputs: ['planetaryPosition', 'houseLordship'] // Different order
+      };
+
+      const foundation2 = orchestrator.orchestrate({
+        patterns: [],
+        relevance: [],
+        condition: [],
+        networks: [],
+        result10H: result10HSame
+      });
+
+      // Foundation IDs should be the same (missingInputs are sorted)
+      expect(foundation1.foundationId).toBe(foundation2.foundationId);
+    });
+  });
+
+  describe('Review finding E: Identity mappings deferral', () => {
+    it('should explicitly document identity mappings deferral in diagnostics', () => {
+      const ports = createStubPorts();
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify empty identityMappings
+      expect(foundation.identityMappings).toEqual([]);
+
+      // Verify diagnostic documents the deferral
+      expect(foundation.diagnostics).toContainEqual(
+        expect.objectContaining({
+          diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED',
+          severity: 'INFO',
+          category: 'DEFERRED_FEATURE',
+          message: expect.stringContaining('Identity mappings across stages (pattern→qualification→mechanism→refinement) are not yet provided by producers'),
+          stage: 'IDENTITY_MAPPINGS'
+        })
+      );
     });
   });
 });
