@@ -151,6 +151,20 @@ describe('CareerTrajectoryEngine', () => {
       expect(result.longTermPattern).toBe('NON_LINEAR');
     });
 
+    it('CHALLENGE+MIXED → CONSTRAINED (CHALLENGE takes precedence)', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'CHALLENGE',
+        natalStrength: 'MIXED',
+        timingStatus: 'CHALLENGED'
+      });
+
+      const input = createTrajectoryInput(c11);
+      const result = buildCareerTrajectory(input);
+
+      // CHALLENGE direction is evaluated before MIXED strength, so CONSTRAINED
+      expect(result.longTermPattern).toBe('CONSTRAINED');
+    });
+
     it('conditional → CONDITIONAL_GROWTH', () => {
       const c11 = createC11Fixture({
         natalDirection: 'CONDITIONAL',
@@ -323,7 +337,7 @@ describe('CareerTrajectoryEngine', () => {
       expect(result.opportunities[0].qualified).toBe(false);
     });
 
-    it('opportunities sorted by mode.localeCompare', () => {
+    it('opportunities sorted by deterministic code-point comparison', () => {
       const c11 = createC11Fixture({
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -353,6 +367,45 @@ describe('CareerTrajectoryEngine', () => {
       expect(result.opportunities[1].mode).toBe('MANAGEMENT');
     });
 
+    it('opportunity ordering is locale-independent (deterministic)', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'SERVICE_EMPLOYMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1']
+          },
+          {
+            mode: 'LEADERSHIP',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev2']
+          },
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev3']
+          }
+        ]
+      });
+
+      const input = createTrajectoryInput(c11);
+      const result = buildCareerTrajectory(input);
+
+      // Should be sorted by code-point order (LEADERSHIP < MANAGEMENT < SERVICE_EMPLOYMENT)
+      expect(result.opportunities[0].mode).toBe('LEADERSHIP');
+      expect(result.opportunities[1].mode).toBe('MANAGEMENT');
+      expect(result.opportunities[2].mode).toBe('SERVICE_EMPLOYMENT');
+    });
+
     it('expression evidenceIds are sorted', () => {
       const c11 = createC11Fixture({
         natalDirection: 'SUPPORT',
@@ -373,6 +426,94 @@ describe('CareerTrajectoryEngine', () => {
       const result = buildCareerTrajectory(input);
 
       expect(result.opportunities[0].evidenceIds).toEqual(['ev1', 'ev2', 'ev3']);
+    });
+
+    it('expression-only ID (not in finalSynthesis.evidenceIds but exists in evidence) → not surfaced', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['ev1'], // only ev1 at top level
+        expressions: [
+          {
+            mode: 'LEADERSHIP',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev2'] // ev2 only in expression
+          }
+        ]
+      });
+
+      const evidenceItems = [
+        { id: 'ev1' },
+        { id: 'ev2' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // ev2 is in expression but not in finalSynthesis.evidenceIds
+      // Since it exists in the evidence set, it's not surfaced as unresolved
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+    });
+
+    it('expression evidence ID missing from evidence set → surfaced in unresolvedEvidenceIds', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['ev1'],
+        expressions: [
+          {
+            mode: 'LEADERSHIP',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1', 'missing-ev']
+          }
+        ]
+      });
+
+      const evidenceItems = [
+        { id: 'ev1' }
+        // missing-ev is not in evidence set
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // missing-ev should be surfaced as unresolved
+      expect(result.unresolvedEvidenceIds).toEqual(['missing-ev']);
+    });
+
+    it('aggregate-consistent IDs (in both expression and finalSynthesis, exist in evidence) → no unresolved', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['ev1', 'ev2'],
+        expressions: [
+          {
+            mode: 'LEADERSHIP',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1', 'ev2']
+          }
+        ]
+      });
+
+      const evidenceItems = [
+        { id: 'ev1' },
+        { id: 'ev2' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // All IDs are consistent and present
+      expect(result.unresolvedEvidenceIds).toEqual([]);
     });
   });
 
@@ -457,6 +598,65 @@ describe('CareerTrajectoryEngine', () => {
 
       // Should resolve using identityKey
       expect(result.unresolvedEvidenceIds).toEqual([]);
+    });
+
+    it('C11 ID matching evidence identityKey → resolved (contract test)', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['semantic-key-abc']
+      });
+
+      const evidenceItems = [
+        { id: 'occ-123', identityKey: 'semantic-key-abc' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // C11 references the semantic identityKey, which exists in evidence set
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+      expect(result.evidenceIds).toEqual(['semantic-key-abc']);
+    });
+
+    it('occurrence id differs from identityKey, C11 references semantic key → resolved', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['semantic-key-xyz']
+      });
+
+      const evidenceItems = [
+        { id: 'occ-456', identityKey: 'semantic-key-xyz' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // C11 references semantic key, not occurrence id → should resolve
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+      expect(result.evidenceIds).toEqual(['semantic-key-xyz']);
+    });
+
+    it('genuinely absent reference → unresolvedEvidenceIds', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['missing-semantic-key']
+      });
+
+      const evidenceItems = [
+        { id: 'occ-789', identityKey: 'different-semantic-key' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // C11 references a semantic key that does not exist in evidence set
+      expect(result.unresolvedEvidenceIds).toEqual(['missing-semantic-key']);
     });
   });
 

@@ -47,6 +47,13 @@ export type CareerTrajectoryCurrentPhase =
  *
  * Copies mode/direction/strength/qualified verbatim from finalSynthesis.expressions entries.
  * No normalization, no promotion of unqualified expressions.
+ *
+ * EVIDENCE CONSISTENCY: The evidenceIds array preserves C11 expression references verbatim.
+ * Expression-level evidenceIds are checked against the supplied evidence set, and any missing
+ * IDs are surfaced in unresolvedEvidenceIds. This check is for consistency reporting only;
+ * the copied IDs are not modified. Note: IDs that exist in the evidence set but are not
+ * referenced at the top level (expression-only) are not surfaced as unresolved — only
+ * genuinely missing IDs are reported.
  */
 export interface CareerTrajectoryOpportunity {
   readonly mode: string;

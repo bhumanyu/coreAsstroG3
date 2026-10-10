@@ -40,6 +40,10 @@ import type {
  *
  * NOTE: natalStrength === 'MIXED' is evaluated before the CONDITIONAL/SUPPORT direction branches,
  * so a SUPPORT+MIXED combination resolves to NON_LINEAR by design.
+ *
+ * CHALLENGE+MIXED PRECEDENCE: CHALLENGE direction is evaluated before MIXED strength,
+ * so CHALLENGE+MIXED resolves to CONSTRAINED (not NON_LINEAR). This is intentional:
+ * a CHALLENGE direction represents a fundamental constraint regardless of structural strength.
  */
 function deriveLongTermPattern(
   natalDirection: string,
@@ -115,18 +119,48 @@ function mapCurrentPhase(timingStatus: string): CareerTrajectoryCurrentPhase {
  * Copies mode/direction/strength/qualified verbatim from each finalSynthesis.expressions entry.
  * No normalization, no promotion of unqualified expressions.
  *
- * Sorts each evidenceIds array and sorts opportunities by mode.localeCompare.
+ * EVIDENCE CONSISTENCY CHECK:
+ * Expression-level evidenceIds are checked against the supplied evidence set.
+ * Any expression evidenceIds not present in the evidence set are added to
+ * unresolvedEvidenceIds to surface potential inconsistencies. This does not
+ * modify the copied verbatim IDs in the opportunity object.
+ * Note: IDs that exist in the evidence set but are not referenced at the top
+ * level (expression-only) are not surfaced as unresolved — only genuinely
+ * missing IDs are reported.
+ *
+ * Sorts each evidenceIds array and sorts opportunities by deterministic
+ * code-point comparison (locale-independent).
  * Freezes all nested arrays and the returned array.
+ *
+ * Returns the opportunities array plus any additional unresolved evidence IDs
+ * found at the expression level.
  */
 function mapOpportunities(
-  expressions: readonly { readonly mode: string; readonly direction: string; readonly strength: string; readonly qualified: boolean; readonly evidenceIds: readonly string[] }[]
-): readonly CareerTrajectoryOpportunity[] {
+  expressions: readonly { readonly mode: string; readonly direction: string; readonly strength: string; readonly qualified: boolean; readonly evidenceIds: readonly string[] }[],
+  evidenceIdentitySet: ReadonlySet<string>
+): {
+  readonly opportunities: readonly CareerTrajectoryOpportunity[];
+  readonly additionalUnresolvedIds: readonly string[];
+} {
   if (!expressions || expressions.length === 0) {
-    return Object.freeze([]);
+    return {
+      opportunities: Object.freeze([]),
+      additionalUnresolvedIds: Object.freeze([])
+    };
   }
+
+  const additionalUnresolvedIds = new Set<string>();
 
   const opportunities = expressions.map((expr) => {
     const sortedEvidenceIds = [...expr.evidenceIds].sort();
+
+    // Check expression evidenceIds against evidence set
+    for (const id of sortedEvidenceIds) {
+      if (!evidenceIdentitySet.has(id)) {
+        additionalUnresolvedIds.add(id);
+      }
+    }
+
     return Object.freeze({
       mode: expr.mode,
       direction: expr.direction,
@@ -136,22 +170,33 @@ function mapOpportunities(
     });
   });
 
-  // Sort by mode.localeCompare for deterministic output
+  // Sort by deterministic code-point comparison (locale-independent)
   const sortedOpportunities = opportunities.sort((a, b) =>
-    a.mode.localeCompare(b.mode)
+    a.mode < b.mode ? -1 : a.mode > b.mode ? 1 : 0
   );
 
-  return Object.freeze(sortedOpportunities);
+  return {
+    opportunities: Object.freeze(sortedOpportunities),
+    additionalUnresolvedIds: Object.freeze([...additionalUnresolvedIds].sort())
+  };
 }
 
 /**
  * Resolves evidence references from C11 against the supplied evidence set.
  *
+ * EVIDENCE-IDENTITY CONTRACT:
+ * C11 finalSynthesis.evidenceIds MUST be canonical identity keys (the project's
+ * established semantic identity field). For DomainEvidence, the canonical identity
+ * is identityKey when present, with id being the occurrence ID.
+ *
+ * Resolution logic:
+ * - C11 evidenceIds are resolved against the canonical identity field (identityKey
+ *   when present, falling back to id only for evidence that has no identityKey).
+ * - Occurrence IDs (id) are NOT matched directly unless the evidence has no identityKey.
+ * - This ensures C11 references semantic identities, not specific occurrences.
+ *
  * Dedupes and sorts finalSynthesis.evidenceIds.
  * unresolvedEvidenceIds = those IDs not present in the supplied evidence set.
- *
- * An evidence item's identity is identityKey ?? id (lookup only — must not turn
- * an occurrence id into a new semantic identity).
  *
  * Evidence supplied but NOT referenced by C11 must never become a trajectory signal.
  */
@@ -219,14 +264,28 @@ export function buildCareerTrajectory(
   // Map current phase from timing status
   const currentPhase = mapCurrentPhase(finalSynthesis.timingStatus);
 
-  // Map opportunities from expressions
-  const opportunities = mapOpportunities(finalSynthesis.expressions);
+  // Build evidence identity set for opportunity consistency check
+  const evidenceIdentitySet = new Set<string>();
+  for (const ev of evidence) {
+    const identity = ev.identityKey ?? ev.id;
+    evidenceIdentitySet.add(identity);
+  }
+
+  // Map opportunities from expressions (with consistency check)
+  const { opportunities, additionalUnresolvedIds } = mapOpportunities(
+    finalSynthesis.expressions,
+    evidenceIdentitySet
+  );
 
   // Resolve evidence references
   const { resolvedIds, unresolvedIds } = resolveEvidenceReferences(
     finalSynthesis.evidenceIds,
     evidence
   );
+
+  // Merge unresolved IDs from top-level and expression-level
+  const allUnresolvedIds = new Set([...unresolvedIds, ...additionalUnresolvedIds]);
+  const finalUnresolvedIds = Object.freeze([...allUnresolvedIds].sort());
 
   // Dedupe and sort sourceIds and ruleIds
   const sourceIds = Object.freeze(
@@ -250,7 +309,7 @@ export function buildCareerTrajectory(
     currentStatus: finalSynthesis.finalStatus,
     opportunities,
     evidenceIds: resolvedIds,
-    unresolvedEvidenceIds: unresolvedIds,
+    unresolvedEvidenceIds: finalUnresolvedIds,
     sourceIds,
     ruleIds,
     datedForecastAvailable: false,

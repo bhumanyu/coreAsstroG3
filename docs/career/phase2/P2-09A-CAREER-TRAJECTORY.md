@@ -53,11 +53,15 @@ Long-term trajectory pattern derived from natalDirection and natalStrength ONLY:
 | any | UNDETERMINED | INSUFFICIENT_DATA |
 | CHALLENGE | any | CONSTRAINED |
 | MIXED | any | NON_LINEAR |
-| any | MIXED | NON_LINEAR |
+| any | MIXED | NON_LINEAR¹ |
 | CONDITIONAL | any (not MIXED) | CONDITIONAL_GROWTH |
 | SUPPORT | any (not MIXED) | GROWTH_CAPABLE |
 
-**Explicit Ordering Decision:** `natalStrength === 'MIXED'` is evaluated before the `CONDITIONAL`/`SUPPORT` direction branches, so a SUPPORT+MIXED combination resolves to NON_LINEAR by design. This prevents strong natal direction from masking mixed structural strength.
+**Explicit Ordering Decisions:**
+- `natalStrength === 'MIXED'` is evaluated before the `CONDITIONAL`/`SUPPORT` direction branches, so a SUPPORT+MIXED combination resolves to NON_LINEAR by design. This prevents strong natal direction from masking mixed structural strength.
+- CHALLENGE direction is evaluated before MIXED strength, so CHALLENGE+MIXED resolves to CONSTRAINED (not NON_LINEAR). This is intentional: a CHALLENGE direction represents a fundamental constraint regardless of structural strength.
+
+¹ Note: "any | MIXED → NON_LINEAR" does not apply when direction is CHALLENGE (CHALLENGE takes precedence).
 
 ### `CareerTrajectoryCurrentPhase`
 
@@ -78,16 +82,26 @@ Opportunities extracted from C11 `expressions`:
 - Copies `mode`/`direction`/`strength`/`qualified` verbatim from each expression.
 - No normalization, no promotion of unqualified expressions.
 - Each `evidenceIds` array is sorted.
-- Opportunities are sorted by `mode.localeCompare`.
+- Opportunities are sorted by deterministic code-point comparison (locale-independent).
 - All nested arrays are frozen.
+
+**Evidence Consistency Check:**
+Expression-level `evidenceIds` are checked against the supplied evidence set. Any expression `evidenceIds` not present in the evidence set are added to `unresolvedEvidenceIds` to surface potential inconsistencies. This does not modify the copied verbatim IDs in the opportunity object. Note: IDs that exist in the evidence set but are not referenced at the top level (expression-only) are not surfaced as unresolved — only genuinely missing IDs are reported.
 
 ## Evidence, Identity, and Provenance Semantics
 
 ### Evidence Reference Resolution
 
+**EVIDENCE-IDENTITY CONTRACT:**
+C11 `finalSynthesis.evidenceIds` MUST be canonical identity keys (the project's established semantic identity field). For `DomainEvidence`, the canonical identity is `identityKey` when present, with `id` being the occurrence ID.
+
+Resolution logic:
+- C11 `evidenceIds` are resolved against the canonical identity field (`identityKey` when present, falling back to `id` only for evidence that has no `identityKey`).
+- Occurrence IDs (`id`) are NOT matched directly unless the evidence has no `identityKey`.
+- This ensures C11 references semantic identities, not specific occurrences.
+
 - `evidenceIds`: All evidence IDs referenced by C11 (deduplicated and sorted).
 - `unresolvedEvidenceIds`: Evidence IDs referenced by C11 but not present in the supplied evidence set.
-- An evidence item's identity is `identityKey ?? id` (lookup only — must not turn an occurrence id into a new semantic identity).
 - Evidence supplied but NOT referenced by C11 must never become a trajectory signal.
 
 ### Source and Rule ID Handling
