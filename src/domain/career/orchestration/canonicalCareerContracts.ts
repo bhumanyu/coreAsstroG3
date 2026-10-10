@@ -27,6 +27,9 @@ import type {
   Career10LStatus,
   Career10LFoundationResult
 } from '../career10h/career10LFoundationTypes';
+import type {
+  PatternLevelEstablishingEvidence
+} from '../careerMechanism/resolver';
 
 /**
  * P2-11B Canonical Career Orchestrator Contracts
@@ -150,32 +153,23 @@ export interface ParticipantRoleAssignment {
  * Status of establishing evidence resolution.
  */
 export type EstablishingEvidenceStatus =
-  | 'RESOLVED'
+  | 'SOURCE_EVIDENCE_PRESENT'
+  | 'RESOLVED_FOR_MECHANISM'
   | 'UNRESOLVED'
   | 'UNAVAILABLE';
 
 /**
- * Establishing evidence for mechanism resolution.
- * Represents pattern-level evidence that establishes a mechanism candidate before
- * the resolver determines the mechanism type.
- *
- * Unlike CareerMechanismEvidence, mechanismType is optional here because the pattern
- * evidence does not yet know which mechanism type it will establish. The resolver
- * determines the mechanism type during resolution.
- *
- * role is always 'ESTABLISHING' for this type - refinement evidence uses the full
- * CareerMechanismEvidence type with mechanismType required.
+ * Re-export PatternLevelEstablishingEvidence for use in orchestration contracts.
+ * This type is defined in the resolver module and represents pattern-level
+ * establishing evidence with optional mechanismType.
  */
-export interface EstablishingMechanismEvidence {
-  readonly evidenceId: string;
-  readonly mechanismType?: CareerMechanismType; // Optional - resolver determines the type
-  readonly source: import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidenceSource;
-  readonly role: 'ESTABLISHING'; // Always establishing for this type
-  readonly participantIds: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantId[];
-  readonly relationshipIds: readonly string[];
-  readonly patternId?: string;
-  readonly explanation: string;
-}
+export type { PatternLevelEstablishingEvidence };
+
+/**
+ * Legacy alias for PatternLevelEstablishingEvidence for backward compatibility.
+ * Deprecated: Use PatternLevelEstablishingEvidence directly.
+ */
+export type EstablishingMechanismEvidence = PatternLevelEstablishingEvidence;
 
 /**
  * Resolved mechanism from the mechanism resolver (P2-07D).
@@ -200,18 +194,30 @@ export interface ResolvedMechanism {
  * - Unchanged → UNCHANGED
  * - InsufficientData/missing → UNAVAILABLE
  *
- * mechanismId is empty string when the refiner does not provide a mechanism ID
- * (e.g., when dispositor contexts are unavailable). This explicitly indicates
- * unresolved mechanism identity rather than aliasing the candidate ID.
+ * Uses a discriminated union to explicitly model unresolved mechanism identity:
+ * - RESOLVED: mechanismId is present, mechanism may be populated
+ * - UNRESOLVED: mechanismId is absent, mechanism is null
+ *
+ * This prevents downstream equality/map/join collisions across multiple unresolved refinements.
  */
-export interface MechanismRefinement {
-  readonly mechanismId: string; // Empty string when unresolved
-  readonly candidateId: string;
-  readonly mechanismType: CareerMechanismType;
-  readonly status: 'REFINED' | 'UNCHANGED' | 'UNAVAILABLE';
-  readonly mechanism: CareerMechanism | null;
-  readonly stageEvidence: readonly StageEvidence[];
-}
+export type MechanismRefinement =
+  | {
+    readonly resolution: 'RESOLVED';
+    readonly mechanismId: string;
+    readonly candidateId: string;
+    readonly mechanismType: CareerMechanismType;
+    readonly status: 'REFINED' | 'UNCHANGED';
+    readonly mechanism: CareerMechanism | null;
+    readonly stageEvidence: readonly StageEvidence[];
+  }
+  | {
+    readonly resolution: 'UNRESOLVED';
+    readonly candidateId: string;
+    readonly mechanismType: CareerMechanismType;
+    readonly status: 'UNAVAILABLE';
+    readonly mechanism: null;
+    readonly stageEvidence: readonly StageEvidence[];
+  };
 
 /**
  * Career foundation supplement from 10H/10L layers (P2-07F/G).
@@ -391,9 +397,8 @@ export interface MechanismResolverPort {
     readonly pattern: CareerPattern;
     readonly qualification: QualifiedCareerPattern;
     readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
-    readonly establishingEvidence: readonly EstablishingMechanismEvidence[];
+    readonly establishingEvidence: readonly PatternLevelEstablishingEvidence[];
     readonly networks: readonly CareerHouseNetwork[];
-    readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
   }): import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet;
 
   /**
@@ -406,9 +411,8 @@ export interface MechanismResolverPort {
     readonly pattern: CareerPattern;
     readonly qualification: QualifiedCareerPattern;
     readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
-    readonly establishingEvidence: readonly EstablishingMechanismEvidence[];
+    readonly establishingEvidence: readonly PatternLevelEstablishingEvidence[];
     readonly networks: readonly CareerHouseNetwork[];
-    readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
   }[]): readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet[];
 }
 

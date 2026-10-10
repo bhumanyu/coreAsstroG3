@@ -896,8 +896,8 @@ describe('CanonicalCareerOrchestrator', () => {
       });
 
       // With dispositor contexts unavailable, refiner is not called
-      // mechanismId is empty string (unresolved)
-      expect(foundation.mechanismRefinements[0].mechanismId).toBe('');
+      // resolution is UNRESOLVED, status is UNAVAILABLE
+      expect(foundation.mechanismRefinements[0].resolution).toBe('UNRESOLVED');
       expect(foundation.mechanismRefinements[0].status).toBe('UNAVAILABLE');
       expect(foundation.mechanismRefinements[0].mechanism).toBeNull();
     });

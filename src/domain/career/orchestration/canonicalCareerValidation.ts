@@ -181,12 +181,13 @@ export function validateRefinementCandidateReferences(
 
   for (const refinement of refinements) {
     if (!candidateIdSet.has(refinement.candidateId)) {
+      const mechanismId = refinement.resolution === 'RESOLVED' ? refinement.mechanismId : 'UNRESOLVED';
       diagnostics.push({
-        diagnosticId: `VALIDATION_ORPHANED_REFINEMENT_${refinement.mechanismId}`,
+        diagnosticId: `VALIDATION_ORPHANED_REFINEMENT_${mechanismId}`,
         severity: 'ERROR',
         category: 'ORPHANED_REFERENCE',
         message: `Refinement references non-existent mechanism candidate ID: ${refinement.candidateId}`,
-        relatedIds: [refinement.mechanismId, refinement.candidateId],
+        relatedIds: [mechanismId, refinement.candidateId],
         stage: 'REFINEMENT'
       });
     }

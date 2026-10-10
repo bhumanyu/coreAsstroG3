@@ -3,13 +3,12 @@ import type {
   ParticipantRolesPort,
   MechanismResolverPort,
   MechanismRefinerPort,
-  EstablishingMechanismEvidence
+  PatternLevelEstablishingEvidence
 } from './canonicalCareerContracts';
 import { qualifyCareerPatterns } from '../careerPatternQualification/careerPatternQualification';
 import { assignParticipantRoles } from '../careerParticipantRoles/participantRoleEngine';
 import { defaultCareerMechanismResolver } from '../careerMechanism/resolver/defaultCareerMechanismResolver';
 import { defaultCareerMechanismDispositorRefiner } from '../careerMechanism/dispositor/defaultCareerMechanismDispositorRefiner';
-import type { CareerMechanismEvidence } from '../careerMechanism/careerMechanismTypes';
 
 /**
  * P2-11B Canonical Career Ports Adapter
@@ -92,32 +91,22 @@ export class ParticipantRolesPortAdapter implements ParticipantRolesPort {
  * Wires the real defaultCareerMechanismResolver to the MechanismResolverPort interface.
  *
  * The engine's resolveAll accepts CareerMechanismResolutionInput[] and returns CareerMechanismCandidateSet[].
- * This adapter converts EstablishingMechanismEvidence (with optional mechanismType) to
- * CareerMechanismEvidence (with required mechanismType) before passing to the resolver.
+ * This adapter passes PatternLevelEstablishingEvidence directly to the resolver without conversion,
+ * as the types are now compatible.
  *
- * When establishing evidence has no mechanismType (pattern-level evidence), it is converted
- * to CareerMechanismEvidence but will be filtered by the resolver's mechanismType check.
- * Evidence without a mechanismType will not match any specific mechanism type filter.
+ * Pattern-level evidence (without mechanismType) is properly typed and attached to all
+ * candidates derived from the pattern. Typed evidence (with mechanismType) is attached
+ * only to matching mechanism types.
  */
 export class MechanismResolverPortAdapter implements MechanismResolverPort {
   /**
-   * Converts EstablishingMechanismEvidence to CareerMechanismEvidence.
-   * When mechanismType is undefined, it remains undefined in the conversion.
-   * The resolver will filter by mechanismType; evidence without a type won't match.
+   * Identity conversion - types are now compatible directly.
+   * PatternLevelEstablishingEvidence is the expected input for the resolver.
    */
   private convertEstablishingEvidence(
-    establishingEvidence: readonly EstablishingMechanismEvidence[]
-  ): readonly CareerMechanismEvidence[] {
-    return establishingEvidence.map(ev => ({
-      evidenceId: ev.evidenceId,
-      mechanismType: ev.mechanismType as any, // May be undefined - resolver handles filtering
-      source: ev.source,
-      role: ev.role,
-      participantIds: ev.participantIds,
-      relationshipIds: ev.relationshipIds,
-      patternId: ev.patternId,
-      explanation: ev.explanation
-    }));
+    establishingEvidence: readonly PatternLevelEstablishingEvidence[]
+  ): readonly PatternLevelEstablishingEvidence[] {
+    return establishingEvidence;
   }
 
   /**
@@ -127,14 +116,14 @@ export class MechanismResolverPortAdapter implements MechanismResolverPort {
     readonly pattern: import('../careerPattern/careerPatternTypes').CareerPattern;
     readonly qualification: import('../careerPatternQualification/careerPatternQualificationTypes').QualifiedCareerPattern;
     readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
-    readonly establishingEvidence: readonly EstablishingMechanismEvidence[];
+    readonly establishingEvidence: readonly PatternLevelEstablishingEvidence[];
     readonly networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[];
   }): import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet {
     const resolverInput = {
       ...input,
       establishingEvidence: this.convertEstablishingEvidence(input.establishingEvidence)
     };
-    return defaultCareerMechanismResolver.resolve(resolverInput as any);
+    return defaultCareerMechanismResolver.resolve(resolverInput);
   }
 
   /**
@@ -144,14 +133,14 @@ export class MechanismResolverPortAdapter implements MechanismResolverPort {
     readonly pattern: import('../careerPattern/careerPatternTypes').CareerPattern;
     readonly qualification: import('../careerPatternQualification/careerPatternQualificationTypes').QualifiedCareerPattern;
     readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
-    readonly establishingEvidence: readonly EstablishingMechanismEvidence[];
+    readonly establishingEvidence: readonly PatternLevelEstablishingEvidence[];
     readonly networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[];
   }[]): readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet[] {
     const resolverInputs = inputs.map(input => ({
       ...input,
       establishingEvidence: this.convertEstablishingEvidence(input.establishingEvidence)
     }));
-    return defaultCareerMechanismResolver.resolveAll(resolverInputs as any);
+    return defaultCareerMechanismResolver.resolveAll(resolverInputs);
   }
 }
 

@@ -21,6 +21,9 @@ import type {
 import type {
   CareerPatternQualificationStatus
 } from '../careerPatternQualification/careerPatternQualificationTypes';
+import type {
+  PatternLevelEstablishingEvidence
+} from '../careerMechanism/resolver';
 import {
   validateCanonicalCareerFoundation
 } from './canonicalCareerValidation';
@@ -425,10 +428,12 @@ export class CanonicalCareerOrchestrator {
         readonly pattern: import('../careerPattern/careerPatternTypes').CareerPattern;
         readonly qualification: import('../careerPatternQualification/careerPatternQualificationTypes').QualifiedCareerPattern;
         readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
-        readonly establishingEvidence: readonly EstablishingMechanismEvidence[];
+        readonly establishingEvidence: readonly PatternLevelEstablishingEvidence[];
         readonly networks: readonly import('../careerGraph/careerHouseNetworkTypes').CareerHouseNetwork[];
-        readonly establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
       }[] = [];
+
+      // Track establishing evidence per pattern for post-resolution status determination
+      const establishingEvidenceByPattern = new Map<string, readonly PatternLevelEstablishingEvidence[]>();
 
       for (const pattern of patternCandidates) {
         const qualification = qualMap.get(pattern.patternId);
@@ -454,8 +459,7 @@ export class CanonicalCareerOrchestrator {
 
         // Derive establishing evidence from the qualified pattern's source pattern evidence
         // This preserves the provenance chain back to the pattern facts that established the mechanism
-        let establishingEvidence: EstablishingMechanismEvidence[];
-        let establishingEvidenceStatus: 'RESOLVED' | 'UNAVAILABLE';
+        let establishingEvidence: PatternLevelEstablishingEvidence[];
 
         if (qualification.qualifiedPattern.sourcePattern.evidence.length > 0) {
           establishingEvidence = qualification.qualifiedPattern.sourcePattern.evidence.map(ev => ({
@@ -469,10 +473,8 @@ export class CanonicalCareerOrchestrator {
             patternId: pattern.patternId,
             explanation: `Pattern classification evidence from network ${ev.sourceNetworkId}`
           }));
-          establishingEvidenceStatus = 'RESOLVED';
         } else {
           establishingEvidence = [];
-          establishingEvidenceStatus = 'UNAVAILABLE';
           diagnostics.push({
             diagnosticId: `ORCHESTRATION_ESTABLISHING_EVIDENCE_UNAVAILABLE_${pattern.patternId}`,
             severity: 'WARNING',
@@ -483,13 +485,15 @@ export class CanonicalCareerOrchestrator {
           });
         }
 
+        // Track establishing evidence for post-resolution status
+        establishingEvidenceByPattern.set(pattern.patternId, Object.freeze(establishingEvidence));
+
         resolutionInputs.push({
           pattern: pattern.sourcePattern,
           qualification: qualification.qualifiedPattern,
           participantRoles: roles,
           establishingEvidence: Object.freeze(establishingEvidence),
-          networks,
-          establishingEvidenceStatus
+          networks
         });
       }
 
@@ -501,13 +505,32 @@ export class CanonicalCareerOrchestrator {
       // Convert to resolved mechanisms
       const resolvedMechanisms: ResolvedMechanism[] = [];
       for (const candidateSet of candidateSets) {
-        // Look up the qualification to get the establishing evidence status
-        const qualification = qualMap.get(candidateSet.patternId);
-        const establishingEvidenceStatus = qualification && qualification.qualifiedPattern.sourcePattern.evidence.length > 0
-          ? 'RESOLVED' as const
-          : 'UNAVAILABLE' as const;
+        // Look up the establishing evidence supplied for this pattern
+        const suppliedEstablishingEvidence = establishingEvidenceByPattern.get(candidateSet.patternId) ?? [];
 
         for (const candidate of candidateSet.candidates) {
+          // Determine establishing evidence status by checking if supplied evidence appears in candidate provenance
+          // RESOLVED_FOR_MECHANISM: at least one supplied evidence record is present in candidate's evidence/provenance
+          // SOURCE_EVIDENCE_PRESENT: source evidence exists but not in candidate provenance (filtered out)
+          // UNRESOLVED: no source evidence exists
+          // UNAVAILABLE: source evidence unavailable from qualification
+          let establishingEvidenceStatus: 'SOURCE_EVIDENCE_PRESENT' | 'RESOLVED_FOR_MECHANISM' | 'UNRESOLVED' | 'UNAVAILABLE';
+
+          if (suppliedEstablishingEvidence.length === 0) {
+            establishingEvidenceStatus = 'UNAVAILABLE';
+          } else {
+            // Check if any supplied evidence appears in the candidate's evidence
+            const suppliedEvidenceIds = new Set(suppliedEstablishingEvidence.map(ev => ev.evidenceId));
+            const candidateEvidenceIds = new Set(candidate.evidence.map(ev => ev.evidenceId));
+            const hasResolvedEvidence = [...suppliedEvidenceIds].some(id => candidateEvidenceIds.has(id));
+
+            if (hasResolvedEvidence) {
+              establishingEvidenceStatus = 'RESOLVED_FOR_MECHANISM';
+            } else {
+              establishingEvidenceStatus = 'SOURCE_EVIDENCE_PRESENT';
+            }
+          }
+
           // Convert candidate evidence to stage evidence
           // Preserve identity namespace: use evidence's identityKey if available, otherwise occurrenceId only
           const stageEvidence: StageEvidence[] = candidate.evidence.map(ev =>
@@ -564,7 +587,7 @@ export class CanonicalCareerOrchestrator {
    * - InsufficientData/missing → UNAVAILABLE
    *
    * Dispositor contexts are not yet available in the orchestration input.
-   * When no dispositor contexts are available, refinement is explicitly UNAVAILABLE
+   * When no dispositor contexts are available, refinement is explicitly UNRESOLVED
    * and the refiner is NOT called. This deferral is documented via diagnostic.
    */
   private buildMechanismRefinements(
@@ -574,7 +597,7 @@ export class CanonicalCareerOrchestrator {
     const refinements: MechanismRefinement[] = [];
 
     // Dispositor contexts are not yet available in the orchestration input
-    // When contexts are unavailable, all refinements are marked UNAVAILABLE
+    // When contexts are unavailable, all refinements are marked UNRESOLVED
     const dispositorContextsUnavailable = true; // TODO: Wire real dispositor contexts when available
 
     if (dispositorContextsUnavailable) {
@@ -582,15 +605,15 @@ export class CanonicalCareerOrchestrator {
         diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
         severity: 'WARNING',
         category: 'MISSING_DATA',
-        message: 'Dispositor contexts are not yet provided in orchestration input - all refinements marked UNAVAILABLE without calling refiner',
+        message: 'Dispositor contexts are not yet provided in orchestration input - all refinements marked UNRESOLVED without calling refiner',
         relatedIds: [],
         stage: 'REFINEMENT'
       });
 
-      // Produce UNAVAILABLE refinements for all resolved mechanisms
+      // Produce UNRESOLVED refinements for all resolved mechanisms
       for (const resolved of resolvedMechanisms) {
         refinements.push({
-          mechanismId: '', // Empty string to indicate unresolved mechanism ID
+          resolution: 'UNRESOLVED',
           candidateId: resolved.candidateId,
           mechanismType: resolved.mechanismType,
           status: 'UNAVAILABLE',
@@ -619,9 +642,9 @@ export class CanonicalCareerOrchestrator {
           }
 
           // Use the real mechanism ID from the refinement result if available
-          // Otherwise leave as empty string to indicate unresolved
-          const mechanismId = result.mechanisms[0]?.mechanismId ?? '';
-          if (!result.mechanisms[0]?.mechanismId) {
+          // Otherwise mark as UNRESOLVED
+          const mechanismId = result.mechanisms[0]?.mechanismId;
+          if (!mechanismId) {
             diagnostics.push({
               diagnosticId: `ORCHESTRATION_MECHANISM_ID_MISSING_${resolved.candidateId}`,
               severity: 'WARNING',
@@ -630,6 +653,17 @@ export class CanonicalCareerOrchestrator {
               relatedIds: [resolved.candidateId],
               stage: 'REFINEMENT'
             });
+
+            // Produce UNRESOLVED refinement when mechanism ID is missing
+            refinements.push({
+              resolution: 'UNRESOLVED',
+              candidateId: resolved.candidateId,
+              mechanismType: resolved.mechanismType,
+              status: 'UNAVAILABLE',
+              mechanism: null,
+              stageEvidence: Object.freeze([])
+            });
+            continue;
           }
 
           // Convert refinement evidence to stage evidence
@@ -646,6 +680,7 @@ export class CanonicalCareerOrchestrator {
           );
 
           refinements.push({
+            resolution: 'RESOLVED',
             mechanismId,
             candidateId: resolved.candidateId,
             mechanismType: resolved.mechanismType,
@@ -796,7 +831,7 @@ export class CanonicalCareerOrchestrator {
     references.push({
       stageId: 'REFINEMENT',
       stageName: 'Mechanism Refinement (P2-07E)',
-      evidenceIds: mechanismRefinements.map((r) => r.mechanismId)
+      evidenceIds: mechanismRefinements.map((r) => r.resolution === 'RESOLVED' ? r.mechanismId : r.candidateId)
     });
 
     // 10H/10L stage
@@ -829,7 +864,7 @@ export class CanonicalCareerOrchestrator {
     ).length;
 
     const totalRefinedMechanisms = mechanismRefinements.filter(
-      (r) => r.status === 'REFINED'
+      (r) => r.resolution === 'RESOLVED' && r.status === 'REFINED'
     ).length;
 
     // Determine data completeness (availability of data)

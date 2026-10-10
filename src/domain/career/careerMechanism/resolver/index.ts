@@ -21,7 +21,8 @@
 export type {
   CareerMechanismResolutionInput,
   CareerMechanismResolutionRule,
-  CareerMechanismResolver
+  CareerMechanismResolver,
+  PatternLevelEstablishingEvidence
 } from './careerMechanismResolverTypes';
 
 // Rules

@@ -5,6 +5,7 @@ import type { CareerHouseNetwork } from '../../careerGraph/careerHouseNetworkTyp
 import type {
   CareerMechanismCandidateSet,
   CareerMechanismEvidence,
+  CareerMechanismEvidenceSource,
   CareerMechanismPathway,
   CareerMechanismType
 } from '../careerMechanismTypes';
@@ -33,6 +34,32 @@ import type {
  */
 
 /**
+ * Pattern-level establishing evidence for mechanism resolution.
+ * Unlike CareerMechanismEvidence, mechanismType is optional here because
+ * pattern-level evidence does not yet know which mechanism type it will establish.
+ * The resolver determines the mechanism type during resolution.
+ *
+ * This evidence is attached to all candidates derived from the pattern,
+ * while typed establishing evidence (with mechanismType) is attached only
+ * to matching mechanism types.
+ */
+export interface PatternLevelEstablishingEvidence {
+  readonly evidenceId: string;
+  readonly mechanismType?: CareerMechanismType; // Optional - resolver determines the type
+  readonly source: CareerMechanismEvidenceSource;
+  readonly role: 'ESTABLISHING'; // Always establishing for this type
+  readonly participantIds: readonly string[];
+  readonly relationshipIds: readonly string[];
+  readonly patternId?: string;
+  readonly explanation: string;
+}
+
+/**
+ * Re-export PatternLevelEstablishingEvidence for use by port adapters.
+ */
+export type { PatternLevelEstablishingEvidence };
+
+/**
  * Input for mechanism resolution.
  * Contains the pattern, qualification, participant roles, establishing evidence,
  * and source network(s) for canonical edge resolution.
@@ -40,12 +67,18 @@ import type {
  * Per spec §25: uses ParticipantRoleAssignment from careerParticipantRoles.
  * Extended to carry qualification for gating and source networks for canonical
  * edge resolution (replaces ID-string checks with P2-06A predicates).
+ *
+ * establishingEvidence now accepts both typed CareerMechanismEvidence (with
+ * required mechanismType) and pattern-level PatternLevelEstablishingEvidence
+ * (with optional mechanismType). Pattern-level evidence is attached to all
+ * candidates derived from the pattern, while typed evidence is attached only
+ * to matching mechanism types.
  */
 export interface CareerMechanismResolutionInput {
   readonly pattern: CareerPattern;
   readonly qualification: QualifiedCareerPattern;
   readonly participantRoles: readonly ParticipantRoleAssignment[];
-  readonly establishingEvidence: readonly CareerMechanismEvidence[];
+  readonly establishingEvidence: readonly PatternLevelEstablishingEvidence[];
   readonly networks: readonly CareerHouseNetwork[];
 }
 

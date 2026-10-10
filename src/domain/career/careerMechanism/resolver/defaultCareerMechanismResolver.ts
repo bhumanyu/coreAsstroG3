@@ -9,7 +9,8 @@ import type {
 } from '../careerMechanismTypes';
 import type {
   CareerMechanismResolutionInput,
-  CareerMechanismResolver
+  CareerMechanismResolver,
+  PatternLevelEstablishingEvidence
 } from './careerMechanismResolverTypes';
 import { CAREER_MECHANISM_RESOLUTION_RULES } from './careerMechanismResolverRules';
 import {
@@ -185,6 +186,11 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
    * where participant roles contributed. Incorporates establishingEvidence from
    * the input if present, filtered to structural sources only.
    *
+   * Pattern-level establishing evidence (without mechanismType) is attached to
+   * all candidates derived from the pattern. Typed establishing evidence (with
+   * mechanismType) is attached only to matching mechanism types. Both are gated
+   * by ESTABLISHING_EVIDENCE_SOURCES on the source field.
+   *
    * @param patternId - The pattern ID
    * @param candidateId - The candidate ID
    * @param mechanismType - The mechanism type
@@ -245,9 +251,38 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
     // are filtered out here.
     if (input.establishingEvidence.length > 0) {
       for (const ev of input.establishingEvidence) {
-        // Only include evidence that matches this mechanism type AND is from a structural source
-        if (ev.mechanismType === mechanismType && ESTABLISHING_EVIDENCE_SOURCES.has(ev.source)) {
-          evidence.push(ev);
+        // Source firewall: only structural sources allowed
+        if (!ESTABLISHING_EVIDENCE_SOURCES.has(ev.source)) {
+          continue;
+        }
+
+        // Pattern-level evidence (no mechanismType): attach to all candidates
+        if (ev.mechanismType === undefined) {
+          evidence.push({
+            evidenceId: ev.evidenceId,
+            mechanismId: candidateId,
+            mechanismType,
+            source: ev.source,
+            role: ev.role,
+            participantIds: ev.participantIds,
+            relationshipIds: ev.relationshipIds,
+            patternId: ev.patternId,
+            explanation: ev.explanation
+          });
+        }
+        // Typed evidence: attach only to matching mechanism types
+        else if (ev.mechanismType === mechanismType) {
+          evidence.push({
+            evidenceId: ev.evidenceId,
+            mechanismId: candidateId,
+            mechanismType: ev.mechanismType,
+            source: ev.source,
+            role: ev.role,
+            participantIds: ev.participantIds,
+            relationshipIds: ev.relationshipIds,
+            patternId: ev.patternId,
+            explanation: ev.explanation
+          });
         }
       }
     }
