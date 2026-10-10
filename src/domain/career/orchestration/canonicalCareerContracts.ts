@@ -213,20 +213,30 @@ export interface ResolvedMechanism {
  * - Unchanged → UNCHANGED
  * - InsufficientData/missing → UNAVAILABLE
  *
- * Uses a discriminated union to explicitly model unresolved mechanism identity:
- * - RESOLVED: mechanismId is present, mechanism may be populated
- * - UNRESOLVED: mechanismId is absent, mechanism is null
+ * Uses a discriminated union to explicitly model mechanism identity:
+ * - REFINED: mechanismId is present (genuinely refined mechanism), mechanism is populated
+ * - UNCHANGED: mechanismId is absent (no mechanism produced), sourceCandidateId tracks the original candidate
+ * - UNRESOLVED: mechanismId is absent, mechanism is null (insufficient data)
  *
- * This prevents downstream equality/map/join collisions across multiple unresolved refinements.
+ * This prevents downstream equality/map/join collisions and avoids fabricating mechanism IDs for UNCHANGED results.
  */
 export type MechanismRefinement =
   | {
-    readonly resolution: 'RESOLVED';
+    readonly resolution: 'REFINED';
     readonly mechanismId: string;
     readonly candidateId: string;
     readonly mechanismType: CareerMechanismType;
-    readonly status: 'REFINED' | 'UNCHANGED';
-    readonly mechanism: CareerMechanism | null;
+    readonly status: 'REFINED';
+    readonly mechanism: CareerMechanism;
+    readonly stageEvidence: readonly StageEvidence[];
+  }
+  | {
+    readonly resolution: 'UNCHANGED';
+    readonly sourceCandidateId: string;
+    readonly candidateId: string;
+    readonly mechanismType: CareerMechanismType;
+    readonly status: 'UNCHANGED';
+    readonly mechanism: null;
     readonly stageEvidence: readonly StageEvidence[];
   }
   | {

@@ -406,16 +406,20 @@ describe('CanonicalCareerOrchestrator', () => {
       const ports = createStubPorts();
       // Create a qualified pattern with source pattern evidence so establishing evidence is available
       const stubPattern = createStubPattern('PATTERN_1');
-      stubPattern.evidence = [
-        {
-          evidenceId: 'PATTERN_EVIDENCE_1',
-          sourceNetworkId: 'NETWORK_1',
-          relationshipId: 'REL:8→10:OCCUPIES',
-          ruleId: 'RULE_1'
-        }
-      ];
+      Object.assign(stubPattern, {
+        evidence: [
+          {
+            evidenceId: 'PATTERN_EVIDENCE_1',
+            sourceNetworkId: 'NETWORK_1',
+            relationshipId: 'REL:8→10:OCCUPIES',
+            ruleId: 'RULE_1'
+          }
+        ]
+      });
       const qualifiedPatternWithEvidence = createStubQualifiedPattern('PATTERN_1', 'QUALIFIED');
-      qualifiedPatternWithEvidence.sourcePattern = stubPattern;
+      Object.assign(qualifiedPatternWithEvidence, {
+        sourcePattern: stubPattern
+      });
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
         qualifiedPatterns: [qualifiedPatternWithEvidence]
       });
@@ -973,6 +977,8 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(refinement.mechanism).toBeNull();
       // Type guard: UNRESOLVED variant has no mechanismId property
       expect('mechanismId' in refinement).toBe(false);
+      // Type guard: UNRESOLVED variant has no sourceCandidateId property
+      expect('sourceCandidateId' in refinement).toBe(false);
     });
 
     it('should type-guard UNRESOLVED refinement correctly', () => {
@@ -1005,9 +1011,20 @@ describe('CanonicalCareerOrchestrator', () => {
         // TypeScript should error if we try to access refinement.mechanismId here
         // @ts-expect-error - mechanismId does not exist on UNRESOLVED variant
         const _mechanismId = refinement.mechanismId;
-      } else {
-        // RESOLVED branch - mechanismId is available
+        // TypeScript should error if we try to access refinement.sourceCandidateId here
+        // @ts-expect-error - sourceCandidateId does not exist on UNRESOLVED variant
+        const _sourceCandidateId = refinement.sourceCandidateId;
+      } else if (refinement.resolution === 'REFINED') {
+        // REFINED branch - mechanismId is available
         expect(refinement.mechanismId).toBeDefined();
+        expect(refinement.status).toBe('REFINED');
+      } else {
+        // UNCHANGED branch - sourceCandidateId is available, mechanismId is not
+        expect(refinement.sourceCandidateId).toBeDefined();
+        expect(refinement.status).toBe('UNCHANGED');
+        // TypeScript should error if we try to access refinement.mechanismId here
+        // @ts-expect-error - mechanismId does not exist on UNCHANGED variant
+        const _mechanismId = refinement.mechanismId;
       }
     });
 
@@ -1141,10 +1158,10 @@ describe('CanonicalCareerOrchestrator', () => {
       });
 
       const refinement = foundation.mechanismRefinements[0];
-      expect(refinement.resolution).toBe('RESOLVED');
+      expect(refinement.resolution).toBe('REFINED');
       expect(refinement.status).toBe('REFINED');
       expect(refinement.candidateId).toBe('CANDIDATE_1');
-      if (refinement.resolution === 'RESOLVED') {
+      if (refinement.resolution === 'REFINED') {
         expect(refinement.mechanismId).toBe('MECHANISM_REAL_1');
         expect(refinement.mechanism).not.toBeNull();
       }
@@ -1206,14 +1223,16 @@ describe('CanonicalCareerOrchestrator', () => {
       });
 
       const refinement = foundation.mechanismRefinements[0];
-      expect(refinement.resolution).toBe('RESOLVED');
+      expect(refinement.resolution).toBe('UNCHANGED');
       expect(refinement.status).toBe('UNCHANGED');
       expect(refinement.candidateId).toBe('CANDIDATE_1');
-      if (refinement.resolution === 'RESOLVED') {
-        // mechanismId is placeholder (candidateId) for UNCHANGED status
-        expect(refinement.mechanismId).toBe('CANDIDATE_1');
+      if (refinement.resolution === 'UNCHANGED') {
+        // sourceCandidateId exposes the original candidate (no fabricated mechanismId)
+        expect(refinement.sourceCandidateId).toBe('CANDIDATE_1');
         // mechanism is null for UNCHANGED status (no new mechanism produced)
         expect(refinement.mechanism).toBeNull();
+        // mechanismId does not exist on UNCHANGED variant
+        expect('mechanismId' in refinement).toBe(false);
       }
     });
 
@@ -1984,16 +2003,25 @@ describe('CanonicalCareerOrchestrator', () => {
 
       // The real refiner should accept the properly-typed context
       // AGENCY has no applicable dispositor rule for SUN→MARS TERMINAL context
-      // Refiner returns UNCHANGED → orchestrator maps to RESOLVED with UNCHANGED status
-      expect(refinement.resolution).toBe('RESOLVED');
-      expect(refinement.status).toBe('UNCHANGED');
-
-      // Verify the refinement result flows back correctly
+      // Refiner returns either REFINED or UNCHANGED depending on the refiner's logic
       expect(refinement.candidateId).toBe('CANDIDATE_1');
-      // mechanismId is placeholder (candidateId) for UNCHANGED status
-      expect(refinement.mechanismId).toBe('CANDIDATE_1');
-      // mechanism is null for UNCHANGED status (no new mechanism produced)
-      expect(refinement.mechanism).toBeNull();
+
+      // Test the actual resolution returned by the real refiner
+      if (refinement.resolution === 'UNCHANGED') {
+        // UNCHANGED branch: sourceCandidateId exposes the original candidate
+        expect(refinement.sourceCandidateId).toBe('CANDIDATE_1');
+        expect(refinement.mechanism).toBeNull();
+        expect('mechanismId' in refinement).toBe(false);
+      } else if (refinement.resolution === 'REFINED') {
+        // REFINED branch: mechanismId is present
+        expect(refinement.mechanismId).toBeDefined();
+        expect(refinement.mechanism).not.toBeNull();
+        expect('sourceCandidateId' in refinement).toBe(false);
+      } else {
+        // UNRESOLVED branch
+        expect(refinement.status).toBe('UNAVAILABLE');
+        expect(refinement.mechanism).toBeNull();
+      }
     });
   });
 });

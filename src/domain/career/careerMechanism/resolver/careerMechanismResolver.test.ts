@@ -627,26 +627,26 @@ describe('careerMechanismResolver', () => {
       expect(result.candidates.length).toBeGreaterThan(0);
 
       for (const candidate of result.candidates) {
-        // Evidence with mismatched patternId should be rejected
-        if (candidate.rejectedEstablishingEvidenceIds) {
-          expect(candidate.rejectedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1');
-        }
+        // Evidence with mismatched patternId should be rejected (unconditional assertion)
+        expect(candidate.rejectedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1');
         // Evidence with matching patternId should be accepted
         expect(candidate.acceptedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:PATTERN:1');
       }
     });
 
-    it('should reject evidence with mismatched patternId (Finding 3)', () => {
+    it('should reject evidence with missing patternId', () => {
+      // Create evidence with missing patternId using type assertion to bypass TypeScript check
       const mockEvidence: PatternLevelEstablishingEvidence[] = [
         {
-          evidenceId: 'CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1',
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:MISSING_PATTERN:1',
           mechanismType: undefined,
           source: 'PATTERN',
           role: 'ESTABLISHING',
           participantIds: [],
           relationshipIds: [],
-          patternId: 'different-pattern', // Mismatched patternId - should be rejected
-          explanation: 'Evidence with mismatched patternId (should be rejected)'
+          // @ts-expect-error - patternId is required, testing runtime guard
+          patternId: undefined,
+          explanation: 'Evidence with missing patternId (should be rejected)'
         },
         {
           evidenceId: 'CAREER_MECHANISM_EVIDENCE:PATTERN:1',
@@ -673,10 +673,8 @@ describe('careerMechanismResolver', () => {
       expect(result.candidates.length).toBeGreaterThan(0);
 
       for (const candidate of result.candidates) {
-        // Evidence with mismatched patternId should be rejected
-        if (candidate.rejectedEstablishingEvidenceIds) {
-          expect(candidate.rejectedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1');
-        }
+        // Evidence with missing patternId should be rejected
+        expect(candidate.rejectedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:MISSING_PATTERN:1');
         // Evidence with matching patternId should be accepted
         expect(candidate.acceptedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:PATTERN:1');
       }

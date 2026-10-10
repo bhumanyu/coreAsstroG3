@@ -698,12 +698,11 @@ export class CanonicalCareerOrchestrator {
           // For UNCHANGED status, the original candidate remains valid
           // For REFINED status, we need a mechanism ID from the refinement result
           if (status === 'UNCHANGED') {
-            // UNCHANGED: original candidate is valid, produce RESOLVED refinement with UNCHANGED status
-            // Use the candidateId as a placeholder mechanismId since no new mechanism was produced
-            // The contract requires a non-empty string for RESOLVED refinements
+            // UNCHANGED: original candidate is valid, produce UNCHANGED refinement
+            // Do NOT fabricate a mechanismId - expose the original candidate via sourceCandidateId
             refinements.push({
-              resolution: 'RESOLVED',
-              mechanismId: resolved.candidateId, // Use candidateId as placeholder (original candidate unchanged)
+              resolution: 'UNCHANGED',
+              sourceCandidateId: resolved.candidateId,
               candidateId: resolved.candidateId,
               mechanismType: resolved.mechanismType,
               status: 'UNCHANGED',
@@ -751,11 +750,11 @@ export class CanonicalCareerOrchestrator {
           );
 
           refinements.push({
-            resolution: 'RESOLVED',
+            resolution: 'REFINED',
             mechanismId,
             candidateId: resolved.candidateId,
             mechanismType: resolved.mechanismType,
-            status,
+            status: 'REFINED',
             mechanism: result.mechanisms[0] ?? null,
             stageEvidence: Object.freeze(stageEvidence)
           });
@@ -902,7 +901,15 @@ export class CanonicalCareerOrchestrator {
     references.push({
       stageId: 'REFINEMENT',
       stageName: 'Mechanism Refinement (P2-07E)',
-      evidenceIds: mechanismRefinements.map((r) => r.resolution === 'RESOLVED' ? r.mechanismId : r.candidateId)
+      evidenceIds: mechanismRefinements.map((r) => {
+        if (r.resolution === 'REFINED') {
+          return r.mechanismId;
+        } else if (r.resolution === 'UNCHANGED') {
+          return r.sourceCandidateId;
+        } else {
+          return r.candidateId;
+        }
+      })
     });
 
     // 10H/10L stage
@@ -935,7 +942,7 @@ export class CanonicalCareerOrchestrator {
     ).length;
 
     const totalRefinedMechanisms = mechanismRefinements.filter(
-      (r) => r.resolution === 'RESOLVED' && r.status === 'REFINED'
+      (r) => r.resolution === 'REFINED'
     ).length;
 
     // Determine data completeness (availability of data)

@@ -181,7 +181,7 @@ export function validateRefinementCandidateReferences(
 
   for (const refinement of refinements) {
     if (!candidateIdSet.has(refinement.candidateId)) {
-      const mechanismId = refinement.resolution === 'RESOLVED' ? refinement.mechanismId : 'UNRESOLVED';
+      const mechanismId = refinement.resolution === 'REFINED' ? refinement.mechanismId : 'UNRESOLVED';
       diagnostics.push({
         diagnosticId: `VALIDATION_ORPHANED_REFINEMENT_${mechanismId}`,
         severity: 'ERROR',
