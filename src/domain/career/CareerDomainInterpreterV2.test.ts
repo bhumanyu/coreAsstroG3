@@ -2055,9 +2055,9 @@ describe('CareerDomainInterpreterV2', () => {
       // Build timing synthesis with strong support
       const strongTiming = {
         natalPromise: 'STRONG' as const,
-        dashaEffect: 'ACTIVATES' as const,
-        transitEffect: 'TRIGGER' as const,
-        overallEffect: 'ACTIVE' as const,
+        dashaEffect: 'STRONGLY_SUPPORTS' as const,
+        transitEffect: 'SUPPORTS' as const,
+        overallEffect: 'ACTIVATES' as const,
         confidence: 0.9,
         factors: [],
         summary: 'Strong timing support'
