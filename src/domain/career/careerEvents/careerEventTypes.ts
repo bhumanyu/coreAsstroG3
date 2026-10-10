@@ -108,6 +108,13 @@ export interface CareerEvent {
   readonly evidenceIds: readonly string[];
 
   /**
+   * Rule IDs that generated this event.
+   * Stable identifiers (e.g., 'P2-09B-EVT-01', 'P2-09B-EVT-02', 'P2-09B-EVT-03').
+   * Kept separate from evidenceIds for clear provenance.
+   */
+  readonly ruleIds: readonly string[];
+
+  /**
    * Human-readable statement.
    */
   readonly statement: string;

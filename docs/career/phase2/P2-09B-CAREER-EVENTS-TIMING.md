@@ -15,6 +15,7 @@ This is a standalone analysis layer — it must NOT recalculate any C4–C11 ast
 
 2. **Dasha cannot manufacture opportunities (EVT-01).**
    - Opportunity-window candidates require an existing qualified trajectory opportunity (`qualified === true` and direction `SUPPORT`/`CONDITIONAL`) AND an activating period (`ACTIVATES`/`PARTIALLY_ACTIVATES`) with `SUPPORT` direction.
+   - Compatibility check: The period must have matching Dasha evidence (same level, planet, effect, direction, role).
    - Never emit an event with zero supporting evidence.
 
 3. **Missing evidence is not negative evidence (EVT-02).**
@@ -24,11 +25,13 @@ This is a standalone analysis layer — it must NOT recalculate any C4–C11 ast
 4. **Use source dates as-is (EVT-03).**
    - Never infer, interpolate, or extend dates.
    - Missing or partial dates → `UNTIMED` candidate.
+   - Impossible calendar dates (e.g., '2020-02-31') → `UNTIMED` candidate (strict validation).
    - Malformed or start>end dates → throw.
 
 5. **Evidence IDs are semantic identities, not occurrence IDs.**
    - `evidenceIds` must stay semantic identity IDs (the Dasha evidence `identityKey` and trajectory opportunity `evidenceIds`).
-   - Never mix in occurrence IDs, source IDs, rule IDs, or event IDs.
+   - Never mix in occurrence IDs, source IDs, or event IDs.
+   - Rule IDs are kept separate in the `ruleIds` field.
 
 6. **Deterministic output.**
    - Stable `eventId` derived from domain inputs (no UUID/timestamp).
@@ -37,6 +40,10 @@ This is a standalone analysis layer — it must NOT recalculate any C4–C11 ast
    - Throw on same-identity conflicting payloads.
    - Sort final events by `eventId` with a code-point comparator (not `localeCompare`).
    - Freeze result and all nested arrays.
+
+7. **Input validation.**
+   - Validate Dasha analysis structure (periods present and well-formed) before generation.
+   - Require matching canonical Dasha evidence for events (evidence must match period by level, planet, effect, direction, role).
 
 ## Output Contract
 
@@ -62,6 +69,7 @@ This is a standalone analysis layer — it must NOT recalculate any C4–C11 ast
   status: 'CANDIDATE';
   timing: CareerEventTiming;
   evidenceIds: readonly string[];
+  ruleIds: readonly string[];  // Rule IDs that generated this event (e.g., 'P2-09B-EVT-01')
   statement: string;
 }
 ```
@@ -93,6 +101,9 @@ Opportunity-window candidates require:
    - `effect === 'ACTIVATES'` or `effect === 'PARTIALLY_ACTIVATES'`
    - `direction === 'SUPPORT'`
 
+3. Compatibility check: The period must have matching Dasha evidence (same level, planet, effect, direction, role).
+   This ensures the activation evidence relates to the opportunity rather than merely overlapping temporally.
+
 Dasha cannot manufacture an opportunity. Never emit an event with zero supporting evidence.
 
 ### EVT-02: Missing Evidence Is Not Negative Evidence
@@ -104,12 +115,19 @@ Periods with the following effect/direction values produce NO event:
 
 These are not treated as challenges — missing evidence is not negative evidence.
 
+### Challenge Semantics
+
+Challenge events are generated from the period's own canonical CHALLENGE evidence (matched by level, planet, effect, direction, role). They do NOT include the opportunity's SUPPORT evidenceIds. This preserves separate supporting/challenging evidence roles.
+
+If no matching CHALLENGE evidence exists for a challenging period, the event is suppressed rather than attaching unrelated evidence.
+
 ### EVT-03: Date Handling
 
 - Use source dates as-is; never infer, interpolate, or extend.
 - Missing or partial dates (start only, end only) → `UNTIMED` candidate.
-- Malformed dates → `UNTIMED` candidate (validator accepts both ISO format from vimshottari engine and YYYY-MM-DD format from test fixtures).
-- Start > end dates → throw error.
+- Strict date validation for both ISO format (from vimshottari engine) and YYYY-MM-DD format (from test fixtures).
+- Impossible calendar dates (e.g., '2020-02-31') are rejected via round-trip validation → `UNTIMED` candidate.
+- Start > end dates → throw error (reversed range).
 
 ## Evidence, Identity, and Provenance Semantics
 
@@ -120,16 +138,18 @@ These are not treated as challenges — missing evidence is not negative evidenc
 - `evidenceIds`: Semantic identity IDs (Dasha evidence `identityKey` and trajectory opportunity `evidenceIds`)
 - `occurrenceIds`: NOT used in events (these are the `id` field from canonical evidence)
 - `sourceIds`: NOT used in events (these are provenance occurrence IDs)
-- `ruleIds`: NOT used in events (these are rule identity IDs)
+- `ruleIds`: Used in events for rule provenance (these are rule identity IDs like 'P2-09B-EVT-01')
 - `eventIds`: Generated event identifiers (format: `CAREER_EVENT:{eventType}:{sourceKey}`)
 
-**Never mix namespaces in `evidenceIds`.**
+**Never mix namespaces in `evidenceIds`. Rule IDs are kept separate in the `ruleIds` field.**
 
 ### Dasha Evidence Identity
 
 - Use `identityKey` from `CareerDashaCanonicalEvidence` for semantic identity.
 - Do NOT use the `id` field (occurrence identity).
 - Do NOT use `sourceIds` (provenance occurrences).
+- Match evidence to the exact period by filtering on level, planet, effect, direction, and role.
+- This ensures a SUPPORT event cannot inherit a CHALLENGE evidence identity.
 
 ### Trajectory Evidence Identity
 
@@ -142,12 +162,20 @@ These are not treated as challenges — missing evidence is not negative evidenc
 Event IDs are stable and derived from domain inputs:
 
 ```
-CAREER_EVENT:{eventType}:{opportunityMode}:{periodLevel}:{periodPlanet}
+CAREER_EVENT:{eventType}:{opportunityMode}:{opportunityEvidenceDiscriminator}:{periodLevel}:{periodPlanet}:{periodStart}:{periodEnd}
 ```
 
-Example: `CAREER_EVENT:CAREER_OPPORTUNITY_WINDOW:MANAGEMENT:MD:SUN`
+Example: `CAREER_EVENT:CAREER_OPPORTUNITY_WINDOW:MANAGEMENT:evidence-1|evidence-2:MD:SUN:2020-01-01:2030-01-01`
 
-No UUIDs or timestamps are used.
+Discriminator components (all stable semantic inputs, no UUIDs/timestamps):
+- Opportunity mode (e.g., 'MANAGEMENT')
+- Opportunity semantic discriminator (sorted evidenceIds joined with '|')
+- Period level (e.g., 'MD')
+- Period planet (e.g., 'SUN')
+- Period start date (if available, from source)
+- Period end date (if available, from source)
+
+This ensures distinct semantic opportunities and distinct period windows cannot collapse.
 
 ### Evidence ID Handling
 
@@ -183,16 +211,38 @@ This module must NOT:
 2. Wire itself into `CareerDomainInterpreterV2.ts`.
 3. Call AI or any non-deterministic services.
 4. Invent dates or outcomes.
-5. Mix occurrence IDs, source IDs, or rule IDs into `evidenceIds`.
+5. Mix occurrence IDs, source IDs, or event IDs into `evidenceIds`.
 6. Treat missing evidence as negative evidence.
 7. Manufacture opportunities from Dasha alone (EVT-01).
 8. Emit events for periods with UNKNOWN/INSUFFICIENT_DATA/UNAVAILABLE/NEUTRAL effect/direction (EVT-02).
 9. Infer, interpolate, or extend dates (EVT-03).
 10. Use UUIDs or timestamps for event IDs.
+11. Attach unrelated Dasha evidence to events (evidence must match period by level, planet, effect, direction, role).
+12. Include opportunity SUPPORT evidence in challenge events (challenge events use only period-specific CHALLENGE evidence).
 
 ## Implementation Status
 
 **IMPLEMENTED — VERIFICATION PENDING**
+
+P1 fixes implemented:
+1. Event identity generation now includes opportunity semantic identity (sorted evidenceIds) and period dates.
+2. Dasha evidence matching now filters by level, planet, effect, direction, and role.
+3. Challenge semantics finalized: challenge events use only period-specific CHALLENGE evidence, not opportunity SUPPORT evidence.
+4. Date validation standardized with strict parsing for ISO and YYYY-MM-DD formats, rejecting impossible calendar dates.
+
+P2 features implemented:
+5. Opportunity↔activation compatibility rule added (period must have matching Dasha evidence).
+6. RuleIds field added to CareerEvent type, populated with stable rule identifiers (P2-09B-EVT-01, P2-09B-EVT-02).
+
+Input validation implemented:
+7. Dasha input contract validation added (periods must be present and well-formed).
+8. Events require matching canonical Dasha evidence for their period.
+
+Test strengthening implemented:
+9. Deep immutability assertions added (nested freeze).
+10. Input non-mutation test added.
+11. Conflict detection test improved to actually construct conflicting payloads.
+12. Regression tests added for all P1 fixes.
 
 Files:
 - `src/domain/career/careerEvents/careerEventTypes.ts`

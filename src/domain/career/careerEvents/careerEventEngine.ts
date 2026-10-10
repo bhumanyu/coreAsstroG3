@@ -13,7 +13,8 @@ import type {
 
 import type {
   CareerDashaCanonicalPeriod,
-  CareerDashaCanonicalEvidence
+  CareerDashaCanonicalEvidence,
+  CareerDashaCanonicalAnalysis
 } from '../careerDasha/careerDashaCanonicalTypes';
 
 /**
@@ -37,9 +38,13 @@ import type {
  */
 
 /**
- * Validates a date string.
+ * Validates a date string with strict parsing.
  *
- * Accepts both ISO format (from vimshottari engine) and YYYY-MM-DD format (from test fixtures).
+ * Accepts two formats:
+ * 1. ISO format (from vimshottari engine): e.g., '2020-01-01T00:00:00.000Z'
+ * 2. YYYY-MM-DD format (from test fixtures): e.g., '2020-01-01'
+ *
+ * Rejects impossible calendar dates (e.g., '2020-02-31') by validating round-trip.
  * Returns true if the date is valid, false otherwise.
  */
 function isValidDate(dateStr: string | undefined): boolean {
@@ -48,16 +53,29 @@ function isValidDate(dateStr: string | undefined): boolean {
   }
 
   // Try ISO format first (from vimshottari.ts: toISOString())
-  const isoDate = new Date(dateStr);
-  if (!isNaN(isoDate.getTime())) {
-    return true;
+  const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+  if (isoRegex.test(dateStr)) {
+    const parsed = new Date(dateStr);
+    if (isNaN(parsed.getTime())) {
+      return false;
+    }
+    // Round-trip validation for ISO
+    return parsed.toISOString() === dateStr;
   }
 
   // Try YYYY-MM-DD format (from test fixtures)
   const yyyyMmDdRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (yyyyMmDdRegex.test(dateStr)) {
     const parsed = new Date(dateStr);
-    return !isNaN(parsed.getTime());
+    if (isNaN(parsed.getTime())) {
+      return false;
+    }
+    // Round-trip validation for YYYY-MM-DD to catch impossible dates like 2020-02-31
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    const roundTrip = `${year}-${month}-${day}`;
+    return roundTrip === dateStr;
   }
 
   return false;
@@ -112,12 +130,28 @@ function isQualifiedOpportunity(opportunity: CareerTrajectoryOpportunity): boole
 }
 
 /**
+ * Checks if an opportunity is compatible with an activating period.
+ *
+ * Compatibility rule: The period must have matching Dasha evidence (same level, planet,
+ * effect, direction, role). This ensures the activation evidence relates to the opportunity
+ * rather than merely overlapping temporally.
+ */
+function isOpportunityCompatibleWithPeriod(
+  period: CareerDashaCanonicalPeriod,
+  dashaEvidence: readonly CareerDashaCanonicalEvidence[]
+): boolean {
+  const matchingEvidence = collectDashaEvidenceIds(dashaEvidence, period);
+  return matchingEvidence.length > 0;
+}
+
+/**
  * Builds timing information from a Dasha period.
  *
  * If the period has valid start and end dates, returns a DASHA_PERIOD_WINDOW.
  * Otherwise, returns UNTIMED.
  *
- * Throws if dates are malformed or start > end.
+ * Throws if start > end (reversed range).
+ * Malformed dates (e.g., '2020-02-31') produce UNTIMED.
  */
 function buildTiming(period: CareerDashaCanonicalPeriod): CareerEventTiming {
   const hasStart = isValidDate(period.start);
@@ -149,14 +183,30 @@ function buildTiming(period: CareerDashaCanonicalPeriod): CareerEventTiming {
 /**
  * Collects Dasha evidence identity keys for a period.
  *
+ * Matches evidence to the exact period by filtering on:
+ * - level
+ * - planet
+ * - effect
+ * - direction
+ * - role
+ *
+ * This ensures a SUPPORT event cannot inherit a CHALLENGE evidence identity.
+ * If no canonical Dasha evidence matches the period, returns empty array.
+ *
  * Returns the identityKey from each evidence item (semantic identity).
  * Never mixes in occurrence IDs, source IDs, rule IDs, or event IDs.
  */
 function collectDashaEvidenceIds(
   dashaEvidence: readonly CareerDashaCanonicalEvidence[],
-  level: 'MD' | 'AD' | 'PD'
+  period: CareerDashaCanonicalPeriod
 ): readonly string[] {
-  const relevantEvidence = dashaEvidence.filter(e => e.level === level);
+  const relevantEvidence = dashaEvidence.filter(e =>
+    e.level === period.level &&
+    e.planet === period.planet &&
+    e.effect === period.effect &&
+    e.direction === period.direction &&
+    e.role === period.role
+  );
   const identityKeys = relevantEvidence.map(e => e.identityKey);
   return Object.freeze([...new Set(identityKeys)].sort());
 }
@@ -165,16 +215,37 @@ function collectDashaEvidenceIds(
  * Generates a stable event ID from domain inputs.
  *
  * Format: 'CAREER_EVENT:{eventType}:{sourceKey}'
- * Where sourceKey is derived from the opportunity and period.
+ * Where sourceKey is derived from the opportunity's semantic identity and the period's identity.
+ *
+ * Discriminator components (all stable semantic inputs, no UUIDs/timestamps):
+ * - Opportunity mode (e.g., 'MANAGEMENT')
+ * - Opportunity semantic discriminator (sorted evidenceIds joined with '|')
+ * - Period level (e.g., 'MD')
+ * - Period planet (e.g., 'SUN')
+ * - Period start date (if available, from source)
+ * - Period end date (if available, from source)
+ *
+ * This ensures distinct semantic opportunities and distinct period windows cannot collapse.
  */
 function generateEventId(
   eventType: CareerEventType,
   opportunityMode: string,
+  opportunityEvidenceIds: readonly string[],
   periodLevel: string,
-  periodPlanet: string | undefined
+  periodPlanet: string | undefined,
+  periodStart: string | undefined,
+  periodEnd: string | undefined
 ): string {
   const planetPart = periodPlanet ?? 'none';
-  const sourceKey = `${opportunityMode}:${periodLevel}:${planetPart}`;
+  const startPart = periodStart ?? 'none';
+  const endPart = periodEnd ?? 'none';
+
+  // Use sorted evidenceIds as opportunity semantic discriminator
+  const oppDiscriminator = opportunityEvidenceIds.length > 0
+    ? opportunityEvidenceIds.join('|')
+    : 'none';
+
+  const sourceKey = `${opportunityMode}:${oppDiscriminator}:${periodLevel}:${planetPart}:${startPart}:${endPart}`;
   return `CAREER_EVENT:${eventType}:${sourceKey}`;
 }
 
@@ -194,15 +265,18 @@ function buildOpportunityEvent(
 
   // Collect evidence IDs: trajectory opportunity evidenceIds + Dasha evidence identityKeys
   const trajectoryEvidenceIds = opportunity.evidenceIds;
-  const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period.level);
+  const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period);
   const allEvidenceIds = [...trajectoryEvidenceIds, ...dashaEvidenceIds];
   const sortedEvidenceIds = Object.freeze([...new Set(allEvidenceIds)].sort());
 
   const eventId = generateEventId(
     eventType,
     opportunity.mode,
+    trajectoryEvidenceIds,
     period.level,
-    period.planet
+    period.planet,
+    period.start,
+    period.end
   );
 
   const statement = [
@@ -219,6 +293,7 @@ function buildOpportunityEvent(
     status: 'CANDIDATE',
     timing,
     evidenceIds: sortedEvidenceIds,
+    ruleIds: Object.freeze(['P2-09B-EVT-01']),
     statement
   });
 }
@@ -228,6 +303,10 @@ function buildOpportunityEvent(
  *
  * Requires qualified opportunity (qualified trajectories can face challenges during challenging periods).
  * EVT-02: Only CHALLENGES effect with CHALLENGE direction produces a challenge event.
+ *
+ * CHALLENGE SEMANTICS: Challenge events use ONLY the period's canonical CHALLENGE evidence
+ * (matched by level, planet, effect, direction, role). They do NOT include the opportunity's
+ * SUPPORT evidenceIds. This preserves separate supporting/challenging evidence roles.
  */
 function buildChallengeEvent(
   opportunity: CareerTrajectoryOpportunity,
@@ -237,17 +316,19 @@ function buildChallengeEvent(
   const eventType: CareerEventType = 'CAREER_CHALLENGE_WINDOW';
   const timing = buildTiming(period);
 
-  // Collect evidence IDs: trajectory opportunity evidenceIds + Dasha evidence identityKeys
-  const trajectoryEvidenceIds = opportunity.evidenceIds;
-  const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period.level);
-  const allEvidenceIds = [...trajectoryEvidenceIds, ...dashaEvidenceIds];
-  const sortedEvidenceIds = Object.freeze([...new Set(allEvidenceIds)].sort());
+  // Collect evidence IDs: ONLY Dasha CHALLENGE evidence (matched to period)
+  // Do NOT include trajectory opportunity evidenceIds to preserve separate evidence roles
+  const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period);
+  const sortedEvidenceIds = Object.freeze([...dashaEvidenceIds]);
 
   const eventId = generateEventId(
     eventType,
     opportunity.mode,
+    opportunity.evidenceIds, // Still use opportunity evidence for identity, but not for event evidence
     period.level,
-    period.planet
+    period.planet,
+    period.start,
+    period.end
   );
 
   const statement = [
@@ -264,6 +345,7 @@ function buildChallengeEvent(
     status: 'CANDIDATE',
     timing,
     evidenceIds: sortedEvidenceIds,
+    ruleIds: Object.freeze(['P2-09B-EVT-02']),
     statement
   });
 }
@@ -283,15 +365,18 @@ function buildConditionalEvent(
 
   // Collect evidence IDs: trajectory opportunity evidenceIds + Dasha evidence identityKeys
   const trajectoryEvidenceIds = opportunity.evidenceIds;
-  const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period.level);
+  const dashaEvidenceIds = collectDashaEvidenceIds(dashaEvidence, period);
   const allEvidenceIds = [...trajectoryEvidenceIds, ...dashaEvidenceIds];
   const sortedEvidenceIds = Object.freeze([...new Set(allEvidenceIds)].sort());
 
   const eventId = generateEventId(
     eventType,
     opportunity.mode,
+    trajectoryEvidenceIds,
     period.level,
-    period.planet
+    period.planet,
+    period.start,
+    period.end
   );
 
   const statement = [
@@ -308,6 +393,7 @@ function buildConditionalEvent(
     status: 'CANDIDATE',
     timing,
     evidenceIds: sortedEvidenceIds,
+    ruleIds: Object.freeze(['P2-09B-EVT-01']),
     statement
   });
 }
@@ -350,19 +436,29 @@ function generateEvents(
         continue;
       }
 
-      // No evidence to support this combination
-      if (opportunity.evidenceIds.length === 0) {
+      // For activating periods, require opportunity evidence
+      if (isActivating && opportunity.evidenceIds.length === 0) {
         continue;
       }
 
       // Determine event type based on period effect and opportunity direction
       if (isActivating) {
+        // Compatibility check: period must have matching Dasha evidence
+        if (!isOpportunityCompatibleWithPeriod(period, dashaAnalysis.evidence)) {
+          continue;
+        }
         if (opportunity.direction === 'CONDITIONAL') {
           events.push(buildConditionalEvent(opportunity, period, dashaAnalysis.evidence));
         } else {
           events.push(buildOpportunityEvent(opportunity, period, dashaAnalysis.evidence));
         }
       } else if (isChallenging) {
+        // For challenging periods, only require matching CHALLENGE Dasha evidence
+        const challengeEvidenceIds = collectDashaEvidenceIds(dashaAnalysis.evidence, period);
+        if (challengeEvidenceIds.length === 0) {
+          // No matching CHALLENGE evidence - suppress the event
+          continue;
+        }
         events.push(buildChallengeEvent(opportunity, period, dashaAnalysis.evidence));
       }
       // Other effect/direction combinations (e.g., MIXED, NEUTRAL) produce no event
@@ -375,7 +471,7 @@ function generateEvents(
 /**
  * Deduplicates events by event identity (eventId).
  *
- * Merges evidenceIds when events have the same eventId.
+ * Merges evidenceIds and ruleIds when events have the same eventId.
  * Throws if same eventId has conflicting payloads (different eventType or timing).
  */
 function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEvent[] {
@@ -399,10 +495,16 @@ function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEvent[] {
         new Set([...existing.evidenceIds, ...event.evidenceIds])
       ).sort();
 
-      // Update existing event with merged evidence
+      // Merge ruleIds
+      const mergedRuleIds = Array.from(
+        new Set([...existing.ruleIds, ...event.ruleIds])
+      ).sort();
+
+      // Update existing event with merged evidence and rules
       eventMap.set(event.eventId, Object.freeze({
         ...existing,
-        evidenceIds: Object.freeze(mergedEvidenceIds)
+        evidenceIds: Object.freeze(mergedEvidenceIds),
+        ruleIds: Object.freeze(mergedRuleIds)
       }));
     } else {
       eventMap.set(event.eventId, event);
@@ -422,10 +524,25 @@ function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEvent[] {
 }
 
 /**
+ * Validates Dasha canonical analysis structure.
+ *
+ * Ensures periods are present and well-formed.
+ */
+function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
+  if (!dasha.md || !dasha.ad || !dasha.pd) {
+    throw new Error('Dasha analysis must include md, ad, and pd periods');
+  }
+
+  if (!Array.isArray(dasha.evidence)) {
+    throw new Error('Dasha analysis must include evidence array');
+  }
+}
+
+/**
  * Builds career events analysis from trajectory and Dasha analysis.
  *
  * Validates reasoningVersion === 'P2-09A' for trajectory.
- * Validates reasoningVersion (if present) for Dasha.
+ * Validates Dasha analysis structure.
  * Returns an Object.freeze result with all nested arrays frozen.
  * guaranteedEventsAvailable is always false.
  */
@@ -446,6 +563,9 @@ export function buildCareerEvents(
       `Invalid trajectory domain: expected 'CAREER', got '${trajectory.domain}'`
     );
   }
+
+  // Validate Dasha analysis structure
+  validateDashaAnalysis(dasha);
 
   // Generate events from opportunities and Dasha periods
   const rawEvents = generateEvents(trajectory.opportunities, {
