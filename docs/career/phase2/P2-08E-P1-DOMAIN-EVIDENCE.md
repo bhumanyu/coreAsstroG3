@@ -114,7 +114,9 @@ This aligns with C11-INV-05 from the convergence contract.
 
 C11 is used **only for reference validation**, never as an evidence source:
 
-- The mapper computes a check that produced evidence IDs are cross-referenceable against `finalSynthesis.evidenceIds`, returning `{ unreferenced: string[]; missing: string[] }`
+- The mapper computes a check that produced evidence identities are cross-referenceable against `finalSynthesis.evidenceIds`, returning `{ unreferenced: string[]; missing: string[] }`
+- Validation compares canonical identities using `identityKey` (falling back to `id` only when `identityKey` is absent)
+- This allows C11 to reference evidence by semantic identity rather than occurrence ID
 - In the production path (`mapCanonicalCareerEvidence`), this check is computed but the result is discarded (not surfaced or acted upon)
 - The validation result is exposed to tests via `validateC11References()`, which allows test observability of the cross-reference check
 - Unknown references are handled explicitly (ignored, never fabricated)
@@ -170,17 +172,23 @@ The mapper reuses the C4 MIXED evidence identity contract (§9 of CW-R1):
 - During canonical deduplication, the two occurrences merge into one MIXED record
 - Weight is the max single-occurrence, not the sum
 
+This convention is applied consistently across:
+- Natal evidence (C4–C7): MIXED direction splits into SUPPORTING/CHALLENGING occurrences
+- Dasha evidence (C9): MIXED direction splits into SUPPORTING/CHALLENGING occurrences (same convention as natal)
+- D10 evidence (C10): MIXED direction splits into SUPPORTING/CHALLENGING occurrences
+
 This prevents duplicate representations of one underlying structural fact from independently contributing to the Career conclusion.
 
 ## Deduplication and Merge Policy
 
 The mapper enforces semantic field safety during deduplication:
 
-- For non-MIXED same-identity groups, all merge-relevant semantic fields must agree
-- Fields checked: polarity, strength, phase, source, role, provenance
-- If fields disagree, an error is thrown (silent merging is prevented)
+- For all same-identity groups (including MIXED), all merge-relevant semantic fields must agree
+- Fields checked: statement, ruleId, sourceType, domain, timing, phase, source, role, provenance (all except polarity)
+- If any non-polarity field disagrees, an error is thrown (silent merging is prevented)
 - Records without an `identityKey` are preserved as separate, non-deduplicable items (grouped by `id` instead)
 - MIXED occurrences (SUPPORTING + CHALLENGING with same identityKey) are kept separate for downstream canonical dedup
+- The merged record takes all fields from `group[0]` (acceptable only after field agreement is validated)
 
 This policy prevents silent merging of semantically incompatible evidence and ensures merge conflicts are visible.
 
@@ -190,12 +198,16 @@ All enum mapping functions use exhaustive mappings with explicit error handling:
 
 - `mapLayerToRole`: throws on unexpected layer values
 - `mapStrength`: returns `null` for unmappable strengths (excludes record)
-- `mapLayerToSourceType`: returns STRUCTURAL for most layers, YOGA for yoga evidence
-- `mapD10DirectionToPolarity`: throws on unexpected direction values
-- `mapD10DirectionToProvenanceEffect`: throws on unexpected direction values
+- `mapLayerToSourceType`: throws on unexpected layer values (added in commit 2a81a2a)
+- `mapDirectionToPolarity`: throws on unexpected `ReasoningDirection` values (exhaustive with never type)
+- `mapDirectionToProvenanceEffect`: throws on unexpected `ReasoningDirection` values (exhaustive with never type)
+- `mapExpressionDirectionToPolarity`: throws on unexpected `CareerExpressionDirection` values (exhaustive with never type)
+- `mapExpressionStrengthToEvidenceStrength`: throws on unexpected `CareerExpressionStrength` values (exhaustive with never type)
+- `mapD10DirectionToPolarity`: throws on unexpected `CareerD10QualificationDirection` values (exhaustive with never type)
+- `mapD10DirectionToProvenanceEffect`: throws on unexpected `CareerD10QualificationDirection` values (exhaustive with never type)
 - `mapDashaEffectToProvenanceEffect`: throws on unexpected effect values
 
-This ensures contract drift fails loudly rather than defaulting to incorrect values.
+This ensures contract drift fails loudly rather than defaulting to incorrect values. The MIXED branch in `mapDirectionToPolarity` throws an error because all callers (natal, Dasha) now split MIXED before calling the mapper, making the throw a true invariant guard.
 
 ## Determinism
 
@@ -225,6 +237,7 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - CONDITIONAL expression maps to SUPPORTING with notes
 - UNAVAILABLE expression emits nothing
 - Dasha → DASHA_ACTIVATION and cannot be PRIMARY natal
+- Dasha MIXED direction splits into SUPPORTING and CHALLENGING occurrences (same convention as natal)
 - Dasha evidence has no provenance or ruleId (CareerDashaCanonicalProvenance does not expose ruleId)
 - Dasha evidence preserves sourceIds in relatedEvidenceIds
 - Dasha polarity/effect consistency: throws on SUPPORTING with CHALLENGE effect
@@ -233,6 +246,9 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - Expression strength derived from parent CareerExpression.strength
 - Expression UNAVAILABLE strength excludes record
 - Deduplication throws on strength disagreement in dedup
+- Deduplication throws on statement disagreement (input-order invariant)
+- Deduplication throws on ruleId disagreement (input-order invariant)
+- Deduplication throws on sourceType disagreement (input-order invariant)
 - Records with unique identityKeys are preserved as separate items
 - Missing-layer data yields no fabricated negative evidence
 - Missing provenance leaves ruleId absent (no fabrication for C8)
@@ -242,6 +258,8 @@ The test suite (`canonicalCareerEvidenceMapper.test.ts`) covers:
 - Distinct id, sourceIds, and ruleId as separate concepts
 - Unknown C11 evidence references handled explicitly
 - C11 validation returns structured result with unreferenced and missing IDs
+- C11 identityKey match (not just id match) is treated as referenced
+- Unsupported direction values throw error (exhaustive mapping validation)
 - Nested immutability (Object.isFrozen)
 
 No `as any` casts are used in the test fixtures.

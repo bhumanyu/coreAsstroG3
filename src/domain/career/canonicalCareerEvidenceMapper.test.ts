@@ -433,6 +433,89 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Dasha Evidence Mapping', () => {
+    it('Dasha MIXED direction splits into SUPPORTING and CHALLENGING occurrences', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-mixed-1',
+          id: 'dasha-mixed-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'MIXED' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD mixed activation',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'MIXED' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'MIXED' as ReasoningDirection,
+        overallStrength: 'MODERATE' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with MIXED direction'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // MIXED should split into two occurrences
+      const mixedEvidence = result.filter(e => e.identityKey === 'dasha-mixed-1');
+      expect(mixedEvidence).toHaveLength(2);
+
+      const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
+      const challenging = mixedEvidence.find(e => e.polarity === 'CHALLENGING');
+
+      expect(supporting).toBeDefined();
+      expect(challenging).toBeDefined();
+
+      // Both share the same identityKey
+      expect(supporting!.identityKey).toBe('dasha-mixed-1');
+      expect(challenging!.identityKey).toBe('dasha-mixed-1');
+
+      // Both have distinct ids with polarity suffix
+      expect(supporting!.id).toBe('dasha-mixed-1:SUPPORTING');
+      expect(challenging!.id).toBe('dasha-mixed-1:CHALLENGING');
+
+      // Both have DASHA_ACTIVATION phase and TIMING role
+      expect(supporting!.phase).toBe('DASHA_ACTIVATION');
+      expect(challenging!.phase).toBe('DASHA_ACTIVATION');
+      expect(supporting!.role).toBe('TIMING');
+      expect(challenging!.role).toBe('TIMING');
+
+      // Timing is preserved for both
+      expect(supporting!.timing?.period).toBe('MD');
+      expect(challenging!.timing?.period).toBe('MD');
+    });
+
     it('maps Dasha evidence to DASHA_ACTIVATION phase with TIMING role', () => {
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
         {
@@ -795,7 +878,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 3,
           weight: 3,
-          statement: 'First occurrence',
+          statement: 'Duplicate evidence',
           relatedEvidenceIds: [],
           sourceIds: ['source-1']
         },
@@ -808,7 +891,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 2,
           weight: 2,
-          statement: 'Second occurrence',
+          statement: 'Duplicate evidence',
           relatedEvidenceIds: [],
           sourceIds: ['source-2']
         }
@@ -889,7 +972,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 1,
           weight: 2,
-          statement: 'Occurrence 1',
+          statement: 'Multi-occurrence evidence',
           relatedEvidenceIds: [],
           sourceIds: ['src-a', 'src-b']
         },
@@ -902,7 +985,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           strength: 'STRONG',
           priority: 1,
           weight: 2,
-          statement: 'Occurrence 2',
+          statement: 'Multi-occurrence evidence',
           relatedEvidenceIds: [],
           sourceIds: ['src-c', 'src-d']
         }
@@ -1273,8 +1356,119 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       // Also test the exposed validation function
       const validationResult = validateC11References(result, finalSynthesis);
-      expect(validationResult.unreferenced).toContain('test-evidence-1');
+      expect(validationResult.unreferenced).toContain('test-identity');
       expect(validationResult.missing).toContain('unknown-evidence-id');
+    });
+
+    it('C11 evidenceId matching identityKey (not id) is treated as referenced', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'semantic-identity-1',
+          evidenceId: 'occurrence-id-1',
+          ruleId: 'RULE_TEST',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Test evidence',
+          relatedEvidenceIds: [],
+          sourceIds: ['src-1']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: mockEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      // C11 has evidenceId that matches identityKey but not occurrence id
+      const finalSynthesis: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'SUPPORT',
+        d10Direction: 'SUPPORT',
+        d10Effect: 'QUALIFIES',
+        dashaEffect: 'ACTIVATES',
+        dashaDirection: 'SUPPORT',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'NEUTRAL',
+        currentPressure: 'NONE',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['semantic-identity-1'], // Matches identityKey, not occurrence id
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['semantic-identity-1'],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Final synthesis with identityKey reference'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Should not throw - identityKey match is valid
+      expect(result).toHaveLength(1);
+      expect(result[0].identityKey).toBe('semantic-identity-1');
+      expect(result[0].id).toBe('occurrence-id-1');
+
+      // Validation should show no missing/unreferenced since identityKey matches
+      const validationResult = validateC11References(result, finalSynthesis);
+      expect(validationResult.unreferenced).not.toContain('semantic-identity-1');
+      expect(validationResult.missing).not.toContain('semantic-identity-1');
     });
   });
 
@@ -2383,6 +2577,439 @@ describe('CanonicalCareerEvidenceMapper', () => {
       for (const evidence of result) {
         expect(Object.isFrozen(evidence)).toBe(true);
       }
+    });
+  });
+
+  describe('Deduplication Field Disagreement Extended', () => {
+    it('throws on statement disagreement in dedup (input-order invariant)', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence1: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'disagree-statement',
+          evidenceId: 'disagree-1',
+          ruleId: 'RULE_DISAGREE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'First statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        },
+        {
+          identityKey: 'disagree-statement',
+          evidenceId: 'disagree-2',
+          ruleId: 'RULE_DISAGREE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Different statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-2']
+        }
+      ];
+
+      const mockEvidence2: WeightedReasoningEvidence[] = [
+        mockEvidence1[1],
+        mockEvidence1[0]
+      ];
+
+      const mockReasoningTrace1: ReasoningTrace = {
+        primaryPromise: mockEvidence1,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const mockReasoningTrace2: ReasoningTrace = {
+        primaryPromise: mockEvidence2,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal1: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence1,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace1
+      };
+
+      const natal2: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence2,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace2
+      };
+
+      const input1: CanonicalCareerEvidenceInput = {
+        natal: natal1,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const input2: CanonicalCareerEvidenceInput = {
+        natal: natal2,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Both should throw due to statement disagreement, regardless of order
+      expect(() => mapCanonicalCareerEvidence(input1)).toThrow('Semantic field disagreement');
+      expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
+    });
+
+    it('throws on ruleId disagreement in dedup (input-order invariant)', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence1: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'disagree-rule',
+          evidenceId: 'disagree-1',
+          ruleId: 'RULE_A',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Same statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        },
+        {
+          identityKey: 'disagree-rule',
+          evidenceId: 'disagree-2',
+          ruleId: 'RULE_B',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Same statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-2']
+        }
+      ];
+
+      const mockEvidence2: WeightedReasoningEvidence[] = [
+        mockEvidence1[1],
+        mockEvidence1[0]
+      ];
+
+      const mockReasoningTrace1: ReasoningTrace = {
+        primaryPromise: mockEvidence1,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const mockReasoningTrace2: ReasoningTrace = {
+        primaryPromise: mockEvidence2,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal1: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence1,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace1
+      };
+
+      const natal2: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence2,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace2
+      };
+
+      const input1: CanonicalCareerEvidenceInput = {
+        natal: natal1,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const input2: CanonicalCareerEvidenceInput = {
+        natal: natal2,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Both should throw due to ruleId disagreement, regardless of order
+      expect(() => mapCanonicalCareerEvidence(input1)).toThrow('Semantic field disagreement');
+      expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
+    });
+
+    it('throws on sourceType disagreement in dedup (input-order invariant)', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence1: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'disagree-source',
+          evidenceId: 'disagree-1',
+          ruleId: 'RULE_DISAGREE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Same statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        },
+        {
+          identityKey: 'disagree-source',
+          evidenceId: 'disagree-2',
+          ruleId: 'RULE_DISAGREE',
+          layer: 'YOGA',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Same statement',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-2']
+        }
+      ];
+
+      const mockEvidence2: WeightedReasoningEvidence[] = [
+        mockEvidence1[1],
+        mockEvidence1[0]
+      ];
+
+      const mockReasoningTrace1: ReasoningTrace = {
+        primaryPromise: mockEvidence1,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const mockReasoningTrace2: ReasoningTrace = {
+        primaryPromise: mockEvidence2,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal1: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence1,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace1
+      };
+
+      const natal2: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence2,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace2
+      };
+
+      const input1: CanonicalCareerEvidenceInput = {
+        natal: natal1,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const input2: CanonicalCareerEvidenceInput = {
+        natal: natal2,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      // Both should throw due to sourceType disagreement (different layers), regardless of order
+      expect(() => mapCanonicalCareerEvidence(input1)).toThrow('Semantic field disagreement');
+      expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
+    });
+  });
+
+  describe('Direction Mapping Exhaustiveness', () => {
+    it('unsupported ReasoningDirection value throws error in mapDirectionToPolarity', () => {
+      // Use type assertion to bypass compiler check for invalid runtime value
+      const invalidDirection = 'INVALID_DIRECTION' as ReasoningDirection;
+
+      expect(() => {
+        // Import the mapper function and test it directly
+        // Since we can't call it directly from here, we'll test through the main mapper
+        const mockStructural: CareerStructuralReasoning = {
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 2,
+          supportingSupport: 5,
+          supportingChallenge: 1,
+          challengingSupport: 1,
+          challengingChallenge: 3,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Test structural'
+        };
+
+        const mockEvidence: WeightedReasoningEvidence[] = [
+          {
+            identityKey: 'test-identity',
+            evidenceId: 'test-evidence-1',
+            ruleId: 'RULE_TEST',
+            layer: 'PRIMARY_PROMISE',
+            direction: invalidDirection, // Invalid direction
+            strength: 'STRONG',
+            priority: 1,
+            weight: 2,
+            statement: 'Test evidence',
+            relatedEvidenceIds: [],
+            sourceIds: ['src-1']
+          }
+        ];
+
+        const mockReasoningTrace: ReasoningTrace = {
+          primaryPromise: mockEvidence,
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        };
+
+        const natal: CareerNatalAnalysis = {
+          structural: mockStructural,
+          relevance: [],
+          condition: [],
+          lordRelationships: [],
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG' as DomainStrength,
+          evidence: mockEvidence,
+          conflicts: [],
+          reasoningTrace: mockReasoningTrace
+        };
+
+        const input: CanonicalCareerEvidenceInput = {
+          natal,
+          expression: createEmptyExpressionAnalysis(),
+          dasha: createEmptyDashaAnalysis(),
+          d10: createEmptyD10Analysis(),
+          finalSynthesis: createEmptyFinalSynthesis()
+        };
+
+        mapCanonicalCareerEvidence(input);
+      }).toThrow('Unexpected ReasoningDirection value');
     });
   });
 });
