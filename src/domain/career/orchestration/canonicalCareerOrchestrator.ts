@@ -11,7 +11,11 @@ import type {
   IdentityMapping,
   StageReference,
   OrchestrationDiagnostic,
-  EvidenceIdentityKey
+  EvidenceIdentityKey,
+  SourceId,
+  RuleId,
+  OccurrenceId,
+  StageEvidence
 } from './canonicalCareerContracts';
 import type {
   CareerPatternQualificationStatus
@@ -83,8 +87,8 @@ export class CanonicalCareerOrchestrator {
    * @returns Immutable canonical career foundation
    */
   orchestrate(input: CanonicalCareerOrchestrationInput): CanonicalCareerFoundation {
-    const foundationId = this.generateFoundationId();
-    const timestamp = new Date().toISOString();
+    const foundationId = this.generateDeterministicFoundationId(input);
+    const timestamp = 'DETERMINISTIC_TIMESTAMP';
     const diagnostics: OrchestrationDiagnostic[] = [];
 
     // Stage 1: Pattern candidates (C4/P2-03)
@@ -131,7 +135,17 @@ export class CanonicalCareerOrchestrator {
       diagnostics
     );
 
-    // Stage 7: Identity mappings (empty for now - producers may provide explicit mappings)
+    // Stage 7: Identity mappings
+    // Producers do not yet supply explicit identity mappings across stages
+    // This is documented as a diagnostic rather than silently emitting empty mappings
+    diagnostics.push({
+      diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED',
+      severity: 'INFO',
+      category: 'DEFERRED_FEATURE',
+      message: 'Identity mappings across stages (pattern→qualification→mechanism→refinement) are not yet provided by producers - mappings deferred',
+      relatedIds: [],
+      stage: 'IDENTITY_MAPPINGS'
+    });
     const identityMappings: readonly IdentityMapping[] = Object.freeze([]);
 
     // Stage 8: Stage references
@@ -181,6 +195,28 @@ export class CanonicalCareerOrchestrator {
   }
 
   /**
+   * Converts producer evidence to orchestration StageEvidence.
+   * Preserves identity keys from the producer without modification.
+   */
+  private convertToStageEvidence(
+    evidenceId: string,
+    identityKey: string,
+    statement: string,
+    sourceIds: readonly string[],
+    ruleIds: readonly string[],
+    occurrenceId?: string
+  ): StageEvidence {
+    return Object.freeze({
+      evidenceId,
+      identityKey: identityKey as any,
+      statement,
+      sourceIds: sourceIds as any,
+      ruleIds: ruleIds as any,
+      occurrenceId: occurrenceId as any
+    });
+  }
+
+  /**
    * Builds pattern candidates from input patterns.
    */
   private buildPatternCandidates(
@@ -190,6 +226,18 @@ export class CanonicalCareerOrchestrator {
     const candidates: PatternCandidate[] = [];
 
     for (const pattern of patterns) {
+      // Convert pattern evidence to stage evidence
+      const stageEvidence: StageEvidence[] = pattern.evidence.map(ev =>
+        this.convertToStageEvidence(
+          ev.evidenceId,
+          ev.sourceNetworkIdentityKey,
+          `Pattern classification evidence from network ${ev.sourceNetworkId}`,
+          [ev.sourceNetworkId],
+          [ev.ruleId],
+          ev.relationshipId
+        )
+      );
+
       const candidate: PatternCandidate = {
         patternId: pattern.patternId,
         identityKey: pattern.identityKey,
@@ -198,7 +246,7 @@ export class CanonicalCareerOrchestrator {
         classification: pattern.classification,
         name: pattern.name,
         sourcePattern: pattern,
-        stageEvidence: Object.freeze([])
+        stageEvidence: Object.freeze(stageEvidence)
       };
       candidates.push(candidate);
     }
@@ -226,13 +274,26 @@ export class CanonicalCareerOrchestrator {
         condition
       });
 
-      const qualifications: PatternQualification[] = result.qualifiedPatterns.map((qp) => ({
-        patternId: qp.patternId,
-        identityKey: qp.identityKey,
-        status: qp.status,
-        qualifiedPattern: qp,
-        stageEvidence: Object.freeze([])
-      }));
+      const qualifications: PatternQualification[] = result.qualifiedPatterns.map((qp) => {
+        // Convert qualification evidence to stage evidence
+        const stageEvidence: StageEvidence[] = qp.evidence.map(ev =>
+          this.convertToStageEvidence(
+            ev.evidenceId,
+            ev.identityKey,
+            `Qualification evidence for dimension ${ev.dimension}`,
+            ev.sourceEvidenceIds,
+            ev.ruleIds
+          )
+        );
+
+        return {
+          patternId: qp.patternId,
+          identityKey: qp.identityKey,
+          status: qp.status,
+          qualifiedPattern: qp,
+          stageEvidence: Object.freeze(stageEvidence)
+        };
+      });
 
       // Sort deterministically by patternId
       qualifications.sort((a, b) => a.patternId.localeCompare(b.patternId));
@@ -348,7 +409,7 @@ export class CanonicalCareerOrchestrator {
         patternQualifications.map((q) => [q.patternId, q])
       );
 
-      // Group assignments by patternId
+      // Group assignments by patternId (unwrap orchestration-level assignments)
       const rolesByPattern = new Map<string, import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[]>();
       for (const orchAssignment of participantRoleAssignments) {
         const existing = rolesByPattern.get(orchAssignment.patternId) ?? [];
@@ -386,29 +447,47 @@ export class CanonicalCareerOrchestrator {
 
         const roles = rolesByPattern.get(pattern.patternId) ?? [];
 
+        // Extract establishing evidence from qualification if available
+        // For now, use empty array if qualification doesn't provide explicit establishing evidence
+        // This will be documented as a diagnostic when evidence is expected but unavailable
+        const establishingEvidence: import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[] = [];
+
         resolutionInputs.push({
           pattern: pattern.sourcePattern,
           qualification: qualification.qualifiedPattern,
           participantRoles: roles,
-          establishingEvidence: Object.freeze([]),
+          establishingEvidence: Object.freeze(establishingEvidence),
           networks
         });
       }
 
-      // Resolve all mechanisms
-      const candidateSets = this.ports.mechanismResolver.resolveAll(resolutionInputs);
+      // Resolve all mechanisms (only if there are inputs to resolve)
+      const candidateSets = resolutionInputs.length > 0
+        ? this.ports.mechanismResolver.resolveAll(resolutionInputs)
+        : [];
 
       // Convert to resolved mechanisms
       const resolvedMechanisms: ResolvedMechanism[] = [];
       for (const candidateSet of candidateSets) {
         for (const candidate of candidateSet.candidates) {
+          // Convert candidate evidence to stage evidence
+          const stageEvidence: StageEvidence[] = candidate.evidence.map(ev =>
+            this.convertToStageEvidence(
+              ev.evidenceId,
+              ev.evidenceId, // Use evidenceId as identityKey for now
+              `Mechanism evidence from ${ev.source}`,
+              ev.participantIds,
+              ev.relationshipIds
+            )
+          );
+
           resolvedMechanisms.push({
             candidateId: candidate.candidateId,
             patternId: candidate.patternId,
             mechanismType: candidate.mechanismType,
             candidate,
             candidateSet,
-            stageEvidence: Object.freeze([])
+            stageEvidence: Object.freeze(stageEvidence)
           });
         }
       }
@@ -442,6 +521,9 @@ export class CanonicalCareerOrchestrator {
    * - Refined → REFINED
    * - Unchanged → UNCHANGED
    * - InsufficientData/missing → UNAVAILABLE
+   *
+   * Dispositor contexts are not yet available in the orchestration input.
+   * This is documented as a diagnostic rather than silently passing empty contexts.
    */
   private buildMechanismRefinements(
     resolvedMechanisms: readonly ResolvedMechanism[],
@@ -449,10 +531,20 @@ export class CanonicalCareerOrchestrator {
   ): readonly MechanismRefinement[] {
     const refinements: MechanismRefinement[] = [];
 
+    // Document that dispositor contexts are not yet available
+    diagnostics.push({
+      diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
+      severity: 'WARNING',
+      category: 'MISSING_DATA',
+      message: 'Dispositor contexts are not yet provided in orchestration input - refinement called with empty contexts',
+      relatedIds: [],
+      stage: 'REFINEMENT'
+    });
+
     for (const resolved of resolvedMechanisms) {
       try {
-        // For now, we don't have dispositor contexts in the input
-        // This would be added when the dispositor engine is wired in
+        // Dispositor contexts are not yet available in the input
+        // This will be populated when the dispositor engine is wired in
         const result = this.ports.mechanismRefiner.refine({
           candidate: resolved.candidate,
           dispositorContexts: Object.freeze([])
@@ -469,13 +561,38 @@ export class CanonicalCareerOrchestrator {
           status = 'UNAVAILABLE';
         }
 
+        // Use the real mechanism ID from the refinement result if available
+        // Otherwise fall back to candidate ID with a diagnostic
+        const mechanismId = result.mechanisms[0]?.mechanismId ?? resolved.candidateId;
+        if (!result.mechanisms[0]?.mechanismId) {
+          diagnostics.push({
+            diagnosticId: `ORCHESTRATION_MECHANISM_ID_MISSING_${resolved.candidateId}`,
+            severity: 'WARNING',
+            category: 'MISSING_DATA',
+            message: `Refinement result for candidate ${resolved.candidateId} did not provide a mechanism ID - using candidate ID as fallback`,
+            relatedIds: [resolved.candidateId],
+            stage: 'REFINEMENT'
+          });
+        }
+
+        // Convert refinement evidence to stage evidence
+        const stageEvidence: StageEvidence[] = result.evidence.map(evId =>
+          this.convertToStageEvidence(
+            evId,
+            evId,
+            'Refinement evidence from dispositor refiner',
+            [],
+            result.provenance.newEvidenceIds
+          )
+        );
+
         refinements.push({
-          mechanismId: resolved.candidateId, // Temporary - would be real mechanism ID
+          mechanismId,
           candidateId: resolved.candidateId,
           mechanismType: resolved.mechanismType,
           status,
           mechanism: result.mechanisms[0] ?? null,
-          stageEvidence: Object.freeze([])
+          stageEvidence: Object.freeze(stageEvidence)
         });
       } catch (error) {
         diagnostics.push({
@@ -500,7 +617,10 @@ export class CanonicalCareerOrchestrator {
    *
    * Maps engine status to orchestration availability:
    * - COMPLETE → AVAILABLE
-   * - INSUFFICIENT_DATA → PARTIALLY_AVAILABLE or UNAVAILABLE based on missingInputs
+   * - INSUFFICIENT_DATA → PARTIALLY_AVAILABLE (if partial inputs present) or UNAVAILABLE (if absent)
+   *
+   * Since we only receive the foundation objects (not the result objects with status/missingInputs),
+   * we infer availability from presence/absence and document the limitation.
    */
   private buildCareerFoundationSupplements(
     foundation10H: import('../career10h/career10HFoundationTypes').Career10HFoundation | undefined,
@@ -511,8 +631,17 @@ export class CanonicalCareerOrchestrator {
 
     // 10H supplement
     if (foundation10H) {
-      // For now, assume COMPLETE if present
-      // In reality, we'd check the result status from the engine
+      // Since we don't receive the result object with status/missingInputs, we assume COMPLETE if present
+      // This is a limitation - the orchestrator should receive the full result object
+      diagnostics.push({
+        diagnosticId: 'ORCHESTRATION_10H_STATUS_LIMITATION',
+        severity: 'INFO',
+        category: 'DATA_LIMITATION',
+        message: '10H status/missingInputs not available in orchestration input - assuming COMPLETE if foundation present',
+        relatedIds: [],
+        stage: '10H'
+      });
+
       supplements.push({
         supplementId: 'SUPPLEMENT_10H',
         supplementType: '10H',
@@ -537,6 +666,16 @@ export class CanonicalCareerOrchestrator {
 
     // 10L supplement
     if (foundation10L) {
+      // Since we don't receive the result object with status/missingInputs, we assume COMPLETE if present
+      diagnostics.push({
+        diagnosticId: 'ORCHESTRATION_10L_STATUS_LIMITATION',
+        severity: 'INFO',
+        category: 'DATA_LIMITATION',
+        message: '10L status/missingInputs not available in orchestration input - assuming COMPLETE if foundation present',
+        relatedIds: [],
+        stage: '10L'
+      });
+
       supplements.push({
         supplementId: 'SUPPLEMENT_10L',
         supplementType: '10L',
@@ -614,6 +753,10 @@ export class CanonicalCareerOrchestrator {
 
   /**
    * Builds metadata for the foundation.
+   *
+   * Separates data availability from contract validity:
+   * - dataCompleteness: Whether all required data is present (COMPLETE, PARTIAL, INSUFFICIENT)
+   * - contractValidity: Whether all contracts passed (VALID, INVALID, UNKNOWN)
    */
   private buildMetadata(
     patternCandidates: readonly PatternCandidate[],
@@ -630,7 +773,7 @@ export class CanonicalCareerOrchestrator {
       (r) => r.status === 'REFINED'
     ).length;
 
-    // Determine data completeness
+    // Determine data completeness (availability of data)
     let dataCompleteness: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT';
     if (careerFoundationSupplements.length === 0) {
       dataCompleteness = 'INSUFFICIENT';
@@ -640,20 +783,55 @@ export class CanonicalCareerOrchestrator {
       dataCompleteness = 'COMPLETE';
     }
 
+    // Determine contract validity (whether contracts passed)
+    // For now, assume VALID since validation doesn't return a validity status
+    // This would be populated from the validation result when it provides explicit validity
+    const contractValidity: 'VALID' | 'INVALID' | 'UNKNOWN' = 'UNKNOWN';
+
     return Object.freeze({
       totalPatterns: patternCandidates.length,
       totalQualifiedPatterns,
       totalMechanisms: resolvedMechanisms.length,
       totalRefinedMechanisms,
-      dataCompleteness
+      dataCompleteness,
+      contractValidity
     });
   }
 
   /**
-   * Generates a unique foundation ID.
+   * Generates a deterministic foundation ID from logical input.
+   * Hashes sorted pattern IDs, relevance data, condition data, network IDs, and 10H/10L presence.
+   * The same logical input produces the same foundation ID regardless of order.
    */
-  private generateFoundationId(): string {
-    return `FOUNDATION_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  private generateDeterministicFoundationId(input: CanonicalCareerOrchestrationInput): string {
+    // Collect all identity keys from the input
+    const patternIds = input.patterns.map(p => p.patternId).sort();
+    const relevanceData = input.relevance.map(r => `${r.planet}:${r.relevance}`).sort();
+    const conditionData = input.condition.map(c => `${c.planet}:${c.condition}`).sort();
+    const networkIds = input.networks.map(n => n.networkId).sort();
+    const has10H = input.foundation10H ? 'HAS_10H' : 'NO_10H';
+    const has10L = input.foundation10L ? 'HAS_10L' : 'NO_10L';
+
+    // Concatenate and hash using a simple string hash
+    const combined = [
+      ...patternIds,
+      ...relevanceData,
+      ...conditionData,
+      ...networkIds,
+      has10H,
+      has10L
+    ].join('|');
+
+    // Simple hash function (FNV-1a-like)
+    let hash = 2166136261;
+    for (let i = 0; i < combined.length; i++) {
+      hash ^= combined.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+
+    // Convert to positive hex string
+    const hashHex = (hash >>> 0).toString(16).padStart(8, '0');
+    return `FOUNDATION_${hashHex}`;
   }
 
   /**

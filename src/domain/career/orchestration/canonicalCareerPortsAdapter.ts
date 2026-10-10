@@ -73,12 +73,12 @@ export class ParticipantRolesPortAdapter implements ParticipantRolesPort {
     readonly planetaryConditions: readonly import('../careerPlanetaryCondition').CareerPlanetaryConditionResult[];
     readonly relevance: readonly import('../careerPlanetaryRelevance').CareerPlanetaryRelevance[];
   }): {
-    readonly assignments: readonly import('./canonicalCareerContracts').ParticipantRoleAssignment[];
+    readonly assignments: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
   } {
     const result = assignParticipantRoles(context);
 
     // The engine returns ParticipantRoleResult with assignments array
-    // We return it directly as the port expects assignments array
+    // We return it directly as the port expects engine-level assignments
     return {
       assignments: result.assignments
     };

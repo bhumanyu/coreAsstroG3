@@ -16,7 +16,27 @@
  * - domain/timing
  */
 
-export * from './careerPatternTypes';
+// Selective export to avoid CareerMechanism conflict with careerMechanism
+export type {
+    CareerPatternFamily,
+    CareerPatternLevel,
+    CareerPatternClassification,
+    CareerPatternHouseRole,
+    ParivartanaCareerType,
+    CareerPatternClassificationEvidence,
+    CareerPatternClassificationEvidenceArray,
+    CareerPatternClassificationProvenance,
+    CareerPatternRelationship,
+    CareerPatternConflict,
+    CareerPattern,
+    CareerPatternClassificationInput,
+    CareerPatternClassificationResult,
+    CareerYogaPattern,
+    CareerPatternEvidence,
+    CareerPatternAnalysis,
+    CareerMechanismType
+} from './careerPatternTypes';
+
 export * from './careerPatternIdentity';
 export * from './careerPatternPredicates';
 export * from './careerPatternClassificationRules';

@@ -2,6 +2,9 @@ import type { CareerHouseNetwork, CareerNetworkTopology, CareerNetworkDirection 
 import type { Planet } from '../../../types';
 import type { CareerMechanismType } from '../careerMechanism/careerMechanismTypes';
 
+// Re-export CareerMechanismType for backward compatibility (deprecated)
+export type { CareerMechanismType };
+
 /**
  * P2-03 Career Pattern Classification Types
  *
@@ -83,7 +86,8 @@ export type CareerPatternHouseRole =
  * @deprecated Use CareerMechanismType from careerMechanism/careerMechanismTypes.ts instead.
  * This alias exists only for backward compatibility with external callers.
  */
-export type CareerMechanism = CareerMechanismType;
+// Removed export to avoid conflict with careerMechanism.CareerMechanism
+// Use CareerMechanismType directly from careerMechanism instead
 
 /**
  * Parivartana career type classification.

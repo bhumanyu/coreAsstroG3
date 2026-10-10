@@ -271,6 +271,7 @@ export interface CanonicalCareerFoundation {
     readonly totalMechanisms: number;
     readonly totalRefinedMechanisms: number;
     readonly dataCompleteness: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT';
+    readonly contractValidity: 'VALID' | 'INVALID' | 'UNKNOWN';
   };
 }
 
@@ -332,7 +333,7 @@ export interface ParticipantRolesPort {
     readonly planetaryConditions: readonly CareerPlanetaryConditionResult[];
     readonly relevance: readonly CareerPlanetaryRelevance[];
   }): {
-    readonly assignments: readonly ParticipantRoleAssignment[];
+    readonly assignments: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
   };
 }
 
@@ -350,7 +351,7 @@ export interface MechanismResolverPort {
   resolve(input: {
     readonly pattern: CareerPattern;
     readonly qualification: QualifiedCareerPattern;
-    readonly participantRoles: readonly ParticipantRoleAssignment[];
+    readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
     readonly establishingEvidence: readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
     readonly networks: readonly CareerHouseNetwork[];
   }): import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet;
@@ -364,7 +365,7 @@ export interface MechanismResolverPort {
   resolveAll(inputs: readonly {
     readonly pattern: CareerPattern;
     readonly qualification: QualifiedCareerPattern;
-    readonly participantRoles: readonly ParticipantRoleAssignment[];
+    readonly participantRoles: readonly import('../careerParticipantRoles/participantRoleTypes').ParticipantRoleAssignment[];
     readonly establishingEvidence: readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismEvidence[];
     readonly networks: readonly CareerHouseNetwork[];
   }[]): readonly import('../careerMechanism/careerMechanismTypes').CareerMechanismCandidateSet[];

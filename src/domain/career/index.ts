@@ -72,10 +72,7 @@ export {
     defaultCareerOrchestrationPorts
 } from './orchestration';
 
-// Resolve export conflicts by explicitly re-exporting
-export {
-    CareerMechanism as PatternCareerMechanism
-} from './careerPattern/careerPatternTypes';
+
 export {
     // Type exports
     type CareerDispositorStartRole,
