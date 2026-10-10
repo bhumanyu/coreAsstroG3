@@ -26,6 +26,10 @@ import type {
  * - At least one of requiredExpressionTypes or requiredMechanismTypes must be specified.
  * - If both are specified, ALL must be present for the rule to match (AND semantics).
  * - Composite rules with multiple mechanism types require ALL to be present (every check).
+ * - STRONG source-linkage contract for mechanism composites: required mechanisms must be
+ *   referenced together by at least one expression in the pattern, indicating they share
+ *   a deterministic source relationship (e.g., participate in a common qualifying expression).
+ *   Mechanisms that merely co-occur in the same pattern without shared linkage are rejected.
  * - Rules never map a planet directly to a job title.
  * - Rules never let D10/Dasha/timing create candidates.
  *

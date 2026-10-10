@@ -2,6 +2,12 @@
 
 **Status:** IMPLEMENTED — VERIFICATION PENDING
 
+**Recent Changes (P1/P2 Enforcement):**
+- Implemented STRONG source-linkage contract for mechanism composites: required mechanisms must be referenced together by at least one expression in the pattern
+- Defined partial source resolution policy for expressions: valid if at least one sourceMechanismId resolves
+- Fixed buildProvenance() to derive patternIds strictly from emitted candidates (not all input patterns)
+- Added regression tests for unlinked mechanisms, partial resolution, and consumed pattern provenance
+
 ## Overview
 
 The P2-10A Career Domain/Profession layer is a standalone, deterministic module that converts already-computed canonical career outputs into broad professional-domain candidates and profession families. This layer does NOT recalculate astrology, does NOT map a planet directly to a job title, and does NOT let D10/Dasha/timing create candidates.
@@ -151,6 +157,7 @@ Rule descriptor for expression/mechanism → profession mapping.
 - At least one of `requiredExpressionTypes` or `requiredMechanismTypes` must be specified.
 - If both are specified, ALL must be present for the rule to match (AND semantics).
 - Composite rules with multiple mechanism types require ALL to be present (every check).
+- **STRONG source-linkage contract for mechanism composites**: Required mechanisms must be referenced together by at least one expression in the pattern, indicating they share a deterministic source relationship (e.g., participate in a common qualifying expression). Mechanisms that merely co-occur in the same pattern without shared linkage are rejected. This matches the project's established provenance discipline.
 - Rules never map a planet directly to a job title.
 - Rules never let D10/Dasha/timing create candidates.
 
@@ -193,6 +200,11 @@ Main entry point for profession resolution.
 - Does NOT combine mechanisms/expressions from different patterns to satisfy a composite rule.
 - Candidate identity includes the source-pattern set so candidates from distinct patterns are not collapsed.
 
+**Source-Linkage Resolution (P1):**
+- For expression-driven rules: expressions must reference at least one mechanism in the pattern via `sourceMechanismIds`.
+- **Partial resolution policy**: An expression is valid if at least one of its `sourceMechanismIds` resolves to a pattern mechanism. Unresolved source references are ignored for validity, but evidence `sourceIds` include only expression IDs (not mechanism IDs) to avoid implying full linkage when only partial resolution occurred.
+- For mechanism composites: STRONG source-linkage contract - required mechanisms must be referenced together by at least one expression in the pattern, indicating they share a deterministic source relationship.
+
 **D10 Status Resolution (Critical Trap):**
 - The P2-08A `expressionId` is built from `createCareerExpressionId(expressionType, sourceMechanismIds)`.
 - D10 canonical expression qualifications are keyed on the legacy mode-based `CareerExpression`.
@@ -206,6 +218,7 @@ Main entry point for profession resolution.
 - Do not fabricate source IDs. Carry real upstream source IDs where they genuinely exist, otherwise leave empty rather than inventing.
 - `DomainEvidence.provenance.source` is a source label, not necessarily a source ID, so treat it carefully.
 - Unreferenced `DomainEvidence` (not linked via `relatedEvidenceIds` to the candidate's base evidence) must never create or activate a candidate.
+- **Consumed pattern IDs**: Provenance `patternIds` are derived strictly from emitted candidates' `patternIds`, not from all input patterns. Input patterns that produce no candidates do not appear in consumed provenance.
 
 **Determinism:**
 - Output is deterministically sorted and deeply frozen.
@@ -258,6 +271,9 @@ Main entry point for profession resolution.
 11. **Determinism under permutation**: Produces identical results under input permutation
 12. **Immutability/no input mutation**: Does not modify input, returns frozen output
 13. **Unresolved expression-type reporting**: Reports expression types with no matching rule, computes mappedTypes from actually consumed expression types
+14. **STRONG source-linkage for mechanism composites**: Mechanism composites require shared source linkage (referenced together by at least one expression)
+15. **Partial source resolution for expressions**: Expressions are valid if at least one sourceMechanismId resolves; evidence sourceIds include only expression IDs
+16. **Consumed pattern IDs in provenance**: Provenance patternIds derived from emitted candidates only, not all input patterns
 
 ### Boundary Enforcement (§9)
 

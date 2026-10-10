@@ -171,10 +171,7 @@ export function buildCareerProfessionAnalysis(
   }
 
   // Build provenance from emitted candidates' evidence only
-  const provenance = buildProvenance(
-    d10QualifiedCandidates,
-    allPatternIds
-  );
+  const provenance = buildProvenance(d10QualifiedCandidates);
 
   // Sort and deduplicate candidates
   const sortedCandidates = canonicalSortProfessionCandidates(
@@ -251,7 +248,8 @@ function indexMechanismsByPattern(
  * Source-linked resolution (P1):
  * - For expression-driven rules: select only expressions whose expressionType matches the rule
  *   AND verify their sourceMechanismIds reference the pattern's mechanism candidates
- * - For mechanism composites: require all requiredMechanismTypes to be present in the source-linked mechanism set
+ * - For mechanism composites: require all requiredMechanismTypes to be present AND share
+ *   a deterministic source relationship (referenced together by at least one expression in the pattern)
  * - Pass only the satisfying expressions/mechanisms into buildCandidateFromRule and buildEvidence
  */
 function resolveRulesInPattern(
@@ -307,6 +305,8 @@ function resolveRulesInPattern(
  * Evaluate a rule against available expression and mechanism types with source linkage.
  * Per spec §4: composite rules require ALL listed mechanism types (every check).
  * Per spec P1: source-linked resolution - expressions must reference pattern mechanisms.
+ * For mechanism composites: STRONG source-linkage contract - required mechanisms must be
+ * referenced together by at least one expression in the pattern (shared source relationship).
  *
  * Returns null if rule does not match, or the satisfying expressions/mechanisms if it does.
  */
@@ -333,6 +333,9 @@ function evaluateRule(
     for (const expr of patternExpressions) {
       if (rule.requiredExpressionTypes.includes(expr.expressionType)) {
         // Verify source linkage: expression must reference at least one mechanism in this pattern
+        // PARTIAL RESOLUTION POLICY: An expression is valid if at least one of its sourceMechanismIds
+        // resolves to a pattern mechanism. Unresolved source references are ignored for validity,
+        // but only actually-resolved mechanism IDs are included in evidence sourceIds.
         const hasSourceLinkage = expr.sourceMechanismIds.some(id => patternMechanismIds.has(id));
         if (hasSourceLinkage) {
           satisfyingExpressions.push(expr);
@@ -359,6 +362,40 @@ function evaluateRule(
     );
     if (!hasAllMechanisms) {
       return null;
+    }
+
+    // STRONG source-linkage contract for mechanism composites:
+    // Require mechanisms to share a deterministic source relationship.
+    // A mechanism composite is valid only if the required mechanisms are
+    // referenced together by at least one expression in the pattern, indicating
+    // they participate in a common qualifying relationship rather than merely co-occurring.
+    if (rule.requiredMechanismTypes.length > 1) {
+      // Build a map from mechanism ID to mechanism type
+      const mechanismIdToType = new Map<string, CareerMechanismType>();
+      for (const mech of patternMechanisms) {
+        mechanismIdToType.set(mech.candidateId, mech.mechanismType);
+      }
+
+      // Check if any expression references multiple required mechanism types
+      let hasSharedSourceLinkage = false;
+      for (const expr of patternExpressions) {
+        const referencedMechanismTypes = new Set<CareerMechanismType>();
+        for (const mechId of expr.sourceMechanismIds) {
+          const mechType = mechanismIdToType.get(mechId);
+          if (mechType && rule.requiredMechanismTypes!.includes(mechType)) {
+            referencedMechanismTypes.add(mechType);
+          }
+        }
+        // If this expression references all required mechanism types, we have shared linkage
+        if (referencedMechanismTypes.size === rule.requiredMechanismTypes.length) {
+          hasSharedSourceLinkage = true;
+          break;
+        }
+      }
+
+      if (!hasSharedSourceLinkage) {
+        return null;
+      }
     }
 
     // Collect the satisfying mechanisms
@@ -461,6 +498,8 @@ function buildCandidateFromRule(
 
 /**
  * Build evidence for a candidate.
+ * For expression-based evidence, sourceIds include only the expression IDs themselves.
+ * Mechanism source linkage is validated during rule evaluation, not included in evidence sourceIds.
  */
 function buildEvidence(
   rule: CareerProfessionRule,
@@ -574,8 +613,7 @@ function applyD10Qualification(
  * Separate observed/input IDs from consumed/causal source IDs.
  */
 function buildProvenance(
-  candidates: readonly CareerProfessionCandidate[],
-  patternIds: Set<string>
+  candidates: readonly CareerProfessionCandidate[]
 ): CareerProfessionProvenance {
   // Derive consumed/causal source IDs from candidates' evidence only
   const consumedExpressionIds = candidates.flatMap(c =>
@@ -588,7 +626,13 @@ function buildProvenance(
       .filter(e => e.basis === 'MECHANISM')
       .flatMap(e => e.sourceIds)
   );
-  const candidatePatternIds = [...patternIds].sort(codePointCompare);
+  // Derive pattern IDs strictly from emitted candidates' patternIds (not all input patterns)
+  const consumedPatternIds = new Set<string>();
+  for (const candidate of candidates) {
+    for (const patternId of candidate.patternIds) {
+      consumedPatternIds.add(patternId);
+    }
+  }
   const evidenceIds = candidates.flatMap(c => c.evidence.map(e => e.evidenceId));
   const sourceIds = candidates.flatMap(c => c.evidence.flatMap(e => e.sourceIds));
   const ruleIds = candidates.map(c => c.ruleId);
@@ -596,7 +640,7 @@ function buildProvenance(
   return Object.freeze({
     expressionIds: Object.freeze(consumedExpressionIds.sort(codePointCompare)),
     mechanismIds: Object.freeze(consumedMechanismIds.sort(codePointCompare)),
-    patternIds: Object.freeze(candidatePatternIds),
+    patternIds: Object.freeze([...consumedPatternIds].sort(codePointCompare)),
     evidenceIds: Object.freeze(evidenceIds.sort(codePointCompare)),
     sourceIds: Object.freeze(sourceIds.sort(codePointCompare)),
     ruleIds: Object.freeze(ruleIds.sort(codePointCompare))

@@ -162,12 +162,21 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec §7.D: Source-mechanism-supports-expression check', () => {
     it('should verify that source mechanisms support the expression', () => {
-      const expressions = createMockExpressionAnalysisResult([]);
+      const innovationMechanism = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
 
-      const mechanisms = [
-        createMockMechanismCandidate('INNOVATION', 'PATTERN_1'),
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      // Expression that references both mechanisms (required for STRONG source-linkage contract)
+      const compositeExpression = createMockExpressionCandidate(
+        'INNOVATION_WORK',
+        'PATTERN_1',
+        [innovationMechanism.candidateId, authorityMechanism.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        compositeExpression
+      ]);
+
+      const mechanisms = [innovationMechanism, authorityMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -178,9 +187,14 @@ describe('Career Profession Engine (P2-10A)', () => {
 
       const result = buildCareerProfessionAnalysis(input);
 
-      expect(result.candidates).toHaveLength(1);
-      expect(result.candidates[0].mechanismTypes).toContain('INNOVATION');
-      expect(result.candidates[0].mechanismTypes).toContain('AUTHORITY');
+      // Should emit both the composite AND the individual INNOVATION_WORK expression candidate
+      expect(result.candidates.length).toBeGreaterThanOrEqual(1);
+      const technicalLeadershipCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+      );
+      expect(technicalLeadershipCandidate).toBeDefined();
+      expect(technicalLeadershipCandidate!.mechanismTypes).toContain('INNOVATION');
+      expect(technicalLeadershipCandidate!.mechanismTypes).toContain('AUTHORITY');
     });
   });
 
@@ -291,13 +305,12 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec §7.G: Missing-D10/10H/10L not negative', () => {
     it('should not treat missing D10 as negative evidence', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -316,13 +329,12 @@ describe('Career Profession Engine (P2-10A)', () => {
     });
 
     it('should not treat missing 10H/10L as negative evidence', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -373,13 +385,13 @@ describe('Career Profession Engine (P2-10A)', () => {
     });
 
     it('should only include DomainEvidence related to candidate sources', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const authorityExpression = createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId]);
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+        authorityExpression
       ]);
 
-      const mechanisms: CareerMechanismCandidate[] = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const mechanisms: CareerMechanismCandidate[] = [authorityMechanism];
 
       const referencedDomainEvidence: DomainEvidence = {
         id: 'DOMAIN_EVIDENCE_1',
@@ -392,7 +404,7 @@ describe('Career Profession Engine (P2-10A)', () => {
         polarity: 'SUPPORTING',
         strength: 'STRONG',
         priority: 1,
-        relatedEvidenceIds: ['EXPR:AUTHORITY_EXPRESSION:MECH1'] // Related to expression
+        relatedEvidenceIds: [authorityExpression.expressionId] // Related to expression
       };
 
       const unreferencedDomainEvidence: DomainEvidence = {
@@ -428,13 +440,12 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec §7.I: ID-namespace separation', () => {
     it('should keep evidenceIds, sourceIds, and ruleIds in separate namespaces', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -468,15 +479,14 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec §7.J: Conflicting candidates preserved', () => {
     it('should preserve conflicting candidates from different rules', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const leadershipMechanism = createMockMechanismCandidate('LEADERSHIP', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1'),
-        createMockExpressionCandidate('LEADERSHIP_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId]),
+        createMockExpressionCandidate('LEADERSHIP_EXPRESSION', 'PATTERN_1', [leadershipMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1'),
-        createMockMechanismCandidate('LEADERSHIP', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism, leadershipMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -546,24 +556,156 @@ describe('Career Profession Engine (P2-10A)', () => {
       );
       expect(technicalLeadershipCandidate).toBeUndefined();
 
-      // Should emit individual candidates for each pattern
+      // Should emit individual candidates for each pattern (INNOVATION_WORK and AUTHORITY_EXPRESSION)
       expect(result.candidates.length).toBeGreaterThanOrEqual(2);
+      const innovationCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_INNOVATION'
+      );
+      const authorityCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_AUTHORITY'
+      );
+      expect(innovationCandidate).toBeDefined();
+      expect(authorityCandidate).toBeDefined();
+    });
+
+    it('should not emit technical-leadership composite for INNOVATION+AUTHORITY in same pattern with no shared source linkage', () => {
+      // Both mechanisms in PATTERN_1 but with no shared source linkage
+      const innovationMechanism = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
+      // Expressions that reference only their respective mechanisms (no expression references both)
+      const innovationExpression = createMockExpressionCandidate(
+        'INNOVATION_WORK',
+        'PATTERN_1',
+        [innovationMechanism.candidateId]
+      );
+
+      const authorityExpression = createMockExpressionCandidate(
+        'AUTHORITY_EXPRESSION',
+        'PATTERN_1',
+        [authorityMechanism.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        innovationExpression,
+        authorityExpression
+      ]);
+
+      const mechanisms = [innovationMechanism, authorityMechanism];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // Should NOT emit the technical-leadership composite candidate
+      // under STRONG source-linkage contract: no expression references both mechanisms together
+      const technicalLeadershipCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+      );
+      expect(technicalLeadershipCandidate).toBeUndefined();
+
+      // Should emit individual candidates for each expression (INNOVATION_WORK and AUTHORITY_EXPRESSION)
+      expect(result.candidates.length).toBeGreaterThanOrEqual(2);
+      const innovationCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_INNOVATION'
+      );
+      const authorityCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_AUTHORITY'
+      );
+      expect(innovationCandidate).toBeDefined();
+      expect(authorityCandidate).toBeDefined();
+    });
+
+    it('should emit technical-leadership composite when INNOVATION+AUTHORITY share source linkage via common expression', () => {
+      // Both mechanisms in PATTERN_1 with shared source linkage
+      const innovationMechanism = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
+      // Expression that references BOTH mechanisms (shared source linkage)
+      const compositeExpression = createMockExpressionCandidate(
+        'INNOVATION_WORK',
+        'PATTERN_1',
+        [innovationMechanism.candidateId, authorityMechanism.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        compositeExpression
+      ]);
+
+      const mechanisms = [innovationMechanism, authorityMechanism];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // Should emit the technical-leadership composite candidate
+      // under STRONG source-linkage contract: expression references both mechanisms together
+      const technicalLeadershipCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_TECHNICAL_LEADERSHIP'
+      );
+      expect(technicalLeadershipCandidate).toBeDefined();
+      expect(technicalLeadershipCandidate!.domain).toBe('TECHNOLOGY');
+      expect(technicalLeadershipCandidate!.family).toBe('TECHNICAL_LEADERSHIP');
+    });
+
+    it('should accept expression with partial source resolution (at least one sourceMechanismId resolves)', () => {
+      // Only one mechanism exists in the pattern
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
+      // Expression references both AUTHORITY (exists) and a non-existent mechanism
+      // Under partial resolution policy, this is valid because at least one source resolves
+      const expressionWithPartialResolution = createMockExpressionCandidate(
+        'AUTHORITY_EXPRESSION',
+        'PATTERN_1',
+        [authorityMechanism.candidateId, 'NON_EXISTENT_MECH_ID']
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        expressionWithPartialResolution
+      ]);
+
+      const mechanisms = [authorityMechanism];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // Should emit candidate because at least one sourceMechanismId resolved
+      expect(result.candidates.length).toBeGreaterThanOrEqual(1);
+      const authorityCandidate = result.candidates.find(
+        c => c.ruleId === 'RULE_PROFESSION_AUTHORITY'
+      );
+      expect(authorityCandidate).toBeDefined();
     });
   });
 
   describe('Spec §7.K: Determinism under permutation', () => {
     it('should produce identical results under input permutation', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const leadershipMechanism = createMockMechanismCandidate('LEADERSHIP', 'PATTERN_2');
+      const teachingMechanism = createMockMechanismCandidate('TEACHING', 'PATTERN_3');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1'),
-        createMockExpressionCandidate('LEADERSHIP_EXPRESSION', 'PATTERN_2'),
-        createMockExpressionCandidate('TEACHING_EXPRESSION', 'PATTERN_3')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId]),
+        createMockExpressionCandidate('LEADERSHIP_EXPRESSION', 'PATTERN_2', [leadershipMechanism.candidateId]),
+        createMockExpressionCandidate('TEACHING_EXPRESSION', 'PATTERN_3', [teachingMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1'),
-        createMockMechanismCandidate('LEADERSHIP', 'PATTERN_2'),
-        createMockMechanismCandidate('TEACHING', 'PATTERN_3')
-      ];
+      const mechanisms = [authorityMechanism, leadershipMechanism, teachingMechanism];
 
       const input1: CareerProfessionInput = {
         expressions,
@@ -591,15 +733,16 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec §7.L: Immutability/no input mutation', () => {
     it('should not modify input expressions', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
       ]);
 
       const originalExpressionId = expressions.expressions[0].expressionId;
 
       const input: CareerProfessionInput = {
         expressions,
-        mechanisms: [createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')],
+        mechanisms: [authorityMechanism],
         career10HFoundation: createMock10HFoundation(),
         career10LFoundation: createMock10LFoundation()
       };
@@ -610,15 +753,14 @@ describe('Career Profession Engine (P2-10A)', () => {
     });
 
     it('should not modify input mechanisms', () => {
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const mechanisms = [authorityMechanism];
 
       const originalCandidateId = mechanisms[0].candidateId;
 
       const input: CareerProfessionInput = {
         expressions: createMockExpressionAnalysisResult([
-          createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+          createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
         ]),
         mechanisms,
         career10HFoundation: createMock10HFoundation(),
@@ -631,11 +773,12 @@ describe('Career Profession Engine (P2-10A)', () => {
     });
 
     it('should return frozen output', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
       const input: CareerProfessionInput = {
         expressions: createMockExpressionAnalysisResult([
-          createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+          createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
         ]),
-        mechanisms: [createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')],
+        mechanisms: [authorityMechanism],
         career10HFoundation: createMock10HFoundation(),
         career10LFoundation: createMock10LFoundation()
       };
@@ -653,13 +796,12 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec §7.M: Unresolved expression-type reporting', () => {
     it('should report expression types with no matching rule', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -675,15 +817,14 @@ describe('Career Profession Engine (P2-10A)', () => {
     });
 
     it('should compute mappedTypes from actually consumed expression types', () => {
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const leadershipMechanism = createMockMechanismCandidate('LEADERSHIP', 'PATTERN_1');
       const expressions = createMockExpressionAnalysisResult([
-        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1'),
-        createMockExpressionCandidate('LEADERSHIP_EXPRESSION', 'PATTERN_1')
+        createMockExpressionCandidate('AUTHORITY_EXPRESSION', 'PATTERN_1', [authorityMechanism.candidateId]),
+        createMockExpressionCandidate('LEADERSHIP_EXPRESSION', 'PATTERN_1', [leadershipMechanism.candidateId])
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1'),
-        createMockMechanismCandidate('LEADERSHIP', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism, leadershipMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -702,19 +843,48 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec P2: Status semantics', () => {
     it('should not report INSUFFICIENT_DATA for mechanism-only match that emits candidates', () => {
-      // Empty expressions, but matching mechanisms
-      const expressions = createMockExpressionAnalysisResult([]);
+      // Mechanisms with shared source linkage via expression
+      const innovationMechanism = createMockMechanismCandidate('INNOVATION', 'PATTERN_1');
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
 
-      const mechanisms = [
-        createMockMechanismCandidate('INNOVATION', 'PATTERN_1'),
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      // Expression that references both mechanisms (required for STRONG source-linkage contract)
+      const compositeExpression = createMockExpressionCandidate(
+        'INNOVATION_WORK',
+        'PATTERN_1',
+        [innovationMechanism.candidateId, authorityMechanism.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        compositeExpression
+      ]);
+
+      const mechanisms = [innovationMechanism, authorityMechanism];
+
+      const mockD10Analysis: CareerD10CanonicalAnalysis = {
+        availability: 'AVAILABLE',
+        natalDirection: 'STRONG' as any,
+        natalStrength: 'STRONG' as any,
+        d10Effect: 'REINFORCES',
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
+        qualifiedDirection: 'SUPPORT',
+        qualifiedStrength: 'STRONG',
+        natalPromisePreserved: true,
+        relationship: 'REINFORCES',
+        evidence: [],
+        conflicts: [],
+        expressionQualifications: [],
+        rootEvidenceIds: [],
+        statement: 'D10 analysis'
+      };
 
       const input: CareerProfessionInput = {
         expressions,
         mechanisms,
         career10HFoundation: createMock10HFoundation(),
-        career10LFoundation: createMock10LFoundation()
+        career10LFoundation: createMock10LFoundation(),
+        careerD10CanonicalAnalysis: mockD10Analysis,
+        domainEvidence: [] // Empty domainEvidence is sufficient for COMPLETE status
       };
 
       const result = buildCareerProfessionAnalysis(input);
@@ -730,18 +900,21 @@ describe('Career Profession Engine (P2-10A)', () => {
 
   describe('Spec P2: Provenance namespaces', () => {
     it('should not include non-consumed input expression/mechanism IDs in consumed-source provenance', () => {
+      // Create a mechanism that will be consumed
+      const authorityMechanism = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+
       // Create expressions that will not be consumed (no matching rule)
       const unconsumedExpression = createMockExpressionCandidate(
         'UNMAPPED_EXPRESSION' as any,
         'PATTERN_1',
-        ['MECH1']
+        ['NON_EXISTENT_MECH']
       );
 
       // Create expressions that will be consumed
       const consumedExpression = createMockExpressionCandidate(
         'AUTHORITY_EXPRESSION',
         'PATTERN_1',
-        ['MECH2']
+        [authorityMechanism.candidateId]
       );
 
       const expressions = createMockExpressionAnalysisResult([
@@ -749,9 +922,7 @@ describe('Career Profession Engine (P2-10A)', () => {
         consumedExpression
       ]);
 
-      const mechanisms = [
-        createMockMechanismCandidate('AUTHORITY', 'PATTERN_1')
-      ];
+      const mechanisms = [authorityMechanism];
 
       const input: CareerProfessionInput = {
         expressions,
@@ -767,6 +938,74 @@ describe('Career Profession Engine (P2-10A)', () => {
 
       // Consumed expression ID should appear in provenance
       expect(result.provenance.expressionIds).toContain(consumedExpression.expressionId);
+    });
+
+    it('should not include input pattern IDs that produce no candidates in consumed provenance', () => {
+      // PATTERN_1 will produce a candidate
+      const authorityMechanism1 = createMockMechanismCandidate('AUTHORITY', 'PATTERN_1');
+      const authorityExpression1 = createMockExpressionCandidate(
+        'AUTHORITY_EXPRESSION',
+        'PATTERN_1',
+        [authorityMechanism1.candidateId]
+      );
+
+      // PATTERN_2 will NOT produce a candidate (no matching rule)
+      const unmappedMechanism2 = createMockMechanismCandidate('AGENCY', 'PATTERN_2');
+      const unmappedExpression2 = createMockExpressionCandidate(
+        'UNMAPPED_EXPRESSION' as any,
+        'PATTERN_2',
+        [unmappedMechanism2.candidateId]
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        authorityExpression1,
+        unmappedExpression2
+      ]);
+
+      const mechanisms = [authorityMechanism1, unmappedMechanism2];
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // PATTERN_1 should appear in provenance (produced a candidate)
+      expect(result.provenance.patternIds).toContain('PATTERN_1');
+
+      // PATTERN_2 should NOT appear in provenance (produced no candidate)
+      expect(result.provenance.patternIds).not.toContain('PATTERN_2');
+    });
+
+    it('should exclude expression with unresolved source linkage (all sourceMechanismIds point to non-existent mechanisms)', () => {
+      // No mechanisms exist in the pattern
+      const mechanisms: CareerMechanismCandidate[] = [];
+
+      // Expression references only non-existent mechanisms
+      const expressionWithUnresolvedLinkage = createMockExpressionCandidate(
+        'AUTHORITY_EXPRESSION',
+        'PATTERN_1',
+        ['NON_EXISTENT_MECH_1', 'NON_EXISTENT_MECH_2']
+      );
+
+      const expressions = createMockExpressionAnalysisResult([
+        expressionWithUnresolvedLinkage
+      ]);
+
+      const input: CareerProfessionInput = {
+        expressions,
+        mechanisms,
+        career10HFoundation: createMock10HFoundation(),
+        career10LFoundation: createMock10LFoundation()
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // Should NOT emit candidate because no sourceMechanismIds resolved
+      expect(result.candidates.length).toBe(0);
     });
   });
 });
@@ -797,13 +1036,12 @@ function createMockExpressionAnalysisResult(
 function createMockExpressionCandidate(
   expressionType: string,
   patternId: string,
-  sourceMechanismIds?: string[]
+  sourceMechanismIds: string[]
 ): CareerExpressionCandidate {
-  const mechanismIds = sourceMechanismIds || ['MECH1'];
-  const expressionId = `EXPR:${expressionType}:${mechanismIds.join(',')}`;
+  const expressionId = `EXPR:${expressionType}:${sourceMechanismIds.join(',')}`;
 
   const provenance: CareerExpressionProvenance = {
-    mechanismIds,
+    mechanismIds: sourceMechanismIds,
     patternIds: [patternId],
     relationshipIds: [],
     evidenceIds: ['EVID1'],
@@ -813,7 +1051,7 @@ function createMockExpressionCandidate(
   return {
     expressionId,
     expressionType: expressionType as any,
-    sourceMechanismIds: mechanismIds,
+    sourceMechanismIds,
     mechanismTypes: ['AUTHORITY' as CareerMechanismType], // Default to AUTHORITY for mocks
     status: 'CANDIDATE',
     pathway: 'PATTERN' as any,
