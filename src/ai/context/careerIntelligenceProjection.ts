@@ -36,6 +36,12 @@ import type { AiAvailability } from '../types/aiTypes';
  * Runtime type guard for CareerFinalSynthesisResult.
  * Reads ONLY conclusionData.canonicalCareerFinalSynthesis.
  * Never falls back to legacy careerFinalSynthesis.
+ *
+ * This is a defensive shape check for nested values that the projection
+ * actually consumes. It validates:
+ * - Each expressions element has string mode/direction/strength
+ * - Each conflicts element has source/direction/severity/statement
+ * - evidenceTrace is a non-null object with array evidenceIds/sourceIds/ruleIds
  */
 export function isCareerFinalSynthesisResult(
   value: unknown
@@ -46,32 +52,77 @@ export function isCareerFinalSynthesisResult(
 
   const obj = value as Record<string, unknown>;
 
-  return (
-    obj.reasoningVersion === 'C11' &&
-    obj.domain === 'CAREER' &&
-    typeof obj.finalStatus === 'string' &&
-    typeof obj.finalDirection === 'string' &&
-    typeof obj.finalStrength === 'string' &&
-    typeof obj.confidence === 'string' &&
-    typeof obj.natalDirection === 'string' &&
-    typeof obj.natalStrength === 'string' &&
-    typeof obj.expressionStatus === 'string' &&
-    typeof obj.d10Direction === 'string' &&
-    typeof obj.d10Effect === 'string' &&
-    typeof obj.dashaEffect === 'string' &&
-    typeof obj.dashaDirection === 'string' &&
-    typeof obj.timingStatus === 'string' &&
-    typeof obj.transitDirection === 'string' &&
-    typeof obj.currentPressure === 'string' &&
-    Array.isArray(obj.expressions) &&
-    Array.isArray(obj.strongestExpressions) &&
-    Array.isArray(obj.challengedExpressions) &&
-    Array.isArray(obj.conflicts) &&
-    Array.isArray(obj.evidenceIds) &&
-    Array.isArray(obj.sourceIds) &&
-    Array.isArray(obj.ruleIds) &&
-    typeof obj.statement === 'string'
-  );
+  if (
+    obj.reasoningVersion !== 'C11' ||
+    obj.domain !== 'CAREER' ||
+    typeof obj.finalStatus !== 'string' ||
+    typeof obj.finalDirection !== 'string' ||
+    typeof obj.finalStrength !== 'string' ||
+    typeof obj.confidence !== 'string' ||
+    typeof obj.natalDirection !== 'string' ||
+    typeof obj.natalStrength !== 'string' ||
+    typeof obj.expressionStatus !== 'string' ||
+    typeof obj.d10Direction !== 'string' ||
+    typeof obj.d10Effect !== 'string' ||
+    typeof obj.dashaEffect !== 'string' ||
+    typeof obj.dashaDirection !== 'string' ||
+    typeof obj.timingStatus !== 'string' ||
+    typeof obj.transitDirection !== 'string' ||
+    typeof obj.currentPressure !== 'string' ||
+    !Array.isArray(obj.expressions) ||
+    !Array.isArray(obj.strongestExpressions) ||
+    !Array.isArray(obj.challengedExpressions) ||
+    !Array.isArray(obj.conflicts) ||
+    !Array.isArray(obj.evidenceIds) ||
+    !Array.isArray(obj.sourceIds) ||
+    !Array.isArray(obj.ruleIds) ||
+    typeof obj.statement !== 'string'
+  ) {
+    return false;
+  }
+
+  // Validate nested expressions array elements
+  const expressions = obj.expressions as unknown[];
+  for (const expr of expressions) {
+    if (
+      typeof expr !== 'object' ||
+      expr === null ||
+      typeof (expr as Record<string, unknown>).mode !== 'string' ||
+      typeof (expr as Record<string, unknown>).direction !== 'string' ||
+      typeof (expr as Record<string, unknown>).strength !== 'string'
+    ) {
+      return false;
+    }
+  }
+
+  // Validate nested conflicts array elements (fields read by conflict mapper)
+  const conflicts = obj.conflicts as unknown[];
+  for (const conflict of conflicts) {
+    if (
+      typeof conflict !== 'object' ||
+      conflict === null ||
+      typeof (conflict as Record<string, unknown>).source !== 'string' ||
+      typeof (conflict as Record<string, unknown>).direction !== 'string' ||
+      typeof (conflict as Record<string, unknown>).severity !== 'string' ||
+      typeof (conflict as Record<string, unknown>).statement !== 'string'
+    ) {
+      return false;
+    }
+  }
+
+  // Validate evidenceTrace is a non-null object with required arrays
+  const evidenceTrace = obj.evidenceTrace;
+  if (
+    typeof evidenceTrace !== 'object' ||
+    evidenceTrace === null ||
+    !Array.isArray((evidenceTrace as Record<string, unknown>).evidenceIds) ||
+    !Array.isArray((evidenceTrace as Record<string, unknown>).sourceIds) ||
+    !Array.isArray((evidenceTrace as Record<string, unknown>).ruleIds)
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -122,10 +173,18 @@ export function projectCanonicalCareerC11(
     transitDirection: canonicalC11.transitDirection,
     currentPressure: canonicalC11.currentPressure,
     expressions,
-    strongestExpressions: canonicalC11.strongestExpressions,
-    challengedExpressions: canonicalC11.challengedExpressions,
+    strongestExpressions: Object.freeze([...canonicalC11.strongestExpressions]),
+    challengedExpressions: Object.freeze([...canonicalC11.challengedExpressions]),
     conflicts,
-    statement: canonicalC11.statement
+    statement: canonicalC11.statement,
+    canonicalEvidenceIds: Object.freeze([...canonicalC11.evidenceIds]),
+    canonicalSourceIds: Object.freeze([...canonicalC11.sourceIds]),
+    canonicalRuleIds: Object.freeze([...canonicalC11.ruleIds]),
+    canonicalEvidenceTrace: {
+      evidenceIds: Object.freeze([...canonicalC11.evidenceTrace.evidenceIds]),
+      sourceIds: Object.freeze([...canonicalC11.evidenceTrace.sourceIds]),
+      ruleIds: Object.freeze([...canonicalC11.evidenceTrace.ruleIds])
+    }
   };
 }
 
@@ -138,15 +197,15 @@ function projectProfessionEvidence(
   return {
     evidenceId: evidence.evidenceId,
     basis: evidence.basis,
-    sourceIds: evidence.sourceIds,
+    sourceIds: Object.freeze([...evidence.sourceIds]),
     ruleId: evidence.ruleId,
     statement: evidence.statement,
     ...(evidence.linkage ? { linkage: evidence.linkage } : {}),
     ...(evidence.resolvedMechanismIds
-      ? { resolvedMechanismIds: evidence.resolvedMechanismIds }
+      ? { resolvedMechanismIds: Object.freeze([...evidence.resolvedMechanismIds]) }
       : {}),
     ...(evidence.unresolvedMechanismIds
-      ? { unresolvedMechanismIds: evidence.unresolvedMechanismIds }
+      ? { unresolvedMechanismIds: Object.freeze([...evidence.unresolvedMechanismIds]) }
       : {})
   };
 }
@@ -162,13 +221,13 @@ function projectProfessionCandidate(
     domain: candidate.domain,
     family: candidate.family,
     basis: candidate.basis,
-    expressionTypes: candidate.expressionTypes,
-    mechanismTypes: candidate.mechanismTypes,
-    patternIds: candidate.patternIds,
+    expressionTypes: Object.freeze([...candidate.expressionTypes]),
+    mechanismTypes: Object.freeze([...candidate.mechanismTypes]),
+    patternIds: Object.freeze([...candidate.patternIds]),
     d10Status: candidate.d10Status,
     evidence: candidate.evidence.map(projectProfessionEvidence),
-    domainEvidenceIds: candidate.domainEvidenceIds,
-    relatedEvidenceIds: candidate.relatedEvidenceIds,
+    domainEvidenceIds: Object.freeze([...candidate.domainEvidenceIds]),
+    relatedEvidenceIds: Object.freeze([...candidate.relatedEvidenceIds]),
     ruleId: candidate.ruleId
   };
 }
@@ -221,9 +280,9 @@ export function projectCareerProfessionAnalysis(
     availability: 'AVAILABLE' as AiAvailability,
     status: analysis.status,
     candidates,
-    unresolvedExpressionTypes: analysis.unresolvedExpressionTypes,
-    mappedTypes: analysis.mappedTypes,
-    missingInputs: analysis.missingInputs,
+    unresolvedExpressionTypes: Object.freeze([...analysis.unresolvedExpressionTypes]),
+    mappedTypes: Object.freeze([...analysis.mappedTypes]),
+    missingInputs: Object.freeze([...analysis.missingInputs]),
     d10Status: aggregateD10Status
   };
 }

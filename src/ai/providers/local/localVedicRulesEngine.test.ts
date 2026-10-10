@@ -84,6 +84,126 @@ describe('localVedicRulesEngine', () => {
     }
   });
 
+  it('should report canonical C11 information first in career conclusion when available', () => {
+    const contextWithC11: AiContext = {
+      ...context,
+      career: {
+        ...context.career!,
+        canonicalC11: {
+          reasoningVersion: 'C11',
+          finalStatus: 'SUPPORTED',
+          finalDirection: 'SUPPORT',
+          finalStrength: 'STRONG',
+          confidence: 'HIGH',
+          natalDirection: 'SUPPORT',
+          natalStrength: 'STRONG',
+          expressionStatus: 'SUPPORT',
+          d10Direction: 'SUPPORT',
+          d10Effect: 'QUALIFIES',
+          dashaEffect: 'ACTIVATES',
+          dashaDirection: 'SUPPORT',
+          timingStatus: 'ACTIVE',
+          transitDirection: 'SUPPORT',
+          currentPressure: 'LOW',
+          expressions: [],
+          strongestExpressions: ['LEADERSHIP', 'MANAGEMENT'],
+          challengedExpressions: [],
+          conflicts: [],
+          statement: 'Strong career potential',
+          canonicalEvidenceIds: [],
+          canonicalSourceIds: [],
+          canonicalRuleIds: [],
+          canonicalEvidenceTrace: {
+            evidenceIds: [],
+            sourceIds: [],
+            ruleIds: []
+          }
+        },
+        profession: {
+          availability: 'AVAILABLE',
+          status: 'COMPLETE',
+          candidates: [],
+          unresolvedExpressionTypes: [],
+          mappedTypes: [],
+          missingInputs: [],
+          d10Status: 'QUALIFIED'
+        }
+      }
+    };
+
+    const result = reasonWithLocalRules('CAREER_ANALYSIS', contextWithC11);
+    expect(result.conclusion).toContain('Canonical C11 analysis');
+    expect(result.conclusion).toContain('SUPPORTED status');
+    expect(result.conclusion).toContain('SUPPORT direction');
+    expect(result.conclusion).toContain('STRONG strength');
+    expect(result.conclusion).toContain('HIGH confidence');
+    expect(result.conclusion).toContain('Strongest expressions');
+    expect(result.conclusion).toContain('LEADERSHIP');
+    expect(result.conclusion).toContain('Conflicts: 0 identified');
+  });
+
+  it('should report profession analysis when available', () => {
+    const contextWithProfession: AiContext = {
+      ...context,
+      career: {
+        ...context.career!,
+        profession: {
+          availability: 'AVAILABLE',
+          status: 'COMPLETE',
+          candidates: [
+            {
+              candidateId: 'c1',
+              domain: 'LEADERSHIP',
+              family: 'EXECUTIVE',
+              basis: 'EXPRESSION',
+              expressionTypes: ['LEADERSHIP'],
+              mechanismTypes: ['AUTHORITY'],
+              patternIds: [],
+              d10Status: 'QUALIFIED',
+              evidence: [],
+              domainEvidenceIds: [],
+              relatedEvidenceIds: [],
+              ruleId: 'rule1'
+            }
+          ],
+          unresolvedExpressionTypes: [],
+          mappedTypes: ['LEADERSHIP'],
+          missingInputs: [],
+          d10Status: 'QUALIFIED'
+        }
+      }
+    };
+
+    const result = reasonWithLocalRules('CAREER_ANALYSIS', contextWithProfession);
+    expect(result.conclusion).toContain('Profession analysis');
+    expect(result.conclusion).toContain('COMPLETE status');
+    expect(result.conclusion).toContain('1 candidate professions');
+    expect(result.conclusion).toContain('QUALIFIED');
+  });
+
+  it('should state when canonical C11 or profession analysis is unavailable', () => {
+    const contextWithoutC11: AiContext = {
+      ...context,
+      career: {
+        ...context.career!,
+        canonicalC11: undefined,
+        profession: {
+          availability: 'UNAVAILABLE',
+          status: 'INSUFFICIENT_DATA',
+          candidates: [],
+          unresolvedExpressionTypes: [],
+          mappedTypes: [],
+          missingInputs: ['careerProfessionAnalysis'],
+          d10Status: 'NOT_PROVIDED'
+        }
+      }
+    };
+
+    const result = reasonWithLocalRules('CAREER_ANALYSIS', contextWithoutC11);
+    expect(result.conclusion).toContain('Canonical C11 analysis is unavailable');
+    expect(result.conclusion).toContain('Profession analysis is unavailable');
+  });
+
   it('should only return evidence IDs that exist in context.evidence', () => {
     const tasks: readonly AiTask[] = [
       'CHART_SYNTHESIS',

@@ -445,6 +445,16 @@ export interface AiCareerCanonicalConflictFact {
 }
 
 /**
+ * P2-10B AI DTO: Career canonical evidence trace.
+ * Mirrors CareerFinalSynthesisResult.evidenceTrace.
+ */
+export interface AiCareerCanonicalEvidenceTrace {
+  readonly evidenceIds: readonly string[];
+  readonly sourceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+}
+
+/**
  * P2-10B AI DTO: Career canonical C11 fact.
  * Projects the authoritative C11 result into AI context.
  */
@@ -469,6 +479,11 @@ export interface AiCareerCanonicalC11Fact {
   readonly challengedExpressions: readonly string[];
   readonly conflicts: readonly AiCareerCanonicalConflictFact[];
   readonly statement: string;
+  // Canonical provenance fields (distinct identity namespace from AI evidence)
+  readonly canonicalEvidenceIds: readonly string[];
+  readonly canonicalSourceIds: readonly string[];
+  readonly canonicalRuleIds: readonly string[];
+  readonly canonicalEvidenceTrace: AiCareerCanonicalEvidenceTrace;
 }
 
 /**

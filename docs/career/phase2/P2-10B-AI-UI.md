@@ -47,6 +47,10 @@ This layer is purely additive projection/plumbing — it does NOT:
    - Projects C11 final synthesis result
    - Includes expressions, conflicts, and all C11 fields
    - No legacy fallback
+   - **New (hardening):** Canonical provenance fields in distinct identity namespace:
+     - `canonicalEvidenceIds`, `canonicalSourceIds`, `canonicalRuleIds`
+     - `canonicalEvidenceTrace` sub-object with evidenceIds/sourceIds/ruleIds
+     - These are NOT remapped into `AiContext.evidence`
 
 2. **`AiCareerProfessionFact`**
    - Projects P2-10A profession analysis
@@ -130,6 +134,69 @@ These inputs are not currently exposed in `DomainInterpretation.conclusionData`.
    - Reports candidate count, missing inputs, unresolved/mapped expression types
    - Does NOT invent astrology
 
+## Hardening Changes (Follow-up to commit 16ec3526)
+
+### Canonical-First Career Conclusion
+
+**File:** `src/ai/providers/local/localVedicRulesEngine.ts`
+
+**Changes:**
+- `buildConclusion()` CAREER_ANALYSIS branch rewritten to be canonical-first
+- When `context.career.canonicalC11` exists, reports its `finalStatus`, `finalDirection`, `finalStrength`, `confidence`, and conflict count/strongest expressions
+- When `context.career.profession` is available (availability AVAILABLE), reports its status, `d10Status`, and candidate count
+- Explicitly states when `canonicalC11` or `profession` analysis is unavailable
+- Legacy fields (`status`, `natalPromise`, `d10Relationship`) kept for compatibility but not presented as authoritative C11 conclusion
+
+**Test coverage:**
+- Tests assert the returned `conclusion` string contains canonical C11 and profession information
+- Tests verify unavailable states are explicitly stated
+
+### Canonical Provenance Preservation
+
+**Files:** `src/ai/types/aiContextTypes.ts`, `src/ai/context/careerIntelligenceProjection.ts`
+
+**Changes:**
+- Added explicitly named canonical provenance fields to `AiCareerCanonicalC11Fact`:
+  - `canonicalEvidenceIds`, `canonicalSourceIds`, `canonicalRuleIds`
+  - `canonicalEvidenceTrace` sub-object mirroring `CareerFinalSynthesisResult.evidenceTrace`
+- Populated in `projectCanonicalCareerC11` from `canonicalC11.evidenceIds/sourceIds/ruleIds/evidenceTrace`
+- These fields are a distinct identity namespace from `AiContext.evidence` (NOT remapped)
+
+**Test coverage:**
+- Tests prove all four provenance fields survive projection
+- Tests verify provenance fields are distinguishable from ordinary AI evidence occurrence IDs (use C11 namespace prefix)
+
+### Type Guard Hardening
+
+**File:** `src/ai/context/careerIntelligenceProjection.ts`
+
+**Changes:**
+- `isCareerFinalSynthesisResult()` now validates nested shapes the projection actually consumes:
+  - Each `expressions` element has string `mode`/`direction`/`strength`
+  - Each `conflicts` element has `source`, `direction`, `severity`, `statement`
+  - `evidenceTrace` is a non-null object with array `evidenceIds`/`sourceIds`/`ruleIds`
+
+**Test coverage:**
+- Tests for malformed nested values (e.g., `expressions: [null]`, conflict missing `source`)
+- Tests for null/missing `evidenceTrace`
+- Tests for malformed `evidenceTrace` (missing required arrays)
+
+### Array Isolation at Projection Boundary
+
+**File:** `src/ai/context/careerIntelligenceProjection.ts`
+
+**Changes:**
+- Every passed-through array is cloned with a frozen copy (`Object.freeze([...arr])`)
+- Applied in:
+  - `projectProfessionCandidate`: `expressionTypes`, `mechanismTypes`, `patternIds`, `domainEvidenceIds`, `relatedEvidenceIds`
+  - `projectProfessionEvidence`: `sourceIds`, `resolvedMechanismIds`, `unresolvedMechanismIds`
+  - `projectCanonicalCareerC11`: `strongestExpressions`, `challengedExpressions`, `canonicalEvidenceIds`, `canonicalSourceIds`, `canonicalRuleIds`, `canonicalEvidenceTrace.*`
+  - `projectCareerProfessionAnalysis`: `unresolvedExpressionTypes`, `mappedTypes`, `missingInputs`
+
+**Test coverage:**
+- Tests mutate source arrays after projection and assert projected DTO is unchanged
+- Tests verify arrays are frozen with `Object.isFrozen()`
+
 ## Boundary Contracts
 
 ### Authoritative-C11-Only Boundary
@@ -180,6 +247,17 @@ These inputs are not currently exposed in `DomainInterpretation.conclusionData`.
 - ✓ Wrong reasoningVersion → false
 - ✓ Null/undefined → false
 - ✓ Missing required fields → false
+- ✓ Malformed expressions array (null element) → false
+- ✓ Malformed expressions element (missing mode) → false
+- ✓ Malformed conflicts element (missing source) → false
+- ✓ Null or missing evidenceTrace → false
+- ✓ Malformed evidenceTrace (missing evidenceIds array) → false
+
+### Array Isolation
+- ✓ Profession candidate arrays frozen and isolated from source mutations
+- ✓ Profession evidence arrays frozen and isolated from source mutations
+- ✓ Canonical C11 arrays frozen and isolated from source mutations
+- ✓ Analysis-level arrays frozen and isolated from source mutations
 
 ## Schema Version
 

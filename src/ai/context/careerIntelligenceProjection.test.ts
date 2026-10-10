@@ -48,17 +48,33 @@ describe('careerIntelligenceProjection', () => {
         timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
         transitDirection: 'SUPPORT' as CareerFinalDirection,
         currentPressure: 'LOW',
-        expressions: [],
-        strongestExpressions: [],
+        expressions: [
+          {
+            mode: 'LEADERSHIP',
+            direction: 'SUPPORT' as CareerFinalDirection,
+            strength: 'STRONG' as CareerFinalStrength,
+            qualified: true,
+            evidenceIds: []
+          }
+        ],
+        strongestExpressions: ['LEADERSHIP'],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: [],
-        sourceIds: [],
-        ruleIds: [],
+        conflicts: [
+          {
+            source: 'NATAL',
+            direction: 'CHALLENGE',
+            severity: 'MODERATE',
+            evidenceIds: [],
+            statement: 'Conflict between natal and D10'
+          }
+        ],
+        evidenceIds: ['ev1', 'ev2'],
+        sourceIds: ['src1'],
+        ruleIds: ['rule1'],
         evidenceTrace: {
-          evidenceIds: [],
-          sourceIds: [],
-          ruleIds: []
+          evidenceIds: ['ev1', 'ev2'],
+          sourceIds: ['src1'],
+          ruleIds: ['rule1']
         },
         statement: 'Test statement'
       };
@@ -88,6 +104,177 @@ describe('careerIntelligenceProjection', () => {
         // Missing finalStatus, finalDirection, etc.
       } as any;
       expect(isCareerFinalSynthesisResult(partial)).toBe(false);
+    });
+
+    it('should return false for malformed expressions array (null element)', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [null], // Malformed: null element
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
+    });
+
+    it('should return false for malformed expressions element (missing mode)', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [{ direction: 'SUPPORT', strength: 'STRONG' }], // Missing mode
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
+    });
+
+    it('should return false for malformed conflicts element (missing source)', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [{ direction: 'CHALLENGE', severity: 'MODERATE', statement: 'Test' }], // Missing source
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
+    });
+
+    it('should return false for null or missing evidenceTrace', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: null, // Malformed: null instead of object
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
+    });
+
+    it('should return false for malformed evidenceTrace (missing evidenceIds array)', () => {
+      const malformed = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED' as CareerFinalStatus,
+        finalDirection: 'SUPPORT' as CareerFinalDirection,
+        finalStrength: 'STRONG' as CareerFinalStrength,
+        confidence: 'HIGH' as CareerFinalConfidence,
+        natalDirection: 'SUPPORT' as CareerFinalDirection,
+        natalStrength: 'STRONG' as CareerFinalStrength,
+        expressionStatus: 'SUPPORT' as CareerFinalDirection,
+        d10Direction: 'SUPPORT' as CareerFinalDirection,
+        d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+        dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+        dashaDirection: 'SUPPORT' as CareerFinalDirection,
+        timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+        transitDirection: 'SUPPORT' as CareerFinalDirection,
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          sourceIds: [],
+          ruleIds: []
+          // Missing evidenceIds array
+        },
+        statement: 'Test statement'
+      } as any;
+      expect(isCareerFinalSynthesisResult(malformed)).toBe(false);
     });
   });
 
@@ -159,6 +346,118 @@ describe('careerIntelligenceProjection', () => {
       expect(result?.conflicts).toHaveLength(1);
       expect(result?.conflicts[0].layers).toEqual(['NATAL', 'CHALLENGE', 'MODERATE']);
       expect(result?.statement).toBe('Strong career potential');
+      expect(result?.canonicalEvidenceIds).toEqual(['ev1', 'ev2']);
+      expect(result?.canonicalSourceIds).toEqual(['src1']);
+      expect(result?.canonicalRuleIds).toEqual(['rule1']);
+      expect(result?.canonicalEvidenceTrace).toEqual({
+        evidenceIds: ['ev1', 'ev2'],
+        sourceIds: ['src1'],
+        ruleIds: ['rule1']
+      });
+    });
+
+    it('should populate canonical provenance fields from canonicalC11', () => {
+      const interpretation: DomainInterpretation = {
+        domain: 'CAREER',
+        conclusionData: {
+          canonicalCareerFinalSynthesis: {
+            reasoningVersion: 'C11',
+            domain: 'CAREER',
+            finalStatus: 'SUPPORTED' as CareerFinalStatus,
+            finalDirection: 'SUPPORT' as CareerFinalDirection,
+            finalStrength: 'STRONG' as CareerFinalStrength,
+            confidence: 'HIGH' as CareerFinalConfidence,
+            natalDirection: 'SUPPORT' as CareerFinalDirection,
+            natalStrength: 'STRONG' as CareerFinalStrength,
+            expressionStatus: 'SUPPORT' as CareerFinalDirection,
+            d10Direction: 'SUPPORT' as CareerFinalDirection,
+            d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+            dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+            dashaDirection: 'SUPPORT' as CareerFinalDirection,
+            timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+            transitDirection: 'SUPPORT' as CareerFinalDirection,
+            currentPressure: 'LOW',
+            expressions: [],
+            strongestExpressions: [],
+            challengedExpressions: [],
+            conflicts: [],
+            evidenceIds: ['canonical-ev-1', 'canonical-ev-2'],
+            sourceIds: ['canonical-src-1'],
+            ruleIds: ['canonical-rule-1'],
+            evidenceTrace: {
+              evidenceIds: ['trace-ev-1', 'trace-ev-2'],
+              sourceIds: ['trace-src-1'],
+              ruleIds: ['trace-rule-1']
+            },
+            statement: 'Test statement'
+          }
+        }
+      } as any;
+
+      const result = projectCanonicalCareerC11(interpretation);
+
+      expect(result).toBeDefined();
+      expect(result?.canonicalEvidenceIds).toEqual(['canonical-ev-1', 'canonical-ev-2']);
+      expect(result?.canonicalSourceIds).toEqual(['canonical-src-1']);
+      expect(result?.canonicalRuleIds).toEqual(['canonical-rule-1']);
+      expect(result?.canonicalEvidenceTrace).toEqual({
+        evidenceIds: ['trace-ev-1', 'trace-ev-2'],
+        sourceIds: ['trace-src-1'],
+        ruleIds: ['trace-rule-1']
+      });
+    });
+
+    it('should distinguish canonical provenance from ordinary AI evidence occurrence IDs', () => {
+      const interpretation: DomainInterpretation = {
+        domain: 'CAREER',
+        conclusionData: {
+          canonicalCareerFinalSynthesis: {
+            reasoningVersion: 'C11',
+            domain: 'CAREER',
+            finalStatus: 'SUPPORTED' as CareerFinalStatus,
+            finalDirection: 'SUPPORT' as CareerFinalDirection,
+            finalStrength: 'STRONG' as CareerFinalStrength,
+            confidence: 'HIGH' as CareerFinalConfidence,
+            natalDirection: 'SUPPORT' as CareerFinalDirection,
+            natalStrength: 'STRONG' as CareerFinalStrength,
+            expressionStatus: 'SUPPORT' as CareerFinalDirection,
+            d10Direction: 'SUPPORT' as CareerFinalDirection,
+            d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+            dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+            dashaDirection: 'SUPPORT' as CareerFinalDirection,
+            timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+            transitDirection: 'SUPPORT' as CareerFinalDirection,
+            currentPressure: 'LOW',
+            expressions: [],
+            strongestExpressions: [],
+            challengedExpressions: [],
+            conflicts: [],
+            evidenceIds: ['CAREER:C11:EVIDENCE:001'],
+            sourceIds: ['CAREER:C11:SOURCE:001'],
+            ruleIds: ['CAREER:C11:RULE:001'],
+            evidenceTrace: {
+              evidenceIds: ['CAREER:C11:TRACE:EVIDENCE:001'],
+              sourceIds: ['CAREER:C11:TRACE:SOURCE:001'],
+              ruleIds: ['CAREER:C11:TRACE:RULE:001']
+            },
+            statement: 'Test statement'
+          }
+        }
+      } as any;
+
+      const result = projectCanonicalCareerC11(interpretation);
+
+      // Canonical provenance uses distinct C11 namespace
+      expect(result?.canonicalEvidenceIds).toContain('CAREER:C11:EVIDENCE:001');
+      expect(result?.canonicalSourceIds).toContain('CAREER:C11:SOURCE:001');
+      expect(result?.canonicalRuleIds).toContain('CAREER:C11:RULE:001');
+      expect(result?.canonicalEvidenceTrace.evidenceIds).toContain('CAREER:C11:TRACE:EVIDENCE:001');
+
+      // These are NOT in the AI evidence array (which would use different IDs like 'PLANET:MARS:1')
+      // This proves they are a distinct identity namespace
+      expect(result?.canonicalEvidenceIds[0]).toMatch(/^CAREER:C11:/);
+      expect(result?.canonicalSourceIds[0]).toMatch(/^CAREER:C11:/);
+      expect(result?.canonicalRuleIds[0]).toMatch(/^CAREER:C11:/);
     });
 
     it('should return undefined when canonicalCareerFinalSynthesis is missing', () => {
@@ -548,6 +847,254 @@ describe('careerIntelligenceProjection', () => {
       const result2 = projectCareerProfessionAnalysis(analysis);
 
       expect(result1).toEqual(result2);
+    });
+
+    it('should isolate arrays at projection boundary for profession candidate', () => {
+      const mutableExpressionTypes = ['LEADERSHIP' as CareerExpressionType];
+      const mutableMechanismTypes = ['AUTHORITY'];
+      const mutablePatternIds = ['pattern1'];
+      const mutableDomainEvidenceIds = ['domain1'];
+      const mutableRelatedEvidenceIds = ['related1'];
+
+      const candidate: CareerProfessionCandidate = {
+        candidateId: 'c1',
+        domain: 'LEADERSHIP' as CareerProfessionDomain,
+        family: 'EXECUTIVE_MANAGEMENT' as CareerProfessionFamily,
+        basis: 'EXPRESSION' as CareerProfessionBasis,
+        expressionTypes: mutableExpressionTypes,
+        mechanismTypes: mutableMechanismTypes,
+        patternIds: mutablePatternIds,
+        d10Status: 'QUALIFIED' as CareerProfessionD10Status,
+        evidence: [],
+        domainEvidenceIds: mutableDomainEvidenceIds,
+        relatedEvidenceIds: mutableRelatedEvidenceIds,
+        ruleId: 'rule1'
+      };
+
+      const analysis: CareerProfessionAnalysis = {
+        status: 'COMPLETE',
+        candidates: [candidate],
+        unresolvedExpressionTypes: [],
+        mappedTypes: [],
+        missingInputs: [],
+        provenance: {
+          expressionIds: [],
+          mechanismIds: [],
+          patternIds: [],
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        }
+      };
+
+      const result = projectCareerProfessionAnalysis(analysis);
+      const projectedCandidate = result.candidates[0];
+
+      // Mutate source arrays after projection
+      mutableExpressionTypes.push('MANAGEMENT');
+      mutableMechanismTypes.push('TEAMWORK');
+      mutablePatternIds.push('pattern2');
+      mutableDomainEvidenceIds.push('domain2');
+      mutableRelatedEvidenceIds.push('related2');
+
+      // Projected DTO should be unchanged
+      expect(projectedCandidate.expressionTypes).toEqual(['LEADERSHIP']);
+      expect(projectedCandidate.mechanismTypes).toEqual(['AUTHORITY']);
+      expect(projectedCandidate.patternIds).toEqual(['pattern1']);
+      expect(projectedCandidate.domainEvidenceIds).toEqual(['domain1']);
+      expect(projectedCandidate.relatedEvidenceIds).toEqual(['related1']);
+
+      // Arrays should be frozen
+      expect(Object.isFrozen(projectedCandidate.expressionTypes)).toBe(true);
+      expect(Object.isFrozen(projectedCandidate.mechanismTypes)).toBe(true);
+      expect(Object.isFrozen(projectedCandidate.patternIds)).toBe(true);
+      expect(Object.isFrozen(projectedCandidate.domainEvidenceIds)).toBe(true);
+      expect(Object.isFrozen(projectedCandidate.relatedEvidenceIds)).toBe(true);
+    });
+
+    it('should isolate arrays at projection boundary for profession evidence', () => {
+      const mutableSourceIds = ['src1'];
+      const mutableResolvedMechanismIds = ['mech1'];
+      const mutableUnresolvedMechanismIds = ['mech2'];
+
+      const evidence: CareerProfessionEvidence = {
+        evidenceId: 'ev1',
+        basis: 'EXPRESSION' as CareerProfessionBasis,
+        sourceIds: mutableSourceIds,
+        ruleId: 'rule1',
+        statement: 'Test evidence',
+        linkage: 'COMPLETE',
+        resolvedMechanismIds: mutableResolvedMechanismIds,
+        unresolvedMechanismIds: mutableUnresolvedMechanismIds
+      };
+
+      const candidate: CareerProfessionCandidate = {
+        candidateId: 'c1',
+        domain: 'LEADERSHIP' as CareerProfessionDomain,
+        family: 'EXECUTIVE_MANAGEMENT' as CareerProfessionFamily,
+        basis: 'EXPRESSION' as CareerProfessionBasis,
+        expressionTypes: [],
+        mechanismTypes: [],
+        patternIds: [],
+        d10Status: 'QUALIFIED' as CareerProfessionD10Status,
+        evidence: [evidence],
+        domainEvidenceIds: [],
+        relatedEvidenceIds: [],
+        ruleId: 'rule1'
+      };
+
+      const analysis: CareerProfessionAnalysis = {
+        status: 'COMPLETE',
+        candidates: [candidate],
+        unresolvedExpressionTypes: [],
+        mappedTypes: [],
+        missingInputs: [],
+        provenance: {
+          expressionIds: [],
+          mechanismIds: [],
+          patternIds: [],
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        }
+      };
+
+      const result = projectCareerProfessionAnalysis(analysis);
+      const projectedEvidence = result.candidates[0].evidence[0];
+
+      // Mutate source arrays after projection
+      mutableSourceIds.push('src2');
+      mutableResolvedMechanismIds.push('mech3');
+      mutableUnresolvedMechanismIds.push('mech4');
+
+      // Projected DTO should be unchanged
+      expect(projectedEvidence.sourceIds).toEqual(['src1']);
+      expect(projectedEvidence.resolvedMechanismIds).toEqual(['mech1']);
+      expect(projectedEvidence.unresolvedMechanismIds).toEqual(['mech2']);
+
+      // Arrays should be frozen
+      expect(Object.isFrozen(projectedEvidence.sourceIds)).toBe(true);
+      expect(Object.isFrozen(projectedEvidence.resolvedMechanismIds)).toBe(true);
+      expect(Object.isFrozen(projectedEvidence.unresolvedMechanismIds)).toBe(true);
+    });
+
+    it('should isolate arrays at projection boundary for canonical C11', () => {
+      const mutableStrongestExpressions = ['LEADERSHIP', 'MANAGEMENT'];
+      const mutableChallengedExpressions = ['SERVICE'];
+      const mutableEvidenceIds = ['ev1', 'ev2'];
+      const mutableSourceIds = ['src1'];
+      const mutableRuleIds = ['rule1'];
+      const mutableTraceEvidenceIds = ['trace-ev1'];
+      const mutableTraceSourceIds = ['trace-src1'];
+      const mutableTraceRuleIds = ['trace-rule1'];
+
+      const interpretation: DomainInterpretation = {
+        domain: 'CAREER',
+        conclusionData: {
+          canonicalCareerFinalSynthesis: {
+            reasoningVersion: 'C11',
+            domain: 'CAREER',
+            finalStatus: 'SUPPORTED' as CareerFinalStatus,
+            finalDirection: 'SUPPORT' as CareerFinalDirection,
+            finalStrength: 'STRONG' as CareerFinalStrength,
+            confidence: 'HIGH' as CareerFinalConfidence,
+            natalDirection: 'SUPPORT' as CareerFinalDirection,
+            natalStrength: 'STRONG' as CareerFinalStrength,
+            expressionStatus: 'SUPPORT' as CareerFinalDirection,
+            d10Direction: 'SUPPORT' as CareerFinalDirection,
+            d10Effect: 'QUALIFIES' as CareerD10QualificationEffect,
+            dashaEffect: 'ACTIVATES' as CareerDashaActivationEffect,
+            dashaDirection: 'SUPPORT' as CareerFinalDirection,
+            timingStatus: 'ACTIVE' as CareerFinalTimingStatus,
+            transitDirection: 'SUPPORT' as CareerFinalDirection,
+            currentPressure: 'LOW',
+            expressions: [],
+            strongestExpressions: mutableStrongestExpressions,
+            challengedExpressions: mutableChallengedExpressions,
+            conflicts: [],
+            evidenceIds: mutableEvidenceIds,
+            sourceIds: mutableSourceIds,
+            ruleIds: mutableRuleIds,
+            evidenceTrace: {
+              evidenceIds: mutableTraceEvidenceIds,
+              sourceIds: mutableTraceSourceIds,
+              ruleIds: mutableTraceRuleIds
+            },
+            statement: 'Test statement'
+          }
+        }
+      } as any;
+
+      const result = projectCanonicalCareerC11(interpretation);
+
+      // Mutate source arrays after projection
+      mutableStrongestExpressions.push('TEACHING');
+      mutableChallengedExpressions.push('RESEARCH');
+      mutableEvidenceIds.push('ev3');
+      mutableSourceIds.push('src2');
+      mutableRuleIds.push('rule2');
+      mutableTraceEvidenceIds.push('trace-ev2');
+      mutableTraceSourceIds.push('trace-src2');
+      mutableTraceRuleIds.push('trace-rule2');
+
+      // Projected DTO should be unchanged
+      expect(result?.strongestExpressions).toEqual(['LEADERSHIP', 'MANAGEMENT']);
+      expect(result?.challengedExpressions).toEqual(['SERVICE']);
+      expect(result?.canonicalEvidenceIds).toEqual(['ev1', 'ev2']);
+      expect(result?.canonicalSourceIds).toEqual(['src1']);
+      expect(result?.canonicalRuleIds).toEqual(['rule1']);
+      expect(result?.canonicalEvidenceTrace.evidenceIds).toEqual(['trace-ev1']);
+      expect(result?.canonicalEvidenceTrace.sourceIds).toEqual(['trace-src1']);
+      expect(result?.canonicalEvidenceTrace.ruleIds).toEqual(['trace-rule1']);
+
+      // Arrays should be frozen
+      expect(Object.isFrozen(result?.strongestExpressions)).toBe(true);
+      expect(Object.isFrozen(result?.challengedExpressions)).toBe(true);
+      expect(Object.isFrozen(result?.canonicalEvidenceIds)).toBe(true);
+      expect(Object.isFrozen(result?.canonicalSourceIds)).toBe(true);
+      expect(Object.isFrozen(result?.canonicalRuleIds)).toBe(true);
+      expect(Object.isFrozen(result?.canonicalEvidenceTrace.evidenceIds)).toBe(true);
+      expect(Object.isFrozen(result?.canonicalEvidenceTrace.sourceIds)).toBe(true);
+      expect(Object.isFrozen(result?.canonicalEvidenceTrace.ruleIds)).toBe(true);
+    });
+
+    it('should isolate arrays at projection boundary for analysis-level fields', () => {
+      const mutableUnresolvedExpressionTypes = ['LEADERSHIP' as CareerExpressionType];
+      const mutableMappedTypes = ['MANAGEMENT' as CareerExpressionType];
+      const mutableMissingInputs = ['INPUT_1'];
+
+      const analysis: CareerProfessionAnalysis = {
+        status: 'PARTIAL',
+        candidates: [],
+        unresolvedExpressionTypes: mutableUnresolvedExpressionTypes,
+        mappedTypes: mutableMappedTypes,
+        missingInputs: mutableMissingInputs,
+        provenance: {
+          expressionIds: [],
+          mechanismIds: [],
+          patternIds: [],
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: []
+        }
+      };
+
+      const result = projectCareerProfessionAnalysis(analysis);
+
+      // Mutate source arrays after projection
+      mutableUnresolvedExpressionTypes.push('TEACHING');
+      mutableMappedTypes.push('RESEARCH');
+      mutableMissingInputs.push('INPUT_2');
+
+      // Projected DTO should be unchanged
+      expect(result.unresolvedExpressionTypes).toEqual(['LEADERSHIP']);
+      expect(result.mappedTypes).toEqual(['MANAGEMENT']);
+      expect(result.missingInputs).toEqual(['INPUT_1']);
+
+      // Arrays should be frozen
+      expect(Object.isFrozen(result.unresolvedExpressionTypes)).toBe(true);
+      expect(Object.isFrozen(result.mappedTypes)).toBe(true);
+      expect(Object.isFrozen(result.missingInputs)).toBe(true);
     });
   });
 });

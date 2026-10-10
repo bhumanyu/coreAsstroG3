@@ -47,10 +47,34 @@ function buildLifeAnalysisExplanationConclusion(context: AiContext): string {
 function buildConclusion(task: AiTask, context: AiContext): string {
   switch (task) {
     case 'CAREER_ANALYSIS': {
-      if (context.career) {
-        return `Career analysis indicates a status of ${context.career.status}, with natal promise assessed as ${context.career.natalPromise} and D10 relationship configured as ${context.career.d10Relationship}. Key career factors are established across ${context.career.supportingFactors.length} supporting and ${context.career.challengingFactors.length} challenging indications.`;
+      if (!context.career) {
+        return 'Career analysis facts are not fully configured in the provided context.';
       }
-      return 'Career analysis facts are not fully configured in the provided context.';
+
+      const parts: string[] = [];
+
+      // Canonical C11 first (authoritative)
+      if (context.career.canonicalC11) {
+        const c11 = context.career.canonicalC11;
+        parts.push(`Canonical C11 analysis indicates ${c11.finalStatus} status with ${c11.finalDirection} direction and ${c11.finalStrength} strength at ${c11.confidence} confidence.`);
+        parts.push(`Strongest expressions: ${c11.strongestExpressions.length > 0 ? c11.strongestExpressions.join(', ') : 'none identified'}.`);
+        parts.push(`Conflicts: ${c11.conflicts.length} identified.`);
+      } else {
+        parts.push('Canonical C11 analysis is unavailable.');
+      }
+
+      // Profession analysis when available
+      if (context.career.profession && context.career.profession.availability === 'AVAILABLE') {
+        const prof = context.career.profession;
+        parts.push(`Profession analysis indicates ${prof.status} status with ${prof.candidates.length} candidate professions and D10 qualification status of ${prof.d10Status}.`);
+      } else {
+        parts.push('Profession analysis is unavailable.');
+      }
+
+      // Legacy fields for compatibility (not authoritative)
+      parts.push(`Legacy context reports status of ${context.career.status}, natal promise as ${context.career.natalPromise}, and D10 relationship as ${context.career.d10Relationship}.`);
+
+      return parts.join(' ');
     }
     case 'WEALTH_ANALYSIS': {
       if (context.wealth) {
@@ -210,8 +234,7 @@ export function reasonWithLocalRules(
     } catch (error) {
       ruleFailureCount++;
       warnings.push(
-        `Rule ${rule.id} evaluation failed: ${
-          error instanceof Error ? error.message : String(error)
+        `Rule ${rule.id} evaluation failed: ${error instanceof Error ? error.message : String(error)
         }`
       );
     }
