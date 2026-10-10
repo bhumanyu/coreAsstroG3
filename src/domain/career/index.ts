@@ -26,6 +26,7 @@ export * from './careerFinalSynthesis';
 export * from './careerGraph';
 export * from './careerPattern';
 export * from './careerPatternQualification';
+export * from './careerTrajectory';
 export {
     // Type exports
     type CareerDispositorStartRole,
