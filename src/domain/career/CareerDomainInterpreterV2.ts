@@ -533,6 +533,10 @@ export function interpretCareerV2(
    *
    * Map canonical C11 fields to legacy trace graph shape.
    * These are internal adapters for reasoning trace compatibility only.
+   *
+   * IMPORTANT: UNDETERMINED strength never maps to a positive status.
+   * Within the SUPPORT branch, only explicitly-supported strengths produce positive statuses.
+   * UNDETERMINED/MIXED strengths map to INSUFFICIENT_DATA to represent unavailable/insufficient data.
    */
   const mapC11DirectionToLegacyStatus = (
     direction: CareerFinalDirection,
@@ -541,11 +545,14 @@ export function interpretCareerV2(
     if (direction === 'SUPPORT') {
       if (strength === 'VERY_STRONG' || strength === 'STRONG') return 'VERY_STRONG';
       if (strength === 'MODERATE') return 'STRONG';
-      return 'MODERATE';
+      // WEAK/VERY_WEAK: no valid positive status weaker than MODERATE in legacy union
+      // UNDETERMINED/MIXED: insufficient data, not a positive status
+      return 'INSUFFICIENT_DATA';
     }
     if (direction === 'CHALLENGE') return 'CHALLENGED';
     if (direction === 'CONDITIONAL') return 'MODERATE';
     if (direction === 'MIXED') return 'MIXED';
+    // NEUTRAL/UNAVAILABLE directions map to unavailable representation
     return 'INSUFFICIENT_DATA';
   };
 
@@ -654,8 +661,24 @@ export function interpretCareerV2(
    * - divisionalStatus: derived from C11 d10Direction
    * - manifestationStatus: derived from C11 expressionStatus
    * - finalStatus/confidence: direct from C11
+   *
+   * P2-08D-04: Typed Adapter Contract
+   *
+   * This interface defines the exact shape required by buildCareerReasoningTraceGraph
+   * for the careerFinalSynthesis parameter. It structurally matches the subset of
+   * CareerWealthFinalSynthesis that the trace builder actually reads.
    */
-  const legacyShapeForTraceGraph = Object.freeze({
+  interface C11TraceGraphShape {
+    readonly promiseStatus: string;
+    readonly activationStatus: string;
+    readonly timingStatus: string;
+    readonly divisionalStatus: string;
+    readonly manifestationStatus: string;
+    readonly finalStatus: string;
+    readonly confidence: string;
+  }
+
+  const legacyShapeForTraceGraph: C11TraceGraphShape = Object.freeze({
     promiseStatus: mapC11DirectionToLegacyStatus(canonicalC11Result.natalDirection, canonicalC11Result.natalStrength),
     activationStatus: mapC11DashaEffectToLegacyStatus(canonicalC11Result.dashaEffect),
     timingStatus: mapC11TimingStatusToLegacyStatus(canonicalC11Result.timingStatus),
@@ -672,7 +695,7 @@ export function interpretCareerV2(
     careerTimingSynthesis,
     d10Relationship,
     careerManifestationSynthesis,
-    careerFinalSynthesis: legacyShapeForTraceGraph as any // P2-08D: Use C11-derived shape for trace graph
+    careerFinalSynthesis: legacyShapeForTraceGraph as CareerWealthFinalSynthesis // P2-08D: Use C11-derived shape for trace graph (typed as C11TraceGraphShape, asserted to full type for function signature compatibility)
   });
 
   return buildDomainInterpretation({

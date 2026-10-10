@@ -242,6 +242,109 @@ Added test confirming:
 - C11 does not call AI (no aiGenerated/llmResponse/aiConfidence fields)
 - C11 does not depend on UI modules (no uiComponent/renderable/displayConfig fields)
 
+## Empty Evidence Field Compatibility Impact (P2-08D-08)
+
+### Audit Results
+
+The `c11AdaptedConclusion` in `CareerDomainInterpreterV2.ts` now emits empty `primaryEvidenceIds`, `supportingEvidenceIds`, `challengingEvidenceIds` arrays and `undefined` for `primarySourceIds`, `supportingSourceIds`, `challengingSourceIds`.
+
+**Rationale:** C11 evidenceIds are canonical identity keys from the C11 reasoning hierarchy, not occurrence-level evidence IDs that map to the DomainEvidence list in `mergedEvidence`. Similarly, C11 sourceIds are provenance occurrences that may not map cleanly to DomainEvidence. To maintain traceability invariants, we omit both evidence IDs and source IDs from the DomainConclusion adapter rather than fabricating a mapping.
+
+### Affected Consumers
+
+The following consumers read evidence ID fields from the DomainConclusion returned by `interpretCareerV2`:
+
+1. **`projectDomainInterpretationForAi`** (src/domain/interpretation/DomainInterpretationAiProjection.ts)
+   - Reads: `interpretation.conclusion.primaryEvidenceIds`
+   - Maps to: AI projection's `evidenceIds` field
+   - **Impact:** The AI projection will now receive an empty `evidenceIds` array from the career interpreter
+   - **Mitigation:** Consumers requiring evidence-level provenance should read from `conclusionData.canonicalCareerFinalSynthesis.evidenceIds` and `sourceIds` directly
+
+2. **Test consumers** (CareerDomainInterpreterV2.test.ts, WealthDomainInterpreterV2.test.ts, domainActivationRuleProvider.test.ts, DomainInterpretationBuilder.test.ts)
+   - These are test assertions that check the field values
+   - Tests have been updated to expect empty arrays/undefined for these fields
+   - No production impact
+
+3. **Stage 1 golden fixture** (src/integration/stage1/stage1GoldenFixture.ts)
+   - Reads: `STAGE1_GOLDEN_CAREER.conclusion.supportingEvidenceIds`
+   - Used for: Golden fixture validation
+   - **Impact:** The fixture will see an empty array
+   - **Mitigation:** Update fixture validation to read from `canonicalCareerFinalSynthesis.evidenceIds` if needed
+
+### Migration Guidance
+
+For consumers that require occurrence-level evidence IDs:
+
+- **Do not** rely on `conclusion.primaryEvidenceIds`, `conclusion.supportingEvidenceIds`, `conclusion.challengingEvidenceIds`
+- **Do not** rely on `conclusion.primarySourceIds`, `conclusion.supportingSourceIds`, `conclusion.challengingSourceIds`
+- **Instead**, read from `conclusionData.canonicalCareerFinalSynthesis.evidenceIds` for canonical identity keys
+- **For provenance occurrences**, read from `conclusionData.canonicalCareerFinalSynthesis.sourceIds`
+- **For rule-level provenance**, read from `conclusionData.canonicalCareerFinalSynthesis.ruleIds`
+
+### Design Decision
+
+This is an intentional compatibility tradeoff. Fabricating a mapping from C11 canonical identity keys to occurrence-level DomainEvidence IDs would violate traceability invariants and could produce incorrect associations. The full canonical C11 result remains available in `conclusionData.canonicalCareerFinalSynthesis` for consumers that need role-aware evidence.
+
+## Lossy State Collapse in Trace Adapter (P2-08D-09)
+
+### Overview
+
+The trace adapter functions `mapC11DirectionToLegacyStatus` and `mapC11DirectionToLegacyVarga` project canonical C11 states onto the legacy trace schema. This projection is intentionally lossy: the legacy schema cannot represent all C11 distinctions.
+
+### `mapC11DirectionToLegacyStatus` Mapping Table
+
+| C11 Direction + Strength | Legacy Status | Notes |
+|---------------------------|---------------|-------|
+| SUPPORT + VERY_STRONG | VERY_STRONG | Strong positive support |
+| SUPPORT + STRONG | VERY_STRONG | Strong positive support |
+| SUPPORT + MODERATE | STRONG | Moderate support maps to strong |
+| SUPPORT + WEAK | INSUFFICIENT_DATA | Weak support cannot produce positive status |
+| SUPPORT + VERY_WEAK | INSUFFICIENT_DATA | Very weak support cannot produce positive status |
+| SUPPORT + UNDETERMINED | INSUFFICIENT_DATA | Undetermined strength → insufficient data |
+| SUPPORT + MIXED | INSUFFICIENT_DATA | Mixed evidence → insufficient data |
+| CHALLENGE (any strength) | CHALLENGED | Challenge direction preserved |
+| CONDITIONAL (any strength) | MODERATE | Conditional maps to moderate |
+| MIXED (any strength) | MIXED | Mixed direction preserved |
+| NEUTRAL (any strength) | INSUFFICIENT_DATA | Neutral → unavailable representation |
+| UNAVAILABLE (any strength) | INSUFFICIENT_DATA | Unavailable → unavailable representation |
+
+**Key invariants:**
+- `SUPPORT + UNDETERMINED` never yields a positive status
+- `SUPPORT + WEAK` and `SUPPORT + VERY_WEAK` never yield a positive status
+- `NEUTRAL` and `UNAVAILABLE` both map to `INSUFFICIENT_DATA` (indistinguishable in legacy schema)
+
+### `mapC11DirectionToLegacyVarga` Mapping Table
+
+| C11 Direction | Legacy Varga Status | Notes |
+|---------------|-------------------|-------|
+| SUPPORT | CONFIRMS | Support direction maps to confirms |
+| CHALLENGE | CONFLICTS | Challenge direction maps to conflicts |
+| CONDITIONAL | MODIFIES | Conditional maps to modifies |
+| MIXED | UNAVAILABLE | Mixed → unavailable (lossy) |
+| NEUTRAL | UNAVAILABLE | Neutral → unavailable (lossy) |
+| UNAVAILABLE | UNAVAILABLE | Unavailable preserved |
+
+**Key invariants:**
+- `MIXED`, `NEUTRAL`, and `UNAVAILABLE` all map to `UNAVAILABLE` (indistinguishable in legacy schema)
+- The legacy trace schema cannot distinguish between "no data" (UNAVAILABLE), "mixed evidence" (MIXED), and "neutral outcome" (NEUTRAL)
+
+### Design Rationale
+
+This lossy projection is intentional:
+
+1. **Legacy schema constraints:** The legacy trace graph schema (`FinalDomainStatus`, `VargaRelationship`) was designed before C11 and lacks the granularity to represent all C11 states.
+2. **Backward compatibility:** The trace graph must continue to work with existing visualizers and consumers that expect the legacy schema.
+3. **No information loss for canonical consumers:** The full C11 result remains available in `conclusionData.canonicalCareerFinalSynthesis` with all distinctions preserved.
+4. **Trace graph purpose:** The trace graph is a high-level visualization of reasoning flow, not a source of truth for detailed state. Consumers requiring full precision should read the canonical C11 result directly.
+
+### Migration Guidance
+
+For consumers that require full C11 state precision:
+
+- **Do not** rely on trace graph node labels or edge types to distinguish between NEUTRAL, UNAVAILABLE, or MIXED in the legacy schema
+- **Instead**, read from `conclusionData.canonicalCareerFinalSynthesis` for the authoritative C11 state
+- The trace graph remains useful for high-level visualization, but canonical C11 is the source of truth for detailed state analysis
+
 ## Completion Criteria
 
 P2-08D is complete when:
