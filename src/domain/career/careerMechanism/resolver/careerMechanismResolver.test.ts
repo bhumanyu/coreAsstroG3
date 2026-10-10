@@ -589,6 +589,98 @@ describe('careerMechanismResolver', () => {
         }
       }
     });
+
+    it('should reject evidence with mismatched patternId (Finding 3)', () => {
+      const mockEvidence: PatternLevelEstablishingEvidence[] = [
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1',
+          mechanismType: undefined,
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'different-pattern', // Mismatched patternId - should be rejected
+          explanation: 'Evidence with mismatched patternId (should be rejected)'
+        },
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:PATTERN:1',
+          mechanismType: undefined,
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Pattern evidence with matching patternId (should be accepted)'
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence: mockEvidence
+      });
+
+      const result = resolver.resolve(input);
+
+      // Candidates should be emitted
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      for (const candidate of result.candidates) {
+        // Evidence with mismatched patternId should be rejected
+        if (candidate.rejectedEstablishingEvidenceIds) {
+          expect(candidate.rejectedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1');
+        }
+        // Evidence with matching patternId should be accepted
+        expect(candidate.acceptedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:PATTERN:1');
+      }
+    });
+
+    it('should reject evidence with mismatched patternId (Finding 3)', () => {
+      const mockEvidence: PatternLevelEstablishingEvidence[] = [
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1',
+          mechanismType: undefined,
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'different-pattern', // Mismatched patternId - should be rejected
+          explanation: 'Evidence with mismatched patternId (should be rejected)'
+        },
+        {
+          evidenceId: 'CAREER_MECHANISM_EVIDENCE:PATTERN:1',
+          mechanismType: undefined,
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Pattern evidence with matching patternId (should be accepted)'
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence: mockEvidence
+      });
+
+      const result = resolver.resolve(input);
+
+      // Candidates should be emitted
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      for (const candidate of result.candidates) {
+        // Evidence with mismatched patternId should be rejected
+        if (candidate.rejectedEstablishingEvidenceIds) {
+          expect(candidate.rejectedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:MISMATCHED_PATTERN:1');
+        }
+        // Evidence with matching patternId should be accepted
+        expect(candidate.acceptedEstablishingEvidenceIds).toContain('CAREER_MECHANISM_EVIDENCE:PATTERN:1');
+      }
+    });
   });
 
   describe('Regression tests - provenance↔evidence set equality (Test C)', () => {

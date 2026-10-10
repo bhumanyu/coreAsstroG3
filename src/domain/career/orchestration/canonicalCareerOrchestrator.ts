@@ -514,11 +514,19 @@ export class CanonicalCareerOrchestrator {
 
         for (const candidate of candidateSet.candidates) {
           // Determine establishing evidence status using resolver-reported acceptance/rejection signals
-          // RESOLVED_FOR_MECHANISM: resolver explicitly accepted establishing evidence for this candidate
-          // REJECTED: source evidence exists but resolver explicitly rejected it for this candidate
-          // SOURCE_EVIDENCE_PRESENT: source evidence exists but resolver produced no acceptance/rejection metadata
-          // UNRESOLVED: no source evidence exists
-          // UNAVAILABLE: source evidence unavailable from qualification
+          // IMPORTANT: establishingEvidenceStatus is a single priority-ordered value representing the overall outcome.
+          // Priority order: RESOLVED_FOR_MECHANISM > REJECTED > SOURCE_EVIDENCE_PRESENT > UNRESOLVED > UNAVAILABLE
+          //
+          // - RESOLVED_FOR_MECHANISM: At least one establishing record was accepted for this candidate.
+          //   Note: This status DOES NOT imply all evidence was accepted. Downstream consumers MUST inspect
+          //   the three ID lists (acceptedEstablishingEvidenceIds, rejectedEstablishingEvidenceIds,
+          //   firewallExcludedEstablishingEvidenceIds) on ResolvedMechanism to detect mixed outcomes where
+          //   both accepted and rejected/firewall-excluded evidence are present.
+          // - REJECTED: All source evidence was explicitly rejected by resolver (no accepted evidence)
+          // - SOURCE_EVIDENCE_PRESENT: Source evidence exists but was either (a) all firewall-excluded,
+          //   or (b) resolver produced no acceptance/rejection metadata (missing-metadata case)
+          // - UNRESOLVED: No source evidence exists
+          // - UNAVAILABLE: Source evidence unavailable from qualification
           let establishingEvidenceStatus: 'SOURCE_EVIDENCE_PRESENT' | 'RESOLVED_FOR_MECHANISM' | 'REJECTED' | 'UNRESOLVED' | 'UNAVAILABLE';
 
           if (suppliedEstablishingEvidence.length === 0) {
@@ -526,9 +534,12 @@ export class CanonicalCareerOrchestrator {
           } else {
             // Use resolver-reported acceptedEstablishingEvidenceIds, rejectedEstablishingEvidenceIds, and firewallExcludedEstablishingEvidenceIds if available
             if (candidate.acceptedEstablishingEvidenceIds && candidate.acceptedEstablishingEvidenceIds.length > 0) {
+              // At least one evidence accepted - mark as RESOLVED_FOR_MECHANISM
+              // Priority: accepted > rejected > firewall-excluded
+              // Downstream must inspect all three ID lists to detect mixed outcomes
               establishingEvidenceStatus = 'RESOLVED_FOR_MECHANISM';
             } else if (candidate.rejectedEstablishingEvidenceIds && candidate.rejectedEstablishingEvidenceIds.length > 0) {
-              // Explicitly rejected by resolver
+              // Explicitly rejected by resolver (no accepted evidence)
               establishingEvidenceStatus = 'REJECTED';
             } else if (candidate.firewallExcludedEstablishingEvidenceIds && candidate.firewallExcludedEstablishingEvidenceIds.length > 0) {
               // All source evidence was firewall-excluded (later-stage sources like D10, DISPOSITOR, etc.)
@@ -684,8 +695,25 @@ export class CanonicalCareerOrchestrator {
             status = 'UNCHANGED';
           }
 
-          // Use the real mechanism ID from the refinement result if available
-          // Otherwise mark as UNRESOLVED
+          // For UNCHANGED status, the original candidate remains valid
+          // For REFINED status, we need a mechanism ID from the refinement result
+          if (status === 'UNCHANGED') {
+            // UNCHANGED: original candidate is valid, produce RESOLVED refinement with UNCHANGED status
+            // Use the candidateId as a placeholder mechanismId since no new mechanism was produced
+            // The contract requires a non-empty string for RESOLVED refinements
+            refinements.push({
+              resolution: 'RESOLVED',
+              mechanismId: resolved.candidateId, // Use candidateId as placeholder (original candidate unchanged)
+              candidateId: resolved.candidateId,
+              mechanismType: resolved.mechanismType,
+              status: 'UNCHANGED',
+              mechanism: null, // No new mechanism produced
+              stageEvidence: Object.freeze([])
+            });
+            continue;
+          }
+
+          // For REFINED status, use the real mechanism ID from the refinement result
           const mechanismId = result.mechanisms[0]?.mechanismId;
           if (!mechanismId) {
             diagnostics.push({

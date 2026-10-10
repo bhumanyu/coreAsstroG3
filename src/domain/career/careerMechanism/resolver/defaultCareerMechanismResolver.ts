@@ -301,8 +301,14 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
           continue;
         }
 
-        // Validate patternId: must match current candidate's patternId
+        // Validate patternId: must be present and match current candidate's patternId
+        if (!ev.patternId) {
+          // Missing patternId - reject explicitly
+          rejectedEstablishingEvidenceIds.push(ev.evidenceId);
+          continue;
+        }
         if (ev.patternId !== patternId) {
+          // Mismatched patternId - reject explicitly
           rejectedEstablishingEvidenceIds.push(ev.evidenceId);
           continue;
         }

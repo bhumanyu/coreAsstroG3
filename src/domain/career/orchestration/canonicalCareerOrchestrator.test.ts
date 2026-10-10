@@ -404,8 +404,20 @@ describe('CanonicalCareerOrchestrator', () => {
 
     it('should expose mixed accepted/rejected/firewall-excluded evidence IDs on ResolvedMechanism', () => {
       const ports = createStubPorts();
+      // Create a qualified pattern with source pattern evidence so establishing evidence is available
+      const stubPattern = createStubPattern('PATTERN_1');
+      stubPattern.evidence = [
+        {
+          evidenceId: 'PATTERN_EVIDENCE_1',
+          sourceNetworkId: 'NETWORK_1',
+          relationshipId: 'REL:8→10:OCCUPIES',
+          ruleId: 'RULE_1'
+        }
+      ];
+      const qualifiedPatternWithEvidence = createStubQualifiedPattern('PATTERN_1', 'QUALIFIED');
+      qualifiedPatternWithEvidence.sourcePattern = stubPattern;
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
-        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+        qualifiedPatterns: [qualifiedPatternWithEvidence]
       });
 
       const candidateWithMixedEvidence: CareerMechanismCandidate = {
@@ -434,7 +446,7 @@ describe('CanonicalCareerOrchestrator', () => {
       const orchestrator = new CanonicalCareerOrchestrator(ports);
 
       const foundation = orchestrator.orchestrate({
-        patterns: [createStubPattern('PATTERN_1')],
+        patterns: [stubPattern],
         relevance: [],
         condition: [],
         networks: []
@@ -445,6 +457,8 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(resolved.acceptedEstablishingEvidenceIds).toEqual(['EVIDENCE_ACCEPTED_1', 'EVIDENCE_ACCEPTED_2']);
       expect(resolved.rejectedEstablishingEvidenceIds).toEqual(['EVIDENCE_REJECTED_1']);
       expect(resolved.firewallExcludedEstablishingEvidenceIds).toEqual(['EVIDENCE_EXCLUDED_1']);
+      // RESOLVED_FOR_MECHANISM because at least one evidence was accepted (priority chain)
+      expect(resolved.establishingEvidenceStatus).toBe('RESOLVED_FOR_MECHANISM');
     });
   });
 
@@ -1196,8 +1210,10 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(refinement.status).toBe('UNCHANGED');
       expect(refinement.candidateId).toBe('CANDIDATE_1');
       if (refinement.resolution === 'RESOLVED') {
-        expect(refinement.mechanismId).toBe('MECHANISM_UNCHANGED_1');
-        expect(refinement.mechanism).not.toBeNull();
+        // mechanismId is placeholder (candidateId) for UNCHANGED status
+        expect(refinement.mechanismId).toBe('CANDIDATE_1');
+        // mechanism is null for UNCHANGED status (no new mechanism produced)
+        expect(refinement.mechanism).toBeNull();
       }
     });
 
@@ -1923,8 +1939,8 @@ describe('CanonicalCareerOrchestrator', () => {
     });
   });
 
-  describe('Real dispositor integration test (Finding 4)', () => {
-    it('should use real defaultCareerMechanismDispositorRefiner with properly-typed CareerDispositorContext', () => {
+  describe('Real dispositor integration test (Finding 2)', () => {
+    it('should use real defaultCareerMechanismDispositorRefiner with properly-typed CareerDispositorContext and assert exact UNCHANGED status', () => {
       const ports = createStubPorts();
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
         qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
@@ -1967,18 +1983,17 @@ describe('CanonicalCareerOrchestrator', () => {
       const refinement = foundation.mechanismRefinements[0];
 
       // The real refiner should accept the properly-typed context
-      // Result status depends on whether the rule applies to AGENCY with this context
-      // The orchestrator maps:
-      // - REFINED/UNCHANGED from refiner → RESOLVED with same status
-      // - INSUFFICIENT_DATA from refiner → UNRESOLVED with UNAVAILABLE status
-      expect(['REFINED', 'UNCHANGED', 'UNAVAILABLE']).toContain(refinement.status);
+      // AGENCY has no applicable dispositor rule for SUN→MARS TERMINAL context
+      // Refiner returns UNCHANGED → orchestrator maps to RESOLVED with UNCHANGED status
+      expect(refinement.resolution).toBe('RESOLVED');
+      expect(refinement.status).toBe('UNCHANGED');
 
-      // If RESOLVED, verify the refinement result flows back correctly
-      if (refinement.resolution === 'RESOLVED') {
-        expect(refinement.candidateId).toBe('CANDIDATE_1');
-        expect(refinement.mechanismId).toBeDefined();
-        expect(refinement.mechanism).not.toBeNull();
-      }
+      // Verify the refinement result flows back correctly
+      expect(refinement.candidateId).toBe('CANDIDATE_1');
+      // mechanismId is placeholder (candidateId) for UNCHANGED status
+      expect(refinement.mechanismId).toBe('CANDIDATE_1');
+      // mechanism is null for UNCHANGED status (no new mechanism produced)
+      expect(refinement.mechanism).toBeNull();
     });
   });
 });

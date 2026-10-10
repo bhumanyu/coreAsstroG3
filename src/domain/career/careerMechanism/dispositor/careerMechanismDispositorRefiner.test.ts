@@ -556,6 +556,63 @@ describe('CareerMechanismDispositorRefiner', () => {
     });
   });
 
+  describe('AGENCY mechanism test for Finding 2', () => {
+    it('returns UNCHANGED for AGENCY with SUN→MARS TERMINAL context (no applicable rule)', () => {
+      const candidate: CareerMechanismCandidate = {
+        candidateId: 'CAREER_MECHANISM_CANDIDATE:pattern-1:AGENCY',
+        patternId: 'pattern-1',
+        mechanismType: 'AGENCY',
+        pathway: 'PATTERN',
+        evidence: [
+          {
+            evidenceId: 'ev-1',
+            mechanismType: 'AGENCY',
+            source: 'PATTERN',
+            role: 'ESTABLISHING',
+            participantIds: ['PLANET:SUN'],
+            relationshipIds: [],
+            patternId: 'pattern-1',
+            explanation: 'Agency mechanism from pattern'
+          }
+        ],
+        provenance: {
+          patternIds: ['pattern-1'],
+          relationshipIds: [],
+          participantIds: ['PLANET:SUN'],
+          evidenceIds: ['ev-1'],
+          sourceStages: ['PATTERN']
+        },
+        explanation: 'Agency candidate'
+      };
+
+      // SUN→MARS TERMINAL context (exact fixture from orchestration test)
+      const context: CareerDispositorContext = {
+        startPlanetId: Planet.SUN,
+        chain: [Planet.SUN, Planet.MARS],
+        terminalPlanetId: Planet.MARS,
+        depth: 2,
+        outcome: 'TERMINAL',
+        chainId: 'CHAIN:SUN:MARS',
+        provenanceIds: ['PROVENANCE_1'],
+        sourceEvidenceIds: ['SOURCE_EVIDENCE_1'],
+        relevantHouseIds: [10],
+        sufficientData: true
+      };
+
+      const input: CareerMechanismDispositorRefinementInput = {
+        candidate,
+        dispositorContexts: [context]
+      };
+
+      const result = defaultCareerMechanismDispositorRefiner.refine(input);
+
+      // AGENCY has no applicable dispositor rule for this context
+      // Should return UNCHANGED
+      expect(result.status).toBe('UNCHANGED');
+      expect(result.mechanisms.length).toBe(0);
+    });
+  });
+
   describe('Original candidate preservation', () => {
     it('preserves original candidate mechanism and evidence', () => {
       const originalEvidence: CareerMechanismEvidence = {

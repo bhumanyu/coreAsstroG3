@@ -42,6 +42,10 @@ import type {
  * This evidence is attached to all candidates derived from the pattern,
  * while typed establishing evidence (with mechanismType) is attached only
  * to matching mechanism types.
+ *
+ * IMPORTANT: patternId is REQUIRED for pattern-level establishing evidence.
+ * This ensures evidence can be validated against the candidate's patternId
+ * and prevents cross-pattern evidence contamination.
  */
 export interface PatternLevelEstablishingEvidence {
   readonly evidenceId: string;
@@ -50,7 +54,7 @@ export interface PatternLevelEstablishingEvidence {
   readonly role: 'ESTABLISHING'; // Always establishing for this type
   readonly participantIds: readonly string[];
   readonly relationshipIds: readonly string[];
-  readonly patternId?: string;
+  readonly patternId: string; // Required - identifies which pattern this evidence belongs to
   readonly explanation: string;
 }
 

@@ -78,6 +78,7 @@ interface CanonicalCareerFoundation {
 6. **No Fabricated Types:** Establishing evidence does not fabricate mechanismType - it is optional and determined by the resolver
 7. **Empty Contexts = UNAVAILABLE:** When dispositor contexts are unavailable, refinements are marked UNAVAILABLE without calling the refiner
 8. **Unresolved Identity:** When the refiner provides no mechanism ID, mechanismId is empty string (unresolved), not aliased to candidateId
+9. **Mixed Establishing Evidence Outcomes:** The `establishingEvidenceStatus` field on `ResolvedMechanism` is a single priority-ordered value (RESOLVED_FOR_MECHANISM > REJECTED > SOURCE_EVIDENCE_PRESENT > UNRESOLVED > UNAVAILABLE). `RESOLVED_FOR_MECHANISM` means "at least one establishing record was accepted" — it does NOT imply all evidence was accepted. Downstream consumers MUST inspect the three ID lists (`acceptedEstablishingEvidenceIds`, `rejectedEstablishingEvidenceIds`, `firewallExcludedEstablishingEvidenceIds`) on `ResolvedMechanism` to detect mixed outcomes where both accepted and rejected/firewall-excluded evidence are present.
 
 ## Port Adapter Mapping
 
