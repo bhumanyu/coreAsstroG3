@@ -26,7 +26,56 @@ export * from './careerFinalSynthesis';
 export * from './careerGraph';
 export * from './careerPattern';
 export * from './careerPatternQualification';
+export * from './careerParticipantRoles';
+export * from './careerMechanism';
 export * from './careerTrajectory';
+
+// Orchestration exports (selective to avoid conflicts)
+export {
+    CanonicalCareerOrchestrator,
+    type CanonicalCareerFoundation,
+    type CanonicalCareerOrchestrationInput,
+    type CareerOrchestrationPorts,
+    type QualificationPort,
+    type ParticipantRolesPort,
+    type MechanismResolverPort,
+    type MechanismRefinerPort,
+    type PatternCandidate,
+    type PatternQualification,
+    type ResolvedMechanism,
+    type MechanismRefinement,
+    type CareerFoundationSupplement,
+    type IdentityMapping,
+    type OrchestrationDiagnostic,
+    type EvidenceIdentityKey,
+    type OccurrenceId,
+    type SourceId,
+    type RuleId,
+    type MechanismId,
+    type StageEvidence,
+    type StageReference,
+    validateUniquePatternIds,
+    validateQualificationPatternReferences,
+    validateUniqueMechanismIds,
+    validateMechanismPatternReferences,
+    validateRefinementCandidateReferences,
+    validateIdentityMappings,
+    validateCanonicalCareerFoundation,
+    QualificationPortAdapter,
+    ParticipantRolesPortAdapter,
+    MechanismResolverPortAdapter,
+    MechanismRefinerPortAdapter,
+    qualificationPortAdapter,
+    participantRolesPortAdapter,
+    mechanismResolverPortAdapter,
+    mechanismRefinerPortAdapter,
+    defaultCareerOrchestrationPorts
+} from './orchestration';
+
+// Resolve export conflicts by explicitly re-exporting
+export {
+    CareerMechanism as PatternCareerMechanism
+} from './careerPattern/careerPatternTypes';
 export {
     // Type exports
     type CareerDispositorStartRole,
