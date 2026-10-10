@@ -5,7 +5,8 @@ import type {
   CareerMechanismEvidenceSource,
   CareerMechanismPathway,
   CareerMechanismProvenance,
-  CareerMechanismType
+  CareerMechanismType,
+  ParticipantId
 } from '../careerMechanismTypes';
 import type {
   CareerMechanismResolutionInput,
@@ -128,7 +129,7 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       const pathway: CareerMechanismPathway = 'PATTERN';
 
       // Build evidence for this candidate (must be built before provenance)
-      const evidence = this.buildCandidateEvidence(
+      const [evidence, acceptedEstablishingEvidenceIds] = this.buildCandidateEvidence(
         pattern.patternId,
         candidateId,
         mechanismType,
@@ -146,14 +147,15 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
       // Build explanation
       const explanation = this.buildExplanation(mechanismType, input);
 
-      // Create candidate
+      // Create candidate with accepted establishing evidence IDs
       const candidate = createCareerMechanismCandidate(
         pattern.patternId,
         mechanismType,
         pathway,
         evidence,
         provenance,
-        explanation
+        explanation,
+        acceptedEstablishingEvidenceIds.length > 0 ? acceptedEstablishingEvidenceIds : undefined
       );
 
       candidates.push(candidate);
@@ -191,12 +193,16 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
    * mechanismType) is attached only to matching mechanism types. Both are gated
    * by ESTABLISHING_EVIDENCE_SOURCES on the source field.
    *
+   * Returns a tuple of [evidence array, accepted establishing evidence IDs].
+   * The accepted IDs track which supplied establishing evidence was validated
+   * and attached to this candidate (used by orchestrator to derive status).
+   *
    * @param patternId - The pattern ID
    * @param candidateId - The candidate ID
    * @param mechanismType - The mechanism type
    * @param pathway - The mechanism pathway
    * @param input - The resolution input
-   * @returns Frozen array of evidence records
+   * @returns Frozen array of evidence records and accepted establishing evidence IDs
    */
   private buildCandidateEvidence(
     patternId: string,
@@ -204,8 +210,9 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
     mechanismType: CareerMechanismType,
     pathway: CareerMechanismPathway,
     input: CareerMechanismResolutionInput
-  ): readonly CareerMechanismEvidence[] {
+  ): readonly [readonly CareerMechanismEvidence[], readonly string[]] {
     const evidence: CareerMechanismEvidence[] = [];
+    const acceptedEstablishingEvidenceIds: string[] = [];
 
     // Add PATTERN evidence (pattern-derived)
     const patternEvidence = buildCareerMechanismEvidence({
@@ -260,35 +267,37 @@ export class DefaultCareerMechanismResolver implements CareerMechanismResolver {
         if (ev.mechanismType === undefined) {
           evidence.push({
             evidenceId: ev.evidenceId,
-            mechanismId: candidateId,
             mechanismType,
             source: ev.source,
             role: ev.role,
-            participantIds: ev.participantIds,
+            participantIds: ev.participantIds as readonly ParticipantId[],
             relationshipIds: ev.relationshipIds,
             patternId: ev.patternId,
             explanation: ev.explanation
           });
+          // Track this as accepted establishing evidence
+          acceptedEstablishingEvidenceIds.push(ev.evidenceId);
         }
         // Typed evidence: attach only to matching mechanism types
         else if (ev.mechanismType === mechanismType) {
           evidence.push({
             evidenceId: ev.evidenceId,
-            mechanismId: candidateId,
             mechanismType: ev.mechanismType,
             source: ev.source,
             role: ev.role,
-            participantIds: ev.participantIds,
+            participantIds: ev.participantIds as readonly ParticipantId[],
             relationshipIds: ev.relationshipIds,
             patternId: ev.patternId,
             explanation: ev.explanation
           });
+          // Track this as accepted establishing evidence
+          acceptedEstablishingEvidenceIds.push(ev.evidenceId);
         }
       }
     }
 
-    // Return frozen array
-    return Object.freeze(evidence);
+    // Return frozen array and accepted IDs
+    return Object.freeze([Object.freeze(evidence), Object.freeze(acceptedEstablishingEvidenceIds)]);
   }
 
   /**

@@ -31,6 +31,9 @@ import type {
   CareerMechanismType
 } from '../careerMechanism/careerMechanismTypes';
 import type {
+  PatternLevelEstablishingEvidence
+} from '../careerMechanism/resolver';
+import type {
   CareerMechanismDispositorRefinementResult
 } from '../careerMechanism/dispositor/careerMechanismDispositorTypes';
 import type {
@@ -835,7 +838,7 @@ describe('CanonicalCareerOrchestrator', () => {
           diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
           severity: 'WARNING',
           category: 'MISSING_DATA',
-          message: expect.stringContaining('Dispositor contexts are not yet provided')
+          message: expect.stringContaining('Dispositor contexts are not provided')
         })
       );
     });
@@ -896,11 +899,53 @@ describe('CanonicalCareerOrchestrator', () => {
       });
 
       // With dispositor contexts unavailable, refiner is not called
-      // resolution is UNRESOLVED, status is UNAVAILABLE
-      expect(foundation.mechanismRefinements[0].resolution).toBe('UNRESOLVED');
-      expect(foundation.mechanismRefinements[0].status).toBe('UNAVAILABLE');
-      expect(foundation.mechanismRefinements[0].mechanism).toBeNull();
+      // All refinements are UNRESOLVED with status UNAVAILABLE
+      const refinement = foundation.mechanismRefinements[0];
+      expect(refinement.resolution).toBe('UNRESOLVED');
+      expect(refinement.status).toBe('UNAVAILABLE');
+      expect(refinement.mechanism).toBeNull();
+      // Type guard: UNRESOLVED variant has no mechanismId property
+      expect('mechanismId' in refinement).toBe(false);
     });
+
+    it('should type-guard UNRESOLVED refinement correctly', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      const refinement = foundation.mechanismRefinements[0];
+
+      // Type guard: check resolution before accessing variant-specific properties
+      if (refinement.resolution === 'UNRESOLVED') {
+        // In UNRESOLVED branch, mechanismId is not available
+        expect(refinement.status).toBe('UNAVAILABLE');
+        expect(refinement.mechanism).toBeNull();
+        // TypeScript should error if we try to access refinement.mechanismId here
+        // @ts-expect-error - mechanismId does not exist on UNRESOLVED variant
+        const _mechanismId = refinement.mechanismId;
+      } else {
+        // RESOLVED branch - mechanismId is available
+        expect(refinement.mechanismId).toBeDefined();
+      }
+    });
+
+    // Note: resolver-reported acceptance tests are in careerMechanismResolver.test.ts
+    // The orchestrator consumes the resolver's acceptedEstablishingEvidenceIds output
   });
 
   describe('Identity mappings deferred', () => {
@@ -1084,7 +1129,6 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(capturedInputs).toHaveLength(1);
       expect(capturedInputs[0].establishingEvidence).toHaveLength(1);
       expect(capturedInputs[0].establishingEvidence[0].evidenceId).toBe('EVIDENCE_1');
-      expect(capturedInputs[0].establishingEvidenceStatus).toBe('RESOLVED');
     });
 
     it('should emit WARNING diagnostic when qualified pattern has no establishing evidence', () => {
@@ -1173,7 +1217,7 @@ describe('CanonicalCareerOrchestrator', () => {
   });
 
   describe('Identity vs occurrence namespace preservation', () => {
-    it('should preserve identityKey when available in mechanism evidence', () => {
+    it('should use evidenceId as occurrenceId for mechanism evidence (no identityKey)', () => {
       const ports = createStubPorts();
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
         qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
@@ -1184,7 +1228,6 @@ describe('CanonicalCareerOrchestrator', () => {
         evidence: [
           {
             evidenceId: 'EVIDENCE_1',
-            identityKey: 'IDENTITY_MECH_1', // Real identity key
             mechanismType: 'AGENCY',
             source: 'PATTERN',
             role: 'ESTABLISHING',
@@ -1208,7 +1251,9 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      expect(foundation.resolvedMechanisms[0].stageEvidence[0].identityKey).toBe('IDENTITY_MECH_1');
+      // Mechanism evidence does not use identityKey - identityKey is undefined
+      expect(foundation.resolvedMechanisms[0].stageEvidence[0].identityKey).toBeUndefined();
+      // occurrenceId is set to evidenceId
       expect(foundation.resolvedMechanisms[0].stageEvidence[0].occurrenceId).toBe('EVIDENCE_1');
     });
 
@@ -1381,7 +1426,7 @@ describe('CanonicalCareerOrchestrator', () => {
           diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
           severity: 'WARNING',
           category: 'MISSING_DATA',
-          message: expect.stringContaining('all refinements marked UNAVAILABLE without calling refiner')
+          message: expect.stringContaining('Dispositor contexts are not provided')
         })
       );
     });
@@ -1408,10 +1453,11 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // When dispositor contexts are unavailable, mechanismId is empty string (unresolved)
-      expect(foundation.mechanismRefinements[0].mechanismId).toBe('');
-      expect(foundation.mechanismRefinements[0].status).toBe('UNAVAILABLE');
-      expect(foundation.mechanismRefinements[0].mechanismId).not.toBe('CANDIDATE_1'); // Not aliased to candidate ID
+      // When dispositor contexts are unavailable, refinement is UNRESOLVED with no mechanismId
+      const refinement = foundation.mechanismRefinements[0];
+      expect(refinement.resolution).toBe('UNRESOLVED');
+      expect(refinement.status).toBe('UNAVAILABLE');
+      expect('mechanismId' in refinement).toBe(false); // UNRESOLVED variant has no mechanismId
     });
   });
 

@@ -4,7 +4,8 @@ import {
 } from './defaultCareerMechanismResolver';
 import { CAREER_MECHANISM_RESOLUTION_RULES } from './careerMechanismResolverRules';
 import type {
-  CareerMechanismResolutionInput
+  CareerMechanismResolutionInput,
+  PatternLevelEstablishingEvidence
 } from './careerMechanismResolverTypes';
 import type {
   CareerPattern,
@@ -461,7 +462,7 @@ describe('careerMechanismResolver', () => {
 
   describe('Regression tests - establishing-evidence source firewall (Test B)', () => {
     it('should filter out non-structural evidence sources from establishingEvidence', () => {
-      const mockEvidence: CareerMechanismEvidence[] = [
+      const mockEvidence: PatternLevelEstablishingEvidence[] = [
         {
           evidenceId: 'CAREER_MECHANISM_EVIDENCE:D10:1',
           mechanismType: 'RESEARCH',
@@ -596,6 +597,98 @@ describe('careerMechanismResolver', () => {
       expect(result.candidates.length).toBe(0);
     });
   });
+
+  describe('End-to-end establishing evidence identity trace', () => {
+    it('should populate acceptedEstablishingEvidenceIds from supplied establishing evidence', () => {
+      const establishingEvidence: PatternLevelEstablishingEvidence[] = [
+        {
+          evidenceId: 'EVIDENCE_1',
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Pattern-level establishing evidence'
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence
+      });
+
+      const result = resolver.resolve(input);
+
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      // Each candidate should have acceptedEstablishingEvidenceIds populated
+      for (const candidate of result.candidates) {
+        expect(candidate.acceptedEstablishingEvidenceIds).toBeDefined();
+        expect(candidate.acceptedEstablishingEvidenceIds).toContain('EVIDENCE_1');
+      }
+    });
+
+    it('should not populate acceptedEstablishingEvidenceIds when no establishing evidence supplied', () => {
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence: []
+      });
+
+      const result = resolver.resolve(input);
+
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      // Candidates should not have acceptedEstablishingEvidenceIds
+      for (const candidate of result.candidates) {
+        expect(candidate.acceptedEstablishingEvidenceIds).toBeUndefined();
+      }
+    });
+
+    it('should filter out non-structural establishing evidence sources', () => {
+      const establishingEvidence: PatternLevelEstablishingEvidence[] = [
+        {
+          evidenceId: 'EVIDENCE_PATTERN',
+          source: 'PATTERN',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Valid structural evidence'
+        },
+        {
+          evidenceId: 'EVIDENCE_D10',
+          source: 'D10',
+          role: 'ESTABLISHING',
+          participantIds: [],
+          relationshipIds: [],
+          patternId: 'pattern-1',
+          explanation: 'Invalid non-structural evidence'
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED',
+        establishingEvidence
+      });
+
+      const result = resolver.resolve(input);
+
+      expect(result.candidates.length).toBeGreaterThan(0);
+
+      // Only structural evidence should be accepted
+      for (const candidate of result.candidates) {
+        expect(candidate.acceptedEstablishingEvidenceIds).toBeDefined();
+        expect(candidate.acceptedEstablishingEvidenceIds).toContain('EVIDENCE_PATTERN');
+        expect(candidate.acceptedEstablishingEvidenceIds).not.toContain('EVIDENCE_D10');
+      }
+    });
+  });
 });
 
 /**
@@ -608,7 +701,7 @@ function createMockInput(overrides: {
   establishingRelationshipIds: string[];
   status: CareerPatternQualificationStatus;
   participantRoles?: ParticipantRoleAssignment[];
-  establishingEvidence?: CareerMechanismEvidence[];
+  establishingEvidence?: PatternLevelEstablishingEvidence[];
   networkRelationships?: CareerGraphEdge[];
   networkHouses?: number[];
 }): CareerMechanismResolutionInput {

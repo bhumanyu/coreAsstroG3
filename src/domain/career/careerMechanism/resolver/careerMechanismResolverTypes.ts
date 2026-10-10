@@ -55,11 +55,6 @@ export interface PatternLevelEstablishingEvidence {
 }
 
 /**
- * Re-export PatternLevelEstablishingEvidence for use by port adapters.
- */
-export type { PatternLevelEstablishingEvidence };
-
-/**
  * Input for mechanism resolution.
  * Contains the pattern, qualification, participant roles, establishing evidence,
  * and source network(s) for canonical edge resolution.

@@ -30,6 +30,9 @@ import type {
 import type {
   PatternLevelEstablishingEvidence
 } from '../careerMechanism/resolver';
+import type {
+  CareerDispositorContext
+} from '../careerMechanism/dispositor';
 
 /**
  * P2-11B Canonical Career Orchestrator Contracts
@@ -333,6 +336,11 @@ export interface CanonicalCareerOrchestrationInput {
 
   // Networks (P2-06)
   readonly networks: readonly CareerHouseNetwork[];
+
+  // Dispositor contexts for mechanism refinement (P2-07E)
+  // When provided, these contexts enable the refiner to produce RESOLVED refinements
+  // When absent or empty, all refinements are marked UNRESOLVED with status UNAVAILABLE
+  readonly dispositorContexts?: readonly CareerDispositorContext[];
 
   // 10H/10L supplements (P2-07F/G)
   // Accept result objects to get status and missingInputs for accurate availability reporting

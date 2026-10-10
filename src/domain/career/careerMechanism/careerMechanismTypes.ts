@@ -295,6 +295,14 @@ export interface CareerMechanismCandidate {
   readonly evidence: readonly CareerMechanismEvidence[];
   readonly provenance: CareerMechanismProvenance;
   readonly explanation: string;
+  /**
+   * IDs of establishing evidence records that were accepted for this candidate.
+   * This explicitly identifies which supplied establishing evidence was validated
+   * (matching source + ESTABLISHING role + expected pattern reference + provenance agreement).
+   * When present, this should be used to derive establishingEvidenceStatus instead of
+   * naive evidence ID intersection.
+   */
+  readonly acceptedEstablishingEvidenceIds?: readonly string[];
 }
 
 /**
