@@ -25,6 +25,15 @@ import {
   Planet
 } from '../../../types';
 
+import {
+  CAREER_DASHA_CANONICAL_EFFECTS,
+  CAREER_DASHA_CANONICAL_ROLES
+} from '../careerDasha/careerDashaCanonicalTypes';
+
+import {
+  REASONING_DIRECTIONS
+} from '../../reasoning/reasoningTypes';
+
 /**
  * P2-09A trajectory fixture factory.
  */
@@ -739,6 +748,54 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event 2'
+      };
+
+      expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
+    });
+
+    it('dedupeEvents throws on conflicting statement for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1'
+      };
+
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Different statement' // Different statement
+      };
+
+      expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
+    });
+
+    it('dedupeEvents throws on conflicting status for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1'
+      };
+
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CONFIRMED' as any, // Different status
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Test event 1'
       };
 
       expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
@@ -1461,92 +1518,258 @@ describe('CareerEventEngine', () => {
       expect(() => buildCareerEvents(input)).toThrow("Invalid md period role: 'INVALID' is not a valid role");
     });
 
-    it('empty Dasha evidence produces no events for activating periods', () => {
+    it('non-object evidence item throws error', () => {
       const trajectory = createTrajectoryFixture({
         opportunities: [createOpportunity()]
       });
 
       const dasha = createDashaFixture({
-        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT', planet: Planet.SUN }),
-        evidence: []
+        md: createPeriod('MD'),
+        evidence: [null as any] // Non-object evidence
       });
 
       const input = createEventsInput(trajectory, dasha);
-      const result = buildCareerEvents(input);
 
-      // No event when no matching Dasha evidence
-      expect(result.events).toHaveLength(0);
+      expect(() => buildCareerEvents(input)).toThrow('Evidence at index 0 must be a non-null object');
+    });
+
+    it('malformed planet value throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { planet: 'INVALID_PLANET' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period planet: 'INVALID_PLANET' is not a valid Planet");
+    });
+
+    it('unsupported effect value throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'UNSUPPORTED_EFFECT' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period effect: 'UNSUPPORTED_EFFECT' is not a valid effect");
+    });
+
+    it('unsupported direction value throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { direction: 'UNSUPPORTED_DIRECTION' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period direction: 'UNSUPPORTED_DIRECTION' is not a valid direction");
+    });
+
+    it('unsupported role value throws error', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { role: 'UNSUPPORTED_ROLE' as any })
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow("Invalid md period role: 'UNSUPPORTED_ROLE' is not a valid role");
     });
   });
 
-  describe('Deep immutability tests', () => {
-    it('deep freezes all nested structures', () => {
-      const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity()]
-      });
+  describe('Exhaustive validation tests for canonical values', () => {
+    it('accepts all canonical effect values', () => {
+      for (const effect of CAREER_DASHA_CANONICAL_EFFECTS) {
+        const trajectory = createTrajectoryFixture({
+          opportunities: [createOpportunity()]
+        });
 
-      const dasha = createDashaFixture({
-        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
-      });
+        const dasha = createDashaFixture({
+          md: createPeriod('MD', { effect: effect as any, direction: 'SUPPORT' }),
+          evidence: [createDashaEvidence('MD', { effect: effect as any, direction: 'SUPPORT' })]
+        });
 
-      const input = createEventsInput(trajectory, dasha);
-      const result = buildCareerEvents(input);
+        const input = createEventsInput(trajectory, dasha);
 
-      // Top-level frozen
-      expect(Object.isFrozen(result)).toBe(true);
-      expect(Object.isFrozen(result.events)).toBe(true);
-      expect(Object.isFrozen(result.evidenceIds)).toBe(true);
+        // Should not throw for any valid effect
+        expect(() => buildCareerEvents(input)).not.toThrow();
+      }
+    });
 
-      // Event frozen
-      expect(Object.isFrozen(result.events[0])).toBe(true);
-      expect(Object.isFrozen(result.events[0].evidenceIds)).toBe(true);
-      expect(Object.isFrozen(result.events[0].ruleIds)).toBe(true);
-      expect(Object.isFrozen(result.events[0].timing)).toBe(true);
+    it('accepts all canonical direction values', () => {
+      for (const direction of REASONING_DIRECTIONS) {
+        const trajectory = createTrajectoryFixture({
+          opportunities: [createOpportunity()]
+        });
+
+        const dasha = createDashaFixture({
+          md: createPeriod('MD', { effect: 'ACTIVATES', direction: direction as any }),
+          evidence: [createDashaEvidence('MD', { effect: 'ACTIVATES', direction: direction as any })]
+        });
+
+        const input = createEventsInput(trajectory, dasha);
+
+        // Should not throw for any valid direction
+        expect(() => buildCareerEvents(input)).not.toThrow();
+      }
+    });
+
+    it('accepts all canonical role values', () => {
+      for (const role of CAREER_DASHA_CANONICAL_ROLES) {
+        const trajectory = createTrajectoryFixture({
+          opportunities: [createOpportunity()]
+        });
+
+        const dasha = createDashaFixture({
+          md: createPeriod('MD', { role: role as any }),
+          evidence: [createDashaEvidence('MD', { role: role as any })]
+        });
+
+        const input = createEventsInput(trajectory, dasha);
+
+        // Should not throw for any valid role
+        expect(() => buildCareerEvents(input)).not.toThrow();
+      }
     });
   });
 
-  describe('Input non-mutation tests', () => {
-    it('does not mutate input trajectory', () => {
-      const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity()]
-      });
-
-      const dasha = createDashaFixture({
-        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
-      });
-
-      const originalOppCount = trajectory.opportunities.length;
-      const originalOppMode = trajectory.opportunities[0].mode;
-
-      const input = createEventsInput(trajectory, dasha);
-      buildCareerEvents(input);
-
-      // Verify input not mutated
-      expect(trajectory.opportunities.length).toBe(originalOppCount);
-      expect(trajectory.opportunities[0].mode).toBe(originalOppMode);
+  it('empty Dasha evidence produces no events for activating periods', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity()]
     });
 
-    it('does not mutate input dasha', () => {
-      const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity()]
-      });
-
-      const dasha = createDashaFixture({
-        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
-      });
-
-      const originalEvidenceCount = dasha.evidence.length;
-      const originalEvidenceId = dasha.evidence[0].identityKey;
-
-      const input = createEventsInput(trajectory, dasha);
-      buildCareerEvents(input);
-
-      // Verify input not mutated
-      expect(dasha.evidence.length).toBe(originalEvidenceCount);
-      expect(dasha.evidence[0].identityKey).toBe(originalEvidenceId);
+    const dasha = createDashaFixture({
+      md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT', planet: Planet.SUN }),
+      evidence: []
     });
+
+    const input = createEventsInput(trajectory, dasha);
+    const result = buildCareerEvents(input);
+
+    // No event when no matching Dasha evidence
+    expect(result.events).toHaveLength(0);
   });
+
+  it('distinct invalid date strings produce distinct eventIds even with UNTIMED timing', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity({ evidenceIds: ['evidence-1'] })]
+    });
+
+    const dasha = createDashaFixture({
+      md: createPeriod('MD', {
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT',
+        planet: Planet.SUN,
+        start: 'invalid-date-1',
+        end: 'invalid-date-2'
+      }),
+      ad: createPeriod('AD', {
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT',
+        planet: Planet.SUN,
+        start: 'partial-date-1',
+        end: 'partial-date-2'
+      }),
+      evidence: [
+        createDashaEvidence('MD'),
+        createDashaEvidence('AD', { level: 'AD', planet: Planet.SUN, role: 'MODIFIER' })
+      ]
+    });
+
+    const input = createEventsInput(trajectory, dasha);
+    const result = buildCareerEvents(input);
+
+    // Both should produce UNTIMED timing due to invalid dates
+    expect(result.events).toHaveLength(2);
+    expect(result.events[0].timing.type).toBe('UNTIMED');
+    expect(result.events[1].timing.type).toBe('UNTIMED');
+
+    // But eventIds should be distinct (different source date strings)
+    expect(result.events[0].eventId).not.toBe(result.events[1].eventId);
+  });
+});
+
+describe('Deep immutability tests', () => {
+  it('deep freezes all nested structures', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity()]
+    });
+
+    const dasha = createDashaFixture({
+      md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    const input = createEventsInput(trajectory, dasha);
+    const result = buildCareerEvents(input);
+
+    // Top-level frozen
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.events)).toBe(true);
+    expect(Object.isFrozen(result.evidenceIds)).toBe(true);
+
+    // Event frozen
+    expect(Object.isFrozen(result.events[0])).toBe(true);
+    expect(Object.isFrozen(result.events[0].evidenceIds)).toBe(true);
+    expect(Object.isFrozen(result.events[0].ruleIds)).toBe(true);
+    expect(Object.isFrozen(result.events[0].timing)).toBe(true);
+  });
+});
+
+describe('Input non-mutation tests', () => {
+  it('does not mutate input trajectory', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity()]
+    });
+
+    const dasha = createDashaFixture({
+      md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    const originalOppCount = trajectory.opportunities.length;
+    const originalOppMode = trajectory.opportunities[0].mode;
+
+    const input = createEventsInput(trajectory, dasha);
+    buildCareerEvents(input);
+
+    // Verify input not mutated
+    expect(trajectory.opportunities.length).toBe(originalOppCount);
+    expect(trajectory.opportunities[0].mode).toBe(originalOppMode);
+  });
+
+  it('does not mutate input dasha', () => {
+    const trajectory = createTrajectoryFixture({
+      opportunities: [createOpportunity()]
+    });
+
+    const dasha = createDashaFixture({
+      md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+      evidence: [createDashaEvidence('MD')]
+    });
+
+    const originalEvidenceCount = dasha.evidence.length;
+    const originalEvidenceId = dasha.evidence[0].identityKey;
+
+    const input = createEventsInput(trajectory, dasha);
+    buildCareerEvents(input);
+
+    // Verify input not mutated
+    expect(dasha.evidence.length).toBe(originalEvidenceCount);
+    expect(dasha.evidence[0].identityKey).toBe(originalEvidenceId);
+  });
+});
 });

@@ -26,6 +26,19 @@ export type CareerDashaCanonicalEffect =
   | 'INSUFFICIENT_DATA';
 
 /**
+ * Canonical effect values for validation.
+ * Use satisfies to ensure exhaustiveness at compile time.
+ */
+export const CAREER_DASHA_CANONICAL_EFFECTS = [
+  'ACTIVATES',
+  'PARTIALLY_ACTIVATES',
+  'CHALLENGES',
+  'DOES_NOT_ACTIVATE',
+  'UNKNOWN',
+  'INSUFFICIENT_DATA'
+] as const satisfies readonly CareerDashaCanonicalEffect[];
+
+/**
  * Canonical period level for Dasha activation.
  */
 export type CareerDashaCanonicalLevel =
@@ -41,6 +54,17 @@ export type CareerDashaCanonicalRole =
   | 'MODIFIER'
   | 'REFINEMENT'
   | 'TRIGGER';
+
+/**
+ * Canonical role values for validation.
+ * Use satisfies to ensure exhaustiveness at compile time.
+ */
+export const CAREER_DASHA_CANONICAL_ROLES = [
+  'PRIMARY_DRIVER',
+  'MODIFIER',
+  'REFINEMENT',
+  'TRIGGER'
+] as const satisfies readonly CareerDashaCanonicalRole[];
 
 /**
  * Canonical evidence for C9 Dasha activation.

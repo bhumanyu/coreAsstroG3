@@ -17,6 +17,18 @@ export type ReasoningDirection =
   | 'NEUTRAL'
   | 'UNAVAILABLE';
 
+/**
+ * Reasoning direction values for validation.
+ * Use satisfies to ensure exhaustiveness at compile time.
+ */
+export const REASONING_DIRECTIONS = [
+  'SUPPORT',
+  'CHALLENGE',
+  'MIXED',
+  'NEUTRAL',
+  'UNAVAILABLE'
+] as const satisfies readonly ReasoningDirection[];
+
 export type TimingLevel = 'MD' | 'AD' | 'PD';
 
 export type DomainStrength =

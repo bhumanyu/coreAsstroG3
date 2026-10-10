@@ -17,6 +17,19 @@ import type {
   CareerDashaCanonicalAnalysis
 } from '../careerDasha/careerDashaCanonicalTypes';
 
+import {
+  CAREER_DASHA_CANONICAL_EFFECTS,
+  CAREER_DASHA_CANONICAL_ROLES
+} from '../careerDasha/careerDashaCanonicalTypes';
+
+import {
+  Planet
+} from '../../../types';
+
+import {
+  REASONING_DIRECTIONS
+} from '../../reasoning/reasoningTypes';
+
 /**
  * P2-09B Career Events & Timing Engine
  *
@@ -231,6 +244,13 @@ function collectDashaEvidenceIds(
  * even if evidence IDs contain literal ':' or '|' characters.
  *
  * This ensures distinct semantic opportunities and distinct period windows cannot collapse.
+ *
+ * IMPORTANT: Event ID identity reflects the SOURCE period (raw periodStart/periodEnd strings),
+ * NOT the normalized timing. Two periods with different invalid/partial date strings will
+ * produce distinct eventIds even though buildTiming collapses both to UNTIMED timing.
+ * This is intentional: identity captures the source period specification, while timing
+ * represents the normalized result. A period with 'invalid-date' and a period with 'partial-date'
+ * are distinct source inputs even if both become UNTIMED after normalization.
  */
 function generateEventId(
   eventType: CareerEventType,
@@ -484,7 +504,10 @@ function generateEvents(
  * Deduplicates events by event identity (eventId).
  *
  * Merges evidenceIds and ruleIds when events have the same eventId.
- * Throws if same eventId has conflicting payloads (different eventType or timing).
+ * Throws if same eventId has conflicting payloads (different eventType, timing, status, or statement).
+ *
+ * Payload-identity fields that must agree before merge: eventType, timing, status, statement.
+ * Only evidenceIds and ruleIds are intentionally mergeable (union + sort).
  *
  * Exported for direct unit testing.
  */
@@ -494,10 +517,12 @@ export function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEve
   for (const event of events) {
     const existing = eventMap.get(event.eventId);
     if (existing) {
-      // Check for truly conflicting payloads (eventType or timing)
+      // Check for truly conflicting payloads (all payload-identity fields must agree)
       if (
         existing.eventType !== event.eventType ||
-        JSON.stringify(existing.timing) !== JSON.stringify(event.timing)
+        JSON.stringify(existing.timing) !== JSON.stringify(event.timing) ||
+        existing.status !== event.status ||
+        existing.statement !== event.statement
       ) {
         throw new Error(
           `Conflicting payloads for same eventId: ${event.eventId}`
@@ -544,6 +569,9 @@ export function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEve
  * Validates that each period's level matches its slot.
  * Validates that effect, direction, and role are members of their respective unions.
  * Validates that each evidence item has a non-empty identityKey and valid level.
+ * Validates that periods and evidence items are non-null objects.
+ * Validates planet field (if present) is a valid Planet member.
+ * Validates start/end fields (if present) are strings.
  */
 function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
   if (!dasha.md || !dasha.ad || !dasha.pd) {
@@ -552,6 +580,13 @@ function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
 
   if (!Array.isArray(dasha.evidence)) {
     throw new Error('Dasha analysis must include evidence array');
+  }
+
+  // Validate periods are non-null objects
+  for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
+    if (period === null || typeof period !== 'object') {
+      throw new Error(`Invalid ${slot} period: must be a non-null object`);
+    }
   }
 
   // Validate period level matches slot
@@ -566,7 +601,7 @@ function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
   }
 
   // Validate effect values
-  const validEffects = new Set(['ACTIVATES', 'PARTIALLY_ACTIVATES', 'CHALLENGES', 'DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA']);
+  const validEffects = new Set(CAREER_DASHA_CANONICAL_EFFECTS);
   for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
     if (!validEffects.has(period.effect)) {
       throw new Error(`Invalid ${slot} period effect: '${period.effect}' is not a valid effect`);
@@ -574,7 +609,7 @@ function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
   }
 
   // Validate direction values
-  const validDirections = new Set(['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'UNAVAILABLE']);
+  const validDirections = new Set(REASONING_DIRECTIONS);
   for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
     if (!validDirections.has(period.direction)) {
       throw new Error(`Invalid ${slot} period direction: '${period.direction}' is not a valid direction`);
@@ -582,10 +617,28 @@ function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
   }
 
   // Validate role values
-  const validRoles = new Set(['PRIMARY_DRIVER', 'MODIFIER', 'REFINEMENT', 'TRIGGER']);
+  const validRoles = new Set(CAREER_DASHA_CANONICAL_ROLES);
   for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
     if (!validRoles.has(period.role)) {
       throw new Error(`Invalid ${slot} period role: '${period.role}' is not a valid role`);
+    }
+  }
+
+  // Validate planet field (if present) is a valid Planet member
+  const validPlanets = new Set(Object.values(Planet));
+  for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
+    if (period.planet !== undefined && !validPlanets.has(period.planet)) {
+      throw new Error(`Invalid ${slot} period planet: '${period.planet}' is not a valid Planet`);
+    }
+  }
+
+  // Validate start/end fields (if present) are strings
+  for (const [slot, period] of [['md', dasha.md], ['ad', dasha.ad], ['pd', dasha.pd]] as const) {
+    if (period.start !== undefined && typeof period.start !== 'string') {
+      throw new Error(`Invalid ${slot} period start: must be a string if present`);
+    }
+    if (period.end !== undefined && typeof period.end !== 'string') {
+      throw new Error(`Invalid ${slot} period end: must be a string if present`);
     }
   }
 
@@ -593,6 +646,11 @@ function validateDashaAnalysis(dasha: CareerDashaCanonicalAnalysis): void {
   const validLevels = new Set(['MD', 'AD', 'PD']);
   for (let i = 0; i < dasha.evidence.length; i++) {
     const evidence = dasha.evidence[i];
+
+    // Check evidence is a non-null object
+    if (evidence === null || typeof evidence !== 'object') {
+      throw new Error(`Evidence at index ${i} must be a non-null object`);
+    }
 
     // Check non-empty identityKey
     if (!evidence.identityKey || typeof evidence.identityKey !== 'string' || evidence.identityKey.trim() === '') {

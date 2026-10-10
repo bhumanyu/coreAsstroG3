@@ -182,6 +182,10 @@ The JSON encoding with nested arrays provides structural delimiters, making the 
 
 This ensures distinct semantic opportunities and distinct period windows cannot collapse.
 
+**Event ID vs Timing Identity Contract:**
+
+Event ID identity reflects the SOURCE period (raw periodStart/periodEnd strings), NOT the normalized timing. Two periods with different invalid/partial date strings will produce distinct eventIds even though `buildTiming` collapses both to `UNTIMED` timing. This is intentional: identity captures the source period specification, while timing represents the normalized result. A period with 'invalid-date' and a period with 'partial-date' are distinct source inputs even if both become `UNTIMED` after normalization.
+
 ### Evidence ID Handling
 
 - Collect evidence IDs from trajectory opportunities and Dasha evidence.
