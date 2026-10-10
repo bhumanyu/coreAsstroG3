@@ -93,6 +93,11 @@ import {
 } from '../../domain/synthesis';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import { deepFreeze } from './deepFreeze';
+import {
+  projectCanonicalCareerC11,
+  projectCareerProfessionAnalysis
+} from './careerIntelligenceProjection';
+import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 
 /**
  * Options to avoid double calculation when domain interpretations and life analysis
@@ -117,6 +122,11 @@ export interface BuildAiContextOptions {
    * Explicit analysis timestamp (ISO string).
    */
   readonly asOf?: string;
+  /**
+   * Pre-computed career profession analysis from P2-10A.
+   * When provided, this is projected into AI context.
+   */
+  readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
 }
 
 /**
@@ -126,6 +136,7 @@ export interface ProductAiContextOptions {
   readonly domainInterpretations: readonly DomainInterpretation[];
   readonly lifeAnalysis: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
+  readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
 }
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -557,7 +568,8 @@ function mapThemeEffectToStatus(
 function buildCareerFact(
   horoscope: Horoscope,
   careerInterpretation?: DomainInterpretation,
-  asOf?: string
+  asOf?: string,
+  careerProfessionAnalysis?: CareerProfessionAnalysis
 ): CareerFact | undefined {
   const career = horoscope.themeInterpretationV2?.career;
   const timing = buildNormalizedCareerTiming(careerInterpretation, asOf) as CareerTimingFact | undefined;
@@ -717,6 +729,9 @@ function buildCareerFact(
   const careerFinalSynthesis = careerInterpretation?.conclusionData?.careerFinalSynthesis;
   const careerFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(careerFinalSynthesis);
 
+  const canonicalC11 = projectCanonicalCareerC11(careerInterpretation);
+  const profession = projectCareerProfessionAnalysis(careerProfessionAnalysis);
+
   const enrichedTiming: CareerTimingFact | undefined = timing || careerTimingSynthesisFact
     ? {
       ...(timing ?? { status: 'AVAILABLE' }),
@@ -738,7 +753,9 @@ function buildCareerFact(
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
       ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
       ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {}),
-      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {})
+      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {}),
+      ...(canonicalC11 ? { canonicalC11 } : {}),
+      profession
     };
   }
 
@@ -755,7 +772,9 @@ function buildCareerFact(
       ...(enrichedTiming ? { timing: enrichedTiming } : {}),
       ...(dashaSynthesisFact ? { dashaSynthesis: dashaSynthesisFact } : {}),
       ...(careerManifestationSynthesisFacts ? { manifestationSynthesis: careerManifestationSynthesisFacts } : {}),
-      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {})
+      ...(careerFinalSynthesisFact ? { finalSynthesis: careerFinalSynthesisFact } : {}),
+      ...(canonicalC11 ? { canonicalC11 } : {}),
+      profession
     };
   }
 
@@ -1443,7 +1462,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   const wealthInterpretation = rawDomainInterpretations.find((d) => d.domain === 'WEALTH');
   const asOf = options?.temporalState?.asOf ?? options?.asOf;
 
-  const career = careerInterpretation ? buildCareerFact(horoscope, careerInterpretation, asOf) : undefined;
+  const career = careerInterpretation ? buildCareerFact(horoscope, careerInterpretation, asOf, options?.careerProfessionAnalysis) : undefined;
   const wealth = wealthInterpretation ? buildWealthFact(horoscope, wealthInterpretation, asOf) : undefined;
 
   const domainInterpretations: readonly DomainInterpretationAiProjection[] =

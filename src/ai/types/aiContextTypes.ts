@@ -15,6 +15,13 @@ import {
 } from './aiTypes';
 import type { DomainInterpretationAiProjection } from '../../domain/interpretation';
 import type { LifeAnalysisAiProjection } from '../../domain/synthesis';
+import type { CareerFinalSynthesisResult } from '../../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type {
+  CareerProfessionAnalysis,
+  CareerProfessionCandidate,
+  CareerProfessionEvidence,
+  CareerProfessionD10Status
+} from '../../domain/career/careerProfession/careerProfessionTypes';
 
 export type { DomainInterpretationAiProjection, LifeAnalysisAiProjection, TimingActivationEffect, WealthSubthemeKey, TimingSourceCategory };
 
@@ -417,6 +424,107 @@ export interface CareerWealthFinalSynthesisFact {
   readonly riskProfile?: WealthRiskProfile;
 }
 
+/**
+ * P2-10B AI DTO: Career canonical expression fact.
+ * Projects a C11 expression into AI context.
+ */
+export interface AiCareerCanonicalExpressionFact {
+  readonly mode: string;
+  readonly direction: string;
+  readonly strength: string;
+  readonly statement: string;
+}
+
+/**
+ * P2-10B AI DTO: Career canonical conflict fact.
+ * Projects a C11 conflict into AI context.
+ */
+export interface AiCareerCanonicalConflictFact {
+  readonly layers: readonly string[];
+  readonly description: string;
+}
+
+/**
+ * P2-10B AI DTO: Career canonical C11 fact.
+ * Projects the authoritative C11 result into AI context.
+ */
+export interface AiCareerCanonicalC11Fact {
+  readonly reasoningVersion: 'C11';
+  readonly finalStatus: string;
+  readonly finalDirection: string;
+  readonly finalStrength: string;
+  readonly confidence: string;
+  readonly natalDirection: string;
+  readonly natalStrength: string;
+  readonly expressionStatus: string;
+  readonly d10Direction: string;
+  readonly d10Effect: string;
+  readonly dashaEffect: string;
+  readonly dashaDirection: string;
+  readonly timingStatus: string;
+  readonly transitDirection: string;
+  readonly currentPressure: string;
+  readonly expressions: readonly AiCareerCanonicalExpressionFact[];
+  readonly strongestExpressions: readonly string[];
+  readonly challengedExpressions: readonly string[];
+  readonly conflicts: readonly AiCareerCanonicalConflictFact[];
+  readonly statement: string;
+}
+
+/**
+ * P2-10B AI DTO: Career profession evidence fact.
+ * Projects profession evidence into AI context.
+ */
+export interface AiCareerProfessionEvidenceFact {
+  readonly evidenceId: string;
+  readonly basis: string;
+  readonly sourceIds: readonly string[];
+  readonly ruleId: string;
+  readonly statement: string;
+  readonly linkage?: 'COMPLETE' | 'PARTIAL';
+  readonly resolvedMechanismIds?: readonly string[];
+  readonly unresolvedMechanismIds?: readonly string[];
+}
+
+/**
+ * P2-10B AI DTO: Career profession candidate fact.
+ * Projects a profession candidate into AI context.
+ */
+export interface AiCareerProfessionCandidateFact {
+  readonly candidateId: string;
+  readonly domain: string;
+  readonly family: string;
+  readonly basis: string;
+  readonly expressionTypes: readonly string[];
+  readonly mechanismTypes: readonly string[];
+  readonly patternIds: readonly string[];
+  readonly d10Status: CareerProfessionD10Status;
+  readonly evidence: readonly AiCareerProfessionEvidenceFact[];
+  readonly domainEvidenceIds: readonly string[];
+  readonly relatedEvidenceIds: readonly string[];
+  readonly ruleId: string;
+}
+
+/**
+ * P2-10B AI DTO: Career profession status.
+ * Status of profession analysis in AI context.
+ */
+export type AiCareerProfessionStatus = 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+
+/**
+ * P2-10B AI DTO: Career profession fact.
+ * Projects the precomputed P2-10A CareerProfessionAnalysis into AI context.
+ */
+export interface AiCareerProfessionFact {
+  readonly availability: AiAvailability;
+  readonly status: AiCareerProfessionStatus;
+  readonly candidates: readonly AiCareerProfessionCandidateFact[];
+  readonly unresolvedExpressionTypes: readonly string[];
+  readonly mappedTypes: readonly string[];
+  readonly missingInputs: readonly string[];
+  readonly d10Status: CareerProfessionD10Status;
+}
+
 export interface CareerFact {
   readonly status:
   | 'STRONGLY_SUPPORTED'
@@ -435,6 +543,8 @@ export interface CareerFact {
   readonly dashaSynthesis?: CareerDashaSynthesisFact;
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesisFact[];
   readonly finalSynthesis?: CareerWealthFinalSynthesisFact;
+  readonly canonicalC11?: AiCareerCanonicalC11Fact;
+  readonly profession: AiCareerProfessionFact;
 }
 
 export interface WealthDimensionHierarchyFact {
