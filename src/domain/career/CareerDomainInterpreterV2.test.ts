@@ -1388,6 +1388,35 @@ describe('CareerDomainInterpreterV2', () => {
       expect(mapCareerSource(customTransitItem)).toBe('TRANSIT');
       expect(mapCareerPhase(customTransitItem)).toBe('TRANSIT_TRIGGER');
     });
+
+    it('uses legacy transit evidence as compatibility source and preserves trigger effect and natal-promise links', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Transit trigger should be computed from legacy themeInterpretation.transitEvidence
+      expect(v2.transitTrigger).toBeDefined();
+
+      // Verify that transit evidence is NOT in the main evidence array (to prevent double-counting)
+      const transitInMainEvidence = v2.evidence.filter(
+        (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
+      );
+      expect(transitInMainEvidence).toHaveLength(0);
+
+      // Verify that transit evidence is properly linked to natal promises
+      if (v2.transitTrigger.active && v2.transitTrigger.triggeredPromiseEvidenceIds.length > 0) {
+        // When transit is active, verify evidence IDs are preserved
+        expect(v2.transitTrigger.evidenceIds).toBeDefined();
+        expect(v2.transitTrigger.evidenceIds.length).toBeGreaterThan(0);
+
+        // Verify that triggered promise evidence IDs reference actual natal promise evidence
+        const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
+        for (const promiseId of v2.transitTrigger.triggeredPromiseEvidenceIds) {
+          expect(allEvidenceIds.has(promiseId)).toBe(true);
+        }
+      }
+
+      // Verify transit effect is one of the expected values
+      expect(['TRIGGER', 'MODIFIER', 'CHALLENGE', 'NO_MATERIAL_TRIGGER', 'UNKNOWN']).toContain(v2.transitTrigger.effect);
+    });
   });
 
   // 16. Structured CareerConclusionData & Traceability (P1-6 & P1-7)
@@ -1530,19 +1559,17 @@ describe('CareerDomainInterpreterV2', () => {
     expect(byMode).toHaveProperty('INDEPENDENT_WORK');
     expect(byMode).toHaveProperty('BUSINESS_ENTREPRENEURSHIP');
 
-    // P2-11C Gate 5: Canonical evidence cutover updated manifestation statuses
-    // Canonical C4 evidence uses different ruleId patterns (CAREER_STRUCTURAL_*) that do not match
-    // manifestation synthesis rule sets (which expect CAREER_10H_STRONG_001, CAREER_SUN_RELEVANCE_001, etc.)
-    // As a result, all modes currently resolve to INSUFFICIENT_DATA due to lack of matching ruleId patterns
-    // This is a known limitation of the canonical cutover - manifestation synthesis rule pattern alignment
-    // is deferred to a future gate when canonical evidence ruleId patterns are standardized
-    expect(byMode.LEADERSHIP.status).toBe('INSUFFICIENT_DATA');
-    expect(byMode.MANAGEMENT.status).toBe('INSUFFICIENT_DATA');
-    expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('INSUFFICIENT_DATA');
-    expect(byMode.SERVICE_EMPLOYMENT.status).toBe('INSUFFICIENT_DATA');
-    expect(byMode.AUTHORITY.status).toBe('INSUFFICIENT_DATA');
-    expect(byMode.INDEPENDENT_WORK.status).toBe('INSUFFICIENT_DATA');
-    expect(byMode.BUSINESS_ENTREPRENEURSHIP.status).toBe('INSUFFICIENT_DATA');
+    // P2-11C Gate 5: Canonical evidence cutover with ruleId adapter
+    // Canonical C4 evidence ruleIds are now adapted to manifestation-compatible patterns
+    // via adaptCanonicalRuleIdToManifestationRules in canonicalCareerEvidenceMapper
+    // This preserves the intended manifestation hierarchy where canonical evidence supports it
+    expect(byMode.LEADERSHIP.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.MANAGEMENT.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.SERVICE_EMPLOYMENT.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.AUTHORITY.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.INDEPENDENT_WORK.status).toBe('STRONGLY_SUPPORTED');
+    expect(byMode.BUSINESS_ENTREPRENEURSHIP.status).toBe('MIXED');
 
     // Verify structure and contracts for each mode
     for (const syn of manifestations ?? []) {
