@@ -162,4 +162,67 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       expect(mappedLegacy[1].provenance).toBeUndefined();
     });
   });
+
+  describe('Finding 3: Legacy Wealth mapper id/identityKey contract', () => {
+    it('uses identityKey as id when present on raw evidence item', () => {
+      const rawItemWithIdentityKey: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'RAW_OCCURRENCE_ID_123',
+        ruleId: 'WEALTH_2H_STRONG',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: '2nd house of accumulated wealth has auspicious placements',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2],
+        identityKey: 'SEMANTIC_KEY_ABC' as any
+      };
+
+      const [mapped] = buildWealthEvidence([rawItemWithIdentityKey]);
+
+      // Contract: id = identityKey when present
+      expect(mapped.id).toBe('SEMANTIC_KEY_ABC');
+      expect(mapped.identityKey).toBe('SEMANTIC_KEY_ABC');
+      // Original occurrence ID is not preserved in id field
+      expect(mapped.id).not.toBe('RAW_OCCURRENCE_ID_123');
+    });
+
+    it('uses item.id as id when identityKey is absent', () => {
+      const rawItemWithoutIdentityKey: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'RAW_OCCURRENCE_ID_456',
+        ruleId: 'WEALTH_11H_GAINS',
+        evidenceFamily: WealthEvidenceFamily.ELEVENTH_HOUSE,
+        statement: '11th house supports continuous income and gains',
+        effect: 'SUPPORT',
+        strength: 'MODERATE',
+        priority: 'SECONDARY',
+        houses: [11]
+      };
+
+      const [mapped] = buildWealthEvidence([rawItemWithoutIdentityKey]);
+
+      // Contract: id = item.id when identityKey absent
+      expect(mapped.id).toBe('RAW_OCCURRENCE_ID_456');
+      expect(mapped.identityKey).toBeUndefined();
+    });
+
+    it('uses item.id as id when identityKey is undefined', () => {
+      const rawItemWithUndefinedIdentityKey: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+        id: 'RAW_OCCURRENCE_ID_789',
+        ruleId: 'WEALTH_9H_FORTUNE',
+        evidenceFamily: WealthEvidenceFamily.NINTH_HOUSE,
+        statement: '9th house supports fortune and luck',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [9],
+        identityKey: undefined as any
+      };
+
+      const [mapped] = buildWealthEvidence([rawItemWithUndefinedIdentityKey]);
+
+      // Contract: id = item.id when identityKey is undefined (nullish coalescing)
+      expect(mapped.id).toBe('RAW_OCCURRENCE_ID_789');
+      expect(mapped.identityKey).toBeUndefined();
+    });
+  });
 });

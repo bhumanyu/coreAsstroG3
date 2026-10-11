@@ -51,12 +51,26 @@ export interface DomainEvidence {
  * This enables cross-layer evidence matching where multiple occurrences of the same semantic fact
  * should resolve to a single identity.
  *
+ * Edge-case hardening: if both identityKey and id are empty/whitespace, returns a fallback token
+ * to prevent silent failures. Consumers should validate evidence construction to ensure non-empty ids.
+ *
  * @param evidence - The DomainEvidence to resolve
- * @returns The semantic identity (trimmed identityKey if non-empty, otherwise id)
+ * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise fallback token)
  */
 export function resolveSemanticIdentity(e: DomainEvidence): string {
-  const trimmed = e.identityKey?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : e.id;
+  const trimmedIdentityKey = e.identityKey?.trim();
+  if (trimmedIdentityKey && trimmedIdentityKey.length > 0) {
+    return trimmedIdentityKey;
+  }
+
+  const trimmedId = e.id?.trim();
+  if (trimmedId && trimmedId.length > 0) {
+    return trimmedId;
+  }
+
+  // Edge-case hardening: both identityKey and id are empty/whitespace
+  // Return a deterministic fallback token to prevent silent failures
+  return 'INVALID_IDENTITY:EMPTY_ID_AND_IDENTITYKEY';
 }
 
 export function createDomainEvidence(
