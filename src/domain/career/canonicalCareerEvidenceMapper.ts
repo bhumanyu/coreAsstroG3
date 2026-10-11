@@ -45,7 +45,6 @@ import type {
 import {
   createDomainEvidence,
   type DomainEvidence,
-  resolveSemanticIdentity,
   tryResolveSemanticIdentity,
   UNRESOLVED_IDENTITY_SENTINEL
 } from '../interpretation/DomainEvidence';
@@ -175,6 +174,14 @@ export function validateC11References(
 ): C11ValidationResult {
   return validateAgainstFinalSynthesis(evidence, finalSynthesis);
 }
+
+/**
+ * Exposed sort function for testing invalid evidence filtering.
+ *
+ * This allows tests to directly unit-test the sort helper's behavior with records
+ * that have empty id and/or empty identityKey (invalid evidence that should be filtered).
+ */
+export { sortCanonicalEvidence, validateAgainstFinalSynthesis };
 
 /**
  * Exposed deduplication function for testing the no-identityKey path.
@@ -925,6 +932,10 @@ function assertNonPolarityFieldsAgree(
  * invalid evidence from appearing in canonical output. This is a defensive filter;
  * in practice, createDomainEvidence already throws on empty id, so this should
  * never trigger with properly-constructed evidence.
+ *
+ * Uses tryResolveSemanticIdentity for identity resolution to ensure the sentinel
+ * is never treated as a valid identity. Since the list is pre-filtered, all items
+ * in validEvidence have non-null identities.
  */
 function sortCanonicalEvidence(
   evidence: readonly DomainEvidence[]
@@ -944,8 +955,9 @@ function sortCanonicalEvidence(
     const phaseDiff = phaseOrder[a.phase] - phaseOrder[b.phase];
     if (phaseDiff !== 0) return phaseDiff;
 
-    const identityA = resolveSemanticIdentity(a);
-    const identityB = resolveSemanticIdentity(b);
+    // Use tryResolveSemanticIdentity - all items in validEvidence have non-null identities
+    const identityA = tryResolveSemanticIdentity(a) as string;
+    const identityB = tryResolveSemanticIdentity(b) as string;
     const identityDiff = identityA.localeCompare(identityB);
     if (identityDiff !== 0) return identityDiff;
 

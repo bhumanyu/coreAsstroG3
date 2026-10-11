@@ -79,21 +79,23 @@ export interface DomainEvidence {
  * that consumers must treat as a failure signal (DEGRADED traceability) rather than a valid ID.
  * This prevents invalid evidence from appearing traceable via a shared token.
  *
+ * The sentinel string itself is rejected as an invalid user-supplied identity (reserved).
+ *
  * @param evidence - The DomainEvidence to resolve
- * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise UNRESOLVED_IDENTITY_SENTINEL)
+ * @returns The semantic identity (trimmed identityKey if non-empty and not the sentinel, otherwise trimmed id if non-empty and not the sentinel, otherwise UNRESOLVED_IDENTITY_SENTINEL)
  */
 export function resolveSemanticIdentity(e: DomainEvidence): string {
   const trimmedIdentityKey = e.identityKey?.trim();
-  if (trimmedIdentityKey && trimmedIdentityKey.length > 0) {
+  if (trimmedIdentityKey && trimmedIdentityKey.length > 0 && trimmedIdentityKey !== UNRESOLVED_IDENTITY_SENTINEL) {
     return trimmedIdentityKey;
   }
 
   const trimmedId = e.id?.trim();
-  if (trimmedId && trimmedId.length > 0) {
+  if (trimmedId && trimmedId.length > 0 && trimmedId !== UNRESOLVED_IDENTITY_SENTINEL) {
     return trimmedId;
   }
 
-  // Both identityKey and id are empty/whitespace - signal resolution failure
+  // Both identityKey and id are empty/whitespace or equal the sentinel - signal resolution failure
   // Consumers must filter this marker and treat as DEGRADED traceability
   return UNRESOLVED_IDENTITY_SENTINEL;
 }
@@ -110,21 +112,23 @@ export function resolveSemanticIdentity(e: DomainEvidence): string {
  * canonicalCareerEvidenceMapper) should use this API to prevent the sentinel from
  * leaking into canonical output.
  *
+ * The sentinel string itself is rejected as an invalid user-supplied identity (reserved).
+ *
  * @param evidence - The DomainEvidence to resolve
- * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise null)
+ * @returns The semantic identity (trimmed identityKey if non-empty and not the sentinel, otherwise trimmed id if non-empty and not the sentinel, otherwise null)
  */
 export function tryResolveSemanticIdentity(e: DomainEvidence): string | null {
   const trimmedIdentityKey = e.identityKey?.trim();
-  if (trimmedIdentityKey && trimmedIdentityKey.length > 0) {
+  if (trimmedIdentityKey && trimmedIdentityKey.length > 0 && trimmedIdentityKey !== UNRESOLVED_IDENTITY_SENTINEL) {
     return trimmedIdentityKey;
   }
 
   const trimmedId = e.id?.trim();
-  if (trimmedId && trimmedId.length > 0) {
+  if (trimmedId && trimmedId.length > 0 && trimmedId !== UNRESOLVED_IDENTITY_SENTINEL) {
     return trimmedId;
   }
 
-  // Both identityKey and id are empty/whitespace - return null for type-level discrimination
+  // Both identityKey and id are empty/whitespace or equal the sentinel - return null for type-level discrimination
   return null;
 }
 
@@ -138,6 +142,17 @@ export function createDomainEvidence(
   const trimmedId = evidence.id?.trim();
   if (!trimmedId || trimmedId.length === 0) {
     throw new Error(`createDomainEvidence: id must be non-empty (received: "${evidence.id}")`);
+  }
+
+  // Reject the sentinel string as an invalid user-supplied identity (reserved)
+  if (trimmedId === UNRESOLVED_IDENTITY_SENTINEL) {
+    throw new Error(`createDomainEvidence: id cannot be the sentinel "${UNRESOLVED_IDENTITY_SENTINEL}" (reserved)`);
+  }
+
+  // Validate identityKey if present (reject sentinel and empty/whitespace)
+  const trimmedIdentityKey = evidence.identityKey?.trim();
+  if (trimmedIdentityKey === UNRESOLVED_IDENTITY_SENTINEL) {
+    throw new Error(`createDomainEvidence: identityKey cannot be the sentinel "${UNRESOLVED_IDENTITY_SENTINEL}" (reserved)`);
   }
 
   return Object.freeze({

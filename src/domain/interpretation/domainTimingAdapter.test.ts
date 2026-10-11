@@ -13,7 +13,7 @@ import {
   createDomainConclusion
 } from './index';
 import { Planet } from '../../types';
-import { resolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
+import { resolveSemanticIdentity, tryResolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
 import type { DomainEvidence } from './DomainEvidence';
 
 describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
@@ -888,5 +888,126 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     // Should return empty evidenceIds with DEGRADED traceability
     expect(result.evidenceIds).toEqual([]);
     expect(result.traceability).toBe('DEGRADED');
+  });
+
+  it('tryResolveSemanticIdentity returns null when BOTH id and identityKey are the sentinel (Finding 3)', () => {
+    // Use RAW DomainEvidence object literal to bypass createDomainEvidence validation
+    // and test that tryResolveSemanticIdentity returns null when BOTH are the sentinel
+    const evidence: DomainEvidence = {
+      id: '__UNRESOLVED_IDENTITY__',
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Test evidence with sentinel in both id and identityKey',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 1,
+      relatedEvidenceIds: [],
+      identityKey: '__UNRESOLVED_IDENTITY__'
+    };
+
+    const identity = tryResolveSemanticIdentity(evidence);
+    // Both are the sentinel, so return null
+    expect(identity).toBeNull();
+  });
+
+  it('tryResolveSemanticIdentity rejects sentinel in identityKey but falls back to valid id (Finding 3)', () => {
+    // Use RAW DomainEvidence object literal to bypass createDomainEvidence validation
+    // and test that tryResolveSemanticIdentity rejects the sentinel in identityKey
+    // but falls back to the valid id (only returns null when BOTH are invalid)
+    const evidence: DomainEvidence = {
+      id: 'valid-id',
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Test evidence with sentinel identityKey',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 1,
+      relatedEvidenceIds: [],
+      identityKey: '__UNRESOLVED_IDENTITY__'
+    };
+
+    const identity = tryResolveSemanticIdentity(evidence);
+    // Sentinel in identityKey is rejected, but valid id is returned
+    expect(identity).toBe('valid-id');
+  });
+
+  it('tryResolveSemanticIdentity rejects sentinel in id but falls back to valid identityKey (Finding 3)', () => {
+    // Use RAW DomainEvidence object literal to bypass createDomainEvidence validation
+    // and test that tryResolveSemanticIdentity rejects the sentinel in id but falls back to valid identityKey
+    const evidence: DomainEvidence = {
+      id: '__UNRESOLVED_IDENTITY__',
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Test evidence with sentinel id but valid identityKey',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 1,
+      relatedEvidenceIds: [],
+      identityKey: 'valid-identity-key'
+    };
+
+    const identity = tryResolveSemanticIdentity(evidence);
+    // Sentinel in id is rejected, but valid identityKey is returned
+    expect(identity).toBe('valid-identity-key');
+  });
+
+  it('resolveSemanticIdentity rejects the sentinel string as invalid (Finding 3)', () => {
+    // Use RAW DomainEvidence object literal to bypass createDomainEvidence validation
+    // and test that resolveSemanticIdentity rejects the sentinel (does not return it as valid)
+    const evidence: DomainEvidence = {
+      id: '__UNRESOLVED_IDENTITY__',
+      sourceType: 'DASHA',
+      domain: 'CAREER',
+      role: 'PRIMARY',
+      phase: 'NATAL_PROMISE',
+      source: 'D1',
+      statement: 'Test evidence with sentinel id',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      priority: 1,
+      relatedEvidenceIds: [],
+      identityKey: '__UNRESOLVED_IDENTITY__'
+    };
+
+    const identity = resolveSemanticIdentity(evidence);
+    // Sentinel should be rejected; since both id and identityKey are the sentinel,
+    // it returns the sentinel to signal failure (but the sentinel is not treated as valid)
+    expect(identity).toBe(UNRESOLVED_IDENTITY_SENTINEL);
+  });
+
+  it('createDomainEvidence throws error when id is the sentinel string (Finding 3)', () => {
+    // Regression test: factory validation rejects the sentinel string in id
+    expect(() => {
+      createDomainEvidence({
+        id: '__UNRESOLVED_IDENTITY__',
+        sourceType: 'DASHA',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        statement: 'Test evidence'
+      });
+    }).toThrow('createDomainEvidence: id cannot be the sentinel');
+  });
+
+  it('createDomainEvidence throws error when identityKey is the sentinel string (Finding 3)', () => {
+    // Regression test: factory validation rejects the sentinel string in identityKey
+    expect(() => {
+      createDomainEvidence({
+        id: 'valid-id',
+        sourceType: 'DASHA',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        statement: 'Test evidence',
+        identityKey: '__UNRESOLVED_IDENTITY__'
+      });
+    }).toThrow('createDomainEvidence: identityKey cannot be the sentinel');
   });
 });

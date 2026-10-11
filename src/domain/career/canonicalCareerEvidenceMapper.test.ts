@@ -2,6 +2,7 @@ import {
   mapCanonicalCareerEvidence,
   validateC11References,
   deduplicateCanonicalEvidence,
+  sortCanonicalEvidence,
   type CanonicalCareerEvidenceInput
 } from './canonicalCareerEvidenceMapper';
 
@@ -11,8 +12,9 @@ import {
 
 import {
   createDomainEvidence,
-  resolveSemanticIdentity,
-  UNRESOLVED_IDENTITY_SENTINEL
+  tryResolveSemanticIdentity,
+  UNRESOLVED_IDENTITY_SENTINEL,
+  type DomainEvidence
 } from '../interpretation/DomainEvidence';
 
 import type {
@@ -4338,66 +4340,133 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
   });
 
   describe('UNRESOLVED_IDENTITY_SENTINEL Filtering (Finding 2)', () => {
-    it('raw invalid evidence (empty id) is filtered out and does not appear in produced ID set', () => {
-      // Regression test: run raw invalid evidence through the canonical Career mapper
-      // to prove the sentinel never appears in the produced ID set
-      // This tests the defensive filter in sortCanonicalEvidence
+    it('sortCanonicalEvidence filters out invalid evidence (empty id AND empty identityKey) - Finding 1', () => {
+      // Direct unit test of sortCanonicalEvidence with raw invalid DomainEvidence
+      // Use RAW DomainEvidence object literal to bypass createDomainEvidence validation
+      // and prove that sortCanonicalEvidence filters invalid evidence (empty id AND empty/whitespace identityKey)
 
-      const mockStructural: CareerStructuralReasoning = {
-        direction: 'SUPPORT',
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-1',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
         strength: 'STRONG',
-        primarySupport: 10,
-        primaryChallenge: 2,
-        supportingSupport: 5,
-        supportingChallenge: 1,
-        challengingSupport: 1,
-        challengingChallenge: 3,
-        mixedWeight: 0,
-        evidence: [],
-        primaryEvidenceIds: [],
-        supportingEvidenceIds: [],
-        challengingEvidenceIds: [],
-        conflicts: [],
-        statement: 'Test structural'
+        priority: 1,
+        identityKey: 'valid-semantic-1'
+      });
+
+      // RAW DomainEvidence with empty id AND empty identityKey - bypasses factory validation
+      // This is truly invalid because BOTH id and identityKey are empty
+      const invalidEvidence: DomainEvidence = {
+        id: '', // Empty id
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Invalid evidence with empty id and identityKey',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        relatedEvidenceIds: [],
+        identityKey: '' // Empty identityKey
       };
 
-      // Valid evidence
-      const validEvidence: WeightedReasoningEvidence[] = [
-        {
-          identityKey: 'valid-semantic-1',
-          evidenceId: 'valid-ev-1',
-          ruleId: 'RULE_VALID_1',
-          layer: 'PRIMARY_PROMISE',
-          direction: 'SUPPORT' as ReasoningDirection,
-          strength: 'STRONG',
-          priority: 1,
-          weight: 3,
-          statement: 'Valid natal support for career',
-          relatedEvidenceIds: [],
-          sourceIds: ['source-1']
-        }
-      ];
+      const result = sortCanonicalEvidence([validEvidence, invalidEvidence]);
 
-      const mockReasoningTrace: ReasoningTrace = {
-        primaryPromise: validEvidence,
-        secondarySupport: [],
-        modifiers: [],
-        yogas: [],
-        varga: [],
-        dasha: [],
-        transit: []
+      // (a) the invalid item is excluded from result.evidence
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('valid-occurrence-1');
+
+      // (b) result.evidence.map(tryResolveSemanticIdentity) does NOT contain '__UNRESOLVED_IDENTITY__'
+      const producedIds = result.map((e: DomainEvidence) => tryResolveSemanticIdentity(e)).filter((id): id is string => id !== null);
+      expect(producedIds).not.toContain('__UNRESOLVED_IDENTITY__');
+      expect(producedIds).toEqual(['valid-semantic-1']);
+    });
+
+    it('sortCanonicalEvidence keeps evidence with valid id but whitespace identityKey (resolves to id) - Finding 1', () => {
+      // Test with whitespace-only identityKey but valid id
+      // This evidence is NOT filtered because it resolves to the valid id
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-2',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-2'
+      });
+
+      // RAW DomainEvidence with valid id but whitespace-only identityKey
+      // This is NOT filtered because it resolves to the valid id
+      const evidenceWithWhitespaceIdentityKey: DomainEvidence = {
+        id: 'some-id',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Evidence with whitespace identityKey but valid id',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        relatedEvidenceIds: [],
+        identityKey: '   ' // Whitespace-only identityKey
       };
 
-      const natal: CareerNatalAnalysis = {
-        structural: mockStructural,
-        relevance: [],
-        condition: [],
-        lordRelationships: [],
-        direction: 'SUPPORT' as ReasoningDirection,
-        strength: 'STRONG' as DomainStrength,
-        evidence: validEvidence,
-        conflicts: [],
-        reasoningTrace: mockReasoningTrace
+      const result = sortCanonicalEvidence([validEvidence, evidenceWithWhitespaceIdentityKey]);
+
+      // Both items are kept (invalid evidence with valid id is not filtered)
+      expect(result).toHaveLength(2);
+
+      // result.evidence.map(tryResolveSemanticIdentity) does NOT contain '__UNRESOLVED_IDENTITY__'
+      const producedIds = result.map((e: DomainEvidence) => tryResolveSemanticIdentity(e)).filter((id): id is string => id !== null);
+      expect(producedIds).not.toContain('__UNRESOLVED_IDENTITY__');
+      expect(producedIds).toContain('valid-semantic-2');
+      expect(producedIds).toContain('some-id'); // Resolves to id when identityKey is whitespace
+    });
+
+    it('validateAgainstFinalSynthesis does not include sentinel in unreferenced - Finding 1', () => {
+      // Test that C11 validation (which uses producedIds from tryResolveSemanticIdentity)
+      // does not include the sentinel or empty string in unreferenced
+      // Use invalid evidence (empty id AND empty identityKey) which gets filtered
+
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-3',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-3'
+      });
+
+      // RAW DomainEvidence with empty id AND empty identityKey - gets filtered
+      const invalidEvidence: DomainEvidence = {
+        id: '',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Invalid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        relatedEvidenceIds: [],
+        identityKey: ''
       };
 
       const finalSynthesis: CareerFinalSynthesisResult = {
@@ -4421,37 +4490,22 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         strongestExpressions: [],
         challengedExpressions: [],
         conflicts: [],
-        evidenceIds: ['valid-semantic-1'],
+        evidenceIds: ['valid-semantic-3'],
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
-          evidenceIds: ['valid-semantic-1'],
+          evidenceIds: ['valid-semantic-3'],
           sourceIds: [],
           ruleIds: []
         },
         statement: 'Career supported.'
       };
 
-      const input: CanonicalCareerEvidenceInput = {
-        natal,
-        expression: createEmptyExpressionAnalysis(),
-        dasha: createEmptyDashaAnalysis(),
-        d10: createEmptyD10Analysis(),
-        finalSynthesis
-      };
+      const validationResult = validateC11References([validEvidence, invalidEvidence], finalSynthesis);
 
-      const result = mapCanonicalCareerEvidence(input);
-
-      // Should produce only the valid evidence
-      expect(result.evidence).toHaveLength(1);
-      expect(result.evidence[0].identityKey).toBe('valid-semantic-1');
-
-      // The produced ID set should NOT contain the sentinel
-      const producedIds = result.evidence.map(e => resolveSemanticIdentity(e));
-      expect(producedIds).not.toContain('__UNRESOLVED_IDENTITY__');
-
-      // C11 validation should not report the sentinel as unreferenced
-      expect(result.c11Validation.unreferenced).not.toContain('__UNRESOLVED_IDENTITY__');
+      // (c) result.c11Validation.unreferenced does not contain the sentinel or an empty string
+      expect(validationResult.unreferenced).not.toContain('__UNRESOLVED_IDENTITY__');
+      expect(validationResult.unreferenced).not.toContain('');
     });
   });
 });
