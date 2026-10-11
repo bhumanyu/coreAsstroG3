@@ -1553,6 +1553,7 @@ describe('CareerDomainInterpreterV2', () => {
     // As a result, manifestation modes resolve to INSUFFICIENT_DATA until canonical analysis is
     // enhanced to emit the missing semantic information or manifestation synthesis is updated to
     // directly interpret canonical ruleIds.
+    // See P2-11C-GATE-5-EVIDENCE-ASSEMBLY.md, section "Manifestation Gap (Deferred)" for details.
     expect(byMode.LEADERSHIP.status).toBe('INSUFFICIENT_DATA');
     expect(byMode.MANAGEMENT.status).toBe('INSUFFICIENT_DATA');
     expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('INSUFFICIENT_DATA');

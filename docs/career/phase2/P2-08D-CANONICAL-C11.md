@@ -66,7 +66,7 @@ Location: `src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts`
 - These three arrays are kept distinct with no new global dedup mechanism
 
 **P2-09A NAMESPACE CONTRACT:** C11 `evidenceIds` are canonical semantic identity keys (P2-09A fix):
-- **Natal:** `evidenceId` (semantic identity, matches `identityKey` in `WeightedReasoningEvidence`)
+- **Natal:** `identityKey` (semantic identity, falls back to `evidenceId` when absent/empty)
 - **Dasha:** `identityKey` (semantic identity from `CareerDashaCanonicalEvidence`)
 - **D10:** `identityKey` (semantic identity from `CareerD10CanonicalEvidence`)
 - **Expression:** `supportingEvidenceIds` (CareerExpressionEvidence.id, used as semantic identity — no separate `identityKey` field in C8 contract)

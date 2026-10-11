@@ -148,11 +148,15 @@ function mapTransitEffectToFinalDirection(
 
 /**
  * Collects evidence IDs from natal analysis.
- * From natal.evidence (WeightedReasoningEvidence.evidenceId).
+ * From natal.evidence (WeightedReasoningEvidence.identityKey, falling back to evidenceId).
  * These are semantic identity IDs (one per evidence item).
  *
+ * Emits identityKey when present and non-empty (the canonical semantic identity field),
+ * falling back to evidenceId when identityKey is absent or empty. This mirrors the
+ * trajectory resolver's identityKey ?? id logic in careerTrajectoryEngine.ts.
+ *
  * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
- * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Natal: identityKey (semantic identity, falls back to evidenceId when absent/empty)
  * - Dasha: identityKey (semantic identity)
  * - D10: identityKey (semantic identity)
  * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
@@ -164,7 +168,7 @@ function collectNatalEvidenceIds(
   natal: CareerNatalAnalysis
 ): readonly string[] {
   return Object.freeze(
-    natal.evidence.map(e => e.evidenceId).sort((a, b) => a.localeCompare(b))
+    natal.evidence.map(e => (e.identityKey && e.identityKey !== '') ? e.identityKey : e.evidenceId).sort((a, b) => a.localeCompare(b))
   );
 }
 
@@ -207,7 +211,7 @@ function collectNatalRuleIds(
  * These are semantic identity IDs (one per evidence item).
  *
  * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
- * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Natal: identityKey (semantic identity, falls back to evidenceId when absent)
  * - Dasha: identityKey (semantic identity)
  * - D10: identityKey (semantic identity)
  * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
@@ -265,7 +269,7 @@ function collectDashaRuleIds(
  * These are semantic identity IDs (one per evidence item).
  *
  * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
- * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Natal: identityKey (semantic identity, falls back to evidenceId when absent)
  * - Dasha: identityKey (semantic identity)
  * - D10: identityKey (semantic identity)
  * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)
@@ -324,7 +328,7 @@ function collectD10RuleIds(
  * there is no separate identityKey field in the C8 contract).
  *
  * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
- * - Natal: evidenceId (semantic identity, matches identityKey in WeightedReasoningEvidence)
+ * - Natal: identityKey (semantic identity, falls back to evidenceId when absent)
  * - Dasha: identityKey (semantic identity)
  * - D10: identityKey (semantic identity)
  * - Expression: supportingEvidenceIds (CareerExpressionEvidence.id, used as semantic identity)

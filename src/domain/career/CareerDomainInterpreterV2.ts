@@ -237,7 +237,13 @@ export function interpretCareerV2(
    * Note: We build a preliminary C11 input without timing here to get canonical evidence.
    * The final C11 synthesis will be recomputed with timing later.
    * This two-pass approach is intentional: canonical evidence mapper needs C11 finalIds for validation,
-   * but timing synthesis requires canonical evidence (circular dependency resolved by two-pass build).
+   * but timing synthesis requires canonical evidence (two-pass build to satisfy both dependencies).
+   *
+   * Dependency Graph (no circular dependency):
+   * - Mapper builds DomainEvidence from C4-C10 inputs
+   * - C11 is used only for reference validation (does not feed back into mapper)
+   * - Timing synthesis requires canonical evidence for calculation
+   * - Final C11 requires timing synthesis input
    */
   const preliminaryC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(canonicalC11Input);
 
@@ -262,7 +268,13 @@ export function interpretCareerV2(
    * - Preliminary C11 (without timing) is built to get canonical evidence IDs for mapper input
    * - Final C11 (with timing) is built after careerTimingSynthesis is computed
    * - This two-pass approach is intentional: canonical evidence mapper needs C11 finalIds for validation,
-   *   but timing synthesis requires canonical evidence (circular dependency resolved by two-pass build)
+   *   but timing synthesis requires canonical evidence (two-pass build to satisfy both dependencies)
+   *
+   * Dependency Graph (no circular dependency):
+   * - Mapper builds DomainEvidence from C4-C10 inputs
+   * - C11 is used only for reference validation (does not feed back into mapper)
+   * - Timing synthesis requires canonical evidence for calculation
+   * - Final C11 requires timing synthesis input
    */
   const c11Validation = canonicalEvidenceOutput.c11Validation;
 

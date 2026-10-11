@@ -662,6 +662,32 @@ describe('CareerTrajectoryEngine', () => {
       // C11 references a semantic key that does not exist in evidence set
       expect(result.unresolvedEvidenceIds).toEqual(['missing-semantic-key']);
     });
+
+    it('full chain test: natal semantic reference with identityKey≠evidenceId resolves in trajectory (FINDING 1 regression)', () => {
+      // Simulate the full C4 → mapper → C11 → trajectory chain
+      // where natal evidence has identityKey != evidenceId
+
+      // C11 emits the semantic identityKey (from collectNatalEvidenceIds fix)
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        evidenceIds: ['semantic-identity-abc'] // C11 references the semantic identity
+      });
+
+      // Mapper produces DomainEvidence with identityKey matching C11 reference
+      const evidenceItems = [
+        { id: 'occurrence-id-123', identityKey: 'semantic-identity-abc' }
+      ];
+
+      const input = createTrajectoryInput(c11, evidenceItems);
+      const result = buildCareerTrajectory(input);
+
+      // The semantic reference should resolve (appear in resolvedIds, NOT in unresolvedEvidenceIds)
+      expect(result.evidenceIds).toContain('semantic-identity-abc');
+      expect(result.unresolvedEvidenceIds).not.toContain('semantic-identity-abc');
+      expect(result.unresolvedEvidenceIds).toEqual([]);
+    });
   });
 
   describe('Input order invariance', () => {

@@ -4003,3 +4003,277 @@ function createEmptyFinalSynthesis(): CareerFinalSynthesisResult {
     statement: 'No final synthesis data'
   };
 }
+
+describe('C11 Reference Validation (FINDING 4 regression)', () => {
+  it('canonical references resolve correctly when final C11 result is built WITH timing', () => {
+    // Test that canonical evidence IDs are cross-referenceable against C11 evidenceIds
+    // even when C11 is built with timing (not just preliminary C11 without timing)
+
+    const natalEvidence: WeightedReasoningEvidence[] = [
+      {
+        identityKey: 'natal-semantic-1',
+        evidenceId: 'natal-occ-1',
+        ruleId: 'RULE_NATAL_1',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG',
+        priority: 1,
+        weight: 5,
+        statement: 'Natal support for career',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      }
+    ];
+
+    const natal: CareerNatalAnalysis = {
+      structural: {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 5,
+        primaryChallenge: 0,
+        supportingSupport: 3,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Structural reasoning.'
+      },
+      relevance: [],
+      condition: [],
+      lordRelationships: [],
+      direction: 'SUPPORT' as ReasoningDirection,
+      strength: 'STRONG' as DomainStrength,
+      evidence: natalEvidence,
+      conflicts: [],
+      reasoningTrace: {
+        primaryPromise: natalEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      }
+    };
+
+    // C11 result built WITH timing (simulating final C11 after two-pass build)
+    const finalSynthesisWithTiming: CareerFinalSynthesisResult = {
+      reasoningVersion: 'C11',
+      domain: 'CAREER',
+      finalStatus: 'SUPPORTED',
+      finalDirection: 'SUPPORT',
+      finalStrength: 'STRONG',
+      confidence: 'HIGH',
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      expressionStatus: 'UNAVAILABLE',
+      d10Direction: 'UNAVAILABLE',
+      d10Effect: 'UNKNOWN',
+      dashaEffect: 'UNKNOWN',
+      dashaDirection: 'UNAVAILABLE',
+      timingStatus: 'ACTIVE',  // timing is present (built with timing)
+      transitDirection: 'SUPPORT',  // transit direction is set
+      currentPressure: 'LOW',
+      expressions: [],
+      strongestExpressions: [],
+      challengedExpressions: [],
+      conflicts: [],
+      evidenceIds: ['natal-semantic-1'],  // C11 references the semantic identityKey
+      sourceIds: ['source-1'],
+      ruleIds: ['RULE_NATAL_1'],
+      evidenceTrace: {
+        evidenceIds: ['natal-semantic-1'],
+        sourceIds: ['source-1'],
+        ruleIds: ['RULE_NATAL_1']
+      },
+      statement: 'Career supported with timing.'
+    };
+
+    const input: CanonicalCareerEvidenceInput = {
+      natal,
+      expression: createEmptyExpressionAnalysis(),
+      dasha: createEmptyDashaAnalysis(),
+      d10: createEmptyD10Analysis(),
+      finalSynthesis: finalSynthesisWithTiming
+    };
+
+    const result = mapCanonicalCareerEvidence(input);
+
+    // Canonical references should resolve correctly
+    expect(result.c11Validation.missing).toEqual([]);
+    expect(result.c11Validation.unreferenced).toEqual([]);
+
+    // The evidence should contain the semantic identityKey
+    const natalDomainEvidence = result.evidence.find(e => e.identityKey === 'natal-semantic-1');
+    expect(natalDomainEvidence).toBeDefined();
+    expect(natalDomainEvidence?.identityKey).toBe('natal-semantic-1');
+  });
+
+  it('C11 validation discrepancies are non-fatal warnings (unreferenced)', () => {
+    // Test that unreferenced evidence (produced by mapper but not in C11) is non-fatal
+
+    const natalEvidence: WeightedReasoningEvidence[] = [
+      {
+        identityKey: 'natal-semantic-1',
+        evidenceId: 'natal-occ-1',
+        ruleId: 'RULE_NATAL_1',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG',
+        priority: 1,
+        weight: 5,
+        statement: 'Natal support for career',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      }
+    ];
+
+    const natal: CareerNatalAnalysis = {
+      structural: {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 5,
+        primaryChallenge: 0,
+        supportingSupport: 3,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Structural reasoning.'
+      },
+      relevance: [],
+      condition: [],
+      lordRelationships: [],
+      direction: 'SUPPORT' as ReasoningDirection,
+      strength: 'STRONG' as DomainStrength,
+      evidence: natalEvidence,
+      conflicts: [],
+      reasoningTrace: {
+        primaryPromise: natalEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      }
+    };
+
+    // C11 does NOT reference natal-semantic-1 (e.g., C11 has different scope)
+    const finalSynthesisWithoutReference: CareerFinalSynthesisResult = {
+      reasoningVersion: 'C11',
+      domain: 'CAREER',
+      finalStatus: 'SUPPORTED',
+      finalDirection: 'SUPPORT',
+      finalStrength: 'STRONG',
+      confidence: 'HIGH',
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      expressionStatus: 'UNAVAILABLE',
+      d10Direction: 'UNAVAILABLE',
+      d10Effect: 'UNKNOWN',
+      dashaEffect: 'UNKNOWN',
+      dashaDirection: 'UNAVAILABLE',
+      timingStatus: 'ACTIVE',
+      transitDirection: 'SUPPORT',
+      currentPressure: 'LOW',
+      expressions: [],
+      strongestExpressions: [],
+      challengedExpressions: [],
+      conflicts: [],
+      evidenceIds: [],  // C11 does not reference natal-semantic-1
+      sourceIds: [],
+      ruleIds: [],
+      evidenceTrace: {
+        evidenceIds: [],
+        sourceIds: [],
+        ruleIds: []
+      },
+      statement: 'Career supported.'
+    };
+
+    const input: CanonicalCareerEvidenceInput = {
+      natal,
+      expression: createEmptyExpressionAnalysis(),
+      dasha: createEmptyDashaAnalysis(),
+      d10: createEmptyD10Analysis(),
+      finalSynthesis: finalSynthesisWithoutReference
+    };
+
+    const result = mapCanonicalCareerEvidence(input);
+
+    // This is a non-fatal warning: mapper produced evidence not referenced by C11
+    expect(result.c11Validation.unreferenced).toContain('natal-semantic-1');
+    expect(result.c11Validation.missing).toEqual([]);
+
+    // Evidence is still produced (validation does not block output)
+    expect(result.evidence).toHaveLength(1);
+    expect(result.evidence[0].identityKey).toBe('natal-semantic-1');
+  });
+
+  it('C11 validation discrepancies are non-fatal warnings (missing)', () => {
+    // Test that missing references (in C11 but not produced by mapper) is non-fatal
+
+    const natal: CareerNatalAnalysis = createEmptyNatalAnalysis();
+
+    // C11 references an ID not produced by mapper (e.g., evidence from other source)
+    const finalSynthesisWithMissingReference: CareerFinalSynthesisResult = {
+      reasoningVersion: 'C11',
+      domain: 'CAREER',
+      finalStatus: 'SUPPORTED',
+      finalDirection: 'SUPPORT',
+      finalStrength: 'STRONG',
+      confidence: 'HIGH',
+      natalDirection: 'SUPPORT',
+      natalStrength: 'STRONG',
+      expressionStatus: 'UNAVAILABLE',
+      d10Direction: 'UNAVAILABLE',
+      d10Effect: 'UNKNOWN',
+      dashaEffect: 'UNKNOWN',
+      dashaDirection: 'UNAVAILABLE',
+      timingStatus: 'ACTIVE',
+      transitDirection: 'SUPPORT',
+      currentPressure: 'LOW',
+      expressions: [],
+      strongestExpressions: [],
+      challengedExpressions: [],
+      conflicts: [],
+      evidenceIds: ['external-evidence-id'],  // C11 references ID not produced by mapper
+      sourceIds: [],
+      ruleIds: [],
+      evidenceTrace: {
+        evidenceIds: ['external-evidence-id'],
+        sourceIds: [],
+        ruleIds: []
+      },
+      statement: 'Career supported.'
+    };
+
+    const input: CanonicalCareerEvidenceInput = {
+      natal,
+      expression: createEmptyExpressionAnalysis(),
+      dasha: createEmptyDashaAnalysis(),
+      d10: createEmptyD10Analysis(),
+      finalSynthesis: finalSynthesisWithMissingReference
+    };
+
+    const result = mapCanonicalCareerEvidence(input);
+
+    // This is a non-fatal warning: C11 references ID not produced by mapper
+    expect(result.c11Validation.missing).toContain('external-evidence-id');
+    expect(result.c11Validation.unreferenced).toEqual([]);
+
+    // Mapper output is not affected by validation
+    expect(result.evidence).toHaveLength(0);
+  });
+});
