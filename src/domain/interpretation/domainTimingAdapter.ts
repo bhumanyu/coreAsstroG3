@@ -69,7 +69,14 @@ export function mapPeriodToCanonicalEvidenceIds(
   if (canonicalEvidence.length > 0) {
     const evidenceIds = canonicalEvidence
       .map((e: DomainEvidence) => resolveSemanticIdentity(e))
+      .filter((id) => id !== '__UNRESOLVED_IDENTITY__') // Filter out unresolved markers
       .sort((a, b) => a.localeCompare(b)); // Ensure deterministic output
+
+    // If all evidence resolved to the unresolved marker, treat as DEGRADED
+    if (evidenceIds.length === 0) {
+      return { evidenceIds: [], traceability: 'DEGRADED' };
+    }
+
     return {
       evidenceIds,
       traceability: 'RESOLVED'

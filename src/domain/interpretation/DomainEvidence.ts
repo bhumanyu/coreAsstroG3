@@ -51,11 +51,12 @@ export interface DomainEvidence {
  * This enables cross-layer evidence matching where multiple occurrences of the same semantic fact
  * should resolve to a single identity.
  *
- * Edge-case hardening: if both identityKey and id are empty/whitespace, returns a fallback token
- * to prevent silent failures. Consumers should validate evidence construction to ensure non-empty ids.
+ * If both identityKey and id are empty/whitespace, returns a dedicated unresolved marker
+ * that consumers must treat as a failure signal (DEGRADED traceability) rather than a valid ID.
+ * This prevents invalid evidence from appearing traceable via a shared token.
  *
  * @param evidence - The DomainEvidence to resolve
- * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise fallback token)
+ * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise unresolved marker)
  */
 export function resolveSemanticIdentity(e: DomainEvidence): string {
   const trimmedIdentityKey = e.identityKey?.trim();
@@ -68,9 +69,9 @@ export function resolveSemanticIdentity(e: DomainEvidence): string {
     return trimmedId;
   }
 
-  // Edge-case hardening: both identityKey and id are empty/whitespace
-  // Return a deterministic fallback token to prevent silent failures
-  return 'INVALID_IDENTITY:EMPTY_ID_AND_IDENTITYKEY';
+  // Both identityKey and id are empty/whitespace - signal resolution failure
+  // Consumers must filter this marker and treat as DEGRADED traceability
+  return '__UNRESOLVED_IDENTITY__';
 }
 
 export function createDomainEvidence(
@@ -79,8 +80,14 @@ export function createDomainEvidence(
     sourceType: EvidenceSourceType;
   }
 ): DomainEvidence {
+  // Validate non-empty id to prevent unresolvable evidence
+  const trimmedId = evidence.id?.trim();
+  if (!trimmedId || trimmedId.length === 0) {
+    throw new Error(`createDomainEvidence: id must be non-empty (received: "${evidence.id}")`);
+  }
+
   return Object.freeze({
-    id: evidence.id,
+    id: trimmedId,
     sourceType: evidence.sourceType,
     domain: evidence.domain ?? 'CAREER',
     role: evidence.role ?? 'PRIMARY',

@@ -61,23 +61,23 @@ export interface D10EvaluationDiagnostics {
 
 export interface VargaThemeEvidence {
   readonly varga:
-    | 'D1'
-    | 'D2'
-    | 'D3'
-    | 'D4'
-    | 'D7'
-    | 'D9'
-    | 'D10'
-    | 'D12'
-    | 'D16'
-    | 'D20'
-    | 'D24'
-    | 'D27'
-    | 'D30'
-    | 'D40'
-    | 'D45'
-    | 'D60'
-    | string;
+  | 'D1'
+  | 'D2'
+  | 'D3'
+  | 'D4'
+  | 'D7'
+  | 'D9'
+  | 'D10'
+  | 'D12'
+  | 'D16'
+  | 'D20'
+  | 'D24'
+  | 'D27'
+  | 'D30'
+  | 'D40'
+  | 'D45'
+  | 'D60'
+  | string;
   readonly relationship: VargaRelationship;
   readonly statement: string;
   readonly effect: ThemeEvidenceEffect;
@@ -99,7 +99,7 @@ export interface ThemeTransitEvidence {
   readonly relevanceReason?: string;
 }
 
-export interface CareerTimingEvidence extends ThemeTimingEvidence {}
+export interface CareerTimingEvidence extends ThemeTimingEvidence { }
 
 export interface ThemeInterpretationEvidence<TFamily extends string = string> {
   readonly id: string;
@@ -117,6 +117,7 @@ export interface ThemeInterpretationEvidence<TFamily extends string = string> {
   readonly vargaEvidence?: VargaThemeEvidence;
   readonly timingEvidence?: ThemeTimingEvidence;
   readonly transitEvidence?: ThemeTransitEvidence;
+  readonly identityKey?: string;
 }
 
 export interface ThemeRuleResult<TFamily extends string = string> {

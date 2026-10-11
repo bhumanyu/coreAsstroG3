@@ -174,7 +174,7 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
         strength: 'STRONG',
         priority: 'PRIMARY',
         houses: [2],
-        identityKey: 'SEMANTIC_KEY_ABC' as any
+        identityKey: 'SEMANTIC_KEY_ABC'
       };
 
       const [mapped] = buildWealthEvidence([rawItemWithIdentityKey]);
@@ -215,7 +215,7 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
         strength: 'STRONG',
         priority: 'PRIMARY',
         houses: [9],
-        identityKey: undefined as any
+        identityKey: undefined
       };
 
       const [mapped] = buildWealthEvidence([rawItemWithUndefinedIdentityKey]);

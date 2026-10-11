@@ -545,7 +545,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     expect(result.traceability).toBe('RESOLVED');
   });
 
-  it('resolveSemanticIdentity returns fallback token when both id and identityKey are empty/whitespace (RAW object literal)', () => {
+  it('resolveSemanticIdentity returns unresolved marker when both id and identityKey are empty/whitespace (RAW object literal)', () => {
     // Use RAW DomainEvidence object literal to exercise the edge case
     const evidence: DomainEvidence = {
       id: '', // Empty id
@@ -563,10 +563,10 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     };
 
     const identity = resolveSemanticIdentity(evidence);
-    expect(identity).toBe('INVALID_IDENTITY:EMPTY_ID_AND_IDENTITYKEY');
+    expect(identity).toBe('__UNRESOLVED_IDENTITY__');
   });
 
-  it('resolveSemanticIdentity returns fallback token when id is empty string and identityKey is undefined (RAW object literal)', () => {
+  it('resolveSemanticIdentity returns unresolved marker when id is empty string and identityKey is undefined (RAW object literal)', () => {
     // Use RAW DomainEvidence object literal to exercise the edge case
     const evidence: DomainEvidence = {
       id: '', // Empty id
@@ -584,113 +584,193 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     };
 
     const identity = resolveSemanticIdentity(evidence);
-    expect(identity).toBe('INVALID_IDENTITY:EMPTY_ID_AND_IDENTITYKEY');
-  });
-  expect(result.traceability).toBe('RESOLVED');
-});
-
-it('mapPeriodToCanonicalEvidenceIds produces deterministic output (sorted by semantic identity)', () => {
-  const interpretation = createDomainInterpretation({
-    domain: 'CAREER',
-    natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
-    dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
-    transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
-    conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
-    evidence: [
-      {
-        ...createDomainEvidence({
-          id: 'OCC_Z',
-          sourceType: 'DASHA',
-          polarity: 'SUPPORTING',
-          strength: 'STRONG',
-          statement: 'Third evidence',
-          identityKey: 'SEM_C'
-        }),
-        source: 'DASHA',
-        phase: 'DASHA_ACTIVATION',
-        timing: {
-          level: 'MD',
-          planet: Planet.JUPITER
-        }
-      } as any,
-      {
-        ...createDomainEvidence({
-          id: 'OCC_A',
-          sourceType: 'DASHA',
-          polarity: 'SUPPORTING',
-          strength: 'STRONG',
-          statement: 'First evidence',
-          identityKey: 'SEM_A'
-        }),
-        source: 'DASHA',
-        phase: 'DASHA_ACTIVATION',
-        timing: {
-          level: 'MD',
-          planet: Planet.JUPITER
-        }
-      } as any,
-      {
-        ...createDomainEvidence({
-          id: 'OCC_M',
-          sourceType: 'DASHA',
-          polarity: 'SUPPORTING',
-          strength: 'STRONG',
-          statement: 'Second evidence',
-          identityKey: 'SEM_B'
-        }),
-        source: 'DASHA',
-        phase: 'DASHA_ACTIVATION',
-        timing: {
-          level: 'MD',
-          planet: Planet.JUPITER
-        }
-      } as any
-    ]
+    expect(identity).toBe('__UNRESOLVED_IDENTITY__');
   });
 
-  const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
-
-  // Sorted deterministically by semantic identity
-  expect(result.evidenceIds).toEqual(['SEM_A', 'SEM_B', 'SEM_C']);
-  expect(result.traceability).toBe('RESOLVED');
-});
-
-it('downstream resolution: id !== identityKey resolves correctly through actual consumer path', () => {
-  // Test that semantic identity resolution works end-to-end through the adapter
-  // Evidence has id !== identityKey, and the adapter correctly uses identityKey for resolution
-  const interpretation = createDomainInterpretation({
-    domain: 'CAREER',
-    natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
-    dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
-    transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
-    conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
-    evidence: [
-      {
-        ...createDomainEvidence({
-          id: 'OCCURRENCE_UNIQUE_ID_ABC', // Occurrence ID
+  it('invalid evidence (blank id and blank identityKey) does not produce RESOLVED traceability', () => {
+    // Regression test: ensure that invalid evidence cannot produce RESOLVED traceability
+    // Even if RAW DomainEvidence with empty id bypasses factory validation,
+    // the adapter must filter out unresolved markers and return DEGRADED
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'VALID_EVIDENCE',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Valid evidence'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          // RAW DomainEvidence with empty id - bypasses factory validation
+          id: '',
           sourceType: 'DASHA',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'DASHA_ACTIVATION',
+          source: 'D1',
+          statement: 'Invalid evidence with empty id',
           polarity: 'SUPPORTING',
           strength: 'STRONG',
-          statement: 'Jupiter Mahadasha activates career',
-          identityKey: 'SEMANTIC_FACT_JUPITER_MD' // Semantic identity key
-        }),
-        source: 'DASHA',
-        phase: 'DASHA_ACTIVATION',
-        timing: {
-          level: 'MD',
-          planet: Planet.JUPITER
-        }
-      } as any
-    ]
+          priority: 1,
+          relatedEvidenceIds: [],
+          identityKey: undefined,
+          timing: {
+            period: 'MD',
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as DomainEvidence
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // Should only include the valid evidence ID, filter out unresolved marker
+    expect(result.evidenceIds).toEqual(['VALID_EVIDENCE']);
+    expect(result.traceability).toBe('RESOLVED');
   });
 
-  const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+  it('createDomainEvidence throws error when id is empty string', () => {
+    // Regression test: factory validation rejects empty id
+    expect(() => {
+      createDomainEvidence({
+        id: '',
+        sourceType: 'DASHA',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        statement: 'Test evidence'
+      });
+    }).toThrow('createDomainEvidence: id must be non-empty');
+  });
 
-  // The adapter should return the semantic identity (identityKey), not the occurrence ID
-  expect(result.evidenceIds).toEqual(['SEMANTIC_FACT_JUPITER_MD']);
-  expect(result.traceability).toBe('RESOLVED');
+  it('createDomainEvidence throws error when id is whitespace-only', () => {
+    // Regression test: factory validation rejects whitespace-only id
+    expect(() => {
+      createDomainEvidence({
+        id: '   ',
+        sourceType: 'DASHA',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        statement: 'Test evidence'
+      });
+    }).toThrow('createDomainEvidence: id must be non-empty');
+  });
 
-  // Verify that the semantic identity is NOT the occurrence ID
-  expect(result.evidenceIds[0]).not.toBe('OCCURRENCE_UNIQUE_ID_ABC');
-});
+  it('mapPeriodToCanonicalEvidenceIds produces deterministic output (sorted by semantic identity)', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'OCC_Z',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Third evidence',
+            identityKey: 'SEM_C'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'OCC_A',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'First evidence',
+            identityKey: 'SEM_A'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'OCC_M',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Second evidence',
+            identityKey: 'SEM_B'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // Sorted deterministically by semantic identity
+    expect(result.evidenceIds).toEqual(['SEM_A', 'SEM_B', 'SEM_C']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('downstream resolution: id !== identityKey resolves correctly through actual consumer path', () => {
+    // Test that semantic identity resolution works end-to-end through the adapter
+    // Evidence has id !== identityKey, and the adapter correctly uses identityKey for resolution
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'OCCURRENCE_UNIQUE_ID_ABC', // Occurrence ID
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Jupiter Mahadasha activates career',
+            identityKey: 'SEMANTIC_FACT_JUPITER_MD' // Semantic identity key
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // The adapter should return the semantic identity (identityKey), not the occurrence ID
+    expect(result.evidenceIds).toEqual(['SEMANTIC_FACT_JUPITER_MD']);
+    expect(result.traceability).toBe('RESOLVED');
+
+    // Verify that the semantic identity is NOT the occurrence ID
+    expect(result.evidenceIds[0]).not.toBe('OCCURRENCE_UNIQUE_ID_ABC');
+  });
 });
