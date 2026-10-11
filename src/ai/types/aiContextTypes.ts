@@ -237,6 +237,7 @@ export interface CareerHierarchyFact {
   readonly overallEffect: TimingActivationEffect;
   readonly confidence?: number;
   readonly evidenceIds?: readonly string[];
+  readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly summary?: string;
 }
 
@@ -577,6 +578,7 @@ export interface WealthHierarchyFact {
   readonly trigger: DashaHierarchyLevelFact;
   readonly dimensions: readonly WealthDimensionHierarchyFact[];
   readonly evidenceIds?: readonly string[];
+  readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly summary?: string;
 }
 

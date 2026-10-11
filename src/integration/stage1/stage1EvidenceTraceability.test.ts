@@ -45,7 +45,8 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
 
     for (const item of itemsWithRuleId) {
       expect(item.traceability.ruleId).toBeTruthy();
-      expect(item.traceability.ruleId).toBe(item.traceability.ruleId);
+      // Cross-check: traceability.ruleId should match the rule object's id
+      expect(item.traceability.ruleId).toBe(item.rule?.id);
     }
   });
 

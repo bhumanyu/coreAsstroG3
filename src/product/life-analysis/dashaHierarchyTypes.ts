@@ -25,6 +25,7 @@ export interface DashaCareerHierarchySynthesis {
   readonly confidence: number;
   readonly evidence: readonly DashaHierarchyEvidenceRef[];
   readonly evidenceIds: readonly string[];
+  readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly summary: string;
 }
 
@@ -43,5 +44,6 @@ export interface DashaWealthHierarchySynthesis {
   readonly dimensions: readonly DashaWealthDimensionHierarchy[];
   readonly evidence: readonly DashaHierarchyEvidenceRef[];
   readonly evidenceIds: readonly string[];
+  readonly traceability?: 'RESOLVED' | 'DEGRADED';
   readonly summary: string;
 }

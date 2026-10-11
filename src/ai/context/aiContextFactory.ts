@@ -666,6 +666,17 @@ function buildCareerFact(
         const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', syn.pd.planet);
         return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
       })(),
+      /**
+       * Hierarchy-level traceability: RESOLVED only when all three periods are RESOLVED,
+       * otherwise DEGRADED (allowing mixed states like MD/AD resolved, PD degraded).
+       */
+      traceability: (() => {
+        const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', syn.md.planet);
+        const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', syn.ad.planet);
+        const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', syn.pd.planet);
+        const allResolved = mdResult.traceability === 'RESOLVED' && adResult.traceability === 'RESOLVED' && pdResult.traceability === 'RESOLVED';
+        return allResolved ? 'RESOLVED' : 'DEGRADED';
+      })(),
       summary: syn.summary
     };
   } else if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
@@ -693,6 +704,17 @@ function buildCareerFact(
           const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', ad.planet);
           const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', pd.planet);
           return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
+        })(),
+        /**
+         * Hierarchy-level traceability: RESOLVED only when all three periods are RESOLVED,
+         * otherwise DEGRADED (allowing mixed states like MD/AD resolved, PD degraded).
+         */
+        traceability: (() => {
+          const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', md.planet);
+          const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', ad.planet);
+          const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', pd.planet);
+          const allResolved = mdResult.traceability === 'RESOLVED' && adResult.traceability === 'RESOLVED' && pdResult.traceability === 'RESOLVED';
+          return allResolved ? 'RESOLVED' : 'DEGRADED';
         })(),
         summary: syn.summary
       };
@@ -848,6 +870,17 @@ function buildWealthFact(
           const adResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'AD', ad.planet);
           const pdResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'PD', pd.planet);
           return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
+        })(),
+        /**
+         * Hierarchy-level traceability: RESOLVED only when all three periods are RESOLVED,
+         * otherwise DEGRADED (allowing mixed states like MD/AD resolved, PD degraded).
+         */
+        traceability: (() => {
+          const mdResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'MD', md.planet);
+          const adResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'AD', ad.planet);
+          const pdResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'PD', pd.planet);
+          const allResolved = mdResult.traceability === 'RESOLVED' && adResult.traceability === 'RESOLVED' && pdResult.traceability === 'RESOLVED';
+          return allResolved ? 'RESOLVED' : 'DEGRADED';
         })(),
         summary: syn.summary
       };

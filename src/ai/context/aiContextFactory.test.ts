@@ -273,6 +273,20 @@ describe('AI Context Factory', () => {
     }
   });
 
+  it('should expose hierarchy-level traceability signal (Finding 2)', () => {
+    // Career hierarchy should have traceability status
+    if (context.career?.timing?.hierarchy) {
+      expect(context.career.timing.hierarchy.traceability).toBeDefined();
+      expect(['RESOLVED', 'DEGRADED']).toContain(context.career.timing.hierarchy.traceability);
+    }
+
+    // Wealth hierarchy should have traceability status
+    if (context.wealth?.timing?.hierarchy) {
+      expect(context.wealth.timing.hierarchy.traceability).toBeDefined();
+      expect(['RESOLVED', 'DEGRADED']).toContain(context.wealth.timing.hierarchy.traceability);
+    }
+  });
+
   it('should throw an error on conflicting evidence ID with different payload', () => {
     const conflictingCareer = createDomainInterpretation({
       domain: 'CAREER',
