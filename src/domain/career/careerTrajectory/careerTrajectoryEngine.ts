@@ -11,7 +11,8 @@ import type {
 } from '../../interpretation/DomainEvidence';
 
 import {
-  resolveSemanticIdentity
+  resolveSemanticIdentity,
+  tryResolveSemanticIdentity
 } from '../../interpretation/DomainEvidence';
 
 /**
@@ -216,8 +217,10 @@ function resolveEvidenceReferences(
 
   const evidenceIdentitySet = new Set<string>();
   for (const ev of evidenceSet) {
-    const identity = resolveSemanticIdentity(ev);
-    evidenceIdentitySet.add(identity);
+    const identity = tryResolveSemanticIdentity(ev);
+    if (identity !== null) {
+      evidenceIdentitySet.add(identity);
+    }
   }
 
   const unresolvedIds: string[] = [];
@@ -271,8 +274,10 @@ export function buildCareerTrajectory(
   // Build evidence identity set for opportunity consistency check
   const evidenceIdentitySet = new Set<string>();
   for (const ev of evidence) {
-    const identity = resolveSemanticIdentity(ev);
-    evidenceIdentitySet.add(identity);
+    const identity = tryResolveSemanticIdentity(ev);
+    if (identity !== null) {
+      evidenceIdentitySet.add(identity);
+    }
   }
 
   // Map opportunities from expressions (with consistency check)

@@ -13,7 +13,7 @@ import {
   createDomainConclusion
 } from './index';
 import { Planet } from '../../types';
-import { resolveSemanticIdentity } from './DomainEvidence';
+import { resolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
 import type { DomainEvidence } from './DomainEvidence';
 
 describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
@@ -563,7 +563,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     };
 
     const identity = resolveSemanticIdentity(evidence);
-    expect(identity).toBe('__UNRESOLVED_IDENTITY__');
+    expect(identity).toBe(UNRESOLVED_IDENTITY_SENTINEL);
   });
 
   it('resolveSemanticIdentity returns unresolved marker when id is empty string and identityKey is undefined (RAW object literal)', () => {
@@ -584,7 +584,7 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
     };
 
     const identity = resolveSemanticIdentity(evidence);
-    expect(identity).toBe('__UNRESOLVED_IDENTITY__');
+    expect(identity).toBe(UNRESOLVED_IDENTITY_SENTINEL);
   });
 
   it('invalid evidence (blank id and blank identityKey) does not produce RESOLVED traceability', () => {
@@ -772,5 +772,121 @@ describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
 
     // Verify that the semantic identity is NOT the occurrence ID
     expect(result.evidenceIds[0]).not.toBe('OCCURRENCE_UNIQUE_ID_ABC');
+  });
+
+  it('valid + invalid matching evidence yields ONLY valid semantic IDs with RESOLVED traceability (Finding 2a)', () => {
+    // Regression test: when matching evidence includes both valid and invalid (sentinel-resolving) items,
+    // only the valid semantic IDs should be returned with RESOLVED traceability
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'VALID_EVIDENCE_1',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Valid Jupiter MD evidence',
+            identityKey: 'SEMANTIC_JUPITER_MD'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          // RAW DomainEvidence with empty id - bypasses factory validation, resolves to sentinel
+          id: '',
+          sourceType: 'DASHA',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'DASHA_ACTIVATION',
+          source: 'D1',
+          statement: 'Invalid evidence with empty id',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: [],
+          identityKey: undefined,
+          timing: {
+            period: 'MD',
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as DomainEvidence
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // Should only include the valid semantic ID, not the sentinel
+    expect(result.evidenceIds).toEqual(['SEMANTIC_JUPITER_MD']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('invalid-only matching evidence yields empty evidenceIds with DEGRADED traceability (Finding 2b)', () => {
+    // Regression test: when all matching evidence resolves to the sentinel, return empty evidenceIds
+    // with DEGRADED traceability (not RESOLVED)
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          // RAW DomainEvidence with empty id - bypasses factory validation, resolves to sentinel
+          id: '',
+          sourceType: 'DASHA',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'DASHA_ACTIVATION',
+          source: 'D1',
+          statement: 'Invalid evidence 1 with empty id',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: [],
+          identityKey: undefined,
+          timing: {
+            period: 'MD',
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as DomainEvidence,
+        {
+          // RAW DomainEvidence with whitespace-only identityKey - resolves to sentinel
+          id: 'SOME_ID',
+          sourceType: 'DASHA',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'DASHA_ACTIVATION',
+          source: 'D1',
+          statement: 'Invalid evidence 2 with whitespace identityKey',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: [],
+          identityKey: '   ', // Whitespace-only
+          timing: {
+            period: 'MD',
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as DomainEvidence
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // Should return empty evidenceIds with DEGRADED traceability
+    expect(result.evidenceIds).toEqual([]);
+    expect(result.traceability).toBe('DEGRADED');
   });
 });

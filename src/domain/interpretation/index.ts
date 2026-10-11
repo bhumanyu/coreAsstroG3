@@ -16,7 +16,10 @@ export type {
 } from './DomainInterpretationBuilder';
 
 export {
-  createDomainEvidence
+  createDomainEvidence,
+  resolveSemanticIdentity,
+  tryResolveSemanticIdentity,
+  UNRESOLVED_IDENTITY_SENTINEL
 } from './DomainEvidence';
 
 export type {

@@ -10,7 +10,9 @@ import {
 } from './manifestation/careerManifestationSynthesis';
 
 import {
-  createDomainEvidence
+  createDomainEvidence,
+  resolveSemanticIdentity,
+  UNRESOLVED_IDENTITY_SENTINEL
 } from '../interpretation/DomainEvidence';
 
 import type {
@@ -4333,5 +4335,123 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
     // Mapper output is not affected by validation
     expect(result.evidence).toHaveLength(0);
+  });
+
+  describe('UNRESOLVED_IDENTITY_SENTINEL Filtering (Finding 2)', () => {
+    it('raw invalid evidence (empty id) is filtered out and does not appear in produced ID set', () => {
+      // Regression test: run raw invalid evidence through the canonical Career mapper
+      // to prove the sentinel never appears in the produced ID set
+      // This tests the defensive filter in sortCanonicalEvidence
+
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      // Valid evidence
+      const validEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'valid-semantic-1',
+          evidenceId: 'valid-ev-1',
+          ruleId: 'RULE_VALID_1',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 3,
+          statement: 'Valid natal support for career',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: validEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: validEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const finalSynthesis: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['valid-semantic-1'],
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['valid-semantic-1'],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career supported.'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Should produce only the valid evidence
+      expect(result.evidence).toHaveLength(1);
+      expect(result.evidence[0].identityKey).toBe('valid-semantic-1');
+
+      // The produced ID set should NOT contain the sentinel
+      const producedIds = result.evidence.map(e => resolveSemanticIdentity(e));
+      expect(producedIds).not.toContain('__UNRESOLVED_IDENTITY__');
+
+      // C11 validation should not report the sentinel as unreferenced
+      expect(result.c11Validation.unreferenced).not.toContain('__UNRESOLVED_IDENTITY__');
+    });
   });
 });

@@ -20,11 +20,14 @@ import type { EvidenceProvenance } from '../careerWealth/provenance';
  * The sentinel is kept private to the identity boundary (DomainEvidence.ts) and exported only for
  * use by consumers that project resolved identities. It should never be used as a valid identity.
  *
- * Consumers of resolveSemanticIdentity MUST filter this sentinel:
+ * ENFORCEMENT STATE:
+ * All output boundaries that project resolved IDs now filter this sentinel:
  * - domainTimingAdapter.ts: filters in mapPeriodToCanonicalEvidenceIds (line 72)
  * - careerTrajectoryEngine.ts: filters by checking against evidenceIdentitySet (lines 219-220, 274-276)
- * - canonicalCareerEvidenceMapper.ts: uses for sorting; sentinel appears in output but is acceptable
- *   since validation handles unknown references explicitly (lines 937-938, 966, 977)
+ * - canonicalCareerEvidenceMapper.ts: filters in sortCanonicalEvidence and validateAgainstFinalSynthesis
+ *
+ * For new code at output boundaries, prefer tryResolveSemanticIdentity which returns null for
+ * unresolved evidence, providing type-level discrimination.
  *
  * Note: careerFinalSynthesisIntegration.ts does NOT use resolveSemanticIdentity; it has inline
  * logic for WeightedReasoningEvidence (different field structure: identityKey + evidenceId).
@@ -93,6 +96,36 @@ export function resolveSemanticIdentity(e: DomainEvidence): string {
   // Both identityKey and id are empty/whitespace - signal resolution failure
   // Consumers must filter this marker and treat as DEGRADED traceability
   return UNRESOLVED_IDENTITY_SENTINEL;
+}
+
+/**
+ * Type-safe version of resolveSemanticIdentity for output boundaries.
+ *
+ * Returns the semantic identity when resolvable, or null when both identityKey and id
+ * are empty/whitespace. This allows output boundaries to handle unresolved evidence
+ * with type-level discrimination (null vs string) instead of string matching against
+ * the sentinel constant.
+ *
+ * Consumers at output boundaries (e.g., domainTimingAdapter, careerTrajectoryEngine,
+ * canonicalCareerEvidenceMapper) should use this API to prevent the sentinel from
+ * leaking into canonical output.
+ *
+ * @param evidence - The DomainEvidence to resolve
+ * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise null)
+ */
+export function tryResolveSemanticIdentity(e: DomainEvidence): string | null {
+  const trimmedIdentityKey = e.identityKey?.trim();
+  if (trimmedIdentityKey && trimmedIdentityKey.length > 0) {
+    return trimmedIdentityKey;
+  }
+
+  const trimmedId = e.id?.trim();
+  if (trimmedId && trimmedId.length > 0) {
+    return trimmedId;
+  }
+
+  // Both identityKey and id are empty/whitespace - return null for type-level discrimination
+  return null;
 }
 
 export function createDomainEvidence(

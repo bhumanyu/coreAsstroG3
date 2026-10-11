@@ -45,7 +45,9 @@ import type {
 import {
   createDomainEvidence,
   type DomainEvidence,
-  resolveSemanticIdentity
+  resolveSemanticIdentity,
+  tryResolveSemanticIdentity,
+  UNRESOLVED_IDENTITY_SENTINEL
 } from '../interpretation/DomainEvidence';
 
 import type {
@@ -918,6 +920,11 @@ function assertNonPolarityFieldsAgree(
  *
  * Sort order: phase, then identityKey, then id
  * Ensures input order never changes output.
+ *
+ * Filters out evidence that resolves to null (unresolvable) to prevent
+ * invalid evidence from appearing in canonical output. This is a defensive filter;
+ * in practice, createDomainEvidence already throws on empty id, so this should
+ * never trigger with properly-constructed evidence.
  */
 function sortCanonicalEvidence(
   evidence: readonly DomainEvidence[]
@@ -930,7 +937,10 @@ function sortCanonicalEvidence(
     'VARGA_CONFIRMATION': 5
   };
 
-  return [...evidence].sort((a, b) => {
+  // Filter out evidence that resolves to null (unresolvable) before sorting
+  const validEvidence = evidence.filter(e => tryResolveSemanticIdentity(e) !== null);
+
+  return [...validEvidence].sort((a, b) => {
     const phaseDiff = phaseOrder[a.phase] - phaseOrder[b.phase];
     if (phaseDiff !== 0) return phaseDiff;
 
@@ -963,7 +973,7 @@ export interface C11ValidationResult {
  * Validates that produced evidence IDs are cross-referenceable against finalSynthesis.evidenceIds.
  *
  * Compares canonical identities (identityKey) against C11 evidenceIds.
- * Uses resolveSemanticIdentity to handle empty/whitespace identityKey correctly.
+ * Uses tryResolveSemanticIdentity to handle empty/whitespace identityKey correctly.
  *
  * Handles unknown references explicitly (ignores them, never fabricates).
  * This is a lightweight validation; it does not affect the mapping output.
@@ -974,7 +984,13 @@ function validateAgainstFinalSynthesis(
   evidence: readonly DomainEvidence[],
   finalSynthesis: CareerFinalSynthesisResult
 ): C11ValidationResult {
-  const producedIds = new Set(evidence.map(e => resolveSemanticIdentity(e)));
+  // Exclude unresolved evidence (null from tryResolveSemanticIdentity) from producedIds
+  // to prevent invalid evidence from appearing in the validation result as a valid reference
+  const producedIds = new Set(
+    evidence
+      .map(e => tryResolveSemanticIdentity(e))
+      .filter((id): id is string => id !== null)
+  );
   const finalIds = new Set(finalSynthesis.evidenceIds);
 
   // Check for produced IDs not referenced in C11 (informational only)

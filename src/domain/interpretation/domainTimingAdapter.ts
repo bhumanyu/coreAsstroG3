@@ -11,7 +11,7 @@ import type {
 } from '../../product/life-analysis/lifeAnalysisTypes';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 import type { DomainEvidence } from './DomainEvidence';
-import { resolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
+import { resolveSemanticIdentity, tryResolveSemanticIdentity } from './DomainEvidence';
 
 export interface PeriodCanonicalEvidenceResult {
   readonly evidenceIds: readonly string[];
@@ -68,11 +68,11 @@ export function mapPeriodToCanonicalEvidenceIds(
   // Semantic identity (identityKey) is used for cross-layer matching, falling back to occurrence ID
   if (canonicalEvidence.length > 0) {
     const evidenceIds = canonicalEvidence
-      .map((e: DomainEvidence) => resolveSemanticIdentity(e))
-      .filter((id) => id !== UNRESOLVED_IDENTITY_SENTINEL) // Filter out unresolved markers
+      .map((e: DomainEvidence) => tryResolveSemanticIdentity(e))
+      .filter((id): id is string => id !== null) // Filter out unresolved markers (null)
       .sort((a, b) => a.localeCompare(b)); // Ensure deterministic output
 
-    // If all evidence resolved to the unresolved marker, treat as DEGRADED
+    // If all evidence resolved to null (unresolvable), treat as DEGRADED
     if (evidenceIds.length === 0) {
       return { evidenceIds: [], traceability: 'DEGRADED' };
     }
