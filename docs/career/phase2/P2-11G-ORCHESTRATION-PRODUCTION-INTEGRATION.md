@@ -1,17 +1,24 @@
 # P2-11G: Production Integration Boundary for Canonical Career Orchestration
 
-**Status:** IMPLEMENTED — VERIFICATION PENDING (awaiting observable remote CI workflow results)
+**Status:** COMPOSITION BOUNDARY PREPARED — NOT WIRED INTO PRODUCTION
+
+**Note:** The `buildCanonicalCareerFoundation` builder exists and is tested, but no production service invokes it yet. The P2-11F blocker (profession-producer upstream inputs absent from the production path) remains unresolved. This milestone establishes the composition boundary but does not wire it into the production path.
+
+**Production Integration Status:**
+- No production caller currently invokes `buildCanonicalCareerFoundation`
+- The orchestrator upstream chain (structural → graph → networks → patterns → relevance → condition) is only exercised in tests
+- Profession-producer consumption of the foundation output remains deferred to a future milestone
 
 **Test Results (local):**
 - Lint: ✅ PASSED (`tsc --noEmit`)
-- P2-11G integration test: ✅ 8/8 PASSED
+- P2-11G integration test: ✅ 9/9 PASSED
 - canonicalCareerOrchestrator.test.ts: ✅ 50/50 PASSED
 - careerPatternQualification.test.ts: ✅ 78/78 PASSED
 - CareerDomainInterpreterV2.test.ts: ✅ 64/64 PASSED
 - canonicalCareerEvidenceMapper.test.ts: ✅ 63/63 PASSED
-- **Total: 263/263 PASSED**
+- **Total: 264/264 PASSED**
 
-**Tested Commit SHA:** `6d4d566dab25ef67923e94f3deda68a80ad5fdde`
+**Tested Commit SHA:** `39bf2d9e1281c8dd319826e37a5b34e2f8775a49`
 
 ## Step 1: Dependency Graph Audit
 
@@ -88,11 +95,9 @@ From `src/domain/career/orchestration/canonicalCareerPortsAdapter.ts`, the `defa
 - **Canonical C4–C11 chain:** ✅ Fully wired in production via `interpretCareerV2`
 - **Orchestrator upstream chain:** ❌ NOT wired in production (structural → graph → networks → patterns → relevance → condition)
 - **Orchestrator ports:** ✅ Already wired to real engines via `defaultCareerOrchestrationPorts`
-- **Missing integration point:** A composition/builder module under `src/domain/career/orchestration/` that:
-  1. Runs the canonical upstream chain (structural → graph → networks → patterns → relevance → condition)
-  2. Assembles `CanonicalCareerOrchestrationInput` from the real producers
-  3. Invokes `new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts).orchestrate(input)`
-  4. Returns the `CanonicalCareerFoundation`
+- **Composition boundary:** ✅ `buildCanonicalCareerFoundation` created at `src/domain/career/orchestration/canonicalCareerFoundationBuilder.ts`
+- **Production wiring:** ❌ NOT wired into production — no production caller invokes `buildCanonicalCareerFoundation` yet
+- **Profession-producer consumption:** ❌ Deferred — foundation output not consumed by profession engine yet
 
 ## Step 2: Integration Boundary Design
 

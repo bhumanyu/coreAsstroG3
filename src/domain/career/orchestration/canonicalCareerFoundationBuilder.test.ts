@@ -1,10 +1,22 @@
 import { buildCanonicalCareerFoundation } from './canonicalCareerFoundationBuilder';
+import { CanonicalCareerOrchestrator } from './canonicalCareerOrchestrator';
+import { defaultCareerOrchestrationPorts } from './canonicalCareerPortsAdapter';
+import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
+import {
+  buildCareerGraphFactsFromStructural,
+  buildCareerAstroGraph,
+  detectCareerHouseNetworks
+} from '../careerGraph';
+import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
+import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegration';
+import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../../test/fixtures/canonicalChart';
 import { interpretCareerV2 } from '../CareerDomainInterpreterV2';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
 import type { DomainReasoningOptions } from '../../reasoning/reasoningTypes';
+import type { CanonicalCareerOrchestrationInput } from './canonicalCareerContracts';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -30,8 +42,9 @@ function makeDomainOptions(asOf?: string, targetHoroscope?: any): DomainReasonin
  *
  * Test strategy:
  * 1. Integration test: Build foundation through real production producers
- * 2. Regression test: Ensure interpretCareerV2 is unchanged by the integration
- * 3. Determinism test: Verify output is deterministic under input permutation
+ * 2. Regression test: Ensure interpretCareerV2 structural integrity is maintained
+ * 3. Determinism test: Verify output is deterministic across repeated builds
+ * 4. Permutation test: Verify output is deterministic under orchestrator input permutation
  */
 
 describe('P2-11G Canonical Career Foundation Builder', () => {
@@ -163,7 +176,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(foundation.identityMappings).toEqual([]);
     });
 
-    it('output is deterministic under input permutation', async () => {
+    it('output is deterministic across repeated builds', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
       // Build foundation twice
@@ -172,6 +185,54 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
 
       // Verify deterministic output
       expect(JSON.stringify(foundation1)).toBe(JSON.stringify(foundation2));
+    });
+
+    it('output is deterministic under orchestrator input permutation', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+      // Build foundation normally via builder
+      const foundation1 = buildCanonicalCareerFoundation({ horoscope });
+
+      // Build foundation by manually constructing orchestrator input in permuted order
+      // to test determinism at the orchestrator-input level
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const facts = buildCareerGraphFactsFromStructural(structural);
+      const graph = buildCareerAstroGraph({ facts });
+      const networks = detectCareerHouseNetworks({ graph });
+      const patterns = classifyCareerPatterns({ networks: networks.networks });
+      const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
+      const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
+
+      // Assemble orchestrator input in original order
+      const input1: CanonicalCareerOrchestrationInput = {
+        patterns: patterns.patterns,
+        relevance,
+        condition,
+        networks: networks.networks,
+        dispositorContexts: undefined,
+        result10H: undefined,
+        result10L: undefined
+      };
+
+      // Assemble orchestrator input with permuted field order (semantically equivalent)
+      const input2: CanonicalCareerOrchestrationInput = {
+        networks: networks.networks,
+        patterns: patterns.patterns,
+        condition,
+        relevance,
+        dispositorContexts: undefined,
+        result10H: undefined,
+        result10L: undefined
+      };
+
+      const orchestrator1 = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
+      const foundation2 = orchestrator1.orchestrate(input1);
+
+      const orchestrator2 = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
+      const foundation3 = orchestrator2.orchestrate(input2);
+
+      // Output should be identical regardless of input field order
+      expect(JSON.stringify(foundation2)).toBe(JSON.stringify(foundation3));
     });
 
     it('deep freezes all output objects', async () => {
@@ -202,18 +263,15 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
     });
   });
 
-  describe('Regression Test: interpretCareerV2 Unchanged', () => {
-    it('interpretCareerV2 C4-C11 conclusion is unchanged', async () => {
+  describe('Regression Test: interpretCareerV2 Structural Integrity', () => {
+    it('interpretCareerV2 produces valid C4-C11 conclusion structure', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-
-      // Build the orchestration foundation (this should NOT affect interpretCareerV2)
-      const foundation = buildCanonicalCareerFoundation({ horoscope });
 
       // Run interpretCareerV2
       const options = makeDomainOptions('2024-01-01T00:00:00Z', horoscope);
       const interpretation = interpretCareerV2(horoscope, options);
 
-      // Verify interpretation structure is unchanged
+      // Verify interpretation structure is valid
       expect(interpretation).toBeDefined();
       expect(interpretation.domain).toBe('CAREER');
       expect(interpretation.evidence).toBeDefined();
@@ -233,18 +291,14 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       }
     });
 
-    it('interpretCareerV2 evidence set is unchanged (no double-count)', async () => {
+    it('interpretCareerV2 evidence set has unique IDs (no double-count)', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-
-      // Build the orchestration foundation
-      const foundation = buildCanonicalCareerFoundation({ horoscope });
 
       // Run interpretCareerV2
       const options = makeDomainOptions('2024-01-01T00:00:00Z', horoscope);
       const interpretation = interpretCareerV2(horoscope, options);
 
-      // Verify evidence count is reasonable (not inflated by double-counting)
-      // The exact count depends on the canonical chart, but we can verify it's not zero
+      // Verify evidence count is reasonable (not zero)
       expect(interpretation.evidence.length).toBeGreaterThan(0);
 
       // Verify all evidence has unique IDs (no duplicates)
@@ -253,11 +307,8 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(uniqueIds.size).toBe(evidenceIds.length);
     });
 
-    it('interpretCareerV2 reasoning trace is unchanged', async () => {
+    it('interpretCareerV2 reasoning trace is present and structured', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-
-      // Build the orchestration foundation
-      const foundation = buildCanonicalCareerFoundation({ horoscope });
 
       // Run interpretCareerV2
       const options = makeDomainOptions('2024-01-01T00:00:00Z', horoscope);
