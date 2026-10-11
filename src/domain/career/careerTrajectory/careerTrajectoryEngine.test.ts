@@ -519,6 +519,97 @@ describe('CareerTrajectoryEngine', () => {
       // All IDs are consistent and present
       expect(result.unresolvedEvidenceIds).toEqual([]);
     });
+
+    it('opportunityId is deterministic and derived from mode + sorted evidenceIds', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev2', 'ev1']
+          }
+        ]
+      });
+
+      const input = createTrajectoryInput(c11);
+      const result = buildCareerTrajectory(input);
+
+      // opportunityId should be CAREER_OPPORTUNITY:MANAGEMENT:["ev1","ev2"]
+      expect(result.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:["ev1","ev2"]');
+    });
+
+    it('identical opportunities with different input order produce same opportunityId', () => {
+      const c11a = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev3', 'ev1', 'ev2']
+          }
+        ]
+      });
+
+      const c11b = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1', 'ev2', 'ev3']
+          }
+        ]
+      });
+
+      const resultA = buildCareerTrajectory(createTrajectoryInput(c11a));
+      const resultB = buildCareerTrajectory(createTrajectoryInput(c11b));
+
+      // Same opportunityId despite different input order
+      expect(resultA.opportunities[0].opportunityId).toBe(resultB.opportunities[0].opportunityId);
+      expect(resultA.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:["ev1","ev2","ev3"]');
+    });
+
+    it('different modes produce different opportunityIds', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1']
+          },
+          {
+            mode: 'LEADERSHIP',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1']
+          }
+        ]
+      });
+
+      const result = buildCareerTrajectory(createTrajectoryInput(c11));
+
+      // Different modes should produce different opportunityIds
+      expect(result.opportunities[0].opportunityId).not.toBe(result.opportunities[1].opportunityId);
+    });
   });
 
   describe('Evidence reference resolution', () => {

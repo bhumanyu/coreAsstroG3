@@ -54,6 +54,11 @@ export type CareerTrajectoryCurrentPhase =
  * the copied IDs are not modified. Note: IDs that exist in the evidence set but are not
  * referenced at the top level (expression-only) are not surfaced as unresolved — only
  * genuinely missing IDs are reported.
+ *
+ * STABLE IDENTITY: opportunityId is a deterministic identifier derived from stable fields
+ * (mode + sorted evidenceIds). Format: 'CAREER_OPPORTUNITY:{mode}:{sortedEvidenceIds}'
+ * where sortedEvidenceIds is a JSON-encoded array. This ensures identical opportunities
+ * produce the same opportunityId regardless of input order.
  */
 export interface CareerTrajectoryOpportunity {
   readonly mode: string;
@@ -61,6 +66,7 @@ export interface CareerTrajectoryOpportunity {
   readonly strength: string;
   readonly qualified: boolean;
   readonly evidenceIds: readonly string[];
+  readonly opportunityId: string;
 }
 
 /**

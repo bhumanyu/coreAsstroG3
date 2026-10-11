@@ -133,6 +133,12 @@ function mapCurrentPhase(timingStatus: string): CareerTrajectoryCurrentPhase {
  * level (expression-only) are not surfaced as unresolved — only genuinely
  * missing IDs are reported.
  *
+ * STABLE IDENTITY GENERATION:
+ * opportunityId is derived from mode + sorted evidenceIds using JSON encoding.
+ * Format: 'CAREER_OPPORTUNITY:{mode}:{sortedEvidenceIds}'
+ * This ensures identical opportunities produce the same opportunityId regardless
+ * of input order.
+ *
  * Sorts each evidenceIds array and sorts opportunities by deterministic
  * code-point comparison (locale-independent).
  * Freezes all nested arrays and the returned array.
@@ -166,12 +172,16 @@ function mapOpportunities(
       }
     }
 
+    // Generate stable opportunityId from mode + sorted evidenceIds
+    const opportunityId = `CAREER_OPPORTUNITY:${expr.mode}:${JSON.stringify(sortedEvidenceIds)}`;
+
     return Object.freeze({
       mode: expr.mode,
       direction: expr.direction,
       strength: expr.strength,
       qualified: expr.qualified,
-      evidenceIds: Object.freeze(sortedEvidenceIds)
+      evidenceIds: Object.freeze(sortedEvidenceIds),
+      opportunityId
     });
   });
 

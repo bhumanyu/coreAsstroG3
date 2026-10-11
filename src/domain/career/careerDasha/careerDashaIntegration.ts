@@ -338,25 +338,40 @@ function buildCanonicalPeriod(
 /**
  * Resolves natal root evidence IDs for a planet.
  *
- * Conservative implementation: WeightedReasoningEvidence does not expose a structured
- * field that reliably identifies the planet/subject. The rootEvidenceId field is a
- * forward-looking W1 concept that is not yet implemented in the current codebase.
+ * This function extracts natal evidence IDs that are associated with a specific planet
+ * by parsing the identityKey field of WeightedReasoningEvidence items.
  *
- * Rather than fabricating links via string matching (which would be unreliable and
- * create false provenance), this function returns an empty array. This preserves
- * correctness by not claiming traceability that does not exist in the data contract.
+ * The identityKey format for natal evidence is: 'CAREER_NATAL:{planet}:{role}:{detail}'
+ * We parse this to extract the planet and match it against the requested planet.
  *
- * Future W1 work may establish a root evidence tree structure for evidence dependency
- * tracking, at which point this function can be updated to use the structured mechanism.
+ * Returns the evidenceId (semantic identity) of matching natal evidence items.
+ * If no planet is specified, returns an empty array.
+ * If no matching evidence is found, returns an empty array.
  */
 function resolveNatalRootEvidenceIds(
-  _natal: CareerNatalAnalysis,
-  _planet?: Planet
+  natal: CareerNatalAnalysis,
+  planet?: Planet
 ): readonly string[] {
-  // Conservative: return empty array since WeightedReasoningEvidence does not
-  // expose a structured planet/subject field, and rootEvidenceId is not yet implemented.
-  // Do not fabricate links via string matching.
-  return Object.freeze([]);
+  if (!planet) {
+    return Object.freeze([]);
+  }
+
+  const matchingIds: string[] = [];
+
+  for (const evidence of natal.evidence) {
+    // Parse identityKey to extract planet
+    // Expected format: 'CAREER_NATAL:{planet}:{role}:{detail}'
+    const parts = evidence.identityKey.split(':');
+    if (parts.length >= 2 && parts[0] === 'CAREER_NATAL') {
+      const evidencePlanet = parts[1];
+      if (evidencePlanet === planet) {
+        // Use evidenceId as the semantic identity (matches identityKey after P0-08)
+        matchingIds.push(evidence.evidenceId);
+      }
+    }
+  }
+
+  return Object.freeze(matchingIds);
 }
 
 /**

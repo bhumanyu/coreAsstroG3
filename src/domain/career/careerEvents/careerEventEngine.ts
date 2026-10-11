@@ -158,6 +158,58 @@ function periodHasMatchingEvidence(
 }
 
 /**
+ * Checks if an opportunity is relevant to an activating period using evidence-identity overlap.
+ *
+ * The linkage rule: The opportunity's evidenceIds must overlap with the canonical C9 activation's
+ * natalRootIds. This ensures the opportunity is substantively connected to the natal evidence
+ * that the Dasha period activates.
+ *
+ * Returns true if there is at least one overlapping evidence ID between the opportunity and
+ * the period's natal root evidence.
+ */
+function isOpportunityRelevantToPeriod(
+  opportunity: CareerTrajectoryOpportunity,
+  period: CareerDashaCanonicalPeriod,
+  dashaEvidence: readonly CareerDashaCanonicalEvidence[]
+): boolean {
+  // Collect matching Dasha evidence for this period
+  const matchingEvidence = dashaEvidence.filter(e =>
+    e.level === period.level &&
+    e.planet === period.planet &&
+    e.effect === period.effect &&
+    e.direction === period.direction &&
+    e.role === period.role
+  );
+
+  // If no matching evidence, cannot establish relevance
+  if (matchingEvidence.length === 0) {
+    return false;
+  }
+
+  // Collect all natalRootIds from matching evidence
+  const natalRootIds = new Set<string>();
+  for (const evidence of matchingEvidence) {
+    for (const rootId of evidence.provenance.natalRootIds) {
+      natalRootIds.add(rootId);
+    }
+  }
+
+  // If no natalRootIds, cannot establish relevance
+  if (natalRootIds.size === 0) {
+    return false;
+  }
+
+  // Check for overlap between opportunity evidenceIds and natalRootIds
+  for (const oppEvidenceId of opportunity.evidenceIds) {
+    if (natalRootIds.has(oppEvidenceId)) {
+      return true; // Found overlap
+    }
+  }
+
+  return false; // No overlap found
+}
+
+/**
  * Builds timing information from a Dasha period.
  *
  * If the period has valid start and end dates, returns a DASHA_PERIOD_WINDOW.
@@ -310,6 +362,10 @@ function buildOpportunityEvent(
     period.end
   );
 
+  // Extract activationId from the matching Dasha evidence
+  // activationId is the identityKey of the canonical evidence that matches the period
+  const activationId = dashaEvidenceIds.length > 0 ? dashaEvidenceIds[0] : null;
+
   const statement = [
     `Career opportunity window during ${period.level} Dasha.`,
     `Mode: ${opportunity.mode}.`,
@@ -325,7 +381,9 @@ function buildOpportunityEvent(
     timing,
     evidenceIds: sortedEvidenceIds,
     ruleIds: Object.freeze(['P2-09B-EVT-01']),
-    statement
+    statement,
+    opportunityId: opportunity.opportunityId,
+    activationId
   });
 }
 
@@ -362,6 +420,10 @@ function buildChallengeEvent(
     period.end
   );
 
+  // Extract activationId from the matching Dasha evidence
+  // activationId is the identityKey of the canonical evidence that matches the period
+  const activationId = dashaEvidenceIds.length > 0 ? dashaEvidenceIds[0] : null;
+
   const statement = [
     `Career challenge window during ${period.level} Dasha.`,
     timing.type === 'DASHA_PERIOD_WINDOW'
@@ -376,7 +438,9 @@ function buildChallengeEvent(
     timing,
     evidenceIds: sortedEvidenceIds,
     ruleIds: Object.freeze(['P2-09B-EVT-02']),
-    statement
+    statement,
+    opportunityId: null, // Challenge events are independent of opportunities
+    activationId
   });
 }
 
@@ -409,6 +473,10 @@ function buildConditionalEvent(
     period.end
   );
 
+  // Extract activationId from the matching Dasha evidence
+  // activationId is the identityKey of the canonical evidence that matches the period
+  const activationId = dashaEvidenceIds.length > 0 ? dashaEvidenceIds[0] : null;
+
   const statement = [
     `Conditional career window during ${period.level} Dasha.`,
     `Mode: ${opportunity.mode}.`,
@@ -424,7 +492,9 @@ function buildConditionalEvent(
     timing,
     evidenceIds: sortedEvidenceIds,
     ruleIds: Object.freeze(['P2-09B-EVT-01']),
-    statement
+    statement,
+    opportunityId: opportunity.opportunityId,
+    activationId
   });
 }
 
@@ -435,6 +505,11 @@ function buildConditionalEvent(
  * EVT-02: Periods with UNKNOWN/INSUFFICIENT_DATA/UNAVAILABLE/NEUTRAL produce NO event.
  * Challenge events are independent of qualified opportunities (generated from challenging periods directly).
  * Never emits an event with zero supporting evidence.
+ *
+ * LINKAGE RULE (11E-C): Opportunity-to-activation linkage uses evidence-identity overlap.
+ * The opportunity's evidenceIds must overlap with the canonical C9 activation's natalRootIds.
+ * This ensures the opportunity is substantively connected to the natal evidence that the Dasha period activates.
+ * If relevance cannot be established, no event is emitted (the opportunity-activation pair is not linked).
  */
 function generateEvents(
   opportunities: readonly CareerTrajectoryOpportunity[],
@@ -487,6 +562,11 @@ function generateEvents(
           continue;
         }
 
+        // LINKAGE RULE: Check evidence-identity overlap between opportunity and activation
+        if (!isOpportunityRelevantToPeriod(opportunity, period, dashaAnalysis.evidence)) {
+          continue; // No relevance established, skip this opportunity-activation pair
+        }
+
         if (opportunity.direction === 'CONDITIONAL') {
           events.push(buildConditionalEvent(opportunity, period, dashaAnalysis.evidence));
         } else {
@@ -508,6 +588,7 @@ function generateEvents(
  *
  * Payload-identity fields that must agree before merge: eventType, timing, status, statement.
  * Only evidenceIds and ruleIds are intentionally mergeable (union + sort).
+ * opportunityId and activationId must also agree before merge (they are identity references, not mergeable).
  *
  * Exported for direct unit testing.
  */
@@ -522,7 +603,9 @@ export function dedupeEvents(events: readonly CareerEvent[]): readonly CareerEve
         existing.eventType !== event.eventType ||
         JSON.stringify(existing.timing) !== JSON.stringify(event.timing) ||
         existing.status !== event.status ||
-        existing.statement !== event.statement
+        existing.statement !== event.statement ||
+        existing.opportunityId !== event.opportunityId ||
+        existing.activationId !== event.activationId
       ) {
         throw new Error(
           `Conflicting payloads for same eventId: ${event.eventId}`

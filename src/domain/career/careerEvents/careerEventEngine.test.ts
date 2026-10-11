@@ -153,7 +153,8 @@ function createOpportunity(
     direction: 'SUPPORT',
     strength: 'STRONG',
     qualified: true,
-    evidenceIds: ['evidence-1']
+    evidenceIds: ['evidence-1'],
+    opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]'
   };
 
   return { ...base, ...overrides };
@@ -616,6 +617,128 @@ describe('CareerEventEngine', () => {
     });
   });
 
+  describe('Stable identity fields (opportunityId and activationId)', () => {
+    it('opportunity window event has opportunityId from trajectory opportunity', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]' })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD')]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]');
+    });
+
+    it('opportunity window event has activationId from Dasha evidence identityKey', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { identityKey: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER' })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events[0].activationId).toBe('CAREER_DASHA:MD:SUN:PRIMARY_DRIVER');
+    });
+
+    it('conditional window event has opportunityId from trajectory opportunity', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({
+          direction: 'CONDITIONAL',
+          opportunityId: 'CAREER_OPPORTUNITY:LEADERSHIP:["evidence-1"]'
+        })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD')]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events[0].opportunityId).toBe('CAREER_OPPORTUNITY:LEADERSHIP:["evidence-1"]');
+    });
+
+    it('conditional window event has activationId from Dasha evidence identityKey', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ direction: 'CONDITIONAL' })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { identityKey: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER' })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events[0].activationId).toBe('CAREER_DASHA:MD:SUN:PRIMARY_DRIVER');
+    });
+
+    it('challenge window event has null opportunityId (independent of opportunities)', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [] // No opportunities
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'CHALLENGES', direction: 'CHALLENGE' }),
+        evidence: [createDashaEvidence('MD', { effect: 'CHALLENGES', direction: 'CHALLENGE' })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events[0].opportunityId).toBeNull();
+    });
+
+    it('challenge window event has activationId from Dasha evidence identityKey', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: []
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'CHALLENGES', direction: 'CHALLENGE' }),
+        evidence: [createDashaEvidence('MD', {
+          effect: 'CHALLENGES',
+          direction: 'CHALLENGE',
+          identityKey: 'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER'
+        })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events[0].activationId).toBe('CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER');
+    });
+
+    it('event with no matching Dasha evidence has null activationId', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [] // No matching evidence
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      // No event should be generated when no matching Dasha evidence exists
+      expect(result.events).toHaveLength(0);
+    });
+  });
+
   describe('Deterministic output', () => {
     it('generates stable eventId from domain inputs', () => {
       const trajectory = createTrajectoryFixture({
@@ -685,7 +808,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
-        statement: 'Test event'
+        statement: 'Test event',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       const event2: CareerEvent = {
@@ -695,7 +820,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
-        statement: 'Test event'
+        statement: 'Test event',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       const result = dedupeEvents([event1, event2]);
@@ -713,7 +840,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
-        statement: 'Test event 1'
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       const event2: CareerEvent = {
@@ -723,7 +852,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
-        statement: 'Test event 2'
+        statement: 'Test event 2',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
@@ -737,7 +868,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
-        statement: 'Test event 1'
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       const event2: CareerEvent = {
@@ -747,7 +880,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'UNTIMED' }, // Different timing
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
-        statement: 'Test event 2'
+        statement: 'Test event 2',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
@@ -761,7 +896,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
-        statement: 'Test event 1'
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       const event2: CareerEvent = {
@@ -771,7 +908,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
-        statement: 'Different statement' // Different statement
+        statement: 'Different statement', // Different statement
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
@@ -785,7 +924,9 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
-        statement: 'Test event 1'
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
       const event2: CareerEvent = {
@@ -795,7 +936,65 @@ describe('CareerEventEngine', () => {
         timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
-        statement: 'Test event 1'
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
+      };
+
+      expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
+    });
+
+    it('dedupeEvents throws on conflicting opportunityId for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
+      };
+
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:LEADERSHIP:["evidence-1"]', // Different opportunityId
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
+      };
+
+      expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');
+    });
+
+    it('dedupeEvents throws on conflicting activationId for same eventId', () => {
+      const event1: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-1'],
+        ruleIds: ['P2-09B-EVT-01'],
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
+      };
+
+      const event2: CareerEvent = {
+        eventId: 'CAREER_EVENT:["CAREER_OPPORTUNITY_WINDOW","MANAGEMENT",["evidence-1"],"MD","SUN","2020-01-01","2030-01-01"]',
+        eventType: 'CAREER_OPPORTUNITY_WINDOW',
+        status: 'CANDIDATE',
+        timing: { type: 'DASHA_PERIOD_WINDOW', start: '2020-01-01', end: '2030-01-01' },
+        evidenceIds: ['evidence-2'],
+        ruleIds: ['P2-09B-EVT-02'],
+        statement: 'Test event 1',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        activationId: 'CAREER_DASHA:MD:MOON:PRIMARY_DRIVER' // Different activationId
       };
 
       expect(() => dedupeEvents([event1, event2])).toThrow('Conflicting payloads for same eventId');

@@ -118,6 +118,21 @@ export interface CareerEvent {
    * Human-readable statement.
    */
   readonly statement: string;
+
+  /**
+   * Reference to the trajectory opportunity that generated this event.
+   * Populated for opportunity-window and conditional-window events.
+   * Null for challenge events (which are independent of opportunities).
+   */
+  readonly opportunityId: string | null;
+
+  /**
+   * Reference to the canonical C9 activation that triggered this event.
+   * This is the identityKey of the matching CareerDashaCanonicalEvidence.
+   * Populated for all events when a matching activation exists.
+   * Null if no matching activation is found.
+   */
+  readonly activationId: string | null;
 }
 
 /**
