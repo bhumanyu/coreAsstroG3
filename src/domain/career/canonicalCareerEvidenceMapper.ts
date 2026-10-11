@@ -692,7 +692,7 @@ function mapD10Evidence(
       // Create SUPPORTING occurrence
       const supportingEvidence = createDomainEvidence({
         id: `${evidence.id}:SUPPORTING`,
-        sourceType: 'HOUSE',
+        sourceType: 'VARGA',
         domain: 'CAREER',
         role: 'CONFIRMATION',
         phase: 'VARGA_CONFIRMATION',
@@ -719,7 +719,7 @@ function mapD10Evidence(
       // Create CHALLENGING occurrence
       const challengingEvidence = createDomainEvidence({
         id: `${evidence.id}:CHALLENGING`,
-        sourceType: 'HOUSE',
+        sourceType: 'VARGA',
         domain: 'CAREER',
         role: 'CONFIRMATION',
         phase: 'VARGA_CONFIRMATION',
@@ -750,7 +750,7 @@ function mapD10Evidence(
 
       const domainEvidence = createDomainEvidence({
         id: evidence.id,
-        sourceType: 'HOUSE',
+        sourceType: 'VARGA',
         domain: 'CAREER',
         role: 'CONFIRMATION',
         phase: 'VARGA_CONFIRMATION',
