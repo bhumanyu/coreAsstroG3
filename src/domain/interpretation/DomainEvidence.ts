@@ -43,6 +43,21 @@ export interface DomainEvidence {
   readonly manifestationRuleIds?: readonly string[];
 }
 
+/**
+ * Resolves the semantic identity of a DomainEvidence.
+ *
+ * Returns the semantic identity key (identityKey) when present, falling back to the
+ * occurrence ID (id) when identityKey is absent or empty. This enables cross-layer
+ * evidence matching where multiple occurrences of the same semantic fact should resolve
+ * to a single identity.
+ *
+ * @param evidence - The DomainEvidence to resolve
+ * @returns The semantic identity (identityKey if present, otherwise id)
+ */
+export function resolveSemanticIdentity(e: DomainEvidence): string {
+  return e.identityKey ?? e.id;
+}
+
 export function createDomainEvidence(
   evidence: Partial<DomainEvidence> & {
     id: string;

@@ -11,6 +11,7 @@ import type {
 } from '../../product/life-analysis/lifeAnalysisTypes';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 import type { DomainEvidence } from './DomainEvidence';
+import { resolveSemanticIdentity } from './DomainEvidence';
 
 export interface PeriodCanonicalEvidenceResult {
   readonly evidenceIds: readonly string[];
@@ -63,10 +64,14 @@ export function mapPeriodToCanonicalEvidenceIds(
     return e.timing.level === period && e.timing.planet === planet;
   });
 
-  // If canonical evidence exists, use its IDs and mark as RESOLVED
+  // If canonical evidence exists, use its semantic identity IDs and mark as RESOLVED
+  // Semantic identity (identityKey) is used for cross-layer matching, falling back to occurrence ID
   if (canonicalEvidence.length > 0) {
+    const evidenceIds = canonicalEvidence
+      .map((e: DomainEvidence) => resolveSemanticIdentity(e))
+      .sort((a, b) => a.localeCompare(b)); // Ensure deterministic output
     return {
-      evidenceIds: canonicalEvidence.map((e: DomainEvidence) => e.id),
+      evidenceIds,
       traceability: 'RESOLVED'
     };
   }

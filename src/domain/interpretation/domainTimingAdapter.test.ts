@@ -13,6 +13,7 @@ import {
   createDomainConclusion
 } from './index';
 import { Planet } from '../../types';
+import { resolveSemanticIdentity } from './DomainEvidence';
 
 describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
   it('returns RESOLVED with matching canonical evidence IDs for MD period', () => {
@@ -340,5 +341,228 @@ describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
     expect(timing?.mahadasha?.traceability).toBe('RESOLVED');
     expect(timing?.antardasha?.traceability).toBe('DEGRADED'); // No AD evidence
     expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
+  });
+});
+
+describe('domainTimingAdapter - Semantic Identity Resolution (P2-11D)', () => {
+  it('resolveSemanticIdentity returns identityKey when present', () => {
+    const evidence = createDomainEvidence({
+      id: 'OCCURRENCE_ID_123',
+      sourceType: 'DASHA',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      statement: 'Test evidence',
+      identityKey: 'SEMANTIC_KEY_ABC'
+    });
+
+    const identity = resolveSemanticIdentity(evidence);
+    expect(identity).toBe('SEMANTIC_KEY_ABC');
+  });
+
+  it('resolveSemanticIdentity falls back to id when identityKey is absent', () => {
+    const evidence = createDomainEvidence({
+      id: 'OCCURRENCE_ID_123',
+      sourceType: 'DASHA',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      statement: 'Test evidence'
+    });
+
+    const identity = resolveSemanticIdentity(evidence);
+    expect(identity).toBe('OCCURRENCE_ID_123');
+  });
+
+  it('resolveSemanticIdentity falls back to id when identityKey is empty string', () => {
+    const evidence = createDomainEvidence({
+      id: 'OCCURRENCE_ID_123',
+      sourceType: 'DASHA',
+      polarity: 'SUPPORTING',
+      strength: 'STRONG',
+      statement: 'Test evidence',
+      identityKey: ''
+    });
+
+    const identity = resolveSemanticIdentity(evidence);
+    expect(identity).toBe('OCCURRENCE_ID_123');
+  });
+
+  it('mapPeriodToCanonicalEvidenceIds uses semantic identity (identityKey) when present', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'OCCURRENCE_ID_123',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Jupiter Mahadasha activates career',
+            identityKey: 'SEMANTIC_KEY_ABC'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    expect(result.evidenceIds).toEqual(['SEMANTIC_KEY_ABC']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('mapPeriodToCanonicalEvidenceIds falls back to occurrence id when identityKey absent', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'OCCURRENCE_ID_456',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Saturn Antardasha modifies career'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'AD',
+            planet: Planet.SATURN
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'AD', Planet.SATURN, []);
+
+    expect(result.evidenceIds).toEqual(['OCCURRENCE_ID_456']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('mapPeriodToCanonicalEvidenceIds handles mixed identityKey presence (some with, some without)', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'OCC_1',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Evidence with identityKey',
+            identityKey: 'SEM_1'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'OCC_2',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Evidence without identityKey'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // Sorted deterministically by semantic identity
+    expect(result.evidenceIds).toEqual(['OCC_2', 'SEM_1']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('mapPeriodToCanonicalEvidenceIds produces deterministic output (sorted by semantic identity)', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'OCC_Z',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Third evidence',
+            identityKey: 'SEM_C'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'OCC_A',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'First evidence',
+            identityKey: 'SEM_A'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'OCC_M',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Second evidence',
+            identityKey: 'SEM_B'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    // Sorted deterministically by semantic identity
+    expect(result.evidenceIds).toEqual(['SEM_A', 'SEM_B', 'SEM_C']);
+    expect(result.traceability).toBe('RESOLVED');
   });
 });

@@ -859,6 +859,64 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.phase).not.toBe('NATAL_PROMISE');
     });
 
+    it('D10 evidence uses sourceType VARGA with source D10 (P2-11D)', () => {
+      const d10Evidence: CareerD10CanonicalEvidence[] = [
+        {
+          identityKey: 'd10-identity-1',
+          id: 'd10-evidence-1',
+          role: 'PRIMARY',
+          direction: 'SUPPORT',
+          d10Effect: 'QUALIFIES',
+          d10Strength: 'STRONG',
+          weight: 3,
+          statement: 'D10 qualifies career potential',
+          sourceIds: ['d10-source-1'],
+          provenance: {
+            source: 'C10_D10',
+            ruleIds: ['RULE_D10_1'],
+            sourceIds: ['d10-source-1'],
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const d10: CareerD10CanonicalAnalysis = {
+        availability: 'AVAILABLE',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        d10Effect: 'QUALIFIES',
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
+        qualifiedDirection: 'SUPPORT',
+        qualifiedStrength: 'STRONG',
+        natalPromisePreserved: true,
+        relationship: 'REINFORCES',
+        evidence: d10Evidence,
+        conflicts: [],
+        expressionQualifications: [],
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'D10 analysis complete'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10,
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
+
+      // P2-11D: D10 evidence uses sourceType: 'VARGA' to indicate divisional chart
+      expect(evidence.sourceType).toBe('VARGA');
+      // source indicates the specific divisional chart (D10)
+      expect(evidence.source).toBe('D10');
+    });
+
     it('missing provenance ruleIds leaves ruleId absent (no fabrication)', () => {
       const d10Evidence: CareerD10CanonicalEvidence[] = [
         {

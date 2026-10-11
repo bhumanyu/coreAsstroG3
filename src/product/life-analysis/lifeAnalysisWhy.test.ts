@@ -354,7 +354,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(productResult.aiExplanation?.status).toBe('ERROR');
   });
 
-  it('Test 11: Stage-1 Golden Fixture integration — Career (10H/10L/D10) and Wealth (2H/11H/D2) are present in Why evidence universe', () => {
+  it('Test 11 (LEGACY): Stage-1 Golden Fixture integration — Career (10H/10L/D10) and Wealth (2H/11H/D2) are present in Why evidence universe', () => {
     const why = buildWhyExperience({
       analysis: goldenAnalysis,
       domainInterpretations: [STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]
@@ -372,7 +372,7 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     expect(careerSources).toContain('STRUCTURAL');
     expect(careerSources).toContain('VARGA');
     // Wealth fixture still uses legacy source types (HOUSE, LORDSHIP, PLANET, ASPECT, YOGA, DASHA)
-    // Wealth canonical mapper migration is pending
+    // Wealth canonical mapper migration is pending (P2-11D tracking item)
     expect(wealthSources).toContain('HOUSE');
     expect(wealthSources).toContain('LORDSHIP');
     expect(wealthSources).toContain('PLANET');
@@ -386,6 +386,18 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     for (const item of why.evidence) {
       expect(allDomainIds.has(item.id)).toBe(true);
     }
+  });
+
+  it.skip('Test 11B (PENDING canonical contract): Wealth canonical mapper migration — STRUCTURAL/VARGA source types', () => {
+    // TODO: Implement Wealth canonical mapper (analogous to canonicalCareerEvidenceMapper)
+    // Expected behavior when canonical Wealth mapper is implemented:
+    // - Wealth evidence should use STRUCTURAL source type for natal structural factors (2H, 11H, lords)
+    // - Wealth evidence should use VARGA source type for divisional chart factors (D2 for gains)
+    // - source should indicate the specific chart (e.g., 'D2' for D2 varga)
+    // - Legacy source types (HOUSE, LORDSHIP, PLANET, ASPECT, YOGA) should be replaced
+    //
+    // Tracking: P2-11D canonical Wealth mapper migration is an outstanding item
+    // This test should be enabled once the canonical Wealth mapper is implemented
   });
 
   it('Test 12: Rule metadata registry resolution — maps Career and Wealth rule metadata correctly', () => {
