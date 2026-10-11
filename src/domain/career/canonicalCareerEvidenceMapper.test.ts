@@ -4341,9 +4341,15 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
   describe('UNRESOLVED_IDENTITY_SENTINEL Filtering (Finding 2)', () => {
     it('sortCanonicalEvidence filters out invalid evidence (empty id AND empty identityKey) - Finding 1', () => {
-      // Direct unit test of sortCanonicalEvidence with raw invalid DomainEvidence
-      // Use RAW DomainEvidence object literal to bypass createDomainEvidence validation
-      // and prove that sortCanonicalEvidence filters invalid evidence (empty id AND empty/whitespace identityKey)
+      // Direct unit test of sortCanonicalEvidence with raw invalid DomainEvidence.
+      // Uses RAW DomainEvidence object literal to bypass createDomainEvidence validation
+      // and prove that sortCanonicalEvidence filters invalid evidence (empty id AND empty/whitespace identityKey).
+      //
+      // NOTE: This test uses raw DomainEvidence to bypass factory validation because
+      // createDomainEvidence throws on empty id, making truly malformed evidence unreachable
+      // through the public mapper path. The public mapper integration test validates that
+      // sentinel/empty identity never appears in result.evidence or result.c11Validation.
+      // This unit test validates the defensive filtering logic itself.
 
       const validEvidence = createDomainEvidence({
         id: 'valid-occurrence-1',
@@ -4685,13 +4691,143 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expect(validationResult.missing).toEqual([]);
       expect(validationResult.unreferenced).toEqual([]);
     });
+
+    it('validateAgainstFinalSynthesis filters whitespace-padded sentinel from malformed C11 evidenceIds - Finding 3', () => {
+      // Regression test: ensure that a whitespace-padded sentinel such as '  __UNRESOLVED_IDENTITY__  '
+      // is also excluded instead of leaking into missing
+
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-7',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-7'
+      });
+
+      // C11 with malformed evidenceIds containing whitespace-padded sentinel
+      const finalSynthesisWithPaddedSentinel: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['valid-semantic-7', '  __UNRESOLVED_IDENTITY__  '], // Contains whitespace-padded sentinel
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['valid-semantic-7', '  __UNRESOLVED_IDENTITY__  '],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career supported with malformed C11.'
+      };
+
+      const validationResult = validateC11References([validEvidence], finalSynthesisWithPaddedSentinel);
+
+      // The whitespace-padded sentinel should be filtered out, so missing should be empty
+      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.unreferenced).toEqual([]);
+    });
+
+    it('validateAgainstFinalSynthesis does not validate evidenceTrace.evidenceIds - Finding 2', () => {
+      // Test that validateAgainstFinalSynthesis only validates against finalSynthesis.evidenceIds (top-level)
+      // and does NOT validate the nested finalSynthesis.evidenceTrace.evidenceIds field.
+      // Per the documented contract, evidenceTrace.evidenceIds is required to mirror evidenceIds
+      // at the C11 boundary, but this validator only checks the top-level field.
+
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-8',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-8'
+      });
+
+      // C11 with evidenceTrace.evidenceIds populated differently from top-level evidenceIds
+      // (simulating a C11 contract violation)
+      const finalSynthesisWithMismatchedTrace: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['valid-semantic-8'], // Top-level evidenceIds matches produced
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['different-id-in-trace'], // evidenceTrace.evidenceIds differs (C11 contract violation)
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career supported with mismatched evidenceTrace.'
+      };
+
+      const validationResult = validateC11References([validEvidence], finalSynthesisWithMismatchedTrace);
+
+      // Validation should succeed because it only checks top-level evidenceIds
+      // (which matches the produced evidence), not evidenceTrace.evidenceIds
+      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.unreferenced).toEqual([]);
+
+      // The mismatched evidenceTrace.evidenceIds is NOT caught by this validator
+      // This is intentional per the documented contract; C11 boundary validation
+      // should enforce evidenceTrace consistency if needed.
+    });
   });
 
   describe('Public Mapper Integration (P2-11D Gap 3)', () => {
     it('mapCanonicalCareerEvidence output never exposes sentinel or empty identity', () => {
       // Integration test that drives evidence through the public mapper (not just sortCanonicalEvidence helper)
       // and asserts that result.evidence and result.c11Validation never expose __UNRESOLVED_IDENTITY__
-      // or an empty-string identity
+      // or an empty-string identity.
+      //
+      // NOTE: Malformed DomainEvidence (empty id and/or empty identityKey) cannot enter through
+      // the public mapper because createDomainEvidence throws on empty id. This test validates
+      // that valid evidence through the public path never produces sentinel/empty identities in
+      // the output. Direct unit tests of sortCanonicalEvidence/validateC11References with raw
+      // DomainEvidence provide coverage for the invalid-evidence filtering logic.
 
       const natalEvidence: WeightedReasoningEvidence[] = [
         {

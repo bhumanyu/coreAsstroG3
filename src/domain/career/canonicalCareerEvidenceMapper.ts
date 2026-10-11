@@ -180,6 +180,11 @@ export function validateC11References(
  *
  * This allows tests to directly unit-test the sort helper's behavior with records
  * that have empty id and/or empty identityKey (invalid evidence that should be filtered).
+ *
+ * NOTE: Invalid evidence (empty id) cannot enter through the public mapper boundary
+ * because createDomainEvidence throws on empty id. These unit tests use raw DomainEvidence
+ * objects to bypass factory validation and prove the filtering logic works defensively.
+ * End-to-end integration tests use valid evidence through the public mapper path.
  */
 export { sortCanonicalEvidence, validateAgainstFinalSynthesis };
 
@@ -994,6 +999,15 @@ export interface C11ValidationResult {
  * from both producedIds and finalIds to prevent malformed C11 data from being treated as
  * ordinary missing/unreferenced evidence IDs.
  *
+ * evidenceTrace Contract:
+ * This function validates against finalSynthesis.evidenceIds (top-level field) only.
+ * The nested finalSynthesis.evidenceTrace.evidenceIds field is NOT validated here.
+ * Per the C11 contract (careerFinalSynthesis.ts buildEvidenceTrace), evidenceTrace.evidenceIds
+ * is required to mirror the top-level evidenceIds - they are built from the same input.
+ * If evidenceTrace.evidenceIds differs from evidenceIds, that is a C11 contract violation
+ * outside this validator's scope. Consumers that rely on evidenceTrace should validate
+ * consistency at the C11 boundary.
+ *
  * Returns a structured result with unreferenced and missing IDs for observability.
  */
 function validateAgainstFinalSynthesis(
@@ -1010,22 +1024,22 @@ function validateAgainstFinalSynthesis(
 
   // Filter out reserved sentinel and empty/whitespace values from finalIds
   // to prevent malformed C11 data from being treated as ordinary missing evidence IDs
+  // Trim each id once and compare the trimmed value against both '' and UNRESOLVED_IDENTITY_SENTINEL
+  // so that whitespace-padded sentinel values (e.g., '  __UNRESOLVED_IDENTITY__  ') are also excluded
   const finalIds = new Set(
-    finalSynthesis.evidenceIds.filter(id => {
-      // Exclude the reserved sentinel
-      if (id === UNRESOLVED_IDENTITY_SENTINEL) {
-        return false;
-      }
-      // Exclude empty strings
-      if (id === '') {
-        return false;
-      }
-      // Exclude whitespace-only strings
-      if (id.trim() === '') {
-        return false;
-      }
-      return true;
-    })
+    finalSynthesis.evidenceIds
+      .map(id => id.trim()) // Normalize by trimming first
+      .filter(id => {
+        // Exclude the reserved sentinel (after trimming)
+        if (id === UNRESOLVED_IDENTITY_SENTINEL) {
+          return false;
+        }
+        // Exclude empty strings (after trimming)
+        if (id === '') {
+          return false;
+        }
+        return true;
+      })
   );
 
   // Check for produced IDs not referenced in C11 (informational only)
