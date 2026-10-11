@@ -45,19 +45,12 @@ import type {
   CareerEvidenceClassification
 } from './careerTypes';
 import {
-  buildCareerEvidence,
-  classifyCareerEvidence,
-  mapCareerRole,
-  mapCareerPhase,
-  mapCareerSource,
-  mapCareerPolarity,
-  mapCareerStrength,
-  mapCareerPriority
-} from './careerEvidenceMapper';
-import {
   linkCareerEvidence,
   resolveRelatedCareerPromiseEvidenceIds
 } from './careerEvidenceLinker';
+import {
+  buildCareerEvidence
+} from './careerEvidenceMapper';
 import {
   deriveCareerManifestations,
   buildCareerManifestations,
@@ -129,24 +122,34 @@ import {
 import {
   buildCareerD10Analysis
 } from './careerD10/careerD10Integration';
+import {
+  mapCanonicalCareerEvidence
+} from './canonicalCareerEvidenceMapper';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
  *
- * The canonical type contract for Career Final Synthesis is now defined at:
+ * The canonical type contract for Career Final Synthesis is defined at:
  * src/domain/career/careerFinalSynthesis/careerFinalSynthesisTypes.ts
  *
- * This interpreter currently uses the legacy synthesis implementation from
- * src/domain/careerWealth/finalSynthesis/careerFinalSynthesis.ts for backward
- * compatibility and to preserve current runtime behavior.
+ * This interpreter uses the canonical C11 synthesis implementation as the single
+ * authoritative career conclusion source (implemented in P2-08D).
  *
- * The legacy types in careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes.ts
- * are marked as deprecated and will be migrated to re-export from the canonical C11
- * boundary in a future update.
+ * Evidence Assembly (P2-11C Gate 5):
+ * - Canonical evidence mapper (mapCanonicalCareerEvidence) produces evidence from
+ *   canonical C4-C10 analysis
+ * - Legacy evidence paths (buildCareerEvidence, toDomainEvidence, dashaFactorsEvidence)
+ *   are disabled to prevent double-counting
+ * - Each natal/expression/dasha/d10 fact is counted exactly once via identityKey deduplication
+ * - C11 is used only for reference validation, never as an evidence source
  *
- * Future migration will rewire this interpreter to use the canonical C11 synthesis
- * implementation from src/domain/career/careerFinalSynthesis/careerFinalSynthesis.ts
- * while preserving the existing output shape and runtime behavior.
+ * The legacy synthesis from careerWealth/finalSynthesis/careerFinalSynthesis.ts is
+ * retained as a compatibility artifact in conclusionData.careerFinalSynthesis for
+ * backward compatibility with existing consumers. New code should read from
+ * conclusionData.canonicalCareerFinalSynthesis instead.
+ *
+ * The P2-11B CanonicalCareerOrchestrator and its deferred identity mappings remain
+ * intentionally out of the production synthesis path.
  */
 import {
   ReasoningTraceBuilder,
@@ -174,31 +177,101 @@ export function interpretCareerV2(
     dashaInterpretation: options.temporalState.dashaInterpretation
   });
   const rawEvidence = themeInterpretation.evidence;
-  const rawMappedEvidence = buildCareerEvidence(rawEvidence);
-  const evidence = linkCareerEvidence(rawMappedEvidence);
+  const activeDashaReport = options.temporalState.dashaInterpretation;
 
-  // C4 Structural Reasoning Integration
-  // Build canonical structural reasoning chain and convert to DomainEvidence
-  const structuralReasoning = buildCareerStructuralReasoning({ horoscope });
-  const structuralEvidence = toDomainEvidence(structuralReasoning);
+  /**
+   * P2-08D: Canonical C11 Final Synthesis Integration
+   *
+   * Build the canonical C4-C7 natal analysis, C8 expression, C9 Dasha, and C10 D10
+   * to produce the authoritative career conclusion via the canonical C11 module.
+   *
+   * This replaces the legacy synthesis from careerConclusion.ts as the single
+   * authoritative career conclusion source in the production path.
+   */
+  const canonicalNatalAnalysis: CareerNatalAnalysis = buildCareerNatalAnalysis({
+    horoscope
+  });
 
-  // Merge structural evidence additively - existing dedup in evaluateCareerReasoningHierarchy
-  // will collapse any structural fact that already exists by identityKey
-  const evidenceWithStructural = Object.freeze([...evidence, ...structuralEvidence]);
+  const canonicalExpressionAnalysis = buildCareerExpression({
+    natal: canonicalNatalAnalysis
+  });
 
-  const supportingEvidence = evidenceWithStructural.filter(
+  const canonicalDashaAnalysis = buildCareerDashaAnalysis({
+    horoscope,
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis
+  });
+
+  const canonicalD10Analysis = buildCareerD10Analysis({
+    horoscope,
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis
+  });
+
+  const canonicalC11Input: CareerFinalSynthesisIntegrationInput = Object.freeze({
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis,
+    dasha: canonicalDashaAnalysis,
+    d10: canonicalD10Analysis,
+    timing: undefined // Will be set after careerTimingSynthesis is computed
+  });
+
+  /**
+   * P2-11C Gate 5: Canonical Evidence Cutover
+   *
+   * Map canonical C4-C10 outputs to DomainEvidence using the canonical mapper.
+   * This replaces the legacy evidence assembly paths with a single canonical source.
+   *
+   * Legacy evidence paths are disabled to prevent double-counting:
+   * - buildCareerEvidence(rawEvidence) → disabled (legacy C8/C9/C10-equivalent)
+   * - toDomainEvidence(structuralReasoning) → disabled (legacy C4)
+   * - dashaFactorsEvidence → disabled (legacy dasha factors)
+   *
+   * The canonical mapper:
+   * - Preserves identityKey, ruleId, sourceIds as distinct concepts
+   * - Deduplicates by identityKey without weight inflation
+   * - Maps C4-C7 to NATAL_PROMISE, C8 to MODIFIER, C9 to DASHA_ACTIVATION, C10 to VARGA_CONFIRMATION
+   * - Uses C11 only for reference validation (never as an evidence source)
+   * - Excludes unmappable strengths rather than defaulting them
+   *
+   * Note: We build a preliminary C11 input without timing here to get canonical evidence.
+   * The final C11 synthesis will be recomputed with timing later.
+   */
+  const preliminaryC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(canonicalC11Input);
+
+  const canonicalEvidenceInput = Object.freeze({
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis,
+    dasha: canonicalDashaAnalysis,
+    d10: canonicalD10Analysis,
+    finalSynthesis: preliminaryC11Result
+  });
+
+  const canonicalEvidence = mapCanonicalCareerEvidence(canonicalEvidenceInput);
+
+  /**
+   * P2-11C Gate 5: Evidence Assembly
+   *
+   * Use canonicalEvidence as the single authoritative evidence source.
+   * This replaces the legacy mergedEvidence assembly (evidenceWithStructural + dashaFactorsEvidence).
+   *
+   * All downstream code uses canonicalEvidence instead of legacy evidence arrays.
+   */
+  const evidence = canonicalEvidence;
+
+  const supportingEvidence = evidence.filter(
     (item) => item.polarity === 'SUPPORTING'
   );
-  const challengingEvidence = evidenceWithStructural.filter(
+  const challengingEvidence = evidence.filter(
     (item) => item.polarity === 'CHALLENGING'
   );
 
   const natalSupporting = supportingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
   const natalChallenging = challengingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
-  const natalPromiseEvidence = evidenceWithStructural.filter((item) => item.phase === 'NATAL_PROMISE');
+  const natalPromiseEvidence = evidence.filter((item) => item.phase === 'NATAL_PROMISE');
   const natalPromiseEvidenceIds = natalPromiseEvidence.map((item) => item.id);
 
-  const conflicts = detectDomainConflicts('CAREER', evidenceWithStructural);
+  const conflicts = detectDomainConflicts('CAREER', evidence);
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
@@ -229,7 +302,7 @@ export function interpretCareerV2(
   });
 
   // Dasha Timing & Multi-period evaluation (MD / AD / PD)
-  const dashaEvidence = evidenceWithStructural.filter(
+  const dashaEvidence = evidence.filter(
     (item) => item.phase === 'DASHA_ACTIVATION' || item.source === 'DASHA'
   );
   const dashaSupporting = dashaEvidence.filter((item) => item.polarity === 'SUPPORTING');
@@ -252,7 +325,6 @@ export function interpretCareerV2(
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
-  const activeDashaReport = options.temporalState.dashaInterpretation;
   const currentDasha = activeDashaReport?.current;
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
@@ -268,7 +340,7 @@ export function interpretCareerV2(
   ]);
 
   // Transit Trigger evaluation
-  const transitEvidence = evidenceWithStructural.filter(
+  const transitEvidence = evidence.filter(
     (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
   );
   const transitSupporting = transitEvidence.filter((item) => item.polarity === 'SUPPORTING');
@@ -292,7 +364,7 @@ export function interpretCareerV2(
   });
 
   // D10 Varga Confirmation
-  const d10Evidence = evidenceWithStructural.filter((item) => item.source === 'D10');
+  const d10Evidence = evidence.filter((item) => item.source === 'D10');
   const d10Relationship = evaluateD10Relationship(
     rawEvidence,
     themeInterpretation.metadata?.vargaConfirmationStatus,
@@ -313,7 +385,7 @@ export function interpretCareerV2(
 
   // CW-01 reasoning hierarchy is the authoritative production reasoning path
   const cw01Result = evaluateCareerReasoningHierarchy({
-    evidence: evidenceWithStructural,
+    evidence,
     d10Confirmation: vargaConfirmation,
     dashaTimings: {
       md: {
@@ -365,40 +437,6 @@ export function interpretCareerV2(
       summary: 'Timing calculation unavailable: asOf date not provided.'
     });
   }
-  // INVARIANT & ARCHITECTURAL CONTRACT:
-  // (a) Traceability vs. Natal Scoring Non-Double-Counting Invariant:
-  //     These DASHA-sourced evidence items are injected into `mergedEvidence` for traceability and auditability only.
-  //     The manifestation resolver (synthesizeCareerManifestations / resolveManifestation) explicitly excludes
-  //     items with `source === 'DASHA'` from natal scoring and reads dasha contributions directly from the
-  //     separate `careerDashaSynthesis` parameter, guaranteeing zero double-counting of dasha influences.
-  // (b) Strength vs. Priority Distinction:
-  //     `strength` here encodes factor magnitude (derived from `f.weight >= 2.0` -> 'STRONG' vs 'MODERATE')
-  //     while `priority` (derived from `getCareerDashaEvidencePriority`) encodes the MD > AD > PD temporal and
-  //     semantic hierarchy. These two are intentionally distinct orthogonal concepts.
-  // TODO: Architectural note on evidence roles: Dasha factor evidence currently uses a blanket `role: 'MODIFIER'`.
-  //       A period-derived role mapping (e.g. MD -> PRIMARY-equivalent, AD -> MODIFIER, PD -> REFINEMENT)
-  //       can be evaluated if the EvidenceRole union is extended; currently the temporal/semantic hierarchy is cleanly
-  //       governed by the `priority` field without risking cross-engine regressions.
-  const dashaFactorsEvidence: readonly DomainEvidence[] = careerDashaSynthesis.factors.map((f) => {
-    const priority = getCareerDashaEvidencePriority(f.period, f.category);
-
-    return createDomainEvidence({
-      id: f.id,
-      sourceType: 'DASHA',
-      domain: 'CAREER',
-      role: 'MODIFIER',
-      phase: 'DASHA_ACTIVATION',
-      source: 'DASHA',
-      statement: f.statement,
-      polarity: f.direction === 'SUPPORT' ? 'SUPPORTING' : f.direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL',
-      strength: f.weight >= 2.0 ? 'STRONG' : 'MODERATE',
-      priority,
-      ruleId: f.id,
-      ...(f.houses?.[0] !== undefined ? { house: f.houses[0] } : {})
-    });
-  });
-
-  const mergedEvidence = Object.freeze([...evidenceWithStructural, ...dashaFactorsEvidence]);
 
   const conclusionData = buildCareerConclusionData(
     natalStrength,
@@ -451,35 +489,12 @@ export function interpretCareerV2(
   );
 
   /**
-   * P2-08D: Canonical C11 Final Synthesis Integration
+   * P2-11C Gate 5: Canonical C11 Final Synthesis with Timing
    *
-   * Build the canonical C4-C7 natal analysis, C8 expression, C9 Dasha, and C10 D10
-   * to produce the authoritative career conclusion via the canonical C11 module.
-   *
-   * This replaces the legacy synthesis from careerConclusion.ts as the single
-   * authoritative career conclusion source in the production path.
+   * Rebuild the canonical C11 synthesis with the computed timing synthesis.
+   * This is the final authoritative C11 result used for the conclusion.
    */
-  const canonicalNatalAnalysis: CareerNatalAnalysis = buildCareerNatalAnalysis({
-    horoscope
-  });
-
-  const canonicalExpressionAnalysis = buildCareerExpression({
-    natal: canonicalNatalAnalysis
-  });
-
-  const canonicalDashaAnalysis = buildCareerDashaAnalysis({
-    horoscope,
-    natal: canonicalNatalAnalysis,
-    expression: canonicalExpressionAnalysis
-  });
-
-  const canonicalD10Analysis = buildCareerD10Analysis({
-    horoscope,
-    natal: canonicalNatalAnalysis,
-    expression: canonicalExpressionAnalysis
-  });
-
-  const canonicalC11Input: CareerFinalSynthesisIntegrationInput = Object.freeze({
+  const finalCanonicalC11Input: CareerFinalSynthesisIntegrationInput = Object.freeze({
     natal: canonicalNatalAnalysis,
     expression: canonicalExpressionAnalysis,
     dasha: canonicalDashaAnalysis,
@@ -487,7 +502,7 @@ export function interpretCareerV2(
     timing: careerTimingSynthesis
   });
 
-  const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(canonicalC11Input);
+  const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(finalCanonicalC11Input);
 
   /**
    * P2-08D: Presentation/Compatibility Adapter
@@ -605,7 +620,7 @@ export function interpretCareerV2(
    * P2-08D-03: Evidence ID and Source ID Mapping Limitation
    *
    * C11 evidenceIds are canonical identity keys from the C11 reasoning hierarchy,
-   * not occurrence-level evidence IDs that map to the DomainEvidence list in mergedEvidence.
+   * not occurrence-level evidence IDs that map to the DomainEvidence list in evidence.
    * Similarly, C11 sourceIds are provenance occurrences that may not map cleanly to DomainEvidence.
    * To maintain traceability invariants, we omit both evidence IDs and source IDs from the
    * DomainConclusion adapter. Consumers requiring evidence-level provenance should read
@@ -689,7 +704,7 @@ export function interpretCareerV2(
   });
 
   const reasoningTraceGraph = buildCareerReasoningTraceGraph({
-    evidence: mergedEvidence,
+    evidence,
     natalStrength: cw01Result.natalStrength,
     careerDashaSynthesis,
     careerTimingSynthesis,
@@ -700,7 +715,7 @@ export function interpretCareerV2(
 
   return buildDomainInterpretation({
     domain: 'CAREER',
-    evidence: mergedEvidence,
+    evidence,
     natalPromise,
     dashaActivation,
     transitTrigger,
