@@ -99,18 +99,23 @@ export function buildEvidenceIdentityKey(input: EvidenceIdentityKeyInput): strin
 
 /**
  * Parses a canonical evidence identity key into its semantic components.
- * 
- * Validates that the key conforms to the canonical structure:
+ *
+ * Validates that the key conforms to the canonical structure AND is already in
+ * normalized form as produced by buildEvidenceIdentityKey():
  * CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]
- * 
+ *
  * Each positional segment is validated against known enum/value sets:
  * - DOMAIN must be one of: CAREER, WEALTH
  * - AXIS must be one of: NATAL, DASHA, TIMING, DIVISIONAL, MANIFESTATION
  * - SOURCE must be one of: D1, D2, D10, DASHA, TRANSIT, C4_STRUCTURAL_REASONING
- * 
+ *
+ * Additionally, every segment must be in canonical normalized form (no lowercase,
+ * no whitespace, no special characters other than underscores). This rejects
+ * malformed keys that the builder would never emit.
+ *
  * Returns null for any key that does not conform to the canonical structure.
  * This ensures that non-canonical keys (e.g., raw occurrence-ID fallbacks) are safely ignored.
- * 
+ *
  * @param key - The evidence identity key to parse
  * @returns The parsed components or null if the key is invalid
  */
@@ -149,18 +154,21 @@ export function parseEvidenceIdentityKey(
   const objectKey = parts[6]; // May be undefined
 
   // Validate domain
+  // TODO: Derive from EvidenceDomain type definition in evidenceProvenance.ts to prevent drift
   const validDomains: readonly EvidenceDomain[] = ['CAREER', 'WEALTH'];
   if (!validDomains.includes(domain)) {
     return null;
   }
 
   // Validate axis
+  // TODO: Derive from EvidenceAxis type definition in evidenceProvenance.ts to prevent drift
   const validAxes: readonly EvidenceAxis[] = ['NATAL', 'DASHA', 'TIMING', 'DIVISIONAL', 'MANIFESTATION'];
   if (!validAxes.includes(axis)) {
     return null;
   }
 
   // Validate source
+  // TODO: Derive from EvidenceSource type definition in evidenceProvenance.ts to prevent drift
   const validSources: readonly EvidenceSource[] = ['D1', 'D2', 'D10', 'DASHA', 'TRANSIT', 'C4_STRUCTURAL_REASONING'];
   if (!validSources.includes(source)) {
     return null;
@@ -169,6 +177,35 @@ export function parseEvidenceIdentityKey(
   // Validate required fields are non-empty
   if (!ruleId || !subjectKey) {
     return null;
+  }
+
+  // Normalization enforcement: every segment must already be in canonical form
+  // This rejects lowercase, whitespace-containing, or otherwise unnormalized values
+  if (domain !== normalizeSegment(domain)) {
+    return null;
+  }
+  if (axis !== normalizeSegment(axis)) {
+    return null;
+  }
+  if (source !== normalizeSegment(source)) {
+    return null;
+  }
+  if (ruleId !== normalizeSegment(ruleId)) {
+    return null;
+  }
+  if (subjectKey !== normalizeSegment(subjectKey)) {
+    return null;
+  }
+
+  // If objectKey is present (7 segments), it must not be empty/whitespace-only
+  if (parts.length === 7) {
+    if (!objectKey || !objectKey.trim()) {
+      return null;
+    }
+    // ObjectKey must also be in canonical normalized form
+    if (objectKey !== normalizeSegment(objectKey)) {
+      return null;
+    }
   }
 
   // Return parsed components

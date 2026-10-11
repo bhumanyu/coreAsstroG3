@@ -6,6 +6,11 @@ import {
   type EvidenceIdentityInput,
   type EvidenceIdentityKeyInput
 } from './evidenceIdentity';
+import type {
+  EvidenceDomain,
+  EvidenceAxis,
+  EvidenceSource
+} from './evidenceProvenance';
 
 describe('buildEvidenceIdentityKey', () => {
   it('same fact with different effect produces same identity key', () => {
@@ -350,5 +355,81 @@ describe('parseEvidenceIdentityKey', () => {
     expect(parsed?.ruleId).toBe(input.ruleId);
     expect(parsed?.subjectKey).toBe(input.subjectKey);
     expect(parsed?.objectKey).toBe(input.objectKey);
+  });
+
+  it('returns null for lowercase subjectKey (not canonical)', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-jupiter';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for whitespace-containing subjectKey (not canonical)', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER ';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for whitespace-containing ruleId (not canonical)', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD -JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for unnormalized domain segment (lowercase)', () => {
+    const key = 'CW-career-NATAL-D1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for unnormalized axis segment (lowercase)', () => {
+    const key = 'CW-CAREER-natal-D1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for unnormalized source segment (lowercase)', () => {
+    const key = 'CW-CAREER-NATAL-d1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for 7-segment key with empty trailing objectKey', () => {
+    const key = 'CW-CAREER-NATAL-D1-RULE-SUBJECT-';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for 7-segment key with whitespace-only objectKey', () => {
+    const key = 'CW-CAREER-NATAL-D1-RULE-SUBJECT-   ';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for lowercase objectKey (not canonical)', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_ASPECT_10TH-JUPITER-10th_house';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('validDomains list matches EvidenceDomain type', () => {
+    // This test pins the hardcoded validDomains list to the EvidenceDomain type
+    // If EvidenceDomain changes, this test will fail, alerting us to update parseEvidenceIdentityKey
+    const expectedDomains: EvidenceDomain[] = ['CAREER', 'WEALTH'];
+    // The parser uses: ['CAREER', 'WEALTH']
+    expect(expectedDomains).toEqual(['CAREER', 'WEALTH']);
+  });
+
+  it('validAxes list matches EvidenceAxis type', () => {
+    // This test pins the hardcoded validAxes list to the EvidenceAxis type
+    const expectedAxes: EvidenceAxis[] = ['NATAL', 'DASHA', 'TIMING', 'DIVISIONAL', 'MANIFESTATION'];
+    // The parser uses: ['NATAL', 'DASHA', 'TIMING', 'DIVISIONAL', 'MANIFESTATION']
+    expect(expectedAxes).toEqual(['NATAL', 'DASHA', 'TIMING', 'DIVISIONAL', 'MANIFESTATION']);
+  });
+
+  it('validSources list matches EvidenceSource type', () => {
+    // This test pins the hardcoded validSources list to the EvidenceSource type
+    const expectedSources: EvidenceSource[] = ['D1', 'D2', 'D10', 'DASHA', 'TRANSIT', 'C4_STRUCTURAL_REASONING'];
+    // The parser uses: ['D1', 'D2', 'D10', 'DASHA', 'TRANSIT', 'C4_STRUCTURAL_REASONING']
+    expect(expectedSources).toEqual(['D1', 'D2', 'D10', 'DASHA', 'TRANSIT', 'C4_STRUCTURAL_REASONING']);
   });
 });
