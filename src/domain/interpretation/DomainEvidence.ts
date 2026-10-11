@@ -10,6 +10,27 @@ import type {
 import type { Planet } from '../../types';
 import type { EvidenceProvenance } from '../careerWealth/provenance';
 
+/**
+ * Sentinel value returned by resolveSemanticIdentity when both identityKey and id are empty/whitespace.
+ *
+ * This sentinel signals that the evidence has no resolvable semantic identity and must be treated
+ * as a failure signal (DEGRADED traceability) by consumers. All call sites that project resolved IDs
+ * must filter this sentinel to prevent invalid evidence from appearing traceable via a shared token.
+ *
+ * The sentinel is kept private to the identity boundary (DomainEvidence.ts) and exported only for
+ * use by consumers that project resolved identities. It should never be used as a valid identity.
+ *
+ * Consumers of resolveSemanticIdentity MUST filter this sentinel:
+ * - domainTimingAdapter.ts: filters in mapPeriodToCanonicalEvidenceIds (line 72)
+ * - careerTrajectoryEngine.ts: filters by checking against evidenceIdentitySet (lines 219-220, 274-276)
+ * - canonicalCareerEvidenceMapper.ts: uses for sorting; sentinel appears in output but is acceptable
+ *   since validation handles unknown references explicitly (lines 937-938, 966, 977)
+ *
+ * Note: careerFinalSynthesisIntegration.ts does NOT use resolveSemanticIdentity; it has inline
+ * logic for WeightedReasoningEvidence (different field structure: identityKey + evidenceId).
+ */
+export const UNRESOLVED_IDENTITY_SENTINEL = '__UNRESOLVED_IDENTITY__' as const;
+
 export interface DomainEvidence {
   readonly id: string;
   readonly sourceType: EvidenceSourceType;
@@ -51,12 +72,12 @@ export interface DomainEvidence {
  * This enables cross-layer evidence matching where multiple occurrences of the same semantic fact
  * should resolve to a single identity.
  *
- * If both identityKey and id are empty/whitespace, returns a dedicated unresolved marker
+ * If both identityKey and id are empty/whitespace, returns UNRESOLVED_IDENTITY_SENTINEL
  * that consumers must treat as a failure signal (DEGRADED traceability) rather than a valid ID.
  * This prevents invalid evidence from appearing traceable via a shared token.
  *
  * @param evidence - The DomainEvidence to resolve
- * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise unresolved marker)
+ * @returns The semantic identity (trimmed identityKey if non-empty, otherwise trimmed id, otherwise UNRESOLVED_IDENTITY_SENTINEL)
  */
 export function resolveSemanticIdentity(e: DomainEvidence): string {
   const trimmedIdentityKey = e.identityKey?.trim();
@@ -71,7 +92,7 @@ export function resolveSemanticIdentity(e: DomainEvidence): string {
 
   // Both identityKey and id are empty/whitespace - signal resolution failure
   // Consumers must filter this marker and treat as DEGRADED traceability
-  return '__UNRESOLVED_IDENTITY__';
+  return UNRESOLVED_IDENTITY_SENTINEL;
 }
 
 export function createDomainEvidence(

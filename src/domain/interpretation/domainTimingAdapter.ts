@@ -11,7 +11,7 @@ import type {
 } from '../../product/life-analysis/lifeAnalysisTypes';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 import type { DomainEvidence } from './DomainEvidence';
-import { resolveSemanticIdentity } from './DomainEvidence';
+import { resolveSemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from './DomainEvidence';
 
 export interface PeriodCanonicalEvidenceResult {
   readonly evidenceIds: readonly string[];
@@ -69,7 +69,7 @@ export function mapPeriodToCanonicalEvidenceIds(
   if (canonicalEvidence.length > 0) {
     const evidenceIds = canonicalEvidence
       .map((e: DomainEvidence) => resolveSemanticIdentity(e))
-      .filter((id) => id !== '__UNRESOLVED_IDENTITY__') // Filter out unresolved markers
+      .filter((id) => id !== UNRESOLVED_IDENTITY_SENTINEL) // Filter out unresolved markers
       .sort((a, b) => a.localeCompare(b)); // Ensure deterministic output
 
     // If all evidence resolved to the unresolved marker, treat as DEGRADED
