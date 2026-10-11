@@ -126,8 +126,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.phase).toBe('NATAL_PROMISE');
       expect(evidence.polarity).toBe('SUPPORTING');
@@ -205,8 +205,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.phase).toBe('NATAL_PROMISE');
       expect(evidence.polarity).toBe('CHALLENGING');
@@ -282,7 +282,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // MIXED should split into two occurrences
-      const mixedEvidence = result.filter(e => e.identityKey === 'natal-mixed-1');
+      const mixedEvidence = result.evidence.filter(e => e.identityKey === 'natal-mixed-1');
       expect(mixedEvidence).toHaveLength(2);
 
       const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
@@ -349,8 +349,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.phase).toBe('MODIFIER');
       expect(evidence.source).toBe('D1');
@@ -402,8 +402,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.polarity).toBe('SUPPORTING');
       expect(evidence.notes).toContain('CONDITIONAL');
@@ -437,7 +437,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // UNAVAILABLE expression should emit no evidence
-      const expressionEvidence = result.filter(e => e.phase === 'MODIFIER');
+      const expressionEvidence = result.evidence.filter(e => e.phase === 'MODIFIER');
       expect(expressionEvidence).toHaveLength(0);
     });
   });
@@ -554,7 +554,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // MIXED should split into two occurrences
-      const mixedEvidence = result.filter(e => e.identityKey === 'dasha-mixed-allowed');
+      const mixedEvidence = result.evidence.filter(e => e.identityKey === 'dasha-mixed-allowed');
       expect(mixedEvidence).toHaveLength(2);
 
       const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
@@ -627,7 +627,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // MIXED should split into two occurrences
-      const mixedEvidence = result.filter(e => e.identityKey === 'dasha-mixed-1');
+      const mixedEvidence = result.evidence.filter(e => e.identityKey === 'dasha-mixed-1');
       expect(mixedEvidence).toHaveLength(2);
 
       const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
@@ -709,8 +709,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.phase).toBe('DASHA_ACTIVATION');
       expect(evidence.source).toBe('DASHA');
@@ -789,7 +789,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Evidence with unmappable strength should be excluded
-      const dashaResults = result.filter(e => e.phase === 'DASHA_ACTIVATION');
+      const dashaResults = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
       expect(dashaResults).toHaveLength(0);
     });
   });
@@ -844,8 +844,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.phase).toBe('VARGA_CONFIRMATION');
       expect(evidence.source).toBe('D10');
@@ -908,8 +908,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       // No ruleId fabricated when provenance.ruleIds is empty
       expect(evidence.ruleId).toBeUndefined();
@@ -965,7 +965,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Evidence with unmappable strength should be excluded
-      const d10Results = result.filter(e => e.phase === 'VARGA_CONFIRMATION');
+      const d10Results = result.evidence.filter(e => e.phase === 'VARGA_CONFIRMATION');
       expect(d10Results).toHaveLength(0);
     });
   });
@@ -983,7 +983,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Empty inputs should produce no evidence (not negative evidence)
-      expect(result).toHaveLength(0);
+      expect(result.evidence).toHaveLength(0);
     });
   });
 
@@ -1069,8 +1069,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Should deduplicate to one record
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.identityKey).toBe('duplicate-identity');
 
@@ -1162,8 +1162,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       // All sourceIds should be present
       expect(evidence.relatedEvidenceIds).toContain('src-a');
@@ -1364,8 +1364,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       // id is the occurrence identifier
       expect(evidence.id).toBe('occurrence-id-1');
@@ -1490,11 +1490,11 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Mapper should still produce its output
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('test-evidence-1');
+      expect(result.evidence).toHaveLength(1);
+      expect(result.evidence[0].id).toBe('test-evidence-1');
 
       // Also test the exposed validation function
-      const validationResult = validateC11References(result, finalSynthesis);
+      const validationResult = validateC11References(result.evidence, finalSynthesis);
       expect(validationResult.unreferenced).toContain('test-identity');
       expect(validationResult.missing).toContain('unknown-evidence-id');
     });
@@ -1600,12 +1600,12 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Should not throw - identityKey match is valid
-      expect(result).toHaveLength(1);
-      expect(result[0].identityKey).toBe('semantic-identity-1');
-      expect(result[0].id).toBe('occurrence-id-1');
+      expect(result.evidence).toHaveLength(1);
+      expect(result.evidence[0].identityKey).toBe('semantic-identity-1');
+      expect(result.evidence[0].id).toBe('occurrence-id-1');
 
       // Validation should show no missing/unreferenced since identityKey matches
-      const validationResult = validateC11References(result, finalSynthesis);
+      const validationResult = validateC11References(result.evidence, finalSynthesis);
       expect(validationResult.unreferenced).not.toContain('semantic-identity-1');
       expect(validationResult.missing).not.toContain('semantic-identity-1');
     });
@@ -1666,8 +1666,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       // No ruleId or provenance should be present (CareerDashaCanonicalProvenance does not expose ruleId)
       expect(evidence.ruleId).toBeUndefined();
@@ -1728,8 +1728,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.relatedEvidenceIds).toContain('dasha-source-1');
       expect(evidence.relatedEvidenceIds).toContain('dasha-source-2');
@@ -1844,7 +1844,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // MIXED should split into two occurrences
-      const mixedEvidence = result.filter(e => e.identityKey === 'd10-mixed-1');
+      const mixedEvidence = result.evidence.filter(e => e.identityKey === 'd10-mixed-1');
       expect(mixedEvidence).toHaveLength(2);
 
       const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
@@ -1946,7 +1946,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // UNAVAILABLE strength should exclude the record
-      expect(result).toHaveLength(0);
+      expect(result.evidence).toHaveLength(0);
     });
   });
 
@@ -2165,9 +2165,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Both records should be preserved separately (different identityKeys)
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('unique-1');
-      expect(result[1].id).toBe('unique-2');
+      expect(result.evidence).toHaveLength(2);
+      expect(result.evidence[0].id).toBe('unique-1');
+      expect(result.evidence[1].id).toBe('unique-2');
     });
   });
 
@@ -2226,8 +2226,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       // No ruleId or provenance should be present (CareerDashaCanonicalProvenance does not expose ruleId)
       expect(evidence.ruleId).toBeUndefined();
@@ -2288,8 +2288,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       expect(evidence.relatedEvidenceIds).toContain('dasha-source-1');
       expect(evidence.relatedEvidenceIds).toContain('dasha-source-2');
@@ -2404,7 +2404,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // MIXED should split into two occurrences
-      const mixedEvidence = result.filter(e => e.identityKey === 'd10-mixed-1');
+      const mixedEvidence = result.evidence.filter(e => e.identityKey === 'd10-mixed-1');
       expect(mixedEvidence).toHaveLength(2);
 
       const supporting = mixedEvidence.find(e => e.polarity === 'SUPPORTING');
@@ -2506,7 +2506,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // UNAVAILABLE strength should exclude the record
-      expect(result).toHaveLength(0);
+      expect(result.evidence).toHaveLength(0);
     });
   });
 
@@ -2665,10 +2665,10 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
 
       // Output array should be frozen
-      expect(Object.isFrozen(result)).toBe(true);
+      expect(Object.isFrozen(result.evidence)).toBe(true);
 
       // Each record should be frozen
-      for (const evidence of result) {
+      for (const evidence of result.evidence) {
         expect(Object.isFrozen(evidence)).toBe(true);
       }
     });
@@ -2837,7 +2837,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       // First verify this works when house values are the same (both undefined)
       const result1 = mapCanonicalCareerEvidence(input);
-      expect(result1).toHaveLength(1); // Should dedup successfully
+      expect(result1.evidence).toHaveLength(1); // Should dedup successfully
 
       // Now test with Dasha where timing/planet can differ
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
@@ -3395,8 +3395,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      expect(result).toHaveLength(1);
-      const evidence = result[0];
+      expect(result.evidence).toHaveLength(1);
+      const evidence = result.evidence[0];
 
       // Canonical C9 evidence must carry source === 'DASHA' for exclusion from natal scoring
       expect(evidence.source).toBe('DASHA');
@@ -3534,16 +3534,16 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const evidenceWithDasha = mapCanonicalCareerEvidence(inputWithDasha);
 
       // Verify that adding Dasha evidence increases total evidence count
-      expect(evidenceWithDasha.length).toBe(evidenceWithoutDasha.length + 1);
+      expect(evidenceWithDasha.evidence.length).toBe(evidenceWithoutDasha.evidence.length + 1);
 
       // Verify canonical Dasha evidence has source === 'DASHA' and phase === 'DASHA_ACTIVATION'
-      const dashaItem = evidenceWithDasha.find(e => e.source === 'DASHA');
+      const dashaItem = evidenceWithDasha.evidence.find(e => e.source === 'DASHA');
       expect(dashaItem).toBeDefined();
       expect(dashaItem!.phase).toBe('DASHA_ACTIVATION');
 
       // Test that Dasha evidence does not affect natal manifestation scoring
-      const synWithoutDasha = resolveManifestation('LEADERSHIP', evidenceWithoutDasha);
-      const synWithDasha = resolveManifestation('LEADERSHIP', evidenceWithDasha);
+      const synWithoutDasha = resolveManifestation('LEADERSHIP', evidenceWithoutDasha.evidence);
+      const synWithDasha = resolveManifestation('LEADERSHIP', evidenceWithDasha.evidence);
 
       // Natal support should be identical (Dasha excluded from natal scoring)
       expect(synWithDasha.natalSupport).toBe(synWithoutDasha.natalSupport);
@@ -3632,6 +3632,242 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
         mapCanonicalCareerEvidence(input);
       }).toThrow('Unexpected ReasoningDirection value');
+    });
+  });
+
+  describe('P2-11C Fix: Adapter Semantics and Provenance', () => {
+    it('adapter returns empty array for canonical ruleIds (lacks semantic depth for legacy rules)', () => {
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'CAREER_STRUCTURAL_10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false',
+          evidenceId: 'CAREER_STRUCTURAL_10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          priority: 3,
+          weight: 3,
+          ruleId: 'CAREER_STRUCTURAL_10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false',
+          sourceIds: ['source-1'],
+          relatedEvidenceIds: ['source-1'],
+          statement: 'Test evidence'
+        }
+      ];
+
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: [],
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+      const evidence = result.evidence;
+
+      expect(evidence).toHaveLength(1);
+      const evidenceItem = evidence[0];
+
+      // Verify canonical ruleId is preserved
+      expect(evidenceItem.ruleId).toBe('CAREER_STRUCTURAL_10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false');
+
+      // Verify provenance.ruleId is canonical (not adapted)
+      expect(evidenceItem.provenance?.ruleId).toBe('CAREER_STRUCTURAL_10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false');
+
+      // Verify manifestationRuleIds is undefined (adapter returns empty array)
+      expect(evidenceItem.manifestationRuleIds).toBeUndefined();
+    });
+
+    it('canonical ruleId and provenance.ruleId remain CAREER_STRUCTURAL_* after mapping', () => {
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'test-identity',
+          evidenceId: 'evidence-1',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          priority: 3,
+          weight: 3,
+          ruleId: 'CAREER_STRUCTURAL_test_value',
+          sourceIds: ['source-1'],
+          relatedEvidenceIds: ['source-1'],
+          statement: 'Test evidence'
+        }
+      ];
+
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: [],
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+      const evidence = result.evidence;
+
+      expect(evidence).toHaveLength(1);
+      const evidenceItem = evidence[0];
+
+      // Verify canonical ruleId is preserved on DomainEvidence
+      expect(evidenceItem.ruleId).toBe('CAREER_STRUCTURAL_test_value');
+
+      // Verify canonical ruleId is preserved in provenance
+      expect(evidenceItem.provenance?.ruleId).toBe('CAREER_STRUCTURAL_test_value');
+    });
+
+    it('manifestation applicability is carried in separate manifestationRuleIds field', () => {
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'test-identity',
+          evidenceId: 'evidence-1',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          priority: 3,
+          weight: 3,
+          ruleId: 'CAREER_STRUCTURAL_test_value',
+          sourceIds: ['source-1'],
+          relatedEvidenceIds: ['source-1'],
+          statement: 'Test evidence'
+        }
+      ];
+
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: [],
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+      const evidence = result.evidence;
+
+      expect(evidence).toHaveLength(1);
+      const evidenceItem = evidence[0];
+
+      // For canonical evidence, manifestationRuleIds should be undefined (adapter returns empty)
+      expect(evidenceItem.manifestationRuleIds).toBeUndefined();
     });
   });
 });

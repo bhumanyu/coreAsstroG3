@@ -123,8 +123,7 @@ import {
   buildCareerD10Analysis
 } from './careerD10/careerD10Integration';
 import {
-  mapCanonicalCareerEvidence,
-  validateC11References
+  mapCanonicalCareerEvidence
 } from './canonicalCareerEvidenceMapper';
 
 /**
@@ -250,7 +249,7 @@ export function interpretCareerV2(
     finalSynthesis: preliminaryC11Result
   });
 
-  const canonicalEvidence = mapCanonicalCareerEvidence(canonicalEvidenceInput);
+  const canonicalEvidenceOutput = mapCanonicalCareerEvidence(canonicalEvidenceInput);
 
   /**
    * P2-11C Gate 5: C11 Reference Validation (informational, non-fatal)
@@ -265,7 +264,7 @@ export function interpretCareerV2(
    * - This two-pass approach is intentional: canonical evidence mapper needs C11 finalIds for validation,
    *   but timing synthesis requires canonical evidence (circular dependency resolved by two-pass build)
    */
-  const c11Validation = validateC11References(canonicalEvidence, preliminaryC11Result);
+  const c11Validation = canonicalEvidenceOutput.c11Validation;
 
   if (c11Validation.unreferenced.length > 0 || c11Validation.missing.length > 0) {
     // Log validation discrepancies for observability (non-fatal)
@@ -281,7 +280,7 @@ export function interpretCareerV2(
    *
    * All downstream code uses canonicalEvidence instead of legacy evidence arrays.
    */
-  const evidence = canonicalEvidence;
+  const evidence = canonicalEvidenceOutput.evidence;
 
   const supportingEvidence = evidence.filter(
     (item) => item.polarity === 'SUPPORTING'
@@ -365,32 +364,33 @@ export function interpretCareerV2(
 
   // Transit Trigger evaluation
   //
-  // P2-11C Gate 5: Transit evidence from legacy path
+  // P2-11C Gate 5: Transit evidence deferment
   //
   // Canonical evidence mapper does not emit transit evidence (no canonical transit producer exists in Gate 5).
-  // Until a canonical transit evidence producer is implemented, we use the legacy transit evidence path
-  // from themeInterpretation.transitEvidence as a compatibility source.
+  // Transit activation is intentionally deferred to a future gate when a canonical transit evidence producer is available.
+  // transitEvidence and transitTrigger will be empty/NO_MATERIAL_TRIGGER until transit is re-enabled.
   //
-  // This legacy path feeds only the transit trigger evaluation and is kept separate from canonical natal/expression/dasha/d10
-  // evidence to prevent double-counting. The legacy transit evidence is not merged into the main evidence array.
-  const legacyTransitEvidence = themeInterpretation.transitEvidence;
-  const transitSupporting = legacyTransitEvidence.filter((item) => item.polarity === 'SUPPORTING');
-  const transitChallenging = legacyTransitEvidence.filter((item) => item.polarity === 'CHALLENGING');
+  // Legacy transit evidence path is disabled to prevent double-counting.
+  const transitEvidence = evidence.filter(
+    (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
+  );
+  const transitSupporting = transitEvidence.filter((item) => item.polarity === 'SUPPORTING');
+  const transitChallenging = transitEvidence.filter((item) => item.polarity === 'CHALLENGING');
 
-  const rawTransitPromiseLinks = legacyTransitEvidence.flatMap((item) =>
+  const rawTransitPromiseLinks = transitEvidence.flatMap((item) =>
     item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
   );
   const transitPromiseEvidenceIds = Array.from(new Set(rawTransitPromiseLinks));
-  const transitEffect = evaluateTransitEffect(legacyTransitEvidence, transitPromiseEvidenceIds);
+  const transitEffect = evaluateTransitEffect(transitEvidence, transitPromiseEvidenceIds);
 
   const transitTrigger = createTransitTrigger({
     domain: 'CAREER',
-    active: legacyTransitEvidence.length > 0,
+    active: transitEvidence.length > 0,
     effect: transitEffect,
     strength: calculateDomainStrength(transitSupporting, transitChallenging),
-    confidence: calculateEvidenceConfidence(legacyTransitEvidence),
-    statement: buildCareerTransitStatement(legacyTransitEvidence, transitEffect),
-    evidenceIds: legacyTransitEvidence.map((item) => item.id),
+    confidence: calculateEvidenceConfidence(transitEvidence),
+    statement: buildCareerTransitStatement(transitEvidence, transitEffect),
+    evidenceIds: transitEvidence.map((item) => item.id),
     triggeredPromiseEvidenceIds: transitPromiseEvidenceIds
   });
 

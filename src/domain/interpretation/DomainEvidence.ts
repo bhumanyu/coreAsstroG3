@@ -35,6 +35,12 @@ export interface DomainEvidence {
   readonly planet?: Planet;
   readonly house?: number;
   readonly identityKey?: string;
+  /**
+   * Manifestation rule IDs this evidence matches for manifestation synthesis.
+   * This is separate from ruleId to preserve the canonical ruleId for provenance
+   * while still supporting legacy manifestation rule matching.
+   */
+  readonly manifestationRuleIds?: readonly string[];
 }
 
 export function createDomainEvidence(
@@ -65,6 +71,7 @@ export function createDomainEvidence(
     ...(evidence.dimension ? { dimension: evidence.dimension } : {}),
     ...(evidence.planet ? { planet: evidence.planet } : {}),
     ...(evidence.house !== undefined ? { house: evidence.house } : {}),
-    ...(evidence.identityKey ? { identityKey: evidence.identityKey } : {})
+    ...(evidence.identityKey ? { identityKey: evidence.identityKey } : {}),
+    ...(evidence.manifestationRuleIds ? { manifestationRuleIds: Object.freeze(evidence.manifestationRuleIds) } : {})
   });
 }

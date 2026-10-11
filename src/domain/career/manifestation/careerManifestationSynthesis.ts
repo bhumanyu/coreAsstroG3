@@ -38,9 +38,17 @@ export function resolveManifestation(
     if ((item as any).mode === mode || (item as any).manifestationMode === mode) {
       return true;
     }
+    // Check both ruleId and manifestationRuleIds for legacy rule matching
     if (item.ruleId) {
       const baseRule = item.ruleId.split(':')[0];
       if (ruleSet.has(item.ruleId) || ruleSet.has(baseRule)) return true;
+    }
+    // Check manifestationRuleIds field for legacy rule compatibility
+    if (item.manifestationRuleIds && item.manifestationRuleIds.length > 0) {
+      for (const mRuleId of item.manifestationRuleIds) {
+        const baseRule = mRuleId.split(':')[0];
+        if (ruleSet.has(mRuleId) || ruleSet.has(baseRule)) return true;
+      }
     }
     return false;
   });

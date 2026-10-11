@@ -66,11 +66,19 @@ import type {
  * house relationships (e.g., CAREER_STRUCTURAL_10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false).
  * Manifestation synthesis expects legacy rule patterns like CAREER_10H_STRONG_001, CAREER_SUN_RELEVANCE_001, etc.
  *
- * This adapter maps the semantic information embedded in canonical ruleIds to the legacy manifestation
- * rule vocabulary, preserving the intended manifestation hierarchy.
+ * IMPORTANT: This adapter only emits legacy rule IDs when the canonical evidence actually establishes
+ * the full proposition of the legacy rule. The canonical evidence encodes house relationships but
+ * does NOT encode:
+ * - Lord dignity (required for CAREER_10L_DIGNITY_001)
+ * - Specific yoga conditions (required for CAREER_YOGA_CONFIRMATION_001)
+ * - Manifestation-specific planet relevance (beyond mere presence as lordA/lordB)
  *
- * The mapping is conservative: it only produces legacy ruleIds when the canonical evidence
- * semantically aligns with the legacy rule's intent. No false positives are fabricated.
+ * Therefore, this adapter returns an empty array for canonical ruleIds - the semantic information
+ * needed to establish legacy manifestation rules is not present in the canonical evidence.
+ * Manifestation synthesis should be updated to directly interpret canonical ruleIds or canonical
+ * analysis should be enhanced to emit the missing semantic information.
+ *
+ * This conservative approach prevents false positives and maintains correctness.
  */
 function adaptCanonicalRuleIdToManifestationRules(
   canonicalRuleId: string
@@ -80,85 +88,9 @@ function adaptCanonicalRuleIdToManifestationRules(
     return [canonicalRuleId];
   }
 
-  const semanticKey = canonicalRuleId.slice('CAREER_STRUCTURAL_'.length);
-  const parts = semanticKey.split(':');
-
-  // semanticKey format: houseA:houseB:relationshipType:lordA:lordB:relevance:effect:strength:conditional
-  // Example: 10:11:COMMON_LORD:SUN:SATURN:PRIMARY:SUPPORT:STRONG:false
-  if (parts.length < 8) {
-    // Malformed or unexpected format - return as-is to avoid breaking changes
-    return [canonicalRuleId];
-  }
-
-  const [houseAStr, houseBStr, relationshipType, lordA, lordB, relevance, effect, strength] = parts;
-  const houseA = parseInt(houseAStr, 10);
-  const houseB = parseInt(houseBStr, 10);
-
-  const adaptedRules: string[] = [];
-
-  // Map house relationships to manifestation rules
-  // This is a conservative mapping based on the semantic intent of canonical evidence
-
-  // House-based rules
-  if (houseA === 10 || houseB === 10) {
-    adaptedRules.push('CAREER_10H_STRONG_001');
-  }
-  if (houseA === 10 || houseB === 10) {
-    adaptedRules.push('CAREER_10L_DIGNITY_001');
-  }
-  if (houseA === 11 || houseB === 11) {
-    adaptedRules.push('CAREER_11H_GAINS_001');
-  }
-  if (houseA === 6 || houseB === 6) {
-    adaptedRules.push('CAREER_6H_SERVICE_001');
-  }
-  if (houseA === 2 || houseB === 2) {
-    adaptedRules.push('CAREER_2H_WEALTH_001');
-  }
-
-  // House-to-house link rules
-  const housePair = [houseA, houseB].sort((a, b) => a - b).join('_');
-  if (housePair === '6_10' || housePair === '10_6') {
-    adaptedRules.push('CAREER_6H_10H_LINK_001');
-  }
-  if (housePair === '6_10' || housePair === '10_6') {
-    adaptedRules.push('CAREER_6L_10L_LINK_001');
-  }
-  if (housePair === '10_11' || housePair === '11_10') {
-    adaptedRules.push('CAREER_10H_11H_LINK_001');
-  }
-  if (housePair === '10_11' || housePair === '11_10') {
-    adaptedRules.push('CAREER_10L_11L_LINK_001');
-  }
-
-  // Planet relevance rules
-  if (lordA === 'SUN' || lordB === 'SUN') {
-    adaptedRules.push('CAREER_SUN_RELEVANCE_001');
-  }
-  if (lordA === 'JUPITER' || lordB === 'JUPITER') {
-    adaptedRules.push('CAREER_JUPITER_RELEVANCE_001');
-  }
-  if (lordA === 'SATURN' || lordB === 'SATURN') {
-    adaptedRules.push('CAREER_SATURN_RELEVANCE_001');
-  }
-  if (lordA === 'MERCURY' || lordB === 'MERCURY') {
-    adaptedRules.push('CAREER_MERCURY_RELEVANCE_001');
-  }
-  if (lordA === 'MARS' || lordB === 'MARS') {
-    adaptedRules.push('CAREER_MARS_RELEVANCE_001');
-  }
-
-  // Yoga confirmation (strong relationships)
-  if (relationshipType === 'EXCHANGE' || relationshipType === 'COMMON_LORD') {
-    adaptedRules.push('CAREER_YOGA_CONFIRMATION_001');
-  }
-
-  // Return deduplicated rules, preferring canonical ruleId if no adaptations found
-  if (adaptedRules.length === 0) {
-    return [canonicalRuleId];
-  }
-
-  return Object.freeze([...new Set(adaptedRules)]);
+  // Canonical evidence does not contain the semantic depth to establish legacy manifestation rules
+  // Return empty array to indicate no legacy rule mapping is possible
+  return Object.freeze([]);
 }
 
 /**
@@ -184,12 +116,12 @@ export interface CanonicalCareerEvidenceInput {
  * - Deduplicates by identityKey without weight inflation
  * - Produces deep-frozen, deterministic output
  * - Uses C11 only for reference validation, never as an evidence source
+ * - Returns both evidence and C11 validation result for observability
  *
  * Integration Note:
- * This mapper is NOT wired into interpretCareerV2/mergedEvidence in this PR.
- * The C4 structural evidence already enters mergedEvidence via toDomainEvidence in
- * CareerDomainInterpreterV2.ts, so wiring now would double-count natal facts.
- * Interpreter integration is a deferred follow-up (see documentation).
+ * This mapper is wired into interpretCareerV2 on the production path (P2-11C Gate 5).
+ * Legacy evidence paths (buildCareerEvidence, toDomainEvidence, dashaFactorsEvidence) are disabled
+ * to prevent double-counting.
  */
 export interface CanonicalCareerEvidenceOutput {
   readonly evidence: readonly DomainEvidence[];
@@ -224,7 +156,7 @@ export function mapCanonicalCareerEvidence(
   const c11Validation = validateAgainstFinalSynthesis(sorted, input.finalSynthesis);
 
   return Object.freeze({
-    evidence: sorted,
+    evidence: Object.freeze(sorted),
     c11Validation
   });
 }
@@ -392,7 +324,6 @@ function mapNatalEvidence(
 
       // Adapt canonical ruleId to manifestation-compatible patterns
       const adaptedRuleIds = evidence.ruleId ? adaptCanonicalRuleIdToManifestationRules(evidence.ruleId) : [];
-      const primaryRuleId = adaptedRuleIds.length > 0 ? adaptedRuleIds[0] : evidence.ruleId;
 
       // Create SUPPORTING occurrence
       const supportingEvidence = createDomainEvidence({
@@ -406,19 +337,20 @@ function mapNatalEvidence(
         polarity: polaritySupporting,
         strength,
         priority: evidence.priority,
-        ruleId: primaryRuleId,
+        ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: evidence.sourceIds,
         notes,
         provenance: evidence.ruleId ? {
           evidenceId: `${evidence.evidenceId}:SUPPORTING`,
-          ruleId: primaryRuleId,
+          ruleId: evidence.ruleId, // Keep canonical ruleId in provenance
           domain: 'CAREER',
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED',
           strength: mapLayerToProvenanceStrength(evidence.layer)
         } : undefined,
-        identityKey
+        identityKey,
+        manifestationRuleIds: adaptedRuleIds.length > 0 ? adaptedRuleIds : undefined
       });
 
       // Create CHALLENGING occurrence
@@ -433,19 +365,20 @@ function mapNatalEvidence(
         polarity: polarityChallenging,
         strength,
         priority: evidence.priority,
-        ruleId: primaryRuleId,
+        ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: evidence.sourceIds,
         notes,
         provenance: evidence.ruleId ? {
           evidenceId: `${evidence.evidenceId}:CHALLENGING`,
-          ruleId: primaryRuleId,
+          ruleId: evidence.ruleId, // Keep canonical ruleId in provenance
           domain: 'CAREER',
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: 'MIXED',
           strength: mapLayerToProvenanceStrength(evidence.layer)
         } : undefined,
-        identityKey
+        identityKey,
+        manifestationRuleIds: adaptedRuleIds.length > 0 ? adaptedRuleIds : undefined
       });
 
       result.push(supportingEvidence, challengingEvidence);
@@ -456,7 +389,6 @@ function mapNatalEvidence(
 
       // Adapt canonical ruleId to manifestation-compatible patterns
       const adaptedRuleIds = evidence.ruleId ? adaptCanonicalRuleIdToManifestationRules(evidence.ruleId) : [];
-      const primaryRuleId = adaptedRuleIds.length > 0 ? adaptedRuleIds[0] : evidence.ruleId;
 
       const domainEvidence = createDomainEvidence({
         id: evidence.evidenceId,
@@ -469,18 +401,19 @@ function mapNatalEvidence(
         polarity,
         strength,
         priority: evidence.priority,
-        ruleId: primaryRuleId,
+        ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
         relatedEvidenceIds: evidence.sourceIds,
         provenance: evidence.ruleId ? {
           evidenceId: evidence.evidenceId,
-          ruleId: primaryRuleId,
+          ruleId: evidence.ruleId, // Keep canonical ruleId in provenance
           domain: 'CAREER',
           axis: 'NATAL',
           source: 'C4_STRUCTURAL_REASONING',
           effect: mapDirectionToProvenanceEffect(evidence.direction),
           strength: mapLayerToProvenanceStrength(evidence.layer)
         } : undefined,
-        identityKey: evidence.identityKey
+        identityKey: evidence.identityKey,
+        manifestationRuleIds: adaptedRuleIds.length > 0 ? adaptedRuleIds : undefined
       });
 
       result.push(domainEvidence);

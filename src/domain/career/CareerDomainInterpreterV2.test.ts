@@ -91,9 +91,6 @@ import {
   type ThemeTransitEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
-import {
-  mapCanonicalCareerEvidence
-} from './canonicalCareerEvidenceMapper';
 
 describe('CareerDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -1389,33 +1386,23 @@ describe('CareerDomainInterpreterV2', () => {
       expect(mapCareerPhase(customTransitItem)).toBe('TRANSIT_TRIGGER');
     });
 
-    it('uses legacy transit evidence as compatibility source and preserves trigger effect and natal-promise links', () => {
+    it('transit evidence is deferred in Gate 5 (NO_MATERIAL_TRIGGER)', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
 
-      // Transit trigger should be computed from legacy themeInterpretation.transitEvidence
+      // Transit trigger should be defined but inactive (deferred)
       expect(v2.transitTrigger).toBeDefined();
+      expect(v2.transitTrigger.active).toBe(false);
+      expect(v2.transitTrigger.effect).toBe('NO_MATERIAL_TRIGGER');
 
-      // Verify that transit evidence is NOT in the main evidence array (to prevent double-counting)
+      // Verify that transit evidence is NOT in the main evidence array (deferred)
       const transitInMainEvidence = v2.evidence.filter(
         (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
       );
       expect(transitInMainEvidence).toHaveLength(0);
 
-      // Verify that transit evidence is properly linked to natal promises
-      if (v2.transitTrigger.active && v2.transitTrigger.triggeredPromiseEvidenceIds.length > 0) {
-        // When transit is active, verify evidence IDs are preserved
-        expect(v2.transitTrigger.evidenceIds).toBeDefined();
-        expect(v2.transitTrigger.evidenceIds.length).toBeGreaterThan(0);
-
-        // Verify that triggered promise evidence IDs reference actual natal promise evidence
-        const allEvidenceIds = new Set(v2.evidence.map((e) => e.id));
-        for (const promiseId of v2.transitTrigger.triggeredPromiseEvidenceIds) {
-          expect(allEvidenceIds.has(promiseId)).toBe(true);
-        }
-      }
-
-      // Verify transit effect is one of the expected values
-      expect(['TRIGGER', 'MODIFIER', 'CHALLENGE', 'NO_MATERIAL_TRIGGER', 'UNKNOWN']).toContain(v2.transitTrigger.effect);
+      // Verify transit trigger has empty evidence IDs
+      expect(v2.transitTrigger.evidenceIds).toEqual([]);
+      expect(v2.transitTrigger.triggeredPromiseEvidenceIds).toEqual([]);
     });
   });
 
@@ -1559,17 +1546,20 @@ describe('CareerDomainInterpreterV2', () => {
     expect(byMode).toHaveProperty('INDEPENDENT_WORK');
     expect(byMode).toHaveProperty('BUSINESS_ENTREPRENEURSHIP');
 
-    // P2-11C Gate 5: Canonical evidence cutover with ruleId adapter
-    // Canonical C4 evidence ruleIds are now adapted to manifestation-compatible patterns
-    // via adaptCanonicalRuleIdToManifestationRules in canonicalCareerEvidenceMapper
-    // This preserves the intended manifestation hierarchy where canonical evidence supports it
-    expect(byMode.LEADERSHIP.status).toBe('STRONGLY_SUPPORTED');
-    expect(byMode.MANAGEMENT.status).toBe('STRONGLY_SUPPORTED');
-    expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('STRONGLY_SUPPORTED');
-    expect(byMode.SERVICE_EMPLOYMENT.status).toBe('STRONGLY_SUPPORTED');
-    expect(byMode.AUTHORITY.status).toBe('STRONGLY_SUPPORTED');
-    expect(byMode.INDEPENDENT_WORK.status).toBe('STRONGLY_SUPPORTED');
-    expect(byMode.BUSINESS_ENTREPRENEURSHIP.status).toBe('MIXED');
+    // P2-11C Gate 5: Canonical evidence cutover with adapter
+    // Canonical C4 evidence does not contain the semantic depth to establish legacy manifestation rules
+    // (e.g., lord dignity, specific yoga conditions, manifestation-specific planet relevance).
+    // The adapter conservatively returns empty arrays for canonical ruleIds to prevent false positives.
+    // As a result, manifestation modes resolve to INSUFFICIENT_DATA until canonical analysis is
+    // enhanced to emit the missing semantic information or manifestation synthesis is updated to
+    // directly interpret canonical ruleIds.
+    expect(byMode.LEADERSHIP.status).toBe('INSUFFICIENT_DATA');
+    expect(byMode.MANAGEMENT.status).toBe('INSUFFICIENT_DATA');
+    expect(byMode.TECHNICAL_SPECIALIZATION.status).toBe('INSUFFICIENT_DATA');
+    expect(byMode.SERVICE_EMPLOYMENT.status).toBe('INSUFFICIENT_DATA');
+    expect(byMode.AUTHORITY.status).toBe('INSUFFICIENT_DATA');
+    expect(byMode.INDEPENDENT_WORK.status).toBe('INSUFFICIENT_DATA');
+    expect(byMode.BUSINESS_ENTREPRENEURSHIP.status).toBe('INSUFFICIENT_DATA');
 
     // Verify structure and contracts for each mode
     for (const syn of manifestations ?? []) {
