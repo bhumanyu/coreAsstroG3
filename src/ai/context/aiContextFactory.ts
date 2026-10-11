@@ -650,7 +650,22 @@ function buildCareerFact(
       },
       overallEffect: mapEffect(syn.combinedEffect),
       confidence: syn.combinedConfidence === 'HIGH' ? 0.9 : syn.combinedConfidence === 'MEDIUM' ? 0.7 : 0.5,
-      evidenceIds: (careerDashaSynthesis.factors ?? []).map((f: { id: string }) => f.id),
+      /**
+       * P2-11C Gate 5: Use canonical C9 evidence IDs instead of CW-02 factor IDs
+       *
+       * The timing hierarchy should reference canonical C9 evidence (CAREER_DASHA:* namespace)
+       * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
+       * Canonical C9 evidence is available in careerInterpretation.evidence filtered by source 'DASHA'.
+       * Fallback to CW-02 factor IDs if canonical evidence is not available.
+       */
+      evidenceIds: (() => {
+        const canonicalDashaEvidence = careerInterpretation?.evidence
+          ?.filter((e: DomainEvidence) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION')
+          .map((e: DomainEvidence) => e.id);
+        return canonicalDashaEvidence && canonicalDashaEvidence.length > 0
+          ? canonicalDashaEvidence
+          : (careerDashaSynthesis.factors ?? []).map((f: { id: string }) => f.id);
+      })(),
       summary: syn.summary
     };
   } else if (timing?.status === 'AVAILABLE' && timing.mahadasha && timing.antardasha && timing.pratyantardasha) {
@@ -808,7 +823,22 @@ function buildWealthFact(
           overallEffect: d.overallEffect,
           confidence: d.confidence
         })),
-        evidenceIds: syn.evidenceIds,
+        /**
+         * P2-11C Gate 5: Use canonical C9 evidence IDs instead of synthesis evidence IDs
+         *
+         * The timing hierarchy should reference canonical C9 evidence that exists in context.evidence,
+         * not the synthesis evidence IDs which may use a different namespace.
+         * Canonical C9 evidence is available in wealthInterpretation.evidence filtered by source 'DASHA'.
+         * Fallback to synthesis evidence IDs if canonical evidence is not available.
+         */
+        evidenceIds: (() => {
+          const canonicalDashaEvidence = wealthInterpretation?.evidence
+            ?.filter((e: DomainEvidence) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION')
+            .map((e: DomainEvidence) => e.id);
+          return canonicalDashaEvidence && canonicalDashaEvidence.length > 0
+            ? canonicalDashaEvidence
+            : syn.evidenceIds;
+        })(),
         summary: syn.summary
       };
     }
