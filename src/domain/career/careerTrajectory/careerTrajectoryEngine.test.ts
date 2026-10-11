@@ -520,7 +520,7 @@ describe('CareerTrajectoryEngine', () => {
       expect(result.unresolvedEvidenceIds).toEqual([]);
     });
 
-    it('opportunityId is deterministic and derived from mode + sorted evidenceIds', () => {
+    it('opportunityId is deterministic and derived from mode + direction + strength + qualified + sorted evidenceIds', () => {
       const c11 = createC11Fixture({
         natalDirection: 'SUPPORT',
         natalStrength: 'STRONG',
@@ -539,8 +539,8 @@ describe('CareerTrajectoryEngine', () => {
       const input = createTrajectoryInput(c11);
       const result = buildCareerTrajectory(input);
 
-      // opportunityId should be CAREER_OPPORTUNITY:MANAGEMENT:["ev1","ev2"]
-      expect(result.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:["ev1","ev2"]');
+      // opportunityId should be CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1","ev2"]
+      expect(result.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1","ev2"]');
     });
 
     it('identical opportunities with different input order produce same opportunityId', () => {
@@ -579,7 +579,7 @@ describe('CareerTrajectoryEngine', () => {
 
       // Same opportunityId despite different input order
       expect(resultA.opportunities[0].opportunityId).toBe(resultB.opportunities[0].opportunityId);
-      expect(resultA.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:["ev1","ev2","ev3"]');
+      expect(resultA.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1","ev2","ev3"]');
     });
 
     it('different modes produce different opportunityIds', () => {
@@ -609,6 +609,76 @@ describe('CareerTrajectoryEngine', () => {
 
       // Different modes should produce different opportunityIds
       expect(result.opportunities[0].opportunityId).not.toBe(result.opportunities[1].opportunityId);
+    });
+
+    it('opportunities with same mode+evidenceIds but different direction receive distinct opportunityIds', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1', 'ev2']
+          },
+          {
+            mode: 'MANAGEMENT',
+            direction: 'CHALLENGE',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1', 'ev2']
+          }
+        ]
+      });
+
+      const input = createTrajectoryInput(c11);
+      const result = buildCareerTrajectory(input);
+
+      // Should have 2 opportunities with different opportunityIds
+      expect(result.opportunities).toHaveLength(2);
+      expect(result.opportunities[0].opportunityId).not.toBe(result.opportunities[1].opportunityId);
+      // Check that the two IDs are distinct and correct (order may vary)
+      const ids = result.opportunities.map(o => o.opportunityId);
+      expect(ids).toContain('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1","ev2"]');
+      expect(ids).toContain('CAREER_OPPORTUNITY:MANAGEMENT:CHALLENGE:STRONG:true:["ev1","ev2"]');
+    });
+
+    it('opportunities with same mode+evidenceIds but different qualified receive distinct opportunityIds', () => {
+      const c11 = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1', 'ev2']
+          },
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: false,
+            evidenceIds: ['ev1', 'ev2']
+          }
+        ]
+      });
+
+      const input = createTrajectoryInput(c11);
+      const result = buildCareerTrajectory(input);
+
+      // Should have 2 opportunities with different opportunityIds
+      expect(result.opportunities).toHaveLength(2);
+      expect(result.opportunities[0].opportunityId).not.toBe(result.opportunities[1].opportunityId);
+      // Check that the two IDs are distinct and correct (order may vary)
+      const ids = result.opportunities.map(o => o.opportunityId);
+      expect(ids).toContain('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:false:["ev1","ev2"]');
+      expect(ids).toContain('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1","ev2"]');
     });
   });
 

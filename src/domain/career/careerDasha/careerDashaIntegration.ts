@@ -341,8 +341,12 @@ function buildCanonicalPeriod(
  * This function extracts natal evidence IDs that are associated with a specific planet
  * by parsing the identityKey field of WeightedReasoningEvidence items.
  *
- * The identityKey format for natal evidence is: 'CAREER_NATAL:{planet}:{role}:{detail}'
- * We parse this to extract the planet and match it against the requested planet.
+ * The identityKey format for natal evidence (from buildEvidenceIdentityKey) is:
+ * 'CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]'
+ * where SUBJECT_KEY is the planet name (e.g., 'JUPITER', 'SATURN').
+ *
+ * We parse the identityKey to extract the subjectKey (planet) and match it against
+ * the requested planet.
  *
  * Returns the evidenceId (semantic identity) of matching natal evidence items.
  * If no planet is specified, returns an empty array.
@@ -359,12 +363,13 @@ function resolveNatalRootEvidenceIds(
   const matchingIds: string[] = [];
 
   for (const evidence of natal.evidence) {
-    // Parse identityKey to extract planet
-    // Expected format: 'CAREER_NATAL:{planet}:{role}:{detail}'
-    const parts = evidence.identityKey.split(':');
-    if (parts.length >= 2 && parts[0] === 'CAREER_NATAL') {
-      const evidencePlanet = parts[1];
-      if (evidencePlanet === planet) {
+    // Parse identityKey to extract subjectKey (planet)
+    // Expected format: 'CW-CAREER-NATAL-D1-<RULE_ID>-<PLANET>' or similar
+    const parts = evidence.identityKey.split('-');
+    if (parts.length >= 6) {
+      // Subject key is the 6th segment (index 5)
+      const subjectKey = parts[5];
+      if (subjectKey === planet) {
         // Use evidenceId as the semantic identity (matches identityKey after P0-08)
         matchingIds.push(evidence.evidenceId);
       }

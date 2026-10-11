@@ -117,6 +117,49 @@ function makeHoroscopeWithPartialDasha(): Horoscope {
 }
 
 function makeMinimalNatal(): CareerNatalAnalysis {
+  // Create natal evidence with correct identityKey format for the planets in Dasha
+  const saturnEvidence: WeightedReasoningEvidence = Object.freeze({
+    identityKey: 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN',
+    evidenceId: 'natal-saturn-evidence-1',
+    ruleId: 'SATURN_10TH_LORD',
+    layer: 'PRIMARY_PROMISE',
+    direction: 'SUPPORT',
+    strength: 'STRONG',
+    priority: 90,
+    weight: 2.7,
+    statement: 'Saturn as 10th lord in 10th house supports career',
+    relatedEvidenceIds: [],
+    sourceIds: ['source-1']
+  });
+
+  const jupiterEvidence: WeightedReasoningEvidence = Object.freeze({
+    identityKey: 'CW-CAREER-NATAL-D1-JUPITER_7TH_LORD-JUPITER',
+    evidenceId: 'natal-jupiter-evidence-1',
+    ruleId: 'JUPITER_7TH_LORD',
+    layer: 'PRIMARY_PROMISE',
+    direction: 'SUPPORT',
+    strength: 'STRONG',
+    priority: 90,
+    weight: 2.7,
+    statement: 'Jupiter as 7th lord supports career',
+    relatedEvidenceIds: [],
+    sourceIds: ['source-2']
+  });
+
+  const mercuryEvidence: WeightedReasoningEvidence = Object.freeze({
+    identityKey: 'CW-CAREER-NATAL-D1-MERCURY_1ST_LORD-MERCURY',
+    evidenceId: 'natal-mercury-evidence-1',
+    ruleId: 'MERCURY_1ST_LORD',
+    layer: 'PRIMARY_PROMISE',
+    direction: 'SUPPORT',
+    strength: 'STRONG',
+    priority: 90,
+    weight: 2.7,
+    statement: 'Mercury as 1st lord supports career',
+    relatedEvidenceIds: [],
+    sourceIds: ['source-3']
+  });
+
   // Use a minimal natal that satisfies the type requirements
   // The actual C5/C6/C8 test suites should cover detailed semantics
   return Object.freeze({
@@ -139,26 +182,50 @@ function makeMinimalNatal(): CareerNatalAnalysis {
     } as unknown as CareerStructuralReasoning),
     relevance: Object.freeze([
       Object.freeze({
-        planet: Planet.SUN,
+        planet: Planet.SATURN,
         relevance: 'PRIMARY' as CareerPlanetRelevance,
         roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
         reasons: Object.freeze(['PRIMARY_LORDSHIP' as CareerPlanetRelevanceReason]),
         effect: 'SUPPORT' as CareerPlanetEffect,
         expressionHints: Object.freeze([] as CareerExpressionHint[]),
-        relatedHouses: Object.freeze([5]),
+        relatedHouses: Object.freeze([10]),
         relatedPlanets: Object.freeze([]),
         conditional: false,
-        statement: 'Sun has primary career relevance.'
+        statement: 'Saturn has primary career relevance.'
+      }),
+      Object.freeze({
+        planet: Planet.JUPITER,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
+        reasons: Object.freeze(['PRIMARY_LORDSHIP' as CareerPlanetRelevanceReason]),
+        effect: 'SUPPORT' as CareerPlanetEffect,
+        expressionHints: Object.freeze([] as CareerExpressionHint[]),
+        relatedHouses: Object.freeze([7]),
+        relatedPlanets: Object.freeze([]),
+        conditional: false,
+        statement: 'Jupiter has primary career relevance.'
+      }),
+      Object.freeze({
+        planet: Planet.MERCURY,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
+        reasons: Object.freeze(['PRIMARY_LORDSHIP' as CareerPlanetRelevanceReason]),
+        effect: 'SUPPORT' as CareerPlanetEffect,
+        expressionHints: Object.freeze([] as CareerExpressionHint[]),
+        relatedHouses: Object.freeze([1]),
+        relatedPlanets: Object.freeze([]),
+        conditional: false,
+        statement: 'Mercury has primary career relevance.'
       })
     ]) as readonly CareerPlanetaryRelevance[],
     condition: Object.freeze([]) as readonly CareerPlanetaryConditionResult[],
     lordRelationships: Object.freeze([]),
     direction: 'SUPPORT',
     strength: 'STRONG',
-    evidence: Object.freeze([]) as readonly WeightedReasoningEvidence[],
+    evidence: Object.freeze([saturnEvidence, jupiterEvidence, mercuryEvidence]),
     conflicts: Object.freeze([]),
     reasoningTrace: Object.freeze({
-      primaryPromise: Object.freeze([]),
+      primaryPromise: Object.freeze([saturnEvidence, jupiterEvidence, mercuryEvidence]),
       secondarySupport: Object.freeze([]),
       modifiers: Object.freeze([]),
       yogas: Object.freeze([]),
@@ -306,13 +373,93 @@ describe('C9 Dasha Integration', () => {
     });
   });
 
-  describe('Test 8: Conservative root evidence (empty array)', () => {
-    it('natalRootIds are empty due to conservative approach', () => {
+  describe('Test 8: Root evidence linkage via identityKey parsing', () => {
+    it('natalRootIds are populated for planets with matching natal evidence', () => {
+      // Create natal evidence with correct identityKey format: CW-CAREER-NATAL-D1-<RULE_ID>-<PLANET>
+      const natalEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN',
+        evidenceId: 'natal-saturn-evidence-1',
+        ruleId: 'SATURN_10TH_LORD',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Saturn as 10th lord in 10th house supports career',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      });
+
+      const natal: CareerNatalAnalysis = Object.freeze({
+        structural: Object.freeze({
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 0,
+          supportingSupport: 5,
+          supportingChallenge: 0,
+          challengingSupport: 0,
+          challengingChallenge: 0,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Strong structural support'
+        }),
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [natalEvidence],
+        conflicts: [],
+        reasoningTrace: Object.freeze({
+          primaryPromise: [natalEvidence],
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        })
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: [],
+        evidenceIds: [],
+        unresolvedEvidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        statement: 'No expressions'
+      });
+
+      const input: CareerDashaIntegrationInput = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Find evidence for SATURN planet
+      const saturnEvidence = result.evidence.find(e => e.planet === Planet.SATURN);
+      expect(saturnEvidence).toBeDefined();
+
+      // The natalRootIds should include the natal evidence ID
+      if (saturnEvidence) {
+        expect(saturnEvidence.provenance.natalRootIds).toContain('natal-saturn-evidence-1');
+      }
+    });
+
+    it('natalRootIds are empty when no planet specified', () => {
       const input = makeInput();
       const result = buildCareerDashaAnalysis(input);
 
-      // All evidence should have empty natalRootIds due to conservative approach
-      result.evidence.forEach(evidence => {
+      // Check that evidence without a planet has empty natalRootIds
+      const evidenceWithoutPlanet = result.evidence.filter(e => !e.planet);
+      evidenceWithoutPlanet.forEach(evidence => {
         expect(evidence.provenance.natalRootIds).toEqual([]);
       });
     });

@@ -1410,24 +1410,27 @@ C9 canonical evidence uses three identity levels:
 - `sourceIds` are the upstream activation evidence ids (provenance)
 - This prevents circular provenance (C9 evidence pointing at itself)
 
-### W3.5 Root Evidence Linkage (Conservative Approach)
+### W3.5 Root Evidence Linkage
 
-C9 currently uses a conservative approach for `natalRootIds` in canonical evidence provenance:
+C9 links canonical Dasha evidence to natal root evidence via the `natalRootIds` field in provenance.
 
-**Current Implementation:**
-- `resolveNatalRootEvidenceIds` returns an empty array `readonly string[]`
-- This is because `WeightedReasoningEvidence` does not expose a structured field that reliably identifies the planet/subject
-- The `rootEvidenceId` field is a forward-looking W1 concept that is not yet implemented in the current codebase
+**Implementation:**
+- `resolveNatalRootEvidenceIds` extracts natal evidence IDs for a given planet by parsing the `identityKey` field of `WeightedReasoningEvidence` items
+- The identityKey format (from `buildEvidenceIdentityKey`) is: `CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]`
+- The `SUBJECT_KEY` segment (6th dash-delimited segment) contains the planet name (e.g., 'JUPITER', 'SATURN')
+- The function parses the identityKey to extract the subjectKey and matches it against the requested planet
+- Returns the `evidenceId` (semantic identity) of matching natal evidence items
+- If no planet is specified or no matching evidence is found, returns an empty array
 
-**Rationale:**
-- Fabricating links via string matching (e.g., `id.includes(planet)`) would be unreliable and create false provenance
-- The contract states `rootEvidenceId` is a forward-looking, not-yet-implemented W1 concept
-- Returning an empty array preserves correctness by not claiming traceability that does not exist in the data contract
+**Linkage Rule (11E-C):**
+- The opportunity's `evidenceIds` must overlap with the canonical C9 activation's `natalRootIds`
+- This ensures the opportunity is substantively connected to the natal evidence that the Dasha period activates
+- If relevance cannot be established (no overlap), no event is emitted
 
-**Future W1 Work:**
-- When W1 establishes a root evidence tree structure for evidence dependency tracking
-- This function can be updated to use the structured mechanism
-- Until then, the conservative empty-array approach is the correct implementation
+**Example:**
+- Natal evidence with identityKey `CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER` has subjectKey `JUPITER`
+- For a Dasha activation of planet JUPITER, this evidence would be included in `natalRootIds`
+- An opportunity referencing this evidence ID would be linked to the JUPITER Dasha activation
 
 ### W3.6 Missing Data Representation
 

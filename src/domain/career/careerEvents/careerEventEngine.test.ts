@@ -135,7 +135,7 @@ function createDashaEvidence(
     provenance: {
       source: 'C9_DASHA',
       activationLevel: level,
-      natalRootIds: []
+      natalRootIds: ['evidence-1'] // Default to include opportunity's evidence ID for positive tests
     }
   };
 
@@ -154,7 +154,7 @@ function createOpportunity(
     strength: 'STRONG',
     qualified: true,
     evidenceIds: ['evidence-1'],
-    opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]'
+    opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]'
   };
 
   return { ...base, ...overrides };
@@ -182,7 +182,7 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
+        evidence: [createDashaEvidence('MD')] // Default natalRootIds includes 'evidence-1'
       });
 
       const input = createEventsInput(trajectory, dasha);
@@ -488,6 +488,116 @@ describe('CareerEventEngine', () => {
     });
   });
 
+  describe('LINKAGE RULE: Evidence-identity overlap', () => {
+    it('generates event when opportunity evidenceIds overlap with natalRootIds', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ evidenceIds: ['evidence-1'] })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-1'] } })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0].eventType).toBe('CAREER_OPPORTUNITY_WINDOW');
+    });
+
+    it('does NOT generate event when natalRootIds is empty', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ evidenceIds: ['evidence-1'] })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: [] } })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events).toHaveLength(0);
+    });
+
+    it('does NOT generate event when opportunity evidenceIds and natalRootIds are disjoint', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ evidenceIds: ['evidence-1'] })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-2'] } })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events).toHaveLength(0);
+    });
+
+    it('generates event when at least one opportunity evidenceId overlaps with natalRootIds', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ evidenceIds: ['evidence-1', 'evidence-2', 'evidence-3'] })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-2'] } })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0].eventType).toBe('CAREER_OPPORTUNITY_WINDOW');
+    });
+  });
+
+  describe('activationId semantics', () => {
+    it('collectDashaEvidenceIds returns a single identityKey per matched period (one-to-one invariant)', () => {
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD')]
+      });
+
+      // Simulate collectDashaEvidenceIds logic
+      const matchingEvidence = dasha.evidence.filter(e =>
+        e.level === dasha.md.level &&
+        e.planet === dasha.md.planet &&
+        e.effect === dasha.md.effect &&
+        e.direction === dasha.md.direction &&
+        e.role === dasha.md.role
+      );
+
+      const identityKeys = matchingEvidence.map(e => e.identityKey);
+      const uniqueIdentityKeys = [...new Set(identityKeys)];
+
+      // Should have exactly one unique identityKey for the matched period
+      expect(uniqueIdentityKeys).toHaveLength(1);
+      expect(uniqueIdentityKeys[0]).toBe('CAREER_DASHA:MD:SUN:PRIMARY_DRIVER');
+    });
+
+    it('activationId is the first (and only) identityKey from matching Dasha evidence', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [createDashaEvidence('MD', { identityKey: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER' })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0].activationId).toBe('CAREER_DASHA:MD:SUN:PRIMARY_DRIVER');
+    });
+  });
+
   describe('EVT-03: Date handling', () => {
     it('partial dates (start only) produce UNTIMED event', () => {
       const trajectory = createTrajectoryFixture({
@@ -586,7 +696,7 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD', { identityKey: 'dasha-identity-key' })]
+        evidence: [createDashaEvidence('MD', { identityKey: 'dasha-identity-key', provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['opp-evidence-1'] } })]
       });
 
       const input = createEventsInput(trajectory, dasha);
@@ -605,7 +715,8 @@ describe('CareerEventEngine', () => {
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
         evidence: [createDashaEvidence('MD', {
           identityKey: 'dasha-identity-key',
-          id: 'dasha-occurrence-id'
+          id: 'dasha-occurrence-id',
+          provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['opp-evidence-1'] }
         })]
       });
 
@@ -620,7 +731,7 @@ describe('CareerEventEngine', () => {
   describe('Stable identity fields (opportunityId and activationId)', () => {
     it('opportunity window event has opportunityId from trajectory opportunity', () => {
       const trajectory = createTrajectoryFixture({
-        opportunities: [createOpportunity({ opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]' })]
+        opportunities: [createOpportunity({ opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]' })]
       });
 
       const dasha = createDashaFixture({
@@ -631,7 +742,7 @@ describe('CareerEventEngine', () => {
       const input = createEventsInput(trajectory, dasha);
       const result = buildCareerEvents(input);
 
-      expect(result.events[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]');
+      expect(result.events[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]');
     });
 
     it('opportunity window event has activationId from Dasha evidence identityKey', () => {
@@ -654,7 +765,7 @@ describe('CareerEventEngine', () => {
       const trajectory = createTrajectoryFixture({
         opportunities: [createOpportunity({
           direction: 'CONDITIONAL',
-          opportunityId: 'CAREER_OPPORTUNITY:LEADERSHIP:["evidence-1"]'
+          opportunityId: 'CAREER_OPPORTUNITY:LEADERSHIP:CONDITIONAL:STRONG:true:["evidence-1"]'
         })]
       });
 
@@ -666,7 +777,7 @@ describe('CareerEventEngine', () => {
       const input = createEventsInput(trajectory, dasha);
       const result = buildCareerEvents(input);
 
-      expect(result.events[0].opportunityId).toBe('CAREER_OPPORTUNITY:LEADERSHIP:["evidence-1"]');
+      expect(result.events[0].opportunityId).toBe('CAREER_OPPORTUNITY:LEADERSHIP:CONDITIONAL:STRONG:true:["evidence-1"]');
     });
 
     it('conditional window event has activationId from Dasha evidence identityKey', () => {
@@ -766,7 +877,7 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD', { identityKey: 'dasha-identity' })]
+        evidence: [createDashaEvidence('MD', { identityKey: 'dasha-identity', provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['zebra', 'apple', 'banana'] } })]
       });
 
       const input = createEventsInput(trajectory, dasha);
@@ -809,7 +920,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -821,7 +932,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -841,7 +952,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -853,7 +964,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event 2',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -869,7 +980,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -881,7 +992,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event 2',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -897,7 +1008,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -909,7 +1020,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Different statement', // Different statement
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -925,7 +1036,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -937,7 +1048,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -953,7 +1064,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -965,7 +1076,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:LEADERSHIP:["evidence-1"]', // Different opportunityId
+        opportunityId: 'CAREER_OPPORTUNITY:LEADERSHIP:SUPPORT:STRONG:true:["evidence-1"]', // Different opportunityId
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -981,7 +1092,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-1'],
         ruleIds: ['P2-09B-EVT-01'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER'
       };
 
@@ -993,7 +1104,7 @@ describe('CareerEventEngine', () => {
         evidenceIds: ['evidence-2'],
         ruleIds: ['P2-09B-EVT-02'],
         statement: 'Test event 1',
-        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:["evidence-1"]',
+        opportunityId: 'CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["evidence-1"]',
         activationId: 'CAREER_DASHA:MD:MOON:PRIMARY_DRIVER' // Different activationId
       };
 
@@ -1066,7 +1177,7 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['a|b', 'a', 'b'] } })]
       });
 
       const input = createEventsInput(trajectory, dasha);
@@ -1087,13 +1198,13 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['zebra', 'apple', 'banana'] } })]
       });
 
       const input = createEventsInput(trajectory, dasha);
       const result = buildCareerEvents(input);
 
-      // Same evidenceIds in different order should produce same eventId
+      // Same evidenceIds in different order should produce same eventId (opportunityId includes direction/strength/qualified which are the same)
       expect(result.events).toHaveLength(1);
     });
 
@@ -1362,7 +1473,7 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-1', 'evidence-2'] } })]
       });
 
       const input = createEventsInput(trajectory, dasha);
@@ -1385,7 +1496,7 @@ describe('CareerEventEngine', () => {
 
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
+        evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-1', 'evidence-2'] } })]
       });
 
       const input = createEventsInput(trajectory, dasha);

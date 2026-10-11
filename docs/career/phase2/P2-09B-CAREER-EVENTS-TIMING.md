@@ -71,8 +71,20 @@ This is a standalone analysis layer — it must NOT recalculate any C4–C11 ast
   evidenceIds: readonly string[];
   ruleIds: readonly string[];  // Rule IDs that generated this event (e.g., 'P2-09B-EVT-01')
   statement: string;
+  opportunityId: string | null;  // Reference to trajectory opportunity (null for challenge events)
+  activationId: string | null;  // Reference to canonical C9 activation
 }
 ```
+
+**Field semantics:**
+
+- `opportunityId`: Reference to the trajectory opportunity that generated this event. Populated for opportunity-window and conditional-window events. Null for challenge events (which are independent of opportunities).
+
+- `activationId`: Reference to the canonical C9 activation that triggered this event. This is the `identityKey` of the matching `CareerDashaCanonicalEvidence`.
+
+  **INVARIANT:** A period matches exactly one canonical activation identity. `collectDashaEvidenceIds` returns a single `identityKey` per matched period (filtered by level, planet, effect, direction, role). Therefore, `activationId` is the first and only `identityKey` from the matching evidence array.
+
+  Populated for all events when a matching activation exists. Null if no matching activation is found.
 
 ### `CareerEventType`
 

@@ -56,9 +56,10 @@ export type CareerTrajectoryCurrentPhase =
  * genuinely missing IDs are reported.
  *
  * STABLE IDENTITY: opportunityId is a deterministic identifier derived from stable fields
- * (mode + sorted evidenceIds). Format: 'CAREER_OPPORTUNITY:{mode}:{sortedEvidenceIds}'
+ * (mode + direction + strength + qualified + sorted evidenceIds). Format: 'CAREER_OPPORTUNITY:{mode}:{direction}:{strength}:{qualified}:{sortedEvidenceIds}'
  * where sortedEvidenceIds is a JSON-encoded array. This ensures identical opportunities
- * produce the same opportunityId regardless of input order.
+ * produce the same opportunityId regardless of input order, and distinct opportunities
+ * (different in direction/strength/qualified) cannot collide even with the same mode+evidenceIds.
  */
 export interface CareerTrajectoryOpportunity {
   readonly mode: string;

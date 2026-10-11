@@ -85,6 +85,9 @@ Opportunities extracted from C11 `expressions`:
 - Opportunities are sorted by deterministic code-point comparison (locale-independent).
 - All nested arrays are frozen.
 
+**Stable Identity:**
+`opportunityId` is a deterministic identifier derived from stable fields (`mode + direction + strength + qualified + sorted evidenceIds`). Format: `'CAREER_OPPORTUNITY:{mode}:{direction}:{strength}:{qualified}:{sortedEvidenceIds}'` where `sortedEvidenceIds` is a JSON-encoded array. This ensures identical opportunities produce the same `opportunityId` regardless of input order, and distinct opportunities (different in `direction`/`strength`/`qualified`) cannot collide even with the same `mode`+`evidenceIds`.
+
 **Evidence Consistency Check:**
 Expression-level `evidenceIds` are checked against the supplied evidence set. Any expression `evidenceIds` not present in the evidence set are added to `unresolvedEvidenceIds` to surface potential inconsistencies. This does not modify the copied verbatim IDs in the opportunity object. Note: IDs that exist in the evidence set but are not referenced at the top level (expression-only) are not surfaced as unresolved — only genuinely missing IDs are reported.
 

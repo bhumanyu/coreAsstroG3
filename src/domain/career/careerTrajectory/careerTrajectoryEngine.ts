@@ -172,8 +172,9 @@ function mapOpportunities(
       }
     }
 
-    // Generate stable opportunityId from mode + sorted evidenceIds
-    const opportunityId = `CAREER_OPPORTUNITY:${expr.mode}:${JSON.stringify(sortedEvidenceIds)}`;
+    // Generate stable opportunityId from mode + direction + strength + qualified + sorted evidenceIds
+    // Including direction/strength/qualified ensures distinct opportunities cannot collide
+    const opportunityId = `CAREER_OPPORTUNITY:${expr.mode}:${expr.direction}:${expr.strength}:${expr.qualified}:${JSON.stringify(sortedEvidenceIds)}`;
 
     return Object.freeze({
       mode: expr.mode,
