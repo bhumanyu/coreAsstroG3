@@ -257,7 +257,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     expect(selectDashaTimingEvidence(viewModel)).toEqual(viewModel.evidence);
   });
 
-  it('Test 9: resolves Career and Wealth timing evidence through canonical evidence ids', () => {
+  it('Test 9a: when canonical Dasha evidence is available, it resolves correctly through model.evidence', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
     const domainOptions = makeDomainOptions(horoscope);
     const careerInterp = interpretCareerV2(horoscope, domainOptions);
@@ -273,52 +273,7 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     expect(model.evidence).toBeDefined();
     expect(model.evidence.length).toBeGreaterThan(0);
 
-    // 1. Assert every id in career activations resolves against model.evidence by id
-    const careerMdEvidenceIds = model.career?.mahadasha?.evidenceIds ?? [];
-    const careerAdEvidenceIds = model.career?.antardasha?.evidenceIds ?? [];
-    const careerPdEvidenceIds = model.career?.pratyantardasha?.evidenceIds ?? [];
-
-    // P2-11C Gate 5: Canonical evidence may not be available in test data
-    // If evidenceIds are present, validate they resolve; if empty, that's acceptable
-    if (careerMdEvidenceIds.length > 0) {
-      for (const id of careerMdEvidenceIds) {
-        expect(model.evidence.some((e) => e.id === id)).toBe(true);
-      }
-    }
-    if (careerAdEvidenceIds.length > 0) {
-      for (const id of careerAdEvidenceIds) {
-        expect(model.evidence.some((e) => e.id === id)).toBe(true);
-      }
-    }
-    if (careerPdEvidenceIds.length > 0) {
-      for (const id of careerPdEvidenceIds) {
-        expect(model.evidence.some((e) => e.id === id)).toBe(true);
-      }
-    }
-
-    // 2. Assert every id in wealth activations resolves against model.evidence by id
-    const wealthMdEvidenceIds = model.wealth?.mahadasha?.evidenceIds ?? [];
-    const wealthAdEvidenceIds = model.wealth?.antardasha?.evidenceIds ?? [];
-    const wealthPdEvidenceIds = model.wealth?.pratyantardasha?.evidenceIds ?? [];
-
-    // P2-11C Gate 5: Canonical evidence may not be available in test data
-    if (wealthMdEvidenceIds.length > 0) {
-      for (const id of wealthMdEvidenceIds) {
-        expect(model.evidence.some((e) => e.id === id)).toBe(true);
-      }
-    }
-    if (wealthAdEvidenceIds.length > 0) {
-      for (const id of wealthAdEvidenceIds) {
-        expect(model.evidence.some((e) => e.id === id)).toBe(true);
-      }
-    }
-    if (wealthPdEvidenceIds.length > 0) {
-      for (const id of wealthPdEvidenceIds) {
-        expect(model.evidence.some((e) => e.id === id)).toBe(true);
-      }
-    }
-
-    // 3. Assert interpretation-level evidence IDs also resolve against model.evidence by id
+    // Assert interpretation-level evidence IDs resolve against model.evidence by id
     const interpretationEvidence = model.interpretation?.evidence ?? [];
     expect(interpretationEvidence.length).toBeGreaterThan(0);
     for (const interpItem of interpretationEvidence) {
@@ -326,6 +281,85 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
       const matched = model.evidence.find((e) => e.id === interpItem.ruleId);
       expect(matched?.statement).toBeDefined();
       expect(matched?.effect).toBeDefined();
+    }
+  });
+
+  it('Test 9b: when canonical Dasha evidence is absent, traceability is marked as DEGRADED (Finding 1)', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const domainOptions = makeDomainOptions(horoscope);
+    const careerInterp = interpretCareerV2(horoscope, domainOptions);
+    const wealthInterp = interpretWealthV2(horoscope, domainOptions);
+
+    const model = buildDashaTimingViewModel({
+      temporalState: domainOptions.temporalState,
+      horoscope,
+      careerTiming: careerInterp,
+      wealthTiming: wealthInterp
+    });
+
+    // Check for traceability status on each period
+    const careerMd = model.career?.mahadasha;
+    const careerAd = model.career?.antardasha;
+    const careerPd = model.career?.pratyantardasha;
+
+    // If evidenceIds is non-empty, they must resolve and traceability should be RESOLVED
+    if (careerMd && careerMd.evidenceIds.length > 0) {
+      expect(careerMd.traceability).toBe('RESOLVED');
+      for (const id of careerMd.evidenceIds) {
+        expect(model.evidence.some((e) => e.id === id)).toBe(true);
+      }
+    } else if (careerMd) {
+      expect(careerMd.traceability).toBe('DEGRADED');
+    }
+
+    if (careerAd && careerAd.evidenceIds.length > 0) {
+      expect(careerAd.traceability).toBe('RESOLVED');
+      for (const id of careerAd.evidenceIds) {
+        expect(model.evidence.some((e) => e.id === id)).toBe(true);
+      }
+    } else if (careerAd) {
+      expect(careerAd.traceability).toBe('DEGRADED');
+    }
+
+    if (careerPd && careerPd.evidenceIds.length > 0) {
+      expect(careerPd.traceability).toBe('RESOLVED');
+      for (const id of careerPd.evidenceIds) {
+        expect(model.evidence.some((e) => e.id === id)).toBe(true);
+      }
+    } else if (careerPd) {
+      expect(careerPd.traceability).toBe('DEGRADED');
+    }
+
+    // Same for wealth
+    const wealthMd = model.wealth?.mahadasha;
+    const wealthAd = model.wealth?.antardasha;
+    const wealthPd = model.wealth?.pratyantardasha;
+
+    if (wealthMd && wealthMd.evidenceIds.length > 0) {
+      expect(wealthMd.traceability).toBe('RESOLVED');
+      for (const id of wealthMd.evidenceIds) {
+        expect(model.evidence.some((e) => e.id === id)).toBe(true);
+      }
+    } else if (wealthMd) {
+      expect(wealthMd.traceability).toBe('DEGRADED');
+    }
+
+    if (wealthAd && wealthAd.evidenceIds.length > 0) {
+      expect(wealthAd.traceability).toBe('RESOLVED');
+      for (const id of wealthAd.evidenceIds) {
+        expect(model.evidence.some((e) => e.id === id)).toBe(true);
+      }
+    } else if (wealthAd) {
+      expect(wealthAd.traceability).toBe('DEGRADED');
+    }
+
+    if (wealthPd && wealthPd.evidenceIds.length > 0) {
+      expect(wealthPd.traceability).toBe('RESOLVED');
+      for (const id of wealthPd.evidenceIds) {
+        expect(model.evidence.some((e) => e.id === id)).toBe(true);
+      }
+    } else if (wealthPd) {
+      expect(wealthPd.traceability).toBe('DEGRADED');
     }
   });
 

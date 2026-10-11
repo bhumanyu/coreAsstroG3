@@ -1,0 +1,344 @@
+import { describe, expect, it } from 'vitest';
+import {
+  buildNormalizedCareerTiming,
+  buildNormalizedWealthTiming,
+  mapPeriodToCanonicalEvidenceIds
+} from './domainTimingAdapter';
+import {
+  createDomainInterpretation,
+  createDomainEvidence,
+  createNatalPromise,
+  createDashaActivation,
+  createTransitTrigger,
+  createDomainConclusion
+} from './index';
+import { Planet } from '../../types';
+
+describe('domainTimingAdapter - Period Traceability (Finding 1)', () => {
+  it('returns RESOLVED with matching canonical evidence IDs for MD period', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD:JUPITER:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Jupiter Mahadasha activates career'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    expect(result.evidenceIds).toEqual(['CAREER_DASHA:MD:JUPITER:SUPPORT']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('returns RESOLVED with matching canonical evidence IDs for AD period', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:AD:SATURN:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Saturn Antardasha modifies career'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'AD',
+            planet: Planet.SATURN
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'AD', Planet.SATURN, []);
+
+    expect(result.evidenceIds).toEqual(['CAREER_DASHA:AD:SATURN:SUPPORT']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('returns RESOLVED with matching canonical evidence IDs for PD period', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:PD:MARS:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Mars Pratyantardasha triggers career'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'PD',
+            planet: Planet.MARS
+          }
+        } as any
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'PD', Planet.MARS, []);
+
+    expect(result.evidenceIds).toEqual(['CAREER_DASHA:PD:MARS:SUPPORT']);
+    expect(result.traceability).toBe('RESOLVED');
+  });
+
+  it('returns DEGRADED when canonical evidence is absent for the period', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD:JUPITER:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Jupiter Mahadasha activates career'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ]
+    });
+
+    // Request AD but only MD exists
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'AD', Planet.SATURN, []);
+
+    expect(result.evidenceIds).toEqual([]);
+    expect(result.traceability).toBe('DEGRADED');
+  });
+
+  it('returns DEGRADED when no DASHA evidence exists at all', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        createDomainEvidence({
+          id: 'NATAL_EVIDENCE',
+          sourceType: 'PLANET',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          statement: 'Natal evidence only'
+        })
+      ]
+    });
+
+    const result = mapPeriodToCanonicalEvidenceIds(interpretation, 'MD', Planet.JUPITER, []);
+
+    expect(result.evidenceIds).toEqual([]);
+    expect(result.traceability).toBe('DEGRADED');
+  });
+
+  it('returns DEGRADED when interpretation is undefined', () => {
+    const result = mapPeriodToCanonicalEvidenceIds(undefined, 'MD', Planet.JUPITER, []);
+
+    expect(result.evidenceIds).toEqual([]);
+    expect(result.traceability).toBe('DEGRADED');
+  });
+
+  it('buildNormalizedCareerTiming includes traceability status on each period', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD:JUPITER:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Jupiter Mahadasha'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any,
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:AD:SATURN:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Saturn Antardasha'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'AD',
+            planet: Planet.SATURN
+          }
+        } as any
+      ],
+      conclusionData: {
+        careerDashaSynthesis: {
+          md: {
+            planet: Planet.JUPITER,
+            effect: 'SUPPORTS',
+            factors: [{ id: 'FACTOR_1', period: 'MD', planet: Planet.JUPITER, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }],
+            summary: 'MD summary'
+          },
+          ad: {
+            planet: Planet.SATURN,
+            effect: 'SUPPORTS',
+            factors: [{ id: 'FACTOR_2', period: 'AD', planet: Planet.SATURN, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }],
+            summary: 'AD summary'
+          },
+          pd: {
+            planet: Planet.MARS,
+            effect: 'NEUTRAL',
+            factors: [{ id: 'FACTOR_3', period: 'PD', planet: Planet.MARS, category: 'TEST', direction: 'NEUTRAL', weight: 1.0, statement: 'Test' }],
+            summary: 'PD summary'
+          },
+          combined: {
+            md: {
+              planet: Planet.JUPITER,
+              effect: 'SUPPORTS',
+              factors: [{ id: 'FACTOR_1', period: 'MD', planet: Planet.JUPITER, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }]
+            },
+            ad: {
+              planet: Planet.SATURN,
+              effect: 'SUPPORTS',
+              factors: [{ id: 'FACTOR_2', period: 'AD', planet: Planet.SATURN, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }]
+            },
+            pd: {
+              planet: Planet.MARS,
+              effect: 'NEUTRAL',
+              factors: [{ id: 'FACTOR_3', period: 'PD', planet: Planet.MARS, category: 'TEST', direction: 'NEUTRAL', weight: 1.0, statement: 'Test' }]
+            },
+            combinedEffect: 'SUPPORTS'
+          },
+          asOf: '2024-01-01T00:00:00.000Z'
+        }
+      }
+    });
+
+    const timing = buildNormalizedCareerTiming(interpretation);
+
+    expect(timing).toBeDefined();
+    expect(timing?.status).toBe('AVAILABLE');
+    expect(timing?.mahadasha?.traceability).toBe('RESOLVED');
+    expect(timing?.antardasha?.traceability).toBe('RESOLVED');
+    expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
+  });
+
+  it('buildNormalizedWealthTiming includes traceability status on each period', () => {
+    const interpretation = createDomainInterpretation({
+      domain: 'WEALTH',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        {
+          ...createDomainEvidence({
+            id: 'WEALTH_DASHA:MD:JUPITER:SUPPORT',
+            sourceType: 'DASHA',
+            polarity: 'SUPPORTING',
+            strength: 'STRONG',
+            statement: 'Jupiter Mahadasha'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: {
+            level: 'MD',
+            planet: Planet.JUPITER
+          }
+        } as any
+      ],
+      periodTimingActivations: [
+        {
+          period: 'MD',
+          planet: Planet.JUPITER,
+          effect: 'ACTIVATES',
+          dimensions: {
+            accumulation: 'ACTIVATES',
+            gains: 'ACTIVATES',
+            fortune: 'ACTIVATES',
+            speculation: 'ACTIVATES'
+          },
+          evidenceIds: [],
+          statement: 'MD period'
+        },
+        {
+          period: 'AD',
+          planet: Planet.SATURN,
+          effect: 'CHALLENGES',
+          dimensions: {
+            accumulation: 'CHALLENGES',
+            gains: 'CHALLENGES',
+            fortune: 'CHALLENGES',
+            speculation: 'CHALLENGES'
+          },
+          evidenceIds: [],
+          statement: 'AD period'
+        },
+        {
+          period: 'PD',
+          planet: Planet.MARS,
+          effect: 'DOES_NOT_ACTIVATE',
+          dimensions: {
+            accumulation: 'DOES_NOT_ACTIVATE',
+            gains: 'DOES_NOT_ACTIVATE',
+            fortune: 'DOES_NOT_ACTIVATE',
+            speculation: 'DOES_NOT_ACTIVATE'
+          },
+          evidenceIds: [],
+          statement: 'PD period'
+        }
+      ]
+    });
+
+    const timing = buildNormalizedWealthTiming(interpretation);
+
+    expect(timing).toBeDefined();
+    expect(timing?.status).toBe('AVAILABLE');
+    expect(timing?.mahadasha?.traceability).toBe('RESOLVED');
+    expect(timing?.antardasha?.traceability).toBe('DEGRADED'); // No AD evidence
+    expect(timing?.pratyantardasha?.traceability).toBe('DEGRADED'); // No PD evidence
+  });
+});

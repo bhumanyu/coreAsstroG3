@@ -70,11 +70,14 @@ export interface LifeAnalysisQualification {
   readonly description: string;
 }
 
+export type TraceabilityStatus = 'RESOLVED' | 'DEGRADED';
+
 export interface CareerPeriodTimingProduct {
   readonly period?: 'MD' | 'AD' | 'PD';
   readonly planet?: Planet;
   readonly effect: TimingActivationEffect;
   readonly evidenceIds: readonly string[];
+  readonly traceability?: TraceabilityStatus;
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
@@ -103,6 +106,7 @@ export interface WealthPeriodTimingProduct {
     readonly speculation: TimingActivationEffect;
   };
   readonly evidenceIds: readonly string[];
+  readonly traceability?: TraceabilityStatus;
   readonly statement?: string;
 }
 

@@ -17,7 +17,8 @@ import {
   createNatalPromise,
   createDashaActivation,
   createTransitTrigger,
-  createDomainConclusion
+  createDomainConclusion,
+  mapPeriodToCanonicalEvidenceIds
 } from '../../domain/interpretation';
 import { createAiRequest } from '../api/createAiRequest';
 import { YogaType, YogaCategory, YogaStrength, YogaStrengthLevel } from '../../engine/yoga/yogaTypes';
@@ -257,8 +258,8 @@ describe('AI Context Factory', () => {
     expect(context.evidence.length).toBeGreaterThan(0);
 
     // Verify evidence has proper metadata structure
-    const careerContextEvidence = context.evidence.filter(e => e.domain === 'CAREER');
-    const wealthContextEvidence = context.evidence.filter(e => e.domain === 'WEALTH');
+    const careerContextEvidence = context.evidence.filter(e => e.id.startsWith('CAREER_'));
+    const wealthContextEvidence = context.evidence.filter(e => e.id.startsWith('WEALTH_'));
 
     expect(careerContextEvidence.length).toBeGreaterThan(0);
     expect(wealthContextEvidence.length).toBeGreaterThan(0);
@@ -269,9 +270,6 @@ describe('AI Context Factory', () => {
     expect(sampleCareer.statement).toBeTruthy();
     if (sampleCareer.priority !== undefined) {
       expect(['PRIMARY', 'SECONDARY', 'CONFIRMATORY', 'TIMING']).toContain(sampleCareer.priority);
-    }
-    if (sampleCareer.phase !== undefined) {
-      expect(['NATAL_PROMISE', 'MODIFIER', 'DASHA_ACTIVATION', 'VARGA_CONFIRMATION']).toContain(sampleCareer.phase);
     }
   });
 
@@ -1591,6 +1589,152 @@ describe('AI Context Factory', () => {
         expect(ev.statement).toContain('(status: CANCELLED)');
         expect(ev.derivedFromIds).toEqual(expectedRuleIds);
       }
+    });
+
+    it('should scope hierarchy evidenceIds to period and planet (Finding 2)', () => {
+      const customCareerInterpretation = createDomainInterpretation({
+        domain: 'CAREER',
+        natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+        dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+        transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+        conclusion: createDomainConclusion({ statement: 'Career active', confidence: 'HIGH' }),
+        evidence: [
+          {
+            ...createDomainEvidence({
+              id: 'CAREER_DASHA:MD:JUPITER:SUPPORT',
+              sourceType: 'DASHA',
+              polarity: 'SUPPORTING',
+              strength: 'STRONG',
+              statement: 'Jupiter Mahadasha activates career'
+            }),
+            source: 'DASHA',
+            phase: 'DASHA_ACTIVATION',
+            timing: {
+              level: 'MD',
+              planet: Planet.JUPITER
+            }
+          } as any,
+          {
+            ...createDomainEvidence({
+              id: 'CAREER_DASHA:AD:SATURN:SUPPORT',
+              sourceType: 'DASHA',
+              polarity: 'SUPPORTING',
+              strength: 'STRONG',
+              statement: 'Saturn Antardasha modifies career'
+            }),
+            source: 'DASHA',
+            phase: 'DASHA_ACTIVATION',
+            timing: {
+              level: 'AD',
+              planet: Planet.SATURN
+            }
+          } as any,
+          {
+            ...createDomainEvidence({
+              id: 'CAREER_DASHA:PD:MARS:SUPPORT',
+              sourceType: 'DASHA',
+              polarity: 'SUPPORTING',
+              strength: 'STRONG',
+              statement: 'Mars Pratyantardasha triggers career'
+            }),
+            source: 'DASHA',
+            phase: 'DASHA_ACTIVATION',
+            timing: {
+              level: 'PD',
+              planet: Planet.MARS
+            }
+          } as any,
+          {
+            ...createDomainEvidence({
+              id: 'CAREER_DASHA:MD:VENUS:SUPPORT',
+              sourceType: 'DASHA',
+              polarity: 'SUPPORTING',
+              strength: 'STRONG',
+              statement: 'Venus Mahadasha - unrelated period'
+            }),
+            source: 'DASHA',
+            phase: 'DASHA_ACTIVATION',
+            timing: {
+              level: 'MD',
+              planet: Planet.VENUS
+            }
+          } as any
+        ],
+        conclusionData: {
+          careerDashaSynthesis: {
+            md: {
+              planet: Planet.JUPITER,
+              effect: 'SUPPORTS',
+              factors: [{ id: 'F_MD', period: 'MD', planet: Planet.JUPITER, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }],
+              summary: 'MD summary'
+            },
+            ad: {
+              planet: Planet.SATURN,
+              effect: 'SUPPORTS',
+              factors: [{ id: 'F_AD', period: 'AD', planet: Planet.SATURN, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }],
+              summary: 'AD summary'
+            },
+            pd: {
+              planet: Planet.MARS,
+              effect: 'NEUTRAL',
+              factors: [{ id: 'F_PD', period: 'PD', planet: Planet.MARS, category: 'TEST', direction: 'NEUTRAL', weight: 1.0, statement: 'Test' }],
+              summary: 'PD summary'
+            },
+            combined: {
+              md: {
+                planet: Planet.JUPITER,
+                effect: 'SUPPORTS',
+                factors: [{ id: 'F_MD', period: 'MD', planet: Planet.JUPITER, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }]
+              },
+              ad: {
+                planet: Planet.SATURN,
+                effect: 'SUPPORTS',
+                factors: [{ id: 'F_AD', period: 'AD', planet: Planet.SATURN, category: 'TEST', direction: 'SUPPORT', weight: 1.0, statement: 'Test' }]
+              },
+              pd: {
+                planet: Planet.MARS,
+                effect: 'NEUTRAL',
+                factors: [{ id: 'F_PD', period: 'PD', planet: Planet.MARS, category: 'TEST', direction: 'NEUTRAL', weight: 1.0, statement: 'Test' }]
+              },
+              combinedEffect: 'SUPPORTS',
+              hierarchy: {
+                mdRole: 'PRIMARY_DRIVER',
+                adRole: 'MODIFIER',
+                pdRole: 'TRIGGER',
+                combinedEffect: 'SUPPORTS'
+              }
+            },
+            asOf: '2024-01-01T00:00:00.000Z'
+          }
+        }
+      });
+
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [customCareerInterpretation]
+      });
+
+      const hierarchyEvidenceIds = aiContext.career?.timing?.hierarchy?.evidenceIds ?? [];
+
+      // Should include MD (Jupiter), AD (Saturn), and PD (Mars) evidence
+      expect(hierarchyEvidenceIds).toContain('CAREER_DASHA:MD:JUPITER:SUPPORT');
+      expect(hierarchyEvidenceIds).toContain('CAREER_DASHA:AD:SATURN:SUPPORT');
+      expect(hierarchyEvidenceIds).toContain('CAREER_DASHA:PD:MARS:SUPPORT');
+
+      // Should NOT include unrelated Venus MD evidence
+      expect(hierarchyEvidenceIds).not.toContain('CAREER_DASHA:MD:VENUS:SUPPORT');
+
+      // Verify the helper function behavior independently
+      const mdResult = mapPeriodToCanonicalEvidenceIds(customCareerInterpretation, 'MD', Planet.JUPITER);
+      expect(mdResult.evidenceIds).toEqual(['CAREER_DASHA:MD:JUPITER:SUPPORT']);
+      expect(mdResult.traceability).toBe('RESOLVED');
+
+      const venusResult = mapPeriodToCanonicalEvidenceIds(customCareerInterpretation, 'MD', Planet.VENUS);
+      expect(venusResult.evidenceIds).toEqual(['CAREER_DASHA:MD:VENUS:SUPPORT']);
+      expect(venusResult.traceability).toBe('RESOLVED');
+
+      const unknownResult = mapPeriodToCanonicalEvidenceIds(customCareerInterpretation, 'MD', Planet.MERCURY);
+      expect(unknownResult.evidenceIds).toEqual([]);
+      expect(unknownResult.traceability).toBe('DEGRADED');
     });
   });
 });

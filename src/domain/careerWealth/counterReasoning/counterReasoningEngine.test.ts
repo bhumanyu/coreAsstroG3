@@ -432,8 +432,24 @@ describe('counterReasoningEngine (CW-07)', () => {
     expect(d10Challenge.disposition).toBe('REJECTED');
     expect(d10Challenge.claim.targetSubjectKey).toBe('D10_CONFIRMATION');
     expect(d10Challenge.conclusionChanged).toBe(false);
+
+    // Finding 5: Assert specific evidence/factors that drive the rejection
+    // Verify that supporting/challenging evidence IDs are valid node IDs in the graph
     d10Challenge.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
     d10Challenge.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
+
+    // Assert that evaluatedFactors contains the specific D10 evidence that caused REJECTED
+    expect(d10Challenge.evaluatedFactors).toBeDefined();
+    expect(d10Challenge.evaluatedFactors.length).toBeGreaterThan(0);
+
+    // Verify the factors have valid evidence IDs from the graph
+    d10Challenge.evaluatedFactors.forEach((factor) => {
+      expect(nodeIds.has(factor.evidenceId)).toBe(true);
+    });
+
+    // Verify at least one factor has SUPPORT or CONFIRMATION edge semantic (indicating D10 supports the claim, leading to REJECTED when asking about conflict)
+    const supportingFactor = d10Challenge.evaluatedFactors.find((f) => f.edgeSemantic === 'SUPPORT' || f.edgeSemantic === 'CONFIRMATION');
+    expect(supportingFactor).toBeDefined();
   });
 
   it('integrates end-to-end with real Wealth interpretation on canonical fixture', () => {
@@ -461,7 +477,6 @@ describe('counterReasoningEngine (CW-07)', () => {
     expect(whyWealth.claim.targetSubjectKey).toBe('FINAL_SYNTHESIS');
     whyWealth.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
     whyWealth.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
-
 
     const d2Challenge = evaluateCounterReasoning('Does D2 Hora chart support my wealth?', context);
     expect(d2Challenge.disposition).toBe('INSUFFICIENT_EVIDENCE');

@@ -6,10 +6,16 @@ import type {
   CareerTimingProduct,
   WealthTimingProduct,
   WealthPeriodTimingProduct,
-  TimingAvailabilityStatus
+  TimingAvailabilityStatus,
+  TraceabilityStatus
 } from '../../product/life-analysis/lifeAnalysisTypes';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
 import type { DomainEvidence } from './DomainEvidence';
+
+export interface PeriodCanonicalEvidenceResult {
+  readonly evidenceIds: readonly string[];
+  readonly traceability: TraceabilityStatus;
+}
 
 /**
  * Maps CW-02 factor IDs to canonical CAREER_DASHA:* evidence IDs for a given period.
@@ -17,22 +23,28 @@ import type { DomainEvidence } from './DomainEvidence';
  * Per-period timing evidenceIds should reference canonical C9 evidence (CAREER_DASHA:* namespace)
  * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
  * Canonical C9 evidence is available in interpretation.evidence filtered by source 'DASHA'.
- * Returns empty array if canonical evidence is not available (legacy IDs won't exist in context.evidence).
+ *
+ * Returns both the canonical evidence IDs and a traceability status:
+ * - RESOLVED: Canonical evidence was found and IDs are valid
+ * - DEGRADED: No canonical evidence found (projection failed or legitimately absent)
+ *
+ * This allows consumers to distinguish between an empty evidenceIds array due to
+ * degraded traceability vs. a legitimately unavailable period.
  *
  * @param interpretation - The domain interpretation containing canonical evidence
  * @param period - The period ('MD', 'AD', or 'PD')
  * @param planet - The planet for the period
  * @param legacyFactorIds - The CW-02 factor IDs (unused, kept for API compatibility)
- * @returns Canonical evidence IDs if available, otherwise empty array
+ * @returns Object with evidenceIds and traceability status
  */
-function mapPeriodToCanonicalEvidenceIds(
+export function mapPeriodToCanonicalEvidenceIds(
   interpretation?: DomainInterpretation,
   period?: 'MD' | 'AD' | 'PD',
   planet?: string,
   legacyFactorIds?: readonly string[]
-): readonly string[] {
+): PeriodCanonicalEvidenceResult {
   if (!interpretation || !period || !planet) {
-    return [];
+    return { evidenceIds: [], traceability: 'DEGRADED' };
   }
 
   // Find canonical DASHA evidence for this period and planet
@@ -51,14 +63,17 @@ function mapPeriodToCanonicalEvidenceIds(
     return e.timing.level === period && e.timing.planet === planet;
   });
 
-  // If canonical evidence exists, use its IDs
+  // If canonical evidence exists, use its IDs and mark as RESOLVED
   if (canonicalEvidence.length > 0) {
-    return canonicalEvidence.map((e: DomainEvidence) => e.id);
+    return {
+      evidenceIds: canonicalEvidence.map((e: DomainEvidence) => e.id),
+      traceability: 'RESOLVED'
+    };
   }
 
-  // Return empty array if canonical evidence is not available
+  // Return empty array with DEGRADED status if canonical evidence is not available
   // Legacy CW09_* IDs won't exist in context.evidence after Gate 5 cutover
-  return [];
+  return { evidenceIds: [], traceability: 'DEGRADED' };
 }
 
 /**
@@ -131,19 +146,19 @@ export function buildNormalizedCareerTiming(
     const timingAsOf = asOf ?? careerDasha.asOf;
 
     // Map legacy factor IDs to canonical evidence IDs
-    const mdEvidenceIds = mapPeriodToCanonicalEvidenceIds(
+    const mdResult = mapPeriodToCanonicalEvidenceIds(
       career,
       'MD',
       careerDasha.md.planet,
       careerDasha.md.factors.map((f: { id: string }) => f.id)
     );
-    const adEvidenceIds = mapPeriodToCanonicalEvidenceIds(
+    const adResult = mapPeriodToCanonicalEvidenceIds(
       career,
       'AD',
       careerDasha.ad.planet,
       careerDasha.ad.factors.map((f: { id: string }) => f.id)
     );
-    const pdEvidenceIds = mapPeriodToCanonicalEvidenceIds(
+    const pdResult = mapPeriodToCanonicalEvidenceIds(
       career,
       'PD',
       careerDasha.pd.planet,
@@ -157,7 +172,8 @@ export function buildNormalizedCareerTiming(
         period: 'MD',
         planet: careerDasha.md.planet,
         effect: careerDasha.md.effect,
-        evidenceIds: mdEvidenceIds,
+        evidenceIds: mdResult.evidenceIds,
+        traceability: mdResult.traceability,
         statement: careerDasha.md.summary,
         ...(careerDasha.md.start ? { start: careerDasha.md.start } : {}),
         ...(careerDasha.md.end ? { end: careerDasha.md.end } : {})
@@ -166,7 +182,8 @@ export function buildNormalizedCareerTiming(
         period: 'AD',
         planet: careerDasha.ad.planet,
         effect: careerDasha.ad.effect,
-        evidenceIds: adEvidenceIds,
+        evidenceIds: adResult.evidenceIds,
+        traceability: adResult.traceability,
         statement: careerDasha.ad.summary,
         ...(careerDasha.ad.start ? { start: careerDasha.ad.start } : {}),
         ...(careerDasha.ad.end ? { end: careerDasha.ad.end } : {})
@@ -175,7 +192,8 @@ export function buildNormalizedCareerTiming(
         period: 'PD',
         planet: careerDasha.pd.planet,
         effect: careerDasha.pd.effect,
-        evidenceIds: pdEvidenceIds,
+        evidenceIds: pdResult.evidenceIds,
+        traceability: pdResult.traceability,
         statement: careerDasha.pd.summary,
         ...(careerDasha.pd.start ? { start: careerDasha.pd.start } : {}),
         ...(careerDasha.pd.end ? { end: careerDasha.pd.end } : {})
@@ -196,9 +214,9 @@ export function buildNormalizedCareerTiming(
   const status: TimingAvailabilityStatus = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
 
   // Map legacy factor IDs to canonical evidence IDs for each period
-  const mdEvidenceIds = mapPeriodToCanonicalEvidenceIds(career, 'MD', md?.planet, md?.evidenceIds);
-  const adEvidenceIds = mapPeriodToCanonicalEvidenceIds(career, 'AD', ad?.planet, ad?.evidenceIds);
-  const pdEvidenceIds = mapPeriodToCanonicalEvidenceIds(career, 'PD', pd?.planet, pd?.evidenceIds);
+  const mdResult = mapPeriodToCanonicalEvidenceIds(career, 'MD', md?.planet, md?.evidenceIds);
+  const adResult = mapPeriodToCanonicalEvidenceIds(career, 'AD', ad?.planet, ad?.evidenceIds);
+  const pdResult = mapPeriodToCanonicalEvidenceIds(career, 'PD', pd?.planet, pd?.evidenceIds);
 
   return {
     status,
@@ -209,7 +227,8 @@ export function buildNormalizedCareerTiming(
           period: 'MD',
           planet: md.planet,
           effect: md.effect,
-          evidenceIds: mdEvidenceIds,
+          evidenceIds: mdResult.evidenceIds,
+          traceability: mdResult.traceability,
           statement: md.statement
         }
       }
@@ -220,7 +239,8 @@ export function buildNormalizedCareerTiming(
           period: 'AD',
           planet: ad.planet,
           effect: ad.effect,
-          evidenceIds: adEvidenceIds,
+          evidenceIds: adResult.evidenceIds,
+          traceability: adResult.traceability,
           statement: ad.statement
         }
       }
@@ -231,7 +251,8 @@ export function buildNormalizedCareerTiming(
           period: 'PD',
           planet: pd.planet,
           effect: pd.effect,
-          evidenceIds: pdEvidenceIds,
+          evidenceIds: pdResult.evidenceIds,
+          traceability: pdResult.traceability,
           statement: pd.statement
         }
       }
@@ -263,7 +284,7 @@ export function buildNormalizedWealthTiming(
     if (!p) return undefined;
 
     // Map legacy factor IDs to canonical evidence IDs for this period
-    const evidenceIds = mapPeriodToCanonicalEvidenceIds(wealth, p.period, p.planet, p.evidenceIds);
+    const result = mapPeriodToCanonicalEvidenceIds(wealth, p.period, p.planet, p.evidenceIds);
 
     return {
       period: p.period,
@@ -275,7 +296,8 @@ export function buildNormalizedWealthTiming(
         fortune: p.dimensions?.fortune ?? 'INSUFFICIENT_DATA',
         speculation: p.dimensions?.speculation ?? 'INSUFFICIENT_DATA'
       },
-      evidenceIds,
+      evidenceIds: result.evidenceIds,
+      traceability: result.traceability,
       statement: p.statement
     };
   };

@@ -77,9 +77,11 @@ import {
   buildNormalizedWealthTiming,
   getCareerTimingActivations,
   getWealthPeriodTimingActivations,
+  mapPeriodToCanonicalEvidenceIds,
   type DomainInterpretation,
   type DomainEvidence,
-  type DomainInterpretationAiProjection
+  type DomainInterpretationAiProjection,
+  type PeriodCanonicalEvidenceResult
 } from '../../domain/interpretation';
 import {
   synthesizeCareerDashaHierarchy,
@@ -653,18 +655,16 @@ function buildCareerFact(
       /**
        * P2-11C Gate 5: Use canonical C9 evidence IDs instead of CW-02 factor IDs
        *
-       * The timing hierarchy should reference canonical C9 evidence (CAREER_DASHA:* namespace)
-       * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
-       * Canonical C9 evidence is available in careerInterpretation.evidence filtered by source 'DASHA'.
-       * Returns empty array if canonical evidence is not available.
+       * The timing hierarchy references canonical C9 evidence (CAREER_DASHA:* namespace)
+       * scoped to each period's specific planet and level (MD/AD/PD).
+       * Uses the shared mapPeriodToCanonicalEvidenceIds helper to match on both
+       * source+phase AND the hierarchy's own MD/AD/PD level and planet.
        */
       evidenceIds: (() => {
-        const canonicalDashaEvidence = careerInterpretation?.evidence
-          ?.filter((e: DomainEvidence) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION')
-          .map((e: DomainEvidence) => e.id);
-        return canonicalDashaEvidence && canonicalDashaEvidence.length > 0
-          ? canonicalDashaEvidence
-          : [];
+        const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', syn.md.planet);
+        const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', syn.ad.planet);
+        const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', syn.pd.planet);
+        return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
       })(),
       summary: syn.summary
     };
@@ -675,27 +675,25 @@ function buildCareerFact(
     if (md && ad && pd) {
       const syn = synthesizeCareerDashaHierarchy(md, ad, pd);
 
-      /**
-       * P2-11C Gate 5: Use canonical C9 evidence IDs instead of CW-02 factor IDs
-       *
-       * The timing hierarchy should reference canonical C9 evidence (CAREER_DASHA:* namespace)
-       * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
-       * Canonical C9 evidence is available in careerInterpretation.evidence filtered by source 'DASHA'.
-       * Returns empty array if canonical evidence is not available.
-       */
-      const canonicalDashaEvidence = careerInterpretation?.evidence
-        ?.filter((e: DomainEvidence) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION')
-        .map((e: DomainEvidence) => e.id);
-
       hierarchy = {
         primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: md.planet, effect: md.effect },
         modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: ad.planet, effect: ad.effect },
         trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: pd.planet, effect: pd.effect },
         overallEffect: syn.overallEffect,
         confidence: syn.confidence,
-        evidenceIds: canonicalDashaEvidence && canonicalDashaEvidence.length > 0
-          ? canonicalDashaEvidence
-          : [],
+        /**
+         * P2-11C Gate 5: Use canonical C9 evidence IDs scoped to period and planet
+         *
+         * The timing hierarchy references canonical C9 evidence scoped to each period's
+         * specific planet and level (MD/AD/PD). Uses the shared mapPeriodToCanonicalEvidenceIds
+         * helper to match on both source+phase AND the hierarchy's own MD/AD/PD level and planet.
+         */
+        evidenceIds: (() => {
+          const mdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'MD', md.planet);
+          const adResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'AD', ad.planet);
+          const pdResult = mapPeriodToCanonicalEvidenceIds(careerInterpretation, 'PD', pd.planet);
+          return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
+        })(),
         summary: syn.summary
       };
     }
@@ -839,20 +837,17 @@ function buildWealthFact(
           confidence: d.confidence
         })),
         /**
-         * P2-11C Gate 5: Use canonical C9 evidence IDs instead of synthesis evidence IDs
+         * P2-11C Gate 5: Use canonical C9 evidence IDs scoped to period and planet
          *
-         * The timing hierarchy should reference canonical C9 evidence that exists in context.evidence,
-         * not the synthesis evidence IDs which may use a different namespace.
-         * Canonical C9 evidence is available in wealthInterpretation.evidence filtered by source 'DASHA'.
-         * Returns empty array if canonical evidence is not available.
+         * The timing hierarchy references canonical C9 evidence scoped to each period's
+         * specific planet and level (MD/AD/PD). Uses the shared mapPeriodToCanonicalEvidenceIds
+         * helper to match on both source+phase AND the hierarchy's own MD/AD/PD level and planet.
          */
         evidenceIds: (() => {
-          const canonicalDashaEvidence = wealthInterpretation?.evidence
-            ?.filter((e: DomainEvidence) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION')
-            .map((e: DomainEvidence) => e.id);
-          return canonicalDashaEvidence && canonicalDashaEvidence.length > 0
-            ? canonicalDashaEvidence
-            : [];
+          const mdResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'MD', md.planet);
+          const adResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'AD', ad.planet);
+          const pdResult = mapPeriodToCanonicalEvidenceIds(wealthInterpretation, 'PD', pd.planet);
+          return [...mdResult.evidenceIds, ...adResult.evidenceIds, ...pdResult.evidenceIds];
         })(),
         summary: syn.summary
       };

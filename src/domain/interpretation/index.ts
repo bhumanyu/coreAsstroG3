@@ -160,7 +160,12 @@ export {
   buildNormalizedWealthTiming,
   deriveCareerTimingEffect,
   deriveWealthDimensionTiming,
-  deriveWealthTimingEffect
+  deriveWealthTimingEffect,
+  mapPeriodToCanonicalEvidenceIds
+} from './domainTimingAdapter';
+
+export type {
+  PeriodCanonicalEvidenceResult
 } from './domainTimingAdapter';
 
 export type {
