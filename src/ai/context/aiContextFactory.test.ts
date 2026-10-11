@@ -274,17 +274,181 @@ describe('AI Context Factory', () => {
   });
 
   it('should expose hierarchy-level traceability signal (Finding 2)', () => {
-    // Career hierarchy should have traceability status
+    // Use the STAGE1 golden fixture or create a test case with known hierarchy
+    // For now, remove vacuous guards and document that this test needs a fixture
+    // that produces an AVAILABLE timing hierarchy
     if (context.career?.timing?.hierarchy) {
       expect(context.career.timing.hierarchy.traceability).toBeDefined();
       expect(['RESOLVED', 'DEGRADED']).toContain(context.career.timing.hierarchy.traceability);
     }
 
-    // Wealth hierarchy should have traceability status
     if (context.wealth?.timing?.hierarchy) {
       expect(context.wealth.timing.hierarchy.traceability).toBeDefined();
       expect(['RESOLVED', 'DEGRADED']).toContain(context.wealth.timing.hierarchy.traceability);
     }
+  });
+
+  it('should expose RESOLVED hierarchy-level traceability when all periods have canonical evidence (Finding 2)', () => {
+    // Construct a domain interpretation with career dasha synthesis that produces an AVAILABLE hierarchy
+    // Using timingActivations (legacy path) which is simpler and doesn't require careerDashaSynthesis
+    const careerWithTiming = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        // MD canonical evidence
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD_JUPITER',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Jupiter Mahadasha activates career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'MD', planet: Planet.JUPITER }
+        } as any,
+        // AD canonical evidence
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:AD_VENUS',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Venus Antardasha activates career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'AD', planet: Planet.VENUS }
+        } as any,
+        // PD canonical evidence
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:PD_MARS',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Mars Pratyantardasha activates career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'PD', planet: Planet.MARS }
+        } as any
+      ],
+      timingActivations: [
+        {
+          period: 'MD',
+          planet: Planet.JUPITER,
+          effect: 'ACTIVATES',
+          evidenceIds: ['CAREER_DASHA:MD_JUPITER']
+        } as any,
+        {
+          period: 'AD',
+          planet: Planet.VENUS,
+          effect: 'ACTIVATES',
+          evidenceIds: ['CAREER_DASHA:AD_VENUS']
+        } as any,
+        {
+          period: 'PD',
+          planet: Planet.MARS,
+          effect: 'ACTIVATES',
+          evidenceIds: ['CAREER_DASHA:PD_MARS']
+        } as any
+      ]
+    });
+
+    const ctxWithHierarchy = buildAiContext(horoscope, {
+      domainInterpretations: [careerWithTiming]
+    });
+
+    // Assert hierarchy exists
+    expect(ctxWithHierarchy.career?.timing?.hierarchy).toBeDefined();
+
+    // Assert traceability is RESOLVED because all three periods have canonical evidence
+    expect(ctxWithHierarchy.career!.timing!.hierarchy!.traceability).toBe('RESOLVED');
+  });
+
+  it('should expose DEGRADED hierarchy-level traceability when PD lacks canonical evidence (Finding 2)', () => {
+    // Construct a domain interpretation where MD and AD have canonical evidence but PD does not
+    const careerWithMixedEvidence = createDomainInterpretation({
+      domain: 'CAREER',
+      natalPromise: createNatalPromise({ strength: 'STRONG', supportingEvidenceIds: [], challengingEvidenceIds: [] }),
+      dashaActivation: createDashaActivation({ effect: 'ACTIVATES', evidenceIds: [] }),
+      transitTrigger: createTransitTrigger({ effect: 'TRIGGER', evidenceIds: [] }),
+      conclusion: createDomainConclusion({ statement: 'Test', confidence: 'HIGH' }),
+      evidence: [
+        // MD canonical evidence
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:MD_JUPITER',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Jupiter Mahadasha activates career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'MD', planet: Planet.JUPITER }
+        } as any,
+        // AD canonical evidence
+        {
+          ...createDomainEvidence({
+            id: 'CAREER_DASHA:AD_VENUS',
+            ruleId: 'CAREER_DASHA_TIMING_001',
+            sourceType: 'DASHA',
+            role: 'TIMING',
+            strength: 'STRONG',
+            polarity: 'SUPPORTING',
+            statement: 'Venus Antardasha activates career timing'
+          }),
+          source: 'DASHA',
+          phase: 'DASHA_ACTIVATION',
+          timing: { level: 'AD', planet: Planet.VENUS }
+        } as any
+        // PD canonical evidence is intentionally missing to create DEGRADED traceability
+      ],
+      timingActivations: [
+        {
+          period: 'MD',
+          planet: Planet.JUPITER,
+          effect: 'ACTIVATES',
+          evidenceIds: ['CAREER_DASHA:MD_JUPITER']
+        } as any,
+        {
+          period: 'AD',
+          planet: Planet.VENUS,
+          effect: 'ACTIVATES',
+          evidenceIds: ['CAREER_DASHA:AD_VENUS']
+        } as any,
+        {
+          period: 'PD',
+          planet: Planet.MARS,
+          effect: 'ACTIVATES',
+          evidenceIds: [] // No canonical evidence for PD
+        } as any
+      ]
+    });
+
+    const ctxWithMixedHierarchy = buildAiContext(horoscope, {
+      domainInterpretations: [careerWithMixedEvidence]
+    });
+
+    // Assert hierarchy exists
+    expect(ctxWithMixedHierarchy.career?.timing?.hierarchy).toBeDefined();
+
+    // Assert traceability is DEGRADED because PD lacks canonical evidence
+    expect(ctxWithMixedHierarchy.career!.timing!.hierarchy!.traceability).toBe('DEGRADED');
   });
 
   it('should throw an error on conflicting evidence ID with different payload', () => {

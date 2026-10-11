@@ -8,6 +8,7 @@ import { buildLifeAnalysis, type LifeAnalysis } from '../../domain/synthesis';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
+import { resolveRuleMetadata } from '../../product/life-analysis/lifeAnalysisEvidenceRules';
 
 describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () => {
   it('validates core traceability contracts for every career evidence item', async () => {
@@ -45,8 +46,19 @@ describe('Stage 1 - Life Analysis Evidence Traceability & AI Consistency', () =>
 
     for (const item of itemsWithRuleId) {
       expect(item.traceability.ruleId).toBeTruthy();
-      // Cross-check: traceability.ruleId should match the rule object's id
-      expect(item.traceability.ruleId).toBe(item.rule?.id);
+
+      // Registry-based check: verify ruleId against the registry
+      const resolvedRule = resolveRuleMetadata(item.traceability.ruleId);
+
+      if (resolvedRule) {
+        // If the rule resolves against the registry, the attached rule object should match
+        expect(item.rule).toBeDefined();
+        expect(item.rule?.id).toBe(item.traceability.ruleId);
+      } else {
+        // If the rule does not resolve (unregistered), allow item.rule to be undefined
+        // while traceability.ruleId is still truthy (mirroring lifeAnalysisWhy.test.ts Test 6)
+        expect(item.rule).toBeUndefined();
+      }
     }
   });
 
