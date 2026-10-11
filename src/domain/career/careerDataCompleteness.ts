@@ -1,10 +1,8 @@
 import type { DomainEvidence } from '../interpretation';
-import type { CareerEvidenceFamily, ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import type { CareerDataCompleteness } from './careerTypes';
 
 export function calculateCareerDataCompleteness(
-  evidence: readonly DomainEvidence[],
-  rawEvidence?: readonly ThemeInterpretationEvidence<CareerEvidenceFamily>[]
+  evidence: readonly DomainEvidence[]
 ): CareerDataCompleteness {
   const has10House = evidence.some(
     (e) =>

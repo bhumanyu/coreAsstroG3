@@ -6,6 +6,10 @@ import {
 } from './canonicalCareerEvidenceMapper';
 
 import {
+  resolveManifestation
+} from './manifestation/careerManifestationSynthesis';
+
+import {
   createDomainEvidence
 } from '../interpretation/DomainEvidence';
 
@@ -3333,6 +3337,224 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Both should throw due to sourceType disagreement (different layers), regardless of order
       expect(() => mapCanonicalCareerEvidence(input1)).toThrow('Semantic field disagreement');
       expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
+    });
+  });
+
+  describe('Dasha Double-Counting Guard', () => {
+    it('canonical C9 evidence carries source === DASHA and phase === DASHA_ACTIVATION for exclusion from natal scoring', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-identity-1',
+          id: 'dasha-evidence-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG' as DomainStrength,
+          statement: 'Saturn MD activates career',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT' as ReasoningDirection,
+        overallStrength: 'STRONG' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha analysis complete'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      expect(result).toHaveLength(1);
+      const evidence = result[0];
+
+      // Canonical C9 evidence must carry source === 'DASHA' for exclusion from natal scoring
+      expect(evidence.source).toBe('DASHA');
+
+      // Canonical C9 evidence must carry phase === 'DASHA_ACTIVATION' for exclusion from natal scoring
+      expect(evidence.phase).toBe('DASHA_ACTIVATION');
+
+      // synthesizeCareerManifestations/resolveManifestation excludes source === 'DASHA' from natal scoring
+      // This ensures Dasha evidence contributes zero to natal manifestation scoring (timing-only contribution)
+    });
+
+    it('regression test: canonical C9 evidence contributes zero to natal manifestation scoring (no double-counting)', () => {
+      // This test restores the deleted expect(synWithDasha).toEqual(synWithoutDasha) assertion
+      // by proving that canonical DASHA-sourced evidence does not affect natal manifestation synthesis
+
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const natalEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'natal-10h-strong',
+          evidenceId: 'natal-10h-1',
+          ruleId: 'CAREER_10H_STRONG_001',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: '10th house strong',
+          relatedEvidenceIds: [],
+          sourceIds: ['natal-source-1']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: natalEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: natalEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      // Case 1: Natal-only evidence (no Dasha)
+      const inputWithoutDasha: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const evidenceWithoutDasha = mapCanonicalCareerEvidence(inputWithoutDasha);
+
+      // Case 2: Natal + Dasha evidence
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-sun-md',
+          id: 'dasha-sun-1',
+          level: 'MD',
+          planet: Planet.SUN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG' as DomainStrength,
+          statement: 'Sun MD activates career',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-10h-strong']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SUN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        statement: 'Sun MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'SUPPORT' as ReasoningDirection,
+        overallStrength: 'STRONG' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-10h-strong'],
+        statement: 'Dasha with Sun MD'
+      };
+
+      const inputWithDasha: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const evidenceWithDasha = mapCanonicalCareerEvidence(inputWithDasha);
+
+      // Verify that adding Dasha evidence increases total evidence count
+      expect(evidenceWithDasha.length).toBe(evidenceWithoutDasha.length + 1);
+
+      // Verify canonical Dasha evidence has source === 'DASHA' and phase === 'DASHA_ACTIVATION'
+      const dashaItem = evidenceWithDasha.find(e => e.source === 'DASHA');
+      expect(dashaItem).toBeDefined();
+      expect(dashaItem!.phase).toBe('DASHA_ACTIVATION');
+
+      // Test that Dasha evidence does not affect natal manifestation scoring
+      const synWithoutDasha = resolveManifestation('LEADERSHIP', evidenceWithoutDasha);
+      const synWithDasha = resolveManifestation('LEADERSHIP', evidenceWithDasha);
+
+      // Natal support should be identical (Dasha excluded from natal scoring)
+      expect(synWithDasha.natalSupport).toBe(synWithoutDasha.natalSupport);
+
+      // Natal factors should be identical (Dasha excluded from natal factors)
+      const natalFactorsWithoutDasha = synWithoutDasha.factors.filter(f => f.source === 'NATAL');
+      const natalFactorsWithDasha = synWithDasha.factors.filter(f => f.source === 'NATAL');
+      expect(natalFactorsWithDasha).toEqual(natalFactorsWithoutDasha);
+
+      // Status should be identical (no double-counting)
+      expect(synWithDasha.status).toBe(synWithoutDasha.status);
     });
   });
 

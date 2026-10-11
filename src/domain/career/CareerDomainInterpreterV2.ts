@@ -123,7 +123,8 @@ import {
   buildCareerD10Analysis
 } from './careerD10/careerD10Integration';
 import {
-  mapCanonicalCareerEvidence
+  mapCanonicalCareerEvidence,
+  validateC11References
 } from './canonicalCareerEvidenceMapper';
 
 /**
@@ -141,7 +142,7 @@ import {
  * - Legacy evidence paths (buildCareerEvidence, toDomainEvidence, dashaFactorsEvidence)
  *   are disabled to prevent double-counting
  * - Each natal/expression/dasha/d10 fact is counted exactly once via identityKey deduplication
- * - C11 is used only for reference validation, never as an evidence source
+ * - C11 is used for reference validation (cross-checks canonical evidence IDs against C11 finalIds)
  *
  * The legacy synthesis from careerWealth/finalSynthesis/careerFinalSynthesis.ts is
  * retained as a compatibility artifact in conclusionData.careerFinalSynthesis for
@@ -231,11 +232,13 @@ export function interpretCareerV2(
    * - Preserves identityKey, ruleId, sourceIds as distinct concepts
    * - Deduplicates by identityKey without weight inflation
    * - Maps C4-C7 to NATAL_PROMISE, C8 to MODIFIER, C9 to DASHA_ACTIVATION, C10 to VARGA_CONFIRMATION
-   * - Uses C11 only for reference validation (never as an evidence source)
+   * - Uses C11 for reference validation (cross-checks canonical evidence IDs against C11 finalIds)
    * - Excludes unmappable strengths rather than defaulting them
    *
    * Note: We build a preliminary C11 input without timing here to get canonical evidence.
    * The final C11 synthesis will be recomputed with timing later.
+   * This two-pass approach is intentional: canonical evidence mapper needs C11 finalIds for validation,
+   * but timing synthesis requires canonical evidence (circular dependency resolved by two-pass build).
    */
   const preliminaryC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(canonicalC11Input);
 
@@ -248,6 +251,27 @@ export function interpretCareerV2(
   });
 
   const canonicalEvidence = mapCanonicalCareerEvidence(canonicalEvidenceInput);
+
+  /**
+   * P2-11C Gate 5: C11 Reference Validation (informational, non-fatal)
+   *
+   * Cross-check canonical evidence IDs against C11 finalIds for observability.
+   * Validation discrepancies are logged but do not affect the evidence output.
+   * This is a diagnostic check, not a blocking validation.
+   *
+   * Rationale for dual C11 builds:
+   * - Preliminary C11 (without timing) is built to get canonical evidence IDs for mapper input
+   * - Final C11 (with timing) is built after careerTimingSynthesis is computed
+   * - This two-pass approach is intentional: canonical evidence mapper needs C11 finalIds for validation,
+   *   but timing synthesis requires canonical evidence (circular dependency resolved by two-pass build)
+   */
+  const c11Validation = validateC11References(canonicalEvidence, preliminaryC11Result);
+
+  if (c11Validation.unreferenced.length > 0 || c11Validation.missing.length > 0) {
+    // Log validation discrepancies for observability (non-fatal)
+    // In production, this would use a proper logging framework
+    console.warn(`[CareerDomainInterpreterV2] C11 reference validation: ${c11Validation.unreferenced.length} unreferenced, ${c11Validation.missing.length} missing`);
+  }
 
   /**
    * P2-11C Gate 5: Evidence Assembly
@@ -276,7 +300,7 @@ export function interpretCareerV2(
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
   const natalStrength = calculateDomainStrength(natalSupporting, natalChallenging);
-  const dataCompleteness = calculateCareerDataCompleteness(evidence, rawEvidence);
+  const dataCompleteness = calculateCareerDataCompleteness(evidence);
 
   const natalConfidence = calculateEvidenceConfidence(
     natalPromiseEvidence,
@@ -340,6 +364,14 @@ export function interpretCareerV2(
   ]);
 
   // Transit Trigger evaluation
+  //
+  // P2-11C Gate 5: Transit evidence deferment
+  //
+  // Canonical evidence mapper does not emit transit evidence (no canonical transit producer exists in Gate 5).
+  // Transit activation is intentionally deferred to a future gate when a canonical transit evidence producer is available.
+  // transitEvidence and transitTrigger will be empty/NO_MATERIAL_TRIGGER until transit is re-enabled.
+  //
+  // Legacy transit evidence path (themeInterpretation.transitEvidence) is disabled to prevent double-counting.
   const transitEvidence = evidence.filter(
     (item) => item.phase === 'TRANSIT_TRIGGER' || item.source === 'TRANSIT'
   );
@@ -1050,6 +1082,19 @@ export function evaluateD10Relationship(
   d10Evidence?: readonly DomainEvidence[],
   natalPromiseEvidenceIds?: readonly string[]
 ): VargaRelationship {
+  /**
+   * P2-11C Gate 5: Single-source cutover for D10 relationship evaluation
+   *
+   * Primary path: canonical D10 evidence (d10Evidence from canonical mapper)
+   * Fallback path: rawEvidence/legacyStatus for backward compatibility
+   *
+   * The fallback is intentionally retained because:
+   * 1. Legacy consumers may still call this function with rawEvidence directly
+   * 2. Theme interpretation D10 hints (vargaEvidence) are not currently emitted by canonical mapper
+   * 3. The fallback provides graceful degradation for edge cases
+   *
+   * Future gate: Remove fallback when canonical D10 evidence fully replaces legacy D10 production
+   */
   if (d10Evidence && d10Evidence.length === 0 && (!rawEvidence || rawEvidence.length === 0)) {
     return 'UNAVAILABLE';
   }

@@ -455,6 +455,11 @@ function mapExpressionEvidence(
  * Preserves: identityKey, id, sourceIds
  * C9 must NOT become natal promise (enforced by phase assignment).
  *
+ * Double-counting guard:
+ * - Canonical C9 evidence carries source === 'DASHA' and phase === 'DASHA_ACTIVATION'
+ * - synthesizeCareerManifestations/resolveManifestation excludes source === 'DASHA' from natal scoring
+ * - This ensures Dasha evidence contributes zero to natal manifestation scoring (timing-only contribution)
+ *
  * MIXED direction/effect policy:
  * - MIXED direction requires an effect that represents genuinely mixed activation
  * - Allowed effects: PARTIALLY_ACTIVATES (carries both activating and challenging components)
