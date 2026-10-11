@@ -82,7 +82,7 @@ This is a standalone analysis layer — it must NOT recalculate any C4–C11 ast
 
 - `activationId`: Reference to the canonical C9 activation that triggered this event. This is the `identityKey` of the matching `CareerDashaCanonicalEvidence`.
 
-  **INVARIANT:** A period matches exactly one canonical activation identity. `collectDashaEvidenceIds` returns a single `identityKey` per matched period (filtered by level, planet, effect, direction, role). Therefore, `activationId` is the first and only `identityKey` from the matching evidence array.
+  **INVARIANT:** A period matches exactly one canonical activation identity. `collectDashaEvidenceIds` enforces this invariant by throwing an error if more than one distinct `identityKey` matches a single period (filtered by level, planet, effect, direction, role). The function validates that the invariant holds, ensuring `activationId` is the only `identityKey` from the matching evidence array.
 
   Populated for all events when a matching activation exists. Null if no matching activation is found.
 
@@ -247,6 +247,11 @@ This module must NOT:
 
 **IMPLEMENTED — VERIFICATION PENDING**
 
+Code review findings (commit 32ea4f4c) addressed:
+- Finding 2: activationId invariant enforced with fail-fast error when multiple distinct identityKeys match a single period
+- Finding 3: mapOpportunities sorting hardened with stable secondary tie-breaker using opportunityId
+- Finding 1: resolveNatalRootEvidenceIds hardened to only trust canonical CW-... format identityKeys, non-canonical keys safely ignored
+
 P1 fixes implemented:
 1. Event identity generation now uses collision-free JSON encoding with nested arrays (unambiguous even with literal ':' or '|' in evidenceIds).
 2. Evidence IDs are sorted inside generateEventId for deterministic output.
@@ -273,6 +278,12 @@ Test strengthening implemented:
 14. Conflict detection test improved to use exported dedupeEvents function directly.
 15. Regression tests added for all P1 fixes including collision-free encoding (evidence IDs with ':' or '|').
 16. Regression test added for independent challenge model (challenging period with no qualified opportunity).
+17. Invariant enforcement: `collectDashaEvidenceIds` throws when multiple distinct identityKeys match a single period (fail-fast approach per Finding 2).
+
+Finding 2 resolution (activationId invariant):
+- Chose option (a): fail-fast with explicit error when multiple distinct identityKeys match a single period
+- `collectDashaEvidenceIds` now validates the one-to-one invariant and throws a descriptive error if violated
+- Test added to verify the invariant enforcement throws when evidence with same level/planet/effect/direction/role but different identityKeys is provided
 
 Files:
 - `src/domain/career/careerEvents/careerEventTypes.ts`

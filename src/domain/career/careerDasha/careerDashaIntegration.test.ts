@@ -510,4 +510,242 @@ describe('C9 Dasha Integration', () => {
       expect(result.pd.planet).not.toBe(Planet.SUN);
     });
   });
+
+  describe('Test 11: Canonical CW-... identityKey parsing with guards', () => {
+    it('canonical CW-... key with optional OBJECT_KEY segment resolves correct planet at index 5', () => {
+      // Create natal evidence with canonical CW-... format including optional OBJECT_KEY
+      // Format: CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN-10TH_HOUSE
+      const natalEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD-SATURN-10TH_HOUSE',
+        evidenceId: 'natal-saturn-10th-evidence',
+        ruleId: 'SATURN_10TH_LORD',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Saturn as 10th lord in 10th house supports career',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      });
+
+      const natal: CareerNatalAnalysis = Object.freeze({
+        structural: Object.freeze({
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 0,
+          supportingSupport: 5,
+          supportingChallenge: 0,
+          challengingSupport: 0,
+          challengingChallenge: 0,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Strong structural support'
+        }),
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [natalEvidence],
+        conflicts: [],
+        reasoningTrace: Object.freeze({
+          primaryPromise: [natalEvidence],
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        })
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: [],
+        evidenceIds: [],
+        unresolvedEvidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        statement: 'No expressions'
+      });
+
+      const input: CareerDashaIntegrationInput = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Find evidence for SATURN planet
+      const saturnEvidence = result.evidence.find(e => e.planet === Planet.SATURN);
+      expect(saturnEvidence).toBeDefined();
+
+      // The natalRootIds should include the natal evidence ID
+      if (saturnEvidence) {
+        expect(saturnEvidence.provenance.natalRootIds).toContain('natal-saturn-10th-evidence');
+      }
+    });
+
+    it('non-canonical identityKey (occurrence-ID fallback) is safely ignored', () => {
+      // Create natal evidence with non-canonical identityKey (raw occurrence-ID fallback)
+      // This simulates classifyReasoningEvidence fallback when neither planet nor house is present
+      const nonCanonicalEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'raw-occurrence-id-fallback-12345', // Not CW-... format
+        evidenceId: 'raw-fallback-evidence',
+        ruleId: 'UNKNOWN_RULE',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Fallback evidence without canonical identity',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      });
+
+      const natal: CareerNatalAnalysis = Object.freeze({
+        structural: Object.freeze({
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 0,
+          supportingSupport: 5,
+          supportingChallenge: 0,
+          challengingSupport: 0,
+          challengingChallenge: 0,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Strong structural support'
+        }),
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [nonCanonicalEvidence],
+        conflicts: [],
+        reasoningTrace: Object.freeze({
+          primaryPromise: [nonCanonicalEvidence],
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        })
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: [],
+        evidenceIds: [],
+        unresolvedEvidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        statement: 'No expressions'
+      });
+
+      const input: CareerDashaIntegrationInput = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Non-canonical evidence should be safely ignored (not mis-parsed)
+      // The function should not throw or mis-identify a planet from the non-canonical key
+      expect(result.evidence).toBeDefined();
+      // All natalRootIds should be empty since non-canonical key was ignored
+      result.evidence.forEach(evidence => {
+        expect(evidence.provenance.natalRootIds).toEqual([]);
+      });
+    });
+
+    it('identityKey starting with CW but with insufficient segments is safely ignored', () => {
+      // Create evidence with CW prefix but insufficient segments (< 6)
+      const invalidCanonicalEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'CW-CAREER-NATAL', // Only 3 segments (less than required 6)
+        evidenceId: 'invalid-evidence',
+        ruleId: 'TEST_RULE',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Invalid canonical evidence',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      });
+
+      const natal: CareerNatalAnalysis = Object.freeze({
+        structural: Object.freeze({
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 0,
+          supportingSupport: 5,
+          supportingChallenge: 0,
+          challengingSupport: 0,
+          challengingChallenge: 0,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Strong structural support'
+        }),
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [invalidCanonicalEvidence],
+        conflicts: [],
+        reasoningTrace: Object.freeze({
+          primaryPromise: [invalidCanonicalEvidence],
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        })
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: [],
+        evidenceIds: [],
+        unresolvedEvidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        statement: 'No expressions'
+      });
+
+      const input: CareerDashaIntegrationInput = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Invalid canonical evidence should be safely ignored (not mis-parsed)
+      expect(result.evidence).toBeDefined();
+      // All natalRootIds should be empty since invalid key was ignored
+      result.evidence.forEach(evidence => {
+        expect(evidence.provenance.natalRootIds).toEqual([]);
+      });
+    });
+  });
 });

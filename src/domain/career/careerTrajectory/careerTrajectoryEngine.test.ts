@@ -680,6 +680,65 @@ describe('CareerTrajectoryEngine', () => {
       expect(ids).toContain('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:false:["ev1","ev2"]');
       expect(ids).toContain('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1","ev2"]');
     });
+
+    it('same-mode opportunities sorted stably by opportunityId regardless of input order', () => {
+      // Create two opportunities with same mode but different properties
+      const c11a = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1']
+          },
+          {
+            mode: 'MANAGEMENT',
+            direction: 'CHALLENGE',
+            strength: 'WEAK',
+            qualified: true,
+            evidenceIds: ['ev2']
+          }
+        ]
+      });
+
+      const c11b = createC11Fixture({
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        timingStatus: 'ACTIVE',
+        expressions: [
+          {
+            mode: 'MANAGEMENT',
+            direction: 'CHALLENGE',
+            strength: 'WEAK',
+            qualified: true,
+            evidenceIds: ['ev2']
+          },
+          {
+            mode: 'MANAGEMENT',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            qualified: true,
+            evidenceIds: ['ev1']
+          }
+        ]
+      });
+
+      const inputA = createTrajectoryInput(c11a);
+      const inputB = createTrajectoryInput(c11b);
+
+      const resultA = buildCareerTrajectory(inputA);
+      const resultB = buildCareerTrajectory(inputB);
+
+      // Both should produce identical output ordering
+      expect(resultA.opportunities).toEqual(resultB.opportunities);
+      // Same mode should be sorted by opportunityId (which includes direction/strength/qualified)
+      expect(resultA.opportunities[0].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:CHALLENGE:WEAK:true:["ev2"]');
+      expect(resultA.opportunities[1].opportunityId).toBe('CAREER_OPPORTUNITY:MANAGEMENT:SUPPORT:STRONG:true:["ev1"]');
+    });
   });
 
   describe('Evidence reference resolution', () => {

@@ -258,6 +258,10 @@ function buildTiming(period: CareerDashaCanonicalPeriod): CareerEventTiming {
  * This ensures a SUPPORT event cannot inherit a CHALLENGE evidence identity.
  * If no canonical Dasha evidence matches the period, returns empty array.
  *
+ * INVARIANT: A period matches exactly one canonical activation identity.
+ * This function throws if more than one distinct identityKey matches a single period,
+ * as this violates the documented invariant in careerEventTypes.ts.
+ *
  * Returns the identityKey from each evidence item (semantic identity).
  * Never mixes in occurrence IDs, source IDs, rule IDs, or event IDs.
  */
@@ -273,7 +277,18 @@ function collectDashaEvidenceIds(
     e.role === period.role
   );
   const identityKeys = relevantEvidence.map(e => e.identityKey);
-  return Object.freeze([...new Set(identityKeys)].sort());
+  const uniqueIdentityKeys = [...new Set(identityKeys)];
+
+  // Enforce invariant: a period should match exactly one activation identity
+  if (uniqueIdentityKeys.length > 1) {
+    throw new Error(
+      `Invariant violation: period matches multiple distinct identityKeys: ${uniqueIdentityKeys.join(', ')}. ` +
+      `Period: level=${period.level}, planet=${period.planet}, effect=${period.effect}, direction=${period.direction}, role=${period.role}. ` +
+      `Expected exactly one canonical activation identity per period.`
+    );
+  }
+
+  return Object.freeze(uniqueIdentityKeys.sort());
 }
 
 /**

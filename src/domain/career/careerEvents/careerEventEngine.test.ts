@@ -557,27 +557,26 @@ describe('CareerEventEngine', () => {
   });
 
   describe('activationId semantics', () => {
-    it('collectDashaEvidenceIds returns a single identityKey per matched period (one-to-one invariant)', () => {
-      const dasha = createDashaFixture({
-        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
-        evidence: [createDashaEvidence('MD')]
+    it('collectDashaEvidenceIds throws when multiple distinct identityKeys match a single period (invariant enforcement)', () => {
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity()]
       });
 
-      // Simulate collectDashaEvidenceIds logic
-      const matchingEvidence = dasha.evidence.filter(e =>
-        e.level === dasha.md.level &&
-        e.planet === dasha.md.planet &&
-        e.effect === dasha.md.effect &&
-        e.direction === dasha.md.direction &&
-        e.role === dasha.md.role
+      // Create two Dasha evidence items with same level/planet/effect/direction/role but different identityKeys
+      // This violates the invariant and should throw
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
+        evidence: [
+          createDashaEvidence('MD', { identityKey: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER' }),
+          createDashaEvidence('MD', { identityKey: 'CAREER_DASHA:MD:SUN:PRIMARY_DRIVER_ALT' })
+        ]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+
+      expect(() => buildCareerEvents(input)).toThrow(
+        'Invariant violation: period matches multiple distinct identityKeys'
       );
-
-      const identityKeys = matchingEvidence.map(e => e.identityKey);
-      const uniqueIdentityKeys = [...new Set(identityKeys)];
-
-      // Should have exactly one unique identityKey for the matched period
-      expect(uniqueIdentityKeys).toHaveLength(1);
-      expect(uniqueIdentityKeys[0]).toBe('CAREER_DASHA:MD:SUN:PRIMARY_DRIVER');
     });
 
     it('activationId is the first (and only) identityKey from matching Dasha evidence', () => {

@@ -187,9 +187,13 @@ function mapOpportunities(
   });
 
   // Sort by deterministic code-point comparison (locale-independent)
-  const sortedOpportunities = opportunities.sort((a, b) =>
-    a.mode < b.mode ? -1 : a.mode > b.mode ? 1 : 0
-  );
+  // Primary sort by mode, secondary sort by opportunityId for stable tie-breaking
+  const sortedOpportunities = opportunities.sort((a, b) => {
+    if (a.mode < b.mode) return -1;
+    if (a.mode > b.mode) return 1;
+    // Modes are equal - use opportunityId as stable secondary tie-breaker
+    return a.opportunityId < b.opportunityId ? -1 : a.opportunityId > b.opportunityId ? 1 : 0;
+  });
 
   return {
     opportunities: Object.freeze(sortedOpportunities),

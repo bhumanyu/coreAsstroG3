@@ -1419,6 +1419,10 @@ C9 links canonical Dasha evidence to natal root evidence via the `natalRootIds` 
 - The identityKey format (from `buildEvidenceIdentityKey`) is: `CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]`
 - The `SUBJECT_KEY` segment (6th dash-delimited segment) contains the planet name (e.g., 'JUPITER', 'SATURN')
 - The function parses the identityKey to extract the subjectKey and matches it against the requested planet
+- **Parser guards:** The parser only trusts canonical `CW-...` format identityKeys
+  - `parts[0]` must be `'CW'` (canonical format check)
+  - `parts.length` must be `>= 6` (minimum segments for valid format)
+  - Non-canonical keys (e.g., raw occurrence-ID fallbacks from `classifyReasoningEvidence` when neither planet nor house is present) are safely ignored rather than mis-parsed
 - Returns the `evidenceId` (semantic identity) of matching natal evidence items
 - If no planet is specified or no matching evidence is found, returns an empty array
 

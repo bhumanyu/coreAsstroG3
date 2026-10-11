@@ -345,6 +345,15 @@ function buildCanonicalPeriod(
  * 'CW-<DOMAIN>-<AXIS>-<SOURCE>-<RULE_ID>-<SUBJECT_KEY>[-<OBJECT_KEY>]'
  * where SUBJECT_KEY is the planet name (e.g., 'JUPITER', 'SATURN').
  *
+ * This parser only trusts canonical CW-... format identityKeys. Non-canonical keys
+ * (e.g., raw occurrence-ID fallbacks from classifyReasoningEvidence when neither planet
+ * nor house is present) are safely ignored rather than mis-parsed.
+ *
+ * Guards:
+ * - parts[0] must be 'CW' (canonical format)
+ * - parts.length must be >= 6 (minimum segments for valid format)
+ * - Subject key is the 6th segment (index 5) after guards pass
+ *
  * We parse the identityKey to extract the subjectKey (planet) and match it against
  * the requested planet.
  *
@@ -366,13 +375,18 @@ function resolveNatalRootEvidenceIds(
     // Parse identityKey to extract subjectKey (planet)
     // Expected format: 'CW-CAREER-NATAL-D1-<RULE_ID>-<PLANET>' or similar
     const parts = evidence.identityKey.split('-');
-    if (parts.length >= 6) {
-      // Subject key is the 6th segment (index 5)
-      const subjectKey = parts[5];
-      if (subjectKey === planet) {
-        // Use evidenceId as the semantic identity (matches identityKey after P0-08)
-        matchingIds.push(evidence.evidenceId);
-      }
+
+    // Guard: only trust canonical CW-... format identityKeys
+    if (parts[0] !== 'CW' || parts.length < 6) {
+      // Skip non-canonical keys (e.g., raw occurrence-ID fallbacks)
+      continue;
+    }
+
+    // Subject key is the 6th segment (index 5) - safe after guards pass
+    const subjectKey = parts[5];
+    if (subjectKey === planet) {
+      // Use evidenceId as the semantic identity (matches identityKey after P0-08)
+      matchingIds.push(evidence.evidenceId);
     }
   }
 
