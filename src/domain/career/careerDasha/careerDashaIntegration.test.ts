@@ -747,5 +747,165 @@ describe('C9 Dasha Integration', () => {
         expect(evidence.provenance.natalRootIds).toEqual([]);
       });
     });
+
+    it('CW-prefixed key with invalid domain/axis/source is safely ignored', () => {
+      // Create evidence with CW prefix and ≥6 segments but invalid domain/axis/source
+      const invalidEnumEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'CW-INVALID_DOMAIN-NATAL-D1-SATURN_10TH_LORD-SATURN', // Invalid domain
+        evidenceId: 'invalid-domain-evidence',
+        ruleId: 'SATURN_10TH_LORD',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Evidence with invalid domain',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      });
+
+      const natal: CareerNatalAnalysis = Object.freeze({
+        structural: Object.freeze({
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 0,
+          supportingSupport: 5,
+          supportingChallenge: 0,
+          challengingSupport: 0,
+          challengingChallenge: 0,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Strong structural support'
+        }),
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [invalidEnumEvidence],
+        conflicts: [],
+        reasoningTrace: Object.freeze({
+          primaryPromise: [invalidEnumEvidence],
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        })
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: [],
+        evidenceIds: [],
+        unresolvedEvidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        statement: 'No expressions'
+      });
+
+      const input: CareerDashaIntegrationInput = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Evidence with invalid domain should be safely ignored
+      expect(result.evidence).toBeDefined();
+      // All natalRootIds should be empty since invalid key was ignored
+      result.evidence.forEach(evidence => {
+        expect(evidence.provenance.natalRootIds).toEqual([]);
+      });
+    });
+
+    it('key with hyphenated ruleId (normalized) resolves subjectKey at correct position', () => {
+      // Create evidence where ruleId originally contained hyphens
+      // After normalization by buildEvidenceIdentityKey, hyphens become underscores
+      // Format: CW-CAREER-NATAL-D1-SATURN_10TH_LORD_EXAM-SATURN
+      // Original ruleId: 'SATURN-10TH-LORD-EXAM' -> normalized: 'SATURN_10TH_LORD_EXAM'
+      const hyphenatedRuleIdEvidence: WeightedReasoningEvidence = Object.freeze({
+        identityKey: 'CW-CAREER-NATAL-D1-SATURN_10TH_LORD_EXAM-SATURN',
+        evidenceId: 'hyphenated-ruleid-evidence',
+        ruleId: 'SATURN_10TH_LORD_EXAM',
+        layer: 'PRIMARY_PROMISE',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 90,
+        weight: 2.7,
+        statement: 'Evidence with hyphenated ruleId (normalized)',
+        relatedEvidenceIds: [],
+        sourceIds: ['source-1']
+      });
+
+      const natal: CareerNatalAnalysis = Object.freeze({
+        structural: Object.freeze({
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 10,
+          primaryChallenge: 0,
+          supportingSupport: 5,
+          supportingChallenge: 0,
+          challengingSupport: 0,
+          challengingChallenge: 0,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Strong structural support'
+        }),
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        evidence: [hyphenatedRuleIdEvidence],
+        conflicts: [],
+        reasoningTrace: Object.freeze({
+          primaryPromise: [hyphenatedRuleIdEvidence],
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        })
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: [],
+        evidenceIds: [],
+        unresolvedEvidenceIds: [],
+        sourceIds: [],
+        ruleIds: [],
+        statement: 'No expressions'
+      });
+
+      const input: CareerDashaIntegrationInput = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Find evidence for SATURN planet
+      const saturnEvidence = result.evidence.find(e => e.planet === Planet.SATURN);
+      expect(saturnEvidence).toBeDefined();
+
+      // The natalRootIds should include the evidence ID
+      // Subject key (SATURN) should be at the correct position (index 5) despite normalized ruleId
+      if (saturnEvidence) {
+        expect(saturnEvidence.provenance.natalRootIds).toContain('hyphenated-ruleid-evidence');
+      }
+    });
   });
 });

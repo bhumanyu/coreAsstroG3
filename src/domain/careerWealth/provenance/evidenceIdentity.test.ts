@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildEvidenceId,
   buildEvidenceIdentityKey,
+  parseEvidenceIdentityKey,
   type EvidenceIdentityInput,
   type EvidenceIdentityKeyInput
 } from './evidenceIdentity';
@@ -205,5 +206,149 @@ describe('buildEvidenceIdentityKey', () => {
 
     const key = buildEvidenceIdentityKey(input);
     expect(key).toBe('CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER');
+  });
+});
+
+describe('parseEvidenceIdentityKey', () => {
+  it('parses valid canonical key without objectKey', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.domain).toBe('CAREER');
+    expect(parsed?.axis).toBe('NATAL');
+    expect(parsed?.source).toBe('D1');
+    expect(parsed?.ruleId).toBe('JUPITER_10TH_LORD');
+    expect(parsed?.subjectKey).toBe('JUPITER');
+    expect(parsed?.objectKey).toBeUndefined();
+  });
+
+  it('parses valid canonical key with objectKey', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_ASPECT_10TH-JUPITER-10TH_HOUSE';
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.domain).toBe('CAREER');
+    expect(parsed?.axis).toBe('NATAL');
+    expect(parsed?.source).toBe('D1');
+    expect(parsed?.ruleId).toBe('JUPITER_ASPECT_10TH');
+    expect(parsed?.subjectKey).toBe('JUPITER');
+    expect(parsed?.objectKey).toBe('10TH_HOUSE');
+  });
+
+  it('returns null for non-CW prefix', () => {
+    const key = 'NOT_CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for insufficient segments (< 6)', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for too many segments (> 7)', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-JUPITER-10TH_HOUSE-EXTRA';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for invalid domain', () => {
+    const key = 'CW-INVALID_DOMAIN-NATAL-D1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for invalid axis', () => {
+    const key = 'CW-CAREER-INVALID_AXIS-D1-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for invalid source', () => {
+    const key = 'CW-CAREER-NATAL-INVALID_SOURCE-JUPITER_10TH_LORD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for empty ruleId', () => {
+    const key = 'CW-CAREER-NATAL-D1--JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for empty subjectKey', () => {
+    const key = 'CW-CAREER-NATAL-D1-JUPITER_10TH_LORD-';
+    const parsed = parseEvidenceIdentityKey(key);
+    expect(parsed).toBeNull();
+  });
+
+  it('parses valid WEALTH domain', () => {
+    const key = 'CW-WEALTH-NATAL-D2-SATURN_2ND_LORD-SATURN';
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.domain).toBe('WEALTH');
+    expect(parsed?.axis).toBe('NATAL');
+    expect(parsed?.source).toBe('D2');
+  });
+
+  it('parses valid DASHA axis', () => {
+    const key = 'CW-CAREER-DASHA-DASHA-JUPITER_PERIOD-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.axis).toBe('DASHA');
+    expect(parsed?.source).toBe('DASHA');
+  });
+
+  it('parses valid TRANSIT source', () => {
+    const key = 'CW-CAREER-TIMING-TRANSIT-SATURN_TRANSIT-SATURN';
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.axis).toBe('TIMING');
+    expect(parsed?.source).toBe('TRANSIT');
+  });
+
+  it('parses valid C4_STRUCTURAL_REASONING source', () => {
+    const key = 'CW-CAREER-NATAL-C4_STRUCTURAL_REASONING-C4_RULE-JUPITER';
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.source).toBe('C4_STRUCTURAL_REASONING');
+  });
+
+  it('returns null for empty string', () => {
+    const parsed = parseEvidenceIdentityKey('');
+    expect(parsed).toBeNull();
+  });
+
+  it('returns null for non-string input', () => {
+    const parsed = parseEvidenceIdentityKey(null as any);
+    expect(parsed).toBeNull();
+  });
+
+  it('round-trips: build then parse returns same components', () => {
+    const input: EvidenceIdentityKeyInput = {
+      domain: 'CAREER',
+      axis: 'NATAL',
+      source: 'D1',
+      ruleId: 'JUPITER_10TH_LORD',
+      subjectKey: 'JUPITER',
+      objectKey: '10TH_HOUSE'
+    };
+
+    const key = buildEvidenceIdentityKey(input);
+    const parsed = parseEvidenceIdentityKey(key);
+
+    expect(parsed).not.toBeNull();
+    expect(parsed?.domain).toBe(input.domain);
+    expect(parsed?.axis).toBe(input.axis);
+    expect(parsed?.source).toBe(input.source);
+    expect(parsed?.ruleId).toBe(input.ruleId);
+    expect(parsed?.subjectKey).toBe(input.subjectKey);
+    expect(parsed?.objectKey).toBe(input.objectKey);
   });
 });

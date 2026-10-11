@@ -9,9 +9,9 @@ export type {
 
 export { assertUniqueEvidenceIds } from './evidenceProvenance';
 
-export type { EvidenceIdentityInput } from './evidenceIdentity';
+export type { EvidenceIdentityInput, EvidenceIdentityKeyInput } from './evidenceIdentity';
 
-export { buildEvidenceId } from './evidenceIdentity';
+export { buildEvidenceId, parseEvidenceIdentityKey } from './evidenceIdentity';
 
 export { createEvidenceProvenance } from './evidenceProvenanceFactory';
 
