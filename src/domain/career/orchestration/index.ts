@@ -9,6 +9,7 @@
  * - Port adapters: Real engine wiring
  * - Contracts: Type definitions and branded IDs
  * - Validation: Boundary validation helpers
+ * - Foundation Builder: P2-11G production integration boundary
  *
  * USAGE:
  * ```typescript
@@ -19,6 +20,15 @@
  *
  * const orchestrator = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
  * const foundation = orchestrator.orchestrate(input);
+ * ```
+ *
+ * P2-11G USAGE:
+ * ```typescript
+ * import {
+ *   buildCanonicalCareerFoundation
+ * } from './orchestration';
+ *
+ * const foundation = buildCanonicalCareerFoundation({ horoscope });
  * ```
  */
 
@@ -74,3 +84,9 @@ export {
   mechanismRefinerPortAdapter,
   defaultCareerOrchestrationPorts
 } from './canonicalCareerPortsAdapter';
+
+// P2-11G Foundation Builder
+export {
+  buildCanonicalCareerFoundation,
+  type CanonicalCareerFoundationBuilderInput
+} from './canonicalCareerFoundationBuilder';
