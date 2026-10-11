@@ -190,11 +190,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
     it('output is deterministic under orchestrator input permutation', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
-      // Build foundation normally via builder
-      const foundation1 = buildCanonicalCareerFoundation({ horoscope });
-
-      // Build foundation by manually constructing orchestrator input in permuted order
-      // to test determinism at the orchestrator-input level
+      // Build foundation by manually constructing orchestrator input
       const structural = buildCareerStructuralReasoning({ horoscope });
       const facts = buildCareerGraphFactsFromStructural(structural);
       const graph = buildCareerAstroGraph({ facts });
@@ -214,25 +210,42 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         result10L: undefined
       };
 
-      // Assemble orchestrator input with permuted field order (semantically equivalent)
+      // Assemble orchestrator input with permuted collection order (semantically equivalent)
+      // Reverse the actual array elements to test true order-sensitivity
       const input2: CanonicalCareerOrchestrationInput = {
-        networks: networks.networks,
-        patterns: patterns.patterns,
-        condition,
-        relevance,
+        patterns: [...patterns.patterns].reverse(),
+        relevance: [...relevance].reverse(),
+        condition: [...condition].reverse(),
+        networks: [...networks.networks].reverse(),
         dispositorContexts: undefined,
         result10H: undefined,
         result10L: undefined
       };
 
       const orchestrator1 = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
-      const foundation2 = orchestrator1.orchestrate(input1);
+      const foundation1 = orchestrator1.orchestrate(input1);
 
       const orchestrator2 = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
-      const foundation3 = orchestrator2.orchestrate(input2);
+      const foundation2 = orchestrator2.orchestrate(input2);
 
-      // Output should be identical regardless of input field order
-      expect(JSON.stringify(foundation2)).toBe(JSON.stringify(foundation3));
+      // Normalize outputs by sorting collections by stable IDs before comparison
+      const normalizeFoundation = (foundation: any) => ({
+        ...foundation,
+        patternCandidates: [...foundation.patternCandidates].sort((a, b) => a.patternId.localeCompare(b.patternId)),
+        patternQualifications: [...foundation.patternQualifications].sort((a, b) => a.patternId.localeCompare(b.patternId)),
+        participantRoleAssignments: [...foundation.participantRoleAssignments].sort((a, b) => a.patternId.localeCompare(b.patternId)),
+        resolvedMechanisms: [...foundation.resolvedMechanisms].sort((a, b) => a.candidateId.localeCompare(b.candidateId)),
+        mechanismRefinements: [...foundation.mechanismRefinements].sort((a, b) => a.candidateId.localeCompare(b.candidateId)),
+        careerFoundationSupplements: [...foundation.careerFoundationSupplements].sort((a, b) => a.supplementId.localeCompare(b.supplementId)),
+        stageReferences: [...foundation.stageReferences].sort((a, b) => a.stageId.localeCompare(b.stageId)),
+        diagnostics: [...foundation.diagnostics].sort((a, b) => a.diagnosticId.localeCompare(b.diagnosticId))
+      });
+
+      const normalized1 = normalizeFoundation(foundation1);
+      const normalized2 = normalizeFoundation(foundation2);
+
+      // Output should be identical regardless of input collection order
+      expect(JSON.stringify(normalized1)).toBe(JSON.stringify(normalized2));
     });
 
     it('deep freezes all output objects', async () => {
@@ -264,6 +277,12 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
   });
 
   describe('Regression Test: interpretCareerV2 Structural Integrity', () => {
+    // NOTE: These are structural smoke tests, not regression-equivalence tests.
+    // They verify that interpretCareerV2 produces valid output structure, but do NOT
+    // assert that buildCanonicalCareerFoundation leaves interpretCareerV2 output unchanged.
+    // Full regression-equivalence testing (comparing interpretCareerV2 output before/after
+    // building the foundation) is out of scope for this milestone.
+
     it('interpretCareerV2 produces valid C4-C11 conclusion structure', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 

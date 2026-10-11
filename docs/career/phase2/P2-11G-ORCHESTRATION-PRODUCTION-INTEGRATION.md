@@ -11,14 +11,12 @@
 
 **Test Results (local):**
 - Lint: ✅ PASSED (`tsc --noEmit`)
-- P2-11G integration test: ✅ 9/9 PASSED
+- P2-11G integration test (canonicalCareerFoundationBuilder.test.ts): ✅ 9/9 PASSED
 - canonicalCareerOrchestrator.test.ts: ✅ 50/50 PASSED
-- careerPatternQualification.test.ts: ✅ 78/78 PASSED
 - CareerDomainInterpreterV2.test.ts: ✅ 64/64 PASSED
-- canonicalCareerEvidenceMapper.test.ts: ✅ 63/63 PASSED
-- **Total: 264/264 PASSED**
+- **Total: 123/123 PASSED**
 
-**Tested Commit SHA:** `39bf2d9e1281c8dd319826e37a5b34e2f8775a49`
+**Tested Commit SHA:** `543fec4dbfb0be3685e3a0fb449df0c0f6dc756a`
 
 ## Step 1: Dependency Graph Audit
 
