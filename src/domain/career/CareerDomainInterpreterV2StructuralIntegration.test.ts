@@ -46,17 +46,21 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
       // Verify that structural evidence is present in the interpretation
       expect(structuralEvidence.length).toBeGreaterThan(0);
 
+      // P2-11C Gate 5: Canonical evidence uses CAREER_STRUCTURAL_* namespace
       // Check that structural evidence items are present in the interpretation
       const structuralIds = new Set(structuralEvidence.map(e => e.id));
       const interpretationIds = new Set(interpretation.evidence.map(e => e.id));
 
       // At least some structural evidence should be in the interpretation
-      const intersection = [...structuralIds].filter(id => interpretationIds.has(id));
+      // Use identityKey for intersection since canonical evidence may have different occurrence IDs
+      const structuralIdentityKeys = new Set(structuralEvidence.map(e => e.identityKey).filter((k): k is string => k !== undefined));
+      const interpretationIdentityKeys = new Set(interpretation.evidence.map(e => e.identityKey).filter((k): k is string => k !== undefined));
+      const intersection = [...structuralIdentityKeys].filter(key => interpretationIdentityKeys.has(key));
       expect(intersection.length).toBeGreaterThan(0);
 
       // Verify structural evidence has correct provenance
       const structuralItemsInInterpretation = interpretation.evidence.filter(e =>
-        structuralIds.has(e.id)
+        structuralIdentityKeys.has(e.identityKey ?? '')
       );
 
       structuralItemsInInterpretation.forEach(item => {
@@ -65,7 +69,7 @@ describe('CareerDomainInterpreterV2StructuralIntegration', () => {
         expect(item.provenance?.axis).toBe('NATAL');
         expect(item.domain).toBe('CAREER');
         expect(item.phase).toBe('NATAL_PROMISE');
-        expect(item.source).toBe('D1');
+        expect(item.source).toBe('C4_STRUCTURAL_REASONING');
       });
     });
 

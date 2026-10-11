@@ -656,7 +656,7 @@ function buildCareerFact(
        * The timing hierarchy should reference canonical C9 evidence (CAREER_DASHA:* namespace)
        * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
        * Canonical C9 evidence is available in careerInterpretation.evidence filtered by source 'DASHA'.
-       * Fallback to CW-02 factor IDs if canonical evidence is not available.
+       * Returns empty array if canonical evidence is not available.
        */
       evidenceIds: (() => {
         const canonicalDashaEvidence = careerInterpretation?.evidence
@@ -664,7 +664,7 @@ function buildCareerFact(
           .map((e: DomainEvidence) => e.id);
         return canonicalDashaEvidence && canonicalDashaEvidence.length > 0
           ? canonicalDashaEvidence
-          : (careerDashaSynthesis.factors ?? []).map((f: { id: string }) => f.id);
+          : [];
       })(),
       summary: syn.summary
     };
@@ -674,13 +674,28 @@ function buildCareerFact(
 
     if (md && ad && pd) {
       const syn = synthesizeCareerDashaHierarchy(md, ad, pd);
+
+      /**
+       * P2-11C Gate 5: Use canonical C9 evidence IDs instead of CW-02 factor IDs
+       *
+       * The timing hierarchy should reference canonical C9 evidence (CAREER_DASHA:* namespace)
+       * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
+       * Canonical C9 evidence is available in careerInterpretation.evidence filtered by source 'DASHA'.
+       * Returns empty array if canonical evidence is not available.
+       */
+      const canonicalDashaEvidence = careerInterpretation?.evidence
+        ?.filter((e: DomainEvidence) => e.source === 'DASHA' || e.phase === 'DASHA_ACTIVATION')
+        .map((e: DomainEvidence) => e.id);
+
       hierarchy = {
         primary: { level: 'MAHADASHA', role: 'PRIMARY', planet: md.planet, effect: md.effect },
         modifier: { level: 'ANTARDASHA', role: 'MODIFIER', planet: ad.planet, effect: ad.effect },
         trigger: { level: 'PRATYANTARDASHA', role: 'TRIGGER', planet: pd.planet, effect: pd.effect },
         overallEffect: syn.overallEffect,
         confidence: syn.confidence,
-        evidenceIds: syn.evidenceIds,
+        evidenceIds: canonicalDashaEvidence && canonicalDashaEvidence.length > 0
+          ? canonicalDashaEvidence
+          : [],
         summary: syn.summary
       };
     }
@@ -829,7 +844,7 @@ function buildWealthFact(
          * The timing hierarchy should reference canonical C9 evidence that exists in context.evidence,
          * not the synthesis evidence IDs which may use a different namespace.
          * Canonical C9 evidence is available in wealthInterpretation.evidence filtered by source 'DASHA'.
-         * Fallback to synthesis evidence IDs if canonical evidence is not available.
+         * Returns empty array if canonical evidence is not available.
          */
         evidenceIds: (() => {
           const canonicalDashaEvidence = wealthInterpretation?.evidence
@@ -837,7 +852,7 @@ function buildWealthFact(
             .map((e: DomainEvidence) => e.id);
           return canonicalDashaEvidence && canonicalDashaEvidence.length > 0
             ? canonicalDashaEvidence
-            : syn.evidenceIds;
+            : [];
         })(),
         summary: syn.summary
       };

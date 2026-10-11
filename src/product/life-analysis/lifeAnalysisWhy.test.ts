@@ -367,11 +367,11 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
       .filter((e) => e.domain === 'WEALTH')
       .map((e) => e.source.type);
 
-    expect(careerSources).toContain('HOUSE');
-    expect(careerSources).toContain('LORDSHIP');
-    expect(careerSources).toContain('VARGA');
-    expect(wealthSources).toContain('HOUSE');
-    expect(wealthSources).toContain('LORDSHIP');
+    // P2-11C Gate 5: Canonical mapper uses STRUCTURAL and D10 source types instead of LORDSHIP/VARGA
+    expect(careerSources).toContain('STRUCTURAL');
+    expect(careerSources).toContain('D10');
+    expect(wealthSources).toContain('STRUCTURAL');
+    expect(wealthSources).toContain('D10');
     expect(wealthSources).toContain('PLANET');
 
     // Every item in why.evidence must exist in the domain interpretations

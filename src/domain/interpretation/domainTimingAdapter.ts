@@ -9,6 +9,57 @@ import type {
   TimingAvailabilityStatus
 } from '../../product/life-analysis/lifeAnalysisTypes';
 import { indexDashaPeriodActivations } from '../../product/life-analysis/dashaHierarchyUtils';
+import type { DomainEvidence } from './DomainEvidence';
+
+/**
+ * Maps CW-02 factor IDs to canonical CAREER_DASHA:* evidence IDs for a given period.
+ *
+ * Per-period timing evidenceIds should reference canonical C9 evidence (CAREER_DASHA:* namespace)
+ * that exists in context.evidence, not the CW-02 factor IDs (CW09_* namespace).
+ * Canonical C9 evidence is available in interpretation.evidence filtered by source 'DASHA'.
+ * Returns empty array if canonical evidence is not available (legacy IDs won't exist in context.evidence).
+ *
+ * @param interpretation - The domain interpretation containing canonical evidence
+ * @param period - The period ('MD', 'AD', or 'PD')
+ * @param planet - The planet for the period
+ * @param legacyFactorIds - The CW-02 factor IDs (unused, kept for API compatibility)
+ * @returns Canonical evidence IDs if available, otherwise empty array
+ */
+function mapPeriodToCanonicalEvidenceIds(
+  interpretation?: DomainInterpretation,
+  period?: 'MD' | 'AD' | 'PD',
+  planet?: string,
+  legacyFactorIds?: readonly string[]
+): readonly string[] {
+  if (!interpretation || !period || !planet) {
+    return [];
+  }
+
+  // Find canonical DASHA evidence for this period and planet
+  const canonicalEvidence = interpretation.evidence.filter((e: DomainEvidence) => {
+    // Must be DASHA source and DASHA_ACTIVATION phase
+    if (e.source !== 'DASHA' || e.phase !== 'DASHA_ACTIVATION') {
+      return false;
+    }
+
+    // Check if timing information matches the period and planet
+    if (!e.timing) {
+      return false;
+    }
+
+    // Match period level and planet
+    return e.timing.level === period && e.timing.planet === planet;
+  });
+
+  // If canonical evidence exists, use its IDs
+  if (canonicalEvidence.length > 0) {
+    return canonicalEvidence.map((e: DomainEvidence) => e.id);
+  }
+
+  // Return empty array if canonical evidence is not available
+  // Legacy CW09_* IDs won't exist in context.evidence after Gate 5 cutover
+  return [];
+}
 
 /**
  * Safely extract CareerConclusionData from a domain interpretation.
@@ -78,6 +129,27 @@ export function buildNormalizedCareerTiming(
   const careerDasha = career.conclusionData?.careerDashaSynthesis;
   if (careerDasha && careerDasha.combined.combinedEffect !== 'INSUFFICIENT_DATA') {
     const timingAsOf = asOf ?? careerDasha.asOf;
+
+    // Map legacy factor IDs to canonical evidence IDs
+    const mdEvidenceIds = mapPeriodToCanonicalEvidenceIds(
+      career,
+      'MD',
+      careerDasha.md.planet,
+      careerDasha.md.factors.map((f: { id: string }) => f.id)
+    );
+    const adEvidenceIds = mapPeriodToCanonicalEvidenceIds(
+      career,
+      'AD',
+      careerDasha.ad.planet,
+      careerDasha.ad.factors.map((f: { id: string }) => f.id)
+    );
+    const pdEvidenceIds = mapPeriodToCanonicalEvidenceIds(
+      career,
+      'PD',
+      careerDasha.pd.planet,
+      careerDasha.pd.factors.map((f: { id: string }) => f.id)
+    );
+
     return {
       status: 'AVAILABLE',
       asOf: timingAsOf,
@@ -85,7 +157,7 @@ export function buildNormalizedCareerTiming(
         period: 'MD',
         planet: careerDasha.md.planet,
         effect: careerDasha.md.effect,
-        evidenceIds: careerDasha.md.factors.map((f: { id: string }) => f.id),
+        evidenceIds: mdEvidenceIds,
         statement: careerDasha.md.summary,
         ...(careerDasha.md.start ? { start: careerDasha.md.start } : {}),
         ...(careerDasha.md.end ? { end: careerDasha.md.end } : {})
@@ -94,7 +166,7 @@ export function buildNormalizedCareerTiming(
         period: 'AD',
         planet: careerDasha.ad.planet,
         effect: careerDasha.ad.effect,
-        evidenceIds: careerDasha.ad.factors.map((f: { id: string }) => f.id),
+        evidenceIds: adEvidenceIds,
         statement: careerDasha.ad.summary,
         ...(careerDasha.ad.start ? { start: careerDasha.ad.start } : {}),
         ...(careerDasha.ad.end ? { end: careerDasha.ad.end } : {})
@@ -103,7 +175,7 @@ export function buildNormalizedCareerTiming(
         period: 'PD',
         planet: careerDasha.pd.planet,
         effect: careerDasha.pd.effect,
-        evidenceIds: careerDasha.pd.factors.map((f: { id: string }) => f.id),
+        evidenceIds: pdEvidenceIds,
         statement: careerDasha.pd.summary,
         ...(careerDasha.pd.start ? { start: careerDasha.pd.start } : {}),
         ...(careerDasha.pd.end ? { end: careerDasha.pd.end } : {})
@@ -123,41 +195,46 @@ export function buildNormalizedCareerTiming(
   );
   const status: TimingAvailabilityStatus = hasAnyData ? 'AVAILABLE' : 'UNAVAILABLE';
 
+  // Map legacy factor IDs to canonical evidence IDs for each period
+  const mdEvidenceIds = mapPeriodToCanonicalEvidenceIds(career, 'MD', md?.planet, md?.evidenceIds);
+  const adEvidenceIds = mapPeriodToCanonicalEvidenceIds(career, 'AD', ad?.planet, ad?.evidenceIds);
+  const pdEvidenceIds = mapPeriodToCanonicalEvidenceIds(career, 'PD', pd?.planet, pd?.evidenceIds);
+
   return {
     status,
     asOf,
     ...(md
       ? {
-          mahadasha: {
-            period: 'MD',
-            planet: md.planet,
-            effect: md.effect,
-            evidenceIds: md.evidenceIds ?? [],
-            statement: md.statement
-          }
+        mahadasha: {
+          period: 'MD',
+          planet: md.planet,
+          effect: md.effect,
+          evidenceIds: mdEvidenceIds,
+          statement: md.statement
         }
+      }
       : {}),
     ...(ad
       ? {
-          antardasha: {
-            period: 'AD',
-            planet: ad.planet,
-            effect: ad.effect,
-            evidenceIds: ad.evidenceIds ?? [],
-            statement: ad.statement
-          }
+        antardasha: {
+          period: 'AD',
+          planet: ad.planet,
+          effect: ad.effect,
+          evidenceIds: adEvidenceIds,
+          statement: ad.statement
         }
+      }
       : {}),
     ...(pd
       ? {
-          pratyantardasha: {
-            period: 'PD',
-            planet: pd.planet,
-            effect: pd.effect,
-            evidenceIds: pd.evidenceIds ?? [],
-            statement: pd.statement
-          }
+        pratyantardasha: {
+          period: 'PD',
+          planet: pd.planet,
+          effect: pd.effect,
+          evidenceIds: pdEvidenceIds,
+          statement: pd.statement
         }
+      }
       : {})
   };
 }
@@ -184,6 +261,10 @@ export function buildNormalizedWealthTiming(
 
   const mapPeriod = (p?: WealthPeriodTimingActivation): WealthPeriodTimingProduct | undefined => {
     if (!p) return undefined;
+
+    // Map legacy factor IDs to canonical evidence IDs for this period
+    const evidenceIds = mapPeriodToCanonicalEvidenceIds(wealth, p.period, p.planet, p.evidenceIds);
+
     return {
       period: p.period,
       planet: p.planet,
@@ -194,7 +275,7 @@ export function buildNormalizedWealthTiming(
         fortune: p.dimensions?.fortune ?? 'INSUFFICIENT_DATA',
         speculation: p.dimensions?.speculation ?? 'INSUFFICIENT_DATA'
       },
-      evidenceIds: p.evidenceIds ?? [],
+      evidenceIds,
       statement: p.statement
     };
   };

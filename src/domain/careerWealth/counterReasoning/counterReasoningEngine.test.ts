@@ -428,7 +428,8 @@ describe('counterReasoningEngine (CW-07)', () => {
     dashaChallenge.challengingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
 
     const d10Challenge = evaluateCounterReasoning('Does the D10 chart conflict with this?', context);
-    expect(d10Challenge.disposition).toBe('INSUFFICIENT_EVIDENCE');
+    // P2-11C Gate 5: Canonical D10 evidence is now present, so counter-reasoning can evaluate and reject
+    expect(d10Challenge.disposition).toBe('REJECTED');
     expect(d10Challenge.claim.targetSubjectKey).toBe('D10_CONFIRMATION');
     expect(d10Challenge.conclusionChanged).toBe(false);
     d10Challenge.supportingEvidenceIds.forEach((id) => expect(nodeIds.has(id)).toBe(true));
