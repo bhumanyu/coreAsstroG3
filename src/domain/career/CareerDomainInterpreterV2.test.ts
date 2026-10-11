@@ -2324,4 +2324,207 @@ describe('CareerDomainInterpreterV2', () => {
       expect(v2a.evidence.map((e) => e.id)).toEqual(v2b.evidence.map((e) => e.id));
     });
   });
+
+  // P2-11G Production Integration Tests
+  describe('P2-11G Canonical Career Foundation Production Reachability', () => {
+    it('interpretCareerV2 output carries canonicalCareerFoundation on conclusionData', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Verify conclusionData is present
+      expect(v2.conclusionData).toBeDefined();
+
+      // Verify canonicalCareerFoundation is present
+      expect(v2.conclusionData?.canonicalCareerFoundation).toBeDefined();
+
+      const foundation = v2.conclusionData?.canonicalCareerFoundation;
+
+      // Verify foundation structure
+      expect(foundation?.foundationId).toBeDefined();
+      expect(foundation?.timestamp).toBeDefined();
+
+      // Verify pattern candidates are populated
+      expect(foundation?.patternCandidates).toBeDefined();
+      expect(Array.isArray(foundation?.patternCandidates)).toBe(true);
+
+      // Verify pattern qualifications are populated
+      expect(foundation?.patternQualifications).toBeDefined();
+      expect(Array.isArray(foundation?.patternQualifications)).toBe(true);
+
+      // Verify participant role assignments are populated
+      expect(foundation?.participantRoleAssignments).toBeDefined();
+      expect(Array.isArray(foundation?.participantRoleAssignments)).toBe(true);
+
+      // Verify resolved mechanisms are populated
+      expect(foundation?.resolvedMechanisms).toBeDefined();
+      expect(Array.isArray(foundation?.resolvedMechanisms)).toBe(true);
+
+      // Verify mechanism refinements are populated
+      expect(foundation?.mechanismRefinements).toBeDefined();
+      expect(Array.isArray(foundation?.mechanismRefinements)).toBe(true);
+
+      // Verify supplements are populated (10H/10L should be wired now)
+      expect(foundation?.careerFoundationSupplements).toBeDefined();
+      expect(Array.isArray(foundation?.careerFoundationSupplements)).toBe(true);
+
+      // Verify identity mappings are empty (deferred)
+      expect(foundation?.identityMappings).toEqual([]);
+
+      // Verify stage references are populated
+      expect(foundation?.stageReferences).toBeDefined();
+      expect(Array.isArray(foundation?.stageReferences)).toBe(true);
+
+      // Verify diagnostics are populated
+      expect(foundation?.diagnostics).toBeDefined();
+      expect(Array.isArray(foundation?.diagnostics)).toBe(true);
+
+      // Verify metadata is populated
+      expect(foundation?.metadata).toBeDefined();
+    });
+
+    it('canonicalCareerFoundation preserves identity keys across stages', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const foundation = v2.conclusionData?.canonicalCareerFoundation;
+
+      expect(foundation).toBeDefined();
+
+      // Verify pattern candidates preserve identity from source patterns
+      for (const patternCandidate of foundation?.patternCandidates ?? []) {
+        expect(patternCandidate.patternId).toBeDefined();
+        expect(patternCandidate.identityKey).toBeDefined();
+        expect(patternCandidate.sourcePattern).toBeDefined();
+        expect(patternCandidate.sourcePattern.patternId).toBe(patternCandidate.patternId);
+        expect(patternCandidate.sourcePattern.identityKey).toBe(patternCandidate.identityKey);
+      }
+
+      // Verify pattern qualifications preserve identity from source patterns
+      for (const patternQualification of foundation?.patternQualifications ?? []) {
+        expect(patternQualification.patternId).toBeDefined();
+        expect(patternQualification.identityKey).toBeDefined();
+        expect(patternQualification.qualifiedPattern).toBeDefined();
+        expect(patternQualification.qualifiedPattern.patternId).toBe(patternQualification.patternId);
+        expect(patternQualification.qualifiedPattern.identityKey).toBe(patternQualification.identityKey);
+      }
+
+      // Verify participant role assignments preserve pattern provenance
+      for (const roleAssignment of foundation?.participantRoleAssignments ?? []) {
+        expect(roleAssignment.patternId).toBeDefined();
+        expect(roleAssignment.patternIdentityKey).toBeDefined();
+        expect(roleAssignment.assignment).toBeDefined();
+      }
+
+      // Verify resolved mechanisms preserve candidate provenance
+      for (const resolvedMechanism of foundation?.resolvedMechanisms ?? []) {
+        expect(resolvedMechanism.candidateId).toBeDefined();
+        expect(resolvedMechanism.patternId).toBeDefined();
+        expect(resolvedMechanism.candidate).toBeDefined();
+        expect(resolvedMechanism.candidateSet).toBeDefined();
+      }
+    });
+
+    it('missing-data diagnostics are present for deferred features', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const foundation = v2.conclusionData?.canonicalCareerFoundation;
+
+      expect(foundation).toBeDefined();
+
+      // Verify dispositor contexts diagnostic is present
+      const dispositorDiagnostic = foundation?.diagnostics.find(
+        (d: any) => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
+      );
+      expect(dispositorDiagnostic).toBeDefined();
+      expect(dispositorDiagnostic?.severity).toBe('WARNING');
+      expect(dispositorDiagnostic?.category).toBe('MISSING_DATA');
+
+      // Verify identity mappings diagnostic is present
+      const identityMappingDiagnostic = foundation?.diagnostics.find(
+        (d: any) => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED'
+      );
+      expect(identityMappingDiagnostic).toBeDefined();
+      expect(identityMappingDiagnostic?.severity).toBe('INFO');
+      expect(identityMappingDiagnostic?.category).toBe('DEFERRED_FEATURE');
+
+      // Verify mechanism refinements are UNRESOLVED/UNAVAILABLE when dispositor contexts are missing
+      for (const refinement of foundation?.mechanismRefinements ?? []) {
+        expect(refinement.resolution).toBe('UNRESOLVED');
+        expect(refinement.status).toBe('UNAVAILABLE');
+        expect(refinement.mechanism).toBeNull();
+      }
+
+      // Verify identity mappings are empty
+      expect(foundation?.identityMappings).toEqual([]);
+    });
+
+    it('wired 10H/10L inputs flow through when available', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const foundation = v2.conclusionData?.canonicalCareerFoundation;
+
+      expect(foundation).toBeDefined();
+
+      // Verify 10H supplement is present (should be wired now)
+      const supplement10H = foundation?.careerFoundationSupplements.find(
+        (s: any) => s.supplementType === '10H'
+      );
+      expect(supplement10H).toBeDefined();
+
+      // If 10H is AVAILABLE, verify foundation is populated
+      if (supplement10H?.availability === 'AVAILABLE') {
+        expect(supplement10H.foundation10H).toBeDefined();
+        expect(supplement10H.status10H).toBe('COMPLETE');
+      }
+
+      // Verify 10L supplement is present (should be wired now)
+      const supplement10L = foundation?.careerFoundationSupplements.find(
+        (s: any) => s.supplementType === '10L'
+      );
+      expect(supplement10L).toBeDefined();
+
+      // If 10L is AVAILABLE, verify foundation is populated
+      if (supplement10L?.availability === 'AVAILABLE') {
+        expect(supplement10L.foundation10L).toBeDefined();
+        expect(supplement10L.status10L).toBe('COMPLETE');
+      }
+    });
+
+    it('regression: C4-C11 conclusion unchanged by foundation wiring', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Verify canonical C11 result is present and unchanged
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
+
+      // Verify conclusion structure is unchanged
+      expect(v2.conclusion).toBeDefined();
+      expect(v2.conclusion.strength).toBeDefined();
+      expect(v2.conclusion.confidence).toBeDefined();
+      expect(v2.conclusion.statement).toBeDefined();
+
+      // Verify reasoning trace is present
+      expect(v2.reasoningTrace).toBeDefined();
+
+      // Verify evidence set is present
+      expect(v2.evidence).toBeDefined();
+      expect(Array.isArray(v2.evidence)).toBe(true);
+      expect(v2.evidence.length).toBeGreaterThan(0);
+
+      // Verify natal promise is present
+      expect(v2.natalPromise).toBeDefined();
+
+      // Verify dasha activation is present
+      expect(v2.dashaActivation).toBeDefined();
+
+      // Verify transit trigger is present
+      expect(v2.transitTrigger).toBeDefined();
+
+      // Verify varga confirmations are present
+      expect(v2.vargaConfirmations).toBeDefined();
+      expect(Array.isArray(v2.vargaConfirmations)).toBe(true);
+
+      // Verify manifestations are present
+      expect(v2.manifestations).toBeDefined();
+      expect(Array.isArray(v2.manifestations)).toBe(true);
+
+      // Verify conflicts are present
+      expect(v2.conflicts).toBeDefined();
+      expect(Array.isArray(v2.conflicts)).toBe(true);
+    });
+  });
 });

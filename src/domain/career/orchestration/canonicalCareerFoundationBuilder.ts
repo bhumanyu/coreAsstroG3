@@ -14,6 +14,8 @@ import {
 import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
 import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegration';
 import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
+import { resolveCareer10HFoundation } from '../career10h/defaultCareer10HFoundation';
+import { resolveCareer10LFoundation } from '../career10h/defaultCareer10LFoundation';
 
 /**
  * P2-11G Production Integration Boundary
@@ -32,9 +34,15 @@ import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegr
  * - Invokes the orchestrator via defaultCareerOrchestrationPorts
  * - Returns the CanonicalCareerFoundation
  *
+ * WIRED FEATURES (current milestone):
+ * - 10H: resolveCareer10HFoundation({ horoscope }) - passed when status is COMPLETE
+ * - 10L: resolveCareer10LFoundation({ foundation, houseLordship }) - passed when resolvable
+ *
  * DEFERRED FEATURES (documented in P2-11G):
  * - Dispositor contexts: ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE
- * - 10H/10L supplements: Not wired in this milestone
+ *   - Blocker: Dispositor contexts depend on resolved mechanisms from the orchestrator,
+ *     requiring either a two-pass orchestration or an orchestrator contract change.
+ *     Keeping deferred with documented blocker rather than forcing contract change.
  * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED
  *
  * BOUNDARY ENFORCEMENT: This module must NOT:
@@ -51,6 +59,14 @@ import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegr
  */
 export interface CanonicalCareerFoundationBuilderInput {
   readonly horoscope: Horoscope;
+  /**
+   * Feature flag for enabling dispositor contexts.
+   * Default false - dispositor contexts remain deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE).
+   * Future enablement would require either:
+   * - Two-pass orchestration (first pass to get mechanisms, build contexts, second pass with contexts)
+   * - Orchestrator contract change to accept contexts after mechanism resolution
+   */
+  readonly enableDispositorContexts?: boolean;
 }
 
 /**
@@ -84,22 +100,44 @@ export function buildCanonicalCareerFoundation(
   const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
   const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
 
-  // Step 2: Assemble orchestrator input
+  // Step 2: Wire 10H foundation
+  // Resolve 10H from horoscope, pass only when status is COMPLETE
+  const result10H = resolveCareer10HFoundation({ horoscope });
+  const result10HOrchestratorInput = result10H.status === 'COMPLETE' ? result10H : undefined;
+
+  // Step 3: Wire 10L foundation
+  // Resolve 10L from 10H foundation + houseLordship, pass only when resolvable
+  let result10LOrchestratorInput;
+  if (result10HOrchestratorInput) {
+    const result10L = resolveCareer10LFoundation({
+      foundation: result10HOrchestratorInput.foundation,
+      houseLordship: horoscope.houseLordship
+    });
+    result10LOrchestratorInput = result10L.status === 'COMPLETE' ? result10L : undefined;
+  } else {
+    result10LOrchestratorInput = undefined;
+  }
+
+  // Step 4: Assemble orchestrator input
   const orchestrationInput: CanonicalCareerOrchestrationInput = {
     patterns: patterns.patterns,
     relevance,
     condition,
     networks: networks.networks,
     // Dispositor contexts: deferred in this milestone (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
-    // Future enablement: when enableDispositorContexts is true, wire DefaultCareerDispositorContextFactory
+    // Blocker: Dispositor contexts depend on resolved mechanisms from the orchestrator.
+    // Two-pass orchestration would be required:
+    //   Pass 1: Orchestrate without contexts to get mechanisms
+    //   Pass 2: Build contexts from mechanisms, re-orchestrate with contexts
+    // This violates the "run each producer once per intended analysis" invariant.
+    // Keeping deferred with documented blocker rather than forcing contract change.
     dispositorContexts: undefined,
-    // 10H/10L: deferred in this milestone
-    // Future enablement: when enable10H/enable10L are true, wire resolveCareer10HFoundation/resolveCareer10LFoundation
-    result10H: undefined,
-    result10L: undefined
+    // 10H/10L: wired in this milestone (passed when COMPLETE status)
+    result10H: result10HOrchestratorInput,
+    result10L: result10LOrchestratorInput
   };
 
-  // Step 3: Invoke orchestrator
+  // Step 5: Invoke orchestrator
   const orchestrator = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
   const foundation = orchestrator.orchestrate(orchestrationInput);
 

@@ -19,6 +19,7 @@ import {
   calculateEvidenceConfidence,
   detectDomainConflicts
 } from '../interpretation';
+import { buildCanonicalCareerFoundation } from './orchestration/canonicalCareerFoundationBuilder';
 import type {
   DomainEvidence,
   DomainInterpretation,
@@ -481,6 +482,23 @@ export function interpretCareerV2(
     });
   }
 
+  /**
+   * P2-11G Production Integration: Build Canonical Career Foundation
+   *
+   * Build the canonical career foundation from the horoscope via the foundation builder.
+   * This is a composition artifact that exposes pattern/qualification/mechanism stages
+   * with preserved identity keys. It is NOT a competing conclusion to canonical C11.
+   *
+   * The foundation is built exactly once per interpretCareerV2 call and does not
+   * re-derive or double-count anything already computed by the canonical C4–C11 chain.
+   *
+   * The builder runs the orchestrator upstream chain (structural → graph → networks →
+   * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
+   * Dispositor contexts remain deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
+   * due to the single-pass invariant constraint.
+   */
+  const canonicalCareerFoundation = buildCanonicalCareerFoundation({ horoscope });
+
   const conclusionData = buildCareerConclusionData(
     natalStrength,
     d10Relationship,
@@ -489,7 +507,8 @@ export function interpretCareerV2(
     conflicts,
     cw01Result.manifestations,
     cw01Result.supportingSourceIds,
-    cw01Result.challengingSourceIds
+    cw01Result.challengingSourceIds,
+    canonicalCareerFoundation
   );
 
   const conclusion = createDomainConclusion({

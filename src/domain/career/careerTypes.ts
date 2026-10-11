@@ -12,6 +12,7 @@ import type { CareerTimingSynthesis } from '../timing/careerWealthTiming/careerW
 import type { CareerManifestationSynthesis } from './manifestation/careerManifestationSynthesisTypes';
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { ReasoningTraceGraph } from '../careerWealth/reasoningTrace';
+import type { CanonicalCareerFoundation } from './orchestration/canonicalCareerContracts';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -118,4 +119,10 @@ export interface CareerConclusionData {
   readonly careerManifestationSynthesis?: readonly CareerManifestationSynthesis[];
   readonly careerFinalSynthesis?: CareerWealthFinalSynthesis;
   readonly reasoningTraceGraph?: ReasoningTraceGraph;
+  /**
+   * Canonical career foundation from the orchestrator (P2-11G).
+   * A composition artifact that exposes pattern/qualification/mechanism stages
+   * with preserved identity keys. Not a competing conclusion to canonical C11.
+   */
+  readonly canonicalCareerFoundation?: CanonicalCareerFoundation;
 }

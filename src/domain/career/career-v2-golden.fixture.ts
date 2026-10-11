@@ -299,7 +299,8 @@ export function buildGoldenCareerInterpretation(): DomainInterpretation {
     conflicts,
     manifestations,
     supportingEvidence.map((e) => e.id),
-    challengingEvidence.map((e) => e.id)
+    challengingEvidence.map((e) => e.id),
+    undefined // canonicalCareerFoundation not included in golden fixture
   );
 
   const conclusion = createDomainConclusion({

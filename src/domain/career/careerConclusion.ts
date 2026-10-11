@@ -14,6 +14,7 @@ import type {
   ManifestationMode
 } from '../interpretation';
 import type { CareerTimingActivation, CareerConclusionData } from './careerTypes';
+import type { CanonicalCareerFoundation } from './orchestration/canonicalCareerContracts';
 
 export function resolveCareerConclusionStrength(
   natalStrength: DomainStrength,
@@ -283,7 +284,8 @@ export function buildCareerConclusionData(
   conflicts: readonly DomainConflict[],
   manifestations: readonly DomainManifestation[],
   supportingSourceIds: readonly string[],
-  challengingSourceIds: readonly string[]
+  challengingSourceIds: readonly string[],
+  canonicalCareerFoundation?: CanonicalCareerFoundation
 ): CareerConclusionData {
   const currentActivation = resolveCurrentActivation(timingActivations);
   const currentPressure = resolveCurrentPressure(transitTrigger, conflicts);
@@ -313,7 +315,8 @@ export function buildCareerConclusionData(
     dominantManifestations: Object.freeze(dominantManifestations),
     headline,
     supportingSourceIds: Object.freeze([...supportingSourceIds]),
-    challengingSourceIds: Object.freeze([...challengingSourceIds])
+    challengingSourceIds: Object.freeze([...challengingSourceIds]),
+    canonicalCareerFoundation
   });
 }
 
