@@ -4504,8 +4504,301 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       const validationResult = validateC11References([validEvidence, invalidEvidence], finalSynthesis);
 
       // (c) result.c11Validation.unreferenced does not contain the sentinel or an empty string
-      expect(validationResult.unreferenced).not.toContain('__UNRESOLVED_IDENTITY__');
-      expect(validationResult.unreferenced).not.toContain('');
+      // Exact array assertions for the fixture: valid evidence resolves to 'valid-semantic-3'
+      // and finalSynthesis.evidenceIds is ['valid-semantic-3'], so both should be empty
+      expect(validationResult.unreferenced).toEqual([]);
+      expect(validationResult.missing).toEqual([]);
+    });
+
+    it('validateAgainstFinalSynthesis filters sentinel from malformed C11 evidenceIds', () => {
+      // Test that when finalSynthesis.evidenceIds contains __UNRESOLVED_IDENTITY__,
+      // it is filtered out before the missing/unreferenced comparison, so it does not
+      // appear in the missing array as an ordinary missing evidence ID
+
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-4',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-4'
+      });
+
+      // C11 with malformed evidenceIds containing the sentinel
+      const finalSynthesisWithSentinel: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['valid-semantic-4', UNRESOLVED_IDENTITY_SENTINEL], // Contains sentinel
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['valid-semantic-4', UNRESOLVED_IDENTITY_SENTINEL],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career supported with malformed C11.'
+      };
+
+      const validationResult = validateC11References([validEvidence], finalSynthesisWithSentinel);
+
+      // The sentinel should be filtered out, so missing should be empty
+      // (valid-semantic-4 is produced, so no missing references)
+      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.unreferenced).toEqual([]);
+    });
+
+    it('validateAgainstFinalSynthesis filters empty string from malformed C11 evidenceIds', () => {
+      // Test that when finalSynthesis.evidenceIds contains empty string,
+      // it is filtered out before the missing/unreferenced comparison
+
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-5',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-5'
+      });
+
+      // C11 with malformed evidenceIds containing empty string
+      const finalSynthesisWithEmpty: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['valid-semantic-5', ''], // Contains empty string
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['valid-semantic-5', ''],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career supported with malformed C11.'
+      };
+
+      const validationResult = validateC11References([validEvidence], finalSynthesisWithEmpty);
+
+      // The empty string should be filtered out, so missing should be empty
+      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.unreferenced).toEqual([]);
+    });
+
+    it('validateAgainstFinalSynthesis filters whitespace from malformed C11 evidenceIds', () => {
+      // Test that when finalSynthesis.evidenceIds contains whitespace-only string,
+      // it is filtered out before the missing/unreferenced comparison
+
+      const validEvidence = createDomainEvidence({
+        id: 'valid-occurrence-6',
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'valid-semantic-6'
+      });
+
+      // C11 with malformed evidenceIds containing whitespace
+      const finalSynthesisWithWhitespace: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['valid-semantic-6', '   '], // Contains whitespace
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['valid-semantic-6', '   '],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career supported with malformed C11.'
+      };
+
+      const validationResult = validateC11References([validEvidence], finalSynthesisWithWhitespace);
+
+      // The whitespace should be filtered out, so missing should be empty
+      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.unreferenced).toEqual([]);
+    });
+  });
+
+  describe('Public Mapper Integration (P2-11D Gap 3)', () => {
+    it('mapCanonicalCareerEvidence output never exposes sentinel or empty identity', () => {
+      // Integration test that drives evidence through the public mapper (not just sortCanonicalEvidence helper)
+      // and asserts that result.evidence and result.c11Validation never expose __UNRESOLVED_IDENTITY__
+      // or an empty-string identity
+
+      const natalEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'natal-semantic-1',
+          evidenceId: 'natal-occ-1',
+          ruleId: 'RULE_NATAL_1',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 5,
+          statement: 'Natal support for career',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        }
+      ];
+
+      const natal: CareerNatalAnalysis = {
+        structural: {
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          primarySupport: 5,
+          primaryChallenge: 0,
+          supportingSupport: 3,
+          supportingChallenge: 1,
+          challengingSupport: 1,
+          challengingChallenge: 3,
+          mixedWeight: 0,
+          evidence: [],
+          primaryEvidenceIds: [],
+          supportingEvidenceIds: [],
+          challengingEvidenceIds: [],
+          conflicts: [],
+          statement: 'Structural reasoning.'
+        },
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: natalEvidence,
+        conflicts: [],
+        reasoningTrace: {
+          primaryPromise: natalEvidence,
+          secondarySupport: [],
+          modifiers: [],
+          yogas: [],
+          varga: [],
+          dasha: [],
+          transit: []
+        }
+      };
+
+      const finalSynthesis: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['natal-semantic-1'],
+        sourceIds: ['source-1'],
+        ruleIds: ['RULE_NATAL_1'],
+        evidenceTrace: {
+          evidenceIds: ['natal-semantic-1'],
+          sourceIds: ['source-1'],
+          ruleIds: ['RULE_NATAL_1']
+        },
+        statement: 'Career supported.'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Assert result.evidence never exposes sentinel or empty identity
+      for (const evidence of result.evidence) {
+        expect(evidence.identityKey).not.toBe(UNRESOLVED_IDENTITY_SENTINEL);
+        expect(evidence.identityKey).not.toBe('');
+        expect(evidence.identityKey?.trim()).not.toBe('');
+      }
+
+      // Assert result.c11Validation never exposes sentinel or empty identity
+      expect(result.c11Validation.unreferenced).not.toContain(UNRESOLVED_IDENTITY_SENTINEL);
+      expect(result.c11Validation.unreferenced).not.toContain('');
+      expect(result.c11Validation.missing).not.toContain(UNRESOLVED_IDENTITY_SENTINEL);
+      expect(result.c11Validation.missing).not.toContain('');
     });
   });
 });

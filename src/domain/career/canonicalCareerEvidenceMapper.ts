@@ -990,6 +990,10 @@ export interface C11ValidationResult {
  * Handles unknown references explicitly (ignores them, never fabricates).
  * This is a lightweight validation; it does not affect the mapping output.
  *
+ * Filters out the reserved sentinel (__UNRESOLVED_IDENTITY__) and empty/whitespace values
+ * from both producedIds and finalIds to prevent malformed C11 data from being treated as
+ * ordinary missing/unreferenced evidence IDs.
+ *
  * Returns a structured result with unreferenced and missing IDs for observability.
  */
 function validateAgainstFinalSynthesis(
@@ -1003,7 +1007,26 @@ function validateAgainstFinalSynthesis(
       .map(e => tryResolveSemanticIdentity(e))
       .filter((id): id is string => id !== null)
   );
-  const finalIds = new Set(finalSynthesis.evidenceIds);
+
+  // Filter out reserved sentinel and empty/whitespace values from finalIds
+  // to prevent malformed C11 data from being treated as ordinary missing evidence IDs
+  const finalIds = new Set(
+    finalSynthesis.evidenceIds.filter(id => {
+      // Exclude the reserved sentinel
+      if (id === UNRESOLVED_IDENTITY_SENTINEL) {
+        return false;
+      }
+      // Exclude empty strings
+      if (id === '') {
+        return false;
+      }
+      // Exclude whitespace-only strings
+      if (id.trim() === '') {
+        return false;
+      }
+      return true;
+    })
+  );
 
   // Check for produced IDs not referenced in C11 (informational only)
   const unreferenced = [...producedIds].filter(id => !finalIds.has(id));
