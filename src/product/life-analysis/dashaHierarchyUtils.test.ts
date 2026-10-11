@@ -23,6 +23,7 @@ import { Planet } from '../../types';
 import type { CareerTimingActivation } from '../../domain/career/careerTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { DomainInterpretation } from '../../domain/interpretation';
+import { createDomainEvidence } from '../../domain/interpretation/DomainEvidence';
 
 describe('D07-C: indexDashaPeriodActivations Unit Tests', () => {
   it('returns empty object when passed empty array or undefined', () => {
@@ -235,6 +236,8 @@ describe('D07-C: Missing Period Hierarchy Guard Tests', () => {
 
 describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
   it('RESOLVED path: canonical Dasha evidence present, non-empty evidenceIds, traceability RESOLVED, all references resolve', () => {
+    // Explicit fixture WITH canonical Dasha evidence for RESOLVED path
+    // Build from real horoscope which produces canonical Dasha evidence for Wealth
     const asOf = '2024-06-01T00:00:00.000Z';
     const analysisContext = createAnalysisContext({
       asOf,
@@ -288,24 +291,31 @@ describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
     }
 
     // 3. RESOLVED path: when canonical Dasha evidence is available, evidenceIds must be non-empty
-    // Wealth hierarchy has canonical Dasha evidence
+    // Wealth has canonical Dasha evidence in this fixture
     expect(wealthHierarchy?.evidenceIds?.length).toBeGreaterThan(0);
-    // Note: traceability may be DEGRADED if canonical Dasha evidence uses occurrence IDs without identityKey
-    // The semantic identity resolver (P2-11D) returns identityKey when present, falling back to occurrence ID
-    // If canonical evidence lacks identityKey, traceability is DEGRADED (gap in canonical evidence production)
-    // This is acceptable for now; tracking item: Wealth canonical Dasha evidence should emit identityKey
-    if (wealthHierarchy?.traceability === 'DEGRADED') {
-      // DEGRADED is acceptable when identityKey is missing from canonical evidence
-      // This documents the gap without blocking the test
-      console.log('Wealth hierarchy traceability is DEGRADED (canonical Dasha evidence lacks identityKey)');
-    } else {
+    // Assert RESOLVED only if canonical evidence has identityKey (semantic identity)
+    // Since Wealth canonical mapper is deferred (P2-11D tracking item), evidence may lack identityKey
+    if (wealth.evidence.some(e => e.sourceType === 'DASHA' && e.identityKey && e.identityKey.trim().length > 0)) {
       expect(wealthHierarchy?.traceability).toBe('RESOLVED');
+    }
+
+    // Career may or may not have canonical Dasha evidence depending on the real horoscope
+    // Only assert RESOLVED if evidenceIds is non-empty and has identityKey
+    if (careerHierarchy?.evidenceIds && careerHierarchy.evidenceIds.length > 0) {
+      if (career.evidence.some(e => e.sourceType === 'DASHA' && e.identityKey && e.identityKey.trim().length > 0)) {
+        expect(careerHierarchy.traceability).toBe('RESOLVED');
+      }
     }
 
     // 4. Ensure all hierarchy evidenceIds resolve against context.evidence
     const evidenceIdSet = new Set(context.evidence.map((e) => e.id));
     for (const id of wealthHierarchy!.evidenceIds!) {
       expect(evidenceIdSet.has(id)).toBe(true);
+    }
+    if (careerHierarchy?.evidenceIds && careerHierarchy.evidenceIds.length > 0) {
+      for (const id of careerHierarchy.evidenceIds) {
+        expect(evidenceIdSet.has(id)).toBe(true);
+      }
     }
 
     // 5. Assert local wealth rule evaluates and preserves deterministic hierarchy outcome
@@ -324,6 +334,8 @@ describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
   });
 
   it('DEGRADED path: canonical Dasha evidence absent, empty evidenceIds, traceability DEGRADED, no fabricated references', () => {
+    // Explicit fixture WITHOUT canonical Dasha evidence for DEGRADED path
+    // Build interpretations that explicitly omit Dasha evidence
     const asOf = '2024-06-01T00:00:00.000Z';
     const analysisContext = createAnalysisContext({
       asOf,
@@ -343,9 +355,19 @@ describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
     const career = interpretCareerV2(horoscope, domainOptions);
     const wealth = interpretWealthV2(horoscope, domainOptions);
 
+    // Explicitly remove Dasha evidence to force DEGRADED path
+    const careerWithoutDasha: DomainInterpretation = {
+      ...career,
+      evidence: career.evidence.filter(e => e.sourceType !== 'DASHA')
+    };
+    const wealthWithoutDasha: DomainInterpretation = {
+      ...wealth,
+      evidence: wealth.evidence.filter(e => e.sourceType !== 'DASHA')
+    };
+
     const context = buildAiContext(horoscope, {
-      domainInterpretations: [career, wealth],
-      lifeAnalysis: buildLifeAnalysis([career, wealth])
+      domainInterpretations: [careerWithoutDasha, wealthWithoutDasha],
+      lifeAnalysis: buildLifeAnalysis([careerWithoutDasha, wealthWithoutDasha])
     });
 
     // 1. Assert Career Hierarchy facts in AiContext
@@ -360,13 +382,19 @@ describe('D07-C: Task 3 AI Hierarchy-Projection Preservation Test', () => {
     expect(careerHierarchy?.overallEffect).toBeDefined();
 
     // 2. DEGRADED path: when canonical Dasha evidence is unavailable, evidenceIds must be empty and traceability DEGRADED
-    // Career hierarchy may have DEGRADED traceability if Dasha evidence is unavailable
-    if (careerHierarchy?.traceability === 'DEGRADED') {
-      expect(careerHierarchy?.evidenceIds).toBeDefined();
-      expect(careerHierarchy?.evidenceIds?.length).toBe(0);
-    }
+    // Unconditional assertion - no conditional gating, no console.log escape hatch
+    expect(careerHierarchy?.evidenceIds).toBeDefined();
+    expect(careerHierarchy?.evidenceIds?.length).toBe(0);
+    expect(careerHierarchy?.traceability).toBe('DEGRADED');
 
-    // 3. Ensure no fabricated references: when evidenceIds is empty, no IDs should be checked against context.evidence
+    // 3. Assert Wealth Hierarchy DEGRADED path (unconditional)
+    const wealthHierarchy = context.wealth?.timing?.hierarchy;
+    expect(wealthHierarchy).toBeDefined();
+    expect(wealthHierarchy?.evidenceIds).toBeDefined();
+    expect(wealthHierarchy?.evidenceIds?.length).toBe(0);
+    expect(wealthHierarchy?.traceability).toBe('DEGRADED');
+
+    // 4. Ensure no fabricated references: when evidenceIds is empty, no IDs should be checked against context.evidence
     // This is implicitly enforced by the empty check above
   });
 });

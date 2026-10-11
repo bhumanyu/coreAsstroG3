@@ -211,6 +211,10 @@ export function buildWealthEvidence(
       }
 
       return createDomainEvidence({
+        // NOTE: This sets the occurrence ID (id field), not the semantic identity.
+        // Occurrence IDs are intentionally required here - this is the legacy Wealth mapper
+        // which does not yet use canonical semantic identity resolution (identityKey).
+        // The identityKey field is set separately below for future canonical migration.
         id: (item as any).identityKey ?? item.id,
         sourceType: mapWealthSourceType(item),
         domain: 'WEALTH',

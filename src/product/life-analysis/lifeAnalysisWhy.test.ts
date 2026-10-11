@@ -398,6 +398,12 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     //
     // Tracking: P2-11D canonical Wealth mapper migration is an outstanding item
     // This test should be enabled once the canonical Wealth mapper is implemented
+    //
+    // P2-11D SCOPE NOTE: Canonical Wealth mapper migration is NOT in scope for P2-11D.
+    // P2-11D focuses on semantic identity resolution (identityKey) and timing hierarchy traceability.
+    // Wealth canonical mapper migration remains deferred to a future P2 iteration.
+    // DO NOT mark Wealth migration complete and DO NOT fabricate STRUCTURAL/VARGA source types
+    // for Wealth until a real canonical Wealth mapper exists.
   });
 
   it('Test 12: Rule metadata registry resolution — maps Career and Wealth rule metadata correctly', () => {

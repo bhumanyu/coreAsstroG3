@@ -155,6 +155,11 @@ function mapTransitEffectToFinalDirection(
  * falling back to evidenceId when identityKey is absent or empty. This mirrors the
  * trajectory resolver's identityKey ?? id logic in careerTrajectoryEngine.ts.
  *
+ * NOTE: This function does NOT use resolveSemanticIdentity from DomainEvidence.ts because
+ * it operates on WeightedReasoningEvidence (C4-C7 contract) which has a different field
+ * structure (identityKey + evidenceId) vs DomainEvidence (identityKey + id). The semantic
+ * logic is identical but the field names differ, so inline implementation is required here.
+ *
  * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
  * - Natal: identityKey (semantic identity, falls back to evidenceId when absent/empty)
  * - Dasha: identityKey (semantic identity)
@@ -168,7 +173,10 @@ function collectNatalEvidenceIds(
   natal: CareerNatalAnalysis
 ): readonly string[] {
   return Object.freeze(
-    natal.evidence.map(e => (e.identityKey && e.identityKey !== '') ? e.identityKey : e.evidenceId).sort((a, b) => a.localeCompare(b))
+    natal.evidence.map(e => {
+      const trimmed = e.identityKey?.trim();
+      return (trimmed && trimmed.length > 0) ? trimmed : e.evidenceId;
+    }).sort((a, b) => a.localeCompare(b))
   );
 }
 

@@ -44,7 +44,8 @@ import type {
 
 import {
   createDomainEvidence,
-  type DomainEvidence
+  type DomainEvidence,
+  resolveSemanticIdentity
 } from '../interpretation/DomainEvidence';
 
 import type {
@@ -933,8 +934,8 @@ function sortCanonicalEvidence(
     const phaseDiff = phaseOrder[a.phase] - phaseOrder[b.phase];
     if (phaseDiff !== 0) return phaseDiff;
 
-    const identityA = a.identityKey ?? a.id;
-    const identityB = b.identityKey ?? b.id;
+    const identityA = resolveSemanticIdentity(a);
+    const identityB = resolveSemanticIdentity(b);
     const identityDiff = identityA.localeCompare(identityB);
     if (identityDiff !== 0) return identityDiff;
 
@@ -962,7 +963,7 @@ export interface C11ValidationResult {
  * Validates that produced evidence IDs are cross-referenceable against finalSynthesis.evidenceIds.
  *
  * Compares canonical identities (identityKey) against C11 evidenceIds.
- * Uses identityKey when present, falling back to id only when identityKey is absent.
+ * Uses resolveSemanticIdentity to handle empty/whitespace identityKey correctly.
  *
  * Handles unknown references explicitly (ignores them, never fabricates).
  * This is a lightweight validation; it does not affect the mapping output.
@@ -973,7 +974,7 @@ function validateAgainstFinalSynthesis(
   evidence: readonly DomainEvidence[],
   finalSynthesis: CareerFinalSynthesisResult
 ): C11ValidationResult {
-  const producedIds = new Set(evidence.map(e => e.identityKey ?? e.id));
+  const producedIds = new Set(evidence.map(e => resolveSemanticIdentity(e)));
   const finalIds = new Set(finalSynthesis.evidenceIds);
 
   // Check for produced IDs not referenced in C11 (informational only)

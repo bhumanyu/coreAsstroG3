@@ -10,6 +10,10 @@ import type {
   DomainEvidence
 } from '../../interpretation/DomainEvidence';
 
+import {
+  resolveSemanticIdentity
+} from '../../interpretation/DomainEvidence';
+
 /**
  * P2-09A Career Trajectory Engine
  *
@@ -212,7 +216,7 @@ function resolveEvidenceReferences(
 
   const evidenceIdentitySet = new Set<string>();
   for (const ev of evidenceSet) {
-    const identity = ev.identityKey ?? ev.id;
+    const identity = resolveSemanticIdentity(ev);
     evidenceIdentitySet.add(identity);
   }
 
@@ -267,7 +271,7 @@ export function buildCareerTrajectory(
   // Build evidence identity set for opportunity consistency check
   const evidenceIdentitySet = new Set<string>();
   for (const ev of evidence) {
-    const identity = ev.identityKey ?? ev.id;
+    const identity = resolveSemanticIdentity(ev);
     evidenceIdentitySet.add(identity);
   }
 
