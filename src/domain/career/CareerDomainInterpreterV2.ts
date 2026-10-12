@@ -118,6 +118,16 @@ import {
   buildCareerExpression
 } from './careerExpressionIntegration';
 import {
+  defaultCareerExpressionResolver
+} from './careerExpression/defaultCareerExpressionResolver';
+import {
+  adaptMechanismExpressionToLegacy
+} from './careerExpression/mechanismExpressionToLegacyAdapter';
+import type {
+  Career10HFoundation,
+  Career10LFoundation
+} from './career10h';
+import {
   buildCareerDashaAnalysis
 } from './careerDasha/careerDashaIntegration';
 import {
@@ -193,9 +203,77 @@ export function interpretCareerV2(
     horoscope
   });
 
-  const canonicalExpressionAnalysis = buildCareerExpression({
-    natal: canonicalNatalAnalysis
+  /**
+   * P2-08D: Build Canonical Career Foundation BEFORE C8
+   *
+   * Build the canonical career foundation from the horoscope via the foundation builder.
+   * This is moved before C8 so that the mechanism-based resolver can use
+   * canonicalCareerFoundation.resolvedMechanisms as input.
+   *
+   * The foundation is built exactly once per interpretCareerV2 call and does not
+   * re-derive or double-count anything already computed by the canonical C4–C11 chain.
+   *
+   * The builder runs the orchestrator upstream chain (structural → graph → networks →
+   * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
+   *
+   * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
+   * This is a tracked blocker per P2-11G review Finding 5.
+   */
+  const canonicalCareerFoundation = buildCanonicalCareerFoundation({
+    horoscope,
+    enableDispositorContexts: false // Disabled in production per P2-11G Finding 4 (tracked blocker)
   });
+
+  /**
+   * P2-08D: Production C8 - Mechanism-Based Expression Resolution
+   *
+   * Call the mechanism-based resolver (P2-08A) with canonicalCareerFoundation.resolvedMechanisms
+   * to produce the authoritative production C8 expression analysis.
+   *
+   * Input preparation:
+   * - careerMechanismCandidates: Extract from canonicalCareerFoundation.resolvedMechanisms[].candidate
+   * - career10HFoundation: Extract from canonicalCareerFoundation.careerFoundationSupplements (when AVAILABLE)
+   * - career10LFoundation: Extract from canonicalCareerFoundation.careerFoundationSupplements (when AVAILABLE)
+   * - careerMechanismRefinements: Empty (dispositor contexts disabled)
+   *
+   * Bridge adaptation:
+   * - The resolver returns CareerExpressionAnalysisResult (mechanism candidates)
+   * - The bridge adapter maps this to legacy CareerExpressionAnalysis (mode/strength-based)
+   * - This preserves mechanism identities and produces the shape C9/C10/C11 expect
+   *
+   * When resolvedMechanisms is empty or INSUFFICIENT_DATA, the bridge emits an explicit
+   * unavailable expression analysis rather than falling back to the legacy natal-derived path.
+   */
+  const careerMechanismCandidates = Object.freeze(
+    canonicalCareerFoundation.resolvedMechanisms.map(m => m.candidate)
+  );
+
+  // Extract 10H foundation from supplements (when AVAILABLE)
+  const supplement10H = canonicalCareerFoundation.careerFoundationSupplements.find(
+    s => s.supplementType === '10H'
+  );
+  const career10HFoundation: Career10HFoundation | undefined = (
+    supplement10H?.availability === 'AVAILABLE' && supplement10H.foundation10H
+  ) ? supplement10H.foundation10H : undefined;
+
+  // Extract 10L foundation from supplements (when AVAILABLE)
+  const supplement10L = canonicalCareerFoundation.careerFoundationSupplements.find(
+    s => s.supplementType === '10L'
+  );
+  const career10LFoundation: Career10LFoundation | undefined = (
+    supplement10L?.availability === 'AVAILABLE' && supplement10L.foundation10L
+  ) ? supplement10L.foundation10L : undefined;
+
+  // Call the mechanism-based resolver
+  const mechanismExpressionResult = defaultCareerExpressionResolver.resolve({
+    careerMechanismCandidates,
+    careerMechanismRefinements: undefined, // Empty while enableDispositorContexts is false
+    career10HFoundation,
+    career10LFoundation
+  });
+
+  // Bridge to legacy format for C9/C10/C11 consumption
+  const canonicalExpressionAnalysis = adaptMechanismExpressionToLegacy(mechanismExpressionResult);
 
   const canonicalDashaAnalysis = buildCareerDashaAnalysis({
     horoscope,
@@ -481,36 +559,6 @@ export function interpretCareerV2(
       summary: 'Timing calculation unavailable: asOf date not provided.'
     });
   }
-
-  /**
-   * P2-11G Production Integration: Build Canonical Career Foundation
-   *
-   * Build the canonical career foundation from the horoscope via the foundation builder.
-   * This is a composition artifact that exposes pattern/qualification/mechanism stages
-   * with preserved identity keys. It is NOT a competing conclusion to canonical C11.
-   *
-   * The foundation is built exactly once per interpretCareerV2 call and does not
-   * re-derive or double-count anything already computed by the canonical C4–C11 chain.
-   *
-   * The builder runs the orchestrator upstream chain (structural → graph → networks →
-   * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
-   *
-   * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
-   * This is a tracked blocker per P2-11G review Finding 5:
-   * - Finding 1: Golden baseline regression (pending test infrastructure fix)
-   * - Finding 2: Relationship-mapping validation extended (completed)
-   * - Finding 3: Two-pass test with controlled fixture (completed)
-   * - Finding 4: Insufficient-data assertions unconditional (completed)
-   * - Pending: Verification that all tests pass before enabling in production
-   *
-   * The two-pass orchestration feature is available but not enabled in interpretCareerV2
-   * to preserve the current production behavior until verification is complete.
-   * P2-11B status: PARTIAL (dispositor integration not yet production-enabled).
-   */
-  const canonicalCareerFoundation = buildCanonicalCareerFoundation({
-    horoscope,
-    enableDispositorContexts: false // Disabled in production per P2-11G Finding 4 (tracked blocker)
-  });
 
   const conclusionData = buildCareerConclusionData(
     natalStrength,
