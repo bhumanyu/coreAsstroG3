@@ -283,6 +283,24 @@ export interface IdentityMapping {
 }
 
 /**
+ * Relationship mapping across stages.
+ * Records structural relationships using producer-issued IDs (patternId, candidateId, mechanismId).
+ * These are NOT identity equivalences - they represent structural references (e.g., a qualification
+ * pertains to a pattern, a mechanism candidate was derived from a pattern).
+ *
+ * Distinct from IdentityMapping: IdentityMapping uses semantic identityKey values for equivalence;
+ * RelationshipMapping uses structural IDs for derivation/containment relationships.
+ */
+export interface RelationshipMapping {
+  readonly mappingId: string;
+  readonly sourceStage: string;
+  readonly targetStage: string;
+  readonly sourceId: string; // patternId, candidateId, or mechanismId
+  readonly targetId: string; // patternId, candidateId, or mechanismId
+  readonly relationshipType: 'DERIVATION' | 'CONTAINMENT' | 'REFERENCE';
+}
+
+/**
  * Orchestration diagnostic.
  * Records warnings, errors, and informational messages during orchestration.
  */
@@ -328,8 +346,11 @@ export interface CanonicalCareerFoundation {
   // 10H/10L supplement layers (P2-07F/G)
   readonly careerFoundationSupplements: readonly CareerFoundationSupplement[];
 
-  // Identity mappings
+  // Identity mappings (semantic identity equivalences)
   readonly identityMappings: readonly IdentityMapping[];
+
+  // Relationship mappings (structural references via patternId/candidateId/mechanismId)
+  readonly relationshipMappings: readonly RelationshipMapping[];
 
   // Stage references
   readonly stageReferences: readonly StageReference[];

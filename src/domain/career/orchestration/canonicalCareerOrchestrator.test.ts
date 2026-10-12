@@ -255,6 +255,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.mechanismRefinements).toEqual([]);
       expect(foundation.careerFoundationSupplements).toEqual([]);
       expect(foundation.identityMappings).toEqual([]);
+      expect(foundation.relationshipMappings).toEqual([]);
       expect(foundation.diagnostics).toEqual(expect.any(Array));
       expect(foundation.metadata).toBeDefined();
     });
@@ -595,6 +596,38 @@ describe('CanonicalCareerOrchestrator', () => {
 
       // The validation should catch the duplicate
       expect(foundation.diagnostics).toBeDefined();
+    });
+  });
+
+  describe('Qualification cardinality', () => {
+    it('should detect qualification cardinality violation (multiple qualifications per patternId)', () => {
+      const ports = createStubPorts();
+      // Manually inject duplicate qualifications with same patternId to test violation path
+      // This simulates a producer contract violation
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED') // Duplicate patternId
+        ]
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify cardinality violation diagnostic is emitted
+      const cardinalityDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION'
+      );
+      expect(cardinalityDiagnostic).toBeDefined();
+      expect(cardinalityDiagnostic?.severity).toBe('ERROR');
+      expect(cardinalityDiagnostic?.category).toBe('CONTRACT_VIOLATION');
+      expect(cardinalityDiagnostic?.message).toContain('Multiple qualifications detected for same patternId');
     });
   });
 

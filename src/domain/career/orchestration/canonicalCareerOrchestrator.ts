@@ -9,6 +9,7 @@ import type {
   MechanismRefinement,
   CareerFoundationSupplement,
   IdentityMapping,
+  RelationshipMapping,
   StageReference,
   OrchestrationDiagnostic,
   EvidenceIdentityKey,
@@ -153,7 +154,17 @@ export class CanonicalCareerOrchestrator {
       diagnostics
     );
 
-    // Stage 8: Stage references
+    // Stage 8: Relationship mappings
+    // Populate relationship mappings using structural IDs (patternId, candidateId, mechanismId)
+    const relationshipMappings = this.buildRelationshipMappings(
+      patternCandidates,
+      patternQualifications,
+      resolvedMechanisms,
+      mechanismRefinements,
+      diagnostics
+    );
+
+    // Stage 9: Stage references
     const stageReferences = this.buildStageReferences(
       patternCandidates,
       patternQualifications,
@@ -162,18 +173,19 @@ export class CanonicalCareerOrchestrator {
       careerFoundationSupplements
     );
 
-    // Stage 9: Validation
+    // Stage 10: Validation
     const validationResult = validateCanonicalCareerFoundation(
       patternCandidates,
       patternQualifications,
       resolvedMechanisms,
       mechanismRefinements,
       identityMappings,
+      relationshipMappings,
       this.validStages
     );
     diagnostics.push(...validationResult.diagnostics);
 
-    // Stage 10: Build metadata
+    // Stage 11: Build metadata
     const metadata = this.buildMetadata(
       patternCandidates,
       patternQualifications,
@@ -183,7 +195,7 @@ export class CanonicalCareerOrchestrator {
       validationResult.valid
     );
 
-    // Stage 11: Deep freeze and return
+    // Stage 12: Deep freeze and return
     return this.deepFreezeFoundation({
       foundationId,
       timestamp,
@@ -194,6 +206,7 @@ export class CanonicalCareerOrchestrator {
       mechanismRefinements,
       careerFoundationSupplements,
       identityMappings,
+      relationshipMappings,
       stageReferences,
       diagnostics: Object.freeze(diagnostics),
       metadata
@@ -922,64 +935,89 @@ export class CanonicalCareerOrchestrator {
       }
     }
 
-    // Qualification → Mechanism mappings (via patternId)
-    // Only emit if mechanism candidate exposes identityKey
-    // A participantId/candidateId is NOT an EvidenceIdentityKey - do not relabel
-    let unresolvedQualificationToMechanismCount = 0;
-    for (const qualification of patternQualifications) {
-      const mechanisms = resolvedMechanisms.filter(m => m.patternId === qualification.patternId);
-      for (const mechanism of mechanisms) {
-        // Check if mechanism candidate exposes identityKey
-        // CareerMechanismCandidate does not have an identityKey field in the current contract
-        // Therefore, we cannot emit a mapping - record as unresolved
-        unresolvedQualificationToMechanismCount++;
-      }
-    }
-
-    if (unresolvedQualificationToMechanismCount > 0) {
-      diagnostics.push({
-        diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_QUALIFICATION_TO_MECHANISM',
-        severity: 'INFO',
-        category: 'PARTIAL_FEATURE',
-        message: `${unresolvedQualificationToMechanismCount} qualification→mechanism mappings unresolved: mechanism candidates do not expose identityKey in current contract`,
-        relatedIds: [],
-        stage: 'IDENTITY_MAPPINGS'
-      });
-    }
-
-    // Mechanism → Refinement mappings (via candidateId)
-    // CareerMechanismCandidate does not currently expose identityKey in the contract
-    // Therefore, we cannot emit any mechanism→refinement mappings - all are unresolved
-    let unresolvedMechanismToRefinementCount = 0;
-    for (const mechanism of resolvedMechanisms) {
-      const refinement = mechanismRefinements.find(r => r.candidateId === mechanism.candidateId);
-      if (refinement) {
-        // Any refinement (REFINED, UNCHANGED, UNRESOLVED) cannot be mapped
-        // because mechanism candidate does not expose identityKey
-        unresolvedMechanismToRefinementCount++;
-      }
-    }
-
-    if (unresolvedMechanismToRefinementCount > 0) {
-      diagnostics.push({
-        diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_MECHANISM_TO_REFINEMENT',
-        severity: 'INFO',
-        category: 'PARTIAL_FEATURE',
-        message: `${unresolvedMechanismToRefinementCount} mechanism→refinement mappings unresolved: mechanism candidates do not expose identityKey in current contract`,
-        relatedIds: [],
-        stage: 'IDENTITY_MAPPINGS'
-      });
-    }
+    // Qualification → Mechanism and Mechanism → Refinement are NOT identity mappings
+    // They are now represented as RelationshipMappings (structural references via patternId/candidateId)
+    // No unresolved diagnostics needed for these - relationship mappings cover them completely
 
     // Emit diagnostic for incomplete coverage (participant roles gap)
     diagnostics.push({
       diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL',
       severity: 'INFO',
       category: 'PARTIAL_FEATURE',
-      message: 'Identity mappings populated from explicit linkage (pattern→qualification fully mapped; qualification→mechanism and mechanism→refinement partially mapped). Participant role assignments lack explicit stage linkage and are not mapped.',
+      message: 'Identity mappings populated from explicit linkage (pattern→qualification fully mapped via identityKey). Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings (structural references via patternId/candidateId). Participant role assignments lack explicit stage linkage and are not mapped.',
       relatedIds: [],
       stage: 'IDENTITY_MAPPINGS'
     });
+
+    return Object.freeze(mappings);
+  }
+
+  /**
+   * Builds relationship mappings using structural IDs (patternId, candidateId, mechanismId).
+   * These are NOT identity equivalences - they represent structural derivation/containment.
+   */
+  private buildRelationshipMappings(
+    patternCandidates: readonly PatternCandidate[],
+    patternQualifications: readonly PatternQualification[],
+    resolvedMechanisms: readonly ResolvedMechanism[],
+    mechanismRefinements: readonly MechanismRefinement[],
+    diagnostics: OrchestrationDiagnostic[]
+  ): readonly RelationshipMapping[] {
+    const mappings: RelationshipMapping[] = [];
+    let mappingIndex = 0;
+
+    // Build qualification map for lookup
+    const qualMap = new Map<string, PatternQualification>(
+      patternQualifications.map((q) => [q.patternId, q])
+    );
+
+    // Pattern → Qualification mappings (via patternId)
+    // Represents: qualification is derived from pattern
+    for (const pattern of patternCandidates) {
+      const qualification = qualMap.get(pattern.patternId);
+      if (qualification) {
+        mappings.push({
+          mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
+          sourceStage: 'PATTERN',
+          targetStage: 'QUALIFICATION',
+          sourceId: pattern.patternId,
+          targetId: qualification.patternId,
+          relationshipType: 'DERIVATION'
+        });
+      }
+    }
+
+    // Qualification → Mechanism mappings (via patternId)
+    // Represents: mechanism candidates are derived from qualification (via pattern)
+    for (const qualification of patternQualifications) {
+      const mechanisms = resolvedMechanisms.filter(m => m.patternId === qualification.patternId);
+      for (const mechanism of mechanisms) {
+        mappings.push({
+          mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
+          sourceStage: 'QUALIFICATION',
+          targetStage: 'MECHANISM',
+          sourceId: qualification.patternId,
+          targetId: mechanism.candidateId,
+          relationshipType: 'DERIVATION'
+        });
+      }
+    }
+
+    // Mechanism → Refinement mappings (via candidateId)
+    // Represents: refinement is derived from mechanism candidate
+    for (const mechanism of resolvedMechanisms) {
+      const refinement = mechanismRefinements.find(r => r.candidateId === mechanism.candidateId);
+      if (refinement) {
+        mappings.push({
+          mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
+          sourceStage: 'MECHANISM',
+          targetStage: 'REFINEMENT',
+          sourceId: mechanism.candidateId,
+          targetId: refinement.candidateId,
+          relationshipType: 'DERIVATION'
+        });
+      }
+    }
 
     return Object.freeze(mappings);
   }

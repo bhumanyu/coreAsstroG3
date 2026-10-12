@@ -4,6 +4,7 @@ import type {
   ResolvedMechanism,
   MechanismRefinement,
   IdentityMapping,
+  RelationshipMapping,
   OrchestrationDiagnostic
 } from './canonicalCareerContracts';
 
@@ -244,13 +245,58 @@ export function validateIdentityMappings(
 }
 
 /**
+ * Validates relationship mappings.
+ * Ensures that relationship mappings are well-formed and reference valid stages.
+ *
+ * @param mappings - Relationship mappings to validate
+ * @param validStages - Set of valid stage IDs
+ * @returns Validation result with diagnostics for invalid mappings
+ */
+export function validateRelationshipMappings(
+  mappings: readonly RelationshipMapping[],
+  validStages: ReadonlySet<string>
+): ValidationResult {
+  const diagnostics: OrchestrationDiagnostic[] = [];
+
+  for (const mapping of mappings) {
+    if (!validStages.has(mapping.sourceStage)) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_INVALID_SOURCE_STAGE_${mapping.mappingId}`,
+        severity: 'ERROR',
+        category: 'INVALID_REFERENCE',
+        message: `Relationship mapping references invalid source stage: ${mapping.sourceStage}`,
+        relatedIds: [mapping.mappingId],
+        stage: 'RELATIONSHIP_MAPPING'
+      });
+    }
+
+    if (!validStages.has(mapping.targetStage)) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_INVALID_TARGET_STAGE_${mapping.mappingId}`,
+        severity: 'ERROR',
+        category: 'INVALID_REFERENCE',
+        message: `Relationship mapping references invalid target stage: ${mapping.targetStage}`,
+        relatedIds: [mapping.mappingId],
+        stage: 'RELATIONSHIP_MAPPING'
+      });
+    }
+  }
+
+  return {
+    valid: diagnostics.length === 0,
+    diagnostics: Object.freeze(diagnostics)
+  };
+}
+
+/**
  * Runs all validation rules and aggregates diagnostics.
  *
  * @param patterns - Pattern candidates
  * @param qualifications - Pattern qualifications
  * @param mechanisms - Resolved mechanisms
  * @param refinements - Mechanism refinements
- * @param mappings - Identity mappings
+ * @param identityMappings - Identity mappings
+ * @param relationshipMappings - Relationship mappings
  * @param validStages - Set of valid stage IDs
  * @returns Combined validation result
  */
@@ -259,7 +305,8 @@ export function validateCanonicalCareerFoundation(
   qualifications: readonly PatternQualification[],
   mechanisms: readonly ResolvedMechanism[],
   refinements: readonly MechanismRefinement[],
-  mappings: readonly IdentityMapping[],
+  identityMappings: readonly IdentityMapping[],
+  relationshipMappings: readonly RelationshipMapping[],
   validStages: ReadonlySet<string>
 ): ValidationResult {
   const allDiagnostics: OrchestrationDiagnostic[] = [];
@@ -285,8 +332,12 @@ export function validateCanonicalCareerFoundation(
   allDiagnostics.push(...refinementRefResult.diagnostics);
 
   // Validate identity mappings
-  const mappingResult = validateIdentityMappings(mappings, validStages);
-  allDiagnostics.push(...mappingResult.diagnostics);
+  const identityMappingResult = validateIdentityMappings(identityMappings, validStages);
+  allDiagnostics.push(...identityMappingResult.diagnostics);
+
+  // Validate relationship mappings
+  const relationshipMappingResult = validateRelationshipMappings(relationshipMappings, validStages);
+  allDiagnostics.push(...relationshipMappingResult.diagnostics);
 
   return {
     valid: allDiagnostics.filter((d) => d.severity === 'ERROR').length === 0,
