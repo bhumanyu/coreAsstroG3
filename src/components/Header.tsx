@@ -10,6 +10,7 @@ import {
 import type { BirthDetails } from '../types';
 import type { AppTab } from '../types/appTabs';
 import { BirthContext, buildBirthContext } from '../app/birthContext';
+import { ThemeToggle } from './ui/ThemeToggle';
 
 export type { BirthContext };
 
@@ -29,16 +30,16 @@ export interface HeaderProps {
 export const Brand: React.FC = () => {
   return (
     <div className="flex items-center space-x-3">
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 p-0.5 shadow-lg shadow-indigo-500/20">
-        <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-          <Compass className="w-5 h-5 text-indigo-400" />
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 p-0.5 shadow-lg shadow-indigo-500/25">
+        <div className="w-full h-full bg-slate-950 dark:bg-slate-950 light:bg-slate-900 rounded-[10px] flex items-center justify-center">
+          <Compass className="w-5 h-5 text-indigo-400" aria-hidden="true" />
         </div>
       </div>
       <div>
-        <h1 className="text-xl font-bold tracking-wide font-serif-astro text-slate-100">
+        <h1 className="text-xl font-bold tracking-wide font-serif-astro text-slate-100 dark:text-slate-100 light:text-slate-900">
           CoreAstro
         </h1>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 dark:text-slate-400 light:text-slate-500">
           Vedic Astrology
         </p>
       </div>
@@ -57,33 +58,38 @@ export const BirthContextButton: React.FC<BirthContextButtonProps> = ({
 }) => {
   return (
     <button
+      type="button"
       onClick={onOpenBirthForm}
-      className="flex items-center space-x-2 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 rounded-lg px-3 py-1.5 text-xs text-slate-300 transition-all cursor-pointer shadow-sm"
+      className="flex items-center space-x-2 bg-slate-800/80 hover:bg-slate-750 dark:bg-slate-800/80 dark:hover:bg-slate-700 light:bg-slate-100 light:hover:bg-slate-200 border border-slate-700/80 dark:border-slate-700/80 light:border-slate-300 hover:border-indigo-500/50 rounded-xl px-3 py-1.5 text-xs text-slate-300 dark:text-slate-300 light:text-slate-700 transition-all cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       title="Edit Birth Details & Ayanamsa"
     >
-      <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-      <span className="font-medium">{birthContext?.name || 'Birth Chart'}</span>
+      <Calendar className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600 shrink-0" aria-hidden="true" />
+      <span className="font-medium text-slate-200 dark:text-slate-200 light:text-slate-900">
+        {birthContext?.name || 'Birth Chart'}
+      </span>
       {birthContext?.placeOfBirth && (
         <>
-          <span className="text-slate-500">•</span>
-          <span className="text-emerald-400 flex items-center gap-1 font-medium">
-            <MapPin className="w-3 h-3 text-emerald-400" />
+          <span className="text-slate-500 dark:text-slate-500 light:text-slate-400" aria-hidden="true">•</span>
+          <span className="text-emerald-400 dark:text-emerald-400 light:text-emerald-600 flex items-center gap-1 font-medium">
+            <MapPin className="w-3 h-3 text-emerald-400 dark:text-emerald-400 light:text-emerald-600 shrink-0" aria-hidden="true" />
             {birthContext.placeOfBirth}
           </span>
         </>
       )}
       {birthContext?.formattedDate && (
         <>
-          <span className="text-slate-500">•</span>
-          <span className="font-mono-code text-slate-400">
+          <span className="text-slate-500 dark:text-slate-500 light:text-slate-400" aria-hidden="true">•</span>
+          <span className="font-mono-code text-slate-400 dark:text-slate-400 light:text-slate-600">
             {birthContext.formattedDate} {birthContext.zoneLabel}
           </span>
         </>
       )}
       {birthContext?.ayanamsa && (
         <>
-          <span className="text-slate-500">•</span>
-          <span className="text-purple-400 font-semibold">{birthContext.ayanamsa}</span>
+          <span className="text-slate-500 dark:text-slate-500 light:text-slate-400" aria-hidden="true">•</span>
+          <span className="text-purple-400 dark:text-purple-400 light:text-purple-600 font-semibold">
+            {birthContext.ayanamsa}
+          </span>
         </>
       )}
     </button>
@@ -100,18 +106,20 @@ export const ProductNavigation: React.FC<ProductNavigationProps> = ({
   onNavigate
 }) => {
   return (
-    <nav aria-label="Product Navigation" className="hidden lg:flex overflow-x-auto no-scrollbar">
+    <nav aria-label="Product Navigation" className="hidden lg:flex overflow-x-auto scrollbar-none gap-1 py-1">
       {PRODUCT_NAVIGATION.map((item) => {
         const isActive = activePage === item.id;
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => onNavigate(item.id)}
             title={item.description}
-            className={`px-4 py-3 text-xs font-medium whitespace-nowrap transition-colors border-b-2 cursor-pointer flex items-center space-x-1.5 ${isActive
-                ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
-              }`}
+            className={`px-3.5 py-2.5 text-xs font-medium whitespace-nowrap shrink-0 transition-all rounded-lg cursor-pointer flex items-center space-x-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+              isActive
+                ? 'bg-indigo-500/15 text-indigo-400 dark:text-indigo-400 light:text-indigo-700 light:bg-indigo-50 font-semibold shadow-sm border border-indigo-500/20'
+                : 'text-slate-400 hover:text-slate-200 dark:text-slate-400 dark:hover:text-slate-100 light:text-slate-600 light:hover:text-slate-900 hover:bg-slate-800/40 dark:hover:bg-slate-800/40 light:hover:bg-slate-100 border border-transparent'
+            }`}
           >
             <span>{item.label}</span>
           </button>
@@ -135,62 +143,70 @@ export const MobileProductNavigation: React.FC<MobileProductNavigationProps> = (
   onNavigate
 }) => {
   return (
-    <div className="lg:hidden">
+    <div className="lg:hidden flex items-center gap-2">
+      <ThemeToggle />
       <button
+        type="button"
         onClick={onToggle}
         aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
-        className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+        className="p-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 rounded-xl text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
       >
-        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        {isOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 bg-slate-900 border-b border-slate-800 px-4 py-4 space-y-4 shadow-xl z-50">
+        <div className="absolute top-full left-0 right-0 bg-slate-900/95 dark:bg-slate-900/95 light:bg-white border-b border-slate-800/90 dark:border-slate-800/90 light:border-slate-200 px-4 py-4 space-y-4 shadow-2xl backdrop-blur-xl z-50">
           <div>
-            <span className="text-[10px] uppercase font-mono-code font-bold tracking-wider text-slate-400 block mb-2">
+            <span className="text-[10px] uppercase font-mono-code font-bold tracking-wider text-slate-400 dark:text-slate-400 light:text-slate-500 block mb-2">
               Product Views
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {PRODUCT_NAVIGATION.map((item) => {
                 const isActive = activePage === item.id;
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => {
                       onNavigate(item.id);
                       onToggle();
                     }}
-                    className={`text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors flex flex-col ${isActive
-                        ? 'bg-indigo-500/10 text-indigo-400 font-semibold'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                      }`}
+                    className={`text-left px-3 py-2 rounded-xl text-xs font-medium transition-colors flex flex-col cursor-pointer ${
+                      isActive
+                        ? 'bg-indigo-500/15 text-indigo-400 dark:text-indigo-400 light:text-indigo-700 light:bg-indigo-50 font-semibold border border-indigo-500/20'
+                        : 'text-slate-300 dark:text-slate-300 light:text-slate-700 hover:bg-slate-800 dark:hover:bg-slate-800 light:hover:bg-slate-100'
+                    }`}
                   >
                     <span>{item.label}</span>
-                    <span className="text-[10px] text-slate-500 font-normal">{item.description}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-500 light:text-slate-400 font-normal">
+                      {item.description}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80">
-            <span className="text-[10px] uppercase font-mono-code font-bold tracking-wider text-slate-400 block mb-2">
+          <div className="pt-2 border-t border-slate-800/80 dark:border-slate-800/80 light:border-slate-200">
+            <span className="text-[10px] uppercase font-mono-code font-bold tracking-wider text-slate-400 dark:text-slate-400 light:text-slate-500 block mb-2">
               Research & Developer Tools
             </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {RESEARCH_NAVIGATION.map((item) => {
                 const isActive = activePage === item.id;
                 return (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => {
                       onNavigate(item.id);
                       onToggle();
                     }}
-                    className={`text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between ${isActive
-                        ? 'bg-indigo-500/10 text-indigo-400 font-semibold'
-                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                      }`}
+                    className={`text-left px-3 py-2 rounded-xl text-xs transition-colors flex items-center justify-between cursor-pointer ${
+                      isActive
+                        ? 'bg-indigo-500/15 text-indigo-400 dark:text-indigo-400 light:text-indigo-700 light:bg-indigo-50 font-semibold'
+                        : 'text-slate-400 dark:text-slate-400 light:text-slate-600 hover:bg-slate-800 dark:hover:bg-slate-800 light:hover:bg-slate-100'
+                    }`}
                   >
                     <span>{item.label}</span>
                   </button>
@@ -241,9 +257,9 @@ export const Header: React.FC<HeaderProps> = ({
   }, [propBirthContext, birthDetails]);
 
   return (
-    <header className="bg-slate-900/90 border-b border-indigo-500/20 sticky top-0 z-40 backdrop-blur-md relative">
+    <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 dark:bg-slate-950/85 light:bg-white/90 border-b border-indigo-500/15 dark:border-indigo-500/15 light:border-slate-200/90 shadow-sm transition-colors duration-200">
       {/* Top Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Brand */}
         <div className="flex items-center justify-between w-full md:w-auto">
           <Brand />
@@ -255,8 +271,8 @@ export const Header: React.FC<HeaderProps> = ({
           />
         </div>
 
-        {/* Current Birth Details Badge & Actions */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        {/* Current Birth Details Badge, Theme Toggle & Actions */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <BirthContextButton
             birthContext={resolvedBirthContext}
             onOpenBirthForm={onOpenBirthForm}
@@ -264,20 +280,27 @@ export const Header: React.FC<HeaderProps> = ({
 
           {onResetPreset && (
             <button
+              type="button"
               onClick={onResetPreset}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 bg-slate-800/80 hover:bg-slate-750 dark:bg-slate-800/80 dark:hover:bg-slate-700 light:bg-slate-100 light:hover:bg-slate-200 border border-slate-700/80 dark:border-slate-700/80 light:border-slate-300 rounded-xl text-slate-400 dark:text-slate-400 light:text-slate-600 hover:text-white dark:hover:text-white light:hover:text-slate-900 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               title="Reset to Vedic Epoch Default"
+              aria-label="Reset to default preset"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           )}
 
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
+
           {onOpenBirthForm && (
             <button
+              type="button"
               onClick={onOpenBirthForm}
-              className="flex items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium text-xs px-3 py-1.5 rounded-lg transition-all shadow-md shadow-indigo-600/20 cursor-pointer"
+              className="flex items-center space-x-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/25 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
               <span>New Chart</span>
             </button>
           )}
@@ -285,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Desktop Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-800/60 dark:border-slate-800/60 light:border-slate-200/80">
         <ProductNavigation
           activePage={resolvedActivePage}
           onNavigate={handleNavigate}

@@ -14,18 +14,18 @@ export const PageHeading: React.FC<PageHeadingProps> = ({
   children
 }) => {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-800/80 mb-6">
+    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-800/80 dark:border-slate-800/80 light:border-slate-200/90 mb-6">
       <div>
         {eyebrow && (
-          <span className="text-xs uppercase font-mono-code font-bold tracking-wider text-indigo-400 block mb-1">
+          <span className="text-xs uppercase font-mono-code font-bold tracking-wider text-indigo-400 dark:text-indigo-400 light:text-indigo-600 block mb-1">
             {eyebrow}
           </span>
         )}
-        <h1 className="text-2xl sm:text-3xl font-bold font-serif-astro text-slate-100">
+        <h1 className="text-2xl sm:text-3xl font-bold font-serif-astro text-slate-100 dark:text-slate-100 light:text-slate-900 tracking-tight">
           {title}
         </h1>
         {description && (
-          <p className="text-sm text-slate-400 mt-1 max-w-3xl">
+          <p className="text-sm text-slate-400 dark:text-slate-400 light:text-slate-600 mt-1 max-w-3xl">
             {description}
           </p>
         )}

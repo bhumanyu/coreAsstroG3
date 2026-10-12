@@ -6,8 +6,9 @@ import { ProductPageRouter } from './ProductPageRouter';
 import { AppFooter } from './AppFooter';
 import { AppState, INITIAL_APP_STATE, BirthDetails } from './AppState';
 import { createAppController } from './AppController';
+import { ThemeProvider } from '../context/ThemeContext';
 
-export const AppShell: React.FC = () => {
+export const AppShellContent: React.FC = () => {
   const [state, setState] = useState<AppState>(INITIAL_APP_STATE);
 
   const controller = useMemo(() => createAppController(setState), []);
@@ -42,7 +43,7 @@ export const AppShell: React.FC = () => {
   }, [state.birthDetails]);
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-transparent text-slate-100 dark:text-slate-100 light:text-slate-900 flex flex-col font-sans transition-colors duration-200">
       <Header
         activePage={state.activePage}
         onNavigate={controller.navigate}
@@ -71,5 +72,13 @@ export const AppShell: React.FC = () => {
         onSave={handleSaveBirthDetails}
       />
     </div>
+  );
+};
+
+export const AppShell: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <AppShellContent />
+    </ThemeProvider>
   );
 };
