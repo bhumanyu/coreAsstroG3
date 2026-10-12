@@ -27,17 +27,21 @@ import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
  * to the legacy CareerExpressionAnalysis shape consumed by C9, C10, and C11.
  *
  * BRIDGE RESPONSIBILITIES:
- * - Preserve mechanism identities (sourceMechanismIds, expressionId as semantic identity)
+ * - Preserve mechanism identities (sourceMechanismIds in statement, expressionId as semantic identity)
  * - Preserve deterministic ordering and immutability (deep-freeze)
  * - Represent empty/insufficient mechanism results as explicit unavailable expression
  * - Never fabricate expressions when resolvedMechanisms is empty
+ * - Ensure C11 evidenceIds resolve against canonical expression evidence (no dangling references)
  *
  * MAPPING STRATEGY:
  * - expressionType → mode (via expressionTypeToManifestationMode mapping)
  * - direction → 'UNAVAILABLE' (conservative: CANDIDATE status does NOT establish positive direction)
  * - strength → 'UNAVAILABLE' (conservative: CANDIDATE status does NOT establish strong expression)
  * - evidence → synthetic evidence from mechanism sources (with planets from participantIds)
- * - supportingEvidenceIds → sourceMechanismIds (semantic identity linkage)
+ * - supportingEvidenceIds → synthetic legacy evidence record IDs (evidenceItem.evidenceId)
+ *   This ensures C11 evidenceIds resolve against canonical expression evidence emitted by mapExpressionEvidence
+ *   which keys evidence by evidence.id = evidenceItem.evidenceId
+ * - mechanism provenance → preserved in statement (sourceMechanismIds)
  * - primaryExpression → first expression by deterministic ordering
  *
  * CONSERVATIVE MAPPING RATIONALE:
@@ -64,7 +68,10 @@ import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
 /**
  * Maps mechanism expression types to legacy manifestation modes.
  * This is a conservative mapping - not all expression types have a direct legacy equivalent.
- * Unmapped types are represented as 'INDEPENDENT_WORK' as a safe fallback.
+ *
+ * Unmapped types throw an explicit error to prevent silent conversion to a different manifestation mode.
+ * This ensures that newly introduced expression types are handled intentionally rather than silently
+ * mapped to an incorrect default.
  */
 function expressionTypeToManifestationMode(
   expressionType: string
@@ -90,7 +97,14 @@ function expressionTypeToManifestationMode(
     'REMOTE_WORK_EXPRESSION': 'INDEPENDENT_WORK'
   };
 
-  return mapping[expressionType] ?? 'INDEPENDENT_WORK';
+  const mapped = mapping[expressionType];
+  if (mapped === undefined) {
+    throw new Error(
+      `Unknown expression type "${expressionType}" cannot be mapped to a legacy manifestation mode. ` +
+      `Add the mapping to expressionTypeToManifestationMode or update the CareerExpressionType union.`
+    );
+  }
+  return mapped;
 }
 
 /**
@@ -109,6 +123,16 @@ function extractPlanetsFromEvidence(
 
 /**
  * Creates a legacy CareerExpressionEvidence from mechanism expression evidence.
+ *
+ * Note: The mechanism evidence contract (CareerMechanismExpressionEvidence) supplies sourceMechanismId,
+ * sourceEvidenceIds, ruleId, and an ESTABLISHING | REFINING role. It does NOT establish:
+ * - planetary role (no field in contract)
+ * - weight (no field in contract)
+ * - conditional semantics (no field in contract)
+ *
+ * These fields are omitted from the legacy evidence to avoid fabricating defaults without
+ * authoritative source. The legacy shape requires these fields, so they are set to explicit
+ * placeholder values with documented semantics indicating unavailability.
  */
 function createLegacyEvidence(
   candidate: CareerExpressionCandidate,
@@ -121,9 +145,9 @@ function createLegacyEvidence(
   return Object.freeze({
     id: evidenceItem.evidenceId,
     mode: expressionTypeToManifestationMode(candidate.expressionType),
-    role: 'PLANETARY', // Mechanism evidence is planetary in nature
-    statement: `${candidate.expressionType} expression derived from mechanism ${evidenceItem.sourceMechanismId}.`,
-    weight: 2, // Default weight for mechanism-derived evidence
+    role: 'PLANETARY', // Placeholder: mechanism evidence does not establish role, defaulted to planetary for legacy shape compatibility
+    statement: `${candidate.expressionType} expression derived from mechanism ${evidenceItem.sourceMechanismId}. Mechanism role: ${evidenceItem.role}. Rule: ${evidenceItem.ruleId}.`,
+    weight: 2, // Placeholder: mechanism evidence does not establish weight, defaulted to 2 for legacy shape compatibility
     planets,
     houses: Object.freeze([]) // Houses not available in mechanism evidence
   });
@@ -143,8 +167,12 @@ function createLegacyExpression(
     createLegacyEvidence(candidate, evidenceItem, index, mechanismPlanetsMap)
   );
 
-  // Use sourceMechanismIds as supportingEvidenceIds (semantic identity linkage)
-  const supportingEvidenceIds = Object.freeze([...candidate.sourceMechanismIds]);
+  // Use synthetic legacy evidence record IDs (evidenceItem.evidenceId) as supportingEvidenceIds
+  // This ensures C11 evidenceIds resolve against the canonical expression evidence emitted by mapExpressionEvidence
+  // which keys evidence by evidence.id = evidenceItem.evidenceId
+  const supportingEvidenceIds = Object.freeze(
+    candidate.evidence.map(e => e.evidenceId)
+  );
 
   const statement = [
     `${mode} expression derived from mechanism-based resolution.`,
@@ -152,7 +180,8 @@ function createLegacyExpression(
     `Source mechanisms: ${candidate.sourceMechanismIds.join(', ')}.`,
     `Mechanism types: ${candidate.mechanismTypes.join(', ')}.`,
     `Status: ${candidate.status}.`,
-    `Pathway: ${candidate.pathway}.`
+    `Pathway: ${candidate.pathway}.`,
+    `Mechanism provenance: ${candidate.sourceMechanismIds.join(', ')}.`
   ].join(' ');
 
   return Object.freeze({

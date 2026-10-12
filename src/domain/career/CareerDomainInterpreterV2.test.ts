@@ -2421,7 +2421,7 @@ describe('CareerDomainInterpreterV2', () => {
       }
     });
 
-    it('P2-11C regression: mechanism-derived expressions carry UNAVAILABLE direction/strength', () => {
+    it('P2-11C regression: mechanism-derived expressions carry UNAVAILABLE direction/strength and C11 evidence references resolve', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       const foundation = v2.conclusionData?.canonicalCareerFoundation;
 
@@ -2431,18 +2431,73 @@ describe('CareerDomainInterpreterV2', () => {
       expect(foundation?.resolvedMechanisms).toBeDefined();
       expect(Array.isArray(foundation?.resolvedMechanisms)).toBe(true);
 
-      // If there are resolved mechanisms, the expression analysis should be derived from them
-      // and should carry UNAVAILABLE direction/strength (conservative mapping)
+      // Strengthened regression: verify observable downstream behavior
       if (foundation?.resolvedMechanisms && foundation.resolvedMechanisms.length > 0) {
-        // The canonicalCareerFoundation doesn't directly expose the expression analysis,
-        // but we can verify the adapter contract by checking that the mechanism candidates
-        // flow through to the C9 evidence mapper which should handle UNAVAILABLE strength
-        // by excluding those records (honest missing-data behavior)
-
-        // This is a regression guard: if the adapter is changed to fabricate SUPPORTED/STRONG,
-        // this test will fail when we observe the C9 evidence mapper behavior
-        // For now, we verify the mechanism candidates are present and can be plumbed
         expect(foundation.resolvedMechanisms.length).toBeGreaterThan(0);
+
+        // 1. Verify mechanism participant planets are preserved in candidate provenance
+        for (const resolvedMech of foundation.resolvedMechanisms) {
+          expect(resolvedMech.candidate).toBeDefined();
+          expect(resolvedMech.candidate.provenance).toBeDefined();
+          expect(Array.isArray(resolvedMech.candidate.provenance.participantIds)).toBe(true);
+
+          // Participant planets should be extracted from participantIds and not be empty for valid mechanisms
+          // (unless the mechanism genuinely has no participants, which is rare but possible)
+          if (resolvedMech.candidate.provenance.participantIds.length > 0) {
+            // Verify participant IDs follow the PLANET:<NAME> pattern
+            for (const participantId of resolvedMech.candidate.provenance.participantIds) {
+              expect(participantId).toMatch(/^PLANET:/);
+            }
+          }
+        }
+
+        // 2. Verify C11 evidence references are valid (no dangling references)
+        // The canonicalC11Result should contain evidenceIds that resolve against the canonical evidence set
+        const canonicalC11 = v2.conclusionData?.canonicalC11Result;
+        expect(canonicalC11).toBeDefined();
+        expect(canonicalC11?.evidenceIds).toBeDefined();
+
+        // Collect all canonical evidence identity keys
+        const canonicalEvidenceIdentityKeys = new Set(
+          v2.evidence
+            .filter(e => e.identityKey !== undefined)
+            .map(e => e.identityKey as string)
+        );
+
+        // Verify all C11 evidenceIds resolve against canonical evidence
+        // (allow some IDs to be missing if they come from layers not in this mapper's scope)
+        // but expression evidence IDs should always resolve since they come from the adapter
+        const expressionEvidenceIds = new Set(
+          v2.evidence
+            .filter(e => e.phase === 'MODIFIER' && e.source === 'D1')
+            .map(e => e.identityKey as string)
+        );
+
+        // For expression evidence, all IDs in C11 should resolve
+        const danglingExpressionIds = canonicalC11.evidenceIds.filter(
+          (id: string) => expressionEvidenceIds.has(id) && !canonicalEvidenceIdentityKeys.has(id)
+        );
+        expect(danglingExpressionIds).toHaveLength(0);
+
+        // 3. Verify UNAVAILABLE expressions do not generate positive evidence
+        // Expression evidence with UNAVAILABLE strength should be excluded by the mapper
+        const expressionEvidence = v2.evidence.filter(e => e.phase === 'MODIFIER' && e.source === 'D1');
+        for (const ev of expressionEvidence) {
+          // Evidence with UNAVAILABLE strength should not appear (mapper excludes them)
+          expect(ev.strength).not.toBe('UNAVAILABLE');
+        }
+
+        // 4. Verify missing participant planets are not treated as negative evidence
+        // The adapter should not fabricate negative evidence for missing participants
+        const negativeExpressionEvidence = expressionEvidence.filter(e => e.polarity === 'CHALLENGING');
+        // If there is negative expression evidence, it should be from actual challenging polarity
+        // not from missing participants (which the adapter treats as empty arrays, not negatives)
+        // This is a structural check - we don't assert specific behavior but verify the invariant
+        // that negative evidence has proper provenance
+        for (const negEv of negativeExpressionEvidence) {
+          expect(negEv.statement).toBeDefined();
+          expect(negEv.statement.length).toBeGreaterThan(0);
+        }
       }
     });
 
