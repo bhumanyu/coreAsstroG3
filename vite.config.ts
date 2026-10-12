@@ -12,15 +12,31 @@ export default defineConfig({
     allowedHosts: true,
   },
   test: {
-    environment: 'node',
     globals: true,
     setupFiles: './src/test/setupTests.ts',
     testTimeout: 20000,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
-    environmentMatchGlobs: [
-      ['**/*.test.tsx', 'jsdom'],
-      ['**/*.spec.tsx', 'jsdom'],
+    projects: [
+      {
+        name: 'node',
+        test: {
+          environment: 'node',
+          include: ['src/**/*.{test,spec}.ts'],
+          exclude: ['src/**/*.{test,spec}.tsx'],
+          globals: true,
+          setupFiles: './src/test/setupTests.ts',
+        },
+      },
+      {
+        name: 'jsdom',
+        test: {
+          environment: 'jsdom',
+          include: ['src/**/*.{test,spec}.tsx'],
+          globals: true,
+          setupFiles: './src/test/setupTests.ts',
+        },
+      },
     ],
   },
 });

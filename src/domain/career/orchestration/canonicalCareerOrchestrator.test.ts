@@ -213,7 +213,7 @@ describe('CanonicalCareerOrchestrator', () => {
       } as any,
       mechanismRefiner: {
         refine: vi.fn().mockReturnValue({
-          status: 'UNCHANGED',
+          status: 'UNCHANGED' as const,
           originalCandidateId: 'CANDIDATE_1',
           mechanisms: [],
           evidence: ['EVIDENCE_STUB'],
@@ -2124,17 +2124,24 @@ describe('CanonicalCareerOrchestrator', () => {
           assignParticipantRoles: vi.fn(() => ({ assignments: [] }))
         },
         mechanismResolver: {
-          resolveAll: vi.fn(() => []),
-          resolve: vi.fn(() => [])
+          resolveAll: vi.fn((): any => createStubCandidateSet('PATTERN_1', [])),
+          resolve: vi.fn((): any => createStubCandidateSet('PATTERN_1', []))
         },
         mechanismRefiner: {
-          refine: vi.fn(() => ({
-            status: 'UNCHANGED',
+          refine: vi.fn((): any => ({
+            status: 'UNCHANGED' as const,
             mechanisms: [],
             evidence: [],
             provenance: {
+              originalProvenance: {
+                patternIds: [],
+                relationshipIds: [],
+                participantIds: [],
+                evidenceIds: [],
+                sourceStages: []
+              },
               newEvidenceIds: [],
-              consumedContextIds: []
+              sourceStages: []
             },
             originalCandidateId: 'CANDIDATE_1',
             explanation: 'Unchanged'
@@ -2172,21 +2179,28 @@ describe('CanonicalCareerOrchestrator', () => {
           assignParticipantRoles: vi.fn(() => ({ assignments: [] }))
         },
         mechanismResolver: {
-          resolveAll: vi.fn(() => [
+          resolveAll: vi.fn((): any => [
             createStubCandidateSet('PATTERN_1', [
               createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
             ])
           ]),
-          resolve: vi.fn(() => [])
+          resolve: vi.fn((): any => [])
         },
         mechanismRefiner: {
-          refine: vi.fn(() => ({
-            status: 'UNCHANGED',
+          refine: vi.fn((): any => ({
+            status: 'UNCHANGED' as const,
             mechanisms: [],
             evidence: [],
             provenance: {
+              originalProvenance: {
+                patternIds: [],
+                relationshipIds: [],
+                participantIds: [],
+                evidenceIds: [],
+                sourceStages: []
+              },
               newEvidenceIds: [],
-              consumedContextIds: []
+              sourceStages: []
             },
             originalCandidateId: 'CANDIDATE_1',
             explanation: 'Unchanged'
@@ -2227,17 +2241,24 @@ describe('CanonicalCareerOrchestrator', () => {
           assignParticipantRoles: vi.fn(() => ({ assignments: [] }))
         },
         mechanismResolver: {
-          resolveAll: vi.fn(() => []),
-          resolve: vi.fn(() => [])
+          resolveAll: vi.fn((): any => createStubCandidateSet('PATTERN_1', [])),
+          resolve: vi.fn((): any => createStubCandidateSet('PATTERN_1', []))
         },
         mechanismRefiner: {
-          refine: vi.fn(() => ({
-            status: 'UNCHANGED',
+          refine: vi.fn((): any => ({
+            status: 'UNCHANGED' as const,
             mechanisms: [],
             evidence: [],
             provenance: {
+              originalProvenance: {
+                patternIds: [],
+                relationshipIds: [],
+                participantIds: [],
+                evidenceIds: [],
+                sourceStages: []
+              },
               newEvidenceIds: [],
-              consumedContextIds: []
+              sourceStages: []
             },
             originalCandidateId: 'CANDIDATE_1',
             explanation: 'Unchanged'
