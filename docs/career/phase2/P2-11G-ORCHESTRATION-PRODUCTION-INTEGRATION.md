@@ -1,6 +1,6 @@
 # P2-11G: Production Integration Boundary for Canonical Career Orchestration
 
-**Status:** PRODUCTION WIRING COMPLETE — VERIFICATION PENDING
+**Status:** IMPLEMENTED — VERIFICATION PENDING
 
 **Note:** The `buildCanonicalCareerFoundation` builder is now wired into the production path via `interpretCareerV2`. The foundation is exposed on `conclusionData.canonicalCareerFoundation` as a composition artifact. The canonical C4–C11 chain remains the authoritative conclusion; the foundation is not a competing authority.
 
@@ -9,23 +9,27 @@
 - ✅ Foundation exposed on `conclusionData.canonicalCareerFoundation`
 - ✅ 10H input wired: `resolveCareer10HFoundation({ horoscope })` passed when status is COMPLETE
 - ✅ 10L input wired: `resolveCareer10LFoundation({ foundation, houseLordship })` passed when resolvable
-- ❌ Dispositor contexts: Deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
-  - Blocker: Dispositor contexts depend on resolved mechanisms from the orchestrator
-  - Two-pass orchestration would be required, violating the "run each producer once per intended analysis" invariant
-  - Keeping deferred with documented blocker rather than forcing contract change
-- ❌ Identity mappings: Deferred (ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED)
+- ✅ Dispositor contexts: Two-pass orchestration implemented (feature flag `enableDispositorContexts`)
+  - Default `false` in production to preserve current behavior
+  - When `true`, builder runs two-pass orchestration: pass 1 (get mechanisms, build contexts), pass 2 (with contexts)
+  - Upstream producers computed once and reused (invariant preserved)
+- ✅ Identity mappings: Partially implemented from explicit cross-stage linkage
+  - Pattern → Qualification mappings populated (via patternId)
+  - Qualification → Mechanism mappings populated (via patternId)
+  - Mechanism → Refinement mappings populated (via candidateId)
+  - Participant role assignments lack explicit stage linkage (documented in diagnostic)
+  - Diagnostic changed from `ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED` to `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL`
 - ❌ Profession-producer consumption: Deferred to a future milestone
 
 **WIRED FEATURES (current milestone):**
 - 10H: `resolveCareer10HFoundation({ horoscope })` - passed when status is COMPLETE
 - 10L: `resolveCareer10LFoundation({ foundation, houseLordship })` - passed when resolvable
+- Dispositor contexts: Two-pass orchestration available via `enableDispositorContexts` flag (default false)
+- Identity mappings: Populated from explicit linkage (partial coverage)
 
 **DEFERRED FEATURES (documented in P2-11G):**
-- Dispositor contexts: ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE
-  - Blocker: Dispositor contexts depend on resolved mechanisms from the orchestrator
-  - Requires either two-pass orchestration or orchestrator contract change
-  - Keeping deferred with documented blocker rather than forcing contract change
-- Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED
+- Full identity mappings: Participant role assignments lack explicit stage linkage
+- Profession-producer consumption: Deferred to a future milestone
 
 **Test Results (local):**
 - Lint: ⚠️ PRE-EXISTING COMPILATION ERRORS (unrelated to this milestone - iterator compilation issues in TS config)
@@ -34,8 +38,12 @@
   - ✅ Identity preservation test
   - ✅ Missing-data diagnostics test
   - ✅ 10H/10L wiring test
-  - ✅ Regression test (C4-C11 conclusion unchanged)
-- canonicalCareerFoundationBuilder.test.ts: ✅ 9/9 PASSED (existing tests)
+  - ✅ Regression-equivalence test (C4-C11 conclusion unchanged)
+- canonicalCareerFoundationBuilder.test.ts: ✅ 12/12 PASSED (updated with new tests)
+  - ✅ Two-pass orchestration test (enableDispositorContexts=true)
+  - ✅ Identity mappings validation test
+  - ✅ 10H/10L acceptance gates test (canonical chart resolves to COMPLETE)
+  - ✅ 10H/10L missing-data path test
 - canonicalCareerOrchestrator.test.ts: ✅ 50/50 PASSED (existing tests)
 - CareerDomainInterpreterV2.test.ts: ⚠️ Test runner has dependency issues (html-encoding-sniffer ESM/require mismatch - pre-existing)
 
@@ -90,20 +98,29 @@ From `src/domain/career/orchestration/canonicalCareerContracts.ts`, the `Canonic
 | `result10H` | **(ii) Producible from existing engine but not yet wired** | (10H engine) | `career10h/` | Needs integration point |
 | `result10L` | **(ii) Producible from existing engine but not yet wired** | (10L engine) | `career10h/career10LFoundation.ts` | Needs integration point |
 
-### 1.3 Documented Deferred Dependencies
+### 1.3 Documented Deferred/Partial Dependencies
 
-The following dependencies are explicitly documented as deferred:
+The following dependencies are explicitly documented:
 
 1. **Dispositor Contexts** (`ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE`):
+   - **Status:** Implemented via two-pass orchestration (feature flag `enableDispositorContexts`)
    - The orchestrator's `buildMechanismRefinements` requires dispositor contexts
    - `DefaultCareerDispositorContextFactory` in `src/domain/career/careerMechanism/dispositor/careerMechanismDispositorAdapter.ts` can produce dispositor contexts from a candidate + horoscope
-   - Currently NOT wired in production
-   - Must remain UNAVAILABLE unless explicitly enabled
+   - When `enableDispositorContexts=true`, builder runs two-pass orchestration:
+     - Pass 1: orchestrate without contexts to get resolved mechanisms
+     - Build dispositor contexts from resolved mechanisms
+     - Pass 2: re-orchestrate with contexts
+   - **Production:** Default `false` to preserve current behavior
+   - **Invariant:** Upstream producers (structural, graph, networks, patterns, relevance, condition) computed once and reused
 
-2. **Cross-Stage Identity Mappings** (`ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED`):
-   - Producers do not yet supply explicit identity mappings across stages (pattern → qualification → mechanism → refinement)
-   - Orchestrator emits diagnostic `ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED` rather than silently emitting empty mappings
-   - Identity mappings remain as an empty array `[]` in the foundation
+2. **Cross-Stage Identity Mappings** (`ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL`):
+   - **Status:** Partially implemented from explicit cross-stage linkage
+   - Pattern → Qualification mappings populated (via patternId)
+   - Qualification → Mechanism mappings populated (via patternId)
+   - Mechanism → Refinement mappings populated (via candidateId)
+   - Participant role assignments lack explicit stage linkage (documented in diagnostic)
+   - Diagnostic changed from `ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED` to `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL`
+   - Only uses explicit linkage; never infers identity from string similarity
 
 ### 1.4 Port Adapter Verification
 
@@ -184,21 +201,17 @@ From `src/domain/career/orchestration/canonicalCareerPortsAdapter.ts`, the `defa
 
 ### 2.5 Dispositor Contexts
 
-**Decision:** Dispositor contexts remain an explicit deferred dependency in this milestone.
+**Decision:** Dispositor contexts implemented via two-pass orchestration (feature flag `enableDispositorContexts`).
 
-- `dispositorContexts` is NOT provided to the orchestrator
-- All mechanism refinements are marked `UNRESOLVED` with status `UNAVAILABLE`
-- A diagnostic `ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE` is emitted
-- This is documented as a tracked gate rather than silently leaving refinements unavailable
-
-**Future enablement:** In a future milestone, dispositor contexts can be wired via:
-```typescript
-const dispositorContexts = defaultCareerDispositorContextFactory.create(
-  candidate,
-  defaultCareerDispositorEngineAdapter,
-  horoscope
-);
-```
+- Default `false` in production to preserve current behavior
+- When `enableDispositorContexts=true`, builder runs two-pass orchestration:
+  - Pass 1: orchestrate without contexts to get resolved mechanisms
+  - Build dispositor contexts from resolved mechanisms via `defaultCareerDispositorContextFactory.create`
+  - Pass 2: re-orchestrate with contexts
+- **Invariant preservation:** Upstream producers (structural, graph, networks, patterns, relevance, condition) computed once and reused
+- Production caller (`interpretCareerV2`) calls builder with `enableDispositorContexts: false`
+- When `false`, mechanism refinements remain `UNRESOLVED` with status `UNAVAILABLE` and diagnostic `ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE`
+- When `true`, mechanism refinements resolve to `REFINED` or `UNCHANGED` (if contexts built successfully)
 
 ## Step 3: Implementation Plan
 

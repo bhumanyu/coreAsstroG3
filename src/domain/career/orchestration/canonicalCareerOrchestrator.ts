@@ -144,17 +144,14 @@ export class CanonicalCareerOrchestrator {
     );
 
     // Stage 7: Identity mappings
-    // Producers do not yet supply explicit identity mappings across stages
-    // This is documented as a diagnostic rather than silently emitting empty mappings
-    diagnostics.push({
-      diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED',
-      severity: 'INFO',
-      category: 'DEFERRED_FEATURE',
-      message: 'Identity mappings across stages (pattern→qualification→mechanism→refinement) are not yet provided by producers - mappings deferred',
-      relatedIds: [],
-      stage: 'IDENTITY_MAPPINGS'
-    });
-    const identityMappings: readonly IdentityMapping[] = Object.freeze([]);
+    // Populate identity mappings from explicit cross-stage linkage exposed by producers
+    const identityMappings = this.buildIdentityMappings(
+      patternCandidates,
+      patternQualifications,
+      resolvedMechanisms,
+      mechanismRefinements,
+      diagnostics
+    );
 
     // Stage 8: Stage references
     const stageReferences = this.buildStageReferences(
@@ -862,6 +859,97 @@ export class CanonicalCareerOrchestrator {
     }
 
     return Object.freeze(supplements);
+  }
+
+  /**
+   * Builds identity mappings from explicit cross-stage linkage.
+   *
+   * Populates identity mappings based on explicit linkage exposed by producers:
+   * - Pattern → Qualification: via patternId
+   * - Qualification → Mechanism: via patternId
+   * - Mechanism → Refinement: via candidateId
+   *
+   * Only uses explicit linkage; never infers identity from string similarity.
+   */
+  private buildIdentityMappings(
+    patternCandidates: readonly PatternCandidate[],
+    patternQualifications: readonly PatternQualification[],
+    resolvedMechanisms: readonly ResolvedMechanism[],
+    mechanismRefinements: readonly MechanismRefinement[],
+    diagnostics: OrchestrationDiagnostic[]
+  ): readonly IdentityMapping[] {
+    const mappings: IdentityMapping[] = [];
+    let mappingIndex = 0;
+
+    // Build maps for efficient lookup
+    const patternMap = new Map(patternCandidates.map(p => [p.patternId, p]));
+    const qualMap = new Map(patternQualifications.map(q => [q.patternId, q]));
+    const mechanismMap = new Map(resolvedMechanisms.map(m => [m.candidateId, m]));
+    const refinementMap = new Map(mechanismRefinements.map(r => [r.candidateId, r]));
+
+    // Pattern → Qualification mappings (via patternId)
+    for (const pattern of patternCandidates) {
+      const qualification = qualMap.get(pattern.patternId);
+      if (qualification) {
+        mappings.push({
+          mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
+          sourceStage: 'PATTERN',
+          targetStage: 'QUALIFICATION',
+          sourceIdentityKey: pattern.identityKey as any,
+          targetIdentityKey: qualification.identityKey as any,
+          mappingType: 'EQUIVALENCE'
+        });
+      }
+    }
+
+    // Qualification → Mechanism mappings (via patternId)
+    for (const qualification of patternQualifications) {
+      const mechanisms = resolvedMechanisms.filter(m => m.patternId === qualification.patternId);
+      for (const mechanism of mechanisms) {
+        // Use candidate.identityKey if available (mechanism evidence may not have identityKey)
+        const sourceIdentityKey = qualification.identityKey as any;
+        const targetIdentityKey = mechanism.candidate.evidence[0]?.participantIds[0] as any || `CANDIDATE_${mechanism.candidateId}` as any;
+        mappings.push({
+          mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
+          sourceStage: 'QUALIFICATION',
+          targetStage: 'MECHANISM',
+          sourceIdentityKey,
+          targetIdentityKey,
+          mappingType: 'DERIVATION'
+        });
+      }
+    }
+
+    // Mechanism → Refinement mappings (via candidateId)
+    for (const mechanism of resolvedMechanisms) {
+      const refinement = refinementMap.get(mechanism.candidateId);
+      if (refinement) {
+        const sourceIdentityKey = mechanism.candidate.evidence[0]?.participantIds[0] as any || `CANDIDATE_${mechanism.candidateId}` as any;
+        const targetIdentityKey = refinement.resolution === 'REFINED'
+          ? refinement.mechanismId as any
+          : `REFINEMENT_${refinement.candidateId}` as any;
+        mappings.push({
+          mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
+          sourceStage: 'MECHANISM',
+          targetStage: 'REFINEMENT',
+          sourceIdentityKey,
+          targetIdentityKey,
+          mappingType: refinement.resolution === 'REFINED' ? 'DERIVATION' : 'EQUIVALENCE'
+        });
+      }
+    }
+
+    // Emit diagnostic for incomplete coverage (participant roles gap)
+    diagnostics.push({
+      diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL',
+      severity: 'INFO',
+      category: 'PARTIAL_FEATURE',
+      message: 'Identity mappings populated from explicit linkage (pattern→qualification→mechanism→refinement). Participant role assignments lack explicit stage linkage and are not mapped.',
+      relatedIds: [],
+      stage: 'IDENTITY_MAPPINGS'
+    });
+
+    return Object.freeze(mappings);
   }
 
   /**

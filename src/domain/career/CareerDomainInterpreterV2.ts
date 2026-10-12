@@ -494,10 +494,15 @@ export function interpretCareerV2(
    *
    * The builder runs the orchestrator upstream chain (structural → graph → networks →
    * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
-   * Dispositor contexts remain deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
-   * due to the single-pass invariant constraint.
+   *
+   * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
+   * This deferral is documented in P2-11G; the two-pass orchestration feature is available
+   * but not enabled in interpretCareerV2 to preserve the current production behavior.
    */
-  const canonicalCareerFoundation = buildCanonicalCareerFoundation({ horoscope });
+  const canonicalCareerFoundation = buildCanonicalCareerFoundation({
+    horoscope,
+    enableDispositorContexts: false // Disabled in production per P2-11G
+  });
 
   const conclusionData = buildCareerConclusionData(
     natalStrength,

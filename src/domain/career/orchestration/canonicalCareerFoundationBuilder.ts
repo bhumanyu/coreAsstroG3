@@ -16,6 +16,10 @@ import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegr
 import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
 import { resolveCareer10HFoundation } from '../career10h/defaultCareer10HFoundation';
 import { resolveCareer10LFoundation } from '../career10h/defaultCareer10LFoundation';
+import {
+  defaultCareerDispositorContextFactory,
+  defaultCareerDispositorEngineAdapter
+} from '../careerMechanism/dispositor/careerMechanismDispositorAdapter';
 
 /**
  * P2-11G Production Integration Boundary
@@ -37,13 +41,10 @@ import { resolveCareer10LFoundation } from '../career10h/defaultCareer10LFoundat
  * WIRED FEATURES (current milestone):
  * - 10H: resolveCareer10HFoundation({ horoscope }) - passed when status is COMPLETE
  * - 10L: resolveCareer10LFoundation({ foundation, houseLordship }) - passed when resolvable
+ * - Dispositor contexts: two-pass orchestration when enableDispositorContexts=true
  *
  * DEFERRED FEATURES (documented in P2-11G):
- * - Dispositor contexts: ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE
- *   - Blocker: Dispositor contexts depend on resolved mechanisms from the orchestrator,
- *     requiring either a two-pass orchestration or an orchestrator contract change.
- *     Keeping deferred with documented blocker rather than forcing contract change.
- * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED
+ * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED (partial linkage exists)
  *
  * BOUNDARY ENFORCEMENT: This module must NOT:
  * - Implement any astrology calculations or interpretations
@@ -62,9 +63,16 @@ export interface CanonicalCareerFoundationBuilderInput {
   /**
    * Feature flag for enabling dispositor contexts.
    * Default false - dispositor contexts remain deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE).
-   * Future enablement would require either:
-   * - Two-pass orchestration (first pass to get mechanisms, build contexts, second pass with contexts)
-   * - Orchestrator contract change to accept contexts after mechanism resolution
+   *
+   * When true, the builder runs a two-pass orchestration:
+   * - Pass 1: orchestrate with dispositorContexts: undefined to obtain resolvedMechanisms
+   * - Build CareerDispositorContext[] for each resolved candidate via
+   *   defaultCareerDispositorContextFactory.create(candidate, defaultCareerDispositorEngineAdapter, horoscope)
+   * - Pass 2: orchestrate again with the assembled dispositorContexts
+   *
+   * CRITICAL invariant preservation: only the orchestrator composition re-runs between passes.
+   * The upstream astrology producers (structural, graph, networks, patterns, relevance, condition)
+   * are computed once and reused for both passes, preserving the "run each producer once per intended analysis" invariant.
    */
   readonly enableDispositorContexts?: boolean;
 }
@@ -83,15 +91,23 @@ export interface CanonicalCareerFoundationBuilderInput {
  *
  * Then assembles the orchestrator input and invokes the orchestrator.
  *
+ * When enableDispositorContexts is true, runs a two-pass orchestration:
+ * - Pass 1: orchestrate without dispositor contexts to get resolved mechanisms
+ * - Build dispositor contexts from resolved mechanisms
+ * - Pass 2: re-orchestrate with dispositor contexts
+ *
+ * CRITICAL: The upstream producers (structural, graph, networks, patterns, relevance, condition)
+ * are computed once and reused for both passes, preserving the "run each producer once per intended analysis" invariant.
+ *
  * @param input - The input containing the horoscope and optional feature flags
  * @returns The canonical career foundation
  */
 export function buildCanonicalCareerFoundation(
   input: CanonicalCareerFoundationBuilderInput
 ): CanonicalCareerFoundation {
-  const { horoscope } = input;
+  const { horoscope, enableDispositorContexts = false } = input;
 
-  // Step 1: Run canonical upstream chain exactly once
+  // Step 1: Run canonical upstream chain exactly once (shared between passes if two-pass)
   const structural = buildCareerStructuralReasoning({ horoscope });
   const facts = buildCareerGraphFactsFromStructural(structural);
   const graph = buildCareerAstroGraph({ facts });
@@ -118,26 +134,61 @@ export function buildCanonicalCareerFoundation(
     result10LOrchestratorInput = undefined;
   }
 
-  // Step 4: Assemble orchestrator input
+  // Step 4: Two-pass orchestration if dispositor contexts enabled
+  if (enableDispositorContexts) {
+    // Pass 1: Orchestrate without dispositor contexts to get resolved mechanisms
+    const orchestrator = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
+    const pass1Input: CanonicalCareerOrchestrationInput = {
+      patterns: patterns.patterns,
+      relevance,
+      condition,
+      networks: networks.networks,
+      dispositorContexts: undefined,
+      result10H: result10HOrchestratorInput,
+      result10L: result10LOrchestratorInput
+    };
+    const pass1Foundation = orchestrator.orchestrate(pass1Input);
+
+    // Build dispositor contexts from resolved mechanisms
+    const dispositorContexts: import('../careerMechanism/dispositor/careerMechanismDispositorTypes').CareerDispositorContext[] = [];
+    for (const resolvedMechanism of pass1Foundation.resolvedMechanisms) {
+      const contexts = defaultCareerDispositorContextFactory.create(
+        resolvedMechanism.candidate,
+        defaultCareerDispositorEngineAdapter,
+        horoscope
+      );
+      dispositorContexts.push(...contexts);
+    }
+
+    // Pass 2: Re-orchestrate with dispositor contexts
+    const pass2Input: CanonicalCareerOrchestrationInput = {
+      patterns: patterns.patterns,
+      relevance,
+      condition,
+      networks: networks.networks,
+      dispositorContexts: Object.freeze(dispositorContexts),
+      result10H: result10HOrchestratorInput,
+      result10L: result10LOrchestratorInput
+    };
+    const pass2Foundation = orchestrator.orchestrate(pass2Input);
+
+    return pass2Foundation;
+  }
+
+  // Single-pass orchestration (default behavior)
   const orchestrationInput: CanonicalCareerOrchestrationInput = {
     patterns: patterns.patterns,
     relevance,
     condition,
     networks: networks.networks,
-    // Dispositor contexts: deferred in this milestone (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
-    // Blocker: Dispositor contexts depend on resolved mechanisms from the orchestrator.
-    // Two-pass orchestration would be required:
-    //   Pass 1: Orchestrate without contexts to get mechanisms
-    //   Pass 2: Build contexts from mechanisms, re-orchestrate with contexts
-    // This violates the "run each producer once per intended analysis" invariant.
-    // Keeping deferred with documented blocker rather than forcing contract change.
+    // Dispositor contexts: deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
     dispositorContexts: undefined,
-    // 10H/10L: wired in this milestone (passed when COMPLETE status)
+    // 10H/10L: wired (passed when COMPLETE status)
     result10H: result10HOrchestratorInput,
     result10L: result10LOrchestratorInput
   };
 
-  // Step 5: Invoke orchestrator
+  // Invoke orchestrator
   const orchestrator = new CanonicalCareerOrchestrator(defaultCareerOrchestrationPorts);
   const foundation = orchestrator.orchestrate(orchestrationInput);
 
