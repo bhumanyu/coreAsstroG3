@@ -937,7 +937,7 @@ export class CanonicalCareerOrchestrator {
       diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL',
       severity: 'INFO',
       category: 'PARTIAL_FEATURE',
-      message: 'Identity mappings populated from explicit linkage (pattern→qualification fully mapped via identityKey). Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings (structural references via patternId/candidateId). Participant role assignments lack explicit stage linkage and are not mapped.',
+      message: 'Identity mappings populated from explicit linkage (pattern→qualification fully mapped via identityKey). Qualification→mechanism and mechanism→refinement semantic identity remains UNRESOLVED—only structural lineage (derivation via patternId/candidateId) is recorded in relationshipMappings. Participant role assignments lack explicit stage linkage and are not mapped.',
       relatedIds: [],
       stage: 'IDENTITY_MAPPINGS'
     });

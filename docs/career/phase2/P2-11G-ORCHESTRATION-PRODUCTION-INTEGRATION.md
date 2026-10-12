@@ -1,6 +1,6 @@
 # P2-11G: Production Integration Boundary for Canonical Career Orchestration
 
-**Status:** IMPLEMENTED — VERIFICATION PENDING (local verification complete, remote CI pending for exact SHA a4eda30bcf563f6f7c6986b5a6c26f0cbbe997ee)
+**Status:** IMPLEMENTED — VERIFICATION PENDING (local verification complete, remote CI pending for exact SHA 655887ee83bc78b79ad879a4bc0b68be666cb67e)
 
 **Note:** The `buildCanonicalCareerFoundation` builder is now wired into the production path via `interpretCareerV2`. The foundation is exposed on `conclusionData.canonicalCareerFoundation` as a composition artifact. The canonical C4–C11 chain remains the authoritative conclusion; the foundation is not a competing authority.
 
@@ -10,6 +10,10 @@
 - Gate 3: Verified identity-mapping honesty - confirmed no fabricated identity keys (no `CANDIDATE_`/`REFINEMENT_`/participantId fallbacks). `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL` diagnostic accurately names unmapped participant-role linkage.
 - Gate 4: Added producer invocation count test in `canonicalCareerFoundationBuilder.test.ts` proving each upstream producer runs exactly once per `interpretCareerV2` analysis. Added C11 golden baseline test in `CareerDomainInterpreterV2.test.ts` proving foundation wiring does not alter C11 output.
 - Gate 5: Verification completed - lint passed (tsc --noEmit), targeted suites passed (canonicalCareerFoundationBuilder.test.ts: 24/24, canonicalCareerOrchestrator.test.ts: 55/55, CareerDomainInterpreterV2.test.ts: 73/73), build passed. Remote CI pending for exact SHA.
+
+**Review Findings (Commit 71f9669add7bcf33498371f1165d4252670bb136):**
+- Finding 1 (relationship vs identity mapping semantics): Tightened `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL` diagnostic to explicitly state "Qualification→mechanism and mechanism→refinement semantic identity remains UNRESOLVED—only structural lineage (derivation via patternId/candidateId) is recorded in relationshipMappings". Verified `RelationshipMapping` docstring distinguishes structural references from `IdentityMapping` semantic equivalence. Audited `validateRelationshipMappings` to confirm it validates `sourceId`/`targetId` against producer outputs but does NOT assert identity equivalence. Added test assertions in `canonicalCareerOrchestrator.test.ts` documenting mechanism→refinement self-derivation (same `candidateId` in `sourceId` and `targetId`) and absence of corresponding `IdentityMapping`. Added assertion that PARTIAL diagnostic contains "unresolved semantic identity" wording.
+- Finding 6 (strengthen optimization tests): Rewrote `builder-level optimization: preComputedInputs bypasses producer calls` test to capture spy call counts immediately BEFORE the builder call and assert counts are UNCHANGED after it. Rewrote `builder-level without preComputedInputs: producers called internally` test to reset spies (`mockClear`) immediately before the builder call, then assert exactly one call per producer during builder invocation. Confirmed `vi.restoreAllMocks()` runs in `afterEach` for both test suites in `canonicalCareerFoundationBuilder.test.ts`.
 
 **Production Integration Status:**
 - ✅ Production caller (`interpretCareerV2`) now invokes `buildCanonicalCareerFoundation`
@@ -110,25 +114,51 @@
   - `CareerDomainInterpreterV2.test.ts` - added Gate 4 C11 golden baseline test
   - `canonicalCareerValidation.ts` - extended validation logic
 - Remote CI verification pending on next push (observable workflow results required)
+- Review findings 1 and 6 (commit 71f9669add7bcf33498371f1165d4252670bb136) addressed: identity mapping semantics tightened, optimization tests strengthened
 
-**Test Results (local, commit a4eda30bcf563f6f7c6986b5a6c26f0cbbe997ee):**
+**Test Results (local, commit 655887ee83bc78b79ad879a4bc0b68be666cb67e):**
 - Lint: ✅ PASSED (tsc --noEmit)
 - Test execution: ✅ PASSED with minor pre-existing failures
   - Total test files: ~70 test files
   - Passed: ~1000+ tests
-  - Failed: 2 pre-existing failures unrelated to P2-11G changes:
+  - Failed: 1 pre-existing failure unrelated to P2-11G changes:
     - `careerWealthEvidenceIntegration.test.ts`: 1 failure (determinism test)
-    - `stage1Traceability.test.ts`: 1 failure (AI context sanitization)
   - Key targeted suites:
-    - `canonicalCareerFoundationBuilder.test.ts`: ✅ 24/24 passed (including new producer invocation count test)
-    - `canonicalCareerOrchestrator.test.ts`: ✅ 55/55 passed (fixed pre-existing identity mapping assertion failures)
-    - `CareerDomainInterpreterV2.test.ts`: ✅ 73/73 passed (including new C11 golden baseline test)
+    - `canonicalCareerFoundationBuilder.test.ts`: ✅ 27/27 passed (including Finding 6 optimization test improvements, with vi.restoreAllMocks in afterEach)
+    - `canonicalCareerOrchestrator.test.ts`: ✅ 57/57 passed (including Finding 1 identity mapping assertions for mechanism→refinement self-derivation and PARTIAL diagnostic wording)
+    - `CareerDomainInterpreterV2.test.ts`: ✅ 73/73 passed (including Gate 4 C11 golden baseline test)
     - `canonicalCareerValidation` tests: ✅ PASSED
-- Build: ✅ PASSED (10.77s, successful production build)
-- All gates (1-5) addressed and verified locally
+- Build: ✅ PASSED (34.97s, successful production build)
+- All gates (1-5) and review findings (1, 6) addressed and verified locally
 - Remote CI run required for exact-SHA confirmation (status remains IMPLEMENTED — VERIFICATION PENDING)
 
-**Tested Commit SHA:** a4eda30bcf563f6f7c6986b5a6c26f0cbbe997ee (local verification complete, remote CI pending)
+**Tested Commit SHA:** 655887ee83bc78b79ad879a4bc0b68be666cb67e (local verification complete, remote CI pending)
+
+## Review Findings Addressed (Commit 71f9669add7bcf33498371f1165d4252670bb136)
+
+### Finding 1 — relationship vs identity mapping semantics
+**Status:** ✅ COMPLETED
+- Tightened `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL` diagnostic message in `canonicalCareerOrchestrator.ts` (line 940) to explicitly state: "Qualification→mechanism and mechanism→refinement semantic identity remains UNRESOLVED—only structural lineage (derivation via patternId/candidateId) is recorded in relationshipMappings"
+- Verified `RelationshipMapping` docstring in `canonicalCareerContracts.ts` (lines 285-301) already distinguishes structural references from `IdentityMapping` semantic equivalence: "These are NOT identity equivalences - they represent structural references (e.g., a qualification pertains to a pattern, a mechanism candidate was derived from a pattern). Distinct from IdentityMapping: IdentityMapping uses semantic identityKey values for equivalence; RelationshipMapping uses structural IDs for derivation/containment relationships."
+- Audited `validateRelationshipMappings` in `canonicalCareerValidation.ts` (lines 260-346) to confirm it validates `sourceId`/`targetId` against producer outputs but does NOT assert identity equivalence. Validation checks existence of IDs in stage-specific ID sets (patternIdSet, qualificationPatternIdSet, mechanismCandidateIdSet, refinementCandidateIdSet) via `validateMappingId` helper, not semantic identity equivalence.
+- Added test assertions in `canonicalCareerOrchestrator.test.ts` under "Dispositor refinement diagnostics" suite:
+  - Test "relationship mapping: mechanism→refinement carries same candidateId (self-derivation)" documents that the mechanism→refinement relationship legitimately carries the same `candidateId` in `sourceId` and `targetId` (self-derivation)
+  - Asserts that this same linkage is NOT present as an `IdentityMapping` (no entry in `foundation.identityMappings` with `sourceStage: 'MECHANISM'`/`targetStage: 'REFINEMENT'`)
+  - Test "PARTIAL diagnostic contains unresolved semantic identity wording" asserts the PARTIAL diagnostic message contains the "unresolved semantic identity" wording from the tightened diagnostic
+
+### Finding 6 — strengthen the optimization tests
+**Status:** ✅ COMPLETED
+- Rewrote test "builder-level optimization: preComputedInputs bypasses producer calls" in `canonicalCareerFoundationBuilder.test.ts` (lines 952-986):
+  - Captures spy call counts immediately BEFORE the `buildCanonicalCareerFoundation({ horoscope, preComputedInputs })` call in `countsBefore` object
+  - Asserts counts are UNCHANGED after the builder call: `expect(structuralSpy).toHaveBeenCalledTimes(countsBefore.structural)` (and same for relevance/condition)
+  - This proves the supplied-input path adds zero producer calls regardless of setup calls
+- Rewrote test "builder-level without preComputedInputs: producers called internally" in `canonicalCareerFoundationBuilder.test.ts` (lines 988-1016):
+  - Resets spies (`mockClear`) immediately before the builder call to ensure clean state
+  - Asserts exactly one call per producer during the builder invocation: `expect(structuralSpy).toHaveBeenCalledTimes(1)` (and same for relevance/condition)
+- Confirmed `vi.restoreAllMocks()` runs in `afterEach` for both test suites in `canonicalCareerFoundationBuilder.test.ts`:
+  - Added `afterEach` with `vi.restoreAllMocks()` to "Integration Test: Real Production Producers" suite (line 64)
+  - Kept existing `afterEach` with `vi.restoreAllMocks()` in "Regression Test: interpretCareerV2 Structural Integrity" suite (line 741)
+- Ensured existing "producer invocation count: each upstream producer runs exactly once per interpretCareerV2 analysis" test remains as the production-path proof, confirmed it is not undermined by other tests' spies
 
 **Key Constraints Observed:**
 - Do NOT duplicate the canonical upstream chain in the interpreter

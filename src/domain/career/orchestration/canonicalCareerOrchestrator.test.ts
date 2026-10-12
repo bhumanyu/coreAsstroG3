@@ -1135,6 +1135,62 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(capturedRefineInputs[0].dispositorContexts).toEqual(dispositorContexts);
     });
 
+    it('relationship mapping: mechanism→refinement carries same candidateId (self-derivation)', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify mechanism→refinement relationship mapping exists with same candidateId
+      const mechToRefineMapping = foundation.relationshipMappings.find(
+        m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
+      );
+      expect(mechToRefineMapping).toBeDefined();
+      expect(mechToRefineMapping?.sourceId).toBe('CANDIDATE_1');
+      expect(mechToRefineMapping?.targetId).toBe('CANDIDATE_1');
+
+      // Verify this linkage is NOT present as an IdentityMapping
+      const mechToRefineIdentityMapping = foundation.identityMappings.find(
+        m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
+      );
+      expect(mechToRefineIdentityMapping).toBeUndefined();
+    });
+
+    it('PARTIAL diagnostic contains unresolved semantic identity wording', () => {
+      const ports = createStubPorts();
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify PARTIAL diagnostic is present
+      const partialDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL'
+      );
+      expect(partialDiagnostic).toBeDefined();
+
+      // Verify the diagnostic explicitly states semantic identity remains UNRESOLVED
+      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
+    });
+
     it('should produce RESOLVED refinement with REFINED status and correct mechanism ID', () => {
       const ports = createStubPorts();
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
@@ -1385,7 +1441,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
-      expect(partialDiagnostic?.message).toContain('Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings');
+      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
 
       // Identity mappings may be empty if no patterns exist
       expect(foundation.identityMappings).toEqual([]);
@@ -1429,7 +1485,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
-      expect(partialDiagnostic?.message).toContain('Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings');
+      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
 
       // Assert the concrete relationshipMappings contents
       const patternToQualificationRelationships = foundation.relationshipMappings.filter(
@@ -1476,7 +1532,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
-      expect(partialDiagnostic?.message).toContain('Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings');
+      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
 
       // Qualification→mechanism and mechanism→refinement are now represented as RelationshipMappings
       // Assert the concrete relationshipMappings contents

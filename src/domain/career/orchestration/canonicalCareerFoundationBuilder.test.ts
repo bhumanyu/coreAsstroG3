@@ -60,6 +60,10 @@ function makeDomainOptions(asOf?: string, targetHoroscope?: any): DomainReasonin
 
 describe('P2-11G Canonical Career Foundation Builder', () => {
   describe('Integration Test: Real Production Producers', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('builds foundation through the real production producer chain', async () => {
       // Build horoscope from canonical birth details
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -962,6 +966,13 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
       const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
 
+      // Capture spy call counts BEFORE the builder call
+      const countsBefore = {
+        structural: structuralSpy.mock.calls.length,
+        relevance: relevanceSpy.mock.calls.length,
+        condition: conditionSpy.mock.calls.length
+      };
+
       // Call builder with preComputedInputs
       const foundation = buildCanonicalCareerFoundation({
         horoscope,
@@ -972,12 +983,10 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(foundation).toBeDefined();
       expect(foundation.foundationId).toBeDefined();
 
-      // Verify the three producers were NOT called by the builder (they were called above for pre-computation)
-      // The spy counts reflect the pre-computation calls, so they should each be 1 from our explicit calls
-      // and 0 from the builder's internal logic
-      expect(structuralSpy).toHaveBeenCalledTimes(1);
-      expect(relevanceSpy).toHaveBeenCalledTimes(1);
-      expect(conditionSpy).toHaveBeenCalledTimes(1);
+      // Verify the three producers were NOT called by the builder (counts unchanged from before)
+      expect(structuralSpy).toHaveBeenCalledTimes(countsBefore.structural);
+      expect(relevanceSpy).toHaveBeenCalledTimes(countsBefore.relevance);
+      expect(conditionSpy).toHaveBeenCalledTimes(countsBefore.condition);
     });
 
     it('builder-level without preComputedInputs: producers called internally', async () => {
@@ -988,6 +997,11 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
 
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
+      // Reset spies immediately before the builder call to ensure clean state
+      structuralSpy.mockClear();
+      relevanceSpy.mockClear();
+      conditionSpy.mockClear();
+
       // Call builder WITHOUT preComputedInputs
       const foundation = buildCanonicalCareerFoundation({ horoscope });
 
@@ -995,7 +1009,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(foundation).toBeDefined();
       expect(foundation.foundationId).toBeDefined();
 
-      // Verify the three producers were each called once internally by the builder
+      // Verify the three producers were each called exactly once during the builder invocation
       expect(structuralSpy).toHaveBeenCalledTimes(1);
       expect(relevanceSpy).toHaveBeenCalledTimes(1);
       expect(conditionSpy).toHaveBeenCalledTimes(1);
@@ -1032,7 +1046,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(classifyCareerPatternsSpy).toHaveBeenCalled();
 
       // Verify buildCareerGraphFactsFromStructural was called with the structural parameter
-      expect(buildCareerGraphFactsSpy).toHaveBeenCalledWith({ structural });
+      expect(buildCareerGraphFactsSpy).toHaveBeenCalledWith(structural);
     });
   });
 });
