@@ -847,13 +847,6 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
     });
 
     it('regression: interpretCareerV2 output matches committed golden baseline', async () => {
-      // Skip test if baseline is not yet committed (placeholder)
-      if (GOLDEN_C11_BASELINE.placeholder) {
-        // Mark as skipped with a clear message
-        console.warn('Golden baseline not yet committed - skipping regression test');
-        return;
-      }
-
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const options = makeDomainOptions('2024-01-01T00:00:00Z', horoscope);
       const interpretation = interpretCareerV2(horoscope, options);

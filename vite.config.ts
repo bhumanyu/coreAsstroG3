@@ -12,10 +12,16 @@ export default defineConfig({
     allowedHosts: true,
   },
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     globals: true,
     setupFiles: './src/test/setupTests.ts',
     testTimeout: 20000,
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+    environmentMatchGlobs: [
+      ['**/*.test.tsx', 'jsdom'],
+      ['**/*.spec.tsx', 'jsdom'],
+    ],
   },
 });
 
