@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type {
   CareerExpressionResolverInput,
-  CareerExpressionAnalysisResult
+  CareerExpressionAnalysisResult,
+  CareerExpressionCanonicalResult
 } from './careerExpressionTypes';
 import type {
   CareerMechanismCandidate,
@@ -311,6 +312,207 @@ describe('Career Expression Integration (P2-08A)', () => {
       const all10HIds = expression.evidence.flatMap(e => e.source10HIds || []);
       const hasSynthetic10HIds = all10HIds.some(id => /^10H_/.test(id));
       expect(hasSynthetic10HIds).toBe(false);
+    });
+  });
+
+  describe('P2-11C Gate 2: Canonical C8 result with qualification tracking', () => {
+    it('should handle canonical result with CANDIDATE qualification status', () => {
+      // Build a canonical result with CANDIDATE status
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'RESEARCH_WORK',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['RESEARCH'],
+            status: 'CANDIDATE',
+            pathway: 'PATTERN',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            qualification: {
+              qualificationStatus: 'CANDIDATE',
+              ruleIds: [],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: [],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:MERCURY']
+              }
+            },
+            trace: ['Candidate derived from pattern PATTERN-001', 'No authoritative qualification rule found']
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      // Verify canonical result structure
+      expect(canonicalResult.expressions).toHaveLength(1);
+      expect(canonicalResult.expressions[0].qualificationStatus).toBe('CANDIDATE');
+      expect(canonicalResult.expressions[0].direction).toBe('UNAVAILABLE');
+      expect(canonicalResult.expressions[0].strength).toBe('UNAVAILABLE');
+      expect(canonicalResult.expressions[0].qualification.ruleIds).toEqual([]);
+      expect(canonicalResult.expressions[0].trace).toHaveLength(2);
+    });
+
+    it('should handle canonical result with QUALIFIED qualification status', () => {
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'AUTHORITY_EXPRESSION',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['AUTHORITY'],
+            status: 'CANDIDATE',
+            pathway: 'HOUSE',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'QUALIFIED',
+            direction: 'SUPPORTED',
+            strength: 'STRONG',
+            qualification: {
+              qualificationStatus: 'QUALIFIED',
+              ruleIds: ['RULE_AUTH_001'],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                mechanismId: 'MECH_RESOLVED_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: ['RULE_AUTH_001'],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:SUN']
+              }
+            },
+            trace: ['Qualified by rule RULE_AUTH_001']
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      // Verify canonical result structure
+      expect(canonicalResult.expressions).toHaveLength(1);
+      expect(canonicalResult.expressions[0].qualificationStatus).toBe('QUALIFIED');
+      expect(canonicalResult.expressions[0].direction).toBe('SUPPORTED');
+      expect(canonicalResult.expressions[0].strength).toBe('STRONG');
+      expect(canonicalResult.expressions[0].qualification.ruleIds).toEqual(['RULE_AUTH_001']);
+      expect(canonicalResult.expressions[0].qualification.provenance.mechanismId).toBe('MECH_RESOLVED_001');
+    });
+
+    it('should preserve trace separate from directional evidence', () => {
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'RESEARCH_WORK',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['RESEARCH'],
+            status: 'CANDIDATE',
+            pathway: 'PATTERN',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            qualification: {
+              qualificationStatus: 'CANDIDATE',
+              ruleIds: [],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: [],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:MERCURY']
+              }
+            },
+            trace: [
+              'Trace message 1: Candidate derived',
+              'Trace message 2: No qualification rule',
+              'Trace message 3: Direction UNAVAILABLE'
+            ]
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      // Trace should be separate from directional evidence
+      expect(canonicalResult.expressions[0].trace).toHaveLength(3);
+      expect(canonicalResult.expressions[0].trace[0]).toBe('Trace message 1: Candidate derived');
+      expect(canonicalResult.expressions[0].trace[1]).toBe('Trace message 2: No qualification rule');
+      expect(canonicalResult.expressions[0].trace[2]).toBe('Trace message 3: Direction UNAVAILABLE');
     });
   });
 });

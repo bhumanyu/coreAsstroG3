@@ -369,6 +369,57 @@ export interface CareerExpressionAnalysisResult {
 }
 
 /**
+ * Per P2-11C Gate 2: Canonical C8 result with candidate/qualification separation.
+ *
+ * This result type retains each candidate's qualification status, provenance, and a trace list
+ * SEPARATE from directional evidence.
+ *
+ * Key distinctions from legacy CareerExpressionAnalysisResult:
+ * - Each expression candidate carries qualificationStatus (QUALIFIED/CANDIDATE/UNRESOLVED/NOT_APPLICABLE)
+ * - direction and strength are UNAVAILABLE for CANDIDATE expressions (no upstream rule signal)
+ * - trace list is separate from directional evidence (trace visible even when no directional evidence emitted)
+ * - QUALIFIED expressions must carry authorizing ruleIds (enforced via CareerExpressionQualification union)
+ * - Candidates with no authoritative qualification rule stay CANDIDATE with UNAVAILABLE direction/strength
+ *
+ * Invariants:
+ * - A QUALIFIED expression must have non-empty ruleIds and direction/strength other than UNAVAILABLE
+ * - A CANDIDATE expression has empty ruleIds and direction/strength UNAVAILABLE
+ * - Trace is always present for each candidate (for observability)
+ * - Directional evidence is only emitted for QUALIFIED expressions
+ */
+export interface CareerExpressionCanonicalResult {
+  readonly expressions: readonly CareerExpressionCanonicalCandidate[];
+  readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+  readonly sourceMechanismIds: readonly string[];
+  readonly missingInputs: readonly string[];
+  readonly unmappedMechanismTypes: readonly CareerMechanismType[];
+  readonly provenance: CareerExpressionProvenance;
+}
+
+/**
+ * Per P2-11C Gate 2: Canonical expression candidate with qualification tracking.
+ *
+ * Extends CareerExpressionCandidate with:
+ * - qualificationStatus: The qualification status of this expression
+ * - direction: Canonical direction (UNAVAILABLE for CANDIDATE)
+ * - strength: Canonical strength (UNAVAILABLE for CANDIDATE)
+ * - qualification: The qualification details (discriminated union)
+ * - trace: Trace messages for observability (separate from directional evidence)
+ *
+ * Invariants:
+ * - QUALIFIED: direction/strength are set, qualification has non-empty ruleIds
+ * - CANDIDATE: direction/strength are UNAVAILABLE, qualification has empty ruleIds
+ * - UNRESOLVED/NOT_APPLICABLE: direction/strength are UNAVAILABLE, qualification has empty ruleIds
+ */
+export interface CareerExpressionCanonicalCandidate extends CareerExpressionCandidate {
+  readonly qualificationStatus: CareerExpressionQualificationStatus;
+  readonly direction: CareerExpressionCanonicalDirection;
+  readonly strength: CareerExpressionCanonicalStrength;
+  readonly qualification: CareerExpressionQualification;
+  readonly trace: readonly string[];
+}
+
+/**
  * Career expression resolver input.
  * Per spec §8: input for expression resolution.
  *

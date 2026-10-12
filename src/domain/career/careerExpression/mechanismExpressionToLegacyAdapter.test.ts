@@ -4,6 +4,8 @@ import { adaptMechanismExpressionToLegacy } from './mechanismExpressionToLegacyA
 import type {
   CareerExpressionAnalysisResult,
   CareerExpressionCandidate,
+  CareerExpressionCanonicalResult,
+  CareerExpressionCanonicalCandidate,
   CareerMechanismExpressionEvidence
 } from './careerExpressionTypes';
 import type {
@@ -730,6 +732,408 @@ describe('mechanismExpressionToLegacyAdapter', () => {
       expect(() => adaptMechanismExpressionToLegacy(mechanismResult, mechanismCandidates)).toThrow(
         /Unknown expression type "UNKNOWN_EXPRESSION_TYPE"/
       );
+    });
+  });
+
+  describe('P2-11C Gate 2: Canonical C8 result handling', () => {
+    it('should map CANDIDATE to UNAVAILABLE direction/strength with empty ruleIds', () => {
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'AUTHORITY_EXPRESSION',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['AUTHORITY'],
+            status: 'CANDIDATE',
+            pathway: 'HOUSE',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            qualification: {
+              qualificationStatus: 'CANDIDATE',
+              ruleIds: [],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: [],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:SUN']
+              }
+            },
+            trace: ['Candidate derived from mechanism MECH-001 without authoritative qualification']
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      const mechanismCandidates: CareerMechanismCandidate[] = [
+        {
+          candidateId: 'MECH-001',
+          patternId: 'PATTERN-001',
+          mechanismType: 'AUTHORITY',
+          pathway: 'HOUSE',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-001'],
+            relationshipIds: [],
+            participantIds: ['PLANET:SUN'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Test mechanism'
+        }
+      ];
+
+      const result = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
+
+      expect(result.expressions).toHaveLength(1);
+      expect(result.expressions[0].direction).toBe('UNAVAILABLE');
+      expect(result.expressions[0].strength).toBe('UNAVAILABLE');
+      expect(result.expressions[0].statement).toContain('CANDIDATE');
+      expect(result.expressions[0].statement).toContain('Trace: Candidate derived from mechanism MECH-001 without authoritative qualification');
+    });
+
+    it('should preserve QUALIFIED direction/strength with non-empty ruleIds', () => {
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'AUTHORITY_EXPRESSION',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['AUTHORITY'],
+            status: 'CANDIDATE',
+            pathway: 'HOUSE',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'QUALIFIED',
+            direction: 'SUPPORTED',
+            strength: 'STRONG',
+            qualification: {
+              qualificationStatus: 'QUALIFIED',
+              ruleIds: ['RULE_AUTH_001'],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                mechanismId: 'MECH_RESOLVED_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: ['RULE_AUTH_001'],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:SUN']
+              }
+            },
+            trace: ['Qualified by rule RULE_AUTH_001']
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      const mechanismCandidates: CareerMechanismCandidate[] = [
+        {
+          candidateId: 'MECH-001',
+          patternId: 'PATTERN-001',
+          mechanismType: 'AUTHORITY',
+          pathway: 'HOUSE',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-001'],
+            relationshipIds: [],
+            participantIds: ['PLANET:SUN'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Test mechanism'
+        }
+      ];
+
+      const result = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
+
+      expect(result.expressions).toHaveLength(1);
+      expect(result.expressions[0].direction).toBe('SUPPORTED');
+      expect(result.expressions[0].strength).toBe('STRONG');
+      expect(result.expressions[0].statement).toContain('QUALIFIED');
+      expect(result.expressions[0].statement).toContain('Trace: Qualified by rule RULE_AUTH_001');
+    });
+
+    it('should keep candidate trace visible even when no directional evidence is emitted', () => {
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'RESEARCH_WORK',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['RESEARCH'],
+            status: 'CANDIDATE',
+            pathway: 'PATTERN',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            qualification: {
+              qualificationStatus: 'CANDIDATE',
+              ruleIds: [],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: [],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:MERCURY']
+              }
+            },
+            trace: [
+              'Candidate derived from pattern PATTERN-001',
+              'No authoritative qualification rule found',
+              'Direction/strength UNAVAILABLE (no upstream signal)'
+            ]
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      const mechanismCandidates: CareerMechanismCandidate[] = [
+        {
+          candidateId: 'MECH-001',
+          patternId: 'PATTERN-001',
+          mechanismType: 'RESEARCH',
+          pathway: 'PATTERN',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-001'],
+            relationshipIds: [],
+            participantIds: ['PLANET:MERCURY'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Test mechanism'
+        }
+      ];
+
+      const result = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
+
+      expect(result.expressions).toHaveLength(1);
+      expect(result.expressions[0].direction).toBe('UNAVAILABLE');
+      expect(result.expressions[0].strength).toBe('UNAVAILABLE');
+      // Trace should be visible in the statement
+      expect(result.expressions[0].statement).toContain('Trace: Candidate derived from pattern PATTERN-001');
+      expect(result.expressions[0].statement).toContain('No authoritative qualification rule found');
+      expect(result.expressions[0].statement).toContain('Direction/strength UNAVAILABLE (no upstream signal)');
+    });
+
+    it('should enforce determinism of expression IDs/ordering/provenance', () => {
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'AUTHORITY_EXPRESSION',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['AUTHORITY'],
+            status: 'CANDIDATE',
+            pathway: 'HOUSE',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            qualification: {
+              qualificationStatus: 'CANDIDATE',
+              ruleIds: [],
+              provenance: {
+                candidateId: 'CANDIDATE_001',
+                sourceMechanismIds: ['MECH-001'],
+                ruleIds: [],
+                sourceEvidenceIds: ['SRC-001'],
+                participantIds: ['PLANET:SUN']
+              }
+            },
+            trace: ['Trace message 1']
+          },
+          {
+            expressionId: 'EXPR-002',
+            expressionType: 'LEADERSHIP_EXPRESSION',
+            sourceMechanismIds: ['MECH-002'],
+            mechanismTypes: ['LEADERSHIP'],
+            status: 'CANDIDATE',
+            pathway: 'PLANETARY',
+            evidence: [
+              {
+                evidenceId: 'EVID-002',
+                sourceMechanismId: 'MECH-002',
+                sourceEvidenceIds: ['SRC-002'],
+                ruleId: 'RULE-002',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-002'],
+              patternIds: ['PATTERN-002'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-002'],
+              sourceStages: ['PATTERN']
+            },
+            qualificationStatus: 'CANDIDATE',
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            qualification: {
+              qualificationStatus: 'CANDIDATE',
+              ruleIds: [],
+              provenance: {
+                candidateId: 'CANDIDATE_002',
+                sourceMechanismIds: ['MECH-002'],
+                ruleIds: [],
+                sourceEvidenceIds: ['SRC-002'],
+                participantIds: ['PLANET:MARS']
+              }
+            },
+            trace: ['Trace message 2']
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001', 'MECH-002'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001', 'MECH-002'],
+          patternIds: ['PATTERN-001', 'PATTERN-002'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001', 'EVID-002'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      const mechanismCandidates: CareerMechanismCandidate[] = [
+        {
+          candidateId: 'MECH-001',
+          patternId: 'PATTERN-001',
+          mechanismType: 'AUTHORITY',
+          pathway: 'HOUSE',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-001'],
+            relationshipIds: [],
+            participantIds: ['PLANET:SUN'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Test mechanism 1'
+        },
+        {
+          candidateId: 'MECH-002',
+          patternId: 'PATTERN-002',
+          mechanismType: 'LEADERSHIP',
+          pathway: 'PLANETARY',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-002'],
+            relationshipIds: [],
+            participantIds: ['PLANET:MARS'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Test mechanism 2'
+        }
+      ];
+
+      const result = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
+
+      // Expressions should be sorted by mode (deterministic ordering)
+      expect(result.expressions).toHaveLength(2);
+      expect(result.expressions[0].mode).toBe('AUTHORITY');
+      expect(result.expressions[1].mode).toBe('LEADERSHIP');
+
+      // Expression IDs should be preserved
+      expect(result.expressions[0].supportingEvidenceIds).toEqual(['EVID-001']);
+      expect(result.expressions[1].supportingEvidenceIds).toEqual(['EVID-002']);
+
+      // Provenance should be preserved in statements
+      expect(result.expressions[0].statement).toContain('MECH-001');
+      expect(result.expressions[1].statement).toContain('MECH-002');
     });
   });
 });

@@ -1,6 +1,8 @@
 import type {
   CareerExpressionAnalysisResult,
   CareerExpressionCandidate,
+  CareerExpressionCanonicalResult,
+  CareerExpressionCanonicalCandidate,
   CareerMechanismExpressionEvidence
 } from './careerExpressionTypes';
 import type {
@@ -25,6 +27,12 @@ import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
  *
  * This adapter maps the mechanism-based CareerExpressionAnalysisResult (from P2-08A resolver)
  * to the legacy CareerExpressionAnalysis shape consumed by C9, C10, and C11.
+ *
+ * Per P2-11C Gate 2: One-way compatibility projection only.
+ * - Never manufacture qualification/direction/strength/identity
+ * - Preserve real sourceEvidenceIds/ruleIds/participant-derived planets
+ * - Keep existing throw-on-unknown-expression-type behavior
+ * - Report lossy fields rather than forcing canonical identity into a legacy mode field
  *
  * BRIDGE RESPONSIBILITIES:
  * - Preserve mechanism identities (sourceMechanismIds in statement, expressionId as semantic identity)
@@ -201,6 +209,110 @@ function createLegacyExpression(
 }
 
 /**
+ * Creates a legacy CareerExpression from a canonical expression candidate.
+ *
+ * Per P2-11C Gate 2: Handles canonical result with qualification tracking.
+ * - CANDIDATE expressions map to direction/strength UNAVAILABLE
+ * - QUALIFIED expressions preserve their direction/strength
+ * - Trace is preserved in the statement for observability
+ * - Never manufacture qualification/direction/strength/identity
+ */
+function createLegacyExpressionFromCanonical(
+  candidate: CareerExpressionCanonicalCandidate,
+  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>
+): CareerExpression {
+  const mode = expressionTypeToManifestationMode(candidate.expressionType);
+
+  // Create legacy evidence from mechanism evidence
+  const legacyEvidence = candidate.evidence.map((evidenceItem, index) =>
+    createLegacyEvidence(candidate, evidenceItem, index, mechanismPlanetsMap)
+  );
+
+  // Use synthetic legacy evidence record IDs (evidenceItem.evidenceId) as supportingEvidenceIds
+  const supportingEvidenceIds = Object.freeze(
+    candidate.evidence.map(e => e.evidenceId)
+  );
+
+  // Per P2-11C Gate 2: Map qualificationStatus to direction/strength
+  // CANDIDATE → UNAVAILABLE (no upstream rule signal)
+  // QUALIFIED → preserve direction/strength from canonical result
+  const direction = candidate.qualificationStatus === 'CANDIDATE'
+    ? 'UNAVAILABLE'
+    : mapCanonicalDirectionToLegacy(candidate.direction);
+
+  const strength = candidate.qualificationStatus === 'CANDIDATE'
+    ? 'UNAVAILABLE'
+    : mapCanonicalStrengthToLegacy(candidate.strength);
+
+  // Build statement with trace for observability
+  const traceStatement = candidate.trace.length > 0
+    ? ` Trace: ${candidate.trace.join('; ')}.`
+    : '';
+
+  const statement = [
+    `${mode} expression derived from canonical C8 resolution.`,
+    `Expression type: ${candidate.expressionType}.`,
+    `Qualification status: ${candidate.qualificationStatus}.`,
+    `Source mechanisms: ${candidate.sourceMechanismIds.join(', ')}.`,
+    `Mechanism types: ${candidate.mechanismTypes.join(', ')}.`,
+    `Status: ${candidate.status}.`,
+    `Pathway: ${candidate.pathway}.`,
+    `Mechanism provenance: ${candidate.sourceMechanismIds.join(', ')}.`,
+    traceStatement
+  ].join(' ').trim();
+
+  return Object.freeze({
+    mode,
+    direction,
+    strength,
+    evidence: Object.freeze(legacyEvidence),
+    supportingEvidenceIds,
+    statement,
+    conditional: false // Canonical expressions are not conditional by contract
+  });
+}
+
+/**
+ * Maps canonical direction to legacy direction.
+ */
+function mapCanonicalDirectionToLegacy(
+  direction: string
+): 'SUPPORTED' | 'CONDITIONAL' | 'NEUTRAL' | 'UNAVAILABLE' {
+  switch (direction) {
+    case 'SUPPORTED':
+      return 'SUPPORTED';
+    case 'CONDITIONAL':
+      return 'CONDITIONAL';
+    case 'NEUTRAL':
+      return 'NEUTRAL';
+    case 'UNAVAILABLE':
+      return 'UNAVAILABLE';
+    default:
+      return 'UNAVAILABLE';
+  }
+}
+
+/**
+ * Maps canonical strength to legacy strength.
+ */
+function mapCanonicalStrengthToLegacy(
+  strength: string
+): 'STRONG' | 'MODERATE' | 'WEAK' | 'UNAVAILABLE' {
+  switch (strength) {
+    case 'STRONG':
+      return 'STRONG';
+    case 'MODERATE':
+      return 'MODERATE';
+    case 'WEAK':
+      return 'WEAK';
+    case 'UNAVAILABLE':
+      return 'UNAVAILABLE';
+    default:
+      return 'UNAVAILABLE';
+  }
+}
+
+/**
  * Creates an explicit unavailable legacy expression analysis.
  * Used when mechanism-based result has no expressions (INSUFFICIENT_DATA or empty candidates).
  */
@@ -268,6 +380,12 @@ function resolvePrimaryExpression(
  * - Emits explicit unavailable analysis when mechanism result is INSUFFICIENT_DATA or empty
  * - Deep-freezes all output for immutability
  *
+ * Per P2-11C Gate 2: One-way compatibility projection only.
+ * - Never manufacture qualification/direction/strength/identity
+ * - Preserve real sourceEvidenceIds/ruleIds/participant-derived planets
+ * - Keep existing throw-on-unknown-expression-type behavior
+ * - Report lossy fields rather than forcing canonical identity into a legacy mode field
+ *
  * @param mechanismResult - The mechanism-based expression analysis result
  * @param mechanismCandidates - The mechanism candidates (for planet extraction from participantIds)
  * @returns A frozen legacy CareerExpressionAnalysis
@@ -275,7 +393,37 @@ function resolvePrimaryExpression(
 export function adaptMechanismExpressionToLegacy(
   mechanismResult: CareerExpressionAnalysisResult,
   mechanismCandidates: readonly CareerMechanismCandidate[]
+): CareerExpressionAnalysis;
+
+/**
+ * Adapts canonical C8 expression result to legacy expression analysis.
+ *
+ * Per P2-11C Gate 2: Handles canonical result with qualification tracking.
+ * - Maps qualificationStatus to direction/strength (CANDIDATE → UNAVAILABLE, QUALIFIED → preserved)
+ * - Preserves trace separately from directional evidence
+ * - Unqualified candidates stay CANDIDATE with UNAVAILABLE direction/strength and empty ruleIds
+ * - Candidate trace remains visible even when no directional evidence is emitted
+ *
+ * @param canonicalResult - The canonical C8 expression result
+ * @param mechanismCandidates - The mechanism candidates (for planet extraction from participantIds)
+ * @returns A frozen legacy CareerExpressionAnalysis
+ */
+export function adaptMechanismExpressionToLegacy(
+  canonicalResult: CareerExpressionCanonicalResult,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
+): CareerExpressionAnalysis;
+
+/**
+ * Implementation of the adapter (handles both legacy and canonical result types).
+ */
+export function adaptMechanismExpressionToLegacy(
+  mechanismResult: CareerExpressionAnalysisResult | CareerExpressionCanonicalResult,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
 ): CareerExpressionAnalysis {
+  // Check if this is a canonical result (has qualificationStatus on expressions)
+  const isCanonical = mechanismResult.expressions.length > 0 &&
+    'qualificationStatus' in mechanismResult.expressions[0];
+
   // If mechanism result is INSUFFICIENT_DATA or has no expressions, emit explicit unavailable
   if (mechanismResult.status === 'INSUFFICIENT_DATA' || mechanismResult.expressions.length === 0) {
     return createUnavailableLegacyAnalysis();
@@ -286,7 +434,9 @@ export function adaptMechanismExpressionToLegacy(
 
   // Map mechanism candidates to legacy expressions
   const legacyExpressions = mechanismResult.expressions.map(candidate =>
-    createLegacyExpression(candidate, mechanismPlanetsMap)
+    isCanonical
+      ? createLegacyExpressionFromCanonical(candidate as CareerExpressionCanonicalCandidate, mechanismPlanetsMap)
+      : createLegacyExpression(candidate as CareerExpressionCandidate, mechanismPlanetsMap)
   );
 
   // Sort by expressionId for deterministic ordering
