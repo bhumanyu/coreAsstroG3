@@ -886,6 +886,10 @@ export class CanonicalCareerOrchestrator {
    *
    * When a source/target semantic identity is genuinely missing, no mapping is emitted
    * and an unresolved-mapping diagnostic is recorded.
+   *
+   * CARDINALITY HANDLING:
+   * If multiple qualifications share the same patternId, all legitimate identity mappings
+   * are emitted (grouped into arrays). Cardinality diagnostics are emitted in buildRelationshipMappings.
    */
   private buildIdentityMappings(
     patternCandidates: readonly PatternCandidate[],
@@ -897,41 +901,30 @@ export class CanonicalCareerOrchestrator {
     const mappings: IdentityMapping[] = [];
     let mappingIndex = 0;
 
-    // Build qualification map for lookup
-    // Contract: One qualification per patternId (asserted below)
-    const qualMap = new Map<string, PatternQualification>(
-      patternQualifications.map((q) => [q.patternId, q])
-    );
-
-    // Verify cardinality contract: assert one qualification per patternId
-    // If multiple qualifications per patternId are legitimate, this map would need to group into arrays
-    const patternIdsFromQuals = patternQualifications.map(q => q.patternId);
-    const uniquePatternIds = new Set(patternIdsFromQuals);
-    if (patternIdsFromQuals.length !== uniquePatternIds.size) {
-      diagnostics.push({
-        diagnosticId: 'ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION',
-        severity: 'ERROR',
-        category: 'CONTRACT_VIOLATION',
-        message: `Multiple qualifications detected for same patternId - cardinality contract violated`,
-        relatedIds: patternIdsFromQuals,
-        stage: 'QUALIFICATION'
-      });
+    // Build qualification map for lookup - group into arrays to handle cardinality violations
+    const qualMap = new Map<string, PatternQualification[]>();
+    for (const qualification of patternQualifications) {
+      const existing = qualMap.get(qualification.patternId) ?? [];
+      qualMap.set(qualification.patternId, [...existing, qualification]);
     }
 
     // Pattern → Qualification mappings (via patternId)
     // Both pattern and qualification expose real identityKey fields
     for (const pattern of patternCandidates) {
-      const qualification = qualMap.get(pattern.patternId);
-      if (qualification) {
-        // Both source and target have real identityKey - emit mapping
-        mappings.push({
-          mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
-          sourceStage: 'PATTERN',
-          targetStage: 'QUALIFICATION',
-          sourceIdentityKey: pattern.identityKey as EvidenceIdentityKey,
-          targetIdentityKey: qualification.identityKey as EvidenceIdentityKey,
-          mappingType: 'EQUIVALENCE'
-        });
+      const qualifications = qualMap.get(pattern.patternId);
+      if (qualifications && qualifications.length > 0) {
+        // Emit identity mappings for all qualifications (even if cardinality violation)
+        for (const qualification of qualifications) {
+          // Both source and target have real identityKey - emit mapping
+          mappings.push({
+            mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
+            sourceStage: 'PATTERN',
+            targetStage: 'QUALIFICATION',
+            sourceIdentityKey: pattern.identityKey as EvidenceIdentityKey,
+            targetIdentityKey: qualification.identityKey as EvidenceIdentityKey,
+            mappingType: 'EQUIVALENCE'
+          });
+        }
       }
     }
 
@@ -955,6 +948,14 @@ export class CanonicalCareerOrchestrator {
   /**
    * Builds relationship mappings using structural IDs (patternId, candidateId, mechanismId).
    * These are NOT identity equivalences - they represent structural derivation/containment.
+   *
+   * CARDINALITY HANDLING:
+   * - Pattern → Qualification: One-to-one (one patternId maps to one qualification)
+   * - Qualification → Mechanism: One-to-many (one patternId can map to multiple mechanisms)
+   * - Mechanism → Refinement: One-to-one (one candidateId maps to one refinement)
+   *
+   * If multiple qualifications share the same patternId (cardinality violation),
+   * all legitimate relationships are emitted (grouped into arrays) and a diagnostic is recorded.
    */
   private buildRelationshipMappings(
     patternCandidates: readonly PatternCandidate[],
@@ -966,24 +967,43 @@ export class CanonicalCareerOrchestrator {
     const mappings: RelationshipMapping[] = [];
     let mappingIndex = 0;
 
-    // Build qualification map for lookup
-    const qualMap = new Map<string, PatternQualification>(
-      patternQualifications.map((q) => [q.patternId, q])
-    );
+    // Build qualification map for lookup - group into arrays to handle cardinality violations
+    const qualMap = new Map<string, PatternQualification[]>();
+    for (const qualification of patternQualifications) {
+      const existing = qualMap.get(qualification.patternId) ?? [];
+      qualMap.set(qualification.patternId, [...existing, qualification]);
+    }
+
+    // Detect cardinality violation: multiple qualifications for same patternId
+    for (const [patternId, qualifications] of qualMap.entries()) {
+      if (qualifications.length > 1) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION_${patternId}`,
+          severity: 'ERROR',
+          category: 'CONTRACT_VIOLATION',
+          message: `Multiple qualifications (${qualifications.length}) detected for patternId ${patternId} - cardinality contract violated (expected 1:1). All relationships will be emitted.`,
+          relatedIds: [patternId],
+          stage: 'QUALIFICATION'
+        });
+      }
+    }
 
     // Pattern → Qualification mappings (via patternId)
     // Represents: qualification is derived from pattern
     for (const pattern of patternCandidates) {
-      const qualification = qualMap.get(pattern.patternId);
-      if (qualification) {
-        mappings.push({
-          mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
-          sourceStage: 'PATTERN',
-          targetStage: 'QUALIFICATION',
-          sourceId: pattern.patternId,
-          targetId: qualification.patternId,
-          relationshipType: 'DERIVATION'
-        });
+      const qualifications = qualMap.get(pattern.patternId);
+      if (qualifications && qualifications.length > 0) {
+        // Emit relationships for all qualifications (even if cardinality violation)
+        for (const qualification of qualifications) {
+          mappings.push({
+            mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
+            sourceStage: 'PATTERN',
+            targetStage: 'QUALIFICATION',
+            sourceId: pattern.patternId,
+            targetId: qualification.patternId,
+            relationshipType: 'DERIVATION'
+          });
+        }
       }
     }
 

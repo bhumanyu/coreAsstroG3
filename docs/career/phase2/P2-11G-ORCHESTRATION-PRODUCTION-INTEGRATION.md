@@ -10,7 +10,7 @@
 - ✅ 10H input wired: `resolveCareer10HFoundation({ horoscope })` passed when status is COMPLETE
 - ✅ 10L input wired: `resolveCareer10LFoundation({ foundation, houseLordship })` passed when resolvable
 - ⚠️ Dispositor contexts: Two-pass orchestration implemented (feature flag `enableDispositorContexts`)
-  - Default `false` in production to preserve current behavior (tracked blocker per review Finding 4)
+  - Default `false` in production to preserve current behavior (tracked blocker per review Finding 5)
   - When `true`, builder runs two-pass orchestration: pass 1 (get mechanisms, build contexts), pass 2 (with contexts)
   - Upstream producers computed once and reused (invariant preserved)
   - **P2-11B status: PARTIAL** - dispositor integration not yet production-enabled pending verification
@@ -33,23 +33,72 @@
 - Full identity mappings: Participant role assignments lack explicit stage linkage
 - Profession-producer consumption: Deferred to a future milestone
 
-**Test Results (local):**
-- Lint: ⚠️ PRE-EXISTING COMPILATION ERRORS (unrelated to this milestone - iterator compilation issues in TS config)
-- New production-reachability tests added to CareerDomainInterpreterV2.test.ts:
-  - ✅ Foundation presence test
-  - ✅ Identity preservation test
-  - ✅ Missing-data diagnostics test
-  - ✅ 10H/10L wiring test
-  - ✅ Regression-equivalence test (C4-C11 conclusion unchanged)
-- canonicalCareerFoundationBuilder.test.ts: ✅ 12/12 PASSED (updated with new tests)
-  - ✅ Two-pass orchestration test (enableDispositorContexts=true)
-  - ✅ Identity mappings validation test
-  - ✅ 10H/10L acceptance gates test (canonical chart resolves to COMPLETE)
-  - ✅ 10H/10L missing-data path test
-- canonicalCareerOrchestrator.test.ts: ✅ 50/50 PASSED (existing tests)
-- CareerDomainInterpreterV2.test.ts: ⚠️ Test runner has dependency issues (html-encoding-sniffer ESM/require mismatch - pre-existing)
+## Review Findings Addressed (P2-11B Review against commit 663086fae8daa1019cb064776e53c870955cba6c)
 
-**Tested Commit SHA:** [TBD - pending CI verification]
+### Finding 1 (P1) — Make the C11 golden regression real
+**Status:** ⚠️ PENDING (test infrastructure issue)
+- File `src/test/fixtures/careerGoldenBaseline.ts` currently sets `placeholder: true` with all `'PLACEHOLDER'`/`[]`/`null` values
+- Test `regression: interpretCareerV2 output matches committed golden baseline` early-returns when placeholder flag is set
+- **Action needed:** Capture actual `interpretCareerV2` output for `CANONICAL_BIRTH_DETAILS` from known-good pre-P2-11B-integration commit
+- **Blocker:** Test infrastructure has html-encoding-sniffer ESM/require mismatch preventing test execution
+- **Workaround added:** Added `capture: interpretCareerV2 output for golden baseline` test in canonicalCareerFoundationBuilder.test.ts to capture baseline when tests can run
+
+### Finding 2 (P1) — Strengthen relationship-mapping validation and preserve cardinality
+**Status:** ✅ COMPLETED
+- Extended `validateRelationshipMappings()` in `canonicalCareerValidation.ts` to validate that each mapping's `sourceId` and `targetId` exist in the appropriate producer output
+- Emits `INVALID_REFERENCE` ERROR diagnostic for mappings whose source/target ID does not exist
+- Fixed `buildRelationshipMappings` and `buildIdentityMappings` in `canonicalCareerOrchestrator.ts` to group qualifications into arrays when multiple qualifications share a patternId
+- All legitimate relationships are now emitted even when cardinality violation occurs
+- Added unit tests in `canonicalCareerOrchestrator.test.ts` under "Finding 2: Relationship Mapping Validation" suite:
+  - Validates that sourceId exists in producer outputs
+  - Emits INVALID_REFERENCE ERROR for invalid sourceId
+  - Preserves all relationships when multiple qualifications share patternId (cardinality violation)
+- Decision: Cardinality violation emits ERROR diagnostic but does not invalidate the foundation (relationships still emitted)
+
+### Finding 3 (P1) — Prove two-pass refinement on a controlled fixture
+**Status:** ✅ COMPLETED
+- Replaced test `two-pass orchestration: stubbed fixture proves refinement with exact expected outcome` in `canonicalCareerFoundationBuilder.test.ts`
+- New test defers to controlled fixture in `canonicalCareerOrchestrator.test.ts` (lines 2013–2077)
+- Controlled fixture uses stub ports to swap in `defaultCareerMechanismDispositorRefiner` and properly-typed `CareerDispositorContext`
+- Asserts the dispositor context reaches the refiner
+- Asserts exact expected refinement resolution (REFINED/UNCHANGED) for that candidate
+- Kept separate integration test that runs real `CANONICAL_BIRTH_DETAILS` horoscope pipeline for smoke coverage
+
+### Finding 4 (P1) — Make insufficient-data assertions unconditional
+**Status:** ✅ COMPLETED
+- Updated test `two-pass orchestration: insufficient data leaves refinements UNRESOLVED/UNAVAILABLE` in `canonicalCareerFoundationBuilder.test.ts`
+- Test now builds fixture that guarantees at least one eligible mechanism but insufficient dispositor data
+- Assertions are now unconditional (outside any `resolvedMechanisms.length > 0` guard):
+  - Refinements are exactly `UNRESOLVED` / `UNAVAILABLE` / `mechanism === null`
+  - Expected missing-data diagnostic (`ORCHESTRATION_MECHANISM_REFINER_INSUFFICIENT_DATA`) is present
+- Insufficient evidence remains UNAVAILABLE, never a negative astrological indication
+
+### Finding 5 (P2) — Keep `enableDispositorContexts` default `false` in production
+**Status:** ✅ COMPLETED
+- Verified `enableDispositorContexts` defaults to `false` in `canonicalCareerFoundationBuilder.ts` (line 113)
+- Verified `interpretCareerV2` call explicitly passes `enableDispositorContexts: false` (CareerDomainInterpreterV2.ts line 511)
+- Documentation updated to reflect P2-11B status as PARTIAL until Findings 1-4 pass
+- Dispositor contexts not enabled merely because factory returns non-empty context list
+
+### Finding 6 (P2) — Establish exact-SHA verification
+**Status:** ✅ COMPLETED (CI workflow updated, verification pending)
+- Added `npm run lint` step to `.github/workflows/ci.yml` alongside existing `npm ci` / `npm test` / `npm run build`
+- Lint step runs before tests to catch type errors early
+- Targeted suites updated:
+  - `canonicalCareerFoundationBuilder.test.ts` - updated with Finding 2, 3, 4 changes
+  - `canonicalCareerOrchestrator.test.ts` - added Finding 2 validation tests
+  - `canonicalCareerValidation.ts` - extended validation logic
+- **Blocker:** Cannot run full test suite locally due to html-encoding-sniffer ESM/require mismatch
+- Remote CI verification pending on next push
+- Tested commit SHA will be recorded once CI runs successfully
+
+**Test Results (local):**
+- Lint: ⚠️ Cannot run locally due to test infrastructure issues
+- Test execution: ⚠️ Blocked by html-encoding-sniffer ESM/require mismatch (pre-existing issue)
+- Code changes completed for Findings 2, 3, 4, 5, 6
+- Finding 1 requires test execution to capture golden baseline
+
+**Tested Commit SHA:** [TBD - pending CI verification after html-encoding-sniffer fix]
 
 **Key Constraints Observed:**
 - Do NOT duplicate the canonical upstream chain in the interpreter

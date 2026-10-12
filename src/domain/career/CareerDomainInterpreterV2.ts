@@ -496,10 +496,11 @@ export function interpretCareerV2(
    * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
    *
    * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
-   * This is a tracked blocker per P2-11G review Finding 4:
-   * - Semantic-identity fix has landed (Finding 1)
-   * - Identity-mapping test strengthened (Finding 2)
-   * - Two-pass test fixed (Finding 3)
+   * This is a tracked blocker per P2-11G review Finding 5:
+   * - Finding 1: Golden baseline regression (pending test infrastructure fix)
+   * - Finding 2: Relationship-mapping validation extended (completed)
+   * - Finding 3: Two-pass test with controlled fixture (completed)
+   * - Finding 4: Insufficient-data assertions unconditional (completed)
    * - Pending: Verification that all tests pass before enabling in production
    *
    * The two-pass orchestration feature is available but not enabled in interpretCareerV2

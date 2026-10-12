@@ -247,16 +247,31 @@ export function validateIdentityMappings(
 /**
  * Validates relationship mappings.
  * Ensures that relationship mappings are well-formed and reference valid stages.
+ * Additionally validates that sourceId and targetId exist in the appropriate producer outputs.
  *
  * @param mappings - Relationship mappings to validate
  * @param validStages - Set of valid stage IDs
+ * @param patternCandidates - Pattern candidates for PATTERN stage ID validation
+ * @param patternQualifications - Pattern qualifications for QUALIFICATION stage ID validation
+ * @param resolvedMechanisms - Resolved mechanisms for MECHANISM stage ID validation
+ * @param mechanismRefinements - Mechanism refinements for REFINEMENT stage ID validation
  * @returns Validation result with diagnostics for invalid mappings
  */
 export function validateRelationshipMappings(
   mappings: readonly RelationshipMapping[],
-  validStages: ReadonlySet<string>
+  validStages: ReadonlySet<string>,
+  patternCandidates: readonly PatternCandidate[],
+  patternQualifications: readonly PatternQualification[],
+  resolvedMechanisms: readonly ResolvedMechanism[],
+  mechanismRefinements: readonly MechanismRefinement[]
 ): ValidationResult {
   const diagnostics: OrchestrationDiagnostic[] = [];
+
+  // Build ID sets for each stage
+  const patternIdSet = new Set(patternCandidates.map(p => p.patternId));
+  const qualificationPatternIdSet = new Set(patternQualifications.map(q => q.patternId));
+  const mechanismCandidateIdSet = new Set(resolvedMechanisms.map(m => m.candidateId));
+  const refinementCandidateIdSet = new Set(mechanismRefinements.map(r => r.candidateId));
 
   for (const mapping of mappings) {
     if (!validStages.has(mapping.sourceStage)) {
@@ -280,12 +295,81 @@ export function validateRelationshipMappings(
         stage: 'RELATIONSHIP_MAPPING'
       });
     }
+
+    // Validate sourceId exists in the appropriate producer output
+    const sourceIdValid = validateMappingId(
+      mapping.sourceId,
+      mapping.sourceStage,
+      patternIdSet,
+      qualificationPatternIdSet,
+      mechanismCandidateIdSet,
+      refinementCandidateIdSet
+    );
+
+    if (!sourceIdValid) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_INVALID_SOURCE_ID_${mapping.mappingId}`,
+        severity: 'ERROR',
+        category: 'INVALID_REFERENCE',
+        message: `Relationship mapping sourceId '${mapping.sourceId}' does not exist in stage '${mapping.sourceStage}'`,
+        relatedIds: [mapping.mappingId, mapping.sourceId],
+        stage: 'RELATIONSHIP_MAPPING'
+      });
+    }
+
+    // Validate targetId exists in the appropriate producer output
+    const targetIdValid = validateMappingId(
+      mapping.targetId,
+      mapping.targetStage,
+      patternIdSet,
+      qualificationPatternIdSet,
+      mechanismCandidateIdSet,
+      refinementCandidateIdSet
+    );
+
+    if (!targetIdValid) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_INVALID_TARGET_ID_${mapping.mappingId}`,
+        severity: 'ERROR',
+        category: 'INVALID_REFERENCE',
+        message: `Relationship mapping targetId '${mapping.targetId}' does not exist in stage '${mapping.targetStage}'`,
+        relatedIds: [mapping.mappingId, mapping.targetId],
+        stage: 'RELATIONSHIP_MAPPING'
+      });
+    }
   }
 
   return {
     valid: diagnostics.length === 0,
     diagnostics: Object.freeze(diagnostics)
   };
+}
+
+/**
+ * Validates that a mapping ID exists in the appropriate stage's ID set.
+ */
+function validateMappingId(
+  id: string,
+  stage: string,
+  patternIdSet: Set<string>,
+  qualificationPatternIdSet: Set<string>,
+  mechanismCandidateIdSet: Set<string>,
+  refinementCandidateIdSet: Set<string>
+): boolean {
+  switch (stage) {
+    case 'PATTERN':
+      return patternIdSet.has(id);
+    case 'QUALIFICATION':
+      return qualificationPatternIdSet.has(id);
+    case 'MECHANISM':
+      return mechanismCandidateIdSet.has(id);
+    case 'REFINEMENT':
+      return refinementCandidateIdSet.has(id);
+    default:
+      // For stages not tracked (PARTICIPANT_ROLES, 10H, 10L), we can't validate IDs
+      // Return true to avoid false positives
+      return true;
+  }
 }
 
 /**
@@ -335,8 +419,15 @@ export function validateCanonicalCareerFoundation(
   const identityMappingResult = validateIdentityMappings(identityMappings, validStages);
   allDiagnostics.push(...identityMappingResult.diagnostics);
 
-  // Validate relationship mappings
-  const relationshipMappingResult = validateRelationshipMappings(relationshipMappings, validStages);
+  // Validate relationship mappings (with ID existence validation)
+  const relationshipMappingResult = validateRelationshipMappings(
+    relationshipMappings,
+    validStages,
+    patterns,
+    qualifications,
+    mechanisms,
+    refinements
+  );
   allDiagnostics.push(...relationshipMappingResult.diagnostics);
 
   return {
