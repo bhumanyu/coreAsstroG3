@@ -624,13 +624,10 @@ describe('CanonicalCareerOrchestrator', () => {
       const cardinalityDiagnostic = foundation.diagnostics.find(
         d => d.diagnosticId === 'ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION_PATTERN_1'
       );
-      // Note: The current implementation may not emit this diagnostic in all cases
-      // This test is skipped to avoid blocking unrelated changes
-      if (cardinalityDiagnostic) {
-        expect(cardinalityDiagnostic.severity).toBe('ERROR');
-        expect(cardinalityDiagnostic.category).toBe('CONTRACT_VIOLATION');
-        expect(cardinalityDiagnostic.message).toContain('Multiple qualifications');
-      }
+      expect(cardinalityDiagnostic).toBeDefined();
+      expect(cardinalityDiagnostic?.severity).toBe('ERROR');
+      expect(cardinalityDiagnostic?.category).toBe('CONTRACT_VIOLATION');
+      expect(cardinalityDiagnostic?.message).toContain('Multiple qualifications');
     });
   });
 
@@ -1381,16 +1378,25 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // Verify PARTIAL diagnostic is present
+      // Verify PARTIAL diagnostic is present with actual message text
       const partialDiagnostic = foundation.diagnostics.find(
         d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL'
       );
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
+      expect(partialDiagnostic?.message).toContain('Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings');
 
       // Identity mappings may be empty if no patterns exist
       expect(foundation.identityMappings).toEqual([]);
+
+      // Verify no fabricated identity keys appear (empty case still validates contract)
+      for (const mapping of foundation.identityMappings) {
+        expect(mapping.sourceIdentityKey).not.toMatch(/^CANDIDATE_/);
+        expect(mapping.sourceIdentityKey).not.toMatch(/^REFINEMENT_/);
+        expect(mapping.targetIdentityKey).not.toMatch(/^CANDIDATE_/);
+        expect(mapping.targetIdentityKey).not.toMatch(/^REFINEMENT_/);
+      }
     });
 
     it('should emit pattern→qualification mappings when both have identityKey', () => {
@@ -1408,14 +1414,34 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // Pattern → Qualification mapping should be present
+      // Pattern → Qualification mapping should be present in identityMappings
       const patternToQualificationMappings = foundation.identityMappings.filter(
         m => m.sourceStage === 'PATTERN' && m.targetStage === 'QUALIFICATION'
       );
       expect(patternToQualificationMappings.length).toBeGreaterThan(0);
+      expect(patternToQualificationMappings[0].sourceIdentityKey).toBe('IDENTITY_PATTERN_1');
+      expect(patternToQualificationMappings[0].targetIdentityKey).toBe('IDENTITY_PATTERN_1');
 
-      // Verify no fabricated keys
-      for (const mapping of patternToQualificationMappings) {
+      // Verify PARTIAL diagnostic is present with actual message text
+      const partialDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL'
+      );
+      expect(partialDiagnostic).toBeDefined();
+      expect(partialDiagnostic?.severity).toBe('INFO');
+      expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
+      expect(partialDiagnostic?.message).toContain('Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings');
+
+      // Assert the concrete relationshipMappings contents
+      const patternToQualificationRelationships = foundation.relationshipMappings.filter(
+        m => m.sourceStage === 'PATTERN' && m.targetStage === 'QUALIFICATION'
+      );
+      expect(patternToQualificationRelationships.length).toBeGreaterThan(0);
+      expect(patternToQualificationRelationships[0].sourceId).toBe('PATTERN_1');
+      expect(patternToQualificationRelationships[0].targetId).toBe('PATTERN_1');
+      expect(patternToQualificationRelationships[0].relationshipType).toBe('DERIVATION');
+
+      // Verify no fabricated keys in identityMappings
+      for (const mapping of foundation.identityMappings) {
         expect(mapping.sourceIdentityKey).not.toMatch(/^CANDIDATE_/);
         expect(mapping.sourceIdentityKey).not.toMatch(/^REFINEMENT_/);
         expect(mapping.targetIdentityKey).not.toMatch(/^CANDIDATE_/);
@@ -1443,30 +1469,53 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
-      // Note: Unresolved-mapping diagnostics are NOT emitted in the current implementation
-      // because relationship mappings cover the structural references (patternId/candidateId)
-      // This is per Gate 3: identity-mapping honesty (no fabrication)
-      const unresolvedQualToMechDiagnostic = foundation.diagnostics.find(
-        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_QUALIFICATION_TO_MECHANISM'
+      // Verify PARTIAL diagnostic is present with actual message text
+      const partialDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL'
       );
-      expect(unresolvedQualToMechDiagnostic).toBeUndefined();
+      expect(partialDiagnostic).toBeDefined();
+      expect(partialDiagnostic?.severity).toBe('INFO');
+      expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
+      expect(partialDiagnostic?.message).toContain('Qualification→mechanism and mechanism→refinement are represented as RelationshipMappings');
 
-      const unresolvedMechToRefineDiagnostic = foundation.diagnostics.find(
-        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_MECHANISM_TO_REFINEMENT'
+      // Qualification→mechanism and mechanism→refinement are now represented as RelationshipMappings
+      // Assert the concrete relationshipMappings contents
+      const qualificationToMechanismRelationships = foundation.relationshipMappings.filter(
+        m => m.sourceStage === 'QUALIFICATION' && m.targetStage === 'MECHANISM'
       );
-      expect(unresolvedMechToRefineDiagnostic).toBeUndefined();
+      expect(qualificationToMechanismRelationships.length).toBeGreaterThan(0);
+      expect(qualificationToMechanismRelationships[0].sourceId).toBe('PATTERN_1');
+      expect(qualificationToMechanismRelationships[0].targetId).toBe('CANDIDATE_1');
+      expect(qualificationToMechanismRelationships[0].relationshipType).toBe('DERIVATION');
 
-      // Verify no qualification→mechanism mappings were emitted
+      // Mechanism→refinement relationships (present since stub refiner returns a refinement)
+      const mechanismToRefinementRelationships = foundation.relationshipMappings.filter(
+        m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
+      );
+      expect(mechanismToRefinementRelationships.length).toBeGreaterThan(0);
+      expect(mechanismToRefinementRelationships[0].sourceId).toBe('CANDIDATE_1');
+      expect(mechanismToRefinementRelationships[0].targetId).toBe('CANDIDATE_1');
+      expect(mechanismToRefinementRelationships[0].relationshipType).toBe('DERIVATION');
+
+      // Verify no qualification→mechanism mappings were emitted in identityMappings
       const qualificationToMechanismMappings = foundation.identityMappings.filter(
         m => m.sourceStage === 'QUALIFICATION' && m.targetStage === 'MECHANISM'
       );
       expect(qualificationToMechanismMappings.length).toBe(0);
 
-      // Verify no mechanism→refinement mappings were emitted
+      // Verify no mechanism→refinement mappings were emitted in identityMappings
       const mechanismToRefinementMappings = foundation.identityMappings.filter(
         m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
       );
       expect(mechanismToRefinementMappings.length).toBe(0);
+
+      // Verify no fabricated identity keys appear in identityMappings
+      for (const mapping of foundation.identityMappings) {
+        expect(mapping.sourceIdentityKey).not.toMatch(/^CANDIDATE_/);
+        expect(mapping.sourceIdentityKey).not.toMatch(/^REFINEMENT_/);
+        expect(mapping.targetIdentityKey).not.toMatch(/^CANDIDATE_/);
+        expect(mapping.targetIdentityKey).not.toMatch(/^REFINEMENT_/);
+      }
     });
   });
 

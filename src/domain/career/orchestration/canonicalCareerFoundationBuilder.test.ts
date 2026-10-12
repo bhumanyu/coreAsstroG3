@@ -734,6 +734,10 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
   });
 
   describe('Regression Test: interpretCareerV2 Structural Integrity', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('interpretCareerV2 produces valid C4-C11 conclusion structure', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 
@@ -935,15 +939,100 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       // Run interpretCareerV2
       const interpretation = interpretCareerV2(horoscope, options);
 
+      // Verify interpretation was actually produced
+      expect(interpretation).toBeDefined();
+      expect(interpretation.domain).toBe('CAREER');
+
       // Verify each producer was called exactly once
       expect(structuralSpy).toHaveBeenCalledTimes(1);
       expect(relevanceSpy).toHaveBeenCalledTimes(1);
       expect(conditionSpy).toHaveBeenCalledTimes(1);
+    });
 
-      // Restore spies
-      structuralSpy.mockRestore();
-      relevanceSpy.mockRestore();
-      conditionSpy.mockRestore();
+    it('builder-level optimization: preComputedInputs bypasses producer calls', async () => {
+      // Spy on the upstream producers
+      const structuralSpy = vi.spyOn(await import('../careerStructuralReasoningIntegration'), 'buildCareerStructuralReasoning');
+      const relevanceSpy = vi.spyOn(await import('../careerPlanetaryRelevanceIntegration'), 'buildCareerPlanetaryRelevance');
+      const conditionSpy = vi.spyOn(await import('../careerPlanetaryConditionIntegration'), 'buildCareerPlanetaryCondition');
+
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+      // Pre-compute the three shared inputs
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
+      const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
+
+      // Call builder with preComputedInputs
+      const foundation = buildCanonicalCareerFoundation({
+        horoscope,
+        preComputedInputs: { structural, relevance, condition }
+      });
+
+      // Verify foundation was built successfully
+      expect(foundation).toBeDefined();
+      expect(foundation.foundationId).toBeDefined();
+
+      // Verify the three producers were NOT called by the builder (they were called above for pre-computation)
+      // The spy counts reflect the pre-computation calls, so they should each be 1 from our explicit calls
+      // and 0 from the builder's internal logic
+      expect(structuralSpy).toHaveBeenCalledTimes(1);
+      expect(relevanceSpy).toHaveBeenCalledTimes(1);
+      expect(conditionSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('builder-level without preComputedInputs: producers called internally', async () => {
+      // Spy on the upstream producers
+      const structuralSpy = vi.spyOn(await import('../careerStructuralReasoningIntegration'), 'buildCareerStructuralReasoning');
+      const relevanceSpy = vi.spyOn(await import('../careerPlanetaryRelevanceIntegration'), 'buildCareerPlanetaryRelevance');
+      const conditionSpy = vi.spyOn(await import('../careerPlanetaryConditionIntegration'), 'buildCareerPlanetaryCondition');
+
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+      // Call builder WITHOUT preComputedInputs
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Verify foundation was built successfully
+      expect(foundation).toBeDefined();
+      expect(foundation.foundationId).toBeDefined();
+
+      // Verify the three producers were each called once internally by the builder
+      expect(structuralSpy).toHaveBeenCalledTimes(1);
+      expect(relevanceSpy).toHaveBeenCalledTimes(1);
+      expect(conditionSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('foundation-exclusive producers consume shared structural result', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+      // Pre-compute all three shared inputs
+      const structural = buildCareerStructuralReasoning({ horoscope });
+      const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
+      const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
+
+      // Spy on foundation-exclusive producers
+      const buildCareerGraphFactsSpy = vi.spyOn(await import('../careerGraph'), 'buildCareerGraphFactsFromStructural');
+      const buildCareerAstroGraphSpy = vi.spyOn(await import('../careerGraph'), 'buildCareerAstroGraph');
+      const detectCareerHouseNetworksSpy = vi.spyOn(await import('../careerGraph'), 'detectCareerHouseNetworks');
+      const classifyCareerPatternsSpy = vi.spyOn(await import('../careerPattern/careerPatternClassification'), 'classifyCareerPatterns');
+
+      // Call builder with preComputedInputs
+      const foundation = buildCanonicalCareerFoundation({
+        horoscope,
+        preComputedInputs: { structural, relevance, condition }
+      });
+
+      // Verify foundation was built successfully
+      expect(foundation).toBeDefined();
+      expect(foundation.foundationId).toBeDefined();
+
+      // Verify foundation-exclusive producers were called (they consume the shared structural result)
+      expect(buildCareerGraphFactsSpy).toHaveBeenCalled();
+      expect(buildCareerAstroGraphSpy).toHaveBeenCalled();
+      expect(detectCareerHouseNetworksSpy).toHaveBeenCalled();
+      expect(classifyCareerPatternsSpy).toHaveBeenCalled();
+
+      // Verify buildCareerGraphFactsFromStructural was called with the structural parameter
+      expect(buildCareerGraphFactsSpy).toHaveBeenCalledWith({ structural });
     });
   });
 });
