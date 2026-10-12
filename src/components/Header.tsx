@@ -115,13 +115,19 @@ export const ProductNavigation: React.FC<ProductNavigationProps> = ({
             type="button"
             onClick={() => onNavigate(item.id)}
             title={item.description}
-            className={`px-3.5 py-2.5 text-xs font-medium whitespace-nowrap shrink-0 transition-all rounded-lg cursor-pointer flex items-center space-x-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+            className={`relative px-3.5 py-2.5 text-xs font-medium whitespace-nowrap shrink-0 transition-all rounded-lg cursor-pointer flex items-center space-x-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
               isActive
                 ? 'bg-indigo-500/15 text-indigo-400 dark:text-indigo-400 light:text-indigo-700 light:bg-indigo-50 font-semibold shadow-sm border border-indigo-500/20'
                 : 'text-slate-400 hover:text-slate-200 dark:text-slate-400 dark:hover:text-slate-100 light:text-slate-600 light:hover:text-slate-900 hover:bg-slate-800/40 dark:hover:bg-slate-800/40 light:hover:bg-slate-100 border border-transparent'
             }`}
           >
             <span>{item.label}</span>
+            <span
+              aria-hidden="true"
+              className={`absolute bottom-1 left-3 right-3 h-0.5 rounded-full bg-indigo-400 origin-left transition-transform duration-300 ${
+                isActive ? 'scale-x-100' : 'scale-x-0'
+              }`}
+            />
           </button>
         );
       })}

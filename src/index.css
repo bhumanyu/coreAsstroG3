@@ -20,6 +20,10 @@
   --color-cosmic-900: #4c1d95;
   --color-cosmic-950: #2e1065;
 
+  --color-aurora-400: #34d399;
+  --color-aurora-500: #f59e0b;
+  --color-aurora-600: #ec4899;
+
   /* Custom Elevation & Glow Shadows */
   --shadow-glow: 0 0 24px -4px rgba(139, 92, 246, 0.25);
   --shadow-glow-sm: 0 0 12px -2px rgba(139, 92, 246, 0.2);
