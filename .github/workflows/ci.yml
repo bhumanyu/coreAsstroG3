@@ -6,20 +6,38 @@ on:
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Pin npm version
+        run: npm install --global npm@10.9.2
+      - name: Record toolchain and revision
+        run: |
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Node version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "package-lock.json SHA256: $(sha256sum package-lock.json)"
+      - name: Assert lockfile is tracked
+        run: git ls-files --error-unmatch package-lock.json
       - name: Install Node dependencies
         run: npm ci
       - name: Run lint
         run: npm run lint
-      - name: Run Node tests & build
-        run: |
-          npm test
-          npm run build
+      - name: Run tests
+        run: npm test
+      - name: Run build
+        run: npm run build
