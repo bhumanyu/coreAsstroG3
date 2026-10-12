@@ -1333,8 +1333,8 @@ describe('CanonicalCareerOrchestrator', () => {
     });
   });
 
-  describe('Identity mappings deferred', () => {
-    it('should document that identity mappings are deferred', () => {
+  describe('Identity mappings partial', () => {
+    it('should document that identity mappings are partial (pattern→qualification mapped, others unresolved)', () => {
       const ports = createStubPorts();
       const orchestrator = new CanonicalCareerOrchestrator(ports);
 
@@ -1345,16 +1345,94 @@ describe('CanonicalCareerOrchestrator', () => {
         networks: []
       });
 
+      // Verify PARTIAL diagnostic is present
       expect(foundation.diagnostics).toContainEqual(
         expect.objectContaining({
-          diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED',
+          diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL',
           severity: 'INFO',
-          category: 'DEFERRED_FEATURE',
-          message: expect.stringContaining('Identity mappings across stages')
+          category: 'PARTIAL_FEATURE',
+          message: expect.stringContaining('partial linkage')
         })
       );
 
+      // Identity mappings may be empty if no patterns exist
       expect(foundation.identityMappings).toEqual([]);
+    });
+
+    it('should emit pattern→qualification mappings when both have identityKey', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Pattern → Qualification mapping should be present
+      const patternToQualificationMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'PATTERN' && m.targetStage === 'QUALIFICATION'
+      );
+      expect(patternToQualificationMappings.length).toBeGreaterThan(0);
+
+      // Verify no fabricated keys
+      for (const mapping of patternToQualificationMappings) {
+        expect(mapping.sourceIdentityKey).not.toMatch(/^CANDIDATE_/);
+        expect(mapping.sourceIdentityKey).not.toMatch(/^REFINEMENT_/);
+        expect(mapping.targetIdentityKey).not.toMatch(/^CANDIDATE_/);
+        expect(mapping.targetIdentityKey).not.toMatch(/^REFINEMENT_/);
+      }
+    });
+
+    it('should emit unresolved-mapping diagnostics for qualification→mechanism and mechanism→refinement', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      // Verify unresolved-mapping diagnostics are present
+      const unresolvedQualToMechDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_QUALIFICATION_TO_MECHANISM'
+      );
+      expect(unresolvedQualToMechDiagnostic).toBeDefined();
+      expect(unresolvedQualToMechDiagnostic?.category).toBe('PARTIAL_FEATURE');
+
+      const unresolvedMechToRefineDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_MECHANISM_TO_REFINEMENT'
+      );
+      expect(unresolvedMechToRefineDiagnostic).toBeDefined();
+      expect(unresolvedMechToRefineDiagnostic?.category).toBe('PARTIAL_FEATURE');
+
+      // Verify no qualification→mechanism mappings were emitted
+      const qualificationToMechanismMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'QUALIFICATION' && m.targetStage === 'MECHANISM'
+      );
+      expect(qualificationToMechanismMappings.length).toBe(0);
+
+      // Verify no mechanism→refinement mappings were emitted
+      const mechanismToRefinementMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
+      );
+      expect(mechanismToRefinementMappings.length).toBe(0);
     });
   });
 
@@ -1930,33 +2008,7 @@ describe('CanonicalCareerOrchestrator', () => {
     });
   });
 
-  describe('Review finding E: Identity mappings deferral', () => {
-    it('should explicitly document identity mappings deferral in diagnostics', () => {
-      const ports = createStubPorts();
-      const orchestrator = new CanonicalCareerOrchestrator(ports);
 
-      const foundation = orchestrator.orchestrate({
-        patterns: [],
-        relevance: [],
-        condition: [],
-        networks: []
-      });
-
-      // Verify empty identityMappings
-      expect(foundation.identityMappings).toEqual([]);
-
-      // Verify diagnostic documents the deferral
-      expect(foundation.diagnostics).toContainEqual(
-        expect.objectContaining({
-          diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED',
-          severity: 'INFO',
-          category: 'DEFERRED_FEATURE',
-          message: expect.stringContaining('Identity mappings across stages (pattern→qualification→mechanism→refinement) are not yet provided by producers'),
-          stage: 'IDENTITY_MAPPINGS'
-        })
-      );
-    });
-  });
 
   describe('Real dispositor integration test (Finding 2)', () => {
     it('should use real defaultCareerMechanismDispositorRefiner with properly-typed CareerDispositorContext and assert exact UNCHANGED status', () => {

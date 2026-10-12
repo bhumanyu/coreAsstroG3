@@ -9,16 +9,18 @@
 - ✅ Foundation exposed on `conclusionData.canonicalCareerFoundation`
 - ✅ 10H input wired: `resolveCareer10HFoundation({ horoscope })` passed when status is COMPLETE
 - ✅ 10L input wired: `resolveCareer10LFoundation({ foundation, houseLordship })` passed when resolvable
-- ✅ Dispositor contexts: Two-pass orchestration implemented (feature flag `enableDispositorContexts`)
-  - Default `false` in production to preserve current behavior
+- ⚠️ Dispositor contexts: Two-pass orchestration implemented (feature flag `enableDispositorContexts`)
+  - Default `false` in production to preserve current behavior (tracked blocker per review Finding 4)
   - When `true`, builder runs two-pass orchestration: pass 1 (get mechanisms, build contexts), pass 2 (with contexts)
   - Upstream producers computed once and reused (invariant preserved)
-- ✅ Identity mappings: Partially implemented from explicit cross-stage linkage
-  - Pattern → Qualification mappings populated (via patternId)
-  - Qualification → Mechanism mappings populated (via patternId)
-  - Mechanism → Refinement mappings populated (via candidateId)
+  - **P2-11B status: PARTIAL** - dispositor integration not yet production-enabled pending verification
+- ✅ Identity mappings: Partially implemented from explicit cross-stage linkage (fix per review Finding 1)
+  - Pattern → Qualification mappings populated (via real pattern.identityKey and qualification.identityKey)
+  - Qualification → Mechanism mappings NOT populated (mechanism candidates do not expose identityKey in current contract)
+  - Mechanism → Refinement mappings NOT populated (mechanism candidates do not expose identityKey in current contract)
   - Participant role assignments lack explicit stage linkage (documented in diagnostic)
-  - Diagnostic changed from `ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED` to `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL`
+  - Diagnostic: `ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL` with specific unresolved-mapping diagnostics
+  - No fabricated identity keys (CANDIDATE_, REFINEMENT_, participantIds) - only real semantic identityKey values are used
 - ❌ Profession-producer consumption: Deferred to a future milestone
 
 **WIRED FEATURES (current milestone):**

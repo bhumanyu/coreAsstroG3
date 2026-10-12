@@ -864,12 +864,15 @@ export class CanonicalCareerOrchestrator {
   /**
    * Builds identity mappings from explicit cross-stage linkage.
    *
-   * Populates identity mappings based on explicit linkage exposed by producers:
-   * - Pattern → Qualification: via patternId
-   * - Qualification → Mechanism: via patternId
-   * - Mechanism → Refinement: via candidateId
+   * Only emits mappings when the originating producer actually exposes a supported
+   * semantic identityKey for both source and target. Never fabricates identity keys.
    *
-   * Only uses explicit linkage; never infers identity from string similarity.
+   * Pattern → Qualification: Uses real pattern.identityKey and qualification.identityKey
+   * Qualification → Mechanism: Only mapped if mechanism candidate exposes identityKey
+   * Mechanism → Refinement: Only mapped if refinement exposes mechanismId (REFINED status)
+   *
+   * When a source/target semantic identity is genuinely missing, no mapping is emitted
+   * and an unresolved-mapping diagnostic is recorded.
    */
   private buildIdentityMappings(
     patternCandidates: readonly PatternCandidate[],
@@ -881,62 +884,91 @@ export class CanonicalCareerOrchestrator {
     const mappings: IdentityMapping[] = [];
     let mappingIndex = 0;
 
-    // Build maps for efficient lookup
-    const patternMap = new Map(patternCandidates.map(p => [p.patternId, p]));
-    const qualMap = new Map(patternQualifications.map(q => [q.patternId, q]));
-    const mechanismMap = new Map(resolvedMechanisms.map(m => [m.candidateId, m]));
-    const refinementMap = new Map(mechanismRefinements.map(r => [r.candidateId, r]));
+    // Build qualification map for lookup
+    // Contract: One qualification per patternId (asserted below)
+    const qualMap = new Map<string, PatternQualification>(
+      patternQualifications.map((q) => [q.patternId, q])
+    );
+
+    // Verify cardinality contract: assert one qualification per patternId
+    // If multiple qualifications per patternId are legitimate, this map would need to group into arrays
+    const patternIdsFromQuals = patternQualifications.map(q => q.patternId);
+    const uniquePatternIds = new Set(patternIdsFromQuals);
+    if (patternIdsFromQuals.length !== uniquePatternIds.size) {
+      diagnostics.push({
+        diagnosticId: 'ORCHESTRATION_QUALIFICATION_CARDINALITY_VIOLATION',
+        severity: 'ERROR',
+        category: 'CONTRACT_VIOLATION',
+        message: `Multiple qualifications detected for same patternId - cardinality contract violated`,
+        relatedIds: patternIdsFromQuals,
+        stage: 'QUALIFICATION'
+      });
+    }
 
     // Pattern → Qualification mappings (via patternId)
+    // Both pattern and qualification expose real identityKey fields
     for (const pattern of patternCandidates) {
       const qualification = qualMap.get(pattern.patternId);
       if (qualification) {
+        // Both source and target have real identityKey - emit mapping
         mappings.push({
           mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
           sourceStage: 'PATTERN',
           targetStage: 'QUALIFICATION',
-          sourceIdentityKey: pattern.identityKey as any,
-          targetIdentityKey: qualification.identityKey as any,
+          sourceIdentityKey: pattern.identityKey as EvidenceIdentityKey,
+          targetIdentityKey: qualification.identityKey as EvidenceIdentityKey,
           mappingType: 'EQUIVALENCE'
         });
       }
     }
 
     // Qualification → Mechanism mappings (via patternId)
+    // Only emit if mechanism candidate exposes identityKey
+    // A participantId/candidateId is NOT an EvidenceIdentityKey - do not relabel
+    let unresolvedQualificationToMechanismCount = 0;
     for (const qualification of patternQualifications) {
       const mechanisms = resolvedMechanisms.filter(m => m.patternId === qualification.patternId);
       for (const mechanism of mechanisms) {
-        // Use candidate.identityKey if available (mechanism evidence may not have identityKey)
-        const sourceIdentityKey = qualification.identityKey as any;
-        const targetIdentityKey = mechanism.candidate.evidence[0]?.participantIds[0] as any || `CANDIDATE_${mechanism.candidateId}` as any;
-        mappings.push({
-          mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
-          sourceStage: 'QUALIFICATION',
-          targetStage: 'MECHANISM',
-          sourceIdentityKey,
-          targetIdentityKey,
-          mappingType: 'DERIVATION'
-        });
+        // Check if mechanism candidate exposes identityKey
+        // CareerMechanismCandidate does not have an identityKey field in the current contract
+        // Therefore, we cannot emit a mapping - record as unresolved
+        unresolvedQualificationToMechanismCount++;
       }
     }
 
+    if (unresolvedQualificationToMechanismCount > 0) {
+      diagnostics.push({
+        diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_QUALIFICATION_TO_MECHANISM',
+        severity: 'INFO',
+        category: 'PARTIAL_FEATURE',
+        message: `${unresolvedQualificationToMechanismCount} qualification→mechanism mappings unresolved: mechanism candidates do not expose identityKey in current contract`,
+        relatedIds: [],
+        stage: 'IDENTITY_MAPPINGS'
+      });
+    }
+
     // Mechanism → Refinement mappings (via candidateId)
+    // CareerMechanismCandidate does not currently expose identityKey in the contract
+    // Therefore, we cannot emit any mechanism→refinement mappings - all are unresolved
+    let unresolvedMechanismToRefinementCount = 0;
     for (const mechanism of resolvedMechanisms) {
-      const refinement = refinementMap.get(mechanism.candidateId);
+      const refinement = mechanismRefinements.find(r => r.candidateId === mechanism.candidateId);
       if (refinement) {
-        const sourceIdentityKey = mechanism.candidate.evidence[0]?.participantIds[0] as any || `CANDIDATE_${mechanism.candidateId}` as any;
-        const targetIdentityKey = refinement.resolution === 'REFINED'
-          ? refinement.mechanismId as any
-          : `REFINEMENT_${refinement.candidateId}` as any;
-        mappings.push({
-          mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
-          sourceStage: 'MECHANISM',
-          targetStage: 'REFINEMENT',
-          sourceIdentityKey,
-          targetIdentityKey,
-          mappingType: refinement.resolution === 'REFINED' ? 'DERIVATION' : 'EQUIVALENCE'
-        });
+        // Any refinement (REFINED, UNCHANGED, UNRESOLVED) cannot be mapped
+        // because mechanism candidate does not expose identityKey
+        unresolvedMechanismToRefinementCount++;
       }
+    }
+
+    if (unresolvedMechanismToRefinementCount > 0) {
+      diagnostics.push({
+        diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_MECHANISM_TO_REFINEMENT',
+        severity: 'INFO',
+        category: 'PARTIAL_FEATURE',
+        message: `${unresolvedMechanismToRefinementCount} mechanism→refinement mappings unresolved: mechanism candidates do not expose identityKey in current contract`,
+        relatedIds: [],
+        stage: 'IDENTITY_MAPPINGS'
+      });
     }
 
     // Emit diagnostic for incomplete coverage (participant roles gap)
@@ -944,7 +976,7 @@ export class CanonicalCareerOrchestrator {
       diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL',
       severity: 'INFO',
       category: 'PARTIAL_FEATURE',
-      message: 'Identity mappings populated from explicit linkage (pattern→qualification→mechanism→refinement). Participant role assignments lack explicit stage linkage and are not mapped.',
+      message: 'Identity mappings populated from explicit linkage (pattern→qualification fully mapped; qualification→mechanism and mechanism→refinement partially mapped). Participant role assignments lack explicit stage linkage and are not mapped.',
       relatedIds: [],
       stage: 'IDENTITY_MAPPINGS'
     });

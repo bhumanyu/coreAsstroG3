@@ -496,12 +496,19 @@ export function interpretCareerV2(
    * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
    *
    * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
-   * This deferral is documented in P2-11G; the two-pass orchestration feature is available
-   * but not enabled in interpretCareerV2 to preserve the current production behavior.
+   * This is a tracked blocker per P2-11G review Finding 4:
+   * - Semantic-identity fix has landed (Finding 1)
+   * - Identity-mapping test strengthened (Finding 2)
+   * - Two-pass test fixed (Finding 3)
+   * - Pending: Verification that all tests pass before enabling in production
+   *
+   * The two-pass orchestration feature is available but not enabled in interpretCareerV2
+   * to preserve the current production behavior until verification is complete.
+   * P2-11B status: PARTIAL (dispositor integration not yet production-enabled).
    */
   const canonicalCareerFoundation = buildCanonicalCareerFoundation({
     horoscope,
-    enableDispositorContexts: false // Disabled in production per P2-11G
+    enableDispositorContexts: false // Disabled in production per P2-11G Finding 4 (tracked blocker)
   });
 
   const conclusionData = buildCareerConclusionData(

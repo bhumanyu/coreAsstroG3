@@ -41,10 +41,15 @@ import {
  * WIRED FEATURES (current milestone):
  * - 10H: resolveCareer10HFoundation({ horoscope }) - passed when status is COMPLETE
  * - 10L: resolveCareer10LFoundation({ foundation, houseLordship }) - passed when resolvable
- * - Dispositor contexts: two-pass orchestration when enableDispositorContexts=true
+ * - Dispositor contexts: two-pass orchestration when enableDispositorContexts=true (default false)
  *
  * DEFERRED FEATURES (documented in P2-11G):
- * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_DEFERRED (partial linkage exists)
+ * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL (partial linkage exists)
+ *   - Pattern → Qualification: fully mapped (both expose identityKey)
+ *   - Qualification → Mechanism: unresolved (mechanism candidates do not expose identityKey)
+ *   - Mechanism → Refinement: unresolved (mechanism candidates do not expose identityKey)
+ *   - Participant roles: unresolved (no explicit stage linkage)
+ *   - No fabricated identity keys - only real semantic identityKey values are used
  *
  * BOUNDARY ENFORCEMENT: This module must NOT:
  * - Implement any astrology calculations or interpretations

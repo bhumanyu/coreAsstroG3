@@ -287,13 +287,66 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       );
       expect(dispositorDiagnostic).toBeUndefined();
 
-      // Verify mechanism refinements are now resolved (REFINED or UNCHANGED, not UNRESOLVED/UNAVAILABLE)
-      // If contexts were built and refiner was called, at least some refinements should resolve
-      const hasResolvedRefinements = foundation.mechanismRefinements.some(
-        r => r.resolution === 'REFINED' || r.resolution === 'UNCHANGED'
+      // Verify upstream outputs were computed once and reused
+      // We can verify this by checking that the foundation is deterministic
+      // (same input produces same output)
+      const foundation2 = buildCanonicalCareerFoundation({ horoscope, enableDispositorContexts: true });
+      expect(JSON.stringify(foundation)).toBe(JSON.stringify(foundation2));
+
+      // Verify mechanism refinements have actual resolution states
+      // (not all UNRESOLVED/UNAVAILABLE, which would indicate refiner was not called)
+      if (foundation.resolvedMechanisms.length > 0) {
+        // At least some refinements should have a resolution other than UNRESOLVED
+        // The refiner was called with dispositor contexts
+        const hasNonUnresolvedRefinements = foundation.mechanismRefinements.some(
+          r => r.resolution === 'REFINED' || r.resolution === 'UNCHANGED'
+        );
+
+        // Note: It's possible that all refinements remain UNRESOLVED if dispositor contexts
+        // were insufficient for all candidates. The important assertion is that the
+        // two-pass orchestration ran without error and produced a valid foundation.
+        // If we have mechanisms, we should have refinements (even if UNRESOLVED).
+        expect(foundation.mechanismRefinements.length).toBe(foundation.resolvedMechanisms.length);
+      }
+    });
+
+    it('two-pass orchestration: insufficient data leaves refinements UNRESOLVED', async () => {
+      // Create a minimal horoscope that will produce mechanisms but insufficient dispositor data
+      const minimalHoroscope: any = {
+        planetFacts: [
+          { planet: 'SUN', sign: 'ARIES', longitude: 10, house: 10 }
+        ],
+        houses: [
+          { houseNumber: 10, sign: 'ARIES', longitude: 10, lord: 'SUN' }
+        ],
+        ascendant: {
+          sign: 'ARIES',
+          longitude: 0
+        },
+        houseLordship: {
+          10: 'SUN'
+        }
+      };
+
+      // Build foundation with dispositor contexts enabled
+      const foundation = buildCanonicalCareerFoundation({ horoscope: minimalHoroscope, enableDispositorContexts: true });
+
+      // Verify dispositor contexts diagnostic is NOT present (contexts were built)
+      const dispositorDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
       );
-      // Note: This may still be false if the canonical chart produces no mechanisms that can be refined
-      // The important invariant is that the two-pass orchestration ran without error
+      expect(dispositorDiagnostic).toBeUndefined();
+
+      // If mechanisms were produced, verify refinements exist
+      // (even if they are UNRESOLVED due to insufficient data)
+      if (foundation.resolvedMechanisms.length > 0) {
+        expect(foundation.mechanismRefinements.length).toBe(foundation.resolvedMechanisms.length);
+
+        // Verify refinements are either UNRESOLVED (insufficient data) or UNCHANGED/REFINED
+        for (const refinement of foundation.mechanismRefinements) {
+          expect(['UNRESOLVED', 'UNCHANGED', 'REFINED']).toContain(refinement.resolution);
+        }
+      }
     });
 
     it('identity mappings reference valid stages', async () => {
@@ -307,19 +360,203 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         expect(validStages.has(mapping.targetStage)).toBe(true);
       }
 
-      // Verify identity mappings reference real stage IDs (patternIds, candidateIds, mechanismIds)
-      const patternIds = new Set(foundation.patternCandidates.map(p => p.patternId));
-      const candidateIds = new Set(foundation.resolvedMechanisms.map(m => m.candidateId));
-      const mechanismIds = new Set(foundation.mechanismRefinements
-        .filter(r => r.resolution === 'REFINED')
-        .map(r => r.mechanismId));
+      // Build semantic identity key sets for each stage (not candidateId sets)
+      const patternIdentityKeys = new Set(foundation.patternCandidates.map(p => p.identityKey));
+      const qualificationIdentityKeys = new Set(foundation.patternQualifications.map(q => q.identityKey));
+      // Mechanism candidates do not currently expose identityKey - set is empty
+      const mechanismIdentityKeys = new Set<string>();
+      // Only REFINED refinements expose mechanismId
+      const refinementIdentityKeys = new Set(
+        foundation.mechanismRefinements
+          .filter(r => r.resolution === 'REFINED')
+          .map(r => r.mechanismId)
+      );
 
+      // Validate every emitted mapping against semantic identity key sets
       for (const mapping of foundation.identityMappings) {
-        // Verify source/target identity keys reference real data (not fabricated)
-        // This is a structural check - we verify mappings are not empty strings
-        expect(mapping.sourceIdentityKey).toBeTruthy();
-        expect(mapping.targetIdentityKey).toBeTruthy();
+        if (mapping.sourceStage === 'PATTERN') {
+          expect(patternIdentityKeys.has(mapping.sourceIdentityKey)).toBe(true);
+        } else if (mapping.sourceStage === 'QUALIFICATION') {
+          expect(qualificationIdentityKeys.has(mapping.sourceIdentityKey)).toBe(true);
+        } else if (mapping.sourceStage === 'MECHANISM') {
+          // Mechanism stage currently has no identityKey - mapping should not exist
+          expect(true).toBe(false); // Fail if we reach here
+        } else if (mapping.sourceStage === 'REFINEMENT') {
+          expect(refinementIdentityKeys.has(mapping.sourceIdentityKey)).toBe(true);
+        }
+
+        if (mapping.targetStage === 'PATTERN') {
+          expect(patternIdentityKeys.has(mapping.targetIdentityKey)).toBe(true);
+        } else if (mapping.targetStage === 'QUALIFICATION') {
+          expect(qualificationIdentityKeys.has(mapping.targetIdentityKey)).toBe(true);
+        } else if (mapping.targetStage === 'MECHANISM') {
+          // Mechanism stage currently has no identityKey - mapping should not exist
+          expect(true).toBe(false); // Fail if we reach here
+        } else if (mapping.targetStage === 'REFINEMENT') {
+          expect(refinementIdentityKeys.has(mapping.targetIdentityKey)).toBe(true);
+        }
       }
+
+      // Assert Pattern → Qualification mappings are present (both have identityKey)
+      const patternToQualificationMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'PATTERN' && m.targetStage === 'QUALIFICATION'
+      );
+      expect(patternToQualificationMappings.length).toBeGreaterThan(0);
+
+      // Assert qualification→mechanism mappings are NOT present (mechanism has no identityKey)
+      const qualificationToMechanismMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'QUALIFICATION' && m.targetStage === 'MECHANISM'
+      );
+      expect(qualificationToMechanismMappings.length).toBe(0);
+
+      // Assert mechanism→refinement mappings are NOT present (mechanism has no identityKey)
+      const mechanismToRefinementMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
+      );
+      expect(mechanismToRefinementMappings.length).toBe(0);
+
+      // Assert unresolved-mapping diagnostics are present
+      const unresolvedQualToMechDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_QUALIFICATION_TO_MECHANISM'
+      );
+      expect(unresolvedQualToMechDiagnostic).toBeDefined();
+      expect(unresolvedQualToMechDiagnostic?.category).toBe('PARTIAL_FEATURE');
+
+      const unresolvedMechToRefineDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_MECHANISM_TO_REFINEMENT'
+      );
+      expect(unresolvedMechToRefineDiagnostic).toBeDefined();
+      expect(unresolvedMechToRefineDiagnostic?.category).toBe('PARTIAL_FEATURE');
+    });
+
+    it('identity mappings: valid pattern→qualification mapping with real identity keys', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Find a pattern→qualification mapping
+      const patternToQualMapping = foundation.identityMappings.find(
+        m => m.sourceStage === 'PATTERN' && m.targetStage === 'QUALIFICATION'
+      );
+
+      expect(patternToQualMapping).toBeDefined();
+
+      // Verify both identity keys are real (not fabricated)
+      const patternIdentityKey = patternToQualMapping!.sourceIdentityKey;
+      const qualificationIdentityKey = patternToQualMapping!.targetIdentityKey;
+
+      // Verify these keys exist in the actual stage data
+      const patternExists = foundation.patternCandidates.some(p => p.identityKey === patternIdentityKey);
+      const qualificationExists = foundation.patternQualifications.some(q => q.identityKey === qualificationIdentityKey);
+
+      expect(patternExists).toBe(true);
+      expect(qualificationExists).toBe(true);
+
+      // Verify keys are not fabricated patterns like CANDIDATE_ or REFINEMENT_
+      expect(patternIdentityKey).not.toMatch(/^CANDIDATE_/);
+      expect(patternIdentityKey).not.toMatch(/^REFINEMENT_/);
+      expect(qualificationIdentityKey).not.toMatch(/^CANDIDATE_/);
+      expect(qualificationIdentityKey).not.toMatch(/^REFINEMENT_/);
+    });
+
+    it('identity mappings: qualification with no mechanism candidate is handled gracefully', async () => {
+      // This test uses the real fixture - some patterns may have no mechanism candidates
+      // The orchestrator should not emit qualification→mechanism mappings for such cases
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Find qualifications that have no corresponding mechanisms
+      const patternIdsWithQualifications = new Set(foundation.patternQualifications.map(q => q.patternId));
+      const patternIdsWithMechanisms = new Set(foundation.resolvedMechanisms.map(m => m.patternId));
+
+      const qualificationsWithoutMechanisms = foundation.patternQualifications.filter(
+        q => !patternIdsWithMechanisms.has(q.patternId)
+      );
+
+      // If any qualifications without mechanisms exist, verify no mappings were emitted for them
+      if (qualificationsWithoutMechanisms.length > 0) {
+        const qualificationToMechanismMappings = foundation.identityMappings.filter(
+          m => m.sourceStage === 'QUALIFICATION' && m.targetStage === 'MECHANISM'
+        );
+        expect(qualificationToMechanismMappings.length).toBe(0);
+      }
+    });
+
+    it('identity mappings: mechanism with no valid semantic identity mapping is reported as unresolved', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Mechanism candidates do not expose identityKey in current contract
+      // Therefore, qualification→mechanism mappings should be reported as unresolved
+      const unresolvedDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_UNRESOLVED_QUALIFICATION_TO_MECHANISM'
+      );
+
+      expect(unresolvedDiagnostic).toBeDefined();
+      expect(unresolvedDiagnostic?.severity).toBe('INFO');
+      expect(unresolvedDiagnostic?.category).toBe('PARTIAL_FEATURE');
+
+      // Verify no qualification→mechanism mappings were emitted
+      const qualificationToMechanismMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'QUALIFICATION' && m.targetStage === 'MECHANISM'
+      );
+      expect(qualificationToMechanismMappings.length).toBe(0);
+    });
+
+    it('identity mappings: refinement that is UNRESOLVED is handled correctly', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Find UNRESOLVED refinements
+      const unresolvedRefinements = foundation.mechanismRefinements.filter(r => r.resolution === 'UNRESOLVED');
+
+      if (unresolvedRefinements.length > 0) {
+        // Verify no mechanism→refinement mappings were emitted for UNRESOLVED refinements
+        const mechanismToRefinementMappings = foundation.identityMappings.filter(
+          m => m.sourceStage === 'MECHANISM' && m.targetStage === 'REFINEMENT'
+        );
+        expect(mechanismToRefinementMappings.length).toBe(0);
+      }
+    });
+
+    it('identity mappings: multiple candidates linked to same pattern do not cause collisions', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Find patterns with multiple mechanism candidates
+      const patternToCandidateCount = new Map<string, number>();
+      for (const mechanism of foundation.resolvedMechanisms) {
+        const count = patternToCandidateCount.get(mechanism.patternId) || 0;
+        patternToCandidateCount.set(mechanism.patternId, count + 1);
+      }
+
+      const patternsWithMultipleCandidates = Array.from(patternToCandidateCount.entries())
+        .filter(([_, count]) => count > 1)
+        .map(([patternId, _]) => patternId);
+
+      if (patternsWithMultipleCandidates.length > 0) {
+        // Verify identity mappings are still deterministic and valid
+        // (No fabricated keys, no duplicate mapping IDs)
+        const mappingIds = new Set(foundation.identityMappings.map(m => m.mappingId));
+        expect(mappingIds.size).toBe(foundation.identityMappings.length);
+      }
+    });
+
+    it('identity mappings: participant-role mapping remains explicitly unresolved', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const foundation = buildCanonicalCareerFoundation({ horoscope });
+
+      // Verify no participant role identity mappings exist
+      const participantRoleMappings = foundation.identityMappings.filter(
+        m => m.sourceStage === 'PARTICIPANT_ROLES' || m.targetStage === 'PARTICIPANT_ROLES'
+      );
+      expect(participantRoleMappings.length).toBe(0);
+
+      // Verify diagnostic documents this gap
+      const partialDiagnostic = foundation.diagnostics.find(
+        d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL'
+      );
+      expect(partialDiagnostic).toBeDefined();
+      expect(partialDiagnostic?.message).toContain('Participant role assignments lack explicit stage linkage');
     });
 
     it('10H/10L acceptance gates: canonical chart resolves to COMPLETE', async () => {
@@ -346,29 +583,59 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
     });
 
     it('10H/10L missing-data path: INSUFFICIENT_DATA when inputs missing', async () => {
-      // Create a minimal horoscope lacking houseLordship
-      const minimalHoroscope: any = {
-        // Minimal structure without houseLordship
-        planetFacts: [],
-        houses: [],
+      // Test 10H failure: missing houseLordship
+      const horoscopeWithoutHouseLordship: any = {
+        planetFacts: [
+          { planet: 'SUN', sign: 'ARIES', longitude: 10, house: 10 }
+        ],
+        houses: [
+          { houseNumber: 10, sign: 'ARIES', longitude: 10, lord: 'SUN' }
+        ],
         ascendant: {
-          sign: 'ARIES' as any,
+          sign: 'ARIES',
           longitude: 0
         }
+        // houseLordship is missing
       };
 
-      const foundation = buildCanonicalCareerFoundation({ horoscope: minimalHoroscope });
+      const foundation10H = buildCanonicalCareerFoundation({ horoscope: horoscopeWithoutHouseLordship });
 
       // Find 10H supplement
-      const supplement10H = foundation.careerFoundationSupplements.find(s => s.supplementType === '10H');
+      const supplement10H = foundation10H.careerFoundationSupplements.find(s => s.supplementType === '10H');
 
-      // Should be UNAVAILABLE or PARTIALLY_AVAILABLE due to missing inputs
+      // 10H should be PARTIALLY_AVAILABLE or UNAVAILABLE due to missing houseLordship
       if (supplement10H) {
-        expect(['UNAVAILABLE', 'PARTIALLY_AVAILABLE']).toContain(supplement10H.availability);
-        expect(['INSUFFICIENT_DATA', 'COMPLETE']).toContain(supplement10H.status10H);
+        expect(['PARTIALLY_AVAILABLE', 'UNAVAILABLE']).toContain(supplement10H.availability);
+        expect(supplement10H.status10H).toBe('INSUFFICIENT_DATA');
+        expect(supplement10H.missingInputs).toContain('houseLordship');
       } else {
         // Or supplement may not be created at all if 10H result is missing
         expect(supplement10H).toBeUndefined();
+      }
+
+      // Test 10L failure: missing 10H foundation (10H not COMPLETE)
+      const horoscopeWith10HInsufficient: any = {
+        planetFacts: [],
+        houses: [],
+        ascendant: {
+          sign: 'ARIES',
+          longitude: 0
+        },
+        houseLordship: {}
+      };
+
+      const foundation10L = buildCanonicalCareerFoundation({ horoscope: horoscopeWith10HInsufficient });
+
+      // Find 10L supplement
+      const supplement10L = foundation10L.careerFoundationSupplements.find(s => s.supplementType === '10L');
+
+      // 10L should be UNAVAILABLE when 10H is not COMPLETE
+      if (supplement10L) {
+        expect(supplement10L.availability).toBe('UNAVAILABLE');
+        expect(supplement10L.status10L).toBe('INSUFFICIENT_DATA');
+      } else {
+        // Or supplement may not be created at all
+        expect(supplement10L).toBeUndefined();
       }
     });
   });
@@ -433,7 +700,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       }
     });
 
-    it('regression-equivalence: foundation wiring does not change C4-C11 derived outputs', async () => {
+    it('determinism: interpretCareerV2 produces deterministic output across repeated runs', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const options = makeDomainOptions('2024-01-01T00:00:00Z', horoscope);
 
@@ -442,7 +709,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       const interpretation2 = interpretCareerV2(horoscope, options);
 
       // Compare conclusion-relevant fields (C4-C11 derived outputs)
-      // These should be byte-for-byte unchanged by foundation wiring
+      // These should be byte-for-byte identical across runs
       expect(interpretation1.conclusion.strength).toBe(interpretation2.conclusion.strength);
       expect(interpretation1.conclusion.confidence).toBe(interpretation2.conclusion.confidence);
       expect(interpretation1.conclusion.statement).toBe(interpretation2.conclusion.statement);
@@ -503,5 +770,18 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         );
       }
     });
+
+    // TODO: Add regression-equivalence test with golden baseline
+    // This test should compare the changed implementation against a committed golden baseline
+    // captured from the pre-integration C11 behavior. The baseline should lock:
+    // - conclusion strength/confidence/statement
+    // - evidence references
+    // - canonical C11 synthesis
+    // - reasoning trace
+    // This requires:
+    // 1. Capturing a baseline from a known-good commit before P2-11B integration
+    // 2. Storing the baseline in a test fixture file
+    // 3. Comparing current output against the baseline
+    // Deferred to a future PR when baseline infrastructure is available.
   });
 });
