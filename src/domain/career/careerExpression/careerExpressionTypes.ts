@@ -113,19 +113,156 @@ export type CareerExpressionType =
   | 'REMOTE_WORK_EXPRESSION';
 
 /**
- * Career expression status.
+ * Career expression qualification status.
+ * Per P2-11C Gate 1: canonical C8 identity/qualification types.
+ *
+ * QUALIFIED: Expression is qualified by an authoritative qualification rule.
+ * CANDIDATE: Expression derived from one or more mechanism candidates but lacks authoritative qualification.
+ * UNRESOLVED: Expression cannot be determined due to insufficient data or conflicting signals.
+ * NOT_APPLICABLE: Expression does not apply to the current context.
+ *
+ * Invariants:
+ * - A QUALIFIED expression must carry authorizing ruleIds (enforced via discriminated union).
+ * - A CANDIDATE must never be silently promoted to QUALIFIED without a rule.
+ * - UNRESOLVED/NOT_APPLICABLE stay in those states; never default to CANDIDATE.
+ */
+export type CareerExpressionQualificationStatus =
+  | 'QUALIFIED'
+  | 'CANDIDATE'
+  | 'UNRESOLVED'
+  | 'NOT_APPLICABLE';
+
+/**
+ * Career expression status (legacy compatibility).
  * Per spec §8: lifecycle status of an expression.
  * Only statuses that can actually be reached are included (no unreachable status).
  *
  * CANDIDATE: Expression derived from one or more mechanism candidates.
  * INSUFFICIENT_DATA: Missing required context to determine expression candidacy.
  *
- * Note: QUALIFIED is omitted if it cannot be reached. Expressions are either
- * candidates or insufficient data. Qualification happens at the mechanism layer.
+ * Note: This is the legacy status field. New code should use CareerExpressionQualificationStatus
+ * for canonical qualification tracking.
  */
 export type CareerExpressionStatus =
   | 'CANDIDATE'
   | 'INSUFFICIENT_DATA';
+
+/**
+ * Canonical expression direction.
+ * Per P2-11C Gate 1: reconciled with existing CareerExpressionDirection enum.
+ *
+ * Reuses existing CareerExpressionDirection from careerExpression.ts:
+ * - SUPPORTED, CONDITIONAL, NEUTRAL, UNAVAILABLE
+ *
+ * No competing union introduced - this is an alias for type-level documentation.
+ */
+export type CareerExpressionCanonicalDirection =
+  | 'SUPPORTED'
+  | 'CONDITIONAL'
+  | 'NEUTRAL'
+  | 'UNAVAILABLE';
+
+/**
+ * Canonical expression strength.
+ * Per P2-11C Gate 1: reconciled with existing CareerExpressionStrength enum.
+ *
+ * Reuses existing CareerExpressionStrength from careerExpression.ts:
+ * - STRONG, MODERATE, WEAK, UNAVAILABLE
+ *
+ * No competing union introduced - this is an alias for type-level documentation.
+ */
+export type CareerExpressionCanonicalStrength =
+  | 'STRONG'
+  | 'MODERATE'
+  | 'WEAK'
+  | 'UNAVAILABLE';
+
+/**
+ * Canonical expression provenance record.
+ * Per P2-11C Gate 1: provenance tracking with DISTINCT identity fields.
+ *
+ * Invariants:
+ * - candidateId: The mechanism candidate ID that produced this expression (required for candidates).
+ * - mechanismId: The resolved mechanism ID (required for QUALIFIED expressions, optional for CANDIDATE).
+ * - sourceMechanismIds: All mechanism IDs that contributed to this expression (may be multiple).
+ * - ruleIds: The rule IDs that authorized this expression (required for QUALIFIED, empty for CANDIDATE).
+ * - sourceEvidenceIds: The upstream evidence IDs that support this expression.
+ * - participantIds: The participant IDs (planets/houses) involved in this expression.
+ * - identityKey: Optional semantic identity key (absent stays absent - never synthesized from IDs/mode/statement).
+ *
+ * Key distinction:
+ * - candidateId vs mechanismId: candidateId is the candidate from C7, mechanismId is the resolved mechanism.
+ * - sourceMechanismIds vs mechanismId: sourceMechanismIds is a list, mechanismId is the single resolved ID.
+ * - identityKey is optional and only present when explicitly supplied; never fabricated.
+ */
+export interface CareerExpressionCanonicalProvenance {
+  readonly candidateId: string;
+  readonly mechanismId?: string; // Required for QUALIFIED, optional for CANDIDATE
+  readonly sourceMechanismIds: readonly string[];
+  readonly ruleIds: readonly string[]; // Required for QUALIFIED, empty for CANDIDATE
+  readonly sourceEvidenceIds: readonly string[];
+  readonly participantIds: readonly string[];
+  readonly identityKey?: string; // Optional - never synthesized if absent
+}
+
+/**
+ * Qualified expression with authorizing rules.
+ * Per P2-11C Gate 1: discriminated union for QUALIFIED expressions.
+ *
+ * This type ensures via the type system that a QUALIFIED expression always carries
+ * the authorizing ruleIds. The compiler will reject QUALIFIED-with-no-rule.
+ */
+export interface QualifiedExpression {
+  readonly qualificationStatus: 'QUALIFIED';
+  readonly ruleIds: readonly string[]; // Non-empty - enforced by runtime check
+  readonly provenance: CareerExpressionCanonicalProvenance;
+}
+
+/**
+ * Candidate expression without authorizing rules.
+ * Per P2-11C Gate 1: discriminated union for CANDIDATE expressions.
+ *
+ * This type represents expressions derived from mechanism candidates but lacking
+ * authoritative qualification. ruleIds is empty by contract.
+ */
+export interface CandidateExpression {
+  readonly qualificationStatus: 'CANDIDATE';
+  readonly ruleIds: readonly string[]; // Empty by contract
+  readonly provenance: CareerExpressionCanonicalProvenance;
+}
+
+/**
+ * Unresolved expression due to insufficient data.
+ * Per P2-11C Gate 1: discriminated union for UNRESOLVED expressions.
+ */
+export interface UnresolvedExpression {
+  readonly qualificationStatus: 'UNRESOLVED';
+  readonly ruleIds: readonly string[]; // Empty by contract
+  readonly provenance?: CareerExpressionCanonicalProvenance;
+}
+
+/**
+ * Not applicable expression.
+ * Per P2-11C Gate 1: discriminated union for NOT_APPLICABLE expressions.
+ */
+export interface NotApplicableExpression {
+  readonly qualificationStatus: 'NOT_APPLICABLE';
+  readonly ruleIds: readonly string[]; // Empty by contract
+  readonly provenance?: CareerExpressionCanonicalProvenance;
+}
+
+/**
+ * Canonical expression qualification union.
+ * Per P2-11C Gate 1: discriminated union for all qualification states.
+ *
+ * The compiler enforces that QUALIFIED expressions have non-empty ruleIds.
+ * Runtime validation should check this invariant as well.
+ */
+export type CareerExpressionQualification =
+  | QualifiedExpression
+  | CandidateExpression
+  | UnresolvedExpression
+  | NotApplicableExpression;
 
 /**
  * Career expression pathway.
