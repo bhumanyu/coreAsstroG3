@@ -452,6 +452,89 @@ describe('C11 Final Career Synthesis Integration', () => {
       expect(modes).toContain('LEADERSHIP');
       expect(modes).toContain('ENTREPRENEURSHIP');
     });
+
+    it('UNAVAILABLE expression has empty evidenceIds in C11 (matches canonical mapper exclusion)', () => {
+      const exprUnavailable: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'UNAVAILABLE',
+        strength: 'UNAVAILABLE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-unavailable-1', 'evidence-unavailable-2']),
+        statement: 'Leadership unavailable.',
+        conditional: false
+      });
+
+      const exprAvailable: CareerExpression = Object.freeze({
+        mode: 'ENTREPRENEURSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-available-1']),
+        statement: 'Entrepreneurship.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([exprUnavailable, exprAvailable])
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      expect(result.expressions).toHaveLength(2);
+
+      // Find the UNAVAILABLE expression
+      const unavailableExpr = result.expressions.find(e => e.mode === 'LEADERSHIP');
+      expect(unavailableExpr).toBeDefined();
+      expect(unavailableExpr?.direction).toBe('UNAVAILABLE');
+      expect(unavailableExpr?.strength).toBe('UNDETERMINED');
+      // UNAVAILABLE expression should have empty evidenceIds (not the supportingEvidenceIds from C8)
+      expect(unavailableExpr?.evidenceIds).toEqual([]);
+
+      // Find the available expression
+      const availableExpr = result.expressions.find(e => e.mode === 'ENTREPRENEURSHIP');
+      expect(availableExpr).toBeDefined();
+      expect(availableExpr?.direction).toBe('SUPPORT');
+      expect(availableExpr?.strength).toBe('STRONG');
+      // Available expression should have its evidenceIds
+      expect(availableExpr?.evidenceIds).toEqual(['evidence-available-1']);
+
+      // Overall C11 evidenceIds should only include the available expression's evidence
+      expect(result.evidenceIds).toContain('evidence-available-1');
+      expect(result.evidenceIds).not.toContain('evidence-unavailable-1');
+      expect(result.evidenceIds).not.toContain('evidence-unavailable-2');
+    });
+
+    it('expression with UNAVAILABLE strength has empty evidenceIds in C11 (matches canonical mapper exclusion)', () => {
+      const exprUnavailableStrength: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'UNAVAILABLE',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['evidence-unavailable-strength']),
+        statement: 'Leadership with unavailable strength.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([exprUnavailableStrength])
+      });
+
+      const result = buildCareerFinalAnalysis(input);
+
+      expect(result.expressions).toHaveLength(1);
+
+      const expr = result.expressions[0];
+      expect(expr.mode).toBe('LEADERSHIP');
+      expect(expr.direction).toBe('SUPPORT');
+      expect(expr.strength).toBe('UNDETERMINED');
+      // Expression with UNAVAILABLE strength should have empty evidenceIds
+      expect(expr.evidenceIds).toEqual([]);
+
+      // Overall C11 evidenceIds should not include the unavailable-strength expression's evidence
+      expect(result.evidenceIds).not.toContain('evidence-unavailable-strength');
+    });
   });
 
   describe('Test Group K: Evidence identity', () => {

@@ -130,9 +130,14 @@ function extractPlanetsFromEvidence(
  * - weight (no field in contract)
  * - conditional semantics (no field in contract)
  *
- * These fields are omitted from the legacy evidence to avoid fabricating defaults without
- * authoritative source. The legacy shape requires these fields, so they are set to explicit
- * placeholder values with documented semantics indicating unavailability.
+ * These fields are set to explicit unavailable sentinel values to distinguish from authoritative values:
+ * - role: 'PLANETARY' (placeholder - ignored by canonical mapper which hardcodes role: 'MODIFIER')
+ * - weight: 0 (unavailable sentinel - canonical mapper uses this as priority; 0 indicates no authoritative priority)
+ * - conditional: false (placeholder - mechanism-based expressions are not conditional by contract)
+ *
+ * The canonical mapper (canonicalCareerEvidenceMapper.ts) ignores the legacy evidence role
+ * (hardcodes role: 'MODIFIER') and uses weight as priority. Using weight: 0 ensures the mapper
+ * treats this as having no authoritative priority, distinct from legitimate priority values (typically 1-5).
  */
 function createLegacyEvidence(
   candidate: CareerExpressionCandidate,
@@ -145,9 +150,9 @@ function createLegacyEvidence(
   return Object.freeze({
     id: evidenceItem.evidenceId,
     mode: expressionTypeToManifestationMode(candidate.expressionType),
-    role: 'PLANETARY', // Placeholder: mechanism evidence does not establish role, defaulted to planetary for legacy shape compatibility
+    role: 'PLANETARY', // Placeholder: mechanism evidence does not establish role; ignored by canonical mapper (hardcodes 'MODIFIER')
     statement: `${candidate.expressionType} expression derived from mechanism ${evidenceItem.sourceMechanismId}. Mechanism role: ${evidenceItem.role}. Rule: ${evidenceItem.ruleId}.`,
-    weight: 2, // Placeholder: mechanism evidence does not establish weight, defaulted to 2 for legacy shape compatibility
+    weight: 0, // Unavailable sentinel: mechanism evidence does not establish weight; canonical mapper uses this as priority; 0 indicates no authoritative priority
     planets,
     houses: Object.freeze([]) // Houses not available in mechanism evidence
   });
@@ -191,7 +196,7 @@ function createLegacyExpression(
     evidence: Object.freeze(legacyEvidence),
     supportingEvidenceIds,
     statement,
-    conditional: false // Mechanism-based expressions are not conditional by default
+    conditional: false // Mechanism-based expressions are not conditional by contract
   });
 }
 

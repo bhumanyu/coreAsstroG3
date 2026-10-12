@@ -98,24 +98,55 @@ function isExpressionQualified(
 }
 
 /**
+ * Determines if an expression should emit canonical evidence.
+ * This predicate MUST match the exclusion logic in canonicalCareerEvidenceMapper.mapExpressionEvidence:
+ * - Skip if direction === 'UNAVAILABLE'
+ * - Skip if strength === 'UNAVAILABLE' (maps to null in the mapper)
+ *
+ * Expressions that fail this check emit no DomainEvidence, so their supportingEvidenceIds
+ * should not be collected into C11 evidenceIds.
+ */
+function shouldExpressionEmitEvidence(
+  direction: CareerExpressionDirection,
+  strength: CareerExpressionStrength
+): boolean {
+  if (direction === 'UNAVAILABLE') {
+    return false;
+  }
+  if (strength === 'UNAVAILABLE') {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Maps C8 expressions to C11 final expressions.
  * For each C8 CareerExpression, produces a CareerFinalExpression with mapped direction/strength.
  * Expressions are sorted by mode to ensure deterministic output regardless of input order.
+ *
+ * IMPORTANT: evidenceIds are only collected for expressions that would emit canonical evidence.
+ * This matches the exclusion logic in canonicalCareerEvidenceMapper.mapExpressionEvidence:
+ * - Skip if direction === 'UNAVAILABLE'
+ * - Skip if strength === 'UNAVAILABLE'
+ * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey (no dangling references).
  */
 function mapExpressions(
   expressionAnalysis: CareerExpressionAnalysis
 ): readonly CareerFinalExpression[] {
   return Object.freeze(
     expressionAnalysis.expressions
-      .map((expr: CareerExpression) =>
-        Object.freeze({
+      .map((expr: CareerExpression) => {
+        const shouldEmit = shouldExpressionEmitEvidence(expr.direction, expr.strength);
+        return Object.freeze({
           mode: expr.mode,
           direction: mapExpressionDirection(expr.direction),
           strength: mapExpressionStrength(expr.strength),
           qualified: isExpressionQualified(expr.direction),
-          evidenceIds: Object.freeze([...expr.supportingEvidenceIds].sort((a, b) => a.localeCompare(b)))
-        })
-      )
+          evidenceIds: shouldEmit
+            ? Object.freeze([...expr.supportingEvidenceIds].sort((a, b) => a.localeCompare(b)))
+            : Object.freeze([])
+        });
+      })
       .sort((a, b) => a.mode.localeCompare(b.mode))
   );
 }
@@ -335,6 +366,12 @@ function collectD10RuleIds(
  * These are semantic identity IDs (CareerExpressionEvidence uses id as its semantic identity;
  * there is no separate identityKey field in the C8 contract).
  *
+ * IMPORTANT: Only collects evidence IDs for expressions that would emit canonical evidence.
+ * This uses the same exclusion predicate as canonicalCareerEvidenceMapper.mapExpressionEvidence:
+ * - Skip if direction === 'UNAVAILABLE'
+ * - Skip if strength === 'UNAVAILABLE'
+ * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey (no dangling references).
+ *
  * P2-09A NAMESPACE CONTRACT: C11 evidenceIds are canonical semantic identity keys.
  * - Natal: identityKey (semantic identity, falls back to evidenceId when absent)
  * - Dasha: identityKey (semantic identity)
@@ -349,7 +386,9 @@ function collectExpressionEvidenceIds(
 ): readonly string[] {
   const allEvidenceIds: string[] = [];
   for (const e of expression.expressions) {
-    allEvidenceIds.push(...e.supportingEvidenceIds);
+    if (shouldExpressionEmitEvidence(e.direction, e.strength)) {
+      allEvidenceIds.push(...e.supportingEvidenceIds);
+    }
   }
   return Object.freeze(
     Array.from(new Set(allEvidenceIds)).sort((a, b) => a.localeCompare(b))

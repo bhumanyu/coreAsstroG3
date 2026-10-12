@@ -523,6 +523,73 @@ describe('mechanismExpressionToLegacyAdapter', () => {
       expect(result.expressions[0].evidence[1].id).toBe('EVID-002');
     });
 
+    it('should use weight: 0 sentinel for mechanism evidence (no authoritative weight)', () => {
+      const mechanismResult: CareerExpressionAnalysisResult = {
+        expressions: [
+          {
+            expressionId: 'EXPR-001',
+            expressionType: 'AUTHORITY_EXPRESSION',
+            sourceMechanismIds: ['MECH-001'],
+            mechanismTypes: ['AUTHORITY'],
+            status: 'CANDIDATE',
+            pathway: 'HOUSE',
+            evidence: [
+              {
+                evidenceId: 'EVID-001',
+                sourceMechanismId: 'MECH-001',
+                sourceEvidenceIds: ['SRC-001'],
+                ruleId: 'RULE-001',
+                role: 'ESTABLISHING'
+              }
+            ],
+            provenance: {
+              mechanismIds: ['MECH-001'],
+              patternIds: ['PATTERN-001'],
+              relationshipIds: [],
+              evidenceIds: ['EVID-001'],
+              sourceStages: ['PATTERN']
+            }
+          }
+        ],
+        status: 'COMPLETE',
+        sourceMechanismIds: ['MECH-001'],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: ['MECH-001'],
+          patternIds: ['PATTERN-001'],
+          relationshipIds: [],
+          evidenceIds: ['EVID-001'],
+          sourceStages: ['PATTERN']
+        }
+      };
+
+      const mechanismCandidates: CareerMechanismCandidate[] = [
+        {
+          candidateId: 'MECH-001',
+          patternId: 'PATTERN-001',
+          mechanismType: 'AUTHORITY',
+          pathway: 'HOUSE',
+          evidence: [],
+          provenance: {
+            patternIds: ['PATTERN-001'],
+            relationshipIds: [],
+            participantIds: ['PLANET:SUN'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          },
+          explanation: 'Test mechanism'
+        }
+      ];
+
+      const result = adaptMechanismExpressionToLegacy(mechanismResult, mechanismCandidates);
+
+      // Weight should be 0 (unavailable sentinel), not a plausible default like 2
+      expect(result.expressions[0].evidence[0].weight).toBe(0);
+      // Role should be 'PLANETARY' (placeholder, ignored by canonical mapper)
+      expect(result.expressions[0].evidence[0].role).toBe('PLANETARY');
+    });
+
     it('should ensure no dangling supportingEvidenceIds when UNAVAILABLE expressions emit no evidence', () => {
       // UNAVAILABLE expressions are skipped by mapExpressionEvidence and emit no canonical evidence
       // Therefore supportingEvidenceIds for UNAVAILABLE expressions should be empty to avoid
