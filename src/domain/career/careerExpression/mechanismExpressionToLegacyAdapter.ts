@@ -14,6 +14,11 @@ import type {
 import type {
   Planet
 } from '../../../types';
+import type {
+  CareerMechanismCandidate
+} from '../careerMechanism/careerMechanismTypes';
+import { extractPlanetFromParticipantId } from '../careerParticipantRoles/participantRoleUtils';
+import { CANONICAL_PLANET_ORDER } from '../careerPlanetOrder';
 
 /**
  * P2-08D: Mechanism Expression to Legacy Expression Adapter
@@ -29,11 +34,18 @@ import type {
  *
  * MAPPING STRATEGY:
  * - expressionType → mode (via expressionTypeToManifestationMode mapping)
- * - direction → default 'SUPPORTED' (mechanism-based system doesn't have legacy direction concept)
- * - strength → default 'STRONG' (mechanism-based system doesn't have legacy strength concept)
- * - evidence → synthetic evidence from mechanism sources (with planets from upstream)
+ * - direction → 'UNAVAILABLE' (conservative: CANDIDATE status does NOT establish positive direction)
+ * - strength → 'UNAVAILABLE' (conservative: CANDIDATE status does NOT establish strong expression)
+ * - evidence → synthetic evidence from mechanism sources (with planets from participantIds)
  * - supportingEvidenceIds → sourceMechanismIds (semantic identity linkage)
  * - primaryExpression → first expression by deterministic ordering
+ *
+ * CONSERVATIVE MAPPING RATIONALE:
+ * The mechanism resolver's CANDIDATE status does NOT establish positive direction or strong expression.
+ * Without an upstream signal with documented semantics and a tested mapping, we conservatively map every
+ * mechanism-derived expression to direction: 'UNAVAILABLE' and strength: 'UNAVAILABLE'. This prevents
+ * fabricating positive signals. The candidate itself is preserved (mode, supportingEvidenceIds, evidence,
+ * statement) — uncertainty about strength must not erase the candidate.
  *
  * When mechanism-based result has no expressions (INSUFFICIENT_DATA or empty candidates),
  * emit an explicit empty/unavailable expression analysis rather than falling back to
@@ -82,16 +94,17 @@ function expressionTypeToManifestationMode(
 }
 
 /**
- * Extracts planets from mechanism expression evidence.
- * Since mechanism evidence doesn't directly expose planets, we return an empty array.
- * This is a limitation of the bridge - planets are not available in the mechanism-based system.
+ * Extracts planets from mechanism expression evidence using the source mechanism's participant planets.
+ * Looks up planets by sourceMechanismId in the provided map, then sorts by CANONICAL_PLANET_ORDER and dedupes.
+ * If a mechanism has no participant planets, returns an empty array (no fabrication).
  */
 function extractPlanetsFromEvidence(
-  evidence: CareerMechanismExpressionEvidence
+  evidence: CareerMechanismExpressionEvidence,
+  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>
 ): readonly Planet[] {
-  // Mechanism evidence doesn't expose planets directly
-  // This is a known limitation of the bridge adapter
-  return Object.freeze([]);
+  const planets = mechanismPlanetsMap.get(evidence.sourceMechanismId) ?? [];
+  // Already sorted and deduped in the map construction
+  return planets;
 }
 
 /**
@@ -100,9 +113,10 @@ function extractPlanetsFromEvidence(
 function createLegacyEvidence(
   candidate: CareerExpressionCandidate,
   evidenceItem: CareerMechanismExpressionEvidence,
-  index: number
+  index: number,
+  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>
 ): CareerExpressionEvidence {
-  const planets = extractPlanetsFromEvidence(evidenceItem);
+  const planets = extractPlanetsFromEvidence(evidenceItem, mechanismPlanetsMap);
 
   return Object.freeze({
     id: evidenceItem.evidenceId,
@@ -119,13 +133,14 @@ function createLegacyEvidence(
  * Creates a legacy CareerExpression from a mechanism expression candidate.
  */
 function createLegacyExpression(
-  candidate: CareerExpressionCandidate
+  candidate: CareerExpressionCandidate,
+  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>
 ): CareerExpression {
   const mode = expressionTypeToManifestationMode(candidate.expressionType);
 
   // Create legacy evidence from mechanism evidence
   const legacyEvidence = candidate.evidence.map((evidenceItem, index) =>
-    createLegacyEvidence(candidate, evidenceItem, index)
+    createLegacyEvidence(candidate, evidenceItem, index, mechanismPlanetsMap)
   );
 
   // Use sourceMechanismIds as supportingEvidenceIds (semantic identity linkage)
@@ -142,8 +157,8 @@ function createLegacyExpression(
 
   return Object.freeze({
     mode,
-    direction: 'SUPPORTED', // Default direction for mechanism-based expressions
-    strength: 'STRONG', // Default strength for mechanism-based expressions
+    direction: 'UNAVAILABLE', // Conservative: CANDIDATE status does NOT establish positive direction
+    strength: 'UNAVAILABLE', // Conservative: CANDIDATE status does NOT establish strong expression
     evidence: Object.freeze(legacyEvidence),
     supportingEvidenceIds,
     statement,
@@ -161,6 +176,37 @@ function createUnavailableLegacyAnalysis(): CareerExpressionAnalysis {
     primaryExpression: undefined,
     statement: 'Career expression is unavailable because no mechanism candidates were resolved from the canonical career foundation.'
   });
+}
+
+/**
+ * Builds a map from mechanism candidate ID to its participant planets.
+ * Extracts planets from provenance.participantIds using extractPlanetFromParticipantId,
+ * sorts by CANONICAL_PLANET_ORDER, and dedupes. If a mechanism has no participant planets,
+ * the map entry will be an empty array (no fabrication).
+ */
+function buildMechanismPlanetsMap(
+  mechanismCandidates: readonly CareerMechanismCandidate[]
+): ReadonlyMap<string, readonly Planet[]> {
+  const map = new Map<string, readonly Planet[]>();
+
+  for (const candidate of mechanismCandidates) {
+    const planets: Planet[] = [];
+    for (const participantId of candidate.provenance.participantIds) {
+      const planet = extractPlanetFromParticipantId(participantId);
+      if (!planets.includes(planet)) {
+        planets.push(planet);
+      }
+    }
+    // Sort by canonical planet order for deterministic output
+    planets.sort((a, b) => {
+      const indexA = CANONICAL_PLANET_ORDER.indexOf(a);
+      const indexB = CANONICAL_PLANET_ORDER.indexOf(b);
+      return indexA - indexB;
+    });
+    map.set(candidate.candidateId, Object.freeze(planets));
+  }
+
+  return Object.freeze(map);
 }
 
 /**
@@ -184,24 +230,29 @@ function resolvePrimaryExpression(
  * This function:
  * - Maps CareerExpressionCandidate[] to CareerExpression[]
  * - Preserves mechanism identities via sourceMechanismIds → supportingEvidenceIds
- * - Creates synthetic evidence with planets=[] (known limitation)
+ * - Populates planets from mechanism participantIds (authoritative structural associations)
  * - Emits explicit unavailable analysis when mechanism result is INSUFFICIENT_DATA or empty
  * - Deep-freezes all output for immutability
  *
  * @param mechanismResult - The mechanism-based expression analysis result
+ * @param mechanismCandidates - The mechanism candidates (for planet extraction from participantIds)
  * @returns A frozen legacy CareerExpressionAnalysis
  */
 export function adaptMechanismExpressionToLegacy(
-  mechanismResult: CareerExpressionAnalysisResult
+  mechanismResult: CareerExpressionAnalysisResult,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
 ): CareerExpressionAnalysis {
   // If mechanism result is INSUFFICIENT_DATA or has no expressions, emit explicit unavailable
   if (mechanismResult.status === 'INSUFFICIENT_DATA' || mechanismResult.expressions.length === 0) {
     return createUnavailableLegacyAnalysis();
   }
 
+  // Build planet map from mechanism candidates
+  const mechanismPlanetsMap = buildMechanismPlanetsMap(mechanismCandidates);
+
   // Map mechanism candidates to legacy expressions
   const legacyExpressions = mechanismResult.expressions.map(candidate =>
-    createLegacyExpression(candidate)
+    createLegacyExpression(candidate, mechanismPlanetsMap)
   );
 
   // Sort by expressionId for deterministic ordering

@@ -273,7 +273,10 @@ export function interpretCareerV2(
   });
 
   // Bridge to legacy format for C9/C10/C11 consumption
-  const canonicalExpressionAnalysis = adaptMechanismExpressionToLegacy(mechanismExpressionResult);
+  const canonicalExpressionAnalysis = adaptMechanismExpressionToLegacy(
+    mechanismExpressionResult,
+    careerMechanismCandidates
+  );
 
   const canonicalDashaAnalysis = buildCareerDashaAnalysis({
     horoscope,
