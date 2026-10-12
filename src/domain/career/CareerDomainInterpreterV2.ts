@@ -213,14 +213,20 @@ export function interpretCareerV2(
    * The foundation is built exactly once per interpretCareerV2 call and does not
    * re-derive or double-count anything already computed by the canonical C4–C11 chain.
    *
-   * The builder runs the orchestrator upstream chain (structural → graph → networks →
-   * patterns → relevance → condition) and invokes the orchestrator with wired 10H/10L inputs.
+   * The builder receives preComputedInputs (structural, relevance, condition) from
+   * canonicalNatalAnalysis to eliminate duplicate derivation. The builder still computes
+   * foundation-exclusive outputs (graph, networks, patterns) internally.
    *
    * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
    * This is a tracked blocker per P2-11G review Finding 5.
    */
   const canonicalCareerFoundation = buildCanonicalCareerFoundation({
     horoscope,
+    preComputedInputs: {
+      structural: canonicalNatalAnalysis.structural,
+      relevance: canonicalNatalAnalysis.relevance,
+      condition: canonicalNatalAnalysis.condition
+    },
     enableDispositorContexts: false // Disabled in production per P2-11G Finding 4 (tracked blocker)
   });
 

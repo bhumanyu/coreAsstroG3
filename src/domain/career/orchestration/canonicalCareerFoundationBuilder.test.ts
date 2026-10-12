@@ -27,6 +27,7 @@ import {
 } from '../careerMechanism/dispositor/defaultCareerMechanismDispositorRefiner';
 import type { CareerDispositorContext } from '../careerMechanism/dispositor/careerMechanismDispositorTypes';
 import { GOLDEN_C11_BASELINE } from '../../../test/fixtures/careerGoldenBaseline';
+import { vi } from 'vitest';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -920,6 +921,29 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
 
       // Compare reasoning trace
       expect(interpretation.reasoningTrace).toEqual(GOLDEN_C11_BASELINE.reasoningTrace);
+    });
+
+    it('producer invocation count: each upstream producer runs exactly once per interpretCareerV2 analysis', async () => {
+      // Spy on the upstream producers
+      const structuralSpy = vi.spyOn(await import('../careerStructuralReasoningIntegration'), 'buildCareerStructuralReasoning');
+      const relevanceSpy = vi.spyOn(await import('../careerPlanetaryRelevanceIntegration'), 'buildCareerPlanetaryRelevance');
+      const conditionSpy = vi.spyOn(await import('../careerPlanetaryConditionIntegration'), 'buildCareerPlanetaryCondition');
+
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const options = makeDomainOptions();
+
+      // Run interpretCareerV2
+      const interpretation = interpretCareerV2(horoscope, options);
+
+      // Verify each producer was called exactly once
+      expect(structuralSpy).toHaveBeenCalledTimes(1);
+      expect(relevanceSpy).toHaveBeenCalledTimes(1);
+      expect(conditionSpy).toHaveBeenCalledTimes(1);
+
+      // Restore spies
+      structuralSpy.mockRestore();
+      relevanceSpy.mockRestore();
+      conditionSpy.mockRestore();
     });
   });
 });

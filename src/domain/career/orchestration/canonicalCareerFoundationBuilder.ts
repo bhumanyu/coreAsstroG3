@@ -6,6 +6,7 @@ import type {
 import { CanonicalCareerOrchestrator } from './canonicalCareerOrchestrator';
 import { defaultCareerOrchestrationPorts } from './canonicalCareerPortsAdapter';
 import { buildCareerStructuralReasoning } from '../careerStructuralReasoningIntegration';
+import type { CareerStructuralReasoning } from '../careerStructuralReasoning';
 import {
   buildCareerGraphFactsFromStructural,
   buildCareerAstroGraph,
@@ -13,7 +14,9 @@ import {
 } from '../careerGraph';
 import { classifyCareerPatterns } from '../careerPattern/careerPatternClassification';
 import { buildCareerPlanetaryRelevance } from '../careerPlanetaryRelevanceIntegration';
+import type { CareerPlanetaryRelevance } from '../careerPlanetaryRelevance';
 import { buildCareerPlanetaryCondition } from '../careerPlanetaryConditionIntegration';
+import type { CareerPlanetaryConditionResult } from '../careerPlanetaryCondition';
 import { resolveCareer10HFoundation } from '../career10h/defaultCareer10HFoundation';
 import { resolveCareer10LFoundation } from '../career10h/defaultCareer10LFoundation';
 import {
@@ -66,6 +69,20 @@ import {
 export interface CanonicalCareerFoundationBuilderInput {
   readonly horoscope: Horoscope;
   /**
+   * Optional pre-computed inputs from the canonical C4-C11 chain.
+   * When provided, these values are reused instead of recomputed.
+   * This eliminates duplicate derivation when the foundation builder is called
+   * from interpretCareerV2, which already computes structural, relevance, and condition
+   * via buildCareerNatalAnalysis.
+   *
+   * When not provided, the builder computes these values internally as before.
+   */
+  readonly preComputedInputs?: {
+    readonly structural: CareerStructuralReasoning;
+    readonly relevance: readonly CareerPlanetaryRelevance[];
+    readonly condition: readonly CareerPlanetaryConditionResult[];
+  };
+  /**
    * Feature flag for enabling dispositor contexts.
    * Default false - dispositor contexts remain deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE).
    *
@@ -86,13 +103,13 @@ export interface CanonicalCareerFoundationBuilderInput {
  * Builds the canonical career foundation from a horoscope.
  *
  * This function runs the canonical upstream chain exactly once:
- * 1. buildCareerStructuralReasoning({ horoscope })
+ * 1. buildCareerStructuralReasoning({ horoscope }) - OR reuse from preComputedInputs
  * 2. buildCareerGraphFactsFromStructural(structural)
  * 3. buildCareerAstroGraph({ facts })
  * 4. detectCareerHouseNetworks({ graph })
  * 5. classifyCareerPatterns({ networks })
- * 6. buildCareerPlanetaryRelevance({ horoscope, structural })
- * 7. buildCareerPlanetaryCondition({ horoscope, relevance })
+ * 6. buildCareerPlanetaryRelevance({ horoscope, structural }) - OR reuse from preComputedInputs
+ * 7. buildCareerPlanetaryCondition({ horoscope, relevance }) - OR reuse from preComputedInputs
  *
  * Then assembles the orchestrator input and invokes the orchestrator.
  *
@@ -104,22 +121,26 @@ export interface CanonicalCareerFoundationBuilderInput {
  * CRITICAL: The upstream producers (structural, graph, networks, patterns, relevance, condition)
  * are computed once and reused for both passes, preserving the "run each producer once per intended analysis" invariant.
  *
+ * When preComputedInputs is provided, structural, relevance, and condition are reused from the caller
+ * (e.g., from buildCareerNatalAnalysis in interpretCareerV2) to eliminate duplicate derivation.
+ *
  * @param input - The input containing the horoscope and optional feature flags
  * @returns The canonical career foundation
  */
 export function buildCanonicalCareerFoundation(
   input: CanonicalCareerFoundationBuilderInput
 ): CanonicalCareerFoundation {
-  const { horoscope, enableDispositorContexts = false } = input;
+  const { horoscope, preComputedInputs, enableDispositorContexts = false } = input;
 
   // Step 1: Run canonical upstream chain exactly once (shared between passes if two-pass)
-  const structural = buildCareerStructuralReasoning({ horoscope });
+  // Use preComputedInputs if provided to avoid duplicate derivation
+  const structural = preComputedInputs?.structural ?? buildCareerStructuralReasoning({ horoscope });
   const facts = buildCareerGraphFactsFromStructural(structural);
   const graph = buildCareerAstroGraph({ facts });
   const networks = detectCareerHouseNetworks({ graph });
   const patterns = classifyCareerPatterns({ networks: networks.networks });
-  const relevance = buildCareerPlanetaryRelevance({ horoscope, structural });
-  const condition = buildCareerPlanetaryCondition({ horoscope, relevance });
+  const relevance = preComputedInputs?.relevance ?? buildCareerPlanetaryRelevance({ horoscope, structural });
+  const condition = preComputedInputs?.condition ?? buildCareerPlanetaryCondition({ horoscope, relevance });
 
   // Step 2: Wire 10H foundation
   // Resolve 10H from horoscope, pass only when status is COMPLETE

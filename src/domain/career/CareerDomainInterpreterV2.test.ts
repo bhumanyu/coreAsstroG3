@@ -4,6 +4,7 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInterpretation';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { GOLDEN_C11_BASELINE } from '../../test/fixtures/careerGoldenBaseline';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -2701,6 +2702,32 @@ describe('CareerDomainInterpreterV2', () => {
       // Verify conflicts are present
       expect(v2.conflicts).toBeDefined();
       expect(Array.isArray(v2.conflicts)).toBe(true);
+    });
+
+    it('regression: C11 conclusion unchanged vs GOLDEN_C11_BASELINE', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Verify golden baseline is not a placeholder
+      expect(GOLDEN_C11_BASELINE.placeholder).toBe(false);
+
+      // Compare conclusion
+      expect(v2.conclusion.strength).toBe(GOLDEN_C11_BASELINE.conclusion.strength);
+      expect(v2.conclusion.confidence).toBe(GOLDEN_C11_BASELINE.conclusion.confidence);
+      expect(v2.conclusion.statement).toBe(GOLDEN_C11_BASELINE.conclusion.statement);
+
+      // Compare canonical C11 synthesis (authoritative conclusion)
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toEqual(
+        GOLDEN_C11_BASELINE.canonicalC11Synthesis
+      );
+
+      // Verify golden regression test fails if C11 output is perturbed
+      // This test should fail if the canonical C11 output changes unexpectedly
+      const perturbedSynthesis = {
+        ...GOLDEN_C11_BASELINE.canonicalC11Synthesis,
+        finalStrength: 'WEAK' as const // Deliberate perturbation
+      };
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).not.toEqual(perturbedSynthesis);
     });
   });
 });
