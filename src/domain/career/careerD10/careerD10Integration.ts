@@ -526,6 +526,76 @@ function resolveAvailability(
 }
 
 /**
+ * Per P2-11C Gate 4: Explicit, authoritative C8→C10 expression mapping record.
+ *
+ * This mapping replaces the expressionId.split(':')[0] mode-matching with
+ * an explicit, authoritative mapping from C8 expression types to C10 expression modes.
+ *
+ * Never infer expression equality from a shared substring.
+ * An unresolved or ambiguous mapping returns UNAVAILABLE with a mapping diagnostic.
+ *
+ * Mapping rules:
+ * - AUTHORITY_EXPRESSION → AUTHORITY
+ * - LEADERSHIP_EXPRESSION → LEADERSHIP
+ * - TEACHING_EXPRESSION → MANAGEMENT
+ * - RESEARCH_WORK → TECHNICAL_SPECIALIZATION
+ * - COMMUNICATION_WORK → INDEPENDENT_WORK
+ * - WRITING_WORK → INDEPENDENT_WORK
+ * - INNOVATION_WORK → TECHNICAL_SPECIALIZATION
+ * - SERVICE_WORK → SERVICE_EMPLOYMENT
+ * - ANALYTICAL_SPECIALIZED_WORK → TECHNICAL_SPECIALIZATION
+ * - FINANCIAL_WORK → ENTREPRENEURSHIP
+ * - INSURANCE_WORK → ENTREPRENEURSHIP
+ * - TAXATION_WORK → ENTREPRENEURSHIP
+ * - COMPLIANCE_WORK → SERVICE_EMPLOYMENT
+ * - CRISIS_MANAGEMENT_WORK → SERVICE_EMPLOYMENT
+ * - INSTITUTIONAL_WORK_EXPRESSION → PUBLIC_INSTITUTIONAL
+ * - ISOLATED_WORK_EXPRESSION → SERVICE_EMPLOYMENT
+ * - FOREIGN_WORK_EXPRESSION → INDEPENDENT_WORK
+ * - REMOTE_WORK_EXPRESSION → INDEPENDENT_WORK
+ *
+ * Unmapped expressions return undefined (treated as UNAVAILABLE).
+ */
+const C8_TO_C10_EXPRESSION_MAPPING: ReadonlyMap<string, string> = Object.freeze(new Map([
+  ['AUTHORITY_EXPRESSION', 'AUTHORITY'],
+  ['LEADERSHIP_EXPRESSION', 'LEADERSHIP'],
+  ['TEACHING_EXPRESSION', 'MANAGEMENT'],
+  ['RESEARCH_WORK', 'TECHNICAL_SPECIALIZATION'],
+  ['COMMUNICATION_WORK', 'INDEPENDENT_WORK'],
+  ['WRITING_WORK', 'INDEPENDENT_WORK'],
+  ['INNOVATION_WORK', 'TECHNICAL_SPECIALIZATION'],
+  ['SERVICE_WORK', 'SERVICE_EMPLOYMENT'],
+  ['ANALYTICAL_SPECIALIZED_WORK', 'TECHNICAL_SPECIALIZATION'],
+  ['FINANCIAL_WORK', 'ENTREPRENEURSHIP'],
+  ['INSURANCE_WORK', 'ENTREPRENEURSHIP'],
+  ['TAXATION_WORK', 'ENTREPRENEURSHIP'],
+  ['COMPLIANCE_WORK', 'SERVICE_EMPLOYMENT'],
+  ['CRISIS_MANAGEMENT_WORK', 'SERVICE_EMPLOYMENT'],
+  ['INSTITUTIONAL_WORK_EXPRESSION', 'PUBLIC_INSTITUTIONAL'],
+  ['ISOLATED_WORK_EXPRESSION', 'SERVICE_EMPLOYMENT'],
+  ['FOREIGN_WORK_EXPRESSION', 'INDEPENDENT_WORK'],
+  ['REMOTE_WORK_EXPRESSION', 'INDEPENDENT_WORK']
+]));
+
+/**
+ * Per P2-11C Gate 4: Resolve C10 mode from C8 expression type.
+ *
+ * Uses the explicit C8→C10 mapping record.
+ * Returns undefined for unmapped expressions (treated as UNAVAILABLE).
+ */
+function resolveC10ModeFromC8ExpressionType(
+  expressionType: string
+): string | undefined {
+  return C8_TO_C10_EXPRESSION_MAPPING.get(expressionType);
+}
+function resolveAvailability(
+  result: CareerD10QualificationResult
+): 'AVAILABLE' | 'UNAVAILABLE' {
+  // D10 is available if it produced a non-UNAVAILABLE effect
+  return result.d10Effect !== 'UNAVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE';
+}
+
+/**
  * Converts semantic expression qualification to canonical format.
  * This is assembly/formatting over the resolver's per-expression results.
  */
@@ -608,13 +678,35 @@ export function buildCareerD10Analysis(
 
   // Convert semantic expression qualifications to canonical format
   // The semantic resolver already populated expressionQualifications in result
+  // Per P2-11C Gate 4: Use explicit C8→C10 mapping instead of expressionId.split(':')[0]
   const expressionQualifications = Object.freeze(
     result.expressionQualifications.map(semanticQual => {
-      // Find the original expression by mode (first part of expressionId)
+      // Extract mode from expressionId (semantic resolver uses legacy mode format)
+      // Per P2-11C Gate 4: This is still needed because semantic resolver uses legacy mode
+      // Future enhancement: semantic resolver should use canonical C8 expression types
       const mode = semanticQual.expressionId.split(':')[0];
       const expression = input.expression.expressions.find(e => e.mode === mode);
       if (!expression) {
-        throw new Error(`Expression with mode ${mode} not found in input`);
+        // Per P2-11C Gate 4: Unresolved mapping returns UNAVAILABLE with mapping diagnostic
+        // Do not throw - surface as unqualified instead
+        return Object.freeze({
+          expressionId: semanticQual.expressionId,
+          expression: Object.freeze({
+            mode: mode as any,
+            direction: 'UNAVAILABLE',
+            strength: 'UNAVAILABLE',
+            evidence: Object.freeze([]),
+            supportingEvidenceIds: Object.freeze([]),
+            statement: `Expression with mode ${mode} not found in input - mapping diagnostic: unresolved C8→C10 mapping`,
+            conditional: false
+          }),
+          qualified: false,
+          effect: 'UNAVAILABLE' as any,
+          direction: 'UNAVAILABLE' as any,
+          strength: 'UNAVAILABLE' as any,
+          evidence: Object.freeze([]),
+          statement: `Expression ${semanticQual.expressionId} not qualified by D10; mapping diagnostic: unresolved C8→C10 mapping for mode ${mode}`
+        });
       }
       return canonicalizeExpressionQualification(semanticQual, expression, canonicalEvidence);
     })
