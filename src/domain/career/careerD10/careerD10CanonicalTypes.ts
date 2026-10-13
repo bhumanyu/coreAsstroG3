@@ -79,8 +79,15 @@ export interface CareerD10Conflict {
 }
 
 /**
- * Canonical expression qualification.
+ * Per P2-11C Gate 4 (Fix for commit 83556417): Mapping status for C8→C10 expression resolution.
+ */
+export type C8ToC10MappingStatus = 'RESOLVED' | 'UNMAPPED' | 'AMBIGUOUS';
+
+/**
+ * Per P2-11C Gate 4 (Fix for commit 83556417): Canonical expression qualification with typed mapping outcome.
+ *
  * D10 qualifies existing C8 expressions; it never creates new ones.
+ * This type includes mappingStatus and mappingDiagnostic for UNMAPPED/AMBIGUOUS outcomes.
  */
 export interface CareerD10ExpressionQualificationCanonical {
   readonly expressionId: string;
@@ -90,6 +97,8 @@ export interface CareerD10ExpressionQualificationCanonical {
   readonly direction: CareerD10QualificationDirection;
   readonly strength: CareerD10QualificationStrength;
   readonly evidence: readonly CareerD10CanonicalEvidence[];
+  readonly mappingStatus?: C8ToC10MappingStatus;
+  readonly mappingDiagnostic?: string;
   readonly statement: string;
 }
 

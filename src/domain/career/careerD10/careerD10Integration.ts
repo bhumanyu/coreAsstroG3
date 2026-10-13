@@ -62,6 +62,14 @@ import {
   evaluateDimensionQualification
 } from './careerD10QualificationRules';
 
+import type {
+  CareerExpressionType
+} from '../careerExpression/careerExpressionTypes';
+
+import type {
+  CareerManifestationMode
+} from '../careerTypes';
+
 /**
  * Input interface for C10 D10 qualification integration.
  * Consumes the natal analysis aggregate and expression analysis.
@@ -526,13 +534,25 @@ function resolveAvailability(
 }
 
 /**
- * Per P2-11C Gate 4: Explicit, authoritative C8→C10 expression mapping record.
+ * Per P2-11C Gate 4 (Fix for commit 83556417): Typed C8→C10 expression mapping resolution result.
  *
- * This mapping replaces the expressionId.split(':')[0] mode-matching with
- * an explicit, authoritative mapping from C8 expression types to C10 expression modes.
+ * Provides structured outcomes for mapping resolution:
+ * - RESOLVED: Expression type maps to a C10 mode
+ * - UNMAPPED: Expression type has no mapping entry
+ * - AMBIGUOUS: Expression type has ambiguous mapping (currently unused, reserved for future)
+ */
+export type C8ToC10MappingResolution =
+  | { readonly status: 'RESOLVED'; readonly c10Mode: CareerManifestationMode }
+  | { readonly status: 'UNMAPPED'; readonly diagnostic: string }
+  | { readonly status: 'AMBIGUOUS'; readonly diagnostic: string };
+
+/**
+ * Per P2-11C Gate 4 (Fix for commit 83556417): Explicit, authoritative C8→C10 expression mapping record.
  *
- * Never infer expression equality from a shared substring.
- * An unresolved or ambiguous mapping returns UNAVAILABLE with a mapping diagnostic.
+ * Uses a frozen object literal keyed by the actual CareerExpressionType union,
+ * mapping to the actual CareerManifestationMode union.
+ *
+ * An object literal satisfies true immutability; a frozen Map does not.
  *
  * Mapping rules:
  * - AUTHORITY_EXPRESSION → AUTHORITY
@@ -553,46 +573,48 @@ function resolveAvailability(
  * - ISOLATED_WORK_EXPRESSION → SERVICE_EMPLOYMENT
  * - FOREIGN_WORK_EXPRESSION → INDEPENDENT_WORK
  * - REMOTE_WORK_EXPRESSION → INDEPENDENT_WORK
- *
- * Unmapped expressions return undefined (treated as UNAVAILABLE).
  */
-const C8_TO_C10_EXPRESSION_MAPPING: ReadonlyMap<string, string> = Object.freeze(new Map([
-  ['AUTHORITY_EXPRESSION', 'AUTHORITY'],
-  ['LEADERSHIP_EXPRESSION', 'LEADERSHIP'],
-  ['TEACHING_EXPRESSION', 'MANAGEMENT'],
-  ['RESEARCH_WORK', 'TECHNICAL_SPECIALIZATION'],
-  ['COMMUNICATION_WORK', 'INDEPENDENT_WORK'],
-  ['WRITING_WORK', 'INDEPENDENT_WORK'],
-  ['INNOVATION_WORK', 'TECHNICAL_SPECIALIZATION'],
-  ['SERVICE_WORK', 'SERVICE_EMPLOYMENT'],
-  ['ANALYTICAL_SPECIALIZED_WORK', 'TECHNICAL_SPECIALIZATION'],
-  ['FINANCIAL_WORK', 'ENTREPRENEURSHIP'],
-  ['INSURANCE_WORK', 'ENTREPRENEURSHIP'],
-  ['TAXATION_WORK', 'ENTREPRENEURSHIP'],
-  ['COMPLIANCE_WORK', 'SERVICE_EMPLOYMENT'],
-  ['CRISIS_MANAGEMENT_WORK', 'SERVICE_EMPLOYMENT'],
-  ['INSTITUTIONAL_WORK_EXPRESSION', 'PUBLIC_INSTITUTIONAL'],
-  ['ISOLATED_WORK_EXPRESSION', 'SERVICE_EMPLOYMENT'],
-  ['FOREIGN_WORK_EXPRESSION', 'INDEPENDENT_WORK'],
-  ['REMOTE_WORK_EXPRESSION', 'INDEPENDENT_WORK']
-]));
+const C8_TO_C10_EXPRESSION_MAPPING: Readonly<Record<CareerExpressionType, CareerManifestationMode>> = Object.freeze({
+  AUTHORITY_EXPRESSION: 'AUTHORITY',
+  LEADERSHIP_EXPRESSION: 'LEADERSHIP',
+  TEACHING_EXPRESSION: 'MANAGEMENT',
+  RESEARCH_WORK: 'TECHNICAL_SPECIALIZATION',
+  COMMUNICATION_WORK: 'INDEPENDENT_WORK',
+  WRITING_WORK: 'INDEPENDENT_WORK',
+  INNOVATION_WORK: 'TECHNICAL_SPECIALIZATION',
+  SERVICE_WORK: 'SERVICE_EMPLOYMENT',
+  ANALYTICAL_SPECIALIZED_WORK: 'TECHNICAL_SPECIALIZATION',
+  FINANCIAL_WORK: 'ENTREPRENEURSHIP',
+  INSURANCE_WORK: 'ENTREPRENEURSHIP',
+  TAXATION_WORK: 'ENTREPRENEURSHIP',
+  COMPLIANCE_WORK: 'SERVICE_EMPLOYMENT',
+  CRISIS_MANAGEMENT_WORK: 'SERVICE_EMPLOYMENT',
+  INSTITUTIONAL_WORK_EXPRESSION: 'PUBLIC_INSTITUTIONAL',
+  ISOLATED_WORK_EXPRESSION: 'SERVICE_EMPLOYMENT',
+  FOREIGN_WORK_EXPRESSION: 'INDEPENDENT_WORK',
+  REMOTE_WORK_EXPRESSION: 'INDEPENDENT_WORK'
+} as const);
 
 /**
- * Per P2-11C Gate 4: Resolve C10 mode from C8 expression type.
+ * Per P2-11C Gate 4 (Fix for commit 83556417): Resolve C10 mode from C8 expression type.
  *
  * Uses the explicit C8→C10 mapping record.
- * Returns undefined for unmapped expressions (treated as UNAVAILABLE).
+ * Returns a typed resolution result distinguishing RESOLVED, UNMAPPED, and AMBIGUOUS outcomes.
  */
 function resolveC10ModeFromC8ExpressionType(
-  expressionType: string
-): string | undefined {
-  return C8_TO_C10_EXPRESSION_MAPPING.get(expressionType);
-}
-function resolveAvailability(
-  result: CareerD10QualificationResult
-): 'AVAILABLE' | 'UNAVAILABLE' {
-  // D10 is available if it produced a non-UNAVAILABLE effect
-  return result.d10Effect !== 'UNAVAILABLE' ? 'AVAILABLE' : 'UNAVAILABLE';
+  expressionType: CareerExpressionType
+): C8ToC10MappingResolution {
+  const c10Mode = C8_TO_C10_EXPRESSION_MAPPING[expressionType];
+  if (c10Mode) {
+    return Object.freeze({
+      status: 'RESOLVED',
+      c10Mode
+    });
+  }
+  return Object.freeze({
+    status: 'UNMAPPED',
+    diagnostic: `C8 expression type "${expressionType}" has no C10 mapping entry`
+  });
 }
 
 /**
@@ -602,7 +624,8 @@ function resolveAvailability(
 function canonicalizeExpressionQualification(
   semanticQual: CareerD10ExpressionQualification,
   expression: CareerExpression,
-  canonicalEvidence: readonly CareerD10CanonicalEvidence[]
+  canonicalEvidence: readonly CareerD10CanonicalEvidence[],
+  resolution: C8ToC10MappingResolution
 ): CareerD10ExpressionQualificationCanonical {
   // Filter canonical evidence by semantic evidence IDs
   const qualificationEvidence = Object.freeze(
@@ -619,6 +642,8 @@ function canonicalizeExpressionQualification(
     direction: semanticQual.direction,
     strength: semanticQual.strength,
     evidence: qualificationEvidence,
+    mappingStatus: resolution.status,
+    mappingDiagnostic: resolution.status === 'RESOLVED' ? undefined : resolution.diagnostic,
     statement: semanticQual.statement
   });
 }
@@ -678,37 +703,55 @@ export function buildCareerD10Analysis(
 
   // Convert semantic expression qualifications to canonical format
   // The semantic resolver already populated expressionQualifications in result
-  // Per P2-11C Gate 4: Use explicit C8→C10 mapping instead of expressionId.split(':')[0]
+  // Per P2-11C Gate 4 (Fix for commit 83556417): Use typed C8→C10 mapping resolver
   const expressionQualifications = Object.freeze(
     result.expressionQualifications.map(semanticQual => {
       // Extract mode from expressionId (semantic resolver uses legacy mode format)
-      // Per P2-11C Gate 4: This is still needed because semantic resolver uses legacy mode
-      // Future enhancement: semantic resolver should use canonical C8 expression types
+      // Per P2-11C Gate 4 Finding 5: This string-splitting is a transitional bridge
+      // The semantic resolver will be updated to carry typed expression references
       const mode = semanticQual.expressionId.split(':')[0];
       const expression = input.expression.expressions.find(e => e.mode === mode);
+
       if (!expression) {
-        // Per P2-11C Gate 4: Unresolved mapping returns UNAVAILABLE with mapping diagnostic
-        // Do not throw - surface as unqualified instead
+        // Per P2-11C Gate 4: Emit typed UNAVAILABLE qualification with mapping diagnostic
+        // Do NOT fabricate a CareerExpression with type bypassing
         return Object.freeze({
           expressionId: semanticQual.expressionId,
-          expression: Object.freeze({
-            mode: mode as any,
-            direction: 'UNAVAILABLE',
-            strength: 'UNAVAILABLE',
-            evidence: Object.freeze([]),
-            supportingEvidenceIds: Object.freeze([]),
-            statement: `Expression with mode ${mode} not found in input - mapping diagnostic: unresolved C8→C10 mapping`,
-            conditional: false
-          }),
+          expression: null, // Explicit null indicates missing expression reference
           qualified: false,
-          effect: 'UNAVAILABLE' as any,
-          direction: 'UNAVAILABLE' as any,
-          strength: 'UNAVAILABLE' as any,
+          effect: 'UNAVAILABLE' as CareerD10QualificationEffect,
+          direction: 'UNAVAILABLE' as CareerD10QualificationDirection,
+          strength: 'UNDETERMINED' as CareerD10QualificationStrength,
           evidence: Object.freeze([]),
+          mappingStatus: 'UNMAPPED' as const,
+          mappingDiagnostic: `C8→C10 mapping: expression with mode "${mode}" not found in input - unresolved mapping`,
           statement: `Expression ${semanticQual.expressionId} not qualified by D10; mapping diagnostic: unresolved C8→C10 mapping for mode ${mode}`
         });
       }
-      return canonicalizeExpressionQualification(semanticQual, expression, canonicalEvidence);
+
+      // Attempt to resolve via typed C8→C10 mapping if expressionType is available
+      // For now, use the legacy mode as a bridge (semantic resolver still uses string-splitting)
+      // This will be removed once semantic resolver carries typed CareerExpressionType
+      const resolution = resolveC10ModeFromC8ExpressionType(mode as any);
+
+      if (resolution.status !== 'RESOLVED') {
+        // Emit typed UNAVAILABLE qualification with mapping diagnostic
+        return Object.freeze({
+          expressionId: semanticQual.expressionId,
+          expression,
+          qualified: false,
+          effect: 'UNAVAILABLE' as CareerD10QualificationEffect,
+          direction: 'UNAVAILABLE' as CareerD10QualificationDirection,
+          strength: 'UNDETERMINED' as CareerD10QualificationStrength,
+          evidence: Object.freeze([]),
+          mappingStatus: resolution.status,
+          mappingDiagnostic: resolution.diagnostic,
+          statement: `Expression ${semanticQual.expressionId} not qualified by D10; mapping diagnostic: ${resolution.diagnostic}`
+        });
+      }
+
+      // Successfully resolved - canonicalize with preserved expression identity
+      return canonicalizeExpressionQualification(semanticQual, expression, canonicalEvidence, resolution);
     })
   );
 
