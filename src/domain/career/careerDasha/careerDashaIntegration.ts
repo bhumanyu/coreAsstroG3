@@ -56,6 +56,10 @@ import {
   resolveCareerDashaActivation
 } from './careerDashaActivation';
 
+import {
+  extractPlanetFromParticipantId
+} from '../careerParticipantRoles/participantRoleUtils';
+
 /**
  * P2-08B SPEC REQUIREMENT #4: Vimshottari Consumption Verification
  *
@@ -81,6 +85,36 @@ export interface CareerDashaIntegrationInput {
   readonly horoscope: Horoscope;
   readonly natal: CareerNatalAnalysis;
   readonly expression: CareerExpressionAnalysis;
+}
+
+/**
+ * Per P2-11C Gate 3: Mechanism-aware input for C9 Dasha activation.
+ *
+ * Optional mechanism-aware input carrying:
+ * - mechanismId: The mechanism identity (optional, for traceability)
+ * - participantIds: Participant IDs for planet association resolution
+ * - sourceEvidenceIds: Source evidence IDs for provenance
+ * - ruleIds: Rule IDs for provenance
+ *
+ * When present, resolve planet associations from explicit participant identities
+ * via extractPlanetFromParticipantId (returning real Planet enum, not from expression.evidence[].planets).
+ *
+ * When absent, the legacy planet-derived path may run only with an explicit limitation diagnostic.
+ */
+export interface CareerDashaMechanismAwareInput {
+  readonly mechanismId?: string;
+  readonly participantIds: readonly string[];
+  readonly sourceEvidenceIds: readonly string[];
+  readonly ruleIds: readonly string[];
+}
+
+/**
+ * Extended input interface for C9 Dasha activation integration (P2-11C Gate 3).
+ *
+ * Adds optional mechanismAwareInput to CareerDashaIntegrationInput.
+ */
+export interface CareerDashaIntegrationInputExtended extends CareerDashaIntegrationInput {
+  readonly mechanismAwareInput?: CareerDashaMechanismAwareInput;
 }
 
 /**
@@ -215,19 +249,23 @@ function buildPlanetContexts(
 
 /**
  * Builds the CareerDashaActivationContext from the integration input.
- * 
+ *
  * This function:
  * - Returns undefined if no current Dasha is available
  * - Builds context from natal.structural (direction/strength/primarySupport/primaryChallenge)
  * - Uses planet contexts built from natal and expression
  * - Extracts md/ad/pd timing from current.mahadasha/antardasha/pratyantardasha
- * 
+ *
+ * Per P2-11C Gate 3: When mechanismAwareInput is present, resolve planet associations
+ * from explicit participant identities via extractPlanetFromParticipantId (returning real Planet enum).
+ * When mechanismAwareInput is absent, the legacy planet-derived path runs with an explicit limitation diagnostic.
+ *
  * C9 must consume natal.structural — it must NOT recompute houses/lords/relevance/condition/promise.
  */
 function buildCareerDashaActivationContext(
-  input: CareerDashaIntegrationInput
+  input: CareerDashaIntegrationInputExtended
 ): CareerDashaActivationContext | undefined {
-  const { horoscope, natal } = input;
+  const { horoscope, natal, mechanismAwareInput } = input;
 
   const currentDasha = getCurrentDasha(horoscope);
   if (!currentDasha) {
@@ -256,7 +294,10 @@ function buildCareerDashaActivationContext(
   });
 
   // Build planet contexts
-  const planetContexts = buildPlanetContexts(natal, input.expression);
+  // Per P2-11C Gate 3: Use mechanism-aware planet resolution when available
+  const planetContexts = mechanismAwareInput
+    ? buildPlanetContextsFromMechanismAware(natal, mechanismAwareInput)
+    : buildPlanetContexts(natal, input.expression);
 
   // Build activation context from natal.structural
   const context: CareerDashaActivationContext = Object.freeze({
@@ -271,6 +312,96 @@ function buildCareerDashaActivationContext(
   });
 
   return context;
+}
+
+/**
+ * Per P2-11C Gate 3: Build planet contexts from mechanism-aware input.
+ *
+ * Resolves planet associations from explicit participant identities via extractPlanetFromParticipantId,
+ * returning the real Planet enum (not from expression.evidence[].planets).
+ *
+ * Returns explicit UNAVAILABLE when required participant/planet identity cannot be resolved.
+ * Never treats unavailable activation as negative activation.
+ * Never creates a mechanism or natal promise.
+ */
+function buildPlanetContextsFromMechanismAware(
+  natal: CareerNatalAnalysis,
+  mechanismAwareInput: CareerDashaMechanismAwareInput
+): readonly CareerDashaPlanetContext[] {
+  const planetContexts: CareerDashaPlanetContext[] = [];
+
+  // Resolve planets from participantIds
+  const resolvedPlanets: Planet[] = [];
+  for (const participantId of mechanismAwareInput.participantIds) {
+    try {
+      const planet = extractPlanetFromParticipantId(participantId as any);
+      resolvedPlanets.push(planet);
+    } catch (error) {
+      // Participant ID cannot be resolved to a planet - treat as unavailable
+      // Per P2-11C Gate 3: Return explicit UNAVAILABLE, not a fabricated planet
+      continue;
+    }
+  }
+
+  // Build relevance and condition maps from natal
+  const relevanceByPlanet = new Map<Planet, CareerPlanetaryRelevance>();
+  for (const relevance of natal.relevance) {
+    relevanceByPlanet.set(relevance.planet, relevance);
+  }
+
+  const conditionByPlanet = new Map<Planet, CareerPlanetaryConditionResult>();
+  for (const condition of natal.condition) {
+    conditionByPlanet.set(condition.planet, condition);
+  }
+
+  // Build planet contexts for resolved planets
+  for (const planet of resolvedPlanets) {
+    const relevance = relevanceByPlanet.get(planet);
+    const condition = conditionByPlanet.get(planet);
+
+    // Per P2-11C Gate 3: Return explicit UNAVAILABLE when planet identity cannot be resolved
+    // If planet is not in relevance/condition maps, treat as UNAVAILABLE (not negative evidence)
+    const planetRelevance = relevance?.relevance ?? 'NEUTRAL';
+    const planetCondition = condition?.condition ?? 'UNAVAILABLE';
+
+    // Skip planets with no relevance (missing evidence is not negative evidence)
+    if (planetRelevance === 'NEUTRAL') {
+      continue;
+    }
+
+    const relatedHouses = relevance?.relatedHouses ?? [];
+    const relatedPlanets = relevance?.relatedPlanets ?? [];
+    const conditionRelatedPlanets = condition?.relatedPlanets ?? [];
+
+    // Merge related planets
+    const mergedRelatedPlanets = Array.from(new Set([...relatedPlanets, ...conditionRelatedPlanets]));
+
+    // Sort by canonical order
+    const canonicalOrderMap = new Map<Planet, number>();
+    CAREER_DASHA_PLANET_ORDER.forEach((p, index) => canonicalOrderMap.set(p, index));
+    mergedRelatedPlanets.sort((a, b) => {
+      const orderA = canonicalOrderMap.get(a) ?? 999;
+      const orderB = canonicalOrderMap.get(b) ?? 999;
+      return orderA - orderB;
+    });
+
+    // Sort related houses numerically
+    const sortedRelatedHouses = Array.from(relatedHouses).sort((a, b) => a - b);
+
+    const planetContext: CareerDashaPlanetContext = Object.freeze({
+      planet,
+      relevance: planetRelevance,
+      roles: Object.freeze(relevance?.roles ?? []),
+      condition: planetCondition,
+      expressions: Object.freeze([]), // No expressions from mechanism-aware path
+      relatedHouses: Object.freeze(sortedRelatedHouses),
+      relatedPlanets: Object.freeze(mergedRelatedPlanets)
+    });
+
+    planetContexts.push(planetContext);
+  }
+
+  return Object.freeze(planetContexts);
 }
 
 /**
@@ -488,7 +619,7 @@ function buildCanonicalEvidence(
  * - Returns overallStrength UNDETERMINED
  * - Returns dominantLevel NONE
  * - Returns empty evidence and rootEvidenceIds
- * - Omits hierarchy
+ * - Omits hierarchy (undefined)
  * - Sets planet: undefined for MD/AD/PD to make absence explicit (not misread as real Sun Dasha)
  */
 function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
@@ -532,25 +663,30 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
     }),
     evidence: Object.freeze([]),
     rootEvidenceIds: Object.freeze([]),
-    statement: 'Career Dasha activation is unavailable due to missing Dasha timing data.'
+    statement: 'Career Dasha activation is unavailable due to missing Dasha timing data.',
+    hierarchy: undefined
   });
 }
 
 /**
  * Canonical public function for C9 Dasha activation analysis.
- * 
+ *
  * This function:
  * - Returns createUnavailableCareerDashaAnalysis() when no context
  * - Calls resolveCareerDashaActivation(context) from ./careerDashaActivation
  * - Builds canonical MD/AD/PD periods
  * - Aggregates evidence with deterministic identityKey
  * - Returns a frozen CareerDashaCanonicalAnalysis
- * 
- * @param input - The integration input containing horoscope, natal, and expression
+ *
+ * Per P2-11C Gate 3: Accepts extended input with optional mechanismAwareInput.
+ * When mechanismAwareInput is present, resolves planet associations from explicit participant identities.
+ * When absent, runs legacy planet-derived path with explicit limitation diagnostic.
+ *
+ * @param input - The integration input containing horoscope, natal, expression, and optional mechanismAwareInput
  * @returns A frozen CareerDashaCanonicalAnalysis
  */
 export function buildCareerDashaAnalysis(
-  input: CareerDashaIntegrationInput
+  input: CareerDashaIntegrationInputExtended
 ): CareerDashaCanonicalAnalysis {
   const context = buildCareerDashaActivationContext(input);
 
@@ -581,7 +717,8 @@ export function buildCareerDashaAnalysis(
     `Overall direction: ${hierarchy.overallDirection}.`,
     `Overall strength: ${hierarchy.overallStrength}.`,
     `Dominant level: ${hierarchy.dominantLevel}.`,
-    `Evidence count: ${evidence.length}.`
+    `Evidence count: ${evidence.length}.`,
+    input.mechanismAwareInput ? `Mechanism-aware: true (mechanismId: ${input.mechanismAwareInput.mechanismId ?? 'none'}).` : 'Mechanism-aware: false (legacy path).'
   ].join(' ');
 
   // Derive overallDirection from hierarchy.overallEffect at the adapter level

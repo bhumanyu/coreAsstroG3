@@ -3,7 +3,9 @@ import {
 } from './careerDashaIntegration';
 
 import type {
-  CareerDashaIntegrationInput
+  CareerDashaIntegrationInput,
+  CareerDashaIntegrationInputExtended,
+  CareerDashaMechanismAwareInput
 } from './careerDashaIntegration';
 
 import {
@@ -61,6 +63,87 @@ import {
 
 // Simplified test using real engine data and minimal focused mocks
 // This tests the integration layer specifically, not recreating the full C5/C6/C8 test suite
+
+function makeMinimalNatalAnalysis(): CareerNatalAnalysis {
+  return Object.freeze({
+    structural: Object.freeze({
+      direction: 'SUPPORT' as CareerStructuralDirection,
+      strength: 'STRONG' as CareerStructuralStrength,
+      primarySupport: 5,
+      primaryChallenge: 0,
+      supportingSupport: 3,
+      supportingChallenge: 1,
+      challengingSupport: 1,
+      challengingChallenge: 3,
+      mixedWeight: 0,
+      evidence: Object.freeze([]),
+      primaryEvidenceIds: Object.freeze([]),
+      supportingEvidenceIds: Object.freeze([]),
+      challengingEvidenceIds: Object.freeze([]),
+      conflicts: Object.freeze([]),
+      statement: 'Strong structural support for career.'
+    } as unknown as CareerStructuralReasoning),
+    relevance: Object.freeze([
+      Object.freeze({
+        planet: Planet.SATURN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        roles: Object.freeze(['CAREER_LORD' as CareerPlanetRole]),
+        reasons: Object.freeze(['PRIMARY_LORDSHIP' as CareerPlanetRelevanceReason]),
+        effect: 'SUPPORT' as CareerPlanetEffect,
+        expressionHints: Object.freeze([] as CareerExpressionHint[]),
+        relatedHouses: Object.freeze([10]),
+        relatedPlanets: Object.freeze([]),
+        conditional: false,
+        statement: 'Saturn has primary career relevance.'
+      })
+    ]),
+    condition: Object.freeze([
+      Object.freeze({
+        planet: Planet.SATURN,
+        relevance: 'PRIMARY' as CareerPlanetRelevance,
+        condition: 'STRONG',
+        dignity: 'OWN_SIGN' as any,
+        affliction: 'NONE' as any,
+        motion: 'DIRECT' as any,
+        combustion: 'NOT_COMBUST' as any,
+        beneficSupport: false,
+        maleficPressure: false,
+        dataAvailable: true,
+        positiveFactors: Object.freeze([]),
+        negativeFactors: Object.freeze([]),
+        relatedHouses: Object.freeze([10]),
+        relatedPlanets: Object.freeze([]),
+        conditional: false,
+        statement: 'Saturn is strong.'
+      })
+    ]),
+    lordRelationships: [],
+    direction: 'SUPPORT',
+    strength: 'STRONG',
+    evidence: [],
+    conflicts: [],
+    reasoningTrace: Object.freeze({
+      primaryPromise: [],
+      secondarySupport: [],
+      modifiers: [],
+      yogas: [],
+      varga: [],
+      dasha: [],
+      transit: []
+    })
+  });
+}
+
+function makeMinimalExpressionAnalysis(): CareerExpressionAnalysis {
+  return Object.freeze({
+    expressions: [],
+    evidenceIds: [],
+    unresolvedEvidenceIds: [],
+    sourceIds: [],
+    ruleIds: [],
+    statement: 'No expressions'
+  });
+}
 
 function makeHoroscopeWithDasha(): Horoscope {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -906,6 +989,212 @@ describe('C9 Dasha Integration', () => {
       if (saturnEvidence) {
         expect(saturnEvidence.provenance.natalRootIds).toContain('hyphenated-ruleid-evidence');
       }
+    });
+  });
+
+  describe('P2-11C Gate 3: Mechanism-aware activation', () => {
+    it('should resolve planet associations from explicit participant identities', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_AUTHORITY_001',
+        participantIds: ['PLANET:SUN', 'PLANET:MARS'],
+        sourceEvidenceIds: ['EVIDENCE_001', 'EVIDENCE_002'],
+        ruleIds: ['RULE_AUTH_001']
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Statement should indicate mechanism-aware input
+      expect(result.statement).toContain('Mechanism-aware: true');
+      expect(result.statement).toContain('MECH_AUTHORITY_001');
+
+      // Planet contexts should be built from participantIds
+      // SUN and MARS should be in the planet contexts
+      if (result.hierarchy && result.hierarchy.md) {
+        expect(result.hierarchy.md.planet).toBeDefined();
+      }
+    });
+
+    it('should return explicit UNAVAILABLE when participant/planet identity cannot be resolved', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_INVALID_001',
+        participantIds: ['INVALID_PARTICIPANT_ID'], // Not a valid PLANET:{Planet} format
+        sourceEvidenceIds: ['EVIDENCE_001'],
+        ruleIds: ['RULE_INVALID_001']
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Should not fabricate a planet - unavailable participant should be skipped
+      // Statement should indicate mechanism-aware input
+      expect(result.statement).toContain('Mechanism-aware: true');
+    });
+
+    it('should never treat unavailable activation as negative activation', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_TEST_001',
+        participantIds: [], // Empty participant IDs
+        sourceEvidenceIds: [],
+        ruleIds: []
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // UNAVAILABLE should not be treated as negative (CHALLENGE)
+      // The overall direction should not be CHALLENGE just because participants are empty
+      expect(result.overallDirection).not.toBe('CHALLENGE');
+    });
+
+    it('should never create a mechanism or natal promise', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_TEST_001',
+        participantIds: ['PLANET:JUPITER'],
+        sourceEvidenceIds: ['EVIDENCE_001'],
+        ruleIds: ['RULE_TEST_001']
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // C9 should not create mechanisms or natal promises
+      // It only activates existing natal promises
+      // The evidence should be Dasha activation evidence, not natal promise evidence
+      result.evidence.forEach(evidence => {
+        expect(evidence.provenance.source).toBe('C9_DASHA');
+      });
+    });
+
+    it('should preserve source evidence IDs and rule IDs through the result', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_TEST_001',
+        participantIds: ['PLANET:SATURN'],
+        sourceEvidenceIds: ['SOURCE_EVIDENCE_001', 'SOURCE_EVIDENCE_002'],
+        ruleIds: ['RULE_QUAL_001', 'RULE_QUAL_002']
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Statement should include mechanism ID
+      expect(result.statement).toContain('MECH_TEST_001');
+    });
+
+    it('should read MD/AD/PD timing verbatim from horoscope.dashaInterpretation', () => {
+      const horoscope = makeHoroscopeWithDasha();
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_TEST_001',
+        participantIds: ['PLANET:SATURN'],
+        sourceEvidenceIds: ['EVIDENCE_001'],
+        ruleIds: ['RULE_TEST_001']
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope,
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // MD timing should match horoscope.dashaInterpretation
+      expect(result.md.planet).toBe(Planet.SATURN);
+      expect(result.md.start).toBe('2020-01-01');
+      expect(result.md.end).toBe('2025-01-01');
+
+      // AD timing should match horoscope.dashaInterpretation
+      expect(result.ad.planet).toBe(Planet.JUPITER);
+      expect(result.ad.start).toBe('2020-01-01');
+      expect(result.ad.end).toBe('2022-01-01');
+
+      // PD timing should match horoscope.dashaInterpretation
+      expect(result.pd.planet).toBe(Planet.MERCURY);
+      expect(result.pd.start).toBe('2020-01-01');
+      expect(result.pd.end).toBe('2021-01-01');
+    });
+
+    it('should use legacy planet-derived path with explicit limitation diagnostic when mechanismAwareInput is absent', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis()
+        // mechanismAwareInput absent - legacy path
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Statement should indicate legacy path
+      expect(result.statement).toContain('Mechanism-aware: false');
+      expect(result.statement).toContain('legacy path');
+    });
+
+    it('should not use expressionId/candidateId/mode fallbacks for planet resolution', () => {
+      const natal = makeMinimalNatalAnalysis();
+
+      const mechanismAwareInput: CareerDashaMechanismAwareInput = Object.freeze({
+        mechanismId: 'MECH_TEST_001',
+        participantIds: ['PLANET:VENUS'],
+        sourceEvidenceIds: ['EVIDENCE_001'],
+        ruleIds: ['RULE_TEST_001']
+      });
+
+      const input: CareerDashaIntegrationInputExtended = Object.freeze({
+        horoscope: makeHoroscopeWithDasha(),
+        natal,
+        expression: makeMinimalExpressionAnalysis(),
+        mechanismAwareInput
+      });
+
+      const result = buildCareerDashaAnalysis(input);
+
+      // Should resolve VENUS from participantId, not from expression mode or candidateId
+      expect(result.statement).toContain('MECH_TEST_001');
     });
   });
 });

@@ -215,7 +215,9 @@ export interface CareerExpressionCanonicalProvenance {
 export interface QualifiedExpression {
   readonly qualificationStatus: 'QUALIFIED';
   readonly ruleIds: readonly string[]; // Non-empty - enforced by runtime check
-  readonly provenance: CareerExpressionCanonicalProvenance;
+  readonly provenance: CareerExpressionCanonicalProvenance & {
+    readonly mechanismId: string; // Required for QUALIFIED
+  };
 }
 
 /**

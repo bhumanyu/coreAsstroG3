@@ -420,9 +420,12 @@ describe('Career Expression Integration (P2-08A)', () => {
                 sourceMechanismIds: ['MECH-001'],
                 ruleIds: ['RULE_AUTH_001'],
                 sourceEvidenceIds: ['SRC-001'],
-                participantIds: ['PLANET:SUN']
+                participantIds: ['PLANET:SUN'],
+                relatedHouses: [],
+                relatedPlanets: [],
+                conditional: false
               }
-            },
+            } as any,
             trace: ['Qualified by rule RULE_AUTH_001']
           }
         ],
@@ -445,7 +448,8 @@ describe('Career Expression Integration (P2-08A)', () => {
       expect(canonicalResult.expressions[0].direction).toBe('SUPPORTED');
       expect(canonicalResult.expressions[0].strength).toBe('STRONG');
       expect(canonicalResult.expressions[0].qualification.ruleIds).toEqual(['RULE_AUTH_001']);
-      expect(canonicalResult.expressions[0].qualification.provenance.mechanismId).toBe('MECH_RESOLVED_001');
+      // mechanismId is required for QUALIFIED per the discriminated union
+      expect((canonicalResult.expressions[0].qualification.provenance as any).mechanismId).toBe('MECH_RESOLVED_001');
     });
 
     it('should preserve trace separate from directional evidence', () => {
