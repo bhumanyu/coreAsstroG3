@@ -31,6 +31,10 @@ import type {
 } from '../careerExpression';
 
 import type {
+  CareerManifestationMode
+} from '../careerTypes';
+
+import type {
   CareerPlanetaryRelevance
 } from '../careerPlanetaryRelevance';
 
@@ -1238,28 +1242,40 @@ describe('C10 D10 Integration', () => {
     });
   });
 
-  describe('P2-11C Gate 4 Finding 6: Direct C8→C10 mapping tests', () => {
-    it('every supported mapping resolves correctly with typed resolution', () => {
-      // Test all mappings in C8_TO_C10_EXPRESSION_MAPPING
-      const testCases = [
-        { mode: 'AUTHORITY' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'LEADERSHIP' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'MANAGEMENT' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'TECHNICAL_SPECIALIZATION' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'INDEPENDENT_WORK' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'SERVICE_EMPLOYMENT' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'ENTREPRENEURSHIP' as const, expectedStatus: 'RESOLVED' as const },
-        { mode: 'PUBLIC_INSTITUTIONAL' as const, expectedStatus: 'RESOLVED' as const }
-      ];
+  describe('P2-11C Gate 4 Finding 2: Exhaustive C8→C10 mapping tests', () => {
+    it('every canonical CareerExpressionType maps to its declared C10 mode', () => {
+      // Table-drive over the full C8_TO_C10_EXPRESSION_MAPPING
+      // Test every canonical type produces its declared outcome
+      const canonicalTypeMapping: Readonly<Record<string, CareerManifestationMode>> = {
+        'AUTHORITY_EXPRESSION': 'AUTHORITY',
+        'LEADERSHIP_EXPRESSION': 'LEADERSHIP',
+        'TEACHING_EXPRESSION': 'MANAGEMENT',
+        'RESEARCH_WORK': 'TECHNICAL_SPECIALIZATION',
+        'COMMUNICATION_WORK': 'INDEPENDENT_WORK',
+        'WRITING_WORK': 'INDEPENDENT_WORK',
+        'INNOVATION_WORK': 'TECHNICAL_SPECIALIZATION',
+        'SERVICE_WORK': 'SERVICE_EMPLOYMENT',
+        'ANALYTICAL_SPECIALIZED_WORK': 'TECHNICAL_SPECIALIZATION',
+        'FINANCIAL_WORK': 'ENTREPRENEURSHIP',
+        'INSURANCE_WORK': 'ENTREPRENEURSHIP',
+        'TAXATION_WORK': 'ENTREPRENEURSHIP',
+        'COMPLIANCE_WORK': 'SERVICE_EMPLOYMENT',
+        'CRISIS_MANAGEMENT_WORK': 'SERVICE_EMPLOYMENT',
+        'INSTITUTIONAL_WORK_EXPRESSION': 'PUBLIC_INSTITUTIONAL',
+        'ISOLATED_WORK_EXPRESSION': 'SERVICE_EMPLOYMENT',
+        'FOREIGN_WORK_EXPRESSION': 'INDEPENDENT_WORK',
+        'REMOTE_WORK_EXPRESSION': 'INDEPENDENT_WORK'
+      };
 
-      for (const testCase of testCases) {
+      for (const [expressionType, expectedMode] of Object.entries(canonicalTypeMapping)) {
+        // Create a legacy expression with the expected mode
         const expression: CareerExpression = Object.freeze({
-          mode: testCase.mode,
+          mode: expectedMode,
           direction: 'SUPPORTED',
           strength: 'STRONG',
           evidence: Object.freeze([]),
-          supportingEvidenceIds: Object.freeze([`evidence-${testCase.mode}`]),
-          statement: `${testCase.mode} expression.`,
+          supportingEvidenceIds: Object.freeze([`evidence-${expressionType}`]),
+          statement: `${expressionType} expression.`,
           conditional: false
         });
 
@@ -1274,61 +1290,164 @@ describe('C10 D10 Integration', () => {
 
         const result = buildCareerD10Analysis(input);
 
-        const qualification = result.expressionQualifications.find(q => q.expression?.mode === testCase.mode);
+        const qualification = result.expressionQualifications.find(q => q.expression?.mode === expectedMode);
         expect(qualification).toBeDefined();
-        expect(qualification?.mappingStatus).toBe(testCase.expectedStatus);
+        expect(qualification?.mappingStatus).toBe('RESOLVED');
         expect(qualification?.mappingDiagnostic).toBeUndefined();
       }
     });
 
-    it('many-to-one mappings preserve expression identity', () => {
-      // Test that COMMUNICATION_WORK and WRITING_WORK both map to INDEPENDENT_WORK
-      // but preserve their distinct expression identities
-      const expr1: CareerExpression = Object.freeze({
-        mode: 'INDEPENDENT_WORK',
-        direction: 'SUPPORTED',
-        strength: 'STRONG',
-        evidence: Object.freeze([]),
-        supportingEvidenceIds: Object.freeze(['comm-1']),
-        statement: 'Communication work expression.',
-        conditional: false
-      });
+    it('legacy-only modes resolve as UNMAPPED with diagnostic', () => {
+      // Test that legacy-only modes (SPECIALIZATION, EMPLOYMENT, BUSINESS_ENTREPRENEURSHIP)
+      // produce UNMAPPED status with a diagnostic
+      const legacyOnlyModes: CareerManifestationMode[] = [
+        'SPECIALIZATION',
+        'EMPLOYMENT',
+        'BUSINESS_ENTREPRENEURSHIP'
+      ];
 
-      const expr2: CareerExpression = Object.freeze({
-        mode: 'INDEPENDENT_WORK',
-        direction: 'SUPPORTED',
-        strength: 'STRONG',
-        evidence: Object.freeze([]),
-        supportingEvidenceIds: Object.freeze(['write-1']),
-        statement: 'Writing work expression.',
-        conditional: false
-      });
+      for (const mode of legacyOnlyModes) {
+        const expression: CareerExpression = Object.freeze({
+          mode,
+          direction: 'SUPPORTED',
+          strength: 'STRONG',
+          evidence: Object.freeze([]),
+          supportingEvidenceIds: Object.freeze([`evidence-${mode}`]),
+          statement: `${mode} expression.`,
+          conditional: false
+        });
 
-      const input = makeInput({
-        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
-        expression: makeMinimalExpression([expr1, expr2]),
-        horoscope: makeHoroscopeWithD10(
-          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
-          [{ house: 10, lord: Planet.SUN, occupants: [] }]
-        )
-      });
+        const input = makeInput({
+          natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+          expression: makeMinimalExpression([expression]),
+          horoscope: makeHoroscopeWithD10(
+            { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+            [{ house: 10, lord: Planet.SUN, occupants: [] }]
+          )
+        });
 
-      const result = buildCareerD10Analysis(input);
+        const result = buildCareerD10Analysis(input);
 
-      expect(result.expressionQualifications).toHaveLength(2);
-
-      // Both should resolve to the same C10 mode (INDEPENDENT_WORK)
-      const qual1 = result.expressionQualifications.find(q => q.expression?.supportingEvidenceIds.includes('comm-1'));
-      const qual2 = result.expressionQualifications.find(q => q.expression?.supportingEvidenceIds.includes('write-1'));
-
-      expect(qual1).toBeDefined();
-      expect(qual2).toBeDefined();
-      expect(qual1?.mappingStatus).toBe('RESOLVED');
-      expect(qual2?.mappingStatus).toBe('RESOLVED');
-
-      // But they should have distinct expressionId (identity preserved)
-      expect(qual1?.expressionId).not.toBe(qual2?.expressionId);
+        const qualification = result.expressionQualifications.find(q => q.expression?.mode === mode);
+        expect(qualification).toBeDefined();
+        expect(qualification?.mappingStatus).toBe('UNMAPPED');
+        expect(qualification?.mappingDiagnostic).toContain('legacy-only mode');
+        expect(qualification?.mappingDiagnostic).toContain(mode);
+        expect(qualification?.qualified).toBe(false);
+      }
     });
+
+    it('many-to-one modes map with MODE granularity and preserve expression identity', () => {
+      // Test that many-to-one modes (TECHNICAL_SPECIALIZATION, INDEPENDENT_WORK, SERVICE_EMPLOYMENT, ENTREPRENEURSHIP)
+      // have mappingGranularity: 'MODE' and preserve distinct expressionId
+      const manyToOneCases = [
+        {
+          mode: 'TECHNICAL_SPECIALIZATION' as const,
+          expressions: [
+            { type: 'RESEARCH_WORK' as const, evidenceId: 'research-1' },
+            { type: 'INNOVATION_WORK' as const, evidenceId: 'innovation-1' }
+          ]
+        },
+        {
+          mode: 'INDEPENDENT_WORK' as const,
+          expressions: [
+            { type: 'COMMUNICATION_WORK' as const, evidenceId: 'comm-1' },
+            { type: 'WRITING_WORK' as const, evidenceId: 'write-1' }
+          ]
+        },
+        {
+          mode: 'SERVICE_EMPLOYMENT' as const,
+          expressions: [
+            { type: 'SERVICE_WORK' as const, evidenceId: 'service-1' },
+            { type: 'COMPLIANCE_WORK' as const, evidenceId: 'compliance-1' }
+          ]
+        },
+        {
+          mode: 'ENTREPRENEURSHIP' as const,
+          expressions: [
+            { type: 'FINANCIAL_WORK' as const, evidenceId: 'finance-1' },
+            { type: 'INSURANCE_WORK' as const, evidenceId: 'insurance-1' }
+          ]
+        }
+      ];
+
+      for (const testCase of manyToOneCases) {
+        const expressions = testCase.expressions.map(e => ({
+          mode: testCase.mode,
+          direction: 'SUPPORTED' as const,
+          strength: 'STRONG' as const,
+          evidence: Object.freeze([]),
+          supportingEvidenceIds: Object.freeze([e.evidenceId]),
+          statement: `${e.type} expression.`,
+          conditional: false
+        }));
+
+        const input = makeInput({
+          natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+          expression: makeMinimalExpression(expressions),
+          horoscope: makeHoroscopeWithD10(
+            { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+            [{ house: 10, lord: Planet.SUN, occupants: [] }]
+          )
+        });
+
+        const result = buildCareerD10Analysis(input);
+
+        expect(result.expressionQualifications).toHaveLength(testCase.expressions.length);
+
+        for (const qualification of result.expressionQualifications) {
+          expect(qualification.mappingStatus).toBe('RESOLVED');
+          expect(qualification.mappingGranularity).toBe('MODE');
+          expect(qualification.expression?.mode).toBe(testCase.mode);
+        }
+
+        // Verify distinct expressionId for each canonical type
+        const expressionIds = result.expressionQualifications.map(q => q.expressionId);
+        const uniqueIds = new Set(expressionIds);
+        expect(uniqueIds.size).toBe(testCase.expressions.length);
+      }
+    });
+
+    it('one-to-one modes map with EXPRESSION_TYPE granularity', () => {
+      // Test that one-to-one modes (AUTHORITY, LEADERSHIP, MANAGEMENT, PUBLIC_INSTITUTIONAL)
+      // have mappingGranularity: 'EXPRESSION_TYPE'
+      const oneToOneModes: CareerManifestationMode[] = [
+        'AUTHORITY',
+        'LEADERSHIP',
+        'MANAGEMENT',
+        'PUBLIC_INSTITUTIONAL'
+      ];
+
+      for (const mode of oneToOneModes) {
+        const expression: CareerExpression = Object.freeze({
+          mode,
+          direction: 'SUPPORTED',
+          strength: 'STRONG',
+          evidence: Object.freeze([]),
+          supportingEvidenceIds: Object.freeze([`evidence-${mode}`]),
+          statement: `${mode} expression.`,
+          conditional: false
+        });
+
+        const input = makeInput({
+          natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+          expression: makeMinimalExpression([expression]),
+          horoscope: makeHoroscopeWithD10(
+            { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+            [{ house: 10, lord: Planet.SUN, occupants: [] }]
+          )
+        });
+
+        const result = buildCareerD10Analysis(input);
+
+        const qualification = result.expressionQualifications.find(q => q.expression?.mode === mode);
+        expect(qualification).toBeDefined();
+        expect(qualification?.mappingStatus).toBe('RESOLVED');
+        expect(qualification?.mappingGranularity).toBe('EXPRESSION_TYPE');
+      }
+    });
+
+
 
     it('no qualification from D10 alone (D10 cannot create new expressions)', () => {
       const input = makeInput({

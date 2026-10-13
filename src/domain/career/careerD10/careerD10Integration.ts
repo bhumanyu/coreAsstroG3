@@ -16,7 +16,8 @@ import type {
   CareerD10CanonicalEvidence,
   CareerD10Conflict,
   CareerD10ExpressionQualificationCanonical,
-  CareerD10CanonicalProvenance
+  CareerD10CanonicalProvenance,
+  C8ToC10MappingGranularity
 } from './careerD10CanonicalTypes';
 
 import type {
@@ -547,28 +548,29 @@ export type C8ToC10MappingResolution =
   | { readonly status: 'AMBIGUOUS'; readonly diagnostic: string };
 
 /**
- * Per P2-11C Gate 4 (Fix for commit 83556417): Mapping from legacy CareerManifestationMode to CareerExpressionType.
+ * Per P2-11C Gate 4 Finding 1: Mapping from legacy CareerManifestationMode to CareerExpressionType.
  *
  * This bridges the legacy C8 model (which uses CareerManifestationMode like 'LEADERSHIP')
  * to the canonical C8 model (which uses CareerExpressionType like 'LEADERSHIP_EXPRESSION').
+ *
+ * Per Finding 1: Legacy-only modes (SPECIALIZATION, EMPLOYMENT, BUSINESS_ENTREPRENEURSHIP) are REMOVED.
+ * These modes have no canonical ExpressionType mapping and must resolve as UNMAPPED with a diagnostic.
+ * They are not included in this mapping; attempting to map them will fail to resolve.
  *
  * Many-to-one mapping: multiple ExpressionTypes can map to the same ManifestationMode.
  * This is intentional because canonical model has finer granularity.
  *
  * Mapping rules (reverse of canonical type union):
- * - AUTHORITY → AUTHORITY_EXPRESSION
- * - LEADERSHIP → LEADERSHIP_EXPRESSION
- * - MANAGEMENT → TEACHING_EXPRESSION
- * - TECHNICAL_SPECIALIZATION → RESEARCH_WORK | INNOVATION_WORK | ANALYTICAL_SPECIALIZED_WORK
- * - INDEPENDENT_WORK → COMMUNICATION_WORK | WRITING_WORK | FOREIGN_WORK_EXPRESSION | REMOTE_WORK_EXPRESSION
- * - SERVICE_EMPLOYMENT → SERVICE_WORK | COMPLIANCE_WORK | CRISIS_MANAGEMENT_WORK | ISOLATED_WORK_EXPRESSION
- * - ENTREPRENEURSHIP → FINANCIAL_WORK | INSURANCE_WORK | TAXATION_WORK
- * - PUBLIC_INSTITUTIONAL → INSTITUTIONAL_WORK_EXPRESSION
- *
- * NOTE: SPECIALIZATION, EMPLOYMENT, BUSINESS_ENTREPRENEURSHIP have no canonical ExpressionType mapping
- * (they are legacy-only modes).
+ * - AUTHORITY → AUTHORITY_EXPRESSION (one-to-one)
+ * - LEADERSHIP → LEADERSHIP_EXPRESSION (one-to-one)
+ * - MANAGEMENT → TEACHING_EXPRESSION (one-to-one)
+ * - TECHNICAL_SPECIALIZATION → RESEARCH_WORK | INNOVATION_WORK | ANALYTICAL_SPECIALIZED_WORK (many-to-one)
+ * - INDEPENDENT_WORK → COMMUNICATION_WORK | WRITING_WORK | FOREIGN_WORK_EXPRESSION | REMOTE_WORK_EXPRESSION (many-to-one)
+ * - SERVICE_EMPLOYMENT → SERVICE_WORK | COMPLIANCE_WORK | CRISIS_MANAGEMENT_WORK | ISOLATED_WORK_EXPRESSION (many-to-one)
+ * - ENTREPRENEURSHIP → FINANCIAL_WORK | INSURANCE_WORK | TAXATION_WORK (many-to-one)
+ * - PUBLIC_INSTITUTIONAL → INSTITUTIONAL_WORK_EXPRESSION (one-to-one)
  */
-const MANIFESTATION_MODE_TO_EXPRESSION_TYPE: Readonly<Record<CareerManifestationMode, CareerExpressionType>> = Object.freeze({
+const MANIFESTATION_MODE_TO_EXPRESSION_TYPE: Readonly<Partial<Record<CareerManifestationMode, CareerExpressionType>>> = Object.freeze({
   AUTHORITY: 'AUTHORITY_EXPRESSION',
   LEADERSHIP: 'LEADERSHIP_EXPRESSION',
   MANAGEMENT: 'TEACHING_EXPRESSION',
@@ -576,10 +578,10 @@ const MANIFESTATION_MODE_TO_EXPRESSION_TYPE: Readonly<Record<CareerManifestation
   INDEPENDENT_WORK: 'COMMUNICATION_WORK', // Canonical representative for this group
   SERVICE_EMPLOYMENT: 'SERVICE_WORK', // Canonical representative for this group
   ENTREPRENEURSHIP: 'FINANCIAL_WORK', // Canonical representative for this group
-  PUBLIC_INSTITUTIONAL: 'INSTITUTIONAL_WORK_EXPRESSION',
-  SPECIALIZATION: 'RESEARCH_WORK', // Fallback to closest canonical type
-  EMPLOYMENT: 'SERVICE_WORK', // Fallback to closest canonical type
-  BUSINESS_ENTREPRENEURSHIP: 'FINANCIAL_WORK' // Fallback to closest canonical type
+  PUBLIC_INSTITUTIONAL: 'INSTITUTIONAL_WORK_EXPRESSION'
+  // NOTE: SPECIALIZATION, EMPLOYMENT, BUSINESS_ENTREPRENEURSHIP are NOT included.
+  // These are legacy-only modes with no canonical ExpressionType mapping.
+  // They must resolve as UNMAPPED with a diagnostic.
 } as const);
 
 /**
@@ -656,6 +658,9 @@ function resolveC10ModeFromC8ExpressionType(
 /**
  * Converts semantic expression qualification to canonical format.
  * This is assembly/formatting over the resolver's per-expression results.
+ *
+ * Per P2-11C Gate 4 Finding 1: Determines mappingGranularity based on whether the mapping
+ * is one-to-one (EXPRESSION_TYPE) or many-to-one (MODE).
  */
 function canonicalizeExpressionQualification(
   semanticQual: CareerD10ExpressionQualification,
@@ -670,6 +675,20 @@ function canonicalizeExpressionQualification(
     )
   );
 
+  // Determine mapping granularity based on the C10 mode
+  // Many-to-one modes: TECHNICAL_SPECIALIZATION, INDEPENDENT_WORK, SERVICE_EMPLOYMENT, ENTREPRENEURSHIP
+  // One-to-one modes: AUTHORITY, LEADERSHIP, MANAGEMENT, PUBLIC_INSTITUTIONAL
+  const manyToOneModes = new Set<CareerManifestationMode>([
+    'TECHNICAL_SPECIALIZATION',
+    'INDEPENDENT_WORK',
+    'SERVICE_EMPLOYMENT',
+    'ENTREPRENEURSHIP'
+  ]);
+
+  const mappingGranularity: C8ToC10MappingGranularity = manyToOneModes.has(expression.mode)
+    ? 'MODE'
+    : 'EXPRESSION_TYPE';
+
   return Object.freeze({
     expressionId: semanticQual.expressionId,
     expression, // Preserve the original expression (including conditional flag)
@@ -680,6 +699,7 @@ function canonicalizeExpressionQualification(
     evidence: qualificationEvidence,
     mappingStatus: resolution.status,
     mappingDiagnostic: resolution.status === 'RESOLVED' ? undefined : resolution.diagnostic,
+    mappingGranularity,
     statement: semanticQual.statement
   });
 }
@@ -765,6 +785,22 @@ export function buildCareerD10Analysis(
       // Map legacy CareerManifestationMode to canonical CareerExpressionType
       const mode = expression.mode;
       const expressionType = MANIFESTATION_MODE_TO_EXPRESSION_TYPE[mode];
+
+      // Per P2-11C Gate 4 Finding 1: If mode is not in mapping (legacy-only mode), resolve as UNMAPPED
+      if (expressionType === undefined) {
+        return Object.freeze({
+          expressionId: semanticQual.expressionId,
+          expression,
+          qualified: false,
+          effect: 'UNAVAILABLE' as CareerD10QualificationEffect,
+          direction: 'UNAVAILABLE' as CareerD10QualificationDirection,
+          strength: 'UNDETERMINED' as CareerD10QualificationStrength,
+          evidence: Object.freeze([]),
+          mappingStatus: 'UNMAPPED' as const,
+          mappingDiagnostic: `C8→C10 mapping: legacy-only mode "${mode}" has no canonical ExpressionType mapping. This mode is not supported in the canonical type system.`,
+          statement: `Expression ${semanticQual.expressionId} not qualified by D10; mapping diagnostic: legacy-only mode "${mode}" has no canonical mapping`
+        });
+      }
 
       // Resolve via typed C8→C10 mapping
       const resolution = resolveC10ModeFromC8ExpressionType(expressionType);

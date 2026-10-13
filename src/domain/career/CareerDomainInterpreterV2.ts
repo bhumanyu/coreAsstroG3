@@ -346,11 +346,20 @@ export function interpretCareerV2(
   const canonicalEvidenceOutput = mapCanonicalCareerEvidence(canonicalEvidenceInput);
 
   /**
-   * P2-11C Gate 5: C11 Reference Validation (informational, non-fatal)
+   * P2-11C Gate 5: C11 Reference Validation (enforced at acceptance boundary)
    *
    * Cross-check canonical evidence IDs against C11 finalIds for observability.
-   * Validation discrepancies are logged but do not affect the evidence output.
-   * This is a diagnostic check, not a blocking validation.
+   * Per P2-11C Gate 4 Finding 3: Enforce C11 reference integrity with required vs optional boundary.
+   *
+   * REQUIRED references must be satisfied - a failed validation surfaces as a typed
+   * invalid-analysis status on conclusionData. This is enforcement at the acceptance boundary,
+   * not just a diagnostic log.
+   *
+   * EXTERNAL references (optional, documented provenance outside mapper scope) are
+   * non-fatal. C11 does not currently distinguish required vs optional in its type contract,
+   * so all evidenceIds are treated as REQUIRED by the mapper validator.
+   *
+   * UNREFERENCED evidence (produced by mapper but not referenced by C11) is informational only.
    *
    * Rationale for dual C11 builds:
    * - Preliminary C11 (without timing) is built to get canonical evidence IDs for mapper input
@@ -366,10 +375,47 @@ export function interpretCareerV2(
    */
   const c11Validation = canonicalEvidenceOutput.c11Validation;
 
-  if (c11Validation.unreferenced.length > 0 || c11Validation.requiredMissing.length > 0) {
-    // Log validation discrepancies for observability (non-fatal)
-    // In production, this would use a proper logging framework
-    console.warn(`[CareerDomainInterpreterV2] C11 reference validation: ${c11Validation.unreferenced.length} unreferenced, ${c11Validation.requiredMissing.length} required missing`);
+  // Enforce required reference integrity at acceptance boundary
+  let c11ValidationStatus: {
+    readonly valid: boolean;
+    readonly requiredMissing: readonly string[];
+    readonly optionalMissing: readonly string[];
+    readonly unreferenced: readonly string[];
+    readonly diagnostic?: string;
+  } | undefined;
+
+  if (!c11Validation.valid) {
+    // Log validation failure for observability
+    console.error(`[CareerDomainInterpreterV2] C11 reference validation FAILED: ${c11Validation.requiredMissing.length} required missing evidence IDs: ${c11Validation.requiredMissing.join(', ')}`);
+
+    // Surface validation failure as typed invalid-analysis status
+    c11ValidationStatus = Object.freeze({
+      valid: false,
+      requiredMissing: c11Validation.requiredMissing,
+      optionalMissing: c11Validation.optionalMissing,
+      unreferenced: c11Validation.unreferenced,
+      diagnostic: `C11 evidenceIds not resolved in canonical evidence: ${c11Validation.requiredMissing.join(', ')}`
+    });
+
+    // Continue with canonical evidence but mark validation as failed
+    // The failure status will be surfaced in conclusionData
+  } else if (c11Validation.unreferenced.length > 0) {
+    // Log unreferenced evidence for observability (informational, non-fatal)
+    console.warn(`[CareerDomainInterpreterV2] C11 reference validation: ${c11Validation.unreferenced.length} unreferenced evidence IDs: ${c11Validation.unreferenced.join(', ')}`);
+
+    c11ValidationStatus = Object.freeze({
+      valid: true,
+      requiredMissing: c11Validation.requiredMissing,
+      optionalMissing: c11Validation.optionalMissing,
+      unreferenced: c11Validation.unreferenced
+    });
+  } else {
+    c11ValidationStatus = Object.freeze({
+      valid: true,
+      requiredMissing: c11Validation.requiredMissing,
+      optionalMissing: c11Validation.optionalMissing,
+      unreferenced: c11Validation.unreferenced
+    });
   }
 
   /**
@@ -578,7 +624,8 @@ export function interpretCareerV2(
     cw01Result.manifestations,
     cw01Result.supportingSourceIds,
     cw01Result.challengingSourceIds,
-    canonicalCareerFoundation
+    canonicalCareerFoundation,
+    c11ValidationStatus
   );
 
   const conclusion = createDomainConclusion({

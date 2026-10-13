@@ -84,12 +84,22 @@ export interface CareerD10Conflict {
 export type C8ToC10MappingStatus = 'RESOLVED' | 'UNMAPPED' | 'AMBIGUOUS';
 
 /**
+ * Per P2-11C Gate 4 Finding 1: Mapping granularity for C8→C10 expression resolution.
+ *
+ * MODE: Many-to-one mapping where multiple canonical types map to the same C10 mode.
+ * The representative-type bridge is only defensible at mode granularity.
+ * EXPRESSION_TYPE: One-to-one mapping where the canonical type maps exactly to a C10 mode.
+ */
+export type C8ToC10MappingGranularity = 'MODE' | 'EXPRESSION_TYPE';
+
+/**
  * Per P2-11C Gate 4 (Fix for commit 83556417): Canonical expression qualification with typed mapping outcome.
  *
  * D10 qualifies existing C8 expressions; it never creates new ones.
  * This type includes mappingStatus and mappingDiagnostic for UNMAPPED/AMBIGUOUS outcomes.
  *
  * expression: The original expression (or null if the expression reference was lost during resolution)
+ * mappingGranularity: Indicates whether the mapping is at mode granularity (many-to-one) or expression type granularity (one-to-one)
  */
 export interface CareerD10ExpressionQualificationCanonical {
   readonly expressionId: string;
@@ -101,6 +111,7 @@ export interface CareerD10ExpressionQualificationCanonical {
   readonly evidence: readonly CareerD10CanonicalEvidence[];
   readonly mappingStatus?: C8ToC10MappingStatus;
   readonly mappingDiagnostic?: string;
+  readonly mappingGranularity?: C8ToC10MappingGranularity;
   readonly statement: string;
 }
 

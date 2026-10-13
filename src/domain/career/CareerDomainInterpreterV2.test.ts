@@ -43,6 +43,9 @@ import {
   mapCareerPhase,
   type CareerConclusionData
 } from './CareerDomainInterpreterV2';
+import {
+  mapCanonicalCareerEvidence
+} from './canonicalCareerEvidenceMapper';
 import type {
   CareerFinalSynthesisResult,
   CareerFinalExpression
@@ -53,6 +56,12 @@ import {
 import {
   EMPTY_CAREER_NATAL_ANALYSIS
 } from './careerNatalAnalysis';
+import type {
+  CareerNatalAnalysis
+} from './careerNatalAnalysis';
+import type {
+  CareerExpressionAnalysis
+} from './careerExpression';
 import {
   buildCareerExpression
 } from './careerExpressionIntegration';
@@ -1927,6 +1936,57 @@ describe('CareerDomainInterpreterV2', () => {
 
       // Conclusion statement should match canonical C11 statement
       expect(v2.conclusion.statement).toBe(canonicalC11.statement);
+    });
+
+    // P2-11C Gate 4 Finding 4: True reference-integrity test
+    it('C11 evidenceIds resolve to canonical evidence identityKeys with zero dangling required references', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+
+      // Compute the set of canonical evidence identityKeys emitted by the mapper
+      const emittedIdentityKeys = new Set(
+        v2.evidence
+          .map(e => e.identityKey)
+          .filter((id): id is string => id !== null && id !== undefined && id !== '')
+      );
+
+      // All C11 evidenceIds (treated as REQUIRED since C11 doesn't distinguish) must resolve
+      for (const evidenceId of canonicalC11.evidenceIds) {
+        // Normalize evidenceId (trim to handle any whitespace)
+        const normalizedId = evidenceId.trim();
+
+        // Exclude reserved sentinel and empty strings
+        if (normalizedId === '__UNRESOLVED_IDENTITY__' || normalizedId === '') {
+          continue;
+        }
+
+        // Assert the evidenceId resolves to an emitted identityKey
+        expect(emittedIdentityKeys.has(normalizedId)).toBe(true);
+      }
+
+      // Every emitted canonical evidence item is either referenced or explicitly in unreferenced
+      // (via C11 validation result in conclusionData)
+      const c11Validation = v2.conclusionData?.c11ValidationStatus;
+      expect(c11Validation).toBeDefined();
+
+      // Unreferenced evidence should be in the validation result
+      const unreferencedSet = new Set(c11Validation?.unreferenced ?? []);
+      for (const evidence of v2.evidence) {
+        const identityKey = evidence.identityKey;
+        if (identityKey === null || identityKey === undefined || identityKey === '') {
+          continue; // Skip invalid identityKeys
+        }
+
+        const isReferenced = canonicalC11.evidenceIds.includes(identityKey);
+        const isUnreferenced = unreferencedSet.has(identityKey);
+
+        // Every valid evidence must be either referenced or explicitly unreferenced
+        expect(isReferenced || isUnreferenced).toBe(true);
+      }
+
+      // Assert zero dangling required references
+      expect(c11Validation?.requiredMissing.length).toBe(0);
     });
 
     it('canonical C11 does not calculate astrology or call AI', () => {

@@ -125,4 +125,15 @@ export interface CareerConclusionData {
    * with preserved identity keys. Not a competing conclusion to canonical C11.
    */
   readonly canonicalCareerFoundation?: CanonicalCareerFoundation;
+  /**
+   * Per P2-11C Gate 4 Finding 3: C11 validation status.
+   * Surface validation failures at the acceptance boundary.
+   */
+  readonly c11ValidationStatus?: {
+    readonly valid: boolean;
+    readonly requiredMissing: readonly string[];
+    readonly optionalMissing: readonly string[];
+    readonly unreferenced: readonly string[];
+    readonly diagnostic?: string;
+  };
 }

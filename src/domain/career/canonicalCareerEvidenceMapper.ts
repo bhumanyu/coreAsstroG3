@@ -1002,6 +1002,25 @@ export interface C11ValidationResult {
 }
 
 /**
+ * Per P2-11C Gate 4 Finding 3: Classification for C11 evidence references.
+ *
+ * REQUIRED: Evidence ID must resolve in the canonical namespace (mapper must produce it).
+ * EXTERNAL: Evidence ID has documented provenance outside the mapper scope (e.g., legacy evidence).
+ *
+ * This allows the mapper to distinguish between validation failures (required but missing)
+ * and legitimate external references (optional and documented).
+ */
+export type C11EvidenceReferenceRequirement = 'REQUIRED' | 'EXTERNAL';
+
+/**
+ * Per P2-11C Gate 4 Finding 3: Typed C11 evidence reference with requirement classification.
+ */
+export interface C11EvidenceReference {
+  readonly id: string;
+  readonly requirement: C11EvidenceReferenceRequirement;
+}
+
+/**
  * Validates that produced evidence IDs are cross-referenceable against finalSynthesis.evidenceIds.
  *
  * Compares canonical identities (identityKey) against C11 evidenceIds.
@@ -1082,6 +1101,31 @@ function validateAgainstFinalSynthesis(
     unreferenced,
     valid
   });
+}
+
+/**
+ * Per P2-11C Gate 4 Finding 3: Classifies C11 evidence references as REQUIRED or EXTERNAL.
+ *
+ * This function can be used to provide a custom classification when C11 evidenceIds
+ * need to be distinguished (e.g., some IDs are legacy evidence outside mapper scope).
+ *
+ * For now, this classifies all IDs as REQUIRED since C11 does not distinguish.
+ * Future implementations can add ID pattern matching to identify EXTERNAL references.
+ *
+ * @param evidenceIds - The evidence IDs from C11 to classify
+ * @returns Array of classified references
+ */
+export function classifyC11EvidenceReferences(
+  evidenceIds: readonly string[]
+): readonly C11EvidenceReference[] {
+  // For now, classify all as REQUIRED since C11 doesn't distinguish
+  // Future: Add pattern matching to identify EXTERNAL references (e.g., legacy ID shapes)
+  return Object.freeze(
+    evidenceIds.map(id => Object.freeze({
+      id,
+      requirement: 'REQUIRED' as const
+    }))
+  );
 }
 
 // ============================================================================

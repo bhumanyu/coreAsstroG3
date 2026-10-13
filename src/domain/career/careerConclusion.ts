@@ -285,7 +285,14 @@ export function buildCareerConclusionData(
   manifestations: readonly DomainManifestation[],
   supportingSourceIds: readonly string[],
   challengingSourceIds: readonly string[],
-  canonicalCareerFoundation?: CanonicalCareerFoundation
+  canonicalCareerFoundation?: CanonicalCareerFoundation,
+  c11ValidationStatus?: {
+    readonly valid: boolean;
+    readonly requiredMissing: readonly string[];
+    readonly optionalMissing: readonly string[];
+    readonly unreferenced: readonly string[];
+    readonly diagnostic?: string;
+  }
 ): CareerConclusionData {
   const currentActivation = resolveCurrentActivation(timingActivations);
   const currentPressure = resolveCurrentPressure(transitTrigger, conflicts);
@@ -316,7 +323,8 @@ export function buildCareerConclusionData(
     headline,
     supportingSourceIds: Object.freeze([...supportingSourceIds]),
     challengingSourceIds: Object.freeze([...challengingSourceIds]),
-    canonicalCareerFoundation
+    canonicalCareerFoundation,
+    c11ValidationStatus
   });
 }
 
