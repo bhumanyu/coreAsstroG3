@@ -928,7 +928,7 @@ describe('C10 D10 Integration', () => {
       const result = buildCareerD10Analysis(input);
 
       // Conditional flag should be preserved
-      expect(result.expressionQualifications[0].expression.conditional).toBe(true);
+      expect(result.expressionQualifications[0].expression?.conditional).toBe(true);
     });
 
     it('INV-07: employment STRONG + entrepreneurship WEAK both report independently', () => {
@@ -971,8 +971,8 @@ describe('C10 D10 Integration', () => {
 
       // Both expressions should be qualified independently
       expect(result.expressionQualifications).toHaveLength(2);
-      const employmentQual = result.expressionQualifications.find(q => q.expression.mode === 'SERVICE_EMPLOYMENT');
-      const entrepreneurshipQual = result.expressionQualifications.find(q => q.expression.mode === 'ENTREPRENEURSHIP');
+      const employmentQual = result.expressionQualifications.find(q => q.expression?.mode === 'SERVICE_EMPLOYMENT');
+      const entrepreneurshipQual = result.expressionQualifications.find(q => q.expression?.mode === 'ENTREPRENEURSHIP');
 
       expect(employmentQual).toBeDefined();
       expect(entrepreneurshipQual).toBeDefined();
@@ -1015,8 +1015,8 @@ describe('C10 D10 Integration', () => {
       const result = buildCareerD10Analysis(input);
 
       // INDEPENDENT_WORK should be qualified, BUSINESS_ENTREPRENEURSHIP should not
-      const independentQual = result.expressionQualifications.find(q => q.expression.mode === 'INDEPENDENT_WORK');
-      const businessQual = result.expressionQualifications.find(q => q.expression.mode === 'BUSINESS_ENTREPRENEURSHIP');
+      const independentQual = result.expressionQualifications.find(q => q.expression?.mode === 'INDEPENDENT_WORK');
+      const businessQual = result.expressionQualifications.find(q => q.expression?.mode === 'BUSINESS_ENTREPRENEURSHIP');
 
       expect(independentQual?.qualified).toBe(true);
       expect(businessQual?.qualified).toBe(false);
@@ -1052,7 +1052,7 @@ describe('C10 D10 Integration', () => {
       const result = buildCareerD10Analysis(input);
 
       // Entrepreneurship should not be qualified with only income indicators
-      const entrepreneurshipQual = result.expressionQualifications.find(q => q.expression.mode === 'ENTREPRENEURSHIP');
+      const entrepreneurshipQual = result.expressionQualifications.find(q => q.expression?.mode === 'ENTREPRENEURSHIP');
       expect(entrepreneurshipQual?.qualified).toBe(false);
     });
 
@@ -1229,12 +1229,151 @@ describe('C10 D10 Integration', () => {
 
       // The expression qualification should reflect the conflict (SUPPORTED expression + CHALLENGE D10 → CONFLICTS)
       // Note: This is expression-level qualification logic, distinct from overall d10Effect
-      const leadershipQual = result.expressionQualifications.find(q => q.expression.mode === 'LEADERSHIP');
+      const leadershipQual = result.expressionQualifications.find(q => q.expression?.mode === 'LEADERSHIP');
       expect(leadershipQual).toBeDefined();
       expect(leadershipQual?.effect).toBe('CONFLICTS');
 
       // Natal promise should be preserved
       expect(result.natalPromisePreserved).toBe(true);
+    });
+  });
+
+  describe('P2-11C Gate 4 Finding 6: Direct C8→C10 mapping tests', () => {
+    it('every supported mapping resolves correctly with typed resolution', () => {
+      // Test all mappings in C8_TO_C10_EXPRESSION_MAPPING
+      const testCases = [
+        { mode: 'AUTHORITY' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'LEADERSHIP' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'MANAGEMENT' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'TECHNICAL_SPECIALIZATION' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'INDEPENDENT_WORK' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'SERVICE_EMPLOYMENT' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'ENTREPRENEURSHIP' as const, expectedStatus: 'RESOLVED' as const },
+        { mode: 'PUBLIC_INSTITUTIONAL' as const, expectedStatus: 'RESOLVED' as const }
+      ];
+
+      for (const testCase of testCases) {
+        const expression: CareerExpression = Object.freeze({
+          mode: testCase.mode,
+          direction: 'SUPPORTED',
+          strength: 'STRONG',
+          evidence: Object.freeze([]),
+          supportingEvidenceIds: Object.freeze([`evidence-${testCase.mode}`]),
+          statement: `${testCase.mode} expression.`,
+          conditional: false
+        });
+
+        const input = makeInput({
+          natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+          expression: makeMinimalExpression([expression]),
+          horoscope: makeHoroscopeWithD10(
+            { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+            [{ house: 10, lord: Planet.SUN, occupants: [] }]
+          )
+        });
+
+        const result = buildCareerD10Analysis(input);
+
+        const qualification = result.expressionQualifications.find(q => q.expression?.mode === testCase.mode);
+        expect(qualification).toBeDefined();
+        expect(qualification?.mappingStatus).toBe(testCase.expectedStatus);
+        expect(qualification?.mappingDiagnostic).toBeUndefined();
+      }
+    });
+
+    it('many-to-one mappings preserve expression identity', () => {
+      // Test that COMMUNICATION_WORK and WRITING_WORK both map to INDEPENDENT_WORK
+      // but preserve their distinct expression identities
+      const expr1: CareerExpression = Object.freeze({
+        mode: 'INDEPENDENT_WORK',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['comm-1']),
+        statement: 'Communication work expression.',
+        conditional: false
+      });
+
+      const expr2: CareerExpression = Object.freeze({
+        mode: 'INDEPENDENT_WORK',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['write-1']),
+        statement: 'Writing work expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expr1, expr2]),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      expect(result.expressionQualifications).toHaveLength(2);
+
+      // Both should resolve to the same C10 mode (INDEPENDENT_WORK)
+      const qual1 = result.expressionQualifications.find(q => q.expression?.supportingEvidenceIds.includes('comm-1'));
+      const qual2 = result.expressionQualifications.find(q => q.expression?.supportingEvidenceIds.includes('write-1'));
+
+      expect(qual1).toBeDefined();
+      expect(qual2).toBeDefined();
+      expect(qual1?.mappingStatus).toBe('RESOLVED');
+      expect(qual2?.mappingStatus).toBe('RESOLVED');
+
+      // But they should have distinct expressionId (identity preserved)
+      expect(qual1?.expressionId).not.toBe(qual2?.expressionId);
+    });
+
+    it('no qualification from D10 alone (D10 cannot create new expressions)', () => {
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([]), // No expressions from C8
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // D10 should not create new expressions
+      expect(result.expressionQualifications).toHaveLength(0);
+    });
+
+    it('C10 independence from C9 activation presence', () => {
+      const expression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        evidence: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['lead-1']),
+        statement: 'Leadership expression.',
+        conditional: false
+      });
+
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        expression: makeMinimalExpression([expression]),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // C10 should qualify the expression independently of C9 activation
+      // (dashaEffect/dashaDirection are UNAVAILABLE in this test, but C10 still works)
+      expect(result.expressionQualifications).toHaveLength(1);
+      const qual = result.expressionQualifications[0];
+      expect(qual.mappingStatus).toBe('RESOLVED');
+      expect(qual.qualified).toBe(true);
     });
   });
 });

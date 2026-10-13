@@ -83,6 +83,8 @@ function qualifyExpressionSemantically(
   d10Effect: CareerD10QualificationEffect
 ): CareerD10ExpressionQualification {
   // Order-independent, non-empty identity: mode + sorted supporting ids
+  // Per P2-11C Gate 4 Finding 5: expressionId is now a compatibility projection
+  // The authoritative reference is the expression field itself
   const expressionId = [expression.mode, ...[...expression.supportingEvidenceIds].sort()].join(':');
 
   // Evaluate per-dimension qualification
@@ -120,6 +122,7 @@ function qualifyExpressionSemantically(
 
   const qualification: CareerD10ExpressionQualification = Object.freeze({
     expressionId,
+    expression, // Per P2-11C Gate 4 Finding 5: Carry the typed expression reference
     qualified,
     effect: relationship,
     direction: qualified ? dimensionResult.direction : expression.direction === 'SUPPORTED' ? 'SUPPORT' :

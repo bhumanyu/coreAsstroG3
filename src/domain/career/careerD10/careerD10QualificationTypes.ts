@@ -112,6 +112,7 @@ export interface CareerD10Qualification {
 
 export interface CareerD10ExpressionQualification {
   readonly expressionId: string;
+  readonly expression: CareerExpression; // Direct reference to the original expression
   readonly qualified: boolean;
   readonly effect: CareerD10QualificationEffect;
   readonly direction: CareerD10QualificationDirection;

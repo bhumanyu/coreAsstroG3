@@ -366,10 +366,10 @@ export function interpretCareerV2(
    */
   const c11Validation = canonicalEvidenceOutput.c11Validation;
 
-  if (c11Validation.unreferenced.length > 0 || c11Validation.missing.length > 0) {
+  if (c11Validation.unreferenced.length > 0 || c11Validation.requiredMissing.length > 0) {
     // Log validation discrepancies for observability (non-fatal)
     // In production, this would use a proper logging framework
-    console.warn(`[CareerDomainInterpreterV2] C11 reference validation: ${c11Validation.unreferenced.length} unreferenced, ${c11Validation.missing.length} missing`);
+    console.warn(`[CareerDomainInterpreterV2] C11 reference validation: ${c11Validation.unreferenced.length} unreferenced, ${c11Validation.requiredMissing.length} required missing`);
   }
 
   /**

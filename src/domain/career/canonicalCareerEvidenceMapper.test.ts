@@ -1558,7 +1558,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Also test the exposed validation function
       const validationResult = validateC11References(result.evidence, finalSynthesis);
       expect(validationResult.unreferenced).toContain('test-identity');
-      expect(validationResult.missing).toContain('unknown-evidence-id');
+      expect(validationResult.requiredMissing).toContain('unknown-evidence-id');
     });
 
     it('C11 evidenceId matching identityKey (not id) is treated as referenced', () => {
@@ -1669,7 +1669,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Validation should show no missing/unreferenced since identityKey matches
       const validationResult = validateC11References(result.evidence, finalSynthesis);
       expect(validationResult.unreferenced).not.toContain('semantic-identity-1');
-      expect(validationResult.missing).not.toContain('semantic-identity-1');
+      expect(validationResult.requiredMissing).not.toContain('semantic-identity-1');
     });
   });
 
@@ -4167,7 +4167,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
     const result = mapCanonicalCareerEvidence(input);
 
     // Canonical references should resolve correctly
-    expect(result.c11Validation.missing).toEqual([]);
+    expect(result.c11Validation.requiredMissing).toEqual([]);
     expect(result.c11Validation.unreferenced).toEqual([]);
 
     // The evidence should contain the semantic identityKey
@@ -4276,7 +4276,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
     // This is a non-fatal warning: mapper produced evidence not referenced by C11
     expect(result.c11Validation.unreferenced).toContain('natal-semantic-1');
-    expect(result.c11Validation.missing).toEqual([]);
+    expect(result.c11Validation.requiredMissing).toEqual([]);
 
     // Evidence is still produced (validation does not block output)
     expect(result.evidence).toHaveLength(1);
@@ -4332,7 +4332,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
     const result = mapCanonicalCareerEvidence(input);
 
     // This is a non-fatal warning: C11 references ID not produced by mapper
-    expect(result.c11Validation.missing).toContain('external-evidence-id');
+    expect(result.c11Validation.requiredMissing).toContain('external-evidence-id');
     expect(result.c11Validation.unreferenced).toEqual([]);
 
     // Mapper output is not affected by validation
@@ -4513,7 +4513,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       // Exact array assertions for the fixture: valid evidence resolves to 'valid-semantic-3'
       // and finalSynthesis.evidenceIds is ['valid-semantic-3'], so both should be empty
       expect(validationResult.unreferenced).toEqual([]);
-      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.requiredMissing).toEqual([]);
     });
 
     it('validateAgainstFinalSynthesis filters sentinel from malformed C11 evidenceIds', () => {
@@ -4570,9 +4570,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       const validationResult = validateC11References([validEvidence], finalSynthesisWithSentinel);
 
-      // The sentinel should be filtered out, so missing should be empty
+      // The sentinel should be filtered out, so requiredMissing should be empty
       // (valid-semantic-4 is produced, so no missing references)
-      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.requiredMissing).toEqual([]);
       expect(validationResult.unreferenced).toEqual([]);
     });
 
@@ -4629,8 +4629,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       const validationResult = validateC11References([validEvidence], finalSynthesisWithEmpty);
 
-      // The empty string should be filtered out, so missing should be empty
-      expect(validationResult.missing).toEqual([]);
+      // The empty string should be filtered out, so requiredMissing should be empty
+      expect(validationResult.requiredMissing).toEqual([]);
       expect(validationResult.unreferenced).toEqual([]);
     });
 
@@ -4687,8 +4687,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       const validationResult = validateC11References([validEvidence], finalSynthesisWithWhitespace);
 
-      // The whitespace should be filtered out, so missing should be empty
-      expect(validationResult.missing).toEqual([]);
+      // The whitespace should be filtered out, so requiredMissing should be empty
+      expect(validationResult.requiredMissing).toEqual([]);
       expect(validationResult.unreferenced).toEqual([]);
     });
 
@@ -4745,8 +4745,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       const validationResult = validateC11References([validEvidence], finalSynthesisWithPaddedSentinel);
 
-      // The whitespace-padded sentinel should be filtered out, so missing should be empty
-      expect(validationResult.missing).toEqual([]);
+      // The whitespace-padded sentinel should be filtered out, so requiredMissing should be empty
+      expect(validationResult.requiredMissing).toEqual([]);
       expect(validationResult.unreferenced).toEqual([]);
     });
 
@@ -4808,7 +4808,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
 
       // Validation should succeed because it only checks top-level evidenceIds
       // (which matches the produced evidence), not evidenceTrace.evidenceIds
-      expect(validationResult.missing).toEqual([]);
+      expect(validationResult.requiredMissing).toEqual([]);
       expect(validationResult.unreferenced).toEqual([]);
 
       // The mismatched evidenceTrace.evidenceIds is NOT caught by this validator
@@ -4933,8 +4933,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       // Assert result.c11Validation never exposes sentinel or empty identity
       expect(result.c11Validation.unreferenced).not.toContain(UNRESOLVED_IDENTITY_SENTINEL);
       expect(result.c11Validation.unreferenced).not.toContain('');
-      expect(result.c11Validation.missing).not.toContain(UNRESOLVED_IDENTITY_SENTINEL);
-      expect(result.c11Validation.missing).not.toContain('');
+      expect(result.c11Validation.requiredMissing).not.toContain(UNRESOLVED_IDENTITY_SENTINEL);
+      expect(result.c11Validation.requiredMissing).not.toContain('');
     });
   });
 });

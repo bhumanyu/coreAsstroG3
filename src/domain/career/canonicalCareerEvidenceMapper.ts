@@ -972,18 +972,33 @@ function sortCanonicalEvidence(
 
 /**
  * Validation result for C11 reference checking.
+ *
+ * Per P2-11C Gate 4 Finding 3: Enforce C11 reference integrity with required vs optional boundary.
+ *
+ * - requiredMissing: Evidence IDs C11 references as required but the mapper did not produce (validation failure)
+ * - optionalMissing: Evidence IDs C11 references as optional but the mapper did not produce (non-fatal gap)
+ * - unreferenced: Evidence IDs the mapper produced but C11 does not reference (informational)
  */
 export interface C11ValidationResult {
   /**
+   * Evidence IDs referenced in C11 as required that are not produced by the mapper.
+   * This is a validation failure - required references must be satisfied.
+   */
+  readonly requiredMissing: readonly string[];
+  /**
+   * Evidence IDs referenced in C11 as optional that are not produced by the mapper.
+   * This is a non-fatal provenance gap - explicit but does not invalidate the result.
+   */
+  readonly optionalMissing: readonly string[];
+  /**
    * Evidence IDs produced by the mapper that are not referenced in C11.
-   * These are valid evidence items that C11 may not have aggregated.
+   * These are valid evidence items that C11 may not have aggregated (informational only).
    */
   readonly unreferenced: readonly string[];
   /**
-   * Evidence IDs referenced in C11 that are not produced by the mapper.
-   * These may be evidence from other sources not in this mapper's scope.
+   * Overall validation status based on required references.
    */
-  readonly missing: readonly string[];
+  readonly valid: boolean;
 }
 
 /**
@@ -991,6 +1006,11 @@ export interface C11ValidationResult {
  *
  * Compares canonical identities (identityKey) against C11 evidenceIds.
  * Uses tryResolveSemanticIdentity to handle empty/whitespace identityKey correctly.
+ *
+ * Per P2-11C Gate 4 Finding 3: Enforce C11 reference integrity with required vs optional boundary.
+ * Since C11 does not currently distinguish required vs optional evidenceIds in its type contract,
+ * this validator treats all C11 evidenceIds as required for validation purposes.
+ * This is a conservative approach that ensures all references are satisfied.
  *
  * Handles unknown references explicitly (ignores them, never fabricates).
  * This is a lightweight validation; it does not affect the mapping output.
@@ -1008,7 +1028,7 @@ export interface C11ValidationResult {
  * outside this validator's scope. Consumers that rely on evidenceTrace should validate
  * consistency at the C11 boundary.
  *
- * Returns a structured result with unreferenced and missing IDs for observability.
+ * Returns a structured result with requiredMissing, optionalMissing, unreferenced, and valid status.
  */
 function validateAgainstFinalSynthesis(
   evidence: readonly DomainEvidence[],
@@ -1045,12 +1065,22 @@ function validateAgainstFinalSynthesis(
   // Check for produced IDs not referenced in C11 (informational only)
   const unreferenced = [...producedIds].filter(id => !finalIds.has(id));
 
-  // Check for C11 IDs not produced by mapper (informational only)
-  const missing = [...finalIds].filter(id => !producedIds.has(id));
+  // Check for C11 IDs not produced by mapper
+  // Per P2-11C Gate 4 Finding 3: Treat all C11 evidenceIds as required
+  // (C11 does not currently distinguish required vs optional in its type contract)
+  const requiredMissing = [...finalIds].filter(id => !producedIds.has(id));
+
+  // Optional missing is empty since C11 doesn't distinguish required vs optional
+  const optionalMissing: readonly string[] = Object.freeze([]);
+
+  // Validation is valid only if there are no required missing references
+  const valid = requiredMissing.length === 0;
 
   return Object.freeze({
+    requiredMissing,
+    optionalMissing,
     unreferenced,
-    missing
+    valid
   });
 }
 

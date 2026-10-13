@@ -2384,6 +2384,40 @@ describe('CareerDomainInterpreterV2', () => {
       expect(foundation?.metadata).toBeDefined();
     });
 
+    it('C11 references resolve against actually-emitted canonical evidence', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Get the C11 final synthesis
+      const finalSynthesis = v2.conclusionData?.careerFinalSynthesis;
+      expect(finalSynthesis).toBeDefined();
+
+      // Get the emitted canonical evidence
+      const emittedEvidence = v2.evidence;
+
+      // Extract identity keys from emitted evidence
+      const emittedIdentityKeys = new Set(
+        emittedEvidence
+          .map(e => e.identityKey)
+          .filter((id): id is string => id !== null && id !== undefined && id !== '' && typeof id === 'string')
+      );
+
+      // Extract evidence IDs from C11
+      const c11EvidenceIds = new Set(finalSynthesis?.evidenceIds ?? []);
+
+      // C11 should not be empty (it should have actual references)
+      expect(c11EvidenceIds.size).toBeGreaterThan(0);
+
+      // At least some C11 evidence IDs should resolve to actually-emitted canonical evidence
+      // (not an empty-by-construction check). C11 may include evidence from legacy paths
+      // that the canonical mapper doesn't produce, which is acceptable.
+      const resolvedCount = [...c11EvidenceIds].filter(id => emittedIdentityKeys.has(id as string)).length;
+      expect(resolvedCount).toBeGreaterThan(0);
+
+      // At least some emitted evidence should be referenced by C11
+      const referencedCount = [...emittedIdentityKeys].filter(id => c11EvidenceIds.has(id as string)).length;
+      expect(referencedCount).toBeGreaterThan(0);
+    });
+
     it('canonicalCareerFoundation preserves identity keys across stages', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
       const foundation = v2.conclusionData?.canonicalCareerFoundation;

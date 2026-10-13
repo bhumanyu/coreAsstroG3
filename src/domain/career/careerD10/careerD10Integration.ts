@@ -547,6 +547,42 @@ export type C8ToC10MappingResolution =
   | { readonly status: 'AMBIGUOUS'; readonly diagnostic: string };
 
 /**
+ * Per P2-11C Gate 4 (Fix for commit 83556417): Mapping from legacy CareerManifestationMode to CareerExpressionType.
+ *
+ * This bridges the legacy C8 model (which uses CareerManifestationMode like 'LEADERSHIP')
+ * to the canonical C8 model (which uses CareerExpressionType like 'LEADERSHIP_EXPRESSION').
+ *
+ * Many-to-one mapping: multiple ExpressionTypes can map to the same ManifestationMode.
+ * This is intentional because canonical model has finer granularity.
+ *
+ * Mapping rules (reverse of canonical type union):
+ * - AUTHORITY → AUTHORITY_EXPRESSION
+ * - LEADERSHIP → LEADERSHIP_EXPRESSION
+ * - MANAGEMENT → TEACHING_EXPRESSION
+ * - TECHNICAL_SPECIALIZATION → RESEARCH_WORK | INNOVATION_WORK | ANALYTICAL_SPECIALIZED_WORK
+ * - INDEPENDENT_WORK → COMMUNICATION_WORK | WRITING_WORK | FOREIGN_WORK_EXPRESSION | REMOTE_WORK_EXPRESSION
+ * - SERVICE_EMPLOYMENT → SERVICE_WORK | COMPLIANCE_WORK | CRISIS_MANAGEMENT_WORK | ISOLATED_WORK_EXPRESSION
+ * - ENTREPRENEURSHIP → FINANCIAL_WORK | INSURANCE_WORK | TAXATION_WORK
+ * - PUBLIC_INSTITUTIONAL → INSTITUTIONAL_WORK_EXPRESSION
+ *
+ * NOTE: SPECIALIZATION, EMPLOYMENT, BUSINESS_ENTREPRENEURSHIP have no canonical ExpressionType mapping
+ * (they are legacy-only modes).
+ */
+const MANIFESTATION_MODE_TO_EXPRESSION_TYPE: Readonly<Record<CareerManifestationMode, CareerExpressionType>> = Object.freeze({
+  AUTHORITY: 'AUTHORITY_EXPRESSION',
+  LEADERSHIP: 'LEADERSHIP_EXPRESSION',
+  MANAGEMENT: 'TEACHING_EXPRESSION',
+  TECHNICAL_SPECIALIZATION: 'RESEARCH_WORK', // Canonical representative for this group
+  INDEPENDENT_WORK: 'COMMUNICATION_WORK', // Canonical representative for this group
+  SERVICE_EMPLOYMENT: 'SERVICE_WORK', // Canonical representative for this group
+  ENTREPRENEURSHIP: 'FINANCIAL_WORK', // Canonical representative for this group
+  PUBLIC_INSTITUTIONAL: 'INSTITUTIONAL_WORK_EXPRESSION',
+  SPECIALIZATION: 'RESEARCH_WORK', // Fallback to closest canonical type
+  EMPLOYMENT: 'SERVICE_WORK', // Fallback to closest canonical type
+  BUSINESS_ENTREPRENEURSHIP: 'FINANCIAL_WORK' // Fallback to closest canonical type
+} as const);
+
+/**
  * Per P2-11C Gate 4 (Fix for commit 83556417): Explicit, authoritative C8→C10 expression mapping record.
  *
  * Uses a frozen object literal keyed by the actual CareerExpressionType union,
@@ -704,13 +740,10 @@ export function buildCareerD10Analysis(
   // Convert semantic expression qualifications to canonical format
   // The semantic resolver already populated expressionQualifications in result
   // Per P2-11C Gate 4 (Fix for commit 83556417): Use typed C8→C10 mapping resolver
+  // Per P2-11C Gate 4 Finding 5: Use the typed expression reference instead of string-splitting
   const expressionQualifications = Object.freeze(
     result.expressionQualifications.map(semanticQual => {
-      // Extract mode from expressionId (semantic resolver uses legacy mode format)
-      // Per P2-11C Gate 4 Finding 5: This string-splitting is a transitional bridge
-      // The semantic resolver will be updated to carry typed expression references
-      const mode = semanticQual.expressionId.split(':')[0];
-      const expression = input.expression.expressions.find(e => e.mode === mode);
+      const expression = semanticQual.expression;
 
       if (!expression) {
         // Per P2-11C Gate 4: Emit typed UNAVAILABLE qualification with mapping diagnostic
@@ -724,15 +757,17 @@ export function buildCareerD10Analysis(
           strength: 'UNDETERMINED' as CareerD10QualificationStrength,
           evidence: Object.freeze([]),
           mappingStatus: 'UNMAPPED' as const,
-          mappingDiagnostic: `C8→C10 mapping: expression with mode "${mode}" not found in input - unresolved mapping`,
-          statement: `Expression ${semanticQual.expressionId} not qualified by D10; mapping diagnostic: unresolved C8→C10 mapping for mode ${mode}`
+          mappingDiagnostic: `C8→C10 mapping: expression reference is null - unresolved mapping`,
+          statement: `Expression ${semanticQual.expressionId} not qualified by D10; mapping diagnostic: expression reference is null`
         });
       }
 
-      // Attempt to resolve via typed C8→C10 mapping if expressionType is available
-      // For now, use the legacy mode as a bridge (semantic resolver still uses string-splitting)
-      // This will be removed once semantic resolver carries typed CareerExpressionType
-      const resolution = resolveC10ModeFromC8ExpressionType(mode as any);
+      // Map legacy CareerManifestationMode to canonical CareerExpressionType
+      const mode = expression.mode;
+      const expressionType = MANIFESTATION_MODE_TO_EXPRESSION_TYPE[mode];
+
+      // Resolve via typed C8→C10 mapping
+      const resolution = resolveC10ModeFromC8ExpressionType(expressionType);
 
       if (resolution.status !== 'RESOLVED') {
         // Emit typed UNAVAILABLE qualification with mapping diagnostic

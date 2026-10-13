@@ -88,10 +88,12 @@ export type C8ToC10MappingStatus = 'RESOLVED' | 'UNMAPPED' | 'AMBIGUOUS';
  *
  * D10 qualifies existing C8 expressions; it never creates new ones.
  * This type includes mappingStatus and mappingDiagnostic for UNMAPPED/AMBIGUOUS outcomes.
+ *
+ * expression: The original expression (or null if the expression reference was lost during resolution)
  */
 export interface CareerD10ExpressionQualificationCanonical {
   readonly expressionId: string;
-  readonly expression: CareerExpression;
+  readonly expression: CareerExpression | null;
   readonly qualified: boolean;
   readonly effect: CareerD10QualificationEffect;
   readonly direction: CareerD10QualificationDirection;
