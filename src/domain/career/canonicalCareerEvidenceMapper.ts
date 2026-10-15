@@ -697,7 +697,7 @@ function mapDashaEvidence(
       const identityKey = evidence.identityKey;
 
       // Create SUPPORTING occurrence
-      const domainEvidence = createDomainEvidence({
+      const supportingEvidence = createDomainEvidence({
         id: `${evidence.id}:SUPPORTING`,
         sourceType: 'PLANET',
         domain: 'CAREER',
