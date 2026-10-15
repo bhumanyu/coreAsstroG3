@@ -292,7 +292,8 @@ export function buildCareerConclusionData(
     readonly optionalMissing: readonly string[];
     readonly unreferenced: readonly string[];
     readonly diagnostic?: string;
-  }
+  },
+  evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport
 ): CareerConclusionData {
   const currentActivation = resolveCurrentActivation(timingActivations);
   const currentPressure = resolveCurrentPressure(transitTrigger, conflicts);
@@ -324,7 +325,8 @@ export function buildCareerConclusionData(
     supportingSourceIds: Object.freeze([...supportingSourceIds]),
     challengingSourceIds: Object.freeze([...challengingSourceIds]),
     canonicalCareerFoundation,
-    c11ValidationStatus
+    c11ValidationStatus,
+    evidenceContinuityReport
   });
 }
 

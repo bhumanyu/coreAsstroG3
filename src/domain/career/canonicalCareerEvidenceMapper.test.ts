@@ -3,7 +3,8 @@ import {
   validateC11References,
   deduplicateCanonicalEvidence,
   sortCanonicalEvidence,
-  type CanonicalCareerEvidenceInput
+  type CanonicalCareerEvidenceInput,
+  type SemanticEvidenceGroup
 } from './canonicalCareerEvidenceMapper';
 
 import {
@@ -2136,7 +2137,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
         // identityKey is intentionally undefined
       });
 
-      const result = deduplicateCanonicalEvidence([evidence1, evidence2]);
+      const { evidence: result } = deduplicateCanonicalEvidence([evidence1, evidence2]);
 
       // Both should survive as separate output items (not merged)
       expect(result).toHaveLength(2);
@@ -3165,7 +3166,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
     });
 
-    it('throws on ruleId disagreement in dedup (input-order invariant)', () => {
+    it('allows ruleId disagreement in dedup (multi-rule/multi-provenance groups)', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',
         strength: 'STRONG',
@@ -3278,9 +3279,15 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      // Both should throw due to ruleId disagreement, regardless of order
-      expect(() => mapCanonicalCareerEvidence(input1)).toThrow('Semantic field disagreement');
-      expect(() => mapCanonicalCareerEvidence(input2)).toThrow('Semantic field disagreement');
+      // ruleId disagreement is now allowed (multi-rule/multi-provenance groups)
+      // The continuity validator will report PROVENANCE_DISAGREEMENT issues
+      // but deduplication will not throw
+      const result1 = mapCanonicalCareerEvidence(input1);
+      const result2 = mapCanonicalCareerEvidence(input2);
+
+      // Both should succeed (ruleId disagreement is allowed)
+      expect(result1.evidence).toBeDefined();
+      expect(result2.evidence).toBeDefined();
     });
 
     it('throws on sourceType disagreement in dedup (input-order invariant)', () => {
@@ -4935,6 +4942,301 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expect(result.c11Validation.unreferenced).not.toContain('');
       expect(result.c11Validation.requiredMissing).not.toContain(UNRESOLVED_IDENTITY_SENTINEL);
       expect(result.c11Validation.requiredMissing).not.toContain('');
+    });
+  });
+
+  describe('Dedup Trace (Provenance Preservation)', () => {
+    it('preserves occurrence trace for single-occurrence groups', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'evidence-1',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-1'],
+          ruleId: 'RULE_1',
+          identityKey: 'identity-1'
+        })
+      ];
+
+      const { evidence: result, dedupTrace } = deduplicateCanonicalEvidence(evidence);
+
+      expect(result).toHaveLength(1);
+      expect(dedupTrace).toHaveLength(1);
+
+      const trace = dedupTrace[0];
+      expect(trace.identityKey).toBe('identity-1');
+      expect(trace.occurrences).toHaveLength(1);
+      expect(trace.occurrences[0].id).toBe('evidence-1');
+      expect(trace.occurrences[0].relatedEvidenceIds).toEqual(['source-1']);
+      expect(trace.occurrences[0].ruleId).toBe('RULE_1');
+      expect(trace.occurrences[0].producerStage).toBe('NATAL_PROMISE');
+      expect(trace.occurrences[0].polarity).toBe('SUPPORTING');
+      expect(trace.merged).toBe(false);
+      expect(trace.mixed).toBe(false);
+    });
+
+    it('preserves occurrence trace for merged groups', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'evidence-1',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-1'],
+          ruleId: 'RULE_1',
+          identityKey: 'identity-1'
+        }),
+        createDomainEvidence({
+          id: 'evidence-2',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 2,
+          relatedEvidenceIds: ['source-2'],
+          ruleId: 'RULE_1',
+          identityKey: 'identity-1'
+        })
+      ];
+
+      const { evidence: result, dedupTrace } = deduplicateCanonicalEvidence(evidence);
+
+      expect(result).toHaveLength(1); // Merged to one
+      expect(dedupTrace).toHaveLength(1);
+
+      const trace = dedupTrace[0];
+      expect(trace.identityKey).toBe('identity-1');
+      expect(trace.occurrences).toHaveLength(2);
+      expect(trace.occurrences[0].id).toBe('evidence-1');
+      expect(trace.occurrences[1].id).toBe('evidence-2');
+      expect(trace.merged).toBe(true);
+      expect(trace.mixed).toBe(false);
+    });
+
+    it('preserves occurrence trace for MIXED groups', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'evidence-1',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-1'],
+          ruleId: 'RULE_1',
+          identityKey: 'identity-1'
+        }),
+        createDomainEvidence({
+          id: 'evidence-2',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-2'],
+          ruleId: 'RULE_1',
+          identityKey: 'identity-1'
+        })
+      ];
+
+      const { evidence: result, dedupTrace } = deduplicateCanonicalEvidence(evidence);
+
+      expect(result).toHaveLength(2); // Not merged (MIXED)
+      expect(dedupTrace).toHaveLength(1);
+
+      const trace = dedupTrace[0];
+      expect(trace.identityKey).toBe('identity-1');
+      expect(trace.occurrences).toHaveLength(2);
+      expect(trace.merged).toBe(false);
+      expect(trace.mixed).toBe(true);
+    });
+
+    it('preserves multi-rule provenance in trace', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'evidence-1',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-1'],
+          ruleId: 'RULE_A',
+          identityKey: 'identity-1'
+        }),
+        createDomainEvidence({
+          id: 'evidence-2',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: 'Test evidence',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-2'],
+          ruleId: 'RULE_B',
+          identityKey: 'identity-1'
+        })
+      ];
+
+      const { dedupTrace } = deduplicateCanonicalEvidence(evidence);
+
+      const trace = dedupTrace[0];
+      expect(trace.occurrences[0].ruleId).toBe('RULE_A');
+      expect(trace.occurrences[1].ruleId).toBe('RULE_B');
+    });
+
+    it('exposes dedupTrace on CanonicalCareerEvidenceOutput', () => {
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'duplicate-identity',
+          evidenceId: 'evidence-1',
+          ruleId: 'RULE_DUPLICATE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Duplicate evidence',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-1']
+        },
+        {
+          identityKey: 'duplicate-identity',
+          evidenceId: 'evidence-2',
+          ruleId: 'RULE_DUPLICATE',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'STRONG',
+          priority: 1,
+          weight: 2,
+          statement: 'Duplicate evidence',
+          relatedEvidenceIds: [],
+          sourceIds: ['source-2']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: mockEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const finalSynthesis: CareerFinalSynthesisResult = {
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['duplicate-identity'],
+        sourceIds: ['source-1', 'source-2'],
+        ruleIds: ['RULE_DUPLICATE'],
+        evidenceTrace: {
+          evidenceIds: ['duplicate-identity'],
+          sourceIds: ['source-1', 'source-2'],
+          ruleIds: ['RULE_DUPLICATE']
+        },
+        statement: 'Career supported.',
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      expect(result.dedupTrace).toBeDefined();
+      expect(result.dedupTrace.length).toBeGreaterThan(0);
+
+      // Find the trace for the duplicate identity
+      const duplicateTrace = result.dedupTrace.find(t => t.identityKey === 'duplicate-identity');
+      expect(duplicateTrace).toBeDefined();
+      expect(duplicateTrace?.occurrences).toHaveLength(2);
+      expect(duplicateTrace?.merged).toBe(true);
     });
   });
 });

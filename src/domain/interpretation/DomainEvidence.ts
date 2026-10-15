@@ -132,6 +132,34 @@ export function tryResolveSemanticIdentity(e: DomainEvidence): string | null {
   return null;
 }
 
+/**
+ * Namespace Documentation for DomainEvidence Identity Fields
+ *
+ * This function enforces strict namespace separation for C11 reference validation:
+ *
+ * - id: Occurrence identifier (unique per evidence record, may vary across occurrences of the same semantic fact)
+ * - identityKey: Semantic identity (shared across occurrences of the same semantic fact, used for deduplication)
+ * - relatedEvidenceIds: Source provenance (IDs of upstream evidence that produced this record)
+ * - ruleId: Rule identity (ID of the rule that generated this evidence)
+ *
+ * tryResolveC11SemanticIdentity returns ONLY the semantic identityKey (with NO fallback to id).
+ * This ensures C11 references are validated against semantic identities, not occurrence IDs.
+ * Use this for C11 reference validation where namespace distinction is required.
+ *
+ * Returns null if identityKey is empty, whitespace-only, or equals the sentinel.
+ * Does NOT fall back to id - this is intentional to enforce namespace separation.
+ */
+export function tryResolveC11SemanticIdentity(e: DomainEvidence): string | null {
+  const trimmedIdentityKey = e.identityKey?.trim();
+  if (trimmedIdentityKey && trimmedIdentityKey.length > 0 && trimmedIdentityKey !== UNRESOLVED_IDENTITY_SENTINEL) {
+    return trimmedIdentityKey;
+  }
+
+  // Return null for empty/whitespace/sentinel identityKey - do NOT fall back to id
+  // This enforces namespace separation: C11 references must be semantic identities, not occurrence IDs
+  return null;
+}
+
 export function createDomainEvidence(
   evidence: Partial<DomainEvidence> & {
     id: string;

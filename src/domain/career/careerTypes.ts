@@ -136,4 +136,9 @@ export interface CareerConclusionData {
     readonly unreferenced: readonly string[];
     readonly diagnostic?: string;
   };
+  /**
+   * Gate D: Evidence continuity validation report.
+   * Validates identity/provenance/reference/counting continuity from C4–C7 → foundation → C8 → C9 → C10 → C11.
+   */
+  readonly evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport;
 }

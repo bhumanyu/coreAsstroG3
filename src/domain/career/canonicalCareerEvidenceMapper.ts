@@ -108,6 +108,32 @@ export interface CanonicalCareerEvidenceInput {
 }
 
 /**
+ * Occurrence trace for a single evidence record within a semantic group.
+ *
+ * Records the provenance of each occurrence before deduplication.
+ */
+export interface EvidenceOccurrenceTrace {
+  readonly id: string;
+  readonly relatedEvidenceIds: readonly string[];
+  readonly ruleId?: string;
+  readonly producerStage: string; // Derived from phase (e.g., 'NATAL_PROMISE', 'DASHA_ACTIVATION')
+  readonly polarity: EvidencePolarity;
+}
+
+/**
+ * Semantic evidence group with occurrence trace.
+ *
+ * Groups all occurrences of the same semantic identity (identityKey) together,
+ * preserving their individual provenance before deduplication.
+ */
+export interface SemanticEvidenceGroup {
+  readonly identityKey: string;
+  readonly occurrences: readonly EvidenceOccurrenceTrace[];
+  readonly merged: boolean; // True if occurrences were merged (same polarity, non-MIXED)
+  readonly mixed: boolean; // True if group contains both SUPPORTING and CHALLENGING polarities
+}
+
+/**
  * Pure mapper that converts canonical Career reasoning outputs (C4–C10)
  * into the existing DomainEvidence model.
  *
@@ -119,6 +145,7 @@ export interface CanonicalCareerEvidenceInput {
  * - Produces deep-frozen, deterministic output
  * - Uses C11 only for reference validation, never as an evidence source
  * - Returns both evidence and C11 validation result for observability
+ * - Returns dedup trace (SemanticEvidenceGroup[]) for provenance preservation
  *
  * Integration Note:
  * This mapper is wired into interpretCareerV2 on the production path (P2-11C Gate 5).
@@ -128,6 +155,7 @@ export interface CanonicalCareerEvidenceInput {
 export interface CanonicalCareerEvidenceOutput {
   readonly evidence: readonly DomainEvidence[];
   readonly c11Validation: C11ValidationResult;
+  readonly dedupTrace: readonly SemanticEvidenceGroup[];
 }
 
 export function mapCanonicalCareerEvidence(
@@ -150,7 +178,7 @@ export function mapCanonicalCareerEvidence(
     ...transitEvidence
   ];
 
-  const deduplicated = deduplicateCanonicalEvidence(allEvidence);
+  const { evidence: deduplicated, dedupTrace } = deduplicateCanonicalEvidence(allEvidence);
   const sorted = sortCanonicalEvidence(deduplicated);
 
   // C11 validation: check that produced evidence IDs are cross-referenceable
@@ -159,7 +187,8 @@ export function mapCanonicalCareerEvidence(
 
   return Object.freeze({
     evidence: Object.freeze(sorted),
-    c11Validation
+    c11Validation,
+    dedupTrace
   });
 }
 
@@ -202,10 +231,13 @@ export { sortCanonicalEvidence, validateAgainstFinalSynthesis };
  * - Records without identityKey are emitted as separate items (non-deduplicable)
  * - Mergeable metadata fields (evidenceFamily, dimension) use lexicographically-smallest selection
  *   to ensure input order does not affect merged output
+ * - Builds occurrence trace for provenance preservation
+ *
+ * Returns both deduplicated evidence and dedup trace.
  */
 export function deduplicateCanonicalEvidence(
   evidence: readonly DomainEvidence[]
-): DomainEvidence[] {
+): { readonly evidence: DomainEvidence[]; readonly dedupTrace: readonly SemanticEvidenceGroup[] } {
   const byIdentityKey = new Map<string, DomainEvidence[]>();
   const noIdentityKey: DomainEvidence[] = [];
 
@@ -222,6 +254,7 @@ export function deduplicateCanonicalEvidence(
   }
 
   const result: DomainEvidence[] = [];
+  const dedupTrace: SemanticEvidenceGroup[] = [];
 
   // Emit non-deduplicable records (no identityKey) as-is
   noIdentityKey.forEach(e => result.push(e));
@@ -230,6 +263,19 @@ export function deduplicateCanonicalEvidence(
   for (const [identityKey, group] of byIdentityKey.entries()) {
     if (group.length === 1) {
       result.push(group[0]);
+      // Add trace for single-occurrence group
+      dedupTrace.push({
+        identityKey,
+        occurrences: [{
+          id: group[0].id,
+          relatedEvidenceIds: group[0].relatedEvidenceIds,
+          ruleId: group[0].ruleId,
+          producerStage: group[0].phase,
+          polarity: group[0].polarity
+        }],
+        merged: false,
+        mixed: false
+      });
       continue;
     }
 
@@ -241,9 +287,24 @@ export function deduplicateCanonicalEvidence(
     // This ensures MIXED groups only differ in polarity, not in other semantic fields
     assertNonPolarityFieldsAgree(group, identityKey);
 
+    // Build occurrence trace for this group
+    const occurrenceTrace: EvidenceOccurrenceTrace[] = group.map(e => ({
+      id: e.id,
+      relatedEvidenceIds: e.relatedEvidenceIds,
+      ruleId: e.ruleId,
+      producerStage: e.phase,
+      polarity: e.polarity
+    }));
+
     // If MIXED split, keep both occurrences separate (don't merge)
     if (isMixedSplit) {
       group.forEach(e => result.push(e));
+      dedupTrace.push({
+        identityKey,
+        occurrences: Object.freeze(occurrenceTrace),
+        merged: false,
+        mixed: true
+      });
       continue;
     }
 
@@ -293,9 +354,23 @@ export function deduplicateCanonicalEvidence(
     });
 
     result.push(mergedEvidence);
+
+    // Add trace for merged group
+    dedupTrace.push({
+      identityKey,
+      occurrences: Object.freeze(occurrenceTrace),
+      merged: true,
+      mixed: false
+    });
   }
 
-  return result;
+  // Sort dedupTrace deterministically by identityKey to ensure input order does not affect output
+  const sortedDedupTrace = [...dedupTrace].sort((a, b) => a.identityKey.localeCompare(b.identityKey));
+
+  return {
+    evidence: result,
+    dedupTrace: Object.freeze(sortedDedupTrace)
+  };
 }
 
 /**
@@ -802,7 +877,10 @@ function mapD10Evidence(
  * across all fields except polarity. Used for both MIXED and non-MIXED groups.
  *
  * Fields checked:
- * - Semantically significant (must agree): statement, ruleId, sourceType, domain, timing, phase, source, role, provenance, planet, house, strength
+ * - Semantically significant (must agree): statement, sourceType, domain, timing, phase, source, role, planet, house, strength
+ * - Provenance fields (allowed to differ for multi-rule/multi-provenance groups): ruleId, provenance
+ *   - These fields are NOT validated here to allow multi-rule/multi-provenance groups
+ *   - Provenance disagreements are reported by the continuity validator (Gate D)
  * - Mergeable under documented rules (deterministic selection): evidenceFamily, dimension
  *   - Selection rule: lexicographically-smallest value among all occurrences
  *   - If all occurrences have undefined, result is undefined
@@ -813,10 +891,12 @@ function mapD10Evidence(
  * - planet and house: Part of semantic identity upstream per CW-R1, so disagreement is a semantic conflict
  * - evidenceFamily and dimension: Metadata fields that may legitimately differ across occurrences of the same semantic fact.
  *   Merged using deterministic lexicographic selection to ensure order-independence.
+ * - ruleId and provenance: May legitimately differ across occurrences of the same semantic fact (multi-rule/multi-provenance).
+ *   These are allowed to differ here and are validated by the continuity validator.
  *
  * @param group - The evidence group to validate
  * @param identityKey - The identity key for error messages
- * @throws Error if any non-polarity field disagrees
+ * @throws Error if any non-polarity field disagrees (excluding ruleId and provenance)
  */
 function assertNonPolarityFieldsAgree(
   group: readonly DomainEvidence[],
@@ -850,11 +930,8 @@ function assertNonPolarityFieldsAgree(
         `Semantic field disagreement in dedup: statement differs for identityKey "${identityKey}"`
       );
     }
-    if (e.ruleId !== first.ruleId) {
-      throw new Error(
-        `Semantic field disagreement in dedup: ruleId differs for identityKey "${identityKey}"`
-      );
-    }
+    // ruleId and provenance are allowed to differ (multi-rule/multi-provenance groups)
+    // These are validated by the continuity validator (Gate D)
     if (e.sourceType !== first.sourceType) {
       throw new Error(
         `Semantic field disagreement in dedup: sourceType differs for identityKey "${identityKey}"`
@@ -897,31 +974,8 @@ function assertNonPolarityFieldsAgree(
         );
       }
     }
-    // Provenance comparison (both undefined or both deeply equal)
-    const provA = e.provenance;
-    const provB = first.provenance;
-    if (provA === undefined && provB !== undefined) {
-      throw new Error(
-        `Semantic field disagreement in dedup: provenance undefined vs present for identityKey "${identityKey}"`
-      );
-    }
-    if (provA !== undefined && provB === undefined) {
-      throw new Error(
-        `Semantic field disagreement in dedup: provenance present vs undefined for identityKey "${identityKey}"`
-      );
-    }
-    if (provA && provB) {
-      if (provA.ruleId !== provB.ruleId ||
-        provA.effect !== provB.effect ||
-        provA.domain !== provB.domain ||
-        provA.axis !== provB.axis ||
-        provA.source !== provB.source ||
-        provA.strength !== provB.strength) {
-        throw new Error(
-          `Semantic field disagreement in dedup: provenance differs for identityKey "${identityKey}"`
-        );
-      }
-    }
+    // Provenance comparison is skipped to allow multi-rule/multi-provenance groups
+    // Provenance disagreements are validated by the continuity validator (Gate D)
   }
 }
 

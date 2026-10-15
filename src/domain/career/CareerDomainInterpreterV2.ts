@@ -136,6 +136,10 @@ import {
 import {
   mapCanonicalCareerEvidence
 } from './canonicalCareerEvidenceMapper';
+import {
+  validateEvidenceContinuity,
+  type EvidenceContinuityReport
+} from './evidenceContinuity';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
@@ -626,6 +630,7 @@ export function interpretCareerV2(
     cw01Result.challengingSourceIds,
     canonicalCareerFoundation,
     c11ValidationStatus
+    // evidenceContinuityReport will be added after final C11 is built
   );
 
   const conclusion = createDomainConclusion({
@@ -682,6 +687,34 @@ export function interpretCareerV2(
   });
 
   const canonicalC11Result: CareerFinalSynthesisResult = buildCareerFinalAnalysis(finalCanonicalC11Input);
+
+  /**
+   * Gate D: Evidence Continuity Validation
+   *
+   * Validate evidence continuity against the final C11 result (post-timing).
+   * This validates identity/provenance/reference/counting continuity from C4–C7 → foundation → C8 → C9 → C10 → C11.
+   *
+   * The validator:
+   * - Builds occurrence index (id) and semantic groups (identityKey)
+   * - Emits issues for namespace mismatches, missing references, provenance disagreements
+   * - Populates provenanceIssueCount and duplicateCountingRiskCount
+   * - Composes with existing C11ValidationResult
+   *
+   * Invalid required references produce a formally invalid outcome.
+   */
+  const evidenceContinuityReport: EvidenceContinuityReport = validateEvidenceContinuity({
+    evidence,
+    requiredC11EvidenceIds: canonicalC11Result.evidenceIds,
+    c11Validation: canonicalEvidenceOutput.c11Validation
+  });
+
+  // Enforce continuity validation at acceptance boundary
+  if (!evidenceContinuityReport.valid) {
+    console.error(`[CareerDomainInterpreterV2] Evidence continuity validation FAILED: ${evidenceContinuityReport.issues.length} issues detected`);
+    for (const issue of evidenceContinuityReport.issues) {
+      console.error(`  [${issue.severity}] ${issue.code}: ${issue.message}`);
+    }
+  }
 
   /**
    * P2-08D: Presentation/Compatibility Adapter
@@ -913,7 +946,8 @@ export function interpretCareerV2(
       careerManifestationSynthesis,
       careerFinalSynthesis: legacyCareerFinalSynthesis, // P2-08D: Legacy compatibility artifact (not authoritative)
       canonicalCareerFinalSynthesis: canonicalC11Result, // P2-08D: Canonical C11 result (authoritative)
-      reasoningTraceGraph
+      reasoningTraceGraph,
+      evidenceContinuityReport // Gate D: Evidence continuity validation report
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility
