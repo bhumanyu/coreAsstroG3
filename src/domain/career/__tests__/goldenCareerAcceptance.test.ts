@@ -217,6 +217,34 @@ function assertEvidenceProvenanceDistinctions(
 }
 
 /**
+ * Assert evidence continuity report is valid per Gate D requirements
+ *
+ * Validates:
+ * - Evidence continuity report is present in conclusionData
+ * - No ERROR-severity issues (WARNING and INFO are non-fatal)
+ * - C11 reference validation is composed
+ * - Provenance and duplicate counting risk counts are populated
+ */
+function assertEvidenceContinuityValid(
+  interpretation: DomainInterpretation
+): void {
+  const report = interpretation.conclusionData?.evidenceContinuityReport;
+  expect(report).toBeDefined();
+  expect(report.valid).toBe(true);
+
+  // ERROR issues invalidate the result
+  const errorIssues = report.issues.filter((i: any) => i.severity === 'ERROR');
+  expect(errorIssues.length).toBe(0);
+
+  // C11 validation should be composed
+  expect(report.c11Validation).toBeDefined();
+
+  // Counts should be populated
+  expect(typeof report.provenanceIssueCount).toBe('number');
+  expect(typeof report.duplicateCountingRiskCount).toBe('number');
+}
+
+/**
  * Scenario results accumulator for final report
  */
 const scenarioResults: ScenarioResult[] = [];
@@ -249,6 +277,9 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
 
     // Assert evidence/provenance distinctions
     assertEvidenceProvenanceDistinctions(result.evidence, canonicalC11);
+
+    // Assert evidence continuity report is valid (Gate D)
+    assertEvidenceContinuityValid(result.interpretation);
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
@@ -287,6 +318,9 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Final direction still support (natal preserved, C11-INV-04)
     expect(canonicalC11.finalDirection).toBe('MIXED');
 
+    // Assert evidence continuity report is valid (Gate D)
+    assertEvidenceContinuityValid(result.interpretation);
+
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
       status: 'PASS',
@@ -318,6 +352,9 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // D10 may conflict or be unavailable
     // Don't assert specific d10Effect - just check that natal is preserved
     expect(canonicalC11.finalDirection).toBe('MIXED');
+
+    // Assert evidence continuity report is valid (Gate D)
+    assertEvidenceContinuityValid(result.interpretation);
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,

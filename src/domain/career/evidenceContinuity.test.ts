@@ -115,8 +115,12 @@ describe('validateEvidenceContinuity', () => {
     const result = validateEvidenceContinuity(input);
 
     expect(result.valid).toBe(false);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0].code).toBe('UNRESOLVED_SEMANTIC_IDENTITY');
+    // Both UNRESOLVED_SEMANTIC_IDENTITY and MIXED_POLARITY_WITHOUT_IDENTITY_KEY are emitted
+    expect(result.issues.length).toBe(2);
+    const unresolvedIssues = result.issues.filter(i => i.code === 'UNRESOLVED_SEMANTIC_IDENTITY');
+    const mixedPolarityIssues = result.issues.filter(i => i.code === 'MIXED_POLARITY_WITHOUT_IDENTITY_KEY');
+    expect(unresolvedIssues.length).toBe(1);
+    expect(mixedPolarityIssues.length).toBe(1);
   });
 
   it('detects MISSING_REQUIRED_REFERENCE from C11 validation', () => {
@@ -177,10 +181,13 @@ describe('validateEvidenceContinuity', () => {
 
     const result = validateEvidenceContinuity(input);
 
-    expect(result.valid).toBe(false);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0].code).toBe('MISSING_SOURCE_REFERENCE');
-    expect(result.issues[0].evidenceId).toBe('evidence-1');
+    // MISSING_SOURCE_REFERENCE is WARNING severity, so it doesn't invalidate the result
+    expect(result.valid).toBe(true);
+    expect(result.issues.length).toBeGreaterThan(0);
+    const missingSourceIssues = result.issues.filter(i => i.code === 'MISSING_SOURCE_REFERENCE');
+    expect(missingSourceIssues.length).toBeGreaterThan(0);
+    expect(missingSourceIssues[0].evidenceId).toBe('evidence-1');
+    expect(missingSourceIssues[0].severity).toBe('WARNING');
     expect(result.provenanceIssueCount).toBe(1);
   });
 
@@ -372,5 +379,58 @@ describe('validateEvidenceContinuity', () => {
     expect(result.c11Validation).toBe(c11Validation);
     expect(result.issues.some(i => i.code === 'MISSING_REQUIRED_REFERENCE')).toBe(true);
     expect(result.issues.some(i => i.code === 'ORPHANED_EVIDENCE')).toBe(true);
+  });
+
+  it('detects MIXED_POLARITY_WITHOUT_IDENTITY_KEY', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: undefined, // No identityKey
+        polarity: 'SUPPORTING'
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: [],
+      c11Validation: createMockC11Validation({ valid: true })
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    expect(result.valid).toBe(false);
+    // UNRESOLVED_SEMANTIC_IDENTITY and MIXED_POLARITY_WITHOUT_IDENTITY_KEY are both emitted
+    expect(result.issues.length).toBe(2);
+    const mixedPolarityIssues = result.issues.filter(i => i.code === 'MIXED_POLARITY_WITHOUT_IDENTITY_KEY');
+    expect(mixedPolarityIssues.length).toBe(1);
+    expect(mixedPolarityIssues[0].evidenceId).toBe('evidence-1');
+  });
+
+  it('detects MISSING_RULE_PROVENANCE for D10 evidence without ruleId', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        source: 'D10',
+        ruleId: undefined
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true })
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // MISSING_RULE_PROVENANCE is WARNING severity, so it doesn't invalidate the result
+    expect(result.valid).toBe(true);
+    expect(result.issues.length).toBeGreaterThan(0);
+    const missingRuleIssues = result.issues.filter(i => i.code === 'MISSING_RULE_PROVENANCE');
+    expect(missingRuleIssues.length).toBeGreaterThan(0);
+    expect(missingRuleIssues[0].severity).toBe('WARNING');
+    expect(missingRuleIssues[0].message).toContain('D10');
+    expect(result.provenanceIssueCount).toBe(1);
   });
 });

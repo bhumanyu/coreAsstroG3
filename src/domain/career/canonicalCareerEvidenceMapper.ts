@@ -331,6 +331,26 @@ export function deduplicateCanonicalEvidence(
     const evidenceFamily = allEvidenceFamilies.length > 0 ? allEvidenceFamilies.sort()[0] : undefined;
     const dimension = allDimensions.length > 0 ? allDimensions.sort()[0] : undefined;
 
+    // Merge ruleId: collect all unique ruleIds from occurrences
+    // If all occurrences have the same ruleId, use that single value
+    // If occurrences have different ruleIds (legitimate multi-provenance), set to undefined
+    // The occurrence trace preserves individual ruleIds for provenance tracking
+    const allRuleIds = group.map(e => e.ruleId).filter((r): r is string => r !== undefined);
+    const uniqueRuleIds = Array.from(new Set(allRuleIds)).sort();
+    const mergedRuleId = uniqueRuleIds.length === 1 ? uniqueRuleIds[0] : undefined;
+
+    // Merge provenance: collect all unique provenance.ruleIds from occurrences
+    // If all occurrences have the same provenance, use that single provenance
+    // If occurrences have different provenances (legitimate multi-provenance), omit provenance entirely
+    // The occurrence trace preserves individual provenances for provenance tracking
+    const allProvenanceRuleIds = group
+      .map(e => e.provenance?.ruleId)
+      .filter((r): r is string => r !== undefined);
+    const uniqueProvenanceRuleIds = Array.from(new Set(allProvenanceRuleIds)).sort();
+    const mergedProvenance = first.provenance && uniqueProvenanceRuleIds.length > 0
+      ? (uniqueProvenanceRuleIds.length === 1 ? first.provenance : undefined)
+      : first.provenance;
+
     const mergedEvidence = createDomainEvidence({
       id: first.id,
       sourceType: first.sourceType,
@@ -342,10 +362,10 @@ export function deduplicateCanonicalEvidence(
       polarity: first.polarity,
       strength: first.strength,
       priority: maxPriority,
-      ruleId: first.ruleId,
+      ruleId: mergedRuleId,
       relatedEvidenceIds: Array.from(new Set(allSourceIds)).sort(),
-      notes: `Merged ${group.length} occurrences with identityKey: ${identityKey}`,
-      provenance: first.provenance,
+      notes: `Merged ${group.length} occurrences with identityKey: ${identityKey}${uniqueRuleIds.length > 1 ? ` (multi-provenance: ${uniqueRuleIds.join(', ')})` : ''}`,
+      provenance: mergedProvenance,
       timing: first.timing,
       evidenceFamily,
       dimension,

@@ -171,6 +171,7 @@ export function validateEvidenceContinuity(
     const identityKey = tryResolveC11SemanticIdentity(e);
     if (identityKey === null) {
       // Evidence has no resolvable semantic identity (empty/whitespace/sentinel identityKey)
+      // Emit UNRESOLVED_SEMANTIC_IDENTITY for all cases regardless of polarity
       issues.push({
         code: 'UNRESOLVED_SEMANTIC_IDENTITY',
         severity: 'ERROR',
@@ -225,13 +226,22 @@ export function validateEvidenceContinuity(
 
   // Check for missing rule provenance (evidence from rule-based sources should have ruleId)
   for (const e of evidence) {
-    // C4-C7 evidence should have ruleId (rule-based sources)
+    // C4-C7 evidence (source: C4_STRUCTURAL_REASONING) should have ruleId (rule-based sources)
     if (e.source === 'C4_STRUCTURAL_REASONING' && !e.ruleId) {
       issues.push({
         code: 'MISSING_RULE_PROVENANCE',
         severity: 'WARNING',
         evidenceId: e.id,
         message: `Evidence "${e.id}" from C4_STRUCTURAL_REASONING lacks ruleId (missing rule provenance)`
+      });
+    }
+    // C10 evidence (source: D10) should have ruleId (rule-based sources)
+    if (e.source === 'D10' && !e.ruleId) {
+      issues.push({
+        code: 'MISSING_RULE_PROVENANCE',
+        severity: 'WARNING',
+        evidenceId: e.id,
+        message: `Evidence "${e.id}" from D10 lacks ruleId (missing rule provenance)`
       });
     }
   }
@@ -264,18 +274,19 @@ export function validateEvidenceContinuity(
   }
 
   // Check for MIXED polarity without identityKey
+  // Emit ERROR when evidence has MIXED-like split semantics but no resolvable identityKey
   for (const e of evidence) {
     if (e.polarity === 'SUPPORTING' || e.polarity === 'CHALLENGING') {
-      // Check if this evidence is part of a MIXED split (same identityKey with both polarities)
       const identityKey = tryResolveC11SemanticIdentity(e);
-      if (identityKey !== null) {
-        const group = semanticGroups.get(identityKey) ?? [];
-        const polarities = new Set(group.map(item => item.polarity));
-        if (polarities.has('SUPPORTING') && polarities.has('CHALLENGING')) {
-          // Valid MIXED split - has identityKey
-        } else {
-          // Not a MIXED split
-        }
+      if (identityKey === null) {
+        // Evidence has no resolvable identityKey - cannot track as MIXED split
+        // This is an error because MIXED polarity requires identityKey for proper tracking
+        issues.push({
+          code: 'MIXED_POLARITY_WITHOUT_IDENTITY_KEY',
+          severity: 'ERROR',
+          evidenceId: e.id,
+          message: `Evidence "${e.id}" has ${e.polarity} polarity but no resolvable identityKey (cannot track as MIXED split)`
+        });
       }
     }
   }

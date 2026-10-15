@@ -709,11 +709,14 @@ export function interpretCareerV2(
   });
 
   // Enforce continuity validation at acceptance boundary
+  // Per Gate D Finding 1: Consume the report at the boundary - throw on invalid result
   if (!evidenceContinuityReport.valid) {
-    console.error(`[CareerDomainInterpreterV2] Evidence continuity validation FAILED: ${evidenceContinuityReport.issues.length} issues detected`);
-    for (const issue of evidenceContinuityReport.issues) {
-      console.error(`  [${issue.severity}] ${issue.code}: ${issue.message}`);
-    }
+    const errorMessages = evidenceContinuityReport.issues.map(
+      issue => `[${issue.severity}] ${issue.code}: ${issue.message}`
+    ).join('\n  ');
+    throw new Error(
+      `[CareerDomainInterpreterV2] Evidence continuity validation FAILED: ${evidenceContinuityReport.issues.length} issues detected\n  ${errorMessages}`
+    );
   }
 
   /**
