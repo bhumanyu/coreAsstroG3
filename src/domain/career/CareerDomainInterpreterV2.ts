@@ -291,7 +291,8 @@ export function interpretCareerV2(
   const canonicalDashaAnalysis = buildCareerDashaAnalysis({
     horoscope,
     natal: canonicalNatalAnalysis,
-    expression: canonicalExpressionAnalysis
+    expression: canonicalExpressionAnalysis,
+    dashaInterpretation: options.temporalState.dashaInterpretation
   });
 
   const canonicalD10Analysis = buildCareerD10Analysis({
@@ -701,11 +702,19 @@ export function interpretCareerV2(
    * - Composes with existing C11ValidationResult
    *
    * Invalid required references produce a formally invalid outcome.
+   *
+   * PROVENANCE FIX (Gate D):
+   * Wire upstreamSourceIds registry to resolve source references that use colon delimiters
+   * (e.g., CAREER_STRUCTURAL:LORD_IN_HOUSE:2:8:...) against canonical evidence IDs that use
+   * underscore delimiters (e.g., CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_...). This classifies
+   * legitimate external provenance references as EXTERNAL_KNOWN instead of MISSING_SOURCE_REFERENCE.
    */
+  const upstreamSourceIds = canonicalC11Result.sourceIds;
   const evidenceContinuityReport: EvidenceContinuityReport = validateEvidenceContinuity({
     evidence,
     requiredC11EvidenceIds: canonicalC11Result.evidenceIds,
-    c11Validation: canonicalEvidenceOutput.c11Validation
+    c11Validation: canonicalEvidenceOutput.c11Validation,
+    upstreamSourceIds
   });
 
   // Enforce continuity validation at acceptance boundary

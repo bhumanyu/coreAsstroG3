@@ -85,6 +85,14 @@ export interface CareerDashaIntegrationInput {
   readonly horoscope: Horoscope;
   readonly natal: CareerNatalAnalysis;
   readonly expression: CareerExpressionAnalysis;
+  /**
+   * Optional canonical dasha interpretation from temporalState.
+   * When provided, this takes precedence over horoscope.dashaInterpretation
+   * to ensure C9 consumes the same canonical dasha source as C11.
+   * This fixes the provenance split where C11 cites temporalState dasha
+   * while the mapper consumes stale embedded horoscope dasha.
+   */
+  readonly dashaInterpretation?: Horoscope['dashaInterpretation'];
 }
 
 /**
@@ -112,6 +120,7 @@ export interface CareerDashaMechanismAwareInput {
  * Extended input interface for C9 Dasha activation integration (P2-11C Gate 3).
  *
  * Adds optional mechanismAwareInput to CareerDashaIntegrationInput.
+ * Adds optional dashaInterpretation for provenance fix (Gate D).
  */
 export interface CareerDashaIntegrationInputExtended extends CareerDashaIntegrationInput {
   readonly mechanismAwareInput?: CareerDashaMechanismAwareInput;
@@ -134,17 +143,28 @@ export const CAREER_DASHA_PLANET_ORDER: readonly Planet[] = Object.freeze([
 ] as const);
 
 /**
- * Gets the current Dasha period from the horoscope.
+ * Gets the current Dasha period from the horoscope or canonical dashaInterpretation.
  * Falls back to activePeriods if current is not available.
  *
  * SPEC NOTE (P2-08B requirement #4):
  * The active MD/AD/PD comes from engine/dasha/vimshottari.ts getActiveDasha() output
- * (planet + start + end verbatim). This function consumes horoscope.dashaInterpretation.current
+ * (planet + start + end verbatim). This function consumes dashaInterpretation.current
  * which is populated by engine/astroEngine.ts via analyzeActiveDasha() calling getActiveDasha().
  * Timing is preserved verbatim from the canonical Vimshottari engine.
+ *
+ * PROVENANCE FIX (Gate D):
+ * When canonicalDashaInterpretation is provided (from temporalState), it takes precedence
+ * over horoscope.dashaInterpretation to ensure C9 consumes the same canonical dasha source
+ * as C11. This fixes the provenance split where C11 cites temporalState dasha while the
+ * mapper consumes stale embedded horoscope dasha.
  */
-function getCurrentDasha(horoscope: Horoscope) {
-  return horoscope.dashaInterpretation?.current ?? horoscope.dashaInterpretation?.activePeriods;
+function getCurrentDasha(
+  horoscope: Horoscope,
+  canonicalDashaInterpretation?: Horoscope['dashaInterpretation']
+) {
+  // Prefer canonical dashaInterpretation from temporalState if provided
+  const source = canonicalDashaInterpretation ?? horoscope.dashaInterpretation;
+  return source?.current ?? source?.activePeriods;
 }
 
 /**
@@ -265,9 +285,9 @@ function buildPlanetContexts(
 function buildCareerDashaActivationContext(
   input: CareerDashaIntegrationInputExtended
 ): CareerDashaActivationContext | undefined {
-  const { horoscope, natal, mechanismAwareInput } = input;
+  const { horoscope, natal, mechanismAwareInput, dashaInterpretation } = input;
 
-  const currentDasha = getCurrentDasha(horoscope);
+  const currentDasha = getCurrentDasha(horoscope, dashaInterpretation);
   if (!currentDasha) {
     return undefined;
   }

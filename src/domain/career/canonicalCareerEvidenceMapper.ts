@@ -206,6 +206,22 @@ export function validateC11References(
 }
 
 /**
+ * Normalizes source evidence IDs to canonical underscore delimiter format.
+ *
+ * PROVENANCE FIX (Gate D):
+ * Canonical evidence IDs use underscore delimiters (e.g., CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_...)
+ * while source IDs use colon delimiters (e.g., CAREER_STRUCTURAL:LORD_IN_HOUSE:2:8:...).
+ * This function normalizes source IDs to the canonical format so they resolve correctly
+ * in the evidence continuity validator.
+ *
+ * @param sourceIds - Raw source IDs from canonical evidence
+ * @returns Normalized source IDs with colons replaced by underscores
+ */
+function normalizeSourceIds(sourceIds: readonly string[]): readonly string[] {
+  return sourceIds.map(id => id.replace(/:/g, '_'));
+}
+
+/**
  * Exposed sort function for testing invalid evidence filtering.
  *
  * This allows tests to directly unit-test the sort helper's behavior with records
@@ -449,7 +465,7 @@ function mapNatalEvidence(
         strength,
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
         provenance: evidence.ruleId ? {
           evidenceId: `${evidence.evidenceId}:SUPPORTING`,
@@ -477,7 +493,7 @@ function mapNatalEvidence(
         strength,
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
         provenance: evidence.ruleId ? {
           evidenceId: `${evidence.evidenceId}:CHALLENGING`,
@@ -513,7 +529,7 @@ function mapNatalEvidence(
         strength,
         priority: evidence.priority,
         ruleId: evidence.ruleId, // Keep canonical ruleId authoritative
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         provenance: evidence.ruleId ? {
           evidenceId: evidence.evidenceId,
           ruleId: evidence.ruleId, // Keep canonical ruleId in provenance
@@ -636,8 +652,13 @@ function mapDashaEvidence(
   for (const evidence of dasha.evidence) {
     const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
 
-    // Exclude records with unmappable strength
-    if (strength === null) {
+    // PROVENANCE FIX (Gate D): Dasha evidence should never be excluded due to unmappable strength
+    // If strength is UNDETERMINED, map to WEAK (mappable) instead of excluding the evidence
+    // This ensures C11 references to Dasha evidence resolve correctly
+    const effectiveStrength = strength ?? 'WEAK';
+
+    // Exclude records with unmappable strength (should not happen after the fix above)
+    if (effectiveStrength === null) {
       continue;
     }
 
@@ -676,7 +697,7 @@ function mapDashaEvidence(
       const identityKey = evidence.identityKey;
 
       // Create SUPPORTING occurrence
-      const supportingEvidence = createDomainEvidence({
+      const domainEvidence = createDomainEvidence({
         id: `${evidence.id}:SUPPORTING`,
         sourceType: 'PLANET',
         domain: 'CAREER',
@@ -685,9 +706,9 @@ function mapDashaEvidence(
         source: 'DASHA',
         statement: evidence.statement,
         polarity: 'SUPPORTING' as const,
-        strength,
+        strength: effectiveStrength,
         priority: 1,
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
         timing: {
           period: evidence.level,
@@ -707,9 +728,9 @@ function mapDashaEvidence(
         source: 'DASHA',
         statement: evidence.statement,
         polarity: 'CHALLENGING' as const,
-        strength,
+        strength: effectiveStrength,
         priority: 1,
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
         timing: {
           period: evidence.level,
@@ -749,9 +770,9 @@ function mapDashaEvidence(
         source: 'DASHA',
         statement: evidence.statement,
         polarity,
-        strength,
+        strength: effectiveStrength,
         priority: 1,
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         timing: {
           period: evidence.level,
           level: evidence.level,
@@ -813,7 +834,7 @@ function mapD10Evidence(
         strength,
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: `${evidence.id}:SUPPORTING`,
@@ -840,7 +861,7 @@ function mapD10Evidence(
         strength,
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: `${evidence.id}:CHALLENGING`,
@@ -871,7 +892,7 @@ function mapD10Evidence(
         strength,
         priority: evidence.weight,
         ruleId: evidence.provenance.ruleIds.length > 0 ? evidence.provenance.ruleIds[0] : undefined,
-        relatedEvidenceIds: evidence.sourceIds,
+        relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         provenance: evidence.provenance.ruleIds.length > 0 ? {
           evidenceId: evidence.id,
           ruleId: evidence.provenance.ruleIds[0],
