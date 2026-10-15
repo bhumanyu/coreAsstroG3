@@ -3159,6 +3159,20 @@ describe('CareerDomainInterpreterV2', () => {
       // The acceptance boundary in CareerDomainInterpreterV2:817-832 throws when !result.valid
       // This test verifies the validator returns invalid=true for dangling references,
       // ensuring the boundary throw would fire if such a report were produced
+
+      // NOTE: Interpreter-level seam deferred
+      // This test does not invoke interpretCareerV2 directly because:
+      // 1. The canonical production path (P2-11C Gate 5) uses the canonical mapper which now filters
+      //    unmappable evidence via isDashaEvidenceMappable, making it difficult to produce
+      //    dangling references from the canonical C4-C10 chain
+      // 2. Wiring a test seam (e.g., requiredC11EvidenceIds override or fixture with unmappable dasha)
+      //    would require invasive changes to the canonical builder contract
+      // 3. The validator logic is independently tested here, which provides confidence that the
+      //    boundary throw would fire if an invalid report were produced
+      // 4. The real-world protection comes from the collector/mapper asymmetry fixes (Gate D),
+      //    which prevent dangling references from being generated in the first place
+      // If future requirements demand an end-to-end negative test, the interpreter should expose
+      // a test hook (e.g., optional C11 evidenceIds override parameter) to inject invalid state.
     });
   });
 });

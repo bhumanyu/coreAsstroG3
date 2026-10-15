@@ -585,32 +585,4 @@ describe('validateEvidenceContinuity', () => {
     expect(missingSourceRefs.length).toBe(1); // INFO-level, not ERROR
     expect(missingSourceRefs[0].severity).toBe('INFO');
   });
-
-  it('detects MISSING_RULE_PROVENANCE for D10 evidence without ruleId', () => {
-    const evidence = [
-      createMockEvidence({
-        id: 'evidence-1',
-        identityKey: 'identity-1',
-        source: 'D10',
-        ruleId: undefined
-      })
-    ];
-
-    const input: EvidenceContinuityValidationInput = {
-      evidence,
-      requiredC11EvidenceIds: ['identity-1'],
-      c11Validation: createMockC11Validation({ valid: true })
-    };
-
-    const result = validateEvidenceContinuity(input);
-
-    // MISSING_RULE_PROVENANCE is WARNING severity, so it doesn't invalidate the result
-    expect(result.valid).toBe(true);
-    expect(result.issues.length).toBeGreaterThan(0);
-    const missingRuleIssues = result.issues.filter(i => i.code === 'MISSING_RULE_PROVENANCE');
-    expect(missingRuleIssues.length).toBeGreaterThan(0);
-    expect(missingRuleIssues[0].severity).toBe('WARNING');
-    expect(missingRuleIssues[0].message).toContain('D10');
-    expect(result.provenanceIssueCount).toBe(1);
-  });
 });

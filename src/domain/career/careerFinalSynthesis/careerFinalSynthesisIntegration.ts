@@ -33,6 +33,10 @@ import type {
   CareerDashaCanonicalAnalysis
 } from '../careerDasha';
 
+import {
+  isDashaEvidenceMappable
+} from '../canonicalCareerEvidenceMapper';
+
 import type {
   CareerD10CanonicalAnalysis
 } from '../careerD10';
@@ -199,15 +203,33 @@ function mapTransitEffectToFinalDirection(
  *
  * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
  * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
+ *
+ * GATE D FIX: Filter evidence through the same strength exclusion logic as the mapper.
+ * The mapper (mapNatalEvidence) excludes records with unmappable strength (returns null).
+ * Strength values that map to null: anything not VERY_STRONG, STRONG, MODERATE, or WEAK.
+ * This ensures C11 only cites identityKeys the mapper actually emits, preventing dangling references.
  */
 function collectNatalEvidenceIds(
   natal: CareerNatalAnalysis
 ): readonly string[] {
+  const allIds: string[] = [];
+  for (const e of natal.evidence) {
+    // Apply the same strength exclusion logic as mapNatalEvidence
+    // mapStrength returns null for unmappable strengths (not VERY_STRONG, STRONG, MODERATE, WEAK)
+    const strength = e.strength;
+    const isMappableStrength = strength === 'VERY_STRONG' || strength === 'STRONG' ||
+      strength === 'MODERATE' || strength === 'WEAK';
+
+    if (!isMappableStrength) {
+      continue;
+    }
+
+    const trimmed = e.identityKey?.trim();
+    const id = (trimmed && trimmed.length > 0) ? trimmed : e.evidenceId;
+    allIds.push(id);
+  }
   return Object.freeze(
-    natal.evidence.map(e => {
-      const trimmed = e.identityKey?.trim();
-      return (trimmed && trimmed.length > 0) ? trimmed : e.evidenceId;
-    }).sort((a, b) => a.localeCompare(b))
+    allIds.sort((a, b) => a.localeCompare(b))
   );
 }
 
@@ -257,13 +279,23 @@ function collectNatalRuleIds(
  *
  * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
  * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
+ *
+ * GATE D FIX: Filter evidence through isDashaEvidenceMappable predicate before collecting identityKey.
+ * This guarantees C11 only cites identityKeys the mapper actually emits, preventing dangling references.
+ * The predicate encodes the exact conditions under which mapDashaEvidence emits a record:
+ * - Strength must be mappable (not UNDETERMINED, VERY_WEAK, or MIXED)
+ * - For MIXED direction: effect must be PARTIALLY_ACTIVATES
+ * - For non-MIXED direction: polarity and provenance effect must not contradict
  */
 function collectDashaEvidenceIds(
   dasha: CareerDashaCanonicalAnalysis
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of dasha.evidence) {
-    allIds.push(e.identityKey);
+    // Filter through the same predicate used by the mapper
+    if (isDashaEvidenceMappable(e)) {
+      allIds.push(e.identityKey);
+    }
   }
   return Object.freeze(
     allIds.sort((a, b) => a.localeCompare(b))
@@ -320,6 +352,10 @@ function collectDashaRuleIds(
  * D10 resolution evidence has identityKey format CAREER_D10:C10_D10_*_RESOLUTION:ROLE
  * which are source namespace IDs, not canonical occurrence IDs. These belong in sourceIds only.
  * The canonical DomainEvidence mapper does not emit evidence for these source namespace IDs.
+ *
+ * GATE D FIX: Filter evidence through the same strength exclusion logic as the mapper.
+ * The mapper (mapD10Evidence) excludes records with unmappable strength (VERY_WEAK, UNDETERMINED).
+ * This ensures C11 only cites identityKeys the mapper actually emits, preventing dangling references.
  */
 function collectD10EvidenceIds(
   d10: CareerD10CanonicalAnalysis
@@ -331,6 +367,16 @@ function collectD10EvidenceIds(
     if (e.identityKey.startsWith('CAREER_D10:C10_D10_') && e.identityKey.includes('_RESOLUTION:')) {
       continue;
     }
+
+    // Apply the same strength exclusion logic as mapD10Evidence
+    // mapD10StrengthToEvidenceStrength returns null for VERY_WEAK and UNDETERMINED
+    const isMappableStrength = e.d10Strength === 'VERY_STRONG' || e.d10Strength === 'STRONG' ||
+      e.d10Strength === 'MODERATE' || e.d10Strength === 'WEAK';
+
+    if (!isMappableStrength) {
+      continue;
+    }
+
     allIds.push(e.identityKey);
   }
   return Object.freeze(

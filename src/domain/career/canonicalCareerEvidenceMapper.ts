@@ -1430,6 +1430,64 @@ function mapDashaEffectToProvenanceEffect(
 }
 
 /**
+ * Shared eligibility predicate for Dasha evidence mapping.
+ *
+ * Encodes the exact conditions under which mapDashaEvidence emits a record.
+ * This predicate is used by both the mapper and the C11 collector to ensure
+ * they agree on which evidence IDs are mappable, preventing dangling references.
+ *
+ * Conditions:
+ * 1. Strength must be mappable (not UNDETERMINED, VERY_WEAK, or MIXED)
+ * 2. For MIXED direction: effect must be PARTIALLY_ACTIVATES (only allowed effect for MIXED)
+ * 3. For non-MIXED direction: polarity and provenance effect must not contradict
+ *    - SUPPORTING polarity should not have CHALLENGE or NEUTRAL effect
+ *    - CHALLENGING polarity should not have SUPPORT or NEUTRAL effect
+ *
+ * Exported for use by C11 collector (collectDashaEvidenceIds) to filter evidence IDs
+ * before pushing to finalIds, ensuring C11 only cites identityKeys the mapper actually emits.
+ */
+export function isDashaEvidenceMappable(
+  evidence: CareerDashaCanonicalEvidence
+): boolean {
+  // Condition 1: Strength must be mappable
+  const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
+  if (strength === null) {
+    return false;
+  }
+
+  const provenanceEffect = mapDashaEffectToProvenanceEffect(evidence.effect);
+
+  // Condition 2: MIXED direction requires allowed effect
+  if (evidence.direction === 'MIXED') {
+    const ALLOWED_MIXED_EFFECTS = new Set(['PARTIALLY_ACTIVATES']);
+    const DISALLOWED_MIXED_EFFECTS = new Set(['DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA']);
+
+    if (DISALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
+      return false;
+    }
+
+    if (!ALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
+      return false;
+    }
+  } else {
+    // Condition 3: Non-MIXED direction/effect consistency
+    const polarity = mapDirectionToPolarity(evidence.direction);
+
+    // SUPPORTING polarity should not have CHALLENGE or NEUTRAL effect
+    if (polarity === 'SUPPORTING' && (provenanceEffect === 'CHALLENGE' || provenanceEffect === 'NEUTRAL')) {
+      return false;
+    }
+
+    // CHALLENGING polarity should not have SUPPORT or NEUTRAL effect
+    if (polarity === 'CHALLENGING' && (provenanceEffect === 'SUPPORT' || provenanceEffect === 'NEUTRAL')) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Exhaustive strength mapping: DomainStrength → EvidenceStrength.
  *
  * VERY_STRONG → VERY_STRONG
