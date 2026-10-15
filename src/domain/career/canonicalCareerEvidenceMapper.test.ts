@@ -449,7 +449,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Dasha Evidence Mapping', () => {
-    it('Dasha MIXED + DOES_NOT_ACTIVATE throws (disallowed combination)', () => {
+    it('Dasha MIXED + DOES_NOT_ACTIVATE is filtered (disallowed combination)', () => {
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
         {
           identityKey: 'dasha-mixed-disallowed',
@@ -501,8 +501,10 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      // Should throw due to disallowed MIXED/effect combination
-      expect(() => mapCanonicalCareerEvidence(input)).toThrow('MIXED direction/effect disallowed');
+      // Should filter (exclude) due to disallowed MIXED/effect combination
+      const result = mapCanonicalCareerEvidence(input);
+      const dashaEvidenceResult = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
+      expect(dashaEvidenceResult).toHaveLength(0);
     });
 
     it('Dasha MIXED + PARTIALLY_ACTIVATES splits into SUPPORTING and CHALLENGING (allowed combination)', () => {
@@ -823,7 +825,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
             ruleIds: ['RULE_D10_1'],
             sourceIds: ['d10-source-1'],
             natalRootIds: ['natal-root-1']
-          }
+          },
+          evidenceKind: 'OCCURRENCE'
         }
       ];
 
@@ -870,6 +873,83 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.phase).not.toBe('NATAL_PROMISE');
     });
 
+    it('Gate D: D10 resolution-source records are excluded from DomainEvidence mapping', () => {
+      const d10Evidence: CareerD10CanonicalEvidence[] = [
+        {
+          identityKey: 'CAREER_D10:C10_D10_DIRECTION_RESOLUTION:PRIMARY',
+          id: 'd10-resolution-1',
+          role: 'PRIMARY',
+          direction: 'SUPPORT',
+          d10Effect: 'QUALIFIES',
+          d10Strength: 'STRONG',
+          weight: 3,
+          statement: 'D10 resolution source',
+          sourceIds: ['d10-source-1'],
+          provenance: {
+            source: 'C10_D10',
+            ruleIds: ['RULE_D10_RESOLUTION'],
+            sourceIds: ['d10-source-1'],
+            natalRootIds: ['natal-root-1']
+          },
+          evidenceKind: 'RESOLUTION_SOURCE'
+        },
+        {
+          identityKey: 'd10-occurrence-1',
+          id: 'd10-occurrence-1',
+          role: 'PRIMARY',
+          direction: 'SUPPORT',
+          d10Effect: 'QUALIFIES',
+          d10Strength: 'STRONG',
+          weight: 3,
+          statement: 'D10 occurrence record',
+          sourceIds: ['d10-source-2'],
+          provenance: {
+            source: 'C10_D10',
+            ruleIds: ['RULE_D10_1'],
+            sourceIds: ['d10-source-2'],
+            natalRootIds: ['natal-root-1']
+          },
+          evidenceKind: 'OCCURRENCE'
+        }
+      ];
+
+      const d10: CareerD10CanonicalAnalysis = {
+        availability: 'AVAILABLE',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        d10Effect: 'QUALIFIES',
+        d10Direction: 'SUPPORT',
+        d10Strength: 'STRONG',
+        qualifiedDirection: 'SUPPORT',
+        qualifiedStrength: 'STRONG',
+        natalPromisePreserved: true,
+        relationship: 'REINFORCES',
+        evidence: d10Evidence,
+        conflicts: [],
+        expressionQualifications: [],
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'D10 analysis complete'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10,
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Resolution-source records should be excluded from DomainEvidence
+      const resolutionEvidence = result.evidence.filter(e => e.identityKey === 'CAREER_D10:C10_D10_DIRECTION_RESOLUTION:PRIMARY');
+      expect(resolutionEvidence).toHaveLength(0);
+
+      // Occurrence records should be mapped to DomainEvidence
+      const occurrenceEvidence = result.evidence.filter(e => e.identityKey === 'd10-occurrence-1');
+      expect(occurrenceEvidence).toHaveLength(1);
+    });
+
     it('D10 evidence uses sourceType VARGA with source D10 (P2-11D)', () => {
       const d10Evidence: CareerD10CanonicalEvidence[] = [
         {
@@ -887,7 +967,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
             ruleIds: ['RULE_D10_1'],
             sourceIds: ['d10-source-1'],
             natalRootIds: ['natal-root-1']
-          }
+          },
+          evidenceKind: 'OCCURRENCE'
         }
       ];
 
@@ -945,7 +1026,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
             ruleIds: [], // Empty ruleIds
             sourceIds: ['d10-source-2'],
             natalRootIds: []
-          }
+          },
+          evidenceKind: 'OCCURRENCE'
         }
       ];
 
@@ -1001,7 +1083,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
             ruleIds: [],
             sourceIds: [],
             natalRootIds: []
-          }
+          },
+          evidenceKind: 'OCCURRENCE'
         }
       ];
 
@@ -1857,8 +1940,10 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      // Should throw due to polarity/effect inconsistency
-      expect(() => mapCanonicalCareerEvidence(input)).toThrow('polarity/effect inconsistency');
+      // Should filter (exclude) due to polarity/effect inconsistency (Gate D fix)
+      const result = mapCanonicalCareerEvidence(input);
+      const dashaEvidenceResult = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
+      expect(dashaEvidenceResult).toHaveLength(0);
     });
   });
 
@@ -1880,7 +1965,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
             ruleIds: ['RULE_D10_1'],
             sourceIds: ['d10-source-1'],
             natalRootIds: []
-          }
+          },
+          evidenceKind: 'OCCURRENCE'
         }
       ];
 
@@ -2417,8 +2503,10 @@ describe('CanonicalCareerEvidenceMapper', () => {
         finalSynthesis: createEmptyFinalSynthesis()
       };
 
-      // Should throw due to polarity/effect inconsistency
-      expect(() => mapCanonicalCareerEvidence(input)).toThrow('polarity/effect inconsistency');
+      // Should filter (exclude) due to polarity/effect inconsistency (Gate D fix)
+      const result = mapCanonicalCareerEvidence(input);
+      const dashaEvidenceResult = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
+      expect(dashaEvidenceResult).toHaveLength(0);
     });
   });
 
@@ -2440,7 +2528,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
             ruleIds: ['RULE_D10_1'],
             sourceIds: ['d10-source-1'],
             natalRootIds: []
-          }
+          },
+          evidenceKind: 'OCCURRENCE'
         }
       ];
 

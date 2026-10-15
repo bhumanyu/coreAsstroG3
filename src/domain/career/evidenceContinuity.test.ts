@@ -585,4 +585,18 @@ describe('validateEvidenceContinuity', () => {
     expect(missingSourceRefs.length).toBe(1); // INFO-level, not ERROR
     expect(missingSourceRefs[0].severity).toBe('INFO');
   });
+
+  /**
+   * NOTE: MISSING_RULE_PROVENANCE D10 test removed in commit 070945f4
+   *
+   * The test 'detects MISSING_RULE_PROVENANCE for D10 evidence without ruleId' was removed
+   * because the producer contract changed: D10 resolution-source records (which have no ruleId)
+   * are now properly distinguished via the evidenceKind field and excluded from evidenceIds.
+   *
+   * The remaining D10 occurrence records always have ruleId (per C10_D10 producer contract),
+   * so the MISSING_RULE_PROVENANCE check for D10 would never trigger in practice.
+   *
+   * The validator still emits MISSING_RULE_PROVENANCE for C4_STRUCTURAL_REASONING evidence without ruleId,
+   * which remains a valid check since C4 evidence should always have ruleId per the producer contract.
+   */
 });

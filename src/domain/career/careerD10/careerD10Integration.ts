@@ -355,6 +355,9 @@ export function buildCanonicalOccurrences(
       natalRootIds
     });
 
+    // Determine evidence kind: resolution-source records have source ending with _RESOLUTION
+    const evidenceKind = (item.source ?? '').endsWith('_RESOLUTION') ? 'RESOLUTION_SOURCE' : 'OCCURRENCE';
+
     const canonicalEvidence: CareerD10CanonicalEvidence = Object.freeze({
       identityKey,
       id,
@@ -365,7 +368,8 @@ export function buildCanonicalOccurrences(
       weight: item.weight,
       statement: item.statement,
       sourceIds: provenance.sourceIds,
-      provenance
+      provenance,
+      evidenceKind
     });
 
     occurrences.push(canonicalEvidence);
@@ -430,7 +434,8 @@ function mergeCanonicalOccurrences(
     weight: resolvedWeight,
     statement: existing.statement,
     sourceIds: Object.freeze(mergedSourceIds),
-    provenance: mergedProvenance
+    provenance: mergedProvenance,
+    evidenceKind: existing.evidenceKind
   });
 }
 

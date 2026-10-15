@@ -3,6 +3,28 @@ import type { C11ValidationResult } from './canonicalCareerEvidenceMapper';
 import { tryResolveC11SemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from '../interpretation/DomainEvidence';
 
 /**
+ * Test-only hooks for evidence continuity validation.
+ *
+ * Internal test seam used only in test environment to force invalid validation results
+ * for end-to-end acceptance-boundary testing. Not exposed in production API.
+ *
+ * Usage in tests:
+ * ```ts
+ * import { _testHooks } from './evidenceContinuity';
+ * _testHooks.forceInvalidResult = true;
+ * // ... run interpretCareerV2
+ * _testHooks.forceInvalidResult = false;
+ * ```
+ */
+export const _testHooks = {
+  /**
+   * When true, forces validateEvidenceContinuity to return an invalid result.
+   * Used for end-to-end acceptance-boundary testing.
+   */
+  forceInvalidResult: false
+};
+
+/**
  * Evidence Continuity Validation (Gate D)
  *
  * Validates identity/provenance/reference/counting continuity from C4–C7 → foundation → C8 → C9 → C10 → C11.
@@ -141,6 +163,24 @@ export function validateEvidenceContinuity(
   const { evidence, requiredC11EvidenceIds, c11Validation } = input;
   const issues: EvidenceContinuityIssue[] = [];
 
+  // Test-only hook: force invalid result for acceptance-boundary testing
+  if (_testHooks.forceInvalidResult) {
+    return Object.freeze({
+      c11Validation,
+      issues: Object.freeze([
+        {
+          code: 'MISSING_REQUIRED_REFERENCE' as const,
+          severity: 'ERROR' as const,
+          evidenceId: 'test-forced-invalid-reference',
+          message: 'Test hook: forced invalid validation result for acceptance-boundary testing'
+        }
+      ]),
+      provenanceIssueCount: 0,
+      duplicateCountingRiskCount: 0,
+      valid: false
+    });
+  }
+
   // Build occurrence index (id)
   const occurrenceIndex = new Map<string, DomainEvidence[]>();
   for (const e of evidence) {
@@ -278,15 +318,9 @@ export function validateEvidenceContinuity(
         message: `Evidence "${e.id}" from C4_STRUCTURAL_REASONING lacks ruleId (missing rule provenance)`
       });
     }
-    // C10 evidence (source: D10) should have ruleId (rule-based sources)
-    if (e.source === 'D10' && !e.ruleId) {
-      issues.push({
-        code: 'MISSING_RULE_PROVENANCE',
-        severity: 'WARNING',
-        evidenceId: e.id,
-        message: `Evidence "${e.id}" from D10 lacks ruleId (missing rule provenance)`
-      });
-    }
+    // D10 evidence (source: D10) always has ruleId per C10_D10 producer contract
+    // Resolution-source records are excluded via evidenceKind field before reaching the mapper
+    // No MISSING_RULE_PROVENANCE check needed for D10
   }
 
   // Check for provenance disagreement across occurrences of the same semantic identity

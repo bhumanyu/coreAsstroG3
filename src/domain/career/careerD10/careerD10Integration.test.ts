@@ -458,6 +458,31 @@ describe('C10 D10 Integration', () => {
         expect(evidence.sourceIds.length).toBeGreaterThan(0);
       });
     });
+
+    it('Gate D: resolution-source records have evidenceKind field and are excluded from evidenceIds', () => {
+      const input = makeInput({
+        natal: makeMinimalNatal('SUPPORT', 'STRONG'),
+        horoscope: makeHoroscopeWithD10(
+          { [Planet.SUN]: { house: 10, dignity: DignityStatus.EXALTED } },
+          [{ house: 10, lord: Planet.SUN, occupants: [] }]
+        )
+      });
+
+      const result = buildCareerD10Analysis(input);
+
+      // Verify resolution-source records have evidenceKind: 'RESOLUTION_SOURCE'
+      const resolutionRecords = result.evidence.filter(e => e.evidenceKind === 'RESOLUTION_SOURCE');
+      expect(resolutionRecords.length).toBeGreaterThan(0);
+
+      // Verify occurrence records have evidenceKind: 'OCCURRENCE'
+      const occurrenceRecords = result.evidence.filter(e => e.evidenceKind === 'OCCURRENCE');
+      expect(occurrenceRecords.length).toBeGreaterThan(0);
+
+      // Verify all evidence records have evidenceKind field
+      result.evidence.forEach(evidence => {
+        expect(['RESOLUTION_SOURCE', 'OCCURRENCE']).toContain(evidence.evidenceKind);
+      });
+    });
   });
 
   describe('Test Group I: rootEvidenceIds deduped+sorted (§37)', () => {

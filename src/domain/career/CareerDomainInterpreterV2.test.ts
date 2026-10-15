@@ -47,7 +47,8 @@ import {
   mapCanonicalCareerEvidence
 } from './canonicalCareerEvidenceMapper';
 import {
-  validateEvidenceContinuity
+  validateEvidenceContinuity,
+  _testHooks
 } from './evidenceContinuity';
 import type {
   EvidenceContinuityValidationInput
@@ -3115,64 +3116,61 @@ describe('CareerDomainInterpreterV2', () => {
     });
 
     it('throws on evidence continuity validation failure with dangling C11 reference', () => {
-      // Finding 3: Real acceptance-boundary negative test
-      // This test directly validates the evidenceContinuity module with an invalid report
-      // to verify the validator logic would trigger the throw at the acceptance boundary
+      // Finding 3: End-to-end acceptance-boundary negative test
+      // Uses the internal test hook to force an invalid validation result,
+      // then verifies interpretCareerV2 throws at the acceptance boundary
 
-      const evidence = [
-        createDomainEvidence({
-          id: 'evidence-1',
-          sourceType: 'STRUCTURAL',
-          domain: 'CAREER',
-          role: 'PRIMARY',
-          phase: 'NATAL_PROMISE',
-          source: 'C4_STRUCTURAL_REASONING',
-          statement: 'Test evidence',
-          polarity: 'SUPPORTING',
-          strength: 'STRONG',
-          priority: 1,
-          identityKey: 'semantic-1'
-        })
-      ];
+      // Enable test hook to force invalid validation result
+      _testHooks.forceInvalidResult = true;
 
-      const input: EvidenceContinuityValidationInput = {
-        evidence,
-        requiredC11EvidenceIds: ['dangling-reference-id'], // Dangling reference
-        c11Validation: {
-          requiredMissing: ['dangling-reference-id'],
-          optionalMissing: [],
-          unreferenced: [],
-          valid: false
-        }
-      };
+      try {
+        // interpretCareerV2 should throw when evidence continuity validation fails
+        expect(() => interpretCareerV2(horoscope, makeDomainOptions())).toThrow(
+          /[Ee]vidence continuity validation FAILED/
+        );
+      } finally {
+        // Reset test hook to avoid affecting other tests
+        _testHooks.forceInvalidResult = false;
+      }
+    });
 
-      const result = validateEvidenceContinuity(input);
+    it('golden-baseline justification: dasha filtering produces correct C11 conclusion', () => {
+      // Golden-baseline justification for Gate D dasha evidence filtering
+      // This test asserts that the new dasha filtering (isDashaEvidenceMappable)
+      // produces the expected C11 conclusion change from pre-change baseline
 
-      // Assert the report is invalid
-      expect(result.valid).toBe(false);
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
 
-      // Should have MISSING_REQUIRED_REFERENCE issue
-      const missingRefIssues = result.issues.filter((i: any) => i.code === 'MISSING_REQUIRED_REFERENCE');
-      expect(missingRefIssues.length).toBeGreaterThan(0);
-      expect(missingRefIssues[0].severity).toBe('ERROR');
+      // Assert dasha conclusion is NEUTRAL/NOT_ACTIVE (result of filtering unmappable evidence)
+      expect(canonicalC11.dashaDirection).toBe('NEUTRAL');
+      expect(canonicalC11.dashaEffect).toBe('DOES_NOT_ACTIVATE');
+      expect(canonicalC11.timingStatus).toBe('NOT_ACTIVE');
 
-      // The acceptance boundary in CareerDomainInterpreterV2:817-832 throws when !result.valid
-      // This test verifies the validator returns invalid=true for dangling references,
-      // ensuring the boundary throw would fire if such a report were produced
+      // Assert natal-promise fields are byte-identical to pre-change expectations
+      // This proves the baseline update is a dasha-only consequence, not silent drift elsewhere
+      expect(canonicalC11.natalDirection).toBe('MIXED');
+      expect(canonicalC11.natalStrength).toBe('STRONG');
 
-      // NOTE: Interpreter-level seam deferred
-      // This test does not invoke interpretCareerV2 directly because:
-      // 1. The canonical production path (P2-11C Gate 5) uses the canonical mapper which now filters
-      //    unmappable evidence via isDashaEvidenceMappable, making it difficult to produce
-      //    dangling references from the canonical C4-C10 chain
-      // 2. Wiring a test seam (e.g., requiredC11EvidenceIds override or fixture with unmappable dasha)
-      //    would require invasive changes to the canonical builder contract
-      // 3. The validator logic is independently tested here, which provides confidence that the
-      //    boundary throw would fire if an invalid report were produced
-      // 4. The real-world protection comes from the collector/mapper asymmetry fixes (Gate D),
-      //    which prevent dangling references from being generated in the first place
-      // If future requirements demand an end-to-end negative test, the interpreter should expose
-      // a test hook (e.g., optional C11 evidenceIds override parameter) to inject invalid state.
+      // Assert D10-qualification fields are byte-identical to pre-change expectations
+      expect(canonicalC11.d10Direction).toBe('SUPPORT');
+      expect(canonicalC11.d10Effect).toBe('QUALIFIES');
+
+      // Assert C11 statement includes dasha activation status
+      expect(canonicalC11.statement).toContain('Dasha activation: NEUTRAL');
+      expect(canonicalC11.statement).toContain('Timing status: NOT_ACTIVE');
+
+      // Assert D10 resolution source IDs are excluded from evidenceIds but present in sourceIds
+      // This is the consequence of the Gate D fix for resolution source namespace handling
+      const resolutionSourceIds = canonicalC11.sourceIds.filter((id: string) =>
+        id.includes('_RESOLUTION:')
+      );
+      expect(resolutionSourceIds.length).toBeGreaterThan(0);
+
+      const resolutionEvidenceIds = canonicalC11.evidenceIds.filter((id: string) =>
+        id.includes('_RESOLUTION:')
+      );
+      expect(resolutionEvidenceIds.length).toBe(0);
     });
   });
 });

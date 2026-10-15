@@ -34,7 +34,9 @@ import type {
 } from '../careerDasha';
 
 import {
-  isDashaEvidenceMappable
+  isDashaEvidenceMappable,
+  isNatalStrengthMappable,
+  isD10StrengthMappable
 } from '../canonicalCareerEvidenceMapper';
 
 import type {
@@ -204,9 +206,7 @@ function mapTransitEffectToFinalDirection(
  * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
  * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  *
- * GATE D FIX: Filter evidence through the same strength exclusion logic as the mapper.
- * The mapper (mapNatalEvidence) excludes records with unmappable strength (returns null).
- * Strength values that map to null: anything not VERY_STRONG, STRONG, MODERATE, or WEAK.
+ * GATE D FIX: Filter evidence through isNatalStrengthMappable predicate from the mapper.
  * This ensures C11 only cites identityKeys the mapper actually emits, preventing dangling references.
  */
 function collectNatalEvidenceIds(
@@ -214,13 +214,8 @@ function collectNatalEvidenceIds(
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of natal.evidence) {
-    // Apply the same strength exclusion logic as mapNatalEvidence
-    // mapStrength returns null for unmappable strengths (not VERY_STRONG, STRONG, MODERATE, WEAK)
-    const strength = e.strength;
-    const isMappableStrength = strength === 'VERY_STRONG' || strength === 'STRONG' ||
-      strength === 'MODERATE' || strength === 'WEAK';
-
-    if (!isMappableStrength) {
+    // Filter through the same predicate used by the mapper
+    if (!isNatalStrengthMappable(e.strength)) {
       continue;
     }
 
@@ -348,13 +343,12 @@ function collectDashaRuleIds(
  * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
  * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  *
- * GATE D FIX: Exclude D10 resolution source IDs from evidenceIds.
- * D10 resolution evidence has identityKey format CAREER_D10:C10_D10_*_RESOLUTION:ROLE
- * which are source namespace IDs, not canonical occurrence IDs. These belong in sourceIds only.
+ * GATE D FIX: Exclude D10 resolution source records from evidenceIds.
+ * Resolution-source records have evidenceKind: 'RESOLUTION_SOURCE'
+ * These are source namespace IDs that belong in sourceIds/provenance only.
  * The canonical DomainEvidence mapper does not emit evidence for these source namespace IDs.
  *
- * GATE D FIX: Filter evidence through the same strength exclusion logic as the mapper.
- * The mapper (mapD10Evidence) excludes records with unmappable strength (VERY_WEAK, UNDETERMINED).
+ * GATE D FIX: Filter evidence through isD10StrengthMappable predicate from the mapper.
  * This ensures C11 only cites identityKeys the mapper actually emits, preventing dangling references.
  */
 function collectD10EvidenceIds(
@@ -362,18 +356,14 @@ function collectD10EvidenceIds(
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of d10.evidence) {
-    // Exclude resolution source IDs (C10_D10_*_RESOLUTION namespace) from evidenceIds
+    // Exclude resolution source records from evidenceIds
     // These are source namespace IDs that belong in sourceIds/provenance only
-    if (e.identityKey.startsWith('CAREER_D10:C10_D10_') && e.identityKey.includes('_RESOLUTION:')) {
+    if (e.evidenceKind === 'RESOLUTION_SOURCE') {
       continue;
     }
 
-    // Apply the same strength exclusion logic as mapD10Evidence
-    // mapD10StrengthToEvidenceStrength returns null for VERY_WEAK and UNDETERMINED
-    const isMappableStrength = e.d10Strength === 'VERY_STRONG' || e.d10Strength === 'STRONG' ||
-      e.d10Strength === 'MODERATE' || e.d10Strength === 'WEAK';
-
-    if (!isMappableStrength) {
+    // Filter through the same predicate used by the mapper
+    if (!isD10StrengthMappable(e.d10Strength)) {
       continue;
     }
 

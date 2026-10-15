@@ -10,6 +10,11 @@
  * Updated on 2026-10-16 for Gate D fix: Dasha evidence collector now filters unmappable evidence
  * via isDashaEvidenceMappable predicate, preventing dangling C11 references. This changes the
  * C11 conclusion statement to include Dasha activation status when unmappable evidence is filtered.
+ *
+ * Updated on 2026-10-16 for Gate D fix: D10 resolution-source records are now distinguished via
+ * evidenceKind field and excluded from C11 evidenceIds and ruleIds. Resolution-source records
+ * remain in sourceIds/provenance only. This changes C11 output to exclude C10_D10_*_RESOLUTION
+ * ruleIds while preserving resolution source IDs in sourceIds.
  */
 
 export const GOLDEN_C11_BASELINE = {

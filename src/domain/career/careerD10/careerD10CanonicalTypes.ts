@@ -63,6 +63,12 @@ export interface CareerD10CanonicalEvidence {
   readonly statement: string;
   readonly sourceIds: readonly string[];
   readonly provenance: CareerD10CanonicalProvenance;
+  /**
+   * Evidence kind: distinguishes resolution-source records from actual occurrence records.
+   * - RESOLUTION_SOURCE: Resolution namespace IDs that belong in sourceIds/provenance only
+   * - OCCURRENCE: Actual canonical occurrence evidence that should be mapped to DomainEvidence
+   */
+  readonly evidenceKind: 'RESOLUTION_SOURCE' | 'OCCURRENCE';
 }
 
 /**

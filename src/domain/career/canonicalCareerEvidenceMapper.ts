@@ -638,11 +638,12 @@ function mapExpressionEvidence(
  * - synthesizeCareerManifestations/resolveManifestation excludes source === 'DASHA' from natal scoring
  * - This ensures Dasha evidence contributes zero to natal manifestation scoring (timing-only contribution)
  *
- * MIXED direction/effect policy:
- * - MIXED direction requires an effect that represents genuinely mixed activation
- * - Allowed effects: PARTIALLY_ACTIVATES (carries both activating and challenging components)
- * - Disallowed effects: DOES_NOT_ACTIVATE, UNKNOWN, INSUFFICIENT_DATA (these are not genuinely mixed)
- * - Throws an explicit error for disallowed combinations
+ * Eligibility filtering:
+ * - Uses isDashaEvidenceMappable predicate to filter unmappable evidence
+ * - Excludes records with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED)
+ * - Excludes MIXED direction with disallowed effects (DOES_NOT_ACTIVATE, UNKNOWN, INSUFFICIENT_DATA)
+ * - Excludes non-MIXED direction with contradictory polarity/effect combinations
+ * - This ensures mapper and collector agree on which evidence IDs are mappable, preventing dangling references
  */
 function mapDashaEvidence(
   dasha: CareerDashaCanonicalAnalysis
@@ -650,43 +651,19 @@ function mapDashaEvidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of dasha.evidence) {
-    const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
-
-    // Exclude records with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED)
-    // per mapper contract - unmappable strength means evidence is unavailable for canonical mapping
-    if (strength === null) {
+    // Filter through the same predicate used by the C11 collector
+    // This ensures mapper and collector agree on which evidence IDs are mappable
+    if (!isDashaEvidenceMappable(evidence)) {
       continue;
     }
 
-    const provenanceEffect = mapDashaEffectToProvenanceEffect(evidence.effect);
+    const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
+    if (strength === null) {
+      continue; // Should not happen if predicate returned true, but defensive
+    }
 
     // Handle MIXED direction by splitting into two occurrences (consistent with natal convention)
     if (evidence.direction === 'MIXED') {
-      // Validate MIXED direction/effect combination
-      // MIXED direction should only be paired with effects that represent genuinely mixed activation
-      const ALLOWED_MIXED_EFFECTS = new Set(['PARTIALLY_ACTIVATES']);
-      const DISALLOWED_MIXED_EFFECTS = new Set(['DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA']);
-
-      if (DISALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
-        throw new Error(
-          `Dasha MIXED direction/effect disallowed: direction=MIXED with effect=${evidence.effect} for evidence ${evidence.id}. ` +
-          `MIXED direction requires an effect representing genuinely mixed activation (e.g., PARTIALLY_ACTIVATES). ` +
-          `Effects ${Array.from(DISALLOWED_MIXED_EFFECTS).join(', ')} are not compatible with MIXED direction.`
-        );
-      }
-
-      // Optional: Warn if effect is not in allowed set (currently only PARTIALLY_ACTIVATES)
-      // This documents the intended allow-list in code
-      if (!ALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
-        // If the domain contract intends to permit other effects, add them to ALLOWED_MIXED_EFFECTS
-        // and document the rationale here
-        throw new Error(
-          `Dasha MIXED direction/effect not in allow-list: direction=MIXED with effect=${evidence.effect} for evidence ${evidence.id}. ` +
-          `Allowed effects for MIXED direction: ${Array.from(ALLOWED_MIXED_EFFECTS).join(', ')}. ` +
-          `If this combination should be permitted, add it to the ALLOWED_MIXED_EFFECTS set and document the rationale.`
-        );
-      }
-
       const notes = `C9 Dasha direction: MIXED. Split into SUPPORTING and CHALLENGING occurrences of the same semantic fact; canonical dedup merges these into one MIXED record.`;
 
       // Both occurrences share the same identityKey
@@ -741,20 +718,6 @@ function mapDashaEvidence(
       // Non-MIXED directions: map directly
       const polarity = mapDirectionToPolarity(evidence.direction);
 
-      // Consistency check: polarity and provenance effect must agree
-      // SUPPORTING polarity should not have CHALLENGE or NEUTRAL effect
-      // CHALLENGING polarity should not have SUPPORT or NEUTRAL effect
-      if (polarity === 'SUPPORTING' && (provenanceEffect === 'CHALLENGE' || provenanceEffect === 'NEUTRAL')) {
-        throw new Error(
-          `Dasha polarity/effect inconsistency: SUPPORTING polarity with ${provenanceEffect} effect for evidence ${evidence.id}`
-        );
-      }
-      if (polarity === 'CHALLENGING' && (provenanceEffect === 'SUPPORT' || provenanceEffect === 'NEUTRAL')) {
-        throw new Error(
-          `Dasha polarity/effect inconsistency: CHALLENGING polarity with ${provenanceEffect} effect for evidence ${evidence.id}`
-        );
-      }
-
       // Dasha provenance does not expose a ruleId (CareerDashaCanonicalProvenance only has source, activationLevel, natalRootIds)
       // Omit provenance entirely since ruleId is required by EvidenceProvenance
       const domainEvidence = createDomainEvidence({
@@ -803,11 +766,10 @@ function mapD10Evidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of d10.evidence) {
-    // GATE D FIX: Exclude D10 resolution source IDs from canonical evidence mapping
-    // These have identityKey format CAREER_D10:C10_D10_*_RESOLUTION:ROLE
-    // which are source namespace IDs, not canonical occurrence IDs
-    // They belong in sourceIds/provenance only, not as DomainEvidence
-    if (evidence.identityKey.startsWith('CAREER_D10:C10_D10_') && evidence.identityKey.includes('_RESOLUTION:')) {
+    // GATE D FIX: Exclude D10 resolution source records from canonical evidence mapping
+    // Resolution-source records have evidenceKind: 'RESOLUTION_SOURCE'
+    // These are source namespace IDs that belong in sourceIds/provenance only, not as DomainEvidence
+    if (evidence.evidenceKind === 'RESOLUTION_SOURCE') {
       continue;
     }
 
@@ -1485,6 +1447,48 @@ export function isDashaEvidenceMappable(
   }
 
   return true;
+}
+
+/**
+ * Shared eligibility predicate for natal evidence strength mapping.
+ *
+ * Encodes the exact conditions under which mapNatalEvidence emits a record based on strength.
+ * This predicate is used by both the mapper and the C11 collector to ensure
+ * they agree on which evidence IDs are mappable, preventing dangling references.
+ *
+ * Conditions:
+ * - Strength must be one of: VERY_STRONG, STRONG, MODERATE, WEAK
+ * - All other strength values are unmappable (excluded from mapping)
+ *
+ * Exported for use by C11 collector (collectNatalEvidenceIds) to filter evidence IDs
+ * before pushing to finalIds, ensuring C11 only cites identityKeys the mapper actually emits.
+ */
+export function isNatalStrengthMappable(
+  strength: string
+): boolean {
+  return strength === 'VERY_STRONG' || strength === 'STRONG' ||
+    strength === 'MODERATE' || strength === 'WEAK';
+}
+
+/**
+ * Shared eligibility predicate for D10 evidence strength mapping.
+ *
+ * Encodes the exact conditions under which mapD10Evidence emits a record based on strength.
+ * This predicate is used by both the mapper and the C11 collector to ensure
+ * they agree on which evidence IDs are mappable, preventing dangling references.
+ *
+ * Conditions:
+ * - Strength must be one of: VERY_STRONG, STRONG, MODERATE, WEAK
+ * - VERY_WEAK and UNDETERMINED are unmappable (excluded from mapping)
+ *
+ * Exported for use by C11 collector (collectD10EvidenceIds) to filter evidence IDs
+ * before pushing to finalIds, ensuring C11 only cites identityKeys the mapper actually emits.
+ */
+export function isD10StrengthMappable(
+  strength: CareerD10QualificationStrength
+): boolean {
+  return strength === 'VERY_STRONG' || strength === 'STRONG' ||
+    strength === 'MODERATE' || strength === 'WEAK';
 }
 
 /**
