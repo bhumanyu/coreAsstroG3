@@ -5178,6 +5178,112 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expect(trace.occurrences[1].ruleId).toBe('RULE_B');
     });
 
+    // Finding 6: Regression test for legitimate multi-provenance merging
+    it('merges legitimate multi-provenance occurrences with different ruleIds and same semantic fact', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'occurrence-1',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: '10th house is strong', // Same semantic fact
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-1'],
+          ruleId: 'RULE_A',
+          identityKey: 'identity-1'
+        }),
+        createDomainEvidence({
+          id: 'occurrence-2',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: '10th house is strong', // Same semantic fact
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-2'],
+          ruleId: 'RULE_B', // Different ruleId (legitimate multi-provenance)
+          identityKey: 'identity-1'
+        })
+      ];
+
+      const { evidence: result, dedupTrace } = deduplicateCanonicalEvidence(evidence);
+
+      // Should merge to one occurrence (same polarity, same semantic fact)
+      expect(result).toHaveLength(1);
+      expect(dedupTrace).toHaveLength(1);
+
+      const trace = dedupTrace[0];
+      expect(trace.identityKey).toBe('identity-1');
+      expect(trace.merged).toBe(true);
+      expect(trace.mixed).toBe(false);
+
+      // Both ruleIds should be preserved in the occurrence trace
+      expect(trace.occurrences).toHaveLength(2);
+      expect(trace.occurrences[0].ruleId).toBe('RULE_A');
+      expect(trace.occurrences[1].ruleId).toBe('RULE_B');
+
+      // Merged record should have undefined ruleId (multi-provenance)
+      expect(result[0].ruleId).toBeUndefined();
+
+      // Both sourceIds should be merged
+      expect(result[0].relatedEvidenceIds).toContain('source-1');
+      expect(result[0].relatedEvidenceIds).toContain('source-2');
+
+      // Notes should mention multi-provenance
+      expect(result[0].notes).toContain('multi-provenance');
+    });
+
+    // Finding 6: Regression test for genuinely contradictory lineage
+    it('throws on contradictory lineage (different semantic facts, same identityKey)', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'occurrence-1',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: '10th house is strong', // Different semantic fact
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-1'],
+          ruleId: 'RULE_A',
+          identityKey: 'identity-1'
+        }),
+        createDomainEvidence({
+          id: 'occurrence-2',
+          sourceType: 'STRUCTURAL',
+          domain: 'CAREER',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'C4_STRUCTURAL_REASONING',
+          statement: '10th house is weak', // Contradictory statement
+          polarity: 'CHALLENGING', // Different polarity
+          strength: 'STRONG',
+          priority: 1,
+          relatedEvidenceIds: ['source-2'],
+          ruleId: 'RULE_B',
+          identityKey: 'identity-1' // Same identityKey (should not happen in production)
+        })
+      ];
+
+      // The dedup logic throws on statement disagreement (contradictory lineage)
+      expect(() => deduplicateCanonicalEvidence(evidence)).toThrow(
+        /Semantic field disagreement in dedup: statement differs/
+      );
+
+      // This prevents contradictory lineage from entering the evidence stream
+      // Gate D validator also checks for this in case it bypasses dedup
+    });
+
     it('exposes dedupTrace on CanonicalCareerEvidenceOutput', () => {
       const mockStructural: CareerStructuralReasoning = {
         direction: 'SUPPORT',

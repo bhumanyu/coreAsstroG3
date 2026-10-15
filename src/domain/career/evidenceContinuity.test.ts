@@ -181,7 +181,7 @@ describe('validateEvidenceContinuity', () => {
 
     const result = validateEvidenceContinuity(input);
 
-    // MISSING_SOURCE_REFERENCE is WARNING severity, so it doesn't invalidate the result
+    // MISSING_SOURCE_REFERENCE is WARNING severity (backward compatible without upstreamSourceIds)
     expect(result.valid).toBe(true);
     expect(result.issues.length).toBeGreaterThan(0);
     const missingSourceIssues = result.issues.filter(i => i.code === 'MISSING_SOURCE_REFERENCE');
@@ -189,6 +189,88 @@ describe('validateEvidenceContinuity', () => {
     expect(missingSourceIssues[0].evidenceId).toBe('evidence-1');
     expect(missingSourceIssues[0].severity).toBe('WARNING');
     expect(result.provenanceIssueCount).toBe(1);
+  });
+
+  // Finding A: Test upstreamSourceIds resolution
+  it('MISSING_SOURCE_REFERENCE is ERROR when reference not in upstream registry', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        relatedEvidenceIds: ['unknown-source-id']
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      upstreamSourceIds: ['known-source-1', 'known-source-2'] // Upstream registry provided
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Reference not in upstream registry should be ERROR
+    expect(result.valid).toBe(false);
+    const missingSourceIssues = result.issues.filter(i => i.code === 'MISSING_SOURCE_REFERENCE');
+    expect(missingSourceIssues.length).toBeGreaterThan(0);
+    expect(missingSourceIssues[0].evidenceId).toBe('evidence-1');
+    expect(missingSourceIssues[0].severity).toBe('ERROR');
+    expect(missingSourceIssues[0].message).toContain('MISSING');
+  });
+
+  it('MISSING_SOURCE_REFERENCE is INFO when reference in upstream registry', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        relatedEvidenceIds: ['known-upstream-source']
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      upstreamSourceIds: ['known-upstream-source'] // Reference exists in registry
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Reference in upstream registry should be INFO (EXTERNAL_KNOWN)
+    expect(result.valid).toBe(true);
+    const missingSourceIssues = result.issues.filter(i => i.code === 'MISSING_SOURCE_REFERENCE');
+    expect(missingSourceIssues.length).toBeGreaterThan(0);
+    expect(missingSourceIssues[0].evidenceId).toBe('evidence-1');
+    expect(missingSourceIssues[0].severity).toBe('INFO');
+    expect(missingSourceIssues[0].message).toContain('EXTERNAL_KNOWN');
+  });
+
+  it('MISSING_SOURCE_REFERENCE not emitted when reference in canonical evidence', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        relatedEvidenceIds: ['evidence-2'] // References another evidence in canonical list
+      }),
+      createMockEvidence({
+        id: 'evidence-2',
+        identityKey: 'identity-2'
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1', 'identity-2'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      upstreamSourceIds: ['some-upstream-id']
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Reference resolved in canonical evidence - no MISSING_SOURCE_REFERENCE issue
+    const missingSourceIssues = result.issues.filter(i => i.code === 'MISSING_SOURCE_REFERENCE');
+    expect(missingSourceIssues.length).toBe(0);
   });
 
   it('detects MISSING_RULE_PROVENANCE for C4 evidence without ruleId', () => {
@@ -218,17 +300,20 @@ describe('validateEvidenceContinuity', () => {
     expect(result.provenanceIssueCount).toBe(1);
   });
 
-  it('detects PROVENANCE_DISAGREEMENT for ruleId differences', () => {
+  // Finding 6: Legitimate multi-provenance (same semantic fact, different ruleIds) - no error
+  it('allows legitimate multi-provenance with different ruleIds for same semantic fact', () => {
     const evidence = [
       createMockEvidence({
         id: 'evidence-1',
         identityKey: 'identity-1',
-        ruleId: 'RULE_A'
+        ruleId: 'RULE_A',
+        statement: '10th house is strong' // Same semantic fact
       }),
       createMockEvidence({
         id: 'evidence-2',
         identityKey: 'identity-1',
-        ruleId: 'RULE_B'
+        ruleId: 'RULE_B',
+        statement: '10th house is strong' // Same semantic fact
       })
     ];
 
@@ -240,11 +325,44 @@ describe('validateEvidenceContinuity', () => {
 
     const result = validateEvidenceContinuity(input);
 
+    // Same semantic fact with different ruleIds = legitimate multi-provenance
+    // Should NOT emit PROVENANCE_DISAGREEMENT
+    expect(result.valid).toBe(true);
+    const provenanceIssues = result.issues.filter(i => i.code === 'PROVENANCE_DISAGREEMENT');
+    expect(provenanceIssues.length).toBe(0);
+  });
+
+  // Finding 6: Contradictory lineage (different semantic facts, same identityKey) - error
+  it('detects PROVENANCE_DISAGREEMENT for contradictory lineage (different statements)', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        ruleId: 'RULE_A',
+        statement: '10th house is strong' // Different semantic fact
+      }),
+      createMockEvidence({
+        id: 'evidence-2',
+        identityKey: 'identity-1',
+        ruleId: 'RULE_B',
+        statement: '10th house is weak' // Contradictory statement
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true })
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Different statements with same identityKey = contradictory lineage
     expect(result.valid).toBe(false);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0].code).toBe('PROVENANCE_DISAGREEMENT');
-    expect(result.issues[0].identityKey).toBe('identity-1');
-    expect(result.provenanceIssueCount).toBe(1);
+    const provenanceIssues = result.issues.filter(i => i.code === 'PROVENANCE_DISAGREEMENT');
+    expect(provenanceIssues.length).toBeGreaterThan(0);
+    expect(provenanceIssues[0].identityKey).toBe('identity-1');
+    expect(provenanceIssues[0].message).toContain('contradictory lineage');
   });
 
   it('detects DUPLICATE_C11_REFERENCE', () => {
@@ -312,9 +430,15 @@ describe('validateEvidenceContinuity', () => {
     const result = validateEvidenceContinuity(input);
 
     expect(result.valid).toBe(false);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0].code).toBe('IDENTITY_KEY_COLLISION');
-    expect(result.issues[0].identityKey).toBe('identity-1');
+
+    // Should have both PROVENANCE_DISAGREEMENT (contradictory lineage) and IDENTITY_KEY_COLLISION
+    const identityCollisionIssues = result.issues.filter(i => i.code === 'IDENTITY_KEY_COLLISION');
+    const provenanceIssues = result.issues.filter(i => i.code === 'PROVENANCE_DISAGREEMENT');
+
+    expect(identityCollisionIssues.length).toBeGreaterThan(0);
+    expect(identityCollisionIssues[0].identityKey).toBe('identity-1');
+    expect(provenanceIssues.length).toBeGreaterThan(0);
+    expect(provenanceIssues[0].message).toContain('contradictory lineage');
     expect(result.duplicateCountingRiskCount).toBe(1);
   });
 

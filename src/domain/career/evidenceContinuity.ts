@@ -217,10 +217,46 @@ export function validateEvidenceContinuity(
   // Check for missing source references
   // Note: relatedEvidenceIds may reference upstream raw source IDs that are not in the canonical evidence list
   // This is intentional provenance tracking, not cross-references within canonical evidence
-  // Therefore, this check is informational only (WARNING) and does not invalidate the result
+  //
+  // When upstreamSourceIds is provided, we can distinguish between:
+  // - RESOLVED: Reference exists in canonical evidence
+  // - EXTERNAL_KNOWN: Reference exists in upstream source registry (valid provenance)
+  // - MISSING: Reference exists neither in canonical evidence nor upstream registry (ERROR)
+  //
+  // When upstreamSourceIds is not provided, missing references remain WARNING (backward compatible)
+  const upstreamSourceRegistry = input.upstreamSourceIds ? new Set(input.upstreamSourceIds) : null;
+
   for (const e of evidence) {
     for (const sourceId of e.relatedEvidenceIds) {
-      if (!sourceEvidenceIds.has(sourceId)) {
+      const inCanonicalEvidence = sourceEvidenceIds.has(sourceId);
+      const inUpstreamRegistry = upstreamSourceRegistry?.has(sourceId) ?? false;
+
+      if (inCanonicalEvidence) {
+        // Reference resolved in canonical evidence - no issue
+        continue;
+      }
+
+      if (upstreamSourceRegistry) {
+        // Upstream registry provided - check against it
+        if (inUpstreamRegistry) {
+          // Reference exists in upstream registry - EXTERNAL_KNOWN (informational)
+          issues.push({
+            code: 'MISSING_SOURCE_REFERENCE',
+            severity: 'INFO',
+            evidenceId: e.id,
+            message: `Evidence "${e.id}" references upstream source ID "${sourceId}" (EXTERNAL_KNOWN in upstream registry)`
+          });
+        } else {
+          // Reference exists neither in canonical evidence nor upstream registry - MISSING (ERROR)
+          issues.push({
+            code: 'MISSING_SOURCE_REFERENCE',
+            severity: 'ERROR',
+            evidenceId: e.id,
+            message: `Evidence "${e.id}" references source ID "${sourceId}" that is MISSING (not in canonical evidence or upstream registry)`
+          });
+        }
+      } else {
+        // No upstream registry provided - backward compatible WARNING
         issues.push({
           code: 'MISSING_SOURCE_REFERENCE',
           severity: 'WARNING',
@@ -254,27 +290,33 @@ export function validateEvidenceContinuity(
   }
 
   // Check for provenance disagreement across occurrences of the same semantic identity
+  // Distinguish legitimate multi-provenance from genuinely contradictory lineage
   for (const [identityKey, group] of semanticGroups.entries()) {
     if (group.length > 1) {
       const first = group[0];
-      for (const e of group) {
-        if (e.ruleId !== first.ruleId) {
-          issues.push({
-            code: 'PROVENANCE_DISAGREEMENT',
-            severity: 'ERROR',
-            identityKey,
-            evidenceId: e.id,
-            message: `Semantic identity "${identityKey}" has provenance disagreement: ruleId differs (${e.ruleId} vs ${first.ruleId})`
-          });
-        }
-        if (e.provenance?.ruleId !== first.provenance?.ruleId) {
-          issues.push({
-            code: 'PROVENANCE_DISAGREEMENT',
-            severity: 'ERROR',
-            identityKey,
-            evidenceId: e.id,
-            message: `Semantic identity "${identityKey}" has provenance disagreement: provenance.ruleId differs (${e.provenance?.ruleId} vs ${first.provenance?.ruleId})`
-          });
+
+      // Check if all occurrences have the same statement (same semantic fact)
+      const statements = new Set(group.map(e => e.statement));
+      const sameSemanticFact = statements.size === 1;
+
+      if (sameSemanticFact) {
+        // Same semantic fact with different ruleIds = legitimate multi-provenance
+        // No error - the mapper's dedup logic handles this by merging and preserving both ruleIds
+        // The IDENTITY_KEY_COLLISION check below will catch contradictory lineage
+      } else {
+        // Different statements with same identityKey = contradictory lineage
+        // This is caught by IDENTITY_KEY_COLLISION below, but we also emit PROVENANCE_DISAGREEMENT
+        // for clarity that this is a provenance issue
+        for (const e of group) {
+          if (e.statement !== first.statement) {
+            issues.push({
+              code: 'PROVENANCE_DISAGREEMENT',
+              severity: 'ERROR',
+              identityKey,
+              evidenceId: e.id,
+              message: `Semantic identity "${identityKey}" has contradictory lineage: different semantic facts claim the same identity (statement differs)`
+            });
+          }
         }
       }
     }
