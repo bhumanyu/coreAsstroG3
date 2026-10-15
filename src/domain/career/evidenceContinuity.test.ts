@@ -550,6 +550,62 @@ describe('validateEvidenceContinuity', () => {
 
     // MISSING_RULE_PROVENANCE is WARNING severity, so it doesn't invalidate the result
     expect(result.valid).toBe(true);
+    const missingRuleIssues = result.issues.filter(i => i.code === 'MISSING_RULE_PROVENANCE');
+    expect(missingRuleIssues.length).toBe(1);
+    expect(missingRuleIssues[0].evidenceId).toBe('evidence-1');
+    expect(missingRuleIssues[0].severity).toBe('WARNING');
+  });
+
+  it('Gate D: colon→underscore normalization is consistent on both sides', () => {
+    // Test that the validator correctly handles source references that are in the upstream registry
+    // The normalization happens in the interpreter; the validator receives normalized IDs
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        // Normalized underscore-delimited source ID
+        relatedEvidenceIds: ['CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_SUN']
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      // Upstream source IDs are normalized to underscore format (as done in interpreter)
+      upstreamSourceIds: ['CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_SUN']
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Should be valid with no MISSING_SOURCE_REFERENCE (INFO-level when in upstream registry)
+    // The source reference is in upstreamSourceIds, so it's EXTERNAL_KNOWN (INFO, not ERROR)
+    expect(result.valid).toBe(true);
+    const missingSourceRefs = result.issues.filter(i => i.code === 'MISSING_SOURCE_REFERENCE');
+    expect(missingSourceRefs.length).toBe(1); // INFO-level, not ERROR
+    expect(missingSourceRefs[0].severity).toBe('INFO');
+  });
+
+  it('detects MISSING_RULE_PROVENANCE for D10 evidence without ruleId', () => {
+    const evidence = [
+      createMockEvidence({
+        id: 'evidence-1',
+        identityKey: 'identity-1',
+        source: 'D10',
+        ruleId: undefined
+      })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true })
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // MISSING_RULE_PROVENANCE is WARNING severity, so it doesn't invalidate the result
+    expect(result.valid).toBe(true);
     expect(result.issues.length).toBeGreaterThan(0);
     const missingRuleIssues = result.issues.filter(i => i.code === 'MISSING_RULE_PROVENANCE');
     expect(missingRuleIssues.length).toBeGreaterThan(0);

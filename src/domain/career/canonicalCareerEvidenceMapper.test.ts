@@ -797,6 +797,11 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Evidence with unmappable strength should be excluded
       const dashaResults = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
       expect(dashaResults).toHaveLength(0);
+
+      // UNDETERMINED-strength evidence should NOT be converted to WEAK (Gate D fix)
+      // The mapper contract requires unmappable strength to be excluded, not fabricated
+      const undeterminedEvidence = result.evidence.filter(e => e.identityKey === 'dasha-undetermined');
+      expect(undeterminedEvidence).toHaveLength(0);
     });
   });
 

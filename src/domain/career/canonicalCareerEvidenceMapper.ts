@@ -652,13 +652,9 @@ function mapDashaEvidence(
   for (const evidence of dasha.evidence) {
     const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
 
-    // PROVENANCE FIX (Gate D): Dasha evidence should never be excluded due to unmappable strength
-    // If strength is UNDETERMINED, map to WEAK (mappable) instead of excluding the evidence
-    // This ensures C11 references to Dasha evidence resolve correctly
-    const effectiveStrength = strength ?? 'WEAK';
-
-    // Exclude records with unmappable strength (should not happen after the fix above)
-    if (effectiveStrength === null) {
+    // Exclude records with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED)
+    // per mapper contract - unmappable strength means evidence is unavailable for canonical mapping
+    if (strength === null) {
       continue;
     }
 
@@ -706,7 +702,7 @@ function mapDashaEvidence(
         source: 'DASHA',
         statement: evidence.statement,
         polarity: 'SUPPORTING' as const,
-        strength: effectiveStrength,
+        strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
@@ -728,7 +724,7 @@ function mapDashaEvidence(
         source: 'DASHA',
         statement: evidence.statement,
         polarity: 'CHALLENGING' as const,
-        strength: effectiveStrength,
+        strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         notes,
@@ -770,7 +766,7 @@ function mapDashaEvidence(
         source: 'DASHA',
         statement: evidence.statement,
         polarity,
-        strength: effectiveStrength,
+        strength,
         priority: 1,
         relatedEvidenceIds: normalizeSourceIds(evidence.sourceIds),
         timing: {
@@ -807,6 +803,14 @@ function mapD10Evidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of d10.evidence) {
+    // GATE D FIX: Exclude D10 resolution source IDs from canonical evidence mapping
+    // These have identityKey format CAREER_D10:C10_D10_*_RESOLUTION:ROLE
+    // which are source namespace IDs, not canonical occurrence IDs
+    // They belong in sourceIds/provenance only, not as DomainEvidence
+    if (evidence.identityKey.startsWith('CAREER_D10:C10_D10_') && evidence.identityKey.includes('_RESOLUTION:')) {
+      continue;
+    }
+
     const strength = mapD10StrengthToEvidenceStrength(evidence.d10Strength);
 
     // Exclude records with unmappable strength

@@ -748,39 +748,14 @@ export function interpretCareerV2(
     }
   }
 
-  // Collect C10 D10 resolution source IDs (C10_D10_DIRECTION_RESOLUTION, C10_D10_EFFECT_RESOLUTION, etc.)
-  // These are emitted by the D10 qualification module as source field in evidence
-  // C11 references them with CAREER_D10: prefix and role suffix (e.g., CAREER_D10:C10_D10_DIRECTION_RESOLUTION:PRIMARY)
-  // NOTE: This is a workaround for a C11 adapter bug where these source IDs are incorrectly included in evidenceIds
-  // The proper fix would be to remove them from C11's evidenceIds and keep them only in sourceIds
-  const d10ResolutionSourceIds = [
-    'C10_D10_DIRECTION_RESOLUTION',
-    'C10_D10_EFFECT_RESOLUTION',
-    'C10_D10_QUALIFICATION_RESOLUTION',
-    'C10_D10_STRENGTH_RESOLUTION'
-  ];
-  const d10Roles = ['PRIMARY', 'SUPPORTING', 'CHALLENGING', 'MODIFIER'];
-  const d10Directions = ['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'UNDETERMINED', 'UNAVAILABLE'];
-  for (const sourceId of d10ResolutionSourceIds) {
-    // Add base source ID
-    upstreamSourceRegistry.add(sourceId);
-    // Add C11 reference format: CAREER_D10:<sourceId>:<role>
-    for (const role of d10Roles) {
-      upstreamSourceRegistry.add(`CAREER_D10:${sourceId}:${role}`);
-    }
-    // Add the actual emitted IDs: CAREER_D10_QUAL:<sourceId>:<direction>:<role>
-    for (const direction of d10Directions) {
-      for (const role of d10Roles) {
-        upstreamSourceRegistry.add(`CAREER_D10_QUAL:${sourceId}:${direction}:${role}`);
-      }
+  // Collect C10 D10 sourceIds (qualification record IDs and resolution source IDs)
+  // These are emitted by the D10 qualification module in the sourceIds field of each evidence item
+  // The sourceIds include IDs like CAREER_D10_QUAL:* and C10_D10_*_RESOLUTION
+  for (const e of canonicalD10Analysis.evidence) {
+    for (const sourceId of e.sourceIds) {
+      upstreamSourceRegistry.add(sourceId.replace(/:/g, '_'));
     }
   }
-  // Add the specific IDs that C11 actually references (explicit ones from error message)
-  // These are incorrectly in C11's evidenceIds due to a C11 adapter bug (should be in sourceIds only)
-  upstreamSourceRegistry.add('CAREER_D10:C10_D10_DIRECTION_RESOLUTION:PRIMARY');
-  upstreamSourceRegistry.add('CAREER_D10:C10_D10_EFFECT_RESOLUTION:PRIMARY');
-  upstreamSourceRegistry.add('CAREER_D10:C10_D10_QUALIFICATION_RESOLUTION:PRIMARY');
-  upstreamSourceRegistry.add('CAREER_D10:C10_D10_STRENGTH_RESOLUTION:SUPPORTING');
 
   // Collect mechanism candidate IDs from expression analysis
   for (const expr of canonicalMechanismExpressionResult.expressions) {

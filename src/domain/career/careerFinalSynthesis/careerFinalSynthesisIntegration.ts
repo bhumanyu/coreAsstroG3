@@ -315,12 +315,22 @@ function collectDashaRuleIds(
  *
  * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
  * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
+ *
+ * GATE D FIX: Exclude D10 resolution source IDs from evidenceIds.
+ * D10 resolution evidence has identityKey format CAREER_D10:C10_D10_*_RESOLUTION:ROLE
+ * which are source namespace IDs, not canonical occurrence IDs. These belong in sourceIds only.
+ * The canonical DomainEvidence mapper does not emit evidence for these source namespace IDs.
  */
 function collectD10EvidenceIds(
   d10: CareerD10CanonicalAnalysis
 ): readonly string[] {
   const allIds: string[] = [];
   for (const e of d10.evidence) {
+    // Exclude resolution source IDs (C10_D10_*_RESOLUTION namespace) from evidenceIds
+    // These are source namespace IDs that belong in sourceIds/provenance only
+    if (e.identityKey.startsWith('CAREER_D10:C10_D10_') && e.identityKey.includes('_RESOLUTION:')) {
+      continue;
+    }
     allIds.push(e.identityKey);
   }
   return Object.freeze(
