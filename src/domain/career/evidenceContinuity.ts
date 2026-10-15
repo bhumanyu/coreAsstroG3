@@ -108,6 +108,13 @@ export interface EvidenceContinuityValidationInput {
    * C11 validation result (composed from existing validator).
    */
   readonly c11Validation: C11ValidationResult;
+  /**
+   * Upstream source registry (IDs that upstream producers actually emit).
+   * Used to validate relatedEvidenceIds references.
+   * If provided, missing source references that are not in this registry become ERROR.
+   * If not provided, all missing source references remain WARNING (backward compatible).
+   */
+  readonly upstreamSourceIds?: readonly string[];
 }
 
 /**
