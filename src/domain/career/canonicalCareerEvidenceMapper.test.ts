@@ -14,6 +14,7 @@ import {
 import {
   createDomainEvidence,
   tryResolveSemanticIdentity,
+  tryResolveC11SemanticIdentity,
   UNRESOLVED_IDENTITY_SENTINEL,
   type DomainEvidence
 } from '../interpretation/DomainEvidence';
@@ -4821,6 +4822,66 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       // The mismatched evidenceTrace.evidenceIds is NOT caught by this validator
       // This is intentional per the documented contract; C11 boundary validation
       // should enforce evidenceTrace consistency if needed.
+    });
+
+    it('validateAgainstFinalSynthesis rejects occurrence ID as C11 reference - D.1', () => {
+      // Test that C11 references must be semantic identities (identityKey), not occurrence IDs (id).
+      // When C11 evidenceIds contains an occurrence id that is not an identityKey, it should land in requiredMissing.
+      // This enforces namespace separation per Gate D Finding 1.
+
+      const evidence = createDomainEvidence({
+        id: 'occurrence-id-123', // Occurrence ID
+        sourceType: 'STRUCTURAL',
+        domain: 'CAREER',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'C4_STRUCTURAL_REASONING',
+        statement: 'Valid evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 1,
+        identityKey: 'semantic-identity-abc' // Semantic identity (different from occurrence ID)
+      });
+
+      // C11 references the occurrence ID instead of the semantic identity
+      const finalSynthesisWithOccurrenceRef: CareerFinalSynthesisResult = {
+        reasoningVersion: 'C11',
+        domain: 'CAREER',
+        finalStatus: 'SUPPORTED',
+        finalDirection: 'SUPPORT',
+        finalStrength: 'STRONG',
+        confidence: 'HIGH',
+        natalDirection: 'SUPPORT',
+        natalStrength: 'STRONG',
+        expressionStatus: 'UNAVAILABLE',
+        d10Direction: 'UNAVAILABLE',
+        d10Effect: 'UNKNOWN',
+        dashaEffect: 'UNKNOWN',
+        dashaDirection: 'UNAVAILABLE',
+        timingStatus: 'ACTIVE',
+        transitDirection: 'SUPPORT',
+        currentPressure: 'LOW',
+        expressions: [],
+        strongestExpressions: [],
+        challengedExpressions: [],
+        conflicts: [],
+        evidenceIds: ['occurrence-id-123'], // References occurrence ID (wrong namespace)
+        sourceIds: [],
+        ruleIds: [],
+        evidenceTrace: {
+          evidenceIds: ['occurrence-id-123'],
+          sourceIds: [],
+          ruleIds: []
+        },
+        statement: 'Career with occurrence ID reference.'
+      };
+
+      const validationResult = validateC11References([evidence], finalSynthesisWithOccurrenceRef);
+
+      // The occurrence ID reference should be in requiredMissing because producedIds uses tryResolveC11SemanticIdentity
+      // which only returns identityKey, not occurrence ID
+      expect(validationResult.requiredMissing).toEqual(['occurrence-id-123']);
+      expect(validationResult.unreferenced).toEqual(['semantic-identity-abc']); // Semantic identity is produced but not referenced
     });
   });
 

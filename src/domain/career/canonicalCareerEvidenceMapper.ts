@@ -46,6 +46,7 @@ import {
   createDomainEvidence,
   type DomainEvidence,
   tryResolveSemanticIdentity,
+  tryResolveC11SemanticIdentity,
   UNRESOLVED_IDENTITY_SENTINEL
 } from '../interpretation/DomainEvidence';
 
@@ -1078,7 +1079,9 @@ export interface C11EvidenceReference {
  * Validates that produced evidence IDs are cross-referenceable against finalSynthesis.evidenceIds.
  *
  * Compares canonical identities (identityKey) against C11 evidenceIds.
- * Uses tryResolveSemanticIdentity to handle empty/whitespace identityKey correctly.
+ * Uses tryResolveC11SemanticIdentity to enforce namespace separation: C11 references must be
+ * semantic identities (identityKey), not occurrence IDs (id). Occurrence IDs must not satisfy
+ * semantic references.
  *
  * Per P2-11C Gate 4 Finding 3: Enforce C11 reference integrity with required vs optional boundary.
  * Since C11 does not currently distinguish required vs optional evidenceIds in its type contract,
@@ -1107,11 +1110,13 @@ function validateAgainstFinalSynthesis(
   evidence: readonly DomainEvidence[],
   finalSynthesis: CareerFinalSynthesisResult
 ): C11ValidationResult {
-  // Exclude unresolved evidence (null from tryResolveSemanticIdentity) from producedIds
+  // Exclude unresolved evidence (null from tryResolveC11SemanticIdentity) from producedIds
   // to prevent invalid evidence from appearing in the validation result as a valid reference
+  // Uses tryResolveC11SemanticIdentity to enforce namespace separation: only identityKey is valid,
+  // not occurrence IDs. This ensures C11 references must be semantic identities.
   const producedIds = new Set(
     evidence
-      .map(e => tryResolveSemanticIdentity(e))
+      .map(e => tryResolveC11SemanticIdentity(e))
       .filter((id): id is string => id !== null)
   );
 
