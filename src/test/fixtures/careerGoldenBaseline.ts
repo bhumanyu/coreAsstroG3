@@ -8,7 +8,7 @@
  * All identityKey tokens now use fully underscore-normalized format (e.g., 7_1 instead of 7:1).
  *
  * Updated on 2026-10-16 for Gate D fix: Dasha evidence collector now filters unmappable evidence
- * via isDashaEvidenceMappable predicate, preventing dangling C11 references. This changes the
+ * via checkDashaEvidenceMappable predicate, preventing dangling C11 references. This changes the
  * C11 conclusion statement to include Dasha activation status when unmappable evidence is filtered.
  *
  * Updated on 2026-10-16 for Gate D fix: D10 resolution-source records are now distinguished via

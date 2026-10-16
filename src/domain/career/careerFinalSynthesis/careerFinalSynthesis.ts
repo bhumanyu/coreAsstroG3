@@ -27,6 +27,7 @@ import type {
   CareerExpressionDirection,
   CareerExpressionStrength
 } from '../careerExpression';
+import type { ContradictoryEvidenceDiagnostic } from '../canonicalCareerEvidenceMapper';
 
 /**
  * C8 → C11 Direction Mapping Implementation
@@ -674,6 +675,6 @@ export function synthesizeCareerFinal(
     ruleIds: Object.freeze([...ruleIds]),
     evidenceTrace,
     statement,
-    contradictoryDashaEvidence: [] // Filled in by integration adapter
+    contradictoryDashaEvidence: [] // Filled in by integration adapter from mapper diagnostics
   });
 }

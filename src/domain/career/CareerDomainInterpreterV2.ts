@@ -741,13 +741,6 @@ export function interpretCareerV2(
     }
   }
 
-  // Collect C10 D10 sourceIds (qualification record IDs)
-  for (const e of canonicalD10Analysis.evidence) {
-    for (const sourceId of e.sourceIds) {
-      upstreamSourceRegistry.add(sourceId.replace(/:/g, '_'));
-    }
-  }
-
   // Collect C10 D10 sourceIds (qualification record IDs and resolution source IDs)
   // These are emitted by the D10 qualification module in the sourceIds field of each evidence item
   // The sourceIds include IDs like CAREER_D10_QUAL:* and C10_D10_*_RESOLUTION
@@ -793,7 +786,8 @@ export function interpretCareerV2(
     evidence,
     requiredC11EvidenceIds: canonicalC11Result.evidenceIds,
     c11Validation: canonicalEvidenceOutput.c11Validation,
-    upstreamSourceIds
+    upstreamSourceIds,
+    contradictoryEvidence: canonicalEvidenceOutput.contradictoryEvidence
   });
 
   // Enforce continuity validation at acceptance boundary

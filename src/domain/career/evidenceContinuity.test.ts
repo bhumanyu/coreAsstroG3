@@ -8,7 +8,7 @@ import {
   createDomainEvidence,
   type DomainEvidence
 } from '../interpretation/DomainEvidence';
-import type { C11ValidationResult } from './canonicalCareerEvidenceMapper';
+import type { C11ValidationResult, ContradictoryEvidenceDiagnostic } from './canonicalCareerEvidenceMapper';
 
 describe('validateEvidenceContinuity', () => {
   const createMockEvidence = (overrides: Partial<DomainEvidence> = {}): DomainEvidence => {
@@ -599,4 +599,96 @@ describe('validateEvidenceContinuity', () => {
    * The validator still emits MISSING_RULE_PROVENANCE for C4_STRUCTURAL_REASONING evidence without ruleId,
    * which remains a valid check since C4 evidence should always have ruleId per the producer contract.
    */
+
+  it('detects CONTRADICTORY_DASHA_EVIDENCE with full diagnostic details', () => {
+    const evidence = [
+      createMockEvidence({ id: 'evidence-1', identityKey: 'identity-1' })
+    ];
+
+    const contradictoryEvidence: ContradictoryEvidenceDiagnostic[] = [
+      {
+        identityKey: 'contradictory-identity-1',
+        evidenceId: 'contradictory-evidence-1',
+        reason: 'SUPPORTING polarity with contradictory effect: CHALLENGE'
+      },
+      {
+        identityKey: 'contradictory-identity-2',
+        evidenceId: 'contradictory-evidence-2',
+        reason: 'MIXED direction with disallowed effect: DOES_NOT_ACTIVATE'
+      }
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      contradictoryEvidence
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Should be invalid due to contradictory evidence
+    expect(result.valid).toBe(false);
+
+    // Should emit ERROR-severity issues for each contradictory evidence item
+    const contradictoryIssues = result.issues.filter(i => i.code === 'CONTRADICTORY_DASHA_EVIDENCE');
+    expect(contradictoryIssues.length).toBe(2);
+
+    // Verify first diagnostic has full details
+    expect(contradictoryIssues[0].code).toBe('CONTRADICTORY_DASHA_EVIDENCE');
+    expect(contradictoryIssues[0].severity).toBe('ERROR');
+    expect(contradictoryIssues[0].identityKey).toBe('contradictory-identity-1');
+    expect(contradictoryIssues[0].evidenceId).toBe('contradictory-evidence-1');
+    expect(contradictoryIssues[0].message).toContain('Contradictory Dasha evidence');
+    expect(contradictoryIssues[0].message).toContain('SUPPORTING polarity with contradictory effect: CHALLENGE');
+    expect(contradictoryIssues[0].message).toContain('contradictory-identity-1');
+    expect(contradictoryIssues[0].message).toContain('contradictory-evidence-1');
+
+    // Verify second diagnostic has full details
+    expect(contradictoryIssues[1].code).toBe('CONTRADICTORY_DASHA_EVIDENCE');
+    expect(contradictoryIssues[1].severity).toBe('ERROR');
+    expect(contradictoryIssues[1].identityKey).toBe('contradictory-identity-2');
+    expect(contradictoryIssues[1].evidenceId).toBe('contradictory-evidence-2');
+    expect(contradictoryIssues[1].message).toContain('MIXED direction with disallowed effect: DOES_NOT_ACTIVATE');
+  });
+
+  it('validates successfully when contradictoryEvidence is empty', () => {
+    const evidence = [
+      createMockEvidence({ id: 'evidence-1', identityKey: 'identity-1' })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      contradictoryEvidence: []
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Should be valid with no contradictory evidence issues
+    expect(result.valid).toBe(true);
+    const contradictoryIssues = result.issues.filter(i => i.code === 'CONTRADICTORY_DASHA_EVIDENCE');
+    expect(contradictoryIssues.length).toBe(0);
+  });
+
+  it('validates successfully when contradictoryEvidence is undefined', () => {
+    const evidence = [
+      createMockEvidence({ id: 'evidence-1', identityKey: 'identity-1' })
+    ];
+
+    const input: EvidenceContinuityValidationInput = {
+      evidence,
+      requiredC11EvidenceIds: ['identity-1'],
+      c11Validation: createMockC11Validation({ valid: true }),
+      contradictoryEvidence: undefined
+    };
+
+    const result = validateEvidenceContinuity(input);
+
+    // Should be valid with no contradictory evidence issues
+    expect(result.valid).toBe(true);
+    const contradictoryIssues = result.issues.filter(i => i.code === 'CONTRADICTORY_DASHA_EVIDENCE');
+    expect(contradictoryIssues.length).toBe(0);
+  });
 });

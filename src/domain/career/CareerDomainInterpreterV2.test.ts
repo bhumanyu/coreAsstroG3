@@ -44,7 +44,8 @@ import {
   type CareerConclusionData
 } from './CareerDomainInterpreterV2';
 import {
-  mapCanonicalCareerEvidence
+  mapCanonicalCareerEvidence,
+  type ContradictoryEvidenceDiagnostic
 } from './canonicalCareerEvidenceMapper';
 import {
   validateEvidenceContinuity,
@@ -3134,9 +3135,32 @@ describe('CareerDomainInterpreterV2', () => {
       }
     });
 
+    it('contradictoryDashaEvidence carries identityKey, evidenceId, and reason', () => {
+      // Test that contradictoryDashaEvidence in the C11 result carries full diagnostic details
+      // This is a unit test for the integration adapter's collection logic
+
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult;
+
+      // Assert contradictoryDashaEvidence is an array (even if empty)
+      expect(Array.isArray(canonicalC11.contradictoryDashaEvidence)).toBe(true);
+
+      // If there are contradictory evidence items, verify they have the full structure
+      if (canonicalC11.contradictoryDashaEvidence.length > 0) {
+        for (const diagnostic of canonicalC11.contradictoryDashaEvidence) {
+          expect(diagnostic).toHaveProperty('identityKey');
+          expect(diagnostic).toHaveProperty('evidenceId');
+          expect(diagnostic).toHaveProperty('reason');
+          expect(typeof diagnostic.identityKey).toBe('string');
+          expect(typeof diagnostic.evidenceId).toBe('string');
+          expect(typeof diagnostic.reason).toBe('string');
+        }
+      }
+    });
+
     it('golden-baseline justification: dasha filtering produces correct C11 conclusion', () => {
       // Golden-baseline justification for Gate D dasha evidence filtering
-      // This test asserts that the new dasha filtering (isDashaEvidenceMappable)
+      // This test asserts that the new dasha filtering (checkDashaEvidenceMappable)
       // produces the expected C11 conclusion change from pre-change baseline
 
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());

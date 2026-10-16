@@ -1,5 +1,5 @@
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
-import type { C11ValidationResult } from './canonicalCareerEvidenceMapper';
+import type { C11ValidationResult, ContradictoryEvidenceDiagnostic } from './canonicalCareerEvidenceMapper';
 import { tryResolveC11SemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from '../interpretation/DomainEvidence';
 
 /**
@@ -46,7 +46,7 @@ export type EvidenceContinuitySeverity = 'ERROR' | 'WARNING' | 'INFO';
 /**
  * Issue codes for evidence continuity validation.
  *
- * All 11 codes from the specification:
+ * All 12 codes from the specification:
  * 1. DUPLICATE_OCCURRENCE_ID: Multiple evidence records share the same occurrence id
  * 2. UNRESOLVED_SEMANTIC_IDENTITY: Evidence has no resolvable semantic identity (empty/whitespace/sentinel identityKey)
  * 3. MISSING_REQUIRED_REFERENCE: C11 references a required evidence ID that is not present in canonical evidence
@@ -58,6 +58,7 @@ export type EvidenceContinuitySeverity = 'ERROR' | 'WARNING' | 'INFO';
  * 9. DUPLICATE_C11_REFERENCE: Same evidence ID appears multiple times in requiredC11EvidenceIds
  * 10. ORPHANED_EVIDENCE: Evidence is produced but not referenced by C11 (informational)
  * 11. IDENTITY_KEY_COLLISION: Different semantic facts share the same identityKey (semantic conflict)
+ * 12. CONTRADICTORY_DASHA_EVIDENCE: Dasha evidence with contradictory direction/effect combinations (C9 contract violation)
  */
 export type EvidenceContinuityIssueCode =
   | 'DUPLICATE_OCCURRENCE_ID'
@@ -70,7 +71,8 @@ export type EvidenceContinuityIssueCode =
   | 'MIXED_POLARITY_WITHOUT_IDENTITY_KEY'
   | 'DUPLICATE_C11_REFERENCE'
   | 'ORPHANED_EVIDENCE'
-  | 'IDENTITY_KEY_COLLISION';
+  | 'IDENTITY_KEY_COLLISION'
+  | 'CONTRADICTORY_DASHA_EVIDENCE';
 
 /**
  * Individual evidence continuity issue.
@@ -137,6 +139,12 @@ export interface EvidenceContinuityValidationInput {
    * If not provided, all missing source references remain WARNING (backward compatible).
    */
   readonly upstreamSourceIds?: readonly string[];
+  /**
+   * Contradictory evidence diagnostics from the canonical mapper.
+   * These represent Dasha evidence that cannot be mapped due to contradictory
+   * direction/effect combinations (C9 contract violation).
+   */
+  readonly contradictoryEvidence?: readonly ContradictoryEvidenceDiagnostic[];
 }
 
 /**
@@ -160,7 +168,7 @@ export interface EvidenceContinuityValidationInput {
 export function validateEvidenceContinuity(
   input: EvidenceContinuityValidationInput
 ): EvidenceContinuityReport {
-  const { evidence, requiredC11EvidenceIds, c11Validation } = input;
+  const { evidence, requiredC11EvidenceIds, c11Validation, contradictoryEvidence } = input;
   const issues: EvidenceContinuityIssue[] = [];
 
   // Test-only hook: force invalid result for acceptance-boundary testing
@@ -179,6 +187,19 @@ export function validateEvidenceContinuity(
       duplicateCountingRiskCount: 0,
       valid: false
     });
+  }
+
+  // Emit ERROR issues for contradictory Dasha evidence (C9 contract violation)
+  if (contradictoryEvidence && contradictoryEvidence.length > 0) {
+    for (const diagnostic of contradictoryEvidence) {
+      issues.push({
+        code: 'CONTRADICTORY_DASHA_EVIDENCE',
+        severity: 'ERROR',
+        identityKey: diagnostic.identityKey,
+        evidenceId: diagnostic.evidenceId,
+        message: `Contradictory Dasha evidence: ${diagnostic.reason} (identityKey: ${diagnostic.identityKey}, evidenceId: ${diagnostic.evidenceId})`
+      });
+    }
   }
 
   // Build occurrence index (id)

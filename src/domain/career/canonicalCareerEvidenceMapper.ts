@@ -427,11 +427,6 @@ export function deduplicateCanonicalEvidence(
 }
 
 /**
- * Exposed types for testing and external use.
- */
-export type { DashaEvidenceMappabilityResult, ContradictoryEvidenceDiagnostic };
-
-/**
  * Maps natal evidence (C4–C7) to DomainEvidence.
  *
  * Phase: NATAL_PROMISE
@@ -1519,25 +1514,6 @@ export function checkDashaEvidenceMappable(
   }
 
   return { kind: 'MAPPABLE' };
-}
-
-/**
- * Legacy boolean predicate for backward compatibility.
- *
- * Returns true if evidence is mappable (either MAPPABLE or CONTRADICTORY).
- * This allows existing code to continue using the boolean check while
- * new code can use checkDashaEvidenceMappable for detailed diagnostics.
- *
- * NOTE: This predicate returns false for both UNAVAILABLE and CONTRADICTORY.
- * Consumers that need to distinguish between the two should use checkDashaEvidenceMappable.
- *
- * @deprecated Use checkDashaEvidenceMappable for new code to get detailed diagnostics.
- */
-export function isDashaEvidenceMappable(
-  evidence: CareerDashaCanonicalEvidence
-): boolean {
-  const result = checkDashaEvidenceMappable(evidence);
-  return result.kind === 'MAPPABLE';
 }
 
 /**

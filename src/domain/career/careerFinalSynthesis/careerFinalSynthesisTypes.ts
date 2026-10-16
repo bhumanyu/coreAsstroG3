@@ -26,6 +26,8 @@ import type {
 
 import type { CareerManifestationMode } from '../careerTypes';
 
+import type { ContradictoryEvidenceDiagnostic } from '../canonicalCareerEvidenceMapper';
+
 /**
  * C8 → C11 Direction Mapping
  *
@@ -341,5 +343,5 @@ export interface CareerFinalSynthesisResult {
    *
    * Empty if no contradictory evidence detected.
    */
-  readonly contradictoryDashaEvidence: readonly string[];
+  readonly contradictoryDashaEvidence: readonly ContradictoryEvidenceDiagnostic[];
 }

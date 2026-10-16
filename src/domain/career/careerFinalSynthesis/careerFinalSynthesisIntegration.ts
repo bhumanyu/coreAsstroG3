@@ -36,7 +36,8 @@ import type {
 import {
   checkDashaEvidenceMappable,
   isNatalStrengthMappable,
-  isD10StrengthMappable
+  isD10StrengthMappable,
+  type ContradictoryEvidenceDiagnostic
 } from '../canonicalCareerEvidenceMapper';
 
 import type {
@@ -283,12 +284,13 @@ function collectNatalRuleIds(
  * - For non-MIXED direction: polarity and provenance effect must not contradict
  *
  * Returns both evidence IDs and contradictory evidence diagnostics for C9 contract enforcement.
+ * Contradictory evidence diagnostics include identityKey, evidenceId, and reason from checkDashaEvidenceMappable.
  */
 function collectDashaEvidenceIds(
   dasha: CareerDashaCanonicalAnalysis
-): { readonly evidenceIds: readonly string[]; readonly contradictoryEvidence: readonly string[] } {
+): { readonly evidenceIds: readonly string[]; readonly contradictoryEvidence: readonly ContradictoryEvidenceDiagnostic[] } {
   const allIds: string[] = [];
-  const contradictoryEvidence: string[] = [];
+  const contradictoryEvidence: ContradictoryEvidenceDiagnostic[] = [];
 
   for (const e of dasha.evidence) {
     const mappability = checkDashaEvidenceMappable(e);
@@ -296,15 +298,19 @@ function collectDashaEvidenceIds(
     if (mappability.kind === 'MAPPABLE') {
       allIds.push(e.identityKey);
     } else if (mappability.kind === 'CONTRADICTORY') {
-      // Contradictory evidence - record for diagnostic, do not add to evidenceIds
-      contradictoryEvidence.push(e.identityKey);
+      // Contradictory evidence - record full diagnostic (identityKey, evidenceId, reason)
+      contradictoryEvidence.push({
+        identityKey: e.identityKey,
+        evidenceId: e.id,
+        reason: mappability.reason
+      });
     }
     // UNAVAILABLE evidence - silently filter (do not add to evidenceIds or diagnostics)
   }
 
   return {
     evidenceIds: Object.freeze(allIds.sort((a, b) => a.localeCompare(b))),
-    contradictoryEvidence: Object.freeze(contradictoryEvidence.sort((a, b) => a.localeCompare(b)))
+    contradictoryEvidence: Object.freeze(contradictoryEvidence.sort((a, b) => a.identityKey.localeCompare(b.identityKey)))
   };
 }
 
