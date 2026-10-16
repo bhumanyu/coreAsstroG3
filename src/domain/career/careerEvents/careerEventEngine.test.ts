@@ -523,6 +523,10 @@ describe('CareerEventEngine', () => {
     });
 
     it('does NOT generate event when opportunity evidenceIds and natalRootIds are disjoint', () => {
+      // P2-11G G21: Fail-closed negative fixture
+      // Validates that when a trajectory opportunity's evidenceIds do not overlap with
+      // activating Dasha period's natalRootIds, no CAREER_OPPORTUNITY_WINDOW event is produced.
+      // This is a fail-closed test: missing overlap must NOT fabricate events.
       const trajectory = createTrajectoryFixture({
         opportunities: [createOpportunity({ evidenceIds: ['evidence-1'] })]
       });
@@ -530,6 +534,29 @@ describe('CareerEventEngine', () => {
       const dasha = createDashaFixture({
         md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT' }),
         evidence: [createDashaEvidence('MD', { provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-2'] } })]
+      });
+
+      const input = createEventsInput(trajectory, dasha);
+      const result = buildCareerEvents(input);
+
+      expect(result.events).toHaveLength(0);
+    });
+
+    it('does NOT generate event when planet names match but natalRootIds do not overlap', () => {
+      // P2-11G G21: Fail-closed negative fixture (planet name matching without identity overlap)
+      // Validates that even when the Dasha period planet matches an opportunity's planet name,
+      // if the natalRootIds do not overlap with the opportunity's evidenceIds, no event is produced.
+      // The linkage rule requires evidence-identity overlap, not just planet name matching.
+      const trajectory = createTrajectoryFixture({
+        opportunities: [createOpportunity({ evidenceIds: ['evidence-1'] })]
+      });
+
+      const dasha = createDashaFixture({
+        md: createPeriod('MD', { effect: 'ACTIVATES', direction: 'SUPPORT', planet: Planet.SUN }),
+        evidence: [createDashaEvidence('MD', {
+          planet: Planet.SUN,
+          provenance: { source: 'C9_DASHA', activationLevel: 'MD', natalRootIds: ['evidence-2'] }
+        })]
       });
 
       const input = createEventsInput(trajectory, dasha);

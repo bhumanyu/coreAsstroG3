@@ -473,6 +473,29 @@ export const G20_CW01_COMPATIBILITY: GoldenScenarioMetadata = Object.freeze({
 });
 
 /**
+ * G21: Fail-closed negative fixture - non-overlapping evidenceIds/natalRootIds
+ *
+ * Validates that when a trajectory opportunity's evidenceIds do not overlap with
+ * activating Dasha period's natalRootIds, no CAREER_OPPORTUNITY_WINDOW event is produced.
+ * This is a fail-closed test: missing overlap must NOT fabricate events.
+ *
+ * This scenario is tested at the buildCareerEvents unit level with the real production
+ * input shape, as it cannot be reliably produced through interpretCareerV2 inputs alone.
+ */
+export const G21_FAIL_CLOSED_NON_OVERLAP: GoldenScenarioMetadata = Object.freeze({
+  scenarioId: 'G21',
+  description: 'Fail-closed: Non-overlapping evidenceIds/natalRootIds produces no opportunity events',
+  asOf: '2026-01-01T00:00:00.000Z',
+  temporalContext: 'Standard canonical chart - tested at unit level',
+  expectedC11Fields: Object.freeze({
+    // This scenario is tested at buildCareerEvents unit level
+    // See careerEventEngine.test.ts for the actual test implementation
+  }),
+  blockedFields: Object.freeze([]),
+  notes: 'Fail-closed test: Validated at buildCareerEvents unit level with real production input shape. See careerEventEngine.test.ts for implementation.'
+});
+
+/**
  * Complete fixture catalogue
  */
 export const GOLDEN_SCENARIOS: readonly GoldenScenarioMetadata[] = Object.freeze([
@@ -495,7 +518,8 @@ export const GOLDEN_SCENARIOS: readonly GoldenScenarioMetadata[] = Object.freeze
   G17_MALFORMED_TEMPORAL,
   G18_TRAJECTORY_EVENTS,
   G19_ORCHESTRATOR_FOUNDATION,
-  G20_CW01_COMPATIBILITY
+  G20_CW01_COMPATIBILITY,
+  G21_FAIL_CLOSED_NON_OVERLAP
 ]);
 
 /**
