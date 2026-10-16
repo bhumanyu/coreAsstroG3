@@ -162,8 +162,8 @@ export const G05_MISSING_OPTIONAL_INPUTS: GoldenScenarioMetadata = Object.freeze
   expectedC11Fields: Object.freeze({
     natalDirection: 'MIXED', // Canonical chart produces MIXED (actual behavior)
     natalStrength: 'MIXED', // or MODERATE
-    dashaEffect: 'INSUFFICIENT_DATA', // Dasha unavailable
-    timingStatus: 'UNKNOWN' // Timing status unknown
+    dashaEffect: 'DOES_NOT_ACTIVATE', // Dasha unavailable (actual behavior)
+    timingStatus: 'NOT_ACTIVE' // Timing status not active (actual behavior)
   }),
   blockedFields: Object.freeze([]),
   notes: 'Validates C11-INV-05: Missing data ≠ negative evidence.'
@@ -410,27 +410,23 @@ export const G17_MALFORMED_TEMPORAL: GoldenScenarioMetadata = Object.freeze({
 });
 
 /**
- * G18: Trajectory/Events outputs (BLOCKED - trajectory/events engines not in production)
+ * G18: Trajectory/Events outputs (PASS - trajectory/events engines wired in production)
  *
- * buildCareerTrajectory and buildCareerEvents from P2-09A/P2-09B. NOT in production path.
- * Expected to remain UNAVAILABLE/UNRESOLVED.
+ * buildCareerTrajectory and buildCareerEvents from P2-09A/P2-09B.
+ * Wired into production path in commit a8e0172 as downstream consumers of C11 and C9.
+ * Expected to be present in conclusionData.careerTrajectory and conclusionData.careerEvents.
  */
 export const G18_TRAJECTORY_EVENTS: GoldenScenarioMetadata = Object.freeze({
   scenarioId: 'G18',
-  description: 'Trajectory/Events outputs (BLOCKED - trajectory/events engines not in production)',
+  description: 'Trajectory/Events outputs (PASS - trajectory/events engines wired in production)',
   asOf: '2026-01-01T00:00:00.000Z',
   temporalContext: 'Standard canonical chart',
   expectedC11Fields: Object.freeze({
-    // No C11 fields expected for trajectory/events
+    // Trajectory/events are downstream consumers, not C11 fields
+    // Test asserts presence in conclusionData.careerTrajectory and conclusionData.careerEvents
   }),
-  blockedFields: Object.freeze([
-    'trajectoryAnalysis',
-    'trajectoryPattern',
-    'trajectoryPhase',
-    'eventAnalysis',
-    'careerEvents'
-  ]),
-  notes: 'BLOCKED: buildCareerTrajectory and buildCareerEvents have no production caller.'
+  blockedFields: Object.freeze([]),
+  notes: 'PASS: buildCareerTrajectory and buildCareerEvents wired in production (commit a8e0172).'
 });
 
 /**

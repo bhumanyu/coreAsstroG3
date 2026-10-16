@@ -813,7 +813,7 @@ export function interpretCareerV2(
   }
 
   /**
-   * P2-11G: Production Wiring of Trajectory and Events Engines
+   * P2-11G: Production Wiring of Trajectory and Events Engines (commit a8e0172)
    *
    * After Gate D continuity validation, call the standalone trajectory and events engines.
    * These are downstream consumers of C11 and C9 outputs and do not feed back into the conclusion.

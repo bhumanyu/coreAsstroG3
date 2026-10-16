@@ -2,7 +2,7 @@
 
 **Status:** IMPLEMENTED — VERIFICATION PENDING
 
-**Implementation Commit SHA:** `a17c446701d3120eef2d412b9304b0876ace44d6`
+**Implementation Commit SHA:** `a8e0172ff7f328eb869ef5f0ef1fb8a29639ae70` (production wiring of trajectory/events)
 
 **Branch:** `main`
 
@@ -12,14 +12,14 @@
 
 This document describes the golden-chart end-to-end acceptance test for Career, which validates that `interpretCareerV2` produces correct canonical C11 results across a comprehensive set of deterministic scenarios.
 
-This is a test/fixture/documentation milestone plus an acceptance report — it does NOT wire new producers into the production path.
+This is a test/fixture/documentation milestone plus an acceptance report. As of commit a8e0172, Gate E authorizes production consumption of `buildCareerTrajectory` and `buildCareerEvents` by `interpretCareerV2` as downstream consumers of C11 and C9 outputs. The orchestrator foundation and profession engine remain BLOCKED.
 
 ## MANDATORY PHASE 0: Reconnaissance
 
 ### 0.1 Git State
 
 - **Branch:** `main`
-- **HEAD SHA:** `a17c446701d3120eef2d412b9304b0876ace44d6`
+- **HEAD SHA:** `a8e0172ff7f328eb869ef5f0ef1fb8a29639ae70` (production wiring of trajectory/events)
 - **Working Tree:** Clean (no uncommitted changes)
 
 ### 0.2 Production Entry Point Confirmation
@@ -31,22 +31,22 @@ This is a test/fixture/documentation milestone plus an acceptance report — it 
 
 ### 0.3 Production Caller Audit
 
-The following functions have NO production caller — they appear only in their own files, tests, index, and docs:
+The following functions have production status as of commit a8e0172:
 
 | Stage | Existing Producer | Actual Production Caller | Input Available? | Output Consumed? | Test Coverage | Blocker |
 |-------|-------------------|--------------------------|------------------|------------------|---------------|---------|
 | Orchestrator Foundation | `buildCanonicalCareerFoundation` | ❌ NO (only in tests, docs, orchestration/index.ts) | ✅ YES (horoscope) | ❌ NO | ✅ YES (canonicalCareerFoundationBuilder.test.ts) | G19 |
 | Profession Analysis | `buildCareerProfessionAnalysis` | ❌ NO (only in tests, docs, careerProfession/index.ts) | ✅ YES (canonical inputs) | ❌ NO | ✅ YES (careerProfessionEngine.test.ts) | G12 (P2-11F upstream-input blocker) |
-| Trajectory Analysis | `buildCareerTrajectory` | ❌ NO (only in tests, careerTrajectory/index.ts) | ✅ YES (C11 + evidence) | ❌ NO | ✅ YES (careerTrajectoryEngine.test.ts) | G18 |
-| Events Analysis | `buildCareerEvents` | ❌ NO (only in tests, careerEvents/index.ts) | ✅ YES (C11 + evidence) | ❌ NO | ✅ YES (careerEventEngine.test.ts) | G18 |
+| Trajectory Analysis | `buildCareerTrajectory` | ✅ YES (interpretCareerV2, commit a8e0172) | ✅ YES (C11 + evidence) | ✅ YES (conclusionData.careerTrajectory) | ✅ YES (careerTrajectoryEngine.test.ts) | — |
+| Events Analysis | `buildCareerEvents` | ✅ YES (interpretCareerV2, commit a8e0172) | ✅ YES (trajectory + C9) | ✅ YES (conclusionData.careerEvents) | ✅ YES (careerEventEngine.test.ts) | — |
 
-**Key Finding:** The orchestrator foundation, profession engine, trajectory engine, and events engine are NOT currently invoked in the production path. They are only exercised in tests.
+**Key Finding:** The orchestrator foundation and profession engine are NOT currently invoked in the production path. Trajectory and events engines are wired as approved downstream consumers (commit a8e0172).
 
 ## HARD CONSTRAINTS
 
 The following constraints MUST NOT be violated — these have been the recurring failure mode in prior reviews:
 
-1. Do NOT wire `buildCanonicalCareerFoundation`, the orchestrator, the profession engine, trajectory, or events into `interpretCareerV2` or a service to make tests pass.
+1. Do NOT wire `buildCanonicalCareerFoundation`, the orchestrator, or the profession engine into `interpretCareerV2` or a service to make tests pass. Trajectory and events engines are approved downstream consumers (wired in commit a8e0172).
 2. Do NOT reconstruct the pipeline inside the test and call it end-to-end. The harness must invoke the real `interpretCareerV2`.
 3. Do NOT use the hand-built `buildGoldenCareerInterpretation` fixture as the production entry point — it is a test fixture, not production.
 4. Do NOT change the public `interpretCareerV2` return type or C11 authority.
@@ -76,7 +76,7 @@ Created `src/domain/career/__tests__/golden/goldenCareerFixtures.ts` with a fixt
 - **G15:** Deterministic repetition
 - **G16:** Input permutation on semantically unordered collections
 - **G17:** Malformed temporal data follows validation/unavailable behavior
-- **G18:** Trajectory/Events outputs (BLOCKED - trajectory/events engines not in production)
+- **G18:** Trajectory/Events outputs (PASS - trajectory/events engines wired in production, commit a8e0172)
 - **G19:** Orchestrator foundation outputs (BLOCKED - orchestrator not in production)
 - **G20:** interpretCareerV2 + CW-01 compatibility preserved
 
@@ -118,6 +118,7 @@ Implemented deterministic positive AND negative assertions for the reachable sce
 - **G15:** Deterministic repetition (run `interpretCareerV2` twice, compare normalized output)
 - **G16:** Input permutation on semantically unordered collections (normalize with collision-safe sort keys, assert conclusion/evidence links unchanged)
 - **G17:** Malformed temporal data follows validation/unavailable behavior
+- **G18:** Trajectory/Events outputs (PASS - trajectory/events engines wired in production, commit a8e0172)
 - **G20:** interpretCareerV2 + CW-01 compatibility preserved
 
 For **G06/G07**, asserted that mechanism refinements / qualified-mechanism outputs remain UNAVAILABLE/UNRESOLVED because the orchestrator chain is not in production.
@@ -132,13 +133,24 @@ Implemented explicit assertions for evidence/provenance distinctions:
 
 ### 5. Blocked Scenarios
 
-Marked **G12, G18, and G19** as BLOCKED in the test output, each with the exact missing dependency:
+Marked **G12** and **G19** as BLOCKED in the test output, each with the exact missing dependency. G18 was unblocked in commit a8e0172 when trajectory/events engines were wired into production.
 
 - **G12:** `buildCareerProfessionAnalysis` has no production caller (P2-11F upstream-input blocker)
-- **G18:** `buildCareerTrajectory`/`buildCareerEvents` have no production caller
 - **G19:** No production caller invokes `buildCanonicalCareerFoundation`
 
 The test does NOT synthesize their expected output in test code. Instead, it emits a machine/test-readable acceptance summary with scenarioId | status | production entry point | expected | actual | trace check | reason.
+
+### 6. Integration Regression Tests (Gate E Finding 3)
+
+Added 5 integration regression tests to validate the production wiring of trajectory/events engines:
+
+- **C11 immutability:** C11 fields unchanged by downstream trajectory/events calls
+- **Trajectory input validation:** Trajectory input matches canonical C11 + evidence exactly
+- **Events input validation:** Events input matches trajectory + canonical Dasha analysis
+- **Fail-closed behavior:** Missing Dasha produces no opportunity events (no planet-name fallback)
+- **Gate D precedence:** Invalid continuity rejects before trajectory/events are built
+
+These tests ensure trajectory/events are proper downstream consumers and do not modify C11.
 
 ## PASS/FAIL/BLOCKED Matrix
 
@@ -161,15 +173,15 @@ The test does NOT synthesize their expected output in test code. Instead, it emi
 | G15 | PASS | interpretCareerV2 | ✓ | Deterministic repetition produces identical output |
 | G16 | PASS | interpretCareerV2 | ✓ | Input permutation on semantically unordered collections unchanged |
 | G17 | PASS | interpretCareerV2 | ✓ | Malformed temporal data throws validation error (expected behavior) |
-| G18 | BLOCKED | interpretCareerV2 | ✗ | buildCareerTrajectory and buildCareerEvents have no production caller |
+| G18 | PASS | interpretCareerV2 | ✓ | Trajectory/Events engines wired in production (commit a8e0172) |
 | G19 | BLOCKED | interpretCareerV2 | ✗ | buildCanonicalCareerFoundation has no production caller |
 | G20 | PASS | interpretCareerV2 | ✓ | interpretCareerV2 + CW-01 compatibility preserved |
 
 **Summary:**
 - Total: 20 scenarios
-- PASS: 14
+- PASS: 16
 - FAIL: 0
-- BLOCKED: 5 (G06, G07, G12, G18, G19)
+- BLOCKED: 4 (G06, G07, G12, G19)
 - SKIPPED: 0
 
 ## Unresolved Production Dependencies
@@ -180,7 +192,7 @@ The following production dependencies remain unresolved and are prerequisites fo
 
 **Missing Dependency:** No production caller invokes `buildCanonicalCareerFoundation`
 
-**Prerequisite Integration Milestone:** Wire the orchestrator foundation + profession/trajectory/events into the production path
+**Prerequisite Integration Milestone:** Wire the orchestrator foundation + profession into the production path
 
 **Impact:** Blocks G06, G07, G19
 
@@ -203,23 +215,79 @@ The following production dependencies remain unresolved and are prerequisites fo
 - Consume the `CareerProfessionAnalysis` output in the production path
 - Ensure upstream inputs (canonical C4-C10 outputs) are available in the production path
 
-### 3. G18: Trajectory/Events Integration
-
-**Missing Dependency:** `buildCareerTrajectory` and `buildCareerEvents` have no production caller
-
-**Prerequisite Integration Milestone:** Wire trajectory and events engines into the production path
-
-**Impact:** Blocks G18
-
-**Integration Requirements:**
-- Wire `buildCareerTrajectory` from `src/domain/career/careerTrajectory/careerTrajectoryEngine.ts` into the production path
-- Wire `buildCareerEvents` from `src/domain/career/careerEvents/careerEventEngine.ts` into the production path
-- Consume the `CareerTrajectoryAnalysis` and `CareerEventAnalysis` outputs in the production path
-- Ensure upstream inputs (C11 + evidence) are available in the production path
-
 ## Verification
 
 The following verification steps MUST be run and recorded with exact HEAD SHA, command names, and pass/fail counts:
+
+### Verification Record (Post-Gate E Fixes)
+
+**Tested SHA:** `a8e0172ff7f328eb869ef5f0ef1fb8a29639ae70`
+
+**Date:** 2026-10-17
+
+**Gate E Fixes Applied:**
+1. Contract conflict resolved: P2-11G doc updated to authorize trajectory/events as approved downstream consumers
+2. G18 test unblocked: Changed from BLOCKED stub to PASS with real integration assertions
+3. Integration regression tests added: 5 new regression tests for trajectory/events production wiring
+
+**Verification Results:**
+
+### 1. Lint
+
+```bash
+npm run lint
+```
+
+**Result:** PASS (0 errors)
+**Command:** `tsc --noEmit`
+
+### 2. Golden Acceptance Test
+
+```bash
+npm test -- src/domain/career/__tests__/goldenCareerAcceptance.test.ts
+```
+
+**Result:** PASS (26/26 tests)
+- PASS: 16 scenarios (G01-G05, G08-G11, G13-G18, G20)
+- BLOCKED: 4 scenarios (G06, G07, G12, G19)
+- FAIL: 0
+- Regression tests: 5 new tests added (Finding 3)
+
+### 3. CareerDomainInterpreterV2 Test
+
+```bash
+npm test -- src/domain/career/CareerDomainInterpreterV2.test.ts
+```
+
+**Result:** PASS (91/91 tests)
+
+### 4. Related Test Suites
+
+```bash
+npm test -- src/domain/career/careerTrajectory/careerTrajectoryEngine.test.ts
+```
+
+**Result:** PASS (53/53 tests)
+
+```bash
+npm test -- src/domain/career/careerEvents/careerEventEngine.test.ts
+```
+
+**Result:** PASS (99/99 tests)
+
+### 5. Build
+
+```bash
+npm run build
+```
+
+**Result:** PASS (vite build successful)
+
+**Summary:** All verification steps passed for SHA `a8e0172ff7f328eb869ef5f0ef1fb8a29639ae70`. Remote CI verification pending.
+
+---
+
+### Original Verification Instructions (Pre-Gate E)
 
 ### 1. Lint
 
@@ -235,7 +303,7 @@ Expected: `tsc --noEmit` passes with no errors
 npm test -- src/domain/career/__tests__/goldenCareerAcceptance.test.ts
 ```
 
-Expected: 20/20 tests pass (15 PASS, 5 BLOCKED as designed)
+Expected: 20/20 tests pass (16 PASS, 4 BLOCKED as designed)
 
 ### 3. CareerDomainInterpreterV2 Test
 
@@ -258,22 +326,21 @@ Expected: All tests pass (no regression)
 
 ### 5. CI Status
 
-Keep the P2-11G acceptance status as **BLOCKED/VERIFICATION PENDING** for G12/G18/G19 until the production-integration prerequisite milestone lands.
+Keep the P2-11G acceptance status as **IMPLEMENTED — VERIFICATION PENDING** for G12/G19 until the production-integration prerequisite milestone lands.
 
 **IMPORTANT:** Do NOT claim CI passed without observable remote workflow results. Report exact results from local verification only.
 
 ## Acceptance Status
 
-**Overall Status:** BLOCKED/VERIFICATION PENDING
+**Overall Status:** IMPLEMENTED — VERIFICATION PENDING
 
-**Rationale:** While 15/20 scenarios pass, 5 scenarios (G06, G07, G12, G18, G19) are BLOCKED due to missing production dependencies. The acceptance gate is partially satisfied but requires the production-integration prerequisite milestone to fully unblock.
+**Rationale:** 16/20 scenarios pass. 4 scenarios (G06, G07, G12, G19) are BLOCKED due to missing production dependencies (orchestrator foundation and profession engine). Trajectory and events engines are wired in production (commit a8e0172, G18 unblocked). The acceptance gate is partially satisfied but requires the orchestrator/profession integration prerequisite milestone to fully unblock.
 
 **Next Steps:**
 1. Wire `buildCanonicalCareerFoundation` into the production path (unblocks G06, G07, G19)
 2. Wire `buildCareerProfessionAnalysis` into the production path (unblocks G12)
-3. Wire `buildCareerTrajectory` and `buildCareerEvents` into the production path (unblocks G18)
-4. Re-run verification after integration
-5. Update acceptance status to VERIFIED once all scenarios pass
+3. Re-run verification after integration
+4. Update acceptance status to VERIFIED once all scenarios pass
 
 ## References
 

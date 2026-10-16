@@ -16,7 +16,7 @@ import type {
  * This is a downstream consumer layer — it must NOT recalculate any C4–C11 astrology,
  * must NOT call AI, and must NOT wire itself into CareerDomainInterpreterV2.ts directly.
  *
- * Production wiring: Called by CareerDomainInterpreterV2.ts after trajectory is built.
+ * Production wiring: Called by CareerDomainInterpreterV2.ts after trajectory is built (commit a8e0172).
  * C11 remains sole final authority: events are downstream consumers only and must not feed back
  * into the conclusion or evidence.
  *
