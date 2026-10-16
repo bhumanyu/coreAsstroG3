@@ -3451,11 +3451,13 @@ describe('CareerDomainInterpreterV2', () => {
       expect(contradictoryIssue?.message).toContain('SUPPORTING polarity with contradictory effect');
     });
 
-    it('end-to-end: real C9 producer emits contradictory evidence, mapper surfaces diagnostic, interpretCareerV2 throws', async () => {
+    it('mapper surfaces contradictory C9 evidence, interpretCareerV2 throws', async () => {
       // Finding 4: End-to-end test without continuityValidator injection
       // Mocks buildCareerDashaAnalysis to return contradictory C9 evidence,
       // then verifies interpretCareerV2 throws with CONTRADICTORY_DASHA_EVIDENCE in the error.
       // This exercises the real diagnostic path from C9 → mapper → continuity validator → boundary.
+      // Note: The C9 producer is stubbed because real producers contractually filter
+      // contradictory evidence via checkDashaEvidenceMappable before emitting.
 
       // Build contradictory C9 evidence (SUPPORT direction with CHALLENGES effect)
       const contradictoryDashaEvidence: CareerDashaCanonicalEvidence = {
@@ -3517,14 +3519,16 @@ describe('CareerDomainInterpreterV2', () => {
       const dashaSpy = vi.spyOn(await import('./careerDasha/careerDashaIntegration'), 'buildCareerDashaAnalysis')
         .mockReturnValue(contradictoryDashaAnalysis);
 
-      // interpretCareerV2 should throw with CONTRADICTORY_DASHA_EVIDENCE in the error
-      // Note: We do NOT inject continuityValidator - we use the real validator
-      expect(() => interpretCareerV2(horoscope, makeDomainOptions())).toThrow(
-        /CONTRADICTORY_DASHA_EVIDENCE/
-      );
-
-      // Restore the original implementation
-      dashaSpy.mockRestore();
+      try {
+        // interpretCareerV2 should throw with CONTRADICTORY_DASHA_EVIDENCE in the error
+        // Note: We do NOT inject continuityValidator - we use the real validator
+        expect(() => interpretCareerV2(horoscope, makeDomainOptions())).toThrow(
+          /CONTRADICTORY_DASHA_EVIDENCE/
+        );
+      } finally {
+        // Restore the original implementation even if the test fails
+        dashaSpy.mockRestore();
+      }
     });
   });
 });
