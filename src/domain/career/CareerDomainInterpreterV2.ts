@@ -143,6 +143,12 @@ import {
   validateEvidenceContinuity,
   type EvidenceContinuityReport
 } from './evidenceContinuity';
+import {
+  buildCareerTrajectory
+} from './careerTrajectory/careerTrajectoryEngine';
+import {
+  buildCareerEvents
+} from './careerEvents/careerEventEngine';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
@@ -637,8 +643,10 @@ export function interpretCareerV2(
     cw01Result.supportingSourceIds,
     cw01Result.challengingSourceIds,
     canonicalCareerFoundation,
-    c11ValidationStatus
-    // evidenceContinuityReport will be added after final C11 is built
+    c11ValidationStatus,
+    undefined, // evidenceContinuityReport will be added after final C11 is built
+    undefined, // careerTrajectory will be added after Gate D
+    undefined // careerEvents will be added after Gate D
   );
 
   const conclusion = createDomainConclusion({
@@ -803,6 +811,27 @@ export function interpretCareerV2(
       `[CareerDomainInterpreterV2] Evidence continuity validation FAILED: ${evidenceContinuityReport.issues.length} issues detected\n  ${errorMessages}`
     );
   }
+
+  /**
+   * P2-11G: Production Wiring of Trajectory and Events Engines
+   *
+   * After Gate D continuity validation, call the standalone trajectory and events engines.
+   * These are downstream consumers of C11 and C9 outputs and do not feed back into the conclusion.
+   *
+   * - buildCareerTrajectory: Consumes final C11 (canonicalC11Result) and canonical evidence (evidence)
+   * - buildCareerEvents: Consumes trajectory output and existing C9 Dasha analysis (canonicalDashaAnalysis)
+   *
+   * C11 remains sole final authority: trajectory/events are downstream consumers only.
+   */
+  const careerTrajectory = buildCareerTrajectory({
+    finalSynthesis: canonicalC11Result,
+    evidence: new Set(evidence)
+  });
+
+  const careerEvents = buildCareerEvents({
+    trajectory: careerTrajectory,
+    dasha: canonicalDashaAnalysis
+  });
 
   /**
    * P2-08D: Presentation/Compatibility Adapter
@@ -1035,7 +1064,9 @@ export function interpretCareerV2(
       careerFinalSynthesis: legacyCareerFinalSynthesis, // P2-08D: Legacy compatibility artifact (not authoritative)
       canonicalCareerFinalSynthesis: canonicalC11Result, // P2-08D: Canonical C11 result (authoritative)
       reasoningTraceGraph,
-      evidenceContinuityReport // Gate D: Evidence continuity validation report
+      evidenceContinuityReport, // Gate D: Evidence continuity validation report
+      careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
+      careerEvents // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility

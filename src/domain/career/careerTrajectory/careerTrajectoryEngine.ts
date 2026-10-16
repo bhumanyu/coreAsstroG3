@@ -21,9 +21,12 @@ import {
  * Deterministic downstream module that converts the authoritative C11 CareerFinalSynthesisResult
  * plus existing DomainEvidence into a long-term career trajectory classification.
  *
- * This is a standalone analysis layer — it must NOT recalculate any C4–C11 astrology,
- * must NOT wire itself into CareerDomainInterpreterV2.ts, and must NOT consume the deferred
- * canonicalCareerEvidenceMapper or legacy C4 evidence.
+ * This is a downstream consumer layer — it must NOT recalculate any C4–C11 astrology,
+ * must NOT call AI, and must NOT consume the deferred canonicalCareerEvidenceMapper or legacy C4 evidence.
+ *
+ * Production wiring: Called by CareerDomainInterpreterV2.ts after Gate D continuity validation.
+ * C11 remains sole final authority: trajectory is a downstream consumer only and must not feed back
+ * into the conclusion or evidence.
  */
 
 /**

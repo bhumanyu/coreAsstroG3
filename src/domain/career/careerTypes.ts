@@ -13,6 +13,8 @@ import type { CareerManifestationSynthesis } from './manifestation/careerManifes
 import type { CareerWealthFinalSynthesis } from '../careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { ReasoningTraceGraph } from '../careerWealth/reasoningTrace';
 import type { CanonicalCareerFoundation } from './orchestration/canonicalCareerContracts';
+import type { CareerTrajectoryAnalysis } from './careerTrajectory/careerTrajectoryTypes';
+import type { CareerEventsAnalysis } from './careerEvents/careerEventTypes';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -141,4 +143,14 @@ export interface CareerConclusionData {
    * Validates identity/provenance/reference/counting continuity from C4–C7 → foundation → C8 → C9 → C10 → C11.
    */
   readonly evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport;
+  /**
+   * P2-11G: Career trajectory analysis (downstream consumer of C11).
+   * Long-term trajectory classification derived from C11 final synthesis.
+   */
+  readonly careerTrajectory?: CareerTrajectoryAnalysis;
+  /**
+   * P2-11G: Career events analysis (downstream consumer of trajectory and C9).
+   * Event candidates derived from trajectory opportunities and Dasha activations.
+   */
+  readonly careerEvents?: CareerEventsAnalysis;
 }

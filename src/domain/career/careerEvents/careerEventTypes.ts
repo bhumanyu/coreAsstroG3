@@ -13,8 +13,12 @@ import type {
  * and C9 (CareerDashaCanonicalAnalysis) to produce evidence-traceable career event candidates
  * and source-backed timing windows.
  *
- * This is a standalone analysis layer — it must NOT recalculate any C4–C11 astrology,
- * must NOT wire itself into CareerDomainInterpreterV2.ts, and must NOT call AI.
+ * This is a downstream consumer layer — it must NOT recalculate any C4–C11 astrology,
+ * must NOT call AI, and must NOT wire itself into CareerDomainInterpreterV2.ts directly.
+ *
+ * Production wiring: Called by CareerDomainInterpreterV2.ts after trajectory is built.
+ * C11 remains sole final authority: events are downstream consumers only and must not feed back
+ * into the conclusion or evidence.
  *
  * EVT-01: Opportunity-window candidates require an existing qualified trajectory opportunity
  * AND an activating period. Dasha cannot manufacture an opportunity.

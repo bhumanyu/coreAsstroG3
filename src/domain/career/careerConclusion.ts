@@ -293,7 +293,9 @@ export function buildCareerConclusionData(
     readonly unreferenced: readonly string[];
     readonly diagnostic?: string;
   },
-  evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport
+  evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport,
+  careerTrajectory?: import('./careerTrajectory/careerTrajectoryTypes').CareerTrajectoryAnalysis,
+  careerEvents?: import('./careerEvents/careerEventTypes').CareerEventsAnalysis
 ): CareerConclusionData {
   const currentActivation = resolveCurrentActivation(timingActivations);
   const currentPressure = resolveCurrentPressure(transitTrigger, conflicts);
@@ -326,7 +328,9 @@ export function buildCareerConclusionData(
     challengingSourceIds: Object.freeze([...challengingSourceIds]),
     canonicalCareerFoundation,
     c11ValidationStatus,
-    evidenceContinuityReport
+    evidenceContinuityReport,
+    careerTrajectory,
+    careerEvents
   });
 }
 
