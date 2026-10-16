@@ -530,31 +530,17 @@ describe('validateEvidenceContinuity', () => {
     expect(mixedPolarityIssues[0].evidenceId).toBe('evidence-1');
   });
 
-  it('detects MISSING_RULE_PROVENANCE for D10 evidence without ruleId', () => {
-    const evidence = [
-      createMockEvidence({
-        id: 'evidence-1',
-        identityKey: 'identity-1',
-        source: 'D10',
-        ruleId: undefined
-      })
-    ];
-
-    const input: EvidenceContinuityValidationInput = {
-      evidence,
-      requiredC11EvidenceIds: ['identity-1'],
-      c11Validation: createMockC11Validation({ valid: true })
-    };
-
-    const result = validateEvidenceContinuity(input);
-
-    // MISSING_RULE_PROVENANCE is WARNING severity, so it doesn't invalidate the result
-    expect(result.valid).toBe(true);
-    const missingRuleIssues = result.issues.filter(i => i.code === 'MISSING_RULE_PROVENANCE');
-    expect(missingRuleIssues.length).toBe(1);
-    expect(missingRuleIssues[0].evidenceId).toBe('evidence-1');
-    expect(missingRuleIssues[0].severity).toBe('WARNING');
-  });
+  /**
+   * NOTE: The test 'detects MISSING_RULE_PROVENANCE for D10 evidence without ruleId' was removed
+   * because the producer contract changed: D10 resolution-source records (which have no ruleId)
+   * are now properly distinguished via the evidenceKind field and excluded from evidenceIds.
+   *
+   * The remaining D10 occurrence records always have ruleId (per C10_D10 producer contract),
+   * so the MISSING_RULE_PROVENANCE check for D10 would never trigger in practice.
+   *
+   * The validator still emits MISSING_RULE_PROVENANCE for C4_STRUCTURAL_REASONING evidence without ruleId,
+   * which remains a valid check since C4 evidence should always have ruleId per the producer contract.
+   */
 
   it('Gate D: colon→underscore normalization is consistent on both sides', () => {
     // Test that the validator correctly handles source references that are in the upstream registry

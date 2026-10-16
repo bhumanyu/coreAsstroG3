@@ -931,7 +931,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
               // Strength-based classification (condition 1)
               if (strength === 'UNDETERMINED' || strength === 'VERY_WEAK' || strength === 'MIXED') {
                 expect(result.kind).toBe('UNAVAILABLE');
-                expect(result.reason).toBe('UNMAPPABLE_STRENGTH');
+                if (result.kind === 'UNAVAILABLE') {
+                  expect(result.reason).toBe('UNMAPPABLE_STRENGTH');
+                }
                 return;
               }
 
@@ -4489,6 +4491,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expressions: [],
       strongestExpressions: [],
       challengedExpressions: [],
+      conflicts: [],
       contradictoryDashaEvidence: [],
       evidenceIds: ['natal-semantic-1'],  // C11 references the semantic identityKey
       sourceIds: ['source-1'],
@@ -4597,6 +4600,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expressions: [],
       strongestExpressions: [],
       challengedExpressions: [],
+      conflicts: [],
       contradictoryDashaEvidence: [],
       evidenceIds: [],  // C11 does not reference natal-semantic-1
       sourceIds: [],
@@ -4654,8 +4658,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expressions: [],
       strongestExpressions: [],
       challengedExpressions: [],
+      conflicts: [],
       contradictoryDashaEvidence: [],
-      evidenceIds: [''],  // C11 references ID not produced by mapper
+      evidenceIds: ['external-evidence-id'],  // C11 references ID not produced by mapper
       sourceIds: [],
       ruleIds: [],
       evidenceTrace: {
@@ -4840,6 +4845,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
         evidenceIds: ['valid-semantic-3'],
         sourceIds: [],
@@ -4901,6 +4907,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
         evidenceIds: ['valid-semantic-4', UNRESOLVED_IDENTITY_SENTINEL], // Contains sentinel
         sourceIds: [],
@@ -4960,8 +4967,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        ['valid-semantic-5', ''], // Contains empty string
+        evidenceIds: ['valid-semantic-5', ''], // Contains empty string
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5018,8 +5026,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        ['valid-semantic-6', '   '], // Contains whitespace
+        evidenceIds: ['valid-semantic-6', '   '], // Contains whitespace
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5076,8 +5085,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        ['valid-semantic-7', '  __UNRESOLVED_IDENTITY__  '], // Contains whitespace-padded sentinel
+        evidenceIds: ['valid-semantic-7', '  __UNRESOLVED_IDENTITY__  '], // Contains whitespace-padded sentinel
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5137,8 +5147,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        evidenceIds: [''], // Top-level evidenceIds matches produced
+        evidenceIds: ['valid-semantic-8'], // Top-level evidenceIds matches produced
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5201,8 +5212,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        evidenceIds: [''], // References occurrence ID (wrong namespace)
+        evidenceIds: ['occurrence-id-123'], // References occurrence ID (wrong namespace)
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5306,8 +5318,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        evidenceIds: [''],
+        evidenceIds: ['natal-semantic-1'],
         sourceIds: ['source-1'],
         ruleIds: ['RULE_NATAL_1'],
         evidenceTrace: {
@@ -5707,8 +5720,9 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
+        conflicts: [],
         contradictoryDashaEvidence: [],
-        evidenceIds: [''],
+        evidenceIds: ['duplicate-identity'],
         sourceIds: ['source-1', 'source-2'],
         ruleIds: ['RULE_DUPLICATE'],
         evidenceTrace: {

@@ -1,5 +1,9 @@
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
+import type {
+  EvidenceContinuityValidationInput,
+  EvidenceContinuityReport
+} from '../career/evidenceContinuity';
 
 export type ReasoningLayer =
   | 'PRIMARY_PROMISE'
@@ -159,17 +163,5 @@ export interface DomainReasoningOptions {
    * The validator function accepts EvidenceContinuityValidationInput and returns EvidenceContinuityReport.
    * Defined in src/domain/career/evidenceContinuity.ts.
    */
-  readonly continuityValidator?: (input: {
-    readonly evidence: readonly any[];
-    readonly requiredC11EvidenceIds: readonly string[];
-    readonly c11Validation: any;
-    readonly upstreamSourceIds?: readonly string[];
-    readonly contradictoryEvidence?: readonly any[];
-  }) => {
-    readonly c11Validation: any;
-    readonly issues: readonly any[];
-    readonly provenanceIssueCount: number;
-    readonly duplicateCountingRiskCount: number;
-    readonly valid: boolean;
-  };
+  readonly continuityValidator?: (input: EvidenceContinuityValidationInput) => EvidenceContinuityReport;
 }
