@@ -3368,16 +3368,12 @@ describe('CareerDomainInterpreterV2', () => {
           natalDirection: 'NEUTRAL',
           natalStrength: 'UNDETERMINED',
           d10Effect: 'UNAVAILABLE',
-          d10Direction: 'NEUTRAL',
+          d10Direction: 'UNAVAILABLE',
           d10Strength: 'UNDETERMINED',
-          qualifiedDirection: 'NEUTRAL',
+          qualifiedDirection: 'UNAVAILABLE',
           qualifiedStrength: 'UNDETERMINED',
           natalPromisePreserved: false,
-          relationship: {
-            d10LordInNatalHouses: [],
-            natalLordInD10Houses: [],
-            statement: 'No relationship data'
-          },
+          relationship: 'UNAVAILABLE',
           evidence: [],
           conflicts: [],
           expressionQualifications: [],
@@ -3453,6 +3449,82 @@ describe('CareerDomainInterpreterV2', () => {
       expect(contradictoryIssue?.identityKey).toBe('test-contradictory-identity');
       expect(contradictoryIssue?.evidenceId).toBe('test-contradictory-evidence-id');
       expect(contradictoryIssue?.message).toContain('SUPPORTING polarity with contradictory effect');
+    });
+
+    it('end-to-end: real C9 producer emits contradictory evidence, mapper surfaces diagnostic, interpretCareerV2 throws', async () => {
+      // Finding 4: End-to-end test without continuityValidator injection
+      // Mocks buildCareerDashaAnalysis to return contradictory C9 evidence,
+      // then verifies interpretCareerV2 throws with CONTRADICTORY_DASHA_EVIDENCE in the error.
+      // This exercises the real diagnostic path from C9 → mapper → continuity validator → boundary.
+
+      // Build contradictory C9 evidence (SUPPORT direction with CHALLENGES effect)
+      const contradictoryDashaEvidence: CareerDashaCanonicalEvidence = {
+        identityKey: 'e2e-contradictory-identity',
+        id: 'e2e-contradictory-evidence-id',
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'CHALLENGES' as CareerDashaCanonicalEffect,
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        statement: 'End-to-end contradictory Dasha evidence',
+        sourceIds: ['dasha-source-1'],
+        provenance: {
+          source: 'C9_DASHA',
+          activationLevel: 'MD',
+          natalRootIds: ['natal-root-1']
+        }
+      };
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'CHALLENGES' as CareerDashaCanonicalEffect,
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const contradictoryDashaAnalysis: CareerDashaCanonicalAnalysis = Object.freeze({
+        overallEffect: 'CHALLENGES' as CareerDashaCanonicalEffect,
+        overallDirection: 'SUPPORT' as ReasoningDirection,
+        overallStrength: 'STRONG' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: Object.freeze({
+          level: 'AD',
+          role: 'MODIFIER',
+          effect: 'UNKNOWN' as CareerDashaCanonicalEffect,
+          direction: 'NEUTRAL' as ReasoningDirection,
+          strength: 'UNDETERMINED' as DomainStrength,
+          statement: 'Test AD period'
+        }),
+        pd: Object.freeze({
+          level: 'PD',
+          role: 'REFINEMENT',
+          effect: 'UNKNOWN' as CareerDashaCanonicalEffect,
+          direction: 'NEUTRAL' as ReasoningDirection,
+          strength: 'UNDETERMINED' as DomainStrength,
+          statement: 'Test PD period'
+        }),
+        evidence: Object.freeze([contradictoryDashaEvidence]),
+        rootEvidenceIds: Object.freeze(['natal-root-1']),
+        statement: 'Dasha with contradictory direction/effect'
+      });
+
+      // Spy on buildCareerDashaAnalysis to return contradictory evidence
+      const dashaSpy = vi.spyOn(await import('./careerDasha/careerDashaIntegration'), 'buildCareerDashaAnalysis')
+        .mockReturnValue(contradictoryDashaAnalysis);
+
+      // interpretCareerV2 should throw with CONTRADICTORY_DASHA_EVIDENCE in the error
+      // Note: We do NOT inject continuityValidator - we use the real validator
+      expect(() => interpretCareerV2(horoscope, makeDomainOptions())).toThrow(
+        /CONTRADICTORY_DASHA_EVIDENCE/
+      );
+
+      // Restore the original implementation
+      dashaSpy.mockRestore();
     });
   });
 });

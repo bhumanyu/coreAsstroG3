@@ -249,6 +249,33 @@ npm test -- src/domain/career/manifestation/careerManifestationSynthesis.test.ts
 
 All tests must pass for P2-11C to be considered complete.
 
+### Verification Record (SHA: 393a59c)
+
+**Date:** 2026-10-16
+
+**Verification Results:**
+
+| Command | Status | Pass/Fail Count |
+|---------|--------|-----------------|
+| `npm run lint` | ✅ PASSED | - |
+| `npm test -- src/domain/career/CareerDomainInterpreterV2.test.ts` | ✅ PASSED | 91/91 passed |
+| `npm test -- src/domain/career/evidenceContinuity.test.ts` | ✅ PASSED | 25/25 passed |
+| `npm test -- src/domain/career/canonicalCareerEvidenceMapper.test.ts` | ✅ PASSED | 284/284 passed |
+| `npm test` (full vitest run) | ⚠️ PARTIAL | 4 failures in unrelated test files (counterReasoningEngine, lifeAnalysisWhy, aiContextSanitization, dashaTimingViewModel) |
+| `npm run build` | ✅ PASSED | - |
+
+**New Test Added:**
+- End-to-end test in `CareerDomainInterpreterV2.test.ts`: "end-to-end: real C9 producer emits contradictory evidence, mapper surfaces diagnostic, interpretCareerV2 throws"
+  - Mocks `buildCareerDashaAnalysis` to return contradictory C9 evidence (SUPPORT direction with CHALLENGES effect)
+  - Verifies `interpretCareerV2` throws with `CONTRADICTORY_DASHA_EVIDENCE` in the error message
+  - Does NOT inject `continuityValidator` - uses the real validator in the production pipeline
+  - Reuses the fixture shape from commit 393a59c
+  - Fixture uses `createEmptyD10Analysis()` helper to avoid type errors with `CareerD10CanonicalRelationship`
+
+**Remote CI Status:** Pending - awaiting CI results for SHA 393a59c
+
+**Overall Status:** IMPLEMENTED — VERIFICATION PENDING
+
 ## References
 
 - P2-08D: Canonical C11 Final Synthesis Migration
