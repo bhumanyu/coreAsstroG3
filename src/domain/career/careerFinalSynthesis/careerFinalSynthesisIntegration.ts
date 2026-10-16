@@ -34,7 +34,7 @@ import type {
 } from '../careerDasha';
 
 import {
-  isDashaEvidenceMappable,
+  checkDashaEvidenceMappable,
   isNatalStrengthMappable,
   isD10StrengthMappable
 } from '../canonicalCareerEvidenceMapper';
@@ -275,26 +275,37 @@ function collectNatalRuleIds(
  * All collectors MUST emit the semantic identity field, NOT the occurrence ID.
  * This ensures C11 evidenceIds resolve against DomainEvidence.identityKey in the trajectory engine.
  *
- * GATE D FIX: Filter evidence through isDashaEvidenceMappable predicate before collecting identityKey.
+ * GATE D FIX: Filter evidence through checkDashaEvidenceMappable predicate before collecting identityKey.
  * This guarantees C11 only cites identityKeys the mapper actually emits, preventing dangling references.
  * The predicate encodes the exact conditions under which mapDashaEvidence emits a record:
  * - Strength must be mappable (not UNDETERMINED, VERY_WEAK, or MIXED)
  * - For MIXED direction: effect must be PARTIALLY_ACTIVATES
  * - For non-MIXED direction: polarity and provenance effect must not contradict
+ *
+ * Returns both evidence IDs and contradictory evidence diagnostics for C9 contract enforcement.
  */
 function collectDashaEvidenceIds(
   dasha: CareerDashaCanonicalAnalysis
-): readonly string[] {
+): { readonly evidenceIds: readonly string[]; readonly contradictoryEvidence: readonly string[] } {
   const allIds: string[] = [];
+  const contradictoryEvidence: string[] = [];
+
   for (const e of dasha.evidence) {
-    // Filter through the same predicate used by the mapper
-    if (isDashaEvidenceMappable(e)) {
+    const mappability = checkDashaEvidenceMappable(e);
+
+    if (mappability.kind === 'MAPPABLE') {
       allIds.push(e.identityKey);
+    } else if (mappability.kind === 'CONTRADICTORY') {
+      // Contradictory evidence - record for diagnostic, do not add to evidenceIds
+      contradictoryEvidence.push(e.identityKey);
     }
+    // UNAVAILABLE evidence - silently filter (do not add to evidenceIds or diagnostics)
   }
-  return Object.freeze(
-    allIds.sort((a, b) => a.localeCompare(b))
-  );
+
+  return {
+    evidenceIds: Object.freeze(allIds.sort((a, b) => a.localeCompare(b))),
+    contradictoryEvidence: Object.freeze(contradictoryEvidence.sort((a, b) => a.localeCompare(b)))
+  };
 }
 
 /**
@@ -605,7 +616,7 @@ export function buildCareerFinalAnalysis(
   const natalSourceIds = collectNatalSourceIds(natal);
   const natalRuleIds = collectNatalRuleIds(natal);
 
-  const dashaEvidenceIds = collectDashaEvidenceIds(dasha);
+  const { evidenceIds: dashaEvidenceIds, contradictoryEvidence: dashaContradictory } = collectDashaEvidenceIds(dasha);
   const dashaSourceIds = collectDashaSourceIds(dasha);
   const dashaRuleIds = collectDashaRuleIds(dasha);
 
@@ -651,6 +662,12 @@ export function buildCareerFinalAnalysis(
     ruleIds
   });
 
-  // Return result from canonical engine
-  return synthesizeCareerFinal(finalInput);
+  // Return result from canonical engine with contradictory evidence diagnostics
+  const result = synthesizeCareerFinal(finalInput);
+
+  // Add contradictory Dasha evidence diagnostics to the result
+  return Object.freeze({
+    ...result,
+    contradictoryDashaEvidence: dashaContradictory
+  });
 }

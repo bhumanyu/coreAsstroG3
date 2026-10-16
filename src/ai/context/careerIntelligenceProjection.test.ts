@@ -76,7 +76,8 @@ describe('careerIntelligenceProjection', () => {
           sourceIds: ['src1'],
           ruleIds: ['rule1']
         },
-        statement: 'Test statement'
+        statement: 'Test statement',
+        contradictoryDashaEvidence: []
       };
 
       expect(isCareerFinalSynthesisResult(validC11)).toBe(true);

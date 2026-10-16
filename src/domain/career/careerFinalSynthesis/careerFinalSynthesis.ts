@@ -673,6 +673,7 @@ export function synthesizeCareerFinal(
     sourceIds: Object.freeze([...sourceIds]),
     ruleIds: Object.freeze([...ruleIds]),
     evidenceTrace,
-    statement
+    statement,
+    contradictoryDashaEvidence: [] // Filled in by integration adapter
   });
 }

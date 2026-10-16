@@ -449,7 +449,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
   });
 
   describe('Dasha Evidence Mapping', () => {
-    it('Dasha MIXED + DOES_NOT_ACTIVATE is filtered (disallowed combination)', () => {
+    it('Dasha MIXED + DOES_NOT_ACTIVATE surfaces as contradictory diagnostic (disallowed combination)', () => {
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
         {
           identityKey: 'dasha-mixed-disallowed',
@@ -505,6 +505,13 @@ describe('CanonicalCareerEvidenceMapper', () => {
       const result = mapCanonicalCareerEvidence(input);
       const dashaEvidenceResult = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
       expect(dashaEvidenceResult).toHaveLength(0);
+
+      // Should surface as contradictory diagnostic per C9 contract
+      expect(result.contradictoryEvidence).toHaveLength(1);
+      expect(result.contradictoryEvidence[0].identityKey).toBe('dasha-mixed-disallowed');
+      expect(result.contradictoryEvidence[0].evidenceId).toBe('dasha-mixed-disallowed-1');
+      expect(result.contradictoryEvidence[0].reason).toContain('MIXED direction with disallowed effect');
+      expect(result.contradictoryEvidence[0].reason).toContain('DOES_NOT_ACTIVATE');
     });
 
     it('Dasha MIXED + PARTIALLY_ACTIVATES splits into SUPPORTING and CHALLENGING (allowed combination)', () => {
@@ -663,6 +670,138 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(challenging!.timing?.period).toBe('MD');
     });
 
+    it('Dasha SUPPORTING with CHALLENGE effect surfaces as contradictory diagnostic', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-contradictory-1',
+          id: 'dasha-contradictory-1',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'CHALLENGES', // Contradicts SUPPORTING polarity
+          direction: 'SUPPORT' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD contradictory direction/effect',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'CHALLENGES',
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'CHALLENGES',
+        overallDirection: 'SUPPORT' as ReasoningDirection,
+        overallStrength: 'MODERATE' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with contradictory direction/effect'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Should surface as contradictory diagnostic per C9 contract
+      expect(result.contradictoryEvidence).toHaveLength(1);
+      expect(result.contradictoryEvidence[0].identityKey).toBe('dasha-contradictory-1');
+      expect(result.contradictoryEvidence[0].evidenceId).toBe('dasha-contradictory-1');
+      expect(result.contradictoryEvidence[0].reason).toContain('SUPPORTING polarity with contradictory effect');
+      expect(result.contradictoryEvidence[0].reason).toContain('CHALLENGE');
+
+      // Should not emit evidence
+      const dashaEvidenceResult = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
+      expect(dashaEvidenceResult).toHaveLength(0);
+    });
+
+    it('Dasha CHALLENGING with SUPPORT effect surfaces as contradictory diagnostic', () => {
+      const dashaEvidence: CareerDashaCanonicalEvidence[] = [
+        {
+          identityKey: 'dasha-contradictory-2',
+          id: 'dasha-contradictory-2',
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect: 'ACTIVATES', // Contradicts CHALLENGING polarity
+          direction: 'CHALLENGE' as ReasoningDirection,
+          strength: 'MODERATE' as DomainStrength,
+          statement: 'Saturn MD contradictory direction/effect',
+          sourceIds: ['dasha-source-1'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['natal-root-1']
+          }
+        }
+      ];
+
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'ACTIVATES',
+        direction: 'CHALLENGE' as ReasoningDirection,
+        strength: 'MODERATE' as DomainStrength,
+        statement: 'Saturn MD period'
+      };
+
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'ACTIVATES',
+        overallDirection: 'CHALLENGE' as ReasoningDirection,
+        overallStrength: 'MODERATE' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: createEmptyDashaPeriod('AD'),
+        pd: createEmptyDashaPeriod('PD'),
+        evidence: dashaEvidence,
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with contradictory direction/effect'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: createEmptyNatalAnalysis(),
+        expression: createEmptyExpressionAnalysis(),
+        dasha,
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      // Should surface as contradictory diagnostic per C9 contract
+      expect(result.contradictoryEvidence).toHaveLength(1);
+      expect(result.contradictoryEvidence[0].identityKey).toBe('dasha-contradictory-2');
+      expect(result.contradictoryEvidence[0].evidenceId).toBe('dasha-contradictory-2');
+      expect(result.contradictoryEvidence[0].reason).toContain('CHALLENGING polarity with contradictory effect');
+      expect(result.contradictoryEvidence[0].reason).toContain('SUPPORT');
+
+      // Should not emit evidence
+      const dashaEvidenceResult = result.evidence.filter(e => e.phase === 'DASHA_ACTIVATION');
+      expect(dashaEvidenceResult).toHaveLength(0);
+    });
+
     it('maps Dasha evidence to DASHA_ACTIVATION phase with TIMING role', () => {
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
         {
@@ -737,7 +876,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.provenance?.ruleId).toBeUndefined();
     });
 
-    it('excludes Dasha evidence with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED)', () => {
+    it('excludes Dasha evidence with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED) without diagnostic', () => {
       const dashaEvidence: CareerDashaCanonicalEvidence[] = [
         {
           identityKey: 'dasha-undetermined',
@@ -804,6 +943,9 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // The mapper contract requires unmappable strength to be excluded, not fabricated
       const undeterminedEvidence = result.evidence.filter(e => e.identityKey === 'dasha-undetermined');
       expect(undeterminedEvidence).toHaveLength(0);
+
+      // Should NOT surface as contradictory diagnostic (unavailable ≠ contradictory per C9 contract)
+      expect(result.contradictoryEvidence).toHaveLength(0);
     });
   });
 
@@ -1627,7 +1769,8 @@ describe('CanonicalCareerEvidenceMapper', () => {
           sourceIds: [],
           ruleIds: []
         },
-        statement: 'Final synthesis with unknown reference'
+        statement: 'Final synthesis with unknown reference',
+        contradictoryDashaEvidence: []
       };
 
       const input: CanonicalCareerEvidenceInput = {

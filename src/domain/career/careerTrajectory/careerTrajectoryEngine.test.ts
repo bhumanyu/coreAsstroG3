@@ -58,7 +58,8 @@ function createC11Fixture(
       sourceIds: [],
       ruleIds: []
     },
-    statement: 'No final synthesis data'
+    statement: 'No final synthesis data',
+    contradictoryDashaEvidence: []
   };
 
   return { ...base, ...overrides };

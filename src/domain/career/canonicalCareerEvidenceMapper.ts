@@ -135,6 +135,19 @@ export interface SemanticEvidenceGroup {
 }
 
 /**
+ * Contradictory evidence diagnostic.
+ *
+ * Represents evidence that the canonical producer emitted but cannot be mapped
+ * due to contradictory direction/effect combinations. This must surface as a diagnostic
+ * per the C9 contract, distinguishing it from unavailable evidence (which may be omitted).
+ */
+export interface ContradictoryEvidenceDiagnostic {
+  readonly identityKey: string;
+  readonly evidenceId: string;
+  readonly reason: string;
+}
+
+/**
  * Pure mapper that converts canonical Career reasoning outputs (C4–C10)
  * into the existing DomainEvidence model.
  *
@@ -147,6 +160,7 @@ export interface SemanticEvidenceGroup {
  * - Uses C11 only for reference validation, never as an evidence source
  * - Returns both evidence and C11 validation result for observability
  * - Returns dedup trace (SemanticEvidenceGroup[]) for provenance preservation
+ * - Returns contradictory evidence diagnostics for C9 contract enforcement
  *
  * Integration Note:
  * This mapper is wired into interpretCareerV2 on the production path (P2-11C Gate 5).
@@ -157,6 +171,7 @@ export interface CanonicalCareerEvidenceOutput {
   readonly evidence: readonly DomainEvidence[];
   readonly c11Validation: C11ValidationResult;
   readonly dedupTrace: readonly SemanticEvidenceGroup[];
+  readonly contradictoryEvidence: readonly ContradictoryEvidenceDiagnostic[];
 }
 
 export function mapCanonicalCareerEvidence(
@@ -164,7 +179,7 @@ export function mapCanonicalCareerEvidence(
 ): CanonicalCareerEvidenceOutput {
   const natalEvidence = mapNatalEvidence(input.natal);
   const expressionEvidence = mapExpressionEvidence(input.expression);
-  const dashaEvidence = mapDashaEvidence(input.dasha);
+  const { evidence: dashaEvidence, contradictoryEvidence: dashaContradictory } = mapDashaEvidence(input.dasha);
   const d10Evidence = mapD10Evidence(input.d10);
 
   // Transit: only map if a real transit evidence producer is present
@@ -189,7 +204,8 @@ export function mapCanonicalCareerEvidence(
   return Object.freeze({
     evidence: Object.freeze(sorted),
     c11Validation,
-    dedupTrace
+    dedupTrace,
+    contradictoryEvidence: Object.freeze(dashaContradictory)
   });
 }
 
@@ -409,6 +425,11 @@ export function deduplicateCanonicalEvidence(
     dedupTrace: Object.freeze(sortedDedupTrace)
   };
 }
+
+/**
+ * Exposed types for testing and external use.
+ */
+export type { DashaEvidenceMappabilityResult, ContradictoryEvidenceDiagnostic };
 
 /**
  * Maps natal evidence (C4–C7) to DomainEvidence.
@@ -639,27 +660,41 @@ function mapExpressionEvidence(
  * - This ensures Dasha evidence contributes zero to natal manifestation scoring (timing-only contribution)
  *
  * Eligibility filtering:
- * - Uses isDashaEvidenceMappable predicate to filter unmappable evidence
- * - Excludes records with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED)
- * - Excludes MIXED direction with disallowed effects (DOES_NOT_ACTIVATE, UNKNOWN, INSUFFICIENT_DATA)
- * - Excludes non-MIXED direction with contradictory polarity/effect combinations
- * - This ensures mapper and collector agree on which evidence IDs are mappable, preventing dangling references
+ * - Uses checkDashaEvidenceMappable to distinguish unavailable vs contradictory evidence
+ * - UNAVAILABLE (unmappable strength): silently filtered (producer indicates insufficient data)
+ * - CONTRADICTORY (direction/effect disagreement): emits diagnostic (C9 contract violation)
+ * - MAPPABLE: emits DomainEvidence
+ *
+ * Returns both evidence array and contradictory evidence diagnostics.
  */
 function mapDashaEvidence(
   dasha: CareerDashaCanonicalAnalysis
-): DomainEvidence[] {
+): { readonly evidence: DomainEvidence[]; readonly contradictoryEvidence: ContradictoryEvidenceDiagnostic[] } {
   const result: DomainEvidence[] = [];
+  const contradictoryEvidence: ContradictoryEvidenceDiagnostic[] = [];
 
   for (const evidence of dasha.evidence) {
-    // Filter through the same predicate used by the C11 collector
-    // This ensures mapper and collector agree on which evidence IDs are mappable
-    if (!isDashaEvidenceMappable(evidence)) {
+    const mappability = checkDashaEvidenceMappable(evidence);
+
+    if (mappability.kind === 'UNAVAILABLE') {
+      // Unavailable evidence (unmappable strength) - silently filter per C9 contract
       continue;
     }
 
+    if (mappability.kind === 'CONTRADICTORY') {
+      // Contradictory evidence - emit diagnostic per C9 contract
+      contradictoryEvidence.push({
+        identityKey: evidence.identityKey,
+        evidenceId: evidence.id,
+        reason: mappability.reason
+      });
+      continue;
+    }
+
+    // MAPPABLE - proceed with mapping
     const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
     if (strength === null) {
-      continue; // Should not happen if predicate returned true, but defensive
+      continue; // Should not happen if mappability is MAPPABLE, but defensive
     }
 
     // Handle MIXED direction by splitting into two occurrences (consistent with natal convention)
@@ -744,7 +779,10 @@ function mapDashaEvidence(
     }
   }
 
-  return result;
+  return {
+    evidence: result,
+    contradictoryEvidence
+  };
 }
 
 /**
@@ -1392,29 +1430,51 @@ function mapDashaEffectToProvenanceEffect(
 }
 
 /**
+ * Result type for Dasha evidence mappability check.
+ *
+ * Distinguishes between unavailable evidence (strength unmappable) and contradictory evidence
+ * (direction/effect disagreement). Unavailable evidence may be silently omitted; contradictory
+ * evidence must surface as a diagnostic issue per the C9 contract.
+ */
+export type DashaEvidenceMappabilityResult =
+  | { readonly kind: 'MAPPABLE' }
+  | { readonly kind: 'UNAVAILABLE'; readonly reason: 'UNMAPPABLE_STRENGTH' }
+  | { readonly kind: 'CONTRADICTORY'; readonly reason: string };
+
+/**
  * Shared eligibility predicate for Dasha evidence mapping.
  *
  * Encodes the exact conditions under which mapDashaEvidence emits a record.
  * This predicate is used by both the mapper and the C11 collector to ensure
  * they agree on which evidence IDs are mappable, preventing dangling references.
  *
+ * Returns a typed result distinguishing:
+ * - MAPPABLE: Evidence can be mapped (strength mappable, direction/effect consistent)
+ * - UNAVAILABLE: Evidence cannot be mapped due to unmappable strength (may be silently omitted)
+ * - CONTRADICTORY: Evidence has contradictory direction/effect (must surface as diagnostic)
+ *
  * Conditions:
- * 1. Strength must be mappable (not UNDETERMINED, VERY_WEAK, or MIXED)
+ * 1. Strength must be mappable (not UNDETERMINED, VERY_WEAK, or MIXED) → UNAVAILABLE if not
  * 2. For MIXED direction: effect must be PARTIALLY_ACTIVATES (only allowed effect for MIXED)
+ *    - Disallowed effects (DOES_NOT_ACTIVATE, UNKNOWN, INSUFFICIENT_DATA) → CONTRADICTORY
  * 3. For non-MIXED direction: polarity and provenance effect must not contradict
- *    - SUPPORTING polarity should not have CHALLENGE or NEUTRAL effect
- *    - CHALLENGING polarity should not have SUPPORT or NEUTRAL effect
+ *    - SUPPORTING polarity with CHALLENGE/NEUTRAL effect → CONTRADICTORY
+ *    - CHALLENGING polarity with SUPPORT/NEUTRAL effect → CONTRADICTORY
  *
  * Exported for use by C11 collector (collectDashaEvidenceIds) to filter evidence IDs
  * before pushing to finalIds, ensuring C11 only cites identityKeys the mapper actually emits.
+ *
+ * C9 Contract:
+ * - UNAVAILABLE evidence may be omitted from output (producer indicates insufficient data)
+ * - CONTRADICTORY evidence must surface as a diagnostic issue (producer emits inconsistent data)
  */
-export function isDashaEvidenceMappable(
+export function checkDashaEvidenceMappable(
   evidence: CareerDashaCanonicalEvidence
-): boolean {
+): DashaEvidenceMappabilityResult {
   // Condition 1: Strength must be mappable
   const strength = mapDomainStrengthToEvidenceStrength(evidence.strength);
   if (strength === null) {
-    return false;
+    return { kind: 'UNAVAILABLE', reason: 'UNMAPPABLE_STRENGTH' };
   }
 
   const provenanceEffect = mapDashaEffectToProvenanceEffect(evidence.effect);
@@ -1425,11 +1485,17 @@ export function isDashaEvidenceMappable(
     const DISALLOWED_MIXED_EFFECTS = new Set(['DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA']);
 
     if (DISALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
-      return false;
+      return {
+        kind: 'CONTRADICTORY',
+        reason: `MIXED direction with disallowed effect: ${evidence.effect} (only PARTIALLY_ACTIVATES allowed)`
+      };
     }
 
     if (!ALLOWED_MIXED_EFFECTS.has(evidence.effect)) {
-      return false;
+      return {
+        kind: 'CONTRADICTORY',
+        reason: `MIXED direction with invalid effect: ${evidence.effect}`
+      };
     }
   } else {
     // Condition 3: Non-MIXED direction/effect consistency
@@ -1437,16 +1503,41 @@ export function isDashaEvidenceMappable(
 
     // SUPPORTING polarity should not have CHALLENGE or NEUTRAL effect
     if (polarity === 'SUPPORTING' && (provenanceEffect === 'CHALLENGE' || provenanceEffect === 'NEUTRAL')) {
-      return false;
+      return {
+        kind: 'CONTRADICTORY',
+        reason: `SUPPORTING polarity with contradictory effect: ${provenanceEffect}`
+      };
     }
 
     // CHALLENGING polarity should not have SUPPORT or NEUTRAL effect
     if (polarity === 'CHALLENGING' && (provenanceEffect === 'SUPPORT' || provenanceEffect === 'NEUTRAL')) {
-      return false;
+      return {
+        kind: 'CONTRADICTORY',
+        reason: `CHALLENGING polarity with contradictory effect: ${provenanceEffect}`
+      };
     }
   }
 
-  return true;
+  return { kind: 'MAPPABLE' };
+}
+
+/**
+ * Legacy boolean predicate for backward compatibility.
+ *
+ * Returns true if evidence is mappable (either MAPPABLE or CONTRADICTORY).
+ * This allows existing code to continue using the boolean check while
+ * new code can use checkDashaEvidenceMappable for detailed diagnostics.
+ *
+ * NOTE: This predicate returns false for both UNAVAILABLE and CONTRADICTORY.
+ * Consumers that need to distinguish between the two should use checkDashaEvidenceMappable.
+ *
+ * @deprecated Use checkDashaEvidenceMappable for new code to get detailed diagnostics.
+ */
+export function isDashaEvidenceMappable(
+  evidence: CareerDashaCanonicalEvidence
+): boolean {
+  const result = checkDashaEvidenceMappable(evidence);
+  return result.kind === 'MAPPABLE';
 }
 
 /**

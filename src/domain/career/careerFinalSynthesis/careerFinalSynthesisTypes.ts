@@ -331,4 +331,15 @@ export interface CareerFinalSynthesisResult {
   readonly evidenceTrace: CareerFinalEvidenceTrace;
 
   readonly statement: string;
+
+  /**
+   * C9 Contract Enforcement: Contradictory Dasha Evidence Diagnostics
+   *
+   * Dasha evidence that cannot be mapped due to contradictory direction/effect combinations.
+   * This distinguishes contradictory producer output (C9 contract violation) from unavailable evidence
+   * (insufficient data, which may be silently omitted).
+   *
+   * Empty if no contradictory evidence detected.
+   */
+  readonly contradictoryDashaEvidence: readonly string[];
 }
