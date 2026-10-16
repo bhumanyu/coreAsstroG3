@@ -3,28 +3,6 @@ import type { C11ValidationResult, ContradictoryEvidenceDiagnostic } from './can
 import { tryResolveC11SemanticIdentity, UNRESOLVED_IDENTITY_SENTINEL } from '../interpretation/DomainEvidence';
 
 /**
- * Test-only hooks for evidence continuity validation.
- *
- * Internal test seam used only in test environment to force invalid validation results
- * for end-to-end acceptance-boundary testing. Not exposed in production API.
- *
- * Usage in tests:
- * ```ts
- * import { _testHooks } from './evidenceContinuity';
- * _testHooks.forceInvalidResult = true;
- * // ... run interpretCareerV2
- * _testHooks.forceInvalidResult = false;
- * ```
- */
-export const _testHooks = {
-  /**
-   * When true, forces validateEvidenceContinuity to return an invalid result.
-   * Used for end-to-end acceptance-boundary testing.
-   */
-  forceInvalidResult: false
-};
-
-/**
  * Evidence Continuity Validation (Gate D)
  *
  * Validates identity/provenance/reference/counting continuity from C4–C7 → foundation → C8 → C9 → C10 → C11.
@@ -170,24 +148,6 @@ export function validateEvidenceContinuity(
 ): EvidenceContinuityReport {
   const { evidence, requiredC11EvidenceIds, c11Validation, contradictoryEvidence } = input;
   const issues: EvidenceContinuityIssue[] = [];
-
-  // Test-only hook: force invalid result for acceptance-boundary testing
-  if (_testHooks.forceInvalidResult) {
-    return Object.freeze({
-      c11Validation,
-      issues: Object.freeze([
-        {
-          code: 'MISSING_REQUIRED_REFERENCE' as const,
-          severity: 'ERROR' as const,
-          evidenceId: 'test-forced-invalid-reference',
-          message: 'Test hook: forced invalid validation result for acceptance-boundary testing'
-        }
-      ]),
-      provenanceIssueCount: 0,
-      duplicateCountingRiskCount: 0,
-      valid: false
-    });
-  }
 
   // Emit ERROR issues for contradictory Dasha evidence (C9 contract violation)
   if (contradictoryEvidence && contradictoryEvidence.length > 0) {

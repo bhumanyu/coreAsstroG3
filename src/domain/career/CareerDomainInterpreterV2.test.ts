@@ -45,14 +45,13 @@ import {
 } from './CareerDomainInterpreterV2';
 import {
   mapCanonicalCareerEvidence,
-  type ContradictoryEvidenceDiagnostic
+  type ContradictoryEvidenceDiagnostic,
+  type C11ValidationResult
 } from './canonicalCareerEvidenceMapper';
 import {
   validateEvidenceContinuity,
-  _testHooks
-} from './evidenceContinuity';
-import type {
-  EvidenceContinuityValidationInput
+  type EvidenceContinuityValidationInput,
+  type EvidenceContinuityReport
 } from './evidenceContinuity';
 import {
   createDomainEvidence,
@@ -3118,21 +3117,41 @@ describe('CareerDomainInterpreterV2', () => {
 
     it('throws on evidence continuity validation failure with dangling C11 reference', () => {
       // Finding 3: End-to-end acceptance-boundary negative test
-      // Uses the internal test hook to force an invalid validation result,
+      // Uses the scoped injection seam to force an invalid validation result,
       // then verifies interpretCareerV2 throws at the acceptance boundary
 
-      // Enable test hook to force invalid validation result
-      _testHooks.forceInvalidResult = true;
+      // Create a stub validator that returns an invalid result
+      const stubValidator = (_input: EvidenceContinuityValidationInput): EvidenceContinuityReport => {
+        const mockC11Validation: C11ValidationResult = {
+          valid: true,
+          requiredMissing: [],
+          optionalMissing: [],
+          unreferenced: []
+        };
 
-      try {
-        // interpretCareerV2 should throw when evidence continuity validation fails
-        expect(() => interpretCareerV2(horoscope, makeDomainOptions())).toThrow(
-          /[Ee]vidence continuity validation FAILED/
-        );
-      } finally {
-        // Reset test hook to avoid affecting other tests
-        _testHooks.forceInvalidResult = false;
-      }
+        return {
+          c11Validation: mockC11Validation,
+          issues: [
+            {
+              code: 'MISSING_REQUIRED_REFERENCE' as const,
+              severity: 'ERROR' as const,
+              evidenceId: 'test-forced-invalid-reference',
+              message: 'Test stub: forced invalid validation result for acceptance-boundary testing'
+            }
+          ],
+          provenanceIssueCount: 0,
+          duplicateCountingRiskCount: 0,
+          valid: false
+        };
+      };
+
+      // interpretCareerV2 should throw when evidence continuity validation fails
+      expect(() => interpretCareerV2(horoscope, {
+        ...makeDomainOptions(),
+        continuityValidator: stubValidator
+      })).toThrow(
+        /[Ee]vidence continuity validation FAILED/
+      );
     });
 
     it('contradictoryDashaEvidence carries identityKey, evidenceId, and reason', () => {
@@ -3195,6 +3214,57 @@ describe('CareerDomainInterpreterV2', () => {
         id.includes('_RESOLUTION:')
       );
       expect(resolutionEvidenceIds.length).toBe(0);
+    });
+
+    it('throws on contradictory Dasha evidence with CONTRADICTORY_DASHA_EVIDENCE error code', () => {
+      // Finding 4: End-to-end contradictory-C9 integration test
+      // Uses the scoped injection seam to simulate contradictory Dasha evidence,
+      // then verifies interpretCareerV2 throws with CONTRADICTORY_DASHA_EVIDENCE in the error.
+      //
+      // NOTE: This test uses the injected-validator seam because C9 producers are contractually
+      // prohibited from emitting contradictory evidence (they filter via checkDashaEvidenceMappable
+      // before emitting). Therefore, we cannot build a fixture with genuine contradictory C9 evidence
+      // from real producers. The injected validator simulates the diagnostic shape that would occur
+      // if a producer violated the C9 contract.
+
+      const mockC11Validation: C11ValidationResult = {
+        valid: true,
+        requiredMissing: [],
+        optionalMissing: [],
+        unreferenced: []
+      };
+
+      const contradictoryDiagnostics = [
+        {
+          identityKey: 'contradictory-dasha-identity',
+          evidenceId: 'contradictory-dasha-evidence-id',
+          reason: 'SUPPORTING polarity with contradictory effect: CHALLENGE'
+        }
+      ];
+
+      const stubValidator = (_input: EvidenceContinuityValidationInput): EvidenceContinuityReport => ({
+        c11Validation: mockC11Validation,
+        issues: [
+          {
+            code: 'CONTRADICTORY_DASHA_EVIDENCE' as const,
+            severity: 'ERROR' as const,
+            identityKey: contradictoryDiagnostics[0].identityKey,
+            evidenceId: contradictoryDiagnostics[0].evidenceId,
+            message: `Contradictory Dasha evidence: ${contradictoryDiagnostics[0].reason} (identityKey: ${contradictoryDiagnostics[0].identityKey}, evidenceId: ${contradictoryDiagnostics[0].evidenceId})`
+          }
+        ],
+        provenanceIssueCount: 0,
+        duplicateCountingRiskCount: 0,
+        valid: false
+      });
+
+      // interpretCareerV2 should throw with CONTRADICTORY_DASHA_EVIDENCE in the error
+      expect(() => interpretCareerV2(horoscope, {
+        ...makeDomainOptions(),
+        continuityValidator: stubValidator
+      })).toThrow(
+        /CONTRADICTORY_DASHA_EVIDENCE/
+      );
     });
   });
 });

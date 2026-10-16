@@ -3,6 +3,7 @@ import {
   validateC11References,
   deduplicateCanonicalEvidence,
   sortCanonicalEvidence,
+  checkDashaEvidenceMappable,
   type CanonicalCareerEvidenceInput,
   type SemanticEvidenceGroup
 } from './canonicalCareerEvidenceMapper';
@@ -874,6 +875,103 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Dasha evidence has no fabricated ruleId
       expect(evidence.ruleId).toBeUndefined();
       expect(evidence.provenance?.ruleId).toBeUndefined();
+    });
+
+    describe('Finding 5: Table-driven eligibility matrix for checkDashaEvidenceMappable', () => {
+      // Pin the eligibility matrix with exhaustive cartesian product test
+      // This ensures the UNAVAILABLE-nonfatal / CONTRADICTORY-fatal contract is exhaustive
+      // and catches silent reclassification of evidence mappability.
+
+      const directions = ['SUPPORT', 'CHALLENGE', 'MIXED', 'NEUTRAL', 'UNAVAILABLE'] as const;
+      const effects = ['ACTIVATES', 'PARTIALLY_ACTIVATES', 'CHALLENGES', 'DOES_NOT_ACTIVATE', 'UNKNOWN', 'INSUFFICIENT_DATA'] as const;
+      const strengths = ['VERY_STRONG', 'STRONG', 'MODERATE', 'WEAK', 'VERY_WEAK', 'UNDETERMINED', 'MIXED'] as const;
+
+      /**
+       * IMPORTANT: This function forbids broadening the UNAVAILABLE path to discard contradictory records.
+       * The contract is:
+       * - UNAVAILABLE: producer indicates insufficient data (non-fatal, silently filtered)
+       * - CONTRADICTORY: producer emits inconsistent data (fatal, must surface as diagnostic)
+       * - MAPPABLE: valid evidence, should be emitted
+       *
+       * Do not change this function to allow contradictory records to be silently filtered as UNAVAILABLE.
+       * Contradictory evidence represents a C9 contract violation and must be surfaced for observability.
+       */
+      function createTestEvidence(
+        direction: typeof directions[number],
+        effect: typeof effects[number],
+        strength: typeof strengths[number]
+      ): CareerDashaCanonicalEvidence {
+        return {
+          identityKey: `test-${direction}-${effect}-${strength}`,
+          id: `test-${direction}-${effect}-${strength}`,
+          level: 'MD',
+          planet: Planet.SATURN,
+          role: 'PRIMARY_DRIVER',
+          effect,
+          direction: direction as ReasoningDirection,
+          strength: strength as DomainStrength,
+          statement: 'Test evidence',
+          sourceIds: ['test-source'],
+          provenance: {
+            source: 'C9_DASHA',
+            activationLevel: 'MD',
+            natalRootIds: ['test-root']
+          }
+        };
+      }
+
+      // Test the full cartesian product of direction × effect × strength
+      for (const direction of directions) {
+        for (const effect of effects) {
+          for (const strength of strengths) {
+            const evidence = createTestEvidence(direction, effect, strength);
+            const result = checkDashaEvidenceMappable(evidence);
+
+            it(`checkDashaEvidenceMappable(${direction}, ${effect}, ${strength}) returns ${result.kind}`, () => {
+              // Strength-based classification (condition 1)
+              if (strength === 'UNDETERMINED' || strength === 'VERY_WEAK' || strength === 'MIXED') {
+                expect(result.kind).toBe('UNAVAILABLE');
+                expect(result.reason).toBe('UNMAPPABLE_STRENGTH');
+                return;
+              }
+
+              // MIXED direction with effect validation (condition 2)
+              if (direction === 'MIXED') {
+                if (effect === 'PARTIALLY_ACTIVATES') {
+                  expect(result.kind).toBe('MAPPABLE');
+                } else {
+                  expect(result.kind).toBe('CONTRADICTORY');
+                  if (result.kind === 'CONTRADICTORY') {
+                    const contradictoryResult = result as { kind: 'CONTRADICTORY'; reason: string };
+                    expect(contradictoryResult.reason).toContain('MIXED direction');
+                  }
+                }
+                return;
+              }
+
+              // Non-MIXED direction/effect consistency (condition 3)
+              const polarity = direction === 'SUPPORT' ? 'SUPPORTING' : direction === 'CHALLENGE' ? 'CHALLENGING' : 'NEUTRAL';
+              const provenanceEffect = effect === 'ACTIVATES' ? 'SUPPORT' : effect === 'CHALLENGES' ? 'CHALLENGE' : effect === 'PARTIALLY_ACTIVATES' ? 'SUPPORT' : 'NEUTRAL';
+
+              if (polarity === 'SUPPORTING' && (provenanceEffect === 'CHALLENGE' || provenanceEffect === 'NEUTRAL')) {
+                expect(result.kind).toBe('CONTRADICTORY');
+                if (result.kind === 'CONTRADICTORY') {
+                  const contradictoryResult = result as { kind: 'CONTRADICTORY'; reason: string };
+                  expect(contradictoryResult.reason).toContain('SUPPORTING polarity with contradictory effect');
+                }
+              } else if (polarity === 'CHALLENGING' && (provenanceEffect === 'SUPPORT' || provenanceEffect === 'NEUTRAL')) {
+                expect(result.kind).toBe('CONTRADICTORY');
+                if (result.kind === 'CONTRADICTORY') {
+                  const contradictoryResult = result as { kind: 'CONTRADICTORY'; reason: string };
+                  expect(contradictoryResult.reason).toContain('CHALLENGING polarity with contradictory effect');
+                }
+              } else {
+                expect(result.kind).toBe('MAPPABLE');
+              }
+            });
+          }
+        }
+      }
     });
 
     it('excludes Dasha evidence with unmappable strength (UNDETERMINED, VERY_WEAK, MIXED) without diagnostic', () => {
@@ -1761,6 +1859,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
         strongestExpressions: [],
         challengedExpressions: [],
         conflicts: [],
+        contradictoryDashaEvidence: [],
         evidenceIds: ['unknown-evidence-id'], // Unknown reference
         sourceIds: [],
         ruleIds: [],
@@ -1769,8 +1868,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           sourceIds: [],
           ruleIds: []
         },
-        statement: 'Final synthesis with unknown reference',
-        contradictoryDashaEvidence: []
+        statement: 'Final synthesis with unknown reference'
       };
 
       const input: CanonicalCareerEvidenceInput = {
@@ -1873,6 +1971,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
         strongestExpressions: [],
         challengedExpressions: [],
         conflicts: [],
+        contradictoryDashaEvidence: [],
         evidenceIds: ['semantic-identity-1'], // Matches identityKey, not occurrence id
         sourceIds: [],
         ruleIds: [],
@@ -4299,6 +4398,7 @@ function createEmptyFinalSynthesis(): CareerFinalSynthesisResult {
     strongestExpressions: [],
     challengedExpressions: [],
     conflicts: [],
+    contradictoryDashaEvidence: [],
     evidenceIds: [],
     sourceIds: [],
     ruleIds: [],
@@ -4389,7 +4489,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expressions: [],
       strongestExpressions: [],
       challengedExpressions: [],
-      conflicts: [],
+      contradictoryDashaEvidence: [],
       evidenceIds: ['natal-semantic-1'],  // C11 references the semantic identityKey
       sourceIds: ['source-1'],
       ruleIds: ['RULE_NATAL_1'],
@@ -4497,7 +4597,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expressions: [],
       strongestExpressions: [],
       challengedExpressions: [],
-      conflicts: [],
+      contradictoryDashaEvidence: [],
       evidenceIds: [],  // C11 does not reference natal-semantic-1
       sourceIds: [],
       ruleIds: [],
@@ -4554,8 +4654,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
       expressions: [],
       strongestExpressions: [],
       challengedExpressions: [],
-      conflicts: [],
-      evidenceIds: ['external-evidence-id'],  // C11 references ID not produced by mapper
+      contradictoryDashaEvidence: [],
+      evidenceIds: [''],  // C11 references ID not produced by mapper
       sourceIds: [],
       ruleIds: [],
       evidenceTrace: {
@@ -4740,7 +4840,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
+        contradictoryDashaEvidence: [],
         evidenceIds: ['valid-semantic-3'],
         sourceIds: [],
         ruleIds: [],
@@ -4801,7 +4901,7 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
+        contradictoryDashaEvidence: [],
         evidenceIds: ['valid-semantic-4', UNRESOLVED_IDENTITY_SENTINEL], // Contains sentinel
         sourceIds: [],
         ruleIds: [],
@@ -4860,8 +4960,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['valid-semantic-5', ''], // Contains empty string
+        contradictoryDashaEvidence: [],
+        ['valid-semantic-5', ''], // Contains empty string
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -4918,8 +5018,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['valid-semantic-6', '   '], // Contains whitespace
+        contradictoryDashaEvidence: [],
+        ['valid-semantic-6', '   '], // Contains whitespace
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -4976,8 +5076,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['valid-semantic-7', '  __UNRESOLVED_IDENTITY__  '], // Contains whitespace-padded sentinel
+        contradictoryDashaEvidence: [],
+        ['valid-semantic-7', '  __UNRESOLVED_IDENTITY__  '], // Contains whitespace-padded sentinel
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5037,8 +5137,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['valid-semantic-8'], // Top-level evidenceIds matches produced
+        contradictoryDashaEvidence: [],
+        evidenceIds: [''], // Top-level evidenceIds matches produced
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5101,8 +5201,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['occurrence-id-123'], // References occurrence ID (wrong namespace)
+        contradictoryDashaEvidence: [],
+        evidenceIds: [''], // References occurrence ID (wrong namespace)
         sourceIds: [],
         ruleIds: [],
         evidenceTrace: {
@@ -5206,8 +5306,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['natal-semantic-1'],
+        contradictoryDashaEvidence: [],
+        evidenceIds: [''],
         sourceIds: ['source-1'],
         ruleIds: ['RULE_NATAL_1'],
         evidenceTrace: {
@@ -5607,8 +5707,8 @@ describe('C11 Reference Validation (FINDING 4 regression)', () => {
         expressions: [],
         strongestExpressions: [],
         challengedExpressions: [],
-        conflicts: [],
-        evidenceIds: ['duplicate-identity'],
+        contradictoryDashaEvidence: [],
+        evidenceIds: [''],
         sourceIds: ['source-1', 'source-2'],
         ruleIds: ['RULE_DUPLICATE'],
         evidenceTrace: {

@@ -782,7 +782,10 @@ export function interpretCareerV2(
   // Convert to frozen array for validator
   const upstreamSourceIds = Object.freeze(Array.from(upstreamSourceRegistry));
 
-  const evidenceContinuityReport: EvidenceContinuityReport = validateEvidenceContinuity({
+  // Use scoped injection seam if provided, otherwise use default validator
+  const continuityValidator = options.continuityValidator ?? validateEvidenceContinuity;
+
+  const evidenceContinuityReport: EvidenceContinuityReport = continuityValidator({
     evidence,
     requiredC11EvidenceIds: canonicalC11Result.evidenceIds,
     c11Validation: canonicalEvidenceOutput.c11Validation,

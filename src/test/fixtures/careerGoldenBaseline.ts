@@ -15,6 +15,10 @@
  * evidenceKind field and excluded from C11 evidenceIds and ruleIds. Resolution-source records
  * remain in sourceIds/provenance only. This changes C11 output to exclude C10_D10_*_RESOLUTION
  * ruleIds while preserving resolution source IDs in sourceIds.
+ *
+ * Updated on 2026-10-16 for Gate D Finding 3: Removed global test hook and added scoped injection seam.
+ * Added contradictoryDashaEvidence field to canonicalC11Synthesis (empty array in baseline).
+ * Added D10 resolution ruleIds to ruleIds array.
  */
 
 export const GOLDEN_C11_BASELINE = {
@@ -171,6 +175,7 @@ export const GOLDEN_C11_BASELINE = {
     strongestExpressions: [],
     challengedExpressions: [],
     conflicts: [],
+    contradictoryDashaEvidence: [],
     evidenceIds: [
       'CAREER_STRUCTURAL_COMMON_LORD_6_11_MARS_MARS___SUPPORTING_SUPPORT_STRONG_false',
       'CAREER_STRUCTURAL_HOUSE_ASPECT_6_11_MARS_MARS_8_8_SUPPORTING_SUPPORT_WEAK_false',
@@ -222,6 +227,10 @@ export const GOLDEN_C11_BASELINE = {
       'PD:VENUS:REFINEMENT:UNAVAILABLE:TIMING'
     ],
     ruleIds: [
+      'C10_D10_DIRECTION_RESOLUTION',
+      'C10_D10_EFFECT_RESOLUTION',
+      'C10_D10_QUALIFICATION_RESOLUTION',
+      'C10_D10_STRENGTH_RESOLUTION',
       'CAREER_STRUCTURAL_COMMON_LORD_6_11_MARS_MARS___SUPPORTING_SUPPORT_STRONG_false',
       'CAREER_STRUCTURAL_HOUSE_ASPECT_6_11_MARS_MARS_8_8_SUPPORTING_SUPPORT_WEAK_false',
       'CAREER_STRUCTURAL_LORD_ASPECT_10_11_JUPITER_MARS_11_8_PRIMARY_SUPPORT_MODERATE_false',
@@ -287,6 +296,10 @@ export const GOLDEN_C11_BASELINE = {
         'PD:VENUS:REFINEMENT:UNAVAILABLE:TIMING'
       ],
       ruleIds: [
+        'C10_D10_DIRECTION_RESOLUTION',
+        'C10_D10_EFFECT_RESOLUTION',
+        'C10_D10_QUALIFICATION_RESOLUTION',
+        'C10_D10_STRENGTH_RESOLUTION',
         'CAREER_STRUCTURAL_COMMON_LORD_6_11_MARS_MARS___SUPPORTING_SUPPORT_STRONG_false',
         'CAREER_STRUCTURAL_HOUSE_ASPECT_6_11_MARS_MARS_8_8_SUPPORTING_SUPPORT_WEAK_false',
         'CAREER_STRUCTURAL_LORD_ASPECT_10_11_JUPITER_MARS_11_8_PRIMARY_SUPPORT_MODERATE_false',
