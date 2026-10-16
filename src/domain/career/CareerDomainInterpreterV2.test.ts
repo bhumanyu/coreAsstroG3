@@ -55,10 +55,17 @@ import {
   type EvidenceContinuityValidationInput,
   type EvidenceContinuityReport
 } from './evidenceContinuity';
-import type { CareerDashaCanonicalEvidence } from './careerDasha/careerDashaCanonicalTypes';
-import type { CareerD10CanonicalAnalysis } from './careerD10/careerD10CanonicalTypes';
-import type { CareerDashaCanonicalAnalysis, CareerDashaCanonicalEffect } from './careerDasha/careerDashaCanonicalTypes';
-import type { ReasoningDirection, DomainStrength, TimingLevel, TimingActivationEffect } from '../reasoning/reasoningTypes';
+import type {
+  CareerDashaCanonicalEvidence,
+  CareerDashaCanonicalAnalysis,
+  CareerDashaCanonicalEffect,
+  CareerDashaCanonicalPeriod
+} from './careerDasha/careerDashaCanonicalTypes';
+import type {
+  CareerD10CanonicalAnalysis,
+  CareerD10CanonicalRelationship
+} from './careerD10/careerD10CanonicalTypes';
+import type { ReasoningDirection, DomainStrength } from '../reasoning/reasoningTypes';
 import {
   createDomainEvidence,
   type DomainEvidence,
@@ -3275,27 +3282,31 @@ describe('CareerDomainInterpreterV2', () => {
 
     it('end-to-end contradictory C9 diagnostic flows through mapper to continuity validator', () => {
       // Finding 4: End-to-end diagnostic path test
-      // Exercises the real diagnostic path by feeding a contradictory C9 record into
-      // checkDashaEvidenceMappable, confirming the diagnostic is produced,
-      // then passing it to validateEvidenceContinuity to verify it flows correctly.
+      // Exercises the real diagnostic path by:
+      // 1. Building a minimal CanonicalCareerEvidenceInput with contradictory C9 evidence
+      // 2. Calling mapCanonicalCareerEvidence() and reading output.contradictoryEvidence
+      // 3. Asserting it matches what checkDashaEvidenceMappable returned
+      // 4. Feeding that real diagnostic into validateEvidenceContinuity
+      // 5. Asserting the emitted issue retains the same fields
       //
-      // This test proves the diagnostic is not dropped or re-shaped between mapper and boundary.
+      // This proves the diagnostic is not dropped or re-shaped between mapper and boundary.
 
       // Create a contradictory C9 record (SUPPORT direction with CHALLENGES effect)
       const contradictoryDashaEvidence: CareerDashaCanonicalEvidence = {
         identityKey: 'test-contradictory-identity',
         id: 'test-contradictory-evidence-id',
         level: 'MD',
-        role: 'TRIGGER',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
         effect: 'CHALLENGES' as CareerDashaCanonicalEffect,
         direction: 'SUPPORT' as ReasoningDirection,
         strength: 'STRONG' as DomainStrength,
         statement: 'Test contradictory Dasha evidence',
-        sourceIds: ['source-1'],
+        sourceIds: ['dasha-source-1'],
         provenance: {
           source: 'C9_DASHA',
           activationLevel: 'MD',
-          natalRootIds: ['test-contradictory-evidence-id']
+          natalRootIds: ['natal-root-1']
         }
       };
 
@@ -3306,14 +3317,118 @@ describe('CareerDomainInterpreterV2', () => {
         expect(mappabilityResult.reason).toContain('SUPPORTING polarity with contradictory effect');
       }
 
-      // Build a ContradictoryEvidenceDiagnostic directly (simulating what the mapper would produce)
-      const diagnostic: ContradictoryEvidenceDiagnostic = {
-        identityKey: 'test-contradictory-identity',
-        evidenceId: 'test-contradictory-evidence-id',
-        reason: 'SUPPORTING polarity with contradictory effect: CHALLENGE'
+      // Build a minimal CanonicalCareerEvidenceInput with the contradictory evidence
+      const dashaPeriod: CareerDashaCanonicalPeriod = {
+        level: 'MD',
+        planet: Planet.SATURN,
+        role: 'PRIMARY_DRIVER',
+        effect: 'CHALLENGES' as CareerDashaCanonicalEffect,
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        statement: 'Saturn MD period'
       };
 
-      // Pass the diagnostic to validateEvidenceContinuity
+      const dasha: CareerDashaCanonicalAnalysis = {
+        overallEffect: 'CHALLENGES' as CareerDashaCanonicalEffect,
+        overallDirection: 'SUPPORT' as ReasoningDirection,
+        overallStrength: 'STRONG' as DomainStrength,
+        dominantLevel: 'MD',
+        md: dashaPeriod,
+        ad: {
+          level: 'AD',
+          role: 'MODIFIER',
+          effect: 'UNKNOWN' as CareerDashaCanonicalEffect,
+          direction: 'NEUTRAL' as ReasoningDirection,
+          strength: 'UNDETERMINED' as DomainStrength,
+          statement: 'Test AD period'
+        },
+        pd: {
+          level: 'PD',
+          role: 'REFINEMENT',
+          effect: 'UNKNOWN' as CareerDashaCanonicalEffect,
+          direction: 'NEUTRAL' as ReasoningDirection,
+          strength: 'UNDETERMINED' as DomainStrength,
+          statement: 'Test PD period'
+        },
+        evidence: [contradictoryDashaEvidence],
+        rootEvidenceIds: ['natal-root-1'],
+        statement: 'Dasha with contradictory direction/effect'
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal: EMPTY_CAREER_NATAL_ANALYSIS,
+        expression: {
+          expressions: [],
+          primaryExpression: undefined,
+          statement: 'No expression data'
+        },
+        dasha,
+        d10: {
+          availability: 'UNAVAILABLE',
+          natalDirection: 'NEUTRAL',
+          natalStrength: 'UNDETERMINED',
+          d10Effect: 'UNAVAILABLE',
+          d10Direction: 'NEUTRAL',
+          d10Strength: 'UNDETERMINED',
+          qualifiedDirection: 'NEUTRAL',
+          qualifiedStrength: 'UNDETERMINED',
+          natalPromisePreserved: false,
+          relationship: {
+            d10LordInNatalHouses: [],
+            natalLordInD10Houses: [],
+            statement: 'No relationship data'
+          },
+          evidence: [],
+          conflicts: [],
+          expressionQualifications: [],
+          rootEvidenceIds: [],
+          statement: 'No D10 data'
+        },
+        finalSynthesis: {
+          reasoningVersion: 'C11',
+          domain: 'CAREER',
+          finalStatus: 'SUPPORTED',
+          finalDirection: 'SUPPORT',
+          finalStrength: 'STRONG',
+          confidence: 'HIGH',
+          natalDirection: 'SUPPORT',
+          natalStrength: 'STRONG',
+          expressionStatus: 'UNAVAILABLE',
+          d10Direction: 'UNAVAILABLE',
+          d10Effect: 'UNKNOWN',
+          dashaEffect: 'UNKNOWN',
+          dashaDirection: 'UNAVAILABLE',
+          timingStatus: 'ACTIVE',
+          transitDirection: 'SUPPORT',
+          currentPressure: 'LOW',
+          expressions: [],
+          strongestExpressions: [],
+          challengedExpressions: [],
+          conflicts: [],
+          contradictoryDashaEvidence: [],
+          evidenceIds: [],
+          sourceIds: [],
+          ruleIds: [],
+          evidenceTrace: {
+            evidenceIds: [],
+            sourceIds: [],
+            ruleIds: []
+          },
+          statement: 'Test final synthesis'
+        }
+      };
+
+      // Call the real mapper and read output.contradictoryEvidence
+      const mapperResult = mapCanonicalCareerEvidence(input);
+
+      // Assert the mapper produced exactly one diagnostic matching checkDashaEvidenceMappable
+      expect(mapperResult.contradictoryEvidence).toHaveLength(1);
+      const diagnostic = mapperResult.contradictoryEvidence[0];
+      expect(diagnostic.identityKey).toBe('test-contradictory-identity');
+      expect(diagnostic.evidenceId).toBe('test-contradictory-evidence-id');
+      expect(diagnostic.reason).toContain('SUPPORTING polarity with contradictory effect');
+
+      // Feed the real diagnostic into validateEvidenceContinuity
       const mockC11Validation: C11ValidationResult = {
         valid: true,
         requiredMissing: [],
@@ -3322,10 +3437,10 @@ describe('CareerDomainInterpreterV2', () => {
       };
 
       const continuityReport = validateEvidenceContinuity({
-        evidence: [],
+        evidence: mapperResult.evidence,
         requiredC11EvidenceIds: [],
         c11Validation: mockC11Validation,
-        contradictoryEvidence: [diagnostic]
+        contradictoryEvidence: mapperResult.contradictoryEvidence
       });
 
       // Assert the CONTRADICTORY_DASHA_EVIDENCE issue is emitted with correct severity and fields
