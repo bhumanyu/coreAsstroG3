@@ -15,6 +15,7 @@ import type { ReasoningTraceGraph } from '../careerWealth/reasoningTrace';
 import type { CanonicalCareerFoundation } from './orchestration/canonicalCareerContracts';
 import type { CareerTrajectoryAnalysis } from './careerTrajectory/careerTrajectoryTypes';
 import type { CareerEventsAnalysis } from './careerEvents/careerEventTypes';
+import type { CareerProfessionAnalysis } from './careerProfession/careerProfessionTypes';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -153,4 +154,9 @@ export interface CareerConclusionData {
    * Event candidates derived from trajectory opportunities and Dasha activations.
    */
   readonly careerEvents?: CareerEventsAnalysis;
+  /**
+   * P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence).
+   * Profession candidates derived from expression analysis, mechanisms, and D10 qualification.
+   */
+  readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
 }

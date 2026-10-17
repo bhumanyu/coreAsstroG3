@@ -133,6 +133,9 @@ export interface BuildAiContextOptions {
 
 /**
  * Product boundary options requiring canonical temporalState and pre-computed domain artifacts.
+ *
+ * careerProfessionAnalysis is optional: when provided via options, it is used directly;
+ * otherwise, it is extracted from careerInterpretation.conclusionData.careerProfessionAnalysis.
  */
 export interface ProductAiContextOptions {
   readonly domainInterpretations: readonly DomainInterpretation[];
@@ -780,7 +783,9 @@ function buildCareerFact(
   const careerFinalSynthesisFact = mapCareerWealthFinalSynthesisToFact(careerFinalSynthesis);
 
   const canonicalC11 = projectCanonicalCareerC11(careerInterpretation);
-  const profession = projectCareerProfessionAnalysis(careerProfessionAnalysis);
+  const profession = projectCareerProfessionAnalysis(
+    careerInterpretation?.conclusionData?.careerProfessionAnalysis ?? careerProfessionAnalysis
+  );
 
   const enrichedTiming: CareerTimingFact | undefined = timing || careerTimingSynthesisFact
     ? {

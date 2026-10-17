@@ -149,6 +149,9 @@ import {
 import {
   buildCareerEvents
 } from './careerEvents/careerEventEngine';
+import {
+  buildCareerProfessionAnalysis
+} from './careerProfession/careerProfessionEngine';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary
@@ -646,7 +649,8 @@ export function interpretCareerV2(
     c11ValidationStatus,
     undefined, // evidenceContinuityReport will be added after final C11 is built
     undefined, // careerTrajectory will be added after Gate D
-    undefined // careerEvents will be added after Gate D
+    undefined, // careerEvents will be added after Gate D
+    undefined // careerProfessionAnalysis will be added after Gate F
   );
 
   const conclusion = createDomainConclusion({
@@ -831,6 +835,32 @@ export function interpretCareerV2(
   const careerEvents = buildCareerEvents({
     trajectory: careerTrajectory,
     dasha: canonicalDashaAnalysis
+  });
+
+  /**
+   * P2-11F Gate F: Production Wiring of Profession Engine
+   *
+   * After Gate D continuity validation, call the standalone profession engine.
+   * This is a downstream consumer of C8 (mechanismExpressionResult), C10 (canonicalD10Analysis),
+   * and canonical evidence (evidence). It does not feed back into C11, the mapper, or buildDomainInterpretation.
+   *
+   * Input reuse: Uses the exact existing objects computed earlier in the production path:
+   * - expressions: mechanismExpressionResult (the real canonical C8 resolver result, not the legacy adapter output)
+   * - mechanisms: careerMechanismCandidates (extracted from canonicalCareerFoundation.resolvedMechanisms)
+   * - career10HFoundation/career10LFoundation: conditional spreads from foundation supplements
+   * - careerD10CanonicalAnalysis: canonicalD10Analysis (for D10 qualification-only)
+   * - domainEvidence: evidence (canonical evidence from canonicalEvidenceOutput)
+   *
+   * The result is added to conclusionData alongside careerTrajectory/careerEvents.
+   * No C4–C10 producer is rerun; this is pure additive wiring.
+   */
+  const careerProfessionAnalysis = buildCareerProfessionAnalysis({
+    expressions: mechanismExpressionResult,
+    mechanisms: careerMechanismCandidates,
+    ...(career10HFoundation ? { career10HFoundation } : {}),
+    ...(career10LFoundation ? { career10LFoundation } : {}),
+    careerD10CanonicalAnalysis: canonicalD10Analysis,
+    domainEvidence: evidence
   });
 
   /**
@@ -1066,7 +1096,8 @@ export function interpretCareerV2(
       reasoningTraceGraph,
       evidenceContinuityReport, // Gate D: Evidence continuity validation report
       careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
-      careerEvents // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
+      careerEvents, // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
+      careerProfessionAnalysis // P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence)
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility

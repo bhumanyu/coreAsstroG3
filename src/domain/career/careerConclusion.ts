@@ -295,7 +295,8 @@ export function buildCareerConclusionData(
   },
   evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport,
   careerTrajectory?: import('./careerTrajectory/careerTrajectoryTypes').CareerTrajectoryAnalysis,
-  careerEvents?: import('./careerEvents/careerEventTypes').CareerEventsAnalysis
+  careerEvents?: import('./careerEvents/careerEventTypes').CareerEventsAnalysis,
+  careerProfessionAnalysis?: import('./careerProfession/careerProfessionTypes').CareerProfessionAnalysis
 ): CareerConclusionData {
   const currentActivation = resolveCurrentActivation(timingActivations);
   const currentPressure = resolveCurrentPressure(transitTrigger, conflicts);
@@ -330,7 +331,8 @@ export function buildCareerConclusionData(
     c11ValidationStatus,
     evidenceContinuityReport,
     careerTrajectory,
-    careerEvents
+    careerEvents,
+    careerProfessionAnalysis
   });
 }
 
