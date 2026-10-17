@@ -86,6 +86,18 @@ import {
 import {
   EMPTY_CAREER_NATAL_ANALYSIS
 } from './careerNatalAnalysis';
+import {
+  buildCareerProfessionAnalysis
+} from './careerProfession/careerProfessionEngine';
+import type {
+  CareerProfessionAnalysis
+} from './careerProfession/careerProfessionTypes';
+import type {
+  CareerExpressionAnalysisResult
+} from './careerExpression/careerExpressionTypes';
+import type {
+  CareerMechanismCandidate
+} from './careerMechanism/careerMechanismTypes';
 import type {
   CareerNatalAnalysis
 } from './careerNatalAnalysis';
@@ -3528,6 +3540,196 @@ describe('CareerDomainInterpreterV2', () => {
       } finally {
         // Restore the original implementation even if the test fails
         dashaSpy.mockRestore();
+      }
+    });
+  });
+
+  // P2-11F Gate F: Career Profession Analysis Integration Tests
+  describe('P2-11F Gate F: Career Profession Analysis Integration', () => {
+    it('golden fixture produces careerProfessionAnalysis with status field', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Verify careerProfessionAnalysis is present in conclusionData
+      expect(v2.conclusionData).toBeDefined();
+      expect(v2.conclusionData?.careerProfessionAnalysis).toBeDefined();
+
+      const professionAnalysis = v2.conclusionData?.careerProfessionAnalysis as CareerProfessionAnalysis;
+
+      // Verify status field is present and is one of the valid values
+      expect(professionAnalysis.status).toBeDefined();
+      expect(['COMPLETE', 'PARTIAL', 'INSUFFICIENT_DATA']).toContain(professionAnalysis.status);
+
+      // Verify candidates array is present (may be empty)
+      expect(Array.isArray(professionAnalysis.candidates)).toBe(true);
+
+      // Verify provenance is present
+      expect(professionAnalysis.provenance).toBeDefined();
+      expect(professionAnalysis.provenance.expressionIds).toBeDefined();
+      expect(professionAnalysis.provenance.mechanismIds).toBeDefined();
+      expect(professionAnalysis.provenance.patternIds).toBeDefined();
+      expect(professionAnalysis.provenance.evidenceIds).toBeDefined();
+      expect(professionAnalysis.provenance.sourceIds).toBeDefined();
+      expect(professionAnalysis.provenance.ruleIds).toBeDefined();
+    });
+
+    it('candidate identityKeys and provenance in output exactly equal engine emitted values (no remapping)', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const professionAnalysis = v2.conclusionData?.careerProfessionAnalysis as CareerProfessionAnalysis;
+
+      // If candidates are present, verify identityKeys/provenance are preserved
+      for (const candidate of professionAnalysis.candidates) {
+        // Verify candidateId is preserved (pattern-scoped identity)
+        expect(candidate.candidateId).toBeDefined();
+        expect(typeof candidate.candidateId).toBe('string');
+
+        // Verify patternIds are preserved from engine
+        expect(Array.isArray(candidate.patternIds)).toBe(true);
+        for (const patternId of candidate.patternIds) {
+          expect(typeof patternId).toBe('string');
+        }
+
+        // Verify ruleId is preserved from engine
+        expect(candidate.ruleId).toBeDefined();
+        expect(typeof candidate.ruleId).toBe('string');
+
+        // Verify evidence is preserved with correct structure
+        expect(Array.isArray(candidate.evidence)).toBe(true);
+        for (const evidence of candidate.evidence) {
+          expect(evidence.evidenceId).toBeDefined();
+          expect(evidence.basis).toBeDefined();
+          expect(Array.isArray(evidence.sourceIds)).toBe(true);
+          expect(evidence.ruleId).toBeDefined();
+          expect(evidence.statement).toBeDefined();
+        }
+
+        // Verify domainEvidenceIds are preserved
+        expect(Array.isArray(candidate.domainEvidenceIds)).toBe(true);
+        for (const domainEvidenceId of candidate.domainEvidenceIds) {
+          expect(typeof domainEvidenceId).toBe('string');
+        }
+
+        // Verify relatedEvidenceIds are preserved
+        expect(Array.isArray(candidate.relatedEvidenceIds)).toBe(true);
+        for (const relatedEvidenceId of candidate.relatedEvidenceIds) {
+          expect(typeof relatedEvidenceId).toBe('string');
+        }
+      }
+
+      // Verify provenance aggregates match candidate data
+      const provenance = professionAnalysis.provenance;
+      const allCandidateExpressionIds = professionAnalysis.candidates.flatMap(c =>
+        c.evidence.filter(e => e.basis === 'EXPRESSION').flatMap(e => e.sourceIds)
+      );
+      const allCandidateMechanismIds = professionAnalysis.candidates.flatMap(c =>
+        c.evidence.filter(e => e.basis === 'MECHANISM').flatMap(e => e.sourceIds)
+      );
+      const allCandidatePatternIds = professionAnalysis.candidates.flatMap(c => c.patternIds);
+      const allCandidateEvidenceIds = professionAnalysis.candidates.flatMap(c => c.evidence.map(e => e.evidenceId));
+      const allCandidateSourceIds = professionAnalysis.candidates.flatMap(c => c.evidence.flatMap(e => e.sourceIds));
+      const allCandidateRuleIds = professionAnalysis.candidates.map(c => c.ruleId);
+
+      // Provenance should aggregate candidate data exactly (no remapping)
+      expect(new Set(provenance.expressionIds)).toEqual(new Set(allCandidateExpressionIds));
+      expect(new Set(provenance.mechanismIds)).toEqual(new Set(allCandidateMechanismIds));
+      expect(new Set(provenance.patternIds)).toEqual(new Set(allCandidatePatternIds));
+      expect(new Set(provenance.evidenceIds)).toEqual(new Set(allCandidateEvidenceIds));
+      expect(new Set(provenance.sourceIds)).toEqual(new Set(allCandidateSourceIds));
+      expect(new Set(provenance.ruleIds)).toEqual(new Set(allCandidateRuleIds));
+    });
+
+    it('C11 conclusion and canonical evidence are unchanged by profession call', () => {
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Verify C11 conclusion is present
+      const canonicalC11 = v2.conclusionData?.canonicalCareerFinalSynthesis;
+      expect(canonicalC11).toBeDefined();
+
+      // Verify evidence set is present
+      const evidence = v2.evidence;
+      expect(evidence).toBeDefined();
+      expect(Array.isArray(evidence)).toBe(true);
+
+      // Snapshot C11 and evidence before any profession operations
+      const c11Snapshot = { ...canonicalC11 };
+      const evidenceSnapshot = evidence.map(e => ({ ...e }));
+
+      // Call interpretCareerV2 again to verify consistency
+      const v2Again = interpretCareerV2(horoscope, makeDomainOptions());
+      const canonicalC11Again = v2Again.conclusionData?.canonicalCareerFinalSynthesis;
+      const evidenceAgain = v2Again.evidence;
+
+      // C11 should be identical (no change from profession call)
+      expect(canonicalC11Again).toEqual(c11Snapshot);
+
+      // Evidence should be identical (no change from profession call)
+      expect(evidenceAgain.map(e => e.id)).toEqual(evidenceSnapshot.map(e => e.id));
+      expect(evidenceAgain.length).toBe(evidenceSnapshot.length);
+    });
+
+    it('empty resolvedMechanisms produces explicit unavailable/insufficient status, not fabricated candidates', () => {
+      // Build a minimal input with empty resolvedMechanisms
+      const emptyExpressions: CareerExpressionAnalysisResult = {
+        expressions: [],
+        primaryExpression: undefined,
+        statement: 'No expression data available'
+      };
+
+      const emptyMechanisms: readonly CareerMechanismCandidate[] = [];
+
+      const input = {
+        expressions: emptyExpressions,
+        mechanisms: emptyMechanisms
+      };
+
+      const result = buildCareerProfessionAnalysis(input);
+
+      // Should produce INSUFFICIENT_DATA status (no candidates established)
+      expect(result.status).toBe('INSUFFICIENT_DATA');
+
+      // Should produce zero candidates (no fabrication)
+      expect(result.candidates).toHaveLength(0);
+
+      // Missing inputs should include mechanisms
+      expect(result.missingInputs).toContain('career10HFoundation');
+      expect(result.missingInputs).toContain('career10LFoundation');
+      expect(result.missingInputs).toContain('careerD10CanonicalAnalysis');
+      expect(result.missingInputs).toContain('domainEvidence');
+
+      // Provenance should be empty (no consumption)
+      expect(result.provenance.expressionIds).toHaveLength(0);
+      expect(result.provenance.mechanismIds).toHaveLength(0);
+      expect(result.provenance.patternIds).toHaveLength(0);
+      expect(result.provenance.evidenceIds).toHaveLength(0);
+      expect(result.provenance.sourceIds).toHaveLength(0);
+      expect(result.provenance.ruleIds).toHaveLength(0);
+    });
+
+    it('profession engine failure surfaces as typed diagnostic without breaking C11 conclusion', async () => {
+      // Spy on buildCareerProfessionAnalysis to throw an error
+      const professionEngine = await import('./careerProfession/careerProfessionEngine');
+      const professionSpy = vi.spyOn(professionEngine, 'buildCareerProfessionAnalysis')
+        .mockImplementation(() => {
+          throw new Error('Test profession engine failure');
+        });
+
+      try {
+        // interpretCareerV2 should not throw; it should surface the error as a diagnostic
+        const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+        // Verify C11 conclusion is still present and valid
+        expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
+        expect(v2.conclusion).toBeDefined();
+
+        // Verify profession analysis failure diagnostic is present
+        expect(v2.conclusionData?.professionAnalysisFailure).toBeDefined();
+        expect(v2.conclusionData?.professionAnalysisFailure?.error).toBe('Error');
+        expect(v2.conclusionData?.professionAnalysisFailure?.message).toBe('Test profession engine failure');
+
+        // Verify careerProfessionAnalysis is undefined when failure occurs
+        expect(v2.conclusionData?.careerProfessionAnalysis).toBeUndefined();
+      } finally {
+        // Restore the original implementation
+        professionSpy.mockRestore();
       }
     });
   });

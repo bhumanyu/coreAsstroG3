@@ -118,6 +118,42 @@ export interface CareerConclusionViewModel {
   readonly challengingEvidenceCount: number;
 }
 
+export interface CareerProfessionCandidateViewModel {
+  readonly candidateId: string;
+  readonly domain: string;
+  readonly family: string;
+  readonly basis: string;
+  readonly expressionTypes: readonly string[];
+  readonly mechanismTypes: readonly string[];
+  readonly patternIds: readonly string[];
+  readonly d10Status: string;
+  readonly evidence: readonly CareerProfessionEvidenceViewModel[];
+  readonly domainEvidenceIds: readonly string[];
+  readonly relatedEvidenceIds: readonly string[];
+  readonly ruleId: string;
+}
+
+export interface CareerProfessionEvidenceViewModel {
+  readonly evidenceId: string;
+  readonly basis: string;
+  readonly sourceIds: readonly string[];
+  readonly ruleId: string;
+  readonly statement: string;
+  readonly linkage?: string;
+  readonly resolvedMechanismIds?: readonly string[];
+  readonly unresolvedMechanismIds?: readonly string[];
+}
+
+export interface CareerProfessionViewModel {
+  readonly available: boolean;
+  readonly status: string;
+  readonly candidates: readonly CareerProfessionCandidateViewModel[];
+  readonly unresolvedExpressionTypes: readonly string[];
+  readonly mappedTypes: readonly string[];
+  readonly missingInputs: readonly string[];
+  readonly d10Status: string;
+}
+
 export interface CareerViewModel {
   readonly hero: CareerHeroViewModel;
   readonly promise: CareerPromiseViewModel;
@@ -128,6 +164,7 @@ export interface CareerViewModel {
   readonly qualifications: readonly CareerQualificationViewModel[];
   readonly evidence: readonly CareerEvidenceViewModel[];
   readonly conclusion: CareerConclusionViewModel;
+  readonly profession: CareerProfessionViewModel;
   readonly warnings: readonly ProductWarning[];
 }
 
@@ -166,9 +203,9 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
 
   const hasExpressionData = Boolean(
     career.expression &&
-      (career.expression.primaryStyle ||
-        career.expression.leadershipPotential ||
-        (career.expression.secondaryTraits && career.expression.secondaryTraits.length > 0))
+    (career.expression.primaryStyle ||
+      career.expression.leadershipPotential ||
+      (career.expression.secondaryTraits && career.expression.secondaryTraits.length > 0))
   );
 
   const expression: CareerExpressionViewModel = {
@@ -245,6 +282,56 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
     challengingEvidenceCount: evidence.filter((e) => e.direction === 'CHALLENGE').length
   };
 
+  // Map profession analysis from ProductAnalysis
+  const profession: CareerProfessionViewModel = (() => {
+    const professionData = analysis.career?.profession;
+    if (!professionData) {
+      return {
+        available: false,
+        status: 'INSUFFICIENT_DATA',
+        candidates: [],
+        unresolvedExpressionTypes: [],
+        mappedTypes: [],
+        missingInputs: [],
+        d10Status: 'NOT_PROVIDED'
+      };
+    }
+
+    const candidates: CareerProfessionCandidateViewModel[] = professionData.candidates.map(c => ({
+      candidateId: c.candidateId,
+      domain: c.domain,
+      family: c.family,
+      basis: c.basis,
+      expressionTypes: c.expressionTypes,
+      mechanismTypes: c.mechanismTypes,
+      patternIds: c.patternIds,
+      d10Status: c.d10Status,
+      evidence: c.evidence.map(e => ({
+        evidenceId: e.evidenceId,
+        basis: e.basis,
+        sourceIds: e.sourceIds,
+        ruleId: e.ruleId,
+        statement: e.statement,
+        ...(e.linkage ? { linkage: e.linkage } : {}),
+        ...(e.resolvedMechanismIds ? { resolvedMechanismIds: e.resolvedMechanismIds } : {}),
+        ...(e.unresolvedMechanismIds ? { unresolvedMechanismIds: e.unresolvedMechanismIds } : {})
+      })),
+      domainEvidenceIds: c.domainEvidenceIds,
+      relatedEvidenceIds: c.relatedEvidenceIds,
+      ruleId: c.ruleId
+    }));
+
+    return {
+      available: professionData.available,
+      status: professionData.status,
+      candidates,
+      unresolvedExpressionTypes: professionData.unresolvedExpressionTypes,
+      mappedTypes: professionData.mappedTypes,
+      missingInputs: professionData.missingInputs,
+      d10Status: professionData.d10Status
+    };
+  })();
+
   return {
     hero,
     promise,
@@ -255,6 +342,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
     qualifications,
     evidence,
     conclusion,
+    profession,
     warnings: analysis.warnings ?? []
   };
 }

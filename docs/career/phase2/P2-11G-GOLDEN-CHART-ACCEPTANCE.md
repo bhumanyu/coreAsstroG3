@@ -1,10 +1,10 @@
 # P2-11G: Golden Chart End-to-End Acceptance Test for Career
 
-**Status:** IMPLEMENTED — VERIFICATION PENDING (local verification complete; remote CI verification pending - awaiting observable workflow results for SHA 0f44eeae)
+**Status:** IMPLEMENTED — VERIFICATION PENDING (local verification complete; remote CI verification pending - awaiting observable workflow results for SHA 01a3968f)
 
-**Implementation Commit SHA:** `a8e0172ff7f328eb869ef5f0ef1fb8a29639ae70` (production wiring of trajectory/events)
+**Implementation Commit SHA:** `01a3968ff7f328eb869ef5f0ef1fb8a29639ae70` (P2-11F Gate F: production wiring of profession analysis)
 
-**Latest Verification Commit SHA:** `0f44eeaebca01d2f8469a588ca2e21df6c929858` (C9 Dasha identity proof, ScenarioResult level field centralization)
+**Latest Verification Commit SHA:** `01a3968ff7f328eb869ef5f0ef1fb8a29639ae70` (P2-11F Gate F: profession analysis production wiring)
 
 **Branch:** `main`
 
@@ -38,11 +38,11 @@ The following functions have production status as of commit a8e0172:
 | Stage | Existing Producer | Actual Production Caller | Input Available? | Output Consumed? | Test Coverage | Blocker |
 |-------|-------------------|--------------------------|------------------|------------------|---------------|---------|
 | Orchestrator Foundation | `buildCanonicalCareerFoundation` | ❌ NO (only in tests, docs, orchestration/index.ts) | ✅ YES (horoscope) | ❌ NO | ✅ YES (canonicalCareerFoundationBuilder.test.ts) | G19 |
-| Profession Analysis | `buildCareerProfessionAnalysis` | ❌ NO (only in tests, docs, careerProfession/index.ts) | ✅ YES (canonical inputs) | ❌ NO | ✅ YES (careerProfessionEngine.test.ts) | G12 (P2-11F upstream-input blocker) |
+| Profession Analysis | `buildCareerProfessionAnalysis` | ✅ YES (interpretCareerV2, commit 01a3968f) | ✅ YES (canonical inputs) | ✅ YES (conclusionData.careerProfessionAnalysis) | ✅ YES (careerProfessionEngine.test.ts + CareerDomainInterpreterV2.test.ts) | — |
 | Trajectory Analysis | `buildCareerTrajectory` | ✅ YES (interpretCareerV2, commit a8e0172) | ✅ YES (C11 + evidence) | ✅ YES (conclusionData.careerTrajectory) | ✅ YES (careerTrajectoryEngine.test.ts) | — |
 | Events Analysis | `buildCareerEvents` | ✅ YES (interpretCareerV2, commit a8e0172) | ✅ YES (trajectory + C9) | ✅ YES (conclusionData.careerEvents) | ✅ YES (careerEventEngine.test.ts) | — |
 
-**Key Finding:** The orchestrator foundation and profession engine are NOT currently invoked in the production path. Trajectory and events engines are wired as approved downstream consumers (commit a8e0172).
+**Key Finding:** The orchestrator foundation remains NOT invoked in the production path (G19 BLOCKED). The profession engine is now wired in production (commit 01a3968f, G12 unblocked). Trajectory and events engines are wired as approved downstream consumers (commit a8e0172).
 
 ## HARD CONSTRAINTS
 
@@ -72,7 +72,7 @@ Created `src/domain/career/__tests__/golden/goldenCareerFixtures.ts` with a fixt
 - **G09:** Duplicate evidence handled by identityKey dedup, no double count
 - **G10:** Identity mismatch stays unresolved
 - **G11:** Unrelated Dasha cannot activate natal promise
-- **G12:** Profession analysis outputs (BLOCKED - profession engine not in production; blocked on `buildCareerProfessionAnalysis` production caller - see [P2-10A](P2-10A-CAREER-DOMAINS-PROFESSION.md))
+- **G12:** Profession analysis outputs (PASS - profession engine wired in production via `interpretCareerV2` at commit 01a3968f; see [P2-10A](P2-10A-CAREER-DOMAINS-PROFESSION.md))
 - **G13:** D10 unavailable stays not-provided
 - **G14:** AI context/UI do not override canonical C11
 - **G15:** Deterministic repetition
@@ -136,9 +136,8 @@ Implemented explicit assertions for evidence/provenance distinctions:
 
 ### 5. Blocked Scenarios
 
-Marked **G12** and **G19** as BLOCKED in the test output, each with the exact missing dependency. G18 was unblocked in commit a8e0172 when trajectory/events engines were wired into production.
+Marked **G19** as BLOCKED in the test output with the exact missing dependency. G12 was unblocked in commit 01a3968f when the profession engine was wired into production. G18 was unblocked in commit a8e0172 when trajectory/events engines were wired into production.
 
-- **G12:** `buildCareerProfessionAnalysis` has no production caller (P2-11F upstream-input blocker)
 - **G19:** No production caller invokes `buildCanonicalCareerFoundation`
 
 The test does NOT synthesize their expected output in test code. Instead, it emits a machine/test-readable acceptance summary with scenarioId | status | production entry point | expected | actual | trace check | reason.

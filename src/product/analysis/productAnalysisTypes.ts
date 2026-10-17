@@ -170,6 +170,37 @@ export interface CareerProductAnalysis {
     readonly headline?: string;
     readonly statement?: string;
   };
+  readonly profession?: {
+    readonly available: boolean;
+    readonly status: string;
+    readonly candidates: readonly {
+      readonly candidateId: string;
+      readonly domain: string;
+      readonly family: string;
+      readonly basis: string;
+      readonly expressionTypes: readonly string[];
+      readonly mechanismTypes: readonly string[];
+      readonly patternIds: readonly string[];
+      readonly d10Status: string;
+      readonly evidence: readonly {
+        readonly evidenceId: string;
+        readonly basis: string;
+        readonly sourceIds: readonly string[];
+        readonly ruleId: string;
+        readonly statement: string;
+        readonly linkage?: string;
+        readonly resolvedMechanismIds?: readonly string[];
+        readonly unresolvedMechanismIds?: readonly string[];
+      }[];
+      readonly domainEvidenceIds: readonly string[];
+      readonly relatedEvidenceIds: readonly string[];
+      readonly ruleId: string;
+    }[];
+    readonly unresolvedExpressionTypes: readonly string[];
+    readonly mappedTypes: readonly string[];
+    readonly missingInputs: readonly string[];
+    readonly d10Status: string;
+  };
 }
 
 export interface WealthOverallProduct {

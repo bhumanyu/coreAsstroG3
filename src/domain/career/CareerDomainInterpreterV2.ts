@@ -851,17 +851,36 @@ export function interpretCareerV2(
    * - careerD10CanonicalAnalysis: canonicalD10Analysis (for D10 qualification-only)
    * - domainEvidence: evidence (canonical evidence from canonicalEvidenceOutput)
    *
+   * Failure semantics: The profession engine call is wrapped in try-catch. If it throws,
+   * the error is surfaced as a typed diagnostic on conclusionData.professionAnalysisFailure without
+   * breaking the C11 conclusion. This ensures profession analysis failures are observable but
+   * non-fatal to the core career conclusion.
+   *
    * The result is added to conclusionData alongside careerTrajectory/careerEvents.
    * No C4–C10 producer is rerun; this is pure additive wiring.
    */
-  const careerProfessionAnalysis = buildCareerProfessionAnalysis({
-    expressions: mechanismExpressionResult,
-    mechanisms: careerMechanismCandidates,
-    ...(career10HFoundation ? { career10HFoundation } : {}),
-    ...(career10LFoundation ? { career10LFoundation } : {}),
-    careerD10CanonicalAnalysis: canonicalD10Analysis,
-    domainEvidence: evidence
-  });
+  let careerProfessionAnalysis: CareerProfessionAnalysis | undefined;
+  let professionAnalysisFailure: { error: string; message: string } | undefined;
+
+  try {
+    careerProfessionAnalysis = buildCareerProfessionAnalysis({
+      expressions: mechanismExpressionResult,
+      mechanisms: careerMechanismCandidates,
+      ...(career10HFoundation ? { career10HFoundation } : {}),
+      ...(career10LFoundation ? { career10LFoundation } : {}),
+      careerD10CanonicalAnalysis: canonicalD10Analysis,
+      domainEvidence: evidence
+    });
+  } catch (error) {
+    // Surface profession engine failure as a typed diagnostic
+    // This ensures the failure is observable but does not break the C11 conclusion
+    professionAnalysisFailure = Object.freeze({
+      error: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : String(error)
+    });
+    // Log the failure for observability
+    console.error(`[CareerDomainInterpreterV2] Profession engine failed: ${professionAnalysisFailure.error}: ${professionAnalysisFailure.message}`);
+  }
 
   /**
    * P2-08D: Presentation/Compatibility Adapter
@@ -1097,7 +1116,8 @@ export function interpretCareerV2(
       evidenceContinuityReport, // Gate D: Evidence continuity validation report
       careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
       careerEvents, // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
-      careerProfessionAnalysis // P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence)
+      careerProfessionAnalysis, // P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence)
+      professionAnalysisFailure // P2-11F Gate F: Profession analysis failure diagnostic (non-fatal)
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility

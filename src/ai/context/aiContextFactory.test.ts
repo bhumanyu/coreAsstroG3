@@ -1915,4 +1915,53 @@ describe('AI Context Factory', () => {
       expect(unknownResult.traceability).toBe('DEGRADED');
     });
   });
+
+  // P2-11F Gate F: Career Profession Analysis AI Context Projection Test
+  describe('P2-11F Gate F: Career Profession Analysis AI Context Projection', () => {
+    it('when careerProfessionAnalysis is present, AI context reflects it without re-invoking engine', async () => {
+      // Spy on buildCareerProfessionAnalysis to ensure it's not called during AI context building
+      const professionEngine = await import('../../domain/career/careerProfession/careerProfessionEngine');
+      const professionSpy = vi.spyOn(professionEngine, 'buildCareerProfessionAnalysis');
+
+      // Build a career interpretation with profession analysis already computed
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+
+      // Verify profession analysis is present in conclusionData
+      expect(v2.conclusionData?.careerProfessionAnalysis).toBeDefined();
+
+      // Build AI context with the pre-computed profession analysis
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [career],
+        temporalState,
+        careerProfessionAnalysis: v2.conclusionData?.careerProfessionAnalysis
+      });
+
+      // Verify profession fact is present in AI context
+      expect(aiContext.career?.profession).toBeDefined();
+      expect(aiContext.career?.profession?.availability).toBe('AVAILABLE');
+      expect(aiContext.career?.profession?.status).toBeDefined();
+      expect(Array.isArray(aiContext.career?.profession?.candidates)).toBe(true);
+
+      // Assert buildCareerProfessionAnalysis was NOT called during AI context building
+      // (it should use the pre-computed analysis from the options)
+      expect(professionSpy).not.toHaveBeenCalled();
+
+      // Cleanup
+      professionSpy.mockRestore();
+    });
+
+    it('when careerProfessionAnalysis is absent, AI context reflects UNAVAILABLE status', () => {
+      // Build AI context without pre-computed profession analysis
+      const aiContext = buildAiContext(horoscope, {
+        domainInterpretations: [career],
+        temporalState
+      });
+
+      // Verify profession fact is present but UNAVAILABLE
+      expect(aiContext.career?.profession).toBeDefined();
+      expect(aiContext.career?.profession?.availability).toBe('UNAVAILABLE');
+      expect(aiContext.career?.profession?.status).toBe('INSUFFICIENT_DATA');
+      expect(aiContext.career?.profession?.candidates).toEqual([]);
+    });
+  });
 });

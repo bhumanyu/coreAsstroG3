@@ -145,6 +145,15 @@ export interface CareerConclusionData {
    */
   readonly evidenceContinuityReport?: import('./evidenceContinuity').EvidenceContinuityReport;
   /**
+   * P2-11F Gate F: Career profession analysis failure diagnostic.
+   * Surfaces profession engine failures as a typed diagnostic without breaking C11 conclusion.
+   * When present, careerProfessionAnalysis is undefined and the error is recorded here.
+   */
+  readonly professionAnalysisFailure?: {
+    readonly error: string;
+    readonly message: string;
+  };
+  /**
    * P2-11G: Career trajectory analysis (downstream consumer of C11).
    * Long-term trajectory classification derived from C11 final synthesis.
    */

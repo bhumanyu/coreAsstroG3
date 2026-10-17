@@ -44,6 +44,7 @@ import type {
   ProductConfidence,
   ConclusionStatus
 } from './productAnalysisTypes';
+import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 
 export interface ProductAnalysisMapperInput {
   readonly birthDetails: BirthDetails;
@@ -326,11 +327,11 @@ export function mapEvidenceItems(
     const id = item.id || `ev_${fallbackDomain.toLowerCase()}_${idx + 1}`;
     const role: ProductEvidenceRole =
       item.role === 'PRIMARY' ||
-      item.role === 'SUPPORTING' ||
-      item.role === 'CHALLENGING' ||
-      item.role === 'MODIFIER' ||
-      item.role === 'REFINEMENT' ||
-      item.role === 'CONFLICTING'
+        item.role === 'SUPPORTING' ||
+        item.role === 'CHALLENGING' ||
+        item.role === 'MODIFIER' ||
+        item.role === 'REFINEMENT' ||
+        item.role === 'CONFLICTING'
         ? item.role
         : 'SUPPORTING';
 
@@ -339,8 +340,8 @@ export function mapEvidenceItems(
       (role === 'CHALLENGING'
         ? 'CHALLENGE'
         : role === 'CONFLICTING'
-        ? 'MIXED'
-        : 'SUPPORT');
+          ? 'MIXED'
+          : 'SUPPORT');
 
     return {
       id: String(id),
@@ -398,10 +399,10 @@ function mapCareer(
     explicitEvidence && explicitEvidence.length > 0
       ? explicitEvidence
       : viewModel.careerWhy?.factors
-      ? mapEvidenceItems(viewModel.careerWhy.factors, 'CAREER')
-      : viewModel.careerWhy?.evidence
-      ? mapEvidenceItems(viewModel.careerWhy.evidence, 'CAREER')
-      : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'CAREER'), 'CAREER');
+        ? mapEvidenceItems(viewModel.careerWhy.factors, 'CAREER')
+        : viewModel.careerWhy?.evidence
+          ? mapEvidenceItems(viewModel.careerWhy.evidence, 'CAREER')
+          : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'CAREER'), 'CAREER');
 
   const dashaPeriods = mapDashaPeriods(detail?.timing);
 
@@ -421,23 +422,23 @@ function mapCareer(
       strength: detail?.status
         ? String(detail.status)
         : detail?.natalPromise
-        ? String(detail.natalPromise)
-        : 'UNAVAILABLE',
+          ? String(detail.natalPromise)
+          : 'UNAVAILABLE',
       confidence: mapConfidence(summary?.confidence),
       headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
       statement: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion,
       dominantManifestations: detail?.dominantManifestations
         ? [...detail.dominantManifestations]
         : detail?.manifestations
-        ? [...detail.manifestations]
-        : []
+          ? [...detail.manifestations]
+          : []
     },
     expression: detail
       ? {
-          primaryStyle: detail.capacityLevel ? String(detail.capacityLevel) : undefined,
-          leadershipPotential: detail.actionableTakeaways?.[0],
-          secondaryTraits: detail.actionableTakeaways?.slice(1)
-        }
+        primaryStyle: detail.capacityLevel ? String(detail.capacityLevel) : undefined,
+        leadershipPotential: detail.actionableTakeaways?.[0],
+        secondaryTraits: detail.actionableTakeaways?.slice(1)
+      }
       : undefined,
     d10: {
       relationship: mapD10Relationship(detail?.d10Relationship ? String(detail.d10Relationship) : undefined),
@@ -476,10 +477,10 @@ function mapWealth(
     explicitEvidence && explicitEvidence.length > 0
       ? explicitEvidence
       : viewModel.wealthWhy?.factors
-      ? mapEvidenceItems(viewModel.wealthWhy.factors, 'WEALTH')
-      : viewModel.wealthWhy?.evidence
-      ? mapEvidenceItems(viewModel.wealthWhy.evidence, 'WEALTH')
-      : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'WEALTH'), 'WEALTH');
+        ? mapEvidenceItems(viewModel.wealthWhy.factors, 'WEALTH')
+        : viewModel.wealthWhy?.evidence
+          ? mapEvidenceItems(viewModel.wealthWhy.evidence, 'WEALTH')
+          : mapEvidenceItems(viewModel.evidence.filter((e) => e.domain === 'WEALTH'), 'WEALTH');
 
   const dashaPeriods = mapDashaPeriods(detail?.timing);
 
@@ -500,10 +501,10 @@ function mapWealth(
       status: detail?.status
         ? String(detail.status)
         : detail?.overallStatus
-        ? String(detail.overallStatus)
-        : detail?.natalPromise
-        ? String(detail.natalPromise)
-        : 'UNAVAILABLE',
+          ? String(detail.overallStatus)
+          : detail?.natalPromise
+            ? String(detail.natalPromise)
+            : 'UNAVAILABLE',
       promise: detail?.promiseStatement || detail?.statement || summary?.statement || summary?.conclusion || '',
       confidence: mapConfidence(summary?.confidence),
       headline: detail?.promiseHeadline || detail?.headline || summary?.headline,
@@ -553,9 +554,9 @@ function mapWealth(
     },
     speculativeRisk: speculationStatus
       ? {
-          level: mapSpeculativeRisk(String(speculationStatus)),
-          description: speculationStatement
-        }
+        level: mapSpeculativeRisk(String(speculationStatus)),
+        description: speculationStatement
+      }
       : undefined,
     qualifications: mapQualifications(detail?.qualifications),
     evidence,
