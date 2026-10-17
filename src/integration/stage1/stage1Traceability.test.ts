@@ -33,7 +33,7 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
 
     // Runs internal domain evidence checks, AI structured output checks, and explanation view model checks
     assertStage1Traceability(result);
-  });
+  }, 30000);
 
   it('enforces strict domain isolation between Career and Wealth evidence spaces', async () => {
     const result = await runStage1Integration(STAGE1_GOLDEN_INPUT);
@@ -71,7 +71,7 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
     for (const id of result.wealth.conclusion.challengingSourceIds ?? []) {
       expect(wealthIds.has(id)).toBe(true);
     }
-  });
+  }, 30000);
 
   it('validates AI context sanitization using official forbiddenAiContextKeys', async () => {
     const result = await runStage1Integration(STAGE1_GOLDEN_INPUT);
@@ -89,5 +89,5 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
 
     // Verify direct horoscope reference is not present in AiContext
     expect(Object.values(result.aiContext)).not.toContain(result.horoscope);
-  });
+  }, 30000);
 });

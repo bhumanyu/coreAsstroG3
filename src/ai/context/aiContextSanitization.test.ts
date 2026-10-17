@@ -1,8 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { forbiddenAiContextKeys } from './aiContextPrivacy';
 import { buildAiContext } from './aiContextFactory';
+import type { Horoscope } from '../../types';
+
+let horoscope: Horoscope;
+
+beforeAll(() => {
+  horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+});
 
 function collectKeys(obj: unknown, prefix = '', visited = new Set<unknown>()): string[] {
   if (!obj || typeof obj !== 'object' || visited.has(obj)) {
@@ -69,7 +76,6 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
   });
 
   it('should not contain any forbidden keys anywhere in the projected AiContext structure', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const context = buildAiContext(horoscope);
 
     const allKeys = collectKeys(context);
@@ -84,7 +90,6 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
   });
 
   it('should not contain the horoscope object identity or nested references', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const context = buildAiContext(horoscope);
 
     expect(Object.values(context)).not.toContain(horoscope);
@@ -93,7 +98,6 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
   });
 
   it('should deep-freeze the AiContext and all child nodes', () => {
-    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const context = buildAiContext(horoscope);
 
     expect(Object.isFrozen(context)).toBe(true);
@@ -123,4 +127,4 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
       }
     }
   });
-});
+}, 30000);

@@ -799,13 +799,6 @@ function mapD10Evidence(
   const result: DomainEvidence[] = [];
 
   for (const evidence of d10.evidence) {
-    // GATE D FIX: Exclude D10 resolution source records from canonical evidence mapping
-    // Resolution-source records have evidenceKind: 'RESOLUTION_SOURCE'
-    // These are source namespace IDs that belong in sourceIds/provenance only, not as DomainEvidence
-    if (evidence.evidenceKind === 'RESOLUTION_SOURCE') {
-      continue;
-    }
-
     const strength = mapD10StrengthToEvidenceStrength(evidence.d10Strength);
 
     // Exclude records with unmappable strength

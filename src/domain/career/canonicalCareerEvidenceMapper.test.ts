@@ -1115,10 +1115,10 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.phase).not.toBe('NATAL_PROMISE');
     });
 
-    it('Gate D: D10 resolution-source records are excluded from DomainEvidence mapping', () => {
+    it('Gate D: D10 resolution-source records are projected as OCCURRENCE to populate vargaConfirmations', () => {
       const d10Evidence: CareerD10CanonicalEvidence[] = [
         {
-          identityKey: 'CAREER_D10:C10_D10_DIRECTION_RESOLUTION:PRIMARY',
+          identityKey: 'CAREER_D10:D10_DIRECTION:PRIMARY',
           id: 'd10-resolution-1',
           role: 'PRIMARY',
           direction: 'SUPPORT',
@@ -1129,11 +1129,11 @@ describe('CanonicalCareerEvidenceMapper', () => {
           sourceIds: ['d10-source-1'],
           provenance: {
             source: 'C10_D10',
-            ruleIds: ['RULE_D10_RESOLUTION'],
+            ruleIds: ['C10_D10_DIRECTION_RESOLUTION'],
             sourceIds: ['d10-source-1'],
             natalRootIds: ['natal-root-1']
           },
-          evidenceKind: 'RESOLUTION_SOURCE'
+          evidenceKind: 'OCCURRENCE'
         },
         {
           identityKey: 'd10-occurrence-1',
@@ -1183,11 +1183,15 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const result = mapCanonicalCareerEvidence(input);
 
-      // Resolution-source records should be excluded from DomainEvidence
-      const resolutionEvidence = result.evidence.filter(e => e.identityKey === 'CAREER_D10:C10_D10_DIRECTION_RESOLUTION:PRIMARY');
-      expect(resolutionEvidence).toHaveLength(0);
+      // Both OCCURRENCE records should be mapped to DomainEvidence
+      expect(result.evidence).toHaveLength(2);
 
-      // Occurrence records should be mapped to DomainEvidence
+      // Verify resolution-source projection (now OCCURRENCE) is mapped
+      const resolutionEvidence = result.evidence.filter(e => e.identityKey === 'CAREER_D10:D10_DIRECTION:PRIMARY');
+      expect(resolutionEvidence).toHaveLength(1);
+      expect(resolutionEvidence[0].relatedEvidenceIds).toContain('d10-source-1');
+
+      // Verify occurrence record is mapped
       const occurrenceEvidence = result.evidence.filter(e => e.identityKey === 'd10-occurrence-1');
       expect(occurrenceEvidence).toHaveLength(1);
     });

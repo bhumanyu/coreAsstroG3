@@ -331,6 +331,12 @@ export function buildD10EvidenceIdentityKey(
  * - Does NOT deduplicate - returns one record per source occurrence
  * - Sorts output by identityKey.localeCompare
  * - Freezes all
+ *
+ * FIX: Projects RESOLUTION_SOURCE records into OCCURRENCE records to populate vargaConfirmations.
+ * The semantic engine produces evidence with sources ending in _RESOLUTION (e.g., C10_D10_DIRECTION_RESOLUTION).
+ * These are now projected as OCCURRENCE records with semantic identityKeys (e.g., CAREER_D10:D10_DIRECTION:PRIMARY).
+ * The original raw evidence IDs (CAREER_D10_QUAL:*) are preserved in sourceIds and provenance.ruleIds for traceability.
+ * This ensures D10 evidence is available in vargaConfirmations without violating namespace constraints (evidenceIds cite semantic identityKeys).
  */
 export function buildCanonicalOccurrences(
   evidence: readonly CareerD10Evidence[],
@@ -339,8 +345,12 @@ export function buildCanonicalOccurrences(
   const occurrences: CareerD10CanonicalEvidence[] = [];
 
   for (const item of evidence) {
+    // Build semantic identityKey for OCCURRENCE records
+    // Format: CAREER_D10:D10_<ASPECT>:<role>
+    // For resolution records, extract the aspect from the source (e.g., DIRECTION_RESOLUTION -> DIRECTION)
+    const sourceBase = (item.source ?? 'UNKNOWN').replace('_RESOLUTION', '');
     const identityKey = buildD10EvidenceIdentityKey(
-      item.source ?? 'UNKNOWN',
+      `D10_${sourceBase}`,
       item.role
     );
 
@@ -348,6 +358,7 @@ export function buildCanonicalOccurrences(
 
     const natalRootIds = Object.freeze([]);
 
+    // Preserve the original raw evidence ID in provenance for traceability
     const provenance: CareerD10CanonicalProvenance = Object.freeze({
       source: 'C10_D10',
       ruleIds: Object.freeze([item.source ?? 'UNKNOWN']),
@@ -355,9 +366,8 @@ export function buildCanonicalOccurrences(
       natalRootIds
     });
 
-    // Determine evidence kind: resolution-source records have source ending with _RESOLUTION
-    const evidenceKind = (item.source ?? '').endsWith('_RESOLUTION') ? 'RESOLUTION_SOURCE' : 'OCCURRENCE';
-
+    // All records are now OCCURRENCE to populate vargaConfirmations
+    // The raw evidence IDs remain in sourceIds/provenance for traceability
     const canonicalEvidence: CareerD10CanonicalEvidence = Object.freeze({
       identityKey,
       id,
@@ -369,7 +379,7 @@ export function buildCanonicalOccurrences(
       statement: item.statement,
       sourceIds: provenance.sourceIds,
       provenance,
-      evidenceKind
+      evidenceKind: 'OCCURRENCE' as const
     });
 
     occurrences.push(canonicalEvidence);
