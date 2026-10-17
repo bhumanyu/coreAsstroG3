@@ -28,6 +28,10 @@
  * Updated on 2026-10-17: Golden baseline reasoning trace regenerated to reflect D10 identityKey changes
  * and normalizeSourceIds normalization (colons → underscores in relatedEvidenceIds). The core fix
  * semantic change is legitimate; the reasoning trace update is a side effect of the normalization contract.
+ *
+ * Updated on 2026-10-17: Test pinned to asOf=2024-01-01T00:00:00Z for date-independent baseline comparison.
+ * This ensures golden baseline regression test is deterministic regardless of when tests run.
+ * At 2024-01-01, active dasha is MD=JUPITER, AD=SATURN, PD=SATURN (confirmed via diagnostic).
  */
 
 export const GOLDEN_C11_BASELINE = {

@@ -348,6 +348,10 @@ export function buildCanonicalOccurrences(
     // Build semantic identityKey for OCCURRENCE records
     // Format: CAREER_D10:D10_<ASPECT>:<role>
     // For resolution records, extract the aspect from the source (e.g., DIRECTION_RESOLUTION -> DIRECTION)
+    // DEBT: This uses string manipulation (source.replace('_RESOLUTION', '')) instead of a typed aspect field.
+    // Consider: (1) adding a typed `aspect` field to CareerD10Evidence, or (2) removing the now-dead
+    // RESOLUTION_SOURCE enum value since all records are now projected as OCCURRENCE, or (3) restoring
+    // dual-kind semantics if RESOLUTION_SOURCE should be preserved for other use cases.
     const sourceBase = (item.source ?? 'UNKNOWN').replace('_RESOLUTION', '');
     const identityKey = buildD10EvidenceIdentityKey(
       `D10_${sourceBase}`,

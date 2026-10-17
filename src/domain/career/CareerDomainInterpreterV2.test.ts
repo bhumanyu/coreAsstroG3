@@ -2926,7 +2926,7 @@ describe('CareerDomainInterpreterV2', () => {
     });
 
     it('regression: C11 conclusion unchanged vs GOLDEN_C11_BASELINE', () => {
-      const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+      const v2 = interpretCareerV2(horoscope, makeDomainOptions('2024-01-01T00:00:00Z'));
 
       // Verify golden baseline is not a placeholder
       expect(GOLDEN_C11_BASELINE.placeholder).toBe(false);
