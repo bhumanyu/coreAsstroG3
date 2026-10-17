@@ -15,3 +15,15 @@ export {
   mapDashaInterpretationToActiveDashaTimingContext,
   type ActiveDashaTimingContext
 } from './mapDashaInterpretationToActiveDashaTimingContext';
+export {
+  listSelectableMdAdPeriods,
+  resolveSelectedMdAdPeriod,
+  MD_AD_PERIOD_RESOLVER_VERSION,
+  type PeriodDiagnostic,
+  type ResolutionError,
+  type ResolvedPeriod,
+  type ResolutionResult,
+  type SelectableMahadasha,
+  type SelectableAntardasha,
+  type SelectablePeriodsResult
+} from './selectedMdAdPeriod';
