@@ -152,6 +152,9 @@ import {
 import {
   buildCareerProfessionAnalysis
 } from './careerProfession/careerProfessionEngine';
+import type {
+  CareerProfessionAnalysis
+} from './careerProfession';
 
 /**
  * ARCHITECTURAL NOTE: Canonical C11 Final Synthesis Boundary

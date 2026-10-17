@@ -3670,8 +3670,17 @@ describe('CareerDomainInterpreterV2', () => {
       // Build a minimal input with empty resolvedMechanisms
       const emptyExpressions: CareerExpressionAnalysisResult = {
         expressions: [],
-        primaryExpression: undefined,
-        statement: 'No expression data available'
+        status: 'INSUFFICIENT_DATA',
+        sourceMechanismIds: [],
+        missingInputs: [],
+        unmappedMechanismTypes: [],
+        provenance: {
+          mechanismIds: [],
+          patternIds: [],
+          relationshipIds: [],
+          evidenceIds: [],
+          sourceStages: []
+        }
       };
 
       const emptyMechanisms: readonly CareerMechanismCandidate[] = [];

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { Planet } from '../../types';
@@ -31,6 +31,7 @@ import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { mapMethodology } from '../../product/analysis/productAnalysisMapper';
+import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
 
 describe('AI Context Factory', () => {
   const horoscope = calculateHoroscope(
@@ -38,6 +39,16 @@ describe('AI Context Factory', () => {
     undefined,
     CANONICAL_BIRTH_DETAILS.dateTimeStr
   );
+
+  function makeDomainOptions(asOf?: string): DomainReasoningOptions {
+    const context = createAnalysisContext({
+      asOf: asOf || CANONICAL_BIRTH_DETAILS.dateTimeStr,
+      methodology: mapMethodology(CANONICAL_BIRTH_DETAILS)
+    });
+    const temporalState = resolveAnalysisTemporalState(horoscope, context);
+    return { context, temporalState };
+  }
+
   const analysisContext = createAnalysisContext({
     asOf: CANONICAL_BIRTH_DETAILS.dateTimeStr,
     methodology: mapMethodology(CANONICAL_BIRTH_DETAILS)
@@ -1919,15 +1930,16 @@ describe('AI Context Factory', () => {
   // P2-11F Gate F: Career Profession Analysis AI Context Projection Test
   describe('P2-11F Gate F: Career Profession Analysis AI Context Projection', () => {
     it('when careerProfessionAnalysis is present, AI context reflects it without re-invoking engine', async () => {
-      // Spy on buildCareerProfessionAnalysis to ensure it's not called during AI context building
-      const professionEngine = await import('../../domain/career/careerProfession/careerProfessionEngine');
-      const professionSpy = vi.spyOn(professionEngine, 'buildCareerProfessionAnalysis');
-
       // Build a career interpretation with profession analysis already computed
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
 
       // Verify profession analysis is present in conclusionData
       expect(v2.conclusionData?.careerProfessionAnalysis).toBeDefined();
+
+      // Spy on buildCareerProfessionAnalysis to ensure it's not called during AI context building
+      // Install spy AFTER interpretCareerV2 completes, since that legitimately calls buildCareerProfessionAnalysis
+      const professionEngine = await import('../../domain/career/careerProfession/careerProfessionEngine');
+      const professionSpy = vi.spyOn(professionEngine, 'buildCareerProfessionAnalysis');
 
       // Build AI context with the pre-computed profession analysis
       const aiContext = buildAiContext(horoscope, {
@@ -1951,9 +1963,18 @@ describe('AI Context Factory', () => {
     });
 
     it('when careerProfessionAnalysis is absent, AI context reflects UNAVAILABLE status', () => {
+      // Create a career interpretation without careerProfessionAnalysis in conclusionData
+      const careerWithoutProfessionAnalysis = {
+        ...career,
+        conclusionData: {
+          ...career.conclusionData,
+          careerProfessionAnalysis: undefined
+        }
+      };
+
       // Build AI context without pre-computed profession analysis
       const aiContext = buildAiContext(horoscope, {
-        domainInterpretations: [career],
+        domainInterpretations: [careerWithoutProfessionAnalysis],
         temporalState
       });
 
