@@ -30,10 +30,17 @@ export interface SelectedPeriodActivationContext {
   readonly contextVersion: typeof SELECTED_PERIOD_CONTEXT_VERSION;
   readonly dashaSystem: typeof DashaSystem.VIMSHOTTARI;
   readonly level: 'MD_AD';
-  /** Identity of this selection, separate from evidence IDs and rule IDs. */
+  /**
+   * Versioned internal selection identifier for this analysis layer.
+   * Not an evidence ID, rule ID, or durable external/storage identity.
+   * Downstream persistence/API contracts must not rely on its format without a versioned migration.
+   */
   readonly selectedPeriodId: string;
   readonly resolverVersion: typeof MD_AD_PERIOD_RESOLVER_VERSION;
-  /** Exact AnalysisContext.asOf string; retained verbatim and never replaced by selected dates. */
+  /**
+   * Exact AnalysisContext.asOf string; retained verbatim and never replaced by selected dates.
+   * createAnalysisContext/normalizeAsOf canonicalizes asOf upstream; this factory validates parseability only and preserves the string verbatim.
+   */
   readonly analysisAsOf: string;
   readonly temporalRelation: SelectedPeriodTemporalRelation;
   /** Half-open interval semantics: start is included, end is excluded. */
@@ -57,6 +64,9 @@ export interface SelectedPeriodActivationContext {
    * Canonical MD/AD interpretation nodes selected from the existing report.
    * These preserve deterministic activation/evidence/provenance; this layer does not
    * recompute, merge, or reinterpret those facts.
+   *
+   * Read-only view: nodes are shared by reference with the canonical report and are
+   * shallowly (not deeply) frozen. Downstream consumers (PBA-04/05) must not mutate them.
    */
   readonly mahadashaNode: DashaMahadashaInterpretation;
   readonly antardashaNode: DashaAntardashaInterpretation;
@@ -100,6 +110,11 @@ function classifyTemporalRelation(
   return 'CURRENT';
 }
 
+/**
+ * Versioned internal selection identifier for this analysis layer.
+ * Not an evidence ID, rule ID, or durable external/storage identity.
+ * Downstream persistence/API contracts must not rely on its format without a versioned migration.
+ */
 function createSelectedPeriodId(
   mahadashaId: string,
   antardashaId: string
