@@ -134,6 +134,33 @@ export function mapDirection(val?: string): ProductDirection {
 }
 
 /**
+ * Derives aggregate D10 status from candidate D10 statuses.
+ * D10 status is per-candidate; this derives a sensible aggregate.
+ *
+ * Derivation rules:
+ * - QUALIFIED if any candidate is QUALIFIED (presence of D10 support)
+ * - NOT_PROVIDED if all candidates are NOT_PROVIDED (D10 data missing entirely)
+ * - UNAVAILABLE otherwise (mixed or unavailable states)
+ */
+function deriveAggregateD10Status(candidates: readonly { d10Status: string }[]): string {
+  if (!candidates || candidates.length === 0) {
+    return 'NOT_PROVIDED';
+  }
+
+  const hasQualified = candidates.some(c => c.d10Status === 'QUALIFIED');
+  if (hasQualified) {
+    return 'QUALIFIED';
+  }
+
+  const allNotProvided = candidates.every(c => c.d10Status === 'NOT_PROVIDED');
+  if (allNotProvided) {
+    return 'NOT_PROVIDED';
+  }
+
+  return 'UNAVAILABLE';
+}
+
+/**
  * Maps D10 relationship semantics (never percentage).
  */
 export function mapD10Relationship(val?: string): D10ProductResult['relationship'] {
@@ -441,7 +468,7 @@ function mapCareer(
       }
       : undefined,
     profession: detail?.profession ? {
-      available: detail.profession.status === 'COMPLETE',
+      available: detail.profession.status !== 'INSUFFICIENT_DATA',
       status: detail.profession.status,
       candidates: detail.profession.candidates.map(c => ({
         candidateId: c.candidateId,
@@ -469,7 +496,7 @@ function mapCareer(
       unresolvedExpressionTypes: detail.profession.unresolvedExpressionTypes,
       mappedTypes: detail.profession.mappedTypes,
       missingInputs: detail.profession.missingInputs,
-      d10Status: 'NOT_PROVIDED' // D10 status is per-candidate, not aggregate
+      d10Status: deriveAggregateD10Status(detail.profession.candidates)
     } : undefined,
     d10: {
       relationship: mapD10Relationship(detail?.d10Relationship ? String(detail.d10Relationship) : undefined),

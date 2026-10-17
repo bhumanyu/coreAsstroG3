@@ -26,6 +26,7 @@ import {
 } from '../productAnalysisSelectors';
 import type { ProductEvidence, ProductWarning } from '../productAnalysisTypes';
 import type { LifeAnalysisViewModel } from '../../life-analysis/lifeAnalysisTypes';
+import type { CareerProfessionAnalysis } from '../../../domain/career/careerProfession/careerProfessionTypes';
 
 describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
   const sampleBirth: BirthDetails = {
@@ -288,6 +289,190 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     });
 
     expect(analysisWithoutProfession.career.profession).toBeUndefined();
+  });
+
+  it('4.6. Profession with candidates maps correctly with available status and d10Status derivation', () => {
+    // Test COMPLETE status with candidates
+    const viewModelWithCompleteProfession: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        profession: {
+          status: 'COMPLETE',
+          candidates: [
+            {
+              candidateId: 'candidate-1',
+              domain: 'TECHNOLOGY',
+              family: 'TECHNICAL_LEADERSHIP',
+              basis: 'EXPRESSION',
+              expressionTypes: ['TECHNICAL_SPECIALIZATION'],
+              mechanismTypes: [],
+              patternIds: ['pattern-1'],
+              d10Status: 'QUALIFIED',
+              evidence: [
+                {
+                  evidenceId: 'ev-1',
+                  basis: 'EXPRESSION',
+                  sourceIds: ['source-1'],
+                  ruleId: 'RULE_1',
+                  statement: 'Evidence for technical leadership'
+                }
+              ],
+              domainEvidenceIds: ['domain-ev-1'],
+              relatedEvidenceIds: ['related-ev-1'],
+              ruleId: 'RULE_CANDIDATE_1'
+            },
+            {
+              candidateId: 'candidate-2',
+              domain: 'FINANCE',
+              family: 'FINANCIAL_SERVICES',
+              basis: 'MECHANISM',
+              expressionTypes: [],
+              mechanismTypes: ['RESOURCE_MANAGEMENT'],
+              patternIds: ['pattern-2'],
+              d10Status: 'NOT_PROVIDED',
+              evidence: [
+                {
+                  evidenceId: 'ev-2',
+                  basis: 'MECHANISM',
+                  sourceIds: ['source-2'],
+                  ruleId: 'RULE_2',
+                  statement: 'Evidence for financial services'
+                }
+              ],
+              domainEvidenceIds: ['domain-ev-2'],
+              relatedEvidenceIds: ['related-ev-2'],
+              ruleId: 'RULE_CANDIDATE_2'
+            }
+          ],
+          unresolvedExpressionTypes: [],
+          mappedTypes: ['TECHNICAL_SPECIALIZATION'],
+          missingInputs: [],
+          provenance: {
+            expressionIds: [],
+            mechanismIds: [],
+            patternIds: [],
+            evidenceIds: [],
+            sourceIds: [],
+            ruleIds: []
+          }
+        }
+      }
+    } as any;
+
+    const analysisComplete = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModelWithCompleteProfession,
+      context: sampleContext
+    });
+
+    expect(analysisComplete.career.profession).toBeDefined();
+    expect(analysisComplete.career.profession!.available).toBe(true);
+    expect(analysisComplete.career.profession!.status).toBe('COMPLETE');
+    expect(analysisComplete.career.profession!.candidates).toHaveLength(2);
+    expect(analysisComplete.career.profession!.candidates[0].candidateId).toBe('candidate-1');
+    expect(analysisComplete.career.profession!.candidates[0].d10Status).toBe('QUALIFIED');
+    expect(analysisComplete.career.profession!.candidates[1].d10Status).toBe('NOT_PROVIDED');
+    // Aggregate d10Status should be QUALIFIED (any candidate qualified)
+    expect(analysisComplete.career.profession!.d10Status).toBe('QUALIFIED');
+
+    // Test PARTIAL status with candidates
+    const viewModelWithPartialProfession: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        profession: {
+          status: 'PARTIAL',
+          candidates: [
+            {
+              candidateId: 'candidate-3',
+              domain: 'HEALTHCARE',
+              family: 'MEDICAL_PRACTICE',
+              basis: 'EXPRESSION',
+              expressionTypes: ['SERVICE_WORK'],
+              mechanismTypes: [],
+              patternIds: ['pattern-3'],
+              d10Status: 'UNAVAILABLE',
+              evidence: [
+                {
+                  evidenceId: 'ev-3',
+                  basis: 'EXPRESSION',
+                  sourceIds: ['source-3'],
+                  ruleId: 'RULE_3',
+                  statement: 'Evidence for medical practice'
+                }
+              ],
+              domainEvidenceIds: ['domain-ev-3'],
+              relatedEvidenceIds: ['related-ev-3'],
+              ruleId: 'RULE_CANDIDATE_3'
+            }
+          ],
+          unresolvedExpressionTypes: [],
+          mappedTypes: ['SERVICE_WORK'],
+          missingInputs: ['D10_DATA'],
+          provenance: {
+            expressionIds: [],
+            mechanismIds: [],
+            patternIds: [],
+            evidenceIds: [],
+            sourceIds: [],
+            ruleIds: []
+          }
+        }
+      }
+    };
+
+    const analysisPartial = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModelWithPartialProfession as any,
+      context: sampleContext
+    });
+
+    expect(analysisPartial.career.profession).toBeDefined();
+    expect(analysisPartial.career.profession!.available).toBe(true); // PARTIAL is available
+    expect(analysisPartial.career.profession!.status).toBe('PARTIAL');
+    expect(analysisPartial.career.profession!.candidates).toHaveLength(1);
+    // Aggregate d10Status should be UNAVAILABLE (single candidate is UNAVAILABLE)
+    expect(analysisPartial.career.profession!.d10Status).toBe('UNAVAILABLE');
+
+    // Test INSUFFICIENT_DATA status (should not be available)
+    const viewModelWithInsufficientData: LifeAnalysisViewModel = {
+      ...sampleViewModel,
+      careerDetail: {
+        ...sampleViewModel.careerDetail!,
+        profession: {
+          status: 'INSUFFICIENT_DATA',
+          candidates: [],
+          unresolvedExpressionTypes: [],
+          mappedTypes: [],
+          missingInputs: ['EXPRESSIONS'],
+          provenance: {
+            expressionIds: [],
+            mechanismIds: [],
+            patternIds: [],
+            evidenceIds: [],
+            sourceIds: [],
+            ruleIds: []
+          }
+        }
+      }
+    };
+
+    const analysisInsufficient = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: viewModelWithInsufficientData as any,
+      context: sampleContext
+    });
+
+    expect(analysisInsufficient.career.profession).toBeDefined();
+    expect(analysisInsufficient.career.profession!.available).toBe(false); // INSUFFICIENT_DATA is not available
+    expect(analysisInsufficient.career.profession!.status).toBe('INSUFFICIENT_DATA');
+    expect(analysisInsufficient.career.profession!.candidates).toHaveLength(0);
+    // Aggregate d10Status should be NOT_PROVIDED (no candidates)
+    expect(analysisInsufficient.career.profession!.d10Status).toBe('NOT_PROVIDED');
   });
 
   it('5. Status derivation: READY, PARTIAL, and ERROR', () => {

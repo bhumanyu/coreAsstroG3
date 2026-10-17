@@ -1643,10 +1643,24 @@ describe('CanonicalCareerEvidenceMapper', () => {
 
       const evidence = result.evidence[0];
 
-      // relatedEvidenceIds should contain the normalized source ID (colons→underscores)
-      // This is a delimiter normalization, not identity fabrication
+      // Collect all upstream source IDs from the input (before normalization)
+      const upstreamSourceIds = new Set(
+        mockEvidence.flatMap(e => e.sourceIds)
+      );
+
+      // Each emitted relatedEvidenceIds value should be a normalized version of an upstream source ID
+      // This validates that normalization produces identifiers that correspond to real upstream IDs
       expect(evidence.relatedEvidenceIds).toHaveLength(1);
-      expect(evidence.relatedEvidenceIds[0]).toBe('CAREER_STRUCTURAL_LORD_IN_HOUSE_10_11_JUPITER_MARS_PRIMARY_SUPPORT_MODERATE_false');
+      const normalizedId = evidence.relatedEvidenceIds[0];
+
+      // The normalized ID should be the colon→underscore version of an upstream source ID
+      const expectedNormalized = 'CAREER_STRUCTURAL:LORD_IN_HOUSE:10:11:JUPITER:MARS:PRIMARY:SUPPORT:MODERATE:false'.replace(/:/g, '_');
+      expect(normalizedId).toBe(expectedNormalized);
+
+      // Verify that the normalized ID corresponds to a real upstream source ID
+      // The upstream source ID is the colon-delimited version, so we verify the set contains it
+      const upstreamSourceId = 'CAREER_STRUCTURAL:LORD_IN_HOUSE:10:11:JUPITER:MARS:PRIMARY:SUPPORT:MODERATE:false';
+      expect(upstreamSourceIds.has(upstreamSourceId)).toBe(true);
     });
   });
 
