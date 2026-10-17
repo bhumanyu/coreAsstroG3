@@ -9,6 +9,9 @@ import {
   resolveSelectedMdAdPeriod,
   MD_AD_PERIOD_RESOLVER_VERSION
 } from './selectedMdAdPeriod';
+import { calculateHoroscope } from '../../engine/astroEngine';
+import { analyzeDashaInterpretation } from '../../engine/dashaInterpretation/dashaInterpretation';
+import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 
 const mockNatal = (planet: Planet): DashaPlanetActivation =>
   ({
@@ -97,15 +100,21 @@ describe('selectedMdAdPeriod', () => {
       expect(result.mahadashas[0].planet).toBe(Planet.JUPITER);
       expect(result.mahadashas[0].start).toBe('2020-01-01T00:00:00.000Z');
       expect(result.mahadashas[0].end).toBe('2036-01-01T00:00:00.000Z');
+      expect(result.mahadashas[0].valid).toBe(true);
+      expect(result.mahadashas[0].diagnostics).toEqual([]);
 
       // Check antardashas are linked to correct mahadasha
       const jupiterAdIds = result.antardashas
         .filter((ad) => ad.mahadashaId === result.mahadashas[0].id);
       expect(jupiterAdIds).toHaveLength(2);
+      expect(jupiterAdIds.every(ad => ad.valid)).toBe(true);
+      expect(jupiterAdIds.every(ad => ad.diagnostics.length === 0)).toBe(true);
 
       const saturnAdIds = result.antardashas
         .filter((ad) => ad.mahadashaId === result.mahadashas[1].id);
       expect(saturnAdIds).toHaveLength(1);
+      expect(saturnAdIds.every(ad => ad.valid)).toBe(true);
+      expect(saturnAdIds.every(ad => ad.diagnostics.length === 0)).toBe(true);
     });
 
     it('no current-date filtering: lists past, current, and future periods', () => {
@@ -184,6 +193,8 @@ describe('selectedMdAdPeriod', () => {
       // All periods should be listed regardless of date
       expect(result.mahadashas).toHaveLength(3);
       expect(result.antardashas).toHaveLength(3);
+      expect(result.mahadashas.every(md => md.valid)).toBe(true);
+      expect(result.antardashas.every(ad => ad.valid)).toBe(true);
     });
 
     it('invalid MD interval diagnostics: detects invalid start/end', () => {
@@ -374,6 +385,290 @@ describe('selectedMdAdPeriod', () => {
       expect(result.diagnostics).toContain('DUPLICATE_ANTARDASHA_ID');
     });
 
+    it('per-entry validity: invalid MD interval has valid: false with INVALID_MAHADASHA_INTERVAL', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: 'invalid-date',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.mahadashas).toHaveLength(1);
+      expect(result.mahadashas[0].valid).toBe(false);
+      expect(result.mahadashas[0].diagnostics).toContain('INVALID_MAHADASHA_INTERVAL');
+      expect(result.diagnostics).toContain('INVALID_MAHADASHA_INTERVAL');
+    });
+
+    it('per-entry validity: invalid AD interval has valid: false with INVALID_ANTARDASHA_INTERVAL', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: 'invalid-date',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.antardashas).toHaveLength(1);
+      expect(result.antardashas[0].valid).toBe(false);
+      expect(result.antardashas[0].diagnostics).toContain('INVALID_ANTARDASHA_INTERVAL');
+      expect(result.diagnostics).toContain('INVALID_ANTARDASHA_INTERVAL');
+    });
+
+    it('per-entry validity: AD outside MD has valid: false with ANTARDASHA_OUTSIDE_MAHADASHA', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2010-01-01T00:00:00.000Z',
+                end: '2012-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.antardashas).toHaveLength(1);
+      expect(result.antardashas[0].valid).toBe(false);
+      expect(result.antardashas[0].diagnostics).toContain('ANTARDASHA_OUTSIDE_MAHADASHA');
+      expect(result.diagnostics).toContain('ANTARDASHA_OUTSIDE_MAHADASHA');
+    });
+
+    it('per-entry validity: duplicate MD ID has valid: false with DUPLICATE_MAHADASHA_ID', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [],
+            evidence: [],
+            confidence: 'HIGH'
+          },
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.mahadashas).toHaveLength(2);
+      expect(result.mahadashas[0].valid).toBe(false);
+      expect(result.mahadashas[0].diagnostics).toContain('DUPLICATE_MAHADASHA_ID');
+      expect(result.mahadashas[1].valid).toBe(false);
+      expect(result.mahadashas[1].diagnostics).toContain('DUPLICATE_MAHADASHA_ID');
+      expect(result.diagnostics).toContain('DUPLICATE_MAHADASHA_ID');
+    });
+
+    it('per-entry validity: duplicate AD ID has valid: false with DUPLICATE_ANTARDASHA_ID', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              },
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.antardashas).toHaveLength(2);
+      expect(result.antardashas[0].valid).toBe(false);
+      expect(result.antardashas[0].diagnostics).toContain('DUPLICATE_ANTARDASHA_ID');
+      expect(result.antardashas[1].valid).toBe(false);
+      expect(result.antardashas[1].diagnostics).toContain('DUPLICATE_ANTARDASHA_ID');
+      expect(result.diagnostics).toContain('DUPLICATE_ANTARDASHA_ID');
+    });
+
+    it('per-entry validity: non-canonical date format has valid: false with NON_CANONICAL_DATE_FORMAT', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00+00:00',
+            end: '2036-01-01T00:00:00+00:00',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.mahadashas).toHaveLength(1);
+      expect(result.mahadashas[0].valid).toBe(false);
+      expect(result.mahadashas[0].diagnostics).toContain('NON_CANONICAL_DATE_FORMAT');
+      expect(result.diagnostics).toContain('NON_CANONICAL_DATE_FORMAT');
+    });
+
+    it('per-entry validity: valid entries have valid: true and empty diagnostics', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const result = listSelectableMdAdPeriods(report);
+
+      expect(result.mahadashas).toHaveLength(1);
+      expect(result.mahadashas[0].valid).toBe(true);
+      expect(result.mahadashas[0].diagnostics).toEqual([]);
+
+      expect(result.antardashas).toHaveLength(1);
+      expect(result.antardashas[0].valid).toBe(true);
+      expect(result.antardashas[0].diagnostics).toEqual([]);
+
+      expect(result.diagnostics).toEqual([]);
+    });
+
     it('deterministic IDs: same inputs produce same IDs', () => {
       const report: DashaInterpretationReport = {
         system: DashaSystem.VIMSHOTTARI,
@@ -450,6 +745,8 @@ describe('selectedMdAdPeriod', () => {
 
       expect(result.mahadashas[0].planet).toBe(result.mahadashas[1].planet);
       expect(result.mahadashas[0].id).not.toBe(result.mahadashas[1].id);
+      expect(result.mahadashas[0].valid).toBe(true);
+      expect(result.mahadashas[1].valid).toBe(true);
     });
 
     it('AD cannot be reused under another MD: AD IDs include parent MD ID', () => {
@@ -517,6 +814,8 @@ describe('selectedMdAdPeriod', () => {
       expect(saturnAd1).toBeDefined();
       expect(saturnAd2).toBeDefined();
       expect(saturnAd1!.id).not.toBe(saturnAd2!.id);
+      expect(saturnAd1!.valid).toBe(true);
+      expect(saturnAd2!.valid).toBe(true);
     });
 
     it('missing report: returns empty lists', () => {
@@ -1440,6 +1739,44 @@ describe('selectedMdAdPeriod', () => {
       });
 
       expect(result.ok).toBe(true);
+    });
+
+    it('producer contract: deterministic IDs from canonical Vimshottari output', () => {
+      // Build a real DashaInterpretationReport via the canonical engine pipeline
+      const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const dashaInterpretation = analyzeDashaInterpretation({
+        vimshottari: horoscope.vimshottari,
+        planetInterpretation: horoscope.planetInterpretation,
+        houseInterpretation: horoscope.houseInterpretation,
+        functionalRoles: horoscope.functionalRoles,
+        natalGrahaDrishti: horoscope.natalGrahaDrishti,
+        yogas: horoscope.yogas ?? { yogas: [] },
+        planetAnalysis: horoscope.planetAnalysis
+      });
+
+      // Call listSelectableMdAdPeriods twice and verify identical IDs
+      const result1 = listSelectableMdAdPeriods(dashaInterpretation);
+      const result2 = listSelectableMdAdPeriods(dashaInterpretation);
+
+      expect(result1.mahadashas).toHaveLength(result2.mahadashas.length);
+      expect(result1.antardashas).toHaveLength(result2.antardashas.length);
+
+      for (let i = 0; i < result1.mahadashas.length; i++) {
+        expect(result1.mahadashas[i].id).toBe(result2.mahadashas[i].id);
+        expect(result1.mahadashas[i].valid).toBe(result2.mahadashas[i].valid);
+        expect(result1.mahadashas[i].diagnostics).toEqual(result2.mahadashas[i].diagnostics);
+      }
+
+      for (let i = 0; i < result1.antardashas.length; i++) {
+        expect(result1.antardashas[i].id).toBe(result2.antardashas[i].id);
+        expect(result1.antardashas[i].valid).toBe(result2.antardashas[i].valid);
+        expect(result1.antardashas[i].diagnostics).toEqual(result2.antardashas[i].diagnostics);
+      }
+
+      // Verify all entries use canonical ISO format (valid: true, no NON_CANONICAL_DATE_FORMAT)
+      expect(result1.diagnostics).not.toContain('NON_CANONICAL_DATE_FORMAT');
+      expect(result1.mahadashas.every(md => md.valid)).toBe(true);
+      expect(result1.antardashas.every(ad => ad.valid)).toBe(true);
     });
   });
 });

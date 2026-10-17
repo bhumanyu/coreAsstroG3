@@ -20,7 +20,8 @@ export type PeriodDiagnostic =
   | 'INVALID_ANTARDASHA_INTERVAL'
   | 'ANTARDASHA_OUTSIDE_MAHADASHA'
   | 'DUPLICATE_MAHADASHA_ID'
-  | 'DUPLICATE_ANTARDASHA_ID';
+  | 'DUPLICATE_ANTARDASHA_ID'
+  | 'NON_CANONICAL_DATE_FORMAT';
 
 /**
  * Error codes for period resolution failures.
@@ -64,6 +65,8 @@ export interface SelectableMahadasha {
   readonly planet: Planet;
   readonly start: string;
   readonly end: string;
+  readonly valid: boolean;
+  readonly diagnostics: readonly PeriodDiagnostic[];
 }
 
 /**
@@ -75,6 +78,8 @@ export interface SelectableAntardasha {
   readonly planet: Planet;
   readonly start: string;
   readonly end: string;
+  readonly valid: boolean;
+  readonly diagnostics: readonly PeriodDiagnostic[];
 }
 
 /**
@@ -93,6 +98,14 @@ export interface SelectablePeriodsResult {
 function parseDate(dateStr: string): Date | null {
   const date = new Date(dateStr);
   return isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Check if a date string matches the canonical ISO format (Z-terminated).
+ * Format: YYYY-MM-DDTHH:mm:ss.sssZ
+ */
+function isCanonicalIsoFormat(dateStr: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(dateStr);
 }
 
 /**
@@ -188,67 +201,120 @@ function isAntardashaContained(
  * List all selectable mahadasha and antardasha periods from a report.
  * Enumerates all periods without filtering by current date.
  * Collects diagnostics for any structural issues found.
+ *
+ * Producer Contract:
+ * ID stability relies on the canonical producer (Vimshottari) emitting Date.toISOString()
+ * UTC format. See src/engine/dasha/vimshottari.ts ~L230: start: currentAdStart.toISOString().
+ *
+ * Entry Validity:
+ * Entries with valid: false are listed for observability and will be rejected by
+ * resolveSelectedMdAdPeriod (which revalidates at L348-356). Per-entry diagnostics
+ * contain only the diagnostics pertaining to that specific entry.
  */
 export function listSelectableMdAdPeriods(
   report: DashaInterpretationReport | null | undefined
 ): SelectablePeriodsResult {
   const diagnostics: PeriodDiagnostic[] = [];
-  const mahadashas: SelectableMahadasha[] = [];
-  const antardashas: SelectableAntardasha[] = [];
-  const mdIdSet = new Set<string>();
-  const adIdSet = new Set<string>();
+  const mdIdCount = new Map<string, number>();
+  const adIdCount = new Map<string, number>();
 
   if (!report) {
-    return { mahadashas, antardashas, diagnostics };
+    return { mahadashas: [], antardashas: [], diagnostics };
   }
 
+  // First pass: count ID occurrences
   for (const md of report.mahadashas) {
+    const mdId = encodeMahadashaId(md.planet, md.start, md.end);
+    mdIdCount.set(mdId, (mdIdCount.get(mdId) || 0) + 1);
+
+    for (const ad of md.antardashas) {
+      const adId = encodeAntardashaId(ad.planet, ad.start, ad.end, mdId);
+      adIdCount.set(adId, (adIdCount.get(adId) || 0) + 1);
+    }
+  }
+
+  // Second pass: build entries with diagnostics
+  const mahadashas: SelectableMahadasha[] = [];
+  const antardashas: SelectableAntardasha[] = [];
+
+  for (const md of report.mahadashas) {
+    const mdDiagnostics: PeriodDiagnostic[] = [];
+
     // Validate mahadasha interval
     if (!validateInterval(md.start, md.end)) {
+      mdDiagnostics.push('INVALID_MAHADASHA_INTERVAL');
       diagnostics.push('INVALID_MAHADASHA_INTERVAL');
+    }
+
+    // Check for canonical ISO format
+    if (parseDate(md.start) && !isCanonicalIsoFormat(md.start)) {
+      mdDiagnostics.push('NON_CANONICAL_DATE_FORMAT');
+      diagnostics.push('NON_CANONICAL_DATE_FORMAT');
+    }
+    if (parseDate(md.end) && !isCanonicalIsoFormat(md.end)) {
+      mdDiagnostics.push('NON_CANONICAL_DATE_FORMAT');
+      diagnostics.push('NON_CANONICAL_DATE_FORMAT');
     }
 
     const mdId = encodeMahadashaId(md.planet, md.start, md.end);
 
     // Check for duplicate mahadasha ID
-    if (mdIdSet.has(mdId)) {
+    if (mdIdCount.get(mdId)! > 1) {
+      mdDiagnostics.push('DUPLICATE_MAHADASHA_ID');
       diagnostics.push('DUPLICATE_MAHADASHA_ID');
     }
-    mdIdSet.add(mdId);
 
     mahadashas.push({
       id: mdId,
       planet: md.planet,
       start: md.start,
-      end: md.end
+      end: md.end,
+      valid: mdDiagnostics.length === 0,
+      diagnostics: Object.freeze(mdDiagnostics)
     });
 
     // Process antardashas for this mahadasha
     for (const ad of md.antardashas) {
+      const adDiagnostics: PeriodDiagnostic[] = [];
+
       // Validate antardasha interval
       if (!validateInterval(ad.start, ad.end)) {
+        adDiagnostics.push('INVALID_ANTARDASHA_INTERVAL');
         diagnostics.push('INVALID_ANTARDASHA_INTERVAL');
+      }
+
+      // Check for canonical ISO format
+      if (parseDate(ad.start) && !isCanonicalIsoFormat(ad.start)) {
+        adDiagnostics.push('NON_CANONICAL_DATE_FORMAT');
+        diagnostics.push('NON_CANONICAL_DATE_FORMAT');
+      }
+      if (parseDate(ad.end) && !isCanonicalIsoFormat(ad.end)) {
+        adDiagnostics.push('NON_CANONICAL_DATE_FORMAT');
+        diagnostics.push('NON_CANONICAL_DATE_FORMAT');
       }
 
       // Check containment
       if (!isAntardashaContained(md.start, md.end, ad.start, ad.end)) {
+        adDiagnostics.push('ANTARDASHA_OUTSIDE_MAHADASHA');
         diagnostics.push('ANTARDASHA_OUTSIDE_MAHADASHA');
       }
 
       const adId = encodeAntardashaId(ad.planet, ad.start, ad.end, mdId);
 
       // Check for duplicate antardasha ID
-      if (adIdSet.has(adId)) {
+      if (adIdCount.get(adId)! > 1) {
+        adDiagnostics.push('DUPLICATE_ANTARDASHA_ID');
         diagnostics.push('DUPLICATE_ANTARDASHA_ID');
       }
-      adIdSet.add(adId);
 
       antardashas.push({
         id: adId,
         mahadashaId: mdId,
         planet: ad.planet,
         start: ad.start,
-        end: ad.end
+        end: ad.end,
+        valid: adDiagnostics.length === 0,
+        diagnostics: Object.freeze(adDiagnostics)
       });
     }
   }
