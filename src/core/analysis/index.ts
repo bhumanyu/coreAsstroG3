@@ -27,3 +27,12 @@ export {
   type SelectableAntardasha,
   type SelectablePeriodsResult
 } from './selectedMdAdPeriod';
+export {
+  createSelectedPeriodActivationContext,
+  SELECTED_PERIOD_CONTEXT_VERSION,
+  type SelectedPeriodActivationContext,
+  type SelectedPeriodActivationContextResult,
+  type SelectedPeriodContextError,
+  type SelectedPeriodTemporalRelation,
+  type CreateSelectedPeriodActivationContextInput
+} from './selectedPeriodActivationContext';
