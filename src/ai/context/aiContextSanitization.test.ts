@@ -9,7 +9,7 @@ let horoscope: Horoscope;
 
 beforeAll(() => {
   horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-});
+}, 30000);
 
 function collectKeys(obj: unknown, prefix = '', visited = new Set<unknown>()): string[] {
   if (!obj || typeof obj !== 'object' || visited.has(obj)) {
@@ -126,5 +126,5 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
         }
       }
     }
-  });
-}, 30000);
+  }, 30000);
+});

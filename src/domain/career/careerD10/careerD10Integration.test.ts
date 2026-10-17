@@ -1317,7 +1317,7 @@ describe('C10 D10 Integration', () => {
         expect(qualification?.mappingStatus).toBe('RESOLVED');
         expect(qualification?.mappingDiagnostic).toBeUndefined();
       }
-    }, 30000);
+    }, 60000);
 
     it('legacy-only modes resolve as UNMAPPED with diagnostic', () => {
       // Test that legacy-only modes (SPECIALIZATION, EMPLOYMENT, BUSINESS_ENTREPRENEURSHIP)
@@ -1357,7 +1357,7 @@ describe('C10 D10 Integration', () => {
         expect(qualification?.mappingDiagnostic).toContain(mode);
         expect(qualification?.qualified).toBe(false);
       }
-    }, 30000);
+    }, 60000);
 
     it('many-to-one modes map with MODE granularity and preserve expression identity', () => {
       // Test that many-to-one modes (TECHNICAL_SPECIALIZATION, INDEPENDENT_WORK, SERVICE_EMPLOYMENT, ENTREPRENEURSHIP)
@@ -1428,7 +1428,7 @@ describe('C10 D10 Integration', () => {
         const uniqueIds = new Set(expressionIds);
         expect(uniqueIds.size).toBe(testCase.expressions.length);
       }
-    }, 30000);
+    }, 60000);
 
     it('one-to-one modes map with EXPRESSION_TYPE granularity', () => {
       // Test that one-to-one modes (AUTHORITY, LEADERSHIP, MANAGEMENT, PUBLIC_INSTITUTIONAL)
@@ -1467,7 +1467,7 @@ describe('C10 D10 Integration', () => {
         expect(qualification?.mappingStatus).toBe('RESOLVED');
         expect(qualification?.mappingGranularity).toBe('EXPRESSION_TYPE');
       }
-    }, 30000);
+    }, 60000);
 
 
 

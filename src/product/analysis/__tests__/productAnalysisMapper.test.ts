@@ -278,6 +278,18 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(hierarchy.map((p) => p.level)).toEqual(['MD', 'AD', 'PD']);
   });
 
+  it('4.5. Profession field flows from careerDetail.profession to CareerProductAnalysis', () => {
+    // When profession is absent, the field should be undefined (fail-closed)
+    const analysisWithoutProfession = mapProductAnalysis({
+      birthDetails: sampleBirth,
+      horoscope: sampleHoroscope,
+      lifeAnalysisViewModel: sampleViewModel,
+      context: sampleContext
+    });
+
+    expect(analysisWithoutProfession.career.profession).toBeUndefined();
+  });
+
   it('5. Status derivation: READY, PARTIAL, and ERROR', () => {
     const readyAnalysis = mapProductAnalysis({
       birthDetails: sampleBirth,

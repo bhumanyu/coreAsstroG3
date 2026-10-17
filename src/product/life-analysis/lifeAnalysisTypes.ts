@@ -20,6 +20,7 @@ import type { WealthDimensionStatus } from '../../domain/wealth/wealthTypes';
 import type { CareerManifestationSynthesis } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { AiExplanationResult } from '../../ai';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
@@ -165,6 +166,7 @@ export interface LifeAnalysisCareerDetailViewModel {
   readonly dashaHierarchy?: DashaCareerHierarchySynthesis;
   readonly manifestationSynthesis?: readonly CareerManifestationSynthesis[];
   readonly finalSynthesis?: CareerWealthFinalSynthesis;
+  readonly profession?: CareerProfessionAnalysis;
 }
 
 export interface LifeAnalysisWealthDetailViewModel {

@@ -881,8 +881,8 @@ export function interpretCareerV2(
       error: error instanceof Error ? error.name : 'UnknownError',
       message: error instanceof Error ? error.message : String(error)
     });
-    // Log the failure for observability
-    console.error(`[CareerDomainInterpreterV2] Profession engine failed: ${professionAnalysisFailure.error}: ${professionAnalysisFailure.message}`);
+    // Note: Trajectory/events failures are intentionally fatal (they are not wrapped with typed failure fields)
+    // Profession analysis is the only engine with a typed failure diagnostic for non-fatal handling.
   }
 
   /**

@@ -64,11 +64,11 @@ export interface CareerD10CanonicalEvidence {
   readonly sourceIds: readonly string[];
   readonly provenance: CareerD10CanonicalProvenance;
   /**
-   * Evidence kind: distinguishes resolution-source records from actual occurrence records.
-   * - RESOLUTION_SOURCE: Resolution namespace IDs that belong in sourceIds/provenance only
-   * - OCCURRENCE: Actual canonical occurrence evidence that should be mapped to DomainEvidence
+   * Evidence kind: all canonical D10 evidence is projected as OCCURRENCE records.
+   * The original raw evidence IDs (e.g., CAREER_D10_QUAL:*) are preserved in sourceIds and provenance
+   * for traceability. Resolution namespace IDs are no longer distinguished as a separate kind.
    */
-  readonly evidenceKind: 'RESOLUTION_SOURCE' | 'OCCURRENCE';
+  readonly evidenceKind: 'OCCURRENCE';
 }
 
 /**

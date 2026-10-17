@@ -147,6 +147,7 @@ export function buildLifeAnalysisViewModel(
     currentTimingEffect: deriveCareerTimingEffect(careerTiming),
     manifestationSynthesis: careerConclusionData?.careerManifestationSynthesis,
     finalSynthesis: careerConclusionData?.careerFinalSynthesis,
+    profession: careerConclusionData?.careerProfessionAnalysis,
     ...(careerDashaHierarchy ? { dashaHierarchy: careerDashaHierarchy } : {})
   };
 

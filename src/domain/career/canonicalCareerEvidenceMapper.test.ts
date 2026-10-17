@@ -1115,7 +1115,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.phase).not.toBe('NATAL_PROMISE');
     });
 
-    it('Gate D: D10 resolution-source records are projected as OCCURRENCE to populate vargaConfirmations', () => {
+    it('Gate D: All D10 evidence is projected as OCCURRENCE to populate vargaConfirmations', () => {
       const d10Evidence: CareerD10CanonicalEvidence[] = [
         {
           identityKey: 'CAREER_D10:D10_DIRECTION:PRIMARY',
@@ -1125,7 +1125,7 @@ describe('CanonicalCareerEvidenceMapper', () => {
           d10Effect: 'QUALIFIES',
           d10Strength: 'STRONG',
           weight: 3,
-          statement: 'D10 resolution source',
+          statement: 'D10 resolution source (semantic engine source with _RESOLUTION suffix)',
           sourceIds: ['d10-source-1'],
           provenance: {
             source: 'C10_D10',
@@ -1186,12 +1186,12 @@ describe('CanonicalCareerEvidenceMapper', () => {
       // Both OCCURRENCE records should be mapped to DomainEvidence
       expect(result.evidence).toHaveLength(2);
 
-      // Verify resolution-source projection (now OCCURRENCE) is mapped
+      // Verify the first OCCURRENCE record (resolution source) is mapped
       const resolutionEvidence = result.evidence.filter(e => e.identityKey === 'CAREER_D10:D10_DIRECTION:PRIMARY');
       expect(resolutionEvidence).toHaveLength(1);
       expect(resolutionEvidence[0].relatedEvidenceIds).toContain('d10-source-1');
 
-      // Verify occurrence record is mapped
+      // Verify the second OCCURRENCE record is mapped
       const occurrenceEvidence = result.evidence.filter(e => e.identityKey === 'd10-occurrence-1');
       expect(occurrenceEvidence).toHaveLength(1);
     });
@@ -1569,6 +1569,84 @@ describe('CanonicalCareerEvidenceMapper', () => {
       expect(evidence.relatedEvidenceIds).toContain('src-c');
       expect(evidence.relatedEvidenceIds).toContain('src-d');
       expect(evidence.relatedEvidenceIds).toHaveLength(4);
+    });
+
+    it('relatedEvidenceIds normalization preserves real source IDs (Gate D provenance)', () => {
+      // Verify that normalizeSourceIds only normalizes delimiter format (colon→underscore)
+      // and does not fabricate identity. The values should match actual upstream source IDs.
+      const mockStructural: CareerStructuralReasoning = {
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        primarySupport: 10,
+        primaryChallenge: 2,
+        supportingSupport: 5,
+        supportingChallenge: 1,
+        challengingSupport: 1,
+        challengingChallenge: 3,
+        mixedWeight: 0,
+        evidence: [],
+        primaryEvidenceIds: [],
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        conflicts: [],
+        statement: 'Test structural'
+      };
+
+      // Source IDs from C4 producer use colon delimiters (real upstream IDs)
+      const mockEvidence: WeightedReasoningEvidence[] = [
+        {
+          identityKey: 'test-identity',
+          evidenceId: 'evidence-1',
+          ruleId: 'RULE_1',
+          layer: 'PRIMARY_PROMISE',
+          direction: 'SUPPORT',
+          strength: 'STRONG',
+          priority: 1,
+          weight: 3,
+          statement: 'Test evidence',
+          relatedEvidenceIds: [],
+          sourceIds: ['CAREER_STRUCTURAL:LORD_IN_HOUSE:10:11:JUPITER:MARS:PRIMARY:SUPPORT:MODERATE:false']
+        }
+      ];
+
+      const mockReasoningTrace: ReasoningTrace = {
+        primaryPromise: mockEvidence,
+        secondarySupport: [],
+        modifiers: [],
+        yogas: [],
+        varga: [],
+        dasha: [],
+        transit: []
+      };
+
+      const natal: CareerNatalAnalysis = {
+        structural: mockStructural,
+        relevance: [],
+        condition: [],
+        lordRelationships: [],
+        direction: 'SUPPORT' as ReasoningDirection,
+        strength: 'STRONG' as DomainStrength,
+        evidence: mockEvidence,
+        conflicts: [],
+        reasoningTrace: mockReasoningTrace
+      };
+
+      const input: CanonicalCareerEvidenceInput = {
+        natal,
+        expression: createEmptyExpressionAnalysis(),
+        dasha: createEmptyDashaAnalysis(),
+        d10: createEmptyD10Analysis(),
+        finalSynthesis: createEmptyFinalSynthesis()
+      };
+
+      const result = mapCanonicalCareerEvidence(input);
+
+      const evidence = result.evidence[0];
+
+      // relatedEvidenceIds should contain the normalized source ID (colons→underscores)
+      // This is a delimiter normalization, not identity fabrication
+      expect(evidence.relatedEvidenceIds).toHaveLength(1);
+      expect(evidence.relatedEvidenceIds[0]).toBe('CAREER_STRUCTURAL_LORD_IN_HOUSE_10_11_JUPITER_MARS_PRIMARY_SUPPORT_MODERATE_false');
     });
   });
 

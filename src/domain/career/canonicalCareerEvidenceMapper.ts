@@ -226,11 +226,14 @@ export function validateC11References(
  *
  * PROVENANCE FIX (Gate D):
  * Canonical evidence IDs use underscore delimiters (e.g., CAREER_STRUCTURAL_LORD_IN_HOUSE_2_8_...)
- * while source IDs use colon delimiters (e.g., CAREER_STRUCTURAL:LORD_IN_HOUSE:2:8:...).
- * This function normalizes source IDs to the canonical format so they resolve correctly
- * in the evidence continuity validator.
+ * while source IDs from C4 producers use colon delimiters (e.g., CAREER_STRUCTURAL:LORD_IN_HOUSE:2:8:...).
  *
- * @param sourceIds - Raw source IDs from canonical evidence
+ * CONTRACT: This function performs delimiter normalization only (colon→underscore). It does NOT
+ * fabricate identity - the normalized values are the actual upstream source IDs in canonical format.
+ * The upstream producers (C4-C10) emit colon-delimited source IDs; these are real provenance references
+ * that must be normalized to underscore format to resolve correctly in the evidence continuity validator.
+ *
+ * @param sourceIds - Raw source IDs from canonical evidence (colon-delimited)
  * @returns Normalized source IDs with colons replaced by underscores
  */
 function normalizeSourceIds(sourceIds: readonly string[]): readonly string[] {

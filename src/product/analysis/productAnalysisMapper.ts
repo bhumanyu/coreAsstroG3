@@ -440,6 +440,37 @@ function mapCareer(
         secondaryTraits: detail.actionableTakeaways?.slice(1)
       }
       : undefined,
+    profession: detail?.profession ? {
+      available: detail.profession.status === 'COMPLETE',
+      status: detail.profession.status,
+      candidates: detail.profession.candidates.map(c => ({
+        candidateId: c.candidateId,
+        domain: c.domain,
+        family: c.family,
+        basis: c.basis,
+        expressionTypes: c.expressionTypes,
+        mechanismTypes: c.mechanismTypes,
+        patternIds: c.patternIds,
+        d10Status: c.d10Status,
+        evidence: c.evidence.map(e => ({
+          evidenceId: e.evidenceId,
+          basis: e.basis,
+          sourceIds: e.sourceIds,
+          ruleId: e.ruleId,
+          statement: e.statement,
+          linkage: e.linkage,
+          resolvedMechanismIds: e.resolvedMechanismIds,
+          unresolvedMechanismIds: e.unresolvedMechanismIds
+        })),
+        domainEvidenceIds: c.domainEvidenceIds,
+        relatedEvidenceIds: c.relatedEvidenceIds,
+        ruleId: c.ruleId
+      })),
+      unresolvedExpressionTypes: detail.profession.unresolvedExpressionTypes,
+      mappedTypes: detail.profession.mappedTypes,
+      missingInputs: detail.profession.missingInputs,
+      d10Status: 'NOT_PROVIDED' // D10 status is per-candidate, not aggregate
+    } : undefined,
     d10: {
       relationship: mapD10Relationship(detail?.d10Relationship ? String(detail.d10Relationship) : undefined),
       statement: detail?.d10Statement
