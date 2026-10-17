@@ -51,11 +51,24 @@ import {
   GOLDEN_SCENARIOS,
   type GoldenScenarioMetadata,
   type ExpectedC11Fields,
-  type ScenarioResult,
-  type ScenarioStatus,
   GOLDEN_TEST_METHODOLOGY,
   SCENARIO_BIRTH_DETAILS
 } from './golden/goldenCareerFixtures';
+
+/**
+ * Scenario result with optional level marker
+ */
+interface ScenarioResult {
+  readonly scenarioId: string;
+  readonly status: 'PASS' | 'FAIL' | 'BLOCKED' | 'SKIPPED';
+  readonly level?: 'ACCEPTANCE' | 'UNIT';
+  readonly productionEntryPoint: string;
+  readonly expected?: ExpectedC11Fields;
+  readonly actual?: any;
+  readonly traceCheck: boolean;
+  readonly reason?: string;
+  readonly blockedDependency?: string;
+}
 
 /**
  * Test harness for running golden scenarios
@@ -253,6 +266,10 @@ function assertEvidenceContinuityValid(
 const scenarioResults: ScenarioResult[] = [];
 
 describe('P2-11G Golden Chart Acceptance Test for Career', () => {
+  // Guarantee spy cleanup - restore all mocks after each test
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   /**
    * Gate D Precedence Test
    *
@@ -320,10 +337,6 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Assert both engines were never called (Gate D precedence)
     expect(trajectoryEngineSpy).toHaveBeenCalledTimes(0);
     expect(eventsEngineSpy).toHaveBeenCalledTimes(0);
-
-    // Clean up spies
-    trajectoryEngineSpy.mockRestore();
-    eventsEngineSpy.mockRestore();
   });
 
   /**
@@ -333,7 +346,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
    * and the canonical evidence array, and buildCareerEvents receives the trajectory object returned
    * by the trajectory engine plus canonicalDashaAnalysis.
    */
-  it('Engine-argument assertions: Exact object references passed to engines', async () => {
+  it('Engine-argument assertions: Exact object references passed to engines', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G01')!;
 
     // Load birth details
@@ -365,18 +378,20 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     let capturedEvidence: Set<DomainEvidence> | null = null;
     let capturedTrajectory: any = null;
     let capturedDashaAnalysis: any = null;
+    let trajectoryReturnValue: any = null;
 
     // Get original implementations
     const originalBuildCareerTrajectory = trajectoryEngine.buildCareerTrajectory;
     const originalBuildCareerEvents = eventsEngine.buildCareerEvents;
 
-    // Spy on buildCareerTrajectory to capture arguments
+    // Spy on buildCareerTrajectory to capture arguments and return value
     const trajectoryEngineSpy = vi.spyOn(trajectoryEngine, 'buildCareerTrajectory').mockImplementation(
       (input: any) => {
         capturedC11Result = input.finalSynthesis;
         capturedEvidence = input.evidence;
-        // Call original implementation (not the spy)
-        return originalBuildCareerTrajectory(input);
+        // Call original implementation (not the spy) and capture return value
+        trajectoryReturnValue = originalBuildCareerTrajectory(input);
+        return trajectoryReturnValue;
       }
     );
 
@@ -396,7 +411,6 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Extract canonical C11 result and evidence from interpretation
     const canonicalC11 = interpretation.conclusionData?.canonicalCareerFinalSynthesis;
     const evidence = interpretation.evidence;
-    const canonicalDashaAnalysis = interpretation.conclusionData?.canonicalDashaAnalysis;
 
     expect(canonicalC11).toBeDefined();
     expect(evidence).toBeDefined();
@@ -408,16 +422,29 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(capturedEvidence).toBeInstanceOf(Set);
     expect(capturedEvidence).toBeDefined();
 
+    // Assert evidence Set has same cardinality as interpretation.evidence
+    expect(capturedEvidence!.size).toBe(evidence.length);
+
+    // Assert every element in capturedEvidence is the same DomainEvidence reference
+    const evidenceArray = Array.from(capturedEvidence!);
+    evidenceArray.forEach((capturedItem, index) => {
+      expect(capturedItem).toBe(evidence[index]);
+    });
+
     // Assert buildCareerEvents received the trajectory object returned by buildCareerTrajectory
     const careerTrajectory = interpretation.conclusionData?.careerTrajectory;
+    expect(capturedTrajectory).toBe(trajectoryReturnValue);
     expect(capturedTrajectory).toBe(careerTrajectory);
 
-    // Assert buildCareerEvents received canonicalDashaAnalysis
+    // Assert buildCareerEvents received a Dasha analysis object
     expect(capturedDashaAnalysis).toBeDefined();
 
-    // Clean up spies
-    trajectoryEngineSpy.mockRestore();
-    eventsEngineSpy.mockRestore();
+    // C9 grounding: The production code passes the local canonicalDashaAnalysis variable
+    // (the output of buildCareerDashaAnalysis) directly to buildCareerEvents without
+    // modification. This is verified by code inspection of CareerDomainInterpreterV2.ts
+    // lines 304-309 (C9 build) and 831-834 (C9 pass-through to events engine).
+    // Since canonicalDashaAnalysis is not exposed in conclusionData (per requirements),
+    // we verify that events engine received a valid Dasha analysis object.
   });
 
   /**
@@ -1017,13 +1044,16 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     let c11Before: CareerFinalSynthesisResult | null = null;
     let evidenceBefore: readonly DomainEvidence[] | null = null;
 
+    // Get original implementation before spy
+    const originalBuildCareerTrajectory = trajectoryEngine.buildCareerTrajectory;
+
     // Spy on buildCareerTrajectory to capture before-call state
     const trajectoryEngineSpy = vi.spyOn(trajectoryEngine, 'buildCareerTrajectory').mockImplementation(
       (input: any) => {
         c11Before = JSON.parse(JSON.stringify(input.finalSynthesis));
         evidenceBefore = JSON.parse(JSON.stringify([...input.evidence]));
-        // Call original implementation
-        return trajectoryEngine.buildCareerTrajectory(input);
+        // Call original implementation (not the spy)
+        return originalBuildCareerTrajectory(input);
       }
     );
 
@@ -1046,9 +1076,6 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Assert no mutation occurred
     expect(c11Before).toEqual(c11After);
     expect(evidenceBefore).toEqual(evidenceAfter);
-
-    // Clean up spy
-    trajectoryEngineSpy.mockRestore();
   });
 
   /**
@@ -1203,6 +1230,7 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
       status: 'PASS',
+      level: 'UNIT',
       productionEntryPoint: 'buildCareerEvents (unit level)',
       expected: scenario.expectedC11Fields,
       traceCheck: true,
@@ -1247,23 +1275,25 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
    * Final acceptance report
    */
   it('Emits machine/test-readable acceptance summary', () => {
-    // Count results by status
-    const passCount = scenarioResults.filter((r) => r.status === 'PASS').length;
+    // Count results by status and level
+    const passCount = scenarioResults.filter((r) => r.status === 'PASS' && r.level !== 'UNIT').length;
+    const unitPassCount = scenarioResults.filter((r) => r.status === 'PASS' && r.level === 'UNIT').length;
     const failCount = scenarioResults.filter((r) => r.status === 'FAIL').length;
     const blockedCount = scenarioResults.filter((r) => r.status === 'BLOCKED').length;
     const skippedCount = scenarioResults.filter((r) => r.status === 'SKIPPED').length;
 
     // Emit summary table
     console.log('\n=== P2-11G Golden Chart Acceptance Summary ===');
-    console.log('Scenario ID | Status | Production Entry Point | Trace Check | Reason');
-    console.log('------------|--------|------------------------|-------------|-------');
+    console.log('Scenario ID | Status | Level | Production Entry Point | Trace Check | Reason');
+    console.log('------------|--------|-------|------------------------|-------------|-------');
     scenarioResults.forEach((result) => {
       const reason = result.reason ?? result.blockedDependency ?? '-';
+      const level = result.level ?? 'ACCEPTANCE';
       console.log(
-        `${result.scenarioId} | ${result.status} | ${result.productionEntryPoint} | ${result.traceCheck ? '✓' : '✗'} | ${reason}`
+        `${result.scenarioId} | ${result.status} | ${level} | ${result.productionEntryPoint} | ${result.traceCheck ? '✓' : '✗'} | ${reason}`
       );
     });
-    console.log(`\nTotal: ${scenarioResults.length} | PASS: ${passCount} | FAIL: ${failCount} | BLOCKED: ${blockedCount} | SKIPPED: ${skippedCount}`);
+    console.log(`\nTotal: ${scenarioResults.length} | PASS (acceptance): ${passCount} | PASS (unit): ${unitPassCount} | FAIL: ${failCount} | BLOCKED: ${blockedCount} | SKIPPED: ${skippedCount}`);
     console.log('=== End Acceptance Summary ===\n');
 
     // Assert no failures (blocked is expected)
@@ -1272,10 +1302,11 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Assert expected blocked count (G06, G07, G12, G19 = 4 blocked; G18 unblocked in commit a8e0172)
     expect(blockedCount).toBe(4);
 
-    // Assert expected pass count (17 passing golden scenarios + 4 blocked = 21 total golden scenarios)
+    // Assert expected pass count (16 passing acceptance-level golden scenarios + 4 blocked + 1 unit-level = 21 total golden scenarios)
     // Note: Gate D precedence test, Engine-argument assertions, and C11 immutability test are
     // regression/integration tests outside the golden scenario fixture list and are not counted here.
-    // G21 is a golden scenario tested at unit level (PASS status recorded).
-    expect(passCount).toBe(17);
+    // G21 is a golden scenario tested at unit level (level: UNIT, excluded from acceptance pass count).
+    expect(passCount).toBe(16);
+    expect(unitPassCount).toBe(1);
   });
 });
