@@ -703,8 +703,8 @@ describe('selectedMdAdPeriod', () => {
         confidence: 'HIGH'
       };
 
-      const fakeMdId = 'v1|VIMSHOTTARI|md|NONEXISTENT|2000-01-01T00:00:00.000Z|2016-01-01T00:00:00.000Z';
-      const fakeAdId = `v1|VIMSHOTTARI|ad|SATURN|2000-01-01T00:00:00.000Z|2002-01-01T00:00:00.000Z|${Buffer.from(fakeMdId).toString('base64url')}`;
+      const fakeMdId = 'v2|VIMSHOTTARI|md|NONEXISTENT|2000-01-01T00:00:00.000Z|2016-01-01T00:00:00.000Z';
+      const fakeAdId = `v2|VIMSHOTTARI|ad|SATURN|2000-01-01T00:00:00.000Z|2002-01-01T00:00:00.000Z|${encodeURIComponent(fakeMdId)}`;
 
       const result = resolveSelectedMdAdPeriod(report, {
         mahadashaId: fakeMdId,
@@ -819,7 +819,7 @@ describe('selectedMdAdPeriod', () => {
 
       const selectable = listSelectableMdAdPeriods(report);
 
-      const fakeAdId = `v1|VIMSHOTTARI|ad|NONEXISTENT|2020-01-01T00:00:00.000Z|2022-01-01T00:00:00.000Z|${Buffer.from(selectable.mahadashas[0].id).toString('base64url')}`;
+      const fakeAdId = `v2|VIMSHOTTARI|ad|NONEXISTENT|2020-01-01T00:00:00.000Z|2022-01-01T00:00:00.000Z|${encodeURIComponent(selectable.mahadashas[0].id)}`;
 
       const result = resolveSelectedMdAdPeriod(report, {
         mahadashaId: selectable.mahadashas[0].id,
@@ -1028,6 +1028,418 @@ describe('selectedMdAdPeriod', () => {
         expect(result.value.mahadashaNode).toBe(report.mahadashas[0]);
         expect(result.value.antardashaNode).toBe(report.mahadashas[0].antardashas[0]);
       }
+    });
+
+    it('resolver revalidation: malformed MD interval returns INVALID_SELECTED_PERIOD', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: 'invalid-date',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_SELECTED_PERIOD');
+      }
+    });
+
+    it('resolver revalidation: malformed AD interval returns INVALID_SELECTED_PERIOD', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: 'invalid-date',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_SELECTED_PERIOD');
+      }
+    });
+
+    it('resolver revalidation: AD outside parent MD returns INVALID_SELECTED_PERIOD', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2010-01-01T00:00:00.000Z',
+                end: '2012-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_SELECTED_PERIOD');
+      }
+    });
+
+    it('duplicate MD ID: selection by duplicated MD ID returns AMBIGUOUS_MAHADASHA_ID', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          },
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.MERCURY,
+                start: '2022-01-01T00:00:00.000Z',
+                end: '2024-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.MERCURY),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('AMBIGUOUS_MAHADASHA_ID');
+      }
+    });
+
+    it('duplicate AD ID: selection by duplicated AD ID returns AMBIGUOUS_ANTARDASHA_ID', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              },
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('AMBIGUOUS_ANTARDASHA_ID');
+      }
+    });
+
+    it('parent-ID verification: forged parent encoding returns ANTARDASHA_NOT_FOUND', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      // Forged parent: encode a non-existent parent MD ID
+      const forgedParentId = 'v2|VIMSHOTTARI|md|NONEXISTENT|2000-01-01T00:00:00.000Z|2016-01-01T00:00:00.000Z';
+      const forgedAdId = `v2|VIMSHOTTARI|ad|SATURN|2020-01-01T00:00:00.000Z|2022-01-01T00:00:00.000Z|${encodeURIComponent(forgedParentId)}`;
+
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: forgedAdId
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('ANTARDASHA_NOT_FOUND');
+      }
+    });
+
+    it('parent-ID verification: valid AD fields with wrong parent returns ANTARDASHA_NOT_CHILD_OF_MAHADASHA', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          },
+          {
+            planet: Planet.SATURN,
+            start: '2036-01-01T00:00:00.000Z',
+            end: '2055-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.SATURN),
+            antardashas: [
+              {
+                planet: Planet.MERCURY,
+                start: '2036-01-01T00:00:00.000Z',
+                end: '2039-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.MERCURY),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      // Try to select with Jupiter MD but encode Saturn MD as parent in AD ID
+      const wrongParentId = selectable.mahadashas[1].id; // Saturn MD
+      const forgedAdId = `v2|VIMSHOTTARI|ad|SATURN|2020-01-01T00:00:00.000Z|2022-01-01T00:00:00.000Z|${encodeURIComponent(wrongParentId)}`;
+
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id, // Jupiter MD
+        antardashaId: forgedAdId
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('ANTARDASHA_NOT_CHILD_OF_MAHADASHA');
+      }
+    });
+
+    it('parent-ID verification: correct parent resolves successfully', () => {
+      const report: DashaInterpretationReport = {
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: {
+          nakshatra: 'Ashwini',
+          nakshatraLord: Planet.KETU,
+          nakshatraProgress: 0.5,
+          remainingFraction: 0.5
+        },
+        mahadashas: [
+          {
+            planet: Planet.JUPITER,
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            natal: mockNatal(Planet.JUPITER),
+            antardashas: [
+              {
+                planet: Planet.SATURN,
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                natal: mockNatal(Planet.SATURN),
+                pratyantardashas: [],
+                evidence: [],
+                confidence: 'HIGH'
+              }
+            ],
+            evidence: [],
+            confidence: 'HIGH'
+          }
+        ],
+        confidence: 'HIGH'
+      };
+
+      const selectable = listSelectableMdAdPeriods(report);
+      const result = resolveSelectedMdAdPeriod(report, {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      });
+
+      expect(result.ok).toBe(true);
     });
   });
 });

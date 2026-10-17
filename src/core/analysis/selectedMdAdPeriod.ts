@@ -3,13 +3,13 @@ import {
   DashaMahadashaInterpretation,
   DashaAntardashaInterpretation
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
-import { DashaSystem } from '../../types';
+import { DashaSystem, Planet } from '../../types';
 
 /**
  * Version identifier for MD-AD period resolver IDs.
  * IDs are opaque and encode this version to enable future migration.
  */
-export const MD_AD_PERIOD_RESOLVER_VERSION = 'v1' as const;
+export const MD_AD_PERIOD_RESOLVER_VERSION = 'v2' as const;
 
 /**
  * Diagnostic codes collected during period listing.
@@ -30,7 +30,10 @@ export type ResolutionError =
   | 'UNSUPPORTED_DASHA_SYSTEM'
   | 'MAHADASHA_NOT_FOUND'
   | 'ANTARDASHA_NOT_FOUND'
-  | 'ANTARDASHA_NOT_CHILD_OF_MAHADASHA';
+  | 'ANTARDASHA_NOT_CHILD_OF_MAHADASHA'
+  | 'INVALID_SELECTED_PERIOD'
+  | 'AMBIGUOUS_MAHADASHA_ID'
+  | 'AMBIGUOUS_ANTARDASHA_ID';
 
 /**
  * Result of a successful period resolution.
@@ -38,7 +41,7 @@ export type ResolutionError =
 export interface ResolvedPeriod {
   readonly interval: { readonly start: string; readonly end: string };
   readonly mahadasha: {
-    readonly planet: string;
+    readonly planet: Planet;
     readonly start: string;
     readonly end: string;
   };
@@ -58,7 +61,7 @@ export type ResolutionResult =
  */
 export interface SelectableMahadasha {
   readonly id: string;
-  readonly planet: string;
+  readonly planet: Planet;
   readonly start: string;
   readonly end: string;
 }
@@ -69,7 +72,7 @@ export interface SelectableMahadasha {
 export interface SelectableAntardasha {
   readonly id: string;
   readonly mahadashaId: string;
-  readonly planet: string;
+  readonly planet: Planet;
   readonly start: string;
   readonly end: string;
 }
@@ -109,7 +112,7 @@ function validateInterval(start: string, end: string): boolean {
  * Format: {version}|{system}|md|{planet}|{start}|{end}
  */
 function encodeMahadashaId(
-  planet: string,
+  planet: Planet,
   start: string,
   end: string
 ): string {
@@ -117,54 +120,42 @@ function encodeMahadashaId(
 }
 
 /**
- * Base64 encode a string (URL-safe variant).
- */
-function base64Encode(str: string): string {
-  return Buffer.from(str, 'utf-8').toString('base64url');
-}
-
-/**
- * Base64 decode a string (URL-safe variant).
- */
-function base64Decode(str: string): string | null {
-  try {
-    return Buffer.from(str, 'base64url').toString('utf-8');
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Encode an antardasha ID.
- * Format: {version}|{system}|ad|{planet}|{start}|{end}|{base64ParentMahadashaId}
+ * Format: {version}|{system}|ad|{planet}|{start}|{end}|{urlEncodedParentMahadashaId}
+ * Uses encodeURIComponent for browser-safe encoding (replaces Buffer/base64).
  */
 function encodeAntardashaId(
-  planet: string,
+  planet: Planet,
   start: string,
   end: string,
   parentMahadashaId: string
 ): string {
-  const encodedParent = base64Encode(parentMahadashaId);
+  const encodedParent = encodeURIComponent(parentMahadashaId);
   return `${MD_AD_PERIOD_RESOLVER_VERSION}|${DashaSystem.VIMSHOTTARI}|ad|${planet}|${start}|${end}|${encodedParent}`;
 }
 
 /**
- * Parse an antardasha ID to extract planet, start, and end.
+ * Parse an antardasha ID to extract planet, start, end, and parent mahadasha ID.
  * Returns null if the ID format is invalid.
  */
 function parseAntardashaId(
   antardashaId: string
-): { planet: string; start: string; end: string } | null {
+): { planet: string; start: string; end: string; parentMahadashaId: string } | null {
   const parts = antardashaId.split('|');
-  // Expected format: v1|VIMSHOTTARI|ad|{planet}|{start}|{end}|{base64ParentMahadashaId}
+  // Expected format: v2|VIMSHOTTARI|ad|{planet}|{start}|{end}|{urlEncodedParentMahadashaId}
   if (parts.length !== 7) {
     return null;
   }
-  const [version, system, level, planet, start, end, parentMahadashaId] = parts;
+  const [version, system, level, planet, start, end, encodedParent] = parts;
   if (version !== MD_AD_PERIOD_RESOLVER_VERSION || system !== DashaSystem.VIMSHOTTARI || level !== 'ad') {
     return null;
   }
-  return { planet, start, end };
+  try {
+    const parentMahadashaId = decodeURIComponent(encodedParent);
+    return { planet, start, end, parentMahadashaId };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -284,18 +275,24 @@ export function resolveSelectedMdAdPeriod(
     return { ok: false, error: 'UNSUPPORTED_DASHA_SYSTEM' };
   }
 
-  // Find mahadasha by ID
-  const mahadasha = report.mahadashas.find((md) => {
+  // Find mahadasha by ID (collect all matches to detect duplicates)
+  const matchingMahadashas = report.mahadashas.filter((md) => {
     const expectedId = encodeMahadashaId(md.planet, md.start, md.end);
     return expectedId === selection.mahadashaId;
   });
 
-  if (!mahadasha) {
+  if (matchingMahadashas.length === 0) {
     return { ok: false, error: 'MAHADASHA_NOT_FOUND' };
   }
 
-  // Find antardasha by ID within the found mahadasha
-  const antardasha = mahadasha.antardashas.find((ad) => {
+  if (matchingMahadashas.length > 1) {
+    return { ok: false, error: 'AMBIGUOUS_MAHADASHA_ID' };
+  }
+
+  const mahadasha = matchingMahadashas[0];
+
+  // Find antardasha by ID within the found mahadasha (collect all matches to detect duplicates)
+  const matchingAntardashas = mahadasha.antardashas.filter((ad) => {
     const expectedId = encodeAntardashaId(
       ad.planet,
       ad.start,
@@ -305,11 +302,31 @@ export function resolveSelectedMdAdPeriod(
     return expectedId === selection.antardashaId;
   });
 
+  if (matchingAntardashas.length > 1) {
+    return { ok: false, error: 'AMBIGUOUS_ANTARDASHA_ID' };
+  }
+
+  const antardasha = matchingAntardashas[0];
+
   if (!antardasha) {
-    // Parse the antardasha ID to extract planet/start/end
+    // Parse the antardasha ID to extract planet/start/end and parent mahadasha ID
     const parsedAdId = parseAntardashaId(selection.antardashaId);
     if (parsedAdId) {
-      // Check if this antardasha (by planet/start/end) exists in a different mahadasha
+      // Parent-ID verification: check if the decoded parent matches the selected mahadasha
+      if (parsedAdId.parentMahadashaId !== selection.mahadashaId) {
+        // The decoded parent is a well-formed MD ID - check if it exists in the report
+        const parentExists = report.mahadashas.some((md) => {
+          const expectedId = encodeMahadashaId(md.planet, md.start, md.end);
+          return expectedId === parsedAdId.parentMahadashaId;
+        });
+        if (parentExists) {
+          return { ok: false, error: 'ANTARDASHA_NOT_CHILD_OF_MAHADASHA' };
+        }
+        // Parent doesn't exist in report - return NOT_FOUND
+        return { ok: false, error: 'ANTARDASHA_NOT_FOUND' };
+      }
+
+      // Parent matches - check if this antardasha (by planet/start/end) exists in a different mahadasha
       for (const otherMd of report.mahadashas) {
         if (otherMd === mahadasha) continue;
         const foundInOther = otherMd.antardashas.find(
@@ -324,6 +341,18 @@ export function resolveSelectedMdAdPeriod(
       }
     }
     return { ok: false, error: 'ANTARDASHA_NOT_FOUND' };
+  }
+
+  // Resolver revalidation: validate intervals and containment before accepting the selection
+  // This is an input-resolution failure, not an astrological conclusion
+  if (!validateInterval(mahadasha.start, mahadasha.end)) {
+    return { ok: false, error: 'INVALID_SELECTED_PERIOD' };
+  }
+  if (!validateInterval(antardasha.start, antardasha.end)) {
+    return { ok: false, error: 'INVALID_SELECTED_PERIOD' };
+  }
+  if (!isAntardashaContained(mahadasha.start, mahadasha.end, antardasha.start, antardasha.end)) {
+    return { ok: false, error: 'INVALID_SELECTED_PERIOD' };
   }
 
   // Return resolved period with read-only references
