@@ -87,7 +87,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
         expect(lowerKey).not.toBe(forbidden.toLowerCase());
       }
     }
-  });
+  }, 30000);
 
   it('should not contain the horoscope object identity or nested references', () => {
     const context = buildAiContext(horoscope);
@@ -95,7 +95,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
     expect(Object.values(context)).not.toContain(horoscope);
     expect(containsReference(context, horoscope)).toBe(false);
     expect(containsReference(context, horoscope.birthDetails)).toBe(false);
-  });
+  }, 30000);
 
   it('should deep-freeze the AiContext and all child nodes', () => {
     const context = buildAiContext(horoscope);

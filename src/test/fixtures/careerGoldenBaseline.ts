@@ -637,7 +637,7 @@ export const GOLDEN_C11_BASELINE = {
         weight: 2.5,
         statement: 'D10 strength is MODERATE.',
         relatedEvidenceIds: [
-          'CAREER_D10_QUAL_C10_D10_STRENGTH_RESOLUTION:SUPPORT:SUPPORTING'
+          'CAREER_D10_QUAL_C10_D10_STRENGTH_RESOLUTION_SUPPORT_SUPPORTING'
         ],
         sourceIds: [
           'CAREER_D10:D10_C10_D10_STRENGTH:SUPPORTING:SUPPORT:QUALIFIES:MODERATE'

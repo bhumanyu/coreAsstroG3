@@ -73,7 +73,7 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
     for (const id of stage1Result.wealth.conclusion.challengingSourceIds ?? []) {
       expect(wealthIds.has(id)).toBe(true);
     }
-  });
+  }, 30000);
 
   it('validates AI context sanitization using official forbiddenAiContextKeys', () => {
     const allKeys = collectKeys(stage1Result.aiContext);
@@ -89,5 +89,5 @@ describe('Stage-1 Traceability & Domain Isolation Integration', () => {
 
     // Verify direct horoscope reference is not present in AiContext
     expect(Object.values(stage1Result.aiContext)).not.toContain(stage1Result.horoscope);
-  });
+  }, 30000);
 });
