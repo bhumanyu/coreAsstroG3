@@ -536,9 +536,13 @@ export const SCENARIO_BIRTH_DETAILS: Record<string, Partial<BirthDetails>> = Obj
  */
 export type ScenarioStatus = 'PASS' | 'FAIL' | 'BLOCKED' | 'SKIPPED';
 
+/**
+ * Scenario result with optional level marker
+ */
 export interface ScenarioResult {
   readonly scenarioId: string;
   readonly status: ScenarioStatus;
+  readonly level?: 'ACCEPTANCE' | 'UNIT';
   readonly productionEntryPoint: string;
   readonly expected: ExpectedC11Fields;
   readonly actual?: ExpectedC11Fields;

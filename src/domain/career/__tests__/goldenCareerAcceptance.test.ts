@@ -47,28 +47,15 @@ import type { DomainEvidence } from '../../../domain/interpretation/DomainEviden
 import type { EvidenceContinuityReport, EvidenceContinuityIssueCode, EvidenceContinuitySeverity } from '../evidenceContinuity';
 import * as trajectoryEngine from '../careerTrajectory/careerTrajectoryEngine';
 import * as eventsEngine from '../careerEvents/careerEventEngine';
+import * as careerDashaIntegration from '../careerDasha/careerDashaIntegration';
 import {
   GOLDEN_SCENARIOS,
   type GoldenScenarioMetadata,
   type ExpectedC11Fields,
   GOLDEN_TEST_METHODOLOGY,
-  SCENARIO_BIRTH_DETAILS
+  SCENARIO_BIRTH_DETAILS,
+  type ScenarioResult
 } from './golden/goldenCareerFixtures';
-
-/**
- * Scenario result with optional level marker
- */
-interface ScenarioResult {
-  readonly scenarioId: string;
-  readonly status: 'PASS' | 'FAIL' | 'BLOCKED' | 'SKIPPED';
-  readonly level?: 'ACCEPTANCE' | 'UNIT';
-  readonly productionEntryPoint: string;
-  readonly expected?: ExpectedC11Fields;
-  readonly actual?: any;
-  readonly traceCheck: boolean;
-  readonly reason?: string;
-  readonly blockedDependency?: string;
-}
 
 /**
  * Test harness for running golden scenarios
@@ -379,10 +366,21 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     let capturedTrajectory: any = null;
     let capturedDashaAnalysis: any = null;
     let trajectoryReturnValue: any = null;
+    let dashaReturnValue: any = null;
 
     // Get original implementations
     const originalBuildCareerTrajectory = trajectoryEngine.buildCareerTrajectory;
     const originalBuildCareerEvents = eventsEngine.buildCareerEvents;
+    const originalBuildCareerDashaAnalysis = careerDashaIntegration.buildCareerDashaAnalysis;
+
+    // Spy on buildCareerDashaAnalysis to capture return value
+    const dashaIntegrationSpy = vi.spyOn(careerDashaIntegration, 'buildCareerDashaAnalysis').mockImplementation(
+      (input: any) => {
+        // Call original implementation (not the spy) and capture return value
+        dashaReturnValue = originalBuildCareerDashaAnalysis(input);
+        return dashaReturnValue;
+      }
+    );
 
     // Spy on buildCareerTrajectory to capture arguments and return value
     const trajectoryEngineSpy = vi.spyOn(trajectoryEngine, 'buildCareerTrajectory').mockImplementation(
@@ -436,15 +434,9 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     expect(capturedTrajectory).toBe(trajectoryReturnValue);
     expect(capturedTrajectory).toBe(careerTrajectory);
 
-    // Assert buildCareerEvents received a Dasha analysis object
+    // Assert buildCareerEvents received the Dasha analysis object returned by buildCareerDashaAnalysis
     expect(capturedDashaAnalysis).toBeDefined();
-
-    // C9 grounding: The production code passes the local canonicalDashaAnalysis variable
-    // (the output of buildCareerDashaAnalysis) directly to buildCareerEvents without
-    // modification. This is verified by code inspection of CareerDomainInterpreterV2.ts
-    // lines 304-309 (C9 build) and 831-834 (C9 pass-through to events engine).
-    // Since canonicalDashaAnalysis is not exposed in conclusionData (per requirements),
-    // we verify that events engine received a valid Dasha analysis object.
+    expect(capturedDashaAnalysis).toBe(dashaReturnValue);
   });
 
   /**
