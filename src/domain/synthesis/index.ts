@@ -6,3 +6,4 @@ export * from './domainSynthesisConfidence';
 export * from './domainSynthesisService';
 export * from './domainSynthesisTraceability';
 export * from './DomainAnalysisSynthesis';
+export * from './selectedPeriodSynthesis';
