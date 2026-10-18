@@ -305,19 +305,57 @@ function classifyEvidence(evidence: DomainEvidence): 'SUPPORTING' | 'CHALLENGING
 }
 
 /**
+ * Validates whether evidence is a valid WEALTH NATAL_PROMISE record.
+ *
+ * Checks domain and phase only (not dimension - dimension is checked separately).
+ * Invalid domain/phase → should emit UNRESOLVED ref + WEALTH_EVIDENCE_INVALID diagnostic.
+ */
+function isValidWealthPromiseEvidence(evidence: DomainEvidence): boolean {
+  return (
+    evidence.domain === 'WEALTH' &&
+    evidence.phase === 'NATAL_PROMISE'
+  );
+}
+
+/**
+ * Compares two evidence records field-by-field for duplicate detection.
+ *
+ * Returns true if all comparable fields are identical (id, domain, phase, dimension, polarity, house, planet, ruleId).
+ * Identical duplicates are deduplicated silently (first occurrence kept).
+ * Differing duplicates trigger EVIDENCE_ID_AMBIGUOUS.
+ */
+function areEvidenceRecordsIdentical(a: DomainEvidence, b: DomainEvidence): boolean {
+  return (
+    a.id === b.id &&
+    a.domain === b.domain &&
+    a.phase === b.phase &&
+    a.dimension === b.dimension &&
+    a.polarity === b.polarity &&
+    a.house === b.house &&
+    a.planet === b.planet &&
+    a.ruleId === b.ruleId
+  );
+}
+
+/**
  * Resolves wealth promise evidence references.
  *
  * Resolves promiseEvidenceIds against the provided wealthEvidence to build
  * WEALTH_NATAL_PROMISE references with existing id/identityKey/dimension/polarity.
  * Unresolvable IDs → UNRESOLVED + EVIDENCE_REFERENCE_UNRESOLVED diagnostic.
  *
- * Validates dimension consistency: mismatch → diagnostic, preserves source dimension,
- * marks ref UNRESOLVED (High-3).
+ * Validates domain/phase/dimension consistency:
+ * - Invalid domain/phase → WEALTH_EVIDENCE_INVALID diagnostic, UNRESOLVED ref, preserves original ID
+ * - Dimension mismatch → WEALTH_EVIDENCE_DIMENSION_MISMATCH diagnostic, preserves source dimension,
+ *   marks ref UNRESOLVED (High-3).
  *
  * Detects duplicate IDs and marks refs touching ambiguous IDs as UNRESOLVED
  * with EVIDENCE_ID_AMBIGUOUS diagnostic (High-2).
  *
  * Returns references, unresolved IDs, and diagnostics.
+ *
+ * Note: unresolved IDs surface via missingInputs (EVIDENCE_REFERENCE_UNRESOLVED entries),
+ * not via diagnostics in the wealth section.
  */
 function resolveWealthPromiseEvidenceReferences(
   promiseEvidenceIds: readonly string[],
@@ -332,10 +370,16 @@ function resolveWealthPromiseEvidenceReferences(
   const duplicateIds = new Set<string>();
 
   for (const e of wealthEvidence) {
-    if (evidenceMap.has(e.id)) {
-      duplicateIds.add(e.id);
+    const existing = evidenceMap.get(e.id);
+    if (existing) {
+      // Field-by-field comparison
+      if (!areEvidenceRecordsIdentical(existing, e)) {
+        duplicateIds.add(e.id);
+      }
+      // If identical, silently deduplicate (keep first - don't overwrite)
+    } else {
+      evidenceMap.set(e.id, e);
     }
-    evidenceMap.set(e.id, e);
   }
 
   const references: SynthesisEvidenceReference[] = [];
@@ -358,6 +402,28 @@ function resolveWealthPromiseEvidenceReferences(
         diagnostics.push(Object.freeze({
           code: 'EVIDENCE_ID_AMBIGUOUS',
           message: `Evidence ID ${id} appears multiple times in wealth evidence with conflicting properties`
+        }));
+        continue;
+      }
+
+      // Check for invalid domain/phase
+      if (!isValidWealthPromiseEvidence(evidence)) {
+        references.push(Object.freeze({
+          classification: 'UNRESOLVED',
+          evidenceId: evidence.id,
+          identityKey: evidence.identityKey,
+          dimension: evidence.dimension,
+          polarity: evidence.polarity,
+          source: evidence.source,
+          ruleId: evidence.ruleId,
+          stage: 'WEALTH' as const,
+          provenanceStage: 'WEALTH_NATAL_PROMISE' as const,
+          referenceKind: 'EVIDENCE' as const
+        }));
+        unresolvedIds.push(id);
+        diagnostics.push(Object.freeze({
+          code: 'WEALTH_EVIDENCE_INVALID',
+          message: `Evidence ${id} has invalid domain ${evidence.domain} or phase ${evidence.phase} for WEALTH_NATAL_PROMISE`
         }));
         continue;
       }
@@ -501,10 +567,16 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
 
   if (careerDashaEvidence) {
     for (const e of careerDashaEvidence) {
-      if (dashaEvidenceMap.has(e.id)) {
-        dashaDuplicateIds.add(e.id);
+      const existing = dashaEvidenceMap.get(e.id);
+      if (existing) {
+        // Field-by-field comparison
+        if (!areEvidenceRecordsIdentical(existing, e)) {
+          dashaDuplicateIds.add(e.id);
+        }
+        // If identical, silently deduplicate (keep first - don't overwrite)
+      } else {
+        dashaEvidenceMap.set(e.id, e);
       }
-      dashaEvidenceMap.set(e.id, e);
     }
   }
 
@@ -613,18 +685,23 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         const evidenceMap = new Map<string, DomainEvidence>();
         const duplicateIds = new Set<string>();
         for (const e of wealthEvidence) {
-          if (evidenceMap.has(e.id)) {
-            duplicateIds.add(e.id);
+          const existing = evidenceMap.get(e.id);
+          if (existing) {
+            // Field-by-field comparison
+            if (!areEvidenceRecordsIdentical(existing, e)) {
+              duplicateIds.add(e.id);
+            }
+            // If identical, silently deduplicate (keep first - don't overwrite)
+          } else {
+            evidenceMap.set(e.id, e);
           }
-          evidenceMap.set(e.id, e);
         }
         for (const id of dimActivation.promiseEvidenceIds) {
           const evidence = evidenceMap.get(id);
-          // Skip ambiguous IDs, dimension-mismatched evidence, and wrong domain/phase
+          // Skip ambiguous IDs and invalid evidence (wrong domain/phase/dimension)
           if (evidence &&
             !duplicateIds.has(id) &&
-            evidence.domain === 'WEALTH' &&
-            evidence.phase === 'NATAL_PROMISE' &&
+            isValidWealthPromiseEvidence(evidence) &&
             (evidence.dimension === undefined || evidence.dimension === dim)) {
             resolvedCount++;
           }
@@ -660,18 +737,6 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     });
   }
 
-  const wealthSection: SynthesisWealthSection = Object.freeze({
-    dimensions: Object.freeze({
-      ACCUMULATION: Object.freeze(wealthDimensions.ACCUMULATION),
-      GAINS: Object.freeze(wealthDimensions.GAINS),
-      FORTUNE: Object.freeze(wealthDimensions.FORTUNE),
-      SPECULATION: Object.freeze(wealthDimensions.SPECULATION)
-    }),
-    diagnostics: Object.freeze(wealthDiagnostics.sort((a, b) =>
-      a.code.localeCompare(b.code)
-    ))
-  });
-
   // Build evidence references
   const evidenceReferences: SynthesisEvidenceReference[] = [];
   const careerUnresolvedIds: string[] = [];
@@ -683,10 +748,16 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     const duplicateIds = new Set<string>();
 
     for (const e of careerEvidence) {
-      if (evidenceMap.has(e.id)) {
-        duplicateIds.add(e.id);
+      const existing = evidenceMap.get(e.id);
+      if (existing) {
+        // Field-by-field comparison
+        if (!areEvidenceRecordsIdentical(existing, e)) {
+          duplicateIds.add(e.id);
+        }
+        // If identical, silently deduplicate (keep first - don't overwrite)
+      } else {
+        evidenceMap.set(e.id, e);
       }
-      evidenceMap.set(e.id, e);
     }
 
     for (const exprActivation of careerActivation.expressionActivations) {
@@ -880,6 +951,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
             provenanceStage: 'CAREER_ACTIVATION' as const,
             referenceKind: 'EVIDENCE' as const
           }));
+          careerDiagnostics.push({
+            code: 'C9_EVIDENCE_REFERENCE_UNRESOLVED',
+            message: `Career dasha evidence ID ${id} not found in careerDashaEvidence`
+          });
         }
       }
 
@@ -940,6 +1015,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
             provenanceStage: 'CAREER_ACTIVATION' as const,
             referenceKind: 'EVIDENCE' as const
           }));
+          careerDiagnostics.push({
+            code: 'C9_EVIDENCE_REFERENCE_UNRESOLVED',
+            message: `Career dasha evidence ID ${id} not found in careerDashaEvidence`
+          });
         }
       }
     }
@@ -982,6 +1061,18 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       }
     }
   }
+
+  const wealthSection: SynthesisWealthSection = Object.freeze({
+    dimensions: Object.freeze({
+      ACCUMULATION: Object.freeze(wealthDimensions.ACCUMULATION),
+      GAINS: Object.freeze(wealthDimensions.GAINS),
+      FORTUNE: Object.freeze(wealthDimensions.FORTUNE),
+      SPECULATION: Object.freeze(wealthDimensions.SPECULATION)
+    }),
+    diagnostics: Object.freeze(wealthDiagnostics.sort((a, b) =>
+      a.code.localeCompare(b.code)
+    ))
+  });
 
   // Sort evidence references
   const sortedEvidenceReferences = Object.freeze(evidenceReferences.sort((a, b) => {

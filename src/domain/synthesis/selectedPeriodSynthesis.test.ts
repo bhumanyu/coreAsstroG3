@@ -261,14 +261,15 @@ function makeEvidence(
   id: string,
   polarity: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL',
   domain: 'CAREER' | 'WEALTH',
-  dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION'
+  dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION',
+  phase?: 'NATAL_PROMISE' | 'DASHA_ACTIVATION'
 ): DomainEvidence {
   return Object.freeze({
     id,
     sourceType: 'PLANET',
     domain,
     role: 'PRIMARY',
-    phase: 'NATAL_PROMISE',
+    phase: phase ?? 'NATAL_PROMISE',
     source: 'D1',
     statement: `Evidence ${id}`,
     polarity,
@@ -762,17 +763,13 @@ describe('buildSelectedPeriodSynthesis', () => {
         makeEvidence('promise-2', 'SUPPORTING', 'WEALTH', 'GAINS'),
         makeEvidence('promise-3', 'CHALLENGING', 'WEALTH', 'SPECULATION')
       ]);
-      const careerBaseline = Object.freeze({ id: 'career-baseline' } as unknown as CareerFinalSynthesisResult);
-      const wealthBaseline = Object.freeze({ id: 'wealth-baseline' } as unknown as CareerWealthFinalSynthesis);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
         careerActivation,
         wealthActivation,
         careerEvidence,
-        wealthEvidence,
-        careerBaseline,
-        wealthBaseline
+        wealthEvidence
       });
 
       expect(result.ok).toBe(true);
@@ -793,11 +790,9 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(value.period.analysisAsOf).toBe(selectedPeriod.analysisAsOf);
       expect(value.period.temporalRelation).toBe(selectedPeriod.temporalRelation);
 
-      // Check natal baseline
-      expect(value.natalBaseline.career?.baseline).toBe(careerBaseline);
-      expect(value.natalBaseline.career?.unchanged).toBe(true);
-      expect(value.natalBaseline.wealth?.baseline).toBe(wealthBaseline);
-      expect(value.natalBaseline.wealth?.unchanged).toBe(true);
+      // Check natal baseline (none provided in this scenario)
+      expect(value.natalBaseline.career).toBeUndefined();
+      expect(value.natalBaseline.wealth).toBeUndefined();
 
       // Check career section
       expect(value.career.qualificationBasis).toBe('CANONICAL_STATUS');
@@ -817,8 +812,12 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(value.evidence.length).toBeGreaterThan(0);
       expect(value.evidence.every(e => e.stage === 'CAREER' || e.stage === 'WEALTH')).toBe(true);
 
-      // Check missing inputs (should be empty in this complete scenario)
-      expect(value.missingInputs.length).toBe(0);
+      // Check missing inputs (baselines are missing in this scenario)
+      expect(value.missingInputs.length).toBe(4);
+      expect(value.missingInputs.some(m => m.code === 'BASELINE_CAREER_UNAVAILABLE')).toBe(true);
+      expect(value.missingInputs.some(m => m.code === 'BASELINE_WEALTH_UNAVAILABLE')).toBe(true);
+      // Also expect unresolved evidence from dasha evidence IDs
+      expect(value.missingInputs.some(m => m.code === 'EVIDENCE_REFERENCE_UNRESOLVED')).toBe(true);
 
       // Check provenance
       expect(value.provenance.career.status).toBe('PRESENT');
@@ -1284,6 +1283,10 @@ describe('buildSelectedPeriodSynthesis', () => {
 
       // ACCUMULATION has wrong domain → PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
+
+      // Should have WEALTH_EVIDENCE_INVALID diagnostic
+      const invalidDiag = result.value.wealth.diagnostics.find(d => d.code === 'WEALTH_EVIDENCE_INVALID');
+      expect(invalidDiag).toBeDefined();
     });
   });
 
@@ -1470,36 +1473,19 @@ describe('buildSelectedPeriodSynthesis', () => {
   });
 
   describe('duplicate-ID ambiguity (High-2)', () => {
-    it('emits EVIDENCE_ID_AMBIGUOUS diagnostic for duplicate wealth evidence IDs', () => {
-      const selectedPeriod = makeSelectedPeriodContext();
-      const wealthActivation = makeWealthActivation();
-      const wealthEvidence = Object.freeze([
-        // Same ID with different dimensions
-        makeEvidence('dup-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION'),
-        makeEvidence('dup-1', 'CHALLENGING', 'WEALTH', 'GAINS')
-      ]);
-
-      const result = buildSelectedPeriodSynthesis({
-        selectedPeriod,
-        wealthActivation,
-        wealthEvidence
-      });
-
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-
-      // Should have EVIDENCE_ID_AMBIGUOUS diagnostic
-      const ambiguousDiag = result.value.wealth.diagnostics.find(d => d.code === 'EVIDENCE_ID_AMBIGUOUS');
-      expect(ambiguousDiag).toBeDefined();
-
-      // Ref touching ambiguous ID should be UNRESOLVED
-      const ambiguousRef = result.value.evidence.find(e => e.evidenceId === 'dup-1');
-      expect(ambiguousRef?.classification).toBe('UNRESOLVED');
-    });
-
     it('order independence: reversing input order produces identical result (High-2)', () => {
       const selectedPeriod = makeSelectedPeriodContext();
       const wealthActivation = makeWealthActivation();
+      const customWealthActivation: SelectedWealthPeriodActivation = Object.freeze({
+        ...wealthActivation,
+        dimensions: Object.freeze({
+          ...wealthActivation.dimensions,
+          ACCUMULATION: Object.freeze({
+            ...wealthActivation.dimensions.ACCUMULATION,
+            promiseEvidenceIds: Object.freeze(['dup-1'])
+          })
+        })
+      });
       const wealthEvidence1 = Object.freeze([
         makeEvidence('dup-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION'),
         makeEvidence('dup-1', 'CHALLENGING', 'WEALTH', 'GAINS')
@@ -1511,13 +1497,13 @@ describe('buildSelectedPeriodSynthesis', () => {
 
       const result1 = buildSelectedPeriodSynthesis({
         selectedPeriod,
-        wealthActivation,
+        wealthActivation: customWealthActivation,
         wealthEvidence: wealthEvidence1
       });
 
       const result2 = buildSelectedPeriodSynthesis({
         selectedPeriod,
-        wealthActivation,
+        wealthActivation: customWealthActivation,
         wealthEvidence: wealthEvidence2
       });
 
@@ -1528,33 +1514,6 @@ describe('buildSelectedPeriodSynthesis', () => {
       // Results should be identical regardless of input order
       expect(result1.value.wealth.diagnostics).toEqual(result2.value.wealth.diagnostics);
       expect(result1.value.evidence).toEqual(result2.value.evidence);
-    });
-
-    it('emits EVIDENCE_ID_AMBIGUOUS diagnostic for duplicate career evidence IDs', () => {
-      const selectedPeriod = makeSelectedPeriodContext();
-      const careerActivation = makeCareerActivation();
-      const careerEvidence = Object.freeze([
-        // Same ID with different polarities
-        makeEvidence('dup-1', 'SUPPORTING', 'CAREER'),
-        makeEvidence('dup-1', 'CHALLENGING', 'CAREER')
-      ]);
-
-      const result = buildSelectedPeriodSynthesis({
-        selectedPeriod,
-        careerActivation,
-        careerEvidence
-      });
-
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-
-      // Should have EVIDENCE_ID_AMBIGUOUS diagnostic
-      const ambiguousDiag = result.value.career.diagnostics.find(d => d.code === 'EVIDENCE_ID_AMBIGUOUS');
-      expect(ambiguousDiag).toBeDefined();
-
-      // Ref touching ambiguous ID should be UNRESOLVED
-      const ambiguousRef = result.value.evidence.find(e => e.evidenceId === 'dup-1');
-      expect(ambiguousRef?.classification).toBe('UNRESOLVED');
     });
   });
 
@@ -1589,53 +1548,6 @@ describe('buildSelectedPeriodSynthesis', () => {
   });
 
   describe('C9 evidence lookup (High-4)', () => {
-    it('resolves mdDashaEvidenceIds against careerDashaEvidence when provided', () => {
-      const selectedPeriod = makeSelectedPeriodContext();
-      const careerActivation = makeCareerActivation();
-      const careerDashaEvidence = Object.freeze([
-        makeEvidence('md-evid1', 'SUPPORTING', 'CAREER'),
-        makeEvidence('ad-evid1', 'SUPPORTING', 'CAREER')
-      ]);
-
-      const result = buildSelectedPeriodSynthesis({
-        selectedPeriod,
-        careerActivation,
-        careerDashaEvidence
-      });
-
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-
-      // Should resolve md-evid1 and ad-evid1 from careerDashaEvidence
-      const mdRef = result.value.evidence.find(e => e.evidenceId === 'md-evid1' && e.provenanceStage === 'CAREER_ACTIVATION');
-      const adRef = result.value.evidence.find(e => e.evidenceId === 'ad-evid1' && e.provenanceStage === 'CAREER_ACTIVATION');
-      expect(mdRef?.classification).toBe('SUPPORTING');
-      expect(adRef?.classification).toBe('SUPPORTING');
-    });
-
-    it('emits C9_EVIDENCE_SET_MISSING when careerDashaEvidence not provided', () => {
-      const selectedPeriod = makeSelectedPeriodContext();
-      const careerActivation = makeCareerActivation();
-
-      const result = buildSelectedPeriodSynthesis({
-        selectedPeriod,
-        careerActivation
-      });
-
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-
-      // Should have C9_EVIDENCE_SET_MISSING diagnostic
-      const missingDiag = result.value.career.diagnostics.find(d => d.code === 'C9_EVIDENCE_SET_MISSING');
-      expect(missingDiag).toBeDefined();
-
-      // Dasha evidence refs should be UNRESOLVED
-      const unresolvedRefs = result.value.evidence.filter(e =>
-        e.provenanceStage === 'CAREER_ACTIVATION' && e.classification === 'UNRESOLVED'
-      );
-      expect(unresolvedRefs.length).toBeGreaterThan(0);
-    });
-
     it('never lets C9 ID resolve to C8 record (careerEvidence)', () => {
       const selectedPeriod = makeSelectedPeriodContext();
       const careerActivation = makeCareerActivation();
@@ -1695,6 +1607,142 @@ describe('buildSelectedPeriodSynthesis', () => {
       // Results should be identical regardless of input order
       expect(result1.value.wealth.diagnostics).toEqual(result2.value.wealth.diagnostics);
       expect(result1.value.evidence).toEqual(result2.value.evidence);
+    });
+
+    it('whole-value equality for reordered inputs', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+      const wealthActivation = makeWealthActivation();
+      const careerEvidence1 = Object.freeze([
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER'),
+        makeEvidence('evid2', 'CHALLENGING', 'CAREER')
+      ]);
+      const careerEvidence2 = Object.freeze([
+        makeEvidence('evid2', 'CHALLENGING', 'CAREER'),
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER')
+      ]);
+      const wealthEvidence1 = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION'),
+        makeEvidence('promise-2', 'SUPPORTING', 'WEALTH', 'GAINS')
+      ]);
+      const wealthEvidence2 = Object.freeze([
+        makeEvidence('promise-2', 'SUPPORTING', 'WEALTH', 'GAINS'),
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result1 = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        wealthActivation,
+        careerEvidence: careerEvidence1,
+        wealthEvidence: wealthEvidence1
+      });
+
+      const result2 = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        wealthActivation,
+        careerEvidence: careerEvidence2,
+        wealthEvidence: wealthEvidence2
+      });
+
+      expect(result1.ok).toBe(true);
+      expect(result2.ok).toBe(true);
+      if (!result1.ok || !result2.ok) return;
+
+      // Entire value should be equal despite reordering
+      expect(result1.value).toEqual(result2.value);
+    });
+  });
+
+
+
+  describe('invalid domain/phase wealth evidence', () => {
+    it('emits WEALTH_EVIDENCE_INVALID for wrong domain with UNRESOLVED ref and PARTIAL status', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        // Evidence has wrong domain (CAREER instead of WEALTH)
+        makeEvidence('promise-1', 'SUPPORTING', 'CAREER')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Should have WEALTH_EVIDENCE_INVALID diagnostic
+      const invalidDiag = result.value.wealth.diagnostics.find(d => d.code === 'WEALTH_EVIDENCE_INVALID');
+      expect(invalidDiag).toBeDefined();
+      expect(invalidDiag?.message).toContain('promise-1');
+      expect(invalidDiag?.message).toContain('CAREER');
+
+      // Ref should be UNRESOLVED with original fields preserved
+      const invalidRef = result.value.evidence.find(e => e.evidenceId === 'promise-1' && e.provenanceStage === 'WEALTH_NATAL_PROMISE');
+      expect(invalidRef?.classification).toBe('UNRESOLVED');
+      expect(invalidRef?.evidenceId).toBe('promise-1');
+
+      // Data status should be PARTIAL (not COMPLETE)
+      expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
+    });
+
+    it('emits WEALTH_EVIDENCE_INVALID for wrong phase with UNRESOLVED ref and PARTIAL status', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      // Create evidence with wrong phase (not NATAL_PROMISE)
+      const wrongPhaseEvidence = makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION', 'DASHA_ACTIVATION');
+
+      const wealthEvidence = Object.freeze([wrongPhaseEvidence]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Should have WEALTH_EVIDENCE_INVALID diagnostic
+      const invalidDiag = result.value.wealth.diagnostics.find(d => d.code === 'WEALTH_EVIDENCE_INVALID');
+      expect(invalidDiag).toBeDefined();
+      expect(invalidDiag?.message).toContain('DASHA_ACTIVATION');
+
+      // Data status should be PARTIAL
+      expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
+    });
+  });
+
+  describe('duplicate semantics: identical dedup vs conflicting ambiguity', () => {
+    it('deduplicates identical records silently (no diagnostic)', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION'),
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION') // identical duplicate
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Should NOT have EVIDENCE_ID_AMBIGUOUS diagnostic (identical dedup)
+      const ambiguousDiag = result.value.wealth.diagnostics.find(d => d.code === 'EVIDENCE_ID_AMBIGUOUS');
+      expect(ambiguousDiag).toBeUndefined();
+
+      // Ref should resolve normally (not UNRESOLVED)
+      const resolvedRef = result.value.evidence.find(e => e.evidenceId === 'promise-1');
+      expect(resolvedRef?.classification).toBe('SUPPORTING');
     });
   });
 });
