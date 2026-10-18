@@ -12,7 +12,7 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { runLifeAnalysisProduct } from '../life-analysis/lifeAnalysisProductService';
 import type { ProductAnalysis } from './productAnalysisTypes';
 import { listSelectableMdAdPeriods } from '../../core/analysis/selectedMdAdPeriod';
-import { VALID_SELECTION_GOLDEN_FIXTURE, UNRESOLVED_REFS_GOLDEN_FIXTURE } from '../../test/fixtures/selectedPeriodGoldenFixtures';
+import { VALID_SELECTION_GOLDEN_FIXTURE } from '../../test/fixtures/selectedPeriodGoldenFixtures';
 
 describe('ProductAnalysisService integration (PBA-07)', () => {
   let service: ProductAnalysisService;
@@ -131,6 +131,9 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
     // Assert status is OK (or a valid error status, not ERROR)
     expect(result.status).not.toBe('ERROR');
+
+    // Assert selectedPeriod status is OK
+    expect(result.selectedPeriod?.status).toBe('OK');
   });
 
   it('selected MD/AD identity matches canonical report when selection is valid', async () => {
@@ -277,29 +280,15 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       }
     });
 
-    // Assert selectedPeriod is present with OK status
+    // Assert selectedPeriod is present with OK status (vacuous-pass guard: non-OK must fail)
     expect(analysis.selectedPeriod).toBeDefined();
     expect(analysis.selectedPeriod?.status).toBe('OK');
 
-    // Narrow the type before accessing synthesis
-    if (analysis.selectedPeriod?.status === 'OK') {
-      // Compare synthesis against hand-authored literal fixture
-      expect(analysis.selectedPeriod.synthesis).toEqual(VALID_SELECTION_GOLDEN_FIXTURE);
-    }
+    // Compare synthesis against hand-authored literal fixture
+    expect(analysis.selectedPeriod.synthesis).toEqual(VALID_SELECTION_GOLDEN_FIXTURE);
   });
 
-  it('golden test: unresolved refs within valid period', async () => {
-    // This test requires mocking to create unresolved evidence references
-    // For now, we verify the structure allows it
-    // A complete implementation would:
-    // 1. Get valid IDs via listSelectableMdAdPeriods
-    // 2. Mock careerDashaEvidence to be missing some IDs referenced by career expressions
-    // 3. Assert EVIDENCE_REFERENCE_UNRESOLVED / C9_EVIDENCE_REFERENCE_UNRESOLVED in diagnostics/missingInputs
 
-    // Skip for now - requires more complex mocking infrastructure
-    // The fixture is defined for future use
-    expect(true).toBe(true);
-  });
 
   it('unresolved/ambiguous refs preserved in selectedPeriod', async () => {
     // This test requires a selection that produces unresolved refs
@@ -370,5 +359,46 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(json).not.toContain('Horoscope');
     expect(json).not.toContain('DomainInterpretation');
     expect(json).not.toContain('conclusionData');
+  });
+
+  it('no internal objects in selectedPeriod.synthesis DTO', async () => {
+    // First, get a baseline to obtain canonical IDs
+    const baseline = await service.analyze(mockBirthDetails, {
+      includeAiExplanation: false
+    });
+
+    const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+    expect(report).toBeDefined();
+
+    const selectablePeriods = listSelectableMdAdPeriods(report!);
+    const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+    expect(validMd).toBeDefined();
+
+    const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+    expect(validAd).toBeDefined();
+
+    // Request with valid selection
+    const analysis = await service.analyze(mockBirthDetails, {
+      includeAiExplanation: false,
+      selectedPeriod: {
+        mahadashaId: validMd!.id,
+        antardashaId: validAd!.id
+      }
+    });
+
+    // Assert selectedPeriod is present with OK status
+    expect(analysis.selectedPeriod).toBeDefined();
+    expect(analysis.selectedPeriod?.status).toBe('OK');
+
+    // Verify no internal engine objects are in selectedPeriod.synthesis
+    if (analysis.selectedPeriod?.status === 'OK') {
+      const json = JSON.stringify(analysis.selectedPeriod.synthesis);
+      expect(json).not.toContain('Horoscope');
+      expect(json).not.toContain('DomainInterpretation');
+      expect(json).not.toContain('conclusionData');
+      expect(json).not.toContain('mahadashaNode');
+      expect(json).not.toContain('antardashaNode');
+      expect(json).not.toContain('function('); // No function references
+    }
   });
 });
