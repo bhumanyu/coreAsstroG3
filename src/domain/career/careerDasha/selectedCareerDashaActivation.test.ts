@@ -1346,6 +1346,77 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       }
     });
 
+    it('returns INCOMPLETE_CANONICAL_INPUT error when canonicalExpression is present with explicitly empty mechanismCandidates array', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const expression = makeExpressionAnalysisWithLinkedEvidence();
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Create a minimal canonical result
+      const canonicalCandidate: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-001',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'QUALIFIED',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        qualification: Object.freeze({
+          qualificationStatus: 'QUALIFIED',
+          ruleIds: Object.freeze(['RULE-001']),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-001',
+            mechanismId: 'MECH-001',
+            sourceMechanismIds: Object.freeze(['MECH-001']),
+            ruleIds: Object.freeze(['RULE-001']),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: 'leadership-expression'
+          })
+        }),
+        trace: Object.freeze(['Qualified by RULE-001'])
+      });
+
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([canonicalCandidate]),
+        status: 'COMPLETE',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates: Object.freeze([]) // Explicitly empty array (degenerate canonical input)
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+      }
+    });
+
     it('uses CANONICAL_STATUS when canonicalExpression is provided with mechanismCandidates', () => {
       const horoscope = makeHoroscope();
       const natal = makeMinimalNatalAnalysis();
@@ -1774,6 +1845,450 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(result.value.expressionActivations[0].expression).not.toBe(callerExpression);
         // expressionRefKey should document that this is adapter-derived
         expect(result.value.expressionActivations[0].expressionRefKey).toContain('LEADERSHIP');
+      }
+    });
+
+    it('splits supportingEvidenceIds into qualified vs unqualified portions when expression has mixed provenance', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Create caller's expression with two evidence IDs: one matches QUALIFIED, one matches CANDIDATE
+      const qualifiedEvidenceId = 'qualified-evidence-001';
+      const unqualifiedEvidenceId = 'unqualified-evidence-002';
+
+      const callerEvidence1: CareerExpressionEvidence = Object.freeze({
+        id: 'expr-evidence-1',
+        mode: 'LEADERSHIP' as any,
+        role: 'PLANETARY' as any,
+        statement: 'Caller expression evidence 1',
+        weight: 2.0,
+        planets: [Planet.SATURN],
+        houses: [10]
+      });
+
+      const callerEvidence2: CareerExpressionEvidence = Object.freeze({
+        id: 'expr-evidence-2',
+        mode: 'LEADERSHIP' as any,
+        role: 'PLANETARY' as any,
+        statement: 'Caller expression evidence 2',
+        weight: 1.5,
+        planets: [Planet.JUPITER],
+        houses: [7]
+      });
+
+      const callerExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP' as any,
+        direction: 'SUPPORTED' as any,
+        strength: 'STRONG' as any,
+        evidence: Object.freeze([callerEvidence1, callerEvidence2]),
+        supportingEvidenceIds: Object.freeze([qualifiedEvidenceId, unqualifiedEvidenceId]),
+        statement: 'Caller expression with mixed provenance',
+        conditional: false
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: Object.freeze([callerExpression]),
+        primaryExpression: undefined,
+        statement: 'Caller expression analysis with mixed provenance'
+      });
+
+      // Create QUALIFIED canonical candidate with the qualified evidence ID
+      const qualifiedCanonicalCandidate: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-QUALIFIED',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: qualifiedEvidenceId, // Matches caller's qualified evidence ID
+            sourceMechanismId: 'MECH-001',
+            sourceEvidenceIds: Object.freeze([]),
+            ruleId: 'RULE-001',
+            role: 'ESTABLISHING'
+          })
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'QUALIFIED',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        qualification: Object.freeze({
+          qualificationStatus: 'QUALIFIED',
+          ruleIds: Object.freeze(['RULE-001']),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-QUALIFIED',
+            mechanismId: 'MECH-001',
+            sourceMechanismIds: Object.freeze(['MECH-001']),
+            ruleIds: Object.freeze(['RULE-001']),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: 'leadership-expression'
+          })
+        }),
+        trace: Object.freeze(['Qualified by RULE-001'])
+      });
+
+      // Create CANDIDATE canonical candidate with the unqualified evidence ID
+      const candidateCanonicalCandidate: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-CANDIDATE',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-002']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: unqualifiedEvidenceId, // Matches caller's unqualified evidence ID
+            sourceMechanismId: 'MECH-002',
+            sourceEvidenceIds: Object.freeze([]),
+            ruleId: 'RULE-002',
+            role: 'ESTABLISHING'
+          })
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-002']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'CANDIDATE',
+        direction: 'UNAVAILABLE',
+        strength: 'UNAVAILABLE',
+        qualification: Object.freeze({
+          qualificationStatus: 'CANDIDATE',
+          ruleIds: Object.freeze([]),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-CANDIDATE',
+            sourceMechanismIds: Object.freeze(['MECH-002']),
+            ruleIds: Object.freeze([]),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: undefined
+          })
+        }),
+        trace: Object.freeze(['Candidate without qualification'])
+      });
+
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([qualifiedCanonicalCandidate, candidateCanonicalCandidate]),
+        status: 'COMPLETE',
+        sourceMechanismIds: Object.freeze(['MECH-001', 'MECH-002']),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001', 'MECH-002']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const mechanismCandidate1: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-001',
+        patternId: 'PATTERN-001',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-001']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Test mechanism 1'
+      });
+
+      const mechanismCandidate2: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-002',
+        patternId: 'PATTERN-002',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-002']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Test mechanism 2'
+      });
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates: Object.freeze([mechanismCandidate1, mechanismCandidate2])
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
+        // Should emit row for caller's expression (matched via qualified evidence ID)
+        expect(result.value.expressionActivations.length).toBe(1);
+        const activation = result.value.expressionActivations[0];
+        // Check that qualifiedEvidenceIds contains only the qualified evidence ID
+        expect(activation.qualifiedEvidenceIds).toEqual([qualifiedEvidenceId]);
+        // Check that unqualifiedEvidenceIds contains only the unqualified evidence ID
+        expect(activation.unqualifiedEvidenceIds).toEqual([unqualifiedEvidenceId]);
+        // Contract: expressionEvidenceIds should still contain all C8 evidence IDs
+        expect(activation.expressionEvidenceIds).toEqual(['expr-evidence-1', 'expr-evidence-2']);
+      }
+    });
+
+    it('marks expressionSource as CALLER when using caller expressions', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const selectedPeriod = makeSelectedPeriod();
+
+      const callerEvidenceId = 'caller-evidence-001';
+      const callerEvidence: CareerExpressionEvidence = Object.freeze({
+        id: callerEvidenceId,
+        mode: 'LEADERSHIP' as any,
+        role: 'PLANETARY' as any,
+        statement: 'Caller expression evidence',
+        weight: 2.0,
+        planets: [Planet.SATURN],
+        houses: [10]
+      });
+
+      const callerExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP' as any,
+        direction: 'SUPPORTED' as any,
+        strength: 'STRONG' as any,
+        evidence: Object.freeze([callerEvidence]),
+        supportingEvidenceIds: Object.freeze([callerEvidenceId]),
+        statement: 'Caller expression',
+        conditional: false
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: Object.freeze([callerExpression]),
+        primaryExpression: undefined,
+        statement: 'Caller expression analysis'
+      });
+
+      const canonicalCandidate: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-001',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: callerEvidenceId,
+            sourceMechanismId: 'MECH-001',
+            sourceEvidenceIds: Object.freeze([]),
+            ruleId: 'RULE-001',
+            role: 'ESTABLISHING'
+          })
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'QUALIFIED',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        qualification: Object.freeze({
+          qualificationStatus: 'QUALIFIED',
+          ruleIds: Object.freeze(['RULE-001']),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-001',
+            mechanismId: 'MECH-001',
+            sourceMechanismIds: Object.freeze(['MECH-001']),
+            ruleIds: Object.freeze(['RULE-001']),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: 'leadership-expression'
+          })
+        }),
+        trace: Object.freeze(['Qualified by RULE-001'])
+      });
+
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([canonicalCandidate]),
+        status: 'COMPLETE',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const mechanismCandidate: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-001',
+        patternId: 'PATTERN-001',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-001']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Test mechanism'
+      });
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates: Object.freeze([mechanismCandidate])
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.expressionActivations.length).toBe(1);
+        expect(result.value.expressionActivations[0].expressionSource).toBe('CALLER');
+      }
+    });
+
+    it('marks expressionSource as ADAPTER_FALLBACK when using adapter-derived expressions', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const selectedPeriod = makeSelectedPeriod();
+
+      const callerEvidenceId = 'caller-evidence-no-match';
+      const callerEvidence: CareerExpressionEvidence = Object.freeze({
+        id: callerEvidenceId,
+        mode: 'LEADERSHIP' as any,
+        role: 'PLANETARY' as any,
+        statement: 'Caller expression evidence (no match)',
+        weight: 2.0,
+        planets: [Planet.SATURN],
+        houses: [10]
+      });
+
+      const callerExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP' as any,
+        direction: 'SUPPORTED' as any,
+        strength: 'STRONG' as any,
+        evidence: Object.freeze([callerEvidence]),
+        supportingEvidenceIds: Object.freeze([callerEvidenceId]),
+        statement: 'Caller expression (no match)',
+        conditional: false
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: Object.freeze([callerExpression]),
+        primaryExpression: undefined,
+        statement: 'Caller expression analysis (no match)'
+      });
+
+      const canonicalEvidenceId = 'canonical-evidence-001';
+      const canonicalCandidate: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-001',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: canonicalEvidenceId,
+            sourceMechanismId: 'MECH-001',
+            sourceEvidenceIds: Object.freeze([]),
+            ruleId: 'RULE-001',
+            role: 'ESTABLISHING'
+          })
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'QUALIFIED',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        qualification: Object.freeze({
+          qualificationStatus: 'QUALIFIED',
+          ruleIds: Object.freeze(['RULE-001']),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-001',
+            mechanismId: 'MECH-001',
+            sourceMechanismIds: Object.freeze(['MECH-001']),
+            ruleIds: Object.freeze(['RULE-001']),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: 'leadership-expression'
+          })
+        }),
+        trace: Object.freeze(['Qualified by RULE-001'])
+      });
+
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([canonicalCandidate]),
+        status: 'COMPLETE',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const mechanismCandidate: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-001',
+        patternId: 'PATTERN-001',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-001']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Test mechanism'
+      });
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates: Object.freeze([mechanismCandidate])
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.expressionActivations.length).toBe(1);
+        expect(result.value.expressionActivations[0].expressionSource).toBe('ADAPTER_FALLBACK');
       }
     });
   });

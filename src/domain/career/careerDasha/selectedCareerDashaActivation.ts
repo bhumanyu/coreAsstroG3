@@ -82,8 +82,15 @@ export interface SelectedExpressionActivation {
   /**
    * Local key derived from mode:direction: + sorted expression evidence IDs.
    * JSDoc: not a durable identity, just a deterministic local reference.
+   * When expressionSource is 'ADAPTER_FALLBACK', this key references the adapter's re-derived expressions,
+   * not the caller's original expressions.
    */
   readonly expressionRefKey: string;
+  /**
+   * Source of the expression: 'CALLER' if from caller's expression.expressions,
+   * 'ADAPTER_FALLBACK' if derived from canonical candidates via adapter (no reliable mapping to caller's expressions).
+   */
+  readonly expressionSource: 'CALLER' | 'ADAPTER_FALLBACK';
   /**
    * Reference to the original expression.
    */
@@ -93,6 +100,18 @@ export interface SelectedExpressionActivation {
    * These are the evidence IDs from expression.evidence[].id that are linked via planet association.
    */
   readonly expressionEvidenceIds: readonly string[];
+  /**
+   * Evidence IDs from expression.supportingEvidenceIds that match QUALIFIED canonical candidates.
+   * Only populated when qualificationBasis === 'CANONICAL_STATUS'. Empty array otherwise.
+   * This allows consumers to distinguish qualified vs unqualified provenance.
+   */
+  readonly qualifiedEvidenceIds: readonly string[];
+  /**
+   * Evidence IDs from expression.supportingEvidenceIds that do NOT match QUALIFIED canonical candidates.
+   * Only populated when qualificationBasis === 'CANONICAL_STATUS'. Empty array otherwise.
+   * This allows consumers to distinguish qualified vs unqualified provenance.
+   */
+  readonly unqualifiedEvidenceIds: readonly string[];
   /**
    * Which levels this expression is linked to (authoritative).
    * Contains 'MD' if expression includes mdPlanet, 'AD' if includes adPlanet.
@@ -249,8 +268,13 @@ export function buildSelectedCareerDashaActivation(params: {
 
   // Reject inconsistent canonical inputs: if exactly one of canonicalExpression/mechanismCandidates is supplied
   const hasCanonicalExpression = canonicalExpression !== undefined;
-  const hasMechanismCandidates = mechanismCandidates !== undefined && mechanismCandidates.length > 0;
+  const hasMechanismCandidates = mechanismCandidates !== undefined;
+  // Reject if exactly one is present
   if (hasCanonicalExpression !== hasMechanismCandidates) {
+    return { ok: false, error: 'INCOMPLETE_CANONICAL_INPUT' };
+  }
+  // Reject if both are present but mechanismCandidates is explicitly empty (degenerate canonical input)
+  if (hasCanonicalExpression && mechanismCandidates!.length === 0) {
     return { ok: false, error: 'INCOMPLETE_CANONICAL_INPUT' };
   }
 
@@ -295,6 +319,10 @@ export function buildSelectedCareerDashaActivation(params: {
   // P2: C8 qualification boundary - filter by QUALIFIED status or use proxy
   let qualifiedExpressions: CareerExpression[];
   let qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  // Store qualified canonical evidence IDs for later use in splitting expression evidence
+  let qualifiedCanonicalEvidenceIds: Set<string> | null = null;
+  // Track whether we used adapter fallback (for per-expression source determination)
+  let usedAdapterFallback = false;
 
   if (canonicalExpression && mechanismCandidates) {
     // Use canonical qualification status (authoritative)
@@ -303,7 +331,7 @@ export function buildSelectedCareerDashaActivation(params: {
     );
 
     // Build a set of all evidence IDs from QUALIFIED canonical candidates for matching
-    const qualifiedCanonicalEvidenceIds = new Set<string>();
+    qualifiedCanonicalEvidenceIds = new Set<string>();
     for (const candidate of qualifiedCanonicalCandidates) {
       for (const evidence of candidate.evidence) {
         qualifiedCanonicalEvidenceIds.add(evidence.evidenceId);
@@ -314,13 +342,14 @@ export function buildSelectedCareerDashaActivation(params: {
     // Match via evidence ID intersection: expression.supportingEvidenceIds ∩ candidate.evidence[].evidenceId
     const matchedCallerExpressions = expression.expressions.filter(expr => {
       // Check if any of the expression's supporting evidence IDs match canonical evidence IDs
-      return expr.supportingEvidenceIds.some(id => qualifiedCanonicalEvidenceIds.has(id));
+      return expr.supportingEvidenceIds.some(id => qualifiedCanonicalEvidenceIds!.has(id));
     });
 
     // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
     // This is documented in expressionRefKey below
     if (matchedCallerExpressions.length > 0) {
       qualifiedExpressions = matchedCallerExpressions;
+      usedAdapterFallback = false;
     } else {
       // No reliable mapping to caller's expressions - use adapter-derived expressions as fallback
       const canonicalResult: CareerExpressionCanonicalResult = {
@@ -329,6 +358,7 @@ export function buildSelectedCareerDashaActivation(params: {
       };
       const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
       qualifiedExpressions = [...legacyAnalysis.expressions];
+      usedAdapterFallback = true;
     }
 
     qualificationBasis = 'CANONICAL_STATUS';
@@ -338,6 +368,7 @@ export function buildSelectedCareerDashaActivation(params: {
     // This is a fallback for backward compatibility; production callers should provide both inputs
     // to use the authoritative CANONICAL_STATUS qualification basis.
     qualifiedExpressions = [...expression.expressions.filter(expr => expr.direction !== 'UNAVAILABLE')];
+    usedAdapterFallback = false;
     qualificationBasis = 'PROXY_DIRECTION';
   }
 
@@ -362,6 +393,28 @@ export function buildSelectedCareerDashaActivation(params: {
       // Collect expression evidence IDs (C8 evidence IDs, verbatim)
       const exprEvidenceIds = expr.evidence.map(e => e.id);
       const sortedExprEvidenceIds = Array.from(exprEvidenceIds).sort();
+
+      // Split supportingEvidenceIds into qualified vs unqualified portions
+      // Only applicable when using CANONICAL_STATUS qualification basis
+      let qualifiedEvidenceIds: readonly string[] = [];
+      let unqualifiedEvidenceIds: readonly string[] = [];
+      if (qualificationBasis === 'CANONICAL_STATUS' && qualifiedCanonicalEvidenceIds !== null) {
+        const qualified: string[] = [];
+        const unqualified: string[] = [];
+        for (const id of expr.supportingEvidenceIds) {
+          if (qualifiedCanonicalEvidenceIds.has(id)) {
+            qualified.push(id);
+          } else {
+            unqualified.push(id);
+          }
+        }
+        qualifiedEvidenceIds = Object.freeze(qualified.sort());
+        unqualifiedEvidenceIds = Object.freeze(unqualified.sort());
+      } else {
+        // Empty arrays when not using canonical qualification
+        qualifiedEvidenceIds = Object.freeze([]);
+        unqualifiedEvidenceIds = Object.freeze([]);
+      }
 
       // Build linkedLevels array (authoritative for which levels apply)
       const linkedLevels: ('MD' | 'AD')[] = [];
@@ -393,10 +446,16 @@ export function buildSelectedCareerDashaActivation(params: {
       // this key references the adapter's re-derived expressions, not the caller's original expressions.
       const expressionRefKey = `${expr.mode}:${expr.direction}:${sortedExprEvidenceIds.join(',')}`;
 
+      // Determine expression source: all expressions in a batch have the same source
+      const expressionSource: 'CALLER' | 'ADAPTER_FALLBACK' = usedAdapterFallback ? 'ADAPTER_FALLBACK' : 'CALLER';
+
       expressionActivations.push(Object.freeze({
         expressionRefKey,
+        expressionSource,
         expression: expr,
         expressionEvidenceIds: Object.freeze(sortedExprEvidenceIds),
+        qualifiedEvidenceIds,
+        unqualifiedEvidenceIds,
         linkedLevels: Object.freeze(linkedLevels),
         mdDashaEvidenceIds: Object.freeze(mdDashaEvidenceIds),
         adDashaEvidenceIds: Object.freeze(adDashaEvidenceIds),
