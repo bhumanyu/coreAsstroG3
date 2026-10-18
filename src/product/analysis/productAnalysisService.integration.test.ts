@@ -13,26 +13,16 @@ import { runLifeAnalysisProduct } from '../life-analysis/lifeAnalysisProductServ
 import type { ProductAnalysis } from './productAnalysisTypes';
 import { listSelectableMdAdPeriods } from '../../core/analysis/selectedMdAdPeriod';
 import { VALID_SELECTION_GOLDEN_FIXTURE } from '../../test/fixtures/selectedPeriodGoldenFixtures';
+import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 
 describe('ProductAnalysisService integration (PBA-07)', () => {
   let service: ProductAnalysisService;
-  let mockBirthDetails: BirthDetails;
 
   beforeEach(() => {
     service = new ProductAnalysisService({
       calculateHoroscope,
       runPipeline: runLifeAnalysisProduct
     });
-
-    mockBirthDetails = {
-      name: 'Test User',
-      dateTimeStr: '1990-01-01T12:00:00',
-      timeZone: 'Asia/Kolkata',
-      latitude: 28.6139,
-      longitude: 77.2090,
-      ayanamsa: AyanamsaType.LAHIRI,
-      placeOfBirth: 'New Delhi'
-    };
   });
 
   it('calculateHoroscope and runPipeline called exactly once when selectedPeriod is provided', async () => {
@@ -47,7 +37,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
 
     // First, get a baseline to obtain canonical IDs
-    const baseline = await spyService.analyze(mockBirthDetails, {
+    const baseline = await spyService.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -66,7 +56,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     spyRunPipeline.mockClear();
 
     // Now request with selectedPeriod
-    await spyService.analyze(mockBirthDetails, {
+    await spyService.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: validMd!.id,
@@ -82,7 +72,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   it('horoscope calculated once, runPipeline once', async () => {
     // Verify the service doesn't call calculateHoroscope or runPipeline multiple times
     // by checking that the lastPipelineState and lastHoroscope are set
-    const result = await service.analyze(mockBirthDetails, {
+    const result = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -93,7 +83,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
   it('interpreters not re-invoked when selectedPeriod is provided', async () => {
     // Obtain valid IDs via listSelectableMdAdPeriods (same pattern as the spy test)
-    const baseline = await service.analyze(mockBirthDetails, {
+    const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -117,7 +107,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     });
 
     // Request with valid selection
-    const result = await spyService.analyze(mockBirthDetails, {
+    const result = await spyService.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: validMd!.id,
@@ -138,7 +128,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
   it('selected MD/AD identity matches canonical report when selection is valid', async () => {
     // First, get the current period from the analysis
-    const currentAnalysis = await service.analyze(mockBirthDetails, {
+    const currentAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -158,7 +148,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(validAd).toBeDefined();
 
     // Now request the selected period
-    const selectedAnalysis = await service.analyze(mockBirthDetails, {
+    const selectedAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: validMd!.id,
@@ -181,7 +171,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('dasha.current unchanged with selection', async () => {
-    const analysisWithoutSelection = await service.analyze(mockBirthDetails, {
+    const analysisWithoutSelection = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -194,7 +184,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
     const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
 
-    const analysisWithSelection = await service.analyze(mockBirthDetails, {
+    const analysisWithSelection = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: validMd!.id,
@@ -214,11 +204,11 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('dasha.current unchanged without selection', async () => {
-    const analysis1 = await service.analyze(mockBirthDetails, {
+    const analysis1 = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
-    const analysis2 = await service.analyze(mockBirthDetails, {
+    const analysis2 = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -229,7 +219,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
   it('past/current/future temporalRelation vs asOf', async () => {
     // Test with a future asOf date
-    const futureAnalysis = await service.analyze(mockBirthDetails, {
+    const futureAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       asOf: new Date('2030-01-01')
     });
@@ -241,12 +231,12 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('full-DTO equality vs literal golden fixture', async () => {
-    const analysis1 = await service.analyze(mockBirthDetails, {
+    const analysis1 = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       asOf: new Date('2024-01-01T00:00:00Z')
     });
 
-    const analysis2 = await service.analyze(mockBirthDetails, {
+    const analysis2 = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       asOf: new Date('2024-01-01T00:00:00Z')
     });
@@ -262,7 +252,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
   it('golden test: full selectedPeriod DTO structure with valid selection', async () => {
     // First, get a baseline to obtain canonical IDs with pinned asOf
-    const baseline = await service.analyze(mockBirthDetails, {
+    const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       asOf: new Date('2024-01-01T00:00:00Z')
     });
@@ -280,7 +270,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(validAd).toBeDefined();
 
     // Request with valid selection and the same pinned asOf
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       asOf: new Date('2024-01-01T00:00:00Z'),
       selectedPeriod: {
@@ -305,7 +295,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   it('unresolved/ambiguous refs preserved in selectedPeriod', async () => {
     // This test requires a selection that produces unresolved refs
     // For now, we verify the structure allows it
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: 'some-md-id',
@@ -319,7 +309,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('four dimensions isolated in wealth section', async () => {
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: 'some-md-id',
@@ -333,7 +323,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('invalid selection → typed failure not fallback', async () => {
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: 'invalid-md-id',
@@ -353,7 +343,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('includeAiExplanation: false still works', async () => {
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -362,7 +352,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('no internal objects (Horoscope/DomainInterpretation/baselines) in DTO', async () => {
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -375,7 +365,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
   it('no internal objects in selectedPeriod.synthesis DTO', async () => {
     // First, get a baseline to obtain canonical IDs
-    const baseline = await service.analyze(mockBirthDetails, {
+    const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false
     });
 
@@ -390,7 +380,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(validAd).toBeDefined();
 
     // Request with valid selection
-    const analysis = await service.analyze(mockBirthDetails, {
+    const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       selectedPeriod: {
         mahadashaId: validMd!.id,
