@@ -232,7 +232,9 @@ export interface SelectedCareerDashaActivationSuccess {
  * EXPRESSION SOURCE CONTRACT:
  * - Rows are built from the caller's expression.expressions in both paths (canonical and proxy)
  * - In the canonical path: caller's expressions are filtered by matching to QUALIFIED canonical candidates
- *   - Matching uses evidence ID intersection: expression.supportingEvidenceIds ∩ candidate.evidence[].evidenceId
+ *   - P2: Matching uses evidence ID containment: ALL candidate.evidence[].evidenceId must be in expression.supportingEvidenceIds
+ *   - The evidence ID bridge is reliable: canonical evidence.evidenceId maps 1:1 to legacy evidence.id and supportingEvidenceIds
+ *     (see mechanismExpressionToLegacyAdapter.ts createLegacyEvidence ~L159)
  *   - If no reliable mapping exists, the adapter-derived expressions are used (documented in expressionRefKey)
  * - In the proxy path: caller's expressions are filtered by expr.direction !== 'UNAVAILABLE'
  *
@@ -338,11 +340,26 @@ export function buildSelectedCareerDashaActivation(params: {
       }
     }
 
-    // Filter caller's expressions by matching to QUALIFIED canonical candidates
-    // Match via evidence ID intersection: expression.supportingEvidenceIds ∩ candidate.evidence[].evidenceId
+    // P2: Filter caller's expressions by matching to QUALIFIED canonical candidates
+    // Prefer explicit identity mapping: require ALL of a candidate's evidence IDs to be in
+    // expression.supportingEvidenceIds (containment, not overlap). This ensures the caller expression
+    // corresponds to the full canonical candidate, not just a partial overlap.
+    // The evidence ID bridge is reliable: canonical evidence.evidenceId maps 1:1 to legacy evidence.id
+    // and supportingEvidenceIds (see mechanismExpressionToLegacyAdapter.ts createLegacyEvidence ~L159).
     const matchedCallerExpressions = expression.expressions.filter(expr => {
-      // Check if any of the expression's supporting evidence IDs match canonical evidence IDs
-      return expr.supportingEvidenceIds.some(id => qualifiedCanonicalEvidenceIds!.has(id));
+      // For each QUALIFIED canonical candidate, check if ALL of its evidence IDs are in
+      // the expression's supportingEvidenceIds (containment check)
+      for (const candidate of qualifiedCanonicalCandidates) {
+        const candidateEvidenceIds = new Set(candidate.evidence.map(e => e.evidenceId));
+        // Check containment: all candidate evidence IDs must be in expression's supportingEvidenceIds
+        const isContainmentMatch = candidate.evidence.every(
+          evidenceItem => expr.supportingEvidenceIds.includes(evidenceItem.evidenceId)
+        );
+        if (isContainmentMatch) {
+          return true;
+        }
+      }
+      return false;
     });
 
     // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
@@ -377,15 +394,26 @@ export function buildSelectedCareerDashaActivation(params: {
   const matchedExpressionEvidenceIds = new Set<string>();
 
   for (const expr of qualifiedExpressions) {
-    // Collect all planets from expression evidence
+    // P1: Collect planets from expression evidence, filtering to qualified provenance when using CANONICAL_STATUS
+    // When qualificationBasis === 'CANONICAL_STATUS', only build exprPlanets from evidence items
+    // whose canonical evidence ID (evidence.id) is in qualifiedCanonicalEvidenceIds.
+    // This ensures qualified-only planet linkage: unqualified evidence cannot drive MD/AD linkage.
     const exprPlanets = new Set<Planet>();
     for (const evidence of expr.evidence) {
+      // When using canonical qualification, filter evidence to qualified provenance only
+      if (qualificationBasis === 'CANONICAL_STATUS' && qualifiedCanonicalEvidenceIds !== null) {
+        // Skip evidence whose canonical ID is not qualified
+        if (!qualifiedCanonicalEvidenceIds.has(evidence.id)) {
+          continue;
+        }
+      }
       for (const planet of evidence.planets) {
         exprPlanets.add(planet);
       }
     }
 
     // P1: Check if expression planets include selected MD planet or AD planet
+    // After qualified-only filtering, if no MD/AD planet remains, the expression does not link
     const isLinkedToMd = mdPlanet && exprPlanets.has(mdPlanet);
     const isLinkedToAd = adPlanet && exprPlanets.has(adPlanet);
 
