@@ -256,24 +256,28 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   it('golden test: full selectedPeriod DTO structure with valid selection', async () => {
-    // First, get a baseline to obtain canonical IDs
+    // First, get a baseline to obtain canonical IDs with pinned asOf
     const baseline = await service.analyze(mockBirthDetails, {
-      includeAiExplanation: false
+      includeAiExplanation: false,
+      asOf: new Date('2024-01-01T00:00:00Z')
     });
 
     const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
     expect(report).toBeDefined();
 
     const selectablePeriods = listSelectableMdAdPeriods(report!);
-    const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+    // Select MD=MOON explicitly by planet to match fixture
+    const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid && md.planet === 'MOON');
     expect(validMd).toBeDefined();
 
-    const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+    // Select AD=MOON under the MOON mahadasha explicitly by planet
+    const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id && ad.planet === 'MOON');
     expect(validAd).toBeDefined();
 
-    // Request with valid selection
+    // Request with valid selection and the same pinned asOf
     const analysis = await service.analyze(mockBirthDetails, {
       includeAiExplanation: false,
+      asOf: new Date('2024-01-01T00:00:00Z'),
       selectedPeriod: {
         mahadashaId: validMd!.id,
         antardashaId: validAd!.id
@@ -284,8 +288,11 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(analysis.selectedPeriod).toBeDefined();
     expect(analysis.selectedPeriod?.status).toBe('OK');
 
+    // Extract synthesis using type assertion after status check
+    const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+
     // Compare synthesis against hand-authored literal fixture
-    expect(analysis.selectedPeriod.synthesis).toEqual(VALID_SELECTION_GOLDEN_FIXTURE);
+    expect(synthesis).toEqual(VALID_SELECTION_GOLDEN_FIXTURE);
   });
 
 
@@ -390,15 +397,16 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(analysis.selectedPeriod).toBeDefined();
     expect(analysis.selectedPeriod?.status).toBe('OK');
 
+    // Extract synthesis using type assertion after status check
+    const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+
     // Verify no internal engine objects are in selectedPeriod.synthesis
-    if (analysis.selectedPeriod?.status === 'OK') {
-      const json = JSON.stringify(analysis.selectedPeriod.synthesis);
-      expect(json).not.toContain('Horoscope');
-      expect(json).not.toContain('DomainInterpretation');
-      expect(json).not.toContain('conclusionData');
-      expect(json).not.toContain('mahadashaNode');
-      expect(json).not.toContain('antardashaNode');
-      expect(json).not.toContain('function('); // No function references
-    }
+    const json = JSON.stringify(synthesis);
+    expect(json).not.toContain('Horoscope');
+    expect(json).not.toContain('DomainInterpretation');
+    expect(json).not.toContain('conclusionData');
+    expect(json).not.toContain('mahadashaNode');
+    expect(json).not.toContain('antardashaNode');
+    expect(json).not.toContain('function('); // No function references
   });
 });

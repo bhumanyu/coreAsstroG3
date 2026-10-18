@@ -15,7 +15,7 @@
 import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';
 
 /**
- * Fixture 1: Valid selection with complete synthesis.
+ * Fixture 1: Valid selection; career PROXY_DIRECTION with no linked expressions; mixed wealth dimension states.
  *
  * This fixture represents a successful selected-period synthesis with:
  * - Exact selectedPeriodId, mahadashaId, antardashaId, planets, interval dates
@@ -24,7 +24,7 @@ import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/prod
  * - Career qualificationBasis = PROXY_DIRECTION (canonical inputs insufficient)
  * - Empty expressions array (no expressions linked to MOON-MOON period)
  * - Career diagnostic for PROXY_DIRECTION usage
- * - Wealth dimensions with literal effect/dataStatus/linkedLevels/diagnostics
+ * - Wealth dimensions with literal effect/dataStatus/linkedLevels/diagnostics (mixed states)
  * - 12 evidence entries with literal classification, evidenceId, dimension, polarity, etc.
  * - Empty missingInputs array
  * - Provenance with literal status/version/qualificationBasis
@@ -242,3 +242,4 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
  * by building a mock input with missing evidence IDs. A golden fixture is impractical
  * because it requires intentionally creating an invalid state that the pipeline would
  * normally reject.
+ */
