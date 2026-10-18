@@ -1755,12 +1755,12 @@ describe('buildSelectedPeriodSynthesis', () => {
       const selectedPeriod = makeSelectedPeriodContext();
       const careerActivation = makeCareerActivation();
       const careerEvidence1 = Object.freeze([
-        makeEvidence('dup-1', 'SUPPORTING', 'CAREER'),
-        makeEvidence('dup-1', 'CHALLENGING', 'CAREER')
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER'),
+        makeEvidence('evid1', 'CHALLENGING', 'CAREER')
       ]);
       const careerEvidence2 = Object.freeze([
-        makeEvidence('dup-1', 'CHALLENGING', 'CAREER'),
-        makeEvidence('dup-1', 'SUPPORTING', 'CAREER')
+        makeEvidence('evid1', 'CHALLENGING', 'CAREER'),
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER')
       ]);
 
       const result1 = buildSelectedPeriodSynthesis({
@@ -1786,8 +1786,8 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(ambiguousDiag2).toBeDefined();
 
       // Both refs should be UNRESOLVED
-      const unresolvedRef1 = result1.value.evidence.find(e => e.evidenceId === 'dup-1');
-      const unresolvedRef2 = result2.value.evidence.find(e => e.evidenceId === 'dup-1');
+      const unresolvedRef1 = result1.value.evidence.find(e => e.evidenceId === 'evid1');
+      const unresolvedRef2 = result2.value.evidence.find(e => e.evidenceId === 'evid1');
       expect(unresolvedRef1?.classification).toBe('UNRESOLVED');
       expect(unresolvedRef2?.classification).toBe('UNRESOLVED');
 

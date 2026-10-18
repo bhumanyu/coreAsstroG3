@@ -620,6 +620,11 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         // Field-by-field comparison
         if (!areEvidenceRecordsIdentical(existing, e)) {
           dashaDuplicateIds.add(e.id);
+          // Emit EVIDENCE_ID_AMBIGUOUS diagnostic at map-build time
+          careerDiagnostics.push(Object.freeze({
+            code: 'EVIDENCE_ID_AMBIGUOUS',
+            message: `Evidence ID ${e.id} appears multiple times in career dasha evidence with conflicting properties`
+          }));
         }
         // If identical, silently deduplicate (keep first - don't overwrite)
       } else {
@@ -677,16 +682,6 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       message: 'Career activation not provided'
     }));
   }
-
-  const careerSection: SynthesisCareerSection = Object.freeze({
-    qualificationBasis: careerQualificationBasis,
-    expressions: Object.freeze(careerExpressions.map(e => Object.freeze(e)).sort((a, b) =>
-      a.expressionRefKey.localeCompare(b.expressionRefKey)
-    )),
-    diagnostics: Object.freeze(careerDiagnostics.map(d => Object.freeze(d)).sort((a, b) =>
-      a.code.localeCompare(b.code)
-    ))
-  });
 
   // Build wealth section
   const wealthDiagnostics: SynthesisDiagnostic[] = [];
@@ -801,12 +796,19 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         // Field-by-field comparison
         if (!areEvidenceRecordsIdentical(existing, e)) {
           duplicateIds.add(e.id);
+          // Emit EVIDENCE_ID_AMBIGUOUS diagnostic at map-build time
+          careerDiagnostics.push(Object.freeze({
+            code: 'EVIDENCE_ID_AMBIGUOUS',
+            message: `Evidence ID ${e.id} appears multiple times in career evidence with conflicting properties`
+          }));
         }
         // If identical, silently deduplicate (keep first - don't overwrite)
       } else {
         evidenceMap.set(e.id, e);
       }
     }
+
+
 
     for (const exprActivation of careerActivation.expressionActivations) {
       // EXPRESSION stage: from expressionEvidenceIds
@@ -823,10 +825,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_EXPRESSION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push(Object.freeze({
-              code: 'EVIDENCE_ID_AMBIGUOUS',
-              message: `Evidence ID ${id} appears multiple times in career evidence with conflicting properties`
-            }));
+            // Diagnostic already emitted at map-build time
             continue;
           }
 
@@ -867,10 +866,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_QUALIFICATION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push(Object.freeze({
-              code: 'EVIDENCE_ID_AMBIGUOUS',
-              message: `Evidence ID ${id} appears multiple times in career evidence with conflicting properties`
-            }));
+            // Diagnostic already emitted at map-build time
             continue;
           }
 
@@ -910,10 +906,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_QUALIFICATION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push(Object.freeze({
-              code: 'EVIDENCE_ID_AMBIGUOUS',
-              message: `Evidence ID ${id} appears multiple times in career evidence with conflicting properties`
-            }));
+            // Diagnostic already emitted at map-build time
             continue;
           }
 
@@ -972,10 +965,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_ACTIVATION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push(Object.freeze({
-              code: 'EVIDENCE_ID_AMBIGUOUS',
-              message: `Evidence ID ${id} appears multiple times in career dasha evidence with conflicting properties`
-            }));
+            // Diagnostic already emitted at map-build time
             continue;
           }
 
@@ -1036,10 +1026,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_ACTIVATION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push(Object.freeze({
-              code: 'EVIDENCE_ID_AMBIGUOUS',
-              message: `Evidence ID ${id} appears multiple times in career dasha evidence with conflicting properties`
-            }));
+            // Diagnostic already emitted at map-build time
             continue;
           }
 
@@ -1071,6 +1058,17 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       }
     }
   }
+
+  // Build career section (after evidence resolution so diagnostics are available)
+  const careerSection: SynthesisCareerSection = Object.freeze({
+    qualificationBasis: careerQualificationBasis,
+    expressions: Object.freeze(careerExpressions.map(e => Object.freeze(e)).sort((a, b) =>
+      a.expressionRefKey.localeCompare(b.expressionRefKey)
+    )),
+    diagnostics: Object.freeze(careerDiagnostics.map(d => Object.freeze(d)).sort((a, b) =>
+      a.code.localeCompare(b.code)
+    ))
+  });
 
   // Wealth promise evidence references with stage-specific provenance
   if (wealthActivation && wealthEvidence) {

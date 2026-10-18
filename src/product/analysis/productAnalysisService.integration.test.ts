@@ -97,7 +97,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       includeAiExplanation: false
     });
 
-    const report = service.lastHoroscope?.dashaInterpretation;
+    const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
     expect(report).toBeDefined();
 
     const selectablePeriods = listSelectableMdAdPeriods(report!);
@@ -143,7 +143,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     });
 
     // Obtain canonical IDs from the report's mahadashas
-    const report = service.lastHoroscope?.dashaInterpretation;
+    const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
     expect(report).toBeDefined();
 
     // Build the selection via listSelectableMdAdPeriods
@@ -267,7 +267,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       asOf: new Date('2024-01-01T00:00:00Z')
     });
 
-    const report = service.lastHoroscope?.dashaInterpretation;
+    const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
     expect(report).toBeDefined();
 
     const selectablePeriods = listSelectableMdAdPeriods(report!);
@@ -379,7 +379,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       includeAiExplanation: false
     });
 
-    const report = service.lastHoroscope?.dashaInterpretation;
+    const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
     expect(report).toBeDefined();
 
     const selectablePeriods = listSelectableMdAdPeriods(report!);
