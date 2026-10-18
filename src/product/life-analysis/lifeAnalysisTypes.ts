@@ -22,6 +22,8 @@ import type { CareerManifestationSynthesis } from '../../domain/career/manifesta
 import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import type { AiExplanationResult } from '../../ai';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
@@ -66,6 +68,38 @@ export type LifeAnalysisActiveDashaViewModel = DashaInterpretationProduct;
 export type LifeAnalysisProductStatus = 'LOADING' | 'READY' | 'PARTIAL' | 'ERROR';
 
 export type TimingAvailabilityStatus = 'AVAILABLE' | 'UNAVAILABLE';
+
+/**
+ * Domain-specific narrowing types for LifeAnalysisProductState.
+ * These types provide typed access to conclusionData based on the domain field.
+ */
+export type CareerDomainInterpretation = DomainInterpretation & {
+  readonly domain: 'CAREER';
+  readonly conclusionData?: CareerConclusionData;
+};
+
+export type WealthDomainInterpretation = DomainInterpretation & {
+  readonly domain: 'WEALTH';
+  readonly conclusionData?: WealthConclusionData;
+};
+
+/**
+ * Type guard to narrow DomainInterpretation to CareerDomainInterpretation.
+ */
+export function isCareerDomainInterpretation(
+  interpretation: DomainInterpretation
+): interpretation is CareerDomainInterpretation {
+  return interpretation.domain === 'CAREER';
+}
+
+/**
+ * Type guard to narrow DomainInterpretation to WealthDomainInterpretation.
+ */
+export function isWealthDomainInterpretation(
+  interpretation: DomainInterpretation
+): interpretation is WealthDomainInterpretation {
+  return interpretation.domain === 'WEALTH';
+}
 
 export interface LifeAnalysisQualification {
   readonly type: string;

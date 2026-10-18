@@ -15,6 +15,7 @@ import type { BirthDetails, Horoscope } from '../../types';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { runLifeAnalysisProduct } from '../life-analysis/lifeAnalysisProductService';
 import type { LifeAnalysisProductState } from '../life-analysis/lifeAnalysisTypes';
+import { isCareerDomainInterpretation, isWealthDomainInterpretation } from '../life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysis } from './productAnalysisTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
@@ -169,8 +170,12 @@ export class ProductAnalysisService {
           careerEvidence: pipelineState.career?.evidence ?? [],
           careerDashaEvidence: pipelineState.careerArtifacts.careerDashaEvidence,
           wealthEvidence: pipelineState.wealth?.evidence ?? [],
-          careerBaseline: pipelineState.career?.conclusionData as CareerConclusionData,
-          wealthBaseline: pipelineState.wealth?.conclusionData as WealthConclusionData
+          careerBaseline: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
+            ? pipelineState.career.conclusionData
+            : undefined,
+          wealthBaseline: pipelineState.wealth && isWealthDomainInterpretation(pipelineState.wealth)
+            ? pipelineState.wealth.conclusionData
+            : undefined
         };
 
         const selectedPeriodResult = buildProductSelectedPeriodSynthesis(selectedPeriodInput);
@@ -186,46 +191,39 @@ export class ProductAnalysisService {
           };
         }
 
-        // Map error codes to appropriate status based on the actual domain error codes
-        let failureStatus: 'INVALID_SELECTION' | 'SYNTHESIS_FAILED' | 'UNAVAILABLE';
+        // Map error codes to appropriate status using exhaustive switch
+        // Canonical mapping documented: INVALID_SELECTED_PERIOD_CONTEXT maps to INVALID_SELECTION
+        // since both domain validators produce it for malformed contexts.
         const error = selectedPeriodResult.error;
-
-        // UNAVAILABLE errors (missing prerequisites)
-        if (error === 'CAREER_ARTIFACTS_UNAVAILABLE' ||
-          error === 'TEMPORAL_STATE_UNAVAILABLE' ||
-          error === 'CAREER_BASELINE_UNAVAILABLE' ||
-          error === 'WEALTH_BASELINE_UNAVAILABLE') {
-          failureStatus = 'UNAVAILABLE';
-        }
-        // CONTEXT stage errors (from createSelectedPeriodActivationContext)
-        else if (error === 'REPORT_UNAVAILABLE' ||
-          error === 'UNSUPPORTED_DASHA_SYSTEM' ||
-          error === 'MAHADASHA_NOT_FOUND' ||
-          error === 'ANTARDASHA_NOT_FOUND' ||
-          error === 'ANTARDASHA_NOT_CHILD_OF_MAHADASHA' ||
-          error === 'INVALID_SELECTED_PERIOD' ||
-          error === 'AMBIGUOUS_MAHADASHA_ID' ||
-          error === 'AMBIGUOUS_ANTARDASHA_ID' ||
-          error === 'INVALID_ANALYSIS_AS_OF' ||
-          error === 'INVALID_SELECTED_PERIOD_CONTEXT') {
-          failureStatus = 'INVALID_SELECTION';
-        }
-        // CAREER stage errors (from buildSelectedCareerDashaActivation)
-        else if (error === 'INCOMPLETE_CANONICAL_INPUT') {
-          failureStatus = 'SYNTHESIS_FAILED';
-        }
-        // SYNTHESIS stage errors (from buildSelectedPeriodSynthesis)
-        else if (error === 'ACTIVATION_PERIOD_MISMATCH') {
-          failureStatus = 'SYNTHESIS_FAILED';
-        }
-        // WEALTH stage errors (from evaluateSelectedWealthPeriodActivation)
-        else if (error === 'INVALID_SELECTED_PERIOD_CONTEXT') {
-          failureStatus = 'SYNTHESIS_FAILED';
-        }
-        // Any other error is treated as SYNTHESIS_FAILED
-        else {
-          failureStatus = 'SYNTHESIS_FAILED';
-        }
+        const failureStatus: 'INVALID_SELECTION' | 'SYNTHESIS_FAILED' | 'UNAVAILABLE' = (() => {
+          // UNAVAILABLE errors (missing prerequisites - handled earlier, not in domain error union)
+          // CONTEXT stage errors (from createSelectedPeriodActivationContext)
+          if (
+            error === 'REPORT_UNAVAILABLE' ||
+            error === 'UNSUPPORTED_DASHA_SYSTEM' ||
+            error === 'MAHADASHA_NOT_FOUND' ||
+            error === 'ANTARDASHA_NOT_FOUND' ||
+            error === 'ANTARDASHA_NOT_CHILD_OF_MAHADASHA' ||
+            error === 'INVALID_SELECTED_PERIOD' ||
+            error === 'AMBIGUOUS_MAHADASHA_ID' ||
+            error === 'AMBIGUOUS_ANTARDASHA_ID' ||
+            error === 'INVALID_ANALYSIS_AS_OF' ||
+            error === 'INVALID_SELECTED_PERIOD_CONTEXT'
+          ) {
+            return 'INVALID_SELECTION';
+          }
+          // CAREER stage errors (from buildSelectedCareerDashaActivation)
+          if (error === 'INCOMPLETE_CANONICAL_INPUT') {
+            return 'SYNTHESIS_FAILED';
+          }
+          // SYNTHESIS stage errors (from buildSelectedPeriodSynthesis)
+          if (error === 'ACTIVATION_PERIOD_MISMATCH') {
+            return 'SYNTHESIS_FAILED';
+          }
+          // Exhaustive check: if we reach here, the error type is not in the union
+          const _exhaustiveCheck: never = error;
+          return _exhaustiveCheck;
+        })();
 
         // On failure, return productAnalysis with typed failure (no natal status downgrade)
         return {

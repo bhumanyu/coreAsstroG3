@@ -72,13 +72,13 @@ export interface BuildProductSelectedPeriodSynthesisInput {
  * - CONTEXT stage: SelectedPeriodContextError (from createSelectedPeriodActivationContext)
  * - CAREER stage: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' (from buildSelectedCareerDashaActivation)
  * - WEALTH stage: 'INVALID_SELECTED_PERIOD_CONTEXT' (from evaluateSelectedWealthPeriodActivation)
- * - SYNTHESIS stage: string error codes from buildSelectedPeriodSynthesis
+ * - SYNTHESIS stage: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' (from buildSelectedPeriodSynthesis)
  *
  * This policy ensures domain error codes are never silently replaced with generic wrappers.
  */
 export type BuildProductSelectedPeriodSynthesisResult =
   | { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> }
-  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' | string };
+  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'INCOMPLETE_CANONICAL_INPUT' | 'ACTIVATION_PERIOD_MISMATCH' };
 
 /**
  * Creates selected-period activation context.
@@ -146,12 +146,16 @@ function evaluateSelectedWealthPeriodActivationInternal(
 /**
  * Builds selected-period synthesis (internal wrapper).
  * Propagates domain error codes verbatim.
+ *
+ * NOTE: This function is only called after both career and wealth activations succeed.
+ * It does not accept undefined activations - domain failures are propagated immediately
+ * by the caller (buildProductSelectedPeriodSynthesis).
  */
 function buildSelectedPeriodSynthesisWrapper(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext,
-  careerActivation: SelectedCareerDashaActivationSuccess | undefined,
-  wealthActivation: SelectedWealthPeriodActivation | undefined
+  careerActivation: SelectedCareerDashaActivationSuccess,
+  wealthActivation: SelectedWealthPeriodActivation
 ): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;
   const result = buildSelectedPeriodSynthesis({
@@ -198,11 +202,19 @@ export function buildProductSelectedPeriodSynthesis(
 
   // Step 2: Build selected Career Dasha activation
   const careerActivationResult = buildSelectedCareerDashaActivationInternal(input, selectedPeriod);
-  const careerActivation = careerActivationResult.ok ? careerActivationResult.value : undefined;
+  if (!careerActivationResult.ok) {
+    // Propagate domain activation failure immediately - do not call synthesis with undefined
+    return { ok: false, error: careerActivationResult.error };
+  }
+  const careerActivation = careerActivationResult.value;
 
   // Step 3: Evaluate selected Wealth period activation
   const wealthActivationResult = evaluateSelectedWealthPeriodActivationInternal(input, selectedPeriod);
-  const wealthActivation = wealthActivationResult.ok ? wealthActivationResult.value : undefined;
+  if (!wealthActivationResult.ok) {
+    // Propagate domain activation failure immediately - do not call synthesis with undefined
+    return { ok: false, error: wealthActivationResult.error };
+  }
+  const wealthActivation = wealthActivationResult.value;
 
   // Step 4: Build selected-period synthesis
   const synthesisResult = buildSelectedPeriodSynthesisWrapper(
