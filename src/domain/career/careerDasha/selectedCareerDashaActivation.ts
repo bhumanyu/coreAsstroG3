@@ -77,6 +77,11 @@ import {
  * The mdDashaEvidenceIds and adDashaEvidenceIds arrays contain ALL C9 evidence for the linked level
  * (MD or AD), not evidence filtered to match the specific planet that triggered the linkage.
  * This is documented contract: evidence IDs are level-scoped, not planet-scoped.
+ *
+ * AMBIGUOUS MATCH HANDLING:
+ * When a caller expression matches multiple QUALIFIED canonical candidates via evidence containment,
+ * the expression is marked as ambiguous. The matchBasis field indicates whether the match is
+ * unambiguous (single candidate) or ambiguous (multiple candidates).
  */
 export interface SelectedExpressionActivation {
   /**
@@ -129,6 +134,12 @@ export interface SelectedExpressionActivation {
    * Empty array if expression is not linked to AD.
    */
   readonly adDashaEvidenceIds: readonly string[];
+  /**
+   * Match basis for the expression: 'UNAMBIGUOUS' if matched exactly one QUALIFIED candidate,
+   * 'AMBIGUOUS' if matched multiple QUALIFIED candidates. Only applicable when expressionSource === 'CALLER'.
+   * Undefined for ADAPTER_FALLBACK expressions.
+   */
+  readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
   /**
    * Activation summary from MD/AD canonical periods.
    * Note: Both mdActivation and adActivation are always present for reference,
@@ -321,10 +332,12 @@ export function buildSelectedCareerDashaActivation(params: {
   // P2: C8 qualification boundary - filter by QUALIFIED status or use proxy
   let qualifiedExpressions: CareerExpression[];
   let qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
-  // Store qualified canonical evidence IDs for later use in splitting expression evidence
-  let qualifiedCanonicalEvidenceIds: Set<string> | null = null;
+  // Track qualified canonical evidence IDs per expression (scoped to matched candidates)
+  const expressionQualifiedEvidenceIds = new Map<CareerExpression, Set<string>>();
   // Track whether we used adapter fallback (for per-expression source determination)
   let usedAdapterFallback = false;
+  // Track match basis per expression (for ambiguous match detection)
+  const expressionMatchBasis = new Map<CareerExpression, 'UNAMBIGUOUS' | 'AMBIGUOUS'>();
 
   if (canonicalExpression && mechanismCandidates) {
     // Use canonical qualification status (authoritative)
@@ -332,11 +345,23 @@ export function buildSelectedCareerDashaActivation(params: {
       candidate => candidate.qualificationStatus === 'QUALIFIED'
     );
 
-    // Build a set of all evidence IDs from QUALIFIED canonical candidates for matching
-    qualifiedCanonicalEvidenceIds = new Set<string>();
+    // Diagnostic: Check for canonical evidence ID uniqueness across all QUALIFIED candidates
+    // If evidence IDs are globally unique, each evidenceId should appear in at most one candidate
+    const allCanonicalEvidenceIds = new Map<string, string>(); // evidenceId -> candidateId
     for (const candidate of qualifiedCanonicalCandidates) {
       for (const evidence of candidate.evidence) {
-        qualifiedCanonicalEvidenceIds.add(evidence.evidenceId);
+        const existingCandidateId = allCanonicalEvidenceIds.get(evidence.evidenceId);
+        if (existingCandidateId !== undefined && existingCandidateId !== candidate.expressionId) {
+          // Evidence ID appears in multiple candidates - this violates the uniqueness assumption
+          // Document this diagnostic but do not fail (consume gracefully)
+          console.warn(
+            `[selectedCareerDashaActivation] Canonical evidence ID "${evidence.evidenceId}" appears in multiple candidates: ` +
+            `"${existingCandidateId}" and "${candidate.expressionId}". ` +
+            `This violates the uniqueness assumption for canonical evidence IDs. ` +
+            `Qualified evidence scoping may be affected.`
+          );
+        }
+        allCanonicalEvidenceIds.set(evidence.evidenceId, candidate.expressionId);
       }
     }
 
@@ -346,36 +371,75 @@ export function buildSelectedCareerDashaActivation(params: {
     // corresponds to the full canonical candidate, not just a partial overlap.
     // The evidence ID bridge is reliable: canonical evidence.evidenceId maps 1:1 to legacy evidence.id
     // and supportingEvidenceIds (see mechanismExpressionToLegacyAdapter.ts createLegacyEvidence ~L159).
-    const matchedCallerExpressions = expression.expressions.filter(expr => {
+    // Guard: empty-evidence candidates cannot match via containment (they have no identity to bridge).
+    // Ambiguous match detection: collect ALL matching candidates per expression, not just first-match.
+    const matchedCallerExpressionsWithCandidates = expression.expressions.map(expr => {
+      const matchingCandidates: CareerExpressionCanonicalCandidate[] = [];
       // For each QUALIFIED canonical candidate, check if ALL of its evidence IDs are in
       // the expression's supportingEvidenceIds (containment check)
       for (const candidate of qualifiedCanonicalCandidates) {
-        const candidateEvidenceIds = new Set(candidate.evidence.map(e => e.evidenceId));
+        // Guard: empty-evidence candidates cannot match via containment
+        if (candidate.evidence.length === 0) {
+          continue;
+        }
         // Check containment: all candidate evidence IDs must be in expression's supportingEvidenceIds
         const isContainmentMatch = candidate.evidence.every(
           evidenceItem => expr.supportingEvidenceIds.includes(evidenceItem.evidenceId)
         );
         if (isContainmentMatch) {
-          return true;
+          matchingCandidates.push(candidate);
         }
       }
-      return false;
+      return { expr, matchingCandidates };
     });
+
+    // Determine match basis for each expression and filter unambiguous matches
+    // Conservative approach: omit ambiguous matches (do not treat as reliably identified)
+    const matchedCallerExpressions = matchedCallerExpressionsWithCandidates
+      .filter(({ matchingCandidates }) => matchingCandidates.length === 1)
+      .map(({ expr, matchingCandidates }) => {
+        // Exactly one match - mark as UNAMBIGUOUS
+        expressionMatchBasis.set(expr, 'UNAMBIGUOUS');
+        // Scope qualified evidence IDs to the matched candidate (not global union)
+        const matchedCandidate = matchingCandidates[0];
+        const qualifiedIds = new Set<string>();
+        for (const evidence of matchedCandidate.evidence) {
+          qualifiedIds.add(evidence.evidenceId);
+        }
+        expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
+        return expr;
+      });
 
     // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
     // This is documented in expressionRefKey below
     if (matchedCallerExpressions.length > 0) {
       qualifiedExpressions = matchedCallerExpressions;
       usedAdapterFallback = false;
-    } else {
+    } else if (qualifiedCanonicalCandidates.length > 0) {
       // No reliable mapping to caller's expressions - use adapter-derived expressions as fallback
+      // Use only the first QUALIFIED candidate to avoid generating multiple expressions
+      const firstCandidate = qualifiedCanonicalCandidates[0];
       const canonicalResult: CareerExpressionCanonicalResult = {
         ...canonicalExpression,
-        expressions: qualifiedCanonicalCandidates
+        expressions: [firstCandidate]
       };
       const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
       qualifiedExpressions = [...legacyAnalysis.expressions];
       usedAdapterFallback = true;
+      // For ADAPTER_FALLBACK expressions, use the first QUALIFIED candidate's evidence IDs
+      // (since adapter derives from canonical candidates, we scope to their evidence)
+      const qualifiedIds = new Set<string>();
+      for (const evidence of firstCandidate.evidence) {
+        qualifiedIds.add(evidence.evidenceId);
+      }
+      // Apply to all adapter-derived expressions (they all come from the same canonical source)
+      for (const expr of qualifiedExpressions) {
+        expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
+      }
+    } else {
+      // No QUALIFIED candidates - use empty expressions (no fallback)
+      qualifiedExpressions = [];
+      usedAdapterFallback = false;
     }
 
     qualificationBasis = 'CANONICAL_STATUS';
@@ -396,14 +460,15 @@ export function buildSelectedCareerDashaActivation(params: {
   for (const expr of qualifiedExpressions) {
     // P1: Collect planets from expression evidence, filtering to qualified provenance when using CANONICAL_STATUS
     // When qualificationBasis === 'CANONICAL_STATUS', only build exprPlanets from evidence items
-    // whose canonical evidence ID (evidence.id) is in qualifiedCanonicalEvidenceIds.
+    // whose canonical evidence ID (evidence.id) is in the expression's qualified evidence set.
     // This ensures qualified-only planet linkage: unqualified evidence cannot drive MD/AD linkage.
+    const exprQualifiedEvidenceIds = expressionQualifiedEvidenceIds.get(expr);
     const exprPlanets = new Set<Planet>();
     for (const evidence of expr.evidence) {
       // When using canonical qualification, filter evidence to qualified provenance only
-      if (qualificationBasis === 'CANONICAL_STATUS' && qualifiedCanonicalEvidenceIds !== null) {
+      if (qualificationBasis === 'CANONICAL_STATUS' && exprQualifiedEvidenceIds !== undefined) {
         // Skip evidence whose canonical ID is not qualified
-        if (!qualifiedCanonicalEvidenceIds.has(evidence.id)) {
+        if (!exprQualifiedEvidenceIds.has(evidence.id)) {
           continue;
         }
       }
@@ -426,11 +491,11 @@ export function buildSelectedCareerDashaActivation(params: {
       // Only applicable when using CANONICAL_STATUS qualification basis
       let qualifiedEvidenceIds: readonly string[] = [];
       let unqualifiedEvidenceIds: readonly string[] = [];
-      if (qualificationBasis === 'CANONICAL_STATUS' && qualifiedCanonicalEvidenceIds !== null) {
+      if (qualificationBasis === 'CANONICAL_STATUS' && exprQualifiedEvidenceIds !== undefined) {
         const qualified: string[] = [];
         const unqualified: string[] = [];
         for (const id of expr.supportingEvidenceIds) {
-          if (qualifiedCanonicalEvidenceIds.has(id)) {
+          if (exprQualifiedEvidenceIds.has(id)) {
             qualified.push(id);
           } else {
             unqualified.push(id);
@@ -477,6 +542,9 @@ export function buildSelectedCareerDashaActivation(params: {
       // Determine expression source: all expressions in a batch have the same source
       const expressionSource: 'CALLER' | 'ADAPTER_FALLBACK' = usedAdapterFallback ? 'ADAPTER_FALLBACK' : 'CALLER';
 
+      // Determine match basis (only for CALLER expressions)
+      const matchBasis = expressionSource === 'CALLER' ? expressionMatchBasis.get(expr) : undefined;
+
       expressionActivations.push(Object.freeze({
         expressionRefKey,
         expressionSource,
@@ -487,6 +555,7 @@ export function buildSelectedCareerDashaActivation(params: {
         linkedLevels: Object.freeze(linkedLevels),
         mdDashaEvidenceIds: Object.freeze(mdDashaEvidenceIds),
         adDashaEvidenceIds: Object.freeze(adDashaEvidenceIds),
+        matchBasis,
         activation: Object.freeze({
           mdActivation,
           adActivation
