@@ -1126,12 +1126,16 @@ export function interpretCareerV2(
    * Expose already-computed canonical artifacts via an internal-only typed channel.
    * These are added to conclusionData for upstream handoff to the selected-period builder.
    * No recalculation - references the objects already in scope.
+   *
+   * If mechanismCandidates is empty, set both canonicalExpression and mechanismCandidates to undefined
+   * to trigger PROXY_DIRECTION path instead of rejecting as INCOMPLETE_CANONICAL_INPUT.
    */
+  const hasValidMechanismCandidates = careerMechanismCandidates && careerMechanismCandidates.length > 0;
   const internalArtifacts = Object.freeze({
     natal: canonicalNatalAnalysis,
     expression: canonicalExpressionAnalysis,
-    canonicalExpression: canonicalMechanismExpressionResult,
-    mechanismCandidates: careerMechanismCandidates,
+    canonicalExpression: hasValidMechanismCandidates ? canonicalMechanismExpressionResult : undefined,
+    mechanismCandidates: hasValidMechanismCandidates ? careerMechanismCandidates : undefined,
     careerDashaEvidence: canonicalDashaAnalysis.evidence
   });
 
