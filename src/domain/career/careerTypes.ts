@@ -16,6 +16,18 @@ import type { CanonicalCareerFoundation } from './orchestration/canonicalCareerC
 import type { CareerTrajectoryAnalysis } from './careerTrajectory/careerTrajectoryTypes';
 import type { CareerEventsAnalysis } from './careerEvents/careerEventTypes';
 import type { CareerProfessionAnalysis } from './careerProfession/careerProfessionTypes';
+import type {
+  CareerNatalAnalysis
+} from './careerNatalAnalysis';
+import type {
+  CareerExpressionAnalysis
+} from './careerExpression';
+import type {
+  CareerExpressionCanonicalResult
+} from './careerExpression/careerExpressionTypes';
+import type {
+  CareerMechanismCandidate
+} from './careerMechanism/careerMechanismTypes';
 
 export type CareerManifestationMode =
   | 'LEADERSHIP'
@@ -168,4 +180,16 @@ export interface CareerConclusionData {
    * Profession candidates derived from expression analysis, mechanisms, and D10 qualification.
    */
   readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
+  /**
+   * PBA-07: Internal canonical artifacts for selected-period synthesis.
+   * Internal-only field for passing already-computed canonical artifacts to the selected-period builder.
+   * Never mapped into ProductAnalysis directly - used only for projection into ProductSelectedPeriodSynthesis.
+   */
+  readonly internalArtifacts?: {
+    readonly natal: CareerNatalAnalysis;
+    readonly expression: CareerExpressionAnalysis;
+    readonly canonicalExpression?: CareerExpressionCanonicalResult;
+    readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
+    readonly careerDashaEvidence: readonly DomainEvidence[];
+  };
 }

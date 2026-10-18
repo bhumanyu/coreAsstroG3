@@ -80,7 +80,8 @@ export async function runLifeAnalysisProduct(
         temporalState,
         career,
         wealth,
-        lifeAnalysis: analysis
+        lifeAnalysis: analysis,
+        careerArtifacts: career.conclusionData?.internalArtifacts
       });
     }
 
@@ -101,7 +102,8 @@ export async function runLifeAnalysisProduct(
       temporalState,
       career,
       wealth,
-      lifeAnalysis: analysis
+      lifeAnalysis: analysis,
+      careerArtifacts: career.conclusionData?.internalArtifacts
     });
   } catch (error) {
     return deepFreeze({

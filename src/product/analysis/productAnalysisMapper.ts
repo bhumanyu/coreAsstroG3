@@ -42,9 +42,21 @@ import type {
   SpeculativeRiskProduct,
   ProductQualification,
   ProductConfidence,
-  ConclusionStatus
+  ConclusionStatus,
+  ProductSelectedPeriodSynthesis,
+  ProductSynthesisEvidenceReference,
+  ProductSynthesisMissingInput,
+  ProductSynthesisProvenance,
+  ProductSynthesisDiagnostic,
+  ProductSynthesisCareerSection,
+  ProductSynthesisCareerExpressionRow,
+  ProductSynthesisWealthSection,
+  ProductSynthesisWealthDimensionRow
 } from './productAnalysisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type {
+  SelectedPeriodSynthesisValue
+} from '../../domain/synthesis/selectedPeriodSynthesis';
 
 export interface ProductAnalysisMapperInput {
   readonly birthDetails: BirthDetails;
@@ -55,6 +67,7 @@ export interface ProductAnalysisMapperInput {
   readonly warnings?: readonly ProductWarning[];
   readonly careerEvidence?: readonly ProductEvidence[];
   readonly wealthEvidence?: readonly ProductEvidence[];
+  readonly temporalState?: import('../../core/analysis/AnalysisTemporalState').AnalysisTemporalState;
 }
 
 /**
@@ -629,9 +642,71 @@ function mapDashaState(
   horoscope: Horoscope,
   career: CareerProductAnalysis,
   wealth: WealthProductAnalysis,
-  asOf: string
+  asOf: string,
+  temporalState?: import('../../core/analysis/AnalysisTemporalState').AnalysisTemporalState
 ): ProductDashaState {
-  // Read from career/wealth activation periods or horoscope
+  // PBA-07: Source dasha.current from temporalState.dashaInterpretation.current (canonical MD/AD/PD identity)
+  // Note: The DashaInterpretation types don't have effect/evidenceIds/statement on the period nodes
+  // We preserve what's available and derive the rest from activation periods
+  if (temporalState?.dashaInterpretation?.current) {
+    const current = temporalState.dashaInterpretation.current;
+    const summary = [
+      current.mahadasha ? `Mahadasha: ${current.mahadasha.planet}` : undefined,
+      current.antardasha ? `Antardasha: ${current.antardasha.planet}` : undefined,
+      current.pratyantardasha ? `Pratyantardasha: ${current.pratyantardasha.planet}` : undefined
+    ].filter(Boolean).join(' • ');
+
+    // Get activation periods for effect/evidenceIds/statement
+    const periods = career.activation.dasha.periods.length > 0
+      ? career.activation.dasha.periods
+      : wealth.activation.dasha.periods;
+
+    const mdActivation = periods.find((p) => p.level === 'MD');
+    const adActivation = periods.find((p) => p.level === 'AD');
+    const pdActivation = periods.find((p) => p.level === 'PD');
+
+    return {
+      current: {
+        mahadasha: current.mahadasha ? {
+          level: 'MD',
+          planet: current.mahadasha.planet,
+          role: 'PRIMARY',
+          direction: mdActivation ? mapDirection(mdActivation.effect) : 'NEUTRAL',
+          effect: mdActivation?.effect || 'UNAVAILABLE',
+          evidenceIds: mdActivation?.evidenceIds || [],
+          statement: mdActivation?.statement,
+          start: current.mahadasha.start,
+          end: current.mahadasha.end
+        } : undefined,
+        antardasha: current.antardasha ? {
+          level: 'AD',
+          planet: current.antardasha.planet,
+          role: 'MODIFIER',
+          direction: adActivation ? mapDirection(adActivation.effect) : 'NEUTRAL',
+          effect: adActivation?.effect || 'UNAVAILABLE',
+          evidenceIds: adActivation?.evidenceIds || [],
+          statement: adActivation?.statement,
+          start: current.antardasha.start,
+          end: current.antardasha.end
+        } : undefined,
+        pratyantardasha: current.pratyantardasha ? {
+          level: 'PD',
+          planet: current.pratyantardasha.planet,
+          role: 'REFINEMENT',
+          direction: pdActivation ? mapDirection(pdActivation.effect) : 'NEUTRAL',
+          effect: pdActivation?.effect || 'UNAVAILABLE',
+          evidenceIds: pdActivation?.evidenceIds || [],
+          statement: pdActivation?.statement,
+          start: current.pratyantardasha.start,
+          end: current.pratyantardasha.end
+        } : undefined
+      },
+      asOf,
+      summary: summary || undefined
+    };
+  }
+
+  // Fallback: Read from career/wealth activation periods
   const periods = career.activation.dasha.periods.length > 0
     ? career.activation.dasha.periods
     : wealth.activation.dasha.periods;
@@ -852,6 +927,175 @@ export function buildFailedProductAnalysis(
 }
 
 /**
+ * Maps selected-period synthesis from domain layer to product DTO.
+ *
+ * Pure field-by-field projection:
+ * - Preserves all ID/provenance fields verbatim
+ * - Preserves all diagnostics
+ * - Preserves missing inputs
+ * - Deterministic array order
+ * - No ID regeneration
+ * - No dropping UNRESOLVED refs
+ * - No flattening RULE refs into evidence
+ */
+export function mapSelectedPeriodSynthesis(
+  value: SelectedPeriodSynthesisValue<any, any>
+): ProductSelectedPeriodSynthesis {
+  // Map evidence references verbatim
+  const evidence: readonly ProductSynthesisEvidenceReference[] = Object.freeze(
+    value.evidence.map(ref => Object.freeze({
+      classification: ref.classification,
+      evidenceId: ref.evidenceId,
+      identityKey: ref.identityKey,
+      dimension: ref.dimension,
+      polarity: ref.polarity,
+      source: ref.source,
+      ruleId: ref.ruleId,
+      level: ref.level,
+      stage: ref.stage,
+      provenanceStage: ref.provenanceStage,
+      referenceKind: ref.referenceKind
+    }))
+  );
+
+  // Map missing inputs verbatim
+  const missingInputs: readonly ProductSynthesisMissingInput[] = Object.freeze(
+    value.missingInputs.map(input => Object.freeze({
+      domain: input.domain,
+      code: input.code,
+      description: input.description
+    }))
+  );
+
+  // Map provenance verbatim
+  const provenance: ProductSynthesisProvenance = Object.freeze({
+    career: Object.freeze({
+      status: value.provenance.career.status,
+      version: value.provenance.career.version,
+      qualificationBasis: value.provenance.career.qualificationBasis
+    }),
+    wealth: Object.freeze({
+      status: value.provenance.wealth.status,
+      version: value.provenance.wealth.version
+    })
+  });
+
+  // Map career section verbatim
+  const career: ProductSynthesisCareerSection = Object.freeze({
+    qualificationBasis: value.career.qualificationBasis,
+    expressions: Object.freeze(
+      value.career.expressions.map(expr => Object.freeze({
+        expressionRefKey: expr.expressionRefKey,
+        status: expr.status,
+        linkedLevels: Object.freeze([...expr.linkedLevels]),
+        qualificationBasis: expr.qualificationBasis,
+        matchBasis: expr.matchBasis,
+        diagnostics: Object.freeze(
+          expr.diagnostics.map(d => Object.freeze({
+            code: d.code,
+            message: d.message
+          }))
+        ),
+        expressionEvidenceIds: Object.freeze([...expr.expressionEvidenceIds]),
+        qualifiedEvidenceIds: Object.freeze([...expr.qualifiedEvidenceIds]),
+        unqualifiedEvidenceIds: Object.freeze([...expr.unqualifiedEvidenceIds]),
+        mdDashaEvidenceIds: Object.freeze([...expr.mdDashaEvidenceIds]),
+        adDashaEvidenceIds: Object.freeze([...expr.adDashaEvidenceIds]),
+        expressionSource: expr.expressionSource
+      }))
+    ),
+    diagnostics: Object.freeze(
+      value.career.diagnostics.map(d => Object.freeze({
+        code: d.code,
+        message: d.message
+      }))
+    )
+  });
+
+  // Map wealth section verbatim
+  const wealth: ProductSynthesisWealthSection = Object.freeze({
+    dimensions: Object.freeze({
+      ACCUMULATION: Object.freeze({
+        dimension: value.wealth.dimensions.ACCUMULATION.dimension,
+        effect: value.wealth.dimensions.ACCUMULATION.effect,
+        dataStatus: value.wealth.dimensions.ACCUMULATION.dataStatus,
+        linkedLevels: Object.freeze([...value.wealth.dimensions.ACCUMULATION.linkedLevels]),
+        diagnostics: Object.freeze(
+          value.wealth.dimensions.ACCUMULATION.diagnostics.map(d => Object.freeze({
+            code: d.code,
+            message: d.message
+          }))
+        )
+      }),
+      GAINS: Object.freeze({
+        dimension: value.wealth.dimensions.GAINS.dimension,
+        effect: value.wealth.dimensions.GAINS.effect,
+        dataStatus: value.wealth.dimensions.GAINS.dataStatus,
+        linkedLevels: Object.freeze([...value.wealth.dimensions.GAINS.linkedLevels]),
+        diagnostics: Object.freeze(
+          value.wealth.dimensions.GAINS.diagnostics.map(d => Object.freeze({
+            code: d.code,
+            message: d.message
+          }))
+        )
+      }),
+      FORTUNE: Object.freeze({
+        dimension: value.wealth.dimensions.FORTUNE.dimension,
+        effect: value.wealth.dimensions.FORTUNE.effect,
+        dataStatus: value.wealth.dimensions.FORTUNE.dataStatus,
+        linkedLevels: Object.freeze([...value.wealth.dimensions.FORTUNE.linkedLevels]),
+        diagnostics: Object.freeze(
+          value.wealth.dimensions.FORTUNE.diagnostics.map(d => Object.freeze({
+            code: d.code,
+            message: d.message
+          }))
+        )
+      }),
+      SPECULATION: Object.freeze({
+        dimension: value.wealth.dimensions.SPECULATION.dimension,
+        effect: value.wealth.dimensions.SPECULATION.effect,
+        dataStatus: value.wealth.dimensions.SPECULATION.dataStatus,
+        linkedLevels: Object.freeze([...value.wealth.dimensions.SPECULATION.linkedLevels]),
+        diagnostics: Object.freeze(
+          value.wealth.dimensions.SPECULATION.diagnostics.map(d => Object.freeze({
+            code: d.code,
+            message: d.message
+          }))
+        )
+      })
+    }),
+    diagnostics: Object.freeze(
+      value.wealth.diagnostics.map(d => Object.freeze({
+        code: d.code,
+        message: d.message
+      }))
+    )
+  });
+
+  return Object.freeze({
+    synthesisVersion: value.synthesisVersion,
+    period: Object.freeze({
+      selectedPeriodId: value.period.selectedPeriodId,
+      mahadashaId: value.period.mahadashaId,
+      mahadashaPlanet: value.period.mahadashaPlanet,
+      antardashaId: value.period.antardashaId,
+      antardashaPlanet: value.period.antardashaPlanet,
+      interval: Object.freeze({
+        start: value.period.interval.start,
+        end: value.period.interval.end
+      }),
+      analysisAsOf: value.period.analysisAsOf,
+      temporalRelation: value.period.temporalRelation
+    }),
+    career,
+    wealth,
+    evidence,
+    missingInputs,
+    provenance
+  });
+}
+
+/**
  * Main Projection Entry Point:
  * Maps computational engine results and view models into canonical ProductAnalysis.
  */
@@ -869,7 +1113,7 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
   const career = mapCareer(input.lifeAnalysisViewModel, input.careerEvidence);
   const wealth = mapWealth(input.lifeAnalysisViewModel, input.wealthEvidence);
 
-  const dasha = mapDashaState(input.horoscope, career, wealth, asOf);
+  const dasha = mapDashaState(input.horoscope, career, wealth, asOf, input.temporalState);
   const reasoning = mapReasoning(input.lifeAnalysisViewModel, career, wealth, input.aiExplanation);
   const ai = mapAiState(input.aiExplanation);
 

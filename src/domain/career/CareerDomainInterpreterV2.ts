@@ -117,6 +117,15 @@ import type {
 import {
   buildCareerNatalAnalysis
 } from './careerNatalConvergence';
+import type {
+  CareerExpressionAnalysis
+} from './careerExpression';
+import type {
+  CareerExpressionCanonicalResult
+} from './careerExpression/careerExpressionTypes';
+import type {
+  CareerMechanismCandidate
+} from './careerMechanism/careerMechanismTypes';
 import {
   buildCareerExpression
 } from './careerExpressionIntegration';
@@ -1112,6 +1121,20 @@ export function interpretCareerV2(
     careerFinalSynthesis: legacyShapeForTraceGraph as CareerWealthFinalSynthesis // P2-08D: Use C11-derived shape for trace graph (typed as C11TraceGraphShape, asserted to full type for function signature compatibility)
   });
 
+  /**
+   * PBA-07: Internal canonical artifacts for selected-period synthesis.
+   * Expose already-computed canonical artifacts via an internal-only typed channel.
+   * These are added to conclusionData for upstream handoff to the selected-period builder.
+   * No recalculation - references the objects already in scope.
+   */
+  const internalArtifacts = Object.freeze({
+    natal: canonicalNatalAnalysis,
+    expression: canonicalExpressionAnalysis,
+    canonicalExpression: canonicalMechanismExpressionResult,
+    mechanismCandidates: careerMechanismCandidates,
+    careerDashaEvidence: canonicalDashaAnalysis.evidence
+  });
+
   return buildDomainInterpretation({
     domain: 'CAREER',
     evidence,
@@ -1138,7 +1161,8 @@ export function interpretCareerV2(
       careerTrajectory, // P2-11G: Career trajectory analysis (downstream consumer of C11)
       careerEvents, // P2-11G: Career events analysis (downstream consumer of trajectory and C9)
       careerProfessionAnalysis, // P2-11F Gate F: Career profession analysis (downstream consumer of C8, C10, evidence)
-      professionAnalysisFailure // P2-11F Gate F: Profession analysis failure diagnostic (non-fatal)
+      professionAnalysisFailure, // P2-11F Gate F: Profession analysis failure diagnostic (non-fatal)
+      internalArtifacts // PBA-07: Internal canonical artifacts for selected-period synthesis
     },
     reasoningTrace: cw01Result.reasoningTrace,
     reasoningVersion: 'CW-01' // Keep version as CW-01 for downstream compatibility

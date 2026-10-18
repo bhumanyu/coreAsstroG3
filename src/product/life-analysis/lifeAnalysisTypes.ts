@@ -8,6 +8,7 @@ import type {
   TransitTriggerEffect,
   DomainInterpretation
 } from '../../domain/interpretation';
+import type { DomainEvidence } from '../../domain/interpretation/DomainEvidence';
 import type {
   LifeAnalysisStatus,
   SynthesisDomainStrength,
@@ -267,4 +268,16 @@ export interface LifeAnalysisProductState {
   readonly career?: DomainInterpretation;
   readonly wealth?: DomainInterpretation;
   readonly lifeAnalysis?: LifeAnalysis;
+  /**
+   * PBA-07: Internal career artifacts for selected-period synthesis.
+   * Internal-only field for passing already-computed canonical artifacts to the selected-period builder.
+   * Never mapped into ProductAnalysis directly - used only for projection into ProductSelectedPeriodSynthesis.
+   */
+  readonly careerArtifacts?: {
+    readonly natal: import('../../domain/career/careerNatalAnalysis').CareerNatalAnalysis;
+    readonly expression: import('../../domain/career/careerExpression').CareerExpressionAnalysis;
+    readonly canonicalExpression?: import('../../domain/career/careerExpression/careerExpressionTypes').CareerExpressionCanonicalResult;
+    readonly mechanismCandidates?: readonly import('../../domain/career/careerMechanism/careerMechanismTypes').CareerMechanismCandidate[];
+    readonly careerDashaEvidence: readonly DomainEvidence[];
+  };
 }

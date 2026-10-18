@@ -290,6 +290,154 @@ export interface AiProductState {
 }
 
 /**
+ * Status for selected-period synthesis only.
+ * Separate from ProductAnalysis.status - a failed selection must not mark a valid natal analysis as error.
+ */
+export type ProductSelectedPeriodStatus =
+  | 'OK'
+  | 'INVALID_SELECTION'
+  | 'SYNTHESIS_FAILED'
+  | 'UNAVAILABLE';
+
+/**
+ * Evidence reference in the selected-period synthesis.
+ * Classification is based on explicit source polarity/effect only.
+ * Mixed evidence stays MIXED (maps to PARTIALLY_ACTIVATES in status).
+ * For RULE references (referenceKind: 'RULE'), classification and polarity are omitted.
+ *
+ * Provenance tracking:
+ * - stage: Distinguishes high-level domain (CAREER/WEALTH)
+ * - provenanceStage: For CAREER, distinguishes source stage (EXPRESSION/QUALIFICATION/ACTIVATION)
+ * - referenceKind: Distinguishes evidence-based vs rule-based references (EVIDENCE/RULE)
+ */
+export interface ProductSynthesisEvidenceReference {
+  readonly classification?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL' | 'MIXED' | 'UNRESOLVED';
+  readonly evidenceId?: string;
+  readonly identityKey?: string;
+  readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
+  readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+  readonly source?: string;
+  readonly ruleId?: string;
+  readonly level?: 'MD' | 'AD';
+  readonly stage: 'CAREER' | 'WEALTH';
+  readonly provenanceStage?: 'CAREER_EXPRESSION' | 'CAREER_QUALIFICATION' | 'CAREER_ACTIVATION' | 'WEALTH_NATAL_PROMISE' | 'WEALTH_DASHA_RULE';
+  readonly referenceKind?: 'EVIDENCE' | 'RULE';
+}
+
+/**
+ * Missing input diagnostic.
+ */
+export interface ProductSynthesisMissingInput {
+  readonly domain: 'CAREER' | 'WEALTH';
+  readonly code: string;
+  readonly description: string;
+}
+
+/**
+ * Provenance tracking per analysis stage.
+ */
+export interface ProductSynthesisProvenance {
+  readonly career: {
+    readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
+    readonly version?: string;
+    readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+  };
+  readonly wealth: {
+    readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
+    readonly version?: string;
+  };
+}
+
+/**
+ * Diagnostic attached to a synthesis row.
+ */
+export interface ProductSynthesisDiagnostic {
+  readonly code: string;
+  readonly message: string;
+}
+
+/**
+ * Career expression row in the synthesis result.
+ *
+ * Status is derived from explicit C9 MD/AD activation effects across linkedLevels.
+ * matchBasis is omitted if the PBA-04 row type lacks the field.
+ *
+ * Full PBA-04 traceability: all evidence ID collections are carried through verbatim.
+ * Status is a C9 activation derivation conditioned on the row's qualification basis —
+ * activation never creates natal promise.
+ */
+export interface ProductSynthesisCareerExpressionRow {
+  readonly expressionRefKey: string;
+  readonly status: ActivationEffect | string;
+  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
+  readonly diagnostics: readonly ProductSynthesisDiagnostic[];
+  readonly expressionEvidenceIds: readonly string[];
+  readonly qualifiedEvidenceIds: readonly string[];
+  readonly unqualifiedEvidenceIds: readonly string[];
+  readonly mdDashaEvidenceIds: readonly string[];
+  readonly adDashaEvidenceIds: readonly string[];
+  readonly expressionSource: 'CALLER' | 'ADAPTER_FALLBACK';
+}
+
+/**
+ * Career section in the synthesis result.
+ */
+export interface ProductSynthesisCareerSection {
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+  readonly expressions: readonly ProductSynthesisCareerExpressionRow[];
+  readonly diagnostics: readonly ProductSynthesisDiagnostic[];
+}
+
+/**
+ * Wealth dimension row in the synthesis result.
+ *
+ * Effect is preserved verbatim from PBA-05 dimension effect.
+ * dataStatus describes input availability only, never a composite score.
+ */
+export interface ProductSynthesisWealthDimensionRow {
+  readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
+  readonly effect: ActivationEffect | string;
+  readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly diagnostics: readonly ProductSynthesisDiagnostic[];
+}
+
+/**
+ * Wealth section in the synthesis result.
+ */
+export interface ProductSynthesisWealthSection {
+  readonly dimensions: Readonly<Record<'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION', ProductSynthesisWealthDimensionRow>>;
+  readonly diagnostics: readonly ProductSynthesisDiagnostic[];
+}
+
+/**
+ * Selected-period synthesis for ProductAnalysis.
+ *
+ * This is a pure projection of the PBA-06 synthesis result into the product DTO layer.
+ * No recalculation, no AI-generated conclusions.
+ */
+export interface ProductSelectedPeriodSynthesis {
+  readonly synthesisVersion: 'PBA-06-v1';
+  readonly period: {
+    readonly selectedPeriodId: string;
+    readonly mahadashaId: string;
+    readonly mahadashaPlanet: string;
+    readonly antardashaId: string;
+    readonly antardashaPlanet: string;
+    readonly interval: { readonly start: string; readonly end: string };
+    readonly analysisAsOf: string;
+    readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE';
+  };
+  readonly career: ProductSynthesisCareerSection;
+  readonly wealth: ProductSynthesisWealthSection;
+  readonly evidence: readonly ProductSynthesisEvidenceReference[];
+  readonly missingInputs: readonly ProductSynthesisMissingInput[];
+  readonly provenance: ProductSynthesisProvenance;
+}
+
+/**
  * Root Canonical ProductAnalysis Aggregate
  */
 export interface ProductAnalysis {
@@ -307,4 +455,10 @@ export interface ProductAnalysis {
   readonly reasoning: ReasoningProductAnalysis;
   readonly ai: AiProductState;
   readonly warnings: readonly ProductWarning[];
+  /**
+   * Optional selected-period synthesis.
+   * When present, contains the synthesis for a user-selected MD/AD period.
+   * Absence does NOT indicate an error - it means no selection was requested.
+   */
+  readonly selectedPeriod?: ProductSelectedPeriodSynthesis;
 }

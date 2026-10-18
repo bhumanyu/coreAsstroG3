@@ -16,9 +16,13 @@ import { calculateHoroscope } from '../../engine/astroEngine';
 import { runLifeAnalysisProduct } from '../life-analysis/lifeAnalysisProductService';
 import type { LifeAnalysisProductState } from '../life-analysis/lifeAnalysisTypes';
 import type { ProductAnalysis } from './productAnalysisTypes';
-import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems } from './productAnalysisMapper';
+import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis } from './productAnalysisMapper';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import {
+  buildProductSelectedPeriodSynthesis,
+  type BuildProductSelectedPeriodSynthesisInput
+} from './selectedPeriodProductService';
 
 export interface ProductAnalysisDependencies {
   readonly calculateHoroscope: (birthDetails: BirthDetails, customPositionsOrOptions?: any, asOfParam?: string | Date) => Horoscope;
@@ -38,6 +42,10 @@ export interface AnalyzeOptions {
   readonly includeAiExplanation?: boolean;
   readonly asOf?: Date | string;
   readonly context?: AnalysisContext;
+  readonly selectedPeriod?: {
+    readonly mahadashaId: string;
+    readonly antardashaId: string;
+  };
 }
 
 export class ProductAnalysisService {
@@ -46,7 +54,7 @@ export class ProductAnalysisService {
 
   constructor(
     private readonly deps: ProductAnalysisDependencies = defaultProductAnalysisDependencies
-  ) {}
+  ) { }
 
   get lastPipelineState(): LifeAnalysisProductState | undefined {
     return this._lastPipelineState;
@@ -89,7 +97,7 @@ export class ProductAnalysisService {
         );
       }
 
-      return mapProductAnalysis({
+      const productAnalysis = mapProductAnalysis({
         birthDetails,
         horoscope,
         lifeAnalysisViewModel: pipelineState.analysis,
@@ -100,8 +108,39 @@ export class ProductAnalysisService {
         wealthEvidence: pipelineState.wealth?.evidence
           ? mapEvidenceItems(pipelineState.wealth.evidence, 'WEALTH')
           : undefined,
-        context
+        context,
+        temporalState: pipelineState.temporalState
       });
+
+      // PBA-07: Build selected-period synthesis if selection is provided
+      if (options?.selectedPeriod && pipelineState.careerArtifacts) {
+        const selectedPeriodInput: BuildProductSelectedPeriodSynthesisInput = {
+          selection: options.selectedPeriod,
+          context,
+          temporalState: pipelineState.temporalState!,
+          horoscope,
+          careerArtifacts: pipelineState.careerArtifacts,
+          careerEvidence: pipelineState.career?.evidence ?? [],
+          careerDashaEvidence: pipelineState.careerArtifacts.careerDashaEvidence,
+          wealthEvidence: pipelineState.wealth?.evidence ?? [],
+          careerBaseline: pipelineState.career?.conclusionData as any,
+          wealthBaseline: pipelineState.wealth?.conclusionData as any
+        };
+
+        const selectedPeriodResult = buildProductSelectedPeriodSynthesis(selectedPeriodInput);
+
+        if (selectedPeriodResult.ok) {
+          const selectedPeriodSynthesis = mapSelectedPeriodSynthesis(selectedPeriodResult.value);
+          return {
+            ...productAnalysis,
+            selectedPeriod: selectedPeriodSynthesis
+          };
+        }
+        // On failure, return productAnalysis without selectedPeriod (no natal status downgrade)
+        return productAnalysis;
+      }
+
+      return productAnalysis;
     } catch (error: unknown) {
       return buildFailedProductAnalysis(birthDetails, error, context);
     }
