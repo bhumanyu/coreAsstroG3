@@ -1998,7 +1998,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       const wealthActivation = makeWealthActivation();
 
       // Create evidence with wrong phase (not NATAL_PROMISE)
-      const wrongPhaseEvidence = makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION', 'DASHA_ACTIVATION', undefined);
+      const wrongPhaseEvidence = makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION', 'DASHA_ACTIVATION');
 
       const wealthEvidence = Object.freeze([wrongPhaseEvidence]);
 
@@ -2120,6 +2120,268 @@ describe('buildSelectedPeriodSynthesis', () => {
       // Ref should be UNRESOLVED
       const unresolvedRef = result.value.evidence.find(e => e.evidenceId === 'dup-2');
       expect(unresolvedRef?.classification).toBe('UNRESOLVED');
+    });
+  });
+
+  describe('PBA-06 golden fixture: full reproducible synthesis', () => {
+    it('produces complete, reproducible result with fully-populated scenario (PBA-06 completion gate)', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      // Career activation with qualified expressions
+      const careerActivation = makeCareerActivation('CANONICAL_STATUS');
+
+      // Wealth activation with all four dimensions resolved
+      const wealthActivation = makeWealthActivation();
+
+      // Complete evidence sets
+      const careerEvidence = Object.freeze([
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER'),
+        makeEvidence('evid2', 'CHALLENGING', 'CAREER')
+      ]);
+
+      const careerDashaEvidence = Object.freeze([
+        makeEvidence('md-evid1', 'SUPPORTING', 'CAREER'),
+        makeEvidence('ad-evid1', 'SUPPORTING', 'CAREER')
+      ]);
+
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION'),
+        makeEvidence('promise-2', 'SUPPORTING', 'WEALTH', 'GAINS'),
+        makeEvidence('promise-3', 'CHALLENGING', 'WEALTH', 'SPECULATION')
+      ]);
+
+      // Baselines (both lifetime baselines unchanged, no cross-domain coupling)
+      const careerBaseline = Object.freeze({ id: 'career-baseline' } as unknown as CareerFinalSynthesisResult);
+      const wealthBaseline = Object.freeze({ id: 'wealth-baseline' } as unknown as CareerWealthFinalSynthesis);
+
+      // Run twice to assert reproducibility
+      const result1 = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        wealthActivation,
+        careerEvidence,
+        careerDashaEvidence,
+        wealthEvidence,
+        careerBaseline,
+        wealthBaseline
+      });
+
+      const result2 = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        wealthActivation,
+        careerEvidence,
+        careerDashaEvidence,
+        wealthEvidence,
+        careerBaseline,
+        wealthBaseline
+      });
+
+      expect(result1.ok).toBe(true);
+      expect(result2.ok).toBe(true);
+      if (!result1.ok || !result2.ok) return;
+
+      // Assert reproducibility
+      expect(result1.value).toEqual(result2.value);
+
+      // Golden fixture: frozen literal of the full result
+      const expectedGoldenFixture = Object.freeze({
+        synthesisVersion: 'PBA-06-v1',
+        period: Object.freeze({
+          selectedPeriodId: selectedPeriod.selectedPeriodId,
+          mahadashaId: selectedPeriod.mahadasha.id,
+          mahadashaPlanet: selectedPeriod.mahadasha.planet,
+          antardashaId: selectedPeriod.antardasha.id,
+          antardashaPlanet: selectedPeriod.antardasha.planet,
+          interval: Object.freeze({
+            start: selectedPeriod.interval.start,
+            end: selectedPeriod.interval.end
+          }),
+          analysisAsOf: selectedPeriod.analysisAsOf,
+          temporalRelation: selectedPeriod.temporalRelation
+        }),
+        natalBaseline: Object.freeze({
+          career: Object.freeze({
+            baseline: careerBaseline,
+            unchanged: true
+          }),
+          wealth: Object.freeze({
+            baseline: wealthBaseline,
+            unchanged: true
+          })
+        }),
+        career: Object.freeze({
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: Object.freeze([
+            Object.freeze({
+              expressionRefKey: 'EMPLOYMENT:SUPPORT:evid1',
+              status: 'ACTIVATES',
+              linkedLevels: Object.freeze(['MD', 'AD']),
+              qualificationBasis: 'CANONICAL_STATUS',
+              matchBasis: 'UNAMBIGUOUS',
+              diagnostics: Object.freeze([]),
+              expressionEvidenceIds: Object.freeze(['evid1']),
+              qualifiedEvidenceIds: Object.freeze(['evid1']),
+              unqualifiedEvidenceIds: Object.freeze([]),
+              mdDashaEvidenceIds: Object.freeze(['md-evid1']),
+              adDashaEvidenceIds: Object.freeze(['ad-evid1']),
+              expressionSource: 'CALLER'
+            })
+          ]),
+          diagnostics: Object.freeze([])
+        }),
+        wealth: Object.freeze({
+          dimensions: Object.freeze({
+            ACCUMULATION: Object.freeze({
+              dimension: 'ACCUMULATION',
+              effect: 'ACTIVATES',
+              dataStatus: 'COMPLETE',
+              linkedLevels: Object.freeze(['MD', 'AD']),
+              diagnostics: Object.freeze([])
+            }),
+            GAINS: Object.freeze({
+              dimension: 'GAINS',
+              effect: 'PARTIALLY_ACTIVATES',
+              dataStatus: 'COMPLETE',
+              linkedLevels: Object.freeze(['MD']),
+              diagnostics: Object.freeze([])
+            }),
+            FORTUNE: Object.freeze({
+              dimension: 'FORTUNE',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: Object.freeze([]),
+              diagnostics: Object.freeze([])
+            }),
+            SPECULATION: Object.freeze({
+              dimension: 'SPECULATION',
+              effect: 'CHALLENGES',
+              dataStatus: 'COMPLETE',
+              linkedLevels: Object.freeze(['AD']),
+              diagnostics: Object.freeze([])
+            })
+          }),
+          diagnostics: Object.freeze([])
+        }),
+        evidence: Object.freeze([
+          // Career activation evidence (C9) - sorted first by stage/provenanceStage
+          Object.freeze({
+            classification: 'SUPPORTING',
+            evidenceId: 'ad-evid1',
+            identityKey: 'key-ad-evid1',
+            polarity: 'SUPPORTING',
+            source: 'D1',
+            stage: 'CAREER',
+            provenanceStage: 'CAREER_ACTIVATION',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          }),
+          Object.freeze({
+            classification: 'SUPPORTING',
+            evidenceId: 'md-evid1',
+            identityKey: 'key-md-evid1',
+            polarity: 'SUPPORTING',
+            source: 'D1',
+            stage: 'CAREER',
+            provenanceStage: 'CAREER_ACTIVATION',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          }),
+          // Career expression evidence
+          Object.freeze({
+            classification: 'SUPPORTING',
+            evidenceId: 'evid1',
+            identityKey: 'key-evid1',
+            polarity: 'SUPPORTING',
+            source: 'D1',
+            stage: 'CAREER',
+            provenanceStage: 'CAREER_EXPRESSION',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          }),
+          // Career qualification evidence
+          Object.freeze({
+            classification: 'SUPPORTING',
+            evidenceId: 'evid1',
+            identityKey: 'key-evid1',
+            polarity: 'SUPPORTING',
+            source: 'D1',
+            stage: 'CAREER',
+            provenanceStage: 'CAREER_QUALIFICATION',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          }),
+          // Wealth dasha rule references (no classification/polarity)
+          Object.freeze({
+            ruleId: 'rule-1',
+            source: 'DASHA',
+            level: 'MD',
+            stage: 'WEALTH',
+            provenanceStage: 'WEALTH_DASHA_RULE',
+            referenceKind: 'RULE'
+          }),
+          Object.freeze({
+            ruleId: 'rule-2',
+            source: 'DASHA',
+            level: 'AD',
+            stage: 'WEALTH',
+            provenanceStage: 'WEALTH_DASHA_RULE',
+            referenceKind: 'RULE'
+          }),
+          // Wealth promise evidence
+          Object.freeze({
+            classification: 'SUPPORTING',
+            evidenceId: 'promise-1',
+            identityKey: 'key-promise-1',
+            dimension: 'ACCUMULATION',
+            polarity: 'SUPPORTING',
+            source: 'D1',
+            stage: 'WEALTH',
+            provenanceStage: 'WEALTH_NATAL_PROMISE',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          }),
+          Object.freeze({
+            classification: 'SUPPORTING',
+            evidenceId: 'promise-2',
+            identityKey: 'key-promise-2',
+            dimension: 'GAINS',
+            polarity: 'SUPPORTING',
+            source: 'D1',
+            stage: 'WEALTH',
+            provenanceStage: 'WEALTH_NATAL_PROMISE',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          }),
+          Object.freeze({
+            classification: 'CHALLENGING',
+            evidenceId: 'promise-3',
+            identityKey: 'key-promise-3',
+            dimension: 'SPECULATION',
+            polarity: 'CHALLENGING',
+            source: 'D1',
+            stage: 'WEALTH',
+            provenanceStage: 'WEALTH_NATAL_PROMISE',
+            referenceKind: 'EVIDENCE',
+            ruleId: undefined
+          })
+        ]),
+        missingInputs: Object.freeze([]),
+        provenance: Object.freeze({
+          career: Object.freeze({
+            status: 'PRESENT',
+            version: 'PBA-04-v1',
+            qualificationBasis: 'CANONICAL_STATUS'
+          }),
+          wealth: Object.freeze({
+            status: 'PRESENT',
+            version: 'PBA-05-v1'
+          })
+        })
+      });
+
+      // Assert full result equals golden fixture
+      expect(result1.value).toEqual(expectedGoldenFixture);
     });
   });
 });
