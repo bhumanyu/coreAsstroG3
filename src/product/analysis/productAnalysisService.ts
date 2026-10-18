@@ -178,7 +178,18 @@ export class ProductAnalysisService {
             : undefined
         };
 
-        const selectedPeriodResult = buildProductSelectedPeriodSynthesis(selectedPeriodInput);
+        let selectedPeriodResult;
+        try {
+          selectedPeriodResult = buildProductSelectedPeriodSynthesis(selectedPeriodInput);
+        } catch {
+          return {
+            ...productAnalysis,
+            selectedPeriod: {
+              status: 'SYNTHESIS_FAILED',
+              error: 'SYNTHESIS_EXCEPTION'
+            }
+          };
+        }
 
         if (selectedPeriodResult.ok) {
           const selectedPeriodSynthesis = mapSelectedPeriodSynthesis(selectedPeriodResult.value);
