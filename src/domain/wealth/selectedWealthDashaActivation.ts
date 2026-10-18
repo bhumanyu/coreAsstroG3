@@ -85,7 +85,11 @@ const DIMENSIONS: readonly WealthDimension[] = Object.freeze([
 /**
  * Selects Wealth evidence for a specific dimension.
  *
+ * This function selects natal promise evidence only. Dasha/transit/varga evidence
+ * can never establish a promise for the selected period.
+ *
  * Rules:
+ * - Must have phase === 'NATAL_PROMISE'
  * - Must have domain === 'WEALTH'
  * - Prefers explicit dimension field when present
  * - Falls back to house matching when dimension is absent
@@ -96,6 +100,9 @@ function selectDimensionEvidence(
   dimension: WealthDimension
 ): readonly DomainEvidence[] {
   return evidence.filter((item) => {
+    // Only natal promise evidence can establish a promise for the selected period
+    if (item.phase !== 'NATAL_PROMISE') return false;
+
     if (item.domain !== 'WEALTH') return false;
 
     // Prefer explicit dimension classification
@@ -134,6 +141,7 @@ function extractSelectedDashaEvidence(
  *   (not the dimension's canonical house if evidence has conflicting house)
  * - Planet overlap is NOT sufficient alone; must also share a house to establish linkage
  *   (prevents spurious cross-dimension activation via planetary overlap alone)
+ * - Planet-only evidence (no houses) cannot link under the current conservative contract
  */
 function isLinkedToDimension(
   dashaEvidence: DashaInterpretationEvidence,

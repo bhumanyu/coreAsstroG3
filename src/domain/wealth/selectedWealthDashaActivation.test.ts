@@ -101,6 +101,31 @@ function promise(
   });
 }
 
+function timingEvidence(
+  id: string,
+  phase: DomainEvidence['phase'],
+  dimension: DomainEvidence['dimension'],
+  house: number,
+  planet: Planet
+): DomainEvidence {
+  return createDomainEvidence({
+    id,
+    sourceType: 'HOUSE',
+    domain: 'WEALTH',
+    role: 'PRIMARY',
+    phase,
+    source: 'D1',
+    statement: `${phase} evidence fixture`,
+    polarity: 'SUPPORTING',
+    strength: 'STRONG',
+    priority: 90,
+    relatedEvidenceIds: [],
+    dimension,
+    house,
+    planet
+  });
+}
+
 describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
   it('evaluates four dimensions independently for the same selected MD-AD period', () => {
     const context = makeContext(
@@ -541,5 +566,126 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     if (!result.ok) {
       expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
     }
+  });
+
+  describe('natal-promise phase guard regression tests', () => {
+    it('rejects DASHA_ACTIVATION evidence (timing evidence cannot create natal promise)', () => {
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]),
+        wealthEvidence: [
+          timingEvidence('DASHA_ACC', 'DASHA_ACTIVATION', 'ACCUMULATION', 2, Planet.SATURN)
+        ]
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual([]);
+      expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('rejects TRANSIT_TRIGGER evidence (timing evidence cannot create natal promise)', () => {
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]),
+        wealthEvidence: [
+          timingEvidence('TRANSIT_ACC', 'TRANSIT_TRIGGER', 'ACCUMULATION', 2, Planet.SATURN)
+        ]
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual([]);
+      expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('rejects VARGA_CONFIRMATION evidence (modifier phase cannot create natal promise)', () => {
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]),
+        wealthEvidence: [
+          timingEvidence('VARGA_ACC', 'VARGA_CONFIRMATION', 'ACCUMULATION', 2, Planet.SATURN)
+        ]
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual([]);
+      expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('rejects MODIFIER evidence (modifier phase cannot create natal promise)', () => {
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]),
+        wealthEvidence: [
+          timingEvidence('MODIFIER_ACC', 'MODIFIER', 'ACCUMULATION', 2, Planet.SATURN)
+        ]
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual([]);
+      expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('only NATAL_PROMISE evidence is accepted for establishing the promise', () => {
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]),
+        wealthEvidence: [
+          timingEvidence('DASHA_ACC', 'DASHA_ACTIVATION', 'ACCUMULATION', 2, Planet.SATURN),
+          timingEvidence('TRANSIT_ACC', 'TRANSIT_TRIGGER', 'ACCUMULATION', 2, Planet.SATURN),
+          timingEvidence('VARGA_ACC', 'VARGA_CONFIRMATION', 'ACCUMULATION', 2, Planet.SATURN),
+          timingEvidence('MODIFIER_ACC', 'MODIFIER', 'ACCUMULATION', 2, Planet.SATURN),
+          promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)
+        ]
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Only NATAL_PROMISE should be in promiseEvidenceIds
+      expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual(['NATAL_ACC']);
+      expect(result.value.dimensions.ACCUMULATION.effect).toBe('ACTIVATES');
+    });
+  });
+
+  describe('defensive validation error handling', () => {
+    it('returns INVALID_SELECTED_PERIOD_CONTEXT for malformed context instead of throwing', () => {
+      const malformedContext = {
+        // Missing required fields
+        contextVersion: 'v1',
+        dashaSystem: 'VIMSHOTTARI' as const,
+        level: 'MD_AD',
+        selectedPeriodId: 'pba-period:v1:md-1:ad-1',
+        resolverVersion: 'pba-md-ad-resolver-v1',
+        analysisAsOf: '2026-01-01T00:00:00.000Z',
+        temporalRelation: 'CURRENT',
+        intervalSemantics: '[start,end)',
+        // Missing interval, mahadasha, antardasha, mahadashaNode, antardashaNode
+      } as unknown as SelectedPeriodActivationContext;
+
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: malformedContext,
+        wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
+      }
+    });
+
+    it('returns INVALID_SELECTED_PERIOD_CONTEXT for null context', () => {
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: null as unknown as SelectedPeriodActivationContext,
+        wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
+      }
+    });
   });
 });

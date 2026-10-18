@@ -6,7 +6,8 @@ import type {
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import {
   createSelectedPeriodActivationContext,
-  SELECTED_PERIOD_CONTEXT_VERSION
+  SELECTED_PERIOD_CONTEXT_VERSION,
+  validateSelectedPeriodContext
 } from './selectedPeriodActivationContext';
 import {
   resolveSelectedMdAdPeriod,
@@ -471,6 +472,128 @@ describe('selectedPeriodActivationContext', () => {
         expect(result.value.antardasha.end).toBe('2022-01-01T00:00:00.000Z');
         expect(result.value.mahadashaNode).toBeDefined();
         expect(result.value.antardashaNode).toBeDefined();
+      }
+    });
+  });
+
+  describe('validateSelectedPeriodContext defensive checks', () => {
+    it('returns false for null input', () => {
+      expect(validateSelectedPeriodContext(null)).toBe(false);
+    });
+
+    it('returns false for undefined input', () => {
+      expect(validateSelectedPeriodContext(undefined)).toBe(false);
+    });
+
+    it('returns false for non-object input (string)', () => {
+      expect(validateSelectedPeriodContext('not an object')).toBe(false);
+    });
+
+    it('returns false for array input', () => {
+      expect(validateSelectedPeriodContext([])).toBe(false);
+    });
+
+    it('returns false when mahadashaNode is missing', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, mahadashaNode: undefined };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false when interval is missing', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, interval: undefined };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false when antardasha is missing mahadashaId', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          antardasha: { ...result.value.antardasha, mahadashaId: undefined }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false when mahadasha.planet is not a string', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          mahadasha: { ...result.value.mahadasha, planet: 123 as any }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false when mahadasha.start is not a string', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          mahadasha: { ...result.value.mahadasha, start: null as any }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns true for valid context from factory', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(validateSelectedPeriodContext(result.value)).toBe(true);
       }
     });
   });

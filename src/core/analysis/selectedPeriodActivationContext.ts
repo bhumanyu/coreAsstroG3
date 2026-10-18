@@ -195,6 +195,9 @@ export function createSelectedPeriodActivationContext(
  * Validates selected-period context consistency.
  *
  * Verifies:
+ * - ctx is truthy and an object
+ * - ctx.mahadasha, ctx.mahadashaNode, ctx.antardasha, ctx.antardashaNode, ctx.interval exist and are objects
+ * - required string fields (planet, start, end, id, mahadashaId) are present and are strings
  * - ctx.dashaSystem === VIMSHOTTARI
  * - ctx.level === 'MD_AD'
  * - ctx.intervalSemantics === '[start,end)'
@@ -208,67 +211,107 @@ export function createSelectedPeriodActivationContext(
  * On any mismatch, returns false.
  * Never substitutes current-Dasha data on mismatch.
  *
- * @param ctx - The selected period activation context to validate
+ * @param ctx - The selected period activation context to validate (accepts unknown for defensive validation)
  * @returns true if valid, false if invalid
  */
 export function validateSelectedPeriodContext(
-  ctx: SelectedPeriodActivationContext
+  ctx: unknown
 ): boolean {
+  // Defensive: reject falsy or non-object input
+  if (!ctx || typeof ctx !== 'object' || Array.isArray(ctx)) {
+    return false;
+  }
+
+  const typedCtx = ctx as Partial<SelectedPeriodActivationContext>;
+
+  // Defensive: verify required nested objects exist
+  if (
+    !typedCtx.mahadasha ||
+    typeof typedCtx.mahadasha !== 'object' ||
+    !typedCtx.mahadashaNode ||
+    typeof typedCtx.mahadashaNode !== 'object' ||
+    !typedCtx.antardasha ||
+    typeof typedCtx.antardasha !== 'object' ||
+    !typedCtx.antardashaNode ||
+    typeof typedCtx.antardashaNode !== 'object' ||
+    !typedCtx.interval ||
+    typeof typedCtx.interval !== 'object'
+  ) {
+    return false;
+  }
+
+  // Defensive: verify required string fields
+  if (
+    typeof typedCtx.mahadasha.planet !== 'string' ||
+    typeof typedCtx.mahadasha.start !== 'string' ||
+    typeof typedCtx.mahadasha.end !== 'string' ||
+    typeof typedCtx.mahadasha.id !== 'string' ||
+    typeof typedCtx.antardasha.planet !== 'string' ||
+    typeof typedCtx.antardasha.start !== 'string' ||
+    typeof typedCtx.antardasha.end !== 'string' ||
+    typeof typedCtx.antardasha.id !== 'string' ||
+    typeof typedCtx.antardasha.mahadashaId !== 'string' ||
+    typeof typedCtx.interval.start !== 'string' ||
+    typeof typedCtx.interval.end !== 'string'
+  ) {
+    return false;
+  }
+
   // Verify dasha system
-  if (ctx.dashaSystem !== DashaSystem.VIMSHOTTARI) {
+  if (typedCtx.dashaSystem !== DashaSystem.VIMSHOTTARI) {
     return false;
   }
 
   // Verify level
-  if (ctx.level !== 'MD_AD') {
+  if (typedCtx.level !== 'MD_AD') {
     return false;
   }
 
   // Verify interval semantics
-  if (ctx.intervalSemantics !== '[start,end)') {
+  if (typedCtx.intervalSemantics !== '[start,end)') {
     return false;
   }
 
   // Verify mahadasha consistency between context and node
-  if (ctx.mahadasha.planet !== ctx.mahadashaNode.planet) {
+  if (typedCtx.mahadasha.planet !== typedCtx.mahadashaNode.planet) {
     return false;
   }
-  if (ctx.mahadasha.start !== ctx.mahadashaNode.start) {
+  if (typedCtx.mahadasha.start !== typedCtx.mahadashaNode.start) {
     return false;
   }
-  if (ctx.mahadasha.end !== ctx.mahadashaNode.end) {
+  if (typedCtx.mahadasha.end !== typedCtx.mahadashaNode.end) {
     return false;
   }
 
   // Verify antardasha consistency between context and node
-  if (ctx.antardasha.planet !== ctx.antardashaNode.planet) {
+  if (typedCtx.antardasha.planet !== typedCtx.antardashaNode.planet) {
     return false;
   }
-  if (ctx.antardasha.start !== ctx.antardashaNode.start) {
+  if (typedCtx.antardasha.start !== typedCtx.antardashaNode.start) {
     return false;
   }
-  if (ctx.antardasha.end !== ctx.antardashaNode.end) {
+  if (typedCtx.antardasha.end !== typedCtx.antardashaNode.end) {
     return false;
   }
 
   // Verify antardasha mahadashaId matches mahadasha id
-  if (ctx.antardasha.mahadashaId !== ctx.mahadasha.id) {
+  if (typedCtx.antardasha.mahadashaId !== typedCtx.mahadasha.id) {
     return false;
   }
 
   // Verify interval matches antardasha node
-  if (ctx.interval.start !== ctx.antardashaNode.start) {
+  if (typedCtx.interval.start !== typedCtx.antardashaNode.start) {
     return false;
   }
-  if (ctx.interval.end !== ctx.antardashaNode.end) {
+  if (typedCtx.interval.end !== typedCtx.antardashaNode.end) {
     return false;
   }
 
   // Parse and verify interval ordering
-  const startMs = Date.parse(ctx.interval.start);
-  const endMs = Date.parse(ctx.interval.end);
-  const mdStartMs = Date.parse(ctx.mahadasha.start);
-  const mdEndMs = Date.parse(ctx.mahadasha.end);
+  const startMs = Date.parse(typedCtx.interval.start);
+  const endMs = Date.parse(typedCtx.interval.end);
+  const mdStartMs = Date.parse(typedCtx.mahadasha.start);
+  const mdEndMs = Date.parse(typedCtx.mahadasha.end);
 
   if (Number.isNaN(startMs) || Number.isNaN(endMs) || Number.isNaN(mdStartMs) || Number.isNaN(mdEndMs)) {
     return false;
