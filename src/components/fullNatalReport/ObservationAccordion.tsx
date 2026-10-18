@@ -17,7 +17,7 @@ interface SectionAccordionProps {
 }
 
 export const SectionAccordion: React.FC<SectionAccordionProps> = ({ title, count, children }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [openObservationIds, setOpenObservationIds] = useState<Set<string>>(() => new Set());
   const generatedId = useId().replace(/:/g, '');
   const panelId = `observation-section-${generatedId}`;
