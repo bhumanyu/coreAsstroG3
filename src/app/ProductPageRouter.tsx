@@ -39,6 +39,7 @@ export interface ProductPageRouterProps {
   readonly lifeAnalysisState?: LifeAnalysisProductState;
   readonly onNavigate: (page: AppPage) => void;
   readonly onRetry: () => void;
+  readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
 }
 
 export const ResearchToolsPanel: React.FC<{
@@ -62,11 +63,10 @@ export const ResearchToolsPanel: React.FC<{
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                isActive
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                  : 'bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${isActive
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                : 'bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                }`}
             >
               {item.label}
             </button>
@@ -104,7 +104,8 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
   dashaTimingViewModel,
   lifeAnalysisState,
   onNavigate,
-  onRetry
+  onRetry,
+  onSelectPeriod
 }) => {
   const effectiveLifeAnalysisState: LifeAnalysisProductState =
     lifeAnalysisState ?? state.lifeAnalysisState ?? { status: 'LOADING' };
@@ -145,6 +146,7 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
           productAnalysisState={state.productAnalysis}
           onRetry={onRetry}
           onNavigate={onNavigate}
+          onSelectPeriod={onSelectPeriod}
         />
       );
 

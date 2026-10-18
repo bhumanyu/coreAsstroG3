@@ -12,6 +12,7 @@ export interface AppController {
   closeBirthForm: () => void;
   resetPreset: () => void;
   analyze: (birthDetails: BirthDetails) => Promise<void>;
+  selectPeriod: (mahadashaId: string, antardashaId: string) => Promise<void>;
 }
 
 export function createAppController(
@@ -94,6 +95,51 @@ export function createAppController(
           },
           horoscope,
           dashaTimingViewModel
+        }));
+      }
+    },
+    selectPeriod: async (mahadashaId: string, antardashaId: string) => {
+      const requestId = ++currentRequestId;
+
+      setState((prev) => ({
+        ...prev,
+        productAnalysis: {
+          ...prev.productAnalysis,
+          status: 'LOADING'
+        }
+      }));
+
+      try {
+        const analysis = await service.selectPeriod(mahadashaId, antardashaId);
+
+        // Stale-result guard: discard late-resolving results for previous requests
+        if (requestId !== currentRequestId) {
+          return;
+        }
+
+        const horoscope = service.lastHoroscope;
+
+        setState((prev) => ({
+          ...prev,
+          productAnalysis: {
+            status: 'READY',
+            analysis,
+            horoscope
+          }
+        }));
+      } catch (error) {
+        if (requestId !== currentRequestId) {
+          return;
+        }
+
+        const errorMsg = error instanceof Error ? error.message : 'Period selection failed.';
+        setState((prev) => ({
+          ...prev,
+          productAnalysis: {
+            status: 'ERROR',
+            error: errorMsg,
+            analysis: prev.productAnalysis?.analysis
+          }
         }));
       }
     }

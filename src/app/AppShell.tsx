@@ -60,6 +60,7 @@ export const AppShellContent: React.FC = () => {
           lifeAnalysisState={state.lifeAnalysisState}
           onNavigate={controller.navigate}
           onRetry={handleLifeAnalysisRetry}
+          onSelectPeriod={controller.selectPeriod}
         />
       </main>
 

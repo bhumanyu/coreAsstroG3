@@ -17,7 +17,11 @@ import type {
   ProductChartSummary,
   ProductBirth,
   ProductWarning,
-  ProductEvidence
+  ProductEvidence,
+  ProductDashaPeriodOptions,
+  ProductSelectableMahadasha,
+  ProductSelectableAntardasha,
+  ProductSelectedPeriodResult
 } from './productAnalysisTypes';
 
 export interface ProductOverviewSlice {
@@ -203,6 +207,49 @@ export function selectDashaHierarchy(
   if (current.pratyantardasha) hierarchy.push(current.pratyantardasha);
 
   return hierarchy;
+}
+
+/**
+ * Returns dasha period options for period selection UI.
+ * Returns undefined if dashPeriodOptions is not present on the analysis.
+ */
+export function selectDashaPeriodOptions(
+  analysis: ProductAnalysis
+): ProductDashaPeriodOptions | undefined {
+  return analysis.dashPeriodOptions;
+}
+
+/**
+ * Returns antardashas for a specific mahadasha.
+ * Filters by mahadashaId.
+ * If validOnly is true, returns only valid antardashas (for submission).
+ */
+export function selectAntardashasForMahadasha(
+  analysis: ProductAnalysis,
+  mahadashaId: string,
+  validOnly: boolean = false
+): readonly ProductSelectableAntardasha[] {
+  const options = analysis.dashPeriodOptions;
+  if (!options) return [];
+
+  const mahadasha = options.mahadashas.find(md => md.id === mahadashaId);
+  if (!mahadasha) return [];
+
+  if (validOnly) {
+    return mahadasha.antardashas.filter(ad => ad.valid);
+  }
+
+  return mahadasha.antardashas;
+}
+
+/**
+ * Returns the selected period result from the analysis.
+ * Returns undefined if no selection was requested.
+ */
+export function selectSelectedPeriod(
+  analysis: ProductAnalysis
+): ProductSelectedPeriodResult | undefined {
+  return analysis.selectedPeriod;
 }
 
 export * from './overviewViewModel';

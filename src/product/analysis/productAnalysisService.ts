@@ -54,6 +54,7 @@ export interface AnalyzeOptions {
 export class ProductAnalysisService {
   private _lastPipelineState?: LifeAnalysisProductState;
   private _lastHoroscope?: Horoscope;
+  private _lastBirthDetails?: BirthDetails;
 
   constructor(
     private readonly deps: ProductAnalysisDependencies = defaultProductAnalysisDependencies
@@ -65,6 +66,10 @@ export class ProductAnalysisService {
 
   get lastHoroscope(): Horoscope | undefined {
     return this._lastHoroscope;
+  }
+
+  get lastBirthDetails(): BirthDetails | undefined {
+    return this._lastBirthDetails;
   }
 
   /**
@@ -85,6 +90,7 @@ export class ProductAnalysisService {
     try {
       const horoscope = this.deps.calculateHoroscope(birthDetails, undefined, context.asOf);
       this._lastHoroscope = horoscope;
+      this._lastBirthDetails = birthDetails;
       const pipelineState = await this.deps.runPipeline({
         horoscope,
         context,
@@ -250,6 +256,148 @@ export class ProductAnalysisService {
     } catch (error: unknown) {
       return buildFailedProductAnalysis(birthDetails, error, context);
     }
+  }
+
+  /**
+   * Re-selects a dasha period using retained pipeline state.
+   *
+   * This method:
+   * - Reuses lastHoroscope, lastPipelineState (temporalState, careerArtifacts, evidence, baselines)
+   * - Calls buildProductSelectedPeriodSynthesis directly (NEVER calculateHoroscope/runPipeline)
+   * - Returns typed errors (INVALID_SELECTION, synthesis codes verbatim)
+   * - Keeps dasha.current and natal baseline untouched
+   *
+   * Returns updated ProductAnalysis with selectedPeriod result.
+   * Throws if prerequisites are not available (should have been checked before calling).
+   */
+  async selectPeriod(
+    mahadashaId: string,
+    antardashaId: string
+  ): Promise<ProductAnalysis> {
+    if (!this._lastHoroscope) {
+      throw new Error('Cannot select period: no horoscope available. Call analyze() first.');
+    }
+    if (!this._lastPipelineState) {
+      throw new Error('Cannot select period: no pipeline state available. Call analyze() first.');
+    }
+    if (!this._lastBirthDetails) {
+      throw new Error('Cannot select period: no birth details available. Call analyze() first.');
+    }
+    if (!this._lastPipelineState.temporalState) {
+      throw new Error('Cannot select period: temporalState unavailable.');
+    }
+    if (!this._lastPipelineState.careerArtifacts) {
+      throw new Error('Cannot select period: careerArtifacts unavailable.');
+    }
+    if (!this._lastPipelineState.career?.conclusionData) {
+      throw new Error('Cannot select period: career baseline unavailable.');
+    }
+    if (!this._lastPipelineState.wealth?.conclusionData) {
+      throw new Error('Cannot select period: wealth baseline unavailable.');
+    }
+
+    const horoscope = this._lastHoroscope;
+    const birthDetails = this._lastBirthDetails;
+    const pipelineState = this._lastPipelineState;
+    const temporalState = pipelineState.temporalState!;
+
+    // Reconstruct context from retained state
+    const context = createAnalysisContext({
+      asOf: temporalState.asOf,
+      engineVersion: 'ASTRO_CORE_V1',
+      rulesVersion: 'PARASHARA_CLASSICAL_RULES_V2'
+    });
+
+    // Reconstruct the base product analysis (preserves natal baseline and dasha.current)
+    const productAnalysis = mapProductAnalysis({
+      birthDetails,
+      horoscope,
+      lifeAnalysisViewModel: pipelineState.analysis!,
+      aiExplanation: pipelineState.aiExplanation,
+      careerEvidence: pipelineState.career?.evidence
+        ? mapEvidenceItems(pipelineState.career.evidence, 'CAREER')
+        : undefined,
+      wealthEvidence: pipelineState.wealth?.evidence
+        ? mapEvidenceItems(pipelineState.wealth.evidence, 'WEALTH')
+        : undefined,
+      context,
+      temporalState
+    });
+
+    const selection = { mahadashaId, antardashaId };
+
+    const selectedPeriodInput: BuildProductSelectedPeriodSynthesisInput = {
+      selection,
+      context,
+      temporalState,
+      horoscope,
+      careerArtifacts: pipelineState.careerArtifacts!,
+      careerEvidence: pipelineState.career?.evidence ?? [],
+      careerDashaEvidence: pipelineState.careerArtifacts!.careerDashaEvidence,
+      wealthEvidence: pipelineState.wealth?.evidence ?? [],
+      careerBaseline: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
+        ? pipelineState.career.conclusionData
+        : undefined,
+      wealthBaseline: pipelineState.wealth && isWealthDomainInterpretation(pipelineState.wealth)
+        ? pipelineState.wealth.conclusionData
+        : undefined
+    };
+
+    let selectedPeriodResult;
+    try {
+      selectedPeriodResult = buildProductSelectedPeriodSynthesis(selectedPeriodInput);
+    } catch {
+      return {
+        ...productAnalysis,
+        selectedPeriod: {
+          status: 'SYNTHESIS_FAILED',
+          error: 'SYNTHESIS_EXCEPTION'
+        }
+      };
+    }
+
+    if (selectedPeriodResult.ok) {
+      const selectedPeriodSynthesis = mapSelectedPeriodSynthesis(selectedPeriodResult.value);
+      return {
+        ...productAnalysis,
+        selectedPeriod: {
+          status: 'OK',
+          synthesis: selectedPeriodSynthesis
+        }
+      };
+    }
+
+    // Map error codes to appropriate status (same logic as analyze)
+    const error = selectedPeriodResult.error;
+    const failureStatus: 'INVALID_SELECTION' | 'SYNTHESIS_FAILED' | 'UNAVAILABLE' = (() => {
+      if (
+        error === 'REPORT_UNAVAILABLE' ||
+        error === 'UNSUPPORTED_DASHA_SYSTEM' ||
+        error === 'MAHADASHA_NOT_FOUND' ||
+        error === 'ANTARDASHA_NOT_FOUND' ||
+        error === 'ANTARDASHA_NOT_CHILD_OF_MAHADASHA' ||
+        error === 'INVALID_SELECTED_PERIOD' ||
+        error === 'AMBIGUOUS_MAHADASHA_ID' ||
+        error === 'AMBIGUOUS_ANTARDASHA_ID' ||
+        error === 'INVALID_ANALYSIS_AS_OF' ||
+        error === 'INVALID_SELECTED_PERIOD_CONTEXT'
+      ) {
+        return 'INVALID_SELECTION';
+      }
+      if (error === 'INCOMPLETE_CANONICAL_INPUT' || error === 'ACTIVATION_PERIOD_MISMATCH') {
+        return 'SYNTHESIS_FAILED';
+      }
+      const _exhaustiveCheck: never = error;
+      return _exhaustiveCheck;
+    })();
+
+    return {
+      ...productAnalysis,
+      selectedPeriod: {
+        status: failureStatus,
+        error: error
+      }
+    };
   }
 }
 

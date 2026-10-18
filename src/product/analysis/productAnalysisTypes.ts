@@ -11,6 +11,12 @@ export type ProductAnalysisStatus = ProductStatus;
 
 export type ProductConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
 
+/**
+ * Temporal relation of a period relative to analysis.asOf.
+ * Computed using interval semantics: before start → FUTURE, [start,end) → CURRENT, ≥ end → PAST.
+ */
+export type ProductTemporalRelation = 'PAST' | 'CURRENT' | 'FUTURE';
+
 export type ProductAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'CONDITIONAL' | 'PARTIAL';
 
 export type ProductDirection = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
@@ -134,6 +140,44 @@ export interface ProductDashaPeriod {
   readonly statement?: string;
   readonly start?: string;
   readonly end?: string;
+}
+
+/**
+ * Selectable antardasha option for period selection UI.
+ * Nested within ProductSelectableMahadasha.
+ */
+export interface ProductSelectableAntardasha {
+  readonly id: string;
+  readonly planet: string;
+  readonly start: string;
+  readonly end: string;
+  readonly valid: boolean;
+  readonly diagnostics: readonly string[];
+  readonly temporalRelation: ProductTemporalRelation;
+}
+
+/**
+ * Selectable mahadasha option for period selection UI.
+ * Contains nested antardashas.
+ */
+export interface ProductSelectableMahadasha {
+  readonly id: string;
+  readonly planet: string;
+  readonly start: string;
+  readonly end: string;
+  readonly valid: boolean;
+  readonly diagnostics: readonly string[];
+  readonly temporalRelation: ProductTemporalRelation;
+  readonly antardashas: readonly ProductSelectableAntardasha[];
+}
+
+/**
+ * Dash period options for period selection UI.
+ * Projected from listSelectableMdAdPeriods(report) with temporalRelation computed.
+ */
+export interface ProductDashaPeriodOptions {
+  readonly mahadashas: readonly ProductSelectableMahadasha[];
+  readonly diagnostics: readonly string[];
 }
 
 export interface TransitProductResult {
@@ -470,6 +514,11 @@ export interface ProductAnalysis {
   readonly reasoning: ReasoningProductAnalysis;
   readonly ai: AiProductState;
   readonly warnings: readonly ProductWarning[];
+  /**
+   * Optional dasha period options for period selection UI.
+   * Projected from listSelectableMdAdPeriods(report) with temporalRelation computed.
+   */
+  readonly dashPeriodOptions?: ProductDashaPeriodOptions;
   /**
    * Optional selected-period synthesis result.
    * When present, contains either a successful synthesis or a typed failure.

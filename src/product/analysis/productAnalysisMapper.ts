@@ -51,7 +51,11 @@ import type {
   ProductSynthesisCareerSection,
   ProductSynthesisCareerExpressionRow,
   ProductSynthesisWealthSection,
-  ProductSynthesisWealthDimensionRow
+  ProductSynthesisWealthDimensionRow,
+  ProductDashaPeriodOptions,
+  ProductSelectableMahadasha,
+  ProductSelectableAntardasha,
+  ProductTemporalRelation
 } from './productAnalysisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
@@ -59,6 +63,10 @@ import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
   SelectedPeriodSynthesisValue
 } from '../../domain/synthesis/selectedPeriodSynthesis';
+import {
+  listSelectableMdAdPeriods,
+  type SelectablePeriodsResult
+} from '../../core/analysis/selectedMdAdPeriod';
 
 export interface ProductAnalysisMapperInput {
   readonly birthDetails: BirthDetails;
@@ -173,6 +181,88 @@ function deriveAggregateD10Status(candidates: readonly { d10Status: string }[]):
   }
 
   return 'UNAVAILABLE';
+}
+
+/**
+ * Parse an ISO date string to a timestamp.
+ * Returns null if invalid.
+ */
+function parseInstant(value: string): number | null {
+  const milliseconds = Date.parse(value);
+  return Number.isFinite(milliseconds) ? milliseconds : null;
+}
+
+/**
+ * Compute temporal relation of a period relative to analysis.asOf.
+ * Uses the same interval semantics as createSelectedPeriodActivationContext:
+ * - before start → FUTURE
+ * - [start,end) → CURRENT
+ * - ≥ end → PAST
+ */
+function computeTemporalRelation(
+  start: string,
+  end: string,
+  analysisAsOf: string
+): ProductTemporalRelation {
+  const startMs = parseInstant(start);
+  const endMs = parseInstant(end);
+  const asOfMs = parseInstant(analysisAsOf);
+
+  if (startMs === null || endMs === null || asOfMs === null) {
+    // Default to CURRENT if we can't parse dates
+    return 'CURRENT';
+  }
+
+  // Canonical intervals are half-open [start, end): start is included, end excluded.
+  if (asOfMs < startMs) return 'FUTURE';
+  if (asOfMs >= endMs) return 'PAST';
+  return 'CURRENT';
+}
+
+/**
+ * Project listSelectableMdAdPeriods(report) into ProductDashaPeriodOptions.
+ *
+ * Verbatim IDs/dates are preserved.
+ * valid + diagnostics are preserved per entry.
+ * temporalRelation is computed at the mapper boundary against analysis.asOf
+ * using the same interval semantics as createSelectedPeriodActivationContext.
+ */
+export function mapDashaPeriodOptions(
+  selectablePeriods: SelectablePeriodsResult,
+  analysisAsOf: string
+): ProductDashaPeriodOptions {
+  const mahadashas: ProductSelectableMahadasha[] = selectablePeriods.mahadashas.map(md => {
+    const temporalRelation = computeTemporalRelation(md.start, md.end, analysisAsOf);
+
+    // Map antardashas for this mahadasha
+    const antardashas: ProductSelectableAntardasha[] = selectablePeriods.antardashas
+      .filter(ad => ad.mahadashaId === md.id)
+      .map(ad => ({
+        id: ad.id,
+        planet: ad.planet,
+        start: ad.start,
+        end: ad.end,
+        valid: ad.valid,
+        diagnostics: ad.diagnostics,
+        temporalRelation: computeTemporalRelation(ad.start, ad.end, analysisAsOf)
+      }));
+
+    return {
+      id: md.id,
+      planet: md.planet,
+      start: md.start,
+      end: md.end,
+      valid: md.valid,
+      diagnostics: md.diagnostics,
+      temporalRelation,
+      antardashas: Object.freeze(antardashas)
+    };
+  });
+
+  return Object.freeze({
+    mahadashas: Object.freeze(mahadashas),
+    diagnostics: selectablePeriods.diagnostics
+  });
 }
 
 /**
@@ -1119,6 +1209,20 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
   const reasoning = mapReasoning(input.lifeAnalysisViewModel, career, wealth, input.aiExplanation);
   const ai = mapAiState(input.aiExplanation);
 
+  // Project dasha period options from temporalState.dashaInterpretation
+  let dashPeriodOptions: ProductDashaPeriodOptions | undefined;
+  try {
+    if (input.temporalState?.dashaInterpretation) {
+      dashPeriodOptions = mapDashaPeriodOptions(
+        listSelectableMdAdPeriods(input.temporalState.dashaInterpretation),
+        asOf
+      );
+    }
+  } catch {
+    // If projection fails, leave dashPeriodOptions undefined rather than failing the entire analysis
+    dashPeriodOptions = undefined;
+  }
+
   const status = deriveProductAnalysisStatus(career, wealth, warnings);
 
   return {
@@ -1135,6 +1239,8 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
     dasha,
     reasoning,
     ai,
-    warnings
+    warnings,
+    dashPeriodOptions
   };
 }
+
