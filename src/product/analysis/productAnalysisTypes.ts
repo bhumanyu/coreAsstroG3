@@ -438,6 +438,21 @@ export interface ProductSelectedPeriodSynthesis {
 }
 
 /**
+ * Selected-period result type for ProductAnalysis.
+ * Discriminated union distinguishing successful synthesis from various failure modes.
+ * A failed selection must not mark a valid natal analysis as error.
+ */
+export type ProductSelectedPeriodResult =
+  | {
+    readonly status: 'OK';
+    readonly synthesis: ProductSelectedPeriodSynthesis;
+  }
+  | {
+    readonly status: 'INVALID_SELECTION' | 'SYNTHESIS_FAILED' | 'UNAVAILABLE';
+    readonly error?: string;
+  };
+
+/**
  * Root Canonical ProductAnalysis Aggregate
  */
 export interface ProductAnalysis {
@@ -456,9 +471,10 @@ export interface ProductAnalysis {
   readonly ai: AiProductState;
   readonly warnings: readonly ProductWarning[];
   /**
-   * Optional selected-period synthesis.
-   * When present, contains the synthesis for a user-selected MD/AD period.
+   * Optional selected-period synthesis result.
+   * When present, contains either a successful synthesis or a typed failure.
    * Absence does NOT indicate an error - it means no selection was requested.
+   * Natal status is never downgraded by a failed selection.
    */
-  readonly selectedPeriod?: ProductSelectedPeriodSynthesis;
+  readonly selectedPeriod?: ProductSelectedPeriodResult;
 }

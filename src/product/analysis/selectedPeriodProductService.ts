@@ -15,7 +15,7 @@ import type { Horoscope } from '../../types';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { DomainEvidence } from '../../domain/interpretation/DomainEvidence';
-import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { CareerConclusionData, CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
   SelectedPeriodActivationContext,
@@ -56,28 +56,29 @@ export interface BuildProductSelectedPeriodSynthesisInput {
   readonly context: AnalysisContext;
   readonly temporalState: AnalysisTemporalState;
   readonly horoscope: Horoscope;
-  readonly careerArtifacts: {
-    readonly natal: any; // CareerNatalAnalysis
-    readonly expression: any; // CareerExpressionAnalysis
-    readonly canonicalExpression?: any; // CareerExpressionCanonicalResult
-    readonly mechanismCandidates?: readonly any[]; // CareerMechanismCandidate[]
-    readonly careerDashaEvidence: readonly DomainEvidence[];
-  };
+  readonly careerArtifacts: CareerInternalArtifacts;
   readonly careerEvidence: readonly DomainEvidence[];
   readonly careerDashaEvidence: readonly DomainEvidence[];
   readonly wealthEvidence: readonly DomainEvidence[];
-  readonly careerBaseline: CareerConclusionData;
-  readonly wealthBaseline: WealthConclusionData;
+  readonly careerBaseline?: CareerConclusionData;
+  readonly wealthBaseline?: WealthConclusionData;
 }
 
 /**
  * Result type for buildProductSelectedPeriodSynthesis.
  *
  * Discriminated union preserving each layer's error codes verbatim.
+ * Error codes are propagated directly from domain layers without wrapping:
+ * - CONTEXT stage: SelectedPeriodContextError (from createSelectedPeriodActivationContext)
+ * - CAREER stage: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' (from buildSelectedCareerDashaActivation)
+ * - WEALTH stage: 'INVALID_SELECTED_PERIOD_CONTEXT' (from evaluateSelectedWealthPeriodActivation)
+ * - SYNTHESIS stage: string error codes from buildSelectedPeriodSynthesis
+ *
+ * This policy ensures domain error codes are never silently replaced with generic wrappers.
  */
 export type BuildProductSelectedPeriodSynthesisResult =
-  | { readonly ok: true; readonly value: SelectedPeriodSynthesisResult<CareerConclusionData, WealthConclusionData>['value'] }
-  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'CAREER_ACTIVATION_FAILED' | 'WEALTH_ACTIVATION_FAILED' | 'SYNTHESIS_FAILED' };
+  | { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> }
+  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' | string };
 
 /**
  * Creates selected-period activation context.
@@ -96,11 +97,12 @@ function createSelectedPeriodActivationContextInternal(
 
 /**
  * Builds selected Career Dasha activation.
+ * Propagates domain error codes verbatim.
  */
 function buildSelectedCareerDashaActivationInternal(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext
-): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly error: 'CAREER_ACTIVATION_FAILED' } {
+): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' } {
   const { careerArtifacts, horoscope } = input;
   const result = buildSelectedCareerDashaActivation({
     horoscope,
@@ -112,7 +114,8 @@ function buildSelectedCareerDashaActivationInternal(
   });
 
   if (!result.ok) {
-    return { ok: false, error: 'CAREER_ACTIVATION_FAILED' };
+    // Propagate the actual domain error code verbatim
+    return { ok: false, error: result.error };
   }
 
   return { ok: true, value: result.value };
@@ -120,11 +123,12 @@ function buildSelectedCareerDashaActivationInternal(
 
 /**
  * Evaluates selected Wealth period activation.
+ * Propagates domain error codes verbatim.
  */
 function evaluateSelectedWealthPeriodActivationInternal(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext
-): { readonly ok: true; readonly value: SelectedWealthPeriodActivation } | { readonly ok: false; readonly error: 'WEALTH_ACTIVATION_FAILED' } {
+): { readonly ok: true; readonly value: SelectedWealthPeriodActivation } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' } {
   const { wealthEvidence } = input;
   const result = evaluateSelectedWealthPeriodActivation({
     selectedPeriod,
@@ -132,7 +136,8 @@ function evaluateSelectedWealthPeriodActivationInternal(
   });
 
   if (!result.ok) {
-    return { ok: false, error: 'WEALTH_ACTIVATION_FAILED' };
+    // Propagate the actual domain error code verbatim
+    return { ok: false, error: result.error };
   }
 
   return { ok: true, value: result.value };
@@ -140,13 +145,14 @@ function evaluateSelectedWealthPeriodActivationInternal(
 
 /**
  * Builds selected-period synthesis (internal wrapper).
+ * Propagates domain error codes verbatim.
  */
 function buildSelectedPeriodSynthesisWrapper(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext,
   careerActivation: SelectedCareerDashaActivationSuccess | undefined,
   wealthActivation: SelectedWealthPeriodActivation | undefined
-): { readonly ok: true; readonly value: SelectedPeriodSynthesisResult<CareerConclusionData, WealthConclusionData>['value'] } | { readonly ok: false; readonly error: 'SYNTHESIS_FAILED' } {
+): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;
   const result = buildSelectedPeriodSynthesis({
     selectedPeriod,
@@ -160,7 +166,8 @@ function buildSelectedPeriodSynthesisWrapper(
   });
 
   if (!result.ok) {
-    return { ok: false, error: 'SYNTHESIS_FAILED' };
+    // Propagate the actual domain error code verbatim
+    return { ok: false, error: result.error };
   }
 
   return { ok: true, value: result.value };

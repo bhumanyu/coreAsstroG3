@@ -54,6 +54,8 @@ import type {
   ProductSynthesisWealthDimensionRow
 } from './productAnalysisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type {
   SelectedPeriodSynthesisValue
 } from '../../domain/synthesis/selectedPeriodSynthesis';
@@ -939,7 +941,7 @@ export function buildFailedProductAnalysis(
  * - No flattening RULE refs into evidence
  */
 export function mapSelectedPeriodSynthesis(
-  value: SelectedPeriodSynthesisValue<any, any>
+  value: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>
 ): ProductSelectedPeriodSynthesis {
   // Map evidence references verbatim
   const evidence: readonly ProductSynthesisEvidenceReference[] = Object.freeze(

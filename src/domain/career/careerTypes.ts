@@ -120,6 +120,20 @@ export interface CareerEvidenceClassification {
   readonly modifiers: readonly DomainEvidence[];
 }
 
+/**
+ * PBA-07: Internal canonical artifacts for selected-period synthesis.
+ * Internal-only type for passing already-computed canonical artifacts to the selected-period builder.
+ * Never mapped into ProductAnalysis directly - used only for projection into ProductSelectedPeriodSynthesis.
+ * Reused in LifeAnalysisProductState.careerArtifacts and BuildProductSelectedPeriodSynthesisInput.careerArtifacts.
+ */
+export interface CareerInternalArtifacts {
+  readonly natal: CareerNatalAnalysis;
+  readonly expression: CareerExpressionAnalysis;
+  readonly canonicalExpression?: CareerExpressionCanonicalResult;
+  readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
+  readonly careerDashaEvidence: readonly DomainEvidence[];
+}
+
 export interface CareerConclusionData {
   readonly natalStatus: DomainStrength;
   readonly currentActivation: 'ACTIVE' | 'PARTIALLY_ACTIVE' | 'INACTIVE' | 'STRONG' | 'MODERATE' | 'LOW' | 'INSUFFICIENT_DATA' | 'UNKNOWN';
@@ -185,11 +199,5 @@ export interface CareerConclusionData {
    * Internal-only field for passing already-computed canonical artifacts to the selected-period builder.
    * Never mapped into ProductAnalysis directly - used only for projection into ProductSelectedPeriodSynthesis.
    */
-  readonly internalArtifacts?: {
-    readonly natal: CareerNatalAnalysis;
-    readonly expression: CareerExpressionAnalysis;
-    readonly canonicalExpression?: CareerExpressionCanonicalResult;
-    readonly mechanismCandidates?: readonly CareerMechanismCandidate[];
-    readonly careerDashaEvidence: readonly DomainEvidence[];
-  };
+  readonly internalArtifacts?: CareerInternalArtifacts;
 }

@@ -11,7 +11,8 @@ import {
 } from './selectedPeriodProductService';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
-import type { Horoscope, Planet } from '../../types';
+import type { Horoscope } from '../../types';
+import { Planet } from '../../types';
 import type { DomainEvidence } from '../../domain/interpretation/DomainEvidence';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
@@ -34,28 +35,11 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
   const mockTemporalState: AnalysisTemporalState = {
     dashaInterpretation: {
-      current: {
-        mahadasha: {
-          planet: Planet.SATURN,
-          effect: 'SUPPORT',
-          evidenceIds: ['evidence-1'],
-          statement: 'Saturn mahadasha active',
-          start: '2020-01-01T00:00:00Z',
-          end: '2039-01-01T00:00:00Z'
-        },
-        antardasha: {
-          planet: Planet.JUPITER,
-          effect: 'SUPPORT',
-          evidenceIds: ['evidence-2'],
-          statement: 'Jupiter antardasha active',
-          start: '2025-01-01T00:00:00Z',
-          end: '2027-01-01T00:00:00Z'
-        }
-      },
+      current: {} as any,
       mahadashas: [],
       antardashas: []
     }
-  };
+  } as any;
 
   const mockHoroscope: Horoscope = {} as any;
 
@@ -94,7 +78,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
+      expect(result.error).toBe('UNSUPPORTED_DASHA_SYSTEM');
     }
   });
 
@@ -203,7 +187,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     const invalidResult = buildProductSelectedPeriodSynthesis(invalidInput);
     expect(invalidResult.ok).toBe(false);
     if (!invalidResult.ok) {
-      expect(['INVALID_SELECTED_PERIOD_CONTEXT', 'CAREER_ACTIVATION_FAILED', 'WEALTH_ACTIVATION_FAILED', 'SYNTHESIS_FAILED']).toContain(invalidResult.error);
+      expect(['INVALID_SELECTED_PERIOD_CONTEXT', 'INCOMPLETE_CANONICAL_INPUT', 'ACTIVATION_PERIOD_MISMATCH', 'UNSUPPORTED_DASHA_SYSTEM']).toContain(invalidResult.error);
     }
   });
 

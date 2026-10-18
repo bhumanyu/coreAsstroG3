@@ -22,6 +22,7 @@ import type { CareerManifestationSynthesis } from '../../domain/career/manifesta
 import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerInternalArtifacts } from '../../domain/career/careerTypes';
 import type { AiExplanationResult } from '../../ai';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
@@ -273,11 +274,5 @@ export interface LifeAnalysisProductState {
    * Internal-only field for passing already-computed canonical artifacts to the selected-period builder.
    * Never mapped into ProductAnalysis directly - used only for projection into ProductSelectedPeriodSynthesis.
    */
-  readonly careerArtifacts?: {
-    readonly natal: import('../../domain/career/careerNatalAnalysis').CareerNatalAnalysis;
-    readonly expression: import('../../domain/career/careerExpression').CareerExpressionAnalysis;
-    readonly canonicalExpression?: import('../../domain/career/careerExpression/careerExpressionTypes').CareerExpressionCanonicalResult;
-    readonly mechanismCandidates?: readonly import('../../domain/career/careerMechanism/careerMechanismTypes').CareerMechanismCandidate[];
-    readonly careerDashaEvidence: readonly DomainEvidence[];
-  };
+  readonly careerArtifacts?: CareerInternalArtifacts;
 }
