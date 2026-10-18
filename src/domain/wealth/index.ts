@@ -9,3 +9,4 @@ export * from './wealthConfidence';
 export * from './WealthDomainInterpreterV2';
 export * from './WealthDomainInterpreter';
 export * from './wealth-v2-golden.fixture';
+export * from './selectedWealthDashaActivation';
