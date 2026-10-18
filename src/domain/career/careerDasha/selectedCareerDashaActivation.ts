@@ -41,6 +41,10 @@ import type {
   SelectedPeriodActivationContext
 } from '../../../core/analysis';
 
+import {
+  validateSelectedPeriodContext
+} from '../../../core/analysis';
+
 import type {
   DashaMahadashaInterpretation,
   DashaAntardashaInterpretation
@@ -55,8 +59,7 @@ import {
 } from '../../../types';
 
 import {
-  buildSelectedCareerDashaCanonicalAnalysis,
-  validateSelectedPeriodContext
+  buildSelectedCareerDashaCanonicalAnalysis
 } from './careerDashaIntegration';
 
 /**

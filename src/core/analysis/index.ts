@@ -29,6 +29,7 @@ export {
 } from './selectedMdAdPeriod';
 export {
   createSelectedPeriodActivationContext,
+  validateSelectedPeriodContext,
   SELECTED_PERIOD_CONTEXT_VERSION,
   type SelectedPeriodActivationContext,
   type SelectedPeriodActivationContextResult,

@@ -24,7 +24,8 @@ export type SelectedPeriodTemporalRelation = 'PAST' | 'CURRENT' | 'FUTURE';
 
 export type SelectedPeriodContextError =
   | ResolutionError
-  | 'INVALID_ANALYSIS_AS_OF';
+  | 'INVALID_ANALYSIS_AS_OF'
+  | 'INVALID_SELECTED_PERIOD_CONTEXT';
 
 export interface SelectedPeriodActivationContext {
   readonly contextVersion: typeof SELECTED_PERIOD_CONTEXT_VERSION;
@@ -188,4 +189,101 @@ export function createSelectedPeriodActivationContext(
   };
 
   return { ok: true, value: Object.freeze(value) };
+}
+
+/**
+ * Validates selected-period context consistency.
+ *
+ * Verifies:
+ * - ctx.dashaSystem === VIMSHOTTARI
+ * - ctx.level === 'MD_AD'
+ * - ctx.intervalSemantics === '[start,end)'
+ * - ctx.mahadasha.planet/start/end equal mahadashaNode.planet/start/end
+ * - ctx.antardasha.planet/start/end equal antardashaNode.planet/start/end
+ * - ctx.interval equals {antardashaNode.start, antardashaNode.end}
+ * - ctx.antardasha.mahadashaId === ctx.mahadasha.id
+ * - interval.start < interval.end (parsed)
+ * - AD interval contained in MD interval
+ *
+ * On any mismatch, returns false.
+ * Never substitutes current-Dasha data on mismatch.
+ *
+ * @param ctx - The selected period activation context to validate
+ * @returns true if valid, false if invalid
+ */
+export function validateSelectedPeriodContext(
+  ctx: SelectedPeriodActivationContext
+): boolean {
+  // Verify dasha system
+  if (ctx.dashaSystem !== DashaSystem.VIMSHOTTARI) {
+    return false;
+  }
+
+  // Verify level
+  if (ctx.level !== 'MD_AD') {
+    return false;
+  }
+
+  // Verify interval semantics
+  if (ctx.intervalSemantics !== '[start,end)') {
+    return false;
+  }
+
+  // Verify mahadasha consistency between context and node
+  if (ctx.mahadasha.planet !== ctx.mahadashaNode.planet) {
+    return false;
+  }
+  if (ctx.mahadasha.start !== ctx.mahadashaNode.start) {
+    return false;
+  }
+  if (ctx.mahadasha.end !== ctx.mahadashaNode.end) {
+    return false;
+  }
+
+  // Verify antardasha consistency between context and node
+  if (ctx.antardasha.planet !== ctx.antardashaNode.planet) {
+    return false;
+  }
+  if (ctx.antardasha.start !== ctx.antardashaNode.start) {
+    return false;
+  }
+  if (ctx.antardasha.end !== ctx.antardashaNode.end) {
+    return false;
+  }
+
+  // Verify antardasha mahadashaId matches mahadasha id
+  if (ctx.antardasha.mahadashaId !== ctx.mahadasha.id) {
+    return false;
+  }
+
+  // Verify interval matches antardasha node
+  if (ctx.interval.start !== ctx.antardashaNode.start) {
+    return false;
+  }
+  if (ctx.interval.end !== ctx.antardashaNode.end) {
+    return false;
+  }
+
+  // Parse and verify interval ordering
+  const startMs = Date.parse(ctx.interval.start);
+  const endMs = Date.parse(ctx.interval.end);
+  const mdStartMs = Date.parse(ctx.mahadasha.start);
+  const mdEndMs = Date.parse(ctx.mahadasha.end);
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || Number.isNaN(mdStartMs) || Number.isNaN(mdEndMs)) {
+    return false;
+  }
+
+  // Verify start < end
+  if (startMs >= endMs) {
+    return false;
+  }
+
+  // Verify AD interval contained in MD interval
+  if (startMs < mdStartMs || endMs > mdEndMs) {
+    return false;
+  }
+
+  // All checks passed
+  return true;
 }

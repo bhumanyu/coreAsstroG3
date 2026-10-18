@@ -6,7 +6,7 @@ import type {
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import type { TimingActivationEffect } from '../interpretation/DomainInterpretationTypes';
-import { validateSelectedPeriodContext } from '../career/careerDasha/careerDashaIntegration';
+import { validateSelectedPeriodContext } from '../../core/analysis';
 import { WEALTH_DIMENSION_HOUSES, type WealthDimension } from './wealthTypes';
 
 /**
@@ -21,6 +21,10 @@ export interface SelectedWealthDashaRuleReference {
 
 /**
  * Per-dimension activation result for selected period.
+ *
+ * Effect semantics:
+ * - MIXED evidence from dasha rules is collapsed to PARTIALLY_ACTIVATES (partial activation, not unresolved)
+ * - Individual rule provenance is preserved in dashaRuleReferences for traceability
  */
 export interface SelectedWealthDimensionActivation {
   readonly dimension: WealthDimension;
@@ -64,7 +68,7 @@ export interface EvaluateSelectedWealthPeriodActivationInput {
  */
 export type EvaluateSelectedWealthPeriodActivationResult =
   | { readonly ok: true; readonly value: SelectedWealthPeriodActivation }
-  | { readonly ok: false; readonly error: string };
+  | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' };
 
 type DashaEvidenceWithLevel = {
   readonly level: 'MD' | 'AD';
@@ -123,12 +127,13 @@ function extractSelectedDashaEvidence(
 }
 
 /**
- * Checks if dasha evidence links to a dimension via house or planet overlap.
+ * Checks if dasha evidence links to a dimension via house match.
  *
  * Linkage rules:
  * - Explicit house match via DashaInterpretationEvidence.houses to the actual house of promise evidence
  *   (not the dimension's canonical house if evidence has conflicting house)
- * - Planet overlap between evidence.planets and natal promise planets
+ * - Planet overlap is NOT sufficient alone; must also share a house to establish linkage
+ *   (prevents spurious cross-dimension activation via planetary overlap alone)
  */
 function isLinkedToDimension(
   dashaEvidence: DashaInterpretationEvidence,
@@ -143,14 +148,8 @@ function isLinkedToDimension(
     }
   }
 
-  // Planet overlap with natal promise
-  const promisePlanets = new Set(
-    promiseEvidence.flatMap((item) => (item.planet ? [item.planet] : []))
-  );
-  if (promisePlanets.size > 0) {
-    return dashaEvidence.planets.some((planet) => promisePlanets.has(planet));
-  }
-
+  // Planet overlap alone is NOT sufficient for linkage
+  // This prevents spurious activation when dasha evidence shares a planet but targets different houses
   return false;
 }
 
@@ -161,8 +160,11 @@ function isLinkedToDimension(
  * - No evidence → INSUFFICIENT_DATA
  * - Neutral-only → UNKNOWN
  * - Support + challenge or MIXED → PARTIALLY_ACTIVATES
+ *   (MIXED is collapsed to PARTIALLY_ACTIVATES - partial activation, not unresolved)
  * - Support only → ACTIVATES
  * - Challenge only → CHALLENGES
+ *
+ * Individual rule provenance is preserved in dashaRuleReferences for traceability.
  */
 function resolveEffect(evidence: readonly DashaInterpretationEvidence[]): TimingActivationEffect {
   if (evidence.length === 0) {
@@ -316,7 +318,7 @@ export function evaluateSelectedWealthPeriodActivation(
   if (!validateSelectedPeriodContext(selectedPeriod)) {
     return {
       ok: false,
-      error: 'Selected period context validation failed: nodes/metadata/interval mismatch'
+      error: 'INVALID_SELECTED_PERIOD_CONTEXT'
     };
   }
 

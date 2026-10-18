@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { Planet } from '../../types';
+import { Planet, DashaSystem } from '../../types';
 import type { SelectedPeriodActivationContext } from '../../core/analysis';
 import type {
   DashaAntardashaInterpretation,
   DashaInterpretationEvidence,
-  DashaMahadashaInterpretation
+  DashaMahadashaInterpretation,
+  DashaInterpretationReport
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { createDomainEvidence } from '../interpretation/DomainEvidence';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import { evaluateSelectedWealthPeriodActivation } from './selectedWealthDashaActivation';
+import {
+  createSelectedPeriodActivationContext,
+  listSelectableMdAdPeriods
+} from '../../core/analysis';
 
 function dashaEvidence(
   ruleId: string,
@@ -199,6 +204,32 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.ACCUMULATION.effect).toBe('PARTIALLY_ACTIVATES');
   });
 
+  it('collapses SUPPORT + MIXED to PARTIALLY_ACTIVATES with both ruleIds preserved', () => {
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext([
+        dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2]),
+        dashaEvidence('MD_2H_MIXED', 'MIXED', [2])
+      ]),
+      wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // MIXED is collapsed to PARTIALLY_ACTIVATES
+    expect(result.value.dimensions.ACCUMULATION.effect).toBe('PARTIALLY_ACTIVATES');
+
+    // Both rule IDs should be preserved in references
+    expect(result.value.dimensions.ACCUMULATION.dashaRuleReferences).toHaveLength(2);
+    expect(result.value.dimensions.ACCUMULATION.dashaRuleReferences.some((ref) => ref.ruleId === 'MD_2H_SUPPORT')).toBe(true);
+    expect(result.value.dimensions.ACCUMULATION.dashaRuleReferences.some((ref) => ref.ruleId === 'MD_2H_MIXED')).toBe(true);
+
+    // Per-level references should also preserve both rules
+    expect(result.value.dimensions.ACCUMULATION.md.dashaRuleReferences).toHaveLength(2);
+    expect(result.value.dimensions.ACCUMULATION.md.dashaRuleReferences.some((ref) => ref.ruleId === 'MD_2H_SUPPORT')).toBe(true);
+    expect(result.value.dimensions.ACCUMULATION.md.dashaRuleReferences.some((ref) => ref.ruleId === 'MD_2H_MIXED')).toBe(true);
+  });
+
   it('correctly tracks per-level linkage (MD and AD)', () => {
     const result = evaluateSelectedWealthPeriodActivation({
       selectedPeriod: makeContext(
@@ -215,6 +246,15 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.ACCUMULATION.md.effect).toBe('ACTIVATES');
     expect(result.value.dimensions.ACCUMULATION.ad.effect).toBe('CHALLENGES');
     expect(result.value.dimensions.ACCUMULATION.effect).toBe('PARTIALLY_ACTIVATES');
+
+    // Assert MD- and AD-level provenance are preserved
+    expect(result.value.dimensions.ACCUMULATION.md.dashaRuleReferences).toHaveLength(1);
+    expect(result.value.dimensions.ACCUMULATION.md.dashaRuleReferences[0].ruleId).toBe('MD_2H_SUPPORT');
+    expect(result.value.dimensions.ACCUMULATION.md.dashaRuleReferences[0].level).toBe('MD');
+
+    expect(result.value.dimensions.ACCUMULATION.ad.dashaRuleReferences).toHaveLength(1);
+    expect(result.value.dimensions.ACCUMULATION.ad.dashaRuleReferences[0].ruleId).toBe('AD_2H_CHALLENGE');
+    expect(result.value.dimensions.ACCUMULATION.ad.dashaRuleReferences[0].level).toBe('AD');
   });
 
   it('resolves dimension-vs-house conflict: explicit dimension wins', () => {
@@ -246,6 +286,10 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     // Should match ACCUMULATION via explicit dimension, not GAINS via house
     expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA'); // No 2H linkage
     expect(result.value.dimensions.GAINS.effect).toBe('INSUFFICIENT_DATA'); // Explicit dimension is ACCUMULATION
+
+    // Assert exact promiseEvidenceIds
+    expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toContain('CONFLICTING');
+    expect(result.value.dimensions.GAINS.promiseEvidenceIds).toEqual([]);
   });
 
   it('does not mutate the selected context or Wealth evidence', () => {
@@ -300,9 +344,11 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toContain('HOUSE_FALLBACK');
   });
 
-  it('links via planet overlap with natal promise', () => {
+  it('links via house match even when planets also overlap', () => {
+    // Dasha evidence targets house 2 AND includes Saturn
+    // Promise is in house 2 with Saturn - should link via house
     const result = evaluateSelectedWealthPeriodActivation({
-      selectedPeriod: makeContext([dashaEvidence('MD_PLANET_SATURN', 'SUPPORT', [], [Planet.SATURN])]),
+      selectedPeriod: makeContext([dashaEvidence('MD_2H_SATURN', 'SUPPORT', [2], [Planet.SATURN])]),
       wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
     });
 
@@ -339,7 +385,161 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error).toContain('validation failed');
+      expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
+    }
+  });
+
+  it('does not link via planet overlap alone (houses must match)', () => {
+    // Dasha evidence shares Saturn planet but targets house 9 (FORTUNE house)
+    // while ACCUMULATION promise is in house 2
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext([dashaEvidence('AD_9H_SATURN', 'SUPPORT', [9], [Planet.SATURN])]),
+      wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // Should NOT activate ACCUMULATION - planet overlap alone is insufficient
+    expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('does not link cross-dimension via planet overlap alone', () => {
+    // ACCUMULATION promise has Saturn in house 2
+    // AD evidence lists Saturn but targets house 11 (GAINS house)
+    // Should not link ACCUMULATION via planet overlap (wrong house)
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext([dashaEvidence('AD_11H_SATURN', 'SUPPORT', [11], [Planet.SATURN])]),
+      wealthEvidence: [
+        promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN),
+        promise('NATAL_GAINS', 'GAINS', 11, Planet.JUPITER)
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // ACCUMULATION should not activate (planet overlap alone, wrong house)
+    expect(result.value.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+    // GAINS should activate via house match (house 11), regardless of planet
+    expect(result.value.dimensions.GAINS.effect).toBe('ACTIVATES');
+  });
+
+  it('accepts genuine SelectedPeriodActivationContext from PBA-03 factory', () => {
+    // Build a minimal DashaInterpretationReport
+    const report: DashaInterpretationReport = {
+      system: DashaSystem.VIMSHOTTARI,
+      birthAnchor: {
+        nakshatra: 'Pushya',
+        nakshatraLord: Planet.SATURN,
+        nakshatraProgress: 0.5,
+        remainingFraction: 0.5
+      },
+      confidence: 'HIGH',
+      mahadashas: [
+        {
+          planet: Planet.SATURN,
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2039-01-01T00:00:00.000Z',
+          antardashas: [
+            {
+              planet: Planet.MERCURY,
+              start: '2025-01-01T00:00:00.000Z',
+              end: '2027-01-01T00:00:00.000Z',
+              evidence: [dashaEvidence('AD_2H_SUPPORT', 'SUPPORT', [2])]
+            }
+          ],
+          evidence: [dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]
+        }
+      ]
+    } as unknown as DashaInterpretationReport;
+
+    // List selectable periods
+    const selectable = listSelectableMdAdPeriods(report);
+    expect(selectable.mahadashas).toHaveLength(1);
+    expect(selectable.antardashas).toHaveLength(1);
+
+    // Create context via PBA-03 factory
+    const contextResult = createSelectedPeriodActivationContext({
+      report,
+      selection: {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      },
+      analysisAsOf: '2026-01-01T00:00:00.000Z'
+    });
+
+    expect(contextResult.ok).toBe(true);
+    if (!contextResult.ok) return;
+
+    // Evaluate with genuine context
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: contextResult.value,
+      wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value.dimensions.ACCUMULATION.effect).toBe('ACTIVATES');
+  });
+
+  it('rejects malformed context with interval mismatch', () => {
+    // Build a valid context
+    const report: DashaInterpretationReport = {
+      system: DashaSystem.VIMSHOTTARI,
+      birthAnchor: {
+        nakshatra: 'Pushya',
+        nakshatraLord: Planet.SATURN,
+        nakshatraProgress: 0.5,
+        remainingFraction: 0.5
+      },
+      confidence: 'HIGH',
+      mahadashas: [
+        {
+          planet: Planet.SATURN,
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2039-01-01T00:00:00.000Z',
+          antardashas: [
+            {
+              planet: Planet.MERCURY,
+              start: '2025-01-01T00:00:00.000Z',
+              end: '2027-01-01T00:00:00.000Z',
+              evidence: []
+            }
+          ],
+          evidence: []
+        }
+      ]
+    } as unknown as DashaInterpretationReport;
+
+    const selectable = listSelectableMdAdPeriods(report);
+    const contextResult = createSelectedPeriodActivationContext({
+      report,
+      selection: {
+        mahadashaId: selectable.mahadashas[0].id,
+        antardashaId: selectable.antardashas[0].id
+      },
+      analysisAsOf: '2026-01-01T00:00:00.000Z'
+    });
+
+    expect(contextResult.ok).toBe(true);
+    if (!contextResult.ok) return;
+
+    // Corrupt the interval to mismatch AD node
+    const malformedContext = {
+      ...contextResult.value,
+      interval: { start: '2020-01-01T00:00:00.000Z', end: '2021-01-01T00:00:00.000Z' }
+    } as SelectedPeriodActivationContext;
+
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: malformedContext,
+      wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
     }
   });
 });
