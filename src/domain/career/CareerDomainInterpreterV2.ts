@@ -307,6 +307,24 @@ export function interpretCareerV2(
   // This is needed to collect mechanism candidate IDs and expression evidence provenance IDs
   const canonicalMechanismExpressionResult = mechanismExpressionResult;
 
+  /**
+   * PBA-07: Selected-Period Builder Wiring (API-Only Status)
+   *
+   * The selected-period builder (buildSelectedCareerDashaActivation) is NOT currently called
+   * in the production path. The following inputs are prepared for future wiring when PBA-07
+   * integrates the selected-period feature:
+   *
+   * - mechanismExpressionResult: CareerExpressionCanonicalResult (canonical C8 result)
+   * - careerMechanismCandidates: readonly CareerMechanismCandidate[] (from canonical foundation)
+   *
+   * When the selected-period builder is added to production, it should be called behind the same
+   * fail-closed pattern as the profession engine: errors → typed diagnostic, never break C11.
+   *
+   * The selected-period builder requires a SelectedPeriodActivationContext (from PBA-03) which
+   * is not currently available in the production C11 synthesis path. PBA-07 owns the integration
+   * of this context and the production wiring of the selected-period builder.
+   */
+
   const canonicalDashaAnalysis = buildCareerDashaAnalysis({
     horoscope,
     natal: canonicalNatalAnalysis,

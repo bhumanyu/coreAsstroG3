@@ -69,9 +69,14 @@ import {
  * (or mechanism participant planets) includes the selected MD planet or AD planet.
  *
  * Per-level linkage: MD and AD evidence IDs are tracked separately.
- * - mdDashaEvidenceIds: C9 canonical evidence IDs where level === 'MD'
- * - adDashaEvidenceIds: C9 canonical evidence IDs where level === 'AD'
+ * - mdDashaEvidenceIds: C9 canonical evidence IDs where level === 'MD' (all C9 MD evidence, not planet-specific attribution)
+ * - adDashaEvidenceIds: C9 canonical evidence IDs where level === 'AD' (all C9 AD evidence, not planet-specific attribution)
  * - linkedLevels: Which levels this expression is actually linked to (authoritative)
+ *
+ * EVIDENCE ATTRIBUTION SCOPE:
+ * The mdDashaEvidenceIds and adDashaEvidenceIds arrays contain ALL C9 evidence for the linked level
+ * (MD or AD), not evidence filtered to match the specific planet that triggered the linkage.
+ * This is documented contract: evidence IDs are level-scoped, not planet-scoped.
  */
 export interface SelectedExpressionActivation {
   /**
@@ -123,7 +128,7 @@ export interface SelectedExpressionActivation {
  */
 export type SelectedCareerDashaActivationResult =
   | { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess }
-  | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' };
+  | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' };
 
 /**
  * Success result of building selected Career Dasha activation.
@@ -195,6 +200,7 @@ export interface SelectedCareerDashaActivationSuccess {
  *
  * This function:
  * - Validates selected-period context consistency (P1)
+ * - Rejects inconsistent canonical inputs (both canonicalExpression and mechanismCandidates must be present or both absent)
  * - Builds canonical Dasha analysis for the selected period using buildSelectedCareerDashaCanonicalAnalysis
  * - Extracts MD/AD canonical periods and their evidence
  * - Links expressions to the selected activation based on semantic planet linkage (P1)
@@ -203,6 +209,13 @@ export interface SelectedCareerDashaActivationSuccess {
  * - Reports unmatched expression evidence IDs (planet-based linkage)
  * - Returns a frozen result with all linkage information
  * - Includes selectedDashaInterpretation with read-only node references (P2)
+ *
+ * EXPRESSION SOURCE CONTRACT:
+ * - Rows are built from the caller's expression.expressions in both paths (canonical and proxy)
+ * - In the canonical path: caller's expressions are filtered by matching to QUALIFIED canonical candidates
+ *   - Matching uses evidence ID intersection: expression.supportingEvidenceIds ∩ candidate.evidence[].evidenceId
+ *   - If no reliable mapping exists, the adapter-derived expressions are used (documented in expressionRefKey)
+ * - In the proxy path: caller's expressions are filtered by expr.direction !== 'UNAVAILABLE'
  *
  * Guardrails enforced:
  * - No new expressions created
@@ -232,6 +245,13 @@ export function buildSelectedCareerDashaActivation(params: {
   const isValid = validateSelectedPeriodContext(selectedPeriod);
   if (!isValid) {
     return { ok: false, error: 'INVALID_SELECTED_PERIOD_CONTEXT' };
+  }
+
+  // Reject inconsistent canonical inputs: if exactly one of canonicalExpression/mechanismCandidates is supplied
+  const hasCanonicalExpression = canonicalExpression !== undefined;
+  const hasMechanismCandidates = mechanismCandidates !== undefined && mechanismCandidates.length > 0;
+  if (hasCanonicalExpression !== hasMechanismCandidates) {
+    return { ok: false, error: 'INCOMPLETE_CANONICAL_INPUT' };
   }
 
   // Build canonical Dasha analysis for the selected period
@@ -282,16 +302,41 @@ export function buildSelectedCareerDashaActivation(params: {
       candidate => candidate.qualificationStatus === 'QUALIFIED'
     );
 
-    // Map canonical candidates to legacy expressions using the adapter
-    const canonicalResult: CareerExpressionCanonicalResult = {
-      ...canonicalExpression,
-      expressions: qualifiedCanonicalCandidates
-    };
-    const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
-    qualifiedExpressions = [...legacyAnalysis.expressions];
+    // Build a set of all evidence IDs from QUALIFIED canonical candidates for matching
+    const qualifiedCanonicalEvidenceIds = new Set<string>();
+    for (const candidate of qualifiedCanonicalCandidates) {
+      for (const evidence of candidate.evidence) {
+        qualifiedCanonicalEvidenceIds.add(evidence.evidenceId);
+      }
+    }
+
+    // Filter caller's expressions by matching to QUALIFIED canonical candidates
+    // Match via evidence ID intersection: expression.supportingEvidenceIds ∩ candidate.evidence[].evidenceId
+    const matchedCallerExpressions = expression.expressions.filter(expr => {
+      // Check if any of the expression's supporting evidence IDs match canonical evidence IDs
+      return expr.supportingEvidenceIds.some(id => qualifiedCanonicalEvidenceIds.has(id));
+    });
+
+    // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
+    // This is documented in expressionRefKey below
+    if (matchedCallerExpressions.length > 0) {
+      qualifiedExpressions = matchedCallerExpressions;
+    } else {
+      // No reliable mapping to caller's expressions - use adapter-derived expressions as fallback
+      const canonicalResult: CareerExpressionCanonicalResult = {
+        ...canonicalExpression,
+        expressions: qualifiedCanonicalCandidates
+      };
+      const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
+      qualifiedExpressions = [...legacyAnalysis.expressions];
+    }
+
     qualificationBasis = 'CANONICAL_STATUS';
   } else {
     // Use interim conservative proxy: expr.direction !== 'UNAVAILABLE'
+    // TEMPORARY COMPATIBILITY PATH: Used when both canonicalExpression and mechanismCandidates are absent.
+    // This is a fallback for backward compatibility; production callers should provide both inputs
+    // to use the authoritative CANONICAL_STATUS qualification basis.
     qualifiedExpressions = [...expression.expressions.filter(expr => expr.direction !== 'UNAVAILABLE')];
     qualificationBasis = 'PROXY_DIRECTION';
   }
@@ -343,6 +388,9 @@ export function buildSelectedCareerDashaActivation(params: {
       }
 
       // Build expressionRefKey: mode:direction: + sorted expression evidence IDs
+      // JSDoc: not a durable identity, just a deterministic local reference.
+      // Note: If adapter-derived expressions are used (no reliable mapping to caller's expressions),
+      // this key references the adapter's re-derived expressions, not the caller's original expressions.
       const expressionRefKey = `${expr.mode}:${expr.direction}:${sortedExprEvidenceIds.join(',')}`;
 
       expressionActivations.push(Object.freeze({
