@@ -1,9 +1,10 @@
 import React from 'react';
-import { OverallSynthesisSection as OverallSynthesisSectionType, SynthesisObservation } from '../../types';
+import { OverallSynthesisSection as OverallSynthesisSectionType } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
 import { formatLifeThemeLabel, formatConfidence } from './reportUtils';
-import { Award, AlertTriangle, Scale, Clock, RefreshCw, Eye, Sparkles } from 'lucide-react';
+import { Award, AlertTriangle, Scale, Clock, RefreshCw, Sparkles } from 'lucide-react';
+import { ObservationAccordion, SectionAccordion } from './ObservationAccordion';
 
 interface OverallSynthesisSectionProps {
   readonly section: OverallSynthesisSectionType;
@@ -118,25 +119,18 @@ export const OverallSynthesisSection: React.FC<OverallSynthesisSectionProps> = (
 
       {/* Observations */}
       {section.keyObservations && section.keyObservations.length > 0 && (
-        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3">
-          <h4 className="text-xs font-mono-code font-bold uppercase text-indigo-400 flex items-center gap-1.5">
-            <Eye className="w-4 h-4" /> Overall Synthesis Observations ({section.keyObservations.length})
-          </h4>
-          <div className="space-y-2">
-            {section.keyObservations.map((obs: SynthesisObservation, idx: number) => (
-              <div key={idx} className="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-200 font-serif-astro">{obs.summary}</span>
-                  {obs.type && (
-                    <span className="text-[10px] font-mono-code text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 uppercase">
-                      {obs.type}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SectionAccordion title="Overall Synthesis Observations" count={section.keyObservations.length}>
+          {section.keyObservations.map((observation, index) => {
+            const observationKey = observation.id || String(index);
+            return (
+              <ObservationAccordion
+                key={observationKey}
+                observation={observation}
+                observationKey={observationKey}
+              />
+            );
+          })}
+        </SectionAccordion>
       )}
     </div>
   );
