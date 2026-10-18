@@ -12,9 +12,7 @@ import type {
 } from '../career/careerDasha/selectedCareerDashaActivation';
 
 import type {
-  SelectedWealthPeriodActivation,
-  SelectedWealthDimensionActivation,
-  SelectedWealthDashaRuleReference
+  SelectedWealthPeriodActivation
 } from '../wealth/selectedWealthDashaActivation';
 
 import type {
@@ -57,6 +55,11 @@ export interface BuildSelectedPeriodSynthesisInput<TCareerBaseline, TWealthBasel
  *
  * Classification is based on explicit source polarity/effect only.
  * Mixed evidence stays MIXED (maps to PARTIALLY_ACTIVATES in status).
+ *
+ * Provenance tracking:
+ * - stage: Distinguishes high-level domain (CAREER/WEALTH)
+ * - provenanceStage: For CAREER, distinguishes source stage (EXPRESSION/QUALIFICATION/ACTIVATION)
+ * - referenceKind: Distinguishes evidence-based vs rule-based references (EVIDENCE/RULE)
  */
 export interface SynthesisEvidenceReference {
   readonly classification: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL' | 'MIXED' | 'UNRESOLVED';
@@ -67,6 +70,8 @@ export interface SynthesisEvidenceReference {
   readonly source?: string;
   readonly ruleId?: string;
   readonly stage: 'CAREER' | 'WEALTH';
+  readonly provenanceStage?: 'CAREER_EXPRESSION' | 'CAREER_QUALIFICATION' | 'CAREER_ACTIVATION' | 'WEALTH_NATAL_PROMISE' | 'WEALTH_DASHA_RULE';
+  readonly referenceKind?: 'EVIDENCE' | 'RULE';
 }
 
 /**
@@ -85,7 +90,7 @@ export interface SynthesisProvenance {
   readonly career: {
     readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
     readonly version?: string;
-    readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+    readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   };
   readonly wealth: {
     readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
@@ -97,8 +102,9 @@ export interface SynthesisProvenance {
  * Career section in the synthesis result.
  */
 export interface SynthesisCareerSection {
-  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   readonly expressions: readonly SynthesisCareerExpressionRow[];
+  readonly diagnostics: readonly SynthesisDiagnostic[];
 }
 
 /**
@@ -106,6 +112,10 @@ export interface SynthesisCareerSection {
  *
  * Status is derived from explicit C9 MD/AD activation effects across linkedLevels.
  * matchBasis is omitted if the PBA-04 row type lacks the field.
+ *
+ * Full PBA-04 traceability: all evidence ID collections are carried through verbatim.
+ * Status is a C9 activation derivation conditioned on the row's qualification basis —
+ * activation never creates natal promise.
  */
 export interface SynthesisCareerExpressionRow {
   readonly expressionRefKey: string;
@@ -114,6 +124,12 @@ export interface SynthesisCareerExpressionRow {
   readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
   readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
   readonly diagnostics: readonly SynthesisDiagnostic[];
+  readonly expressionEvidenceIds: readonly string[];
+  readonly qualifiedEvidenceIds: readonly string[];
+  readonly unqualifiedEvidenceIds: readonly string[];
+  readonly mdDashaEvidenceIds: readonly string[];
+  readonly adDashaEvidenceIds: readonly string[];
+  readonly expressionSource: 'CALLER' | 'ADAPTER_FALLBACK';
 }
 
 /**
@@ -129,6 +145,7 @@ export interface SynthesisDiagnostic {
  */
 export interface SynthesisWealthSection {
   readonly dimensions: Readonly<Record<WealthDimension, SynthesisWealthDimensionRow>>;
+  readonly diagnostics: readonly SynthesisDiagnostic[];
 }
 
 /**
@@ -151,7 +168,7 @@ export interface SynthesisWealthDimensionRow {
  * Discriminated union: invalid context returns error, valid context returns value.
  */
 export type SelectedPeriodSynthesisResult<TCareerBaseline, TWealthBaseline> =
-  | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' }
+  | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' }
   | { readonly ok: true; readonly value: SelectedPeriodSynthesisValue<TCareerBaseline, TWealthBaseline> };
 
 /**
@@ -231,7 +248,7 @@ function deriveCareerStatus(
 
   // Check for partial or mixed
   if (effects.some(e => e === 'PARTIALLY_ACTIVATES') ||
-      (effects.some(e => e === 'ACTIVATES') && effects.some(e => e === 'CHALLENGES'))) {
+    (effects.some(e => e === 'ACTIVATES') && effects.some(e => e === 'CHALLENGES'))) {
     return 'PARTIALLY_ACTIVATES';
   }
 
@@ -284,44 +301,65 @@ function classifyEvidence(evidence: DomainEvidence): 'SUPPORTING' | 'CHALLENGING
  * Resolves promiseEvidenceIds against the provided wealthEvidence to build
  * WEALTH_NATAL_PROMISE references with existing id/identityKey/dimension/polarity.
  * Unresolvable IDs → UNRESOLVED + EVIDENCE_REFERENCE_UNRESOLVED diagnostic.
+ *
+ * Validates dimension consistency: mismatch → diagnostic, preserves requested dimension.
+ * Returns both resolved references and any unresolved IDs for diagnostic generation.
  */
 function resolveWealthPromiseEvidenceReferences(
   promiseEvidenceIds: readonly string[],
-  wealthEvidence: readonly DomainEvidence[]
-): readonly SynthesisEvidenceReference[] {
+  wealthEvidence: readonly DomainEvidence[],
+  requestingDimension: WealthDimension
+): { readonly references: readonly SynthesisEvidenceReference[]; readonly unresolvedIds: readonly string[] } {
   const evidenceMap = new Map<string, DomainEvidence>();
+  const duplicateCheck = new Set<string>();
+  const duplicateIds: string[] = [];
+
   for (const e of wealthEvidence) {
+    if (evidenceMap.has(e.id)) {
+      duplicateIds.push(e.id);
+    }
     evidenceMap.set(e.id, e);
   }
 
   const references: SynthesisEvidenceReference[] = [];
+  const unresolvedIds: string[] = [];
+
   for (const id of promiseEvidenceIds) {
     const evidence = evidenceMap.get(id);
     if (evidence) {
+      const dimensionMismatch = evidence.dimension !== undefined && evidence.dimension !== requestingDimension;
       references.push(Object.freeze({
         classification: classifyEvidence(evidence),
         evidenceId: evidence.id,
         identityKey: evidence.identityKey,
-        dimension: evidence.dimension,
+        dimension: dimensionMismatch ? requestingDimension : evidence.dimension,
         polarity: evidence.polarity,
         source: evidence.source,
         ruleId: evidence.ruleId,
-        stage: 'WEALTH' as const
+        stage: 'WEALTH' as const,
+        provenanceStage: 'WEALTH_NATAL_PROMISE' as const,
+        referenceKind: 'EVIDENCE' as const
       }));
     } else {
       references.push(Object.freeze({
         classification: 'UNRESOLVED',
         evidenceId: id,
-        stage: 'WEALTH' as const
+        stage: 'WEALTH' as const,
+        provenanceStage: 'WEALTH_NATAL_PROMISE' as const,
+        referenceKind: 'EVIDENCE' as const
       }));
+      unresolvedIds.push(id);
     }
   }
 
-  return Object.freeze(references.sort((a, b) => {
-    if (a.classification !== b.classification) return a.classification.localeCompare(b.classification);
-    if (a.evidenceId !== b.evidenceId) return (a.evidenceId ?? '').localeCompare(b.evidenceId ?? '');
-    return 0;
-  }));
+  return Object.freeze({
+    references: Object.freeze(references.sort((a, b) => {
+      if (a.classification !== b.classification) return a.classification.localeCompare(b.classification);
+      if (a.evidenceId !== b.evidenceId) return (a.evidenceId ?? '').localeCompare(b.evidenceId ?? '');
+      return 0;
+    })),
+    unresolvedIds: Object.freeze(unresolvedIds)
+  });
 }
 
 /**
@@ -330,8 +368,10 @@ function resolveWealthPromiseEvidenceReferences(
  * Pure additive synthesis: projects selected-period activations onto baselines without mutation.
  * Does not invoke interpreters, Dasha resolvers, or horoscope calculation.
  *
+ * Result structures are shallow-frozen; inputs are never mutated.
+ *
  * @param input - The input containing selected period, activations, evidence, and baselines
- * @returns Discriminated result: error on invalid context, value on success
+ * @returns Discriminated result: error on invalid context or activation period mismatch, value on success
  */
 export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   input: BuildSelectedPeriodSynthesisInput<TCareerBaseline, TWealthBaseline>
@@ -341,6 +381,24 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   // Validate selected-period context
   if (!validateSelectedPeriodContext(selectedPeriod)) {
     return { ok: false, error: 'INVALID_SELECTED_PERIOD_CONTEXT' };
+  }
+
+  // Validate activation-context consistency (Medium-6)
+  if (careerActivation) {
+    if (careerActivation.selectedPeriodId !== selectedPeriod.selectedPeriodId ||
+      careerActivation.interval.start !== selectedPeriod.interval.start ||
+      careerActivation.interval.end !== selectedPeriod.interval.end ||
+      careerActivation.temporalRelation !== selectedPeriod.temporalRelation) {
+      return { ok: false, error: 'ACTIVATION_PERIOD_MISMATCH' };
+    }
+  }
+  if (wealthActivation) {
+    if (wealthActivation.selectedPeriodId !== selectedPeriod.selectedPeriodId ||
+      wealthActivation.interval.start !== selectedPeriod.interval.start ||
+      wealthActivation.interval.end !== selectedPeriod.interval.end ||
+      wealthActivation.temporalRelation !== selectedPeriod.temporalRelation) {
+      return { ok: false, error: 'ACTIVATION_PERIOD_MISMATCH' };
+    }
   }
 
   // Build period section (verbatim copy)
@@ -376,7 +434,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
 
   // Build career section
   const careerDiagnostics: SynthesisDiagnostic[] = [];
-  let careerQualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' = 'CANONICAL_STATUS';
+  let careerQualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE' = 'CANONICAL_STATUS';
   const careerExpressions: SynthesisCareerExpressionRow[] = [];
 
   if (careerActivation) {
@@ -409,12 +467,20 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         qualificationBasis: careerQualificationBasis,
         // Omit matchBasis if the PBA-04 row type lacks the field
         ...(exprActivation.matchBasis !== undefined ? { matchBasis: exprActivation.matchBasis } : {}),
-        diagnostics: Object.freeze(rowDiagnostics)
+        diagnostics: Object.freeze(rowDiagnostics),
+        // Full PBA-04 traceability (High-4)
+        expressionEvidenceIds: exprActivation.expressionEvidenceIds,
+        qualifiedEvidenceIds: exprActivation.qualifiedEvidenceIds,
+        unqualifiedEvidenceIds: exprActivation.unqualifiedEvidenceIds,
+        mdDashaEvidenceIds: exprActivation.mdDashaEvidenceIds,
+        adDashaEvidenceIds: exprActivation.adDashaEvidenceIds,
+        expressionSource: exprActivation.expressionSource
       });
 
       careerExpressions.push(row);
     }
   } else {
+    careerQualificationBasis = 'UNAVAILABLE';
     careerDiagnostics.push(Object.freeze({
       code: 'CAREER_ACTIVATION_MISSING',
       message: 'Career activation not provided'
@@ -425,7 +491,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     qualificationBasis: careerQualificationBasis,
     expressions: Object.freeze(careerExpressions.sort((a, b) =>
       a.expressionRefKey.localeCompare(b.expressionRefKey)
-    ))
+    )),
+    diagnostics: Object.freeze(careerDiagnostics)
   });
 
   // Build wealth section
@@ -464,9 +531,26 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   if (wealthActivation) {
     for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
       const dimActivation = wealthActivation.dimensions[dim];
+
+      // Honest dataStatus (High-3): compute from successfully resolved promise refs
+      let hasResolvedEvidence = false;
+      if (wealthEvidence && dimActivation.promiseEvidenceIds.length > 0) {
+        const evidenceMap = new Map<string, DomainEvidence>();
+        for (const e of wealthEvidence) {
+          evidenceMap.set(e.id, e);
+        }
+        for (const id of dimActivation.promiseEvidenceIds) {
+          const evidence = evidenceMap.get(id);
+          if (evidence && (evidence.dimension === undefined || evidence.dimension === dim)) {
+            hasResolvedEvidence = true;
+            break;
+          }
+        }
+      }
+
       const dataStatus = deriveWealthDataStatus(
         dimActivation.linkedLevels.length > 0,
-        dimActivation.promiseEvidenceIds.length > 0
+        hasResolvedEvidence
       );
 
       const dimDiagnostics: SynthesisDiagnostic[] = [];
@@ -493,58 +577,188 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   }
 
   const wealthSection: SynthesisWealthSection = Object.freeze({
-    dimensions: Object.freeze(wealthDimensions)
+    dimensions: Object.freeze(wealthDimensions),
+    diagnostics: Object.freeze(wealthDiagnostics)
   });
 
   // Build evidence references
   const evidenceReferences: SynthesisEvidenceReference[] = [];
+  const careerUnresolvedIds: string[] = [];
+  const wealthUnresolvedIds: Array<{ readonly dimension: WealthDimension; readonly id: string }> = [];
 
-  // Career evidence references
-  if (careerEvidence) {
+  // Career evidence references with stage-specific provenance (High-1)
+  if (careerActivation && careerEvidence) {
+    const evidenceMap = new Map<string, DomainEvidence>();
     for (const e of careerEvidence) {
-      evidenceReferences.push(Object.freeze({
-        classification: classifyEvidence(e),
-        evidenceId: e.id,
-        identityKey: e.identityKey,
-        polarity: e.polarity,
-        source: e.source,
-        ruleId: e.ruleId,
-        stage: 'CAREER' as const
-      }));
+      evidenceMap.set(e.id, e);
     }
-  }
 
-  // Wealth promise evidence references
-  if (wealthActivation && wealthEvidence) {
-    for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
-      const dimActivation = wealthActivation.dimensions[dim];
-      const promiseRefs = resolveWealthPromiseEvidenceReferences(
-        dimActivation.promiseEvidenceIds,
-        wealthEvidence
-      );
-      for (const ref of promiseRefs) {
-        if (ref.classification === 'UNRESOLVED') {
+    for (const exprActivation of careerActivation.expressionActivations) {
+      // EXPRESSION stage: from expressionEvidenceIds
+      for (const id of exprActivation.expressionEvidenceIds) {
+        const evidence = evidenceMap.get(id);
+        if (evidence) {
           evidenceReferences.push(Object.freeze({
-            ...ref,
-            classification: 'UNRESOLVED' as const
+            classification: classifyEvidence(evidence),
+            evidenceId: evidence.id,
+            identityKey: evidence.identityKey,
+            polarity: evidence.polarity,
+            source: evidence.source,
+            ruleId: evidence.ruleId,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_EXPRESSION' as const,
+            referenceKind: 'EVIDENCE' as const
           }));
         } else {
-          evidenceReferences.push(ref);
+          careerUnresolvedIds.push(id);
+          evidenceReferences.push(Object.freeze({
+            classification: 'UNRESOLVED',
+            evidenceId: id,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_EXPRESSION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        }
+      }
+
+      // QUALIFICATION stage: from qualifiedEvidenceIds and unqualifiedEvidenceIds
+      for (const id of exprActivation.qualifiedEvidenceIds) {
+        const evidence = evidenceMap.get(id);
+        if (evidence) {
+          evidenceReferences.push(Object.freeze({
+            classification: classifyEvidence(evidence),
+            evidenceId: evidence.id,
+            identityKey: evidence.identityKey,
+            polarity: evidence.polarity,
+            source: evidence.source,
+            ruleId: evidence.ruleId,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_QUALIFICATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        } else {
+          careerUnresolvedIds.push(id);
+          evidenceReferences.push(Object.freeze({
+            classification: 'UNRESOLVED',
+            evidenceId: id,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_QUALIFICATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        }
+      }
+
+      for (const id of exprActivation.unqualifiedEvidenceIds) {
+        const evidence = evidenceMap.get(id);
+        if (evidence) {
+          evidenceReferences.push(Object.freeze({
+            classification: classifyEvidence(evidence),
+            evidenceId: evidence.id,
+            identityKey: evidence.identityKey,
+            polarity: evidence.polarity,
+            source: evidence.source,
+            ruleId: evidence.ruleId,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_QUALIFICATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        } else {
+          careerUnresolvedIds.push(id);
+          evidenceReferences.push(Object.freeze({
+            classification: 'UNRESOLVED',
+            evidenceId: id,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_QUALIFICATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        }
+      }
+
+      // ACTIVATION stage: from mdDashaEvidenceIds and adDashaEvidenceIds
+      for (const id of exprActivation.mdDashaEvidenceIds) {
+        const evidence = evidenceMap.get(id);
+        if (evidence) {
+          evidenceReferences.push(Object.freeze({
+            classification: classifyEvidence(evidence),
+            evidenceId: evidence.id,
+            identityKey: evidence.identityKey,
+            polarity: evidence.polarity,
+            source: evidence.source,
+            ruleId: evidence.ruleId,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_ACTIVATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        } else {
+          careerUnresolvedIds.push(id);
+          evidenceReferences.push(Object.freeze({
+            classification: 'UNRESOLVED',
+            evidenceId: id,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_ACTIVATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        }
+      }
+
+      for (const id of exprActivation.adDashaEvidenceIds) {
+        const evidence = evidenceMap.get(id);
+        if (evidence) {
+          evidenceReferences.push(Object.freeze({
+            classification: classifyEvidence(evidence),
+            evidenceId: evidence.id,
+            identityKey: evidence.identityKey,
+            polarity: evidence.polarity,
+            source: evidence.source,
+            ruleId: evidence.ruleId,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_ACTIVATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
+        } else {
+          careerUnresolvedIds.push(id);
+          evidenceReferences.push(Object.freeze({
+            classification: 'UNRESOLVED',
+            evidenceId: id,
+            stage: 'CAREER' as const,
+            provenanceStage: 'CAREER_ACTIVATION' as const,
+            referenceKind: 'EVIDENCE' as const
+          }));
         }
       }
     }
   }
 
-  // Wealth dasha rule references (use ruleId, never promote to evidenceId)
+  // Wealth promise evidence references with stage-specific provenance
+  if (wealthActivation && wealthEvidence) {
+    for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+      const dimActivation = wealthActivation.dimensions[dim];
+      const { references, unresolvedIds } = resolveWealthPromiseEvidenceReferences(
+        dimActivation.promiseEvidenceIds,
+        wealthEvidence,
+        dim
+      );
+      for (const ref of references) {
+        evidenceReferences.push(ref);
+      }
+      for (const id of unresolvedIds) {
+        wealthUnresolvedIds.push({ dimension: dim, id });
+      }
+    }
+  }
+
+  // Wealth dasha rule references with proper classification (High-1)
   if (wealthActivation) {
     for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
       const dimActivation = wealthActivation.dimensions[dim];
       for (const ruleRef of dimActivation.dashaRuleReferences) {
         evidenceReferences.push(Object.freeze({
-          classification: 'UNRESOLVED', // Rule references are not evidence-classified
+          classification: 'NEUTRAL', // Rule references are neutral, not UNRESOLVED
           ruleId: ruleRef.ruleId,
           source: ruleRef.source,
-          stage: 'WEALTH' as const
+          stage: 'WEALTH' as const,
+          provenanceStage: 'WEALTH_DASHA_RULE' as const,
+          referenceKind: 'RULE' as const
         }));
       }
     }
@@ -553,6 +767,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   // Sort evidence references
   const sortedEvidenceReferences = Object.freeze(evidenceReferences.sort((a, b) => {
     if (a.stage !== b.stage) return a.stage.localeCompare(b.stage);
+    if (a.provenanceStage !== b.provenanceStage) return (a.provenanceStage ?? '').localeCompare(b.provenanceStage ?? '');
     if (a.dimension !== b.dimension) return (a.dimension ?? '').localeCompare(b.dimension ?? '');
     if (a.classification !== b.classification) return a.classification.localeCompare(b.classification);
     if (a.evidenceId !== b.evidenceId) return (a.evidenceId ?? '').localeCompare(b.evidenceId ?? '');
@@ -592,6 +807,38 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     }));
   }
 
+  // Add missing-input entries for unresolved evidence references (High-2)
+  for (const id of careerUnresolvedIds) {
+    missingInputs.push(Object.freeze({
+      domain: 'CAREER',
+      code: 'EVIDENCE_REFERENCE_UNRESOLVED',
+      description: `Career evidence reference unresolved: ${id}`
+    }));
+  }
+  for (const { dimension, id } of wealthUnresolvedIds) {
+    missingInputs.push(Object.freeze({
+      domain: 'WEALTH',
+      code: 'EVIDENCE_REFERENCE_UNRESOLVED',
+      description: `Wealth evidence reference unresolved for dimension ${dimension}: ${id}`
+    }));
+  }
+
+  // Add missing-input entries for absent baselines (contract gaps)
+  if (!careerBaseline) {
+    missingInputs.push(Object.freeze({
+      domain: 'CAREER',
+      code: 'BASELINE_CAREER_UNAVAILABLE',
+      description: 'Career baseline not provided'
+    }));
+  }
+  if (!wealthBaseline) {
+    missingInputs.push(Object.freeze({
+      domain: 'WEALTH',
+      code: 'BASELINE_WEALTH_UNAVAILABLE',
+      description: 'Wealth baseline not provided'
+    }));
+  }
+
   const sortedMissingInputs = Object.freeze(missingInputs.sort((a, b) => {
     if (a.domain !== b.domain) return a.domain.localeCompare(b.domain);
     return a.code.localeCompare(b.code);
@@ -602,7 +849,7 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     career: Object.freeze({
       status: careerActivation ? 'PRESENT' : 'MISSING',
       version: careerActivation ? 'PBA-04-v1' : undefined,
-      qualificationBasis: careerActivation ? careerActivation.qualificationBasis : undefined
+      qualificationBasis: careerActivation ? careerActivation.qualificationBasis : 'UNAVAILABLE'
     }),
     wealth: Object.freeze({
       status: wealthActivation ? 'PRESENT' : 'MISSING',

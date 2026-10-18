@@ -454,13 +454,9 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // Check that the diagnostic is in the result
-      // The diagnostic is attached to career expressions or at section level
-      const hasDiagnostic = result.value.career.expressions.some(expr =>
-        expr.diagnostics.some(d => d.code === 'CAREER_QUALIFICATION_UNAVAILABLE')
-      );
-      // Actually, the diagnostic is added at the section level in our implementation
-      // but we're checking for presence in the overall structure
+      // The diagnostic is now at section level in diagnostics array
+      const hasDiagnostic = result.value.career.diagnostics.some(d => d.code === 'CAREER_QUALIFICATION_UNAVAILABLE');
+      expect(hasDiagnostic).toBe(true);
       expect(result.value.career.qualificationBasis).toBe('PROXY_DIRECTION');
     });
   });
@@ -468,12 +464,14 @@ describe('buildSelectedPeriodSynthesis', () => {
   describe('supporting/challenging/mixed classification with provenance', () => {
     it('classifies supporting evidence correctly', () => {
       const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
       const careerEvidence = Object.freeze([
         makeEvidence('evid1', 'SUPPORTING', 'CAREER')
       ]);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
+        careerActivation,
         careerEvidence
       });
 
@@ -487,12 +485,14 @@ describe('buildSelectedPeriodSynthesis', () => {
 
     it('classifies challenging evidence correctly', () => {
       const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
       const careerEvidence = Object.freeze([
         makeEvidence('evid1', 'CHALLENGING', 'CAREER')
       ]);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
+        careerActivation,
         careerEvidence
       });
 
@@ -506,12 +506,14 @@ describe('buildSelectedPeriodSynthesis', () => {
 
     it('classifies neutral evidence correctly', () => {
       const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
       const careerEvidence = Object.freeze([
         makeEvidence('evid1', 'NEUTRAL', 'CAREER')
       ]);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
+        careerActivation,
         careerEvidence
       });
 
@@ -527,12 +529,14 @@ describe('buildSelectedPeriodSynthesis', () => {
   describe('unqualified ≠ challenging', () => {
     it('unqualified evidence is not classified as challenging', () => {
       const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
       const careerEvidence = Object.freeze([
         makeEvidence('evid1', 'SUPPORTING', 'CAREER')
       ]);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
+        careerActivation,
         careerEvidence
       });
 
@@ -541,6 +545,7 @@ describe('buildSelectedPeriodSynthesis', () => {
 
       // Unqualified evidence should be SUPPORTING (its actual polarity), not CHALLENGING
       const refs = result.value.evidence.filter(e => e.evidenceId === 'evid1');
+      expect(refs.length).toBeGreaterThan(0);
       expect(refs[0].classification).not.toBe('CHALLENGING');
     });
   });
@@ -748,7 +753,9 @@ describe('buildSelectedPeriodSynthesis', () => {
       const wealthActivation = makeWealthActivation();
       const careerEvidence = Object.freeze([
         makeEvidence('evid1', 'SUPPORTING', 'CAREER'),
-        makeEvidence('evid2', 'CHALLENGING', 'CAREER')
+        makeEvidence('evid2', 'CHALLENGING', 'CAREER'),
+        makeEvidence('md-evid1', 'SUPPORTING', 'CAREER'),
+        makeEvidence('ad-evid1', 'SUPPORTING', 'CAREER')
       ]);
       const wealthEvidence = Object.freeze([
         makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION'),
@@ -982,6 +989,348 @@ describe('buildSelectedPeriodSynthesis', () => {
       if (!result.ok) return;
 
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('INSUFFICIENT_DATA');
+    });
+  });
+
+  describe('stage-specific evidence provenance (High-1)', () => {
+    it('tags career evidence with provenanceStage', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+      const careerEvidence = Object.freeze([
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        careerEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Check that evidence has provenanceStage
+      const careerRefs = result.value.evidence.filter(e => e.stage === 'CAREER');
+      expect(careerRefs.length).toBeGreaterThan(0);
+      expect(careerRefs[0].provenanceStage).toBeDefined();
+      expect(['CAREER_EXPRESSION', 'CAREER_QUALIFICATION', 'CAREER_ACTIVATION']).toContain(careerRefs[0].provenanceStage);
+    });
+
+    it('tags wealth promise evidence with WEALTH_NATAL_PROMISE', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const promiseRefs = result.value.evidence.filter(e =>
+        e.stage === 'WEALTH' && e.provenanceStage === 'WEALTH_NATAL_PROMISE'
+      );
+      expect(promiseRefs.length).toBeGreaterThan(0);
+    });
+
+    it('tags wealth dasha rule references with WEALTH_DASHA_RULE and referenceKind RULE', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const ruleRefs = result.value.evidence.filter(e =>
+        e.stage === 'WEALTH' && e.provenanceStage === 'WEALTH_DASHA_RULE'
+      );
+      expect(ruleRefs.length).toBeGreaterThan(0);
+      expect(ruleRefs[0].referenceKind).toBe('RULE');
+      expect(ruleRefs[0].ruleId).toBeDefined();
+      // Rule refs should be NEUTRAL, not UNRESOLVED
+      expect(ruleRefs[0].classification).toBe('NEUTRAL');
+    });
+  });
+
+  describe('EVIDENCE_REFERENCE_UNRESOLVED missing-input entries (High-2)', () => {
+    it('adds EVIDENCE_REFERENCE_UNRESOLVED for unresolved career evidence', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+      const careerEvidence = Object.freeze([
+        makeEvidence('evid1', 'SUPPORTING', 'CAREER')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        careerEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // The mock activation has evidence IDs that don't exist in careerEvidence
+      const unresolvedMissing = result.value.missingInputs.filter(m =>
+        m.code === 'EVIDENCE_REFERENCE_UNRESOLVED' && m.domain === 'CAREER'
+      );
+      expect(unresolvedMissing.length).toBeGreaterThan(0);
+    });
+
+    it('adds EVIDENCE_REFERENCE_UNRESOLVED for unresolved wealth promise evidence', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // promise-2 and promise-3 are not in wealthEvidence
+      const unresolvedMissing = result.value.missingInputs.filter(m =>
+        m.code === 'EVIDENCE_REFERENCE_UNRESOLVED' && m.domain === 'WEALTH'
+      );
+      expect(unresolvedMissing.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('honest dataStatus (High-3)', () => {
+    it('downgrades dataStatus when promise IDs do not resolve', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        // Only promise-1 is present, promise-2 and promise-3 are missing
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // GAINS has promise-2 which is not in evidence, so hasResolvedEvidence should be false
+      expect(result.value.wealth.dimensions.GAINS.dataStatus).toBe('PARTIAL');
+    });
+
+    it('upgrades dataStatus when promise IDs resolve with dimension match', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // ACCUMULATION has promise-1 which is in evidence with matching dimension
+      expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('COMPLETE');
+    });
+  });
+
+  describe('full PBA-04 traceability (High-4)', () => {
+    it('preserves all five evidence-ID collections in expression rows', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const row = result.value.career.expressions[0];
+      expect(row.expressionEvidenceIds).toBeDefined();
+      expect(row.qualifiedEvidenceIds).toBeDefined();
+      expect(row.unqualifiedEvidenceIds).toBeDefined();
+      expect(row.mdDashaEvidenceIds).toBeDefined();
+      expect(row.adDashaEvidenceIds).toBeDefined();
+      expect(row.expressionSource).toBeDefined();
+    });
+
+    it('carries expressionSource verbatim', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const row = result.value.career.expressions[0];
+      expect(row.expressionSource).toBe('CALLER');
+    });
+  });
+
+  describe('qualification basis when absent (Medium-5)', () => {
+    it('emits UNAVAILABLE when career activation absent', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.career.qualificationBasis).toBe('UNAVAILABLE');
+    });
+
+    it('keeps PROXY_DIRECTION explicit when present', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation('PROXY_DIRECTION');
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.career.qualificationBasis).toBe('PROXY_DIRECTION');
+    });
+  });
+
+  describe('activation-context consistency (Medium-6)', () => {
+    it('returns ACTIVATION_PERIOD_MISMATCH for mismatched career activation', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+
+      // Modify activation to have mismatched selectedPeriodId
+      const mismatchedActivation = Object.freeze({
+        ...careerActivation,
+        selectedPeriodId: 'different-period-id'
+      });
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation: mismatchedActivation
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('ACTIVATION_PERIOD_MISMATCH');
+      }
+    });
+
+    it('returns ACTIVATION_PERIOD_MISMATCH for mismatched wealth activation', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      // Modify activation to have mismatched interval
+      const mismatchedActivation = Object.freeze({
+        ...wealthActivation,
+        interval: Object.freeze({
+          start: '2021-01-01T00:00:00.000Z',
+          end: '2023-01-01T00:00:00.000Z'
+        })
+      });
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation: mismatchedActivation
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('ACTIVATION_PERIOD_MISMATCH');
+      }
+    });
+  });
+
+  describe('baseline missing-input entries (contract gaps)', () => {
+    it('adds BASELINE_CAREER_UNAVAILABLE when career baseline absent', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const missingBaseline = result.value.missingInputs.find(m => m.code === 'BASELINE_CAREER_UNAVAILABLE');
+      expect(missingBaseline).toBeDefined();
+      expect(missingBaseline?.domain).toBe('CAREER');
+    });
+
+    it('adds BASELINE_WEALTH_UNAVAILABLE when wealth baseline absent', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const missingBaseline = result.value.missingInputs.find(m => m.code === 'BASELINE_WEALTH_UNAVAILABLE');
+      expect(missingBaseline).toBeDefined();
+      expect(missingBaseline?.domain).toBe('WEALTH');
+    });
+  });
+
+  describe('section-level diagnostics (High-2)', () => {
+    it('career section includes diagnostics array', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.career.diagnostics).toBeDefined();
+      expect(Array.isArray(result.value.career.diagnostics)).toBe(true);
+    });
+
+    it('wealth section includes diagnostics array', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.wealth.diagnostics).toBeDefined();
+      expect(Array.isArray(result.value.wealth.diagnostics)).toBe(true);
     });
   });
 });
