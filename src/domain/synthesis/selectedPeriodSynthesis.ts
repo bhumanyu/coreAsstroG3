@@ -320,21 +320,69 @@ function isValidWealthPromiseEvidence(evidence: DomainEvidence): boolean {
 /**
  * Compares two evidence records field-by-field for duplicate detection.
  *
- * Returns true if all comparable fields are identical (id, domain, phase, dimension, polarity, house, planet, ruleId).
- * Identical duplicates are deduplicated silently (first occurrence kept).
- * Differing duplicates trigger EVIDENCE_ID_AMBIGUOUS.
+ * Returns true if all semantically relevant fields are identical. Identical duplicates are
+ * deduplicated silently (first occurrence kept). Differing duplicates trigger EVIDENCE_ID_AMBIGUOUS.
+ *
+ * Semantically relevant fields compared:
+ * - id, domain, phase, dimension, polarity, house, planet, ruleId (structural identity)
+ * - identityKey, source, sourceType, role, statement, strength, priority (content identity)
+ * - manifestationRuleIds (rule attachment identity)
+ * - timing (structural comparison of period/level/planet fields)
+ *
+ * Fields intentionally excluded from duplicate identity:
+ * - relatedEvidenceIds: Source provenance - two records can be semantically identical even if
+ *   derived from different upstream evidence sources
+ * - notes: Free-form commentary that does not affect the semantic meaning of the evidence
+ * - provenance: Origin metadata (timestamps, engine versions) that does not affect evidence semantics
+ * - evidenceFamily: Taxonomic grouping for manifestation synthesis, not evidence content
  */
 function areEvidenceRecordsIdentical(a: DomainEvidence, b: DomainEvidence): boolean {
-  return (
-    a.id === b.id &&
-    a.domain === b.domain &&
-    a.phase === b.phase &&
-    a.dimension === b.dimension &&
-    a.polarity === b.polarity &&
-    a.house === b.house &&
-    a.planet === b.planet &&
-    a.ruleId === b.ruleId
-  );
+  // Structural identity fields
+  if (a.id !== b.id) return false;
+  if (a.domain !== b.domain) return false;
+  if (a.phase !== b.phase) return false;
+  if (a.dimension !== b.dimension) return false;
+  if (a.polarity !== b.polarity) return false;
+  if (a.house !== b.house) return false;
+  if (a.planet !== b.planet) return false;
+  if (a.ruleId !== b.ruleId) return false;
+
+  // Content identity fields
+  if (a.identityKey !== b.identityKey) return false;
+  if (a.source !== b.source) return false;
+  if (a.sourceType !== b.sourceType) return false;
+  if (a.role !== b.role) return false;
+  if (a.statement !== b.statement) return false;
+  if (a.strength !== b.strength) return false;
+  if (a.priority !== b.priority) return false;
+
+  // Rule attachment identity
+  if (a.manifestationRuleIds !== b.manifestationRuleIds) {
+    // Compare arrays by value if both present
+    if (a.manifestationRuleIds && b.manifestationRuleIds) {
+      if (a.manifestationRuleIds.length !== b.manifestationRuleIds.length) return false;
+      for (let i = 0; i < a.manifestationRuleIds.length; i++) {
+        if (a.manifestationRuleIds[i] !== b.manifestationRuleIds[i]) return false;
+      }
+    } else if (a.manifestationRuleIds !== b.manifestationRuleIds) {
+      // One is undefined, the other is not
+      return false;
+    }
+  }
+
+  // Timing structural comparison
+  if (a.timing !== b.timing) {
+    if (a.timing && b.timing) {
+      if (a.timing.period !== b.timing.period) return false;
+      if (a.timing.level !== b.timing.level) return false;
+      if (a.timing.planet !== b.timing.planet) return false;
+    } else if (a.timing !== b.timing) {
+      // One is undefined, the other is not
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
@@ -584,10 +632,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     careerQualificationBasis = careerActivation.qualificationBasis;
 
     if (careerQualificationBasis === 'PROXY_DIRECTION') {
-      careerDiagnostics.push({
+      careerDiagnostics.push(Object.freeze({
         code: 'CAREER_QUALIFICATION_UNAVAILABLE',
         message: 'Career qualification used PROXY_DIRECTION interim contract; canonical C11 qualification unavailable'
-      });
+      }));
     }
 
     for (const exprActivation of careerActivation.expressionActivations) {
@@ -624,10 +672,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     }
   } else {
     careerQualificationBasis = 'UNAVAILABLE';
-    careerDiagnostics.push({
+    careerDiagnostics.push(Object.freeze({
       code: 'CAREER_ACTIVATION_MISSING',
       message: 'Career activation not provided'
-    });
+    }));
   }
 
   const careerSection: SynthesisCareerSection = Object.freeze({
@@ -731,10 +779,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       };
     }
   } else {
-    wealthDiagnostics.push({
+    wealthDiagnostics.push(Object.freeze({
       code: 'WEALTH_ACTIVATION_MISSING',
       message: 'Wealth activation not provided'
-    });
+    }));
   }
 
   // Build evidence references
@@ -775,10 +823,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_EXPRESSION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push({
+            careerDiagnostics.push(Object.freeze({
               code: 'EVIDENCE_ID_AMBIGUOUS',
               message: `Evidence ID ${id} appears multiple times in career evidence with conflicting properties`
-            });
+            }));
             continue;
           }
 
@@ -819,10 +867,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_QUALIFICATION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push({
+            careerDiagnostics.push(Object.freeze({
               code: 'EVIDENCE_ID_AMBIGUOUS',
               message: `Evidence ID ${id} appears multiple times in career evidence with conflicting properties`
-            });
+            }));
             continue;
           }
 
@@ -862,10 +910,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
               provenanceStage: 'CAREER_QUALIFICATION' as const,
               referenceKind: 'EVIDENCE' as const
             }));
-            careerDiagnostics.push({
+            careerDiagnostics.push(Object.freeze({
               code: 'EVIDENCE_ID_AMBIGUOUS',
               message: `Evidence ID ${id} appears multiple times in career evidence with conflicting properties`
-            });
+            }));
             continue;
           }
 
@@ -905,10 +953,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
             provenanceStage: 'CAREER_ACTIVATION' as const,
             referenceKind: 'EVIDENCE' as const
           }));
-          careerDiagnostics.push({
+          careerDiagnostics.push(Object.freeze({
             code: 'C9_EVIDENCE_SET_MISSING',
             message: `Career dasha evidence ID ${id} cannot be resolved: careerDashaEvidence not provided`
-          });
+          }));
           continue;
         }
 
@@ -951,10 +999,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
             provenanceStage: 'CAREER_ACTIVATION' as const,
             referenceKind: 'EVIDENCE' as const
           }));
-          careerDiagnostics.push({
+          careerDiagnostics.push(Object.freeze({
             code: 'C9_EVIDENCE_REFERENCE_UNRESOLVED',
             message: `Career dasha evidence ID ${id} not found in careerDashaEvidence`
-          });
+          }));
         }
       }
 
@@ -969,10 +1017,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
             provenanceStage: 'CAREER_ACTIVATION' as const,
             referenceKind: 'EVIDENCE' as const
           }));
-          careerDiagnostics.push({
+          careerDiagnostics.push(Object.freeze({
             code: 'C9_EVIDENCE_SET_MISSING',
             message: `Career dasha evidence ID ${id} cannot be resolved: careerDashaEvidence not provided`
-          });
+          }));
           continue;
         }
 
@@ -1015,10 +1063,10 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
             provenanceStage: 'CAREER_ACTIVATION' as const,
             referenceKind: 'EVIDENCE' as const
           }));
-          careerDiagnostics.push({
+          careerDiagnostics.push(Object.freeze({
             code: 'C9_EVIDENCE_REFERENCE_UNRESOLVED',
             message: `Career dasha evidence ID ${id} not found in careerDashaEvidence`
-          });
+          }));
         }
       }
     }
