@@ -813,14 +813,14 @@ function assembleCareerDashaCanonicalAnalysis(
  * - ctx.antardasha.mahadashaId === ctx.mahadasha.id
  * - interval.start < interval.end (parsed)
  * - AD interval contained in MD interval
- * 
+ *
  * On any mismatch, returns false.
  * Never substitutes current-Dasha data on mismatch.
- * 
+ *
  * @param ctx - The selected period activation context to validate
  * @returns true if valid, false if invalid
  */
-function validateSelectedPeriodContext(
+export function validateSelectedPeriodContext(
   ctx: SelectedPeriodActivationContext
 ): boolean {
   // Verify dasha system
