@@ -235,7 +235,11 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
       explanation: 'Synthesis consistent with classical texts.',
       conclusion: 'Executive trajectory supported.'
     },
-    warnings: []
+    warnings: [],
+    dashPeriodOptions: {
+      mahadashas: [],
+      diagnostics: []
+    }
   };
 
   return {
@@ -251,6 +255,7 @@ export function createProductAnalysis(overrides?: Partial<ProductAnalysis>): Pro
         ...defaultAnalysis.dasha.current,
         ...overrides?.dasha?.current
       }
-    }
+    },
+    dashPeriodOptions: overrides?.dashPeriodOptions ?? defaultAnalysis.dashPeriodOptions
   };
 }

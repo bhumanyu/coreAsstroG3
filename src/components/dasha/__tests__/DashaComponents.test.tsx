@@ -1,6 +1,6 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import {
   DashaHero,
   TransitTimingSection,
@@ -8,7 +8,8 @@ import {
   CareerActivationSection,
   WealthActivationSection,
   DashaEvidenceSection,
-  DashaPeriodCard
+  DashaPeriodCard,
+  SelectedPeriodSection
 } from '../index';
 import type {
   DashaHeroViewModel,
@@ -16,6 +17,7 @@ import type {
   DashaPeriodViewModel,
   DashaEvidenceViewModel
 } from '../../../product/analysis/dashaViewModel';
+import type { ProductDashaPeriodOptions } from '../../../product/analysis/productAnalysisTypes';
 
 describe('Dasha Presentational Components (P-UI-07)', () => {
   it('1. DashaHero: renders with all three periods and asserts planet names', () => {
@@ -190,5 +192,99 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
     expect(screen.getByText('10th Lord Strength')).toBeInTheDocument();
     expect(screen.getByText(/Primary Driver/i)).toBeInTheDocument();
+  });
+
+  it('8. SelectedPeriodSection: temporal labels appended to option text, value remains ID', () => {
+    const dashPeriodOptions: ProductDashaPeriodOptions = {
+      mahadashas: [
+        {
+          id: 'md_jupiter',
+          planet: 'Jupiter',
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2036-01-01T00:00:00.000Z',
+          valid: true,
+          diagnostics: [],
+          temporalRelation: 'PAST',
+          antardashas: [
+            {
+              id: 'ad_saturn',
+              planet: 'Saturn',
+              start: '2020-01-01T00:00:00.000Z',
+              end: '2022-01-01T00:00:00.000Z',
+              valid: true,
+              diagnostics: [],
+              temporalRelation: 'PAST'
+            },
+            {
+              id: 'ad_mercury',
+              planet: 'Mercury',
+              start: '2024-01-01T00:00:00.000Z',
+              end: '2026-01-01T00:00:00.000Z',
+              valid: true,
+              diagnostics: [],
+              temporalRelation: 'CURRENT'
+            }
+          ]
+        },
+        {
+          id: 'md_saturn',
+          planet: 'Saturn',
+          start: '2036-01-01T00:00:00.000Z',
+          end: '2055-01-01T00:00:00.000Z',
+          valid: true,
+          diagnostics: [],
+          temporalRelation: 'FUTURE',
+          antardashas: []
+        }
+      ],
+      diagnostics: []
+    };
+
+    const onSelect = vi.fn();
+    render(
+      <SelectedPeriodSection
+        dashPeriodOptions={dashPeriodOptions}
+        onSelect={onSelect}
+      />
+    );
+
+    // Get the MD select
+    const mdSelect = screen.getByLabelText(/Mahadasha \(Major Period\)/i);
+    const mdOptions = Array.from(mdSelect.querySelectorAll('option'));
+
+    // Verify Jupiter option has temporal label "Past" and value is the ID
+    const jupiterOption = mdOptions.find(opt => opt.value === 'md_jupiter');
+    expect(jupiterOption).toBeDefined();
+    expect(jupiterOption?.textContent).toContain('Jupiter');
+    expect(jupiterOption?.textContent).toContain('Past');
+    expect(jupiterOption?.value).toBe('md_jupiter');
+
+    // Verify Saturn option has temporal label "Future" and value is the ID
+    const saturnOption = mdOptions.find(opt => opt.value === 'md_saturn');
+    expect(saturnOption).toBeDefined();
+    expect(saturnOption?.textContent).toContain('Saturn');
+    expect(saturnOption?.textContent).toContain('Future');
+    expect(saturnOption?.value).toBe('md_saturn');
+
+    // Select Jupiter to populate AD options
+    fireEvent.change(mdSelect, { target: { value: 'md_jupiter' } });
+
+    // Get the AD select
+    const adSelect = screen.getByLabelText(/Antardasha \(Sub-period\)/i);
+    const adOptions = Array.from(adSelect.querySelectorAll('option'));
+
+    // Verify Saturn AD option has temporal label "Past" and value is the ID
+    const saturnAdOption = adOptions.find(opt => opt.value === 'ad_saturn');
+    expect(saturnAdOption).toBeDefined();
+    expect(saturnAdOption?.textContent).toContain('Saturn');
+    expect(saturnAdOption?.textContent).toContain('Past');
+    expect(saturnAdOption?.value).toBe('ad_saturn');
+
+    // Verify Mercury AD option has temporal label "Current" and value is the ID
+    const mercuryAdOption = adOptions.find(opt => opt.value === 'ad_mercury');
+    expect(mercuryAdOption).toBeDefined();
+    expect(mercuryAdOption?.textContent).toContain('Mercury');
+    expect(mercuryAdOption?.textContent).toContain('Current');
+    expect(mercuryAdOption?.value).toBe('ad_mercury');
   });
 });

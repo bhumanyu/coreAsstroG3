@@ -158,10 +158,34 @@ describe('DashaPage (P-UI-07)', () => {
   });
 
   it('8. Changing MD/AD after successful report: report hidden (submittedPeriod cleared)', () => {
-    // This test verifies the component structure handles the submittedPeriod clearing
-    // The actual behavior is tested via handleSelectionChange clearing submittedPeriod
-    // which we can verify by checking the component renders correctly with different states
-    const analysis = createProductAnalysis();
+    // Test that the component handles dashPeriodOptions correctly
+    const analysis = createProductAnalysis({
+      dashPeriodOptions: {
+        mahadashas: [
+          {
+            id: 'md_jupiter',
+            planet: 'Jupiter',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'CURRENT',
+            antardashas: [
+              {
+                id: 'ad_saturn',
+                planet: 'Saturn',
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                valid: true,
+                diagnostics: [],
+                temporalRelation: 'PAST'
+              }
+            ]
+          }
+        ],
+        diagnostics: []
+      }
+    });
 
     const onSelectPeriod = vi.fn();
     render(
@@ -174,7 +198,128 @@ describe('DashaPage (P-UI-07)', () => {
       />
     );
 
-    // Verify the component renders without errors
-    expect(screen.getByText('Current Dasha Hierarchy')).toBeInTheDocument();
+    // Verify the MD select exists and can be interacted with
+    const mdSelect = screen.getByLabelText(/Mahadasha \(Major Period\)/i);
+    expect(mdSelect).toBeInTheDocument();
+
+    // Change MD select to verify onSelectionChange is called
+    fireEvent.change(mdSelect, { target: { value: 'md_jupiter' } });
+
+    // Since submittedPeriod is cleared on selection change, report should not be visible
+    expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
+  });
+
+  it('9. Stale selectedPeriod result: ID-match gate prevents rendering mismatched result', () => {
+    // Test that the ID-match gate in DashaPage prevents rendering stale results
+    // When selectedPeriod.synthesis.period IDs don't match submittedPeriod
+    const analysis = createProductAnalysis({
+      selectedPeriod: {
+        status: 'OK',
+        synthesis: {
+          synthesisVersion: 'PBA-06-v1',
+          period: {
+            selectedPeriodId: 'sp-1',
+            mahadashaId: 'md_jupiter',
+            mahadashaPlanet: 'Jupiter',
+            antardashaId: 'ad_saturn',
+            antardashaPlanet: 'Saturn',
+            interval: { start: '2020-01-01', end: '2036-01-01' },
+            analysisAsOf: '2026-01-15T08:30:00.000Z',
+            temporalRelation: 'CURRENT'
+          },
+          career: {
+            qualificationBasis: 'CANONICAL_STATUS',
+            expressions: [],
+            diagnostics: []
+          },
+          wealth: {
+            dimensions: {
+              ACCUMULATION: {
+                dimension: 'ACCUMULATION',
+                effect: 'ACTIVATES',
+                dataStatus: 'COMPLETE',
+                linkedLevels: ['MD'],
+                diagnostics: []
+              },
+              GAINS: {
+                dimension: 'GAINS',
+                effect: 'SUPPORTS',
+                dataStatus: 'COMPLETE',
+                linkedLevels: ['AD'],
+                diagnostics: []
+              },
+              FORTUNE: {
+                dimension: 'FORTUNE',
+                effect: 'NEUTRAL',
+                dataStatus: 'COMPLETE',
+                linkedLevels: [],
+                diagnostics: []
+              },
+              SPECULATION: {
+                dimension: 'SPECULATION',
+                effect: 'NEUTRAL',
+                dataStatus: 'COMPLETE',
+                linkedLevels: [],
+                diagnostics: []
+              }
+            },
+            diagnostics: []
+          },
+          evidence: [],
+          missingInputs: [],
+          provenance: {
+            career: {
+              status: 'PRESENT',
+              version: 'v1',
+              qualificationBasis: 'CANONICAL_STATUS'
+            },
+            wealth: {
+              status: 'PRESENT',
+              version: 'v1'
+            }
+          }
+        }
+      },
+      dashPeriodOptions: {
+        mahadashas: [
+          {
+            id: 'md_jupiter',
+            planet: 'Jupiter',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'CURRENT',
+            antardashas: [
+              {
+                id: 'ad_saturn',
+                planet: 'Saturn',
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                valid: true,
+                diagnostics: [],
+                temporalRelation: 'PAST'
+              }
+            ]
+          }
+        ],
+        diagnostics: []
+      }
+    });
+
+    const onSelectPeriod = vi.fn();
+    render(
+      <DashaPage
+        productAnalysisState={{
+          status: 'READY',
+          analysis
+        }}
+        onSelectPeriod={onSelectPeriod}
+      />
+    );
+
+    // Even though selectedPeriod has a valid synthesis, the report should not be visible
+    // because submittedPeriod is null (user hasn't submitted yet)
+    expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
   });
 });

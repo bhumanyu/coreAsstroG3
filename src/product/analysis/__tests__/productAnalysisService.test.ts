@@ -8,6 +8,10 @@ import {
 } from '../productAnalysisService';
 import type { LifeAnalysisProductState, LifeAnalysisViewModel } from '../../life-analysis/lifeAnalysisTypes';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPeriod';
+import { calculateHoroscope } from '../../../engine/astroEngine';
+import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
+import { mapMethodology } from '../productAnalysisMapper';
 
 describe('ProductAnalysisService (P-UI-02)', () => {
   const sampleBirth: BirthDetails = {
@@ -147,6 +151,20 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       fallbackUsed: false,
       selectionReason: 'DEFAULT',
       generatedAt: '2026-01-01T00:00:00.000Z'
+    },
+    temporalState: undefined, // Will be set in specific tests that need it
+    careerArtifacts: undefined, // Will be set in specific tests that need it
+    career: {
+      domain: 'CAREER',
+      status: 'AVAILABLE',
+      asOf: '2026-01-01T00:00:00.000Z',
+      conclusionData: {} as any
+    },
+    wealth: {
+      domain: 'WEALTH',
+      status: 'AVAILABLE',
+      asOf: '2026-01-01T00:00:00.000Z',
+      conclusionData: {} as any
     }
   };
 
@@ -323,5 +341,118 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     await expect(
       service.selectPeriod('md_jupiter', 'ad_saturn')
     ).rejects.toThrow('Cannot select period: no horoscope available. Call analyze() first.');
+  });
+
+  it('8. selectPeriod retains and uses custom analysis context from analyze', async () => {
+    // Use real calculateHoroscope to get a temporalState with dashaInterpretation
+    const realHoroscope = calculateHoroscope(sampleBirth);
+
+    // Create a distinctive asOf for context
+    const customAsOf = '2030-03-01T00:00:00Z';
+    const customContext = createAnalysisContext({
+      asOf: customAsOf,
+      methodology: mapMethodology(sampleBirth),
+      engineVersion: 'CUSTOM_ENGINE_V2',
+      rulesVersion: 'CUSTOM_RULES_V3'
+    });
+
+    // Resolve temporalState with the custom context
+    const temporalState = resolveAnalysisTemporalState(realHoroscope, customContext);
+
+    // Build pipeline state with temporalState and required artifacts
+    const pipelineStateWithTemporal: LifeAnalysisProductState = {
+      ...readyPipelineState,
+      temporalState,
+      careerArtifacts: {
+        natal: {} as any,
+        expression: {} as any,
+        canonicalExpression: {} as any,
+        mechanismCandidates: [],
+        careerDashaEvidence: []
+      },
+      career: {
+        domain: 'CAREER',
+        status: 'AVAILABLE',
+        asOf: customAsOf,
+        conclusionData: {} as any
+      },
+      wealth: {
+        domain: 'WEALTH',
+        status: 'AVAILABLE',
+        asOf: customAsOf,
+        conclusionData: {} as any
+      }
+    };
+
+    const runPipelineMock = vi.fn().mockResolvedValue(pipelineStateWithTemporal);
+    const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
+
+    const deps: ProductAnalysisDependencies = {
+      calculateHoroscope: calculateHoroscopeMock,
+      runPipeline: runPipelineMock
+    };
+
+    const service = createProductAnalysisService(deps);
+
+    // Run analyze with custom context
+    await service.analyze(sampleBirth, {
+      context: customContext,
+      includeAiExplanation: false
+    });
+
+    // Verify context was retained
+    expect(service.lastHoroscope).toBeDefined();
+    expect(service.lastPipelineState).toBeDefined();
+    expect(service.lastPipelineState?.temporalState).toBeDefined();
+
+    // Verify the retained context matches the custom context
+    const serviceAny = service as any;
+    expect(serviceAny._lastContext).toBeDefined();
+    expect(serviceAny._lastContext.asOf).toContain('2030-03-01T00:00:00');
+    expect(serviceAny._lastContext.engineVersion).toBe('CUSTOM_ENGINE_V2');
+    expect(serviceAny._lastContext.rulesVersion).toBe('CUSTOM_RULES_V3');
+
+    // Get valid MD/AD IDs from the temporalState
+    const selectablePeriods = listSelectableMdAdPeriods(
+      service.lastPipelineState!.temporalState!.dashaInterpretation!
+    );
+    const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+    expect(validMd).toBeDefined();
+
+    const validAd = selectablePeriods.antardashas.find(
+      (ad: any) => ad.valid && ad.mahadashaId === validMd!.id
+    );
+    expect(validAd).toBeDefined();
+
+    // Call selectPeriod with valid IDs
+    const result = await service.selectPeriod(validMd!.id, validAd!.id);
+
+    // The key assertion is that selectPeriod succeeds (doesn't throw due to missing context)
+    // and that the result asOf matches the custom context's asOf
+    expect(result.asOf).toContain('2030-03-01');
+  });
+
+  it('9. selectPeriod throws when _lastContext is missing', async () => {
+    const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
+    const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
+
+    const deps: ProductAnalysisDependencies = {
+      calculateHoroscope: calculateHoroscopeMock,
+      runPipeline: runPipelineMock
+    };
+
+    const service = new ProductAnalysisService(deps);
+
+    // Run analyze to populate other fields
+    await service.analyze(sampleBirth);
+
+    // Manually delete _lastContext to simulate missing context
+    const serviceAny = service as any;
+    serviceAny._lastContext = undefined;
+
+    // selectPeriod should throw with 'no analysis context available'
+    await expect(
+      service.selectPeriod('md_jupiter', 'ad_saturn')
+    ).rejects.toThrow('no analysis context available');
   });
 });

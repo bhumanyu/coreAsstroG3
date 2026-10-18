@@ -36,6 +36,23 @@ export interface DashaPageProps {
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
 }
 
+// Helper to determine if selection error banner should be shown
+// Shows generic selectionState error only when there's no typed selectedPeriod failure
+function deriveSelectionErrorBanner(
+  selectionState: { status: 'IDLE' | 'SUBMITTING' | 'READY' | 'ERROR'; error?: string } | undefined,
+  selectedPeriod: { status: string } | undefined
+): boolean {
+  if (!selectionState || selectionState.status !== 'ERROR') {
+    return false;
+  }
+  // Suppress generic selectionState banner when selectedPeriod is already in a non-OK state
+  // (the typed selectedPeriod banner is more specific and carries domain error codes)
+  if (selectedPeriod && selectedPeriod.status !== 'OK') {
+    return false;
+  }
+  return true;
+}
+
 export const DashaPage: React.FC<DashaPageProps> = ({
   productAnalysisState,
   selectionState,
@@ -121,7 +138,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
       )}
 
       {/* Selection Error Banner */}
-      {selectionStatus === 'ERROR' && selectionError && (
+      {deriveSelectionErrorBanner(selectionState, selectedPeriod) && selectionError && (
         <div className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-rose-300">

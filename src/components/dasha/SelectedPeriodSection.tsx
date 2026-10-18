@@ -114,7 +114,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                 disabled={!md.valid}
                 title={!md.valid ? md.diagnostics.join(', ') : undefined}
               >
-                {md.planet} ({formatDate(md.start)} - {formatDate(md.end)})
+                {md.planet} — {formatDate(md.start)} → {formatDate(md.end)} ({TEMPORAL_LABELS[md.temporalRelation]})
                 {!md.valid && ' (Invalid)'}
               </option>
             ))}
@@ -143,7 +143,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                 disabled={!ad.valid}
                 title={!ad.valid ? ad.diagnostics.join(', ') : undefined}
               >
-                {ad.planet} ({formatDate(ad.start)} - {formatDate(ad.end)})
+                {ad.planet} — {formatDate(ad.start)} → {formatDate(ad.end)} ({TEMPORAL_LABELS[ad.temporalRelation]})
                 {!ad.valid && ' (Invalid)'}
               </option>
             ))}
