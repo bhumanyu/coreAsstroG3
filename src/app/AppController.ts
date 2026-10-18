@@ -103,10 +103,7 @@ export function createAppController(
 
       setState((prev) => ({
         ...prev,
-        productAnalysis: {
-          ...prev.productAnalysis,
-          status: 'LOADING'
-        }
+        selectionState: { status: 'SUBMITTING' }
       }));
 
       try {
@@ -122,10 +119,11 @@ export function createAppController(
         setState((prev) => ({
           ...prev,
           productAnalysis: {
-            status: 'READY',
+            ...prev.productAnalysis,
             analysis,
             horoscope
-          }
+          },
+          selectionState: { status: 'READY' }
         }));
       } catch (error) {
         if (requestId !== currentRequestId) {
@@ -135,10 +133,9 @@ export function createAppController(
         const errorMsg = error instanceof Error ? error.message : 'Period selection failed.';
         setState((prev) => ({
           ...prev,
-          productAnalysis: {
+          selectionState: {
             status: 'ERROR',
-            error: errorMsg,
-            analysis: prev.productAnalysis?.analysis
+            error: errorMsg
           }
         }));
       }

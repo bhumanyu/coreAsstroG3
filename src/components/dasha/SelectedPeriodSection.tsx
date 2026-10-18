@@ -19,6 +19,7 @@ export interface SelectedPeriodSectionProps {
   readonly dashPeriodOptions: ProductDashaPeriodOptions;
   readonly onSelect: (mahadashaId: string, antardashaId: string) => void;
   readonly isSubmitting?: boolean;
+  readonly onSelectionChange?: () => void;
 }
 
 const TEMPORAL_BADGE_CLASSES: Record<ProductTemporalRelation, string> = {
@@ -45,7 +46,8 @@ function formatDate(isoString: string): string {
 export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   dashPeriodOptions,
   onSelect,
-  isSubmitting = false
+  isSubmitting = false,
+  onSelectionChange
 }) => {
   const [selectedMahadashaId, setSelectedMahadashaId] = useState<string>('');
   const [selectedAntardashaId, setSelectedAntardashaId] = useState<string>('');
@@ -72,10 +74,12 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   const handleMahadashaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedMahadashaId(e.target.value);
     setSelectedAntardashaId(''); // Clear AD on MD change
+    onSelectionChange?.();
   };
 
   const handleAntardashaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedAntardashaId(e.target.value);
+    onSelectionChange?.();
   };
 
   return (

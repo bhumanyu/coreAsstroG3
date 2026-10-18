@@ -5,7 +5,7 @@
  * Does NOT perform any astrology/domain/Vimshottari/Dasha/transit/AI calculations.
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectDashaViewModel } from '../product/analysis/dashaViewModel';
@@ -30,6 +30,7 @@ import {
 
 export interface DashaPageProps {
   readonly productAnalysisState?: ProductAnalysisState;
+  readonly selectionState?: { status: 'IDLE' | 'SUBMITTING' | 'READY' | 'ERROR'; error?: string };
   readonly onRetry?: () => void;
   readonly onNavigate?: (page: AppPage) => void;
   readonly onSelectPeriod?: (mahadashaId: string, antardashaId: string) => Promise<void>;
@@ -37,6 +38,7 @@ export interface DashaPageProps {
 
 export const DashaPage: React.FC<DashaPageProps> = ({
   productAnalysisState,
+  selectionState,
   onRetry,
   onNavigate,
   onSelectPeriod
@@ -44,6 +46,8 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   const status = productAnalysisState?.status;
   const analysis = productAnalysisState?.analysis;
   const errorMessage = productAnalysisState?.error;
+  const selectionStatus = selectionState?.status;
+  const selectionError = selectionState?.error;
 
   const viewModel = useMemo(
     () => (analysis ? selectDashaViewModel(analysis) : undefined),
@@ -61,34 +65,36 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   );
 
   // State for period selection
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectionRequestToken, setSelectionRequestToken] = useState(0);
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
+  const [submittedPeriod, setSubmittedPeriod] = useState<{ mahadashaId: string; antardashaId: string } | null>(null);
+  const requestRef = useRef(0);
+
+  // isSubmitting is derived from selectionState
+  const isSubmitting = selectionStatus === 'SUBMITTING';
+
+  // Clear submitted period when dropdown changes (hides stale report)
+  const handleSelectionChange = useCallback(() => {
+    setSubmittedPeriod(null);
+  }, []);
 
   // Handle period selection with stale-response guard
   const handleSelectPeriod = useCallback(async (mahadashaId: string, antardashaId: string) => {
     if (!onSelectPeriod) return;
 
-    const currentToken = selectionRequestToken + 1;
-    setSelectionRequestToken(currentToken);
-    setIsSubmitting(true);
+    const requestId = ++requestRef.current;
+    setSubmittedPeriod({ mahadashaId, antardashaId });
 
     try {
       await onSelectPeriod(mahadashaId, antardashaId);
-
-      // Stale-response guard: if token changed during request, ignore result
-      if (currentToken !== selectionRequestToken + 1) {
-        return;
-      }
     } catch (error) {
       console.error('Period selection failed:', error);
     } finally {
       // Only clear submitting state if this is still the current request
-      if (currentToken === selectionRequestToken) {
-        setIsSubmitting(false);
+      if (requestId === requestRef.current) {
+        // isSubmitting is derived from selectionState, no local state to clear
       }
     }
-  }, [onSelectPeriod, selectionRequestToken]);
+  }, [onSelectPeriod]);
 
   // 1. Error state when no analysis is available
   if (status === 'ERROR' && !analysis) {
@@ -121,31 +127,35 @@ export const DashaPage: React.FC<DashaPageProps> = ({
           dashPeriodOptions={dashPeriodOptions}
           onSelect={handleSelectPeriod}
           isSubmitting={isSubmitting}
+          onSelectionChange={handleSelectionChange}
         />
       )}
 
-      {/* Selected Period Report */}
-      {selectedPeriod && selectedPeriod.status === 'OK' && selectedPeriod.synthesis && (
-        <SelectedPeriodReport
-          synthesis={selectedPeriod.synthesis}
-          domainToggle={domainToggle}
-          onDomainToggle={setDomainToggle}
-        />
-      )}
-
-      {/* Error states for selected period */}
-      {selectedPeriod && selectedPeriod.status !== 'OK' && (
+      {/* Selection Error Banner */}
+      {selectionStatus === 'ERROR' && selectionError && (
         <div className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-rose-300">
-              Selection Error: {selectedPeriod.status}
+              Selection Error
             </span>
           </div>
-          {selectedPeriod.error && (
-            <div className="text-xs text-slate-300">{selectedPeriod.error}</div>
-          )}
+          <div className="text-xs text-slate-300">{selectionError}</div>
         </div>
       )}
+
+      {/* Selected Period Report */}
+      {selectedPeriod &&
+        selectedPeriod.status === 'OK' &&
+        selectedPeriod.synthesis &&
+        submittedPeriod &&
+        selectedPeriod.synthesis.period.mahadashaId === submittedPeriod.mahadashaId &&
+        selectedPeriod.synthesis.period.antardashaId === submittedPeriod.antardashaId && (
+          <SelectedPeriodReport
+            synthesis={selectedPeriod.synthesis}
+            domainToggle={domainToggle}
+            onDomainToggle={setDomainToggle}
+          />
+        )}
 
       <CareerActivationSection activation={viewModel.careerActivation} />
 

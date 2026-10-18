@@ -12,6 +12,15 @@ export interface ProductAnalysisState {
   readonly horoscope?: Horoscope;
 }
 
+export interface SelectionState {
+  readonly status: 'IDLE' | 'SUBMITTING' | 'READY' | 'ERROR';
+  readonly error?: string;
+}
+
+export const INITIAL_SELECTION_STATE: SelectionState = {
+  status: 'IDLE'
+};
+
 export const INITIAL_PRODUCT_ANALYSIS_STATE: ProductAnalysisState = {
   status: 'IDLE'
 };
@@ -37,6 +46,11 @@ export interface AppState {
    * Sourced directly from single ProductAnalysis pipeline
    */
   readonly dashaTimingViewModel?: DashaTimingViewModel;
+  /**
+   * Selection state for period selection - separate from productAnalysis.status
+   * to avoid clobbering the baseline view on selection errors.
+   */
+  readonly selectionState: SelectionState;
 }
 
 export const INITIAL_APP_STATE: AppState = {
@@ -44,7 +58,8 @@ export const INITIAL_APP_STATE: AppState = {
   birthDetails: PRESET_PROFILES[0].details,
   isBirthFormOpen: false,
   productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,
-  lifeAnalysisState: { status: 'LOADING' }
+  lifeAnalysisState: { status: 'LOADING' },
+  selectionState: INITIAL_SELECTION_STATE
 };
 
 export type { BirthDetails, LifeAnalysisProductState, AppPage };
