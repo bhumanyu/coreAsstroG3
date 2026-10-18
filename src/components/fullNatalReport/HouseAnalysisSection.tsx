@@ -3,6 +3,7 @@ import { HouseAnalysisSection as HouseAnalysisSectionType, HouseReportItem } fro
 import { HouseAnalysisCard } from './HouseAnalysisCard';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
+import { CollapsibleItem, SectionAccordion } from './ObservationAccordion';
 
 interface HouseAnalysisSectionProps {
   readonly section: HouseAnalysisSectionType;
@@ -19,12 +20,13 @@ export const HouseAnalysisSection: React.FC<HouseAnalysisSectionProps> = ({ sect
         <PartialStateNotice message="House analysis is incomplete or partial." />
       )}
 
-      {/* Grid of 12 Houses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <SectionAccordion title="House Analysis" count={section.houses.length}>
         {section.houses.map((item: HouseReportItem) => (
-          <HouseAnalysisCard key={item.house} item={item} />
+          <CollapsibleItem key={item.house} itemId={String(item.house)} title={`House ${item.house}`}>
+            <HouseAnalysisCard item={item} />
+          </CollapsibleItem>
         ))}
-      </div>
+      </SectionAccordion>
     </div>
   );
 };

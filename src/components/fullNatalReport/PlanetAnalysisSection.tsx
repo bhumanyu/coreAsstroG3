@@ -3,6 +3,8 @@ import { PlanetAnalysisSection as PlanetAnalysisSectionType } from '../../types'
 import { PlanetAnalysisCard } from './PlanetAnalysisCard';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
+import { formatPlanetName } from './reportUtils';
+import { CollapsibleItem, SectionAccordion } from './ObservationAccordion';
 
 interface PlanetAnalysisSectionProps {
   readonly section: PlanetAnalysisSectionType;
@@ -17,11 +19,13 @@ export const PlanetAnalysisSection: React.FC<PlanetAnalysisSectionProps> = ({ se
     <div className="space-y-4">
       {section.status === 'PARTIAL' && <PartialStateNotice message="Planetary analysis contains partial data." />}
 
-      <div className="grid grid-cols-1 gap-4">
+      <SectionAccordion title="Planetary Analysis" count={section.planets.length}>
         {section.planets.map((item) => (
-          <PlanetAnalysisCard key={item.planet} item={item} />
+          <CollapsibleItem key={item.planet} itemId={item.planet} title={formatPlanetName(item.planet)}>
+            <PlanetAnalysisCard item={item} />
+          </CollapsibleItem>
         ))}
-      </div>
+      </SectionAccordion>
     </div>
   );
 };
