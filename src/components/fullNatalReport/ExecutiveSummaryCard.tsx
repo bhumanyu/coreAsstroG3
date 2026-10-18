@@ -1,9 +1,10 @@
 import React from 'react';
-import { ExecutiveSummarySection, LifeTheme, SynthesisObservation } from '../../types';
+import { ExecutiveSummarySection, LifeTheme } from '../../types';
 import { EmptyState } from './EmptyState';
 import { PartialStateNotice } from './PartialStateNotice';
 import { formatLifeThemeLabel, formatConfidence } from './reportUtils';
-import { Award, AlertTriangle, Scale, Eye } from 'lucide-react';
+import { Award, AlertTriangle, Scale } from 'lucide-react';
+import { ObservationAccordion, SectionAccordion } from './ObservationAccordion';
 
 interface ExecutiveSummaryCardProps {
   readonly section: ExecutiveSummarySection;
@@ -97,25 +98,18 @@ export const ExecutiveSummaryCard: React.FC<ExecutiveSummaryCardProps> = ({ sect
 
       {/* Key Observations */}
       {section.keyObservations && section.keyObservations.length > 0 && (
-        <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
-          <span className="text-[11px] font-mono-code font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-            <Eye className="w-4 h-4" /> Key Synthesis Observations
-          </span>
-          <div className="space-y-2">
-            {section.keyObservations.map((obs: SynthesisObservation, idx: number) => (
-              <div key={idx} className="bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-xs space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-200 font-serif-astro">{obs.summary}</span>
-                  {obs.type && (
-                    <span className="text-[10px] font-mono-code text-indigo-300 bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20 uppercase">
-                      {obs.type}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SectionAccordion title="Key Synthesis Observations" count={section.keyObservations.length}>
+          {section.keyObservations.map((observation, index) => {
+            const observationKey = observation.id || String(index);
+            return (
+              <ObservationAccordion
+                key={observationKey}
+                observation={observation}
+                observationKey={observationKey}
+              />
+            );
+          })}
+        </SectionAccordion>
       )}
     </div>
   );
