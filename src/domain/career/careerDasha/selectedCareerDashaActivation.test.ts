@@ -4,7 +4,21 @@ import {
 
 import type {
   SelectedPeriodActivationContext
-} from './careerDashaIntegration';
+} from '../../../core/analysis';
+
+import {
+  SELECTED_PERIOD_CONTEXT_VERSION,
+  MD_AD_PERIOD_RESOLVER_VERSION
+} from '../../../core/analysis';
+
+import {
+  DashaSystem
+} from '../../../types';
+
+import type {
+  DashaMahadashaInterpretation,
+  DashaAntardashaInterpretation
+} from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 
 import {
   Planet
@@ -76,21 +90,23 @@ function makeMinimalNatalAnalysis(): CareerNatalAnalysis {
 }
 
 function makeExpressionAnalysisWithLinkedEvidence(): CareerExpressionAnalysis {
+  // Use canonical evidence ID format from buildCanonicalEvidence: CAREER_DASHA:LEVEL:PLANET:ROLE:EFFECT
+  // These IDs match the sourceIds in canonicalDashaAnalysis.evidence for SATURN (MD) and JUPITER (AD)
   const evidence1: CareerExpressionEvidence = Object.freeze({
-    id: 'expr-evidence-1',
+    id: 'CAREER_DASHA:MD:SATURN:PRIMARY_DRIVER:SUPPORT',
     mode: 'LEADERSHIP' as any,
     role: 'PLANETARY' as any,
-    statement: 'Leadership expression evidence 1',
+    statement: 'Leadership expression evidence 1 (linked to MD)',
     weight: 2.0,
     planets: [Planet.SATURN],
     houses: [10]
   });
 
   const evidence2: CareerExpressionEvidence = Object.freeze({
-    id: 'expr-evidence-2',
+    id: 'CAREER_DASHA:AD:JUPITER:MODIFIER:SUPPORT',
     mode: 'LEADERSHIP' as any,
     role: 'PLANETARY' as any,
-    statement: 'Leadership expression evidence 2',
+    statement: 'Leadership expression evidence 2 (linked to AD)',
     weight: 1.5,
     planets: [Planet.JUPITER],
     houses: [7]
@@ -137,19 +153,67 @@ function makeHoroscope(): Horoscope {
   return calculateHoroscope(CANONICAL_BIRTH_DETAILS);
 }
 
-function makeSelectedPeriod(): SelectedPeriodActivationContext {
+function makeSelectedPeriod(overrides: Partial<SelectedPeriodActivationContext> = {}): SelectedPeriodActivationContext {
+  // Create minimal but valid DashaMahadashaInterpretation and DashaAntardashaInterpretation nodes
+  const mahadashaNode: DashaMahadashaInterpretation = Object.freeze({
+    planet: Planet.SATURN,
+    start: '2020-01-01',
+    end: '2025-01-01',
+    natal: Object.freeze({
+      planet: Planet.SATURN,
+      dignity: 'OWN_SIGN' as any,
+      strength: 'STRONG' as any,
+      activation: 'ACTIVE' as any
+    } as any),
+    antardashas: Object.freeze([]),
+    evidence: Object.freeze([]),
+    confidence: 'HIGH' as any
+  });
+
+  const antardashaNode: DashaAntardashaInterpretation = Object.freeze({
+    planet: Planet.JUPITER,
+    start: '2020-01-01',
+    end: '2022-01-01',
+    natal: Object.freeze({
+      planet: Planet.JUPITER,
+      dignity: 'OWN_SIGN' as any,
+      strength: 'STRONG' as any,
+      activation: 'ACTIVE' as any
+    } as any),
+    pratyantardashas: Object.freeze([]),
+    evidence: Object.freeze([]),
+    confidence: 'HIGH' as any
+  });
+
   return Object.freeze({
-    mahadashaNode: Object.freeze({
+    contextVersion: SELECTED_PERIOD_CONTEXT_VERSION,
+    dashaSystem: DashaSystem.VIMSHOTTARI,
+    level: 'MD_AD',
+    selectedPeriodId: 'SATURN-JUPITER-2020-2022',
+    resolverVersion: MD_AD_PERIOD_RESOLVER_VERSION,
+    analysisAsOf: '2021-06-15',
+    temporalRelation: 'CURRENT',
+    intervalSemantics: '[start,end)',
+    interval: Object.freeze({
+      start: '2020-01-01',
+      end: '2022-01-01'
+    }),
+    mahadasha: Object.freeze({
+      id: 'md-saturn-2020-2025',
       planet: Planet.SATURN,
       start: '2020-01-01',
       end: '2025-01-01'
     }),
-    antardashaNode: Object.freeze({
+    antardasha: Object.freeze({
+      id: 'ad-jupiter-2020-2022',
+      mahadashaId: 'md-saturn-2020-2025',
       planet: Planet.JUPITER,
       start: '2020-01-01',
       end: '2022-01-01'
     }),
-    selectedPeriodId: 'SATURN-JUPITER-2020-2022'
+    mahadashaNode,
+    antardashaNode,
+    ...overrides
   });
 }
 
@@ -168,10 +232,26 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         selectedPeriod
       });
 
-      // Should have expression activations only for expressions with linked evidence
-      // The exact linkage depends on the canonical evidence generated, but we should have some rows
+      // Collect all source IDs from canonical evidence (MD and AD levels)
+      const canonicalSourceIds = new Set<string>();
+      for (const evidence of result.canonicalDashaAnalysis.evidence) {
+        if (evidence.level === 'MD' || evidence.level === 'AD') {
+          for (const sourceId of evidence.sourceIds) {
+            canonicalSourceIds.add(sourceId);
+          }
+        }
+      }
+
+      // Should have expression activations for expressions with evidence IDs matching canonical source IDs
       expect(result.expressionActivations).toBeDefined();
       expect(Array.isArray(result.expressionActivations)).toBe(true);
+
+      // Check that linkedEvidenceIds match canonical source IDs
+      for (const activation of result.expressionActivations) {
+        for (const linkedId of activation.linkedEvidenceIds) {
+          expect(canonicalSourceIds.has(linkedId)).toBe(true);
+        }
+      }
     });
 
     it('expression without linked evidence is absent from rows (not a negative result)', () => {
@@ -192,9 +272,8 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       expect(Array.isArray(result.unmatchedExpressionEvidenceIds)).toBe(true);
 
       // The unmatched evidence should include the technical expression evidence
-      // which is not linked to SATURN/JUPITER activation
-      const hasUnmatched = result.unmatchedExpressionEvidenceIds.length > 0;
-      expect(hasUnmatched).toBe(true);
+      // which has ID 'expr-evidence-3' that does not match canonical source IDs
+      expect(result.unmatchedExpressionEvidenceIds).toContain('expr-evidence-3');
     });
   });
 
@@ -334,24 +413,19 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
   });
 
   describe('Temporal relation', () => {
-    it('determines temporal relation based on interval', () => {
+    it('uses temporalRelation from PBA-03 context', () => {
       const horoscope = makeHoroscope();
       const natal = makeMinimalNatalAnalysis();
       const expression = makeExpressionAnalysisWithLinkedEvidence();
 
       // Test with a past period
-      const pastPeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN,
-          start: '2000-01-01',
-          end: '2005-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER,
+      const pastPeriod = makeSelectedPeriod({
+        temporalRelation: 'PAST',
+        analysisAsOf: '2025-06-15',
+        interval: Object.freeze({
           start: '2000-01-01',
           end: '2002-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2000-2002'
+        })
       });
 
       const pastResult = buildSelectedCareerDashaActivation({
@@ -364,18 +438,13 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       expect(pastResult.temporalRelation).toBe('PAST');
 
       // Test with a future period
-      const futurePeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN,
-          start: '2030-01-01',
-          end: '2035-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER,
+      const futurePeriod = makeSelectedPeriod({
+        temporalRelation: 'FUTURE',
+        analysisAsOf: '2025-06-15',
+        interval: Object.freeze({
           start: '2030-01-01',
           end: '2032-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2030-2032'
+        })
       });
 
       const futureResult = buildSelectedCareerDashaActivation({

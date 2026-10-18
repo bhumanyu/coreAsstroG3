@@ -60,6 +60,10 @@ import {
   extractPlanetFromParticipantId
 } from '../careerParticipantRoles/participantRoleUtils';
 
+import type {
+  SelectedPeriodActivationContext
+} from '../../../core/analysis';
+
 /**
  * P2-08B SPEC REQUIREMENT #4: Vimshottari Consumption Verification
  *
@@ -124,26 +128,6 @@ export interface CareerDashaMechanismAwareInput {
  */
 export interface CareerDashaIntegrationInputExtended extends CareerDashaIntegrationInput {
   readonly mechanismAwareInput?: CareerDashaMechanismAwareInput;
-}
-
-/**
- * Selected period activation context for PBA-04 wrapper.
- *
- * Provides verbatim MD/AD timing from a user-selected period.
- * PD is explicitly unavailable (no selection at that level).
- */
-export interface SelectedPeriodActivationContext {
-  readonly mahadashaNode: {
-    readonly planet: string;
-    readonly start: string;
-    readonly end: string;
-  };
-  readonly antardashaNode: {
-    readonly planet: string;
-    readonly start: string;
-    readonly end: string;
-  };
-  readonly selectedPeriodId: string;
 }
 
 /**
@@ -831,15 +815,14 @@ export function buildSelectedCareerDashaCanonicalAnalysis(
   const { selectedPeriod, natal, mechanismAwareInput } = input;
 
   // Build timing verbatim from selected period (PD explicitly unavailable)
-  // Cast planet strings to Planet type (caller is responsible for providing valid planet names)
   const timingOverride: DashaTimingOverride = Object.freeze({
     mdTiming: Object.freeze({
-      planet: selectedPeriod.mahadashaNode.planet as Planet,
+      planet: selectedPeriod.mahadashaNode.planet,
       start: selectedPeriod.mahadashaNode.start,
       end: selectedPeriod.mahadashaNode.end
     }),
     adTiming: Object.freeze({
-      planet: selectedPeriod.antardashaNode.planet as Planet,
+      planet: selectedPeriod.antardashaNode.planet,
       start: selectedPeriod.antardashaNode.start,
       end: selectedPeriod.antardashaNode.end
     }),

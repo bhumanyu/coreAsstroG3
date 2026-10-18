@@ -21,9 +21,12 @@ import type {
 } from './careerDashaIntegration';
 
 import type {
-  CareerDashaIntegrationInputExtended,
-  SelectedPeriodActivationContext
+  CareerDashaIntegrationInputExtended
 } from './careerDashaIntegration';
+
+import type {
+  SelectedPeriodActivationContext
+} from '../../../core/analysis';
 
 import {
   buildSelectedCareerDashaCanonicalAnalysis
@@ -69,7 +72,7 @@ export interface SelectedCareerDashaActivationResult {
   readonly selectedPeriodId: string;
   /**
    * Temporal relation of the selected period (e.g., 'CURRENT', 'PAST', 'FUTURE').
-   * For PBA-04, this is derived from the interval relative to current time.
+   * Computed by PBA-03 relative to analysisAsOf.
    */
   readonly temporalRelation: 'CURRENT' | 'PAST' | 'FUTURE';
   /**
@@ -194,15 +197,15 @@ export function buildSelectedCareerDashaActivation(params: {
     .filter(id => !matchedExpressionEvidenceIds.has(id))
     .sort();
 
-  // Determine temporal relation (simplified - assumes we have current time)
-  // For PBA-04, we'll use a simple heuristic based on the interval
-  const temporalRelation = determineTemporalRelation(selectedPeriod.antardashaNode.start, selectedPeriod.antardashaNode.end);
+  // Use temporalRelation and interval from PBA-03 context
+  const temporalRelation = selectedPeriod.temporalRelation;
+  const interval = selectedPeriod.interval;
 
   // Build statement
   const statement = [
     `Selected Career Dasha activation for period ${selectedPeriod.selectedPeriodId}.`,
     `Temporal relation: ${temporalRelation}.`,
-    `Interval: [${selectedPeriod.antardashaNode.start}, ${selectedPeriod.antardashaNode.end}).`,
+    `Interval: [${interval.start}, ${interval.end}).`,
     `MD: ${mdActivation.planet ?? 'none'} (${mdActivation.effect}, ${mdActivation.direction}).`,
     `AD: ${adActivation.planet ?? 'none'} (${adActivation.effect}, ${adActivation.direction}).`,
     `Expression activations: ${expressionActivations.length}.`,
@@ -212,40 +215,10 @@ export function buildSelectedCareerDashaActivation(params: {
   return Object.freeze({
     selectedPeriodId: selectedPeriod.selectedPeriodId,
     temporalRelation,
-    interval: Object.freeze({
-      start: selectedPeriod.antardashaNode.start,
-      end: selectedPeriod.antardashaNode.end
-    }),
+    interval,
     expressionActivations: Object.freeze(expressionActivations),
     unmatchedExpressionEvidenceIds: Object.freeze(unmatchedExpressionEvidenceIds),
     canonicalDashaAnalysis,
     statement
   });
-}
-
-/**
- * Determines temporal relation based on interval relative to current time.
- *
- * Compares the interval [start, end) against the current date.
- * - CURRENT: current time is within the interval
- * - PAST: interval is entirely in the past
- * - FUTURE: interval is entirely in the future
- */
-function determineTemporalRelation(start: string, end: string): 'CURRENT' | 'PAST' | 'FUTURE' {
-  const now = new Date();
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-    // If dates are invalid, default to CURRENT
-    return 'CURRENT';
-  }
-
-  if (now < startDate) {
-    return 'FUTURE';
-  } else if (now >= endDate) {
-    return 'PAST';
-  } else {
-    return 'CURRENT';
-  }
 }

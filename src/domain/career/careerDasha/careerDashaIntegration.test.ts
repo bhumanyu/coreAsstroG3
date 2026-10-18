@@ -1,8 +1,20 @@
 import {
   buildCareerDashaAnalysis,
-  buildSelectedCareerDashaCanonicalAnalysis,
-  type SelectedPeriodActivationContext
+  buildSelectedCareerDashaCanonicalAnalysis
 } from './careerDashaIntegration';
+
+import type {
+  SelectedPeriodActivationContext
+} from '../../../core/analysis';
+
+import {
+  SELECTED_PERIOD_CONTEXT_VERSION,
+  MD_AD_PERIOD_RESOLVER_VERSION
+} from '../../../core/analysis';
+
+import {
+  DashaSystem
+} from '../../../types';
 
 import type {
   CareerDashaIntegrationInput,
@@ -13,6 +25,11 @@ import type {
 import {
   Planet
 } from '../../../types';
+
+import type {
+  DashaMahadashaInterpretation,
+  DashaAntardashaInterpretation
+} from '../../../engine/dashaInterpretation/dashaInterpretationTypes';
 
 import type {
   CareerNatalAnalysis
@@ -337,6 +354,73 @@ function makeInput(overrides: Partial<CareerDashaIntegrationInput> = {}): Career
     horoscope: makeHoroscopeWithDasha(),
     natal: makeMinimalNatal(),
     expression: makeMinimalExpression(),
+    ...overrides
+  });
+}
+
+/**
+ * Helper to create a full SelectedPeriodActivationContext fixture matching PBA-03 type.
+ */
+function makeSelectedPeriod(overrides: Partial<SelectedPeriodActivationContext> = {}): SelectedPeriodActivationContext {
+  // Create minimal but valid DashaMahadashaInterpretation and DashaAntardashaInterpretation nodes
+  const mahadashaNode: DashaMahadashaInterpretation = Object.freeze({
+    planet: Planet.SATURN,
+    start: '2020-01-01',
+    end: '2025-01-01',
+    natal: Object.freeze({
+      planet: Planet.SATURN,
+      dignity: 'OWN_SIGN' as any,
+      strength: 'STRONG' as any,
+      activation: 'ACTIVE' as any
+    } as any),
+    antardashas: Object.freeze([]),
+    evidence: Object.freeze([]),
+    confidence: 'HIGH' as any
+  });
+
+  const antardashaNode: DashaAntardashaInterpretation = Object.freeze({
+    planet: Planet.JUPITER,
+    start: '2020-01-01',
+    end: '2022-01-01',
+    natal: Object.freeze({
+      planet: Planet.JUPITER,
+      dignity: 'OWN_SIGN' as any,
+      strength: 'STRONG' as any,
+      activation: 'ACTIVE' as any
+    } as any),
+    pratyantardashas: Object.freeze([]),
+    evidence: Object.freeze([]),
+    confidence: 'HIGH' as any
+  });
+
+  return Object.freeze({
+    contextVersion: SELECTED_PERIOD_CONTEXT_VERSION,
+    dashaSystem: DashaSystem.VIMSHOTTARI,
+    level: 'MD_AD',
+    selectedPeriodId: 'SATURN-JUPITER-2020-2022',
+    resolverVersion: MD_AD_PERIOD_RESOLVER_VERSION,
+    analysisAsOf: '2021-06-15',
+    temporalRelation: 'CURRENT',
+    intervalSemantics: '[start,end)',
+    interval: Object.freeze({
+      start: '2020-01-01',
+      end: '2022-01-01'
+    }),
+    mahadasha: Object.freeze({
+      id: 'md-saturn-2020-2025',
+      planet: Planet.SATURN,
+      start: '2020-01-01',
+      end: '2025-01-01'
+    }),
+    antardasha: Object.freeze({
+      id: 'ad-jupiter-2020-2022',
+      mahadashaId: 'md-saturn-2020-2025',
+      planet: Planet.JUPITER,
+      start: '2020-01-01',
+      end: '2022-01-01'
+    }),
+    mahadashaNode,
+    antardashaNode,
     ...overrides
   });
 }
@@ -1207,20 +1291,7 @@ describe('C9 Dasha Integration', () => {
   describe('PBA-04: Selected Career Dasha Canonical Analysis', () => {
     it('selected MD/AD planets+dates equal the PBA-03 selection', () => {
       const input = makeInput();
-
-      const selectedPeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN,
-          start: '2020-01-01',
-          end: '2025-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER,
-          start: '2020-01-01',
-          end: '2022-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2020-2022'
-      });
+      const selectedPeriod = makeSelectedPeriod();
 
       const result = buildSelectedCareerDashaCanonicalAnalysis({
         ...input,
@@ -1240,20 +1311,7 @@ describe('C9 Dasha Integration', () => {
 
     it('PD explicitly unavailable (planet undefined, INSUFFICIENT_DATA)', () => {
       const input = makeInput();
-
-      const selectedPeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN,
-          start: '2020-01-01',
-          end: '2025-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER,
-          start: '2020-01-01',
-          end: '2022-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2020-2022'
-      });
+      const selectedPeriod = makeSelectedPeriod();
 
       const result = buildSelectedCareerDashaCanonicalAnalysis({
         ...input,
@@ -1270,20 +1328,7 @@ describe('C9 Dasha Integration', () => {
 
     it('interval preserved verbatim from selected period', () => {
       const input = makeInput();
-
-      const selectedPeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN,
-          start: '2020-01-01',
-          end: '2025-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER,
-          start: '2020-01-01',
-          end: '2022-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2020-2022'
-      });
+      const selectedPeriod = makeSelectedPeriod();
 
       const result = buildSelectedCareerDashaCanonicalAnalysis({
         ...input,
@@ -1301,19 +1346,7 @@ describe('C9 Dasha Integration', () => {
       const natalBefore = JSON.stringify(input.natal);
       const expressionBefore = JSON.stringify(input.expression);
 
-      const selectedPeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN,
-          start: '2020-01-01',
-          end: '2025-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER,
-          start: '2020-01-01',
-          end: '2022-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2020-2022'
-      });
+      const selectedPeriod = makeSelectedPeriod();
 
       buildSelectedCareerDashaCanonicalAnalysis({
         ...input,
@@ -1371,19 +1404,7 @@ describe('C9 Dasha Integration', () => {
         } as Horoscope)
       });
 
-      const selectedPeriod: SelectedPeriodActivationContext = Object.freeze({
-        mahadashaNode: Object.freeze({
-          planet: Planet.SATURN, // Selected, not current
-          start: '2020-01-01',
-          end: '2025-01-01'
-        }),
-        antardashaNode: Object.freeze({
-          planet: Planet.JUPITER, // Selected, not current
-          start: '2020-01-01',
-          end: '2022-01-01'
-        }),
-        selectedPeriodId: 'SATURN-JUPITER-2020-2022'
-      });
+      const selectedPeriod = makeSelectedPeriod();
 
       const result = buildSelectedCareerDashaCanonicalAnalysis({
         ...input,
