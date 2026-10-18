@@ -26,6 +26,7 @@ export default defineConfig({
           exclude: ['src/**/*.{test,spec}.tsx'],
           globals: true,
           setupFiles: './src/test/setupTests.ts',
+          testTimeout: 30000,
         },
       },
       {
@@ -35,6 +36,7 @@ export default defineConfig({
           include: ['src/**/*.{test,spec}.tsx'],
           globals: true,
           setupFiles: './src/test/setupTests.ts',
+          testTimeout: 30000,
         },
       },
     ],

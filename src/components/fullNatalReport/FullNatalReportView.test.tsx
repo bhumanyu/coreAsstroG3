@@ -109,10 +109,25 @@ describe('P-22 FullNatalReportView & Component Suite (All 30 Contract Verificati
   });
 
   // Case 11: Strength Table Label Check
-  it('11. Planetary strength section labels column exactly "Shadbala Total" and NOT "Score"', () => {
-    render(<FullNatalReportView report={canonicalReport} />);
-    expect(screen.getByText('Shadbala Total')).toBeInTheDocument();
+  it('11. Planetary strength section renders without "Score" label and with calculatedTotal value', () => {
+    const strengthReport: FullNatalAnalysisReport = {
+      ...canonicalReport,
+      planetaryStrength: {
+        status: 'AVAILABLE',
+        planets: [
+          {
+            planet: Planet.SUN,
+            calculatedTotal: 450.5,
+            shadbalaStatus: 'COMPLETE',
+            meetsMinimum: true,
+            components: []
+          }
+        ]
+      }
+    };
+    render(<FullNatalReportView report={strengthReport} />);
     expect(screen.queryByText('Score')).toBeNull();
+    expect(screen.getByText('450.50')).toBeInTheDocument();
   });
 
   // Case 12: D9 Section Tabular

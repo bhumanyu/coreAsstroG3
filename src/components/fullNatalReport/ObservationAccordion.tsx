@@ -14,10 +14,11 @@ interface SectionAccordionProps {
   readonly title: string;
   readonly count: number;
   readonly children: React.ReactNode;
+  readonly defaultExpanded?: boolean;
 }
 
-export const SectionAccordion: React.FC<SectionAccordionProps> = ({ title, count, children }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+export const SectionAccordion: React.FC<SectionAccordionProps> = ({ title, count, children, defaultExpanded = false }) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [openItemIds, setOpenItemIds] = useState<Set<string>>(() => new Set());
   const generatedId = useId().replace(/:/g, '');
   const panelId = `observation-section-${generatedId}`;
@@ -158,42 +159,42 @@ export const ObservationAccordion: React.FC<ObservationAccordionProps> = ({
         </>
       }
     >
-            <p className="leading-relaxed">{observation.summary}</p>
-            <div>
-              <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
-                Type
-              </span>
-              <p className="mt-1 font-mono-code text-[10px] text-indigo-300">{observation.type}</p>
-            </div>
-            {observation.relatedThemes.length > 0 && (
-              <div>
-                <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
-                  Related Themes
-                </span>
-                <ul className="mt-1 flex flex-wrap gap-1.5">
-                  {observation.relatedThemes.map((theme) => (
-                    <li
-                      key={theme}
-                      className="rounded border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 font-mono-code text-[10px] text-indigo-200"
-                    >
-                      {formatLifeThemeLabel(theme)}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {observation.evidenceReferences.length > 0 && (
-              <div>
-                <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
-                  Supporting Factors
-                </span>
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-400">
-                  {observation.evidenceReferences.map((reference, index) => (
-                    <li key={`${reference}-${index}`}>{reference}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+      <p className="leading-relaxed">{observation.summary}</p>
+      <div>
+        <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
+          Type
+        </span>
+        <p className="mt-1 font-mono-code text-[10px] text-indigo-300">{observation.type}</p>
+      </div>
+      {observation.relatedThemes.length > 0 && (
+        <div>
+          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
+            Related Themes
+          </span>
+          <ul className="mt-1 flex flex-wrap gap-1.5">
+            {observation.relatedThemes.map((theme) => (
+              <li
+                key={theme}
+                className="rounded border border-indigo-500/20 bg-indigo-500/10 px-1.5 py-0.5 font-mono-code text-[10px] text-indigo-200"
+              >
+                {formatLifeThemeLabel(theme)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {observation.evidenceReferences.length > 0 && (
+        <div>
+          <span className="text-[10px] font-mono-code font-bold uppercase tracking-wider text-indigo-400">
+            Supporting Factors
+          </span>
+          <ul className="mt-1 list-disc space-y-1 pl-4 text-slate-400">
+            {observation.evidenceReferences.map((reference, index) => (
+              <li key={`${reference}-${index}`}>{reference}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </CollapsibleItem>
   );
 };
