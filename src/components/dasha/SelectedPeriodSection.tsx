@@ -25,13 +25,15 @@ export interface SelectedPeriodSectionProps {
 const TEMPORAL_BADGE_CLASSES: Record<ProductTemporalRelation, string> = {
   PAST: 'bg-slate-700/60 border-slate-600/80 text-slate-300',
   CURRENT: 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300',
-  FUTURE: 'bg-blue-950/60 border-blue-800/80 text-blue-300'
+  FUTURE: 'bg-blue-950/60 border-blue-800/80 text-blue-300',
+  UNKNOWN: 'bg-amber-950/60 border-amber-800/80 text-amber-300'
 };
 
 const TEMPORAL_LABELS: Record<ProductTemporalRelation, string> = {
   PAST: 'Past',
   CURRENT: 'Current',
-  FUTURE: 'Future'
+  FUTURE: 'Future',
+  UNKNOWN: 'Unknown'
 };
 
 function formatDate(isoString: string): string {

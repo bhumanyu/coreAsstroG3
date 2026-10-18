@@ -5,7 +5,7 @@
  * Does NOT perform any astrology/domain/Vimshottari/Dasha/transit/AI calculations.
  */
 
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectDashaViewModel } from '../product/analysis/dashaViewModel';
@@ -67,7 +67,6 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
   const [submittedPeriod, setSubmittedPeriod] = useState<{ mahadashaId: string; antardashaId: string } | null>(null);
-  const requestRef = useRef(0);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';
@@ -77,23 +76,13 @@ export const DashaPage: React.FC<DashaPageProps> = ({
     setSubmittedPeriod(null);
   }, []);
 
-  // Handle period selection with stale-response guard
+  // Handle period selection
   const handleSelectPeriod = useCallback(async (mahadashaId: string, antardashaId: string) => {
     if (!onSelectPeriod) return;
 
-    const requestId = ++requestRef.current;
     setSubmittedPeriod({ mahadashaId, antardashaId });
 
-    try {
-      await onSelectPeriod(mahadashaId, antardashaId);
-    } catch (error) {
-      console.error('Period selection failed:', error);
-    } finally {
-      // Only clear submitting state if this is still the current request
-      if (requestId === requestRef.current) {
-        // isSubmitting is derived from selectionState, no local state to clear
-      }
-    }
+    await onSelectPeriod(mahadashaId, antardashaId);
   }, [onSelectPeriod]);
 
   // 1. Error state when no analysis is available
@@ -140,6 +129,21 @@ export const DashaPage: React.FC<DashaPageProps> = ({
             </span>
           </div>
           <div className="text-xs text-slate-300">{selectionError}</div>
+        </div>
+      )}
+
+      {/* Selected Period Typed Failure Banner */}
+      {selectedPeriod && selectedPeriod.status !== 'OK' && (
+        <div key={`selected-period-error-${selectedPeriod.status}`} className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-amber-300">
+              Period Selection Failed
+            </span>
+          </div>
+          <div className="text-xs text-slate-300">
+            Status: {selectedPeriod.status}
+            {selectedPeriod.error && <span> — {selectedPeriod.error}</span>}
+          </div>
         </div>
       )}
 

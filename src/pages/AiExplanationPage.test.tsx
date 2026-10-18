@@ -80,7 +80,8 @@ describe('AiExplanationPage Integration', () => {
       horoscope
     },
     lifeAnalysisState: validLifeAnalysisState,
-    horoscope
+    horoscope,
+    selectionState: { status: 'IDLE' }
   });
 
   beforeEach(() => {

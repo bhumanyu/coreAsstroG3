@@ -180,7 +180,8 @@ describe('AppController', () => {
       birthDetails: INITIAL_APP_STATE.birthDetails,
       isBirthFormOpen: true,
       productAnalysis: INITIAL_PRODUCT_ANALYSIS_STATE,
-      lifeAnalysisState: { status: 'LOADING' }
+      lifeAnalysisState: { status: 'LOADING' },
+      selectionState: { status: 'IDLE' }
     };
 
     const nextState = updater(previousState);
@@ -203,7 +204,7 @@ describe('AppController', () => {
         }
       );
 
-      let resolveAnalysis: (val: ProductAnalysis) => void = () => {};
+      let resolveAnalysis: (val: ProductAnalysis) => void = () => { };
       const pendingPromise = new Promise<ProductAnalysis>((resolve) => {
         resolveAnalysis = resolve;
       });
@@ -286,8 +287,8 @@ describe('AppController', () => {
         }
       );
 
-      let resolveReq1: (val: ProductAnalysis) => void = () => {};
-      let resolveReq2: (val: ProductAnalysis) => void = () => {};
+      let resolveReq1: (val: ProductAnalysis) => void = () => { };
+      let resolveReq2: (val: ProductAnalysis) => void = () => { };
 
       const p1 = new Promise<ProductAnalysis>((resolve) => {
         resolveReq1 = resolve;
@@ -346,7 +347,7 @@ describe('AppController', () => {
         }
       );
 
-      let resolveAnalysis: (val: ProductAnalysis) => void = () => {};
+      let resolveAnalysis: (val: ProductAnalysis) => void = () => { };
       const pendingPromise = new Promise<ProductAnalysis>((resolve) => {
         resolveAnalysis = resolve;
       });

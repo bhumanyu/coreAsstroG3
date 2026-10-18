@@ -198,6 +198,7 @@ function parseInstant(value: string): number | null {
  * - before start → FUTURE
  * - [start,end) → CURRENT
  * - ≥ end → PAST
+ * - invalid/unparseable dates → UNKNOWN
  */
 function computeTemporalRelation(
   start: string,
@@ -209,8 +210,8 @@ function computeTemporalRelation(
   const asOfMs = parseInstant(analysisAsOf);
 
   if (startMs === null || endMs === null || asOfMs === null) {
-    // Default to CURRENT if we can't parse dates
-    return 'CURRENT';
+    // Return UNKNOWN if we can't parse dates
+    return 'UNKNOWN';
   }
 
   // Canonical intervals are half-open [start, end): start is included, end excluded.

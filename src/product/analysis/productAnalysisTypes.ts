@@ -14,8 +14,9 @@ export type ProductConfidence = 'LOW' | 'MEDIUM' | 'HIGH';
 /**
  * Temporal relation of a period relative to analysis.asOf.
  * Computed using interval semantics: before start → FUTURE, [start,end) → CURRENT, ≥ end → PAST.
+ * UNKNOWN indicates invalid/unparseable date strings.
  */
-export type ProductTemporalRelation = 'PAST' | 'CURRENT' | 'FUTURE';
+export type ProductTemporalRelation = 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
 
 export type ProductAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'CONDITIONAL' | 'PARTIAL';
 

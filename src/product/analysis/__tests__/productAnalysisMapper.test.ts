@@ -9,9 +9,12 @@ import {
   mapD10Relationship,
   mapD2Relationship,
   mapSpeculativeRisk,
-  mapMethodology
+  mapMethodology,
+  mapDashaPeriodOptions
 } from '../productAnalysisMapper';
 import { createAnalysisContext } from '../../../core/analysis/analysisContextFactory';
+import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPeriod';
+import type { ProductTemporalRelation } from '../productAnalysisTypes';
 import {
   selectCareer,
   selectWealth,
@@ -571,5 +574,35 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(failed.career.promise.strength).toBe('UNAVAILABLE');
     expect(failed.wealth.overall.status).toBe('UNAVAILABLE');
     expect(failed.ai.status).toBe('FAILED');
+  });
+
+  it('9. computeTemporalRelation returns UNKNOWN for invalid/unparseable dates', () => {
+    // Verify the ProductTemporalRelation type includes 'UNKNOWN'
+    const validRelations: ProductTemporalRelation[] = ['PAST', 'CURRENT', 'FUTURE', 'UNKNOWN'];
+    expect(validRelations).toContain('UNKNOWN');
+
+    // Test mapDashaPeriodOptions with invalid dates to ensure it doesn't crash
+    // and returns 'UNKNOWN' for temporalRelation
+    // Create a mock selectable periods result with invalid dates
+    const invalidSelectablePeriods = {
+      mahadashas: [
+        {
+          id: 'md_invalid',
+          planet: Planet.JUPITER,
+          start: 'invalid-date',
+          end: 'also-invalid',
+          valid: true,
+          diagnostics: []
+        }
+      ],
+      antardashas: [],
+      diagnostics: []
+    };
+
+    const result = mapDashaPeriodOptions(invalidSelectablePeriods, '2026-01-15T08:30:00.000Z');
+
+    // Should not crash and should return temporalRelation as 'UNKNOWN'
+    expect(result.mahadashas).toHaveLength(1);
+    expect(result.mahadashas[0].temporalRelation).toBe('UNKNOWN');
   });
 });

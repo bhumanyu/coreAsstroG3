@@ -55,6 +55,7 @@ export class ProductAnalysisService {
   private _lastPipelineState?: LifeAnalysisProductState;
   private _lastHoroscope?: Horoscope;
   private _lastBirthDetails?: BirthDetails;
+  private _lastContext?: AnalysisContext;
 
   constructor(
     private readonly deps: ProductAnalysisDependencies = defaultProductAnalysisDependencies
@@ -91,6 +92,7 @@ export class ProductAnalysisService {
       const horoscope = this.deps.calculateHoroscope(birthDetails, undefined, context.asOf);
       this._lastHoroscope = horoscope;
       this._lastBirthDetails = birthDetails;
+      this._lastContext = context;
       const pipelineState = await this.deps.runPipeline({
         horoscope,
         context,
@@ -283,6 +285,9 @@ export class ProductAnalysisService {
     if (!this._lastBirthDetails) {
       throw new Error('Cannot select period: no birth details available. Call analyze() first.');
     }
+    if (!this._lastContext) {
+      throw new Error('Cannot select period: no analysis context available. Call analyze() first.');
+    }
     if (!this._lastPipelineState.temporalState) {
       throw new Error('Cannot select period: temporalState unavailable.');
     }
@@ -300,13 +305,7 @@ export class ProductAnalysisService {
     const birthDetails = this._lastBirthDetails;
     const pipelineState = this._lastPipelineState;
     const temporalState = pipelineState.temporalState!;
-
-    // Reconstruct context from retained state
-    const context = createAnalysisContext({
-      asOf: temporalState.asOf,
-      engineVersion: 'ASTRO_CORE_V1',
-      rulesVersion: 'PARASHARA_CLASSICAL_RULES_V2'
-    });
+    const context = this._lastContext;
 
     // Reconstruct the base product analysis (preserves natal baseline and dasha.current)
     const productAnalysis = mapProductAnalysis({
