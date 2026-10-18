@@ -127,6 +127,26 @@ export interface CareerDashaIntegrationInputExtended extends CareerDashaIntegrat
 }
 
 /**
+ * Selected period activation context for PBA-04 wrapper.
+ *
+ * Provides verbatim MD/AD timing from a user-selected period.
+ * PD is explicitly unavailable (no selection at that level).
+ */
+export interface SelectedPeriodActivationContext {
+  readonly mahadashaNode: {
+    readonly planet: string;
+    readonly start: string;
+    readonly end: string;
+  };
+  readonly antardashaNode: {
+    readonly planet: string;
+    readonly start: string;
+    readonly end: string;
+  };
+  readonly selectedPeriodId: string;
+}
+
+/**
  * Canonical planet order for Career Dasha processing.
  * Matches the 9-planet Vedic system: Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu.
  */
@@ -268,50 +288,76 @@ function buildPlanetContexts(
 }
 
 /**
+ * Optional timing override for building Dasha activation context.
+ * Used when a specific MD/AD/PD selection is provided instead of current timing.
+ */
+interface DashaTimingOverride {
+  readonly mdTiming: CareerDashaTiming;
+  readonly adTiming: CareerDashaTiming;
+  readonly pdTiming: CareerDashaTiming;
+}
+
+/**
  * Builds the CareerDashaActivationContext from the integration input.
  *
  * This function:
- * - Returns undefined if no current Dasha is available
+ * - Returns undefined if no current Dasha is available (when no timing override)
  * - Builds context from natal.structural (direction/strength/primarySupport/primaryChallenge)
  * - Uses planet contexts built from natal and expression
- * - Extracts md/ad/pd timing from current.mahadasha/antardasha/pratyantardasha
+ * - Extracts md/ad/pd timing from current.mahadasha/antardasha/pratyantardasha, or uses override if provided
  *
  * Per P2-11C Gate 3: When mechanismAwareInput is present, resolve planet associations
  * from explicit participant identities via extractPlanetFromParticipantId (returning real Planet enum).
  * When mechanismAwareInput is absent, the legacy planet-derived path runs with an explicit limitation diagnostic.
  *
  * C9 must consume natal.structural — it must NOT recompute houses/lords/relevance/condition/promise.
+ *
+ * @param input - The integration input containing horoscope, natal, expression, and optional mechanismAwareInput
+ * @param timingOverride - Optional timing override for selected MD/AD/PD periods
+ * @returns A frozen CareerDashaActivationContext, or undefined if no timing available
  */
 function buildCareerDashaActivationContext(
-  input: CareerDashaIntegrationInputExtended
+  input: CareerDashaIntegrationInputExtended,
+  timingOverride?: DashaTimingOverride
 ): CareerDashaActivationContext | undefined {
   const { horoscope, natal, mechanismAwareInput, dashaInterpretation } = input;
 
-  const currentDasha = getCurrentDasha(horoscope, dashaInterpretation);
-  if (!currentDasha) {
-    return undefined;
+  // Use timing override if provided, otherwise extract from current Dasha
+  let mdTiming: CareerDashaTiming;
+  let adTiming: CareerDashaTiming;
+  let pdTiming: CareerDashaTiming;
+
+  if (timingOverride) {
+    mdTiming = timingOverride.mdTiming;
+    adTiming = timingOverride.adTiming;
+    pdTiming = timingOverride.pdTiming;
+  } else {
+    const currentDasha = getCurrentDasha(horoscope, dashaInterpretation);
+    if (!currentDasha) {
+      return undefined;
+    }
+
+    // Extract timing from current Dasha
+    // SPEC NOTE (P2-08B requirement #4): Preserve planet + start + end verbatim from upstream source.
+    // These should come from engine/dasha/vimshottari.ts getActiveDasha() output.
+    mdTiming = Object.freeze({
+      planet: currentDasha.mahadasha?.planet,
+      start: currentDasha.mahadasha?.start,
+      end: currentDasha.mahadasha?.end
+    });
+
+    adTiming = Object.freeze({
+      planet: currentDasha.antardasha?.planet,
+      start: currentDasha.antardasha?.start,
+      end: currentDasha.antardasha?.end
+    });
+
+    pdTiming = Object.freeze({
+      planet: currentDasha.pratyantardasha?.planet,
+      start: currentDasha.pratyantardasha?.start,
+      end: currentDasha.pratyantardasha?.end
+    });
   }
-
-  // Extract timing from current Dasha
-  // SPEC NOTE (P2-08B requirement #4): Preserve planet + start + end verbatim from upstream source.
-  // These should come from engine/dasha/vimshottari.ts getActiveDasha() output.
-  const mdTiming: CareerDashaTiming = Object.freeze({
-    planet: currentDasha.mahadasha?.planet,
-    start: currentDasha.mahadasha?.start,
-    end: currentDasha.mahadasha?.end
-  });
-
-  const adTiming: CareerDashaTiming = Object.freeze({
-    planet: currentDasha.antardasha?.planet,
-    start: currentDasha.antardasha?.start,
-    end: currentDasha.antardasha?.end
-  });
-
-  const pdTiming: CareerDashaTiming = Object.freeze({
-    planet: currentDasha.pratyantardasha?.planet,
-    start: currentDasha.pratyantardasha?.start,
-    end: currentDasha.pratyantardasha?.end
-  });
 
   // Build planet contexts
   // Per P2-11C Gate 3: Use mechanism-aware planet resolution when available
@@ -689,41 +735,28 @@ function createUnavailableCareerDashaAnalysis(): CareerDashaCanonicalAnalysis {
 }
 
 /**
- * Canonical public function for C9 Dasha activation analysis.
+ * Private shared function to assemble canonical analysis from activation hierarchy.
  *
  * This function:
- * - Returns createUnavailableCareerDashaAnalysis() when no context
- * - Calls resolveCareerDashaActivation(context) from ./careerDashaActivation
- * - Builds canonical MD/AD/PD periods
+ * - Builds canonical MD/AD/PD periods from hierarchy
  * - Aggregates evidence with deterministic identityKey
  * - Returns a frozen CareerDashaCanonicalAnalysis
  *
- * Per P2-11C Gate 3: Accepts extended input with optional mechanismAwareInput.
- * When mechanismAwareInput is present, resolves planet associations from explicit participant identities.
- * When absent, runs legacy planet-derived path with explicit limitation diagnostic.
- *
- * @param input - The integration input containing horoscope, natal, expression, and optional mechanismAwareInput
- * @returns A frozen CareerDashaCanonicalAnalysis
+ * Used by both the current-path buildCareerDashaAnalysis and the selected-path
+ * buildSelectedCareerDashaCanonicalAnalysis.
  */
-export function buildCareerDashaAnalysis(
-  input: CareerDashaIntegrationInputExtended
+function assembleCareerDashaCanonicalAnalysis(
+  hierarchy: CareerDashaActivationHierarchy,
+  natal: CareerNatalAnalysis,
+  mechanismAwareInput?: CareerDashaMechanismAwareInput
 ): CareerDashaCanonicalAnalysis {
-  const context = buildCareerDashaActivationContext(input);
-
-  if (!context) {
-    return createUnavailableCareerDashaAnalysis();
-  }
-
-  // Call the existing engine
-  const hierarchy = resolveCareerDashaActivation(context);
-
   // Build canonical periods
   const md = buildCanonicalPeriod(hierarchy.md, 'MD');
   const ad = buildCanonicalPeriod(hierarchy.ad, 'AD');
   const pd = buildCanonicalPeriod(hierarchy.pd, 'PD');
 
   // Build canonical evidence
-  const evidence = buildCanonicalEvidence(hierarchy, input.natal);
+  const evidence = buildCanonicalEvidence(hierarchy, natal);
 
   // Collect all root evidence IDs
   const rootEvidenceIds = Object.freeze(
@@ -738,7 +771,7 @@ export function buildCareerDashaAnalysis(
     `Overall strength: ${hierarchy.overallStrength}.`,
     `Dominant level: ${hierarchy.dominantLevel}.`,
     `Evidence count: ${evidence.length}.`,
-    input.mechanismAwareInput ? `Mechanism-aware: true (mechanismId: ${input.mechanismAwareInput.mechanismId ?? 'none'}).` : 'Mechanism-aware: false (legacy path).'
+    mechanismAwareInput ? `Mechanism-aware: true (mechanismId: ${mechanismAwareInput.mechanismId ?? 'none'}).` : 'Mechanism-aware: false (legacy path).'
   ].join(' ');
 
   // Derive overallDirection from hierarchy.overallEffect at the adapter level
@@ -777,4 +810,89 @@ export function buildCareerDashaAnalysis(
     statement,
     hierarchy
   });
+}
+
+/**
+ * PBA-04 wrapper: Build canonical analysis for a selected MD/AD period.
+ *
+ * This function:
+ * - Builds mdTiming/adTiming verbatim from selectedPeriod.mahadashaNode/antardashaNode (planet/start/end exact source strings)
+ * - Sets pdTiming = { planet: undefined, start: undefined, end: undefined } (explicitly unavailable)
+ * - Never reads horoscope.dashaInterpretation.current/activePeriods or the dashaInterpretation input for the selected path
+ * - Runs the shared assembly function
+ * - Returns a frozen CareerDashaCanonicalAnalysis
+ *
+ * @param input - The integration input containing horoscope, natal, expression, mechanismAwareInput, and selectedPeriod
+ * @returns A frozen CareerDashaCanonicalAnalysis
+ */
+export function buildSelectedCareerDashaCanonicalAnalysis(
+  input: CareerDashaIntegrationInputExtended & { selectedPeriod: SelectedPeriodActivationContext }
+): CareerDashaCanonicalAnalysis {
+  const { selectedPeriod, natal, mechanismAwareInput } = input;
+
+  // Build timing verbatim from selected period (PD explicitly unavailable)
+  // Cast planet strings to Planet type (caller is responsible for providing valid planet names)
+  const timingOverride: DashaTimingOverride = Object.freeze({
+    mdTiming: Object.freeze({
+      planet: selectedPeriod.mahadashaNode.planet as Planet,
+      start: selectedPeriod.mahadashaNode.start,
+      end: selectedPeriod.mahadashaNode.end
+    }),
+    adTiming: Object.freeze({
+      planet: selectedPeriod.antardashaNode.planet as Planet,
+      start: selectedPeriod.antardashaNode.start,
+      end: selectedPeriod.antardashaNode.end
+    }),
+    pdTiming: Object.freeze({
+      planet: undefined,
+      start: undefined,
+      end: undefined
+    })
+  });
+
+  // Build context with timing override (does NOT read horoscope.dashaInterpretation)
+  const context = buildCareerDashaActivationContext(input, timingOverride);
+
+  if (!context) {
+    return createUnavailableCareerDashaAnalysis();
+  }
+
+  // Call the existing engine
+  const hierarchy = resolveCareerDashaActivation(context);
+
+  // Use shared assembly function
+  return assembleCareerDashaCanonicalAnalysis(hierarchy, natal, mechanismAwareInput);
+}
+
+/**
+ * Canonical public function for C9 Dasha activation analysis.
+ *
+ * This function:
+ * - Returns createUnavailableCareerDashaAnalysis() when no context
+ * - Calls resolveCareerDashaActivation(context) from ./careerDashaActivation
+ * - Builds canonical MD/AD/PD periods
+ * - Aggregates evidence with deterministic identityKey
+ * - Returns a frozen CareerDashaCanonicalAnalysis
+ *
+ * Per P2-11C Gate 3: Accepts extended input with optional mechanismAwareInput.
+ * When mechanismAwareInput is present, resolves planet associations from explicit participant identities.
+ * When absent, runs legacy planet-derived path with explicit limitation diagnostic.
+ *
+ * @param input - The integration input containing horoscope, natal, expression, and optional mechanismAwareInput
+ * @returns A frozen CareerDashaCanonicalAnalysis
+ */
+export function buildCareerDashaAnalysis(
+  input: CareerDashaIntegrationInputExtended
+): CareerDashaCanonicalAnalysis {
+  const context = buildCareerDashaActivationContext(input);
+
+  if (!context) {
+    return createUnavailableCareerDashaAnalysis();
+  }
+
+  // Call the existing engine
+  const hierarchy = resolveCareerDashaActivation(context);
+
+  // Use shared assembly function
+  return assembleCareerDashaCanonicalAnalysis(hierarchy, input.natal, input.mechanismAwareInput);
 }

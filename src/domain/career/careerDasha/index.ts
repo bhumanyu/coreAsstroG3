@@ -18,6 +18,9 @@ export * from './careerDashaActivation';
 export * from './careerDashaCanonicalTypes';
 export * from './careerDashaIntegration';
 
+// PBA-04: Selected Career Dasha Activation
+export * from './selectedCareerDashaActivation';
+
 // Export key helpers for C9 Dasha activation analysis
 export {
     createCanonicalEvidenceKey,
