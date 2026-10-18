@@ -1298,6 +1298,10 @@ describe('C9 Dasha Integration', () => {
         selectedPeriod
       });
 
+      if (!result) {
+        throw new Error('Expected result to be defined');
+      }
+
       // MD should match selected period verbatim
       expect(result.md.planet).toBe(Planet.SATURN);
       expect(result.md.start).toBe('2020-01-01');
@@ -1318,6 +1322,10 @@ describe('C9 Dasha Integration', () => {
         selectedPeriod
       });
 
+      if (!result) {
+        throw new Error('Expected result to be defined');
+      }
+
       // PD should be explicitly unavailable
       expect(result.pd.planet).toBeUndefined();
       expect(result.pd.effect).toBe('INSUFFICIENT_DATA');
@@ -1334,6 +1342,10 @@ describe('C9 Dasha Integration', () => {
         ...input,
         selectedPeriod
       });
+
+      if (!result) {
+        throw new Error('Expected result to be defined');
+      }
 
       // Interval should be preserved verbatim from AD
       expect(result.ad.start).toBe('2020-01-01');
@@ -1411,11 +1423,202 @@ describe('C9 Dasha Integration', () => {
         selectedPeriod
       });
 
+      if (!result) {
+        throw new Error('Expected result to be defined');
+      }
+
       // Should use selected period, NOT current from horoscope.dashaInterpretation
       expect(result.md.planet).toBe(Planet.SATURN);
       expect(result.ad.planet).toBe(Planet.JUPITER);
       expect(result.md.planet).not.toBe(Planet.MARS);
       expect(result.ad.planet).not.toBe(Planet.VENUS);
+    });
+
+    describe('P1: Validation errors', () => {
+      it('returns undefined when dashaSystem is not VIMSHOTTARI', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          dashaSystem: 'OTHER_SYSTEM' as any // Invalid dasha system
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
+
+      it('returns undefined when level is not MD_AD', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          level: 'MD' as any // Invalid level
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
+
+      it('returns undefined when intervalSemantics is not [start,end)', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          intervalSemantics: '[start,end]' as any // Invalid semantics
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
+
+      it('returns undefined when mahadasha context and node mismatch', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          mahadasha: Object.freeze({
+            id: 'md-saturn-2020-2025',
+            planet: Planet.MARS, // Mismatch with node
+            start: '2020-01-01',
+            end: '2025-01-01'
+          }),
+          mahadashaNode: Object.freeze({
+            planet: Planet.SATURN, // Node still has SATURN - mismatch
+            start: '2020-01-01',
+            end: '2025-01-01',
+            natal: Object.freeze({
+              planet: Planet.SATURN,
+              dignity: 'OWN_SIGN' as any,
+              strength: 'STRONG' as any,
+              activation: 'ACTIVE' as any
+            } as any),
+            antardashas: Object.freeze([]),
+            evidence: Object.freeze([]),
+            confidence: 'HIGH' as any
+          })
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
+
+      it('returns undefined when antardasha context and node mismatch', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          antardasha: Object.freeze({
+            id: 'ad-jupiter-2020-2022',
+            mahadashaId: 'md-saturn-2020-2025',
+            planet: Planet.VENUS, // Mismatch with node
+            start: '2020-01-01',
+            end: '2022-01-01'
+          }),
+          antardashaNode: Object.freeze({
+            planet: Planet.JUPITER, // Node still has JUPITER - mismatch
+            start: '2020-01-01',
+            end: '2022-01-01',
+            natal: Object.freeze({
+              planet: Planet.JUPITER,
+              dignity: 'OWN_SIGN' as any,
+              strength: 'STRONG' as any,
+              activation: 'ACTIVE' as any
+            } as any),
+            pratyantardashas: Object.freeze([]),
+            evidence: Object.freeze([]),
+            confidence: 'HIGH' as any
+          })
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
+
+      it('returns undefined when interval start >= end', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          interval: Object.freeze({
+            start: '2022-01-01', // Invalid: start >= end
+            end: '2020-01-01'
+          }),
+          antardasha: Object.freeze({
+            id: 'ad-jupiter-2022-2020',
+            mahadashaId: 'md-saturn-2020-2025',
+            planet: Planet.JUPITER,
+            start: '2022-01-01',
+            end: '2020-01-01'
+          }),
+          antardashaNode: Object.freeze({
+            planet: Planet.JUPITER,
+            start: '2022-01-01',
+            end: '2020-01-01',
+            natal: Object.freeze({
+              planet: Planet.JUPITER,
+              dignity: 'OWN_SIGN' as any,
+              strength: 'STRONG' as any,
+              activation: 'ACTIVE' as any
+            } as any),
+            pratyantardashas: Object.freeze([]),
+            evidence: Object.freeze([]),
+            confidence: 'HIGH' as any
+          })
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
+
+      it('returns undefined when AD interval not contained in MD interval', () => {
+        const input = makeInput();
+        const selectedPeriod = makeSelectedPeriod({
+          interval: Object.freeze({
+            start: '2019-01-01', // AD starts before MD (2020-01-01)
+            end: '2022-01-01'
+          }),
+          antardasha: Object.freeze({
+            id: 'ad-jupiter-2019-2022',
+            mahadashaId: 'md-saturn-2020-2025',
+            planet: Planet.JUPITER,
+            start: '2019-01-01',
+            end: '2022-01-01'
+          }),
+          antardashaNode: Object.freeze({
+            planet: Planet.JUPITER,
+            start: '2019-01-01',
+            end: '2022-01-01',
+            natal: Object.freeze({
+              planet: Planet.JUPITER,
+              dignity: 'OWN_SIGN' as any,
+              strength: 'STRONG' as any,
+              activation: 'ACTIVE' as any
+            } as any),
+            pratyantardashas: Object.freeze([]),
+            evidence: Object.freeze([]),
+            confidence: 'HIGH' as any
+          })
+        });
+
+        const result = buildSelectedCareerDashaCanonicalAnalysis({
+          ...input,
+          selectedPeriod
+        });
+
+        expect(result).toBeUndefined();
+      });
     });
   });
 });

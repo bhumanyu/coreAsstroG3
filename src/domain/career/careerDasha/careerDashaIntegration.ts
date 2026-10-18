@@ -53,6 +53,10 @@ import {
 } from '../../../types';
 
 import {
+  DashaSystem
+} from '../../../types';
+
+import {
   resolveCareerDashaActivation
 } from './careerDashaActivation';
 
@@ -797,22 +801,126 @@ function assembleCareerDashaCanonicalAnalysis(
 }
 
 /**
+ * P1: Validates selected-period context consistency before C9 resolution.
+ *
+ * Verifies:
+ * - ctx.dashaSystem === VIMSHOTTARI
+ * - ctx.level === 'MD_AD'
+ * - ctx.intervalSemantics === '[start,end)'
+ * - ctx.mahadasha.planet/start/end equal mahadashaNode.planet/start/end
+ * - ctx.antardasha.planet/start/end equal antardashaNode.planet/start/end
+ * - ctx.interval equals {antardashaNode.start, antardashaNode.end}
+ * - ctx.antardasha.mahadashaId === ctx.mahadasha.id
+ * - interval.start < interval.end (parsed)
+ * - AD interval contained in MD interval
+ * 
+ * On any mismatch, returns false.
+ * Never substitutes current-Dasha data on mismatch.
+ * 
+ * @param ctx - The selected period activation context to validate
+ * @returns true if valid, false if invalid
+ */
+function validateSelectedPeriodContext(
+  ctx: SelectedPeriodActivationContext
+): boolean {
+  // Verify dasha system
+  if (ctx.dashaSystem !== DashaSystem.VIMSHOTTARI) {
+    return false;
+  }
+
+  // Verify level
+  if (ctx.level !== 'MD_AD') {
+    return false;
+  }
+
+  // Verify interval semantics
+  if (ctx.intervalSemantics !== '[start,end)') {
+    return false;
+  }
+
+  // Verify mahadasha consistency between context and node
+  if (ctx.mahadasha.planet !== ctx.mahadashaNode.planet) {
+    return false;
+  }
+  if (ctx.mahadasha.start !== ctx.mahadashaNode.start) {
+    return false;
+  }
+  if (ctx.mahadasha.end !== ctx.mahadashaNode.end) {
+    return false;
+  }
+
+  // Verify antardasha consistency between context and node
+  if (ctx.antardasha.planet !== ctx.antardashaNode.planet) {
+    return false;
+  }
+  if (ctx.antardasha.start !== ctx.antardashaNode.start) {
+    return false;
+  }
+  if (ctx.antardasha.end !== ctx.antardashaNode.end) {
+    return false;
+  }
+
+  // Verify antardasha mahadashaId matches mahadasha id
+  if (ctx.antardasha.mahadashaId !== ctx.mahadasha.id) {
+    return false;
+  }
+
+  // Verify interval matches antardasha node
+  if (ctx.interval.start !== ctx.antardashaNode.start) {
+    return false;
+  }
+  if (ctx.interval.end !== ctx.antardashaNode.end) {
+    return false;
+  }
+
+  // Parse and verify interval ordering
+  const startMs = Date.parse(ctx.interval.start);
+  const endMs = Date.parse(ctx.interval.end);
+  const mdStartMs = Date.parse(ctx.mahadasha.start);
+  const mdEndMs = Date.parse(ctx.mahadasha.end);
+
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || Number.isNaN(mdStartMs) || Number.isNaN(mdEndMs)) {
+    return false;
+  }
+
+  // Verify start < end
+  if (startMs >= endMs) {
+    return false;
+  }
+
+  // Verify AD interval contained in MD interval
+  if (startMs < mdStartMs || endMs > mdEndMs) {
+    return false;
+  }
+
+  // All checks passed
+  return true;
+}
+
+/**
  * PBA-04 wrapper: Build canonical analysis for a selected MD/AD period.
  *
  * This function:
+ * - Validates selected-period context consistency (P1)
  * - Builds mdTiming/adTiming verbatim from selectedPeriod.mahadashaNode/antardashaNode (planet/start/end exact source strings)
  * - Sets pdTiming = { planet: undefined, start: undefined, end: undefined } (explicitly unavailable)
  * - Never reads horoscope.dashaInterpretation.current/activePeriods or the dashaInterpretation input for the selected path
  * - Runs the shared assembly function
- * - Returns a frozen CareerDashaCanonicalAnalysis
+ * - Returns a frozen CareerDashaCanonicalAnalysis on success
+ * - Returns undefined on validation failure (P1: discriminated failure pattern)
  *
  * @param input - The integration input containing horoscope, natal, expression, mechanismAwareInput, and selectedPeriod
- * @returns A frozen CareerDashaCanonicalAnalysis
+ * @returns A frozen CareerDashaCanonicalAnalysis on success, undefined on validation failure
  */
 export function buildSelectedCareerDashaCanonicalAnalysis(
   input: CareerDashaIntegrationInputExtended & { selectedPeriod: SelectedPeriodActivationContext }
-): CareerDashaCanonicalAnalysis {
+): CareerDashaCanonicalAnalysis | undefined {
   const { selectedPeriod, natal, mechanismAwareInput } = input;
+
+  // P1: Validate selected-period context consistency
+  if (!validateSelectedPeriodContext(selectedPeriod)) {
+    return undefined;
+  }
 
   // Build timing verbatim from selected period (PD explicitly unavailable)
   const timingOverride: DashaTimingOverride = Object.freeze({
