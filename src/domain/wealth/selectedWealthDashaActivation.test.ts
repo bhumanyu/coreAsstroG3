@@ -12,8 +12,10 @@ import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import { evaluateSelectedWealthPeriodActivation } from './selectedWealthDashaActivation';
 import {
   createSelectedPeriodActivationContext,
-  listSelectableMdAdPeriods
+  listSelectableMdAdPeriods,
+  SELECTED_PERIOD_CONTEXT_VERSION
 } from '../../core/analysis';
+import { MD_AD_PERIOD_RESOLVER_VERSION } from '../../core/analysis/selectedMdAdPeriod';
 
 function dashaEvidence(
   ruleId: string,
@@ -37,6 +39,8 @@ function makeContext(
   mdEvidence: readonly DashaInterpretationEvidence[],
   adEvidence: readonly DashaInterpretationEvidence[] = []
 ): SelectedPeriodActivationContext {
+  const mdId = 'md-1';
+  const adId = 'ad-1';
   const mdNode = {
     planet: Planet.SATURN,
     evidence: mdEvidence,
@@ -49,25 +53,27 @@ function makeContext(
     start: '2025-01-01T00:00:00.000Z',
     end: '2027-01-01T00:00:00.000Z'
   } as unknown as DashaAntardashaInterpretation;
+  // Create selectedPeriodId using the same logic as the factory
+  const selectedPeriodId = `pba-period:${SELECTED_PERIOD_CONTEXT_VERSION}:${encodeURIComponent(mdId)}:${encodeURIComponent(adId)}`;
   return {
-    contextVersion: 'v1',
+    contextVersion: SELECTED_PERIOD_CONTEXT_VERSION,
     dashaSystem: 'VIMSHOTTARI' as const,
     level: 'MD_AD',
-    selectedPeriodId: 'pba-period:v1:md-1:ad-1',
-    resolverVersion: 'pba-md-ad-resolver-v1',
+    selectedPeriodId,
+    resolverVersion: MD_AD_PERIOD_RESOLVER_VERSION,
     analysisAsOf: '2026-01-01T00:00:00.000Z',
     temporalRelation: 'CURRENT',
     intervalSemantics: '[start,end)',
     interval: { start: '2025-01-01T00:00:00.000Z', end: '2027-01-01T00:00:00.000Z' },
     mahadasha: {
-      id: 'md-1',
+      id: mdId,
       planet: Planet.SATURN,
       start: '2020-01-01T00:00:00.000Z',
       end: '2039-01-01T00:00:00.000Z'
     },
     antardasha: {
-      id: 'ad-1',
-      mahadashaId: 'md-1',
+      id: adId,
+      mahadashaId: mdId,
       planet: Planet.MERCURY,
       start: '2025-01-01T00:00:00.000Z',
       end: '2027-01-01T00:00:00.000Z'
@@ -679,6 +685,22 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     it('returns INVALID_SELECTED_PERIOD_CONTEXT for null context', () => {
       const result = evaluateSelectedWealthPeriodActivation({
         selectedPeriod: null as unknown as SelectedPeriodActivationContext,
+        wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_SELECTED_PERIOD_CONTEXT');
+      }
+    });
+
+    it('returns INVALID_SELECTED_PERIOD_CONTEXT for context with temporalRelation: undefined', () => {
+      const contextWithUndefinedTemporalRelation = makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]);
+      // Set temporalRelation to undefined
+      (contextWithUndefinedTemporalRelation as any).temporalRelation = undefined;
+
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: contextWithUndefinedTemporalRelation,
         wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
       });
 

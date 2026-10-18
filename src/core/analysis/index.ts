@@ -30,6 +30,7 @@ export {
 export {
   createSelectedPeriodActivationContext,
   validateSelectedPeriodContext,
+  createSelectedPeriodId,
   SELECTED_PERIOD_CONTEXT_VERSION,
   type SelectedPeriodActivationContext,
   type SelectedPeriodActivationContextResult,

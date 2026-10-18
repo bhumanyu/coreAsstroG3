@@ -116,7 +116,7 @@ function classifyTemporalRelation(
  * Not an evidence ID, rule ID, or durable external/storage identity.
  * Downstream persistence/API contracts must not rely on its format without a versioned migration.
  */
-function createSelectedPeriodId(
+export function createSelectedPeriodId(
   mahadashaId: string,
   antardashaId: string
 ): string {
@@ -198,6 +198,11 @@ export function createSelectedPeriodActivationContext(
  * - ctx is truthy and an object
  * - ctx.mahadasha, ctx.mahadashaNode, ctx.antardasha, ctx.antardashaNode, ctx.interval exist and are objects
  * - required string fields (planet, start, end, id, mahadashaId) are present and are strings
+ * - ctx.contextVersion === SELECTED_PERIOD_CONTEXT_VERSION
+ * - ctx.resolverVersion === MD_AD_PERIOD_RESOLVER_VERSION
+ * - ctx.selectedPeriodId is a non-empty string matching createSelectedPeriodId(mahadasha.id, antardasha.id)
+ * - ctx.analysisAsOf is a parseable date string
+ * - ctx.temporalRelation is one of 'PAST' | 'CURRENT' | 'FUTURE'
  * - ctx.dashaSystem === VIMSHOTTARI
  * - ctx.level === 'MD_AD'
  * - ctx.intervalSemantics === '[start,end)'
@@ -253,6 +258,41 @@ export function validateSelectedPeriodContext(
     typeof typedCtx.antardasha.mahadashaId !== 'string' ||
     typeof typedCtx.interval.start !== 'string' ||
     typeof typedCtx.interval.end !== 'string'
+  ) {
+    return false;
+  }
+
+  // Verify top-level metadata: contextVersion
+  if (typedCtx.contextVersion !== SELECTED_PERIOD_CONTEXT_VERSION) {
+    return false;
+  }
+
+  // Verify top-level metadata: resolverVersion
+  if (typedCtx.resolverVersion !== MD_AD_PERIOD_RESOLVER_VERSION) {
+    return false;
+  }
+
+  // Verify top-level metadata: selectedPeriodId (must be non-empty string)
+  if (typeof typedCtx.selectedPeriodId !== 'string' || typedCtx.selectedPeriodId.length === 0) {
+    return false;
+  }
+
+  // Verify selectedPeriodId consistency with mahadasha/antardasha IDs
+  const expectedPeriodId = createSelectedPeriodId(typedCtx.mahadasha.id, typedCtx.antardasha.id);
+  if (typedCtx.selectedPeriodId !== expectedPeriodId) {
+    return false;
+  }
+
+  // Verify top-level metadata: analysisAsOf (must be parseable date string)
+  if (typeof typedCtx.analysisAsOf !== 'string' || Number.isNaN(Date.parse(typedCtx.analysisAsOf))) {
+    return false;
+  }
+
+  // Verify top-level metadata: temporalRelation (must be valid enum value)
+  if (
+    typedCtx.temporalRelation !== 'PAST' &&
+    typedCtx.temporalRelation !== 'CURRENT' &&
+    typedCtx.temporalRelation !== 'FUTURE'
   ) {
     return false;
   }

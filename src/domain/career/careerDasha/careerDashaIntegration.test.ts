@@ -9,7 +9,8 @@ import type {
 
 import {
   SELECTED_PERIOD_CONTEXT_VERSION,
-  MD_AD_PERIOD_RESOLVER_VERSION
+  MD_AD_PERIOD_RESOLVER_VERSION,
+  createSelectedPeriodId
 } from '../../../core/analysis';
 
 import {
@@ -393,11 +394,14 @@ function makeSelectedPeriod(overrides: Partial<SelectedPeriodActivationContext> 
     confidence: 'HIGH' as any
   });
 
+  const mahadashaId = 'md-saturn-2020-2025';
+  const antardashaId = 'ad-jupiter-2020-2022';
+
   return Object.freeze({
     contextVersion: SELECTED_PERIOD_CONTEXT_VERSION,
     dashaSystem: DashaSystem.VIMSHOTTARI,
     level: 'MD_AD',
-    selectedPeriodId: 'SATURN-JUPITER-2020-2022',
+    selectedPeriodId: createSelectedPeriodId(mahadashaId, antardashaId),
     resolverVersion: MD_AD_PERIOD_RESOLVER_VERSION,
     analysisAsOf: '2021-06-15',
     temporalRelation: 'CURRENT',
@@ -407,14 +411,14 @@ function makeSelectedPeriod(overrides: Partial<SelectedPeriodActivationContext> 
       end: '2022-01-01'
     }),
     mahadasha: Object.freeze({
-      id: 'md-saturn-2020-2025',
+      id: mahadashaId,
       planet: Planet.SATURN,
       start: '2020-01-01',
       end: '2025-01-01'
     }),
     antardasha: Object.freeze({
-      id: 'ad-jupiter-2020-2022',
-      mahadashaId: 'md-saturn-2020-2025',
+      id: antardashaId,
+      mahadashaId,
       planet: Planet.JUPITER,
       start: '2020-01-01',
       end: '2022-01-01'

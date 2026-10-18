@@ -596,5 +596,133 @@ describe('selectedPeriodActivationContext', () => {
         expect(validateSelectedPeriodContext(result.value)).toBe(true);
       }
     });
+
+    it('returns false for missing contextVersion', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const { contextVersion, ...invalidCtx } = result.value;
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for wrong contextVersion value', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, contextVersion: 'v99' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for missing selectedPeriodId', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const { selectedPeriodId, ...invalidCtx } = result.value;
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for selectedPeriodId inconsistent with createSelectedPeriodId', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, selectedPeriodId: 'inconsistent-id' };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for missing resolverVersion', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const { resolverVersion, ...invalidCtx } = result.value;
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for invalid resolverVersion', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, resolverVersion: 'invalid-version' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for unparseable analysisAsOf', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, analysisAsOf: 'not-a-date' };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for invalid temporalRelation value', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, temporalRelation: 'SOMETIME' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
   });
 });
