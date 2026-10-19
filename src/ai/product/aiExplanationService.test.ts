@@ -343,7 +343,7 @@ describe('runAiExplanation', () => {
     }
   });
 
-  it.skip('SELECTED_PERIOD_ANALYSIS evidence IDs are exact subsets with no invented IDs', async () => {
+  it('SELECTED_PERIOD_ANALYSIS evidence IDs are exact subsets with no invented IDs', async () => {
     // Build a selected-period synthesis with known evidence IDs
     const mockSelectedPeriod: any = {
       selectedPeriodId: 'test-period-id',
@@ -428,7 +428,15 @@ describe('runAiExplanation', () => {
         career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_C11' },
         wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
       },
-      synthesisVersion: 'PBA-06-v1'
+      synthesisVersion: 'PBA-06-v1',
+      // Add availableEvidence bridge with actual AiEvidence objects
+      availableEvidence: [
+        { id: 'ev-1', source: 'PLANET', effect: 'SUPPORT', strength: 'STRONG', statement: 'Evidence 1' },
+        { id: 'ev-2', source: 'PLANET', effect: 'SUPPORT', strength: 'STRONG', statement: 'Evidence 2' },
+        { id: 'ev-3', source: 'DASHA', effect: 'SUPPORT', strength: 'MODERATE', statement: 'Evidence 3' },
+        { id: 'ev-4', source: 'HOUSE', effect: 'SUPPORT', strength: 'STRONG', statement: 'Evidence 4' },
+        { id: 'ev-5', source: 'HOUSE', effect: 'SUPPORT', strength: 'STRONG', statement: 'Evidence 5' }
+      ]
     };
 
     const mockRouter: any = {
@@ -437,16 +445,15 @@ describe('runAiExplanation', () => {
         expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
         expect(request.context.selectedPeriod).toBeDefined();
 
-        // Use empty evidence IDs since the mock selectedPeriod doesn't have real evidence
-        // The test should still succeed with empty evidence
+        // Return evidence IDs that exist in availableEvidence plus one invented ID
         return {
           response: {
             content: '',
             structuredOutput: {
               status: 'SUCCESS',
               conclusion: 'Selected period analysis shows activation.',
-              supportingEvidenceIds: [],
-              challengingEvidenceIds: [],
+              supportingEvidenceIds: ['ev-1', 'ev-3', 'ev-invented'],
+              challengingEvidenceIds: ['ev-4'],
               unresolvedQuestions: [],
               warnings: []
             },
@@ -474,14 +481,27 @@ describe('runAiExplanation', () => {
     if (result.kind === 'SUCCESS') {
       expect(result.status).toBe('SUCCESS');
 
-      // Verify evidence arrays are empty (since mock returned empty IDs)
-      expect(result.supportingEvidence).toEqual([]);
-      expect(result.challengingEvidence).toEqual([]);
+      // Verify resolved evidence IDs are exact subset of availableEvidence
+      const resolvedSupportingIds = result.supportingEvidence.map(e => e.evidence.id);
+      const resolvedChallengingIds = result.challengingEvidence.map(e => e.evidence.id);
+      const allResolvedIds = [...resolvedSupportingIds, ...resolvedChallengingIds];
 
-      // Verify no unresolved IDs warning (all IDs resolved successfully)
-      expect(result.unresolvedQuestions).not.toContain(
-        expect.stringContaining('could not be resolved')
+      // All resolved IDs should be in availableEvidence
+      const availableIds = mockSelectedPeriod.availableEvidence.map((e: any) => e.id);
+      for (const id of allResolvedIds) {
+        expect(availableIds).toContain(id);
+      }
+
+      // Verify the invented ID is NOT in resolved evidence
+      expect(allResolvedIds).not.toContain('ev-invented');
+
+      // Verify unresolved IDs include the invented ID
+      expect(result.unresolvedQuestions).toContain(
+        expect.stringContaining('ev-invented')
       );
+
+      // Verify at least some evidence was resolved (non-empty)
+      expect(allResolvedIds.length).toBeGreaterThan(0);
     }
   });
 });

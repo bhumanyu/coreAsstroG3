@@ -168,8 +168,8 @@ export function reasonWithLocalRules(
   const validEvidenceMap = new Map(context.evidence.map((e) => [e.id, e]));
 
   // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
-  // This includes evidence from context.selectedPeriod.evidence plus IDs from
-  // career expressions and wealth dimensions
+  // This includes evidence from selectedPeriod.availableEvidence plus context.evidence
+  // Used for both validation and ranking to ensure consistency
   const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
     ? buildSelectedPeriodEvidenceIndex(context)
     : null;
@@ -178,6 +178,7 @@ export function reasonWithLocalRules(
   const challengingSet = new Set<string>();
   const triggeredRuleSet = new Set<string>();
   const unresolvedQuestionsSet = new Set<string>();
+  const unresolvedEvidenceIdsSet = new Set<string>();
   const warnings: string[] = [];
   let ruleFailureCount = 0;
 
@@ -266,6 +267,7 @@ export function reasonWithLocalRules(
               warnings.push(
                 `Rule ${rule.id} referenced unknown supporting evidence ID: ${id}`
               );
+              unresolvedEvidenceIdsSet.add(id);
             }
           }
         }
@@ -284,6 +286,7 @@ export function reasonWithLocalRules(
               warnings.push(
                 `Rule ${rule.id} referenced unknown challenging evidence ID: ${id}`
               );
+              unresolvedEvidenceIdsSet.add(id);
             }
           }
         }
@@ -308,18 +311,31 @@ export function reasonWithLocalRules(
     status = 'PARTIAL';
   }
 
+  // Add unresolved evidence IDs to unresolvedQuestions
+  if (unresolvedEvidenceIdsSet.size > 0) {
+    unresolvedQuestionsSet.add(
+      `The following evidence IDs could not be resolved: ${Array.from(unresolvedEvidenceIdsSet).sort().join(', ')}`
+    );
+  }
+
   const conclusion = buildConclusion(task, context);
+
+  // For SELECTED_PERIOD_ANALYSIS, use selectedPeriodEvidenceIndex for ranking
+  // For other tasks, use validEvidenceMap
+  const evidenceMapForRanking = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
+    ? selectedPeriodEvidenceIndex
+    : validEvidenceMap;
 
   // Rank supporting and challenging evidence deterministically by priority score
   const rankedSupporting = rankEvidence(
     Array.from(supportingSet)
-      .map((id) => validEvidenceMap.get(id))
+      .map((id) => evidenceMapForRanking.get(id))
       .filter((e): e is NonNullable<typeof e> => e != null)
   ).map((e) => e.id);
 
   const rankedChallenging = rankEvidence(
     Array.from(challengingSet)
-      .map((id) => validEvidenceMap.get(id))
+      .map((id) => evidenceMapForRanking.get(id))
       .filter((e): e is NonNullable<typeof e> => e != null)
   ).map((e) => e.id);
 

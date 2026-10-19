@@ -773,6 +773,14 @@ export interface AiContextMethodology {
  * They are NOT added to the unified context.evidence map unless they genuinely belong
  * to that namespace. Evidence-parity invariant is scoped to the projection's ID lists,
  * not the global evidence array.
+ *
+ * Two-namespace contract:
+ * - Primary namespace: context.evidence (unified DomainInterpretation evidence)
+ * - Selected-period namespace: selectedPeriod.availableEvidence (canonical bridge)
+ *
+ * Evidence resolution for SELECTED_PERIOD_ANALYSIS must first check
+ * selectedPeriod.availableEvidence, then fall back to context.evidence.
+ * IDs with no object in either namespace are unresolved (never synthesize placeholders).
  */
 export interface AiSelectedPeriodContext {
   readonly selectedPeriodId: string;
@@ -849,6 +857,18 @@ export interface AiSelectedPeriodContext {
     };
   };
   readonly synthesisVersion: 'PBA-06-v1';
+  /**
+   * Canonical evidence bridge for selected-period-only evidence IDs.
+   *
+   * This array contains AiEvidence-shaped records projected from the canonical
+   * DomainEvidence collections (careerEvidence, careerDashaEvidence, wealthEvidence)
+   * that were used to build the synthesis. These IDs may not exist in context.evidence.
+   *
+   * Resolution contract: For SELECTED_PERIOD_ANALYSIS, evidence resolution must
+   * first check this array, then fall back to context.evidence. IDs with no object
+   * in either namespace are unresolved.
+   */
+  readonly availableEvidence: readonly AiEvidence[];
 }
 
 export interface AiContext {

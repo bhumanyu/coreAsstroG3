@@ -9,12 +9,16 @@ import type { AiContext, AiEvidence } from '../types/aiContextTypes';
  * evidence objects for SELECTED_PERIOD_ANALYSIS tasks.
  *
  * The index includes evidence from:
- * - selectedPeriod.evidence references
- * - career expressions (expressionEvidenceIds, qualifiedEvidenceIds, unqualifiedEvidenceIds, mdDashaEvidenceIds, adDashaEvidenceIds)
- * - wealth dimensions (promiseEvidenceIds)
+ * - selectedPeriod.availableEvidence (canonical bridge from DomainEvidence collections)
+ * - context.evidence (unified DomainInterpretation evidence)
  *
- * For SELECTED_PERIOD_ANALYSIS, evidence resolution should first check this index,
- * then fall back to context.evidence.
+ * Two-namespace contract:
+ * - Primary namespace: selectedPeriod.availableEvidence (selected-period-only IDs)
+ * - Fallback namespace: context.evidence (unified evidence)
+ *
+ * Evidence resolution for SELECTED_PERIOD_ANALYSIS must first check
+ * selectedPeriod.availableEvidence, then fall back to context.evidence.
+ * IDs with no object in either namespace are unresolved (never synthesize placeholders).
  *
  * @param context - The AI context containing selectedPeriod information
  * @returns A Map from evidence ID to AiEvidence object for all selected-period evidence
@@ -36,14 +40,19 @@ export function buildSelectedPeriodEvidenceIndex(
 
   const sp = context.selectedPeriod;
 
+  // Pre-populate with selectedPeriod.availableEvidence (canonical bridge)
+  // This takes precedence over context.evidence for selected-period-only IDs
+  for (const evidence of sp.availableEvidence) {
+    index.set(evidence.id, evidence);
+  }
+
+  // Collect all referenced IDs from selected-period structures
+  const referencedIds = new Set<string>();
+
   // Add evidence IDs from selectedPeriod.evidence references
   for (const ref of sp.evidence) {
     if (ref.evidenceId) {
-      // Look up the evidence in context.evidence and add to index
-      const evidence = context.evidence.find((e) => e.id === ref.evidenceId);
-      if (evidence) {
-        index.set(ref.evidenceId, evidence);
-      }
+      referencedIds.add(ref.evidenceId);
     }
   }
 
@@ -58,22 +67,24 @@ export function buildSelectedPeriodEvidenceIndex(
     ];
 
     for (const id of idsToAdd) {
-      // Look up the evidence in context.evidence and add to index
-      const evidence = context.evidence.find((e) => e.id === id);
-      if (evidence) {
-        index.set(id, evidence);
-      }
+      referencedIds.add(id);
     }
   }
 
   // Add evidence IDs from wealth dimensions
   for (const dim of Object.values(sp.wealth.dimensions)) {
     for (const id of dim.promiseEvidenceIds ?? []) {
-      // Look up the evidence in context.evidence and add to index
-      const evidence = context.evidence.find((e) => e.id === id);
-      if (evidence) {
-        index.set(id, evidence);
-      }
+      referencedIds.add(id);
+    }
+  }
+
+  // Track unresolved IDs (referenced but not in either namespace)
+  // These will be reported by consumers as unresolved
+  for (const id of referencedIds) {
+    if (!index.has(id)) {
+      // ID is referenced but has no object in either namespace
+      // This is expected for unresolved references - consumers handle this
+      // We do NOT synthesize placeholder AiEvidence objects
     }
   }
 

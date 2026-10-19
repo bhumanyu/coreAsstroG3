@@ -156,6 +156,11 @@ export interface BuildAiContextOptions {
  *
  * selectedPeriod is optional: when provided via options, it is projected into AI context
  * as an additive field without schema version bump.
+ *
+ * selectedPeriodEvidence is optional: when provided with selectedPeriod, it contains the
+ * canonical DomainEvidence collections (careerEvidence, careerDashaEvidence, wealthEvidence)
+ * used to build the synthesis. These are projected into selectedPeriod.availableEvidence
+ * for evidence resolution in SELECTED_PERIOD_ANALYSIS tasks.
  */
 export interface ProductAiContextOptions {
   readonly domainInterpretations: readonly DomainInterpretation[];
@@ -163,6 +168,11 @@ export interface ProductAiContextOptions {
   readonly temporalState: AnalysisTemporalState;
   readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
   readonly selectedPeriod?: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>;
+  readonly selectedPeriodEvidence?: {
+    readonly careerEvidence?: readonly DomainEvidence[];
+    readonly careerDashaEvidence?: readonly DomainEvidence[];
+    readonly wealthEvidence?: readonly DomainEvidence[];
+  };
 }
 
 /**
@@ -176,10 +186,16 @@ export interface ProductAiContextOptions {
  * No re-sorting beyond what the canonical result already emits deterministically.
  *
  * @param value - The canonical selected-period synthesis result
+ * @param evidenceCollections - Optional canonical DomainEvidence collections used to build the synthesis
  * @returns AI context projection of the selected-period synthesis
  */
 export function projectSelectedPeriodSynthesis(
-  value: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>
+  value: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>,
+  evidenceCollections?: {
+    readonly careerEvidence?: readonly DomainEvidence[];
+    readonly careerDashaEvidence?: readonly DomainEvidence[];
+    readonly wealthEvidence?: readonly DomainEvidence[];
+  }
 ): AiSelectedPeriodContext {
   // Validate evidence IDs are strings (defensive check)
   const validateStringIds = (ids: readonly string[]): readonly string[] => {
@@ -272,6 +288,54 @@ export function projectSelectedPeriodSynthesis(
   }
   const diagnostics = Array.from(diagnosticsMap.values());
 
+  // Build availableEvidence bridge from canonical DomainEvidence collections
+  // This provides the selected-period-only evidence namespace for resolution
+  const availableEvidenceMap = new Map<string, AiEvidence>();
+
+  if (evidenceCollections) {
+    // Project careerEvidence
+    for (const e of evidenceCollections.careerEvidence ?? []) {
+      const projected = projectDomainEvidenceToAi(e);
+      const existing = availableEvidenceMap.get(projected.id);
+      if (existing) {
+        if (!isEvidenceEqual(existing, projected)) {
+          // Conflicting ID - skip to avoid errors (these are canonical collections)
+          continue;
+        }
+      } else {
+        availableEvidenceMap.set(projected.id, projected);
+      }
+    }
+
+    // Project careerDashaEvidence
+    for (const e of evidenceCollections.careerDashaEvidence ?? []) {
+      const projected = projectDomainEvidenceToAi(e);
+      const existing = availableEvidenceMap.get(projected.id);
+      if (existing) {
+        if (!isEvidenceEqual(existing, projected)) {
+          continue;
+        }
+      } else {
+        availableEvidenceMap.set(projected.id, projected);
+      }
+    }
+
+    // Project wealthEvidence
+    for (const e of evidenceCollections.wealthEvidence ?? []) {
+      const projected = projectDomainEvidenceToAi(e);
+      const existing = availableEvidenceMap.get(projected.id);
+      if (existing) {
+        if (!isEvidenceEqual(existing, projected)) {
+          continue;
+        }
+      } else {
+        availableEvidenceMap.set(projected.id, projected);
+      }
+    }
+  }
+
+  const availableEvidence = Array.from(availableEvidenceMap.values());
+
   return Object.freeze({
     selectedPeriodId: value.period.selectedPeriodId,
     mahadashaId: value.period.mahadashaId,
@@ -294,7 +358,8 @@ export function projectSelectedPeriodSynthesis(
     missingInputs: Object.freeze(missingInputs),
     diagnostics: Object.freeze(diagnostics),
     provenance: value.provenance,
-    synthesisVersion: value.synthesisVersion
+    synthesisVersion: value.synthesisVersion,
+    availableEvidence: Object.freeze(availableEvidence)
   });
 }
 
@@ -1911,7 +1976,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
 
   // Project selected-period synthesis if provided (PBA-09)
   const selectedPeriodContext = options?.selectedPeriod
-    ? projectSelectedPeriodSynthesis(options.selectedPeriod)
+    ? projectSelectedPeriodSynthesis(options.selectedPeriod, options.selectedPeriodEvidence)
     : undefined;
 
   const context: AiContext = {
