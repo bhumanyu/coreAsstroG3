@@ -302,4 +302,44 @@ describe('runAiExplanation', () => {
       );
     }
   });
+
+  it('SELECTED_PERIOD_ANALYSIS routes through capability map and degrades gracefully without selectedPeriod context', async () => {
+    const mockRouter: any = {
+      route: async (request: any) => {
+        // Verify the request has the correct task
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        // Verify the context does not have selectedPeriod (degrades gracefully)
+        expect(request.context.selectedPeriod).toBeUndefined();
+
+        // Return a graceful degradation response
+        return {
+          response: {
+            content: 'Selected period analysis unavailable due to missing context.',
+            structuredOutput: undefined,
+            warnings: ['Selected period context not provided']
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-select-period'
+        };
+      }
+    };
+
+    const result = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      router: mockRouter
+    }));
+
+    // Should degrade gracefully to PARTIAL with fallback content
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.status).toBe('PARTIAL');
+      expect(result.conclusion).toBe('Selected period analysis unavailable due to missing context.');
+      expect(result.warnings).toContain('Selected period context not provided');
+    }
+  });
 });

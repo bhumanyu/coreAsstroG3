@@ -1986,3 +1986,68 @@ describe('AI Context Factory', () => {
     });
   });
 });
+
+describe('normalizeTimingActivationEffect', () => {
+  it('should return exact matches for known values', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect('ACTIVATES')).toBe('ACTIVATES');
+    expect(normalizeTimingActivationEffect('PARTIALLY_ACTIVATES')).toBe('PARTIALLY_ACTIVATES');
+    expect(normalizeTimingActivationEffect('DOES_NOT_ACTIVATE')).toBe('DOES_NOT_ACTIVATE');
+    expect(normalizeTimingActivationEffect('CHALLENGES')).toBe('CHALLENGES');
+    expect(normalizeTimingActivationEffect('UNKNOWN')).toBe('UNKNOWN');
+    expect(normalizeTimingActivationEffect('INSUFFICIENT_DATA')).toBe('INSUFFICIENT_DATA');
+  });
+
+  it('should fuzzy-match confident free-form strings to ACTIVATES', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect('activate')).toBe('ACTIVATES');
+    expect(normalizeTimingActivationEffect('active')).toBe('ACTIVATES');
+    expect(normalizeTimingActivationEffect('strong activation')).toBe('ACTIVATES');
+    expect(normalizeTimingActivationEffect('yes')).toBe('ACTIVATES');
+  });
+
+  it('should fuzzy-match partial strings to PARTIALLY_ACTIVATES', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect('partial')).toBe('PARTIALLY_ACTIVATES');
+    expect(normalizeTimingActivationEffect('some activation')).toBe('PARTIALLY_ACTIVATES');
+    expect(normalizeTimingActivationEffect('moderate')).toBe('PARTIALLY_ACTIVATES');
+    expect(normalizeTimingActivationEffect('mixed')).toBe('PARTIALLY_ACTIVATES');
+  });
+
+  it('should fuzzy-match challenge strings to CHALLENGES', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect('challenge')).toBe('CHALLENGES');
+    expect(normalizeTimingActivationEffect('weak')).toBe('CHALLENGES');
+    expect(normalizeTimingActivationEffect('negative')).toBe('CHALLENGES');
+    expect(normalizeTimingActivationEffect('no')).toBe('CHALLENGES');
+  });
+
+  it('should fuzzy-match inactive strings to DOES_NOT_ACTIVATE', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect('inactive')).toBe('DOES_NOT_ACTIVATE');
+    expect(normalizeTimingActivationEffect('not activate')).toBe('DOES_NOT_ACTIVATE');
+    expect(normalizeTimingActivationEffect('none')).toBe('DOES_NOT_ACTIVATE');
+  });
+
+  it('should return UNKNOWN for unrecognized strings', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect('random text')).toBe('UNKNOWN');
+    expect(normalizeTimingActivationEffect('foo bar')).toBe('UNKNOWN');
+    expect(normalizeTimingActivationEffect('')).toBe('UNKNOWN');
+  });
+
+  it('should return UNKNOWN for non-string inputs', async () => {
+    const { normalizeTimingActivationEffect } = await import('./aiContextFactory');
+
+    expect(normalizeTimingActivationEffect(null)).toBe('UNKNOWN');
+    expect(normalizeTimingActivationEffect(undefined)).toBe('UNKNOWN');
+    expect(normalizeTimingActivationEffect(123)).toBe('UNKNOWN');
+    expect(normalizeTimingActivationEffect({})).toBe('UNKNOWN');
+  });
+});

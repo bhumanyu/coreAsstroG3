@@ -415,7 +415,7 @@ export interface ProductSynthesisCareerExpressionRow {
   readonly expressionRefKey: string;
   readonly status: ActivationEffect | string;
   readonly linkedLevels: readonly ('MD' | 'AD')[];
-  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
   readonly diagnostics: readonly ProductSynthesisDiagnostic[];
   readonly expressionEvidenceIds: readonly string[];
@@ -490,12 +490,14 @@ export interface ProductSelectedPeriodSynthesis {
   readonly provenance: ProductSynthesisProvenance;
   /**
    * AI explanation status for the selected period (PBA-09).
-   * Explicitly surfaces whether AI explanation succeeded, failed, or is pending.
-   * When status is 'OK', aiExplanation contains the result.
-   * When status is 'ERROR', aiExplanation contains the error result.
-   * When status is 'PENDING', aiExplanation is undefined (request in flight).
+   * Explicitly surfaces whether AI explanation succeeded, failed, is pending, or was not requested.
+   *
+   * - 'OK': AI explanation succeeded and aiExplanation contains the result.
+   * - 'ERROR': AI explanation failed and aiExplanation contains the error result.
+   * - 'PENDING': AI explanation request is in flight; aiExplanation is undefined.
+   * - 'NOT_REQUESTED': AI explanation was not requested; aiExplanation is undefined.
    */
-  readonly aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING';
+  readonly aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' | 'NOT_REQUESTED';
   /**
    * Optional AI explanation for the selected period (PBA-09).
    * When present, contains the AI explanation result.

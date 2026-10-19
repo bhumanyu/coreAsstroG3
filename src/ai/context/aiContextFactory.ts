@@ -201,7 +201,7 @@ export function projectSelectedPeriodSynthesis(
   // Project career expressions
   const careerExpressions = value.career.expressions.map((expr) => ({
     expressionRefKey: expr.expressionRefKey,
-    status: expr.status,
+    status: normalizeTimingActivationEffect(expr.status),
     linkedLevels: expr.linkedLevels,
     qualificationBasis: expr.qualificationBasis,
     diagnostics: expr.diagnostics.map((d) => ({ code: d.code, message: d.message })),
@@ -282,7 +282,7 @@ export function projectSelectedPeriodSynthesis(
     analysisAsOf: value.period.analysisAsOf,
     temporalRelation: value.period.temporalRelation,
     career: Object.freeze({
-      qualificationBasis: value.career.qualificationBasis === 'UNAVAILABLE' ? undefined : value.career.qualificationBasis,
+      qualificationBasis: value.career.qualificationBasis,
       expressions: Object.freeze(careerExpressions)
     }),
     wealth: Object.freeze({
@@ -1288,6 +1288,69 @@ function normalizeEvidenceEffect(effect: unknown): AiEvidenceEffect {
   return 'UNKNOWN';
 }
 
+export function normalizeTimingActivationEffect(effect: unknown): TimingActivationEffect {
+  if (typeof effect !== 'string') {
+    return 'UNKNOWN';
+  }
+
+  const upper = effect.trim().toUpperCase();
+
+  // Exact matches
+  if (
+    upper === 'ACTIVATES' ||
+    upper === 'PARTIALLY_ACTIVATES' ||
+    upper === 'DOES_NOT_ACTIVATE' ||
+    upper === 'CHALLENGES' ||
+    upper === 'UNKNOWN' ||
+    upper === 'INSUFFICIENT_DATA'
+  ) {
+    return upper;
+  }
+
+  // Fuzzy matching for confident free-form strings
+  // Activates variants
+  if (
+    upper.includes('ACTIVATE') ||
+    upper.includes('ACTIVE') ||
+    upper.includes('STRONG') ||
+    upper === 'YES'
+  ) {
+    return 'ACTIVATES';
+  }
+
+  // Partially activates variants
+  if (
+    upper.includes('PARTIAL') ||
+    upper.includes('SOME') ||
+    upper.includes('MODERATE') ||
+    upper === 'MIXED'
+  ) {
+    return 'PARTIALLY_ACTIVATES';
+  }
+
+  // Challenges variants
+  if (
+    upper.includes('CHALLENGE') ||
+    upper.includes('WEAK') ||
+    upper.includes('NEGATIVE') ||
+    upper === 'NO'
+  ) {
+    return 'CHALLENGES';
+  }
+
+  // Does not activate variants
+  if (
+    upper.includes('INACTIVE') ||
+    upper.includes('NOT ACTIVATE') ||
+    upper === 'NONE'
+  ) {
+    return 'DOES_NOT_ACTIVATE';
+  }
+
+  // Default to UNKNOWN for unrecognized strings
+  return 'UNKNOWN';
+}
+
 function buildLifeThemeFacts(horoscope: Horoscope): readonly LifeThemeFact[] {
   const themes = horoscope.lifeThemes?.themes || [];
   return themes.map((t: any) => ({
@@ -1845,7 +1908,7 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
   }
 
   // Project selected-period synthesis if provided (PBA-09)
-  const selectedPeriodContext = options.selectedPeriod
+  const selectedPeriodContext = options?.selectedPeriod
     ? projectSelectedPeriodSynthesis(options.selectedPeriod)
     : undefined;
 

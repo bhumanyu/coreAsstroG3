@@ -52,11 +52,15 @@ export async function runAiExplanation(
       selectedPeriod: options.selectedPeriod
     });
 
+    // Extract traceability IDs from context for debugging/audit
+    const traceabilityIds = extractTraceabilityIds(context);
+
     const request = createAiRequest(
       options.task,
       context,
       'STRUCTURED',
-      requestId
+      requestId,
+      traceabilityIds
     );
 
     const router = options.router ?? createDefaultAiRouter();
@@ -78,9 +82,21 @@ export async function runAiExplanation(
       options.task
     );
   } catch (error) {
+    // Extract traceability IDs even on error for better debugging
+    const context = buildProductAiContext(options.horoscope, {
+      domainInterpretations: options.domainInterpretations,
+      lifeAnalysis: options.lifeAnalysis,
+      temporalState: options.temporalState,
+      selectedPeriod: options.selectedPeriod
+    });
+    const traceabilityIds = extractTraceabilityIds(context);
+    const errorRequestId = traceabilityIds.length > 0
+      ? `error-${traceabilityIds.slice(0, 3).join('-')}`
+      : requestId;
+
     return Object.freeze({
       kind: 'ERROR',
-      requestId,
+      requestId: errorRequestId,
       task: options.task,
       status: 'ERROR',
       message: getSafeAiExplanationErrorMessage(error),
@@ -266,4 +282,49 @@ function createRequestId(): string {
   return `ai-ui-${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 9)}`;
+}
+
+function extractTraceabilityIds(context: any): readonly string[] {
+  const ids = new Set<string>();
+
+  // Extract from context.evidence
+  if (context.evidence) {
+    for (const evidence of context.evidence) {
+      if (evidence.id) {
+        ids.add(evidence.id);
+      }
+    }
+  }
+
+  // Extract from selectedPeriod context if present
+  if (context.selectedPeriod) {
+    // From career expressions
+    if (context.selectedPeriod.career?.expressions) {
+      for (const expr of context.selectedPeriod.career.expressions) {
+        expr.expressionEvidenceIds?.forEach((id: string) => ids.add(id));
+        expr.qualifiedEvidenceIds?.forEach((id: string) => ids.add(id));
+        expr.unqualifiedEvidenceIds?.forEach((id: string) => ids.add(id));
+        expr.mdDashaEvidenceIds?.forEach((id: string) => ids.add(id));
+        expr.adDashaEvidenceIds?.forEach((id: string) => ids.add(id));
+      }
+    }
+
+    // From wealth dimensions
+    if (context.selectedPeriod.wealth?.dimensions) {
+      for (const dim of Object.values<any>(context.selectedPeriod.wealth.dimensions)) {
+        dim.promiseEvidenceIds?.forEach((id: string) => ids.add(id));
+      }
+    }
+
+    // From evidence references
+    if (context.selectedPeriod.evidence) {
+      for (const ref of context.selectedPeriod.evidence) {
+        if (ref.evidenceId) {
+          ids.add(ref.evidenceId);
+        }
+      }
+    }
+  }
+
+  return Array.from(ids);
 }

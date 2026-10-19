@@ -18,4 +18,9 @@ export interface AiRequest {
   readonly context: AiContext;
   readonly instructions?: readonly string[];
   readonly responseFormat: 'STRUCTURED' | 'NARRATIVE';
+  /**
+   * Optional traceability IDs for debugging and audit.
+   * When present, should contain deduplicated evidence IDs from the context.
+   */
+  readonly traceabilityIds?: readonly string[];
 }

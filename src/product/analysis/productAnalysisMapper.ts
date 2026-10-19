@@ -1214,31 +1214,8 @@ export function mapSelectedPeriodSynthesis(
     evidence,
     missingInputs,
     provenance,
-    aiExplanationStatus: 'PENDING'
+    aiExplanationStatus: 'NOT_REQUESTED'
   });
-}
-
-return Object.freeze({
-  synthesisVersion: value.synthesisVersion,
-  period: Object.freeze({
-    selectedPeriodId: value.period.selectedPeriodId,
-    mahadashaId: value.period.mahadashaId,
-    mahadashaPlanet: value.period.mahadashaPlanet,
-    antardashaId: value.period.antardashaId,
-    antardashaPlanet: value.period.antardashaPlanet,
-    interval: Object.freeze({
-      start: value.period.interval.start,
-      end: value.period.interval.end
-    }),
-    analysisAsOf: value.period.analysisAsOf,
-    temporalRelation: value.period.temporalRelation
-  }),
-  career,
-  wealth,
-  evidence,
-  missingInputs,
-  provenance
-});
 }
 
 /**

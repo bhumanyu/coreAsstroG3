@@ -8,14 +8,16 @@ export function createAiRequest(
   responseFormat: 'STRUCTURED' | 'NARRATIVE' = 'STRUCTURED',
   requestId: string = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
-    : `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+    : `req-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+  traceabilityIds?: readonly string[]
 ): AiRequest {
   const request: AiRequest = {
     requestId,
     schemaVersion: context.schemaVersion,
     task,
     context,
-    responseFormat
+    responseFormat,
+    ...(traceabilityIds ? { traceabilityIds } : {})
   };
 
   return deepFreeze(request);

@@ -221,6 +221,34 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
       expect(expr.adDashaEvidenceIds).toEqual(['ad-evid-1']);
     });
 
+    it('preserves UNAVAILABLE qualificationBasis verbatim', () => {
+      const synthesisWithUnavailable: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> = {
+        ...canonicalSynthesis,
+        career: {
+          ...canonicalSynthesis.career,
+          qualificationBasis: 'UNAVAILABLE',
+          expressions: [
+            {
+              ...canonicalSynthesis.career.expressions[0],
+              qualificationBasis: 'UNAVAILABLE'
+            }
+          ]
+        },
+        provenance: {
+          ...canonicalSynthesis.provenance,
+          career: {
+            ...canonicalSynthesis.provenance.career,
+            qualificationBasis: 'UNAVAILABLE'
+          }
+        }
+      };
+
+      const result = projectSelectedPeriodSynthesis(synthesisWithUnavailable);
+
+      expect(result.career.qualificationBasis).toBe('UNAVAILABLE');
+      expect(result.career.expressions[0].qualificationBasis).toBe('UNAVAILABLE');
+    });
+
     it('preserves evidence references verbatim', () => {
       const result = projectSelectedPeriodSynthesis(canonicalSynthesis);
 

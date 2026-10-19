@@ -239,28 +239,36 @@ describe('DashaPage (P-UI-07)', () => {
                 effect: 'ACTIVATES',
                 dataStatus: 'COMPLETE',
                 linkedLevels: ['MD'],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               },
               GAINS: {
                 dimension: 'GAINS',
                 effect: 'SUPPORTS',
                 dataStatus: 'COMPLETE',
                 linkedLevels: ['AD'],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               },
               FORTUNE: {
                 dimension: 'FORTUNE',
                 effect: 'NEUTRAL',
                 dataStatus: 'COMPLETE',
                 linkedLevels: [],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               },
               SPECULATION: {
                 dimension: 'SPECULATION',
                 effect: 'NEUTRAL',
                 dataStatus: 'COMPLETE',
                 linkedLevels: [],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               }
             },
             diagnostics: []
@@ -570,12 +578,22 @@ describe('DashaPage (P-UI-07)', () => {
             aiExplanationStatus: 'OK',
             aiExplanation: {
               kind: 'SUCCESS',
+              requestId: 'test-request-id',
+              task: 'SELECTED_PERIOD_ANALYSIS',
               status: 'SUCCESS',
               conclusion: 'Test conclusion',
               supportingEvidence: [],
               challengingEvidence: [],
               unresolvedQuestions: [],
-              warnings: []
+              warnings: [],
+              triggeredRuleIds: [],
+              providerId: 'test-provider',
+              providerName: 'Test Provider',
+              providerKind: 'LOCAL_RULES',
+              routingMode: 'LOCAL_ONLY',
+              fallbackUsed: false,
+              selectionReason: 'DEFAULT',
+              generatedAt: '2024-01-01T00:00:00Z'
             }
           }
         }

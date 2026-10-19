@@ -124,7 +124,7 @@ export interface SynthesisCareerExpressionRow {
   readonly expressionRefKey: string;
   readonly status: TimingActivationEffect;
   readonly linkedLevels: readonly ('MD' | 'AD')[];
-  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
   readonly diagnostics: readonly SynthesisDiagnostic[];
   readonly expressionEvidenceIds: readonly string[];

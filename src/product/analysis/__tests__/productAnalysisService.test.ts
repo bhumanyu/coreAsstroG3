@@ -156,13 +156,11 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     careerArtifacts: undefined, // Will be set in specific tests that need it
     career: {
       domain: 'CAREER',
-      status: 'AVAILABLE',
       asOf: '2026-01-01T00:00:00.000Z',
       conclusionData: {} as any
     },
     wealth: {
       domain: 'WEALTH',
-      status: 'AVAILABLE',
       asOf: '2026-01-01T00:00:00.000Z',
       conclusionData: {} as any
     }
@@ -372,13 +370,11 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       },
       career: {
         domain: 'CAREER',
-        status: 'AVAILABLE',
         asOf: customAsOf,
         conclusionData: {} as any
       },
       wealth: {
         domain: 'WEALTH',
-        status: 'AVAILABLE',
         asOf: customAsOf,
         conclusionData: {} as any
       }
@@ -468,9 +464,16 @@ describe('ProductAnalysisService (P-UI-02)', () => {
 
       const service = createProductAnalysisService(deps);
 
-      // Mock runAiExplanation to throw
-      const { runAiExplanation } = await import('../../ai/product/aiExplanationService');
-      vi.spyOn({ runAiExplanation }, 'runAiExplanation').mockRejectedValue(new Error('AI service unavailable'));
+      // Mock runAiExplanation to return ERROR result
+      const aiExplanationModule = await import('../../../ai/product/aiExplanationService');
+      vi.spyOn(aiExplanationModule, 'runAiExplanation').mockResolvedValue({
+        kind: 'ERROR',
+        requestId: 'error-from-ai',
+        task: 'SELECTED_PERIOD_ANALYSIS',
+        status: 'ERROR',
+        message: 'AI service unavailable',
+        warnings: []
+      });
 
       const result = await service.analyze(sampleBirth, {
         selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
@@ -485,11 +488,13 @@ describe('ProductAnalysisService (P-UI-02)', () => {
         // AI explanation should contain error result
         expect(result.selectedPeriod.synthesis.aiExplanation).toBeDefined();
         expect(result.selectedPeriod.synthesis.aiExplanation?.kind).toBe('ERROR');
-        expect(result.selectedPeriod.synthesis.aiExplanation?.message).toBe('AI service unavailable');
+        if (result.selectedPeriod.synthesis.aiExplanation?.kind === 'ERROR') {
+          expect(result.selectedPeriod.synthesis.aiExplanation.message).toBe('AI service unavailable');
+        }
       }
     });
 
-    it('sets PENDING status when includeSelectedPeriodAiExplanation is false', async () => {
+    it('sets NOT_REQUESTED status when includeSelectedPeriodAiExplanation is false', async () => {
       const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
       const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
 
@@ -507,7 +512,7 @@ describe('ProductAnalysisService (P-UI-02)', () => {
 
       expect(result.selectedPeriod?.status).toBe('OK');
       if (result.selectedPeriod?.status === 'OK') {
-        expect(result.selectedPeriod.synthesis.aiExplanationStatus).toBe('PENDING');
+        expect(result.selectedPeriod.synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
         expect(result.selectedPeriod.synthesis.aiExplanation).toBeUndefined();
       }
     });
@@ -524,8 +529,8 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       const service = createProductAnalysisService(deps);
 
       // Mock runAiExplanation to succeed
-      const { runAiExplanation } = await import('../../ai/product/aiExplanationService');
-      vi.spyOn({ runAiExplanation }, 'runAiExplanation').mockResolvedValue({
+      const aiExplanationModule = await import('../../../ai/product/aiExplanationService');
+      vi.spyOn(aiExplanationModule, 'runAiExplanation').mockResolvedValue({
         kind: 'SUCCESS',
         requestId: 'test-request-id',
         task: 'SELECTED_PERIOD_ANALYSIS',
@@ -538,10 +543,10 @@ describe('ProductAnalysisService (P-UI-02)', () => {
         triggeredRuleIds: [],
         providerId: 'test-provider',
         providerName: 'Test Provider',
-        providerKind: 'LOCAL',
-        routingMode: 'LOCAL',
+        providerKind: 'LOCAL_RULES',
+        routingMode: 'LOCAL_ONLY',
         fallbackUsed: false,
-        selectionReason: 'CAPABILITY',
+        selectionReason: 'DEFAULT',
         generatedAt: '2024-01-01T00:00:00Z'
       });
 
@@ -556,6 +561,67 @@ describe('ProductAnalysisService (P-UI-02)', () => {
         expect(result.selectedPeriod.synthesis.aiExplanation).toBeDefined();
         expect(result.selectedPeriod.synthesis.aiExplanation?.kind).toBe('SUCCESS');
       }
+    });
+
+    it('parity test: same canonical SelectedPeriodSynthesisValue passed to both mapSelectedPeriodSynthesis and runAiExplanation', async () => {
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      // Spy on mapSelectedPeriodSynthesis
+      const productAnalysisMapper = await import('../productAnalysisMapper');
+      const mapSynthesisSpy = vi.spyOn(productAnalysisMapper, 'mapSelectedPeriodSynthesis');
+
+      // Spy on runAiExplanation
+      const aiExplanationModule = await import('../../../ai/product/aiExplanationService');
+      const runAiSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockResolvedValue({
+        kind: 'SUCCESS',
+        requestId: 'test-request-id',
+        task: 'SELECTED_PERIOD_ANALYSIS',
+        status: 'SUCCESS',
+        conclusion: 'Test conclusion',
+        supportingEvidence: [],
+        challengingEvidence: [],
+        unresolvedQuestions: [],
+        warnings: [],
+        triggeredRuleIds: [],
+        providerId: 'test-provider',
+        providerName: 'Test Provider',
+        providerKind: 'LOCAL_RULES',
+        routingMode: 'LOCAL_ONLY',
+        fallbackUsed: false,
+        selectionReason: 'DEFAULT',
+        generatedAt: '2024-01-01T00:00:00Z'
+      });
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      // Both spies should have been called
+      expect(mapSynthesisSpy).toHaveBeenCalled();
+      expect(runAiSpy).toHaveBeenCalled();
+
+      // Extract the synthesis values passed to each
+      const synthesisPassedToMapper = mapSynthesisSpy.mock.calls[0][0];
+      const selectedPeriodPassedToAi = (runAiSpy.mock.calls[0][0] as any).selectedPeriod;
+
+      // Verify they are the same object (by reference)
+      expect(synthesisPassedToMapper).toBe(selectedPeriodPassedToAi);
+
+      // Verify they have the same structure
+      expect(synthesisPassedToMapper).toEqual(selectedPeriodPassedToAi);
+
+      // Cleanup
+      mapSynthesisSpy.mockRestore();
+      runAiSpy.mockRestore();
     });
   });
 });

@@ -211,32 +211,17 @@ export class ProductAnalysisService {
 
           // PBA-09: Trigger AI explanation for selected period when enabled
           let aiExplanation;
-          let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' = 'PENDING';
+          let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' | undefined;
           if (options?.includeSelectedPeriodAiExplanation ?? false) {
-            try {
-              aiExplanation = await runAiExplanation({
-                horoscope,
-                task: 'SELECTED_PERIOD_ANALYSIS',
-                domainInterpretations: pipelineState.domainInterpretations ?? [],
-                lifeAnalysis: pipelineState.lifeAnalysis!,
-                temporalState: pipelineState.temporalState!,
-                selectedPeriod: selectedPeriodResult.value
-              });
-              aiExplanationStatus = 'OK';
-            } catch (error) {
-              // AI failure does not affect deterministic synthesis
-              aiExplanation = {
-                kind: 'ERROR' as const,
-                requestId: 'error-request-id',
-                task: 'SELECTED_PERIOD_ANALYSIS',
-                status: 'ERROR' as const,
-                message: error instanceof Error ? error.message : 'AI explanation failed',
-                warnings: []
-              } as const;
-              aiExplanationStatus = 'ERROR';
-            }
-          } else {
-            aiExplanationStatus = 'PENDING';
+            aiExplanation = await runAiExplanation({
+              horoscope,
+              task: 'SELECTED_PERIOD_ANALYSIS',
+              domainInterpretations: pipelineState.domainInterpretations ?? [],
+              lifeAnalysis: pipelineState.lifeAnalysis!,
+              temporalState: pipelineState.temporalState!,
+              selectedPeriod: selectedPeriodResult.value
+            });
+            aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
           }
 
           return {
@@ -245,7 +230,7 @@ export class ProductAnalysisService {
               status: 'OK',
               synthesis: {
                 ...selectedPeriodSynthesis,
-                aiExplanationStatus,
+                aiExplanationStatus: aiExplanationStatus ?? 'NOT_REQUESTED',
                 ...(aiExplanation ? { aiExplanation } : {})
               }
             }
@@ -405,32 +390,17 @@ export class ProductAnalysisService {
 
       // PBA-09: Trigger AI explanation for selected period when enabled
       let aiExplanation;
-      let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' = 'PENDING';
+      let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' | undefined;
       if (includeAiExplanation) {
-        try {
-          aiExplanation = await runAiExplanation({
-            horoscope,
-            task: 'SELECTED_PERIOD_ANALYSIS',
-            domainInterpretations: pipelineState.domainInterpretations ?? [],
-            lifeAnalysis: pipelineState.lifeAnalysis!,
-            temporalState: pipelineState.temporalState!,
-            selectedPeriod: selectedPeriodResult.value
-          });
-          aiExplanationStatus = 'OK';
-        } catch (error) {
-          // AI failure does not affect deterministic synthesis
-          aiExplanation = {
-            kind: 'ERROR' as const,
-            requestId: 'error-request-id',
-            task: 'SELECTED_PERIOD_ANALYSIS',
-            status: 'ERROR' as const,
-            message: error instanceof Error ? error.message : 'AI explanation failed',
-            warnings: []
-          } as const;
-          aiExplanationStatus = 'ERROR';
-        }
-      } else {
-        aiExplanationStatus = 'PENDING';
+        aiExplanation = await runAiExplanation({
+          horoscope,
+          task: 'SELECTED_PERIOD_ANALYSIS',
+          domainInterpretations: pipelineState.domainInterpretations ?? [],
+          lifeAnalysis: pipelineState.lifeAnalysis!,
+          temporalState: pipelineState.temporalState!,
+          selectedPeriod: selectedPeriodResult.value
+        });
+        aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
       }
 
       return {
@@ -439,7 +409,7 @@ export class ProductAnalysisService {
           status: 'OK',
           synthesis: {
             ...selectedPeriodSynthesis,
-            aiExplanationStatus,
+            aiExplanationStatus: aiExplanationStatus ?? 'NOT_REQUESTED',
             ...(aiExplanation ? { aiExplanation } : {})
           }
         }

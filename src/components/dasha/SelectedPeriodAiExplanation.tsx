@@ -25,7 +25,7 @@ export interface SelectedPeriodAiExplanationProps {
       readonly mahadashaId: string;
       readonly antardashaId: string;
     };
-    readonly aiExplanationStatus?: 'OK' | 'ERROR' | 'PENDING';
+    readonly aiExplanationStatus?: 'OK' | 'ERROR' | 'PENDING' | 'NOT_REQUESTED';
     readonly aiExplanation?: AiExplanationResult;
   };
   readonly submittedPeriod: {
@@ -55,8 +55,8 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
     return null;
   }
 
-  // Render pending state
-  if (synthesis.aiExplanationStatus === 'PENDING' || !synthesis.aiExplanation) {
+  // Render pending state only when explicitly PENDING
+  if (synthesis.aiExplanationStatus === 'PENDING') {
     return (
       <div
         className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-4"
@@ -76,7 +76,17 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
     );
   }
 
+  // Render nothing for NOT_REQUESTED when aiExplanation is absent
+  if (synthesis.aiExplanationStatus === 'NOT_REQUESTED' && !synthesis.aiExplanation) {
+    return null;
+  }
+
   const explanation = synthesis.aiExplanation;
+
+  // Guard: if no explanation despite a status that should have one, render nothing
+  if (!explanation) {
+    return null;
+  }
 
   // Render based on kind (status discriminant)
   if (explanation.kind === 'ERROR') {

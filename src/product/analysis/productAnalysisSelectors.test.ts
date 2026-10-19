@@ -708,28 +708,36 @@ describe('productAnalysisSelectors', () => {
                 effect: 'ACTIVATES',
                 dataStatus: 'COMPLETE',
                 linkedLevels: ['MD'],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               },
               GAINS: {
                 dimension: 'GAINS',
                 effect: 'ACTIVATES',
                 dataStatus: 'COMPLETE',
                 linkedLevels: ['MD'],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               },
               FORTUNE: {
                 dimension: 'FORTUNE',
                 effect: 'ACTIVATES',
                 dataStatus: 'COMPLETE',
                 linkedLevels: ['MD'],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               },
               SPECULATION: {
                 dimension: 'SPECULATION',
                 effect: 'ACTIVATES',
                 dataStatus: 'COMPLETE',
                 linkedLevels: ['MD'],
-                diagnostics: []
+                diagnostics: [],
+                promiseEvidenceIds: [],
+                dashaRuleReferences: []
               }
             },
             diagnostics: []

@@ -841,7 +841,7 @@ export interface AiSelectedPeriodContext {
     readonly career: {
       readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
       readonly version?: string;
-      readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+      readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
     };
     readonly wealth: {
       readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';

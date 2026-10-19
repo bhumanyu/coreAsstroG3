@@ -240,7 +240,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       status: 'PRESENT',
       version: 'PBA-05-v1'
     }
-  }
+  },
+  aiExplanationStatus: 'NOT_REQUESTED'
 };
 
 /**
