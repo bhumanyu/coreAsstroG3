@@ -1308,7 +1308,28 @@ export function normalizeTimingActivationEffect(effect: unknown): TimingActivati
   }
 
   // Fuzzy matching for confident free-form strings
-  // Activates variants
+  // Check negation/inactive/challenge patterns BEFORE positive ACTIVATES branch
+  // Does not activate variants (must come before ACTIVATE check)
+  if (
+    upper.includes('INACTIVE') ||
+    upper.includes('NOT ACTIVATE') ||
+    upper === 'NONE' ||
+    upper === 'NOT'
+  ) {
+    return 'DOES_NOT_ACTIVATE';
+  }
+
+  // Challenges variants (must come before ACTIVATE check)
+  if (
+    upper.includes('CHALLENGE') ||
+    upper.includes('WEAK') ||
+    upper.includes('NEGATIVE') ||
+    upper === 'NO'
+  ) {
+    return 'CHALLENGES';
+  }
+
+  // Activates variants (only if no negation pattern matched)
   if (
     upper.includes('ACTIVATE') ||
     upper.includes('ACTIVE') ||
@@ -1326,25 +1347,6 @@ export function normalizeTimingActivationEffect(effect: unknown): TimingActivati
     upper === 'MIXED'
   ) {
     return 'PARTIALLY_ACTIVATES';
-  }
-
-  // Challenges variants
-  if (
-    upper.includes('CHALLENGE') ||
-    upper.includes('WEAK') ||
-    upper.includes('NEGATIVE') ||
-    upper === 'NO'
-  ) {
-    return 'CHALLENGES';
-  }
-
-  // Does not activate variants
-  if (
-    upper.includes('INACTIVE') ||
-    upper.includes('NOT ACTIVATE') ||
-    upper === 'NONE'
-  ) {
-    return 'DOES_NOT_ACTIVATE';
   }
 
   // Default to UNKNOWN for unrecognized strings

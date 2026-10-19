@@ -285,7 +285,8 @@ describe('DashaPage (P-UI-07)', () => {
               status: 'PRESENT',
               version: 'v1'
             }
-          }
+          },
+          aiExplanationStatus: 'NOT_REQUESTED'
         }
       },
       dashPeriodOptions: {
@@ -400,7 +401,7 @@ describe('DashaPage (P-UI-07)', () => {
               career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
               wealth: { status: 'PRESENT', version: 'v1' }
             },
-            aiExplanationStatus: 'PENDING'
+            aiExplanationStatus: 'NOT_REQUESTED'
           }
         }
       });
@@ -412,7 +413,7 @@ describe('DashaPage (P-UI-07)', () => {
       );
 
       // Should not render AI explanation when not matching IDs
-      expect(screen.queryByText(/AI Explanation Pending/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/AI Explanation/i)).not.toBeInTheDocument();
     });
 
     it('renders error banner when aiExplanationStatus is ERROR', () => {

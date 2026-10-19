@@ -6,7 +6,7 @@ import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
 import type { AiRouter } from '../routing/AiRouter';
 import type { AiTask } from '../types/aiRequestTypes';
 import type { AiRoutingResult } from '../routing/aiRoutingTypes';
-import type { AiEvidence } from '../types/aiContextTypes';
+import type { AiEvidence, AiContext } from '../types/aiContextTypes';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
@@ -44,17 +44,33 @@ export async function runAiExplanation(
 ): Promise<AiExplanationResult> {
   const requestId = createRequestId();
 
+  // Build context and extract traceability IDs once before try/catch
+  // These are computed once and reused in both success and error paths
+  let context: AiContext;
+  let traceabilityIds: readonly string[];
   try {
-    const context = buildProductAiContext(options.horoscope, {
+    context = buildProductAiContext(options.horoscope, {
       domainInterpretations: options.domainInterpretations,
       lifeAnalysis: options.lifeAnalysis,
       temporalState: options.temporalState,
       selectedPeriod: options.selectedPeriod
     });
+    traceabilityIds = extractTraceabilityIds(context);
+  } catch (contextError) {
+    // If context construction itself throws, fall back to empty traceability IDs
+    traceabilityIds = [];
+    // Since context construction failed, we need to return error immediately
+    return Object.freeze({
+      kind: 'ERROR',
+      requestId,
+      task: options.task,
+      status: 'ERROR',
+      message: getSafeAiExplanationErrorMessage(contextError),
+      warnings: Object.freeze([])
+    });
+  }
 
-    // Extract traceability IDs from context for debugging/audit
-    const traceabilityIds = extractTraceabilityIds(context);
-
+  try {
     const request = createAiRequest(
       options.task,
       context,
@@ -82,21 +98,11 @@ export async function runAiExplanation(
       options.task
     );
   } catch (error) {
-    // Extract traceability IDs even on error for better debugging
-    const context = buildProductAiContext(options.horoscope, {
-      domainInterpretations: options.domainInterpretations,
-      lifeAnalysis: options.lifeAnalysis,
-      temporalState: options.temporalState,
-      selectedPeriod: options.selectedPeriod
-    });
-    const traceabilityIds = extractTraceabilityIds(context);
-    const errorRequestId = traceabilityIds.length > 0
-      ? `error-${traceabilityIds.slice(0, 3).join('-')}`
-      : requestId;
-
+    // Use the real requestId, not evidence-IDs-as-request-id
+    // Traceability IDs are already on the request object
     return Object.freeze({
       kind: 'ERROR',
-      requestId: errorRequestId,
+      requestId,
       task: options.task,
       status: 'ERROR',
       message: getSafeAiExplanationErrorMessage(error),
@@ -284,7 +290,7 @@ function createRequestId(): string {
     .slice(2, 9)}`;
 }
 
-function extractTraceabilityIds(context: any): readonly string[] {
+function extractTraceabilityIds(context: AiContext): readonly string[] {
   const ids = new Set<string>();
 
   // Extract from context.evidence
@@ -311,7 +317,7 @@ function extractTraceabilityIds(context: any): readonly string[] {
 
     // From wealth dimensions
     if (context.selectedPeriod.wealth?.dimensions) {
-      for (const dim of Object.values<any>(context.selectedPeriod.wealth.dimensions)) {
+      for (const dim of Object.values(context.selectedPeriod.wealth.dimensions)) {
         dim.promiseEvidenceIds?.forEach((id: string) => ids.add(id));
       }
     }

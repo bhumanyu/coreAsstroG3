@@ -490,14 +490,13 @@ export interface ProductSelectedPeriodSynthesis {
   readonly provenance: ProductSynthesisProvenance;
   /**
    * AI explanation status for the selected period (PBA-09).
-   * Explicitly surfaces whether AI explanation succeeded, failed, is pending, or was not requested.
+   * Explicitly surfaces whether AI explanation succeeded, failed, or was not requested.
    *
    * - 'OK': AI explanation succeeded and aiExplanation contains the result.
    * - 'ERROR': AI explanation failed and aiExplanation contains the error result.
-   * - 'PENDING': AI explanation request is in flight; aiExplanation is undefined.
    * - 'NOT_REQUESTED': AI explanation was not requested; aiExplanation is undefined.
    */
-  readonly aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' | 'NOT_REQUESTED';
+  readonly aiExplanationStatus: 'OK' | 'ERROR' | 'NOT_REQUESTED';
   /**
    * Optional AI explanation for the selected period (PBA-09).
    * When present, contains the AI explanation result.

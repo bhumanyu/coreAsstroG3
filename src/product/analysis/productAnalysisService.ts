@@ -211,17 +211,30 @@ export class ProductAnalysisService {
 
           // PBA-09: Trigger AI explanation for selected period when enabled
           let aiExplanation;
-          let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' | undefined;
+          let aiExplanationStatus: 'OK' | 'ERROR' | undefined;
           if (options?.includeSelectedPeriodAiExplanation ?? false) {
-            aiExplanation = await runAiExplanation({
-              horoscope,
-              task: 'SELECTED_PERIOD_ANALYSIS',
-              domainInterpretations: pipelineState.domainInterpretations ?? [],
-              lifeAnalysis: pipelineState.lifeAnalysis!,
-              temporalState: pipelineState.temporalState!,
-              selectedPeriod: selectedPeriodResult.value
-            });
-            aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
+            try {
+              aiExplanation = await runAiExplanation({
+                horoscope,
+                task: 'SELECTED_PERIOD_ANALYSIS',
+                domainInterpretations: pipelineState.domainInterpretations ?? [],
+                lifeAnalysis: pipelineState.lifeAnalysis!,
+                temporalState: pipelineState.temporalState!,
+                selectedPeriod: selectedPeriodResult.value
+              });
+              aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
+            } catch (aiError) {
+              // AI failure must never reject analyze() - map to ERROR result
+              aiExplanation = Object.freeze({
+                kind: 'ERROR' as const,
+                requestId: `error-${Date.now()}`,
+                task: 'SELECTED_PERIOD_ANALYSIS' as const,
+                status: 'ERROR' as const,
+                message: aiError instanceof Error ? aiError.message : 'AI explanation could not be generated.',
+                warnings: Object.freeze([])
+              });
+              aiExplanationStatus = 'ERROR';
+            }
           }
 
           return {
@@ -390,17 +403,30 @@ export class ProductAnalysisService {
 
       // PBA-09: Trigger AI explanation for selected period when enabled
       let aiExplanation;
-      let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' | undefined;
+      let aiExplanationStatus: 'OK' | 'ERROR' | undefined;
       if (includeAiExplanation) {
-        aiExplanation = await runAiExplanation({
-          horoscope,
-          task: 'SELECTED_PERIOD_ANALYSIS',
-          domainInterpretations: pipelineState.domainInterpretations ?? [],
-          lifeAnalysis: pipelineState.lifeAnalysis!,
-          temporalState: pipelineState.temporalState!,
-          selectedPeriod: selectedPeriodResult.value
-        });
-        aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
+        try {
+          aiExplanation = await runAiExplanation({
+            horoscope,
+            task: 'SELECTED_PERIOD_ANALYSIS',
+            domainInterpretations: pipelineState.domainInterpretations ?? [],
+            lifeAnalysis: pipelineState.lifeAnalysis!,
+            temporalState: pipelineState.temporalState!,
+            selectedPeriod: selectedPeriodResult.value
+          });
+          aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
+        } catch (aiError) {
+          // AI failure must never reject selectPeriod() - map to ERROR result
+          aiExplanation = Object.freeze({
+            kind: 'ERROR' as const,
+            requestId: `error-${Date.now()}`,
+            task: 'SELECTED_PERIOD_ANALYSIS' as const,
+            status: 'ERROR' as const,
+            message: aiError instanceof Error ? aiError.message : 'AI explanation could not be generated.',
+            warnings: Object.freeze([])
+          });
+          aiExplanationStatus = 'ERROR';
+        }
       }
 
       return {

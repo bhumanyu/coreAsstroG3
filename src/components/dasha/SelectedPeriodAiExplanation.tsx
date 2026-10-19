@@ -16,7 +16,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { Brain, Loader2, AlertCircle, CheckCircle2, TriangleAlert } from 'lucide-react';
+import { Brain, AlertCircle, CheckCircle2, TriangleAlert } from 'lucide-react';
 import type { AiExplanationResult } from '../../ai';
 
 export interface SelectedPeriodAiExplanationProps {
@@ -25,7 +25,7 @@ export interface SelectedPeriodAiExplanationProps {
       readonly mahadashaId: string;
       readonly antardashaId: string;
     };
-    readonly aiExplanationStatus?: 'OK' | 'ERROR' | 'PENDING' | 'NOT_REQUESTED';
+    readonly aiExplanationStatus?: 'OK' | 'ERROR' | 'NOT_REQUESTED';
     readonly aiExplanation?: AiExplanationResult;
   };
   readonly submittedPeriod: {
@@ -53,27 +53,6 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
   // If not matching, don't render
   if (!isMatching) {
     return null;
-  }
-
-  // Render pending state only when explicitly PENDING
-  if (synthesis.aiExplanationStatus === 'PENDING') {
-    return (
-      <div
-        className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-4"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-3">
-          <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" aria-hidden="true" />
-          <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
-            AI Explanation Pending
-          </span>
-        </div>
-        <div className="text-xs text-slate-400">
-          AI explanation is being generated...
-        </div>
-      </div>
-    );
   }
 
   // Render nothing for NOT_REQUESTED when aiExplanation is absent

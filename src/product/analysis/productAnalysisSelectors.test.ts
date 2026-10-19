@@ -747,7 +747,8 @@ describe('productAnalysisSelectors', () => {
           provenance: {
             career: { status: 'PRESENT' },
             wealth: { status: 'PRESENT' }
-          }
+          },
+          aiExplanationStatus: 'NOT_REQUESTED'
         }
       };
 
