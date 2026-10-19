@@ -1118,6 +1118,14 @@ export function mapSelectedPeriodSynthesis(
             code: d.code,
             message: d.message
           }))
+        ),
+        promiseEvidenceIds: Object.freeze([...value.wealth.dimensions.ACCUMULATION.promiseEvidenceIds]),
+        dashaRuleReferences: Object.freeze(
+          value.wealth.dimensions.ACCUMULATION.dashaRuleReferences.map(ref => Object.freeze({
+            ruleId: ref.ruleId,
+            source: ref.source,
+            level: ref.level
+          }))
         )
       }),
       GAINS: Object.freeze({
@@ -1129,6 +1137,14 @@ export function mapSelectedPeriodSynthesis(
           value.wealth.dimensions.GAINS.diagnostics.map(d => Object.freeze({
             code: d.code,
             message: d.message
+          }))
+        ),
+        promiseEvidenceIds: Object.freeze([...value.wealth.dimensions.GAINS.promiseEvidenceIds]),
+        dashaRuleReferences: Object.freeze(
+          value.wealth.dimensions.GAINS.dashaRuleReferences.map(ref => Object.freeze({
+            ruleId: ref.ruleId,
+            source: ref.source,
+            level: ref.level
           }))
         )
       }),
@@ -1142,6 +1158,14 @@ export function mapSelectedPeriodSynthesis(
             code: d.code,
             message: d.message
           }))
+        ),
+        promiseEvidenceIds: Object.freeze([...value.wealth.dimensions.FORTUNE.promiseEvidenceIds]),
+        dashaRuleReferences: Object.freeze(
+          value.wealth.dimensions.FORTUNE.dashaRuleReferences.map(ref => Object.freeze({
+            ruleId: ref.ruleId,
+            source: ref.source,
+            level: ref.level
+          }))
         )
       }),
       SPECULATION: Object.freeze({
@@ -1153,6 +1177,14 @@ export function mapSelectedPeriodSynthesis(
           value.wealth.dimensions.SPECULATION.diagnostics.map(d => Object.freeze({
             code: d.code,
             message: d.message
+          }))
+        ),
+        promiseEvidenceIds: Object.freeze([...value.wealth.dimensions.SPECULATION.promiseEvidenceIds]),
+        dashaRuleReferences: Object.freeze(
+          value.wealth.dimensions.SPECULATION.dashaRuleReferences.map(ref => Object.freeze({
+            ruleId: ref.ruleId,
+            source: ref.source,
+            level: ref.level
           }))
         )
       })
@@ -1173,10 +1205,7 @@ export function mapSelectedPeriodSynthesis(
       mahadashaPlanet: value.period.mahadashaPlanet,
       antardashaId: value.period.antardashaId,
       antardashaPlanet: value.period.antardashaPlanet,
-      interval: Object.freeze({
-        start: value.period.interval.start,
-        end: value.period.interval.end
-      }),
+      interval: Object.freeze({ ...value.period.interval }),
       analysisAsOf: value.period.analysisAsOf,
       temporalRelation: value.period.temporalRelation
     }),
@@ -1184,8 +1213,32 @@ export function mapSelectedPeriodSynthesis(
     wealth,
     evidence,
     missingInputs,
-    provenance
+    provenance,
+    aiExplanationStatus: 'PENDING'
   });
+}
+
+return Object.freeze({
+  synthesisVersion: value.synthesisVersion,
+  period: Object.freeze({
+    selectedPeriodId: value.period.selectedPeriodId,
+    mahadashaId: value.period.mahadashaId,
+    mahadashaPlanet: value.period.mahadashaPlanet,
+    antardashaId: value.period.antardashaId,
+    antardashaPlanet: value.period.antardashaPlanet,
+    interval: Object.freeze({
+      start: value.period.interval.start,
+      end: value.period.interval.end
+    }),
+    analysisAsOf: value.period.analysisAsOf,
+    temporalRelation: value.period.temporalRelation
+  }),
+  career,
+  wealth,
+  evidence,
+  missingInputs,
+  provenance
+});
 }
 
 /**

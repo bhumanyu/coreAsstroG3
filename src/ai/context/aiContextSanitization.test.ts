@@ -2,8 +2,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { forbiddenAiContextKeys } from './aiContextPrivacy';
-import { buildAiContext } from './aiContextFactory';
+import { buildAiContext, projectSelectedPeriodSynthesis } from './aiContextFactory';
 import type { Horoscope } from '../../types';
+import type { SelectedPeriodSynthesisValue } from '../../domain/synthesis/selectedPeriodSynthesis';
+import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 
 let horoscope: Horoscope;
 
@@ -127,4 +130,168 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
       }
     }
   }, 30000);
+
+  describe('selectedPeriod projection', () => {
+    it('should deep-freeze selectedPeriod context when present', () => {
+      const mockSelectedPeriod: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> = {
+        synthesisVersion: 'PBA-06-v1',
+        period: {
+          selectedPeriodId: 'test-period',
+          mahadashaId: 'md-1',
+          mahadashaPlanet: 'SATURN',
+          antardashaId: 'ad-1',
+          antardashaPlanet: 'JUPITER',
+          interval: { start: '2025-01-01T00:00:00Z', end: '2027-01-01T00:00:00Z' },
+          analysisAsOf: '2026-01-01T00:00:00Z',
+          temporalRelation: 'CURRENT'
+        },
+        natalBaseline: {
+          career: { baseline: {} as CareerConclusionData, unchanged: true },
+          wealth: { baseline: {} as WealthConclusionData, unchanged: true }
+        },
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [],
+          diagnostics: []
+        },
+        wealth: {
+          dimensions: {
+            ACCUMULATION: {
+              dimension: 'ACCUMULATION',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            },
+            GAINS: {
+              dimension: 'GAINS',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            },
+            FORTUNE: {
+              dimension: 'FORTUNE',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            },
+            SPECULATION: {
+              dimension: 'SPECULATION',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            }
+          },
+          diagnostics: []
+        },
+        evidence: [],
+        missingInputs: [],
+        provenance: {
+          career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+          wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+        }
+      };
+
+      const selectedPeriodContext = projectSelectedPeriodSynthesis(mockSelectedPeriod);
+
+      expect(Object.isFrozen(selectedPeriodContext)).toBe(true);
+      expect(Object.isFrozen(selectedPeriodContext.career)).toBe(true);
+      expect(Object.isFrozen(selectedPeriodContext.wealth)).toBe(true);
+      expect(Object.isFrozen(selectedPeriodContext.evidence)).toBe(true);
+      expect(Object.isFrozen(selectedPeriodContext.wealth.dimensions)).toBe(true);
+    });
+
+    it('should not contain forbidden keys in selectedPeriod projection', () => {
+      const mockSelectedPeriod: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> = {
+        synthesisVersion: 'PBA-06-v1',
+        period: {
+          selectedPeriodId: 'test-period',
+          mahadashaId: 'md-1',
+          mahadashaPlanet: 'SATURN',
+          antardashaId: 'ad-1',
+          antardashaPlanet: 'JUPITER',
+          interval: { start: '2025-01-01T00:00:00Z', end: '2027-01-01T00:00:00Z' },
+          analysisAsOf: '2026-01-01T00:00:00Z',
+          temporalRelation: 'CURRENT'
+        },
+        natalBaseline: {
+          career: { baseline: {} as CareerConclusionData, unchanged: true },
+          wealth: { baseline: {} as WealthConclusionData, unchanged: true }
+        },
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [],
+          diagnostics: []
+        },
+        wealth: {
+          dimensions: {
+            ACCUMULATION: {
+              dimension: 'ACCUMULATION',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            },
+            GAINS: {
+              dimension: 'GAINS',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            },
+            FORTUNE: {
+              dimension: 'FORTUNE',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            },
+            SPECULATION: {
+              dimension: 'SPECULATION',
+              effect: 'INSUFFICIENT_DATA',
+              dataStatus: 'INSUFFICIENT_DATA',
+              linkedLevels: [],
+              diagnostics: [],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: []
+            }
+          },
+          diagnostics: []
+        },
+        evidence: [],
+        missingInputs: [],
+        provenance: {
+          career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+          wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+        }
+      };
+
+      const selectedPeriodContext = projectSelectedPeriodSynthesis(mockSelectedPeriod);
+      const allKeys = collectKeys(selectedPeriodContext);
+
+      for (const key of allKeys) {
+        const lowerKey = key.toLowerCase();
+        for (const forbidden of forbiddenAiContextKeys) {
+          expect(lowerKey).not.toBe(forbidden.toLowerCase());
+        }
+      }
+    });
+  });
 });

@@ -71,28 +71,39 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           effect: 'ACTIVATES',
           dataStatus: 'COMPLETE',
           linkedLevels: ['MD'],
-          diagnostics: []
+          diagnostics: [],
+          promiseEvidenceIds: ['promise-1'],
+          dashaRuleReferences: [
+            { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
+            { ruleId: 'rule-2', source: 'DASHA', level: 'AD' }
+          ]
         },
         GAINS: {
           dimension: 'GAINS',
           effect: 'PARTIALLY_ACTIVATES',
           dataStatus: 'PARTIAL',
           linkedLevels: ['AD'],
-          diagnostics: []
+          diagnostics: [],
+          promiseEvidenceIds: ['promise-2'],
+          dashaRuleReferences: []
         },
         FORTUNE: {
           dimension: 'FORTUNE',
           effect: 'INSUFFICIENT_DATA',
           dataStatus: 'INSUFFICIENT_DATA',
           linkedLevels: [],
-          diagnostics: []
+          diagnostics: [],
+          promiseEvidenceIds: [],
+          dashaRuleReferences: []
         },
         SPECULATION: {
           dimension: 'SPECULATION',
           effect: 'CHALLENGES',
           dataStatus: 'COMPLETE',
           linkedLevels: ['MD', 'AD'],
-          diagnostics: []
+          diagnostics: [],
+          promiseEvidenceIds: ['promise-3'],
+          dashaRuleReferences: []
         }
       },
       diagnostics: []
@@ -229,6 +240,22 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     expect(result.wealth.dimensions.GAINS.dataStatus).toBe('PARTIAL');
     expect(result.wealth.dimensions.FORTUNE.dataStatus).toBe('INSUFFICIENT_DATA');
     expect(result.wealth.dimensions.SPECULATION.dataStatus).toBe('COMPLETE');
+  });
+
+  it('preserves promiseEvidenceIds and dashaRuleReferences in wealth dimensions', () => {
+    const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+    expect(result.wealth.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual(['promise-1']);
+    expect(result.wealth.dimensions.ACCUMULATION.dashaRuleReferences).toEqual([
+      { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
+      { ruleId: 'rule-2', source: 'DASHA', level: 'AD' }
+    ]);
+    expect(result.wealth.dimensions.GAINS.promiseEvidenceIds).toEqual(['promise-2']);
+    expect(result.wealth.dimensions.GAINS.dashaRuleReferences).toEqual([]);
+    expect(result.wealth.dimensions.FORTUNE.promiseEvidenceIds).toEqual([]);
+    expect(result.wealth.dimensions.FORTUNE.dashaRuleReferences).toEqual([]);
+    expect(result.wealth.dimensions.SPECULATION.promiseEvidenceIds).toEqual(['promise-3']);
+    expect(result.wealth.dimensions.SPECULATION.dashaRuleReferences).toEqual([]);
   });
 
   it('preserves career expression row with full traceability', () => {

@@ -15,7 +15,7 @@
  * No deterministic fields sourced from AI output.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Brain, Loader2, AlertCircle, CheckCircle2, TriangleAlert } from 'lucide-react';
 import type { AiExplanationResult } from '../../ai';
 
@@ -25,6 +25,7 @@ export interface SelectedPeriodAiExplanationProps {
       readonly mahadashaId: string;
       readonly antardashaId: string;
     };
+    readonly aiExplanationStatus?: 'OK' | 'ERROR' | 'PENDING';
     readonly aiExplanation?: AiExplanationResult;
   };
   readonly submittedPeriod: {
@@ -37,7 +38,6 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
   synthesis,
   submittedPeriod
 }) => {
-  const [isPending, setIsPending] = useState(false);
   const requestIdRef = useRef(0);
 
   // Stale-async guard: only render if IDs match
@@ -48,7 +48,6 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
   // Clear on selection change
   useEffect(() => {
     requestIdRef.current += 1;
-    setIsPending(false);
   }, [synthesis.period.mahadashaId, synthesis.period.antardashaId]);
 
   // If not matching, don't render
@@ -56,17 +55,33 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
     return null;
   }
 
-  // If no AI explanation, don't render
-  if (!synthesis.aiExplanation) {
-    return null;
+  // Render pending state
+  if (synthesis.aiExplanationStatus === 'PENDING' || !synthesis.aiExplanation) {
+    return (
+      <div
+        className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-4"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-3">
+          <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" aria-hidden="true" />
+          <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
+            AI Explanation Pending
+          </span>
+        </div>
+        <div className="text-xs text-slate-400">
+          AI explanation is being generated...
+        </div>
+      </div>
+    );
   }
 
   const explanation = synthesis.aiExplanation;
 
-  // Render based on status
+  // Render based on kind (status discriminant)
   if (explanation.kind === 'ERROR') {
     return (
-      <div className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3">
+      <div className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3" role="alert" aria-live="assertive">
         <div className="flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-400" aria-hidden="true" />
           <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-rose-300">

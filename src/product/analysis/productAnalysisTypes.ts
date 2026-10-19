@@ -440,6 +440,8 @@ export interface ProductSynthesisCareerSection {
  *
  * Effect is preserved verbatim from PBA-05 dimension effect.
  * dataStatus describes input availability only, never a composite score.
+ * promiseEvidenceIds and dashaRuleReferences are preserved verbatim from PBA-05 activation
+ * for evidence parity with the AI context projection.
  */
 export interface ProductSynthesisWealthDimensionRow {
   readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
@@ -447,6 +449,12 @@ export interface ProductSynthesisWealthDimensionRow {
   readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
   readonly linkedLevels: readonly ('MD' | 'AD')[];
   readonly diagnostics: readonly ProductSynthesisDiagnostic[];
+  readonly promiseEvidenceIds: readonly string[];
+  readonly dashaRuleReferences: readonly {
+    readonly ruleId: string;
+    readonly source: string;
+    readonly level: 'MD' | 'AD';
+  }[];
 }
 
 /**
@@ -480,6 +488,14 @@ export interface ProductSelectedPeriodSynthesis {
   readonly evidence: readonly ProductSynthesisEvidenceReference[];
   readonly missingInputs: readonly ProductSynthesisMissingInput[];
   readonly provenance: ProductSynthesisProvenance;
+  /**
+   * AI explanation status for the selected period (PBA-09).
+   * Explicitly surfaces whether AI explanation succeeded, failed, or is pending.
+   * When status is 'OK', aiExplanation contains the result.
+   * When status is 'ERROR', aiExplanation contains the error result.
+   * When status is 'PENDING', aiExplanation is undefined (request in flight).
+   */
+  readonly aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING';
   /**
    * Optional AI explanation for the selected period (PBA-09).
    * When present, contains the AI explanation result.

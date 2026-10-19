@@ -63,14 +63,18 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         effect: 'INSUFFICIENT_DATA',
         dataStatus: 'INSUFFICIENT_DATA',
         linkedLevels: [],
-        diagnostics: []
+        diagnostics: [],
+        promiseEvidenceIds: [],
+        dashaRuleReferences: []
       },
       GAINS: {
         dimension: 'GAINS',
         effect: 'UNKNOWN',
         dataStatus: 'COMPLETE',
         linkedLevels: ['MD', 'AD'],
-        diagnostics: []
+        diagnostics: [],
+        promiseEvidenceIds: [],
+        dashaRuleReferences: []
       },
       FORTUNE: {
         dimension: 'FORTUNE',
@@ -82,7 +86,9 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             code: 'WEALTH_DIMENSION_INSUFFICIENT_DESPITE_COMPLETE_INPUT',
             message: 'Wealth dimension FORTUNE has complete input but insufficient activation data'
           }
-        ]
+        ],
+        promiseEvidenceIds: [],
+        dashaRuleReferences: []
       },
       SPECULATION: {
         dimension: 'SPECULATION',
@@ -94,7 +100,9 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             code: 'WEALTH_DIMENSION_INSUFFICIENT_DESPITE_COMPLETE_INPUT',
             message: 'Wealth dimension SPECULATION has complete input but insufficient activation data'
           }
-        ]
+        ],
+        promiseEvidenceIds: [],
+        dashaRuleReferences: []
       }
     },
     diagnostics: []

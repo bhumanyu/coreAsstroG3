@@ -455,4 +455,107 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       service.selectPeriod('md_jupiter', 'ad_saturn')
     ).rejects.toThrow('no analysis context available');
   });
+
+  describe('AI explanation handling (PBA-09)', () => {
+    it('surfaces AI failure as ERROR status with error result', async () => {
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      // Mock runAiExplanation to throw
+      const { runAiExplanation } = await import('../../ai/product/aiExplanationService');
+      vi.spyOn({ runAiExplanation }, 'runAiExplanation').mockRejectedValue(new Error('AI service unavailable'));
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      // Synthesis should still be OK with status
+      expect(result.selectedPeriod?.status).toBe('OK');
+      if (result.selectedPeriod?.status === 'OK') {
+        // AI explanation status should be ERROR
+        expect(result.selectedPeriod.synthesis.aiExplanationStatus).toBe('ERROR');
+        // AI explanation should contain error result
+        expect(result.selectedPeriod.synthesis.aiExplanation).toBeDefined();
+        expect(result.selectedPeriod.synthesis.aiExplanation?.kind).toBe('ERROR');
+        expect(result.selectedPeriod.synthesis.aiExplanation?.message).toBe('AI service unavailable');
+      }
+    });
+
+    it('sets PENDING status when includeSelectedPeriodAiExplanation is false', async () => {
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: false
+      });
+
+      expect(result.selectedPeriod?.status).toBe('OK');
+      if (result.selectedPeriod?.status === 'OK') {
+        expect(result.selectedPeriod.synthesis.aiExplanationStatus).toBe('PENDING');
+        expect(result.selectedPeriod.synthesis.aiExplanation).toBeUndefined();
+      }
+    });
+
+    it('sets OK status when AI explanation succeeds', async () => {
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(readyPipelineState);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      // Mock runAiExplanation to succeed
+      const { runAiExplanation } = await import('../../ai/product/aiExplanationService');
+      vi.spyOn({ runAiExplanation }, 'runAiExplanation').mockResolvedValue({
+        kind: 'SUCCESS',
+        requestId: 'test-request-id',
+        task: 'SELECTED_PERIOD_ANALYSIS',
+        status: 'SUCCESS',
+        conclusion: 'Test conclusion',
+        supportingEvidence: [],
+        challengingEvidence: [],
+        unresolvedQuestions: [],
+        warnings: [],
+        triggeredRuleIds: [],
+        providerId: 'test-provider',
+        providerName: 'Test Provider',
+        providerKind: 'LOCAL',
+        routingMode: 'LOCAL',
+        fallbackUsed: false,
+        selectionReason: 'CAPABILITY',
+        generatedAt: '2024-01-01T00:00:00Z'
+      });
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      expect(result.selectedPeriod?.status).toBe('OK');
+      if (result.selectedPeriod?.status === 'OK') {
+        expect(result.selectedPeriod.synthesis.aiExplanationStatus).toBe('OK');
+        expect(result.selectedPeriod.synthesis.aiExplanation).toBeDefined();
+        expect(result.selectedPeriod.synthesis.aiExplanation?.kind).toBe('SUCCESS');
+      }
+    });
+  });
 });

@@ -322,4 +322,274 @@ describe('DashaPage (P-UI-07)', () => {
     // because submittedPeriod is null (user hasn't submitted yet)
     expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
   });
+
+  describe('AI explanation states (PBA-09)', () => {
+    it('renders pending state when aiExplanationStatus is PENDING', () => {
+      const analysis = createProductAnalysis({
+        selectedPeriod: {
+          status: 'OK',
+          synthesis: {
+            synthesisVersion: 'PBA-06-v1',
+            period: {
+              selectedPeriodId: 'period-1',
+              mahadashaId: 'md_jupiter',
+              mahadashaPlanet: 'Jupiter',
+              antardashaId: 'ad_saturn',
+              antardashaPlanet: 'Saturn',
+              interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+              analysisAsOf: '2021-01-01T00:00:00Z',
+              temporalRelation: 'CURRENT'
+            },
+            career: {
+              qualificationBasis: 'CANONICAL_STATUS',
+              expressions: [],
+              diagnostics: []
+            },
+            wealth: {
+              dimensions: {
+                ACCUMULATION: {
+                  dimension: 'ACCUMULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                GAINS: {
+                  dimension: 'GAINS',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                FORTUNE: {
+                  dimension: 'FORTUNE',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                SPECULATION: {
+                  dimension: 'SPECULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                }
+              },
+              diagnostics: []
+            },
+            evidence: [],
+            missingInputs: [],
+            provenance: {
+              career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+              wealth: { status: 'PRESENT', version: 'v1' }
+            },
+            aiExplanationStatus: 'PENDING'
+          }
+        }
+      });
+
+      render(
+        <DashaPage
+          productAnalysisState={{ status: 'READY', analysis }}
+        />
+      );
+
+      // Should not render AI explanation when not matching IDs
+      expect(screen.queryByText(/AI Explanation Pending/i)).not.toBeInTheDocument();
+    });
+
+    it('renders error banner when aiExplanationStatus is ERROR', () => {
+      const analysis = createProductAnalysis({
+        selectedPeriod: {
+          status: 'OK',
+          synthesis: {
+            synthesisVersion: 'PBA-06-v1',
+            period: {
+              selectedPeriodId: 'period-1',
+              mahadashaId: 'md_jupiter',
+              mahadashaPlanet: 'Jupiter',
+              antardashaId: 'ad_saturn',
+              antardashaPlanet: 'Saturn',
+              interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+              analysisAsOf: '2021-01-01T00:00:00Z',
+              temporalRelation: 'CURRENT'
+            },
+            career: {
+              qualificationBasis: 'CANONICAL_STATUS',
+              expressions: [],
+              diagnostics: []
+            },
+            wealth: {
+              dimensions: {
+                ACCUMULATION: {
+                  dimension: 'ACCUMULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                GAINS: {
+                  dimension: 'GAINS',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                FORTUNE: {
+                  dimension: 'FORTUNE',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                SPECULATION: {
+                  dimension: 'SPECULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                }
+              },
+              diagnostics: []
+            },
+            evidence: [],
+            missingInputs: [],
+            provenance: {
+              career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+              wealth: { status: 'PRESENT', version: 'v1' }
+            },
+            aiExplanationStatus: 'ERROR',
+            aiExplanation: {
+              kind: 'ERROR',
+              requestId: 'error-request-id',
+              task: 'SELECTED_PERIOD_ANALYSIS',
+              status: 'ERROR',
+              message: 'AI service unavailable',
+              warnings: []
+            }
+          }
+        }
+      });
+
+      render(
+        <DashaPage
+          productAnalysisState={{ status: 'READY', analysis }}
+        />
+      );
+
+      // Should not render when not matching IDs
+      expect(screen.queryByText(/AI Explanation Error/i)).not.toBeInTheDocument();
+    });
+
+    it('clears AI explanation panel when selection changes', () => {
+      const onSelectPeriod = vi.fn();
+      const analysis = createProductAnalysis({
+        selectedPeriod: {
+          status: 'OK',
+          synthesis: {
+            synthesisVersion: 'PBA-06-v1',
+            period: {
+              selectedPeriodId: 'period-1',
+              mahadashaId: 'md_jupiter',
+              mahadashaPlanet: 'Jupiter',
+              antardashaId: 'ad_saturn',
+              antardashaPlanet: 'Saturn',
+              interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+              analysisAsOf: '2021-01-01T00:00:00Z',
+              temporalRelation: 'CURRENT'
+            },
+            career: {
+              qualificationBasis: 'CANONICAL_STATUS',
+              expressions: [],
+              diagnostics: []
+            },
+            wealth: {
+              dimensions: {
+                ACCUMULATION: {
+                  dimension: 'ACCUMULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                GAINS: {
+                  dimension: 'GAINS',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                FORTUNE: {
+                  dimension: 'FORTUNE',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                SPECULATION: {
+                  dimension: 'SPECULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                }
+              },
+              diagnostics: []
+            },
+            evidence: [],
+            missingInputs: [],
+            provenance: {
+              career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+              wealth: { status: 'PRESENT', version: 'v1' }
+            },
+            aiExplanationStatus: 'OK',
+            aiExplanation: {
+              kind: 'SUCCESS',
+              status: 'SUCCESS',
+              conclusion: 'Test conclusion',
+              supportingEvidence: [],
+              challengingEvidence: [],
+              unresolvedQuestions: [],
+              warnings: []
+            }
+          }
+        }
+      });
+
+      render(
+        <DashaPage
+          productAnalysisState={{ status: 'READY', analysis }}
+          onSelectPeriod={onSelectPeriod}
+        />
+      );
+
+      // Initially should not show AI explanation (no matching submittedPeriod)
+      expect(screen.queryByText(/AI Explanation/i)).not.toBeInTheDocument();
+    });
+  });
 });

@@ -156,6 +156,8 @@ export interface SynthesisWealthSection {
  *
  * Effect is preserved verbatim from PBA-05 dimension effect.
  * dataStatus describes input availability only, never a composite score.
+ * promiseEvidenceIds and dashaRuleReferences are preserved verbatim from PBA-05 activation
+ * for evidence parity with the AI context projection.
  */
 export interface SynthesisWealthDimensionRow {
   readonly dimension: WealthDimension;
@@ -163,6 +165,12 @@ export interface SynthesisWealthDimensionRow {
   readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
   readonly linkedLevels: readonly ('MD' | 'AD')[];
   readonly diagnostics: readonly SynthesisDiagnostic[];
+  readonly promiseEvidenceIds: readonly string[];
+  readonly dashaRuleReferences: readonly {
+    readonly ruleId: string;
+    readonly source: string;
+    readonly level: 'MD' | 'AD';
+  }[];
 }
 
 /**
@@ -691,28 +699,36 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       effect: 'INSUFFICIENT_DATA',
       dataStatus: 'INSUFFICIENT_DATA',
       linkedLevels: [],
-      diagnostics: []
+      diagnostics: [],
+      promiseEvidenceIds: [],
+      dashaRuleReferences: []
     },
     GAINS: {
       dimension: 'GAINS',
       effect: 'INSUFFICIENT_DATA',
       dataStatus: 'INSUFFICIENT_DATA',
       linkedLevels: [],
-      diagnostics: []
+      diagnostics: [],
+      promiseEvidenceIds: [],
+      dashaRuleReferences: []
     },
     FORTUNE: {
       dimension: 'FORTUNE',
       effect: 'INSUFFICIENT_DATA',
       dataStatus: 'INSUFFICIENT_DATA',
       linkedLevels: [],
-      diagnostics: []
+      diagnostics: [],
+      promiseEvidenceIds: [],
+      dashaRuleReferences: []
     },
     SPECULATION: {
       dimension: 'SPECULATION',
       effect: 'INSUFFICIENT_DATA',
       dataStatus: 'INSUFFICIENT_DATA',
       linkedLevels: [],
-      diagnostics: []
+      diagnostics: [],
+      promiseEvidenceIds: [],
+      dashaRuleReferences: []
     }
   };
 
@@ -770,7 +786,9 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         effect: dimActivation.effect,
         dataStatus,
         linkedLevels: dimActivation.linkedLevels,
-        diagnostics: dimDiagnostics
+        diagnostics: dimDiagnostics,
+        promiseEvidenceIds: dimActivation.promiseEvidenceIds,
+        dashaRuleReferences: dimActivation.dashaRuleReferences
       };
     }
   } else {

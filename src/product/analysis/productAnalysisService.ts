@@ -211,6 +211,7 @@ export class ProductAnalysisService {
 
           // PBA-09: Trigger AI explanation for selected period when enabled
           let aiExplanation;
+          let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' = 'PENDING';
           if (options?.includeSelectedPeriodAiExplanation ?? false) {
             try {
               aiExplanation = await runAiExplanation({
@@ -221,10 +222,21 @@ export class ProductAnalysisService {
                 temporalState: pipelineState.temporalState!,
                 selectedPeriod: selectedPeriodResult.value
               });
-            } catch {
+              aiExplanationStatus = 'OK';
+            } catch (error) {
               // AI failure does not affect deterministic synthesis
-              aiExplanation = undefined;
+              aiExplanation = {
+                kind: 'ERROR' as const,
+                requestId: 'error-request-id',
+                task: 'SELECTED_PERIOD_ANALYSIS',
+                status: 'ERROR' as const,
+                message: error instanceof Error ? error.message : 'AI explanation failed',
+                warnings: []
+              } as const;
+              aiExplanationStatus = 'ERROR';
             }
+          } else {
+            aiExplanationStatus = 'PENDING';
           }
 
           return {
@@ -233,6 +245,7 @@ export class ProductAnalysisService {
               status: 'OK',
               synthesis: {
                 ...selectedPeriodSynthesis,
+                aiExplanationStatus,
                 ...(aiExplanation ? { aiExplanation } : {})
               }
             }
@@ -392,6 +405,7 @@ export class ProductAnalysisService {
 
       // PBA-09: Trigger AI explanation for selected period when enabled
       let aiExplanation;
+      let aiExplanationStatus: 'OK' | 'ERROR' | 'PENDING' = 'PENDING';
       if (includeAiExplanation) {
         try {
           aiExplanation = await runAiExplanation({
@@ -402,10 +416,21 @@ export class ProductAnalysisService {
             temporalState: pipelineState.temporalState!,
             selectedPeriod: selectedPeriodResult.value
           });
-        } catch {
+          aiExplanationStatus = 'OK';
+        } catch (error) {
           // AI failure does not affect deterministic synthesis
-          aiExplanation = undefined;
+          aiExplanation = {
+            kind: 'ERROR' as const,
+            requestId: 'error-request-id',
+            task: 'SELECTED_PERIOD_ANALYSIS',
+            status: 'ERROR' as const,
+            message: error instanceof Error ? error.message : 'AI explanation failed',
+            warnings: []
+          } as const;
+          aiExplanationStatus = 'ERROR';
         }
+      } else {
+        aiExplanationStatus = 'PENDING';
       }
 
       return {
@@ -414,6 +439,7 @@ export class ProductAnalysisService {
           status: 'OK',
           synthesis: {
             ...selectedPeriodSynthesis,
+            aiExplanationStatus,
             ...(aiExplanation ? { aiExplanation } : {})
           }
         }

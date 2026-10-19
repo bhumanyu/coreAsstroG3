@@ -60,6 +60,10 @@ import type { CareerManifestationSynthesis, CareerManifestationFactor } from '..
 import type { WealthManifestationSynthesis, WealthDimensionManifestationSynthesis, WealthManifestationFactor, WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis, WealthDimensionFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
 import type { WealthPeriodTimingActivation, WealthDimension } from '../../domain/wealth/wealthTypes';
+import type {
+  SynthesisEvidenceReference,
+  SynthesisDiagnostic
+} from '../../domain/synthesis/selectedPeriodSynthesis';
 import type { WealthSubthemeKey } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { YogaResult } from '../../engine/yoga/yogaTypes';
 import type {
@@ -174,7 +178,7 @@ export interface ProductAiContextOptions {
  * @param value - The canonical selected-period synthesis result
  * @returns AI context projection of the selected-period synthesis
  */
-function projectSelectedPeriodSynthesis(
+export function projectSelectedPeriodSynthesis(
   value: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>
 ): AiSelectedPeriodContext {
   // Validate evidence IDs are strings (defensive check)
@@ -195,12 +199,12 @@ function projectSelectedPeriodSynthesis(
   }
 
   // Project career expressions
-  const careerExpressions = value.career.expressions.map((expr: any) => ({
+  const careerExpressions = value.career.expressions.map((expr) => ({
     expressionRefKey: expr.expressionRefKey,
     status: expr.status,
     linkedLevels: expr.linkedLevels,
     qualificationBasis: expr.qualificationBasis,
-    diagnostics: expr.diagnostics.map((d: any) => ({ code: d.code, message: d.message })),
+    diagnostics: expr.diagnostics.map((d) => ({ code: d.code, message: d.message })),
     expressionEvidenceIds: validateStringIds(expr.expressionEvidenceIds),
     qualifiedEvidenceIds: validateStringIds(expr.qualifiedEvidenceIds),
     unqualifiedEvidenceIds: validateStringIds(expr.unqualifiedEvidenceIds),
@@ -209,7 +213,19 @@ function projectSelectedPeriodSynthesis(
   }));
 
   // Project wealth dimensions
-  const wealthDimensions: Record<string, any> = {};
+  const wealthDimensions: Record<string, {
+    readonly dimension: WealthDimension;
+    readonly effect: TimingActivationEffect;
+    readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+    readonly linkedLevels: readonly ('MD' | 'AD')[];
+    readonly diagnostics: readonly { readonly code: string; readonly message: string }[];
+    readonly promiseEvidenceIds: readonly string[];
+    readonly dashaRuleReferences: readonly {
+      readonly ruleId: string;
+      readonly source: string;
+      readonly level: 'MD' | 'AD';
+    }[];
+  }> = {};
   for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
     const dimRow = value.wealth.dimensions[dim];
     wealthDimensions[dim] = {
@@ -217,26 +233,15 @@ function projectSelectedPeriodSynthesis(
       effect: dimRow.effect,
       dataStatus: dimRow.dataStatus,
       linkedLevels: dimRow.linkedLevels,
-      diagnostics: dimRow.diagnostics.map((d: any) => ({ code: d.code, message: d.message })),
-      // Extract promiseEvidenceIds and dashaRuleReferences from canonical evidence
-      promiseEvidenceIds: validateStringIds(
-        value.evidence
-          .filter((ref: any) => ref.dimension === dim && ref.provenanceStage === 'WEALTH_NATAL_PROMISE')
-          .map((ref: any) => ref.evidenceId)
-          .filter((id): id is string => id !== undefined)
-      ),
-      dashaRuleReferences: value.evidence
-        .filter((ref: any) => ref.dimension === dim && ref.provenanceStage === 'WEALTH_DASHA_RULE' && ref.referenceKind === 'RULE')
-        .map((ref: any) => ({
-          ruleId: ref.ruleId ?? '',
-          source: ref.source ?? '',
-          level: ref.level ?? 'MD'
-        }))
+      diagnostics: dimRow.diagnostics.map((d) => ({ code: d.code, message: d.message })),
+      // Copy promiseEvidenceIds and dashaRuleReferences verbatim for evidence parity
+      promiseEvidenceIds: validateStringIds(dimRow.promiseEvidenceIds),
+      dashaRuleReferences: dimRow.dashaRuleReferences
     };
   }
 
   // Project evidence references verbatim
-  const evidence = value.evidence.map((ref: any) => ({
+  const evidence = value.evidence.map((ref) => ({
     classification: ref.classification,
     evidenceId: ref.evidenceId,
     identityKey: ref.identityKey,
@@ -251,17 +256,21 @@ function projectSelectedPeriodSynthesis(
   }));
 
   // Project missing inputs
-  const missingInputs = value.missingInputs.map((mi: any) => ({
+  const missingInputs = value.missingInputs.map((mi) => ({
     domain: mi.domain,
     code: mi.code,
     description: mi.description
   }));
 
-  // Collect diagnostics from career and wealth sections
-  const diagnostics = [
-    ...value.career.diagnostics.map((d: any) => ({ code: d.code, message: d.message })),
-    ...value.wealth.diagnostics.map((d: any) => ({ code: d.code, message: d.message }))
-  ];
+  // Collect diagnostics from career and wealth sections, deduping by code
+  const diagnosticsMap = new Map<string, { code: string; message: string }>();
+  for (const d of value.career.diagnostics) {
+    diagnosticsMap.set(d.code, { code: d.code, message: d.message });
+  }
+  for (const d of value.wealth.diagnostics) {
+    diagnosticsMap.set(d.code, { code: d.code, message: d.message });
+  }
+  const diagnostics = Array.from(diagnosticsMap.values());
 
   return Object.freeze({
     selectedPeriodId: value.period.selectedPeriodId,
@@ -273,7 +282,7 @@ function projectSelectedPeriodSynthesis(
     analysisAsOf: value.period.analysisAsOf,
     temporalRelation: value.period.temporalRelation,
     career: Object.freeze({
-      qualificationBasis: value.career.qualificationBasis,
+      qualificationBasis: value.career.qualificationBasis === 'UNAVAILABLE' ? undefined : value.career.qualificationBasis,
       expressions: Object.freeze(careerExpressions)
     }),
     wealth: Object.freeze({

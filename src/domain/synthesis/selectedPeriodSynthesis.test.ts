@@ -2237,28 +2237,39 @@ describe('buildSelectedPeriodSynthesis', () => {
               effect: 'ACTIVATES',
               dataStatus: 'COMPLETE',
               linkedLevels: Object.freeze(['MD', 'AD']),
-              diagnostics: Object.freeze([])
+              diagnostics: Object.freeze([]),
+              promiseEvidenceIds: Object.freeze(['promise-1']),
+              dashaRuleReferences: Object.freeze([
+                Object.freeze({ ruleId: 'rule-1', level: 'MD', source: 'DASHA' }),
+                Object.freeze({ ruleId: 'rule-2', level: 'AD', source: 'DASHA' })
+              ])
             }),
             GAINS: Object.freeze({
               dimension: 'GAINS',
               effect: 'PARTIALLY_ACTIVATES',
               dataStatus: 'COMPLETE',
               linkedLevels: Object.freeze(['MD']),
-              diagnostics: Object.freeze([])
+              diagnostics: Object.freeze([]),
+              promiseEvidenceIds: Object.freeze(['promise-2']),
+              dashaRuleReferences: Object.freeze([])
             }),
             FORTUNE: Object.freeze({
               dimension: 'FORTUNE',
               effect: 'INSUFFICIENT_DATA',
               dataStatus: 'INSUFFICIENT_DATA',
               linkedLevels: Object.freeze([]),
-              diagnostics: Object.freeze([])
+              diagnostics: Object.freeze([]),
+              promiseEvidenceIds: Object.freeze([]),
+              dashaRuleReferences: Object.freeze([])
             }),
             SPECULATION: Object.freeze({
               dimension: 'SPECULATION',
               effect: 'CHALLENGES',
               dataStatus: 'COMPLETE',
               linkedLevels: Object.freeze(['AD']),
-              diagnostics: Object.freeze([])
+              diagnostics: Object.freeze([]),
+              promiseEvidenceIds: Object.freeze(['promise-3']),
+              dashaRuleReferences: Object.freeze([])
             })
           }),
           diagnostics: Object.freeze([])
