@@ -171,7 +171,7 @@ export function reasonWithLocalRules(
   // This includes evidence from selectedPeriod.availableEvidence plus context.evidence
   // Used for both validation and ranking to ensure consistency
   const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
-    ? buildSelectedPeriodEvidenceIndex(context)
+    ? buildSelectedPeriodEvidenceIndex(context.evidence, context.selectedPeriod)
     : null;
 
   const supportingSet = new Set<string>();

@@ -1,4 +1,4 @@
-import type { AiContext, AiEvidence } from '../types/aiContextTypes';
+import type { AiContext, AiEvidence, AiSelectedPeriodContext } from '../types/aiContextTypes';
 
 /**
  * Builds an index mapping selected-period evidence IDs to their corresponding
@@ -20,30 +20,32 @@ import type { AiContext, AiEvidence } from '../types/aiContextTypes';
  * selectedPeriod.availableEvidence, then fall back to context.evidence.
  * IDs with no object in either namespace are unresolved (never synthesize placeholders).
  *
- * @param context - The AI context containing selectedPeriod information
+ * @param evidence - The unified evidence from context.evidence for fallback lookup
+ * @param selectedPeriod - The selected-period context containing availableEvidence
  * @returns A Map from evidence ID to AiEvidence object for all selected-period evidence
  */
 export function buildSelectedPeriodEvidenceIndex(
-  context: AiContext
+  evidence: readonly AiEvidence[],
+  selectedPeriod: AiSelectedPeriodContext | undefined
 ): Map<string, AiEvidence> {
   const index = new Map<string, AiEvidence>();
 
   // Pre-populate with context.evidence for fallback lookup
-  for (const evidence of context.evidence) {
-    index.set(evidence.id, evidence);
+  for (const ev of evidence) {
+    index.set(ev.id, ev);
   }
 
   // If no selectedPeriod, return the base context evidence map
-  if (!context.selectedPeriod) {
+  if (!selectedPeriod) {
     return index;
   }
 
-  const sp = context.selectedPeriod;
+  const sp = selectedPeriod;
 
   // Pre-populate with selectedPeriod.availableEvidence (canonical bridge)
   // This takes precedence over context.evidence for selected-period-only IDs
-  for (const evidence of sp.availableEvidence) {
-    index.set(evidence.id, evidence);
+  for (const ev of sp.availableEvidence) {
+    index.set(ev.id, ev);
   }
 
   // Collect all referenced IDs from selected-period structures

@@ -11,10 +11,6 @@
  * - Selected period: MD=MOON, AD=MOON (via listSelectableMdAdPeriods)
  * - Using PROXY_DIRECTION path (canonical inputs insufficient for this chart)
  * - Updated to include identityKey fields on evidence references
- *
- * NOTE: This fixture needs regeneration after PBA-09 evidence-identity fix.
- * The wealth activation now includes promiseEvidenceIds and dashaRuleReferences
- * that were previously empty. The fixture reflects the old output format.
  */
 
 import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';

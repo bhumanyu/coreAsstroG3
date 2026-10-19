@@ -146,6 +146,16 @@ export interface BuildAiContextOptions {
    * When provided, this is projected into AI context as an additive field.
    */
   readonly selectedPeriod?: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>;
+  /**
+   * Optional selected-period evidence collections for SELECTED_PERIOD_ANALYSIS task.
+   * When provided with selectedPeriod, these are projected into selectedPeriod.availableEvidence
+   * for evidence resolution in SELECTED_PERIOD_ANALYSIS tasks.
+   */
+  readonly selectedPeriodEvidence?: {
+    readonly careerEvidence?: readonly DomainEvidence[];
+    readonly careerDashaEvidence?: readonly DomainEvidence[];
+    readonly wealthEvidence?: readonly DomainEvidence[];
+  };
 }
 
 /**
@@ -2017,6 +2027,7 @@ export function buildProductAiContext(
     lifeAnalysis: options.lifeAnalysis,
     temporalState: options.temporalState,
     careerProfessionAnalysis: options.careerProfessionAnalysis,
-    selectedPeriod: options.selectedPeriod
+    selectedPeriod: options.selectedPeriod,
+    selectedPeriodEvidence: options.selectedPeriodEvidence
   } as BuildAiContextOptions);
 }

@@ -19,6 +19,7 @@ import { isCareerDomainInterpretation, isWealthDomainInterpretation } from '../l
 import type { ProductAnalysis } from './productAnalysisTypes';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
+import type { DomainEvidence } from '../../domain/interpretation';
 import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis } from './productAnalysisMapper';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
@@ -220,7 +221,12 @@ export class ProductAnalysisService {
                 domainInterpretations: pipelineState.domainInterpretations ?? [],
                 lifeAnalysis: pipelineState.lifeAnalysis!,
                 temporalState: pipelineState.temporalState!,
-                selectedPeriod: selectedPeriodResult.value
+                selectedPeriod: selectedPeriodResult.value,
+                selectedPeriodEvidence: {
+                  careerEvidence: pipelineState.career?.evidence ?? [],
+                  careerDashaEvidence: pipelineState.careerArtifacts?.careerDashaEvidence ?? [],
+                  wealthEvidence: pipelineState.wealth?.evidence ?? []
+                }
               });
               aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
             } catch (aiError) {
@@ -412,7 +418,12 @@ export class ProductAnalysisService {
             domainInterpretations: pipelineState.domainInterpretations ?? [],
             lifeAnalysis: pipelineState.lifeAnalysis!,
             temporalState: pipelineState.temporalState!,
-            selectedPeriod: selectedPeriodResult.value
+            selectedPeriod: selectedPeriodResult.value,
+            selectedPeriodEvidence: {
+              careerEvidence: pipelineState.career?.evidence ?? [],
+              careerDashaEvidence: pipelineState.careerArtifacts!.careerDashaEvidence,
+              wealthEvidence: pipelineState.wealth?.evidence ?? []
+            }
           });
           aiExplanationStatus = aiExplanation.kind === 'ERROR' ? 'ERROR' : 'OK';
         } catch (aiError) {

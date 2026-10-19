@@ -8,7 +8,7 @@ import type { AiRouter } from '../routing/AiRouter';
 import type { AiTask } from '../types/aiRequestTypes';
 import type { AiRoutingResult } from '../routing/aiRoutingTypes';
 import type { AiEvidence, AiContext } from '../types/aiContextTypes';
-import type { DomainInterpretation } from '../../domain/interpretation';
+import type { DomainInterpretation, DomainEvidence } from '../../domain/interpretation';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
@@ -36,6 +36,16 @@ export interface RunProductAiExplanationOptions {
    * When provided, this is projected into AI context as an additive field.
    */
   readonly selectedPeriod?: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>;
+  /**
+   * Optional selected-period evidence collections for SELECTED_PERIOD_ANALYSIS task.
+   * When provided with selectedPeriod, these are projected into selectedPeriod.availableEvidence
+   * for evidence resolution in SELECTED_PERIOD_ANALYSIS tasks.
+   */
+  readonly selectedPeriodEvidence?: {
+    readonly careerEvidence?: readonly DomainEvidence[];
+    readonly careerDashaEvidence?: readonly DomainEvidence[];
+    readonly wealthEvidence?: readonly DomainEvidence[];
+  };
 }
 
 export type RunAiExplanationOptions = RunProductAiExplanationOptions;
@@ -54,7 +64,8 @@ export async function runAiExplanation(
       domainInterpretations: options.domainInterpretations,
       lifeAnalysis: options.lifeAnalysis,
       temporalState: options.temporalState,
-      selectedPeriod: options.selectedPeriod
+      selectedPeriod: options.selectedPeriod,
+      selectedPeriodEvidence: options.selectedPeriodEvidence
     });
     traceabilityIds = extractTraceabilityIds(context);
   } catch (contextError) {
@@ -286,7 +297,7 @@ function resolveEvidence(
   // This index maps evidence IDs to actual AiEvidence objects from both
   // selectedPeriod collections and context.evidence
   const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
-    ? buildSelectedPeriodEvidenceIndex({ evidence, selectedPeriod } as AiContext)
+    ? buildSelectedPeriodEvidenceIndex(evidence, selectedPeriod)
     : null;
 
   const resolved: AiExplanationEvidence[] = [];

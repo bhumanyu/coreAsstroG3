@@ -633,7 +633,7 @@ describe('ProductAnalysisService (P-UI-02)', () => {
   });
 
   describe('AI explanation handling (PBA-09)', () => {
-    it.skip('surfaces AI failure as ERROR status with error result', async () => {
+    it('surfaces AI failure as ERROR status with error result', async () => {
       // Use real calculateHoroscope to get a temporalState with dashaInterpretation
       const realHoroscope = calculateHoroscope(sampleBirth);
 
@@ -659,7 +659,17 @@ describe('ProductAnalysisService (P-UI-02)', () => {
           canonicalExpression: {} as any,
           mechanismCandidates: [],
           careerDashaEvidence: []
-        }
+        },
+        career: {
+          ...readyPipelineState.career,
+          evidence: [],
+          conclusionData: {} as any
+        } as any,
+        wealth: {
+          ...readyPipelineState.wealth,
+          evidence: [],
+          conclusionData: {} as any
+        } as any
       };
 
       const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
@@ -677,6 +687,46 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       const runAiSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockRejectedValue(
         new Error('AI provider error')
       );
+
+      // Mock buildProductSelectedPeriodSynthesis to return a successful result
+      const selectedPeriodServiceModule = await import('../selectedPeriodProductService');
+      const buildSynthesisSpy = vi.spyOn(selectedPeriodServiceModule, 'buildProductSelectedPeriodSynthesis').mockReturnValue({
+        ok: true,
+        value: {
+          synthesisVersion: 'PBA-06-v1',
+          period: {
+            selectedPeriodId: 'test-id',
+            mahadashaId: 'test-md',
+            mahadashaPlanet: 'JUPITER',
+            antardashaId: 'test-ad',
+            antardashaPlanet: 'SATURN',
+            interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+            analysisAsOf: customAsOf,
+            temporalRelation: 'FUTURE'
+          },
+          natalBaseline: {},
+          career: {
+            qualificationBasis: 'CANONICAL_STATUS',
+            expressions: [],
+            diagnostics: []
+          },
+          wealth: {
+            dimensions: {
+              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] }
+            },
+            diagnostics: []
+          },
+          evidence: [],
+          missingInputs: [],
+          provenance: {
+            career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+            wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+          }
+        }
+      });
 
       // Get valid MD/AD IDs from the temporalState
       const selectablePeriods = listSelectableMdAdPeriods(
@@ -704,9 +754,10 @@ describe('ProductAnalysisService (P-UI-02)', () => {
 
       // Cleanup
       runAiSpy.mockRestore();
+      buildSynthesisSpy.mockRestore();
     });
 
-    it.skip('sets NOT_REQUESTED status when includeSelectedPeriodAiExplanation is false', async () => {
+    it('sets NOT_REQUESTED status when includeSelectedPeriodAiExplanation is false', async () => {
       // Use real calculateHoroscope to get a temporalState with dashaInterpretation
       const realHoroscope = calculateHoroscope(sampleBirth);
 
@@ -732,7 +783,17 @@ describe('ProductAnalysisService (P-UI-02)', () => {
           canonicalExpression: {} as any,
           mechanismCandidates: [],
           careerDashaEvidence: []
-        }
+        },
+        career: {
+          ...readyPipelineState.career,
+          evidence: [],
+          conclusionData: {} as any
+        } as any,
+        wealth: {
+          ...readyPipelineState.wealth,
+          evidence: [],
+          conclusionData: {} as any
+        } as any
       };
 
       const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
@@ -744,6 +805,46 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       };
 
       const service = createProductAnalysisService(deps);
+
+      // Mock buildProductSelectedPeriodSynthesis to return a successful result
+      const selectedPeriodServiceModule = await import('../selectedPeriodProductService');
+      const buildSynthesisSpy = vi.spyOn(selectedPeriodServiceModule, 'buildProductSelectedPeriodSynthesis').mockReturnValue({
+        ok: true,
+        value: {
+          synthesisVersion: 'PBA-06-v1',
+          period: {
+            selectedPeriodId: 'test-id',
+            mahadashaId: 'test-md',
+            mahadashaPlanet: 'JUPITER',
+            antardashaId: 'test-ad',
+            antardashaPlanet: 'SATURN',
+            interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+            analysisAsOf: customAsOf,
+            temporalRelation: 'FUTURE'
+          },
+          natalBaseline: {},
+          career: {
+            qualificationBasis: 'CANONICAL_STATUS',
+            expressions: [],
+            diagnostics: []
+          },
+          wealth: {
+            dimensions: {
+              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] }
+            },
+            diagnostics: []
+          },
+          evidence: [],
+          missingInputs: [],
+          provenance: {
+            career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+            wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+          }
+        }
+      });
 
       // Get valid MD/AD IDs from the temporalState
       const selectablePeriods = listSelectableMdAdPeriods(
@@ -768,9 +869,12 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       if (result.selectedPeriod?.status === 'OK') {
         expect(result.selectedPeriod.synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
       }
+
+      // Cleanup
+      buildSynthesisSpy.mockRestore();
     });
 
-    it.skip('sets OK status when AI explanation succeeds', async () => {
+    it('sets OK status when AI explanation succeeds', async () => {
       // Use real calculateHoroscope to get a temporalState with dashaInterpretation
       const realHoroscope = calculateHoroscope(sampleBirth);
 
@@ -796,7 +900,17 @@ describe('ProductAnalysisService (P-UI-02)', () => {
           canonicalExpression: {} as any,
           mechanismCandidates: [],
           careerDashaEvidence: []
-        }
+        },
+        career: {
+          ...readyPipelineState.career,
+          evidence: [],
+          conclusionData: {} as any
+        } as any,
+        wealth: {
+          ...readyPipelineState.wealth,
+          evidence: [],
+          conclusionData: {} as any
+        } as any
       };
 
       const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
@@ -831,6 +945,46 @@ describe('ProductAnalysisService (P-UI-02)', () => {
         generatedAt: '2024-01-01T00:00:00Z'
       });
 
+      // Mock buildProductSelectedPeriodSynthesis to return a successful result
+      const selectedPeriodServiceModule = await import('../selectedPeriodProductService');
+      const buildSynthesisSpy = vi.spyOn(selectedPeriodServiceModule, 'buildProductSelectedPeriodSynthesis').mockReturnValue({
+        ok: true,
+        value: {
+          synthesisVersion: 'PBA-06-v1',
+          period: {
+            selectedPeriodId: 'test-id',
+            mahadashaId: 'test-md',
+            mahadashaPlanet: 'JUPITER',
+            antardashaId: 'test-ad',
+            antardashaPlanet: 'SATURN',
+            interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+            analysisAsOf: customAsOf,
+            temporalRelation: 'FUTURE'
+          },
+          natalBaseline: {},
+          career: {
+            qualificationBasis: 'CANONICAL_STATUS',
+            expressions: [],
+            diagnostics: []
+          },
+          wealth: {
+            dimensions: {
+              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] }
+            },
+            diagnostics: []
+          },
+          evidence: [],
+          missingInputs: [],
+          provenance: {
+            career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+            wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+          }
+        }
+      });
+
       // Get valid MD/AD IDs from the temporalState
       const selectablePeriods = listSelectableMdAdPeriods(
         temporalState.dashaInterpretation!
@@ -857,6 +1011,7 @@ describe('ProductAnalysisService (P-UI-02)', () => {
 
       // Cleanup
       runAiSpy.mockRestore();
+      buildSynthesisSpy.mockRestore();
     });
 
     it.skip('parity test: same canonical SelectedPeriodSynthesisValue passed to both mapSelectedPeriodSynthesis and runAiExplanation', async () => {
@@ -885,7 +1040,17 @@ describe('ProductAnalysisService (P-UI-02)', () => {
           canonicalExpression: {} as any,
           mechanismCandidates: [],
           careerDashaEvidence: []
-        }
+        },
+        career: {
+          ...readyPipelineState.career,
+          evidence: [],
+          conclusionData: {} as any
+        } as any,
+        wealth: {
+          ...readyPipelineState.wealth,
+          evidence: [],
+          conclusionData: {} as any
+        } as any
       };
 
       const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
@@ -960,6 +1125,149 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       // Cleanup
       mapSynthesisSpy.mockRestore();
       runAiSpy.mockRestore();
+    });
+
+    it('passes selectedPeriodEvidence to runAiExplanation for evidence resolution', async () => {
+      // Use real calculateHoroscope to get a temporalState with dashaInterpretation
+      const realHoroscope = calculateHoroscope(sampleBirth);
+
+      // Create a distinctive asOf for context
+      const customAsOf = '2030-03-01T00:00:00Z';
+      const customContext = createAnalysisContext({
+        asOf: customAsOf,
+        methodology: mapMethodology(sampleBirth),
+        engineVersion: 'CUSTOM_ENGINE_V2',
+        rulesVersion: 'CUSTOM_RULES_V3'
+      });
+
+      // Resolve temporalState with the custom context
+      const temporalState = resolveAnalysisTemporalState(realHoroscope, customContext);
+
+      // Build pipeline state with temporalState and required artifacts
+      const pipelineStateWithArtifacts: LifeAnalysisProductState = {
+        ...readyPipelineState,
+        temporalState,
+        careerArtifacts: {
+          natal: {} as any,
+          expression: {} as any,
+          canonicalExpression: {} as any,
+          mechanismCandidates: [],
+          careerDashaEvidence: []
+        },
+        career: {
+          ...readyPipelineState.career,
+          evidence: [],
+          conclusionData: {} as any
+        } as any,
+        wealth: {
+          ...readyPipelineState.wealth,
+          evidence: [],
+          conclusionData: {} as any
+        } as any
+      };
+
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(pipelineStateWithArtifacts);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      // Mock buildProductSelectedPeriodSynthesis to return a successful result
+      const selectedPeriodServiceModule = await import('../selectedPeriodProductService');
+      const buildSynthesisSpy = vi.spyOn(selectedPeriodServiceModule, 'buildProductSelectedPeriodSynthesis').mockReturnValue({
+        ok: true,
+        value: {
+          synthesisVersion: 'PBA-06-v1',
+          period: {
+            selectedPeriodId: 'test-id',
+            mahadashaId: 'test-md',
+            mahadashaPlanet: 'JUPITER',
+            antardashaId: 'test-ad',
+            antardashaPlanet: 'SATURN',
+            interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+            analysisAsOf: customAsOf,
+            temporalRelation: 'FUTURE'
+          },
+          natalBaseline: {},
+          career: {
+            qualificationBasis: 'CANONICAL_STATUS',
+            expressions: [],
+            diagnostics: []
+          },
+          wealth: {
+            dimensions: {
+              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] },
+              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'COMPLETE', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [] }
+            },
+            diagnostics: []
+          },
+          evidence: [],
+          missingInputs: [],
+          provenance: {
+            career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+            wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+          }
+        }
+      });
+
+      // Spy on runAiExplanation to capture the selectedPeriodEvidence parameter
+      const aiExplanationModule = await import('../../../ai/product/aiExplanationService');
+      const runAiSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockResolvedValue({
+        kind: 'SUCCESS',
+        requestId: 'test-request-id',
+        task: 'SELECTED_PERIOD_ANALYSIS',
+        status: 'SUCCESS',
+        conclusion: 'Test conclusion',
+        supportingEvidence: [],
+        challengingEvidence: [],
+        unresolvedQuestions: [],
+        warnings: [],
+        triggeredRuleIds: [],
+        providerId: 'test-provider',
+        providerName: 'Test Provider',
+        providerKind: 'LOCAL_RULES',
+        routingMode: 'LOCAL_ONLY',
+        fallbackUsed: false,
+        selectionReason: 'DEFAULT',
+        generatedAt: '2024-01-01T00:00:00Z'
+      });
+
+      // Get valid MD/AD IDs from the temporalState
+      const selectablePeriods = listSelectableMdAdPeriods(
+        temporalState.dashaInterpretation!
+      );
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+      const validAd = selectablePeriods.antardashas.find(
+        (ad: any) => ad.valid && ad.mahadashaId === validMd!.id
+      );
+      expect(validAd).toBeDefined();
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: validMd!.id, antardashaId: validAd!.id },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      // Assert selectedPeriod status is OK
+      expect(result.selectedPeriod?.status).toBe('OK');
+
+      // Verify that runAiExplanation was called with selectedPeriodEvidence
+      expect(runAiSpy).toHaveBeenCalled();
+      const aiExplanationCallArgs = runAiSpy.mock.calls[0][0];
+      expect(aiExplanationCallArgs.selectedPeriodEvidence).toBeDefined();
+      expect(aiExplanationCallArgs.selectedPeriodEvidence).toHaveProperty('careerEvidence');
+      expect(aiExplanationCallArgs.selectedPeriodEvidence).toHaveProperty('careerDashaEvidence');
+      expect(aiExplanationCallArgs.selectedPeriodEvidence).toHaveProperty('wealthEvidence');
+
+      // Cleanup
+      runAiSpy.mockRestore();
+      buildSynthesisSpy.mockRestore();
     });
   });
 });
