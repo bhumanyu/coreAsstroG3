@@ -5,6 +5,7 @@ import { DASHA_RULES } from './dashaRules';
 import { LIFE_THEME_RULES } from './lifeThemeRules';
 import { LIFE_ANALYSIS_RULES } from './lifeAnalysisRules';
 import { CHART_SYNTHESIS_RULES } from './chartSynthesisRules';
+import { SELECTED_PERIOD_RULES } from './selectedPeriodRules';
 import { GENERAL_RULES } from './generalRules';
 
 export {
@@ -14,6 +15,7 @@ export {
   LIFE_THEME_RULES,
   LIFE_ANALYSIS_RULES,
   CHART_SYNTHESIS_RULES,
+  SELECTED_PERIOD_RULES,
   GENERAL_RULES
 };
 
@@ -24,5 +26,6 @@ export const LOCAL_VEDIC_RULES: readonly LocalRuleDefinition[] = Object.freeze([
   ...LIFE_THEME_RULES,
   ...LIFE_ANALYSIS_RULES,
   ...CHART_SYNTHESIS_RULES,
+  ...SELECTED_PERIOD_RULES,
   ...GENERAL_RULES
 ]);

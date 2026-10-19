@@ -100,6 +100,14 @@ import {
   projectCareerProfessionAnalysis
 } from './careerIntelligenceProjection';
 import type { CareerProfessionAnalysis } from '../../domain/career/careerProfession/careerProfessionTypes';
+import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
+import type {
+  SelectedPeriodSynthesisValue
+} from '../../domain/synthesis/selectedPeriodSynthesis';
+import type {
+  AiSelectedPeriodContext
+} from '../types/aiContextTypes';
 
 /**
  * Options to avoid double calculation when domain interpretations and life analysis
@@ -129,6 +137,11 @@ export interface BuildAiContextOptions {
    * When provided, this is projected into AI context.
    */
   readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
+  /**
+   * Pre-computed selected-period synthesis from PBA-06.
+   * When provided, this is projected into AI context as an additive field.
+   */
+  readonly selectedPeriod?: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>;
 }
 
 /**
@@ -136,12 +149,144 @@ export interface BuildAiContextOptions {
  *
  * careerProfessionAnalysis is optional: when provided via options, it is used directly;
  * otherwise, it is extracted from careerInterpretation.conclusionData.careerProfessionAnalysis.
+ *
+ * selectedPeriod is optional: when provided via options, it is projected into AI context
+ * as an additive field without schema version bump.
  */
 export interface ProductAiContextOptions {
   readonly domainInterpretations: readonly DomainInterpretation[];
   readonly lifeAnalysis: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
   readonly careerProfessionAnalysis?: CareerProfessionAnalysis;
+  readonly selectedPeriod?: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>;
+}
+
+/**
+ * Projects canonical SelectedPeriodSynthesisValue into AiSelectedPeriodContext.
+ *
+ * This is a pure additive projection - copies canonical fields verbatim without
+ * recalculation or transformation. Evidence IDs are validated as strings and
+ * passed through verbatim. Unresolved references surface as-is (they're already
+ * marked in canonical refs).
+ *
+ * No re-sorting beyond what the canonical result already emits deterministically.
+ *
+ * @param value - The canonical selected-period synthesis result
+ * @returns AI context projection of the selected-period synthesis
+ */
+function projectSelectedPeriodSynthesis(
+  value: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>
+): AiSelectedPeriodContext {
+  // Validate evidence IDs are strings (defensive check)
+  const validateStringIds = (ids: readonly string[]): readonly string[] => {
+    return ids.filter((id): id is string => typeof id === 'string');
+  };
+
+  // Flatten supporting/challenging evidence IDs from canonical evidence references
+  const supportingEvidenceIds: string[] = [];
+  const challengingEvidenceIds: string[] = [];
+
+  for (const ref of value.evidence) {
+    if (ref.classification === 'SUPPORTING' && ref.evidenceId) {
+      supportingEvidenceIds.push(ref.evidenceId);
+    } else if (ref.classification === 'CHALLENGING' && ref.evidenceId) {
+      challengingEvidenceIds.push(ref.evidenceId);
+    }
+  }
+
+  // Project career expressions
+  const careerExpressions = value.career.expressions.map((expr: any) => ({
+    expressionRefKey: expr.expressionRefKey,
+    status: expr.status,
+    linkedLevels: expr.linkedLevels,
+    qualificationBasis: expr.qualificationBasis,
+    diagnostics: expr.diagnostics.map((d: any) => ({ code: d.code, message: d.message })),
+    expressionEvidenceIds: validateStringIds(expr.expressionEvidenceIds),
+    qualifiedEvidenceIds: validateStringIds(expr.qualifiedEvidenceIds),
+    unqualifiedEvidenceIds: validateStringIds(expr.unqualifiedEvidenceIds),
+    mdDashaEvidenceIds: validateStringIds(expr.mdDashaEvidenceIds),
+    adDashaEvidenceIds: validateStringIds(expr.adDashaEvidenceIds)
+  }));
+
+  // Project wealth dimensions
+  const wealthDimensions: Record<string, any> = {};
+  for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+    const dimRow = value.wealth.dimensions[dim];
+    wealthDimensions[dim] = {
+      dimension: dimRow.dimension,
+      effect: dimRow.effect,
+      dataStatus: dimRow.dataStatus,
+      linkedLevels: dimRow.linkedLevels,
+      diagnostics: dimRow.diagnostics.map((d: any) => ({ code: d.code, message: d.message })),
+      // Extract promiseEvidenceIds and dashaRuleReferences from canonical evidence
+      promiseEvidenceIds: validateStringIds(
+        value.evidence
+          .filter((ref: any) => ref.dimension === dim && ref.provenanceStage === 'WEALTH_NATAL_PROMISE')
+          .map((ref: any) => ref.evidenceId)
+          .filter((id): id is string => id !== undefined)
+      ),
+      dashaRuleReferences: value.evidence
+        .filter((ref: any) => ref.dimension === dim && ref.provenanceStage === 'WEALTH_DASHA_RULE' && ref.referenceKind === 'RULE')
+        .map((ref: any) => ({
+          ruleId: ref.ruleId ?? '',
+          source: ref.source ?? '',
+          level: ref.level ?? 'MD'
+        }))
+    };
+  }
+
+  // Project evidence references verbatim
+  const evidence = value.evidence.map((ref: any) => ({
+    classification: ref.classification,
+    evidenceId: ref.evidenceId,
+    identityKey: ref.identityKey,
+    dimension: ref.dimension,
+    polarity: ref.polarity,
+    source: ref.source,
+    ruleId: ref.ruleId,
+    level: ref.level,
+    stage: ref.stage,
+    provenanceStage: ref.provenanceStage,
+    referenceKind: ref.referenceKind
+  }));
+
+  // Project missing inputs
+  const missingInputs = value.missingInputs.map((mi: any) => ({
+    domain: mi.domain,
+    code: mi.code,
+    description: mi.description
+  }));
+
+  // Collect diagnostics from career and wealth sections
+  const diagnostics = [
+    ...value.career.diagnostics.map((d: any) => ({ code: d.code, message: d.message })),
+    ...value.wealth.diagnostics.map((d: any) => ({ code: d.code, message: d.message }))
+  ];
+
+  return Object.freeze({
+    selectedPeriodId: value.period.selectedPeriodId,
+    mahadashaId: value.period.mahadashaId,
+    mahadashaPlanet: value.period.mahadashaPlanet,
+    antardashaId: value.period.antardashaId,
+    antardashaPlanet: value.period.antardashaPlanet,
+    interval: value.period.interval,
+    analysisAsOf: value.period.analysisAsOf,
+    temporalRelation: value.period.temporalRelation,
+    career: Object.freeze({
+      qualificationBasis: value.career.qualificationBasis,
+      expressions: Object.freeze(careerExpressions)
+    }),
+    wealth: Object.freeze({
+      dimensions: Object.freeze(wealthDimensions)
+    }),
+    evidence: Object.freeze(evidence),
+    supportingEvidenceIds: Object.freeze(supportingEvidenceIds),
+    challengingEvidenceIds: Object.freeze(challengingEvidenceIds),
+    missingInputs: Object.freeze(missingInputs),
+    diagnostics: Object.freeze(diagnostics),
+    provenance: value.provenance,
+    synthesisVersion: value.synthesisVersion
+  });
 }
 
 const PLANET_ORDER: readonly Planet[] = Object.freeze([
@@ -1690,6 +1835,11 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
     }
   }
 
+  // Project selected-period synthesis if provided (PBA-09)
+  const selectedPeriodContext = options.selectedPeriod
+    ? projectSelectedPeriodSynthesis(options.selectedPeriod)
+    : undefined;
+
   const context: AiContext = {
     schemaVersion: AI_CONTEXT_SCHEMA_VERSION,
     source,
@@ -1705,7 +1855,8 @@ export function buildAiContext(horoscope: Horoscope, options?: BuildAiContextOpt
     evidence,
     methodology,
     domainInterpretations,
-    lifeAnalysis: projectedLifeAnalysis
+    lifeAnalysis: projectedLifeAnalysis,
+    ...(selectedPeriodContext ? { selectedPeriod: selectedPeriodContext } : {})
   };
 
   return deepFreeze(context);
@@ -1722,5 +1873,11 @@ export function buildProductAiContext(
   if (!options?.temporalState) {
     throw new Error('buildProductAiContext requires canonical temporalState');
   }
-  return buildAiContext(horoscope, options);
+  return buildAiContext(horoscope, {
+    domainInterpretations: options.domainInterpretations,
+    lifeAnalysis: options.lifeAnalysis,
+    temporalState: options.temporalState,
+    careerProfessionAnalysis: options.careerProfessionAnalysis,
+    selectedPeriod: options.selectedPeriod
+  } as BuildAiContextOptions);
 }

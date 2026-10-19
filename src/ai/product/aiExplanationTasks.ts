@@ -37,6 +37,12 @@ export const AI_EXPLANATION_TASKS: readonly AiExplanationTaskOption[] =
       label: 'Life Themes',
       description:
         'Explain the major life themes projected by CoreAstro.'
+    }),
+    Object.freeze({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      label: 'Selected Period',
+      description:
+        'Explain the selected Mahadasha-Antardasha synthesis result.'
     })
   ]);
 

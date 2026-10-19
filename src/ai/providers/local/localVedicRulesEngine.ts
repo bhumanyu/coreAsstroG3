@@ -12,6 +12,7 @@ export const TASK_DOMAIN: Record<AiTask, LocalRuleDomain> = Object.freeze({
   DASHA_ANALYSIS: 'DASHA',
   LIFE_THEME_ANALYSIS: 'LIFE_THEME',
   LIFE_ANALYSIS_EXPLANATION: 'LIFE_ANALYSIS',
+  SELECTED_PERIOD_ANALYSIS: 'DASHA',
   GENERAL_QUERY: 'GENERAL'
 });
 
@@ -105,6 +106,30 @@ function buildConclusion(task: AiTask, context: AiContext): string {
     case 'LIFE_ANALYSIS_EXPLANATION': {
       return buildLifeAnalysisExplanationConclusion(context);
     }
+    case 'SELECTED_PERIOD_ANALYSIS': {
+      if (!context.selectedPeriod) {
+        return 'Selected-period synthesis context is not available in the provided context.';
+      }
+      const sp = context.selectedPeriod;
+      const parts: string[] = [];
+      parts.push(`Selected period analysis for Mahadasha of ${sp.mahadashaPlanet} and Antardasha of ${sp.antardashaPlanet}.`);
+      parts.push(`Period interval: ${sp.interval.start} to ${sp.interval.end}.`);
+      parts.push(`Temporal relation: ${sp.temporalRelation}.`);
+      parts.push(`Career qualification basis: ${sp.career.qualificationBasis}.`);
+      parts.push(`Career expressions analyzed: ${sp.career.expressions.length}.`);
+      const wealthDimCount = Object.keys(sp.wealth.dimensions).length;
+      parts.push(`Wealth dimensions analyzed: ${wealthDimCount}.`);
+      parts.push(`Evidence references: ${sp.evidence.length}.`);
+      parts.push(`Supporting evidence: ${sp.supportingEvidenceIds.length}.`);
+      parts.push(`Challenging evidence: ${sp.challengingEvidenceIds.length}.`);
+      if (sp.missingInputs.length > 0) {
+        parts.push(`Missing inputs: ${sp.missingInputs.length}.`);
+      }
+      if (sp.diagnostics.length > 0) {
+        parts.push(`Diagnostics: ${sp.diagnostics.length}.`);
+      }
+      return parts.join(' ');
+    }
     case 'CHART_SYNTHESIS': {
       return `Chart synthesis evaluates the native's birth chart incorporating ${context.evidence.length} evidence items across ${context.planets.length} planetary positions, ${context.houses.length} house structures, and divisional alignments.`;
     }
@@ -176,6 +201,12 @@ export function reasonWithLocalRules(
     case 'LIFE_ANALYSIS_EXPLANATION': {
       if (!context.lifeAnalysis) {
         unresolvedQuestionsSet.add('Life analysis is unavailable.');
+      }
+      break;
+    }
+    case 'SELECTED_PERIOD_ANALYSIS': {
+      if (!context.selectedPeriod) {
+        unresolvedQuestionsSet.add('Selected-period synthesis context is unavailable.');
       }
       break;
     }

@@ -107,7 +107,8 @@ export function createAppController(
       }));
 
       try {
-        const analysis = await service.selectPeriod(mahadashaId, antardashaId);
+        // PBA-09: Trigger AI explanation for selected-period analysis
+        const analysis = await service.selectPeriod(mahadashaId, antardashaId, true);
 
         // Stale-result guard: discard late-resolving results for previous requests
         if (requestId !== currentRequestId) {

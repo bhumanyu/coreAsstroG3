@@ -309,4 +309,9 @@ export interface LifeAnalysisProductState {
    * Never mapped into ProductAnalysis directly - used only for projection into ProductSelectedPeriodSynthesis.
    */
   readonly careerArtifacts?: CareerInternalArtifacts;
+  /**
+   * PBA-09: Domain interpretations for AI explanation.
+   * Internal-only field for passing domain interpretations to AI context.
+   */
+  readonly domainInterpretations?: readonly DomainInterpretation[];
 }

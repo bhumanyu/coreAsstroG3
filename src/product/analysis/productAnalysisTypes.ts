@@ -480,6 +480,12 @@ export interface ProductSelectedPeriodSynthesis {
   readonly evidence: readonly ProductSynthesisEvidenceReference[];
   readonly missingInputs: readonly ProductSynthesisMissingInput[];
   readonly provenance: ProductSynthesisProvenance;
+  /**
+   * Optional AI explanation for the selected period (PBA-09).
+   * When present, contains the AI explanation result.
+   * AI failure does not affect the deterministic synthesis or status.
+   */
+  readonly aiExplanation?: import('../../ai').AiExplanationResult;
 }
 
 /**

@@ -26,6 +26,7 @@ import {
   buildProductSelectedPeriodSynthesis,
   type BuildProductSelectedPeriodSynthesisInput
 } from './selectedPeriodProductService';
+import { runAiExplanation } from '../../ai/product/aiExplanationService';
 
 export interface ProductAnalysisDependencies {
   readonly calculateHoroscope: (birthDetails: BirthDetails, customPositionsOrOptions?: any, asOfParam?: string | Date) => Horoscope;
@@ -49,6 +50,12 @@ export interface AnalyzeOptions {
     readonly mahadashaId: string;
     readonly antardashaId: string;
   };
+  /**
+   * Whether to trigger AI explanation for selected-period analysis (PBA-09).
+   * When true and selected-period synthesis succeeds, AI explanation is run.
+   * AI failure does not affect the deterministic synthesis or status.
+   */
+  readonly includeSelectedPeriodAiExplanation?: boolean;
 }
 
 export class ProductAnalysisService {
@@ -201,11 +208,33 @@ export class ProductAnalysisService {
 
         if (selectedPeriodResult.ok) {
           const selectedPeriodSynthesis = mapSelectedPeriodSynthesis(selectedPeriodResult.value);
+
+          // PBA-09: Trigger AI explanation for selected period when enabled
+          let aiExplanation;
+          if (options?.includeSelectedPeriodAiExplanation ?? false) {
+            try {
+              aiExplanation = await runAiExplanation({
+                horoscope,
+                task: 'SELECTED_PERIOD_ANALYSIS',
+                domainInterpretations: pipelineState.domainInterpretations ?? [],
+                lifeAnalysis: pipelineState.lifeAnalysis!,
+                temporalState: pipelineState.temporalState!,
+                selectedPeriod: selectedPeriodResult.value
+              });
+            } catch {
+              // AI failure does not affect deterministic synthesis
+              aiExplanation = undefined;
+            }
+          }
+
           return {
             ...productAnalysis,
             selectedPeriod: {
               status: 'OK',
-              synthesis: selectedPeriodSynthesis
+              synthesis: {
+                ...selectedPeriodSynthesis,
+                ...(aiExplanation ? { aiExplanation } : {})
+              }
             }
           };
         }
@@ -271,10 +300,13 @@ export class ProductAnalysisService {
    *
    * Returns updated ProductAnalysis with selectedPeriod result.
    * Throws if prerequisites are not available (should have been checked before calling).
+   *
+   * @param includeAiExplanation - Whether to trigger AI explanation for selected-period analysis (PBA-09)
    */
   async selectPeriod(
     mahadashaId: string,
-    antardashaId: string
+    antardashaId: string,
+    includeAiExplanation?: boolean
   ): Promise<ProductAnalysis> {
     if (!this._lastHoroscope) {
       throw new Error('Cannot select period: no horoscope available. Call analyze() first.');
@@ -357,11 +389,33 @@ export class ProductAnalysisService {
 
     if (selectedPeriodResult.ok) {
       const selectedPeriodSynthesis = mapSelectedPeriodSynthesis(selectedPeriodResult.value);
+
+      // PBA-09: Trigger AI explanation for selected period when enabled
+      let aiExplanation;
+      if (includeAiExplanation) {
+        try {
+          aiExplanation = await runAiExplanation({
+            horoscope,
+            task: 'SELECTED_PERIOD_ANALYSIS',
+            domainInterpretations: pipelineState.domainInterpretations ?? [],
+            lifeAnalysis: pipelineState.lifeAnalysis!,
+            temporalState: pipelineState.temporalState!,
+            selectedPeriod: selectedPeriodResult.value
+          });
+        } catch {
+          // AI failure does not affect deterministic synthesis
+          aiExplanation = undefined;
+        }
+      }
+
       return {
         ...productAnalysis,
         selectedPeriod: {
           status: 'OK',
-          synthesis: selectedPeriodSynthesis
+          synthesis: {
+            ...selectedPeriodSynthesis,
+            ...(aiExplanation ? { aiExplanation } : {})
+          }
         }
       };
     }

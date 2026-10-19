@@ -10,6 +10,11 @@ import type { AiEvidence } from '../types/aiContextTypes';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
+import type { CareerConclusionData } from '../../domain/career/careerTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
+import type {
+  SelectedPeriodSynthesisValue
+} from '../../domain/synthesis/selectedPeriodSynthesis';
 import {
   isAiExplanationStructuredOutput,
   type AiExplanationResult,
@@ -25,6 +30,11 @@ export interface RunProductAiExplanationOptions {
   readonly lifeAnalysis: LifeAnalysis;
   readonly temporalState: AnalysisTemporalState;
   readonly router?: AiRouter;
+  /**
+   * Optional selected-period synthesis for SELECTED_PERIOD_ANALYSIS task.
+   * When provided, this is projected into AI context as an additive field.
+   */
+  readonly selectedPeriod?: SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData>;
 }
 
 export type RunAiExplanationOptions = RunProductAiExplanationOptions;
@@ -38,7 +48,8 @@ export async function runAiExplanation(
     const context = buildProductAiContext(options.horoscope, {
       domainInterpretations: options.domainInterpretations,
       lifeAnalysis: options.lifeAnalysis,
-      temporalState: options.temporalState
+      temporalState: options.temporalState,
+      selectedPeriod: options.selectedPeriod
     });
 
     const request = createAiRequest(

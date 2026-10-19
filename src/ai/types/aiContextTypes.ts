@@ -7,6 +7,18 @@ import type { DomainStrength } from '../../domain/reasoning/reasoningTypes';
 import type { TimingEffect, TimingSourceCategory } from '../../domain/timing/careerWealthTiming/careerWealthTimingTypes';
 import type { CareerManifestationMode } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { WealthManifestationDimension } from '../../domain/wealth/manifestation/wealthManifestationTypes';
+import type { WealthDimension } from '../../domain/wealth/wealthTypes';
+import type {
+  FinalDomainStatus,
+  FinalDomainConfidence,
+  WealthRiskProfile,
+  SynthesisAxisStatus,
+  FinalSynthesisActivationHierarchy
+} from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
+import type { VargaRelationship } from '../../domain/interpretation/DomainInterpretationTypes';
+import type {
+  SelectedPeriodSynthesisValue
+} from '../../domain/synthesis/selectedPeriodSynthesis';
 import {
   AiAvailability,
   AiConfidence,
@@ -282,16 +294,6 @@ export interface CareerDashaSynthesisFact {
   readonly hierarchy: CareerDashaSynthesisHierarchyFact;
   readonly summary: string;
 }
-
-import type { WealthDimension } from '../../domain/wealth/wealthTypes';
-import type {
-  FinalDomainStatus,
-  FinalDomainConfidence,
-  WealthRiskProfile,
-  SynthesisAxisStatus,
-  FinalSynthesisActivationHierarchy
-} from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
-import type { VargaRelationship } from '../../domain/interpretation/DomainInterpretationTypes';
 
 export interface CareerTimingFactorFact {
   readonly id: string;
@@ -761,6 +763,94 @@ export interface AiContextMethodology {
   readonly aspectSystem: 'PARASHARI';
 }
 
+/**
+ * PBA-09 AI DTO: Selected-period synthesis context.
+ *
+ * Projects the canonical SelectedPeriodSynthesisValue into AI context.
+ * This is a pure additive projection - no recalculation, no second synthesis invocation.
+ *
+ * Evidence boundary: Selected-period evidence IDs are scoped to this projection only.
+ * They are NOT added to the unified context.evidence map unless they genuinely belong
+ * to that namespace. Evidence-parity invariant is scoped to the projection's ID lists,
+ * not the global evidence array.
+ */
+export interface AiSelectedPeriodContext {
+  readonly selectedPeriodId: string;
+  readonly mahadashaId: string;
+  readonly mahadashaPlanet: string;
+  readonly antardashaId: string;
+  readonly antardashaPlanet: string;
+  readonly interval: { readonly start: string; readonly end: string };
+  readonly analysisAsOf: string;
+  readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
+  readonly career: {
+    readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+    readonly expressions: readonly {
+      readonly expressionRefKey: string;
+      readonly status: TimingActivationEffect;
+      readonly linkedLevels: readonly ('MD' | 'AD')[];
+      readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+      readonly diagnostics: readonly { readonly code: string; readonly message: string }[];
+      readonly expressionEvidenceIds: readonly string[];
+      readonly qualifiedEvidenceIds: readonly string[];
+      readonly unqualifiedEvidenceIds: readonly string[];
+      readonly mdDashaEvidenceIds: readonly string[];
+      readonly adDashaEvidenceIds: readonly string[];
+    }[];
+  };
+  readonly wealth: {
+    readonly dimensions: Readonly<Record<WealthDimension, {
+      readonly dimension: WealthDimension;
+      readonly effect: TimingActivationEffect;
+      readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+      readonly linkedLevels: readonly ('MD' | 'AD')[];
+      readonly diagnostics: readonly { readonly code: string; readonly message: string }[];
+      readonly promiseEvidenceIds: readonly string[];
+      readonly dashaRuleReferences: readonly {
+        readonly ruleId: string;
+        readonly source: string;
+        readonly level: 'MD' | 'AD';
+      }[];
+    }>>;
+  };
+  readonly evidence: readonly {
+    readonly classification?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL' | 'MIXED' | 'UNRESOLVED';
+    readonly evidenceId?: string;
+    readonly identityKey?: string;
+    readonly dimension?: WealthDimension;
+    readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+    readonly source?: string;
+    readonly ruleId?: string;
+    readonly level?: 'MD' | 'AD';
+    readonly stage: 'CAREER' | 'WEALTH';
+    readonly provenanceStage?: 'CAREER_EXPRESSION' | 'CAREER_QUALIFICATION' | 'CAREER_ACTIVATION' | 'WEALTH_NATAL_PROMISE' | 'WEALTH_DASHA_RULE';
+    readonly referenceKind?: 'EVIDENCE' | 'RULE';
+  }[];
+  readonly supportingEvidenceIds: readonly string[];
+  readonly challengingEvidenceIds: readonly string[];
+  readonly missingInputs: readonly {
+    readonly domain: 'CAREER' | 'WEALTH';
+    readonly code: string;
+    readonly description: string;
+  }[];
+  readonly diagnostics: readonly {
+    readonly code: string;
+    readonly message: string;
+  }[];
+  readonly provenance: {
+    readonly career: {
+      readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
+      readonly version?: string;
+      readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+    };
+    readonly wealth: {
+      readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
+      readonly version?: string;
+    };
+  };
+  readonly synthesisVersion: 'PBA-06-v1';
+}
+
 export interface AiContext {
   readonly schemaVersion: AiContextSchemaVersion;
   readonly source: AiContextSource;
@@ -777,4 +867,13 @@ export interface AiContext {
   readonly methodology: AiContextMethodology;
   readonly domainInterpretations?: readonly DomainInterpretationAiProjection[];
   readonly lifeAnalysis?: LifeAnalysisAiProjection;
+  /**
+   * Optional selected-period synthesis context (PBA-09).
+   * When present, contains the canonical selected-period synthesis result.
+   * This is an optional additive field - no schema version bump required.
+   *
+   * Evidence boundary: Selected-period evidence IDs are scoped to this projection only.
+   * They are NOT added to the unified context.evidence map.
+   */
+  readonly selectedPeriod?: AiSelectedPeriodContext;
 }
