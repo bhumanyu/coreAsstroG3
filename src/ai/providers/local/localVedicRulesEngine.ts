@@ -4,6 +4,7 @@ import type { AiReasoningResult, AiReasoningStatus } from '../../types/aiReasoni
 import type { LocalRuleDefinition, LocalRuleDomain } from './localVedicRulesTypes';
 import { rankEvidence } from './utils/evidenceScorer';
 import { LOCAL_VEDIC_RULES } from './rules';
+import { buildSelectedPeriodEvidenceIndex } from '../../context/selectedPeriodEvidenceHelper';
 
 export const TASK_DOMAIN: Record<AiTask, LocalRuleDomain> = Object.freeze({
   CHART_SYNTHESIS: 'CHART',
@@ -166,34 +167,12 @@ export function reasonWithLocalRules(
 
   const validEvidenceMap = new Map(context.evidence.map((e) => [e.id, e]));
 
-  // Build selected-period evidence map for SELECTED_PERIOD_ANALYSIS task
+  // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
   // This includes evidence from context.selectedPeriod.evidence plus IDs from
   // career expressions and wealth dimensions
-  const selectedPeriodEvidenceMap = new Map<string, boolean>();
-  if (task === 'SELECTED_PERIOD_ANALYSIS' && context.selectedPeriod) {
-    const sp = context.selectedPeriod;
-
-    // Add evidence IDs from selectedPeriod.evidence references
-    for (const ref of sp.evidence) {
-      if (ref.evidenceId) {
-        selectedPeriodEvidenceMap.set(ref.evidenceId, true);
-      }
-    }
-
-    // Add evidence IDs from career expressions
-    for (const expr of sp.career.expressions) {
-      expr.expressionEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.qualifiedEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.unqualifiedEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.mdDashaEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.adDashaEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-    }
-
-    // Add evidence IDs from wealth dimensions
-    for (const dim of Object.values(sp.wealth.dimensions)) {
-      dim.promiseEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-    }
-  }
+  const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
+    ? buildSelectedPeriodEvidenceIndex(context)
+    : null;
 
   const supportingSet = new Set<string>();
   const challengingSet = new Set<string>();
@@ -275,10 +254,10 @@ export function reasonWithLocalRules(
 
         if (evaluation.supportingEvidenceIds) {
           for (const id of evaluation.supportingEvidenceIds) {
-            // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceMap
+            // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceIndex
             // For other tasks, validate against context.evidence
-            const isValid = task === 'SELECTED_PERIOD_ANALYSIS'
-              ? selectedPeriodEvidenceMap.has(id)
+            const isValid = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
+              ? selectedPeriodEvidenceIndex.has(id)
               : validEvidenceMap.has(id);
 
             if (isValid) {
@@ -293,10 +272,10 @@ export function reasonWithLocalRules(
 
         if (evaluation.challengingEvidenceIds) {
           for (const id of evaluation.challengingEvidenceIds) {
-            // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceMap
+            // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceIndex
             // For other tasks, validate against context.evidence
-            const isValid = task === 'SELECTED_PERIOD_ANALYSIS'
-              ? selectedPeriodEvidenceMap.has(id)
+            const isValid = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
+              ? selectedPeriodEvidenceIndex.has(id)
               : validEvidenceMap.has(id);
 
             if (isValid) {

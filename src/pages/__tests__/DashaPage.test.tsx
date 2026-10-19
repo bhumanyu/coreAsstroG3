@@ -333,7 +333,7 @@ describe('DashaPage (P-UI-07)', () => {
   });
 
   describe('AI explanation states (PBA-09)', () => {
-    it('renders pending state when aiExplanationStatus is PENDING', () => {
+    it('renders nothing when aiExplanationStatus is NOT_REQUESTED', () => {
       const analysis = createProductAnalysis({
         selectedPeriod: {
           status: 'OK',

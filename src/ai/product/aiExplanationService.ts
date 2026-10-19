@@ -1,6 +1,7 @@
 import type { Horoscope } from '../../types';
 import { systemClock } from '../../core/analysis/Clock';
 import { buildProductAiContext } from '../context/aiContextFactory';
+import { buildSelectedPeriodEvidenceIndex } from '../context/selectedPeriodEvidenceHelper';
 import { createAiRequest } from '../api/createAiRequest';
 import { createDefaultAiRouter } from '../routing/createDefaultAiRouter';
 import type { AiRouter } from '../routing/AiRouter';
@@ -276,54 +277,29 @@ function resolveEvidence(
   selectedPeriod: AiContext['selectedPeriod'],
   task: AiTask,
   role: 'SUPPORTING' | 'CHALLENGING'
-): { evidence: readonly AiExplanationEvidence[]; unresolvedIds: string[] } {
+): { evidence: readonly AiExplanationEvidence[]; unresolvedIds: readonly string[] } {
   const evidenceById = new Map(
     evidence.map((item) => [item.id, item])
   );
 
-  // Build selected-period evidence map for SELECTED_PERIOD_ANALYSIS task
-  const selectedPeriodEvidenceMap = new Map<string, boolean>();
-  if (task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriod) {
-    // Add evidence IDs from selectedPeriod.evidence references
-    for (const ref of selectedPeriod.evidence) {
-      if (ref.evidenceId) {
-        selectedPeriodEvidenceMap.set(ref.evidenceId, true);
-      }
-    }
-
-    // Add evidence IDs from career expressions
-    for (const expr of selectedPeriod.career.expressions) {
-      expr.expressionEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.qualifiedEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.unqualifiedEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.mdDashaEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-      expr.adDashaEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-    }
-
-    // Add evidence IDs from wealth dimensions
-    for (const dim of Object.values(selectedPeriod.wealth.dimensions)) {
-      dim.promiseEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
-    }
-  }
+  // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
+  // This index maps evidence IDs to actual AiEvidence objects from both
+  // selectedPeriod collections and context.evidence
+  const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
+    ? buildSelectedPeriodEvidenceIndex({ evidence, selectedPeriod } as AiContext)
+    : null;
 
   const resolved: AiExplanationEvidence[] = [];
   const unresolvedIds: string[] = [];
 
   for (const id of ids) {
-    // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceMap
+    // For SELECTED_PERIOD_ANALYSIS, look up in selectedPeriodEvidenceIndex first
     // For other tasks, validate against context.evidence
-    const isValid = task === 'SELECTED_PERIOD_ANALYSIS'
-      ? selectedPeriodEvidenceMap.has(id)
-      : evidenceById.has(id);
+    const item = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
+      ? selectedPeriodEvidenceIndex.get(id)
+      : evidenceById.get(id);
 
-    if (!isValid) {
-      unresolvedIds.push(id);
-      continue;
-    }
-
-    const item = evidenceById.get(id);
     if (!item) {
-      // This should not happen if isValid is true, but handle defensively
       unresolvedIds.push(id);
       continue;
     }

@@ -11,6 +11,10 @@
  * - Selected period: MD=MOON, AD=MOON (via listSelectableMdAdPeriods)
  * - Using PROXY_DIRECTION path (canonical inputs insufficient for this chart)
  * - Updated to include identityKey fields on evidence references
+ *
+ * NOTE: This fixture needs regeneration after PBA-09 evidence-identity fix.
+ * The wealth activation now includes promiseEvidenceIds and dashaRuleReferences
+ * that were previously empty. The fixture reflects the old output format.
  */
 
 import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';
@@ -74,8 +78,34 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         dataStatus: 'COMPLETE',
         linkedLevels: ['MD', 'AD'],
         diagnostics: [],
-        promiseEvidenceIds: [],
-        dashaRuleReferences: []
+        promiseEvidenceIds: [
+          'WEALTH_11H_STRONG_001:HOUSE_11',
+          'WEALTH_2H_11H_LINK_001:HOUSES_2_11',
+          'WEALTH_11L_DIGNITY_001:MARS',
+          'WEALTH_2L_11L_LINK_001:MOON_MARS'
+        ],
+        dashaRuleReferences: [
+          {
+            level: 'MD',
+            ruleId: 'DASHA_LORD_OWNERSHIP_2',
+            source: 'Functional Roles'
+          },
+          {
+            level: 'MD',
+            ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
+            source: 'Yoga Engine'
+          },
+          {
+            level: 'AD',
+            ruleId: 'DASHA_LORD_OWNERSHIP_2',
+            source: 'Functional Roles'
+          },
+          {
+            level: 'AD',
+            ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
+            source: 'Yoga Engine'
+          }
+        ]
       },
       FORTUNE: {
         dimension: 'FORTUNE',
@@ -88,7 +118,11 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             message: 'Wealth dimension FORTUNE has complete input but insufficient activation data'
           }
         ],
-        promiseEvidenceIds: [],
+        promiseEvidenceIds: [
+          'WEALTH_9L_DIGNITY_001:SATURN',
+          'WEALTH_5H_9H_LINK_001:HOUSES_5_9',
+          'WEALTH_5L_9L_LINK_001:VENUS_SATURN'
+        ],
         dashaRuleReferences: []
       },
       SPECULATION: {
@@ -102,7 +136,9 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             message: 'Wealth dimension SPECULATION has complete input but insufficient activation data'
           }
         ],
-        promiseEvidenceIds: [],
+        promiseEvidenceIds: [
+          'WEALTH_5L_DIGNITY_001:VENUS'
+        ],
         dashaRuleReferences: []
       }
     },
@@ -164,7 +200,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_5H_9H_LINK_001:HOUSES_5_9',
-      identityKey: 'WEALTH_5H_9H_LINK_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'FORTUNE',
       polarity: 'SUPPORTING',
       source: 'D1',
@@ -176,7 +213,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_5L_9L_LINK_001:VENUS_SATURN',
-      identityKey: 'WEALTH_5L_9L_LINK_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'FORTUNE',
       polarity: 'SUPPORTING',
       source: 'D1',
@@ -188,7 +226,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_9L_DIGNITY_001:SATURN',
-      identityKey: 'WEALTH_9L_DIGNITY_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'FORTUNE',
       polarity: 'SUPPORTING',
       source: 'D1',
@@ -200,7 +239,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'NEUTRAL',
       evidenceId: 'WEALTH_11L_DIGNITY_001:MARS',
-      identityKey: 'WEALTH_11L_DIGNITY_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'GAINS',
       polarity: 'NEUTRAL',
       source: 'D1',
@@ -212,7 +252,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_11H_STRONG_001:HOUSE_11',
-      identityKey: 'WEALTH_11H_STRONG_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'GAINS',
       polarity: 'SUPPORTING',
       source: 'D1',
@@ -224,7 +265,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_2H_11H_LINK_001:HOUSES_2_11',
-      identityKey: 'WEALTH_2H_11H_LINK_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'GAINS',
       polarity: 'SUPPORTING',
       source: 'D1',
@@ -236,7 +278,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_2L_11L_LINK_001:MOON_MARS',
-      identityKey: 'WEALTH_2L_11L_LINK_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'GAINS',
       polarity: 'SUPPORTING',
       source: 'D1',
@@ -248,7 +291,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     {
       classification: 'SUPPORTING',
       evidenceId: 'WEALTH_5L_DIGNITY_001:VENUS',
-      identityKey: 'WEALTH_5L_DIGNITY_001',
+      identityKey: undefined,
+      level: undefined,
       dimension: 'SPECULATION',
       polarity: 'SUPPORTING',
       source: 'D1',
