@@ -280,5 +280,50 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         statement
       };
     }
+  }),
+
+  Object.freeze({
+    id: 'SP-07-BASELINE-DISTINCTION',
+    domain: 'DASHA',
+    priority: 40,
+    evaluate: (context: AiContext) => {
+      if (!context.selectedPeriod) {
+        return { triggered: false, effect: 'NEUTRAL' as LocalRuleEffect, statement: '' };
+      }
+
+      const sp = context.selectedPeriod;
+
+      // Build baseline provenance narrative
+      const baselineParts: string[] = [];
+
+      // Career baseline status
+      if (sp.provenance.career) {
+        const careerStatus = sp.provenance.career.status;
+        const careerVersion = sp.provenance.career.version;
+        const careerQualification = sp.provenance.career.qualificationBasis;
+        baselineParts.push(`Career baseline is ${careerStatus} (version ${careerVersion}, qualification basis ${careerQualification})`);
+      }
+
+      // Wealth baseline status
+      if (sp.provenance.wealth) {
+        const wealthStatus = sp.provenance.wealth.status;
+        const wealthVersion = sp.provenance.wealth.version;
+        baselineParts.push(`Wealth baseline is ${wealthStatus} (version ${wealthVersion})`);
+      }
+
+      // Build the main statement
+      const baselineStatement = baselineParts.length > 0
+        ? `This selected-period activation qualifies and describes the unchanged natal baseline: ${baselineParts.join('; ')}.`
+        : `This selected-period activation qualifies and describes the unchanged natal baseline.`;
+
+      // Add period reference for provenance
+      const periodReference = `The analysis is based on the ${sp.mahadashaPlanet} mahadasha and ${sp.antardashaPlanet} antardasha period (${sp.interval.start} to ${sp.interval.end}).`;
+
+      return {
+        triggered: true,
+        effect: 'NEUTRAL' as LocalRuleEffect,
+        statement: `${baselineStatement} ${periodReference}`
+      };
+    }
   })
 ]);
