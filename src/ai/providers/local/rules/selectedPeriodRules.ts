@@ -29,12 +29,21 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return {
           triggered: true,
           effect: 'NEUTRAL' as LocalRuleEffect,
-          statement: 'No career expressions are linked to the selected period.',
+          statement: `Career analysis for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period is based on qualification basis ${career.qualificationBasis}. No career expressions are linked to this period.`,
           unresolvedQuestions: [
             'Career activation may be unavailable for this period.'
           ]
         };
       }
+
+      // Build per-expression narrative quoting canonical status and qualificationBasis
+      const expressionNarratives = career.expressions.map(e => {
+        const statusNarrative = `expression ${e.expressionRefKey} shows canonical status ${e.status} with qualification basis ${e.qualificationBasis}`;
+        const diagNarrative = e.diagnostics.length > 0
+          ? ` (diagnostics: ${e.diagnostics.map(d => d.code).join(', ')})`
+          : '';
+        return statusNarrative + diagNarrative;
+      });
 
       const activatingExprs = career.expressions.filter(e =>
         e.status === 'ACTIVATES' || e.status === 'PARTIALLY_ACTIVATES'
@@ -43,11 +52,13 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         e.status === 'CHALLENGES' || e.status === 'DOES_NOT_ACTIVATE'
       );
 
+      const baseStatement = `Career analysis for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period is based on qualification basis ${career.qualificationBasis}. ${expressionNarratives.join('. ')}.`;
+
       if (activatingExprs.length > challengingExprs.length) {
         return {
           triggered: true,
           effect: 'SUPPORT' as LocalRuleEffect,
-          statement: `Career expressions show predominantly ${activatingExprs.length} activating indicators versus ${challengingExprs.length} challenging for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
+          statement: `${baseStatement} Overall, ${activatingExprs.length} expressions show activating indicators versus ${challengingExprs.length} challenging.`,
           supportingEvidenceIds: activatingExprs.flatMap(e => [
             ...e.expressionEvidenceIds,
             ...e.qualifiedEvidenceIds,
@@ -61,7 +72,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
         return {
           triggered: true,
           effect: 'CHALLENGE' as LocalRuleEffect,
-          statement: `Career expressions show predominantly ${challengingExprs.length} challenging indicators versus ${activatingExprs.length} activating for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
+          statement: `${baseStatement} Overall, ${challengingExprs.length} expressions show challenging indicators versus ${activatingExprs.length} activating.`,
           challengingEvidenceIds: challengingExprs.flatMap(e => [
             ...e.expressionEvidenceIds,
             ...e.unqualifiedEvidenceIds,
@@ -74,7 +85,7 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       return {
         triggered: true,
         effect: 'MIXED' as LocalRuleEffect,
-        statement: `Career expressions show balanced activation with ${activatingExprs.length} activating and ${challengingExprs.length} challenging indicators for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period.`,
+        statement: `${baseStatement} Overall, ${activatingExprs.length} expressions show activating indicators and ${challengingExprs.length} show challenging indicators, indicating balanced activation.`,
         supportingEvidenceIds: activatingExprs.flatMap(e => e.expressionEvidenceIds),
         challengingEvidenceIds: challengingExprs.flatMap(e => e.expressionEvidenceIds)
       };

@@ -633,28 +633,26 @@ describe('ProductAnalysisService (P-UI-02)', () => {
   });
 
   describe('AI explanation handling (PBA-09)', () => {
-    it.skip('surfaces AI failure as ERROR status with error result', async () => {
-      // Skipping - requires full temporalState and careerArtifacts for synthesis to succeed
-      // This is covered by integration tests
-    });
+    it('surfaces AI failure as ERROR status with error result', async () => {
+      // Use real calculateHoroscope to get a temporalState with dashaInterpretation
+      const realHoroscope = calculateHoroscope(sampleBirth);
 
-    it.skip('sets NOT_REQUESTED status when includeSelectedPeriodAiExplanation is false', async () => {
-      // Skipping - requires full temporalState and careerArtifacts for synthesis to succeed
-      // This is covered by integration tests
-    });
+      // Create a distinctive asOf for context
+      const customAsOf = '2030-03-01T00:00:00Z';
+      const customContext = createAnalysisContext({
+        asOf: customAsOf,
+        methodology: mapMethodology(sampleBirth),
+        engineVersion: 'CUSTOM_ENGINE_V2',
+        rulesVersion: 'CUSTOM_RULES_V3'
+      });
 
-    it.skip('sets OK status when AI explanation succeeds', async () => {
-      // Skipping - requires full temporalState and careerArtifacts for synthesis to succeed
-      // This is covered by integration tests
-    });
+      // Resolve temporalState with the custom context
+      const temporalState = resolveAnalysisTemporalState(realHoroscope, customContext);
 
-    it('parity test: same canonical SelectedPeriodSynthesisValue passed to both mapSelectedPeriodSynthesis and runAiExplanation', async () => {
-      const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
-
-      // Create pipeline state with required artifacts for selected-period synthesis
+      // Build pipeline state with temporalState and required artifacts
       const pipelineStateWithArtifacts: LifeAnalysisProductState = {
         ...readyPipelineState,
-        temporalState: {} as any, // Minimal temporalState mock
+        temporalState,
         careerArtifacts: {
           natal: {} as any,
           expression: {} as any,
@@ -664,6 +662,200 @@ describe('ProductAnalysisService (P-UI-02)', () => {
         }
       };
 
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(pipelineStateWithArtifacts);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      // Spy on runAiExplanation to throw an error
+      const aiExplanationModule = await import('../../../ai/product/aiExplanationService');
+      const runAiSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockRejectedValue(
+        new Error('AI provider error')
+      );
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      // Assert selectedPeriod status is OK (synthesis succeeded)
+      expect(result.selectedPeriod?.status).toBe('OK');
+
+      // Assert AI explanation status is ERROR
+      if (result.selectedPeriod?.status === 'OK') {
+        expect(result.selectedPeriod.aiExplanationStatus).toBe('ERROR');
+      }
+
+      // Cleanup
+      runAiSpy.mockRestore();
+    });
+
+    it('sets NOT_REQUESTED status when includeSelectedPeriodAiExplanation is false', async () => {
+      // Use real calculateHoroscope to get a temporalState with dashaInterpretation
+      const realHoroscope = calculateHoroscope(sampleBirth);
+
+      // Create a distinctive asOf for context
+      const customAsOf = '2030-03-01T00:00:00Z';
+      const customContext = createAnalysisContext({
+        asOf: customAsOf,
+        methodology: mapMethodology(sampleBirth),
+        engineVersion: 'CUSTOM_ENGINE_V2',
+        rulesVersion: 'CUSTOM_RULES_V3'
+      });
+
+      // Resolve temporalState with the custom context
+      const temporalState = resolveAnalysisTemporalState(realHoroscope, customContext);
+
+      // Build pipeline state with temporalState and required artifacts
+      const pipelineStateWithArtifacts: LifeAnalysisProductState = {
+        ...readyPipelineState,
+        temporalState,
+        careerArtifacts: {
+          natal: {} as any,
+          expression: {} as any,
+          canonicalExpression: {} as any,
+          mechanismCandidates: [],
+          careerDashaEvidence: []
+        }
+      };
+
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(pipelineStateWithArtifacts);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: false
+      });
+
+      // Assert selectedPeriod status is OK (synthesis succeeded)
+      expect(result.selectedPeriod?.status).toBe('OK');
+
+      // Assert AI explanation status is NOT_REQUESTED
+      if (result.selectedPeriod?.status === 'OK') {
+        expect(result.selectedPeriod.aiExplanationStatus).toBe('NOT_REQUESTED');
+      }
+    });
+
+    it('sets OK status when AI explanation succeeds', async () => {
+      // Use real calculateHoroscope to get a temporalState with dashaInterpretation
+      const realHoroscope = calculateHoroscope(sampleBirth);
+
+      // Create a distinctive asOf for context
+      const customAsOf = '2030-03-01T00:00:00Z';
+      const customContext = createAnalysisContext({
+        asOf: customAsOf,
+        methodology: mapMethodology(sampleBirth),
+        engineVersion: 'CUSTOM_ENGINE_V2',
+        rulesVersion: 'CUSTOM_RULES_V3'
+      });
+
+      // Resolve temporalState with the custom context
+      const temporalState = resolveAnalysisTemporalState(realHoroscope, customContext);
+
+      // Build pipeline state with temporalState and required artifacts
+      const pipelineStateWithArtifacts: LifeAnalysisProductState = {
+        ...readyPipelineState,
+        temporalState,
+        careerArtifacts: {
+          natal: {} as any,
+          expression: {} as any,
+          canonicalExpression: {} as any,
+          mechanismCandidates: [],
+          careerDashaEvidence: []
+        }
+      };
+
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
+      const runPipelineMock = vi.fn().mockResolvedValue(pipelineStateWithArtifacts);
+
+      const deps: ProductAnalysisDependencies = {
+        calculateHoroscope: calculateHoroscopeMock,
+        runPipeline: runPipelineMock
+      };
+
+      const service = createProductAnalysisService(deps);
+
+      // Spy on runAiExplanation to return success
+      const aiExplanationModule = await import('../../../ai/product/aiExplanationService');
+      const runAiSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockResolvedValue({
+        kind: 'SUCCESS',
+        requestId: 'test-request-id',
+        task: 'SELECTED_PERIOD_ANALYSIS',
+        status: 'SUCCESS',
+        conclusion: 'Test conclusion',
+        supportingEvidence: [],
+        challengingEvidence: [],
+        unresolvedQuestions: [],
+        warnings: [],
+        triggeredRuleIds: [],
+        providerId: 'test-provider',
+        providerName: 'Test Provider',
+        providerKind: 'LOCAL_RULES',
+        routingMode: 'LOCAL_ONLY',
+        fallbackUsed: false,
+        selectionReason: 'DEFAULT',
+        generatedAt: '2024-01-01T00:00:00Z'
+      });
+
+      const result = await service.analyze(sampleBirth, {
+        selectedPeriod: { mahadashaId: 'md-1', antardashaId: 'ad-1' },
+        includeSelectedPeriodAiExplanation: true
+      });
+
+      // Assert selectedPeriod status is OK (synthesis succeeded)
+      expect(result.selectedPeriod?.status).toBe('OK');
+
+      // Assert AI explanation status is OK
+      if (result.selectedPeriod?.status === 'OK') {
+        expect(result.selectedPeriod.aiExplanationStatus).toBe('OK');
+      }
+
+      // Cleanup
+      runAiSpy.mockRestore();
+    });
+
+    it('parity test: same canonical SelectedPeriodSynthesisValue passed to both mapSelectedPeriodSynthesis and runAiExplanation', async () => {
+      // Use real calculateHoroscope to get a temporalState with dashaInterpretation
+      const realHoroscope = calculateHoroscope(sampleBirth);
+
+      // Create a distinctive asOf for context
+      const customAsOf = '2030-03-01T00:00:00Z';
+      const customContext = createAnalysisContext({
+        asOf: customAsOf,
+        methodology: mapMethodology(sampleBirth),
+        engineVersion: 'CUSTOM_ENGINE_V2',
+        rulesVersion: 'CUSTOM_RULES_V3'
+      });
+
+      // Resolve temporalState with the custom context
+      const temporalState = resolveAnalysisTemporalState(realHoroscope, customContext);
+
+      // Build pipeline state with temporalState and required artifacts
+      const pipelineStateWithArtifacts: LifeAnalysisProductState = {
+        ...readyPipelineState,
+        temporalState,
+        careerArtifacts: {
+          natal: {} as any,
+          expression: {} as any,
+          canonicalExpression: {} as any,
+          mechanismCandidates: [],
+          careerDashaEvidence: []
+        }
+      };
+
+      const calculateHoroscopeMock = vi.fn().mockReturnValue(realHoroscope);
       const runPipelineMock = vi.fn().mockResolvedValue(pipelineStateWithArtifacts);
 
       const deps: ProductAnalysisDependencies = {
@@ -704,24 +896,22 @@ describe('ProductAnalysisService (P-UI-02)', () => {
         includeSelectedPeriodAiExplanation: true
       });
 
-      // This test requires real synthesis to succeed, which needs full temporalState
-      // and careerArtifacts. Skipping with minimal mocks.
-      // TODO: Add proper mocks or mark as integration test
-      if (result.selectedPeriod?.status === 'OK') {
-        // Both spies should have been called
-        expect(mapSynthesisSpy).toHaveBeenCalled();
-        expect(runAiSpy).toHaveBeenCalled();
+      // Assert selectedPeriod status is OK before comparing spies
+      expect(result.selectedPeriod?.status).toBe('OK');
 
-        // Extract the synthesis values passed to each
-        const synthesisPassedToMapper = mapSynthesisSpy.mock.calls[0][0];
-        const selectedPeriodPassedToAi = (runAiSpy.mock.calls[0][0] as any).selectedPeriod;
+      // Both spies should have been called
+      expect(mapSynthesisSpy).toHaveBeenCalled();
+      expect(runAiSpy).toHaveBeenCalled();
 
-        // Verify they are the same object (by reference)
-        expect(synthesisPassedToMapper).toBe(selectedPeriodPassedToAi);
+      // Extract the synthesis values passed to each
+      const synthesisPassedToMapper = mapSynthesisSpy.mock.calls[0][0];
+      const selectedPeriodPassedToAi = (runAiSpy.mock.calls[0][0] as any).selectedPeriod;
 
-        // Verify they have the same structure
-        expect(synthesisPassedToMapper).toEqual(selectedPeriodPassedToAi);
-      }
+      // Verify they are the same object (by reference)
+      expect(synthesisPassedToMapper).toBe(selectedPeriodPassedToAi);
+
+      // Verify they have the same structure
+      expect(synthesisPassedToMapper).toEqual(selectedPeriodPassedToAi);
 
       // Cleanup
       mapSynthesisSpy.mockRestore();

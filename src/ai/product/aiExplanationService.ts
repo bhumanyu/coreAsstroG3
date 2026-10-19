@@ -95,6 +95,7 @@ export async function runAiExplanation(
     return mapRoutingResultToViewModel(
       routingResult,
       context.evidence,
+      context.selectedPeriod,
       options.task
     );
   } catch (error) {
@@ -114,6 +115,7 @@ export async function runAiExplanation(
 function mapRoutingResultToViewModel(
   result: AiRoutingResult,
   evidence: readonly AiEvidence[],
+  selectedPeriod: AiContext['selectedPeriod'],
   task: AiTask
 ): AiExplanationResult {
   const rawStructured = result.response.structuredOutput;
@@ -143,23 +145,42 @@ function mapRoutingResultToViewModel(
     const status: 'SUCCESS' | 'PARTIAL' =
       structured.status === 'PARTIAL' ? 'PARTIAL' : 'SUCCESS';
 
+    const resolvedSupporting = resolveEvidence(
+      structured.supportingEvidenceIds,
+      evidence,
+      selectedPeriod,
+      task,
+      'SUPPORTING'
+    );
+    const resolvedChallenging = resolveEvidence(
+      structured.challengingEvidenceIds,
+      evidence,
+      selectedPeriod,
+      task,
+      'CHALLENGING'
+    );
+
+    // Add unresolved IDs to unresolvedQuestions
+    const unresolvedIds = [
+      ...resolvedSupporting.unresolvedIds,
+      ...resolvedChallenging.unresolvedIds
+    ];
+    const extendedUnresolvedQuestions = unresolvedIds.length > 0
+      ? [
+        ...structured.unresolvedQuestions,
+        `The following evidence IDs could not be resolved: ${unresolvedIds.join(', ')}`
+      ]
+      : structured.unresolvedQuestions;
+
     return Object.freeze({
       kind: 'SUCCESS',
       requestId: result.requestId,
       task,
       status,
       conclusion: structured.conclusion,
-      supportingEvidence: resolveEvidence(
-        structured.supportingEvidenceIds,
-        evidence,
-        'SUPPORTING'
-      ),
-      challengingEvidence: resolveEvidence(
-        structured.challengingEvidenceIds,
-        evidence,
-        'CHALLENGING'
-      ),
-      unresolvedQuestions: Object.freeze([...structured.unresolvedQuestions]),
+      supportingEvidence: resolvedSupporting.evidence,
+      challengingEvidence: resolvedChallenging.evidence,
+      unresolvedQuestions: Object.freeze(extendedUnresolvedQuestions),
       warnings: mergedWarnings,
       triggeredRuleIds: Object.freeze([...(structured.triggeredRuleIds ?? [])]),
       providerId: result.providerId,
@@ -252,17 +273,58 @@ function extractStructuredOutput(
 function resolveEvidence(
   ids: readonly string[],
   evidence: readonly AiEvidence[],
+  selectedPeriod: AiContext['selectedPeriod'],
+  task: AiTask,
   role: 'SUPPORTING' | 'CHALLENGING'
-): readonly AiExplanationEvidence[] {
+): { evidence: readonly AiExplanationEvidence[]; unresolvedIds: string[] } {
   const evidenceById = new Map(
     evidence.map((item) => [item.id, item])
   );
 
+  // Build selected-period evidence map for SELECTED_PERIOD_ANALYSIS task
+  const selectedPeriodEvidenceMap = new Map<string, boolean>();
+  if (task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriod) {
+    // Add evidence IDs from selectedPeriod.evidence references
+    for (const ref of selectedPeriod.evidence) {
+      if (ref.evidenceId) {
+        selectedPeriodEvidenceMap.set(ref.evidenceId, true);
+      }
+    }
+
+    // Add evidence IDs from career expressions
+    for (const expr of selectedPeriod.career.expressions) {
+      expr.expressionEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
+      expr.qualifiedEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
+      expr.unqualifiedEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
+      expr.mdDashaEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
+      expr.adDashaEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
+    }
+
+    // Add evidence IDs from wealth dimensions
+    for (const dim of Object.values(selectedPeriod.wealth.dimensions)) {
+      dim.promiseEvidenceIds?.forEach((id) => selectedPeriodEvidenceMap.set(id, true));
+    }
+  }
+
   const resolved: AiExplanationEvidence[] = [];
+  const unresolvedIds: string[] = [];
 
   for (const id of ids) {
+    // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceMap
+    // For other tasks, validate against context.evidence
+    const isValid = task === 'SELECTED_PERIOD_ANALYSIS'
+      ? selectedPeriodEvidenceMap.has(id)
+      : evidenceById.has(id);
+
+    if (!isValid) {
+      unresolvedIds.push(id);
+      continue;
+    }
+
     const item = evidenceById.get(id);
     if (!item) {
+      // This should not happen if isValid is true, but handle defensively
+      unresolvedIds.push(id);
       continue;
     }
 
@@ -274,7 +336,10 @@ function resolveEvidence(
     );
   }
 
-  return Object.freeze(resolved);
+  return {
+    evidence: Object.freeze(resolved),
+    unresolvedIds: Object.freeze(unresolvedIds)
+  };
 }
 
 function createRequestId(): string {

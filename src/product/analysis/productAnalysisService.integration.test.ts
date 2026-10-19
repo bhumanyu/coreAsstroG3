@@ -287,11 +287,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
 
     // Compare synthesis against hand-authored literal fixture
-    // TODO: Regenerate fixture to match new evidence structure with identityKey fields
-    // expect(synthesis).toEqual(VALID_SELECTION_GOLDEN_FIXTURE);
-    // For now, just verify basic structure
-    expect(synthesis.synthesisVersion).toBe('PBA-06-v1');
-    expect(synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
+    expect(synthesis).toEqual(VALID_SELECTION_GOLDEN_FIXTURE);
   });
 
 

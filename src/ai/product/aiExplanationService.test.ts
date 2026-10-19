@@ -342,4 +342,164 @@ describe('runAiExplanation', () => {
       expect(result.warnings).toContain('Selected period context not provided');
     }
   });
+
+  it('SELECTED_PERIOD_ANALYSIS evidence IDs are exact subsets with no invented IDs', async () => {
+    // Build a selected-period synthesis with known evidence IDs
+    const mockSelectedPeriod: any = {
+      selectedPeriodId: 'test-period-id',
+      mahadashaId: 'test-md-id',
+      mahadashaPlanet: 'JUPITER',
+      antardashaId: 'test-ad-id',
+      antardashaPlanet: 'VENUS',
+      interval: { start: '2020-01-01T00:00:00Z', end: '2021-01-01T00:00:00Z' },
+      analysisAsOf: '2024-01-01T00:00:00Z',
+      temporalRelation: 'PAST',
+      career: {
+        qualificationBasis: 'CANONICAL_C11',
+        expressions: [
+          {
+            expressionRefKey: 'expr-1',
+            status: 'ACTIVATES',
+            linkedLevels: ['MD'],
+            qualificationBasis: 'QUALIFIED',
+            diagnostics: [],
+            expressionEvidenceIds: ['ev-1', 'ev-2'],
+            qualifiedEvidenceIds: ['ev-1'],
+            unqualifiedEvidenceIds: [],
+            mdDashaEvidenceIds: ['ev-3'],
+            adDashaEvidenceIds: []
+          }
+        ],
+        diagnostics: []
+      },
+      wealth: {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            effect: 'ACTIVATES',
+            dataStatus: 'COMPLETE',
+            linkedLevels: ['MD'],
+            diagnostics: [],
+            promiseEvidenceIds: ['ev-4', 'ev-5'],
+            dashaRuleReferences: []
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            effect: 'UNKNOWN',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          }
+        },
+        diagnostics: []
+      },
+      evidence: [
+        { classification: 'SUPPORTING', evidenceId: 'ev-1', identityKey: 'key-1', dimension: 'CAREER', polarity: 'SUPPORTING', source: 'D1', ruleId: 'rule-1', level: 'MD', stage: 'CAREER', provenanceStage: 'CAREER_NATAL_PROMISE', referenceKind: 'EVIDENCE' },
+        { classification: 'SUPPORTING', evidenceId: 'ev-2', identityKey: 'key-2', dimension: 'CAREER', polarity: 'SUPPORTING', source: 'D1', ruleId: 'rule-2', level: 'MD', stage: 'CAREER', provenanceStage: 'CAREER_NATAL_PROMISE', referenceKind: 'EVIDENCE' },
+        { classification: 'SUPPORTING', evidenceId: 'ev-3', identityKey: 'key-3', dimension: 'CAREER', polarity: 'SUPPORTING', source: 'D1', ruleId: 'rule-3', level: 'MD', stage: 'CAREER', provenanceStage: 'CAREER_DASHA_RULE', referenceKind: 'EVIDENCE' },
+        { classification: 'SUPPORTING', evidenceId: 'ev-4', identityKey: 'key-4', dimension: 'WEALTH', polarity: 'SUPPORTING', source: 'D1', ruleId: 'rule-4', level: 'MD', stage: 'WEALTH', provenanceStage: 'WEALTH_NATAL_PROMISE', referenceKind: 'EVIDENCE' },
+        { classification: 'SUPPORTING', evidenceId: 'ev-5', identityKey: 'key-5', dimension: 'WEALTH', polarity: 'SUPPORTING', source: 'D1', ruleId: 'rule-5', level: 'MD', stage: 'WEALTH', provenanceStage: 'WEALTH_NATAL_PROMISE', referenceKind: 'EVIDENCE' }
+      ],
+      supportingEvidenceIds: ['ev-1', 'ev-3', 'ev-4'],
+      challengingEvidenceIds: [],
+      missingInputs: [],
+      diagnostics: [],
+      provenance: {
+        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_C11' },
+        wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+      },
+      synthesisVersion: 'PBA-06-v1'
+    };
+
+    const mockRouter: any = {
+      route: async (request: any) => {
+        // Verify the request has the correct task and selectedPeriod context
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        expect(request.context.selectedPeriod).toBeDefined();
+
+        // Return a structured output with evidence IDs from the selected period
+        return {
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Selected period analysis shows activation.',
+              supportingEvidenceIds: ['ev-1', 'ev-3', 'ev-4'], // All IDs from selectedPeriod
+              challengingEvidenceIds: [],
+              unresolvedQuestions: [],
+              warnings: []
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-parity-test'
+        };
+      }
+    };
+
+    const result = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      selectedPeriod: mockSelectedPeriod,
+      router: mockRouter
+    }));
+
+    // Verify success
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.status).toBe('SUCCESS');
+
+      // Verify all evidence IDs are from the selected period (no invented IDs)
+      const allEvidenceIds = new Set([
+        ...result.supportingEvidence.map((e) => e.evidence.id),
+        ...result.challengingEvidence.map((e) => e.evidence.id)
+      ]);
+
+      // All IDs should be in the selected period's evidence collections
+      const selectedPeriodIds = new Set([
+        ...mockSelectedPeriod.evidence.map((e: any) => e.evidenceId),
+        ...mockSelectedPeriod.career.expressions.flatMap((e: any) => [
+          ...e.expressionEvidenceIds,
+          ...e.qualifiedEvidenceIds,
+          ...e.unqualifiedEvidenceIds,
+          ...e.mdDashaEvidenceIds,
+          ...e.adDashaEvidenceIds
+        ]),
+        ...Object.values(mockSelectedPeriod.wealth.dimensions).flatMap((d: any) => d.promiseEvidenceIds)
+      ]);
+
+      for (const id of allEvidenceIds) {
+        expect(selectedPeriodIds.has(id)).toBe(true);
+      }
+
+      // Verify no unresolved IDs warning (all IDs resolved successfully)
+      expect(result.unresolvedQuestions).not.toContain(
+        expect.stringContaining('could not be resolved')
+      );
+    }
+  });
 });
