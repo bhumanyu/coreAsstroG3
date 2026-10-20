@@ -227,6 +227,10 @@ describe('DashaPage (P-UI-07)', () => {
             analysisAsOf: '2026-01-15T08:30:00.000Z',
             temporalRelation: 'CURRENT'
           },
+          natalBaseline: {
+            career: { baseline: {} as any, unchanged: true },
+            wealth: { baseline: {} as any, unchanged: true }
+          },
           career: {
             qualificationBasis: 'CANONICAL_STATUS',
             expressions: [],
@@ -349,6 +353,10 @@ describe('DashaPage (P-UI-07)', () => {
               analysisAsOf: '2021-01-01T00:00:00Z',
               temporalRelation: 'CURRENT'
             },
+            natalBaseline: {
+              career: { baseline: {} as any, unchanged: true },
+              wealth: { baseline: {} as any, unchanged: true }
+            },
             career: {
               qualificationBasis: 'CANONICAL_STATUS',
               expressions: [],
@@ -431,6 +439,10 @@ describe('DashaPage (P-UI-07)', () => {
               interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
               analysisAsOf: '2021-01-01T00:00:00Z',
               temporalRelation: 'CURRENT'
+            },
+            natalBaseline: {
+              career: { baseline: {} as any, unchanged: true },
+              wealth: { baseline: {} as any, unchanged: true }
             },
             career: {
               qualificationBasis: 'CANONICAL_STATUS',
@@ -524,6 +536,10 @@ describe('DashaPage (P-UI-07)', () => {
               analysisAsOf: '2021-01-01T00:00:00Z',
               temporalRelation: 'CURRENT'
             },
+            natalBaseline: {
+              career: { baseline: {} as any, unchanged: true },
+              wealth: { baseline: {} as any, unchanged: true }
+            },
             career: {
               qualificationBasis: 'CANONICAL_STATUS',
               expressions: [],
@@ -611,10 +627,145 @@ describe('DashaPage (P-UI-07)', () => {
       expect(screen.queryByText(/AI Explanation/i)).not.toBeInTheDocument();
     });
 
-    it.skip('timeline-identity: report gated on submitted IDs, clears on selection change', () => {
-      // This test is skipped because the component's internal state management
-      // for selection changes and submission is complex to test without full integration.
-      // TODO: Re-enable once component state management is better isolated for testing.
+    it('timeline-identity: report gated on submitted IDs, clears on selection change', () => {
+      const onSelectPeriod = vi.fn();
+      const analysis = createProductAnalysis({
+        selectedPeriod: {
+          status: 'OK',
+          synthesis: {
+            synthesisVersion: 'PBA-06-v1',
+            period: {
+              selectedPeriodId: 'period-1',
+              mahadashaId: 'md_jupiter',
+              mahadashaPlanet: 'Jupiter',
+              antardashaId: 'ad_saturn',
+              antardashaPlanet: 'Saturn',
+              interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+              analysisAsOf: '2021-01-01T00:00:00Z',
+              temporalRelation: 'CURRENT'
+            },
+            natalBaseline: {
+              career: { baseline: {} as any, unchanged: true },
+              wealth: { baseline: {} as any, unchanged: true }
+            },
+            career: {
+              qualificationBasis: 'CANONICAL_STATUS',
+              expressions: [],
+              diagnostics: []
+            },
+            wealth: {
+              dimensions: {
+                ACCUMULATION: {
+                  dimension: 'ACCUMULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                GAINS: {
+                  dimension: 'GAINS',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                FORTUNE: {
+                  dimension: 'FORTUNE',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                },
+                SPECULATION: {
+                  dimension: 'SPECULATION',
+                  effect: 'INSUFFICIENT_DATA',
+                  dataStatus: 'INSUFFICIENT_DATA',
+                  linkedLevels: [],
+                  diagnostics: [],
+                  promiseEvidenceIds: [],
+                  dashaRuleReferences: []
+                }
+              },
+              diagnostics: []
+            },
+            evidence: [],
+            missingInputs: [],
+            provenance: {
+              career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+              wealth: { status: 'PRESENT', version: 'v1' }
+            },
+            aiExplanationStatus: 'NOT_REQUESTED'
+          }
+        },
+        dashPeriodOptions: {
+          mahadashas: [
+            {
+              id: 'md_jupiter',
+              planet: 'Jupiter',
+              start: '2020-01-01T00:00:00.000Z',
+              end: '2036-01-01T00:00:00.000Z',
+              valid: true,
+              diagnostics: [],
+              temporalRelation: 'CURRENT',
+              antardashas: [
+                {
+                  id: 'ad_saturn',
+                  planet: 'Saturn',
+                  start: '2020-01-01T00:00:00.000Z',
+                  end: '2022-01-01T00:00:00.000Z',
+                  valid: true,
+                  diagnostics: [],
+                  temporalRelation: 'PAST'
+                }
+              ]
+            }
+          ],
+          diagnostics: []
+        }
+      });
+
+      const { rerender } = render(
+        <DashaPage
+          productAnalysisState={{ status: 'READY', analysis }}
+          onSelectPeriod={onSelectPeriod}
+        />
+      );
+
+      // With no submittedPeriod, report should not be visible
+      expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
+
+      // Simulate selection change by changing the selectedPeriod ID
+      const updatedAnalysis = createProductAnalysis({
+        selectedPeriod: {
+          status: 'OK',
+          synthesis: {
+            ...(analysis.selectedPeriod as any).synthesis,
+            period: {
+              ...(analysis.selectedPeriod as any).synthesis.period,
+              selectedPeriodId: 'period-2', // Different ID
+              mahadashaId: 'md_mars', // Different MD
+              antardashaId: 'ad_venus' // Different AD
+            }
+          }
+        } as any,
+        dashPeriodOptions: analysis.dashPeriodOptions
+      });
+
+      rerender(
+        <DashaPage
+          productAnalysisState={{ status: 'READY', analysis: updatedAnalysis }}
+          onSelectPeriod={onSelectPeriod}
+        />
+      );
+
+      // Report should still not be visible (ID mismatch clears submittedPeriod)
+      expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
     });
   });
 });

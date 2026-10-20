@@ -696,6 +696,10 @@ describe('productAnalysisSelectors', () => {
             analysisAsOf: '2024-01-01T00:00:00.000Z',
             temporalRelation: 'PAST'
           },
+          natalBaseline: {
+            career: { baseline: {} as any, unchanged: true },
+            wealth: { baseline: {} as any, unchanged: true }
+          },
           career: {
             qualificationBasis: 'CANONICAL_STATUS',
             expressions: [],

@@ -337,9 +337,11 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
       expect(result.wealth.diagnostics).toEqual(mockSynthesisValue.wealth.diagnostics);
     });
 
-    it.skip('preserves baseline unchanged marker verbatim', () => {
-      // This test is skipped because the mapper doesn't currently preserve the unchanged marker
-      // TODO: Re-enable once the mapper is updated to preserve this field
+    it('preserves baseline unchanged marker verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      expect(result.natalBaseline.career?.unchanged).toBe(true);
+      expect(result.natalBaseline.wealth?.unchanged).toBe(true);
     });
 
     it('UNRESOLVED refs keep their kind', () => {

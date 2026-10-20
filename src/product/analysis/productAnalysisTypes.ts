@@ -483,6 +483,16 @@ export interface ProductSelectedPeriodSynthesis {
     readonly analysisAsOf: string;
     readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE';
   };
+  readonly natalBaseline: {
+    readonly career?: {
+      readonly baseline: import('../../domain/career/careerTypes').CareerConclusionData;
+      readonly unchanged: boolean;
+    };
+    readonly wealth?: {
+      readonly baseline: import('../../domain/wealth/wealthTypes').WealthConclusionData;
+      readonly unchanged: boolean;
+    };
+  };
   readonly career: ProductSynthesisCareerSection;
   readonly wealth: ProductSynthesisWealthSection;
   readonly evidence: readonly ProductSynthesisEvidenceReference[];

@@ -101,6 +101,10 @@ function classifyTemporalRelation(
   const end = parseInstant(selectedEnd);
   const asOf = parseInstant(analysisAsOf);
 
+  // Note: 'null' is reserved for unparseable period interval dates (start/end).
+  // Caller analysisAsOf parseability is validated upstream in createSelectedPeriodActivationContext
+  // (returns INVALID_ANALYSIS_AS_OF error before calling this function).
+  // This contract ensures unparseable asOf is rejected early rather than silently treated as UNKNOWN.
   if (start === null || end === null || asOf === null || start >= end) {
     return null;
   }

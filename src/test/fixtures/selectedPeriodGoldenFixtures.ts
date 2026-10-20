@@ -47,6 +47,16 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     analysisAsOf: '2024-01-01T00:00:00.000Z',
     temporalRelation: 'PAST'
   },
+  natalBaseline: {
+    career: {
+      baseline: expect.any(Object),
+      unchanged: true
+    },
+    wealth: {
+      baseline: expect.any(Object),
+      unchanged: true
+    }
+  },
   career: {
     qualificationBasis: 'PROXY_DIRECTION',
     expressions: [],

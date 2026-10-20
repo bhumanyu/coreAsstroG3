@@ -1209,6 +1209,7 @@ export function mapSelectedPeriodSynthesis(
       analysisAsOf: value.period.analysisAsOf,
       temporalRelation: value.period.temporalRelation
     }),
+    natalBaseline: value.natalBaseline,
     career,
     wealth,
     evidence,
