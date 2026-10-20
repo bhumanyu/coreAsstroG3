@@ -441,4 +441,162 @@ describe('buildSelectedPeriodEvidenceIndex', () => {
     // availableEvidence wins when identical
     expect(result.index.get('ctx-ev-1')).toBe(spWithDifferentOrder.availableEvidence[0]);
   });
+
+  it('reviewer case: two identical availableEvidence records conflict with context → ambiguous once', () => {
+    // Context has E1 with statement A
+    const contextEvidence: AiEvidence[] = [
+      {
+        id: 'E1',
+        source: 'PLANET',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Statement A',
+        planets: [Planet.SUN],
+        houses: [1],
+        ruleId: 'rule-1',
+        identityKey: 'key-1',
+        dimension: 'NATAL_STRUCTURE'
+      }
+    ];
+
+    // availableEvidence has two E1 records, both with statement B (identical to each other)
+    const availableEvidence1: AiEvidence = {
+      id: 'E1',
+      source: 'PLANET',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement: 'Statement B', // Conflicts with context
+      planets: [Planet.SUN],
+      houses: [1],
+      ruleId: 'rule-1',
+      identityKey: 'key-1',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const availableEvidence2: AiEvidence = {
+      id: 'E1',
+      source: 'PLANET',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement: 'Statement B', // Same as above
+      planets: [Planet.SUN],
+      houses: [1],
+      ruleId: 'rule-1',
+      identityKey: 'key-1',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const spWithDuplicateConflict: AiSelectedPeriodContext = {
+      ...mockSelectedPeriod,
+      availableEvidence: [availableEvidence1, availableEvidence2]
+    };
+
+    const result = buildSelectedPeriodEvidenceIndex(contextEvidence, spWithDuplicateConflict);
+
+    // Ambiguous exactly once (cross-namespace conflict)
+    expect(result.ambiguousIds).toEqual(['E1']);
+
+    // Context version is kept (not overwritten)
+    expect(result.index.get('E1')).toBe(contextEvidence[0]);
+  });
+
+  it('intra-namespace conflicting duplicate in availableEvidence (no context conflict) → ambiguous', () => {
+    // availableEvidence has two conflicting records for an ID not in context
+    const conflictingSpEvidence1: AiEvidence = {
+      id: 'sp-only-1',
+      source: 'PLANET',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement: 'Statement 1',
+      planets: [Planet.JUPITER],
+      houses: [1],
+      ruleId: 'rule-3',
+      identityKey: 'key-3',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const conflictingSpEvidence2: AiEvidence = {
+      id: 'sp-only-1', // Same ID, different statement
+      source: 'PLANET',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement: 'Statement 2', // Conflict
+      planets: [Planet.JUPITER],
+      houses: [1],
+      ruleId: 'rule-3',
+      identityKey: 'key-3',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const spWithConflict: AiSelectedPeriodContext = {
+      ...mockSelectedPeriod,
+      availableEvidence: [conflictingSpEvidence1, conflictingSpEvidence2]
+    };
+
+    const result = buildSelectedPeriodEvidenceIndex(mockEvidence, spWithConflict);
+
+    // The conflicting duplicate is marked as ambiguous
+    expect(result.ambiguousIds).toContain('sp-only-1');
+
+    // Index keeps the first occurrence
+    expect(result.index.get('sp-only-1')).toBe(conflictingSpEvidence1);
+  });
+
+  it('three-record case: two conflicting availableEvidence + context conflict → ambiguous once', () => {
+    // Context has E1 with statement A
+    const contextEvidence: AiEvidence[] = [
+      {
+        id: 'E1',
+        source: 'PLANET',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        statement: 'Statement A',
+        planets: [Planet.SUN],
+        houses: [1],
+        ruleId: 'rule-1',
+        identityKey: 'key-1',
+        dimension: 'NATAL_STRUCTURE'
+      }
+    ];
+
+    // availableEvidence has two conflicting E1 records (statements B and C)
+    const availableEvidence1: AiEvidence = {
+      id: 'E1',
+      source: 'PLANET',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement: 'Statement B', // Conflicts with context
+      planets: [Planet.SUN],
+      houses: [1],
+      ruleId: 'rule-1',
+      identityKey: 'key-1',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const availableEvidence2: AiEvidence = {
+      id: 'E1',
+      source: 'PLANET',
+      effect: 'SUPPORT',
+      strength: 'STRONG',
+      statement: 'Statement C', // Also conflicts with context and with availableEvidence1
+      planets: [Planet.SUN],
+      houses: [1],
+      ruleId: 'rule-1',
+      identityKey: 'key-1',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const spWithTripleConflict: AiSelectedPeriodContext = {
+      ...mockSelectedPeriod,
+      availableEvidence: [availableEvidence1, availableEvidence2]
+    };
+
+    const result = buildSelectedPeriodEvidenceIndex(contextEvidence, spWithTripleConflict);
+
+    // Ambiguous exactly once (deterministic behavior)
+    expect(result.ambiguousIds).toEqual(['E1']);
+
+    // Index keeps the context record (unchanged semantics: context retained on conflict)
+    expect(result.index.get('E1')).toBe(contextEvidence[0]);
+  });
 });

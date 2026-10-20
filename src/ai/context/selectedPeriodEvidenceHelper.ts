@@ -84,59 +84,58 @@ export function buildSelectedPeriodEvidenceIndex(
   evidence: readonly AiEvidence[],
   selectedPeriod: AiSelectedPeriodContext | undefined
 ): { index: Map<string, AiEvidence>; ambiguousIds: readonly string[] } {
+  // Namespace representative maps: first record per ID within each namespace
+  const contextById = new Map<string, AiEvidence>();
+  const availableById = new Map<string, AiEvidence>();
+  // Final merged index with unchanged resolution semantics
   const index = new Map<string, AiEvidence>();
   const ambiguousIds = new Set<string>();
 
-  // Pre-populate with context.evidence for fallback lookup
-  // Track seen IDs to detect intra-namespace duplicates
-  const contextEvidenceSeen = new Set<string>();
+  // Process context.evidence namespace
   for (const ev of evidence) {
-    if (contextEvidenceSeen.has(ev.id)) {
+    const existing = contextById.get(ev.id);
+    if (existing) {
       // Intra-namespace duplicate in context.evidence
-      const existing = index.get(ev.id);
-      if (existing && !areAiEvidenceRecordsIdentical(existing, ev)) {
+      if (!areAiEvidenceRecordsIdentical(existing, ev)) {
         // Conflicting duplicate - record as ambiguous
         ambiguousIds.add(ev.id);
-        // Do not overwrite - keep the first occurrence
       }
       // If identical, skip silently (dedup)
     } else {
-      contextEvidenceSeen.add(ev.id);
+      // First occurrence of this ID in context.evidence
+      contextById.set(ev.id, ev);
       index.set(ev.id, ev);
     }
   }
 
-  // If no selectedPeriod, return the base context evidence map with no ambiguous IDs
+  // If no selectedPeriod, return the base context evidence map
   if (!selectedPeriod) {
     return { index, ambiguousIds: Array.from(ambiguousIds) };
   }
 
   const sp = selectedPeriod;
 
-  // Pre-populate with selectedPeriod.availableEvidence (canonical bridge)
-  // This takes precedence over context.evidence for selected-period-only IDs
-  // Track seen IDs to detect intra-namespace duplicates
-  const availableEvidenceSeen = new Set<string>();
+  // Process selectedPeriod.availableEvidence namespace
   for (const ev of sp.availableEvidence) {
-    if (availableEvidenceSeen.has(ev.id)) {
+    const existingInAvailable = availableById.get(ev.id);
+    if (existingInAvailable) {
       // Intra-namespace duplicate in availableEvidence
-      const existing = index.get(ev.id);
-      if (existing && !areAiEvidenceRecordsIdentical(existing, ev)) {
+      if (!areAiEvidenceRecordsIdentical(existingInAvailable, ev)) {
         // Conflicting duplicate - record as ambiguous
         ambiguousIds.add(ev.id);
-        // Do not overwrite - keep the first occurrence
       }
       // If identical, skip silently (dedup)
     } else {
-      availableEvidenceSeen.add(ev.id);
-      const existing = index.get(ev.id);
-      if (existing) {
-        // Same ID exists in both namespaces - check for conflicts
-        if (!areAiEvidenceRecordsIdentical(existing, ev)) {
+      // First occurrence of this ID in availableEvidence
+      availableById.set(ev.id, ev);
+
+      const existingInContext = contextById.get(ev.id);
+      if (existingInContext) {
+        // Cross-namespace check: compare namespace representatives
+        if (!areAiEvidenceRecordsIdentical(existingInContext, ev)) {
           // Materially different fields - record as ambiguous
           ambiguousIds.add(ev.id);
-          // Do NOT overwrite - keep the context.evidence version for now,
-          // but consumers will treat this as unresolved anyway
+          // Do NOT overwrite - keep the context.evidence version
         } else {
           // Identical records - availableEvidence wins silently (overwrite)
           index.set(ev.id, ev);
