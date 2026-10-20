@@ -251,7 +251,7 @@ function projectProfessionCandidate(
     d10Status: candidate.d10Status,
     evidence: Object.freeze(candidate.evidence.map(projectProfessionEvidence)),
     domainEvidenceIds: Object.freeze([...candidate.domainEvidenceIds]),
-    relatedEvidenceIds: Object.freeze([...candidate.relatedEvidenceIds]),
+    relatedEvidenceIds: Object.freeze([...(candidate.relatedEvidenceIds ?? [])]),
     ruleId: candidate.ruleId
   });
 }

@@ -596,7 +596,7 @@ function mapCareer(
           unresolvedMechanismIds: e.unresolvedMechanismIds
         })),
         domainEvidenceIds: c.domainEvidenceIds,
-        relatedEvidenceIds: c.relatedEvidenceIds,
+        relatedEvidenceIds: c.relatedEvidenceIds ?? [],
         ruleId: c.ruleId
       })),
       unresolvedExpressionTypes: detail.profession.unresolvedExpressionTypes,

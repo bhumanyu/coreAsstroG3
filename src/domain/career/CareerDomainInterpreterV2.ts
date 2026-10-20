@@ -529,7 +529,7 @@ export function interpretCareerV2(
   const dashaChallenging = dashaEvidence.filter((item) => item.polarity === 'CHALLENGING');
 
   const rawDashaPromiseLinks = dashaEvidence.flatMap((item) =>
-    item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
+    (item.relatedEvidenceIds ?? []).filter((id) => natalPromiseEvidenceIds.includes(id))
   );
   const dashaPromiseEvidenceIds = Array.from(new Set(rawDashaPromiseLinks));
   const dashaEffect = evaluateDashaEffect(dashaEvidence, dashaPromiseEvidenceIds);
@@ -1374,7 +1374,7 @@ export function evaluateCareerTimingActivation(
   }
 
   const linkedEvidence = periodEvidence.filter((item) =>
-    item.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
+    (item.relatedEvidenceIds ?? []).some((id) => natalPromiseEvidenceIds.includes(id))
   );
 
   if (linkedEvidence.length === 0) {
@@ -1403,7 +1403,7 @@ export function evaluateCareerTimingActivation(
   }
 
   const activatedPromiseEvidenceIds = Array.from(
-    new Set(linkedEvidence.flatMap((item) => item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))))
+    new Set(linkedEvidence.flatMap((item) => (item.relatedEvidenceIds ?? []).filter((id) => natalPromiseEvidenceIds.includes(id))))
   );
 
   return Object.freeze({
@@ -1425,7 +1425,7 @@ export function evaluateDashaEffect(
   }
   const linkedPromiseIds = activatedPromiseEvidenceIds
     ? new Set(activatedPromiseEvidenceIds)
-    : new Set(dashaEvidence.flatMap((e) => e.relatedEvidenceIds));
+    : new Set(dashaEvidence.flatMap((e) => e.relatedEvidenceIds ?? []));
 
   if (linkedPromiseIds.size === 0) {
     return 'UNKNOWN';
@@ -1455,7 +1455,7 @@ export function evaluateTransitEffect(
   }
   const linkedPromiseIds = triggeredPromiseEvidenceIds
     ? new Set(triggeredPromiseEvidenceIds)
-    : new Set(transitEvidence.flatMap((e) => e.relatedEvidenceIds));
+    : new Set(transitEvidence.flatMap((e) => e.relatedEvidenceIds ?? []));
 
   if (linkedPromiseIds.size === 0) {
     return 'UNKNOWN';
@@ -1504,7 +1504,7 @@ export function evaluateD10Relationship(
     const linkedD10 =
       natalPromiseEvidenceIds && natalPromiseEvidenceIds.length > 0
         ? d10Evidence.filter((e) =>
-          e.relatedEvidenceIds.some((id) => natalPromiseEvidenceIds.includes(id))
+          (e.relatedEvidenceIds ?? []).some((id) => natalPromiseEvidenceIds.includes(id))
         )
         : d10Evidence;
 

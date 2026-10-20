@@ -69,6 +69,9 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
 
   // Render based on kind (status discriminant)
   if (explanation.kind === 'ERROR') {
+    // Log error message for debugging (kept in production for now)
+    console.log('[SelectedPeriodAiExplanation] AI explanation error:', explanation.message);
+
     return (
       <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-3" role="status" aria-live="polite">
         <div className="flex items-center gap-2">

@@ -1196,6 +1196,11 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         const pipelineCareerDashaIds = pipelineCareerDashaEvidence.map((e: any) => e.id);
         const pipelineWealthIds = pipelineWealthEvidence.map((e: any) => e.id);
 
+        // Assert arrays are non-empty (meaningful wiring test)
+        expect(careerIds.length).toBeGreaterThan(0);
+        expect(careerDashaIds.length).toBeGreaterThan(0);
+        expect(wealthIds.length).toBeGreaterThan(0);
+
         // Assert deep equality: AI context evidence IDs must match pipeline state evidence IDs
         expect(careerIds).toEqual(pipelineCareerIds);
         expect(careerDashaIds).toEqual(pipelineCareerDashaIds);
