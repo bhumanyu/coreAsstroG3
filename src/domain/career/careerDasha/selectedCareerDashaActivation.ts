@@ -333,7 +333,7 @@ export function buildSelectedCareerDashaActivation(params: {
 
   // P2: C8 qualification boundary - filter by QUALIFIED status or use proxy
   let qualifiedExpressions: CareerExpression[];
-  let qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  let qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   // Track qualified canonical evidence IDs per expression (scoped to matched candidates)
   const expressionQualifiedEvidenceIds = new Map<CareerExpression, Set<string>>();
   // Track whether we used adapter fallback (for per-expression source determination)

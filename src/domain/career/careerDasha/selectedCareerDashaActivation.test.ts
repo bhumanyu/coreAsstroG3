@@ -274,6 +274,10 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         career10LFoundation: undefined
       });
 
+      const canonicalExpressionResult: CareerExpressionCanonicalResult = {
+        ...mechanismExpressionResult,
+        expressions: []
+      };
       const canonicalExpressionAnalysis = adaptMechanismExpressionToLegacy(
         mechanismExpressionResult,
         careerMechanismCandidates
@@ -293,7 +297,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         natal,
         expression: canonicalExpressionAnalysis,
         selectedPeriod,
-        canonicalExpression: mechanismExpressionResult,
+        canonicalExpression: canonicalExpressionResult,
         mechanismCandidates: careerMechanismCandidates
       });
 

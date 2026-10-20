@@ -74,7 +74,7 @@ export function classifyTemporalRelation(
 export function validateInterval(start: string, end: string): boolean {
   const startMs = parseInstant(start);
   const endMs = parseInstant(end);
-  if (!startMs || !endMs) {
+  if (startMs === null || endMs === null) {
     return false;
   }
   return startMs < endMs;

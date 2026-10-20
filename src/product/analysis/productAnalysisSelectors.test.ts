@@ -686,6 +686,7 @@ describe('productAnalysisSelectors', () => {
         status: 'OK',
         synthesis: {
           synthesisVersion: 'PBA-06-v1',
+          qualificationStatus: 'CANONICAL',
           period: {
             selectedPeriodId: 'test-period',
             mahadashaId: 'md-1',

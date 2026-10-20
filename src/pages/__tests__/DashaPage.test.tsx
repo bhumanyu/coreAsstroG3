@@ -164,6 +164,7 @@ describe('DashaPage (P-UI-07)', () => {
         status: 'OK',
         synthesis: {
           synthesisVersion: 'PBA-06-v1',
+          qualificationStatus: 'CANONICAL',
           period: {
             selectedPeriodId: 'period-1',
             mahadashaId: 'md_jupiter',
@@ -331,6 +332,7 @@ describe('DashaPage (P-UI-07)', () => {
         status: 'OK',
         synthesis: {
           synthesisVersion: 'PBA-06-v1',
+          qualificationStatus: 'CANONICAL',
           period: {
             selectedPeriodId: 'sp-1',
             mahadashaId: 'md_jupiter',
@@ -457,6 +459,7 @@ describe('DashaPage (P-UI-07)', () => {
           status: 'OK',
           synthesis: {
             synthesisVersion: 'PBA-06-v1',
+            qualificationStatus: 'CANONICAL',
             period: {
               selectedPeriodId: 'period-1',
               mahadashaId: 'md_jupiter',
@@ -544,6 +547,7 @@ describe('DashaPage (P-UI-07)', () => {
           status: 'OK',
           synthesis: {
             synthesisVersion: 'PBA-06-v1',
+            qualificationStatus: 'CANONICAL',
             period: {
               selectedPeriodId: 'period-1',
               mahadashaId: 'md_jupiter',
@@ -640,6 +644,7 @@ describe('DashaPage (P-UI-07)', () => {
           status: 'OK',
           synthesis: {
             synthesisVersion: 'PBA-06-v1',
+            qualificationStatus: 'CANONICAL',
             period: {
               selectedPeriodId: 'period-1',
               mahadashaId: 'md_jupiter',
@@ -748,6 +753,7 @@ describe('DashaPage (P-UI-07)', () => {
           status: 'OK',
           synthesis: {
             synthesisVersion: 'PBA-06-v1',
+            qualificationStatus: 'CANONICAL',
             period: {
               selectedPeriodId: 'period-1',
               mahadashaId: 'md_jupiter',

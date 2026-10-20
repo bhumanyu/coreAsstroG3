@@ -9,22 +9,22 @@
  * - CANONICAL_BIRTH_DETAILS
  * - asOf = 2024-01-01T00:00:00Z (pinned for determinism)
  * - Selected period: MD=MOON, AD=MOON (via listSelectableMdAdPeriods)
- * - Using PROXY_DIRECTION path (canonical inputs insufficient for this chart)
+ * - Using UNAVAILABLE basis (canonical inputs supplied, but no mechanisms qualify for this chart)
  * - Updated to include identityKey fields on evidence references
  */
 
 import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';
 
 /**
- * Fixture 1: Valid selection; career PROXY_DIRECTION with no linked expressions; mixed wealth dimension states.
+ * Fixture 1: Valid selection; career qualification UNAVAILABLE with no linked expressions; mixed wealth dimension states.
  *
  * This fixture represents a successful selected-period synthesis with:
  * - Exact selectedPeriodId, mahadashaId, antardashaId, planets, interval dates
  * - Analysis asOf pinned to 2024-01-01T00:00:00.000Z for determinism
  * - TemporalRelation = PAST (period is in the past relative to asOf)
- * - Career qualificationBasis = PROXY_DIRECTION (canonical inputs insufficient)
+ * - Career qualificationBasis = UNAVAILABLE (no canonical mechanisms qualify)
  * - Empty expressions array (no expressions linked to MOON-MOON period)
- * - Career diagnostic for PROXY_DIRECTION usage
+ * - Career diagnostic for UNAVAILABLE qualification
  * - Wealth dimensions with literal effect/dataStatus/linkedLevels/diagnostics (mixed states)
  * - 12 evidence entries with literal classification, evidenceId, dimension, polarity, etc.
  * - Empty missingInputs array
@@ -34,6 +34,7 @@ import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/prod
  */
 export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
   synthesisVersion: 'PBA-06-v1',
+  qualificationStatus: 'UNAVAILABLE',
   period: {
     selectedPeriodId: 'pba-period:v1:v2%7CVIMSHOTTARI%7Cmd%7CMOON%7C1988-05-08T04%3A00%3A00.000Z%7C1996-08-16T18%3A33%3A37.957Z:v2%7CVIMSHOTTARI%7Cad%7CMOON%7C1988-05-08T04%3A00%3A00.000Z%7C1989-01-15T01%3A12%3A48.163Z%7Cv2%257CVIMSHOTTARI%257Cmd%257CMOON%257C1988-05-08T04%253A00%253A00.000Z%257C1996-08-16T18%253A33%253A37.957Z',
     mahadashaId: 'v2|VIMSHOTTARI|md|MOON|1988-05-08T04:00:00.000Z|1996-08-16T18:33:37.957Z',
@@ -58,12 +59,12 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     }
   },
   career: {
-    qualificationBasis: 'PROXY_DIRECTION',
+    qualificationBasis: 'UNAVAILABLE',
     expressions: [],
     diagnostics: [
       {
         code: 'CAREER_QUALIFICATION_UNAVAILABLE',
-        message: 'Career qualification used PROXY_DIRECTION interim contract; canonical C11 qualification unavailable'
+        message: 'Career qualification unavailable: canonical inputs provided but no qualifying mechanisms for this chart'
       }
     ]
   },
@@ -313,7 +314,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     career: {
       status: 'PRESENT',
       version: 'PBA-04-v1',
-      qualificationBasis: 'PROXY_DIRECTION'
+      qualificationBasis: 'UNAVAILABLE'
     },
     wealth: {
       status: 'PRESENT',

@@ -1193,12 +1193,14 @@ export function mapSelectedPeriodSynthesis(
   // Compute qualification status from career.qualificationBasis
   // Product contract (compatibility contract per Finding 5):
   // - CANONICAL: career used canonical qualification mechanisms
-  // - PROVISIONAL: career used proxy direction or canonical inputs were unavailable
-  // - UNAVAILABLE: canonical qualification could not be determined (should not occur on success path)
+  // - PROVISIONAL: career used proxy direction
+  // - UNAVAILABLE: canonical qualification could not be determined
   const qualificationStatus: import('./productAnalysisTypes').ProductQualificationStatus =
     value.career.qualificationBasis === 'CANONICAL_STATUS'
       ? 'CANONICAL'
-      : 'PROVISIONAL';
+      : value.career.qualificationBasis === 'UNAVAILABLE'
+        ? 'UNAVAILABLE'
+        : 'PROVISIONAL';
 
   return Object.freeze({
     synthesisVersion: value.synthesisVersion,
@@ -1279,4 +1281,3 @@ export function mapProductAnalysis(input: ProductAnalysisMapperInput): ProductAn
     dashPeriodOptions
   };
 }
-

@@ -51,7 +51,7 @@ const QUALIFICATION_BADGE_CLASSES: Record<ProductQualificationStatus, string> = 
 
 const QUALIFICATION_DESCRIPTIONS: Record<ProductQualificationStatus, string> = {
   CANONICAL: 'Fully qualified using canonical mechanisms',
-  PROVISIONAL: 'Using proxy direction or canonical inputs unavailable',
+  PROVISIONAL: 'Using proxy direction',
   UNAVAILABLE: 'Canonical qualification could not be determined'
 };
 
@@ -93,7 +93,7 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
         </div>
 
         <div className="space-y-3">
-          {/* Primary information: MD/AD planets, interval, temporal relation */}
+          {/* Primary information: MD/AD planets, interval, temporal relation, qualification */}
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <div className="text-sm text-slate-300 font-mono-code font-semibold">
@@ -103,11 +103,19 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
                 {formatDate(synthesis.period.interval.start)} – {formatDate(synthesis.period.interval.end)}
               </div>
             </div>
-            <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono-code ${TEMPORAL_BADGE_CLASSES[synthesis.period.temporalRelation]}`}
-            >
-              <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>{synthesis.period.temporalRelation}</span>
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-mono-code ${TEMPORAL_BADGE_CLASSES[synthesis.period.temporalRelation]}`}
+              >
+                <Clock className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{synthesis.period.temporalRelation}</span>
+              </div>
+              <div
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-xs font-mono-code ${QUALIFICATION_BADGE_CLASSES[synthesis.qualificationStatus]}`}
+                title={QUALIFICATION_DESCRIPTIONS[synthesis.qualificationStatus]}
+              >
+                <span>{synthesis.qualificationStatus}</span>
+              </div>
             </div>
           </div>
 
@@ -178,12 +186,6 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
               Career Synthesis
             </span>
             <div className="flex items-center gap-2 ml-auto">
-              <div
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono-code ${QUALIFICATION_BADGE_CLASSES[synthesis.qualificationStatus]}`}
-                title={QUALIFICATION_DESCRIPTIONS[synthesis.qualificationStatus]}
-              >
-                <span>{synthesis.qualificationStatus}</span>
-              </div>
               <span className="text-xs text-slate-500 font-mono-code">
                 Basis: {synthesis.career.qualificationBasis}
               </span>

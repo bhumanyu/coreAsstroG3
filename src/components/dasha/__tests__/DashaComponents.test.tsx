@@ -18,7 +18,30 @@ import type {
   DashaPeriodViewModel,
   DashaEvidenceViewModel
 } from '../../../product/analysis/dashaViewModel';
-import type { ProductDashaPeriodOptions, ProductSelectedPeriodSynthesis } from '../../../product/analysis/productAnalysisTypes';
+import type {
+  ProductDashaPeriodOptions,
+  ProductSelectedPeriodSynthesis,
+  ProductSynthesisWealthDimensionRow
+} from '../../../product/analysis/productAnalysisTypes';
+
+const emptyWealthDimension = (
+  dimension: ProductSynthesisWealthDimensionRow['dimension']
+): ProductSynthesisWealthDimensionRow => ({
+  dimension,
+  effect: 'INSUFFICIENT_DATA',
+  dataStatus: 'INSUFFICIENT_DATA',
+  linkedLevels: [],
+  diagnostics: [],
+  promiseEvidenceIds: [],
+  dashaRuleReferences: []
+});
+
+const emptyWealthDimensions: ProductSelectedPeriodSynthesis['wealth']['dimensions'] = {
+  ACCUMULATION: emptyWealthDimension('ACCUMULATION'),
+  GAINS: emptyWealthDimension('GAINS'),
+  FORTUNE: emptyWealthDimension('FORTUNE'),
+  SPECULATION: emptyWealthDimension('SPECULATION')
+};
 
 describe('Dasha Presentational Components (P-UI-07)', () => {
   it('1. DashaHero: renders with all three periods and asserts planet names', () => {
@@ -292,10 +315,16 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
   describe('SelectedPeriodReport', () => {
     it('renders primary period information (MD/AD planets, interval, temporal relation)', () => {
       const synthesis: ProductSelectedPeriodSynthesis = {
+        qualificationStatus: 'CANONICAL',
+        synthesisVersion: 'PBA-06-v1',
+        natalBaseline: {},
+        aiExplanationStatus: 'NOT_REQUESTED',
         period: {
           mahadashaPlanet: 'Jupiter',
           antardashaPlanet: 'Saturn',
           selectedPeriodId: 'md-jupiter-2020-2036_ad-saturn-2020-2022',
+          mahadashaId: 'md-jupiter',
+          antardashaId: 'ad-saturn',
           interval: {
             start: '2020-01-01T00:00:00.000Z',
             end: '2022-01-01T00:00:00.000Z'
@@ -309,7 +338,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           diagnostics: []
         },
         wealth: {
-          dimensions: {},
+          dimensions: emptyWealthDimensions,
           diagnostics: []
         },
         evidence: [],
@@ -327,21 +356,29 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
         }
       };
 
-      render(<SelectedPeriodReport synthesis={synthesis} />);
+      render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
 
       // Verify primary information is visible
       expect(screen.getByText(/Jupiter MD → Saturn AD/i)).toBeInTheDocument();
       expect(screen.getByText(/January 1, 2020 – January 1, 2022/i)).toBeInTheDocument();
       expect(screen.getByText(/CURRENT/i)).toBeInTheDocument();
+      expect(screen.getByText('CANONICAL')).toBeInTheDocument();
+      expect(screen.queryByText(/Career Synthesis/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Analysis as of:/i)).toBeInTheDocument();
     });
 
     it('hides raw selectedPeriodId by default (in technical details)', () => {
       const synthesis: ProductSelectedPeriodSynthesis = {
+        qualificationStatus: 'CANONICAL',
+        synthesisVersion: 'PBA-06-v1',
+        natalBaseline: {},
+        aiExplanationStatus: 'NOT_REQUESTED',
         period: {
           mahadashaPlanet: 'Jupiter',
           antardashaPlanet: 'Saturn',
           selectedPeriodId: 'md-jupiter-2020-2036_ad-saturn-2020-2022',
+          mahadashaId: 'md-jupiter',
+          antardashaId: 'ad-saturn',
           interval: {
             start: '2020-01-01T00:00:00.000Z',
             end: '2022-01-01T00:00:00.000Z'
@@ -355,7 +392,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           diagnostics: []
         },
         wealth: {
-          dimensions: {},
+          dimensions: emptyWealthDimensions,
           diagnostics: []
         },
         evidence: [],
@@ -385,10 +422,16 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
     it('shows raw selectedPeriodId when technical details expanded', () => {
       const synthesis: ProductSelectedPeriodSynthesis = {
+        qualificationStatus: 'CANONICAL',
+        synthesisVersion: 'PBA-06-v1',
+        natalBaseline: {},
+        aiExplanationStatus: 'NOT_REQUESTED',
         period: {
           mahadashaPlanet: 'Jupiter',
           antardashaPlanet: 'Saturn',
           selectedPeriodId: 'md-jupiter-2020-2036_ad-saturn-2020-2022',
+          mahadashaId: 'md-jupiter',
+          antardashaId: 'ad-saturn',
           interval: {
             start: '2020-01-01T00:00:00.000Z',
             end: '2022-01-01T00:00:00.000Z'
@@ -402,7 +445,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           diagnostics: []
         },
         wealth: {
-          dimensions: {},
+          dimensions: emptyWealthDimensions,
           diagnostics: []
         },
         evidence: [],
@@ -432,10 +475,16 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
     it('renders career limitation warning for PROXY_DIRECTION qualification basis', () => {
       const synthesis: ProductSelectedPeriodSynthesis = {
+        qualificationStatus: 'PROVISIONAL',
+        synthesisVersion: 'PBA-06-v1',
+        natalBaseline: {},
+        aiExplanationStatus: 'NOT_REQUESTED',
         period: {
           mahadashaPlanet: 'Jupiter',
           antardashaPlanet: 'Saturn',
           selectedPeriodId: 'md-jupiter-2020-2036_ad-saturn-2020-2022',
+          mahadashaId: 'md-jupiter',
+          antardashaId: 'ad-saturn',
           interval: {
             start: '2020-01-01T00:00:00.000Z',
             end: '2022-01-01T00:00:00.000Z'
@@ -449,7 +498,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           diagnostics: []
         },
         wealth: {
-          dimensions: {},
+          dimensions: emptyWealthDimensions,
           diagnostics: []
         },
         evidence: [],
@@ -476,10 +525,16 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
     it('renders career limitation warning for UNAVAILABLE qualification basis', () => {
       const synthesis: ProductSelectedPeriodSynthesis = {
+        qualificationStatus: 'UNAVAILABLE',
+        synthesisVersion: 'PBA-06-v1',
+        natalBaseline: {},
+        aiExplanationStatus: 'NOT_REQUESTED',
         period: {
           mahadashaPlanet: 'Jupiter',
           antardashaPlanet: 'Saturn',
           selectedPeriodId: 'md-jupiter-2020-2036_ad-saturn-2020-2022',
+          mahadashaId: 'md-jupiter',
+          antardashaId: 'ad-saturn',
           interval: {
             start: '2020-01-01T00:00:00.000Z',
             end: '2022-01-01T00:00:00.000Z'
@@ -493,7 +548,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           diagnostics: []
         },
         wealth: {
-          dimensions: {},
+          dimensions: emptyWealthDimensions,
           diagnostics: []
         },
         evidence: [],
@@ -520,10 +575,16 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
     it('does not render career limitation warning for CANONICAL_STATUS', () => {
       const synthesis: ProductSelectedPeriodSynthesis = {
+        qualificationStatus: 'CANONICAL',
+        synthesisVersion: 'PBA-06-v1',
+        natalBaseline: {},
+        aiExplanationStatus: 'NOT_REQUESTED',
         period: {
           mahadashaPlanet: 'Jupiter',
           antardashaPlanet: 'Saturn',
           selectedPeriodId: 'md-jupiter-2020-2036_ad-saturn-2020-2022',
+          mahadashaId: 'md-jupiter',
+          antardashaId: 'ad-saturn',
           interval: {
             start: '2020-01-01T00:00:00.000Z',
             end: '2022-01-01T00:00:00.000Z'
@@ -537,7 +598,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           diagnostics: []
         },
         wealth: {
-          dimensions: {},
+          dimensions: emptyWealthDimensions,
           diagnostics: []
         },
         evidence: [],

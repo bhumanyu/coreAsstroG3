@@ -21,6 +21,11 @@ import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { listSelectableMdAdPeriods } from '../../core/analysis/selectedMdAdPeriod';
+import { buildCanonicalCareerFoundation } from '../../domain/career/orchestration/canonicalCareerFoundationBuilder';
+import { defaultCareerExpressionResolver } from '../../domain/career/careerExpression/defaultCareerExpressionResolver';
+import { adaptMechanismExpressionToLegacy } from '../../domain/career/careerExpression/mechanismExpressionToLegacyAdapter';
+import type { CareerExpressionCanonicalResult } from '../../domain/career/careerExpression/careerExpressionTypes';
+import { mapSelectedPeriodSynthesis } from './productAnalysisMapper';
 
 describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
   const mockAnalysisContext: AnalysisContext = {
@@ -62,6 +67,67 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     canonicalExpression: {} as any,
     mechanismCandidates: [] as readonly any[],
     careerDashaEvidence: [] as readonly DomainEvidence[]
+  };
+
+  const canonicalCareerFoundation = buildCanonicalCareerFoundation({
+    horoscope: canonicalHoroscope,
+    enableDispositorContexts: false
+  });
+  const canonicalMechanismCandidates = Object.freeze(
+    canonicalCareerFoundation.resolvedMechanisms.map(mechanism => mechanism.candidate)
+  );
+  const canonicalExpression = defaultCareerExpressionResolver.resolve({
+    careerMechanismCandidates: canonicalMechanismCandidates,
+    careerMechanismRefinements: undefined,
+    career10HFoundation: undefined,
+    career10LFoundation: undefined
+  });
+  const canonicalExpressionResult: CareerExpressionCanonicalResult = {
+    ...canonicalExpression,
+    expressions: []
+  };
+  const completeCareerNatal = {
+    structural: {
+      direction: 'SUPPORT',
+      strength: 'STRONG',
+      primarySupport: 5,
+      primaryChallenge: 0,
+      supportingSupport: 3,
+      supportingChallenge: 1,
+      challengingSupport: 1,
+      challengingChallenge: 3,
+      mixedWeight: 0,
+      evidence: [],
+      primaryEvidenceIds: [],
+      supportingEvidenceIds: [],
+      challengingEvidenceIds: [],
+      conflicts: [],
+      statement: 'Strong structural support for career.'
+    },
+    relevance: [],
+    condition: [],
+    expressions: [],
+    lordRelationships: [],
+    direction: 'SUPPORT',
+    strength: 'STRONG',
+    evidence: [],
+    conflicts: [],
+    reasoningTrace: {
+      primaryPromise: [],
+      secondarySupport: [],
+      modifiers: [],
+      yogas: [],
+      varga: [],
+      dasha: [],
+      transit: []
+    }
+  } as any;
+  const canonicalCareerArtifacts = {
+    ...mockCareerArtifacts,
+    natal: completeCareerNatal,
+    expression: adaptMechanismExpressionToLegacy(canonicalExpressionResult, canonicalMechanismCandidates),
+    canonicalExpression: canonicalExpressionResult,
+    mechanismCandidates: canonicalMechanismCandidates
   };
 
   const mockCareerEvidence: readonly DomainEvidence[] = [];
@@ -137,6 +203,43 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       transit: []
     }
   } as any;
+
+  it('builds a successful synthesis with canonical career artifacts', () => {
+    expect(canonicalMechanismCandidates).toHaveLength(0);
+    const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
+    const validMd = selectablePeriods.mahadashas.find(md => md.valid);
+    expect(validMd).toBeDefined();
+    const validAd = selectablePeriods.antardashas.find(
+      ad => ad.valid && ad.mahadashaId === validMd!.id
+    );
+    expect(validAd).toBeDefined();
+
+    const result = buildProductSelectedPeriodSynthesis({
+      selection: {
+        mahadashaId: validMd!.id,
+        antardashaId: validAd!.id
+      },
+      context: mockAnalysisContext,
+      temporalState: mockTemporalState,
+      horoscope: mockHoroscope,
+      careerArtifacts: canonicalCareerArtifacts,
+      careerEvidence: mockCareerEvidence,
+      careerDashaEvidence: mockCareerDashaEvidence,
+      wealthEvidence: mockWealthEvidence,
+      careerBaseline: mockCareerBaseline,
+      wealthBaseline: mockWealthBaseline
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.synthesisVersion).toBe('PBA-06-v1');
+      expect(result.value.career).toBeDefined();
+      expect(result.value.wealth).toBeDefined();
+      expect(result.value.provenance.career.qualificationBasis).toBeDefined();
+      const productSynthesis = mapSelectedPeriodSynthesis(result.value);
+      expect(productSynthesis.qualificationStatus).toBe('UNAVAILABLE');
+    }
+  });
 
   it('returns INVALID_SELECTED_PERIOD_CONTEXT when selection is invalid', () => {
     const input: BuildProductSelectedPeriodSynthesisInput = {
@@ -480,7 +583,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       context: mockAnalysisContext,
       temporalState: mockTemporalState,
       horoscope: mockHoroscope,
-      careerArtifacts: mockCareerArtifacts,
+      careerArtifacts: canonicalCareerArtifacts,
       careerEvidence: mockCareerEvidence,
       careerDashaEvidence: mockCareerDashaEvidence,
       wealthEvidence: mockWealthEvidence,
@@ -490,19 +593,14 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
     const result = buildProductSelectedPeriodSynthesis(input);
 
-    // This will fail due to incomplete canonical inputs (missing natal structural data)
-    // The key is that it exercises the success path through CONTEXT stage
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      // Should fail at career activation due to incomplete canonical inputs
-      expect([
-        'INVALID_SELECTED_PERIOD_CONTEXT',
-        'INCOMPLETE_CANONICAL_INPUT'
-      ]).toContain(result.error);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.career.qualificationBasis).toBe('UNAVAILABLE');
+      expect(mapSelectedPeriodSynthesis(result.value).qualificationStatus).toBe('UNAVAILABLE');
     }
   });
 
-  it('unresolved evidence reference produces diagnostic, missingInput, and UNRESOLVED evidence entry', () => {
+  it('does not fabricate unresolved refs when canonical expressions are empty', () => {
     // This test documents the contract for unresolved evidence references.
     // The actual behavior is tested in the domain layer (selectedPeriodSynthesis.test.ts)
     // where the synthesis layer emits C9_EVIDENCE_REFERENCE_UNRESOLVED diagnostics
@@ -531,7 +629,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       context: mockAnalysisContext,
       temporalState: mockTemporalState,
       horoscope: mockHoroscope,
-      careerArtifacts: mockCareerArtifacts,
+      careerArtifacts: canonicalCareerArtifacts,
       careerEvidence: mockCareerEvidence,
       careerDashaEvidence: mockCareerDashaEvidence,
       wealthEvidence: mockWealthEvidence,
@@ -541,14 +639,9 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
     const result = buildProductSelectedPeriodSynthesis(input);
 
-    // This will fail due to incomplete canonical inputs (missing natal structural data)
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      // Should fail at career activation due to incomplete canonical inputs
-      expect([
-        'INVALID_SELECTED_PERIOD_CONTEXT',
-        'INCOMPLETE_CANONICAL_INPUT'
-      ]).toContain(result.error);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.career.qualificationBasis).toBe('UNAVAILABLE');
     }
   });
 
@@ -570,7 +663,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       context: mockAnalysisContext,
       temporalState: mockTemporalState,
       horoscope: mockHoroscope,
-      careerArtifacts: mockCareerArtifacts,
+      careerArtifacts: canonicalCareerArtifacts,
       careerEvidence: mockCareerEvidence,
       careerDashaEvidence: mockCareerDashaEvidence,
       wealthEvidence: mockWealthEvidence,
@@ -581,10 +674,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
     const result = buildProductSelectedPeriodSynthesis(input);
 
-    // With incomplete canonical inputs, we expect INCOMPLETE_CANONICAL_INPUT error
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.natalBaseline.career).toBeUndefined();
+      expect(result.value.natalBaseline.wealth).toBeUndefined();
     }
   });
 
@@ -616,11 +709,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
         context: mockAnalysisContext,
         temporalState: mockTemporalState,
         horoscope: mockHoroscope,
-        careerArtifacts: {
-          ...mockCareerArtifacts,
-          canonicalExpression: { expressions: [], diagnostics: [] } as any,
-          mechanismCandidates: []
-        },
+        careerArtifacts: canonicalCareerArtifacts,
         careerEvidence,
         careerDashaEvidence,
         wealthEvidence,
@@ -630,10 +719,16 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
       const result = buildProductSelectedPeriodSynthesis(input);
 
-      // With incomplete canonical inputs, we expect INCOMPLETE_CANONICAL_INPUT error
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const inputEvidenceIds = new Set([
+          ...careerEvidence.map(evidence => evidence.id),
+          ...careerDashaEvidence.map(evidence => evidence.id),
+          ...wealthEvidence.map(evidence => evidence.id)
+        ]);
+        expect(result.value.evidence.every(
+          reference => reference.evidenceId !== undefined && inputEvidenceIds.has(reference.evidenceId)
+        )).toBe(true);
       }
     });
 
@@ -670,12 +765,12 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // This simulates real interpreter output where activation rows reference evidence IDs
       // Create a mock activation with mdDashaEvidenceIds containing the missing 'md-evid1'
       const careerArtifactsWithUnresolvedRefs = {
-        ...mockCareerArtifacts,
+        ...canonicalCareerArtifacts,
         canonicalExpression: {
-          expressions: [],
-          diagnostics: []
-        } as any,
-        mechanismCandidates: [],
+          ...canonicalExpressionResult,
+          expressions: []
+        },
+        mechanismCandidates: canonicalMechanismCandidates,
         // Inject a mock activation structure that will trigger unresolved refs
         careerDashaEvidence: partialCareerDashaEvidence
       };
@@ -702,19 +797,11 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // The service should return a result (success or error)
       expect(result).toBeDefined();
 
-      // The product layer constructs the synthesis via buildSelectedPeriodSynthesis which requires
-      // a properly structured SelectedCareerDashaActivationSuccess. Since our mock doesn't include
-      // canonicalExpression and mechanismCandidates that would produce activation rows with mdDashaEvidenceIds,
-      // the synthesis will fail with INCOMPLETE_CANONICAL_INPUT.
-      // This test documents the contract: the service accepts the inputs and passes them to the synthesis layer.
-      // The actual UNRESOLVED behavior is verified in domain-level tests (selectedPeriodSynthesis.test.ts).
-      // To properly test UNRESOLVED refs at the product layer would require constructing a full
-      // SelectedCareerDashaActivationSuccess with expressionActivations containing mdDashaEvidenceIds
-      // that reference missing IDs - this is better tested at the domain layer where the activation
-      // construction is controlled.
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+      // No linked expressions are produced by this chart's empty canonical mechanisms, so
+      // unresolved activation references remain covered by domain-level synthesis tests.
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.career.expressions).toEqual([]);
       }
     });
 
@@ -746,14 +833,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
         context: mockAnalysisContext,
         temporalState: mockTemporalState,
         horoscope: mockHoroscope,
-        careerArtifacts: {
-          ...mockCareerArtifacts,
-          canonicalExpression: {
-            expressions: [],
-            diagnostics: []
-          } as any,
-          mechanismCandidates: []
-        },
+        careerArtifacts: canonicalCareerArtifacts,
         careerEvidence: baseCareerEvidence,
         careerDashaEvidence: baseCareerDashaEvidence,
         wealthEvidence,
@@ -779,13 +859,11 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
       const result2 = buildProductSelectedPeriodSynthesis(input2);
 
-      // Both calls should fail with the same error (INCOMPLETE_CANONICAL_INPUT)
-      // This validates the contract: career and wealth domains are independent
-      expect(result1.ok).toBe(false);
-      expect(result2.ok).toBe(false);
-      if (!result1.ok && !result2.ok) {
-        expect(result1.error).toBe(result2.error);
-        expect(result1.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+      // Career evidence changes must not change the synthesized Wealth domain.
+      expect(result1.ok).toBe(true);
+      expect(result2.ok).toBe(true);
+      if (result1.ok && result2.ok) {
+        expect(result1.value.wealth).toEqual(result2.value.wealth);
       }
     });
 
@@ -817,14 +895,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
         context: mockAnalysisContext,
         temporalState: mockTemporalState,
         horoscope: mockHoroscope,
-        careerArtifacts: {
-          ...mockCareerArtifacts,
-          canonicalExpression: {
-            expressions: [],
-            diagnostics: []
-          } as any,
-          mechanismCandidates: []
-        },
+        careerArtifacts: canonicalCareerArtifacts,
         careerEvidence,
         careerDashaEvidence,
         wealthEvidence: baseWealthEvidence,
@@ -846,13 +917,11 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
 
       const result2 = buildProductSelectedPeriodSynthesis(input2);
 
-      // Both calls should fail with the same error (INCOMPLETE_CANONICAL_INPUT)
-      // This validates the contract: career and wealth domains are independent
-      expect(result1.ok).toBe(false);
-      expect(result2.ok).toBe(false);
-      if (!result1.ok && !result2.ok) {
-        expect(result1.error).toBe(result2.error);
-        expect(result1.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+      // Wealth evidence changes must not change the synthesized Career domain.
+      expect(result1.ok).toBe(true);
+      expect(result2.ok).toBe(true);
+      if (result1.ok && result2.ok) {
+        expect(result1.value.career).toEqual(result2.value.career);
       }
     });
   });
