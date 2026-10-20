@@ -67,6 +67,18 @@ import type {
   ParticipantId
 } from '../careerParticipantRoles';
 
+import {
+  buildCanonicalCareerFoundation
+} from '../orchestration/canonicalCareerFoundationBuilder';
+
+import {
+  defaultCareerExpressionResolver
+} from '../careerExpression/defaultCareerExpressionResolver';
+
+import {
+  adaptMechanismExpressionToLegacy
+} from '../careerExpression/mechanismExpressionToLegacyAdapter';
+
 function makeMinimalNatalAnalysis(): CareerNatalAnalysis {
   return Object.freeze({
     structural: Object.freeze({
@@ -237,6 +249,79 @@ function makeSelectedPeriod(overrides: Partial<SelectedPeriodActivationContext> 
 }
 
 describe('PBA-04: Selected Career Dasha Activation', () => {
+  describe('Real-chart regression test (Part 2)', () => {
+    it('reproduces UNAVAILABLE qualification basis for CANONICAL_BIRTH_DETAILS with genuinely empty canonical candidates', async () => {
+      // Use the real CANONICAL_BIRTH_DETAILS horoscope (not mocked)
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+
+      // Build the canonical career foundation to get the actual mechanism candidates
+      // This will be empty for this chart (per Part 1 investigation findings)
+      const canonicalCareerFoundation = buildCanonicalCareerFoundation({
+        horoscope,
+        enableDispositorContexts: false // Production default
+      });
+
+      // Extract the actual mechanism candidates from the foundation
+      const careerMechanismCandidates = Object.freeze(
+        canonicalCareerFoundation.resolvedMechanisms.map(m => m.candidate)
+      );
+
+      // Build canonical expression from the empty mechanism candidates
+      const mechanismExpressionResult = defaultCareerExpressionResolver.resolve({
+        careerMechanismCandidates,
+        careerMechanismRefinements: undefined,
+        career10HFoundation: undefined,
+        career10LFoundation: undefined
+      });
+
+      const canonicalExpressionAnalysis = adaptMechanismExpressionToLegacy(
+        mechanismExpressionResult,
+        careerMechanismCandidates
+      );
+
+      // Build minimal natal analysis (structural only, as the full natal analysis is not the focus)
+      const natal = makeMinimalNatalAnalysis();
+
+      // Create a selected period context
+      // Use the existing makeSelectedPeriod helper which creates a valid context
+      // The specific MD/AD planets don't matter for testing the UNAVAILABLE path
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Call the selected-period builder with the real inputs
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression: canonicalExpressionAnalysis,
+        selectedPeriod,
+        canonicalExpression: mechanismExpressionResult,
+        mechanismCandidates: careerMechanismCandidates
+      });
+
+      // Debug: log the result if it fails
+      if (!result.ok) {
+        console.log('Result error:', result.error);
+      }
+
+      // Assert the result is successful
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Per Part 1 investigation findings, canonical candidates are genuinely empty
+        // for this chart due to rule coverage gap (pattern does not match dusthana transformation rules)
+        // Therefore, qualificationBasis should be UNAVAILABLE
+        expect(result.value.qualificationBasis).toBe('UNAVAILABLE');
+
+        // Verify that mechanism candidates are indeed empty (reproducing the investigation condition)
+        expect(careerMechanismCandidates.length).toBe(0);
+
+        // Verify expression activations are empty (no canonical candidates to link)
+        expect(result.value.expressionActivations).toEqual([]);
+
+        // This test confirms the UNAVAILABLE path is correctly triggered for genuinely empty
+        // canonical candidates, not as a silent fallback from a successful canonical result
+      }
+    });
+  });
+
   describe('P1: Expression row only when planet-linked', () => {
     it('emits expression row only when expression evidence planets include selected MD or AD planet', () => {
       const horoscope = makeHoroscope();
