@@ -170,7 +170,7 @@ export function reasonWithLocalRules(
   // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
   // This includes evidence from selectedPeriod.availableEvidence plus context.evidence
   // Used for both validation and ranking to ensure consistency
-  const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
+  const selectedPeriodEvidenceResult = task === 'SELECTED_PERIOD_ANALYSIS'
     ? buildSelectedPeriodEvidenceIndex(context.evidence, context.selectedPeriod)
     : null;
 
@@ -181,6 +181,14 @@ export function reasonWithLocalRules(
   const unresolvedEvidenceIdsSet = new Set<string>();
   const warnings: string[] = [];
   let ruleFailureCount = 0;
+
+  // Add ambiguous IDs to unresolved evidence upfront
+  if (selectedPeriodEvidenceResult) {
+    for (const ambiguousId of selectedPeriodEvidenceResult.ambiguousIds) {
+      unresolvedEvidenceIdsSet.add(ambiguousId);
+      warnings.push(`Ambiguous evidence ID (conflict between namespaces): ${ambiguousId}`);
+    }
+  }
 
   // Check for missing task-level context and record unresolved questions
   switch (task) {
@@ -255,10 +263,15 @@ export function reasonWithLocalRules(
 
         if (evaluation.supportingEvidenceIds) {
           for (const id of evaluation.supportingEvidenceIds) {
+            // Skip if already marked as ambiguous (unresolved)
+            if (selectedPeriodEvidenceResult && selectedPeriodEvidenceResult.ambiguousIds.includes(id)) {
+              continue;
+            }
+
             // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceIndex
             // For other tasks, validate against context.evidence
-            const isValid = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
-              ? selectedPeriodEvidenceIndex.has(id)
+            const isValid = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceResult
+              ? selectedPeriodEvidenceResult.index.has(id)
               : validEvidenceMap.has(id);
 
             if (isValid) {
@@ -274,10 +287,15 @@ export function reasonWithLocalRules(
 
         if (evaluation.challengingEvidenceIds) {
           for (const id of evaluation.challengingEvidenceIds) {
+            // Skip if already marked as ambiguous (unresolved)
+            if (selectedPeriodEvidenceResult && selectedPeriodEvidenceResult.ambiguousIds.includes(id)) {
+              continue;
+            }
+
             // For SELECTED_PERIOD_ANALYSIS, validate against selectedPeriodEvidenceIndex
             // For other tasks, validate against context.evidence
-            const isValid = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
-              ? selectedPeriodEvidenceIndex.has(id)
+            const isValid = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceResult
+              ? selectedPeriodEvidenceResult.index.has(id)
               : validEvidenceMap.has(id);
 
             if (isValid) {
@@ -320,10 +338,10 @@ export function reasonWithLocalRules(
 
   const conclusion = buildConclusion(task, context);
 
-  // For SELECTED_PERIOD_ANALYSIS, use selectedPeriodEvidenceIndex for ranking
+  // For SELECTED_PERIOD_ANALYSIS, use selectedPeriodEvidenceResult.index for ranking
   // For other tasks, use validEvidenceMap
-  const evidenceMapForRanking = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
-    ? selectedPeriodEvidenceIndex
+  const evidenceMapForRanking = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceResult
+    ? selectedPeriodEvidenceResult.index
     : validEvidenceMap;
 
   // Rank supporting and challenging evidence deterministically by priority score

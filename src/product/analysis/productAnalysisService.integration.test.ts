@@ -501,7 +501,6 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const selectablePeriods = listSelectableMdAdPeriods(report!);
 
       // Find a period that is FUTURE at the fixed asOf
-      // If none exists, pick an asOf inside an earlier MD window so a later period is FUTURE
       let futureSelection = selectablePeriods.antardashas.find((ad: any) => {
         if (!ad.valid) return false;
         const adStart = new Date(ad.start).getTime();
@@ -509,75 +508,50 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         return asOfTime < adStart; // asOf is before the AD starts
       });
 
-      // If no FUTURE period found at 2024-01-01, try an earlier asOf
+      let analysisAsOf = fixedAsOf;
+
+      // If no FUTURE period found at 2024-01-01, construct one deterministically
+      // by taking the earliest valid MD/AD and pinning asOf before its start
       if (!futureSelection) {
-        const earlierAsOf = new Date('2000-01-01T00:00:00.000Z');
-        await service.analyze(CANONICAL_BIRTH_DETAILS, {
-          includeAiExplanation: false,
-          asOf: earlierAsOf
-        });
+        const allValidAds = selectablePeriods.antardashas.filter((ad: any) => ad.valid);
+        expect(allValidAds.length).toBeGreaterThan(0);
 
-        const earlierReport = service.lastPipelineState?.temporalState?.dashaInterpretation;
-        expect(earlierReport).toBeDefined();
+        // Sort by start time to get the earliest
+        allValidAds.sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
+        const earliestAd = allValidAds[0];
+        const startMs = new Date(earliestAd.start).getTime();
 
-        const earlierSelectablePeriods = listSelectableMdAdPeriods(earlierReport!);
-        futureSelection = earlierSelectablePeriods.antardashas.find((ad: any) => {
-          if (!ad.valid) return false;
-          const adStart = new Date(ad.start).getTime();
-          const asOfTime = earlierAsOf.getTime();
-          return asOfTime < adStart;
-        });
+        // Pin asOf to one day before the earliest interval's start
+        analysisAsOf = new Date(startMs - 86400000);
+        futureSelection = earliestAd;
+      }
 
-        // Use the earlier asOf for the selection
-        if (futureSelection) {
-          const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-            includeAiExplanation: false,
-            asOf: earlierAsOf,
-            selectedPeriod: {
-              mahadashaId: futureSelection.mahadashaId,
-              antardashaId: futureSelection.id
-            }
-          });
+      // Explicit fixture limitation assertion (separate from the FUTURE assertion)
+      // This documents whether we found a natural FUTURE period or constructed one
+      const hadNaturalFuture = fixedAsOf.getTime() < new Date(futureSelection.start).getTime();
+      if (!hadNaturalFuture) {
+        // Document that we constructed a FUTURE period due to fixture limitation
+        expect(hadNaturalFuture).toBe(false);
+      }
 
-          // Assert status is OK first (unconditional - selection must succeed)
-          expect(analysis.selectedPeriod).toBeDefined();
-          expect(analysis.selectedPeriod?.status).toBe('OK');
-
-          // Remove conditional wrapper - the unconditional assert above guarantees OK status
-          const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
-          expect(synthesis.period.temporalRelation).toBe('FUTURE');
-          return;
+      // Run the analysis with the constructed future period
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: analysisAsOf,
+        selectedPeriod: {
+          mahadashaId: futureSelection.mahadashaId,
+          antardashaId: futureSelection.id
         }
-      }
+      });
 
-      // If we found a FUTURE period at the original asOf
-      if (futureSelection) {
-        const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-          includeAiExplanation: false,
-          asOf: fixedAsOf,
-          selectedPeriod: {
-            mahadashaId: futureSelection.mahadashaId,
-            antardashaId: futureSelection.id
-          }
-        });
+      // Assert status is OK first (unconditional - selection must succeed)
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('OK');
 
-        // Assert status is OK first (unconditional - selection must succeed)
-        expect(analysis.selectedPeriod).toBeDefined();
-        expect(analysis.selectedPeriod?.status).toBe('OK');
-
-        // Remove conditional wrapper - the unconditional assert above guarantees OK status
-        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe('FUTURE');
-      } else {
-        // If no FUTURE period exists in the fixture at either 2024-01-01 or 2000-01-01,
-        // document this explicitly with a meaningful assertion (not a silent pass).
-        // The CANONICAL_BIRTH_DETAILS fixture (1995-03-22) may not have any FUTURE periods
-        // relative to these asOf dates given the Vimshottari system timeline.
-        // This is a fixture limitation, not a code defect.
-        // The temporal relation logic is tested directly in selectedPeriodActivationContext.test.ts
-        // with explicit interval strings, so this integration test is a best-effort validation.
-        expect(futureSelection).toBeUndefined(); // Explicit assertion: no FUTURE period found in fixture
-      }
+      // Remove conditional wrapper - the unconditional assert above guarantees OK status
+      const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+      // Unconditional assertion: temporalRelation must be FUTURE
+      expect(synthesis.period.temporalRelation).toBe('FUTURE');
     });
 
     it('boundary tests: iterate PBA10_TEMPORAL_GOLDENS cases', async () => {
@@ -1299,7 +1273,18 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         status: 'OK',
         analysis: service.lastPipelineState?.analysis,
         temporalState: service.lastPipelineState?.temporalState,
-        careerArtifacts: service.lastPipelineState?.careerArtifacts,
+        careerArtifacts: service.lastPipelineState?.careerArtifacts
+          ? {
+            ...service.lastPipelineState.careerArtifacts,
+            careerDashaEvidence: [
+              { id: 'unit-test-career-dasha-ev-1', source: 'DASHA', effect: 'SUPPORT', statement: 'Unit test career dasha evidence 1' } as any
+            ]
+          }
+          : {
+            careerDashaEvidence: [
+              { id: 'unit-test-career-dasha-ev-1', source: 'DASHA', effect: 'SUPPORT', statement: 'Unit test career dasha evidence 1' } as any
+            ]
+          },
         career: {
           ...service.lastPipelineState?.career,
           evidence: [
@@ -1337,7 +1322,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
         // Assert deep equality with known fixture IDs
         expect(careerIds).toEqual(['unit-test-career-ev-1', 'unit-test-career-ev-2']);
-        expect(careerDashaIds).toEqual([]); // Empty in this fixture
+        expect(careerDashaIds).toEqual(['unit-test-career-dasha-ev-1']);
         expect(wealthIds).toEqual(['unit-test-wealth-ev-1']);
 
         // Return a mock successful response

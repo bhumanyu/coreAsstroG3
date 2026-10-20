@@ -214,7 +214,7 @@ describe('selectedPeriodActivationContext', () => {
       }
     });
 
-    it('literal-interval: asOf < start → PAST', () => {
+    it('literal-interval: asOf < start → FUTURE', () => {
       const report = makeReport();
       const selection = selectionFor(report);
 
@@ -226,7 +226,7 @@ describe('selectedPeriodActivationContext', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.value.temporalRelation).toBe('PAST');
+        expect(result.value.temporalRelation).toBe('FUTURE');
       }
     });
 
@@ -278,7 +278,9 @@ describe('selectedPeriodActivationContext', () => {
       }
     });
 
-    it('literal-interval: invalid date → UNKNOWN (error: INVALID_ANALYSIS_AS_OF)', () => {
+    it('literal-interval: invalid analysisAsOf → INVALID_ANALYSIS_AS_OF error', () => {
+      // An unparseable analysisAsOf date results in a failed result with INVALID_ANALYSIS_AS_OF error.
+      // This is a validation failure, not a temporalRelation: 'UNKNOWN' case.
       const report = makeReport();
       const selection = selectionFor(report);
 

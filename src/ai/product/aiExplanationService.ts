@@ -296,18 +296,30 @@ function resolveEvidence(
   // Build selected-period evidence index for SELECTED_PERIOD_ANALYSIS task
   // This index maps evidence IDs to actual AiEvidence objects from both
   // selectedPeriod collections and context.evidence
-  const selectedPeriodEvidenceIndex = task === 'SELECTED_PERIOD_ANALYSIS'
+  const selectedPeriodEvidenceResult = task === 'SELECTED_PERIOD_ANALYSIS'
     ? buildSelectedPeriodEvidenceIndex(evidence, selectedPeriod)
     : null;
 
   const resolved: AiExplanationEvidence[] = [];
   const unresolvedIds: string[] = [];
 
+  // Add ambiguous IDs to unresolved list upfront
+  if (selectedPeriodEvidenceResult) {
+    for (const ambiguousId of selectedPeriodEvidenceResult.ambiguousIds) {
+      unresolvedIds.push(ambiguousId);
+    }
+  }
+
   for (const id of ids) {
+    // Skip if already marked as ambiguous (unresolved)
+    if (selectedPeriodEvidenceResult && selectedPeriodEvidenceResult.ambiguousIds.includes(id)) {
+      continue;
+    }
+
     // For SELECTED_PERIOD_ANALYSIS, look up in selectedPeriodEvidenceIndex first
     // For other tasks, validate against context.evidence
-    const item = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceIndex
-      ? selectedPeriodEvidenceIndex.get(id)
+    const item = task === 'SELECTED_PERIOD_ANALYSIS' && selectedPeriodEvidenceResult
+      ? selectedPeriodEvidenceResult.index.get(id)
       : evidenceById.get(id);
 
     if (!item) {

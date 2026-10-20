@@ -1,6 +1,49 @@
 import type { AiContext, AiEvidence, AiSelectedPeriodContext } from '../types/aiContextTypes';
 
 /**
+ * Comparator for detecting conflicts between evidence records.
+ * Adapted from selectedPeriodSynthesis.areEvidenceRecordsIdentical for AiEvidence.
+ * Fields compared: source, effect, strength, statement, dimension, ruleId, identityKey.
+ * Note: AiEvidence uses arrays for planets/houses and lacks some DomainEvidence fields.
+ */
+function areAiEvidenceRecordsIdentical(a: AiEvidence, b: AiEvidence): boolean {
+  // Core identity fields
+  if (a.id !== b.id) return false;
+  if (a.source !== b.source) return false;
+  if (a.effect !== b.effect) return false;
+  if (a.strength !== b.strength) return false;
+  if (a.statement !== b.statement) return false;
+  if (a.dimension !== b.dimension) return false;
+  if (a.ruleId !== b.ruleId) return false;
+  if (a.identityKey !== b.identityKey) return false;
+
+  // Array comparisons (planets, houses)
+  if (a.planets !== b.planets) {
+    if (a.planets && b.planets) {
+      if (a.planets.length !== b.planets.length) return false;
+      for (let i = 0; i < a.planets.length; i++) {
+        if (a.planets[i] !== b.planets[i]) return false;
+      }
+    } else if (a.planets !== b.planets) {
+      return false;
+    }
+  }
+
+  if (a.houses !== b.houses) {
+    if (a.houses && b.houses) {
+      if (a.houses.length !== b.houses.length) return false;
+      for (let i = 0; i < a.houses.length; i++) {
+        if (a.houses[i] !== b.houses[i]) return false;
+      }
+    } else if (a.houses !== b.houses) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Builds an index mapping selected-period evidence IDs to their corresponding
  * projected AiEvidence-shaped records.
  *
@@ -20,24 +63,31 @@ import type { AiContext, AiEvidence, AiSelectedPeriodContext } from '../types/ai
  * selectedPeriod.availableEvidence, then fall back to context.evidence.
  * IDs with no object in either namespace are unresolved (never synthesize placeholders).
  *
+ * Conflict detection:
+ * - When the same ID exists in both namespaces with materially different fields,
+ *   it is recorded as ambiguous and resolved like an unresolved ID.
+ * - Identical records across namespaces are the documented legitimate overlap;
+ *   availableEvidence wins silently (takes precedence).
+ *
  * @param evidence - The unified evidence from context.evidence for fallback lookup
  * @param selectedPeriod - The selected-period context containing availableEvidence
- * @returns A Map from evidence ID to AiEvidence object for all selected-period evidence
+ * @returns An object containing the evidence index and a list of ambiguous IDs
  */
 export function buildSelectedPeriodEvidenceIndex(
   evidence: readonly AiEvidence[],
   selectedPeriod: AiSelectedPeriodContext | undefined
-): Map<string, AiEvidence> {
+): { index: Map<string, AiEvidence>; ambiguousIds: readonly string[] } {
   const index = new Map<string, AiEvidence>();
+  const ambiguousIds = new Set<string>();
 
   // Pre-populate with context.evidence for fallback lookup
   for (const ev of evidence) {
     index.set(ev.id, ev);
   }
 
-  // If no selectedPeriod, return the base context evidence map
+  // If no selectedPeriod, return the base context evidence map with no ambiguous IDs
   if (!selectedPeriod) {
-    return index;
+    return { index, ambiguousIds: Array.from(ambiguousIds) };
   }
 
   const sp = selectedPeriod;
@@ -45,50 +95,23 @@ export function buildSelectedPeriodEvidenceIndex(
   // Pre-populate with selectedPeriod.availableEvidence (canonical bridge)
   // This takes precedence over context.evidence for selected-period-only IDs
   for (const ev of sp.availableEvidence) {
-    index.set(ev.id, ev);
-  }
-
-  // Collect all referenced IDs from selected-period structures
-  const referencedIds = new Set<string>();
-
-  // Add evidence IDs from selectedPeriod.evidence references
-  for (const ref of sp.evidence) {
-    if (ref.evidenceId) {
-      referencedIds.add(ref.evidenceId);
+    const existing = index.get(ev.id);
+    if (existing) {
+      // Same ID exists in both namespaces - check for conflicts
+      if (!areAiEvidenceRecordsIdentical(existing, ev)) {
+        // Materially different fields - record as ambiguous
+        ambiguousIds.add(ev.id);
+        // Do NOT overwrite - keep the context.evidence version for now,
+        // but consumers will treat this as unresolved anyway
+      } else {
+        // Identical records - availableEvidence wins silently (overwrite)
+        index.set(ev.id, ev);
+      }
+    } else {
+      // ID only in availableEvidence - add it
+      index.set(ev.id, ev);
     }
   }
 
-  // Add evidence IDs from career expressions
-  for (const expr of sp.career.expressions) {
-    const idsToAdd = [
-      ...(expr.expressionEvidenceIds ?? []),
-      ...(expr.qualifiedEvidenceIds ?? []),
-      ...(expr.unqualifiedEvidenceIds ?? []),
-      ...(expr.mdDashaEvidenceIds ?? []),
-      ...(expr.adDashaEvidenceIds ?? [])
-    ];
-
-    for (const id of idsToAdd) {
-      referencedIds.add(id);
-    }
-  }
-
-  // Add evidence IDs from wealth dimensions
-  for (const dim of Object.values(sp.wealth.dimensions)) {
-    for (const id of dim.promiseEvidenceIds ?? []) {
-      referencedIds.add(id);
-    }
-  }
-
-  // Track unresolved IDs (referenced but not in either namespace)
-  // These will be reported by consumers as unresolved
-  for (const id of referencedIds) {
-    if (!index.has(id)) {
-      // ID is referenced but has no object in either namespace
-      // This is expected for unresolved references - consumers handle this
-      // We do NOT synthesize placeholder AiEvidence objects
-    }
-  }
-
-  return index;
+  return { index, ambiguousIds: Array.from(ambiguousIds) };
 }
