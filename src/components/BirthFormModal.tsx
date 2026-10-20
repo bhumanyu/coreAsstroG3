@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, MapPin, Globe, Compass, Sparkles, Clock } from 'lucide-react';
 import { BirthDetails, AyanamsaType } from '../types';
 import { PlaceAutocomplete } from './PlaceAutocomplete';
+import { DateTimeSelector } from './DateTimeSelector';
 import { PlaceResult } from '../services/geocoding';
 import { validateBirthDetails, type BirthValidationError } from '../core/validation/birthDetailsValidation';
 
@@ -368,19 +369,13 @@ export const BirthFormModal: React.FC<BirthFormModalProps> = ({
                 </div>
 
                 {/* Date & Time */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1 flex items-center space-x-1">
                       <Clock className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-400 light:text-indigo-600" aria-hidden="true" />
                       <span>Date & Time (local)</span>
                     </label>
-                    <input
-                      type="datetime-local"
-                      value={dateTimeStr}
-                      onChange={(e) => setDateTimeStr(e.target.value)}
-                      required
-                      className="w-full bg-slate-950 dark:bg-slate-950 light:bg-slate-50 border border-slate-700 dark:border-slate-700 light:border-slate-300 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-sm text-slate-100 dark:text-slate-100 light:text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono-code"
-                    />
+                    <DateTimeSelector dateTimeStr={dateTimeStr} onChange={setDateTimeStr} />
                     {validationErrors.some((e) => e.field === 'dateTimeStr') && (
                       <p className="mt-1 text-xs text-rose-400">
                         {validationErrors.find((e) => e.field === 'dateTimeStr')?.message}
