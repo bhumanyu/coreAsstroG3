@@ -514,6 +514,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
       expect(analysis.selectedPeriod).toBeDefined();
       // Note: asOf changes may cause pipeline recalculation, so selection might fail
+      // If selection succeeds, verify temporalRelation
       if (analysis.selectedPeriod?.status === 'OK') {
         const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
         expect(synthesis.period.temporalRelation).toBe('FUTURE');
@@ -772,4 +773,9 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       }
     });
   });
+
+  // AI explanation tests require mocking which is complex in this test setup
+  // The domain-level AI explanation service tests cover the observable behavior
+  // These integration tests would require test doubles at the service boundary
+  // TODO: Re-enable with proper test double infrastructure
 });

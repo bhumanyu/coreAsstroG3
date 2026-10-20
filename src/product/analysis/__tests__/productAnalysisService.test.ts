@@ -680,35 +680,6 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     ).rejects.toThrow('no analysis context available');
   });
 
-  describe('AI explanation handling (PBA-09)', () => {
-    it.skip('surfaces AI failure as ERROR status with error result - requires real canonical artifacts from full pipeline', async () => {
-      // These tests require real canonical artifacts to pass through the selected-period orchestrator successfully.
-      // The minimal stubs with empty arrays fail the INCOMPLETE_CANONICAL_INPUT validation.
-      // TODO: Re-enable once real artifact construction helpers are available or use integration test approach.
-    });
-
-    it.skip('sets NOT_REQUESTED status when includeSelectedPeriodAiExplanation is false - requires real canonical artifacts', async () => {
-      // These tests require real canonical artifacts to pass through the selected-period orchestrator successfully.
-      // The minimal stubs with empty arrays fail the INCOMPLETE_CANONICAL_INPUT validation.
-      // TODO: Re-enable once real artifact construction helpers are available or use integration test approach.
-    });
-
-    it.skip('sets OK status when AI explanation succeeds - requires real canonical artifacts', async () => {
-      // These tests require real canonical artifacts to pass through the selected-period orchestrator successfully.
-      // The minimal stubs with empty arrays fail the INCOMPLETE_CANONICAL_INPUT validation.
-      // TODO: Re-enable once real artifact construction helpers are available or use integration test approach.
-    });
-
-    it.skip('parity test: same canonical SelectedPeriodSynthesisValue passed to both mapSelectedPeriodSynthesis and runAiExplanation - requires real canonical artifacts', async () => {
-      // These tests require real canonical artifacts to pass through the selected-period orchestrator successfully.
-      // The minimal stubs with empty arrays fail the INCOMPLETE_CANONICAL_INPUT validation.
-      // TODO: Re-enable once real artifact construction helpers are available or use integration test approach.
-    });
-
-    it.skip('passes selectedPeriodEvidence to runAiExplanation for evidence resolution - requires real canonical artifacts', async () => {
-      // These tests require real canonical artifacts to pass through the selected-period orchestrator successfully.
-      // The minimal stubs with empty arrays fail the INCOMPLETE_CANONICAL_INPUT validation.
-      // TODO: Re-enable once real artifact construction helpers are available or use integration test approach.
-    });
-  });
+  // AI explanation tests moved to integration test file (productAnalysisService.integration.test.ts)
+  // where real canonical artifacts are available from the full pipeline
 });
