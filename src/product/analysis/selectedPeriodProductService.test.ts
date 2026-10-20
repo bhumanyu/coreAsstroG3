@@ -552,10 +552,12 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       }
     });
 
-    it('incomplete-evidence: missing C9 evidence IDs → UNRESOLVED refs + diagnostics preserved', () => {
-      // This test validates the contract for unresolved evidence references at the product orchestration layer.
-      // See domain-level contract test: src/domain/synthesis/selectedPeriodSynthesis.test.ts
-      // Test: "emits C9_EVIDENCE_REFERENCE_UNRESOLVED for missing MD ID in careerDashaEvidence"
+    it('documents orchestration limitation: unresolved-ref coverage lives at domain layer', () => {
+      // This test documents a limitation of the product orchestration layer: it cannot construct
+      // a complete SelectedCareerDashaActivationSuccess fixture with expressionActivations
+      // containing mdDashaEvidenceIds that reference missing IDs. The actual UNRESOLVED ref
+      // behavior (C9_EVIDENCE_REFERENCE_UNRESOLVED diagnostics and UNRESOLVED evidence entries)
+      // is tested at the domain layer in src/domain/synthesis/selectedPeriodSynthesis.test.ts.
       //
       // The contract is:
       // 1. The service accepts valid selection and evidence inputs
@@ -563,6 +565,9 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // 3. The service returns the synthesis result including diagnostics and evidence
       // 4. When mdDashaEvidenceIds/adDashaEvidenceIds reference IDs not present in careerDashaEvidence,
       //    the synthesis emits C9_EVIDENCE_REFERENCE_UNRESOLVED diagnostics and UNRESOLVED evidence entries
+      //
+      // This test should not be counted toward unresolved-reference coverage since it does not
+      // actually verify UNRESOLVED behavior - it only documents the contract and the limitation.
 
       const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
       const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);

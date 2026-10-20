@@ -443,15 +443,14 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       expect(analysis.selectedPeriod).toBeDefined();
       expect(analysis.selectedPeriod?.status).toBe('OK');
 
-      if (analysis.selectedPeriod?.status === 'OK') {
-        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe('PAST');
-        expect(synthesis.period.mahadashaId).toBe(moonMd!.id);
-        expect(synthesis.period.antardashaId).toBe(moonAd!.id);
-        expect(synthesis.period.interval.start).toBe(moonAd!.start);
-        expect(synthesis.period.interval.end).toBe(moonAd!.end);
-        expect(synthesis.period.analysisAsOf).toBe('2024-01-01T00:00:00.000Z');
-      }
+      // Remove conditional wrapper - the unconditional assert above guarantees OK status
+      const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesis.period.temporalRelation).toBe('PAST');
+      expect(synthesis.period.mahadashaId).toBe(moonMd!.id);
+      expect(synthesis.period.antardashaId).toBe(moonAd!.id);
+      expect(synthesis.period.interval.start).toBe(moonAd!.start);
+      expect(synthesis.period.interval.end).toBe(moonAd!.end);
+      expect(synthesis.period.analysisAsOf).toBe('2024-01-01T00:00:00.000Z');
     });
 
     it('CURRENT temporal relation: asOf inside [start, end)', async () => {
@@ -483,10 +482,9 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       expect(analysis.selectedPeriod).toBeDefined();
       expect(analysis.selectedPeriod?.status).toBe('OK');
 
-      if (analysis.selectedPeriod?.status === 'OK') {
-        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe('CURRENT');
-      }
+      // Remove conditional wrapper - the unconditional assert above guarantees OK status
+      const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesis.period.temporalRelation).toBe('CURRENT');
     });
 
     it('FUTURE temporal relation: asOf before start', async () => {
@@ -541,14 +539,13 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
             }
           });
 
-          // Assert status is OK first
+          // Assert status is OK first (unconditional - selection must succeed)
           expect(analysis.selectedPeriod).toBeDefined();
           expect(analysis.selectedPeriod?.status).toBe('OK');
 
-          if (analysis.selectedPeriod?.status === 'OK') {
-            const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
-            expect(synthesis.period.temporalRelation).toBe('FUTURE');
-          }
+          // Remove conditional wrapper - the unconditional assert above guarantees OK status
+          const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+          expect(synthesis.period.temporalRelation).toBe('FUTURE');
           return;
         }
       }
@@ -564,22 +561,22 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
           }
         });
 
-        // Assert status is OK first
+        // Assert status is OK first (unconditional - selection must succeed)
         expect(analysis.selectedPeriod).toBeDefined();
         expect(analysis.selectedPeriod?.status).toBe('OK');
 
-        if (analysis.selectedPeriod?.status === 'OK') {
-          const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
-          expect(synthesis.period.temporalRelation).toBe('FUTURE');
-        }
+        // Remove conditional wrapper - the unconditional assert above guarantees OK status
+        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.period.temporalRelation).toBe('FUTURE');
       } else {
         // If no FUTURE period exists in the fixture at either 2024-01-01 or 2000-01-01,
-        // document this explicitly. The CANONICAL_BIRTH_DETAILS fixture (1995-03-22)
-        // may not have any FUTURE periods relative to these asOf dates given the Vimshottari
-        // system timeline. This is a fixture limitation, not a code defect.
+        // document this explicitly with a meaningful assertion (not a silent pass).
+        // The CANONICAL_BIRTH_DETAILS fixture (1995-03-22) may not have any FUTURE periods
+        // relative to these asOf dates given the Vimshottari system timeline.
+        // This is a fixture limitation, not a code defect.
         // The temporal relation logic is tested directly in selectedPeriodActivationContext.test.ts
         // with explicit interval strings, so this integration test is a best-effort validation.
-        expect(true).toBe(true); // Placeholder: document in comment above
+        expect(futureSelection).toBeUndefined(); // Explicit assertion: no FUTURE period found in fixture
       }
     });
 
@@ -609,10 +606,9 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       });
       expect(analysisAtStart.selectedPeriod).toBeDefined();
       expect(analysisAtStart.selectedPeriod?.status).toBe('OK');
-      if (analysisAtStart.selectedPeriod?.status === 'OK') {
-        const synthesisAtStart = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesisAtStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
-      }
+      // Remove conditional wrapper - the unconditional assert above guarantees OK status
+      const synthesisAtStart = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesisAtStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
 
       // Test end-1ms → CURRENT (unconditional assertion - asOf change should not invalidate selection for period inside interval)
       const beforeEnd = new Date(endMs - 1).toISOString();
@@ -626,10 +622,9 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       });
       expect(analysisBeforeEnd.selectedPeriod).toBeDefined();
       expect(analysisBeforeEnd.selectedPeriod?.status).toBe('OK');
-      if (analysisBeforeEnd.selectedPeriod?.status === 'OK') {
-        const synthesisBeforeEnd = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesisBeforeEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
-      }
+      // Remove conditional wrapper - the unconditional assert above guarantees OK status
+      const synthesisBeforeEnd = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesisBeforeEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
 
       // Test end → PAST (unconditional assertion - asOf change should not invalidate selection for exact end)
       const atEnd = new Date(endMs).toISOString();
@@ -643,12 +638,11 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       });
       expect(analysisAtEnd.selectedPeriod).toBeDefined();
       expect(analysisAtEnd.selectedPeriod?.status).toBe('OK');
-      if (analysisAtEnd.selectedPeriod?.status === 'OK') {
-        const synthesisAtEnd = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesisAtEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
-      }
+      // Remove conditional wrapper - the unconditional assert above guarantees OK status
+      const synthesisAtEnd = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesisAtEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
 
-      // Test start-1ms → FUTURE (conditional - may fail if asOf changes cause pipeline recalculation)
+      // Test start-1ms → FUTURE (conditional - asOf change may cause pipeline recalculation and invalidate selection)
       const beforeStart = new Date(startMs - 1).toISOString();
       const analysisBeforeStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false,
@@ -880,10 +874,10 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         expect(analysis.selectedPeriod).toBeDefined();
         expect(analysis.selectedPeriod?.status).toBe('OK');
 
-        if (analysis.selectedPeriod?.status === 'OK') {
-          // Assert: aiExplanationStatus is ERROR
-          expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('ERROR');
-        }
+        // Remove conditional wrapper - the unconditional assert above guarantees OK status
+        // Assert: aiExplanationStatus is ERROR
+        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.aiExplanationStatus).toBe('ERROR');
       } finally {
         aiExplanationSpy.mockRestore();
       }
@@ -928,9 +922,9 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         expect(analysis.selectedPeriod).toBeDefined();
         expect(analysis.selectedPeriod?.status).toBe('OK');
 
-        if (analysis.selectedPeriod?.status === 'OK') {
-          expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
-        }
+        // Remove conditional wrapper - the unconditional assert above guarantees OK status
+        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
       } finally {
         aiExplanationSpy.mockRestore();
       }
@@ -992,19 +986,19 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         expect(analysis.selectedPeriod).toBeDefined();
         expect(analysis.selectedPeriod?.status).toBe('OK');
 
-        if (analysis.selectedPeriod?.status === 'OK') {
-          // Assert: aiExplanationStatus is OK (unconditional - stub guarantees success)
-          expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('OK');
+        // Remove conditional wrapper - the unconditional assert above guarantees OK status
+        // Assert: aiExplanationStatus is OK (unconditional - stub guarantees success)
+        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.aiExplanationStatus).toBe('OK');
 
-          // Assert: explanation deep-equals the known result
-          expect(analysis.selectedPeriod.synthesis.aiExplanation).toEqual(mockSuccessResult);
-        }
+        // Assert: explanation deep-equals the known result
+        expect(synthesis.aiExplanation).toEqual(mockSuccessResult);
       } finally {
         aiExplanationSpy.mockRestore();
       }
     });
 
-    it('parity: selectedPeriod in AI context deep-equals canonical DTO mapper value', async () => {
+    it('parity: selectedPeriod in AI context projects to DTO (canonical projection with explicit dropped fields)', async () => {
       // First, get a baseline to obtain canonical IDs with pinned asOf
       const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false,
@@ -1060,39 +1054,141 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         // Assert: runAiExplanation was called exactly once
         expect(aiExplanationSpy).toHaveBeenCalledTimes(1);
 
-        // Get the call arguments
+        // Get the call arguments (domain SelectedPeriodSynthesisValue passed to AI)
         const callArgs = aiExplanationSpy.mock.calls[0][0];
+        const domainValue = callArgs.selectedPeriod;
 
-        // Assert: selectedPeriod is passed to AI context
+        // Assert: selectedPeriod is passed to AI context and mapped to DTO
         expect(analysis.selectedPeriod).toBeDefined();
         expect(analysis.selectedPeriod?.status).toBe('OK');
 
-        if (analysis.selectedPeriod?.status === 'OK') {
-          // The production code passes selectedPeriodResult.value (the canonical domain SelectedPeriodSynthesisValue)
-          // to AI, not the mapped DTO. Verify the key fields match between what AI receives and what the UI renders.
-          // Since the domain value includes nested objects (natalBaseline) that are not in the DTO mapper output,
-          // we compare the canonical period structure that both share.
-          expect(callArgs.selectedPeriod).toBeDefined();
-          expect(callArgs.selectedPeriod).toMatchObject({
-            period: {
-              selectedPeriodId: analysis.selectedPeriod.synthesis.period.selectedPeriodId,
-              mahadashaId: analysis.selectedPeriod.synthesis.period.mahadashaId,
-              mahadashaPlanet: analysis.selectedPeriod.synthesis.period.mahadashaPlanet,
-              antardashaId: analysis.selectedPeriod.synthesis.period.antardashaId,
-              antardashaPlanet: analysis.selectedPeriod.synthesis.period.antardashaPlanet,
-              interval: analysis.selectedPeriod.synthesis.period.interval,
-              analysisAsOf: analysis.selectedPeriod.synthesis.period.analysisAsOf,
-              temporalRelation: analysis.selectedPeriod.synthesis.period.temporalRelation
-            },
-            synthesisVersion: analysis.selectedPeriod.synthesis.synthesisVersion
+        // Remove conditional wrapper - the unconditional assert above guarantees OK status
+        const dtoValue = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+
+        // The production code passes selectedPeriodResult.value (the canonical domain SelectedPeriodSynthesisValue)
+        // to AI, and mapSelectedPeriodSynthesis(value) to the DTO. Assert the projection relationship explicitly.
+        // Fields present in both domain and DTO should match exactly.
+        expect(domainValue).toBeDefined();
+        expect(dtoValue).toBeDefined();
+
+        // Non-null assertions for domainValue since the expect above verifies it's defined
+        const dv = domainValue!;
+
+        // 1. synthesisVersion: present in both
+        expect(dv.synthesisVersion).toBe(dtoValue.synthesisVersion);
+
+        // 2. period: present in both, field-by-field match
+        expect(dv.period.selectedPeriodId).toBe(dtoValue.period.selectedPeriodId);
+        expect(dv.period.mahadashaId).toBe(dtoValue.period.mahadashaId);
+        expect(dv.period.mahadashaPlanet).toBe(dtoValue.period.mahadashaPlanet);
+        expect(dv.period.antardashaId).toBe(dtoValue.period.antardashaId);
+        expect(dv.period.antardashaPlanet).toBe(dtoValue.period.antardashaPlanet);
+        expect(dv.period.interval).toEqual(dtoValue.period.interval);
+        expect(dv.period.analysisAsOf).toBe(dtoValue.period.analysisAsOf);
+        expect(dv.period.temporalRelation).toBe(dtoValue.period.temporalRelation);
+
+        // 3. natalBaseline: present in both (DTO preserves verbatim)
+        expect(dv.natalBaseline).toEqual(dtoValue.natalBaseline);
+
+        // 4. career: present in both, field-by-field match
+        expect(dv.career.qualificationBasis).toBe(dtoValue.career.qualificationBasis);
+        expect(dv.career.expressions.length).toBe(dtoValue.career.expressions.length);
+        dv.career.expressions.forEach((expr, i) => {
+          const dtoExpr = dtoValue.career.expressions[i];
+          expect(expr.expressionRefKey).toBe(dtoExpr.expressionRefKey);
+          expect(expr.status).toBe(dtoExpr.status);
+          expect(expr.linkedLevels).toEqual(dtoExpr.linkedLevels);
+          expect(expr.qualificationBasis).toBe(dtoExpr.qualificationBasis);
+          expect(expr.matchBasis).toBe(dtoExpr.matchBasis);
+          expect(expr.expressionEvidenceIds).toEqual(dtoExpr.expressionEvidenceIds);
+          expect(expr.qualifiedEvidenceIds).toEqual(dtoExpr.qualifiedEvidenceIds);
+          expect(expr.unqualifiedEvidenceIds).toEqual(dtoExpr.unqualifiedEvidenceIds);
+          expect(expr.mdDashaEvidenceIds).toEqual(dtoExpr.mdDashaEvidenceIds);
+          expect(expr.adDashaEvidenceIds).toEqual(dtoExpr.adDashaEvidenceIds);
+          expect(expr.expressionSource).toBe(dtoExpr.expressionSource);
+          // diagnostics match field-by-field
+          expect(expr.diagnostics.length).toBe(dtoExpr.diagnostics.length);
+          expr.diagnostics.forEach((d, j) => {
+            expect(d.code).toBe(dtoExpr.diagnostics[j].code);
+            expect(d.message).toBe(dtoExpr.diagnostics[j].message);
           });
-        }
+        });
+        expect(dv.career.diagnostics.length).toBe(dtoValue.career.diagnostics.length);
+        dv.career.diagnostics.forEach((d, i) => {
+          expect(d.code).toBe(dtoValue.career.diagnostics[i].code);
+          expect(d.message).toBe(dtoValue.career.diagnostics[i].message);
+        });
+
+        // 5. wealth: present in both, field-by-field match across all four dimensions
+        const wealthDimensions = ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const;
+        wealthDimensions.forEach(dim => {
+          const domainDim = dv.wealth.dimensions[dim];
+          const dtoDim = dtoValue.wealth.dimensions[dim];
+          expect(domainDim.dimension).toBe(dtoDim.dimension);
+          expect(domainDim.effect).toBe(dtoDim.effect);
+          expect(domainDim.dataStatus).toBe(dtoDim.dataStatus);
+          expect(domainDim.linkedLevels).toEqual(dtoDim.linkedLevels);
+          expect(domainDim.promiseEvidenceIds).toEqual(dtoDim.promiseEvidenceIds);
+          expect(domainDim.dashaRuleReferences.length).toBe(dtoDim.dashaRuleReferences.length);
+          domainDim.dashaRuleReferences.forEach((ref, i) => {
+            expect(ref.ruleId).toBe(dtoDim.dashaRuleReferences[i].ruleId);
+            expect(ref.source).toBe(dtoDim.dashaRuleReferences[i].source);
+            expect(ref.level).toBe(dtoDim.dashaRuleReferences[i].level);
+          });
+          expect(domainDim.diagnostics.length).toBe(dtoDim.diagnostics.length);
+          domainDim.diagnostics.forEach((d, j) => {
+            expect(d.code).toBe(dtoDim.diagnostics[j].code);
+            expect(d.message).toBe(dtoDim.diagnostics[j].message);
+          });
+        });
+        expect(dv.wealth.diagnostics.length).toBe(dtoValue.wealth.diagnostics.length);
+        dv.wealth.diagnostics.forEach((d, i) => {
+          expect(d.code).toBe(dtoValue.wealth.diagnostics[i].code);
+          expect(d.message).toBe(dtoValue.wealth.diagnostics[i].message);
+        });
+
+        // 6. evidence: present in both, field-by-field match (all IDs + provenanceStage + classification)
+        expect(dv.evidence.length).toBe(dtoValue.evidence.length);
+        dv.evidence.forEach((ref, i) => {
+          const dtoRef = dtoValue.evidence[i];
+          expect(ref.classification).toBe(dtoRef.classification);
+          expect(ref.evidenceId).toBe(dtoRef.evidenceId);
+          expect(ref.identityKey).toBe(dtoRef.identityKey);
+          expect(ref.dimension).toBe(dtoRef.dimension);
+          expect(ref.polarity).toBe(dtoRef.polarity);
+          expect(ref.source).toBe(dtoRef.source);
+          expect(ref.ruleId).toBe(dtoRef.ruleId);
+          expect(ref.level).toBe(dtoRef.level);
+          expect(ref.stage).toBe(dtoRef.stage);
+          expect(ref.provenanceStage).toBe(dtoRef.provenanceStage);
+          expect(ref.referenceKind).toBe(dtoRef.referenceKind);
+        });
+
+        // 7. missingInputs: present in both, field-by-field match
+        expect(dv.missingInputs.length).toBe(dtoValue.missingInputs.length);
+        dv.missingInputs.forEach((input, i) => {
+          expect(input.domain).toBe(dtoValue.missingInputs[i].domain);
+          expect(input.code).toBe(dtoValue.missingInputs[i].code);
+          expect(input.description).toBe(dtoValue.missingInputs[i].description);
+        });
+
+        // 8. provenance: present in both, field-by-field match
+        expect(dv.provenance.career.status).toBe(dtoValue.provenance.career.status);
+        expect(dv.provenance.career.version).toBe(dtoValue.provenance.career.version);
+        expect(dv.provenance.career.qualificationBasis).toBe(dtoValue.provenance.career.qualificationBasis);
+        expect(dv.provenance.wealth.status).toBe(dtoValue.provenance.wealth.status);
+        expect(dv.provenance.wealth.version).toBe(dtoValue.provenance.wealth.version);
+
+        // Explicitly enumerate fields dropped by DTO (not in domain):
+        // - aiExplanationStatus: added by DTO layer (not in domain)
+        // - aiExplanation: added by DTO layer (not in domain)
+        // These are DTO-only fields and are not part of the domain-to-DTO projection verification.
       } finally {
         aiExplanationSpy.mockRestore();
       }
     });
 
-    it('selectedPeriodEvidence wiring: selected-period-only evidence ID reaches AI context', async () => {
+    it('selectedPeriodEvidence wiring: evidence IDs in AI context match pipeline state', async () => {
       // First, get a baseline to obtain canonical IDs with pinned asOf
       const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false,
@@ -1109,6 +1205,11 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
       expect(validAd).toBeDefined();
 
+      // Capture the actual evidence from the pipeline state
+      const pipelineCareerEvidence = service.lastPipelineState?.career?.evidence ?? [];
+      const pipelineCareerDashaEvidence = service.lastPipelineState?.careerArtifacts?.careerDashaEvidence ?? [];
+      const pipelineWealthEvidence = service.lastPipelineState?.wealth?.evidence ?? [];
+
       // Spy on runAiExplanation to capture the context passed to it
       const aiExplanationModule = await import('../../ai/product/aiExplanationService');
       const aiExplanationSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockImplementation(async (options) => {
@@ -1118,16 +1219,20 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         expect(options.selectedPeriodEvidence?.careerDashaEvidence).toBeDefined();
         expect(options.selectedPeriodEvidence?.wealthEvidence).toBeDefined();
 
-        // Verify the evidence arrays contain the IDs from the pipeline
-        // The test fixture's evidence is not distinguishable, so we verify structure only
+        // Extract evidence IDs from AI context
         const careerIds = options.selectedPeriodEvidence?.careerEvidence?.map((e: any) => e.id) ?? [];
         const careerDashaIds = options.selectedPeriodEvidence?.careerDashaEvidence?.map((e: any) => e.id) ?? [];
         const wealthIds = options.selectedPeriodEvidence?.wealthEvidence?.map((e: any) => e.id) ?? [];
 
-        // At minimum, verify the arrays are arrays (even if empty)
-        expect(Array.isArray(careerIds)).toBe(true);
-        expect(Array.isArray(careerDashaIds)).toBe(true);
-        expect(Array.isArray(wealthIds)).toBe(true);
+        // Extract evidence IDs from pipeline state
+        const pipelineCareerIds = pipelineCareerEvidence.map((e: any) => e.id);
+        const pipelineCareerDashaIds = pipelineCareerDashaEvidence.map((e: any) => e.id);
+        const pipelineWealthIds = pipelineWealthEvidence.map((e: any) => e.id);
+
+        // Assert deep equality: AI context evidence IDs must match pipeline state evidence IDs
+        expect(careerIds).toEqual(pipelineCareerIds);
+        expect(careerDashaIds).toEqual(pipelineCareerDashaIds);
+        expect(wealthIds).toEqual(pipelineWealthIds);
 
         // Return a mock successful response
         return {
@@ -1153,6 +1258,112 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
 
       try {
         const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+          includeAiExplanation: false,
+          asOf: new Date('2024-01-01T00:00:00Z'),
+          selectedPeriod: {
+            mahadashaId: validMd!.id,
+            antardashaId: validAd!.id
+          },
+          includeSelectedPeriodAiExplanation: true
+        });
+
+        // Assert: runAiExplanation was called
+        expect(aiExplanationSpy).toHaveBeenCalled();
+      } finally {
+        aiExplanationSpy.mockRestore();
+      }
+    });
+
+    it('selectedPeriodEvidence wiring: unit test with hand-built pipelineState fixture', async () => {
+      // Unit-level test with a hand-built pipelineState fixture containing distinct known IDs.
+      // This test covers the case where the real pipeline yields empty arrays, ensuring
+      // the assertion is meaningful even when the real pipeline data is sparse.
+
+      const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date('2024-01-01T00:00:00Z')
+      });
+
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selectablePeriods = listSelectableMdAdPeriods(report!);
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+
+      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+      expect(validAd).toBeDefined();
+
+      // Mock runPipeline to return a hand-built pipelineState with distinct evidence IDs
+      const mockRunPipeline = vi.fn().mockResolvedValue({
+        status: 'OK',
+        analysis: service.lastPipelineState?.analysis,
+        temporalState: service.lastPipelineState?.temporalState,
+        careerArtifacts: service.lastPipelineState?.careerArtifacts,
+        career: {
+          ...service.lastPipelineState?.career,
+          evidence: [
+            { id: 'unit-test-career-ev-1', source: 'PLANET', effect: 'SUPPORT', statement: 'Unit test career evidence 1' } as any,
+            { id: 'unit-test-career-ev-2', source: 'HOUSE', effect: 'CHALLENGE', statement: 'Unit test career evidence 2' } as any
+          ]
+        },
+        wealth: {
+          ...service.lastPipelineState?.wealth,
+          evidence: [
+            { id: 'unit-test-wealth-ev-1', source: 'HOUSE', effect: 'SUPPORT', statement: 'Unit test wealth evidence 1' } as any
+          ]
+        },
+        aiExplanation: undefined
+      });
+
+      const mockService = new ProductAnalysisService({
+        calculateHoroscope,
+        runPipeline: mockRunPipeline
+      });
+
+      // Spy on runAiExplanation to capture the context passed to it
+      const aiExplanationModule = await import('../../ai/product/aiExplanationService');
+      const aiExplanationSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockImplementation(async (options) => {
+        // Verify selectedPeriodEvidence is passed correctly
+        expect(options.selectedPeriodEvidence).toBeDefined();
+        expect(options.selectedPeriodEvidence?.careerEvidence).toBeDefined();
+        expect(options.selectedPeriodEvidence?.careerDashaEvidence).toBeDefined();
+        expect(options.selectedPeriodEvidence?.wealthEvidence).toBeDefined();
+
+        // Extract evidence IDs from AI context
+        const careerIds = options.selectedPeriodEvidence?.careerEvidence?.map((e: any) => e.id) ?? [];
+        const careerDashaIds = options.selectedPeriodEvidence?.careerDashaEvidence?.map((e: any) => e.id) ?? [];
+        const wealthIds = options.selectedPeriodEvidence?.wealthEvidence?.map((e: any) => e.id) ?? [];
+
+        // Assert deep equality with known fixture IDs
+        expect(careerIds).toEqual(['unit-test-career-ev-1', 'unit-test-career-ev-2']);
+        expect(careerDashaIds).toEqual([]); // Empty in this fixture
+        expect(wealthIds).toEqual(['unit-test-wealth-ev-1']);
+
+        // Return a mock successful response
+        return {
+          kind: 'SUCCESS' as const,
+          requestId: 'test-request-id',
+          task: 'SELECTED_PERIOD_ANALYSIS' as const,
+          status: 'SUCCESS' as const,
+          conclusion: 'Test explanation',
+          supportingEvidence: [],
+          challengingEvidence: [],
+          unresolvedQuestions: [],
+          warnings: [],
+          triggeredRuleIds: [],
+          providerId: 'test-provider',
+          providerName: 'Test Provider',
+          providerKind: 'LOCAL_RULES' as const,
+          routingMode: 'LOCAL_ONLY' as const,
+          fallbackUsed: false,
+          selectionReason: 'DEFAULT' as const,
+          generatedAt: new Date().toISOString()
+        };
+      });
+
+      try {
+        const analysis = await mockService.analyze(CANONICAL_BIRTH_DETAILS, {
           includeAiExplanation: false,
           asOf: new Date('2024-01-01T00:00:00Z'),
           selectedPeriod: {

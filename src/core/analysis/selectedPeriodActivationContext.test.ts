@@ -213,6 +213,86 @@ describe('selectedPeriodActivationContext', () => {
         expect(result.value.temporalRelation).toBe('PAST');
       }
     });
+
+    it('literal-interval: asOf < start → PAST', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2019-12-31T23:59:59.999Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.temporalRelation).toBe('PAST');
+      }
+    });
+
+    it('literal-interval: asOf === start → CURRENT', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2020-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.temporalRelation).toBe('CURRENT');
+      }
+    });
+
+    it('literal-interval: asOf === end-1ms → CURRENT', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-12-31T23:59:59.999Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.temporalRelation).toBe('CURRENT');
+      }
+    });
+
+    it('literal-interval: asOf === end → PAST', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2022-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.temporalRelation).toBe('PAST');
+      }
+    });
+
+    it('literal-interval: invalid date → UNKNOWN (error: INVALID_ANALYSIS_AS_OF)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: 'not-a-valid-date'
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error).toBe('INVALID_ANALYSIS_AS_OF');
+      }
+    });
   });
 
   describe('error handling', () => {
