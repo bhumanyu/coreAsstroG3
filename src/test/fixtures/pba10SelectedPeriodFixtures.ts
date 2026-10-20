@@ -92,5 +92,6 @@ export const PBA10_TEMPORAL_GOLDENS = {
   atStart: 'CURRENT',
   beforeEnd: 'CURRENT',
   atEnd: 'PAST',
+  invalidAsOf: 'UNKNOWN',
   intervalSemantics: '[start,end)'
 } as const;
