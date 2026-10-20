@@ -7,7 +7,7 @@
  * evidence, missingInputs, provenance, diagnostics.
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import type {
   ProductSelectedPeriodSynthesis,
   ProductSynthesisCareerExpressionRow,
@@ -17,7 +17,7 @@ import type {
   ProductSynthesisDiagnostic,
   ActivationEffect
 } from '../../product/analysis/productAnalysisTypes';
-import { Calendar, Clock, AlertTriangle, CheckCircle2, FileText, Activity } from 'lucide-react';
+import { Calendar, Clock, AlertTriangle, CheckCircle2, FileText, Activity, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 
 export interface SelectedPeriodReportProps {
   readonly synthesis: ProductSelectedPeriodSynthesis;
@@ -62,6 +62,11 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
 }) => {
   const showCareer = domainToggle === 'CAREER' || domainToggle === 'BOTH';
   const showWealth = domainToggle === 'WEALTH' || domainToggle === 'BOTH';
+  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+
+  const copyPeriodId = () => {
+    navigator.clipboard.writeText(synthesis.period.selectedPeriodId);
+  };
 
   return (
     <div className="space-y-6">
@@ -75,13 +80,14 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
         </div>
 
         <div className="space-y-3">
+          {/* Primary information: MD/AD planets, interval, temporal relation */}
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <div className="text-sm text-slate-400 font-mono-code">
+              <div className="text-sm text-slate-300 font-mono-code font-semibold">
                 {synthesis.period.mahadashaPlanet} MD → {synthesis.period.antardashaPlanet} AD
               </div>
-              <div className="text-xs text-slate-500 font-mono-code">
-                ID: {synthesis.period.selectedPeriodId}
+              <div className="text-xs text-slate-400 font-mono-code">
+                {formatDate(synthesis.period.interval.start)} – {formatDate(synthesis.period.interval.end)}
               </div>
             </div>
             <div
@@ -92,12 +98,41 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             </div>
           </div>
 
-          <div className="text-xs text-slate-400 font-mono-code">
-            {formatDate(synthesis.period.interval.start)} - {formatDate(synthesis.period.interval.end)}
-          </div>
-
           <div className="text-xs text-slate-500 font-mono-code">
             Analysis as of: {formatDate(synthesis.period.analysisAsOf)}
+          </div>
+
+          {/* Expandable Technical Details */}
+          <div className="pt-2 border-t border-slate-800/60">
+            <button
+              onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-400 transition-colors"
+            >
+              {showTechnicalDetails ? (
+                <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+              )}
+              <span>Technical details</span>
+            </button>
+
+            {showTechnicalDetails && (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center justify-between bg-slate-950/40 border border-slate-800 rounded-lg p-2">
+                  <div className="text-xs text-slate-500 font-mono-code">Period ID:</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-400 font-mono-code">{synthesis.period.selectedPeriodId}</span>
+                    <button
+                      onClick={copyPeriodId}
+                      className="p-1 hover:bg-slate-800 rounded transition-colors"
+                      title="Copy ID"
+                    >
+                      <Copy className="w-3 h-3 text-slate-500" aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -110,8 +145,8 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
                 key={d}
                 onClick={() => onDomainToggle(d)}
                 className={`px-2.5 py-1 rounded text-xs font-mono-code transition-colors ${domainToggle === d
-                    ? 'bg-indigo-600 text-white border border-indigo-500/30'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700/60'
+                  ? 'bg-indigo-600 text-white border border-indigo-500/30'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700/60'
                   }`}
               >
                 {d}
@@ -133,6 +168,21 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
               Basis: {synthesis.career.qualificationBasis}
             </span>
           </div>
+
+          {/* Career limitation warning */}
+          {(synthesis.career.qualificationBasis === 'PROXY_DIRECTION' || synthesis.career.qualificationBasis === 'UNAVAILABLE') && (
+            <div className="bg-amber-950/40 border border-amber-800/60 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="text-xs">
+                <span className="font-mono-code text-amber-400">Career qualification unavailable</span>
+                <span className="text-slate-300 ml-2">
+                  {synthesis.career.qualificationBasis === 'PROXY_DIRECTION'
+                    ? 'Using interim proxy direction (canonical C11 qualification not provided)'
+                    : 'Canonical inputs provided but no qualifying mechanisms for this chart'}
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {synthesis.career.expressions.map(expr => (

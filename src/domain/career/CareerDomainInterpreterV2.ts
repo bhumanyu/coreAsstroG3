@@ -1127,15 +1127,20 @@ export function interpretCareerV2(
    * These are added to conclusionData for upstream handoff to the selected-period builder.
    * No recalculation - references the objects already in scope.
    *
-   * If mechanismCandidates is empty, set both canonicalExpression and mechanismCandidates to undefined
-   * to trigger PROXY_DIRECTION path instead of rejecting as INCOMPLETE_CANONICAL_INPUT.
+   * Fail-closed semantics for canonical qualification:
+   * - When mechanismCandidates is computed but empty (genuinely no qualifying mechanisms for this chart),
+   *   pass through explicitly as empty arrays to distinguish from "legacy caller didn't provide inputs".
+   * - The selected-period builder will emit qualificationBasis: 'UNAVAILABLE' instead of PROXY_DIRECTION.
+   * - This preserves fail-closed semantics: canonical inputs genuinely unavailable → explicit unavailable status.
+   *
+   * The canonicalExpression is always passed when mechanismCandidates is defined (empty or non-empty),
+   * since it represents the canonical C8 result from the mechanism-based resolver.
    */
-  const hasValidMechanismCandidates = careerMechanismCandidates && careerMechanismCandidates.length > 0;
   const internalArtifacts = Object.freeze({
     natal: canonicalNatalAnalysis,
     expression: canonicalExpressionAnalysis,
-    canonicalExpression: hasValidMechanismCandidates ? canonicalMechanismExpressionResult : undefined,
-    mechanismCandidates: hasValidMechanismCandidates ? careerMechanismCandidates : undefined,
+    canonicalExpression: careerMechanismCandidates !== undefined ? canonicalMechanismExpressionResult : undefined,
+    mechanismCandidates: careerMechanismCandidates, // Pass through explicitly (may be empty array)
     careerDashaEvidence: canonicalDashaAnalysis.evidence
   });
 

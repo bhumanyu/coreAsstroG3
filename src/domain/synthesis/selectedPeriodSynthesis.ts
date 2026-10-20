@@ -649,6 +649,11 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         code: 'CAREER_QUALIFICATION_UNAVAILABLE',
         message: 'Career qualification used PROXY_DIRECTION interim contract; canonical C11 qualification unavailable'
       }));
+    } else if (careerQualificationBasis === 'UNAVAILABLE') {
+      careerDiagnostics.push(Object.freeze({
+        code: 'CAREER_QUALIFICATION_UNAVAILABLE',
+        message: 'Career qualification unavailable: canonical inputs provided but no qualifying mechanisms for this chart'
+      }));
     }
 
     for (const exprActivation of careerActivation.expressionActivations) {

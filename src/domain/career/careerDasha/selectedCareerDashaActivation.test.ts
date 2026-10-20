@@ -2541,12 +2541,14 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expression,
         selectedPeriod,
         canonicalExpression,
-        mechanismCandidates: Object.freeze([]) // Explicitly empty array (degenerate canonical input)
+        mechanismCandidates: Object.freeze([]) // Explicitly empty array (genuinely no qualifying mechanisms)
       });
 
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error).toBe('INCOMPLETE_CANONICAL_INPUT');
+      // Changed behavior: empty mechanismCandidates now emits UNAVAILABLE instead of rejecting
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.qualificationBasis).toBe('UNAVAILABLE');
+        expect(result.value.expressionActivations.length).toBe(0);
       }
     });
 
@@ -3492,6 +3494,105 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(result.value.expressionActivations[0].expressionSource).toBe('ADAPTER_FALLBACK');
         // The caller expression should NOT be used (no containment match)
         expect(result.value.expressionActivations[0].expression).not.toBe(callerExpression);
+      }
+    });
+  });
+
+  describe('UNAVAILABLE qualification basis (empty mechanism candidates)', () => {
+    it('emits UNAVAILABLE when canonical inputs provided but mechanismCandidates is empty', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const expression = makeExpressionAnalysisWithLinkedEvidence();
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Canonical expression result (empty expressions since no mechanisms)
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([]),
+        status: 'INSUFFICIENT_DATA',
+        sourceMechanismIds: Object.freeze([]),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze([]),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      // Empty mechanism candidates array (genuinely no qualifying mechanisms for this chart)
+      const mechanismCandidates: readonly CareerMechanismCandidate[] = Object.freeze([]);
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Should emit UNAVAILABLE qualification basis (fail-closed semantics)
+        expect(result.value.qualificationBasis).toBe('UNAVAILABLE');
+        // No expression activations since no mechanisms
+        expect(result.value.expressionActivations.length).toBe(0);
+      }
+    });
+
+    it('distinguishes UNAVAILABLE from PROXY_DIRECTION (legacy caller)', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const expression = makeExpressionAnalysisWithLinkedEvidence();
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Case 1: UNAVAILABLE - canonical inputs provided but empty
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([]),
+        status: 'INSUFFICIENT_DATA',
+        sourceMechanismIds: Object.freeze([]),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze([]),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const resultUnavailable = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates: Object.freeze([])
+      });
+
+      expect(resultUnavailable.ok).toBe(true);
+      if (resultUnavailable.ok) {
+        expect(resultUnavailable.value.qualificationBasis).toBe('UNAVAILABLE');
+      }
+
+      // Case 2: PROXY_DIRECTION - canonical inputs absent (legacy caller)
+      const resultProxy = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod
+        // No canonicalExpression or mechanismCandidates
+      });
+
+      expect(resultProxy.ok).toBe(true);
+      if (resultProxy.ok) {
+        expect(resultProxy.value.qualificationBasis).toBe('PROXY_DIRECTION');
+        // PROXY_DIRECTION should filter by expr.direction !== 'UNAVAILABLE'
+        // Our test expression has direction: 'SUPPORTED', so it should appear
+        expect(resultProxy.value.expressionActivations.length).toBeGreaterThan(0);
       }
     });
   });

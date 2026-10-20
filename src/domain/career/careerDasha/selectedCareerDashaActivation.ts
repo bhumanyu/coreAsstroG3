@@ -196,9 +196,10 @@ export interface SelectedCareerDashaActivationSuccess {
   /**
    * Qualification basis used for filtering expressions.
    * 'CANONICAL_STATUS': Used canonical qualificationStatus === 'QUALIFIED' (authoritative)
-   * 'PROXY_DIRECTION': Used interim proxy expr.direction !== 'UNAVAILABLE' (conservative)
+   * 'PROXY_DIRECTION': Used interim proxy expr.direction !== 'UNAVAILABLE' (conservative, legacy caller didn't provide canonical inputs)
+   * 'UNAVAILABLE': Canonical inputs were provided but mechanismCandidates was empty (genuinely no qualifying mechanisms for this chart)
    */
-  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION';
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   /**
    * Canonical Dasha analysis for the selected period.
    *
@@ -289,10 +290,8 @@ export function buildSelectedCareerDashaActivation(params: {
   if (hasCanonicalExpression !== hasMechanismCandidates) {
     return { ok: false, error: 'INCOMPLETE_CANONICAL_INPUT' };
   }
-  // Reject if both are present but mechanismCandidates is explicitly empty (degenerate canonical input)
-  if (hasCanonicalExpression && mechanismCandidates!.length === 0) {
-    return { ok: false, error: 'INCOMPLETE_CANONICAL_INPUT' };
-  }
+  // Allow empty mechanismCandidates (genuinely no qualifying mechanisms for this chart)
+  // This will emit qualificationBasis: 'UNAVAILABLE' instead of PROXY_DIRECTION
 
   // Build canonical Dasha analysis for the selected period
   const input: CareerDashaIntegrationInputExtended & { selectedPeriod: SelectedPeriodActivationContext } = Object.freeze({
@@ -343,109 +342,118 @@ export function buildSelectedCareerDashaActivation(params: {
   const expressionMatchBasis = new Map<CareerExpression, 'UNAMBIGUOUS' | 'AMBIGUOUS'>();
 
   if (canonicalExpression && mechanismCandidates) {
-    // Use canonical qualification status (authoritative)
-    const qualifiedCanonicalCandidates = canonicalExpression.expressions.filter(
-      candidate => candidate.qualificationStatus === 'QUALIFIED'
-    );
-
-    // Diagnostic: Check for canonical evidence ID uniqueness across all QUALIFIED candidates
-    // If evidence IDs are globally unique, each evidenceId should appear in at most one candidate
-    const allCanonicalEvidenceIds = new Map<string, string>(); // evidenceId -> candidateId
-    for (const candidate of qualifiedCanonicalCandidates) {
-      for (const evidence of candidate.evidence) {
-        const existingCandidateId = allCanonicalEvidenceIds.get(evidence.evidenceId);
-        if (existingCandidateId !== undefined && existingCandidateId !== candidate.expressionId) {
-          // Evidence ID appears in multiple candidates - this violates the uniqueness assumption
-          // Document this diagnostic but do not fail (consume gracefully)
-          console.warn(
-            `[selectedCareerDashaActivation] Canonical evidence ID "${evidence.evidenceId}" appears in multiple candidates: ` +
-            `"${existingCandidateId}" and "${candidate.expressionId}". ` +
-            `This violates the uniqueness assumption for canonical evidence IDs. ` +
-            `Qualified evidence scoping may be affected.`
-          );
-        }
-        allCanonicalEvidenceIds.set(evidence.evidenceId, candidate.expressionId);
-      }
-    }
-
-    // P2: Filter caller's expressions by matching to QUALIFIED canonical candidates
-    // Prefer explicit identity mapping: require ALL of a candidate's evidence IDs to be in
-    // expression.supportingEvidenceIds (containment, not overlap). This ensures the caller expression
-    // corresponds to the full canonical candidate, not just a partial overlap.
-    // The evidence ID bridge is reliable: canonical evidence.evidenceId maps 1:1 to legacy evidence.id
-    // and supportingEvidenceIds (see mechanismExpressionToLegacyAdapter.ts createLegacyEvidence ~L159).
-    // Guard: empty-evidence candidates cannot match via containment (they have no identity to bridge).
-    // Ambiguous match detection: collect ALL matching candidates per expression, not just first-match.
-    const matchedCallerExpressionsWithCandidates = expression.expressions.map(expr => {
-      const matchingCandidates: CareerExpressionCanonicalCandidate[] = [];
-      // For each QUALIFIED canonical candidate, check if ALL of its evidence IDs are in
-      // the expression's supportingEvidenceIds (containment check)
-      for (const candidate of qualifiedCanonicalCandidates) {
-        // Guard: empty-evidence candidates cannot match via containment
-        if (candidate.evidence.length === 0) {
-          continue;
-        }
-        // Check containment: all candidate evidence IDs must be in expression's supportingEvidenceIds
-        const isContainmentMatch = candidate.evidence.every(
-          evidenceItem => expr.supportingEvidenceIds.includes(evidenceItem.evidenceId)
-        );
-        if (isContainmentMatch) {
-          matchingCandidates.push(candidate);
-        }
-      }
-      return { expr, matchingCandidates };
-    });
-
-    // Determine match basis for each expression and filter unambiguous matches
-    // Conservative approach: omit ambiguous matches (do not treat as reliably identified)
-    const matchedCallerExpressions = matchedCallerExpressionsWithCandidates
-      .filter(({ matchingCandidates }) => matchingCandidates.length === 1)
-      .map(({ expr, matchingCandidates }) => {
-        // Exactly one match - mark as UNAMBIGUOUS
-        expressionMatchBasis.set(expr, 'UNAMBIGUOUS');
-        // Scope qualified evidence IDs to the matched candidate (not global union)
-        const matchedCandidate = matchingCandidates[0];
-        const qualifiedIds = new Set<string>();
-        for (const evidence of matchedCandidate.evidence) {
-          qualifiedIds.add(evidence.evidenceId);
-        }
-        expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
-        return expr;
-      });
-
-    // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
-    // This is documented in expressionRefKey below
-    if (matchedCallerExpressions.length > 0) {
-      qualifiedExpressions = matchedCallerExpressions;
-      usedAdapterFallback = false;
-    } else if (qualifiedCanonicalCandidates.length > 0) {
-      // No reliable mapping to caller's expressions - use adapter-derived expressions as fallback
-      // Use only the first QUALIFIED candidate to avoid generating multiple expressions
-      const firstCandidate = qualifiedCanonicalCandidates[0];
-      const canonicalResult: CareerExpressionCanonicalResult = {
-        ...canonicalExpression,
-        expressions: [firstCandidate]
-      };
-      const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
-      qualifiedExpressions = [...legacyAnalysis.expressions];
-      usedAdapterFallback = true;
-      // For ADAPTER_FALLBACK expressions, use the first QUALIFIED candidate's evidence IDs
-      // (since adapter derives from canonical candidates, we scope to their evidence)
-      const qualifiedIds = new Set<string>();
-      for (const evidence of firstCandidate.evidence) {
-        qualifiedIds.add(evidence.evidenceId);
-      }
-      // Apply to all adapter-derived expressions (they all come from the same canonical source)
-      for (const expr of qualifiedExpressions) {
-        expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
-      }
-    } else {
-      // No QUALIFIED candidates - use empty expressions (no fallback)
+    // Canonical inputs provided - check if mechanismCandidates is empty
+    if (mechanismCandidates.length === 0) {
+      // Canonical inputs provided but no qualifying mechanisms for this chart
+      // Emit UNAVAILABLE qualification basis (fail-closed semantics)
       qualifiedExpressions = [];
       usedAdapterFallback = false;
-    }
+      qualificationBasis = 'UNAVAILABLE';
+    } else {
+      // Use canonical qualification status (authoritative)
+      const qualifiedCanonicalCandidates = canonicalExpression.expressions.filter(
+        candidate => candidate.qualificationStatus === 'QUALIFIED'
+      );
 
-    qualificationBasis = 'CANONICAL_STATUS';
+      // Diagnostic: Check for canonical evidence ID uniqueness across all QUALIFIED candidates
+      // If evidence IDs are globally unique, each evidenceId should appear in at most one candidate
+      const allCanonicalEvidenceIds = new Map<string, string>(); // evidenceId -> candidateId
+      for (const candidate of qualifiedCanonicalCandidates) {
+        for (const evidence of candidate.evidence) {
+          const existingCandidateId = allCanonicalEvidenceIds.get(evidence.evidenceId);
+          if (existingCandidateId !== undefined && existingCandidateId !== candidate.expressionId) {
+            // Evidence ID appears in multiple candidates - this violates the uniqueness assumption
+            // Document this diagnostic but do not fail (consume gracefully)
+            console.warn(
+              `[selectedCareerDashaActivation] Canonical evidence ID "${evidence.evidenceId}" appears in multiple candidates: ` +
+              `"${existingCandidateId}" and "${candidate.expressionId}". ` +
+              `This violates the uniqueness assumption for canonical evidence IDs. ` +
+              `Qualified evidence scoping may be affected.`
+            );
+          }
+          allCanonicalEvidenceIds.set(evidence.evidenceId, candidate.expressionId);
+        }
+      }
+
+      // P2: Filter caller's expressions by matching to QUALIFIED canonical candidates
+      // Prefer explicit identity mapping: require ALL of a candidate's evidence IDs to be in
+      // expression.supportingEvidenceIds (containment, not overlap). This ensures the caller expression
+      // corresponds to the full canonical candidate, not just a partial overlap.
+      // The evidence ID bridge is reliable: canonical evidence.evidenceId maps 1:1 to legacy evidence.id
+      // and supportingEvidenceIds (see mechanismExpressionToLegacyAdapter.ts createLegacyEvidence ~L159).
+      // Guard: empty-evidence candidates cannot match via containment (they have no identity to bridge).
+      // Ambiguous match detection: collect ALL matching candidates per expression, not just first-match.
+      const matchedCallerExpressionsWithCandidates = expression.expressions.map(expr => {
+        const matchingCandidates: CareerExpressionCanonicalCandidate[] = [];
+        // For each QUALIFIED canonical candidate, check if ALL of its evidence IDs are in
+        // the expression's supportingEvidenceIds (containment check)
+        for (const candidate of qualifiedCanonicalCandidates) {
+          // Guard: empty-evidence candidates cannot match via containment
+          if (candidate.evidence.length === 0) {
+            continue;
+          }
+          // Check containment: all candidate evidence IDs must be in expression's supportingEvidenceIds
+          const isContainmentMatch = candidate.evidence.every(
+            evidenceItem => expr.supportingEvidenceIds.includes(evidenceItem.evidenceId)
+          );
+          if (isContainmentMatch) {
+            matchingCandidates.push(candidate);
+          }
+        }
+        return { expr, matchingCandidates };
+      });
+
+      // Determine match basis for each expression and filter unambiguous matches
+      // Conservative approach: omit ambiguous matches (do not treat as reliably identified)
+      const matchedCallerExpressions = matchedCallerExpressionsWithCandidates
+        .filter(({ matchingCandidates }) => matchingCandidates.length === 1)
+        .map(({ expr, matchingCandidates }) => {
+          // Exactly one match - mark as UNAMBIGUOUS
+          expressionMatchBasis.set(expr, 'UNAMBIGUOUS');
+          // Scope qualified evidence IDs to the matched candidate (not global union)
+          const matchedCandidate = matchingCandidates[0];
+          const qualifiedIds = new Set<string>();
+          for (const evidence of matchedCandidate.evidence) {
+            qualifiedIds.add(evidence.evidenceId);
+          }
+          expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
+          return expr;
+        });
+
+      // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
+      // This is documented in expressionRefKey below
+      if (matchedCallerExpressions.length > 0) {
+        qualifiedExpressions = matchedCallerExpressions;
+        usedAdapterFallback = false;
+      } else if (qualifiedCanonicalCandidates.length > 0) {
+        // No reliable mapping to caller's expressions - use adapter-derived expressions as fallback
+        // Use only the first QUALIFIED candidate to avoid generating multiple expressions
+        const firstCandidate = qualifiedCanonicalCandidates[0];
+        const canonicalResult: CareerExpressionCanonicalResult = {
+          ...canonicalExpression,
+          expressions: [firstCandidate]
+        };
+        const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
+        qualifiedExpressions = [...legacyAnalysis.expressions];
+        usedAdapterFallback = true;
+        // For ADAPTER_FALLBACK expressions, use the first QUALIFIED candidate's evidence IDs
+        // (since adapter derives from canonical candidates, we scope to their evidence)
+        const qualifiedIds = new Set<string>();
+        for (const evidence of firstCandidate.evidence) {
+          qualifiedIds.add(evidence.evidenceId);
+        }
+        // Apply to all adapter-derived expressions (they all come from the same canonical source)
+        for (const expr of qualifiedExpressions) {
+          expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
+        }
+      } else {
+        // No QUALIFIED candidates - use empty expressions (no fallback)
+        qualifiedExpressions = [];
+        usedAdapterFallback = false;
+      }
+
+      qualificationBasis = 'CANONICAL_STATUS';
+    }
   } else {
     // Use interim conservative proxy: expr.direction !== 'UNAVAILABLE'
     // TEMPORARY COMPATIBILITY PATH: Used when both canonicalExpression and mechanismCandidates are absent.

@@ -93,7 +93,7 @@ function makeSelectedPeriodContext(): SelectedPeriodActivationContext {
  * Helper to create a mock career activation.
  */
 function makeCareerActivation(
-  qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' = 'CANONICAL_STATUS'
+  qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE' = 'CANONICAL_STATUS'
 ): SelectedCareerDashaActivationSuccess {
   const expressionActivations: SelectedExpressionActivation[] = [
     Object.freeze({
@@ -461,6 +461,24 @@ describe('buildSelectedPeriodSynthesis', () => {
       const hasDiagnostic = result.value.career.diagnostics.some(d => d.code === 'CAREER_QUALIFICATION_UNAVAILABLE');
       expect(hasDiagnostic).toBe(true);
       expect(result.value.career.qualificationBasis).toBe('PROXY_DIRECTION');
+    });
+
+    it('adds CAREER_QUALIFICATION_UNAVAILABLE diagnostic for UNAVAILABLE', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation('UNAVAILABLE' as any);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // The diagnostic is now at section level in diagnostics array
+      const hasDiagnostic = result.value.career.diagnostics.some(d => d.code === 'CAREER_QUALIFICATION_UNAVAILABLE');
+      expect(hasDiagnostic).toBe(true);
+      expect(result.value.career.qualificationBasis).toBe('UNAVAILABLE');
     });
   });
 
