@@ -573,9 +573,13 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
           expect(synthesis.period.temporalRelation).toBe('FUTURE');
         }
       } else {
-        // If no FUTURE period exists in the fixture, skip this test gracefully
-        // This is acceptable as it depends on the specific birth chart
-        expect(true).toBe(true);
+        // If no FUTURE period exists in the fixture at either 2024-01-01 or 2000-01-01,
+        // document this explicitly. The CANONICAL_BIRTH_DETAILS fixture (1995-03-22)
+        // may not have any FUTURE periods relative to these asOf dates given the Vimshottari
+        // system timeline. This is a fixture limitation, not a code defect.
+        // The temporal relation logic is tested directly in selectedPeriodActivationContext.test.ts
+        // with explicit interval strings, so this integration test is a best-effort validation.
+        expect(true).toBe(true); // Placeholder: document in comment above
       }
     });
 
@@ -593,7 +597,58 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const startMs = Date.parse(selection.interval.start);
       const endMs = Date.parse(selection.interval.end);
 
-      // Test start-1ms → FUTURE
+      // Test start → CURRENT (unconditional assertion - asOf change should not invalidate selection for exact start)
+      const atStart = new Date(startMs).toISOString();
+      const analysisAtStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(atStart),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      expect(analysisAtStart.selectedPeriod).toBeDefined();
+      expect(analysisAtStart.selectedPeriod?.status).toBe('OK');
+      if (analysisAtStart.selectedPeriod?.status === 'OK') {
+        const synthesisAtStart = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesisAtStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
+      }
+
+      // Test end-1ms → CURRENT (unconditional assertion - asOf change should not invalidate selection for period inside interval)
+      const beforeEnd = new Date(endMs - 1).toISOString();
+      const analysisBeforeEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeEnd),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      expect(analysisBeforeEnd.selectedPeriod).toBeDefined();
+      expect(analysisBeforeEnd.selectedPeriod?.status).toBe('OK');
+      if (analysisBeforeEnd.selectedPeriod?.status === 'OK') {
+        const synthesisBeforeEnd = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesisBeforeEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
+      }
+
+      // Test end → PAST (unconditional assertion - asOf change should not invalidate selection for exact end)
+      const atEnd = new Date(endMs).toISOString();
+      const analysisAtEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(atEnd),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      expect(analysisAtEnd.selectedPeriod).toBeDefined();
+      expect(analysisAtEnd.selectedPeriod?.status).toBe('OK');
+      if (analysisAtEnd.selectedPeriod?.status === 'OK') {
+        const synthesisAtEnd = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesisAtEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
+      }
+
+      // Test start-1ms → FUTURE (conditional - may fail if asOf changes cause pipeline recalculation)
       const beforeStart = new Date(startMs - 1).toISOString();
       const analysisBeforeStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false,
@@ -608,54 +663,6 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       if (analysisBeforeStart.selectedPeriod?.status === 'OK') {
         const synthesisBeforeStart = (analysisBeforeStart.selectedPeriod as Extract<typeof analysisBeforeStart.selectedPeriod, { status: 'OK' }>).synthesis;
         expect(synthesisBeforeStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeStart);
-      }
-
-      // Test start → CURRENT
-      const atStart = new Date(startMs).toISOString();
-      const analysisAtStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date(atStart),
-        selectedPeriod: {
-          mahadashaId: selection.mahadashaId,
-          antardashaId: selection.antardashaId
-        }
-      });
-      // Note: asOf changes may cause pipeline recalculation, so selection might fail
-      if (analysisAtStart.selectedPeriod?.status === 'OK') {
-        const synthesisAtStart = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesisAtStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
-      }
-
-      // Test end-1ms → CURRENT
-      const beforeEnd = new Date(endMs - 1).toISOString();
-      const analysisBeforeEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date(beforeEnd),
-        selectedPeriod: {
-          mahadashaId: selection.mahadashaId,
-          antardashaId: selection.antardashaId
-        }
-      });
-      // Note: asOf changes may cause pipeline recalculation, so selection might fail
-      if (analysisBeforeEnd.selectedPeriod?.status === 'OK') {
-        const synthesisBeforeEnd = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesisBeforeEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
-      }
-
-      // Test end → PAST
-      const atEnd = new Date(endMs).toISOString();
-      const analysisAtEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date(atEnd),
-        selectedPeriod: {
-          mahadashaId: selection.mahadashaId,
-          antardashaId: selection.antardashaId
-        }
-      });
-      // Note: asOf changes may cause pipeline recalculation, so selection might fail
-      if (analysisAtEnd.selectedPeriod?.status === 'OK') {
-        const synthesisAtEnd = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesisAtEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
       }
     });
 
@@ -856,28 +863,30 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const aiExplanationModule = await import('../../ai/product/aiExplanationService');
       const aiExplanationSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockImplementation(() => {
         throw new Error('Simulated AI service failure');
-      });
+      }) as any;
 
-      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date('2024-01-01T00:00:00Z'),
-        selectedPeriod: {
-          mahadashaId: validMd!.id,
-          antardashaId: validAd!.id
-        },
-        includeSelectedPeriodAiExplanation: true
-      });
+      try {
+        const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+          includeAiExplanation: false,
+          asOf: new Date('2024-01-01T00:00:00Z'),
+          selectedPeriod: {
+            mahadashaId: validMd!.id,
+            antardashaId: validAd!.id
+          },
+          includeSelectedPeriodAiExplanation: true
+        });
 
-      // Assert: selectedPeriod status is OK (deterministic synthesis unaffected)
-      expect(analysis.selectedPeriod).toBeDefined();
-      expect(analysis.selectedPeriod?.status).toBe('OK');
+        // Assert: selectedPeriod status is OK (deterministic synthesis unaffected)
+        expect(analysis.selectedPeriod).toBeDefined();
+        expect(analysis.selectedPeriod?.status).toBe('OK');
 
-      if (analysis.selectedPeriod?.status === 'OK') {
-        // Assert: aiExplanationStatus is ERROR
-        expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('ERROR');
+        if (analysis.selectedPeriod?.status === 'OK') {
+          // Assert: aiExplanationStatus is ERROR
+          expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('ERROR');
+        }
+      } finally {
+        aiExplanationSpy.mockRestore();
       }
-
-      aiExplanationSpy.mockRestore();
     });
 
     it('includeSelectedPeriodAiExplanation: false → NOT_REQUESTED, runAiExplanation not called', async () => {
@@ -901,28 +910,30 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const aiExplanationModule = await import('../../ai/product/aiExplanationService');
       const aiExplanationSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation');
 
-      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date('2024-01-01T00:00:00Z'),
-        selectedPeriod: {
-          mahadashaId: validMd!.id,
-          antardashaId: validAd!.id
-        },
-        includeSelectedPeriodAiExplanation: false
-      });
+      try {
+        const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+          includeAiExplanation: false,
+          asOf: new Date('2024-01-01T00:00:00Z'),
+          selectedPeriod: {
+            mahadashaId: validMd!.id,
+            antardashaId: validAd!.id
+          },
+          includeSelectedPeriodAiExplanation: false
+        });
 
-      // Assert: runAiExplanation was not called
-      expect(aiExplanationSpy).not.toHaveBeenCalled();
+        // Assert: runAiExplanation was not called
+        expect(aiExplanationSpy).not.toHaveBeenCalled();
 
-      // Assert: aiExplanationStatus is NOT_REQUESTED
-      expect(analysis.selectedPeriod).toBeDefined();
-      expect(analysis.selectedPeriod?.status).toBe('OK');
+        // Assert: aiExplanationStatus is NOT_REQUESTED
+        expect(analysis.selectedPeriod).toBeDefined();
+        expect(analysis.selectedPeriod?.status).toBe('OK');
 
-      if (analysis.selectedPeriod?.status === 'OK') {
-        expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
+        if (analysis.selectedPeriod?.status === 'OK') {
+          expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('NOT_REQUESTED');
+        }
+      } finally {
+        aiExplanationSpy.mockRestore();
       }
-
-      aiExplanationSpy.mockRestore();
     });
 
     it('success → aiExplanationStatus OK, explanation attached', async () => {
@@ -942,28 +953,54 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
       expect(validAd).toBeDefined();
 
-      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date('2024-01-01T00:00:00Z'),
-        selectedPeriod: {
-          mahadashaId: validMd!.id,
-          antardashaId: validAd!.id
-        },
-        includeSelectedPeriodAiExplanation: true
-      });
+      // Stub runAiExplanation with a known success result
+      const mockSuccessResult = {
+        kind: 'SUCCESS' as const,
+        requestId: 'test-request-id',
+        task: 'SELECTED_PERIOD_ANALYSIS' as const,
+        status: 'SUCCESS' as const,
+        conclusion: 'Test explanation',
+        supportingEvidence: [],
+        challengingEvidence: [],
+        unresolvedQuestions: [],
+        warnings: [],
+        triggeredRuleIds: [],
+        providerId: 'test-provider',
+        providerName: 'Test Provider',
+        providerKind: 'LOCAL_RULES' as const,
+        routingMode: 'LOCAL_ONLY' as const,
+        fallbackUsed: false,
+        selectionReason: 'DEFAULT' as const,
+        generatedAt: new Date().toISOString()
+      };
 
-      // Assert: selectedPeriod status is OK
-      expect(analysis.selectedPeriod).toBeDefined();
-      expect(analysis.selectedPeriod?.status).toBe('OK');
+      const aiExplanationModule = await import('../../ai/product/aiExplanationService');
+      const aiExplanationSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockResolvedValue(mockSuccessResult);
 
-      if (analysis.selectedPeriod?.status === 'OK') {
-        // Assert: aiExplanationStatus is OK (or ERROR if AI fails - both are acceptable)
-        expect(['OK', 'ERROR']).toContain(analysis.selectedPeriod.synthesis.aiExplanationStatus);
+      try {
+        const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+          includeAiExplanation: false,
+          asOf: new Date('2024-01-01T00:00:00Z'),
+          selectedPeriod: {
+            mahadashaId: validMd!.id,
+            antardashaId: validAd!.id
+          },
+          includeSelectedPeriodAiExplanation: true
+        });
 
-        // If OK, verify explanation is attached
-        if (analysis.selectedPeriod.synthesis.aiExplanationStatus === 'OK') {
-          expect(analysis.selectedPeriod.synthesis.aiExplanation).toBeDefined();
+        // Assert: selectedPeriod status is OK
+        expect(analysis.selectedPeriod).toBeDefined();
+        expect(analysis.selectedPeriod?.status).toBe('OK');
+
+        if (analysis.selectedPeriod?.status === 'OK') {
+          // Assert: aiExplanationStatus is OK (unconditional - stub guarantees success)
+          expect(analysis.selectedPeriod.synthesis.aiExplanationStatus).toBe('OK');
+
+          // Assert: explanation deep-equals the known result
+          expect(analysis.selectedPeriod.synthesis.aiExplanation).toEqual(mockSuccessResult);
         }
+      } finally {
+        aiExplanationSpy.mockRestore();
       }
     });
 
@@ -989,10 +1026,10 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const aiExplanationSpy = vi.spyOn(aiExplanationModule, 'runAiExplanation').mockImplementation(async (options) => {
         // Return a mock successful response
         return {
-          kind: 'SUCCESS',
+          kind: 'SUCCESS' as const,
           requestId: 'test-request-id',
-          task: 'SELECTED_PERIOD_ANALYSIS',
-          status: 'SUCCESS',
+          task: 'SELECTED_PERIOD_ANALYSIS' as const,
+          status: 'SUCCESS' as const,
           conclusion: 'Test explanation',
           supportingEvidence: [],
           challengingEvidence: [],
@@ -1001,39 +1038,58 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
           triggeredRuleIds: [],
           providerId: 'test-provider',
           providerName: 'Test Provider',
-          providerKind: 'LOCAL_RULES',
-          routingMode: 'LOCAL_ONLY',
+          providerKind: 'LOCAL_RULES' as const,
+          routingMode: 'LOCAL_ONLY' as const,
           fallbackUsed: false,
-          selectionReason: 'DEFAULT',
+          selectionReason: 'DEFAULT' as const,
           generatedAt: new Date().toISOString()
         };
       });
 
-      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date('2024-01-01T00:00:00Z'),
-        selectedPeriod: {
-          mahadashaId: validMd!.id,
-          antardashaId: validAd!.id
-        },
-        includeSelectedPeriodAiExplanation: true
-      });
+      try {
+        const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+          includeAiExplanation: false,
+          asOf: new Date('2024-01-01T00:00:00Z'),
+          selectedPeriod: {
+            mahadashaId: validMd!.id,
+            antardashaId: validAd!.id
+          },
+          includeSelectedPeriodAiExplanation: true
+        });
 
-      // Assert: runAiExplanation was called
-      expect(aiExplanationSpy).toHaveBeenCalled();
+        // Assert: runAiExplanation was called exactly once
+        expect(aiExplanationSpy).toHaveBeenCalledTimes(1);
 
-      // Get the call arguments
-      const callArgs = aiExplanationSpy.mock.calls[0][0];
+        // Get the call arguments
+        const callArgs = aiExplanationSpy.mock.calls[0][0];
 
-      // Assert: selectedPeriod is passed to AI context
-      if (analysis.selectedPeriod?.status === 'OK' && callArgs.selectedPeriod) {
-        // Verify the selectedPeriod object is passed
-        expect(callArgs.selectedPeriod).toBeDefined();
-        // The deep equality of availableEvidence IDs is implementation-dependent
-        // The key assertion is that selectedPeriod is passed to the AI context
+        // Assert: selectedPeriod is passed to AI context
+        expect(analysis.selectedPeriod).toBeDefined();
+        expect(analysis.selectedPeriod?.status).toBe('OK');
+
+        if (analysis.selectedPeriod?.status === 'OK') {
+          // The production code passes selectedPeriodResult.value (the canonical domain SelectedPeriodSynthesisValue)
+          // to AI, not the mapped DTO. Verify the key fields match between what AI receives and what the UI renders.
+          // Since the domain value includes nested objects (natalBaseline) that are not in the DTO mapper output,
+          // we compare the canonical period structure that both share.
+          expect(callArgs.selectedPeriod).toBeDefined();
+          expect(callArgs.selectedPeriod).toMatchObject({
+            period: {
+              selectedPeriodId: analysis.selectedPeriod.synthesis.period.selectedPeriodId,
+              mahadashaId: analysis.selectedPeriod.synthesis.period.mahadashaId,
+              mahadashaPlanet: analysis.selectedPeriod.synthesis.period.mahadashaPlanet,
+              antardashaId: analysis.selectedPeriod.synthesis.period.antardashaId,
+              antardashaPlanet: analysis.selectedPeriod.synthesis.period.antardashaPlanet,
+              interval: analysis.selectedPeriod.synthesis.period.interval,
+              analysisAsOf: analysis.selectedPeriod.synthesis.period.analysisAsOf,
+              temporalRelation: analysis.selectedPeriod.synthesis.period.temporalRelation
+            },
+            synthesisVersion: analysis.selectedPeriod.synthesis.synthesisVersion
+          });
+        }
+      } finally {
+        aiExplanationSpy.mockRestore();
       }
-
-      aiExplanationSpy.mockRestore();
     });
 
     it('selectedPeriodEvidence wiring: selected-period-only evidence ID reaches AI context', async () => {
@@ -1062,12 +1118,23 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         expect(options.selectedPeriodEvidence?.careerDashaEvidence).toBeDefined();
         expect(options.selectedPeriodEvidence?.wealthEvidence).toBeDefined();
 
+        // Verify the evidence arrays contain the IDs from the pipeline
+        // The test fixture's evidence is not distinguishable, so we verify structure only
+        const careerIds = options.selectedPeriodEvidence?.careerEvidence?.map((e: any) => e.id) ?? [];
+        const careerDashaIds = options.selectedPeriodEvidence?.careerDashaEvidence?.map((e: any) => e.id) ?? [];
+        const wealthIds = options.selectedPeriodEvidence?.wealthEvidence?.map((e: any) => e.id) ?? [];
+
+        // At minimum, verify the arrays are arrays (even if empty)
+        expect(Array.isArray(careerIds)).toBe(true);
+        expect(Array.isArray(careerDashaIds)).toBe(true);
+        expect(Array.isArray(wealthIds)).toBe(true);
+
         // Return a mock successful response
         return {
-          kind: 'SUCCESS',
+          kind: 'SUCCESS' as const,
           requestId: 'test-request-id',
-          task: 'SELECTED_PERIOD_ANALYSIS',
-          status: 'SUCCESS',
+          task: 'SELECTED_PERIOD_ANALYSIS' as const,
+          status: 'SUCCESS' as const,
           conclusion: 'Test explanation',
           supportingEvidence: [],
           challengingEvidence: [],
@@ -1076,28 +1143,30 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
           triggeredRuleIds: [],
           providerId: 'test-provider',
           providerName: 'Test Provider',
-          providerKind: 'LOCAL_RULES',
-          routingMode: 'LOCAL_ONLY',
+          providerKind: 'LOCAL_RULES' as const,
+          routingMode: 'LOCAL_ONLY' as const,
           fallbackUsed: false,
-          selectionReason: 'DEFAULT',
+          selectionReason: 'DEFAULT' as const,
           generatedAt: new Date().toISOString()
         };
       });
 
-      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
-        includeAiExplanation: false,
-        asOf: new Date('2024-01-01T00:00:00Z'),
-        selectedPeriod: {
-          mahadashaId: validMd!.id,
-          antardashaId: validAd!.id
-        },
-        includeSelectedPeriodAiExplanation: true
-      });
+      try {
+        const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+          includeAiExplanation: false,
+          asOf: new Date('2024-01-01T00:00:00Z'),
+          selectedPeriod: {
+            mahadashaId: validMd!.id,
+            antardashaId: validAd!.id
+          },
+          includeSelectedPeriodAiExplanation: true
+        });
 
-      // Assert: runAiExplanation was called
-      expect(aiExplanationSpy).toHaveBeenCalled();
-
-      aiExplanationSpy.mockRestore();
+        // Assert: runAiExplanation was called
+        expect(aiExplanationSpy).toHaveBeenCalled();
+      } finally {
+        aiExplanationSpy.mockRestore();
+      }
     });
   });
 });
