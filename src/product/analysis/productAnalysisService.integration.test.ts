@@ -489,24 +489,137 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       }
     });
 
-    it.skip('FUTURE temporal relation: asOf before start', async () => {
-      // This test is skipped because the temporal relation calculation appears to fail
-      // when asOf is before the start of the selected period interval.
-      // This may require changes to the temporal state resolution logic.
-      // TODO: Re-enable once temporal relation handling is fixed.
+    it('FUTURE temporal relation: asOf before start', async () => {
+      // First, run a baseline analysis to populate lastPipelineState
+      await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false
+      });
+
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      // Set asOf to 1 day before the interval start
+      const beforeStartIso = isoAtOffset(selection.interval.start, -24 * 60 * 60 * 1000);
+
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeStartIso),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('OK');
+
+      if (analysis.selectedPeriod?.status === 'OK') {
+        const synthesis = (analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.period.temporalRelation).toBe('FUTURE');
+      }
     });
 
-    it.skip('boundary tests: iterate PBA10_TEMPORAL_GOLDENS cases', async () => {
-      // This test is skipped because the temporal relation calculation appears to fail
-      // when asOf is at boundary conditions (start-1ms, start, end-1ms, end).
-      // This may require changes to the temporal state resolution logic.
-      // TODO: Re-enable once temporal relation handling is fixed.
+    it('boundary tests: iterate PBA10_TEMPORAL_GOLDENS cases', async () => {
+      // First, run a baseline analysis to populate lastPipelineState
+      await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false
+      });
+
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      const startMs = Date.parse(selection.interval.start);
+      const endMs = Date.parse(selection.interval.end);
+
+      // Test start-1ms → FUTURE
+      const beforeStart = new Date(startMs - 1).toISOString();
+      const analysisBeforeStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeStart),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisBeforeStart.selectedPeriod?.status === 'OK') {
+        const synthesis = (analysisBeforeStart.selectedPeriod as Extract<typeof analysisBeforeStart.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeStart);
+      }
+
+      // Test start → CURRENT
+      const atStart = new Date(startMs).toISOString();
+      const analysisAtStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(atStart),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisAtStart.selectedPeriod?.status === 'OK') {
+        const synthesis = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
+      }
+
+      // Test end-1ms → CURRENT
+      const beforeEnd = new Date(endMs - 1).toISOString();
+      const analysisBeforeEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeEnd),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisBeforeEnd.selectedPeriod?.status === 'OK') {
+        const synthesis = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
+      }
+
+      // Test end → PAST
+      const atEnd = new Date(endMs).toISOString();
+      const analysisAtEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(atEnd),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisAtEnd.selectedPeriod?.status === 'OK') {
+        const synthesis = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
+      }
     });
 
-    it.skip('invalid asOf: unparseable date → temporalRelation UNKNOWN', async () => {
-      // This test is skipped because the service doesn't currently validate asOf format
-      // before passing it to the temporal state resolver.
-      // TODO: Re-enable once asOf validation is properly implemented.
+    it('invalid asOf: unparseable date → INVALID_SELECTION', async () => {
+      // First, run a baseline analysis to populate lastPipelineState
+      await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false
+      });
+
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      // Pass an unparseable asOf date
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: 'not-a-valid-date' as any,
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+
+      // Should return INVALID_SELECTION due to INVALID_ANALYSIS_AS_OF error
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('INVALID_SELECTION');
     });
 
     it('invalid selection: valid MD + nonexistent AD → INVALID_SELECTION', async () => {
