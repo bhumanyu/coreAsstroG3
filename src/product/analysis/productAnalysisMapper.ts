@@ -44,6 +44,7 @@ import type {
   ProductConfidence,
   ConclusionStatus,
   ProductSelectedPeriodSynthesis,
+  ProductQualificationStatus,
   ProductSynthesisEvidenceReference,
   ProductSynthesisMissingInput,
   ProductSynthesisProvenance,
@@ -67,6 +68,10 @@ import {
   listSelectableMdAdPeriods,
   type SelectablePeriodsResult
 } from '../../core/analysis/selectedMdAdPeriod';
+import {
+  classifyTemporalRelation,
+  type TemporalRelation
+} from '../../core/analysis/temporalInterval';
 
 export interface ProductAnalysisMapperInput {
   readonly birthDetails: BirthDetails;
@@ -184,40 +189,28 @@ function deriveAggregateD10Status(candidates: readonly { d10Status: string }[]):
 }
 
 /**
- * Parse an ISO date string to a timestamp.
- * Returns null if invalid.
- */
-function parseInstant(value: string): number | null {
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds) ? milliseconds : null;
-}
-
-/**
  * Compute temporal relation of a period relative to analysis.asOf.
- * Uses the same interval semantics as createSelectedPeriodActivationContext:
- * - before start → FUTURE
- * - [start,end) → CURRENT
- * - ≥ end → PAST
- * - invalid/unparseable dates → UNKNOWN
+ * Uses the shared classifyTemporalRelation utility for consistency.
+ *
+ * Maps TemporalRelation to ProductTemporalRelation:
+ * - PAST/CURRENT/FUTURE → same
+ * - INVALID → UNKNOWN (mapper treats inverted intervals as unknown)
+ * - UNKNOWN → UNKNOWN
  */
 function computeTemporalRelation(
   start: string,
   end: string,
   analysisAsOf: string
 ): ProductTemporalRelation {
-  const startMs = parseInstant(start);
-  const endMs = parseInstant(end);
-  const asOfMs = parseInstant(analysisAsOf);
+  const relation = classifyTemporalRelation(start, end, analysisAsOf);
 
-  if (startMs === null || endMs === null || asOfMs === null) {
-    // Return UNKNOWN if we can't parse dates
+  // Map INVALID to UNKNOWN for product layer (mapper doesn't reject, just labels)
+  if (relation === 'INVALID') {
     return 'UNKNOWN';
   }
 
-  // Canonical intervals are half-open [start, end): start is included, end excluded.
-  if (asOfMs < startMs) return 'FUTURE';
-  if (asOfMs >= endMs) return 'PAST';
-  return 'CURRENT';
+  // PAST, CURRENT, FUTURE, UNKNOWN map directly
+  return relation as ProductTemporalRelation;
 }
 
 /**
@@ -1197,6 +1190,16 @@ export function mapSelectedPeriodSynthesis(
     )
   });
 
+  // Compute qualification status from career.qualificationBasis
+  // Product contract (compatibility contract per Finding 5):
+  // - CANONICAL: career used canonical qualification mechanisms
+  // - PROVISIONAL: career used proxy direction or canonical inputs were unavailable
+  // - UNAVAILABLE: canonical qualification could not be determined (should not occur on success path)
+  const qualificationStatus: import('./productAnalysisTypes').ProductQualificationStatus =
+    value.career.qualificationBasis === 'CANONICAL_STATUS'
+      ? 'CANONICAL'
+      : 'PROVISIONAL';
+
   return Object.freeze({
     synthesisVersion: value.synthesisVersion,
     period: Object.freeze({
@@ -1207,7 +1210,7 @@ export function mapSelectedPeriodSynthesis(
       antardashaPlanet: value.period.antardashaPlanet,
       interval: Object.freeze({ ...value.period.interval }),
       analysisAsOf: value.period.analysisAsOf,
-      temporalRelation: value.period.temporalRelation
+      temporalRelation: value.period.temporalRelation // Preserved verbatim from domain synthesis
     }),
     natalBaseline: value.natalBaseline,
     career,
@@ -1215,6 +1218,7 @@ export function mapSelectedPeriodSynthesis(
     evidence,
     missingInputs,
     provenance,
+    qualificationStatus,
     aiExplanationStatus: 'NOT_REQUESTED'
   });
 }

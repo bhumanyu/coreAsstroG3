@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { mapSelectedPeriodSynthesis } from './productAnalysisMapper';
+import { mapSelectedPeriodSynthesis, mapDashaPeriodOptions } from './productAnalysisMapper';
 import type { SelectedPeriodSynthesisValue } from '../../domain/synthesis/selectedPeriodSynthesis';
 
 describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
@@ -163,6 +163,43 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     }
   };
 
+  it('computes qualificationStatus from career.qualificationBasis', () => {
+    const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+    // CANONICAL_STATUS should map to CANONICAL
+    expect(result.qualificationStatus).toBe('CANONICAL');
+  });
+
+  it('computes PROVISIONAL qualificationStatus for PROXY_DIRECTION', () => {
+    const mockWithProxy: SelectedPeriodSynthesisValue<any, any> = {
+      ...mockSynthesisValue,
+      career: {
+        ...mockSynthesisValue.career,
+        qualificationBasis: 'PROXY_DIRECTION'
+      }
+    };
+
+    const result = mapSelectedPeriodSynthesis(mockWithProxy);
+
+    // PROXY_DIRECTION should map to PROVISIONAL
+    expect(result.qualificationStatus).toBe('PROVISIONAL');
+  });
+
+  it('computes PROVISIONAL qualificationStatus for UNAVAILABLE', () => {
+    const mockWithUnavailable: SelectedPeriodSynthesisValue<any, any> = {
+      ...mockSynthesisValue,
+      career: {
+        ...mockSynthesisValue.career,
+        qualificationBasis: 'UNAVAILABLE'
+      }
+    };
+
+    const result = mapSelectedPeriodSynthesis(mockWithUnavailable);
+
+    // UNAVAILABLE should map to PROVISIONAL
+    expect(result.qualificationStatus).toBe('PROVISIONAL');
+  });
+
   it('preserves all ID/provenance fields verbatim', () => {
     const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
 
@@ -202,6 +239,24 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     expect(Object.isFrozen(result.evidence)).toBe(true);
     expect(Object.isFrozen(result.missingInputs)).toBe(true);
     expect(Object.isFrozen(result.career.expressions)).toBe(true);
+  });
+
+  it('preserves temporalRelation from domain synthesis (mapper does not recompute)', () => {
+    // The mapper is a pure projection layer - it does not recompute temporalRelation
+    // The domain synthesis layer (selectedPeriodSynthesis) computes temporalRelation
+    // This test verifies the mapper preserves whatever the domain provides
+    const mockWithDifferentRelation: SelectedPeriodSynthesisValue<any, any> = {
+      ...mockSynthesisValue,
+      period: {
+        ...mockSynthesisValue.period,
+        temporalRelation: 'PAST'
+      }
+    };
+
+    const result = mapSelectedPeriodSynthesis(mockWithDifferentRelation);
+
+    // The mapper should preserve the temporalRelation from the domain layer
+    expect(result.period.temporalRelation).toBe('PAST');
   });
 
   it('no ID regeneration', () => {
@@ -279,6 +334,13 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     expect(result.provenance.career.qualificationBasis).toBe('CANONICAL_STATUS');
     expect(result.provenance.wealth.status).toBe('PRESENT');
     expect(result.provenance.wealth.version).toBe('PBA-05-v1');
+  });
+
+  it('includes qualificationStatus field', () => {
+    const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+    expect(result.qualificationStatus).toBeDefined();
+    expect(['CANONICAL', 'PROVISIONAL', 'UNAVAILABLE']).toContain(result.qualificationStatus);
   });
 
   it('returns synthesisVersion PBA-06-v1', () => {
@@ -362,5 +424,30 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
       expect(ruleRef?.classification).toBeUndefined();
       expect(ruleRef?.evidenceId).toBeUndefined();
     });
+  });
+});
+
+describe('mapDashaPeriodOptions (Finding 4: shared interval validation)', () => {
+  it('returns UNKNOWN for parseable-but-inverted intervals', () => {
+    // Test with a parseable interval where start is after end (inverted)
+    const selectablePeriods: import('../../core/analysis/selectedMdAdPeriod').SelectablePeriodsResult = {
+      mahadashas: [
+        {
+          id: 'md-1',
+          planet: 'SATURN' as any,
+          start: '2027-01-01T00:00:00Z', // After end (inverted)
+          end: '2025-01-01T00:00:00Z',
+          valid: false,
+          diagnostics: ['INVALID_MAHADASHA_INTERVAL']
+        }
+      ],
+      antardashas: [],
+      diagnostics: ['INVALID_MAHADASHA_INTERVAL']
+    };
+
+    const result = mapDashaPeriodOptions(selectablePeriods, '2026-01-01T00:00:00Z');
+
+    // The mapper should return UNKNOWN for inverted intervals (not PAST/CURRENT/FUTURE)
+    expect(result.mahadashas[0].temporalRelation).toBe('UNKNOWN');
   });
 });

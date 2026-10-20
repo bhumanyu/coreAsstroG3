@@ -345,6 +345,19 @@ export type ProductSelectedPeriodStatus =
   | 'UNAVAILABLE';
 
 /**
+ * Qualification status for the selected-period synthesis.
+ * Distinguishes fully canonical results from partially/proxy-qualified results.
+ *
+ * Product contract (compatibility contract per Finding 5):
+ * - CANONICAL: Both career and wealth domains used canonical qualification mechanisms
+ * - PROVISIONAL: At least one domain used proxy direction or canonical inputs were unavailable
+ * - UNAVAILABLE: Canonical qualification could not be determined for either domain
+ *
+ * This is an additive field on the success value; it does not change the ok/error discriminant.
+ */
+export type ProductQualificationStatus = 'CANONICAL' | 'PROVISIONAL' | 'UNAVAILABLE';
+
+/**
  * Evidence reference in the selected-period synthesis.
  * Classification is based on explicit source polarity/effect only.
  * Mixed evidence stays MIXED (maps to PARTIALLY_ACTIVATES in status).
@@ -498,6 +511,12 @@ export interface ProductSelectedPeriodSynthesis {
   readonly evidence: readonly ProductSynthesisEvidenceReference[];
   readonly missingInputs: readonly ProductSynthesisMissingInput[];
   readonly provenance: ProductSynthesisProvenance;
+  /**
+   * Qualification status for the synthesis result.
+   * Derived from career.qualificationBasis and wealth qualification completeness.
+   * Allows users to distinguish fully canonical results from partial/proxy-qualified results.
+   */
+  readonly qualificationStatus: ProductQualificationStatus;
   /**
    * AI explanation status for the selected period (PBA-09).
    * Explicitly surfaces whether AI explanation succeeded, failed, or was not requested.

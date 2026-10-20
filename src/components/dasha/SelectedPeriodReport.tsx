@@ -15,7 +15,8 @@ import type {
   ProductSynthesisEvidenceReference,
   ProductSynthesisMissingInput,
   ProductSynthesisDiagnostic,
-  ActivationEffect
+  ActivationEffect,
+  ProductQualificationStatus
 } from '../../product/analysis/productAnalysisTypes';
 import { Calendar, Clock, AlertTriangle, CheckCircle2, FileText, Activity, ChevronDown, ChevronRight, Copy } from 'lucide-react';
 
@@ -40,6 +41,18 @@ const TEMPORAL_BADGE_CLASSES: Record<'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN', 
   CURRENT: 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300',
   FUTURE: 'bg-blue-950/60 border-blue-800/80 text-blue-300',
   UNKNOWN: 'bg-slate-800/60 border-slate-700/80 text-slate-400'
+};
+
+const QUALIFICATION_BADGE_CLASSES: Record<ProductQualificationStatus, string> = {
+  CANONICAL: 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300',
+  PROVISIONAL: 'bg-amber-950/60 border-amber-800/80 text-amber-300',
+  UNAVAILABLE: 'bg-slate-800/60 border-slate-700/80 text-slate-400'
+};
+
+const QUALIFICATION_DESCRIPTIONS: Record<ProductQualificationStatus, string> = {
+  CANONICAL: 'Fully qualified using canonical mechanisms',
+  PROVISIONAL: 'Using proxy direction or canonical inputs unavailable',
+  UNAVAILABLE: 'Canonical qualification could not be determined'
 };
 
 function formatDate(isoString: string): string {
@@ -164,9 +177,17 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
               Career Synthesis
             </span>
-            <span className="text-xs text-slate-500 font-mono-code ml-auto">
-              Basis: {synthesis.career.qualificationBasis}
-            </span>
+            <div className="flex items-center gap-2 ml-auto">
+              <div
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-[10px] font-mono-code ${QUALIFICATION_BADGE_CLASSES[synthesis.qualificationStatus]}`}
+                title={QUALIFICATION_DESCRIPTIONS[synthesis.qualificationStatus]}
+              >
+                <span>{synthesis.qualificationStatus}</span>
+              </div>
+              <span className="text-xs text-slate-500 font-mono-code">
+                Basis: {synthesis.career.qualificationBasis}
+              </span>
+            </div>
           </div>
 
           {/* Career limitation warning */}

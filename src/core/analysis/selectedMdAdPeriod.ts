@@ -4,6 +4,10 @@ import {
   DashaAntardashaInterpretation
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { DashaSystem, Planet } from '../../types';
+import {
+  validateInterval,
+  parseInstant
+} from './temporalInterval';
 
 /**
  * Version identifier for MD-AD period resolver IDs.
@@ -92,15 +96,6 @@ export interface SelectablePeriodsResult {
 }
 
 /**
- * Parse an ISO date string to a Date.
- * Returns null if invalid.
- */
-function parseDate(dateStr: string): Date | null {
-  const date = new Date(dateStr);
-  return isNaN(date.getTime()) ? null : date;
-}
-
-/**
  * Check if a date string matches the canonical ISO format (Z-terminated).
  * Format: YYYY-MM-DDTHH:mm:ss.sssZ
  */
@@ -109,15 +104,13 @@ function isCanonicalIsoFormat(dateStr: string): boolean {
 }
 
 /**
- * Validate that an interval has valid start/end and start < end.
+ * Parse an ISO date string to a Date.
+ * Returns null if invalid.
+ * Local wrapper for parseInstant that returns Date instead of timestamp.
  */
-function validateInterval(start: string, end: string): boolean {
-  const startDate = parseDate(start);
-  const endDate = parseDate(end);
-  if (!startDate || !endDate) {
-    return false;
-  }
-  return startDate.getTime() < endDate.getTime();
+function parseDate(dateStr: string): Date | null {
+  const timestamp = parseInstant(dateStr);
+  return timestamp === null ? null : new Date(timestamp);
 }
 
 /**

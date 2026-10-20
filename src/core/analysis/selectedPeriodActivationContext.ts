@@ -9,6 +9,11 @@ import {
   resolveSelectedMdAdPeriod,
   type ResolutionError
 } from './selectedMdAdPeriod';
+import {
+  parseInstant,
+  classifyTemporalRelation,
+  type TemporalRelation
+} from './temporalInterval';
 
 /**
  * Version for the selected-period activation context contract.
@@ -87,32 +92,27 @@ export interface CreateSelectedPeriodActivationContextInput {
   readonly analysisAsOf: string;
 }
 
-function parseInstant(value: string): number | null {
-  const milliseconds = Date.parse(value);
-  return Number.isFinite(milliseconds) ? milliseconds : null;
-}
-
-function classifyTemporalRelation(
+/**
+ * Classify temporal relation for selected-period activation context.
+ * Uses the shared classifyTemporalRelation utility.
+ *
+ * Returns null for INVALID or UNKNOWN relations (fail-closed rejection).
+ * This ensures inverted intervals are rejected rather than silently treated as UNKNOWN.
+ */
+function classifyTemporalRelationForContext(
   selectedStart: string,
   selectedEnd: string,
   analysisAsOf: string
 ): SelectedPeriodTemporalRelation | null {
-  const start = parseInstant(selectedStart);
-  const end = parseInstant(selectedEnd);
-  const asOf = parseInstant(analysisAsOf);
+  const relation = classifyTemporalRelation(selectedStart, selectedEnd, analysisAsOf);
 
-  // Note: 'null' is reserved for unparseable period interval dates (start/end).
-  // Caller analysisAsOf parseability is validated upstream in createSelectedPeriodActivationContext
-  // (returns INVALID_ANALYSIS_AS_OF error before calling this function).
-  // This contract ensures unparseable asOf is rejected early rather than silently treated as UNKNOWN.
-  if (start === null || end === null || asOf === null || start >= end) {
+  // Reject INVALID (inverted intervals) and UNKNOWN (unparseable dates)
+  if (relation === 'INVALID' || relation === 'UNKNOWN') {
     return null;
   }
 
-  // Canonical intervals are half-open [start, end): start is included, end excluded.
-  if (asOf < start) return 'FUTURE';
-  if (asOf >= end) return 'PAST';
-  return 'CURRENT';
+  // PAST, CURRENT, FUTURE are valid
+  return relation as SelectedPeriodTemporalRelation;
 }
 
 /**
@@ -152,7 +152,7 @@ export function createSelectedPeriodActivationContext(
   }
 
   const { interval, mahadasha, mahadashaNode, antardashaNode } = resolved.value;
-  const temporalRelation = classifyTemporalRelation(
+  const temporalRelation = classifyTemporalRelationForContext(
     interval.start,
     interval.end,
     input.analysisAsOf
