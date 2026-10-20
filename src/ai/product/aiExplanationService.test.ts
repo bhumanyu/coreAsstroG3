@@ -504,6 +504,126 @@ describe('runAiExplanation', () => {
     }
   });
 
+  it('SELECTED_PERIOD_ANALYSIS with evidence-sparse context returns SUCCESS/PARTIAL not ERROR', async () => {
+    // Create a selected-period context with sparse evidence (future period with no activations)
+    const sparseSelectedPeriod: any = {
+      synthesisVersion: 'PBA-06-v1',
+      period: {
+        selectedPeriodId: 'test-period-id',
+        mahadashaId: 'test-md-id',
+        mahadashaPlanet: 'VENUS',
+        antardashaId: 'test-ad-id',
+        antardashaPlanet: 'VENUS',
+        interval: { start: '2030-10-08T17:58:35.885Z', end: '2034-02-07T05:58:35.885Z' },
+        analysisAsOf: '2026-01-01T00:00:00Z',
+        temporalRelation: 'FUTURE'
+      },
+      natalBaseline: {},
+      career: {
+        qualificationBasis: 'PROXY_DIRECTION',
+        expressions: [], // No expressions - sparse evidence
+        diagnostics: []
+      },
+      wealth: {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            effect: 'UNKNOWN',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            effect: 'UNKNOWN',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            effect: 'UNKNOWN',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          }
+        },
+        diagnostics: []
+      },
+      evidence: [], // No evidence references
+      supportingEvidenceIds: [],
+      challengingEvidenceIds: [],
+      missingInputs: [],
+      diagnostics: [],
+      provenance: {
+        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'PROXY_DIRECTION' },
+        wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+      },
+      availableEvidence: []
+    };
+
+    const mockRouter: any = {
+      route: async (request: any) => {
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        expect(request.context.selectedPeriod).toBeDefined();
+
+        // Local rules should return a valid conclusion even with sparse evidence
+        return {
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Career analysis for the selected VENUS-VENUS period is based on qualification basis PROXY_DIRECTION. No career expressions are linked to this period.',
+              supportingEvidenceIds: [],
+              challengingEvidenceIds: [],
+              unresolvedQuestions: ['Career activation may be unavailable for this period.'],
+              warnings: [],
+              triggeredRuleIds: ['SP-01-CAREER-EXPRESSIONS']
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-sparse-test'
+        };
+      }
+    };
+
+    const result = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      selectedPeriod: sparseSelectedPeriod,
+      router: mockRouter
+    }));
+
+    // Should return SUCCESS, not ERROR
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.status).toBe('SUCCESS');
+      expect(result.conclusion).toContain('qualification basis PROXY_DIRECTION');
+      expect(result.supportingEvidence).toEqual([]);
+      expect(result.challengingEvidence).toEqual([]);
+    }
+  });
+
   it('SELECTED_PERIOD_ANALYSIS unreferenced ambiguous ID does not appear in unresolved', async () => {
     // Create a selected-period context with an ambiguous cross-namespace ID
     const ambiguousSpEvidence: any = {

@@ -680,6 +680,12 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     ).rejects.toThrow('no analysis context available');
   });
 
+  // Note: Evidence-sparse selected period testing is covered in integration tests
+  // (productAnalysisService.integration.test.ts) where real canonical artifacts
+  // are available from the full pipeline. The unit test here uses mock data that
+  // doesn't support realistic synthesis, so we rely on integration tests for
+  // end-to-end verification of sparse evidence handling.
+
   // AI explanation tests moved to integration test file (productAnalysisService.integration.test.ts)
   // where real canonical artifacts are available from the full pipeline
 });

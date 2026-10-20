@@ -222,7 +222,7 @@ export function classifyReasoningEvidence(
         weight: layerWeight * strengthWeight,
         statement: item.statement,
         relatedEvidenceIds: Object.freeze([
-          ...item.relatedEvidenceIds
+          ...(item.relatedEvidenceIds ?? [])
         ]),
         sourceIds: Object.freeze([item.id]),
         occurrenceCount: 1

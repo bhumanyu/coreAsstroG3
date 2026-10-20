@@ -70,18 +70,20 @@ export const SelectedPeriodAiExplanation: React.FC<SelectedPeriodAiExplanationPr
   // Render based on kind (status discriminant)
   if (explanation.kind === 'ERROR') {
     return (
-      <div className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3" role="alert" aria-live="assertive">
+      <div className="bg-slate-800/40 border border-slate-700/60 rounded-2xl p-5 space-y-3" role="status" aria-live="polite">
         <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-rose-400" aria-hidden="true" />
-          <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-rose-300">
-            AI Explanation Error
+          <TriangleAlert className="w-4 h-4 text-slate-400" aria-hidden="true" />
+          <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-slate-300">
+            AI Narrative Unavailable
           </span>
         </div>
-        <div className="text-xs text-slate-300">{explanation.message}</div>
+        <div className="text-xs text-slate-400">
+          The AI narrative for this period could not be generated. The deterministic analysis above remains authoritative.
+        </div>
         {explanation.warnings.length > 0 && (
           <div className="space-y-1">
             {explanation.warnings.map((warning, idx) => (
-              <div key={idx} className="text-xs text-rose-400 flex items-start gap-2">
+              <div key={idx} className="text-xs text-slate-500 flex items-start gap-2">
                 <TriangleAlert className="w-3 h-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
                 <span>{warning}</span>
               </div>

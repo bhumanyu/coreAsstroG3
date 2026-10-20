@@ -141,7 +141,7 @@ export function deduplicateReasoningEvidence(
       }
 
       // Accumulate related evidence IDs
-      for (const relatedId of item.relatedEvidenceIds) {
+      for (const relatedId of item.relatedEvidenceIds ?? []) {
         relatedEvidenceIds.add(relatedId);
       }
 
