@@ -35,10 +35,11 @@ const ACTIVATION_EFFECT_CLASSES: Record<ActivationEffect | string, string> = {
   UNAVAILABLE: 'bg-slate-800/60 border-slate-700/80 text-slate-400'
 };
 
-const TEMPORAL_BADGE_CLASSES: Record<'PAST' | 'CURRENT' | 'FUTURE', string> = {
+const TEMPORAL_BADGE_CLASSES: Record<'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN', string> = {
   PAST: 'bg-slate-700/60 border-slate-600/80 text-slate-300',
   CURRENT: 'bg-emerald-950/60 border-emerald-800/80 text-emerald-300',
-  FUTURE: 'bg-blue-950/60 border-blue-800/80 text-blue-300'
+  FUTURE: 'bg-blue-950/60 border-blue-800/80 text-blue-300',
+  UNKNOWN: 'bg-slate-800/60 border-slate-700/80 text-slate-400'
 };
 
 function formatDate(isoString: string): string {
@@ -108,11 +109,10 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
               <button
                 key={d}
                 onClick={() => onDomainToggle(d)}
-                className={`px-2.5 py-1 rounded text-xs font-mono-code transition-colors ${
-                  domainToggle === d
+                className={`px-2.5 py-1 rounded text-xs font-mono-code transition-colors ${domainToggle === d
                     ? 'bg-indigo-600 text-white border border-indigo-500/30'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700/60'
-                }`}
+                  }`}
               >
                 {d}
               </button>

@@ -481,7 +481,7 @@ export interface ProductSelectedPeriodSynthesis {
     readonly antardashaPlanet: string;
     readonly interval: { readonly start: string; readonly end: string };
     readonly analysisAsOf: string;
-    readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE';
+    readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
   };
   readonly natalBaseline: {
     readonly career?: {

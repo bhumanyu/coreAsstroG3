@@ -546,8 +546,8 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       });
       // Note: asOf changes may cause pipeline recalculation, so selection might fail
       if (analysisBeforeStart.selectedPeriod?.status === 'OK') {
-        const synthesis = (analysisBeforeStart.selectedPeriod as Extract<typeof analysisBeforeStart.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeStart);
+        const synthesisBeforeStart = (analysisBeforeStart.selectedPeriod as Extract<typeof analysisBeforeStart.selectedPeriod, { status: 'OK' }>).synthesis;
+        expect(synthesisBeforeStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeStart);
       }
 
       // Test start → CURRENT
@@ -561,10 +561,8 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         }
       });
       expect(analysisAtStart.selectedPeriod?.status).toBe('OK');
-      if (analysisAtStart.selectedPeriod?.status === 'OK') {
-        const synthesis = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
-      }
+      const synthesisAtStart = (analysisAtStart.selectedPeriod as Extract<typeof analysisAtStart.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesisAtStart.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atStart);
 
       // Test end-1ms → CURRENT
       const beforeEnd = new Date(endMs - 1).toISOString();
@@ -577,10 +575,8 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         }
       });
       expect(analysisBeforeEnd.selectedPeriod?.status).toBe('OK');
-      if (analysisBeforeEnd.selectedPeriod?.status === 'OK') {
-        const synthesis = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
-      }
+      const synthesisBeforeEnd = (analysisBeforeEnd.selectedPeriod as Extract<typeof analysisBeforeEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesisBeforeEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.beforeEnd);
 
       // Test end → PAST
       const atEnd = new Date(endMs).toISOString();
@@ -593,10 +589,8 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
         }
       });
       expect(analysisAtEnd.selectedPeriod?.status).toBe('OK');
-      if (analysisAtEnd.selectedPeriod?.status === 'OK') {
-        const synthesis = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
-        expect(synthesis.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
-      }
+      const synthesisAtEnd = (analysisAtEnd.selectedPeriod as Extract<typeof analysisAtEnd.selectedPeriod, { status: 'OK' }>).synthesis;
+      expect(synthesisAtEnd.period.temporalRelation).toBe(PBA10_TEMPORAL_GOLDENS.atEnd);
     });
 
     it('invalid asOf: unparseable date → INVALID_SELECTION', async () => {
