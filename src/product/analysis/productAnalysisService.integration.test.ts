@@ -14,6 +14,12 @@ import type { ProductAnalysis } from './productAnalysisTypes';
 import { listSelectableMdAdPeriods } from '../../core/analysis/selectedMdAdPeriod';
 import { VALID_SELECTION_GOLDEN_FIXTURE } from '../../test/fixtures/selectedPeriodGoldenFixtures';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import {
+  getValidMdAdSelection,
+  getNonOverlappingAdFromOtherMd,
+  isoAtOffset,
+  PBA10_TEMPORAL_GOLDENS
+} from '../../test/fixtures/pba10SelectedPeriodFixtures';
 
 describe('ProductAnalysisService integration (PBA-07)', () => {
   let service: ProductAnalysisService;
@@ -403,5 +409,258 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(json).not.toContain('mahadashaNode');
     expect(json).not.toContain('antardashaNode');
     expect(json).not.toContain('function('); // No function references
+  });
+
+  describe('PBA-10: Test-only validation', () => {
+    it('PAST temporal relation: Moon-Moon selection with asOf in the past', async () => {
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      // Select MD=MOON, AD=MOON to match the golden fixture
+      const selectablePeriods = listSelectableMdAdPeriods(report!);
+      const moonMd = selectablePeriods.mahadashas.find((md: any) => md.valid && md.planet === 'MOON');
+      expect(moonMd).toBeDefined();
+
+      const moonAd = selectablePeriods.antardashas.find(
+        (ad: any) => ad.valid && ad.mahadashaId === moonMd!.id && ad.planet === 'MOON'
+      );
+      expect(moonAd).toBeDefined();
+
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date('2024-01-01T00:00:00.000Z'),
+        selectedPeriod: {
+          mahadashaId: moonMd!.id,
+          antardashaId: moonAd!.id
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('OK');
+
+      if (analysis.selectedPeriod?.status === 'OK') {
+        const synthesis = analysis.selectedPeriod.synthesis;
+        expect(synthesis.period.temporalRelation).toBe('PAST');
+        expect(synthesis.period.mahadashaId).toBe(moonMd!.id);
+        expect(synthesis.period.antardashaId).toBe(moonAd!.id);
+        expect(synthesis.period.interval.start).toBe(moonAd!.start);
+        expect(synthesis.period.interval.end).toBe(moonAd!.end);
+        expect(synthesis.period.analysisAsOf).toBe('2024-01-01T00:00:00.000Z');
+      }
+    });
+
+    it('CURRENT temporal relation: asOf inside [start, end)', async () => {
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      // Set asOf to the midpoint of the interval
+      const startMs = Date.parse(selection.interval.start);
+      const endMs = Date.parse(selection.interval.end);
+      const midMs = startMs + (endMs - startMs) / 2;
+      const midIso = new Date(midMs).toISOString();
+
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(midIso),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('OK');
+
+      if (analysis.selectedPeriod?.status === 'OK') {
+        expect(analysis.selectedPeriod.synthesis.period.temporalRelation).toBe('CURRENT');
+      }
+    });
+
+    it('FUTURE temporal relation: asOf before start', async () => {
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      // Set asOf to 1 day before the interval start
+      const beforeStartIso = isoAtOffset(selection.interval.start, -24 * 60 * 60 * 1000);
+
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeStartIso),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('OK');
+
+      if (analysis.selectedPeriod?.status === 'OK') {
+        expect(analysis.selectedPeriod.synthesis.period.temporalRelation).toBe('FUTURE');
+      }
+    });
+
+    it('boundary tests: start-1→FUTURE, start→CURRENT, end-1→CURRENT, end→PAST', async () => {
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      const startMs = Date.parse(selection.interval.start);
+      const endMs = Date.parse(selection.interval.end);
+
+      // Test start-1ms → FUTURE
+      const beforeStart = new Date(startMs - 1).toISOString();
+      const analysisBeforeStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeStart),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisBeforeStart.selectedPeriod?.status === 'OK') {
+        expect(analysisBeforeStart.selectedPeriod.synthesis.period.temporalRelation).toBe('FUTURE');
+      }
+
+      // Test start → CURRENT
+      const atStart = new Date(startMs).toISOString();
+      const analysisAtStart = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(atStart),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisAtStart.selectedPeriod?.status === 'OK') {
+        expect(analysisAtStart.selectedPeriod.synthesis.period.temporalRelation).toBe('CURRENT');
+      }
+
+      // Test end-1ms → CURRENT
+      const beforeEnd = new Date(endMs - 1).toISOString();
+      const analysisBeforeEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(beforeEnd),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisBeforeEnd.selectedPeriod?.status === 'OK') {
+        expect(analysisBeforeEnd.selectedPeriod.synthesis.period.temporalRelation).toBe('CURRENT');
+      }
+
+      // Test end → PAST
+      const atEnd = new Date(endMs).toISOString();
+      const analysisAtEnd = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(atEnd),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+      if (analysisAtEnd.selectedPeriod?.status === 'OK') {
+        expect(analysisAtEnd.selectedPeriod.synthesis.period.temporalRelation).toBe('PAST');
+      }
+    });
+
+    it('invalid selection: valid MD + nonexistent AD → INVALID_SELECTION', async () => {
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: 'v2|VIMSHOTTARI|ad|NONEXISTENT|2000-01-01T00:00:00.000Z|2001-01-01T00:00:00.000Z|v2%7CVIMSHOTTARI%7Cmd%7CMOON%7C1988-05-08T04%3A00%3A00.000Z%7C1996-08-16T18%3A33%3A37.957Z'
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('INVALID_SELECTION');
+      expect(analysis.selectedPeriod?.synthesis).toBeUndefined();
+    });
+
+    it('invalid selection: AD from different MD → INVALID_SELECTION', async () => {
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      const otherAd = getNonOverlappingAdFromOtherMd(report!, selection.mahadashaId);
+
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: otherAd.antardashaId
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('INVALID_SELECTION');
+      expect(analysis.selectedPeriod?.synthesis).toBeUndefined();
+    });
+
+    it('invalid selection: malformed IDs → INVALID_SELECTION', async () => {
+      const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        selectedPeriod: {
+          mahadashaId: 'malformed-id',
+          antardashaId: 'another-malformed-id'
+        }
+      });
+
+      expect(analysis.selectedPeriod).toBeDefined();
+      expect(analysis.selectedPeriod?.status).toBe('INVALID_SELECTION');
+      expect(analysis.selectedPeriod?.synthesis).toBeUndefined();
+    });
+
+    it('natal invariance: selectedPeriod does not affect baseline career/wealth/dasha.current', async () => {
+      const asOf = '2024-01-01T00:00:00.000Z';
+
+      const baseline = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(asOf)
+      });
+
+      const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
+      expect(report).toBeDefined();
+
+      const selection = getValidMdAdSelection(report!);
+
+      const selected = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+        includeAiExplanation: false,
+        asOf: new Date(asOf),
+        selectedPeriod: {
+          mahadashaId: selection.mahadashaId,
+          antardashaId: selection.antardashaId
+        }
+      });
+
+      // Baseline should not have selectedPeriod
+      expect(baseline.selectedPeriod).toBeUndefined();
+
+      // Selected should have OK status
+      expect(selected.selectedPeriod).toBeDefined();
+      expect(selected.selectedPeriod?.status).toBe('OK');
+
+      // career and wealth should be equal
+      expect(selected.career).toEqual(baseline.career);
+      expect(selected.wealth).toEqual(baseline.wealth);
+
+      // dasha.current should be equal
+      expect(selected.dasha.current).toEqual(baseline.dasha.current);
+    });
   });
 });

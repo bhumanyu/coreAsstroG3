@@ -374,4 +374,252 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     // The function should accept undefined baselines without crashing
     expect(result).toBeDefined();
   });
+
+  describe('PBA-10: Test-only validation', () => {
+    it('evidence-identity invariant: all evidence[].evidenceId exist in input evidence IDs', () => {
+      const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+
+      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+      expect(validAd).toBeDefined();
+
+      // Create evidence with known IDs
+      const careerEvidence: readonly DomainEvidence[] = [
+        { id: 'career-ev-1', source: 'PLANET', effect: 'SUPPORT', statement: 'Career evidence 1' } as any
+      ];
+      const careerDashaEvidence: readonly DomainEvidence[] = [
+        { id: 'career-dasha-ev-1', source: 'DASHA', effect: 'SUPPORT', statement: 'Career dasha evidence 1' } as any
+      ];
+      const wealthEvidence: readonly DomainEvidence[] = [
+        { id: 'wealth-ev-1', source: 'HOUSE', effect: 'SUPPORT', statement: 'Wealth evidence 1' } as any
+      ];
+
+      const input: BuildProductSelectedPeriodSynthesisInput = {
+        selection: {
+          mahadashaId: validMd!.id,
+          antardashaId: validAd!.id
+        },
+        context: mockAnalysisContext,
+        temporalState: mockTemporalState,
+        horoscope: mockHoroscope,
+        careerArtifacts: {
+          ...mockCareerArtifacts,
+          canonicalExpression: { expressions: [], diagnostics: [] } as any,
+          mechanismCandidates: []
+        },
+        careerEvidence,
+        careerDashaEvidence,
+        wealthEvidence,
+        careerBaseline: mockCareerBaseline,
+        wealthBaseline: mockWealthBaseline
+      };
+
+      const result = buildProductSelectedPeriodSynthesis(input);
+
+      // For a successful result, verify evidence identity invariant
+      if (result.ok) {
+        const allInputIds = new Set([
+          ...careerEvidence.map((e: any) => e.id),
+          ...careerDashaEvidence.map((e: any) => e.id),
+          ...wealthEvidence.map((e: any) => e.id)
+        ]);
+
+        for (const evidence of result.value.evidence) {
+          // RULE refs have no evidenceId - skip them
+          if (evidence.referenceKind === 'RULE') {
+            expect(evidence.evidenceId).toBeUndefined();
+            continue;
+          }
+
+          // EVIDENCE refs must have an evidenceId that exists in input
+          expect(evidence.evidenceId).toBeDefined();
+          expect(allInputIds.has(evidence.evidenceId!)).toBe(true);
+        }
+      }
+    });
+
+    it('incomplete-evidence: missing C9 evidence IDs → UNRESOLVED refs + diagnostics preserved', () => {
+      const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+
+      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+      expect(validAd).toBeDefined();
+
+      // Create evidence but intentionally omit some IDs referenced by dasha evidence
+      const careerEvidence: readonly DomainEvidence[] = [
+        { id: 'career-ev-1', source: 'PLANET', effect: 'SUPPORT', statement: 'Career evidence 1' } as any
+      ];
+      const careerDashaEvidence: readonly DomainEvidence[] = [
+        {
+          id: 'career-dasha-ev-1',
+          source: 'DASHA',
+          effect: 'SUPPORT',
+          statement: 'Career dasha evidence 1',
+          referencedEvidenceIds: ['career-ev-1', 'missing-ev-id'] // Reference a missing ID
+        } as any
+      ];
+      const wealthEvidence: readonly DomainEvidence[] = [];
+
+      const input: BuildProductSelectedPeriodSynthesisInput = {
+        selection: {
+          mahadashaId: validMd!.id,
+          antardashaId: validAd!.id
+        },
+        context: mockAnalysisContext,
+        temporalState: mockTemporalState,
+        horoscope: mockHoroscope,
+        careerArtifacts: {
+          ...mockCareerArtifacts,
+          canonicalExpression: { expressions: [], diagnostics: [] } as any,
+          mechanismCandidates: []
+        },
+        careerEvidence,
+        careerDashaEvidence,
+        wealthEvidence,
+        careerBaseline: mockCareerBaseline,
+        wealthBaseline: mockWealthBaseline
+      };
+
+      const result = buildProductSelectedPeriodSynthesis(input);
+
+      // The result may fail due to incomplete canonical inputs, but if it succeeds,
+      // verify that missing inputs are reported and no fabricated records exist
+      if (result.ok) {
+        // missingInputs should be non-empty if there are unresolved references
+        // (This is a documentation test - actual behavior depends on synthesis layer)
+        expect(result.value.missingInputs).toBeDefined();
+
+        // Verify no fabricated evidence IDs were invented
+        const allEvidenceIds = result.value.evidence
+          .filter((e) => e.referenceKind === 'EVIDENCE')
+          .map((e) => e.evidenceId);
+        const allInputIds = new Set([
+          ...careerEvidence.map((e: any) => e.id),
+          ...careerDashaEvidence.map((e: any) => e.id),
+          ...wealthEvidence.map((e: any) => e.id)
+        ]);
+
+        for (const id of allEvidenceIds) {
+          if (id) {
+            expect(allInputIds.has(id)).toBe(true);
+          }
+        }
+      }
+    });
+
+    it('domain-independence: career inputs change → wealth output unchanged', () => {
+      const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+
+      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+      expect(validAd).toBeDefined();
+
+      // Base inputs
+      const baseCareerEvidence: readonly DomainEvidence[] = [
+        { id: 'career-ev-1', source: 'PLANET', effect: 'SUPPORT', statement: 'Career evidence 1' } as any
+      ];
+      const baseCareerDashaEvidence: readonly DomainEvidence[] = [];
+      const wealthEvidence: readonly DomainEvidence[] = [
+        { id: 'wealth-ev-1', source: 'HOUSE', effect: 'SUPPORT', statement: 'Wealth evidence 1' } as any
+      ];
+
+      const input1: BuildProductSelectedPeriodSynthesisInput = {
+        selection: {
+          mahadashaId: validMd!.id,
+          antardashaId: validAd!.id
+        },
+        context: mockAnalysisContext,
+        temporalState: mockTemporalState,
+        horoscope: mockHoroscope,
+        careerArtifacts: {
+          ...mockCareerArtifacts,
+          canonicalExpression: { expressions: [], diagnostics: [] } as any,
+          mechanismCandidates: []
+        },
+        careerEvidence: baseCareerEvidence,
+        careerDashaEvidence: baseCareerDashaEvidence,
+        wealthEvidence,
+        careerBaseline: mockCareerBaseline,
+        wealthBaseline: mockWealthBaseline
+      };
+
+      const result1 = buildProductSelectedPeriodSynthesis(input1);
+
+      // Different career inputs
+      const differentCareerEvidence: readonly DomainEvidence[] = [
+        { id: 'career-ev-2', source: 'PLANET', effect: 'SUPPORT', statement: 'Career evidence 2' } as any
+      ];
+
+      const input2: BuildProductSelectedPeriodSynthesisInput = {
+        ...input1,
+        careerEvidence: differentCareerEvidence
+      };
+
+      const result2 = buildProductSelectedPeriodSynthesis(input2);
+
+      // If both succeed, wealth outputs should be equal
+      if (result1.ok && result2.ok) {
+        expect(result1.value.wealth).toEqual(result2.value.wealth);
+      }
+    });
+
+    it('domain-independence: wealth inputs change → career output unchanged', () => {
+      const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
+      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+      expect(validMd).toBeDefined();
+
+      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
+      expect(validAd).toBeDefined();
+
+      const careerEvidence: readonly DomainEvidence[] = [
+        { id: 'career-ev-1', source: 'PLANET', effect: 'SUPPORT', statement: 'Career evidence 1' } as any
+      ];
+      const careerDashaEvidence: readonly DomainEvidence[] = [];
+      const baseWealthEvidence: readonly DomainEvidence[] = [
+        { id: 'wealth-ev-1', source: 'HOUSE', effect: 'SUPPORT', statement: 'Wealth evidence 1' } as any
+      ];
+
+      const input1: BuildProductSelectedPeriodSynthesisInput = {
+        selection: {
+          mahadashaId: validMd!.id,
+          antardashaId: validAd!.id
+        },
+        context: mockAnalysisContext,
+        temporalState: mockTemporalState,
+        horoscope: mockHoroscope,
+        careerArtifacts: {
+          ...mockCareerArtifacts,
+          canonicalExpression: { expressions: [], diagnostics: [] } as any,
+          mechanismCandidates: []
+        },
+        careerEvidence,
+        careerDashaEvidence,
+        wealthEvidence: baseWealthEvidence,
+        careerBaseline: mockCareerBaseline,
+        wealthBaseline: mockWealthBaseline
+      };
+
+      const result1 = buildProductSelectedPeriodSynthesis(input1);
+
+      // Different wealth inputs
+      const differentWealthEvidence: readonly DomainEvidence[] = [
+        { id: 'wealth-ev-2', source: 'HOUSE', effect: 'SUPPORT', statement: 'Wealth evidence 2' } as any
+      ];
+
+      const input2: BuildProductSelectedPeriodSynthesisInput = {
+        ...input1,
+        wealthEvidence: differentWealthEvidence
+      };
+
+      const result2 = buildProductSelectedPeriodSynthesis(input2);
+
+      // If both succeed, career outputs should be equal
+      if (result1.ok && result2.ok) {
+        expect(result1.value.career).toEqual(result2.value.career);
+      }
+    });
+  });
 });

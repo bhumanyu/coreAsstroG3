@@ -12,6 +12,46 @@ import { listSelectableMdAdPeriods } from '../../../core/analysis/selectedMdAdPe
 import { calculateHoroscope } from '../../../engine/astroEngine';
 import { resolveAnalysisTemporalState } from '../../../core/analysis/resolveAnalysisTemporalState';
 import { mapMethodology } from '../productAnalysisMapper';
+import type { CareerExpressionCanonicalResult } from '../../../domain/career/careerExpression/careerExpressionTypes';
+import type { CareerMechanismCandidate } from '../../../domain/career/careerMechanism/careerMechanismTypes';
+import type { ParticipantId } from '../../../domain/career/careerParticipantRoles';
+
+// Helper function to create a minimal canonical expression with real structure
+function makeMinimalCanonicalExpression(): CareerExpressionCanonicalResult {
+  return Object.freeze({
+    expressions: Object.freeze([]),
+    status: 'COMPLETE',
+    sourceMechanismIds: Object.freeze([]),
+    missingInputs: Object.freeze([]),
+    unmappedMechanismTypes: Object.freeze([]),
+    provenance: Object.freeze({
+      mechanismIds: Object.freeze([]),
+      patternIds: Object.freeze([]),
+      relationshipIds: Object.freeze([]),
+      evidenceIds: Object.freeze([]),
+      sourceStages: Object.freeze([])
+    })
+  });
+}
+
+// Helper function to create a minimal mechanism candidate
+function makeMinimalMechanismCandidate(id: string = 'MECH-001'): CareerMechanismCandidate {
+  return Object.freeze({
+    candidateId: id,
+    patternId: 'PATTERN-001',
+    mechanismType: 'AUTHORITY' as any,
+    pathway: 'PRIMARY' as any,
+    evidence: Object.freeze([]),
+    provenance: Object.freeze({
+      patternIds: Object.freeze(['PATTERN-001']),
+      relationshipIds: Object.freeze([]),
+      participantIds: Object.freeze([]),
+      evidenceIds: Object.freeze([]),
+      sourceStages: Object.freeze([])
+    }),
+    explanation: 'Test mechanism'
+  });
+}
 
 describe('ProductAnalysisService (P-UI-02)', () => {
   const sampleBirth: BirthDetails = {
@@ -681,7 +721,7 @@ describe('ProductAnalysisService (P-UI-02)', () => {
   });
 
   describe('AI explanation handling (PBA-09)', () => {
-    it.skip('surfaces AI failure as ERROR status with error result - requires real canonical artifacts (canonicalExpression + mechanismCandidates)', async () => {
+    it('surfaces AI failure as ERROR status with error result - requires real canonical artifacts (canonicalExpression + mechanismCandidates)', async () => {
       // Use real calculateHoroscope to get a temporalState with dashaInterpretation
       const realHoroscope = calculateHoroscope(sampleBirth);
 

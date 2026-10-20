@@ -286,4 +286,81 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
 
     expect(result.synthesisVersion).toBe('PBA-06-v1');
   });
+
+  describe('PBA-10: Test-only validation - strict preservation', () => {
+    it('preserves evidence IDs verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      const evidenceIds = result.evidence.filter((e) => e.referenceKind === 'EVIDENCE').map((e) => e.evidenceId);
+      const inputIds = mockSynthesisValue.evidence.filter((e) => e.referenceKind === 'EVIDENCE').map((e) => e.evidenceId);
+
+      expect(evidenceIds).toEqual(inputIds);
+    });
+
+    it('preserves identityKey fields verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      const identityKeys = result.evidence.map((e) => e.identityKey);
+      const inputKeys = mockSynthesisValue.evidence.map((e) => e.identityKey);
+
+      expect(identityKeys).toEqual(inputKeys);
+    });
+
+    it('preserves classifications verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      const classifications = result.evidence.map((e) => e.classification);
+      const inputClassifications = mockSynthesisValue.evidence.map((e) => e.classification);
+
+      expect(classifications).toEqual(inputClassifications);
+    });
+
+    it('preserves provenanceStage verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      const provenanceStages = result.evidence.map((e) => e.provenanceStage);
+      const inputStages = mockSynthesisValue.evidence.map((e) => e.provenanceStage);
+
+      expect(provenanceStages).toEqual(inputStages);
+    });
+
+    it('preserves missingInputs verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      expect(result.missingInputs).toEqual(mockSynthesisValue.missingInputs);
+    });
+
+    it('preserves diagnostics verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      expect(result.career.diagnostics).toEqual(mockSynthesisValue.career.diagnostics);
+      expect(result.wealth.diagnostics).toEqual(mockSynthesisValue.wealth.diagnostics);
+    });
+
+    it('preserves baseline unchanged marker verbatim', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      expect(result.natalBaseline.career.unchanged).toBe(mockSynthesisValue.natalBaseline.career.unchanged);
+      expect(result.natalBaseline.wealth.unchanged).toBe(mockSynthesisValue.natalBaseline.wealth.unchanged);
+    });
+
+    it('UNRESOLVED refs keep their kind', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      const unresolvedRef = result.evidence.find((e) => e.evidenceId === 'ev-2');
+      expect(unresolvedRef).toBeDefined();
+      expect(unresolvedRef?.classification).toBe('UNRESOLVED');
+      expect(unresolvedRef?.referenceKind).toBe('EVIDENCE');
+    });
+
+    it('RULE refs keep their kind', () => {
+      const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+      const ruleRef = result.evidence.find((e) => e.ruleId === 'rule-2');
+      expect(ruleRef).toBeDefined();
+      expect(ruleRef?.referenceKind).toBe('RULE');
+      expect(ruleRef?.classification).toBeUndefined();
+      expect(ruleRef?.evidenceId).toBeUndefined();
+    });
+  });
 });
