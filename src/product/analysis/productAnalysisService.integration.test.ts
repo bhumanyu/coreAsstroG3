@@ -527,13 +527,6 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       }
 
       // Explicit fixture limitation assertion (separate from the FUTURE assertion)
-      // This documents whether we found a natural FUTURE period or constructed one
-      const hadNaturalFuture = fixedAsOf.getTime() < new Date(futureSelection.start).getTime();
-      if (!hadNaturalFuture) {
-        // Document that we constructed a FUTURE period due to fixture limitation
-        expect(hadNaturalFuture).toBe(false);
-      }
-
       // Run the analysis with the constructed future period
       const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false,

@@ -182,14 +182,6 @@ export function reasonWithLocalRules(
   const warnings: string[] = [];
   let ruleFailureCount = 0;
 
-  // Add ambiguous IDs to unresolved evidence upfront
-  if (selectedPeriodEvidenceResult) {
-    for (const ambiguousId of selectedPeriodEvidenceResult.ambiguousIds) {
-      unresolvedEvidenceIdsSet.add(ambiguousId);
-      warnings.push(`Ambiguous evidence ID (conflict between namespaces): ${ambiguousId}`);
-    }
-  }
-
   // Check for missing task-level context and record unresolved questions
   switch (task) {
     case 'CAREER_ANALYSIS': {
@@ -263,8 +255,10 @@ export function reasonWithLocalRules(
 
         if (evaluation.supportingEvidenceIds) {
           for (const id of evaluation.supportingEvidenceIds) {
-            // Skip if already marked as ambiguous (unresolved)
+            // If the ID is ambiguous, mark it as unresolved and skip lookup
             if (selectedPeriodEvidenceResult && selectedPeriodEvidenceResult.ambiguousIds.includes(id)) {
+              unresolvedEvidenceIdsSet.add(id);
+              warnings.push(`Ambiguous evidence ID (conflict between namespaces): ${id}`);
               continue;
             }
 
@@ -287,8 +281,10 @@ export function reasonWithLocalRules(
 
         if (evaluation.challengingEvidenceIds) {
           for (const id of evaluation.challengingEvidenceIds) {
-            // Skip if already marked as ambiguous (unresolved)
+            // If the ID is ambiguous, mark it as unresolved and skip lookup
             if (selectedPeriodEvidenceResult && selectedPeriodEvidenceResult.ambiguousIds.includes(id)) {
+              unresolvedEvidenceIdsSet.add(id);
+              warnings.push(`Ambiguous evidence ID (conflict between namespaces): ${id}`);
               continue;
             }
 

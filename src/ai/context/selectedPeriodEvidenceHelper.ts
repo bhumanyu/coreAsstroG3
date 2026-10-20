@@ -5,6 +5,9 @@ import type { AiContext, AiEvidence, AiSelectedPeriodContext } from '../types/ai
  * Adapted from selectedPeriodSynthesis.areEvidenceRecordsIdentical for AiEvidence.
  * Fields compared: source, effect, strength, statement, dimension, ruleId, identityKey.
  * Note: AiEvidence uses arrays for planets/houses and lacks some DomainEvidence fields.
+ *
+ * Array comparison semantics: planets and houses are compared as unordered sets (sorted for comparison).
+ * This means [Sun, Moon] is considered identical to [Moon, Sun].
  */
 function areAiEvidenceRecordsIdentical(a: AiEvidence, b: AiEvidence): boolean {
   // Core identity fields
@@ -17,12 +20,14 @@ function areAiEvidenceRecordsIdentical(a: AiEvidence, b: AiEvidence): boolean {
   if (a.ruleId !== b.ruleId) return false;
   if (a.identityKey !== b.identityKey) return false;
 
-  // Array comparisons (planets, houses)
+  // Array comparisons (planets, houses) - compare as sorted sets
   if (a.planets !== b.planets) {
     if (a.planets && b.planets) {
       if (a.planets.length !== b.planets.length) return false;
-      for (let i = 0; i < a.planets.length; i++) {
-        if (a.planets[i] !== b.planets[i]) return false;
+      const sortedA = [...a.planets].sort();
+      const sortedB = [...b.planets].sort();
+      for (let i = 0; i < sortedA.length; i++) {
+        if (sortedA[i] !== sortedB[i]) return false;
       }
     } else if (a.planets !== b.planets) {
       return false;
@@ -32,8 +37,10 @@ function areAiEvidenceRecordsIdentical(a: AiEvidence, b: AiEvidence): boolean {
   if (a.houses !== b.houses) {
     if (a.houses && b.houses) {
       if (a.houses.length !== b.houses.length) return false;
-      for (let i = 0; i < a.houses.length; i++) {
-        if (a.houses[i] !== b.houses[i]) return false;
+      const sortedA = [...a.houses].sort();
+      const sortedB = [...b.houses].sort();
+      for (let i = 0; i < sortedA.length; i++) {
+        if (sortedA[i] !== sortedB[i]) return false;
       }
     } else if (a.houses !== b.houses) {
       return false;
@@ -81,8 +88,22 @@ export function buildSelectedPeriodEvidenceIndex(
   const ambiguousIds = new Set<string>();
 
   // Pre-populate with context.evidence for fallback lookup
+  // Track seen IDs to detect intra-namespace duplicates
+  const contextEvidenceSeen = new Set<string>();
   for (const ev of evidence) {
-    index.set(ev.id, ev);
+    if (contextEvidenceSeen.has(ev.id)) {
+      // Intra-namespace duplicate in context.evidence
+      const existing = index.get(ev.id);
+      if (existing && !areAiEvidenceRecordsIdentical(existing, ev)) {
+        // Conflicting duplicate - record as ambiguous
+        ambiguousIds.add(ev.id);
+        // Do not overwrite - keep the first occurrence
+      }
+      // If identical, skip silently (dedup)
+    } else {
+      contextEvidenceSeen.add(ev.id);
+      index.set(ev.id, ev);
+    }
   }
 
   // If no selectedPeriod, return the base context evidence map with no ambiguous IDs
@@ -94,22 +115,36 @@ export function buildSelectedPeriodEvidenceIndex(
 
   // Pre-populate with selectedPeriod.availableEvidence (canonical bridge)
   // This takes precedence over context.evidence for selected-period-only IDs
+  // Track seen IDs to detect intra-namespace duplicates
+  const availableEvidenceSeen = new Set<string>();
   for (const ev of sp.availableEvidence) {
-    const existing = index.get(ev.id);
-    if (existing) {
-      // Same ID exists in both namespaces - check for conflicts
-      if (!areAiEvidenceRecordsIdentical(existing, ev)) {
-        // Materially different fields - record as ambiguous
+    if (availableEvidenceSeen.has(ev.id)) {
+      // Intra-namespace duplicate in availableEvidence
+      const existing = index.get(ev.id);
+      if (existing && !areAiEvidenceRecordsIdentical(existing, ev)) {
+        // Conflicting duplicate - record as ambiguous
         ambiguousIds.add(ev.id);
-        // Do NOT overwrite - keep the context.evidence version for now,
-        // but consumers will treat this as unresolved anyway
+        // Do not overwrite - keep the first occurrence
+      }
+      // If identical, skip silently (dedup)
+    } else {
+      availableEvidenceSeen.add(ev.id);
+      const existing = index.get(ev.id);
+      if (existing) {
+        // Same ID exists in both namespaces - check for conflicts
+        if (!areAiEvidenceRecordsIdentical(existing, ev)) {
+          // Materially different fields - record as ambiguous
+          ambiguousIds.add(ev.id);
+          // Do NOT overwrite - keep the context.evidence version for now,
+          // but consumers will treat this as unresolved anyway
+        } else {
+          // Identical records - availableEvidence wins silently (overwrite)
+          index.set(ev.id, ev);
+        }
       } else {
-        // Identical records - availableEvidence wins silently (overwrite)
+        // ID only in availableEvidence - add it
         index.set(ev.id, ev);
       }
-    } else {
-      // ID only in availableEvidence - add it
-      index.set(ev.id, ev);
     }
   }
 

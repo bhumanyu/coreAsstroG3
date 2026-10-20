@@ -303,16 +303,10 @@ function resolveEvidence(
   const resolved: AiExplanationEvidence[] = [];
   const unresolvedIds: string[] = [];
 
-  // Add ambiguous IDs to unresolved list upfront
-  if (selectedPeriodEvidenceResult) {
-    for (const ambiguousId of selectedPeriodEvidenceResult.ambiguousIds) {
-      unresolvedIds.push(ambiguousId);
-    }
-  }
-
   for (const id of ids) {
-    // Skip if already marked as ambiguous (unresolved)
+    // If the ID is ambiguous, mark it as unresolved and skip lookup
     if (selectedPeriodEvidenceResult && selectedPeriodEvidenceResult.ambiguousIds.includes(id)) {
+      unresolvedIds.push(id);
       continue;
     }
 

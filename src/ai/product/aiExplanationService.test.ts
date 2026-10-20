@@ -503,4 +503,282 @@ describe('runAiExplanation', () => {
       expect(unresolvedText).toContain('ev-invented');
     }
   });
+
+  it('SELECTED_PERIOD_ANALYSIS unreferenced ambiguous ID does not appear in unresolved', async () => {
+    // Create a selected-period context with an ambiguous cross-namespace ID
+    const ambiguousSpEvidence: any = {
+      id: 'ctx-ev-1',
+      source: 'PLANET',
+      effect: 'CHALLENGE', // Conflict with context.evidence (SUPPORT)
+      strength: 'STRONG',
+      statement: 'Different statement',
+      planets: ['SUN'],
+      houses: [1],
+      ruleId: 'rule-1',
+      identityKey: 'key-1',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const mockSelectedPeriod: any = {
+      synthesisVersion: 'PBA-06-v1',
+      period: {
+        selectedPeriodId: 'test-period-id',
+        mahadashaId: 'test-md-id',
+        mahadashaPlanet: 'JUPITER',
+        antardashaId: 'test-ad-id',
+        antardashaPlanet: 'VENUS',
+        interval: { start: '2020-01-01T00:00:00Z', end: '2021-01-01T00:00:00Z' },
+        analysisAsOf: '2024-01-01T00:00:00Z',
+        temporalRelation: 'PAST'
+      },
+      natalBaseline: {},
+      career: {
+        qualificationBasis: 'CANONICAL_STATUS',
+        expressions: [],
+        diagnostics: []
+      },
+      wealth: {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            effect: 'ACTIVATES',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            effect: 'UNKNOWN',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          }
+        },
+        diagnostics: []
+      },
+      evidence: [],
+      supportingEvidenceIds: [],
+      challengingEvidenceIds: [],
+      missingInputs: [],
+      diagnostics: [],
+      provenance: {
+        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+        wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+      },
+      // availableEvidence includes the ambiguous ID
+      availableEvidence: [ambiguousSpEvidence]
+    };
+
+    const mockRouter: any = {
+      route: async (request: any) => {
+        // Verify the request has the correct task and selectedPeriod context
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        expect(request.context.selectedPeriod).toBeDefined();
+
+        // Return evidence IDs that do NOT include the ambiguous ID
+        return {
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Selected period analysis shows activation.',
+              supportingEvidenceIds: [],
+              challengingEvidenceIds: [],
+              unresolvedQuestions: [],
+              warnings: []
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-ambiguous-test'
+        };
+      }
+    };
+
+    const result = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      selectedPeriod: mockSelectedPeriod,
+      router: mockRouter
+    }));
+
+    // Verify success
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.status).toBe('SUCCESS');
+
+      // The ambiguous ID should NOT appear in unresolvedQuestions
+      const unresolvedText = result.unresolvedQuestions.join(' ');
+      expect(unresolvedText).not.toContain('ctx-ev-1');
+
+      // The ambiguous ID should NOT appear in warnings (it's unreferenced)
+      const warningsText = result.warnings.join(' ');
+      expect(warningsText).not.toContain('ctx-ev-1');
+    }
+  });
+
+  it('SELECTED_PERIOD_ANALYSIS referenced ambiguous ID appears as unresolved', async () => {
+    // Create a selected-period context with an ambiguous cross-namespace ID
+    const ambiguousSpEvidence: any = {
+      id: 'ctx-ev-1',
+      source: 'PLANET',
+      effect: 'CHALLENGE', // Conflict with context.evidence (SUPPORT)
+      strength: 'STRONG',
+      statement: 'Different statement',
+      planets: ['SUN'],
+      houses: [1],
+      ruleId: 'rule-1',
+      identityKey: 'key-1',
+      dimension: 'NATAL_STRUCTURE'
+    };
+
+    const mockSelectedPeriod: any = {
+      synthesisVersion: 'PBA-06-v1',
+      period: {
+        selectedPeriodId: 'test-period-id',
+        mahadashaId: 'test-md-id',
+        mahadashaPlanet: 'JUPITER',
+        antardashaId: 'test-ad-id',
+        antardashaPlanet: 'VENUS',
+        interval: { start: '2020-01-01T00:00:00Z', end: '2021-01-01T00:00:00Z' },
+        analysisAsOf: '2024-01-01T00:00:00Z',
+        temporalRelation: 'PAST'
+      },
+      natalBaseline: {},
+      career: {
+        qualificationBasis: 'CANONICAL_STATUS',
+        expressions: [],
+        diagnostics: []
+      },
+      wealth: {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            effect: 'ACTIVATES',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            effect: 'UNKNOWN',
+            dataStatus: 'COMPLETE',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [],
+            dashaRuleReferences: []
+          }
+        },
+        diagnostics: []
+      },
+      evidence: [],
+      supportingEvidenceIds: [],
+      challengingEvidenceIds: [],
+      missingInputs: [],
+      diagnostics: [],
+      provenance: {
+        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
+        wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+      },
+      // availableEvidence includes the ambiguous ID
+      availableEvidence: [ambiguousSpEvidence]
+    };
+
+    const mockRouter: any = {
+      route: async (request: any) => {
+        // Verify the request has the correct task and selectedPeriod context
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        expect(request.context.selectedPeriod).toBeDefined();
+
+        // Return evidence IDs that INCLUDE the ambiguous ID
+        return {
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Selected period analysis shows activation.',
+              supportingEvidenceIds: ['ctx-ev-1'], // Request the ambiguous ID
+              challengingEvidenceIds: [],
+              unresolvedQuestions: [],
+              warnings: []
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-ambiguous-test'
+        };
+      }
+    };
+
+    const result = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      selectedPeriod: mockSelectedPeriod,
+      router: mockRouter
+    }));
+
+    // Verify success
+    expect(result.kind).toBe('SUCCESS');
+    if (result.kind === 'SUCCESS') {
+      expect(result.status).toBe('SUCCESS');
+
+      // The ambiguous ID SHOULD appear in unresolvedQuestions
+      const unresolvedText = result.unresolvedQuestions.join(' ');
+      expect(unresolvedText).toContain('ctx-ev-1');
+
+      // The ambiguous ID should NOT be resolved to either record
+      const resolvedIds = result.supportingEvidence.map(e => e.evidence.id);
+      expect(resolvedIds).not.toContain('ctx-ev-1');
+    }
+  });
 });
