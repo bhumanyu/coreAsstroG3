@@ -149,7 +149,8 @@ function makeCareerActivation(
       mahadashaNode: {} as any,
       antardashaNode: {} as any
     }),
-    statement: 'Career activation statement'
+    statement: 'Career activation statement',
+    diagnostics: Object.freeze([])
   });
 }
 

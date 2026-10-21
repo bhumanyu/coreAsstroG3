@@ -155,6 +155,31 @@ export interface SelectedExpressionActivation {
 }
 
 /**
+ * Diagnostic emitted during selected Career Dasha activation.
+ *
+ * Structured diagnostic channel for transparency into adapter fallback,
+ * evidence ID collisions, and other edge cases.
+ */
+export interface SelectedCareerDashaActivationDiagnostic {
+  /**
+   * Diagnostic code identifying the type of issue.
+   */
+  readonly code: 'ADAPTER_FALLBACK_DROPPED_CANDIDATES' | 'CANONICAL_EVIDENCE_ID_COLLISION' | 'AMBIGUOUS_EXPRESSION_MATCH';
+  /**
+   * Human-readable description of the diagnostic.
+   */
+  readonly message: string;
+  /**
+   * For ADAPTER_FALLBACK_DROPPED_CANDIDATES: IDs of candidates dropped by first-candidate fallback.
+   */
+  readonly droppedCandidateIds?: readonly string[];
+  /**
+   * For ADAPTER_FALLBACK_DROPPED_CANDIDATES: total count of QUALIFIED candidates available.
+   */
+  readonly candidateCount?: number;
+}
+
+/**
  * Result type for buildSelectedCareerDashaActivation.
  *
  * P1: Discriminated union for validation errors vs successful result.
@@ -208,6 +233,13 @@ export interface SelectedCareerDashaActivationSuccess {
    * which are carried by reference only in selectedDashaInterpretation and not consumed by C9.
    */
   readonly canonicalDashaAnalysis: CareerDashaCanonicalAnalysis;
+  /**
+   * Diagnostics emitted during activation building.
+   *
+   * Provides structured transparency into adapter fallback, evidence ID collisions,
+   * ambiguous matches, and other edge cases.
+   */
+  readonly diagnostics: readonly SelectedCareerDashaActivationDiagnostic[];
   /**
    * P2: Selected Dasha interpretation with read-only references to PBA-03 nodes.
    *
@@ -340,6 +372,8 @@ export function buildSelectedCareerDashaActivation(params: {
   let usedAdapterFallback = false;
   // Track match basis per expression (for ambiguous match detection)
   const expressionMatchBasis = new Map<CareerExpression, 'UNAMBIGUOUS' | 'AMBIGUOUS'>();
+  // Collect diagnostics for structured transparency
+  const diagnostics: SelectedCareerDashaActivationDiagnostic[] = [];
 
   if (canonicalExpression && mechanismCandidates) {
     // Canonical inputs provided - check if mechanismCandidates is empty
@@ -363,13 +397,11 @@ export function buildSelectedCareerDashaActivation(params: {
           const existingCandidateId = allCanonicalEvidenceIds.get(evidence.evidenceId);
           if (existingCandidateId !== undefined && existingCandidateId !== candidate.expressionId) {
             // Evidence ID appears in multiple candidates - this violates the uniqueness assumption
-            // Document this diagnostic but do not fail (consume gracefully)
-            console.warn(
-              `[selectedCareerDashaActivation] Canonical evidence ID "${evidence.evidenceId}" appears in multiple candidates: ` +
-              `"${existingCandidateId}" and "${candidate.expressionId}". ` +
-              `This violates the uniqueness assumption for canonical evidence IDs. ` +
-              `Qualified evidence scoping may be affected.`
-            );
+            // Emit structured diagnostic but do not fail (consume gracefully)
+            diagnostics.push(Object.freeze({
+              code: 'CANONICAL_EVIDENCE_ID_COLLISION',
+              message: `Canonical evidence ID "${evidence.evidenceId}" appears in multiple candidates: "${existingCandidateId}" and "${candidate.expressionId}". This violates the uniqueness assumption for canonical evidence IDs. Qualified evidence scoping may be affected.`
+            }));
           }
           allCanonicalEvidenceIds.set(evidence.evidenceId, candidate.expressionId);
         }
@@ -420,6 +452,16 @@ export function buildSelectedCareerDashaActivation(params: {
           return expr;
         });
 
+      // Emit diagnostic for ambiguous matches (multiple candidates matched)
+      for (const { expr, matchingCandidates } of matchedCallerExpressionsWithCandidates) {
+        if (matchingCandidates.length > 1) {
+          diagnostics.push(Object.freeze({
+            code: 'AMBIGUOUS_EXPRESSION_MATCH',
+            message: `Expression ${expr.mode}:${expr.direction} matched ${matchingCandidates.length} QUALIFIED canonical candidates (${matchingCandidates.map(c => c.expressionId).join(', ')}). Expression dropped from results (ambiguous match).`
+          }));
+        }
+      }
+
       // If no reliable mapping exists (no matches), fall back to adapter-derived expressions
       // This is documented in expressionRefKey below
       if (matchedCallerExpressions.length > 0) {
@@ -451,14 +493,13 @@ export function buildSelectedCareerDashaActivation(params: {
         if (qualifiedCanonicalCandidates.length > 1) {
           const droppedCandidateIds = qualifiedCanonicalCandidates
             .slice(1)
-            .map(c => c.expressionId)
-            .join(', ');
-          console.warn(
-            `[selectedCareerDashaActivation] Multiple QUALIFIED canonical candidates available (${qualifiedCanonicalCandidates.length}), ` +
-            `but adapter fallback uses only the first candidate: "${firstCandidate.expressionId}". ` +
-            `Dropped candidate IDs: ${droppedCandidateIds}. ` +
-            `This is a documented limitation of the adapter fallback path when no reliable mapping to caller expressions exists.`
-          );
+            .map(c => c.expressionId);
+          diagnostics.push(Object.freeze({
+            code: 'ADAPTER_FALLBACK_DROPPED_CANDIDATES',
+            message: `Multiple QUALIFIED canonical candidates available (${qualifiedCanonicalCandidates.length}), but adapter fallback uses only the first candidate: "${firstCandidate.expressionId}". Dropped candidate IDs: ${droppedCandidateIds.join(', ')}. This is a documented limitation of the adapter fallback path when no reliable mapping to caller expressions exists.`,
+            droppedCandidateIds: Object.freeze(droppedCandidateIds),
+            candidateCount: qualifiedCanonicalCandidates.length
+          }));
         }
       } else {
         // No QUALIFIED candidates - use empty expressions (no fallback)
@@ -624,7 +665,8 @@ export function buildSelectedCareerDashaActivation(params: {
       mahadashaNode: selectedPeriod.mahadashaNode,
       antardashaNode: selectedPeriod.antardashaNode
     }),
-    statement
+    statement,
+    diagnostics: Object.freeze(diagnostics)
   });
 
   return { ok: true, value };

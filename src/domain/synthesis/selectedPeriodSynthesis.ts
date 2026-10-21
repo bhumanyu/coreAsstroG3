@@ -644,6 +644,14 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   if (careerActivation) {
     careerQualificationBasis = careerActivation.qualificationBasis;
 
+    // Forward diagnostics from career activation (e.g., adapter fallback, evidence collisions)
+    for (const diag of careerActivation.diagnostics) {
+      careerDiagnostics.push(Object.freeze({
+        code: diag.code,
+        message: diag.message
+      }));
+    }
+
     if (careerQualificationBasis === 'PROXY_DIRECTION') {
       careerDiagnostics.push(Object.freeze({
         code: 'CAREER_QUALIFICATION_UNAVAILABLE',
