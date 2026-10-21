@@ -129,7 +129,7 @@ function buildSelectedCareerDashaActivationInternal(
 function evaluateSelectedWealthPeriodActivationInternal(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext
-): { readonly ok: true; readonly value: SelectedWealthPeriodActivation } | { readonly ok: false; readonly errorCode: 'INVALID_SELECTED_PERIOD_CONTEXT' } {
+): { readonly ok: true; readonly value: SelectedWealthPeriodActivation } | { readonly ok: false; readonly errorCode: Extract<EvaluateSelectedWealthPeriodActivationResult, { ok: false }>['error'] } {
   const { wealthEvidence } = input;
   const result = evaluateSelectedWealthPeriodActivation({
     selectedPeriod,
@@ -155,7 +155,7 @@ function buildSelectedPeriodSynthesisWrapper(
   careerActivation?: SelectedCareerDashaActivationSuccess,
   wealthActivation?: SelectedWealthPeriodActivation,
   careerErrorCode?: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'],
-  wealthErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT'
+  wealthErrorCode?: Extract<EvaluateSelectedWealthPeriodActivationResult, { ok: false }>['error']
 ): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;
   const result = buildSelectedPeriodSynthesis({

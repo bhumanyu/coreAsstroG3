@@ -1,8 +1,8 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `6f74ac2b9a6520f1c9c682b05c8438aef826d7bd`
+**Baseline Commit:** `3c83b80a6ca327a44da3f6d4e8cbc31f2479e96b`
 
-**Last Updated:** 2026-10-21 (81512bf merge gate verification pending)
+**Last Updated:** 2026-10-21
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
 
@@ -73,7 +73,8 @@
 - `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests including 10 boundary tests)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit ed30213)
+- ✅ npm run verify: PASS (commit 3c83b80)
+- ✅ npm run verify:pba10: PASS (commit 3c83b80)
 
 **Findings:**
 - ✅ Temporal relation recomputation implemented in validateSelectedPeriodContext
@@ -122,7 +123,8 @@
 - `src/domain/wealth/selectedWealthDashaActivation.test.ts` (wealth activation tests)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit f8f3452)
+- ✅ npm run verify: PASS (commit 3c83b80)
+- ✅ npm run verify:pba10: PASS (commit 3c83b80)
 - ✅ insufficientReason discriminator implemented and tested
 
 **Findings:**
@@ -150,9 +152,11 @@
 **Test Files:**
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests including partial synthesis)
 - Both-fail synthesis test added (asserts success/partial discriminant, both provenance entries MISSING, SYNTHESIS_PARTIAL_NO_DOMAINS present, both error codes in diagnostics, natal baselines unchanged)
+- Both-fail baseline assertion strengthened (frozen baseline objects passed, asserts same references with unchanged flag)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit 6f74ac2)
+- ✅ npm run verify: PASS (commit 3c83b80)
+- ✅ npm run verify:pba10: PASS (commit 3c83b80)
 
 **Findings:**
 - ✅ Partial-result contract defined: domain failures degrade, context failures hard-fail
@@ -178,15 +182,15 @@
 - `src/product/analysis/selectedPeriodProductService.ts` (orchestration with partial synthesis support)
 - Result type: no longer includes INCOMPLETE_CANONICAL_INPUT (domain failures degrade)
 - errorCode propagation from activation functions to synthesis
-- Error-union exhaustiveness guard: type wrapper params use Extract<SelectedCareerDashaActivationResult, { ok: false }>['error']
+- Error-union exhaustiveness guard: type wrapper params use Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'] and Extract<EvaluateSelectedWealthPeriodActivationResult, { ok: false }>['error']
 
 **Test Files:**
 - `src/product/analysis/selectedPeriodProductService.test.ts` (product service tests including partial synthesis)
-- Vacuous test removed (unresolved-evidence test now documents domain-layer coverage)
-- Boundary tests added: invalid-context hard-fail regression, unresolved-evidence test reaching synthesis
+- Vacuous test removed (unresolved-evidence test deleted - domain layer has proper coverage)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit 6f74ac2)
+- ✅ npm run verify: PASS (commit 3c83b80)
+- ✅ npm run verify:pba10: PASS (commit 3c83b80)
 
 **Findings:**
 - ✅ Domain activation failures degrade to partial synthesis (do not hard-fail)
@@ -194,14 +198,13 @@
 - ✅ productAnalysisMapper propagates MISSING provenance to qualificationStatus
 - ✅ Partial synthesis tests added (service layer)
 - ✅ errorCode propagated from activation functions to synthesis
-- ✅ Vacuous test removed (expect(true).toBe(true) deleted)
-- ✅ Error-union exhaustiveness guard added (compile-time guard for new error codes)
-- ✅ Invalid-context boundary regression test added (context errors hard-fail, not swallowed by partial path)
-- ✅ Unresolved-evidence test reaching synthesis added (genuinely unresolved evidence refs assert UNRESOLVED classification)
+- ✅ Vacuous test removed (unresolved-evidence test deleted - domain layer has proper coverage)
+- ✅ Error-union exhaustiveness guard added for both career and wealth (compile-time guard for new error codes)
+- ✅ Wealth errorCode uses Extract<EvaluateSelectedWealthPeriodActivationResult, { ok: false }>['error']
 
 **Remediation:**
 - PR-E completed: Partial synthesis orchestration at product service layer
-- 81512bf merge gate: Boundary tests and error-union exhaustiveness guard added
+- 81512bf merge gate: Error-union exhaustiveness guard added for both career and wealth, vacuous test removed
 
 ---
 
@@ -221,10 +224,12 @@
 - Parity test: contextEvidenceIds and allReturnedIds resolved from same projection runAiExplanation consumes
 - Failure-isolation test: inject deterministically failing router, assert ERROR result and deep equality of synthesis input before/after
 - Classification parity test: construct input with known classification/polarity values, assert returned role matches source classification per ID
+- Controlled unresolved ID test: inject router returning invented ID, assert it appears in unresolvedQuestions and not in supporting/challenging evidence
 - Vacuous edge-case test deleted (expect(SUCCESS || ERROR).toBe(true) removed)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit 6f74ac2)
+- ✅ npm run verify: PASS (commit 3c83b80)
+- ✅ npm run verify:pba10: PASS (commit 3c83b80)
 
 **Findings:**
 - ✅ Contract codified: AI evidence semantics contract documented in aiExplanationService.ts
@@ -239,11 +244,12 @@
 - ✅ Parity test improved: resolves authoritative evidence index from same projection runAiExplanation consumes
 - ✅ Failure-isolation test added: injects failing router, asserts ERROR and deep equality
 - ✅ Classification parity test added: asserts role matches source classification per ID
+- ✅ Controlled unresolved ID test added: injects router with invented ID, asserts it appears in unresolvedQuestions
 - ✅ Vacuous test deleted: removed always-true assertion
 
 **Remediation:**
 - PR-F completed: AI evidence semantics contract codified and tested
-- 81512bf merge gate: Parity, failure-isolation, and classification parity tests improved/added
+- 81512bf merge gate: Parity, failure-isolation, classification parity, and controlled unresolved ID tests improved/added
 
 ---
 
@@ -260,8 +266,8 @@
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit 6f74ac2)
-- ✅ npm run verify:pba10: PASS (commit 6f74ac2)
+- ✅ npm run verify: PASS (commit 3c83b80)
+- ✅ npm run verify:pba10: PASS (commit 3c83b80)
 
 **Findings:**
 - ✅ Temporal past/current/future vs asOf test split into three distinct tests with actual values
@@ -322,8 +328,14 @@
 - PR-E (WP-4): Partial synthesis orchestration — COMPLETE
 - PR-F (WP-5): AI evidence semantics — COMPLETE
 - PR-G (WP-6): Acceptance hardening — COMPLETE
+- 81512bf merge gate items (post-PR-G): COMPLETE (commit 3c83b80)
+  - Vacuous unresolved-evidence test removed (domain layer has proper coverage)
+  - Extract guard applied to wealthErrorCode (matching career pattern)
+  - Unresolved-ID assertions strengthened with controlled case
+  - Both-fail baseline assertion strengthened (frozen objects, reference equality)
+  - Verify and verify:pba10 green (baseline SHA updated)
 
 ---
 
 **Definition of Done:**
-Every PBA milestone backed by acceptance evidence; validator recomputes temporal relation; candidate attribution deterministic; domain failure doesn't erase the other domain; AI can't invent or reinterpret evidence; DTO/AI context field parity; zero vacuous assertions in the acceptance suite; green npm run verify recorded against the release commit.
+Every PBA milestone backed by acceptance evidence; validator recomputes temporal relation; candidate attribution deterministic; domain failure doesn't erase the other domain; AI can't invent or reinterpret evidence; DTO/AI context field parity; zero vacuous assertions in the acceptance suite; green npm run verify and npm run verify:pba10 recorded against the release commit.

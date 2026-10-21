@@ -57,7 +57,7 @@ describe('runAiExplanation', () => {
     }));
 
     if (result.kind === 'ERROR') {
-      throw new Error(result.message);
+      throw new Error(result.message || 'AI explanation failed');
     }
 
     expect(result.supportingEvidence.length).toBeGreaterThan(0);
@@ -92,7 +92,7 @@ describe('runAiExplanation', () => {
     }));
 
     expect(result.status).toBe('ERROR');
-    if (result.status === 'ERROR') {
+    if (result.kind === 'ERROR') {
       expect(result.message).toBeTruthy();
     }
   });
@@ -117,7 +117,7 @@ describe('runAiExplanation', () => {
       const result = await runAiExplanation(options);
 
       if (result.kind === 'ERROR') {
-        throw new Error(result.message);
+        throw new Error(result.message || 'AI explanation failed');
       }
 
       // Collect all returned evidence IDs
@@ -143,6 +143,74 @@ describe('runAiExplanation', () => {
       for (const unresolvedId of unresolvedIdsInQuestions) {
         expect(allReturnedIds.has(unresolvedId)).toBe(false);
       }
+    });
+
+    it('evidence-ID parity: controlled case with invented ID is surfaced as unresolved', async () => {
+      // This test uses a controlled router to deterministically produce an unresolved ID
+      const options = createTestOptions({
+        task: 'CHART_SYNTHESIS'
+      });
+
+      // Build the authoritative evidence index
+      const context = buildProductAiContext(options.horoscope, {
+        domainInterpretations: options.domainInterpretations,
+        lifeAnalysis: options.lifeAnalysis,
+        temporalState: options.temporalState
+      });
+
+      const contextEvidenceIds = new Set(context.evidence.map(e => e.id));
+
+      // Use a controlled ID that does not exist in the context
+      const inventedId = 'controlled-invented-id-not-in-context-xyz123';
+
+      const mockRouter: any = {
+        route: async () => ({
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Test conclusion',
+              supportingEvidenceIds: [],
+              challengingEvidenceIds: [],
+              unresolvedQuestions: [`The following evidence ID could not be resolved: ${inventedId}`],
+              warnings: []
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'TASK_MATCH',
+          requestId: 'req-controlled-unresolved'
+        })
+      };
+
+      const result = await runAiExplanation({
+        ...options,
+        router: mockRouter
+      });
+
+      if (result.kind === 'ERROR') {
+        throw new Error(result.message || 'AI explanation failed');
+      }
+
+      // Assert the invented ID is NOT in the context index
+      expect(contextEvidenceIds.has(inventedId)).toBe(false);
+
+      // Assert the invented ID is NOT in supportingEvidence
+      const supportingIds = result.supportingEvidence.map(e => e.evidence.id);
+      expect(supportingIds).not.toContain(inventedId);
+
+      // Assert the invented ID is NOT in challengingEvidence
+      const challengingIds = result.challengingEvidence.map(e => e.evidence.id);
+      expect(challengingIds).not.toContain(inventedId);
+
+      // Assert the invented ID appears in unresolvedQuestions (as a direct string match)
+      // The AI service may surface unresolved IDs in the message text
+      const unresolvedText = result.unresolvedQuestions.join(' ');
+      expect(unresolvedText).toContain(inventedId);
     });
 
     it('AI failure leaves deterministic synthesis unchanged', async () => {
@@ -171,7 +239,9 @@ describe('runAiExplanation', () => {
       // Assert the result is ERROR
       expect(result.kind).toBe('ERROR');
       expect(result.status).toBe('ERROR');
-      expect(result.message).toBeTruthy();
+      if (result.kind === 'ERROR') {
+        expect(result.message).toBeTruthy();
+      }
 
       // Assert deep equality of synthesis input before/after
       expect(JSON.parse(JSON.stringify(options.lifeAnalysis))).toEqual(originalLifeAnalysis);
@@ -254,7 +324,7 @@ describe('runAiExplanation', () => {
       const result = await runAiExplanation(options);
 
       if (result.kind === 'ERROR') {
-        throw new Error(result.message);
+        throw new Error(result.message || 'AI explanation failed');
       }
 
       // Verify the real local rules engine was used

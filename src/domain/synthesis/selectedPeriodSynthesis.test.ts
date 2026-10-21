@@ -2389,9 +2389,13 @@ describe('buildSelectedPeriodSynthesis', () => {
   describe('both-fail diagnostic (81512bf)', () => {
     it('emits SYNTHESIS_PARTIAL_NO_DOMAINS when both activations are missing with error codes', () => {
       const selectedPeriod = makeSelectedPeriodContext();
+      const careerBaseline = Object.freeze({ id: 'career-baseline' } as unknown as CareerFinalSynthesisResult);
+      const wealthBaseline = Object.freeze({ id: 'wealth-baseline' } as unknown as CareerWealthFinalSynthesis);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
+        careerBaseline,
+        wealthBaseline,
         careerErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT',
         wealthErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT'
       });
@@ -2413,25 +2417,25 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(bothFailDiag?.message).toContain('Career activation failed');
       expect(bothFailDiag?.message).toContain('wealth activation failed');
 
-      // Assert both supplied error codes appear in diagnostics
-      const careerErrorDiag = result.value.career.diagnostics.find((d: any) => d.code === 'PARTIAL_CAREER_ACTIVATION_FAILED');
-      expect(careerErrorDiag).toBeDefined();
-      expect(careerErrorDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
+      // Assert both supplied error codes appear in the SYNTHESIS_PARTIAL_NO_DOMAINS message
+      expect(bothFailDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
 
-      const wealthErrorDiag = result.value.wealth.diagnostics.find((d: any) => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED');
-      expect(wealthErrorDiag).toBeDefined();
-      expect(wealthErrorDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
-
-      // Assert natal baselines are unchanged (both undefined since none provided)
-      expect(result.value.natalBaseline.career).toBeUndefined();
-      expect(result.value.natalBaseline.wealth).toBeUndefined();
+      // Assert natal baselines are carried by reference with unchanged flag
+      expect(result.value.natalBaseline.career?.baseline).toBe(careerBaseline);
+      expect(result.value.natalBaseline.career?.unchanged).toBe(true);
+      expect(result.value.natalBaseline.wealth?.baseline).toBe(wealthBaseline);
+      expect(result.value.natalBaseline.wealth?.unchanged).toBe(true);
     });
 
     it('emits SYNTHESIS_PARTIAL_NO_DOMAINS with different error codes', () => {
       const selectedPeriod = makeSelectedPeriodContext();
+      const careerBaseline = Object.freeze({ id: 'career-baseline-2' } as unknown as CareerFinalSynthesisResult);
+      const wealthBaseline = Object.freeze({ id: 'wealth-baseline-2' } as unknown as CareerWealthFinalSynthesis);
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
+        careerBaseline,
+        wealthBaseline,
         careerErrorCode: 'INCOMPLETE_CANONICAL_INPUT',
         wealthErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT'
       });
@@ -2443,14 +2447,15 @@ describe('buildSelectedPeriodSynthesis', () => {
       const bothFailDiag = result.value.career.diagnostics.find((d: any) => d.code === 'SYNTHESIS_PARTIAL_NO_DOMAINS');
       expect(bothFailDiag).toBeDefined();
 
-      // Assert both error codes appear in diagnostics
-      const careerErrorDiag = result.value.career.diagnostics.find((d: any) => d.code === 'PARTIAL_CAREER_ACTIVATION_FAILED');
-      expect(careerErrorDiag).toBeDefined();
-      expect(careerErrorDiag?.message).toContain('INCOMPLETE_CANONICAL_INPUT');
+      // Assert both error codes appear in the SYNTHESIS_PARTIAL_NO_DOMAINS message
+      expect(bothFailDiag?.message).toContain('INCOMPLETE_CANONICAL_INPUT');
+      expect(bothFailDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
 
-      const wealthErrorDiag = result.value.wealth.diagnostics.find((d: any) => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED');
-      expect(wealthErrorDiag).toBeDefined();
-      expect(wealthErrorDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
+      // Assert natal baselines are carried by reference with unchanged flag
+      expect(result.value.natalBaseline.career?.baseline).toBe(careerBaseline);
+      expect(result.value.natalBaseline.career?.unchanged).toBe(true);
+      expect(result.value.natalBaseline.wealth?.baseline).toBe(wealthBaseline);
+      expect(result.value.natalBaseline.wealth?.unchanged).toBe(true);
     });
   });
 

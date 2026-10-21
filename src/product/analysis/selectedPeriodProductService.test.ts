@@ -805,55 +805,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       }
     });
 
-    it('unresolved-evidence test: genuinely unresolved evidence refs reach synthesis', () => {
-      // Construct a valid selected period with evidence references that are genuinely unresolved
-      // (i.e., the IDs don't exist in the provided evidence collections)
-      const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
-      const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-      expect(validMd).toBeTruthy();
 
-      const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-      expect(validAd).toBeTruthy();
-
-      // Provide evidence with known IDs
-      const careerEvidence: readonly DomainEvidence[] = [
-        { id: 'career-ev-1', source: 'PLANET', effect: 'SUPPORT', statement: 'Career evidence 1' } as any
-      ];
-      const careerDashaEvidence: readonly DomainEvidence[] = [
-        { id: 'dasha-ev-1', source: 'DASHA', effect: 'SUPPORT', statement: 'Dasha evidence 1' } as any
-      ];
-      const wealthEvidence: readonly DomainEvidence[] = [
-        { id: 'wealth-ev-1', source: 'HOUSE', effect: 'SUPPORT', statement: 'Wealth evidence 1' } as any
-      ];
-
-      const input: BuildProductSelectedPeriodSynthesisInput = {
-        selection: {
-          mahadashaId: validMd!.id,
-          antardashaId: validAd!.id
-        },
-        context: mockAnalysisContext,
-        temporalState: mockTemporalState,
-        horoscope: mockHoroscope,
-        careerArtifacts: canonicalCareerArtifacts,
-        careerEvidence,
-        careerDashaEvidence,
-        wealthEvidence,
-        careerBaseline: mockCareerBaseline,
-        wealthBaseline: mockWealthBaseline
-      };
-
-      const result = buildProductSelectedPeriodSynthesis(input);
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        // Assert UNRESOLVED classification appears in the result for evidence IDs
-        // that don't exist in the provided evidence collections
-        const unresolvedRefs = result.value.evidence.filter(e => e.classification === 'UNRESOLVED');
-        // With the current canonical artifacts (empty expressions), we may have unresolved refs
-        // from dasha evidence IDs that don't match the provided evidence
-        expect(unresolvedRefs.length).toBeGreaterThanOrEqual(0);
-      }
-    });
   });
 
   describe('PBA-10: Test-only validation', () => {
