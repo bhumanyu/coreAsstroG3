@@ -2,7 +2,7 @@
 
 **Baseline Commit:** `6f74ac2b9a6520f1c9c682b05c8438aef826d7bd`
 
-**Last Updated:** 2026-10-21
+**Last Updated:** 2026-10-21 (81512bf merge gate verification pending)
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
 
@@ -64,37 +64,29 @@
 
 ## PBA-03: Selected-Period Context Guardrails
 
-**Status:** ⚠️ NEEDS_PROOF (PR-B WP-1 in progress)
+**Status:** ✅ COMPLETE
 
 **Implementation Files:**
-- `src/core/analysis/selectedPeriodActivationContext.ts` (validateSelectedPeriodContext)
+- `src/core/analysis/selectedPeriodActivationContext.ts` (validateSelectedPeriodContext with temporal relation recomputation)
 
 **Test Files:**
-- `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests)
+- `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests including 10 boundary tests)
 
 **CI Evidence:**
-- 🔄 Pending PR-B completion
+- ✅ npm run verify: PASS (commit ed30213)
 
 **Findings:**
-- ❌ CONFIRMED_DEFECT: `validateSelectedPeriodContext` does not recompute temporal relation after enum check (lines 295-302)
-- ⚠️ NEEDS_PROOF: Missing tests for:
-  - start−1ms FUTURE boundary
-  - start included (CURRENT at start)
-  - end excluded (PAST at end)
-  - end−1ms CURRENT
-  - malformed date
-  - inverted interval
-  - valid-but-wrong supplied temporalRelation (e.g., FUTURE on CURRENT interval)
+- ✅ Temporal relation recomputation implemented in validateSelectedPeriodContext
+- ✅ All 10 boundary tests added: start−1ms FUTURE, start included (CURRENT at start), end excluded (PAST at end), end−1ms CURRENT, malformed date, inverted interval, valid-but-wrong supplied temporalRelation, and additional edge cases
 
 **Remediation:**
-- PR-B (WP-1): Add temporal relation recomputation in validateSelectedPeriodContext
-- PR-B (WP-1): Add missing context validation tests
+- PR-B completed: Temporal relation recomputation and boundary tests added
 
 ---
 
 ## PBA-04: Selected-Period Career Activation
 
-**Status:** ⚠️ NEEDS_PROOF (PR-C WP-2 in progress)
+**Status:** ⚠️ NEEDS_PROOF (partially complete - adapter diagnostic landed in commits 42398f9/22641c1)
 
 **Implementation Files:**
 - `src/domain/career/careerDasha/selectedCareerDashaActivation.ts` (buildSelectedCareerDashaActivation)
@@ -104,22 +96,17 @@
 - `src/domain/career/careerDasha/selectedCareerDashaActivation.test.ts` (career activation tests)
 
 **CI Evidence:**
-- 🔄 Pending PR-C completion
+- ✅ Adapter dropped-candidate diagnostic landed (commits 42398f9, 22641c1)
 
 **Findings:**
-- ❌ CONFIRMED_DEFECT: Adapter fallback (lines 428-448) collapses multiple QUALIFIED candidates into firstCandidate without diagnostic
+- ✅ Adapter diagnostic implemented for dropped candidates (ADAPTER_DROPPED_CANDIDATES)
 - ⚠️ NEEDS_PROOF: Missing tests for:
-  - zero mechanism candidates
-  - one mechanism candidate
-  - multiple mechanism candidates
-  - ambiguous caller-expression matches
-  - unmatched mechanism candidates
-  - assertion that multiple qualified candidates are not silently represented as one
-  - assertion that unqualified evidence does not enter exprPlanets/activations under CANONICAL_STATUS
+  - Ambiguous caller-expression match proof
+  - Assertion that unqualified evidence does not enter exprPlanets/activations under CANONICAL_STATUS (strengthened test asserting expressionActivations.length === 0)
 
 **Remediation:**
-- PR-C (WP-2): Decide adapter fallback contract (per-candidate evidence scoping OR diagnostic emission)
-- PR-C (WP-2): Add career candidate integrity tests
+- Partially complete: Adapter diagnostic implemented
+- Remaining: Add ambiguous caller-expression match test and unqualified-evidence regression test
 
 ---
 
@@ -162,6 +149,7 @@
 
 **Test Files:**
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests including partial synthesis)
+- Both-fail synthesis test added (asserts success/partial discriminant, both provenance entries MISSING, SYNTHESIS_PARTIAL_NO_DOMAINS present, both error codes in diagnostics, natal baselines unchanged)
 
 **CI Evidence:**
 - ✅ npm run verify: PASS (commit 6f74ac2)
@@ -174,9 +162,11 @@
 - ✅ errorCode propagated from activation failures to diagnostic messages
 - ✅ Baselines unchanged for partial synthesis
 - ✅ Tests for career-fails/wealth-ok and wealth-fails/career-ok scenarios
+- ✅ Both-fail synthesis test added (comprehensive assertions for 81512bf merge gate)
 
 **Remediation:**
 - PR-E completed: Partial synthesis orchestration implemented
+- 81512bf merge gate: Both-fail synthesis test added
 
 ---
 
@@ -188,10 +178,12 @@
 - `src/product/analysis/selectedPeriodProductService.ts` (orchestration with partial synthesis support)
 - Result type: no longer includes INCOMPLETE_CANONICAL_INPUT (domain failures degrade)
 - errorCode propagation from activation functions to synthesis
+- Error-union exhaustiveness guard: type wrapper params use Extract<SelectedCareerDashaActivationResult, { ok: false }>['error']
 
 **Test Files:**
 - `src/product/analysis/selectedPeriodProductService.test.ts` (product service tests including partial synthesis)
 - Vacuous test removed (unresolved-evidence test now documents domain-layer coverage)
+- Boundary tests added: invalid-context hard-fail regression, unresolved-evidence test reaching synthesis
 
 **CI Evidence:**
 - ✅ npm run verify: PASS (commit 6f74ac2)
@@ -203,9 +195,13 @@
 - ✅ Partial synthesis tests added (service layer)
 - ✅ errorCode propagated from activation functions to synthesis
 - ✅ Vacuous test removed (expect(true).toBe(true) deleted)
+- ✅ Error-union exhaustiveness guard added (compile-time guard for new error codes)
+- ✅ Invalid-context boundary regression test added (context errors hard-fail, not swallowed by partial path)
+- ✅ Unresolved-evidence test reaching synthesis added (genuinely unresolved evidence refs assert UNRESOLVED classification)
 
 **Remediation:**
 - PR-E completed: Partial synthesis orchestration at product service layer
+- 81512bf merge gate: Boundary tests and error-union exhaustiveness guard added
 
 ---
 
@@ -222,6 +218,10 @@
 - `src/ai/product/aiExplanationService.test.ts` (AI evidence semantics tests)
 - Evidence ID resolution test improved to actually resolve against AI-context evidence index
 - All-unknown-evidence and zero-classified-evidence test cases added
+- Parity test: contextEvidenceIds and allReturnedIds resolved from same projection runAiExplanation consumes
+- Failure-isolation test: inject deterministically failing router, assert ERROR result and deep equality of synthesis input before/after
+- Classification parity test: construct input with known classification/polarity values, assert returned role matches source classification per ID
+- Vacuous edge-case test deleted (expect(SUCCESS || ERROR).toBe(true) removed)
 
 **CI Evidence:**
 - ✅ npm run verify: PASS (commit 6f74ac2)
@@ -236,9 +236,14 @@
 - ✅ Evidence ID resolution test improved to actually resolve against AI-context evidence index
 - ✅ All-unknown-evidence test case added
 - ✅ Zero-classified-evidence test case added
+- ✅ Parity test improved: resolves authoritative evidence index from same projection runAiExplanation consumes
+- ✅ Failure-isolation test added: injects failing router, asserts ERROR and deep equality
+- ✅ Classification parity test added: asserts role matches source classification per ID
+- ✅ Vacuous test deleted: removed always-true assertion
 
 **Remediation:**
 - PR-F completed: AI evidence semantics contract codified and tested
+- 81512bf merge gate: Parity, failure-isolation, and classification parity tests improved/added
 
 ---
 
@@ -297,20 +302,22 @@
 **Total Milestones:** 10
 
 **Status Breakdown:**
-- ✅ COMPLETE: 7 (PBA-01, PBA-02, PBA-05, PBA-06, PBA-07, PBA-08, PBA-09)
-- ⚠️ NEEDS_PROOF: 2 (PBA-03, PBA-04)
+- ✅ COMPLETE: 8 (PBA-01, PBA-02, PBA-03, PBA-05, PBA-06, PBA-07, PBA-08, PBA-09)
+- ⚠️ NEEDS_PROOF: 1 (PBA-04 - partially complete, adapter diagnostic landed)
 - 🔄 DEFERRED: 1 (PBA-10)
 
-**Confirmed Defects:** 2
-- PBA-03: validateSelectedPeriodContext does not recompute temporal relation
-- PBA-04: Adapter fallback collapses multiple QUALIFIED candidates without diagnostic
+**Confirmed Defects:** 0
+- PBA-03: Resolved (temporal relation recomputation implemented in commit ed30213)
+- PBA-04: Partially resolved (adapter diagnostic implemented in commits 42398f9/22641c1)
 
-**Needs Proof:** 12 test coverage gaps across PBA-03 and PBA-04
+**Needs Proof:** 2 test coverage gaps in PBA-04
+- Ambiguous caller-expression match proof
+- Unqualified-evidence regression test (assert expressionActivations.length === 0)
 
 **PR Sequence Progress:**
 - PR-A (WP-0): Contract and acceptance matrix (docs only) — COMPLETE
-- PR-B (WP-1): Context guardrails — PENDING
-- PR-C (WP-2): Career candidate integrity — PENDING
+- PR-B (WP-1): Context guardrails — COMPLETE (commit ed30213)
+- PR-C (WP-2): Career candidate integrity — PARTIALLY COMPLETE (adapter diagnostic landed in 42398f9/22641c1)
 - PR-D (WP-3): Wealth diagnostics — COMPLETE
 - PR-E (WP-4): Partial synthesis orchestration — COMPLETE
 - PR-F (WP-5): AI evidence semantics — COMPLETE

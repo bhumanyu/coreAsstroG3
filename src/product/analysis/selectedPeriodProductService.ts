@@ -101,7 +101,7 @@ function createSelectedPeriodActivationContextInternal(
 function buildSelectedCareerDashaActivationInternal(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext
-): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly errorCode: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' } {
+): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly errorCode: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'] } {
   const { careerArtifacts, horoscope } = input;
   const result = buildSelectedCareerDashaActivation({
     horoscope,
@@ -114,7 +114,9 @@ function buildSelectedCareerDashaActivationInternal(
 
   if (!result.ok) {
     // Return error code for partial synthesis diagnostic
-    return { ok: false, errorCode: result.error };
+    // Type guard: ensure errorCode is from the failure branch of SelectedCareerDashaActivationResult
+    const errorCode: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'] = result.error;
+    return { ok: false, errorCode };
   }
 
   return { ok: true, value: result.value };
@@ -152,7 +154,7 @@ function buildSelectedPeriodSynthesisWrapper(
   selectedPeriod: SelectedPeriodActivationContext,
   careerActivation?: SelectedCareerDashaActivationSuccess,
   wealthActivation?: SelectedWealthPeriodActivation,
-  careerErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT',
+  careerErrorCode?: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'],
   wealthErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT'
 ): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;

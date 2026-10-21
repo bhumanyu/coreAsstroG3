@@ -9,6 +9,7 @@ import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysi
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysis } from '../../domain/synthesis';
+import { buildProductAiContext } from '../context/aiContextFactory';
 
 function createTestOptions(
   overrides: Partial<RunProductAiExplanationOptions> = {}
@@ -104,38 +105,44 @@ describe('runAiExplanation', () => {
         task: 'CHART_SYNTHESIS'
       });
 
+      // Build the authoritative evidence index from the same projection runAiExplanation consumes
+      const context = buildProductAiContext(options.horoscope, {
+        domainInterpretations: options.domainInterpretations,
+        lifeAnalysis: options.lifeAnalysis,
+        temporalState: options.temporalState
+      });
+
+      const contextEvidenceIds = new Set(context.evidence.map(e => e.id));
+
       const result = await runAiExplanation(options);
 
       if (result.kind === 'ERROR') {
         throw new Error(result.message);
       }
 
-      // The AI should only return evidence IDs that exist in the context
-      // or mark them as unresolved in unresolvedQuestions
+      // Collect all returned evidence IDs
       const allReturnedIds = new Set([
         ...result.supportingEvidence.map(e => e.evidence.id),
         ...result.challengingEvidence.map(e => e.evidence.id)
       ]);
 
-      // Build evidence index from domain interpretations
-      const contextEvidenceIds = new Set(
-        options.domainInterpretations.flatMap(d => d.evidence.map(e => e.id))
-      );
-
-      // Verify that all returned evidence IDs have actual evidence objects
-      for (const item of result.supportingEvidence) {
-        expect(item.evidence.id).toBeTruthy();
-        expect(item.evidence.statement).toBeTruthy();
+      // Assert every returned evidence ID is a member of the context index
+      for (const id of allReturnedIds) {
+        expect(contextEvidenceIds.has(id)).toBe(true);
       }
 
-      for (const item of result.challengingEvidence) {
-        expect(item.evidence.id).toBeTruthy();
-        expect(item.evidence.statement).toBeTruthy();
-      }
+      // Assert model-referenced IDs not in the index are surfaced as unresolved
+      const unresolvedIdsInQuestions = result.unresolvedQuestions
+        .filter(q => q.includes('could not be resolved'))
+        .flatMap(q => {
+          const match = q.match(/evidence IDs could not be resolved: (.+)/);
+          return match ? match[1].split(', ') : [];
+        });
 
-      // The AI context factory builds evidence from lifeAnalysis synthesis as well,
-      // so not all returned IDs will be in domainInterpretations directly.
-      // The important invariant is that returned IDs have valid evidence objects.
+      // Verify unresolved IDs are not in the resolved evidence
+      for (const unresolvedId of unresolvedIdsInQuestions) {
+        expect(allReturnedIds.has(unresolvedId)).toBe(false);
+      }
     });
 
     it('AI failure leaves deterministic synthesis unchanged', async () => {
@@ -145,48 +152,95 @@ describe('runAiExplanation', () => {
         task: 'CHART_SYNTHESIS'
       });
 
-      // Store original data
-      const originalLifeAnalysis = options.lifeAnalysis;
-      const originalDomainInterpretations = options.domainInterpretations;
+      // Store original data for deep equality comparison
+      const originalLifeAnalysis = JSON.parse(JSON.stringify(options.lifeAnalysis));
+      const originalDomainInterpretations = JSON.parse(JSON.stringify(options.domainInterpretations));
+
+      // Inject a deterministically failing router
+      const mockRouter: any = {
+        route: async () => {
+          throw new Error('Simulated AI failure');
+        }
+      };
+
+      const result = await runAiExplanation({
+        ...options,
+        router: mockRouter
+      });
+
+      // Assert the result is ERROR
+      expect(result.kind).toBe('ERROR');
+      expect(result.status).toBe('ERROR');
+      expect(result.message).toBeTruthy();
+
+      // Assert deep equality of synthesis input before/after
+      expect(JSON.parse(JSON.stringify(options.lifeAnalysis))).toEqual(originalLifeAnalysis);
+      expect(JSON.parse(JSON.stringify(options.domainInterpretations))).toEqual(originalDomainInterpretations);
+    });
+
+    it('classification parity: role matches source classification per ID', async () => {
+      // This test verifies that supporting/challenging labels respect engine classification
+      // The classification from SynthesisEvidenceReference.classification/polarity
+      // should be preserved through AI context → explanation
+      const options = createTestOptions({
+        task: 'CHART_SYNTHESIS'
+      });
+
+      // Build context to get the evidence references with classifications
+      const context = buildProductAiContext(options.horoscope, {
+        domainInterpretations: options.domainInterpretations,
+        lifeAnalysis: options.lifeAnalysis,
+        temporalState: options.temporalState
+      });
+
+      // Build a map of evidence ID to classification from the context
+      const classificationById = new Map<string, 'SUPPORTING' | 'CHALLENGING' | 'UNRESOLVED'>();
+      for (const evidence of context.evidence) {
+        // Use the effect field to determine classification
+        if (evidence.effect === 'SUPPORT') {
+          classificationById.set(evidence.id, 'SUPPORTING');
+        } else if (evidence.effect === 'CHALLENGE') {
+          classificationById.set(evidence.id, 'CHALLENGING');
+        } else {
+          classificationById.set(evidence.id, 'UNRESOLVED');
+        }
+      }
 
       const result = await runAiExplanation(options);
 
-      // The original data should be unchanged regardless of AI result
-      expect(options.lifeAnalysis).toBe(originalLifeAnalysis);
-      expect(options.domainInterpretations).toBe(originalDomainInterpretations);
-
-      // Even if AI fails, the service should return an ERROR result
-      // rather than mutating the input data
       if (result.kind === 'ERROR') {
-        expect(result.status).toBe('ERROR');
-        expect(result.message).toBeTruthy();
-      }
-    });
-
-    it('supporting/challenging labels respect engine classification', async () => {
-      // This test documents the contract: AI should restate engine classification
-      // The classification from SynthesisEvidenceReference.classification/polarity
-      // should be preserved through AI context → explanation
-      const result = await runAiExplanation(createTestOptions({
-        task: 'CHART_SYNTHESIS'
-      }));
-
-      if (result.kind === 'ERROR') {
-        throw new Error(result.message);
+        throw new Error('AI explanation failed');
       }
 
-      // Verify that supporting evidence is correctly labeled
+      // Assert returned role matches source classification per ID
       for (const item of result.supportingEvidence) {
+        const id = item.evidence.id;
+        const expectedClassification = classificationById.get(id);
+        expect(expectedClassification).toBe('SUPPORTING');
         expect(item.role).toBe('SUPPORTING');
       }
 
-      // Verify that challenging evidence is correctly labeled
       for (const item of result.challengingEvidence) {
+        const id = item.evidence.id;
+        const expectedClassification = classificationById.get(id);
+        expect(expectedClassification).toBe('CHALLENGING');
         expect(item.role).toBe('CHALLENGING');
       }
 
-      // The AI should not reinterpret evidence classification
-      // It should only restate what the engine provided
+      // Include an unresolved/unclassified case
+      // If there are any unresolved IDs in the result, verify they're not in supporting/challenging
+      const unresolvedIds = result.unresolvedQuestions
+        .filter(q => q.includes('could not be resolved'))
+        .flatMap(q => {
+          const match = q.match(/evidence IDs could not be resolved: (.+)/);
+          return match ? match[1].split(', ') : [];
+        });
+
+      for (const unresolvedId of unresolvedIds) {
+        const classification = classificationById.get(unresolvedId);
+        // Unresolved IDs should either be UNRESOLVED or not in the index
+        expect(classification === 'UNRESOLVED' || classification === undefined).toBe(true);
+      }
     });
 
     it('drives real local rules engine against VALID_SELECTION_GOLDEN_FIXTURE', async () => {
@@ -228,20 +282,7 @@ describe('runAiExplanation', () => {
       expect(result.requestId).toBeTruthy();
     });
 
-    it('handles edge cases gracefully', async () => {
-      // This test verifies that the service handles edge cases without errors
-      // Note: The AI context factory builds evidence from lifeAnalysis synthesis,
-      // so we can't truly have zero evidence or all-unknown evidence.
-      // This test just verifies the service doesn't error with normal input.
-      const options = createTestOptions({
-        task: 'CHART_SYNTHESIS'
-      });
 
-      const result = await runAiExplanation(options);
-
-      // Should not error with normal input
-      expect(result.kind === 'SUCCESS' || result.kind === 'ERROR').toBe(true);
-    });
   });
 
   it('maps structured ERROR status to an ERROR result ViewModel', async () => {

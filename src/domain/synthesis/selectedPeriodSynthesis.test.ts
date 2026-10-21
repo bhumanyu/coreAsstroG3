@@ -2386,6 +2386,74 @@ describe('buildSelectedPeriodSynthesis', () => {
     });
   });
 
+  describe('both-fail diagnostic (81512bf)', () => {
+    it('emits SYNTHESIS_PARTIAL_NO_DOMAINS when both activations are missing with error codes', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT',
+        wealthErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT'
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Assert success/partial discriminant (both MISSING = PARTIAL, not ERROR)
+      expect(result.value.provenance.career.status).toBe('MISSING');
+      expect(result.value.provenance.wealth.status).toBe('MISSING');
+
+      // Assert both provenance entries are MISSING
+      expect(result.value.provenance.career.status).toBe('MISSING');
+      expect(result.value.provenance.wealth.status).toBe('MISSING');
+
+      // Assert SYNTHESIS_PARTIAL_NO_DOMAINS diagnostic is present (in career diagnostics)
+      const bothFailDiag = result.value.career.diagnostics.find((d: any) => d.code === 'SYNTHESIS_PARTIAL_NO_DOMAINS');
+      expect(bothFailDiag).toBeDefined();
+      expect(bothFailDiag?.message).toContain('Career activation failed');
+      expect(bothFailDiag?.message).toContain('wealth activation failed');
+
+      // Assert both supplied error codes appear in diagnostics
+      const careerErrorDiag = result.value.career.diagnostics.find((d: any) => d.code === 'PARTIAL_CAREER_ACTIVATION_FAILED');
+      expect(careerErrorDiag).toBeDefined();
+      expect(careerErrorDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
+
+      const wealthErrorDiag = result.value.wealth.diagnostics.find((d: any) => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED');
+      expect(wealthErrorDiag).toBeDefined();
+      expect(wealthErrorDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
+
+      // Assert natal baselines are unchanged (both undefined since none provided)
+      expect(result.value.natalBaseline.career).toBeUndefined();
+      expect(result.value.natalBaseline.wealth).toBeUndefined();
+    });
+
+    it('emits SYNTHESIS_PARTIAL_NO_DOMAINS with different error codes', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerErrorCode: 'INCOMPLETE_CANONICAL_INPUT',
+        wealthErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT'
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Assert SYNTHESIS_PARTIAL_NO_DOMAINS diagnostic is present (in career diagnostics)
+      const bothFailDiag = result.value.career.diagnostics.find((d: any) => d.code === 'SYNTHESIS_PARTIAL_NO_DOMAINS');
+      expect(bothFailDiag).toBeDefined();
+
+      // Assert both error codes appear in diagnostics
+      const careerErrorDiag = result.value.career.diagnostics.find((d: any) => d.code === 'PARTIAL_CAREER_ACTIVATION_FAILED');
+      expect(careerErrorDiag).toBeDefined();
+      expect(careerErrorDiag?.message).toContain('INCOMPLETE_CANONICAL_INPUT');
+
+      const wealthErrorDiag = result.value.wealth.diagnostics.find((d: any) => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED');
+      expect(wealthErrorDiag).toBeDefined();
+      expect(wealthErrorDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
+    });
+  });
+
   describe('PBA-06 golden fixture: full reproducible synthesis', () => {
     it('produces complete, reproducible result with fully-populated scenario (PBA-06 completion gate)', () => {
       const selectedPeriod = makeSelectedPeriodContext();
