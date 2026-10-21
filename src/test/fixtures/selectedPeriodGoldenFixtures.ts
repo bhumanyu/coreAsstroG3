@@ -321,7 +321,6 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       version: 'PBA-05-v1'
     }
   },
-  qualificationStatus: 'UNAVAILABLE',
   aiExplanationStatus: 'NOT_REQUESTED'
 };
 
