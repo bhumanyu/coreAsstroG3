@@ -806,5 +806,212 @@ describe('selectedPeriodActivationContext', () => {
         expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
       }
     });
+
+    it('returns false for temporalRelation mismatch (FUTURE on CURRENT interval)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // This is a CURRENT interval (asOf is within [start, end))
+        // Supplying FUTURE should fail validation
+        const invalidCtx = { ...result.value, temporalRelation: 'FUTURE' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for temporalRelation mismatch (PAST on CURRENT interval)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // This is a CURRENT interval (asOf is within [start, end))
+        // Supplying PAST should fail validation
+        const invalidCtx = { ...result.value, temporalRelation: 'PAST' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for temporalRelation mismatch (CURRENT on FUTURE interval)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2019-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // This is a FUTURE interval (asOf < start)
+        // Supplying CURRENT should fail validation
+        const invalidCtx = { ...result.value, temporalRelation: 'CURRENT' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for temporalRelation mismatch (CURRENT on PAST interval)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2023-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // This is a PAST interval (asOf >= end)
+        // Supplying CURRENT should fail validation
+        const invalidCtx = { ...result.value, temporalRelation: 'CURRENT' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for inverted interval (start > end)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Invert the interval
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            start: result.value.interval.end,
+            end: result.value.interval.start
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for malformed date in interval.start', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            start: 'not-a-valid-date',
+            end: result.value.interval.end
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns false for malformed date in interval.end', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            start: result.value.interval.start,
+            end: 'not-a-valid-date'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('returns true for start−1ms FUTURE boundary (asOf = start - 1ms)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2019-12-31T23:59:59.999Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // asOf is 1ms before start → FUTURE
+        expect(result.value.temporalRelation).toBe('FUTURE');
+        expect(validateSelectedPeriodContext(result.value)).toBe(true);
+      }
+    });
+
+    it('returns true for start included (CURRENT at start)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2020-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // asOf === start → CURRENT (start is included)
+        expect(result.value.temporalRelation).toBe('CURRENT');
+        expect(validateSelectedPeriodContext(result.value)).toBe(true);
+      }
+    });
+
+    it('returns true for end excluded (PAST at end)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2022-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // asOf === end → PAST (end is excluded)
+        expect(result.value.temporalRelation).toBe('PAST');
+        expect(validateSelectedPeriodContext(result.value)).toBe(true);
+      }
+    });
+
+    it('returns true for end−1ms CURRENT', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-12-31T23:59:59.999Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // asOf is 1ms before end → CURRENT
+        expect(result.value.temporalRelation).toBe('CURRENT');
+        expect(validateSelectedPeriodContext(result.value)).toBe(true);
+      }
+    });
   });
 });

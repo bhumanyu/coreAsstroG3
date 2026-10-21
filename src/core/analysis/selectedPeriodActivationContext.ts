@@ -301,6 +301,24 @@ export function validateSelectedPeriodContext(
     return false;
   }
 
+  // Recompute expected temporal relation from interval and analysisAsOf
+  // This ensures the supplied temporalRelation matches the actual temporal semantics
+  const recomputedRelation = classifyTemporalRelation(
+    typedCtx.interval.start,
+    typedCtx.interval.end,
+    typedCtx.analysisAsOf
+  );
+
+  // Reject INVALID (inverted intervals) and UNKNOWN (unparseable dates)
+  if (recomputedRelation === 'INVALID' || recomputedRelation === 'UNKNOWN') {
+    return false;
+  }
+
+  // Validate that supplied temporalRelation matches recomputed relation
+  if (typedCtx.temporalRelation !== recomputedRelation) {
+    return false;
+  }
+
   // Verify dasha system
   if (typedCtx.dashaSystem !== DashaSystem.VIMSHOTTARI) {
     return false;
