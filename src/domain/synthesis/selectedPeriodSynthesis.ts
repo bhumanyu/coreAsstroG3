@@ -158,6 +158,7 @@ export interface SynthesisWealthSection {
  * dataStatus describes input availability only, never a composite score.
  * promiseEvidenceIds and dashaRuleReferences are preserved verbatim from PBA-05 activation
  * for evidence parity with the AI context projection.
+ * insufficientReason is preserved verbatim from PBA-05 activation for diagnostics (PBA-05).
  */
 export interface SynthesisWealthDimensionRow {
   readonly dimension: WealthDimension;
@@ -171,6 +172,7 @@ export interface SynthesisWealthDimensionRow {
     readonly source: string;
     readonly level: 'MD' | 'AD';
   }[];
+  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
 }
 
 /**
@@ -714,7 +716,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       linkedLevels: [],
       diagnostics: [],
       promiseEvidenceIds: [],
-      dashaRuleReferences: []
+      dashaRuleReferences: [],
+      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     },
     GAINS: {
       dimension: 'GAINS',
@@ -723,7 +726,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       linkedLevels: [],
       diagnostics: [],
       promiseEvidenceIds: [],
-      dashaRuleReferences: []
+      dashaRuleReferences: [],
+      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     },
     FORTUNE: {
       dimension: 'FORTUNE',
@@ -732,7 +736,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       linkedLevels: [],
       diagnostics: [],
       promiseEvidenceIds: [],
-      dashaRuleReferences: []
+      dashaRuleReferences: [],
+      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     },
     SPECULATION: {
       dimension: 'SPECULATION',
@@ -741,7 +746,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       linkedLevels: [],
       diagnostics: [],
       promiseEvidenceIds: [],
-      dashaRuleReferences: []
+      dashaRuleReferences: [],
+      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     }
   };
 
@@ -801,7 +807,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         linkedLevels: dimActivation.linkedLevels,
         diagnostics: dimDiagnostics,
         promiseEvidenceIds: dimActivation.promiseEvidenceIds,
-        dashaRuleReferences: dimActivation.dashaRuleReferences
+        dashaRuleReferences: dimActivation.dashaRuleReferences,
+        insufficientReason: dimActivation.insufficientReason
       };
     }
   } else {

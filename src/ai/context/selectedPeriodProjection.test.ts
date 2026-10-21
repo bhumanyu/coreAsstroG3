@@ -82,7 +82,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           dashaRuleReferences: [
             { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
             { ruleId: 'rule-2', source: 'DASHA', level: 'AD' }
-          ]
+          ],
+          insufficientReason: 'LINKED' as const
         },
         GAINS: {
           dimension: 'GAINS',
@@ -91,7 +92,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           linkedLevels: ['MD'],
           diagnostics: [],
           promiseEvidenceIds: ['promise-2'],
-          dashaRuleReferences: []
+          dashaRuleReferences: [],
+          insufficientReason: 'LINKED' as const
         },
         FORTUNE: {
           dimension: 'FORTUNE',
@@ -100,7 +102,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           linkedLevels: [],
           diagnostics: [],
           promiseEvidenceIds: [],
-          dashaRuleReferences: []
+          dashaRuleReferences: [],
+          insufficientReason: 'NO_PROMISE_EVIDENCE' as const
         },
         SPECULATION: {
           dimension: 'SPECULATION',
@@ -109,7 +112,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           linkedLevels: ['AD'],
           diagnostics: [],
           promiseEvidenceIds: ['promise-3'],
-          dashaRuleReferences: []
+          dashaRuleReferences: [],
+          insufficientReason: 'LINKED' as const
         }
       },
       diagnostics: [
@@ -354,7 +358,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             GAINS: {
               dimension: 'GAINS',
@@ -363,7 +368,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             FORTUNE: {
               dimension: 'FORTUNE',
@@ -372,7 +378,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             SPECULATION: {
               dimension: 'SPECULATION',
@@ -381,7 +388,8 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }
           }
         }

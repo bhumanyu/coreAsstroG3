@@ -76,7 +76,8 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           dashaRuleReferences: [
             { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
             { ruleId: 'rule-2', source: 'DASHA', level: 'AD' }
-          ]
+          ],
+          insufficientReason: 'LINKED' as const
         },
         GAINS: {
           dimension: 'GAINS',
@@ -85,7 +86,8 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           linkedLevels: ['AD'],
           diagnostics: [],
           promiseEvidenceIds: ['promise-2'],
-          dashaRuleReferences: []
+          dashaRuleReferences: [],
+          insufficientReason: 'LINKED' as const
         },
         FORTUNE: {
           dimension: 'FORTUNE',
@@ -94,7 +96,8 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           linkedLevels: [],
           diagnostics: [],
           promiseEvidenceIds: [],
-          dashaRuleReferences: []
+          dashaRuleReferences: [],
+          insufficientReason: 'NO_PROMISE_EVIDENCE' as const
         },
         SPECULATION: {
           dimension: 'SPECULATION',
@@ -103,7 +106,8 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           linkedLevels: ['MD', 'AD'],
           diagnostics: [],
           promiseEvidenceIds: ['promise-3'],
-          dashaRuleReferences: []
+          dashaRuleReferences: [],
+          insufficientReason: 'LINKED' as const
         }
       },
       diagnostics: []

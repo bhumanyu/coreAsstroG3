@@ -163,7 +163,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             GAINS: {
               dimension: 'GAINS',
@@ -172,7 +173,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             FORTUNE: {
               dimension: 'FORTUNE',
@@ -181,7 +183,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             SPECULATION: {
               dimension: 'SPECULATION',
@@ -190,7 +193,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }
           },
           diagnostics: []
@@ -243,7 +247,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             GAINS: {
               dimension: 'GAINS',
@@ -252,7 +257,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             FORTUNE: {
               dimension: 'FORTUNE',
@@ -261,7 +267,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             SPECULATION: {
               dimension: 'SPECULATION',
@@ -270,7 +277,8 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               linkedLevels: [],
               diagnostics: [],
               promiseEvidenceIds: [],
-              dashaRuleReferences: []
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }
           },
           diagnostics: []

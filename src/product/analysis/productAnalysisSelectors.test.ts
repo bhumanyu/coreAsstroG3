@@ -715,7 +715,8 @@ describe('productAnalysisSelectors', () => {
                 linkedLevels: ['MD'],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'LINKED' as const
               },
               GAINS: {
                 dimension: 'GAINS',
@@ -724,7 +725,8 @@ describe('productAnalysisSelectors', () => {
                 linkedLevels: ['MD'],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'LINKED' as const
               },
               FORTUNE: {
                 dimension: 'FORTUNE',
@@ -733,7 +735,8 @@ describe('productAnalysisSelectors', () => {
                 linkedLevels: ['MD'],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'LINKED' as const
               },
               SPECULATION: {
                 dimension: 'SPECULATION',
@@ -742,7 +745,8 @@ describe('productAnalysisSelectors', () => {
                 linkedLevels: ['MD'],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'LINKED' as const
               }
             },
             diagnostics: []

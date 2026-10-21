@@ -1119,7 +1119,8 @@ export function mapSelectedPeriodSynthesis(
             source: ref.source,
             level: ref.level
           }))
-        )
+        ),
+        insufficientReason: value.wealth.dimensions.ACCUMULATION.insufficientReason
       }),
       GAINS: Object.freeze({
         dimension: value.wealth.dimensions.GAINS.dimension,
@@ -1139,7 +1140,8 @@ export function mapSelectedPeriodSynthesis(
             source: ref.source,
             level: ref.level
           }))
-        )
+        ),
+        insufficientReason: value.wealth.dimensions.GAINS.insufficientReason
       }),
       FORTUNE: Object.freeze({
         dimension: value.wealth.dimensions.FORTUNE.dimension,
@@ -1159,7 +1161,8 @@ export function mapSelectedPeriodSynthesis(
             source: ref.source,
             level: ref.level
           }))
-        )
+        ),
+        insufficientReason: value.wealth.dimensions.FORTUNE.insufficientReason
       }),
       SPECULATION: Object.freeze({
         dimension: value.wealth.dimensions.SPECULATION.dimension,
@@ -1179,7 +1182,8 @@ export function mapSelectedPeriodSynthesis(
             source: ref.source,
             level: ref.level
           }))
-        )
+        ),
+        insufficientReason: value.wealth.dimensions.SPECULATION.insufficientReason
       })
     }),
     diagnostics: Object.freeze(

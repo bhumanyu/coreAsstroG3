@@ -195,7 +195,8 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
           level: 'AD',
           source: 'DASHA'
         })
-      ])
+      ]),
+      insufficientReason: 'LINKED' as const
     }),
     GAINS: Object.freeze({
       dimension: 'GAINS',
@@ -210,7 +211,8 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
         dashaRuleReferences: Object.freeze([])
       }),
       promiseEvidenceIds: Object.freeze(['promise-2']),
-      dashaRuleReferences: Object.freeze([])
+      dashaRuleReferences: Object.freeze([]),
+      insufficientReason: 'LINKED' as const
     }),
     FORTUNE: Object.freeze({
       dimension: 'FORTUNE',
@@ -225,7 +227,8 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
         dashaRuleReferences: Object.freeze([])
       }),
       promiseEvidenceIds: Object.freeze([]),
-      dashaRuleReferences: Object.freeze([])
+      dashaRuleReferences: Object.freeze([]),
+      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     }),
     SPECULATION: Object.freeze({
       dimension: 'SPECULATION',
@@ -240,7 +243,8 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
         dashaRuleReferences: Object.freeze([])
       }),
       promiseEvidenceIds: Object.freeze(['promise-3']),
-      dashaRuleReferences: Object.freeze([])
+      dashaRuleReferences: Object.freeze([]),
+      insufficientReason: 'LINKED' as const
     })
   };
 
@@ -937,7 +941,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]), // No promise evidence
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           GAINS: Object.freeze({
             dimension: 'GAINS',
@@ -952,7 +957,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]),
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           FORTUNE: Object.freeze({
             dimension: 'FORTUNE',
@@ -967,7 +973,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]),
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
             dimension: 'SPECULATION',
@@ -982,7 +989,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]),
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })
       });
@@ -1196,7 +1204,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze(['promise-1', 'promise-2', 'promise-3']), // 3 IDs
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'LINKED' as const
           }),
           GAINS: Object.freeze({
             dimension: 'GAINS',
@@ -1211,7 +1220,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]),
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           FORTUNE: Object.freeze({
             dimension: 'FORTUNE',
@@ -1226,7 +1236,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]),
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
             dimension: 'SPECULATION',
@@ -1241,7 +1252,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([])
             }),
             promiseEvidenceIds: Object.freeze([]),
-            dashaRuleReferences: Object.freeze([])
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })
       });
@@ -1503,7 +1515,8 @@ describe('buildSelectedPeriodSynthesis', () => {
           ...wealthActivation.dimensions,
           ACCUMULATION: Object.freeze({
             ...wealthActivation.dimensions.ACCUMULATION,
-            promiseEvidenceIds: Object.freeze(['dup-1'])
+            promiseEvidenceIds: Object.freeze(['dup-1']),
+            insufficientReason: 'LINKED' as const
           })
         })
       });
@@ -2040,6 +2053,201 @@ describe('buildSelectedPeriodSynthesis', () => {
     });
   });
 
+  describe('wealth diagnostics per category (PBA-05)', () => {
+    it('asserts WEALTH_EVIDENCE_INVALID diagnostic code for wrong domain', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'CAREER')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const invalidDiag = result.value.wealth.diagnostics.find(d => d.code === 'WEALTH_EVIDENCE_INVALID');
+      expect(invalidDiag).toBeDefined();
+      expect(invalidDiag?.code).toBe('WEALTH_EVIDENCE_INVALID');
+    });
+
+    it('asserts WEALTH_EVIDENCE_INVALID diagnostic code for wrong phase', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION', 'DASHA_ACTIVATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const invalidDiag = result.value.wealth.diagnostics.find(d => d.code === 'WEALTH_EVIDENCE_INVALID');
+      expect(invalidDiag).toBeDefined();
+      expect(invalidDiag?.code).toBe('WEALTH_EVIDENCE_INVALID');
+    });
+
+    it('asserts WEALTH_EVIDENCE_DIMENSION_MISMATCH diagnostic code for dimension mismatch', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'GAINS')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const mismatchDiag = result.value.wealth.diagnostics.find(d => d.code === 'WEALTH_EVIDENCE_DIMENSION_MISMATCH');
+      expect(mismatchDiag).toBeDefined();
+      expect(mismatchDiag?.code).toBe('WEALTH_EVIDENCE_DIMENSION_MISMATCH');
+    });
+
+    it('asserts EVIDENCE_ID_AMBIGUOUS diagnostic code for conflicting duplicates', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const customWealthActivation: SelectedWealthPeriodActivation = Object.freeze({
+        ...makeWealthActivation(),
+        dimensions: Object.freeze({
+          ...makeWealthActivation().dimensions,
+          ACCUMULATION: Object.freeze({
+            ...makeWealthActivation().dimensions.ACCUMULATION,
+            promiseEvidenceIds: Object.freeze(['dup-1'])
+          })
+        })
+      });
+      const wealthEvidence = Object.freeze([
+        makeEvidence('dup-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION', undefined, { identityKey: 'key-A' }),
+        makeEvidence('dup-1', 'CHALLENGING', 'WEALTH', 'ACCUMULATION', undefined, { identityKey: 'key-B' })
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation: customWealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const ambiguousDiag = result.value.wealth.diagnostics.find(d => d.code === 'EVIDENCE_ID_AMBIGUOUS');
+      expect(ambiguousDiag).toBeDefined();
+      expect(ambiguousDiag?.code).toBe('EVIDENCE_ID_AMBIGUOUS');
+    });
+  });
+
+  describe('wealthUnresolvedIds includes dimension field', () => {
+    it('asserts wealthUnresolvedIds entries include correct dimension field', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+        // promise-2 and promise-3 are missing
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Check missingInputs for unresolved wealth evidence with dimension
+      const unresolvedWealthEntries = result.value.missingInputs.filter(
+        m => m.code === 'EVIDENCE_REFERENCE_UNRESOLVED' && m.domain === 'WEALTH'
+      );
+
+      expect(unresolvedWealthEntries.length).toBeGreaterThan(0);
+
+      // At least one entry should mention dimension GAINS (for promise-2)
+      const gainsEntry = unresolvedWealthEntries.find(m => m.description.includes('GAINS'));
+      expect(gainsEntry).toBeDefined();
+
+      // At least one entry should mention dimension SPECULATION (for promise-3)
+      const specEntry = unresolvedWealthEntries.find(m => m.description.includes('SPECULATION'));
+      expect(specEntry).toBeDefined();
+    });
+  });
+
+  describe('missingInputs distinguishes WEALTH_ACTIVATION_MISSING from WEALTH_EVIDENCE_MISSING', () => {
+    it('reports WEALTH_ACTIVATION_MISSING when wealth activation not provided', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const activationMissing = result.value.missingInputs.find(m => m.code === 'WEALTH_ACTIVATION_MISSING');
+      expect(activationMissing).toBeDefined();
+      expect(activationMissing?.domain).toBe('WEALTH');
+
+      const evidenceMissing = result.value.missingInputs.find(m => m.code === 'WEALTH_EVIDENCE_MISSING');
+      expect(evidenceMissing).toBeUndefined(); // Should not have evidence missing if activation is missing
+    });
+
+    it('reports WEALTH_EVIDENCE_MISSING when wealth activation present but evidence missing', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation
+        // wealthEvidence not provided
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const activationMissing = result.value.missingInputs.find(m => m.code === 'WEALTH_ACTIVATION_MISSING');
+      expect(activationMissing).toBeUndefined(); // Activation is present
+
+      const evidenceMissing = result.value.missingInputs.find(m => m.code === 'WEALTH_EVIDENCE_MISSING');
+      expect(evidenceMissing).toBeDefined();
+      expect(evidenceMissing?.domain).toBe('WEALTH');
+    });
+
+    it('reports neither when both activation and evidence are present', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const activationMissing = result.value.missingInputs.find(m => m.code === 'WEALTH_ACTIVATION_MISSING');
+      expect(activationMissing).toBeUndefined();
+
+      const evidenceMissing = result.value.missingInputs.find(m => m.code === 'WEALTH_EVIDENCE_MISSING');
+      expect(evidenceMissing).toBeUndefined();
+    });
+  });
+
   describe('duplicate semantics: identical dedup vs conflicting ambiguity', () => {
     it('deduplicates identical records silently (no diagnostic)', () => {
       const selectedPeriod = makeSelectedPeriodContext();
@@ -2076,7 +2284,8 @@ describe('buildSelectedPeriodSynthesis', () => {
           ...wealthActivation.dimensions,
           ACCUMULATION: Object.freeze({
             ...wealthActivation.dimensions.ACCUMULATION,
-            promiseEvidenceIds: Object.freeze(['dup-1'])
+            promiseEvidenceIds: Object.freeze(['dup-1']),
+            insufficientReason: 'LINKED' as const
           })
         })
       });
@@ -2113,7 +2322,8 @@ describe('buildSelectedPeriodSynthesis', () => {
           ...wealthActivation.dimensions,
           ACCUMULATION: Object.freeze({
             ...wealthActivation.dimensions.ACCUMULATION,
-            promiseEvidenceIds: Object.freeze(['dup-2'])
+            promiseEvidenceIds: Object.freeze(['dup-2']),
+            insufficientReason: 'LINKED' as const
           })
         })
       });
@@ -2261,7 +2471,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               dashaRuleReferences: Object.freeze([
                 Object.freeze({ ruleId: 'rule-1', level: 'MD', source: 'DASHA' }),
                 Object.freeze({ ruleId: 'rule-2', level: 'AD', source: 'DASHA' })
-              ])
+              ]),
+              insufficientReason: 'LINKED' as const
             }),
             GAINS: Object.freeze({
               dimension: 'GAINS',
@@ -2270,7 +2481,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               linkedLevels: Object.freeze(['MD']),
               diagnostics: Object.freeze([]),
               promiseEvidenceIds: Object.freeze(['promise-2']),
-              dashaRuleReferences: Object.freeze([])
+              dashaRuleReferences: Object.freeze([]),
+              insufficientReason: 'LINKED' as const
             }),
             FORTUNE: Object.freeze({
               dimension: 'FORTUNE',
@@ -2279,7 +2491,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               linkedLevels: Object.freeze([]),
               diagnostics: Object.freeze([]),
               promiseEvidenceIds: Object.freeze([]),
-              dashaRuleReferences: Object.freeze([])
+              dashaRuleReferences: Object.freeze([]),
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }),
             SPECULATION: Object.freeze({
               dimension: 'SPECULATION',
@@ -2288,7 +2501,8 @@ describe('buildSelectedPeriodSynthesis', () => {
               linkedLevels: Object.freeze(['AD']),
               diagnostics: Object.freeze([]),
               promiseEvidenceIds: Object.freeze(['promise-3']),
-              dashaRuleReferences: Object.freeze([])
+              dashaRuleReferences: Object.freeze([]),
+              insufficientReason: 'LINKED' as const
             })
           }),
           diagnostics: Object.freeze([])

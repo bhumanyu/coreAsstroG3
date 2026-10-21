@@ -455,6 +455,7 @@ export interface ProductSynthesisCareerSection {
  * dataStatus describes input availability only, never a composite score.
  * promiseEvidenceIds and dashaRuleReferences are preserved verbatim from PBA-05 activation
  * for evidence parity with the AI context projection.
+ * insufficientReason is preserved verbatim from PBA-05 activation for diagnostics (PBA-05).
  */
 export interface ProductSynthesisWealthDimensionRow {
   readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
@@ -468,6 +469,7 @@ export interface ProductSynthesisWealthDimensionRow {
     readonly source: string;
     readonly level: 'MD' | 'AD';
   }[];
+  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
 }
 
 /**

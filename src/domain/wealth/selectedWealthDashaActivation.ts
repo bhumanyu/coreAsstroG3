@@ -25,6 +25,11 @@ export interface SelectedWealthDashaRuleReference {
  * Effect semantics:
  * - MIXED evidence from dasha rules is collapsed to PARTIALLY_ACTIVATES (partial activation, not unresolved)
  * - Individual rule provenance is preserved in dashaRuleReferences for traceability
+ *
+ * insufficientReason semantics (PBA-05 diagnostics):
+ * - NO_PROMISE_EVIDENCE: No natal promise evidence for this dimension (empty promiseEvidenceIds)
+ * - PROMISE_NOT_LINKED: Promise exists but no MD/AD linkage (populated promiseEvidenceIds, empty linkedLevels)
+ * - LINKED: At least one MD or AD level linked (populated linkedLevels)
  */
 export interface SelectedWealthDimensionActivation {
   readonly dimension: WealthDimension;
@@ -40,6 +45,7 @@ export interface SelectedWealthDimensionActivation {
   };
   readonly promiseEvidenceIds: readonly string[];
   readonly dashaRuleReferences: readonly SelectedWealthDashaRuleReference[];
+  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
 }
 
 /**
@@ -233,7 +239,8 @@ function evaluateDimension(
         dashaRuleReferences: Object.freeze([])
       }),
       promiseEvidenceIds: Object.freeze([]),
-      dashaRuleReferences: Object.freeze([])
+      dashaRuleReferences: Object.freeze([]),
+      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     });
   }
 
@@ -264,7 +271,8 @@ function evaluateDimension(
         dashaRuleReferences: Object.freeze([])
       }),
       promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
-      dashaRuleReferences: Object.freeze([])
+      dashaRuleReferences: Object.freeze([]),
+      insufficientReason: 'PROMISE_NOT_LINKED' as const
     });
   }
 
@@ -299,7 +307,8 @@ function evaluateDimension(
       dashaRuleReferences: adRuleReferences
     }),
     promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
-    dashaRuleReferences: allRuleReferences
+    dashaRuleReferences: allRuleReferences,
+    insufficientReason: 'LINKED' as const
   });
 }
 

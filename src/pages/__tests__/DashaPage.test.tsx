@@ -193,7 +193,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: [],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               GAINS: {
                 dimension: 'GAINS',
@@ -202,7 +203,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: [],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               FORTUNE: {
                 dimension: 'FORTUNE',
@@ -211,7 +213,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: [],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               SPECULATION: {
                 dimension: 'SPECULATION',
@@ -220,7 +223,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: [],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               }
             },
             diagnostics: []
@@ -361,7 +365,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: ['MD'],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'LINKED' as const
               },
               GAINS: {
                 dimension: 'GAINS',
@@ -370,7 +375,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: ['AD'],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'LINKED' as const
               },
               FORTUNE: {
                 dimension: 'FORTUNE',
@@ -379,7 +385,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: [],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               SPECULATION: {
                 dimension: 'SPECULATION',
@@ -388,7 +395,8 @@ describe('DashaPage (P-UI-07)', () => {
                 linkedLevels: [],
                 diagnostics: [],
                 promiseEvidenceIds: [],
-                dashaRuleReferences: []
+                dashaRuleReferences: [],
+                insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               }
             },
             diagnostics: []
@@ -488,7 +496,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 GAINS: {
                   dimension: 'GAINS',
@@ -497,7 +506,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 FORTUNE: {
                   dimension: 'FORTUNE',
@@ -506,7 +516,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 SPECULATION: {
                   dimension: 'SPECULATION',
@@ -515,7 +526,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 }
               },
               diagnostics: []
@@ -576,7 +588,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 GAINS: {
                   dimension: 'GAINS',
@@ -585,7 +598,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 FORTUNE: {
                   dimension: 'FORTUNE',
@@ -594,7 +608,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 SPECULATION: {
                   dimension: 'SPECULATION',
@@ -603,7 +618,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 }
               },
               diagnostics: []
@@ -673,7 +689,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 GAINS: {
                   dimension: 'GAINS',
@@ -682,7 +699,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 FORTUNE: {
                   dimension: 'FORTUNE',
@@ -691,7 +709,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 SPECULATION: {
                   dimension: 'SPECULATION',
@@ -700,7 +719,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 }
               },
               diagnostics: []
@@ -782,7 +802,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 GAINS: {
                   dimension: 'GAINS',
@@ -791,7 +812,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 FORTUNE: {
                   dimension: 'FORTUNE',
@@ -800,7 +822,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 },
                 SPECULATION: {
                   dimension: 'SPECULATION',
@@ -809,7 +832,8 @@ describe('DashaPage (P-UI-07)', () => {
                   linkedLevels: [],
                   diagnostics: [],
                   promiseEvidenceIds: [],
-                  dashaRuleReferences: []
+                  dashaRuleReferences: [],
+                  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
                 }
               },
               diagnostics: []

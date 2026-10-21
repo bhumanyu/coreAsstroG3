@@ -33,7 +33,8 @@ const emptyWealthDimension = (
   linkedLevels: [],
   diagnostics: [],
   promiseEvidenceIds: [],
-  dashaRuleReferences: []
+  dashaRuleReferences: [],
+  insufficientReason: 'NO_PROMISE_EVIDENCE' as const
 });
 
 const emptyWealthDimensions: ProductSelectedPeriodSynthesis['wealth']['dimensions'] = {
@@ -78,7 +79,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             linkedLevels: [],
             diagnostics: [],
             promiseEvidenceIds: [],
-            dashaRuleReferences: []
+            dashaRuleReferences: [],
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           },
           GAINS: {
             dimension: 'GAINS',
@@ -87,7 +89,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             linkedLevels: [],
             diagnostics: [],
             promiseEvidenceIds: [],
-            dashaRuleReferences: []
+            dashaRuleReferences: [],
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           },
           FORTUNE: {
             dimension: 'FORTUNE',
@@ -96,7 +99,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             linkedLevels: [],
             diagnostics: [],
             promiseEvidenceIds: [],
-            dashaRuleReferences: []
+            dashaRuleReferences: [],
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           },
           SPECULATION: {
             dimension: 'SPECULATION',
@@ -105,7 +109,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             linkedLevels: [],
             diagnostics: [],
             promiseEvidenceIds: [],
-            dashaRuleReferences: []
+            dashaRuleReferences: [],
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }
         },
         diagnostics: []

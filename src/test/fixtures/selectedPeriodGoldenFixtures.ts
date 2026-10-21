@@ -77,7 +77,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         linkedLevels: [],
         diagnostics: [],
         promiseEvidenceIds: [],
-        dashaRuleReferences: []
+        dashaRuleReferences: [],
+        insufficientReason: 'NO_PROMISE_EVIDENCE' as const
       },
       GAINS: {
         dimension: 'GAINS',
@@ -112,7 +113,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
             source: 'Yoga Engine'
           }
-        ]
+        ],
+        insufficientReason: 'LINKED' as const
       },
       FORTUNE: {
         dimension: 'FORTUNE',
@@ -130,7 +132,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
           'WEALTH_5H_9H_LINK_001:HOUSES_5_9',
           'WEALTH_5L_9L_LINK_001:VENUS_SATURN'
         ],
-        dashaRuleReferences: []
+        dashaRuleReferences: [],
+        insufficientReason: 'PROMISE_NOT_LINKED' as const
       },
       SPECULATION: {
         dimension: 'SPECULATION',
@@ -146,7 +149,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         promiseEvidenceIds: [
           'WEALTH_5L_DIGNITY_001:VENUS'
         ],
-        dashaRuleReferences: []
+        dashaRuleReferences: [],
+        insufficientReason: 'PROMISE_NOT_LINKED' as const
       }
     },
     diagnostics: []
