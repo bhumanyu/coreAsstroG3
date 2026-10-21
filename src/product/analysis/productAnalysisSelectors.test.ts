@@ -753,7 +753,6 @@ describe('productAnalysisSelectors', () => {
             career: { status: 'PRESENT' },
             wealth: { status: 'PRESENT' }
           },
-          qualificationStatus: 'CANONICAL',
           aiExplanationStatus: 'NOT_REQUESTED'
         }
       };
