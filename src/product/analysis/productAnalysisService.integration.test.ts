@@ -223,17 +223,52 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(analysis1.dasha.current.antardasha?.planet).toBe(analysis2.dasha.current.antardasha?.planet);
   });
 
-  it('past/current/future temporalRelation vs asOf', async () => {
-    // Test with a future asOf date
-    const futureAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+  it('past temporalRelation: period ended before asOf', async () => {
+    // Test with an asOf date that is after the selected period's end
+    // This should produce PAST temporalRelation
+    const pastAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
       includeAiExplanation: false,
       asOf: new Date('2030-01-01')
     });
 
-    // If selectedPeriod is provided, verify temporalRelation is set correctly
-    // This requires a valid selection, which we may not have in test data
-    // For now, we just verify the analysis completes
+    expect(pastAnalysis).toBeDefined();
+    // If selectedPeriod is present with a valid selection, verify temporalRelation
+    if (pastAnalysis.selectedPeriod?.status === 'OK') {
+      // With a 2030 asOf, the canonical chart's 1988-1989 period should be PAST
+      expect(pastAnalysis.selectedPeriod.synthesis.period.temporalRelation).toBe('PAST');
+    }
+  });
+
+  it('current temporalRelation: asOf is within period interval [start, end)', async () => {
+    // Test with an asOf date that is within the selected period's interval
+    // This should produce CURRENT temporalRelation
+    const currentAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+      includeAiExplanation: false,
+      asOf: new Date('1988-06-01') // Within MOON-MOON period (1988-05-08 to 1989-01-15)
+    });
+
+    expect(currentAnalysis).toBeDefined();
+    // If selectedPeriod is present with a valid selection, verify temporalRelation
+    if (currentAnalysis.selectedPeriod?.status === 'OK') {
+      // With a 1988-06-01 asOf, a period spanning 1988-05-08 to 1989-01-15 should be CURRENT
+      expect(currentAnalysis.selectedPeriod.synthesis.period.temporalRelation).toBe('CURRENT');
+    }
+  });
+
+  it('future temporalRelation: period starts after asOf', async () => {
+    // Test with an asOf date that is before the selected period's start
+    // This should produce FUTURE temporalRelation
+    const futureAnalysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
+      includeAiExplanation: false,
+      asOf: new Date('1980-01-01') // Before MOON-MOON period (1988-05-08)
+    });
+
     expect(futureAnalysis).toBeDefined();
+    // If selectedPeriod is present with a valid selection, verify temporalRelation
+    if (futureAnalysis.selectedPeriod?.status === 'OK') {
+      // With a 1980 asOf, a period starting in 1988 should be FUTURE
+      expect(futureAnalysis.selectedPeriod.synthesis.period.temporalRelation).toBe('FUTURE');
+    }
   });
 
   it('full-DTO equality vs literal golden fixture', async () => {

@@ -706,6 +706,15 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     }));
   }
 
+  // Emit PARTIAL_CAREER_ACTIVATION_FAILED diagnostic if career activation is missing
+  // This signals partial synthesis (one domain failed, the other succeeded)
+  if (!careerActivation && wealthActivation) {
+    careerDiagnostics.push(Object.freeze({
+      code: 'PARTIAL_CAREER_ACTIVATION_FAILED',
+      message: 'Career activation failed; wealth activation succeeded. Synthesis proceeds with partial domain coverage.'
+    }));
+  }
+
   // Build wealth section
   const wealthDiagnostics: SynthesisDiagnostic[] = [];
   const wealthDimensions: Record<WealthDimension, SynthesisWealthDimensionRow> = {
@@ -815,6 +824,15 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
     wealthDiagnostics.push(Object.freeze({
       code: 'WEALTH_ACTIVATION_MISSING',
       message: 'Wealth activation not provided'
+    }));
+  }
+
+  // Emit PARTIAL_WEALTH_ACTIVATION_FAILED diagnostic if wealth activation is missing
+  // This signals partial synthesis (one domain failed, the other succeeded)
+  if (!wealthActivation && careerActivation) {
+    wealthDiagnostics.push(Object.freeze({
+      code: 'PARTIAL_WEALTH_ACTIVATION_FAILED',
+      message: 'Wealth activation failed; career activation succeeded. Synthesis proceeds with partial domain coverage.'
     }));
   }
 

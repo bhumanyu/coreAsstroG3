@@ -70,15 +70,14 @@ export interface BuildProductSelectedPeriodSynthesisInput {
  * Discriminated union preserving each layer's error codes verbatim.
  * Error codes are propagated directly from domain layers without wrapping:
  * - CONTEXT stage: SelectedPeriodContextError (from createSelectedPeriodActivationContext)
- * - CAREER stage: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' (from buildSelectedCareerDashaActivation)
- * - WEALTH stage: 'INVALID_SELECTED_PERIOD_CONTEXT' (from evaluateSelectedWealthPeriodActivation)
  * - SYNTHESIS stage: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' (from buildSelectedPeriodSynthesis)
  *
+ * CAREER and WEALTH activation failures are handled as partial synthesis (degrade, not hard-fail).
  * This policy ensures domain error codes are never silently replaced with generic wrappers.
  */
 export type BuildProductSelectedPeriodSynthesisResult =
   | { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> }
-  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'INCOMPLETE_CANONICAL_INPUT' | 'ACTIVATION_PERIOD_MISMATCH' };
+  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'ACTIVATION_PERIOD_MISMATCH' };
 
 /**
  * Creates selected-period activation context.
@@ -97,12 +96,12 @@ function createSelectedPeriodActivationContextInternal(
 
 /**
  * Builds selected Career Dasha activation.
- * Propagates domain error codes verbatim.
+ * Returns error code for partial synthesis diagnostics if activation fails.
  */
 function buildSelectedCareerDashaActivationInternal(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext
-): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' } {
+): { readonly ok: true; readonly value: SelectedCareerDashaActivationSuccess } | { readonly ok: false; readonly errorCode: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' } {
   const { careerArtifacts, horoscope } = input;
   const result = buildSelectedCareerDashaActivation({
     horoscope,
@@ -114,8 +113,8 @@ function buildSelectedCareerDashaActivationInternal(
   });
 
   if (!result.ok) {
-    // Propagate the actual domain error code verbatim
-    return { ok: false, error: result.error };
+    // Return error code for partial synthesis diagnostic
+    return { ok: false, errorCode: result.error };
   }
 
   return { ok: true, value: result.value };
@@ -123,12 +122,12 @@ function buildSelectedCareerDashaActivationInternal(
 
 /**
  * Evaluates selected Wealth period activation.
- * Propagates domain error codes verbatim.
+ * Returns error code for partial synthesis diagnostics if activation fails.
  */
 function evaluateSelectedWealthPeriodActivationInternal(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext
-): { readonly ok: true; readonly value: SelectedWealthPeriodActivation } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' } {
+): { readonly ok: true; readonly value: SelectedWealthPeriodActivation } | { readonly ok: false; readonly errorCode: 'INVALID_SELECTED_PERIOD_CONTEXT' } {
   const { wealthEvidence } = input;
   const result = evaluateSelectedWealthPeriodActivation({
     selectedPeriod,
@@ -136,8 +135,8 @@ function evaluateSelectedWealthPeriodActivationInternal(
   });
 
   if (!result.ok) {
-    // Propagate the actual domain error code verbatim
-    return { ok: false, error: result.error };
+    // Return error code for partial synthesis diagnostic
+    return { ok: false, errorCode: result.error };
   }
 
   return { ok: true, value: result.value };
@@ -145,17 +144,14 @@ function evaluateSelectedWealthPeriodActivationInternal(
 
 /**
  * Builds selected-period synthesis (internal wrapper).
+ * Accepts optional activations for partial synthesis support.
  * Propagates domain error codes verbatim.
- *
- * NOTE: This function is only called after both career and wealth activations succeed.
- * It does not accept undefined activations - domain failures are propagated immediately
- * by the caller (buildProductSelectedPeriodSynthesis).
  */
 function buildSelectedPeriodSynthesisWrapper(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext,
-  careerActivation: SelectedCareerDashaActivationSuccess,
-  wealthActivation: SelectedWealthPeriodActivation
+  careerActivation?: SelectedCareerDashaActivationSuccess,
+  wealthActivation?: SelectedWealthPeriodActivation
 ): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;
   const result = buildSelectedPeriodSynthesis({
@@ -184,9 +180,10 @@ function buildSelectedPeriodSynthesisWrapper(
  * 1. createSelectedPeriodActivationContext
  * 2. buildSelectedCareerDashaActivation (pass BOTH canonical inputs when present; if absent, neither)
  * 3. evaluateSelectedWealthPeriodActivation
- * 4. buildSelectedPeriodSynthesis
+ * 4. buildSelectedPeriodSynthesis (with partial activation support)
  *
- * Preserves each layer's error codes verbatim in a typed union.
+ * Domain activation failures degrade to partial synthesis (do not hard-fail).
+ * Context resolution failures still hard-fail (invariant violation).
  * No horoscope calculation, no interpreter calls, context.asOf passed unchanged.
  */
 export function buildProductSelectedPeriodSynthesis(
@@ -200,23 +197,15 @@ export function buildProductSelectedPeriodSynthesis(
 
   const selectedPeriod = contextResult.value;
 
-  // Step 2: Build selected Career Dasha activation
+  // Step 2: Build selected Career Dasha activation (degrade on failure)
   const careerActivationResult = buildSelectedCareerDashaActivationInternal(input, selectedPeriod);
-  if (!careerActivationResult.ok) {
-    // Propagate domain activation failure immediately - do not call synthesis with undefined
-    return { ok: false, error: careerActivationResult.error };
-  }
-  const careerActivation = careerActivationResult.value;
+  const careerActivation = careerActivationResult.ok ? careerActivationResult.value : undefined;
 
-  // Step 3: Evaluate selected Wealth period activation
+  // Step 3: Evaluate selected Wealth period activation (degrade on failure)
   const wealthActivationResult = evaluateSelectedWealthPeriodActivationInternal(input, selectedPeriod);
-  if (!wealthActivationResult.ok) {
-    // Propagate domain activation failure immediately - do not call synthesis with undefined
-    return { ok: false, error: wealthActivationResult.error };
-  }
-  const wealthActivation = wealthActivationResult.value;
+  const wealthActivation = wealthActivationResult.ok ? wealthActivationResult.value : undefined;
 
-  // Step 4: Build selected-period synthesis
+  // Step 4: Build selected-period synthesis with partial activation support
   const synthesisResult = buildSelectedPeriodSynthesisWrapper(
     input,
     selectedPeriod,

@@ -24,6 +24,37 @@ import {
   type AiExplanationStructuredOutput
 } from './aiExplanationTypes';
 
+/**
+ * AI Evidence Semantics Contract (PR-F)
+ *
+ * This service enforces deterministic evidence semantics between the synthesis engine and AI:
+ *
+ * 1. Evidence-ID Parity:
+ *    - All evidence IDs in AI response must exist in the synthesis → AI context projection
+ *    - Unresolved IDs are marked in unresolvedQuestions, never invented
+ *    - The resolveEvidence function validates IDs against the context index
+ *
+ * 2. Classification Determinism:
+ *    - Supporting/challenging labels in AI explanation must respect engine classification
+ *    - The AI restates SynthesisEvidenceReference.classification/polarity from the engine
+ *    - The AI does NOT reinterpret evidence as supporting/challenging independently
+ *    - AI may describe evidence qualitatively but must preserve the engine's classification
+ *
+ * 3. Zero-Classified Evidence:
+ *    - If no evidence is classified (all UNRESOLVED), AI must not describe as "balanced"
+ *    - AI should report "insufficient evidence" or "no resolved evidence" honestly
+ *
+ * 4. AI Failure Isolation:
+ *    - AI explanation failure leaves deterministic synthesis unchanged
+ *    - The service returns ERROR result without mutating input data
+ *    - Traceability IDs are extracted before AI call to preserve provenance
+ *
+ * 5. DTO ↔ AI Context Parity:
+ *    - Canonical identity/temporal fields are preserved verbatim through projection
+ *    - selectedPeriodId, mahadashaId, antardashaId, interval, analysisAsOf, temporalRelation
+ *    - No ID regeneration or field transformation
+ */
+
 export interface RunProductAiExplanationOptions {
   readonly horoscope: Horoscope;
   readonly task: AiTask;

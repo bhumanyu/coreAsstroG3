@@ -1194,17 +1194,19 @@ export function mapSelectedPeriodSynthesis(
     )
   });
 
-  // Compute qualification status from career.qualificationBasis
+  // Compute qualification status from career.qualificationBasis and provenance.career.status
   // Product contract (compatibility contract per Finding 5):
   // - CANONICAL: career used canonical qualification mechanisms
   // - PROVISIONAL: career used proxy direction
-  // - UNAVAILABLE: canonical qualification could not be determined
+  // - UNAVAILABLE: canonical qualification could not be determined OR career activation missing
   const qualificationStatus: import('./productAnalysisTypes').ProductQualificationStatus =
-    value.career.qualificationBasis === 'CANONICAL_STATUS'
-      ? 'CANONICAL'
-      : value.career.qualificationBasis === 'UNAVAILABLE'
-        ? 'UNAVAILABLE'
-        : 'PROVISIONAL';
+    value.provenance.career.status === 'MISSING'
+      ? 'UNAVAILABLE'
+      : value.career.qualificationBasis === 'CANONICAL_STATUS'
+        ? 'CANONICAL'
+        : value.career.qualificationBasis === 'UNAVAILABLE'
+          ? 'UNAVAILABLE'
+          : 'PROVISIONAL';
 
   return Object.freeze({
     synthesisVersion: value.synthesisVersion,

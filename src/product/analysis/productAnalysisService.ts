@@ -277,10 +277,6 @@ export class ProductAnalysisService {
           ) {
             return 'INVALID_SELECTION';
           }
-          // CAREER stage errors (from buildSelectedCareerDashaActivation)
-          if (error === 'INCOMPLETE_CANONICAL_INPUT') {
-            return 'SYNTHESIS_FAILED';
-          }
           // SYNTHESIS stage errors (from buildSelectedPeriodSynthesis)
           if (error === 'ACTIVATION_PERIOD_MISMATCH') {
             return 'SYNTHESIS_FAILED';
@@ -470,7 +466,7 @@ export class ProductAnalysisService {
       ) {
         return 'INVALID_SELECTION';
       }
-      if (error === 'INCOMPLETE_CANONICAL_INPUT' || error === 'ACTIVATION_PERIOD_MISMATCH') {
+      if (error === 'ACTIVATION_PERIOD_MISMATCH') {
         return 'SYNTHESIS_FAILED';
       }
       const _exhaustiveCheck: never = error;

@@ -192,8 +192,24 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             </div>
           </div>
 
+          {/* Career unavailable state */}
+          {synthesis.provenance.career.status === 'MISSING' && (
+            <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 flex items-start gap-3">
+              <AlertTriangle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="text-xs space-y-1">
+                <span className="font-mono-code text-slate-400">Career activation unavailable</span>
+                <span className="text-slate-500 block">
+                  Career domain activation failed or was not provided. This synthesis proceeds with partial domain coverage.
+                </span>
+                {synthesis.career.diagnostics.length > 0 && (
+                  <DiagnosticsList diagnostics={synthesis.career.diagnostics} compact />
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Career limitation warning */}
-          {(synthesis.career.qualificationBasis === 'PROXY_DIRECTION' || synthesis.career.qualificationBasis === 'UNAVAILABLE') && (
+          {synthesis.provenance.career.status !== 'MISSING' && (synthesis.career.qualificationBasis === 'PROXY_DIRECTION' || synthesis.career.qualificationBasis === 'UNAVAILABLE') && (
             <div className="bg-amber-950/40 border border-amber-800/60 rounded-lg p-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <div className="text-xs">
@@ -207,13 +223,15 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             </div>
           )}
 
-          <div className="space-y-3">
-            {synthesis.career.expressions.map(expr => (
-              <ExpressionRow key={expr.expressionRefKey} expression={expr} />
-            ))}
-          </div>
+          {synthesis.provenance.career.status !== 'MISSING' && (
+            <div className="space-y-3">
+              {synthesis.career.expressions.map(expr => (
+                <ExpressionRow key={expr.expressionRefKey} expression={expr} />
+              ))}
+            </div>
+          )}
 
-          {synthesis.career.diagnostics.length > 0 && (
+          {synthesis.career.diagnostics.length > 0 && synthesis.provenance.career.status !== 'MISSING' && (
             <DiagnosticsList diagnostics={synthesis.career.diagnostics} />
           )}
         </div>
@@ -229,13 +247,31 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {Object.entries(synthesis.wealth.dimensions).map(([key, dimension]) => (
-              <WealthDimensionRow key={key} dimension={dimension} />
-            ))}
-          </div>
+          {/* Wealth unavailable state */}
+          {synthesis.provenance.wealth.status === 'MISSING' && (
+            <div className="bg-slate-800/60 border border-slate-700/80 rounded-lg p-4 flex items-start gap-3">
+              <AlertTriangle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="text-xs space-y-1">
+                <span className="font-mono-code text-slate-400">Wealth activation unavailable</span>
+                <span className="text-slate-500 block">
+                  Wealth domain activation failed or was not provided. This synthesis proceeds with partial domain coverage.
+                </span>
+                {synthesis.wealth.diagnostics.length > 0 && (
+                  <DiagnosticsList diagnostics={synthesis.wealth.diagnostics} compact />
+                )}
+              </div>
+            </div>
+          )}
 
-          {synthesis.wealth.diagnostics.length > 0 && (
+          {synthesis.provenance.wealth.status !== 'MISSING' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Object.entries(synthesis.wealth.dimensions).map(([key, dimension]) => (
+                <WealthDimensionRow key={key} dimension={dimension} />
+              ))}
+            </div>
+          )}
+
+          {synthesis.wealth.diagnostics.length > 0 && synthesis.provenance.wealth.status !== 'MISSING' && (
             <DiagnosticsList diagnostics={synthesis.wealth.diagnostics} />
           )}
         </div>

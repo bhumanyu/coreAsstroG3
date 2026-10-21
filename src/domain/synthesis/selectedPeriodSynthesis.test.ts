@@ -638,6 +638,40 @@ describe('buildSelectedPeriodSynthesis', () => {
       const missingEvidence = result.value.missingInputs.find(m => m.code === 'WEALTH_EVIDENCE_MISSING');
       expect(missingEvidence).toBeDefined();
     });
+
+    it('emits PARTIAL_CAREER_ACTIVATION_FAILED when career missing and wealth present', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.provenance.career.status).toBe('MISSING');
+      expect(result.value.provenance.wealth.status).toBe('PRESENT');
+      expect(result.value.career.diagnostics.some(d => d.code === 'PARTIAL_CAREER_ACTIVATION_FAILED')).toBe(true);
+    });
+
+    it('emits PARTIAL_WEALTH_ACTIVATION_FAILED when wealth missing and career present', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.provenance.career.status).toBe('PRESENT');
+      expect(result.value.provenance.wealth.status).toBe('MISSING');
+      expect(result.value.wealth.diagnostics.some(d => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED')).toBe(true);
+    });
   });
 
   describe('unresolved refs', () => {
