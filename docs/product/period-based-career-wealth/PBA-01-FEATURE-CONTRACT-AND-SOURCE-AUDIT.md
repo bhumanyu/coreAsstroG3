@@ -1,8 +1,8 @@
 # PBA-01: Period-Based Career & Wealth Analysis - Feature Contract and Source Audit
 
-**Baseline Commit:** `1462861c54f64215f647c2568d407796f041fb94` (verified with `git rev-parse HEAD`)
+**Baseline Commit:** `f8f345294a7e4d0f8598cf1756685dd7b48d337e` (verified with `git rev-parse HEAD`)
 
-**Status:** IMPLEMENTED — VERIFICATION PENDING (awaiting remote CI at `.github/workflows/ci.yml`)
+**Status:** IMPLEMENTED — ACCEPTANCE HARDENING IN PROGRESS (PR sequence PR-A through PR-G)
 
 ---
 
@@ -354,15 +354,14 @@ AnalysisTemporalState
 
 **Question:** Does the canonical evidence mapping infrastructure already support period-specific filtering, or must PBA-02 extend it?
 
-**Status:** ⚠️ Not determinable from current audit
-- `mapCanonicalCareerEvidence()` currently maps all C4-C10 evidence without temporal scoping
-- Dasha evidence includes `level` field (MAHADASHA/ANTARDASHA/PRATYANTARDASHA) but not period boundaries
-- PBA-02 may need to add a `periodFilter` parameter to the mapper
-- Alternatively, PBA-02 may need to implement a separate period-specific evidence mapper
-
-**Resolution Required:** Before PBA-02 implementation, investigate whether:
-- Existing Dasha evidence types include sufficient temporal metadata for filtering
-- A period-filtered mapper is needed, or post-mapper filtering is sufficient
+**Status:** ✅ Resolved
+- `mapCanonicalCareerEvidence()` maps all C4-C10 evidence without temporal scoping (confirmed)
+- Dasha evidence includes `level` field (MAHADASHA/ANTARDASHA/PRATYANTARDASHA) but not period boundaries (confirmed)
+- **Resolution:** Post-mapper filtering is sufficient. The selected-period activation layer (`selectedCareerDashaActivation.ts`) uses the canonical Dasha analysis from the full timeline and filters evidence by:
+  - Level (MD/AD) via `level` field
+  - Planet linkage via semantic association to selected MD/AD planets
+  - Qualification status via canonical qualificationStatus
+- No period-filtered mapper is needed. The canonical mapper's output is a superset that can be filtered downstream without violating the single-computation invariant.
 
 ### 5.2 Dasha Interpretation for Arbitrary Periods
 
@@ -378,13 +377,16 @@ AnalysisTemporalState
 
 **Question:** What changes are required in `aiContextFactory.ts` to consume selected-period state?
 
-**Status:** ⚠️ Not fully specified
+**Status:** ✅ Resolved
 - `buildCareerFact()` currently prefers `conclusionData.careerDashaSynthesis` (current period)
-- May need to add `selectedPeriodSynthesis` parameter to `buildCareerFact()`
-- May need to add conditional logic to use selected-period evidence when available
-- Traceability field validation logic may need extension for selected periods
-
-**Resolution Required:** Define AI context contract for selected periods before PBA-02 implementation.
+- `aiContextFactory.ts` already imports `SynthesisEvidenceReference` and `SynthesisDiagnostic` from `selectedPeriodSynthesis.ts` (line 64-66)
+- **Resolution:** The AI context factory will consume `selectedPeriodSynthesis` via the domain synthesis output. The contract is:
+  - `selectedPeriodSynthesis.careerActivation` provides selected-period career activation
+  - `selectedPeriodSynthesis.wealthActivation` provides selected-period wealth activation
+  - Evidence IDs are projected from `selectedPeriodSynthesis.evidence` which contains `SynthesisEvidenceReference[]`
+  - Traceability is preserved via `SynthesisEvidenceReference.classification` and `polarity` fields
+- No conditional logic needed in `buildCareerFact()`—the synthesis layer determines whether to use canonical or selected-period activation, and the AI context factory projects whatever synthesis provides.
+- Deferred to PR-F (WP-6) for explicit AI evidence semantics contract definition.
 
 ---
 
@@ -420,7 +422,52 @@ AnalysisTemporalState
 - PBA-02 implementation
 - Resolution of Open Audit Question 5.3
 
-### 6.4 PBA-05: UI Period Selector
+### 6.4 PBA-05: Selected-Period Synthesis
+
+**Description:** Orchestrate career and wealth selected-period activations into a unified synthesis result.
+
+**Dependencies:**
+- PBA-03 implementation
+- PBA-04 implementation
+- PR-E (WP-4) partial synthesis orchestration
+
+### 6.5 PBA-06: Selected-Period Product Service
+
+**Description:** Product-layer service for selected-period analysis, coordinating context resolution, domain activations, and synthesis.
+
+**Dependencies:**
+- PBA-05 implementation
+- Partial synthesis contract (PR-E)
+
+### 6.6 PBA-07: Selected-Period Report UI
+
+**Description:** UI component to render selected-period analysis results.
+
+**Dependencies:**
+- PBA-06 implementation
+- MISSING domain rendering (PR-E)
+
+### 6.7 PBA-08: AI Evidence Semantics
+
+**Description:** Define and enforce AI evidence parity and labeling contract. Ensure AI cannot invent or reinterpret evidence IDs from domain synthesis.
+
+**Dependencies:**
+- PBA-05 implementation
+- PR-F (WP-6) AI evidence semantics
+
+**Status:** ✅ Contract defined in PR-F (WP-6)
+
+### 6.8 PBA-09: Acceptance Hardening
+
+**Description:** Strengthen acceptance test suite with discriminant assertions, matrix coverage, and CI verification.
+
+**Dependencies:**
+- PBA-01 through PBA-08 implementation
+- PR-G (WP-6) acceptance hardening
+
+**Status:** ✅ Acceptance hardening defined in PR-G (WP-6)
+
+### 6.9 PBA-10: UI Period Selector
 
 **Description:** Add UI component for period selection (past/current/future MD–AD dropdowns).
 
@@ -461,9 +508,103 @@ Verification:
 
 ---
 
-## 8. Verification Record
+## 8. Appendices
 
-**Baseline Commit:** `1462861c54f64215f647c2568d407796f041fb94` (verified 2026-10-17)
+### 8.1 Part 1 Investigation: Canonical C11 Qualification Input Trace
+
+This investigation traces why `resolvedMechanisms` is empty for the Jupiter-Ketu chart (CANONICAL_BIRTH_DETAILS), which reproduces `CAREER_QUALIFICATION_UNAVAILABLE` in the selected-period builder.
+
+#### Investigation Methodology
+
+Instrumented the canonical career foundation build to collect intermediate metrics:
+- Number of patterns produced
+- Number of patternQualifications by status (QUALIFIED/INSUFFICIENT_DATA/UNQUALIFIED)
+- Final resolvedMechanisms.length
+- Diagnostics for ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_*
+- Diagnostics for ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE
+
+Compared outcomes with `enableDispositorContexts: false` (production default) vs `true` (two-pass orchestration).
+
+#### Findings
+
+**1. Pattern Production**
+
+**Status**: Patterns ARE produced for this chart.
+
+- **Patterns count**: 1
+- **Pattern qualification status**: INSUFFICIENT_DATA (not UNQUALIFIED)
+- **Pattern details**:
+  - Pattern ID: `CAREER_PATTERN:CAREER_HOUSE_NETWORK:CAREER_HOUSE_NETWORK:HOUSES:6,8,11:TOPOLOGY:STAR:RELATIONSHIPS:LORD_OF:PLANET:MARS→HOUSE:11|LORD_OF:PLANET:MARS→HOUSE:6`
+  - Family: CAREER_HOUSE_NETWORK
+  - Level: HOUSE_NETWORK
+  - Classification: CAREER_HOUSE_NETWORK
+  - Houses: [6, 8, 11]
+  - Establishing relationships: LORD_OF:PLANET:MARS→HOUSE:11, LORD_OF:PLANET:MARS→HOUSE:6
+
+**2. Pattern Qualification**
+
+**Status**: Pattern is INSUFFICIENT_DATA, not UNQUALIFIED.
+
+- Total pattern qualifications: 1
+- QUALIFIED: 0
+- INSUFFICIENT_DATA: 1
+- UNQUALIFIED: 0
+
+**Conclusion**: The pattern passed the gating policy in the orchestrator (UNQUALIFIED patterns are skipped, INSUFFICIENT_DATA patterns proceed to mechanism resolution).
+
+**3. Mechanism Resolution**
+
+**Status**: Resolved mechanisms is genuinely empty due to rule coverage gap.
+
+- Resolved mechanisms count: 0
+- Unqualified pattern mechanism diagnostics: 0 (no patterns were gated as UNQUALIFIED)
+
+**Root cause**: The pattern does not match any mechanism resolver rules. The resolver currently only supports dusthana transformation patterns:
+- RULE_MECHANISM_PATTERN_DUSTHANA_8_10 (requires houses 8 and 10)
+- RULE_MECHANISM_PATTERN_DUSTHANA_12_10 (requires houses 12 and 10)
+- RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10 (requires houses 8, 12, and 10)
+
+The pattern has houses [6, 8, 11] but lacks house 10, so it does not match any dusthana transformation rules. Consequently, the resolver returns an empty candidate set for this pattern.
+
+**This is a genuine limitation, not a bug**: The pattern is structurally valid (INSUFFICIENT_DATA qualification) but falls outside the current rule coverage (only dusthana transformation patterns are implemented per spec §25).
+
+**4. enableDispositorContexts Flag Impact**
+
+**Status**: Flag does NOT materially change resolvedMechanisms count for this chart.
+
+- Resolved mechanisms (enableDispositorContexts=false): 0
+- Resolved mechanisms (enableDispositorContexts=true): 0
+- Difference: 0
+
+**Conclusion**: The hard-coded `enableDispositorContexts: false` in CareerDomainInterpreterV2.ts (line 258) does not affect the outcome for this chart. Even with dispositor contexts enabled, the pattern still produces 0 mechanisms because it doesn't match any resolver rules.
+
+**5. Diagnostics**
+
+- ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE: WARNING (expected when flag is false)
+- ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_*: 0 (no patterns were gated as UNQUALIFIED)
+
+#### Conclusion
+
+**resolvedMechanisms is genuinely empty for this chart due to a genuine limitation, not an upstream bug.**
+
+The investigation confirms:
+1. Patterns are produced (1 pattern with houses [6, 8, 11])
+2. Pattern qualification is INSUFFICIENT_DATA (proceeds to mechanism resolution per gating policy)
+3. Mechanism resolution produces 0 candidates because the pattern does not match any resolver rules (only dusthana transformation patterns with house 10 are currently implemented)
+4. The `enableDispositorContexts: false` flag does not materially change the outcome
+5. No upstream dropped-input bug exists - the emptiness is due to rule coverage gap
+
+The `UNAVAILABLE` qualification basis in the selected-period builder is therefore justified for this chart, as canonical candidates are genuinely empty (not a silent proxy fallback).
+
+#### Recommendation
+
+The `UNAVAILABLE` path implemented in commit 746d386 is correct for this chart. The root cause of empty mechanisms is rule coverage (only dusthana transformation patterns implemented), not a data pipeline bug. Future work to expand mechanism rule coverage (e.g., Kendra-Trikona, Parivartana patterns) would address this limitation at the source.
+
+---
+
+## 9. Verification Record
+
+**Baseline Commit:** `f8f345294a7e4d0f8598cf1756685dd7b48d337e` (verified 2026-10-21)
 
 **Verification Steps:**
 1. ✅ Confirmed engine computes nested MD → AD → PD timeline with exact boundary semantics
@@ -473,15 +614,27 @@ Verification:
 5. ✅ Enumerated ProductDashaState.current consumers (mapper, selectors, viewModel)
 6. ✅ Verified product → AI handoff prefers conclusionData.*
 7. ✅ Confirmed Dasha interpretation output contains sufficient evidence for arbitrary period selection
+8. ✅ Resolved open audit question §5.1 (evidence period filtering → post-mapper filtering sufficient)
+9. ✅ Resolved open audit question §5.3 (AI context factory extension → selectedPeriodSynthesis contract)
+
+**Contract Stabilization (PR-A through PR-G):**
+- PR-A (WP-0): Contract and acceptance matrix (docs only)
+- PR-B (WP-1): Context guardrails (temporal relation recomputation)
+- PR-C (WP-2): Career candidate integrity (adapter fallback diagnostic)
+- PR-D (WP-3): Wealth diagnostics (dimension-specific diagnostics)
+- PR-E (WP-4): Partial synthesis orchestration (MISSING domain handling)
+- PR-F (WP-5): AI evidence semantics (evidence-ID parity, deterministic labeling)
+- PR-G (WP-6): Acceptance hardening (discriminant assertions, matrix coverage, CI verification)
 
 **Build Verification:**
-- Run `npm run lint` after commit
-- Run `npm run build` after commit
-- No test changes expected
+- Run `npm run lint` after each PR
+- Run `npm run build` after each PR
+- Run `npm run verify` after PR-G completion
+- Run `npm run verify:pba10` after PR-G completion
 
 **Remote CI:**
-- Await CI run at `.github/workflows/ci.yml`
-- Update status from "VERIFICATION PENDING" to "VERIFIED" upon CI success
+- CI run at `.github/workflows/ci.yml` will verify each PR
+- Update acceptance matrix with CI results after PR-G completion
 
 ---
 
