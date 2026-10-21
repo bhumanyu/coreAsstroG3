@@ -446,6 +446,20 @@ export function buildSelectedCareerDashaActivation(params: {
         for (const expr of qualifiedExpressions) {
           expressionQualifiedEvidenceIds.set(expr, qualifiedIds);
         }
+
+        // Emit diagnostic if multiple QUALIFIED candidates were available but not used
+        if (qualifiedCanonicalCandidates.length > 1) {
+          const droppedCandidateIds = qualifiedCanonicalCandidates
+            .slice(1)
+            .map(c => c.expressionId)
+            .join(', ');
+          console.warn(
+            `[selectedCareerDashaActivation] Multiple QUALIFIED canonical candidates available (${qualifiedCanonicalCandidates.length}), ` +
+            `but adapter fallback uses only the first candidate: "${firstCandidate.expressionId}". ` +
+            `Dropped candidate IDs: ${droppedCandidateIds}. ` +
+            `This is a documented limitation of the adapter fallback path when no reliable mapping to caller expressions exists.`
+          );
+        }
       } else {
         // No QUALIFIED candidates - use empty expressions (no fallback)
         qualifiedExpressions = [];

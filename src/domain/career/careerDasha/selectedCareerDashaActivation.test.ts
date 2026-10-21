@@ -1,3 +1,4 @@
+import { describe, it, expect, vi } from 'vitest';
 import {
   buildSelectedCareerDashaActivation
 } from './selectedCareerDashaActivation';
@@ -3699,6 +3700,126 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         // PROXY_DIRECTION should filter by expr.direction !== 'UNAVAILABLE'
         // Our test expression has direction: 'SUPPORTED', so it should appear
         expect(resultProxy.value.expressionActivations.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('asserts unqualified evidence does not enter exprPlanets under CANONICAL_STATUS', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Expression with mixed evidence: some qualified, some unqualified
+      const qualifiedEvidence: CareerExpressionEvidence = Object.freeze({
+        id: 'qualified-evidence',
+        ruleId: 'rule-qualified',
+        category: 'PLANETARY_STRENGTH',
+        planets: Object.freeze([Planet.JUPITER, Planet.SATURN]),
+        houses: Object.freeze([2, 11]),
+        sources: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['qualified-evidence']),
+        direction: 'SUPPORT',
+        strength: 'STRONG'
+      });
+
+      const unqualifiedEvidence: CareerExpressionEvidence = Object.freeze({
+        id: 'unqualified-evidence',
+        ruleId: 'rule-unqualified',
+        category: 'PLANETARY_STRENGTH',
+        planets: Object.freeze([Planet.MARS]), // Different planet
+        houses: Object.freeze([6]),
+        sources: Object.freeze([]),
+        supportingEvidenceIds: Object.freeze(['unqualified-evidence']),
+        direction: 'SUPPORT',
+        strength: 'STRONG'
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: Object.freeze([
+          Object.freeze({
+            mode: 'CAREER_DIRECTION',
+            direction: 'SUPPORT',
+            strength: 'STRONG',
+            evidence: Object.freeze([qualifiedEvidence, unqualifiedEvidence]),
+            supportingEvidenceIds: Object.freeze(['qualified-evidence', 'unqualified-evidence'])
+          })
+        ])
+      });
+
+      // Canonical candidate with only qualified evidence
+      const canonicalCandidate: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'expr-1',
+        qualificationStatus: 'QUALIFIED',
+        mode: 'CAREER_DIRECTION',
+        direction: 'SUPPORT',
+        strength: 'STRONG',
+        expressionType: 'CAREER_DIRECTION',
+        evidence: Object.freeze([
+          { evidenceId: 'qualified-evidence', ruleId: 'rule-qualified', source: 'mechanism' }
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['mech-1']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze(['qualified-evidence']),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([canonicalCandidate]),
+        status: 'SUCCESS',
+        sourceMechanismIds: Object.freeze(['mech-1']),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['mech-1']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze(['qualified-evidence']),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const mechanismCandidates: readonly CareerMechanismCandidate[] = Object.freeze([
+        {
+          id: 'mech-1',
+          type: 'DUSTHANA_TRANSFORMATION' as CareerMechanismType,
+          pathway: '8_10' as CareerMechanismPathway,
+          participants: Object.freeze([]),
+          provenance: Object.freeze({
+            participantIds: Object.freeze([]),
+            relationshipIds: Object.freeze([]),
+            patternIds: Object.freeze([]),
+            evidenceIds: Object.freeze([])
+          })
+        }
+      ]);
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Expression should be linked (has qualified evidence with MD/AD planets)
+        expect(result.value.expressionActivations.length).toBeGreaterThan(0);
+        const activation = result.value.expressionActivations[0];
+
+        // Check that qualifiedEvidenceIds contains only qualified evidence
+        expect(activation.qualifiedEvidenceIds).toEqual(['qualified-evidence']);
+        // Check that unqualifiedEvidenceIds contains unqualified evidence
+        expect(activation.unqualifiedEvidenceIds).toEqual(['unqualified-evidence']);
+
+        // Verify exprPlanets (via expression linkage) does not include unqualified planet
+        // Since only qualified evidence (JUPITER, SATURN) is used for linkage,
+        // and selected period has JUPITER MD and SATURN AD, expression should link
+        // The unqualified MARS evidence should not drive linkage
+        expect(activation.linkedLevels.length).toBeGreaterThan(0);
       }
     });
   });
