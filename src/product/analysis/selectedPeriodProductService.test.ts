@@ -208,11 +208,11 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     expect(canonicalMechanismCandidates).toHaveLength(0);
     const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
     const validMd = selectablePeriods.mahadashas.find(md => md.valid);
-    expect(validMd).not.toBeNull();
+    expect(validMd).toBeTruthy();
     const validAd = selectablePeriods.antardashas.find(
       ad => ad.valid && ad.mahadashaId === validMd!.id
     );
-    expect(validAd).not.toBeNull();
+    expect(validAd).toBeTruthy();
 
     const result = buildProductSelectedPeriodSynthesis({
       selection: {
@@ -281,10 +281,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
   it('invalid-asOf: INVALID_ANALYSIS_AS_OF maps to INVALID_SELECTION', () => {
     const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
     const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-    expect(validMd).not.toBeNull();
+    expect(validMd).toBeTruthy();
 
     const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-    expect(validAd).not.toBeNull();
+    expect(validAd).toBeTruthy();
 
     // Create a context with an invalid asOf (unparseable date)
     const invalidAsOfContext: AnalysisContext = {
@@ -570,10 +570,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     // Get valid IDs from the canonical report
     const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
     const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-    expect(validMd).not.toBeNull();
+    expect(validMd).toBeTruthy();
 
     const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-    expect(validAd).not.toBeNull();
+    expect(validAd).toBeTruthy();
 
     const input: BuildProductSelectedPeriodSynthesisInput = {
       selection: {
@@ -615,10 +615,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     // Verify the service structure accepts the required inputs
     const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
     const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-    expect(validMd).not.toBeNull();
+    expect(validMd).toBeTruthy();
 
     const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-    expect(validAd).not.toBeNull();
+    expect(validAd).toBeTruthy();
 
     // Build minimal input with required fields
     const input: BuildProductSelectedPeriodSynthesisInput = {
@@ -650,10 +650,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     // careerBaseline and wealthBaseline are optional in BuildProductSelectedPeriodSynthesisInput
     const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
     const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-    expect(validMd).not.toBeNull();
+    expect(validMd).toBeTruthy();
 
     const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-    expect(validAd).not.toBeNull();
+    expect(validAd).toBeTruthy();
 
     const input: BuildProductSelectedPeriodSynthesisInput = {
       selection: {
@@ -688,10 +688,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // The actual partial synthesis behavior is tested at the domain layer in selectedPeriodSynthesis.test.ts
       const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
       const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-      expect(validMd).not.toBeNull();
+      expect(validMd).toBeTruthy();
 
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-      expect(validAd).not.toBeNull();
+      expect(validAd).toBeTruthy();
 
       // Use minimal artifacts that should not hard-fail the orchestration
       const input: BuildProductSelectedPeriodSynthesisInput = {
@@ -726,10 +726,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // This is tested by constructing a synthesis with MISSING career status
       const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
       const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-      expect(validMd).not.toBeNull();
+      expect(validMd).toBeTruthy();
 
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-      expect(validAd).not.toBeNull();
+      expect(validAd).toBeTruthy();
 
       const input: BuildProductSelectedPeriodSynthesisInput = {
         selection: {
@@ -763,10 +763,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     it('evidence-identity invariant: all evidence[].evidenceId exist in input evidence IDs', () => {
       const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
       const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-      expect(validMd).not.toBeNull();
+      expect(validMd).toBeTruthy();
 
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-      expect(validAd).not.toBeNull();
+      expect(validAd).toBeTruthy();
 
       // Create evidence with known IDs
       const careerEvidence: readonly DomainEvidence[] = [
@@ -826,16 +826,16 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // - Stage-specific evidence resolution (EXPRESSION, QUALIFICATION, ACTIVATION)
       //
       // This test documents the coverage separation but does not duplicate domain tests.
-      expect(true).toBe(true);
+      // Coverage is verified at the domain layer in selectedPeriodSynthesis.test.ts
     });
 
     it('domain-independence: career inputs change → wealth output unchanged', () => {
       const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
       const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-      expect(validMd).not.toBeNull();
+      expect(validMd).toBeTruthy();
 
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-      expect(validAd).not.toBeNull();
+      expect(validAd).toBeTruthy();
 
       // Base inputs - use real fixtures
       const baseCareerEvidence: readonly DomainEvidence[] = [
@@ -894,10 +894,10 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     it('domain-independence: wealth inputs change → career output unchanged', () => {
       const selectablePeriods = listSelectableMdAdPeriods(mockTemporalState.dashaInterpretation);
       const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
-      expect(validMd).not.toBeNull();
+      expect(validMd).toBeTruthy();
 
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
-      expect(validAd).not.toBeNull();
+      expect(validAd).toBeTruthy();
 
       // Base inputs - use real fixtures
       const careerEvidence: readonly DomainEvidence[] = [

@@ -49,6 +49,8 @@ export interface BuildSelectedPeriodSynthesisInput<TCareerBaseline, TWealthBasel
   readonly careerDashaEvidence?: readonly DomainEvidence[];
   readonly careerBaseline?: TCareerBaseline;
   readonly wealthBaseline?: TWealthBaseline;
+  readonly careerErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT';
+  readonly wealthErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT';
 }
 
 /**
@@ -558,7 +560,7 @@ function resolveWealthPromiseEvidenceReferences(
 export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   input: BuildSelectedPeriodSynthesisInput<TCareerBaseline, TWealthBaseline>
 ): SelectedPeriodSynthesisResult<TCareerBaseline, TWealthBaseline> {
-  const { selectedPeriod, careerActivation, wealthActivation, careerEvidence, wealthEvidence, careerDashaEvidence, careerBaseline, wealthBaseline } = input;
+  const { selectedPeriod, careerActivation, wealthActivation, careerEvidence, wealthEvidence, careerDashaEvidence, careerBaseline, wealthBaseline, careerErrorCode, wealthErrorCode } = input;
 
   // Validate selected-period context
   if (!validateSelectedPeriodContext(selectedPeriod)) {
@@ -709,9 +711,25 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   // Emit PARTIAL_CAREER_ACTIVATION_FAILED diagnostic if career activation is missing
   // This signals partial synthesis (one domain failed, the other succeeded)
   if (!careerActivation && wealthActivation) {
+    const careerErrorMessage = careerErrorCode
+      ? `Career activation failed (${careerErrorCode}); wealth activation succeeded.`
+      : 'Career activation failed; wealth activation succeeded.';
     careerDiagnostics.push(Object.freeze({
       code: 'PARTIAL_CAREER_ACTIVATION_FAILED',
-      message: 'Career activation failed; wealth activation succeeded. Synthesis proceeds with partial domain coverage.'
+      message: `${careerErrorMessage} Synthesis proceeds with partial domain coverage.`
+    }));
+  }
+
+  // Emit SYNTHESIS_PARTIAL_NO_DOMAINS diagnostic if both activations are missing
+  // This makes the empty-result state unambiguous
+  if (!careerActivation && !wealthActivation) {
+    const bothFailMessage = [
+      careerErrorCode ? `Career activation failed (${careerErrorCode})` : 'Career activation failed',
+      wealthErrorCode ? `wealth activation failed (${wealthErrorCode})` : 'wealth activation failed'
+    ].join('; ');
+    careerDiagnostics.push(Object.freeze({
+      code: 'SYNTHESIS_PARTIAL_NO_DOMAINS',
+      message: `${bothFailMessage}. Synthesis proceeds with no domain coverage.`
     }));
   }
 
@@ -830,9 +848,12 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
   // Emit PARTIAL_WEALTH_ACTIVATION_FAILED diagnostic if wealth activation is missing
   // This signals partial synthesis (one domain failed, the other succeeded)
   if (!wealthActivation && careerActivation) {
+    const wealthErrorMessage = wealthErrorCode
+      ? `Wealth activation failed (${wealthErrorCode}); career activation succeeded.`
+      : 'Wealth activation failed; career activation succeeded.';
     wealthDiagnostics.push(Object.freeze({
       code: 'PARTIAL_WEALTH_ACTIVATION_FAILED',
-      message: 'Wealth activation failed; career activation succeeded. Synthesis proceeds with partial domain coverage.'
+      message: `${wealthErrorMessage} Synthesis proceeds with partial domain coverage.`
     }));
   }
 

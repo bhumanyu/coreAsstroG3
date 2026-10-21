@@ -151,7 +151,9 @@ function buildSelectedPeriodSynthesisWrapper(
   input: BuildProductSelectedPeriodSynthesisInput,
   selectedPeriod: SelectedPeriodActivationContext,
   careerActivation?: SelectedCareerDashaActivationSuccess,
-  wealthActivation?: SelectedWealthPeriodActivation
+  wealthActivation?: SelectedWealthPeriodActivation,
+  careerErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT',
+  wealthErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT'
 ): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;
   const result = buildSelectedPeriodSynthesis({
@@ -162,7 +164,9 @@ function buildSelectedPeriodSynthesisWrapper(
     wealthEvidence,
     careerDashaEvidence,
     careerBaseline,
-    wealthBaseline
+    wealthBaseline,
+    careerErrorCode,
+    wealthErrorCode
   });
 
   if (!result.ok) {
@@ -200,17 +204,21 @@ export function buildProductSelectedPeriodSynthesis(
   // Step 2: Build selected Career Dasha activation (degrade on failure)
   const careerActivationResult = buildSelectedCareerDashaActivationInternal(input, selectedPeriod);
   const careerActivation = careerActivationResult.ok ? careerActivationResult.value : undefined;
+  const careerErrorCode = careerActivationResult.ok ? undefined : careerActivationResult.errorCode;
 
   // Step 3: Evaluate selected Wealth period activation (degrade on failure)
   const wealthActivationResult = evaluateSelectedWealthPeriodActivationInternal(input, selectedPeriod);
   const wealthActivation = wealthActivationResult.ok ? wealthActivationResult.value : undefined;
+  const wealthErrorCode = wealthActivationResult.ok ? undefined : wealthActivationResult.errorCode;
 
   // Step 4: Build selected-period synthesis with partial activation support
   const synthesisResult = buildSelectedPeriodSynthesisWrapper(
     input,
     selectedPeriod,
     careerActivation,
-    wealthActivation
+    wealthActivation,
+    careerErrorCode,
+    wealthErrorCode
   );
 
   if (!synthesisResult.ok) {

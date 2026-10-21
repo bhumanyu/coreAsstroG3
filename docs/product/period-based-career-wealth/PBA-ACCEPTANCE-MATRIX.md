@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `f8f345294a7e4d0f8598cf1756685dd7b48d337e`
+**Baseline Commit:** `6f74ac2b9a6520f1c9c682b05c8438aef826d7bd`
 
 **Last Updated:** 2026-10-21
 
@@ -157,17 +157,21 @@
 - `src/domain/synthesis/selectedPeriodSynthesis.ts` (BuildSelectedPeriodSynthesisInput, SynthesisProvenance)
 - Partial synthesis contract: domain failures degrade (career/wealth MISSING provenance)
 - PARTIAL_CAREER_ACTIVATION_FAILED and PARTIAL_WEALTH_ACTIVATION_FAILED diagnostics
+- SYNTHESIS_PARTIAL_NO_DOMAINS diagnostic for both-fail case
+- errorCode propagation from activation failures to diagnostic messages
 
 **Test Files:**
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests including partial synthesis)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit TBD)
+- ✅ npm run verify: PASS (commit 6f74ac2)
 
 **Findings:**
 - ✅ Partial-result contract defined: domain failures degrade, context failures hard-fail
 - ✅ Domain failure handling implemented (career/wealth MISSING provenance)
 - ✅ PARTIAL_* diagnostics emitted when one domain fails and the other succeeds
+- ✅ SYNTHESIS_PARTIAL_NO_DOMAINS diagnostic emitted when both domains fail
+- ✅ errorCode propagated from activation failures to diagnostic messages
 - ✅ Baselines unchanged for partial synthesis
 - ✅ Tests for career-fails/wealth-ok and wealth-fails/career-ok scenarios
 
@@ -183,18 +187,22 @@
 **Implementation Files:**
 - `src/product/analysis/selectedPeriodProductService.ts` (orchestration with partial synthesis support)
 - Result type: no longer includes INCOMPLETE_CANONICAL_INPUT (domain failures degrade)
+- errorCode propagation from activation functions to synthesis
 
 **Test Files:**
 - `src/product/analysis/selectedPeriodProductService.test.ts` (product service tests including partial synthesis)
+- Vacuous test removed (unresolved-evidence test now documents domain-layer coverage)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit TBD)
+- ✅ npm run verify: PASS (commit 6f74ac2)
 
 **Findings:**
 - ✅ Domain activation failures degrade to partial synthesis (do not hard-fail)
 - ✅ Context resolution failures still hard-fail (invariant violation)
 - ✅ productAnalysisMapper propagates MISSING provenance to qualificationStatus
 - ✅ Partial synthesis tests added (service layer)
+- ✅ errorCode propagated from activation functions to synthesis
+- ✅ Vacuous test removed (expect(true).toBe(true) deleted)
 
 **Remediation:**
 - PR-E completed: Partial synthesis orchestration at product service layer
@@ -212,9 +220,11 @@
 
 **Test Files:**
 - `src/ai/product/aiExplanationService.test.ts` (AI evidence semantics tests)
+- Evidence ID resolution test improved to actually resolve against AI-context evidence index
+- All-unknown-evidence and zero-classified-evidence test cases added
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit TBD)
+- ✅ npm run verify: PASS (commit 6f74ac2)
 
 **Findings:**
 - ✅ Contract codified: AI evidence semantics contract documented in aiExplanationService.ts
@@ -223,6 +233,9 @@
 - ✅ AI failure isolation: leaves deterministic synthesis unchanged
 - ✅ DTO↔AI context parity: canonical identity/temporal fields preserved verbatim
 - ✅ Tests added: evidence-ID parity, classification determinism, AI failure isolation, real local rules engine test
+- ✅ Evidence ID resolution test improved to actually resolve against AI-context evidence index
+- ✅ All-unknown-evidence test case added
+- ✅ Zero-classified-evidence test case added
 
 **Remediation:**
 - PR-F completed: AI evidence semantics contract codified and tested
@@ -242,14 +255,16 @@
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit TBD)
-- ✅ npm run verify:pba10: PASS (commit TBD)
+- ✅ npm run verify: PASS (commit 6f74ac2)
+- ✅ npm run verify:pba10: PASS (commit 6f74ac2)
 
 **Findings:**
 - ✅ Temporal past/current/future vs asOf test split into three distinct tests with actual values
+- ✅ Temporal boundary tests assert selectedPeriod.status === 'OK' unconditionally before asserting temporalRelation
 - ✅ Unresolved-evidence integration test rewritten to document domain-layer coverage
 - ✅ Bare toBeDefined() assertions replaced with discriminant assertions (not.toBeNull(), toMatch)
 - ✅ Matrix coverage tests present (invalid selection, malformed context, temporal boundaries, partial domains)
+- ✅ expect(x).not.toBeNull() on find() results replaced with truthy checks (expect(x).toBeTruthy())
 
 **Remediation:**
 - PR-G completed: Acceptance hardening tests improved
@@ -282,27 +297,24 @@
 **Total Milestones:** 10
 
 **Status Breakdown:**
-- ✅ COMPLETE: 2 (PBA-01, PBA-02)
-- ⚠️ NEEDS_PROOF: 7 (PBA-03 through PBA-09)
+- ✅ COMPLETE: 7 (PBA-01, PBA-02, PBA-05, PBA-06, PBA-07, PBA-08, PBA-09)
+- ⚠️ NEEDS_PROOF: 2 (PBA-03, PBA-04)
 - 🔄 DEFERRED: 1 (PBA-10)
 
-**Confirmed Defects:** 4
+**Confirmed Defects:** 2
 - PBA-03: validateSelectedPeriodContext does not recompute temporal relation
 - PBA-04: Adapter fallback collapses multiple QUALIFIED candidates without diagnostic
-- PBA-09: Temporal test asserts only toBeDefined()
-- PBA-09: Unresolved-evidence test uses invalid selection
-- PBA-09: Bare toBeDefined() assertions present
 
-**Needs Proof:** 20 test coverage gaps across PBA-03 through PBA-09
+**Needs Proof:** 12 test coverage gaps across PBA-03 and PBA-04
 
 **PR Sequence Progress:**
-- PR-A (WP-0): Contract and acceptance matrix (docs only) — IN PROGRESS
+- PR-A (WP-0): Contract and acceptance matrix (docs only) — COMPLETE
 - PR-B (WP-1): Context guardrails — PENDING
 - PR-C (WP-2): Career candidate integrity — PENDING
-- PR-D (WP-3): Wealth diagnostics — PENDING
-- PR-E (WP-4): Partial synthesis orchestration — PENDING
-- PR-F (WP-5): AI evidence semantics — PENDING
-- PR-G (WP-6): Acceptance hardening — PENDING
+- PR-D (WP-3): Wealth diagnostics — COMPLETE
+- PR-E (WP-4): Partial synthesis orchestration — COMPLETE
+- PR-F (WP-5): AI evidence semantics — COMPLETE
+- PR-G (WP-6): Acceptance hardening — COMPLETE
 
 ---
 
