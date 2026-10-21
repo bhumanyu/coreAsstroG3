@@ -279,6 +279,23 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         careerMechanismCandidates
       );
 
+      // Build a proper CareerExpressionCanonicalResult with empty expressions
+      // (mechanismExpressionResult is CareerExpressionAnalysisResult, not CareerExpressionCanonicalResult)
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([]),
+        status: 'COMPLETE',
+        sourceMechanismIds: Object.freeze([]),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze([]),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
       // Build minimal natal analysis (structural only, as the full natal analysis is not the focus)
       const natal = makeMinimalNatalAnalysis();
 
@@ -293,7 +310,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         natal,
         expression: canonicalExpressionAnalysis,
         selectedPeriod,
-        canonicalExpression: mechanismExpressionResult,
+        canonicalExpression,
         mechanismCandidates: careerMechanismCandidates
       });
 

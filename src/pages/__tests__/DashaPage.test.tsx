@@ -230,6 +230,7 @@ describe('DashaPage (P-UI-07)', () => {
             career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
             wealth: { status: 'PRESENT', version: 'v1' }
           },
+          qualificationStatus: 'CANONICAL',
           aiExplanationStatus: 'NOT_REQUESTED'
         }
       },
@@ -404,6 +405,7 @@ describe('DashaPage (P-UI-07)', () => {
               version: 'v1'
             }
           },
+          qualificationStatus: 'CANONICAL',
           aiExplanationStatus: 'NOT_REQUESTED'
         }
       },
@@ -523,6 +525,7 @@ describe('DashaPage (P-UI-07)', () => {
               career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
               wealth: { status: 'PRESENT', version: 'v1' }
             },
+            qualificationStatus: 'CANONICAL',
             aiExplanationStatus: 'NOT_REQUESTED'
           }
         }
@@ -610,6 +613,7 @@ describe('DashaPage (P-UI-07)', () => {
               career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
               wealth: { status: 'PRESENT', version: 'v1' }
             },
+            qualificationStatus: 'CANONICAL',
             aiExplanationStatus: 'ERROR',
             aiExplanation: {
               kind: 'ERROR',
@@ -706,6 +710,7 @@ describe('DashaPage (P-UI-07)', () => {
               career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
               wealth: { status: 'PRESENT', version: 'v1' }
             },
+            qualificationStatus: 'CANONICAL',
             aiExplanationStatus: 'OK',
             aiExplanation: {
               kind: 'SUCCESS',
@@ -814,6 +819,7 @@ describe('DashaPage (P-UI-07)', () => {
               career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
               wealth: { status: 'PRESENT', version: 'v1' }
             },
+            qualificationStatus: 'CANONICAL',
             aiExplanationStatus: 'NOT_REQUESTED'
           }
         },

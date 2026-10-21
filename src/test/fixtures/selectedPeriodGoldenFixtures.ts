@@ -16,15 +16,15 @@
 import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';
 
 /**
- * Fixture 1: Valid selection; career PROXY_DIRECTION with no linked expressions; mixed wealth dimension states.
+ * Fixture 1: Valid selection; career UNAVAILABLE with no linked expressions; mixed wealth dimension states.
  *
  * This fixture represents a successful selected-period synthesis with:
  * - Exact selectedPeriodId, mahadashaId, antardashaId, planets, interval dates
  * - Analysis asOf pinned to 2024-01-01T00:00:00.000Z for determinism
  * - TemporalRelation = PAST (period is in the past relative to asOf)
- * - Career qualificationBasis = PROXY_DIRECTION (canonical inputs insufficient)
+ * - Career qualificationBasis = UNAVAILABLE (canonical inputs provided but mechanismCandidates empty)
  * - Empty expressions array (no expressions linked to MOON-MOON period)
- * - Career diagnostic for PROXY_DIRECTION usage
+ * - Career diagnostic for UNAVAILABLE usage
  * - Wealth dimensions with literal effect/dataStatus/linkedLevels/diagnostics (mixed states)
  * - 12 evidence entries with literal classification, evidenceId, dimension, polarity, etc.
  * - Empty missingInputs array
@@ -58,12 +58,12 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     }
   },
   career: {
-    qualificationBasis: 'PROXY_DIRECTION',
+    qualificationBasis: 'UNAVAILABLE',
     expressions: [],
     diagnostics: [
       {
         code: 'CAREER_QUALIFICATION_UNAVAILABLE',
-        message: 'Career qualification used PROXY_DIRECTION interim contract; canonical C11 qualification unavailable'
+        message: 'Career qualification unavailable - no qualifying mechanisms for this chart'
       }
     ]
   },
@@ -313,13 +313,14 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
     career: {
       status: 'PRESENT',
       version: 'PBA-04-v1',
-      qualificationBasis: 'PROXY_DIRECTION'
+      qualificationBasis: 'UNAVAILABLE'
     },
     wealth: {
       status: 'PRESENT',
       version: 'PBA-05-v1'
     }
   },
+  qualificationStatus: 'UNAVAILABLE',
   aiExplanationStatus: 'NOT_REQUESTED'
 };
 
