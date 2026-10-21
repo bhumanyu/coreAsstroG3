@@ -185,7 +185,7 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     expect(result.qualificationStatus).toBe('PROVISIONAL');
   });
 
-  it('computes PROVISIONAL qualificationStatus for UNAVAILABLE', () => {
+  it('computes UNAVAILABLE qualificationStatus for UNAVAILABLE basis', () => {
     const mockWithUnavailable: SelectedPeriodSynthesisValue<any, any> = {
       ...mockSynthesisValue,
       career: {
@@ -196,8 +196,8 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
 
     const result = mapSelectedPeriodSynthesis(mockWithUnavailable);
 
-    // UNAVAILABLE should map to PROVISIONAL
-    expect(result.qualificationStatus).toBe('PROVISIONAL');
+    // UNAVAILABLE should remain unavailable in the product projection
+    expect(result.qualificationStatus).toBe('UNAVAILABLE');
   });
 
   it('preserves all ID/provenance fields verbatim', () => {

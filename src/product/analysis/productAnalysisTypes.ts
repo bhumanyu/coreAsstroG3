@@ -349,9 +349,9 @@ export type ProductSelectedPeriodStatus =
  * Distinguishes fully canonical results from partially/proxy-qualified results.
  *
  * Product contract (compatibility contract per Finding 5):
- * - CANONICAL: Both career and wealth domains used canonical qualification mechanisms
- * - PROVISIONAL: At least one domain used proxy direction or canonical inputs were unavailable
- * - UNAVAILABLE: Canonical qualification could not be determined for either domain
+ * - CANONICAL: Career used canonical qualification mechanisms
+ * - PROVISIONAL: Career used proxy direction
+ * - UNAVAILABLE: Career canonical qualification could not be determined
  *
  * This is an additive field on the success value; it does not change the ok/error discriminant.
  */
@@ -513,8 +513,9 @@ export interface ProductSelectedPeriodSynthesis {
   readonly provenance: ProductSynthesisProvenance;
   /**
    * Qualification status for the synthesis result.
-   * Derived from career.qualificationBasis and wealth qualification completeness.
-   * Allows users to distinguish fully canonical results from partial/proxy-qualified results.
+   * Currently derived only from career.qualificationBasis; wealth has no equivalent
+   * qualification-basis signal.
+   * Allows users to distinguish canonical, proxy-qualified, and unavailable career results.
    */
   readonly qualificationStatus: ProductQualificationStatus;
   /**

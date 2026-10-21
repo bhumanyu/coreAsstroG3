@@ -18,7 +18,30 @@ import type {
   DashaPeriodViewModel,
   DashaEvidenceViewModel
 } from '../../../product/analysis/dashaViewModel';
-import type { ProductDashaPeriodOptions, ProductSelectedPeriodSynthesis } from '../../../product/analysis/productAnalysisTypes';
+import type {
+  ProductDashaPeriodOptions,
+  ProductSelectedPeriodSynthesis,
+  ProductSynthesisWealthDimensionRow
+} from '../../../product/analysis/productAnalysisTypes';
+
+const emptyWealthDimension = (
+  dimension: ProductSynthesisWealthDimensionRow['dimension']
+): ProductSynthesisWealthDimensionRow => ({
+  dimension,
+  effect: 'INSUFFICIENT_DATA',
+  dataStatus: 'INSUFFICIENT_DATA',
+  linkedLevels: [],
+  diagnostics: [],
+  promiseEvidenceIds: [],
+  dashaRuleReferences: []
+});
+
+const emptyWealthDimensions: ProductSelectedPeriodSynthesis['wealth']['dimensions'] = {
+  ACCUMULATION: emptyWealthDimension('ACCUMULATION'),
+  GAINS: emptyWealthDimension('GAINS'),
+  FORTUNE: emptyWealthDimension('FORTUNE'),
+  SPECULATION: emptyWealthDimension('SPECULATION')
+};
 
 describe('Dasha Presentational Components (P-UI-07)', () => {
   function makeSynthesis(overrides: Partial<ProductSelectedPeriodSynthesis> = {}): ProductSelectedPeriodSynthesis {
@@ -379,12 +402,14 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     it('renders primary period information (MD/AD planets, interval, temporal relation)', () => {
       const synthesis = makeSynthesis();
 
-      render(<SelectedPeriodReport synthesis={synthesis} />);
+      render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
 
       // Verify primary information is visible
       expect(screen.getByText(/Jupiter MD → Saturn AD/i)).toBeInTheDocument();
       expect(screen.getByText(/Jan 1, 2020 – Jan 1, 2022/i)).toBeInTheDocument();
       expect(screen.getByText(/CURRENT/i)).toBeInTheDocument();
+      expect(screen.getByText('CANONICAL')).toBeInTheDocument();
+      expect(screen.queryByText(/Career Synthesis/i)).not.toBeInTheDocument();
       expect(screen.getByText(/Analysis as of:/i)).toBeInTheDocument();
     });
 
@@ -421,17 +446,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           expressions: [],
           diagnostics: []
         },
-        provenance: {
-          career: {
-            status: 'PRESENT',
-            version: 'PBA-04-v1',
-            qualificationBasis: 'PROXY_DIRECTION'
-          },
-          wealth: {
-            status: 'PRESENT',
-            version: 'PBA-04-v1'
-          }
-        }
+        qualificationStatus: 'PROVISIONAL'
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
@@ -448,17 +463,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
           expressions: [],
           diagnostics: []
         },
-        provenance: {
-          career: {
-            status: 'PRESENT',
-            version: 'PBA-04-v1',
-            qualificationBasis: 'UNAVAILABLE'
-          },
-          wealth: {
-            status: 'PRESENT',
-            version: 'PBA-04-v1'
-          }
-        }
+        qualificationStatus: 'UNAVAILABLE'
       });
 
       render(<SelectedPeriodReport synthesis={synthesis} />);
