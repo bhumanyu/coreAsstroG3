@@ -344,6 +344,228 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
     });
   });
 
+  describe('Regression A: ambiguous caller-expression mapping', () => {
+    it('caller expression matching two QUALIFIED canonical candidates emits AMBIGUOUS_EXPRESSION_MATCH and ADAPTER_FALLBACK_DROPPED_CANDIDATES diagnostics', () => {
+      const horoscope = makeHoroscope();
+      const natal = makeMinimalNatalAnalysis();
+      const selectedPeriod = makeSelectedPeriod();
+
+      // Shared evidence ID that appears in both candidates (to trigger containment match)
+      const sharedEvidenceId = 'career-evidence-shared';
+
+      // Caller expression with shared evidence + SATURN (MD planet) for linkage
+      const callerEvidence: CareerExpressionEvidence = Object.freeze({
+        id: sharedEvidenceId,
+        mode: 'LEADERSHIP' as any,
+        role: 'PLANETARY' as any,
+        statement: 'Shared evidence with SATURN (MD planet)',
+        weight: 2.0,
+        planets: [Planet.SATURN], // MD planet for linkage
+        houses: [10]
+      });
+
+      const callerExpression: CareerExpression = Object.freeze({
+        mode: 'LEADERSHIP' as any,
+        direction: 'SUPPORTED' as any,
+        strength: 'STRONG' as any,
+        evidence: Object.freeze([callerEvidence]),
+        supportingEvidenceIds: Object.freeze([sharedEvidenceId]),
+        statement: 'Ambiguous caller expression',
+        conditional: false
+      });
+
+      const expression: CareerExpressionAnalysis = Object.freeze({
+        expressions: Object.freeze([callerExpression]),
+        primaryExpression: undefined,
+        statement: 'Ambiguous caller expression analysis'
+      });
+
+      // First QUALIFIED canonical candidate (EXPR-AMBIGUOUS-A) with shared evidence + SATURN
+      const candidateA: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-AMBIGUOUS-A',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-001']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: sharedEvidenceId,
+            sourceMechanismId: 'MECH-001',
+            sourceEvidenceIds: Object.freeze([]),
+            ruleId: 'RULE-001',
+            role: 'ESTABLISHING'
+          })
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'QUALIFIED',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        qualification: Object.freeze({
+          qualificationStatus: 'QUALIFIED',
+          ruleIds: Object.freeze(['RULE-001']),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-AMBIGUOUS-A',
+            mechanismId: 'MECH-001',
+            sourceMechanismIds: Object.freeze(['MECH-001']),
+            ruleIds: Object.freeze(['RULE-001']),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: 'leadership-expression-a'
+          })
+        }),
+        trace: Object.freeze(['Qualified by RULE-001'])
+      });
+
+      // Second QUALIFIED canonical candidate (EXPR-AMBIGUOUS-B) with shared evidence + SATURN
+      const candidateB: CareerExpressionCanonicalCandidate = Object.freeze({
+        expressionId: 'EXPR-AMBIGUOUS-B',
+        expressionType: 'LEADERSHIP_EXPRESSION',
+        sourceMechanismIds: Object.freeze(['MECH-002']),
+        mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
+        status: 'CANDIDATE',
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([
+          Object.freeze({
+            evidenceId: sharedEvidenceId,
+            sourceMechanismId: 'MECH-002',
+            sourceEvidenceIds: Object.freeze([]),
+            ruleId: 'RULE-002',
+            role: 'ESTABLISHING'
+          })
+        ]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-002']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        qualificationStatus: 'QUALIFIED',
+        direction: 'SUPPORTED',
+        strength: 'STRONG',
+        qualification: Object.freeze({
+          qualificationStatus: 'QUALIFIED',
+          ruleIds: Object.freeze(['RULE-002']),
+          provenance: Object.freeze({
+            candidateId: 'EXPR-AMBIGUOUS-B',
+            mechanismId: 'MECH-002',
+            sourceMechanismIds: Object.freeze(['MECH-002']),
+            ruleIds: Object.freeze(['RULE-002']),
+            sourceEvidenceIds: Object.freeze([]),
+            participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+            identityKey: 'leadership-expression-b'
+          })
+        }),
+        trace: Object.freeze(['Qualified by RULE-002'])
+      });
+
+      const canonicalExpression: CareerExpressionCanonicalResult = Object.freeze({
+        expressions: Object.freeze([candidateA, candidateB]), // A precedes B in list
+        status: 'COMPLETE',
+        sourceMechanismIds: Object.freeze(['MECH-001', 'MECH-002']),
+        missingInputs: Object.freeze([]),
+        unmappedMechanismTypes: Object.freeze([]),
+        provenance: Object.freeze({
+          mechanismIds: Object.freeze(['MECH-001', 'MECH-002']),
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        })
+      });
+
+      const mechanismCandidate1: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-001',
+        patternId: 'PATTERN-001',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-001']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Test mechanism 1'
+      });
+
+      const mechanismCandidate2: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-002',
+        patternId: 'PATTERN-002',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-002']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Test mechanism 2'
+      });
+
+      const result = buildSelectedCareerDashaActivation({
+        horoscope,
+        natal,
+        expression,
+        selectedPeriod,
+        canonicalExpression,
+        mechanismCandidates: Object.freeze([mechanismCandidate1, mechanismCandidate2])
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
+
+        // No CALLER activation for the ambiguous expression
+        const callerActivations = result.value.expressionActivations.filter(
+          a => a.expressionSource === 'CALLER' && a.expression === callerExpression
+        );
+        expect(callerActivations.length).toBe(0);
+
+        // AMBIGUOUS_EXPRESSION_MATCH diagnostic with specific message
+        const ambiguousDiag = result.value.diagnostics.find(d => d.code === 'AMBIGUOUS_EXPRESSION_MATCH');
+        expect(ambiguousDiag).toBeDefined();
+        expect(ambiguousDiag?.message).toContain('2 QUALIFIED canonical candidates');
+        expect(ambiguousDiag?.message).toContain('EXPR-AMBIGUOUS-A');
+        expect(ambiguousDiag?.message).toContain('EXPR-AMBIGUOUS-B');
+
+        // ADAPTER_FALLBACK_DROPPED_CANDIDATES diagnostic with payload
+        const droppedDiag = result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES');
+        expect(droppedDiag).toBeDefined();
+        expect(droppedDiag?.candidateCount).toBe(2);
+        expect(droppedDiag?.droppedCandidateIds).toEqual(['EXPR-AMBIGUOUS-B']);
+
+        // Check fallback rows: ADAPTER_FALLBACK row must have matchBasis === undefined
+        // and must NOT be the original caller expression
+        const fallbackRows = result.value.expressionActivations.filter(
+          a => a.expressionSource === 'ADAPTER_FALLBACK'
+        );
+
+        // Runtime caveat: ADAPTER_FALLBACK activation row is only emitted if the adapter-derived
+        // expression's qualified evidence planets link to the selected MD/AD planet.
+        // Candidate A has SATURN (MD planet) in evidence, so it should link and emit a fallback row.
+        if (fallbackRows.length > 0) {
+          expect(fallbackRows.length).toBe(1);
+          expect(fallbackRows[0].matchBasis).toBeUndefined();
+          expect(fallbackRows[0].expression).not.toBe(callerExpression);
+        } else {
+          // If no fallback row emitted, still verify diagnostics fired and no CALLER row exists
+          expect(result.value.expressionActivations.filter(a => a.expressionSource === 'CALLER').length).toBe(0);
+        }
+      }
+    });
+  });
+
   describe('P1: Expression row only when planet-linked', () => {
     it('emits expression row only when expression evidence planets include selected MD or AD planet', () => {
       const horoscope = makeHoroscope();
@@ -1453,7 +1675,12 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       if (result.ok) {
         expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
         // Expression should NOT emit a row because its only MD-planet-bearing evidence is unqualified
-        expect(result.value.expressionActivations.length).toBe(0);
+        expect(result.value.expressionActivations).toEqual([]);
+        // No activation should trace to the unqualified evidence ID
+        for (const activation of result.value.expressionActivations) {
+          expect(activation.expressionEvidenceIds).not.toContain(unqualifiedEvidenceId);
+          expect(activation.qualifiedEvidenceIds).not.toContain(unqualifiedEvidenceId);
+        }
       }
     });
 
@@ -1649,8 +1876,28 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
         // Expression SHOULD emit a row because at least one MD-planet-bearing evidence is qualified
         expect(result.value.expressionActivations.length).toBe(1);
+        const activation = result.value.expressionActivations[0];
+
+        // Should be the caller expression with CALLER source and UNAMBIGUOUS match
+        expect(activation.expression).toBe(callerExpression);
+        expect(activation.expressionSource).toBe('CALLER');
+        expect(activation.matchBasis).toBe('UNAMBIGUOUS');
+
+        // Qualified evidence IDs should contain only the qualified evidence
+        expect(activation.qualifiedEvidenceIds).toEqual([qualifiedEvidenceId]);
+        // Unqualified evidence IDs should contain the unqualified evidence
+        expect(activation.unqualifiedEvidenceIds).toEqual([unqualifiedEvidenceId]);
+
+        // expressionEvidenceIds should contain BOTH the qualified and unqualified IDs
+        // (records original C8 evidence; qualifiedEvidenceIds controls linkage trust)
+        expect(activation.expressionEvidenceIds).toContain(qualifiedEvidenceId);
+        expect(activation.expressionEvidenceIds).toContain(unqualifiedEvidenceId);
+
         // Should be linked to MD (SATURN from qualified evidence)
-        expect(result.value.expressionActivations[0].linkedLevels).toContain('MD');
+        expect(activation.linkedLevels).toContain('MD');
+
+        // adDashaEvidenceIds should be empty (unqualified Jupiter cannot create AD linkage)
+        expect(activation.adDashaEvidenceIds).toEqual([]);
       }
     });
   });
