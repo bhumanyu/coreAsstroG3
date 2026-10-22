@@ -842,6 +842,7 @@ describe('runAiExplanation', () => {
         expect(request.context.selectedPeriod).toBeDefined();
 
         // Local rules should return a valid conclusion even with sparse evidence
+        // With PROXY_DIRECTION, no unresolvedQuestion should be emitted (only for UNAVAILABLE)
         return {
           response: {
             content: '',
@@ -850,7 +851,7 @@ describe('runAiExplanation', () => {
               conclusion: 'Career analysis for the selected VENUS-VENUS period is based on qualification basis PROXY_DIRECTION. No career expressions are linked to this period.',
               supportingEvidenceIds: [],
               challengingEvidenceIds: [],
-              unresolvedQuestions: ['Career activation may be unavailable for this period.'],
+              unresolvedQuestions: [], // Empty for PROXY_DIRECTION (no mechanisms warning only for UNAVAILABLE)
               warnings: [],
               triggeredRuleIds: ['SP-01-CAREER-EXPRESSIONS']
             },

@@ -26,13 +26,17 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       const career = sp.career;
 
       if (career.expressions.length === 0) {
+        // Only emit unresolvedQuestion when qualificationBasis is UNAVAILABLE (genuinely no mechanisms)
+        // If PROXY_DIRECTION, it's using interim proxy and doesn't need the warning
+        const unresolvedQuestions = career.qualificationBasis === 'UNAVAILABLE'
+          ? ['No qualifying career mechanisms resolved for this chart.']
+          : [];
+
         return {
           triggered: true,
           effect: 'NEUTRAL' as LocalRuleEffect,
           statement: `Career analysis for the selected ${sp.mahadashaPlanet}-${sp.antardashaPlanet} period is based on qualification basis ${career.qualificationBasis}. No career expressions are linked to this period.`,
-          unresolvedQuestions: [
-            'Career activation may be unavailable for this period.'
-          ]
+          unresolvedQuestions
         };
       }
 
@@ -112,13 +116,18 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
       );
 
       if (activatingDims.length === 0 && challengingDims.length === 0) {
+        // Only emit unresolvedQuestion when genuinely no dimensions activated
+        // If some dimensions have promise evidence but failed linkage, that's a different condition
+        const dimsWithPromise = Object.values(wealth).filter(d => d.promiseEvidenceIds.length > 0);
+        const unresolvedQuestions = dimsWithPromise.length === 0
+          ? ['Selected period does not activate any wealth dimension.']
+          : [];
+
         return {
           triggered: true,
           effect: 'NEUTRAL' as LocalRuleEffect,
           statement: 'Wealth dimension analysis shows insufficient data for the selected period.',
-          unresolvedQuestions: [
-            'Wealth activation may be unavailable for this period.'
-          ]
+          unresolvedQuestions
         };
       }
 

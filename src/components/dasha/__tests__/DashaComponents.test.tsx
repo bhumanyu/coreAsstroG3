@@ -486,5 +486,65 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       // Should NOT show career limitation warning
       expect(screen.queryByText(/Career qualification unavailable/i)).not.toBeInTheDocument();
     });
+
+    it('renders CAREER_QUALIFICATION_UNAVAILABLE message exactly once when qualificationBasis === UNAVAILABLE', () => {
+      const synthesis = makeSynthesis({
+        career: {
+          qualificationBasis: 'UNAVAILABLE',
+          expressions: [],
+          diagnostics: [
+            {
+              code: 'CAREER_QUALIFICATION_UNAVAILABLE',
+              message: 'Career qualification unavailable: canonical inputs provided but no qualifying mechanisms for this chart'
+            }
+          ]
+        },
+        qualificationStatus: 'UNAVAILABLE'
+      });
+
+      render(<SelectedPeriodReport synthesis={synthesis} />);
+
+      // Should show career limitation warning (friendly message)
+      expect(screen.getByText(/Career qualification unavailable/i)).toBeInTheDocument();
+      expect(screen.getByText(/no qualifying mechanisms for this chart/i)).toBeInTheDocument();
+
+      // The CAREER_QUALIFICATION_UNAVAILABLE diagnostic should be filtered out from DiagnosticsList
+      // when the friendly warning is shown, so the message should appear exactly once
+      const warningMessages = screen.getAllByText(/Career qualification unavailable/i);
+      expect(warningMessages.length).toBe(1);
+    });
+
+    it('renders other diagnostics when qualificationBasis === UNAVAILABLE (CAREER_QUALIFICATION_UNAVAILABLE filtered)', () => {
+      const synthesis = makeSynthesis({
+        career: {
+          qualificationBasis: 'UNAVAILABLE',
+          expressions: [],
+          diagnostics: [
+            {
+              code: 'CAREER_QUALIFICATION_UNAVAILABLE',
+              message: 'Career qualification unavailable: canonical inputs provided but no qualifying mechanisms for this chart'
+            },
+            {
+              code: 'ADAPTER_FALLBACK_DROPPED_CANDIDATES',
+              message: 'Multiple QUALIFIED canonical candidates available, but adapter fallback uses only the first candidate'
+            }
+          ]
+        },
+        qualificationStatus: 'UNAVAILABLE'
+      });
+
+      render(<SelectedPeriodReport synthesis={synthesis} />);
+
+      // Should show career limitation warning
+      expect(screen.getByText(/Career qualification unavailable/i)).toBeInTheDocument();
+
+      // Should show the other diagnostic (ADAPTER_FALLBACK_DROPPED_CANDIDATES)
+      expect(screen.getByText(/ADAPTER_FALLBACK_DROPPED_CANDIDATES/i)).toBeInTheDocument();
+
+      // CAREER_QUALIFICATION_UNAVAILABLE should be filtered from DiagnosticsList
+      // so it only appears in the friendly warning, not in the diagnostics list
+      const diagnosticMessages = screen.getAllByText(/Career qualification unavailable/i);
+      expect(diagnosticMessages.length).toBe(1);
+    });
   });
 });

@@ -232,7 +232,15 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
           )}
 
           {synthesis.career.diagnostics.length > 0 && synthesis.provenance.career.status !== 'MISSING' && (
-            <DiagnosticsList diagnostics={synthesis.career.diagnostics} />
+            <DiagnosticsList
+              diagnostics={
+                // Filter out CAREER_QUALIFICATION_UNAVAILABLE when the friendly warning is already shown
+                // to avoid duplicate messaging. Keep other diagnostics for transparency.
+                (synthesis.career.qualificationBasis === 'PROXY_DIRECTION' || synthesis.career.qualificationBasis === 'UNAVAILABLE')
+                  ? synthesis.career.diagnostics.filter(d => d.code !== 'CAREER_QUALIFICATION_UNAVAILABLE')
+                  : synthesis.career.diagnostics
+              }
+            />
           )}
         </div>
       )}
