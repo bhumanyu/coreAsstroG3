@@ -123,10 +123,15 @@ export const SELECTED_PERIOD_RULES: readonly LocalRuleDefinition[] = Object.free
           ? ['Selected period does not activate any wealth dimension.']
           : [];
 
+        // Distinguish between no promise evidence vs promise present but linkage failed
+        const statement = dimsWithPromise.length === 0
+          ? 'Wealth dimension analysis shows insufficient data for the selected period.'
+          : `Wealth promise evidence exists for ${dimsWithPromise.length} dimension(s) but the selected period's dasha lord does not activate those dimensions' houses.`;
+
         return {
           triggered: true,
           effect: 'NEUTRAL' as LocalRuleEffect,
-          statement: 'Wealth dimension analysis shows insufficient data for the selected period.',
+          statement,
           unresolvedQuestions
         };
       }

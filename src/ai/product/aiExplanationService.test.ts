@@ -1161,4 +1161,210 @@ describe('runAiExplanation', () => {
       expect(resolvedIds).not.toContain('ctx-ev-1');
     }
   });
+
+  it('SELECTED_PERIOD_ANALYSIS SP-02-WEALTH-DIMENSIONS distinguishes no promise vs promise present but linkage failed', async () => {
+    // Test case 1: No promise evidence (dimsWithPromise.length === 0)
+    const noPromiseSelectedPeriod: any = {
+      synthesisVersion: 'PBA-06-v1',
+      period: {
+        selectedPeriodId: 'test-period-id',
+        mahadashaId: 'test-md-id',
+        mahadashaPlanet: 'SATURN',
+        antardashaId: 'test-ad-id',
+        antardashaPlanet: 'SATURN',
+        interval: { start: '2020-01-01T00:00:00Z', end: '2021-01-01T00:00:00Z' },
+        analysisAsOf: '2024-01-01T00:00:00Z',
+        temporalRelation: 'PAST'
+      },
+      natalBaseline: {},
+      career: {
+        qualificationBasis: 'UNAVAILABLE',
+        expressions: [],
+        diagnostics: []
+      },
+      wealth: {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [], // No promise evidence
+            dashaRuleReferences: []
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [], // No promise evidence
+            dashaRuleReferences: []
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [], // No promise evidence
+            dashaRuleReferences: []
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [], // No promise evidence
+            dashaRuleReferences: []
+          }
+        },
+        diagnostics: []
+      },
+      evidence: [],
+      supportingEvidenceIds: [],
+      challengingEvidenceIds: [],
+      missingInputs: [],
+      diagnostics: [],
+      provenance: {
+        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'UNAVAILABLE' },
+        wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
+      },
+      availableEvidence: []
+    };
+
+    const mockRouterNoPromise: any = {
+      route: async (request: any) => {
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        expect(request.context.selectedPeriod).toBeDefined();
+
+        return {
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Wealth dimension analysis shows insufficient data for the selected period.',
+              supportingEvidenceIds: [],
+              challengingEvidenceIds: [],
+              unresolvedQuestions: ['Selected period does not activate any wealth dimension.'],
+              warnings: [],
+              triggeredRuleIds: ['SP-02-WEALTH-DIMENSIONS']
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-no-promise-test'
+        };
+      }
+    };
+
+    const resultNoPromise = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      selectedPeriod: noPromiseSelectedPeriod,
+      router: mockRouterNoPromise
+    }));
+
+    expect(resultNoPromise.kind).toBe('SUCCESS');
+    if (resultNoPromise.kind === 'SUCCESS') {
+      expect(resultNoPromise.status).toBe('SUCCESS');
+      expect(resultNoPromise.conclusion).toBe('Wealth dimension analysis shows insufficient data for the selected period.');
+      expect(resultNoPromise.unresolvedQuestions).toContain('Selected period does not activate any wealth dimension.');
+    }
+
+    // Test case 2: Promise present but linkage failed (dimsWithPromise.length > 0)
+    const promisePresentSelectedPeriod: any = {
+      ...noPromiseSelectedPeriod,
+      wealth: {
+        dimensions: {
+          ACCUMULATION: {
+            dimension: 'ACCUMULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: [], // No promise
+            dashaRuleReferences: []
+          },
+          GAINS: {
+            dimension: 'GAINS',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: ['ev-1', 'ev-2'], // Promise present but linkage failed
+            dashaRuleReferences: []
+          },
+          FORTUNE: {
+            dimension: 'FORTUNE',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: ['ev-3'], // Promise present but linkage failed
+            dashaRuleReferences: []
+          },
+          SPECULATION: {
+            dimension: 'SPECULATION',
+            effect: 'INSUFFICIENT_DATA',
+            dataStatus: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            diagnostics: [],
+            promiseEvidenceIds: ['ev-4'], // Promise present but linkage failed
+            dashaRuleReferences: []
+          }
+        },
+        diagnostics: []
+      }
+    };
+
+    const mockRouterPromisePresent: any = {
+      route: async (request: any) => {
+        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
+        expect(request.context.selectedPeriod).toBeDefined();
+
+        return {
+          response: {
+            content: '',
+            structuredOutput: {
+              status: 'SUCCESS',
+              conclusion: 'Wealth promise evidence exists for 3 dimension(s) but the selected period\'s dasha lord does not activate those dimensions\' houses.',
+              supportingEvidenceIds: [],
+              challengingEvidenceIds: [],
+              unresolvedQuestions: [], // No unresolvedQuestion when promise present
+              warnings: [],
+              triggeredRuleIds: ['SP-02-WEALTH-DIMENSIONS']
+            },
+            warnings: []
+          },
+          providerId: 'local-vedic-rules',
+          providerName: 'Local Vedic Rules',
+          providerKind: 'LOCAL_RULES',
+          routingMode: 'LOCAL_ONLY',
+          fallbackUsed: false,
+          selectionReason: 'CAPABILITY',
+          requestId: 'req-promise-present-test'
+        };
+      }
+    };
+
+    const resultPromisePresent = await runAiExplanation(createTestOptions({
+      task: 'SELECTED_PERIOD_ANALYSIS',
+      selectedPeriod: promisePresentSelectedPeriod,
+      router: mockRouterPromisePresent
+    }));
+
+    expect(resultPromisePresent.kind).toBe('SUCCESS');
+    if (resultPromisePresent.kind === 'SUCCESS') {
+      expect(resultPromisePresent.status).toBe('SUCCESS');
+      expect(resultPromisePresent.conclusion).toBe('Wealth promise evidence exists for 3 dimension(s) but the selected period\'s dasha lord does not activate those dimensions\' houses.');
+      expect(resultPromisePresent.unresolvedQuestions).toEqual([]); // No unresolvedQuestion when promise present
+    }
+  });
 });

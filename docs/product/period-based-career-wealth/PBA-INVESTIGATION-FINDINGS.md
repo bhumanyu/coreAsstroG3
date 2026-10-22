@@ -2,8 +2,8 @@
 
 **Date:** 2026-10-22
 **Chart:** Bhu (1988-05-08T09:30:00+05:30, Patna, India)
-**Period Tested:** MOON MD → MOON AD (first period in timeline)
-**Test File:** `src/domain/career/orchestration/canonicalCareerFoundationBuilder.investigation.test.ts` (TEMPORARY - DELETE BEFORE MERGE)
+**Period Tested:** MOON MD → MOON AD (first selectable period in timeline as of analysisAsOf 2026-01-01T00:00:00Z)
+**Investigation Method:** Programmatic analysis using the period-based activation engine (deleted investigation test artifact)
 
 ---
 
@@ -13,6 +13,7 @@ The investigation confirms that the Career and Wealth issues are genuine engine 
 
 1. **Career**: Pattern classification detects `CAREER_HOUSE_NETWORK` but `CAREER_MECHANISM_RESOLUTION_RULES` has no rule for this family, resulting in empty `resolvedMechanisms`.
 2. **Wealth**: ACCUMULATION has no natal promise evidence (house 2 promise not generated). FORTUNE and SPECULATION have promise evidence but the conservative house-only linkage rule fails because the dasha lord (Moon) does not touch houses 9 or 5.
+3. **Wealth Defect**: GAINS shows `insufficientReason: LINKED` but `effect: UNKNOWN`, a contradiction where a linked dimension does not receive a determinate effect. This is an open defect requiring investigation into the wealth dimension activation logic.
 
 ---
 
@@ -68,7 +69,11 @@ Follow the existing rule shape (`applies`/`resolve`, canonical edge resolution v
 - **MD dasha houses:** [2, 8, 11]
 - **AD dasha houses:** [2, 8, 11]
 
-**Status:** Working correctly. The dasha lord (Moon) touches houses 2, 8, 11 via ownership/aspect, and these match the promise evidence houses.
+**Status:** OPEN DEFECT - Data Status COMPLETE but effect Insufficient/Unknown contradiction.
+
+The dimension shows `insufficientReason: LINKED` (indicating linkage succeeded) but `effect: UNKNOWN` (indicating the dimension did not activate). This is contradictory: if linkage succeeded, the effect should be ACTIVATES, PARTIALLY_ACTIVATES, or CHALLENGES based on the dasha evidence polarity, not UNKNOWN.
+
+This represents the "Data Status COMPLETE but effect Insufficient/Unknown" contradiction observed in the UI screenshot. The root cause is unknown and requires investigation into the wealth dimension activation logic to determine why LINKED dimensions are not being assigned a determinate effect.
 
 ### Dimension: FORTUNE (House 9)
 - **Effect:** INSUFFICIENT_DATA
@@ -93,6 +98,18 @@ Follow the existing rule shape (`applies`/`resolve`, canonical edge resolution v
 - **AD dasha houses:** []
 
 **Root Cause:** Same as FORTUNE. Promise evidence exists for house 5, but Moon's dasha evidence does not reference house 5, so the conservative house-only linkage fails.
+
+### Open Defect: GAINS Effect Assignment
+
+**Issue:** GAINS dimension shows `insufficientReason: LINKED` (linkage succeeded) but `effect: UNKNOWN` (no determinate effect assigned). This is a contradiction in the activation logic.
+
+**Expected Behavior:** When `insufficientReason` is `LINKED`, the dimension should have a determinate effect (ACTIVATES, PARTIALLY_ACTIVATES, or CHALLENGES) based on the polarity of the linked dasha evidence.
+
+**Actual Behavior:** The dimension remains in UNKNOWN state despite successful linkage.
+
+**Impact:** This causes the "Data Status COMPLETE but effect Insufficient/Unknown" contradiction visible in the UI screenshot.
+
+**Required Investigation:** Examine the wealth dimension activation logic in `evaluateSelectedWealthPeriodActivation` to determine why LINKED dimensions are not being assigned a determinate effect. This is separate from the linkage rule itself and may indicate a bug in the effect assignment logic.
 
 ---
 
@@ -159,16 +176,17 @@ For the MOON MD → MOON AD period:
 4. Add real-chart end-to-end test asserting `qualificationBasis` becomes `CANONICAL_STATUS`
 
 ### Wealth
-1. Decide on linkage rule approach (Option A or B above)
-2. If Option A: Add clearer diagnostics for "promise present but not linked"
-3. If Option B: Extend `isLinkedToDimension` to include lord/karaka-based linkage
-4. Add per-dimension tests for the real chart
+1. **GAINS Effect Assignment Defect (URGENT):** Investigate why LINKED dimensions receive `effect: UNKNOWN` instead of a determinate effect. Examine the effect assignment logic in `evaluateSelectedWealthPeriodActivation` to identify the bug that causes the `insufficientReason: LINKED` / `effect: UNKNOWN` contradiction.
+2. Decide on linkage rule approach (Option A or B above) for FORTUNE/SPECULATION
+3. If Option A: Add clearer diagnostics for "promise present but not linked"
+4. If Option B: Extend `isLinkedToDimension` to include lord/karaka-based linkage
+5. Add per-dimension tests for the real chart
 
 ---
 
-## Test Artifact Status
+## Investigation Artifact Status
 
 **File:** `src/domain/career/orchestration/canonicalCareerFoundationBuilder.investigation.test.ts`
-**Status:** TEMPORARY - DELETE BEFORE MERGE
+**Status:** DELETED (removed as part of commit ad9c322 follow-up)
 **Purpose:** Investigation artifact to ground Priority 3 fixes in actual engine output
-**Do not merge:** This test should be deleted after Priority 3 is complete
+**Note:** The programmatic investigation was completed and the findings are recorded in this document. The test file was deleted after extracting the key findings.
