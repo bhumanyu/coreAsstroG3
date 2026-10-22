@@ -272,20 +272,24 @@ function deriveCareerStatus(
 }
 
 /**
- * Resolves wealth data status from input availability and evidence resolution.
+ * Resolves wealth data status from input availability, evidence resolution, and activation effect.
  *
- * Describes input availability only, never a composite score.
- * COMPLETE requires ALL promiseEvidenceIds to resolve to valid WEALTH NATAL_PROMISE evidence
- * with compatible/absent dimension (Medium-6).
+ * COMPLETE requires:
+ * - ALL promiseEvidenceIds to resolve to valid WEALTH NATAL_PROMISE evidence with compatible/absent dimension (Medium-6)
+ * - A determinate activation effect (ACTIVATES, CHALLENGES, PARTIALLY_ACTIVATES, or DOES_NOT_ACTIVATE)
  *
- * Note: A separate diagnostic (WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE) is emitted
- * when dataStatus is COMPLETE but the activation effect is UNKNOWN or INSUFFICIENT_DATA,
- * indicating complete input data without a determinate activation signal.
+ * PARTIAL is returned when:
+ * - Input is complete but effect is UNKNOWN or INSUFFICIENT_DATA (indeterminate effect)
+ * - Input is partially resolved (some promise IDs unresolved)
+ * - Activation exists but no promise evidence
+ *
+ * INSUFFICIENT_DATA is returned when no activation and no promise evidence.
  */
 function deriveWealthDataStatus(
   hasActivation: boolean,
   resolvedCount: number,
-  totalCount: number
+  totalCount: number,
+  effect: TimingActivationEffect
 ): 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA' {
   if (!hasActivation && totalCount === 0) {
     return 'INSUFFICIENT_DATA';
@@ -294,6 +298,10 @@ function deriveWealthDataStatus(
     return 'PARTIAL';
   }
   if (totalCount > 0 && resolvedCount === totalCount) {
+    // Input is complete; gate COMPLETE on determinate effect
+    if (effect === 'UNKNOWN' || effect === 'INSUFFICIENT_DATA') {
+      return 'PARTIAL';
+    }
     return 'COMPLETE';
   }
   return 'PARTIAL';
@@ -820,13 +828,16 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       const dataStatus = deriveWealthDataStatus(
         dimActivation.linkedLevels.length > 0,
         resolvedCount,
-        totalCount
+        totalCount,
+        dimActivation.effect
       );
 
       const dimDiagnostics: SynthesisDiagnostic[] = [];
-      // Emit diagnostic when input is complete but activation is indeterminate
-      // This signals the UI "COMPLETE but Unknown effect" condition
-      if (dataStatus === 'COMPLETE' && (dimActivation.effect === 'UNKNOWN' || dimActivation.effect === 'INSUFFICIENT_DATA')) {
+      // Emit diagnostic when dimension is linked (activation present) and effect is indeterminate
+      // This signals the "complete input, linked, but indeterminate effect" condition
+      if (dimActivation.linkedLevels.length > 0 &&
+        (dimActivation.effect === 'UNKNOWN' || dimActivation.effect === 'INSUFFICIENT_DATA') &&
+        totalCount > 0 && resolvedCount === totalCount) {
         dimDiagnostics.push({
           code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
           message: `Wealth dimension ${dim} has complete input but indeterminate activation effect (${dimActivation.effect})`

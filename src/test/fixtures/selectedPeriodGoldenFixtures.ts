@@ -83,9 +83,14 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       GAINS: {
         dimension: 'GAINS',
         effect: 'UNKNOWN',
-        dataStatus: 'COMPLETE',
+        dataStatus: 'PARTIAL',
         linkedLevels: ['MD', 'AD'],
-        diagnostics: [],
+        diagnostics: [
+          {
+            code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
+            message: 'Wealth dimension GAINS has complete input but indeterminate activation effect (UNKNOWN)'
+          }
+        ],
         promiseEvidenceIds: [
           'WEALTH_11H_STRONG_001:HOUSE_11',
           'WEALTH_2H_11H_LINK_001:HOUSES_2_11',
@@ -119,14 +124,9 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       FORTUNE: {
         dimension: 'FORTUNE',
         effect: 'INSUFFICIENT_DATA',
-        dataStatus: 'COMPLETE',
+        dataStatus: 'PARTIAL',
         linkedLevels: [],
-        diagnostics: [
-          {
-            code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
-            message: 'Wealth dimension FORTUNE has complete input but indeterminate activation effect (INSUFFICIENT_DATA)'
-          }
-        ],
+        diagnostics: [],
         promiseEvidenceIds: [
           'WEALTH_9L_DIGNITY_001:SATURN',
           'WEALTH_5H_9H_LINK_001:HOUSES_5_9',
@@ -138,14 +138,9 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       SPECULATION: {
         dimension: 'SPECULATION',
         effect: 'INSUFFICIENT_DATA',
-        dataStatus: 'COMPLETE',
+        dataStatus: 'PARTIAL',
         linkedLevels: [],
-        diagnostics: [
-          {
-            code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
-            message: 'Wealth dimension SPECULATION has complete input but indeterminate activation effect (INSUFFICIENT_DATA)'
-          }
-        ],
+        diagnostics: [],
         promiseEvidenceIds: [
           'WEALTH_5L_DIGNITY_001:VENUS'
         ],
