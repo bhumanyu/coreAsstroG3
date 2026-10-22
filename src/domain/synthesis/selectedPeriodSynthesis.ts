@@ -277,6 +277,10 @@ function deriveCareerStatus(
  * Describes input availability only, never a composite score.
  * COMPLETE requires ALL promiseEvidenceIds to resolve to valid WEALTH NATAL_PROMISE evidence
  * with compatible/absent dimension (Medium-6).
+ *
+ * Note: A separate diagnostic (WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE) is emitted
+ * when dataStatus is COMPLETE but the activation effect is UNKNOWN or INSUFFICIENT_DATA,
+ * indicating complete input data without a determinate activation signal.
  */
 function deriveWealthDataStatus(
   hasActivation: boolean,

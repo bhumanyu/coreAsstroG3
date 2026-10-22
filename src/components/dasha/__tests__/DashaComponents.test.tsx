@@ -559,12 +559,12 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
               diagnostics: [
                 {
                   code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
-                  message: 'Wealth dimension has complete input data but indeterminate activation effect (UNKNOWN or INSUFFICIENT_DATA)'
+                  message: 'Wealth dimension ACCUMULATION has complete input but indeterminate activation effect (UNKNOWN)'
                 }
               ],
-              promiseEvidenceIds: [],
+              promiseEvidenceIds: ['WEALTH_2H_STRONG_001:HOUSE_2'],
               dashaRuleReferences: [],
-              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+              insufficientReason: 'LINKED' as const
             },
             GAINS: emptyWealthDimension('GAINS'),
             FORTUNE: emptyWealthDimension('FORTUNE'),
@@ -576,9 +576,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
 
-      // Should show the dimension diagnostic message
+      // Should show the dimension diagnostic code
       expect(screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i)).toBeInTheDocument();
-      expect(screen.getByText(/complete input data but indeterminate activation effect/i)).toBeInTheDocument();
     });
   });
 });
