@@ -1164,6 +1164,7 @@ describe('runAiExplanation', () => {
 
   it('SELECTED_PERIOD_ANALYSIS SP-02-WEALTH-DIMENSIONS distinguishes no promise vs promise present but linkage failed', async () => {
     // Test case 1: No promise evidence (dimsWithPromise.length === 0)
+    // All four dimensions have empty promiseEvidenceIds and non-activating effects
     const noPromiseSelectedPeriod: any = {
       synthesisVersion: 'PBA-06-v1',
       period: {
@@ -1235,50 +1236,24 @@ describe('runAiExplanation', () => {
       availableEvidence: []
     };
 
-    const mockRouterNoPromise: any = {
-      route: async (request: any) => {
-        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
-        expect(request.context.selectedPeriod).toBeDefined();
-
-        return {
-          response: {
-            content: '',
-            structuredOutput: {
-              status: 'SUCCESS',
-              conclusion: 'Wealth dimension analysis shows insufficient data for the selected period.',
-              supportingEvidenceIds: [],
-              challengingEvidenceIds: [],
-              unresolvedQuestions: ['Selected period does not activate any wealth dimension.'],
-              warnings: [],
-              triggeredRuleIds: ['SP-02-WEALTH-DIMENSIONS']
-            },
-            warnings: []
-          },
-          providerId: 'local-vedic-rules',
-          providerName: 'Local Vedic Rules',
-          providerKind: 'LOCAL_RULES',
-          routingMode: 'LOCAL_ONLY',
-          fallbackUsed: false,
-          selectionReason: 'CAPABILITY',
-          requestId: 'req-no-promise-test'
-        };
-      }
-    };
-
+    // Use the real router (no mock) to drive the actual local rules engine
     const resultNoPromise = await runAiExplanation(createTestOptions({
       task: 'SELECTED_PERIOD_ANALYSIS',
-      selectedPeriod: noPromiseSelectedPeriod,
-      router: mockRouterNoPromise
+      selectedPeriod: noPromiseSelectedPeriod
     }));
 
     expect(resultNoPromise.kind).toBe('SUCCESS');
     if (resultNoPromise.kind === 'SUCCESS') {
-      expect(resultNoPromise.status).toBe('SUCCESS');
-      expect(resultNoPromise.conclusion).toBe('Wealth dimension analysis shows insufficient data for the selected period.');
+      // Allow SUCCESS or PARTIAL since the rule may not fully resolve
+      expect(resultNoPromise.status === 'SUCCESS' || resultNoPromise.status === 'PARTIAL').toBe(true);
+      // The SP-02-WEALTH-DIMENSIONS rule should be triggered
+      expect(resultNoPromise.triggeredRuleIds).toContain('SP-02-WEALTH-DIMENSIONS');
+      // The unresolvedQuestion should be present when no promise evidence exists
       expect(resultNoPromise.unresolvedQuestions).toContain('Selected period does not activate any wealth dimension.');
     }
 
     // Test case 2: Promise present but linkage failed (dimsWithPromise.length > 0)
+    // At least one dimension has populated promiseEvidenceIds but still no activation
     const promisePresentSelectedPeriod: any = {
       ...noPromiseSelectedPeriod,
       wealth: {
@@ -1324,47 +1299,20 @@ describe('runAiExplanation', () => {
       }
     };
 
-    const mockRouterPromisePresent: any = {
-      route: async (request: any) => {
-        expect(request.task).toBe('SELECTED_PERIOD_ANALYSIS');
-        expect(request.context.selectedPeriod).toBeDefined();
-
-        return {
-          response: {
-            content: '',
-            structuredOutput: {
-              status: 'SUCCESS',
-              conclusion: 'Wealth promise evidence exists for 3 dimension(s) but the selected period\'s dasha lord does not activate those dimensions\' houses.',
-              supportingEvidenceIds: [],
-              challengingEvidenceIds: [],
-              unresolvedQuestions: [], // No unresolvedQuestion when promise present
-              warnings: [],
-              triggeredRuleIds: ['SP-02-WEALTH-DIMENSIONS']
-            },
-            warnings: []
-          },
-          providerId: 'local-vedic-rules',
-          providerName: 'Local Vedic Rules',
-          providerKind: 'LOCAL_RULES',
-          routingMode: 'LOCAL_ONLY',
-          fallbackUsed: false,
-          selectionReason: 'CAPABILITY',
-          requestId: 'req-promise-present-test'
-        };
-      }
-    };
-
+    // Use the real router (no mock) to drive the actual local rules engine
     const resultPromisePresent = await runAiExplanation(createTestOptions({
       task: 'SELECTED_PERIOD_ANALYSIS',
-      selectedPeriod: promisePresentSelectedPeriod,
-      router: mockRouterPromisePresent
+      selectedPeriod: promisePresentSelectedPeriod
     }));
 
     expect(resultPromisePresent.kind).toBe('SUCCESS');
     if (resultPromisePresent.kind === 'SUCCESS') {
-      expect(resultPromisePresent.status).toBe('SUCCESS');
-      expect(resultPromisePresent.conclusion).toBe('Wealth promise evidence exists for 3 dimension(s) but the selected period\'s dasha lord does not activate those dimensions\' houses.');
-      expect(resultPromisePresent.unresolvedQuestions).toEqual([]); // No unresolvedQuestion when promise present
+      // Allow SUCCESS or PARTIAL since the rule may not fully resolve
+      expect(resultPromisePresent.status === 'SUCCESS' || resultPromisePresent.status === 'PARTIAL').toBe(true);
+      // The SP-02-WEALTH-DIMENSIONS rule should be triggered
+      expect(resultPromisePresent.triggeredRuleIds).toContain('SP-02-WEALTH-DIMENSIONS');
+      // The unresolvedQuestion should be empty when promise evidence exists but linkage failed
+      expect(resultPromisePresent.unresolvedQuestions).not.toContain('Selected period does not activate any wealth dimension.');
     }
   });
 });

@@ -1052,6 +1052,104 @@ describe('buildSelectedPeriodSynthesis', () => {
 
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('INSUFFICIENT_DATA');
     });
+
+    it('derives PARTIAL when LINKED but effect is UNKNOWN (neutral-only evidence)', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      // Create a wealth activation with LINKED status but UNKNOWN effect (neutral-only dasha evidence)
+      const linkedUnknownWealthActivation: SelectedWealthPeriodActivation = Object.freeze({
+        selectedPeriodId: createSelectedPeriodId('md-1', 'ad-1'),
+        interval: Object.freeze({
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2022-01-01T00:00:00.000Z'
+        }),
+        temporalRelation: 'CURRENT',
+        dimensions: Object.freeze({
+          ACCUMULATION: Object.freeze({
+            dimension: 'ACCUMULATION',
+            effect: 'UNKNOWN', // Linked but neutral-only evidence
+            linkedLevels: Object.freeze(['MD' as const]),
+            md: Object.freeze({
+              effect: 'UNKNOWN',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            ad: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            promiseEvidenceIds: Object.freeze(['promise-1']),
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'LINKED' as const
+          }),
+          GAINS: Object.freeze({
+            dimension: 'GAINS',
+            effect: 'INSUFFICIENT_DATA',
+            linkedLevels: Object.freeze([]),
+            md: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            ad: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            promiseEvidenceIds: Object.freeze([]),
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+          }),
+          FORTUNE: Object.freeze({
+            dimension: 'FORTUNE',
+            effect: 'INSUFFICIENT_DATA',
+            linkedLevels: Object.freeze([]),
+            md: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            ad: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            promiseEvidenceIds: Object.freeze([]),
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+          }),
+          SPECULATION: Object.freeze({
+            dimension: 'SPECULATION',
+            effect: 'INSUFFICIENT_DATA',
+            linkedLevels: Object.freeze([]),
+            md: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            ad: Object.freeze({
+              effect: 'INSUFFICIENT_DATA',
+              dashaRuleReferences: Object.freeze([])
+            }),
+            promiseEvidenceIds: Object.freeze([]),
+            dashaRuleReferences: Object.freeze([]),
+            insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+          })
+        })
+      });
+
+      const wealthEvidence = Object.freeze([
+        makeEvidence('promise-1', 'SUPPORTING', 'WEALTH', 'ACCUMULATION')
+      ]);
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation: linkedUnknownWealthActivation,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      // Regression test: LINKED with UNKNOWN effect should get PARTIAL dataStatus
+      // This prevents the "Data Status COMPLETE but effect Insufficient/Unknown" contradiction
+      expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
+      expect(result.value.wealth.dimensions.ACCUMULATION.effect).toBe('UNKNOWN');
+      expect(result.value.wealth.dimensions.ACCUMULATION.insufficientReason).toBe('LINKED');
+    });
   });
 
   describe('stage-specific evidence provenance (High-1)', () => {

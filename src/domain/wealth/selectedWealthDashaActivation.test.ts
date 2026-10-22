@@ -225,6 +225,9 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     if (!result.ok) return;
 
     expect(result.value.dimensions.ACCUMULATION.effect).toBe('UNKNOWN');
+    // Regression test: LINKED with UNKNOWN effect is a valid intermediate state
+    // The synthesis layer should map this to PARTIAL dataStatus to avoid contradictions
+    expect(result.value.dimensions.ACCUMULATION.insufficientReason).toBe('LINKED');
   });
 
   it('returns PARTIALLY_ACTIVATES for explicit MIXED effect', () => {
