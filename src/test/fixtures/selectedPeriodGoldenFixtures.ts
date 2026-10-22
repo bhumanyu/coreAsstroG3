@@ -123,8 +123,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         linkedLevels: [],
         diagnostics: [
           {
-            code: 'WEALTH_DIMENSION_INSUFFICIENT_DESPITE_COMPLETE_INPUT',
-            message: 'Wealth dimension FORTUNE has complete input but insufficient activation data'
+            code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
+            message: 'Wealth dimension FORTUNE has complete input but indeterminate activation effect (INSUFFICIENT_DATA)'
           }
         ],
         promiseEvidenceIds: [
@@ -142,8 +142,8 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         linkedLevels: [],
         diagnostics: [
           {
-            code: 'WEALTH_DIMENSION_INSUFFICIENT_DESPITE_COMPLETE_INPUT',
-            message: 'Wealth dimension SPECULATION has complete input but insufficient activation data'
+            code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
+            message: 'Wealth dimension SPECULATION has complete input but indeterminate activation effect (INSUFFICIENT_DATA)'
           }
         ],
         promiseEvidenceIds: [

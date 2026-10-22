@@ -1053,7 +1053,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('INSUFFICIENT_DATA');
     });
 
-    it('derives PARTIAL when LINKED but effect is UNKNOWN (neutral-only evidence)', () => {
+    it('derives COMPLETE when LINKED but effect is UNKNOWN (neutral-only evidence)', () => {
       const selectedPeriod = makeSelectedPeriodContext();
       // Create a wealth activation with LINKED status but UNKNOWN effect (neutral-only dasha evidence)
       const linkedUnknownWealthActivation: SelectedWealthPeriodActivation = Object.freeze({
@@ -1144,11 +1144,18 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // Regression test: LINKED with UNKNOWN effect should get PARTIAL dataStatus
-      // This prevents the "Data Status COMPLETE but effect Insufficient/Unknown" contradiction
-      expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
+      // dataStatus describes input availability only: COMPLETE since all promise IDs resolve
+      expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('COMPLETE');
       expect(result.value.wealth.dimensions.ACCUMULATION.effect).toBe('UNKNOWN');
       expect(result.value.wealth.dimensions.ACCUMULATION.insufficientReason).toBe('LINKED');
+
+      // Should emit diagnostic for COMPLETE but indeterminate effect
+      const diag = result.value.wealth.dimensions.ACCUMULATION.diagnostics.find(
+        d => d.code === 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE'
+      );
+      expect(diag).toBeDefined();
+      expect(diag?.message).toContain('ACCUMULATION');
+      expect(diag?.message).toContain('UNKNOWN');
     });
   });
 

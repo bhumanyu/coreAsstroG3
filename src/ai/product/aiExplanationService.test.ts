@@ -1179,7 +1179,7 @@ describe('runAiExplanation', () => {
       },
       natalBaseline: {},
       career: {
-        qualificationBasis: 'UNAVAILABLE',
+        qualificationBasis: 'CANONICAL_STATUS',
         expressions: [],
         diagnostics: []
       },
@@ -1230,7 +1230,7 @@ describe('runAiExplanation', () => {
       missingInputs: [],
       diagnostics: [],
       provenance: {
-        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'UNAVAILABLE' },
+        career: { status: 'PRESENT', version: 'PBA-04-v1', qualificationBasis: 'CANONICAL_STATUS' },
         wealth: { status: 'PRESENT', version: 'PBA-05-v1' }
       },
       availableEvidence: []
@@ -1244,12 +1244,10 @@ describe('runAiExplanation', () => {
 
     expect(resultNoPromise.kind).toBe('SUCCESS');
     if (resultNoPromise.kind === 'SUCCESS') {
-      // Allow SUCCESS or PARTIAL since the rule may not fully resolve
-      expect(resultNoPromise.status === 'SUCCESS' || resultNoPromise.status === 'PARTIAL').toBe(true);
-      // The SP-02-WEALTH-DIMENSIONS rule should be triggered
+      expect(resultNoPromise.status).toBe('PARTIAL');
       expect(resultNoPromise.triggeredRuleIds).toContain('SP-02-WEALTH-DIMENSIONS');
-      // The unresolvedQuestion should be present when no promise evidence exists
       expect(resultNoPromise.unresolvedQuestions).toContain('Selected period does not activate any wealth dimension.');
+      // The SP-02 statement is embedded in the full conclusion; we verify via triggeredRuleIds and unresolvedQuestions
     }
 
     // Test case 2: Promise present but linkage failed (dimsWithPromise.length > 0)
@@ -1307,12 +1305,11 @@ describe('runAiExplanation', () => {
 
     expect(resultPromisePresent.kind).toBe('SUCCESS');
     if (resultPromisePresent.kind === 'SUCCESS') {
-      // Allow SUCCESS or PARTIAL since the rule may not fully resolve
+      // Accept SUCCESS or PARTIAL since other rules may emit unresolvedQuestions
       expect(resultPromisePresent.status === 'SUCCESS' || resultPromisePresent.status === 'PARTIAL').toBe(true);
-      // The SP-02-WEALTH-DIMENSIONS rule should be triggered
       expect(resultPromisePresent.triggeredRuleIds).toContain('SP-02-WEALTH-DIMENSIONS');
-      // The unresolvedQuestion should be empty when promise evidence exists but linkage failed
       expect(resultPromisePresent.unresolvedQuestions).not.toContain('Selected period does not activate any wealth dimension.');
+      // The SP-02 statement is embedded in the full conclusion; we verify via triggeredRuleIds and unresolvedQuestions
     }
   });
 });

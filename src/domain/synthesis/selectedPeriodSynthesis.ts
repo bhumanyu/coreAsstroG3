@@ -276,24 +276,17 @@ function deriveCareerStatus(
  *
  * Describes input availability only, never a composite score.
  * COMPLETE requires ALL promiseEvidenceIds to resolve to valid WEALTH NATAL_PROMISE evidence
- * with compatible/absent dimension (Medium-6), AND the effect must be determinate (not UNKNOWN/INSUFFICIENT_DATA).
- * This prevents the "Data Status COMPLETE but effect Insufficient/Unknown" contradiction.
+ * with compatible/absent dimension (Medium-6).
  */
 function deriveWealthDataStatus(
   hasActivation: boolean,
   resolvedCount: number,
-  totalCount: number,
-  effect: TimingActivationEffect
+  totalCount: number
 ): 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA' {
   if (!hasActivation && totalCount === 0) {
     return 'INSUFFICIENT_DATA';
   }
   if (hasActivation && totalCount === 0) {
-    return 'PARTIAL';
-  }
-  // If effect is indeterminate (UNKNOWN or INSUFFICIENT_DATA), return PARTIAL even with complete input
-  // This correctly reflects that while input data is complete, the activation result is indeterminate
-  if (effect === 'UNKNOWN' || effect === 'INSUFFICIENT_DATA') {
     return 'PARTIAL';
   }
   if (totalCount > 0 && resolvedCount === totalCount) {
@@ -823,15 +816,16 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       const dataStatus = deriveWealthDataStatus(
         dimActivation.linkedLevels.length > 0,
         resolvedCount,
-        totalCount,
-        dimActivation.effect
+        totalCount
       );
 
       const dimDiagnostics: SynthesisDiagnostic[] = [];
-      if (dimActivation.effect === 'INSUFFICIENT_DATA' && dataStatus === 'COMPLETE') {
+      // Emit diagnostic when input is complete but activation is indeterminate
+      // This signals the UI "COMPLETE but Unknown effect" condition
+      if (dataStatus === 'COMPLETE' && (dimActivation.effect === 'UNKNOWN' || dimActivation.effect === 'INSUFFICIENT_DATA')) {
         dimDiagnostics.push({
-          code: 'WEALTH_DIMENSION_INSUFFICIENT_DESPITE_COMPLETE_INPUT',
-          message: `Wealth dimension ${dim} has complete input but insufficient activation data`
+          code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
+          message: `Wealth dimension ${dim} has complete input but indeterminate activation effect (${dimActivation.effect})`
         });
       }
 
