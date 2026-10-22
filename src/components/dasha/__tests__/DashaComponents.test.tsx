@@ -546,5 +546,39 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       const diagnosticMessages = screen.getAllByText(/Career qualification unavailable/i);
       expect(diagnosticMessages.length).toBe(1);
     });
+
+    it('renders wealth dimension diagnostics when dimension has COMPLETE dataStatus but UNKNOWN effect', () => {
+      const synthesis = makeSynthesis({
+        wealth: {
+          dimensions: {
+            ACCUMULATION: {
+              dimension: 'ACCUMULATION',
+              effect: 'UNKNOWN',
+              dataStatus: 'COMPLETE',
+              linkedLevels: [],
+              diagnostics: [
+                {
+                  code: 'WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE',
+                  message: 'Wealth dimension has complete input data but indeterminate activation effect (UNKNOWN or INSUFFICIENT_DATA)'
+                }
+              ],
+              promiseEvidenceIds: [],
+              dashaRuleReferences: [],
+              insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+            },
+            GAINS: emptyWealthDimension('GAINS'),
+            FORTUNE: emptyWealthDimension('FORTUNE'),
+            SPECULATION: emptyWealthDimension('SPECULATION')
+          },
+          diagnostics: []
+        }
+      });
+
+      render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
+
+      // Should show the dimension diagnostic message
+      expect(screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i)).toBeInTheDocument();
+      expect(screen.getByText(/complete input data but indeterminate activation effect/i)).toBeInTheDocument();
+    });
   });
 });

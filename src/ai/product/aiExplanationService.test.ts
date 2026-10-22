@@ -1305,8 +1305,7 @@ describe('runAiExplanation', () => {
 
     expect(resultPromisePresent.kind).toBe('SUCCESS');
     if (resultPromisePresent.kind === 'SUCCESS') {
-      // Accept SUCCESS or PARTIAL since other rules may emit unresolvedQuestions
-      expect(resultPromisePresent.status === 'SUCCESS' || resultPromisePresent.status === 'PARTIAL').toBe(true);
+      expect(resultPromisePresent.status).toBe('SUCCESS');
       expect(resultPromisePresent.triggeredRuleIds).toContain('SP-02-WEALTH-DIMENSIONS');
       expect(resultPromisePresent.unresolvedQuestions).not.toContain('Selected period does not activate any wealth dimension.');
       // The SP-02 statement is embedded in the full conclusion; we verify via triggeredRuleIds and unresolvedQuestions
