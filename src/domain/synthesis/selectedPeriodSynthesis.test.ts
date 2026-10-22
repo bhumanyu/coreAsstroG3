@@ -3073,8 +3073,10 @@ describe('buildSelectedPeriodSynthesis', () => {
       });
 
       // Assert the actual emitted order (this is the engine's stable sort order)
-      expect(wealthRuleRefs[0].ruleId).toBeDefined();
-      expect(wealthRuleRefs[1].ruleId).toBeDefined();
+      expect(wealthRuleRefs.map(ref => ref.ruleId)).toEqual([
+        'MOON_AD_GAINS_NEUTRAL',
+        'MOON_MD_GAINS_NEUTRAL'
+      ]);
     });
 
     it('derives COMPLETE dataStatus for mixed MD-support / AD-challenge (PARTIALLY_ACTIVATES with all evidence resolved)', () => {
@@ -3250,8 +3252,10 @@ describe('buildSelectedPeriodSynthesis', () => {
       });
 
       // Assert the actual emitted order (this is the engine's stable sort order)
-      expect(wealthRuleRefs[0].ruleId).toBeDefined();
-      expect(wealthRuleRefs[1].ruleId).toBeDefined();
+      expect(wealthRuleRefs.map(ref => ref.ruleId)).toEqual([
+        'MOON_AD_GAINS_CHALLENGE',
+        'MOON_MD_GAINS_SUPPORT'
+      ]);
     });
   });
 });
