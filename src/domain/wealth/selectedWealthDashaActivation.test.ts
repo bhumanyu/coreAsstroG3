@@ -37,18 +37,20 @@ function dashaEvidence(
 
 function makeContext(
   mdEvidence: readonly DashaInterpretationEvidence[],
-  adEvidence: readonly DashaInterpretationEvidence[] = []
+  adEvidence: readonly DashaInterpretationEvidence[] = [],
+  mdPlanet: Planet = Planet.SATURN,
+  adPlanet: Planet = Planet.MERCURY
 ): SelectedPeriodActivationContext {
   const mdId = 'md-1';
   const adId = 'ad-1';
   const mdNode = {
-    planet: Planet.SATURN,
+    planet: mdPlanet,
     evidence: mdEvidence,
     start: '2020-01-01T00:00:00.000Z',
     end: '2039-01-01T00:00:00.000Z'
   } as unknown as DashaMahadashaInterpretation;
   const adNode = {
-    planet: Planet.MERCURY,
+    planet: adPlanet,
     evidence: adEvidence,
     start: '2025-01-01T00:00:00.000Z',
     end: '2027-01-01T00:00:00.000Z'
@@ -67,14 +69,14 @@ function makeContext(
     interval: { start: '2025-01-01T00:00:00.000Z', end: '2027-01-01T00:00:00.000Z' },
     mahadasha: {
       id: mdId,
-      planet: Planet.SATURN,
+      planet: mdPlanet,
       start: '2020-01-01T00:00:00.000Z',
       end: '2039-01-01T00:00:00.000Z'
     },
     antardasha: {
       id: adId,
       mahadashaId: mdId,
-      planet: Planet.MERCURY,
+      planet: adPlanet,
       start: '2025-01-01T00:00:00.000Z',
       end: '2027-01-01T00:00:00.000Z'
     },
@@ -902,6 +904,84 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
       expect(result.value.dimensions.SPECULATION.insufficientReason).toBe('PROMISE_NOT_LINKED');
       expect(result.value.dimensions.SPECULATION.linkedLevels).toEqual([]);
       expect(result.value.dimensions.SPECULATION.effect).toBe('INSUFFICIENT_DATA');
+    });
+  });
+
+  describe('Moon Mahadasha → Moon Antardasha GAINS regression', () => {
+    it('returns UNKNOWN for Moon/Moon neutral-only evidence (LINKED with both levels)', () => {
+      const context = makeContext(
+        [dashaEvidence('MOON_MD_GAINS_NEUTRAL', 'NEUTRAL', [11], [Planet.MOON])],
+        [dashaEvidence('MOON_AD_GAINS_NEUTRAL', 'NEUTRAL', [11], [Planet.MOON])],
+        Planet.MOON,
+        Planet.MOON
+      );
+      const wealthEvidence = [
+        promise('NATAL_GAINS_MOON_PROMISE', 'GAINS', 11, Planet.MOON)
+      ];
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: context,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.selectedPeriodId).toBe(context.selectedPeriodId);
+      expect(context.mahadasha.planet).toBe(Planet.MOON);
+      expect(context.antardasha.planet).toBe(Planet.MOON);
+
+      const gains = result.value.dimensions.GAINS;
+      expect(gains.effect).toBe('UNKNOWN');
+      expect(gains.md.effect).toBe('UNKNOWN');
+      expect(gains.ad.effect).toBe('UNKNOWN');
+      expect(gains.insufficientReason).toBe('LINKED');
+      expect(gains.linkedLevels).toEqual(['MD', 'AD']);
+      expect(gains.promiseEvidenceIds).toEqual(['NATAL_GAINS_MOON_PROMISE']);
+      expect(gains.md.dashaRuleReferences).toEqual([
+        { ruleId: 'MOON_MD_GAINS_NEUTRAL', level: 'MD', source: 'test-fixture' }
+      ]);
+      expect(gains.ad.dashaRuleReferences).toEqual([
+        { ruleId: 'MOON_AD_GAINS_NEUTRAL', level: 'AD', source: 'test-fixture' }
+      ]);
+      expect(gains.dashaRuleReferences).toEqual([
+        { ruleId: 'MOON_MD_GAINS_NEUTRAL', level: 'MD', source: 'test-fixture' },
+        { ruleId: 'MOON_AD_GAINS_NEUTRAL', level: 'AD', source: 'test-fixture' }
+      ]);
+    });
+
+    it('returns PARTIALLY_ACTIVATES for mixed MD-support / AD-challenge (LINKED with both levels)', () => {
+      const context = makeContext(
+        [dashaEvidence('MOON_MD_GAINS_SUPPORT', 'SUPPORT', [11], [Planet.MOON])],
+        [dashaEvidence('MOON_AD_GAINS_CHALLENGE', 'CHALLENGE', [11], [Planet.MOON])],
+        Planet.MOON,
+        Planet.MOON
+      );
+      const wealthEvidence = [
+        promise('NATAL_GAINS_MOON_PROMISE', 'GAINS', 11, Planet.MOON)
+      ];
+      const result = evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: context,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const gains = result.value.dimensions.GAINS;
+      expect(gains.effect).toBe('PARTIALLY_ACTIVATES');
+      expect(gains.md.effect).toBe('ACTIVATES');
+      expect(gains.ad.effect).toBe('CHALLENGES');
+      expect(gains.insufficientReason).toBe('LINKED');
+      expect(gains.linkedLevels).toEqual(['MD', 'AD']);
+      expect(gains.promiseEvidenceIds).toEqual(['NATAL_GAINS_MOON_PROMISE']);
+      expect(gains.md.dashaRuleReferences.map(r => r.ruleId)).toEqual(['MOON_MD_GAINS_SUPPORT']);
+      expect(gains.md.dashaRuleReferences.map(r => r.level)).toEqual(['MD']);
+      expect(gains.ad.dashaRuleReferences.map(r => r.ruleId)).toEqual(['MOON_AD_GAINS_CHALLENGE']);
+      expect(gains.ad.dashaRuleReferences.map(r => r.level)).toEqual(['AD']);
+      expect(gains.dashaRuleReferences.map(r => r.ruleId)).toEqual([
+        'MOON_MD_GAINS_SUPPORT',
+        'MOON_AD_GAINS_CHALLENGE'
+      ]);
     });
   });
 });
