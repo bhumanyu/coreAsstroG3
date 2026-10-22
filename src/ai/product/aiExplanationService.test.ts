@@ -170,9 +170,9 @@ describe('runAiExplanation', () => {
             structuredOutput: {
               status: 'SUCCESS',
               conclusion: 'Test conclusion',
-              supportingEvidenceIds: [],
+              supportingEvidenceIds: [inventedId],
               challengingEvidenceIds: [],
-              unresolvedQuestions: [`The following evidence ID could not be resolved: ${inventedId}`],
+              unresolvedQuestions: [],
               warnings: []
             },
             warnings: []
@@ -199,16 +199,16 @@ describe('runAiExplanation', () => {
       // Assert the invented ID is NOT in the context index
       expect(contextEvidenceIds.has(inventedId)).toBe(false);
 
-      // Assert the invented ID is NOT in supportingEvidence
+      // Assert the invented ID is NOT in resolved supporting evidence
       const supportingIds = result.supportingEvidence.map(e => e.evidence.id);
       expect(supportingIds).not.toContain(inventedId);
 
-      // Assert the invented ID is NOT in challengingEvidence
+      // Assert the invented ID is NOT in resolved challenging evidence
       const challengingIds = result.challengingEvidence.map(e => e.evidence.id);
       expect(challengingIds).not.toContain(inventedId);
 
-      // Assert the invented ID appears in unresolvedQuestions (as a direct string match)
-      // The AI service may surface unresolved IDs in the message text
+      // Assert the service itself surfaced it as unresolved even though the mock returned none
+      // The production message is plural-worded, so match on the ID substring
       const unresolvedText = result.unresolvedQuestions.join(' ');
       expect(unresolvedText).toContain(inventedId);
     });
@@ -708,15 +708,16 @@ describe('runAiExplanation', () => {
         expect(request.context.selectedPeriod).toBeDefined();
 
         // Return evidence IDs that exist in availableEvidence plus one invented ID
+        // The mock must NOT do the service's job - unresolvedQuestions is empty
         return {
           response: {
             content: '',
             structuredOutput: {
               status: 'SUCCESS',
               conclusion: 'Selected period analysis shows activation.',
-              supportingEvidenceIds: ['ev-1', 'ev-3'],
+              supportingEvidenceIds: ['ev-1', 'ev-3', 'ev-invented'],
               challengingEvidenceIds: ['ev-4'],
-              unresolvedQuestions: ['The following evidence ID could not be resolved: ev-invented'],
+              unresolvedQuestions: [],
               warnings: []
             },
             warnings: []
@@ -754,11 +755,15 @@ describe('runAiExplanation', () => {
         expect(availableIds).toContain(id);
       }
 
-      // Verify the invented ID is NOT in resolved evidence
-      expect(allResolvedIds).not.toContain('ev-invented');
+      // Assert the invented ID is NOT in resolved supporting evidence
+      expect(resolvedSupportingIds).not.toContain('ev-invented');
 
-      // Verify the invented ID appears in unresolvedQuestions or warnings
-      const unresolvedText = result.unresolvedQuestions.join(' ') + ' ' + result.warnings.join(' ');
+      // Assert the invented ID is NOT in resolved challenging evidence
+      expect(resolvedChallengingIds).not.toContain('ev-invented');
+
+      // Assert the service itself surfaced it as unresolved even though the mock returned none
+      // The production message is plural-worded, so match on the ID substring
+      const unresolvedText = result.unresolvedQuestions.join(' ');
       expect(unresolvedText).toContain('ev-invented');
     }
   });
