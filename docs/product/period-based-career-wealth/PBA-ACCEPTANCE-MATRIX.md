@@ -1,8 +1,8 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `3c83b80a6ca327a44da3f6d4e8cbc31f2479e96b`
+**Baseline Commit:** `8ba1bd68bdb93a59b7ef48b72f0f3a919a720905`
 
-**Last Updated:** 2026-10-21
+**Last Updated:** 2026-10-23
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
 
@@ -87,7 +87,7 @@
 
 ## PBA-04: Selected-Period Career Activation
 
-**Status:** ⚠️ NEEDS_PROOF (partially complete - adapter diagnostic landed in commits 42398f9/22641c1)
+**Status:** ✅ COMPLETE
 
 **Implementation Files:**
 - `src/domain/career/careerDasha/selectedCareerDashaActivation.ts` (buildSelectedCareerDashaActivation)
@@ -98,16 +98,25 @@
 
 **CI Evidence:**
 - ✅ Adapter dropped-candidate diagnostic landed (commits 42398f9, 22641c1)
+- ✅ Dead loop in unqualified-only test fixed (commit 8ba1bd6)
+- ✅ Regression A fallback-row assertion de-conditionalized (commit 8ba1bd6)
+- ✅ npx vitest run src/domain/career/careerDasha/selectedCareerDashaActivation.test.ts: PASS (57 tests, commit 8ba1bd6)
+- ✅ npx tsc --noEmit: PASS (commit 8ba1bd6)
+- ✅ npm run verify:pba10: PASS (commit 8ba1bd6)
+- ✅ npm run verify: PASS (5421 tests passed, 5 skipped, commit 8ba1bd6)
 
 **Findings:**
 - ✅ Adapter diagnostic implemented for dropped candidates (ADAPTER_DROPPED_CANDIDATES)
-- ⚠️ NEEDS_PROOF: Missing tests for:
-  - Ambiguous caller-expression match proof
-  - Assertion that unqualified evidence does not enter exprPlanets/activations under CANONICAL_STATUS (strengthened test asserting expressionActivations.length === 0)
+- ✅ Ambiguous caller-expression match test present (Regression A test, line 348)
+- ✅ Unqualified-evidence regression test strengthened (dead loop removed, line 1674)
+- ✅ Unmatched-candidate fallback scenario covered (line 4379)
+- ✅ Zero-QUALIFIED-candidates scenario covered (line 2578)
+- ✅ UNAVAILABLE-unchanged scenario covered (lines 333, 2904, 3893, 3932)
+- ✅ PROXY_DIRECTION-unchanged scenario covered (lines 2723, 3946)
+- ✅ Regression A fallback-row assertion de-conditionalized (unconditional assertion that candidateA deterministically emits ADAPTER_FALLBACK)
 
 **Remediation:**
-- Partially complete: Adapter diagnostic implemented
-- Remaining: Add ambiguous caller-expression match test and unqualified-evidence regression test
+- COMPLETE: All test coverage gaps addressed, CI verification green
 
 ---
 
@@ -308,22 +317,17 @@
 **Total Milestones:** 10
 
 **Status Breakdown:**
-- ✅ COMPLETE: 8 (PBA-01, PBA-02, PBA-03, PBA-05, PBA-06, PBA-07, PBA-08, PBA-09)
-- ⚠️ NEEDS_PROOF: 1 (PBA-04 - partially complete, adapter diagnostic landed)
+- ✅ COMPLETE: 9 (PBA-01, PBA-02, PBA-03, PBA-04, PBA-05, PBA-06, PBA-07, PBA-08, PBA-09)
 - 🔄 DEFERRED: 1 (PBA-10)
 
 **Confirmed Defects:** 0
 - PBA-03: Resolved (temporal relation recomputation implemented in commit ed30213)
-- PBA-04: Partially resolved (adapter diagnostic implemented in commits 42398f9/22641c1)
-
-**Needs Proof:** 2 test coverage gaps in PBA-04
-- Ambiguous caller-expression match proof
-- Unqualified-evidence regression test (assert expressionActivations.length === 0)
+- PBA-04: Resolved (adapter diagnostic implemented in commits 42398f9/22641c1, test coverage completed in commit 8ba1bd6)
 
 **PR Sequence Progress:**
 - PR-A (WP-0): Contract and acceptance matrix (docs only) — COMPLETE
 - PR-B (WP-1): Context guardrails — COMPLETE (commit ed30213)
-- PR-C (WP-2): Career candidate integrity — PARTIALLY COMPLETE (adapter diagnostic landed in 42398f9/22641c1)
+- PR-C (WP-2): Career candidate integrity — COMPLETE (adapter diagnostic landed in 42398f9/22641c1, test coverage completed in 8ba1bd6)
 - PR-D (WP-3): Wealth diagnostics — COMPLETE
 - PR-E (WP-4): Partial synthesis orchestration — COMPLETE
 - PR-F (WP-5): AI evidence semantics — COMPLETE
@@ -334,6 +338,10 @@
   - Unresolved-ID assertions strengthened with controlled case
   - Both-fail baseline assertion strengthened (frozen objects, reference equality)
   - Verify and verify:pba10 green (baseline SHA updated)
+- PBA-04 test coverage completion (commit 8ba1bd6):
+  - Dead loop in unqualified-only test fixed
+  - Regression A fallback-row assertion de-conditionalized
+  - All required PBA-04 scenarios verified as already covered in existing tests
 
 ---
 

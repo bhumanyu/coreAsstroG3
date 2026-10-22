@@ -551,17 +551,12 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           a => a.expressionSource === 'ADAPTER_FALLBACK'
         );
 
-        // Runtime caveat: ADAPTER_FALLBACK activation row is only emitted if the adapter-derived
-        // expression's qualified evidence planets link to the selected MD/AD planet.
-        // Candidate A has SATURN (MD planet) in evidence, so it should link and emit a fallback row.
-        if (fallbackRows.length > 0) {
-          expect(fallbackRows.length).toBe(1);
-          expect(fallbackRows[0].matchBasis).toBeUndefined();
-          expect(fallbackRows[0].expression).not.toBe(callerExpression);
-        } else {
-          // If no fallback row emitted, still verify diagnostics fired and no CALLER row exists
-          expect(result.value.expressionActivations.filter(a => a.expressionSource === 'CALLER').length).toBe(0);
-        }
+        // Candidate A has SATURN (MD planet) in evidence, so the adapter-derived expression
+        // deterministically links and emits exactly one ADAPTER_FALLBACK activation
+        expect(fallbackRows.length).toBe(1);
+        expect(fallbackRows[0].matchBasis).toBeUndefined();
+        expect(fallbackRows[0].expressionSource).toBe('ADAPTER_FALLBACK');
+        expect(fallbackRows[0].expression).not.toBe(callerExpression);
       }
     });
   });
@@ -1676,11 +1671,6 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
         // Expression should NOT emit a row because its only MD-planet-bearing evidence is unqualified
         expect(result.value.expressionActivations).toEqual([]);
-        // No activation should trace to the unqualified evidence ID
-        for (const activation of result.value.expressionActivations) {
-          expect(activation.expressionEvidenceIds).not.toContain(unqualifiedEvidenceId);
-          expect(activation.qualifiedEvidenceIds).not.toContain(unqualifiedEvidenceId);
-        }
       }
     });
 
