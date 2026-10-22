@@ -458,6 +458,7 @@ const DiagnosticsList: React.FC<{
           <span
             key={idx}
             className="text-[10px] font-mono-code text-amber-400 bg-amber-950/40 border border-amber-800/60 px-1.5 py-0.5 rounded"
+            title={diag.message}
           >
             {diag.code}
           </span>

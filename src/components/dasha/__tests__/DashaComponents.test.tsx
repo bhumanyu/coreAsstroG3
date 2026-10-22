@@ -576,11 +576,12 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
 
-      // The dimension diagnostic should be present in the synthesis data
-      // (UI rendering of dimension-level diagnostics is tested separately)
-      expect(synthesis.wealth.dimensions.ACCUMULATION.diagnostics).toHaveLength(1);
-      expect(synthesis.wealth.dimensions.ACCUMULATION.diagnostics[0].code).toBe('WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE');
-      expect(synthesis.wealth.dimensions.ACCUMULATION.diagnostics[0].message).toContain('complete input but indeterminate activation effect');
+      // The dimension diagnostic code should be rendered in the UI
+      expect(screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i)).toBeInTheDocument();
+
+      // The readable message should be available as a tooltip
+      const diagnosticElement = screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i);
+      expect(diagnosticElement).toHaveAttribute('title', 'Wealth dimension ACCUMULATION has complete input but indeterminate activation effect (UNKNOWN)');
     });
   });
 });
