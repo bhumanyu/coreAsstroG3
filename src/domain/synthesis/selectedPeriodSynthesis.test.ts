@@ -730,6 +730,48 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.value.provenance.wealth.status).toBe('MISSING');
       expect(result.value.wealth.diagnostics.some(d => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED')).toBe(true);
     });
+
+    it('emits PARTIAL_CAREER_ACTIVATION_FAILED with careerErrorCode in diagnostic message', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const wealthActivation = makeWealthActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation,
+        careerErrorCode: 'INCOMPLETE_CANONICAL_INPUT'
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.provenance.career.status).toBe('MISSING');
+      expect(result.value.provenance.wealth.status).toBe('PRESENT');
+
+      const partialDiag = result.value.career.diagnostics.find(d => d.code === 'PARTIAL_CAREER_ACTIVATION_FAILED');
+      expect(partialDiag).toBeDefined();
+      expect(partialDiag?.message).toContain('INCOMPLETE_CANONICAL_INPUT');
+    });
+
+    it('emits PARTIAL_WEALTH_ACTIVATION_FAILED with wealthErrorCode in diagnostic message', () => {
+      const selectedPeriod = makeSelectedPeriodContext();
+      const careerActivation = makeCareerActivation();
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        careerActivation,
+        wealthErrorCode: 'INVALID_SELECTED_PERIOD_CONTEXT'
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      expect(result.value.provenance.career.status).toBe('PRESENT');
+      expect(result.value.provenance.wealth.status).toBe('MISSING');
+
+      const partialDiag = result.value.wealth.diagnostics.find(d => d.code === 'PARTIAL_WEALTH_ACTIVATION_FAILED');
+      expect(partialDiag).toBeDefined();
+      expect(partialDiag?.message).toContain('INVALID_SELECTED_PERIOD_CONTEXT');
+    });
   });
 
   describe('unresolved refs', () => {
