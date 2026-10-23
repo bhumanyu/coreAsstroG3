@@ -358,12 +358,12 @@
 - `src/app/__tests__/AppController.test.ts` (race condition tests for selectPeriod)
 
 **CI Evidence:**
-- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (20 tests, commit b0250477)
-- ✅ npx vitest run src/pages/__tests__/DashaPage.test.tsx: PASS (17 tests, commit b0250477)
-- ✅ npx vitest run src/app/__tests__/AppController.test.ts: PASS (12 tests, commit b0250477)
-- ✅ npx tsc --noEmit: PASS (commit b0250477)
-- ✅ npm run verify:pba10: PASS (127 tests, commit b0250477)
-- ✅ npm run verify: PASS (5468 tests passed, 5 skipped, commit b0250477)
+- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (20 tests, commit b5dbae8)
+- ✅ npx vitest run src/pages/__tests__/DashaPage.test.tsx: PASS (17 tests, commit b5dbae8)
+- ✅ npx vitest run src/app/__tests__/AppController.test.ts: PASS (12 tests, commit b5dbae8)
+- ✅ npx tsc --noEmit: PASS (commit b5dbae8)
+- ✅ npm run verify:pba10: PASS (127 tests, commit b5dbae8)
+- ✅ npm run verify: PASS (5468 tests passed, 5 skipped, commit b5dbae8)
 
 **Findings:**
 - ✅ DiagnosticsList compact mode now renders both diag.code and diag.message as visible text in semantic list with aria-label
@@ -379,14 +379,14 @@
 
 **Remediation:**
 - Current session: All UI accessibility and test-hardening changes implemented and verified
-- Vacuous tests fixed in commit b0250477:
+- Vacuous tests fixed in commit b5dbae8:
   - change-AD-after-report hides report+AI immediately: Now drives real submission flow and asserts report clears on AD change
   - Career-only partial result: Now renders SelectedPeriodReport directly and asserts career heading + wealth missing explanation
   - Wealth-only partial result: Now renders SelectedPeriodReport directly and asserts wealth dimension + career missing explanation
 - SelectedPeriodSection typo fixed: stray '</div >' corrected to '</div>'
 - All contracts preserved: createSelectedPeriodId, interval semantics, qualification contracts unchanged
 - Non-duplication logic in deriveSelectionErrorBanner preserved
-- CI verification completed on commit b0250477: all tests passing (5468 tests passed, 5 skipped)
+- CI verification completed on commit b5dbae8: all tests passing (5468 tests passed, 5 skipped)
 
 ---
 
