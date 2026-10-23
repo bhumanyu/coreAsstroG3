@@ -742,5 +742,22 @@ These items are blocked inputs, not open implementation gaps. Do not invent refe
 
 1. **P1 partial-Mahadasha timing validation — REFERENCE-DATA-BLOCKED:** Requires an independent Vimshottari reference chart.
 2. **P1 external Moon-anchor capture — REFERENCE-DATA-BLOCKED:** The `describe.skip`'d `D08-A1` suite in `src/engine/dasha/reference/dashaMoonAnchor.test.ts` requires Swiss Ephemeris/JPL Horizons values with version and flags recorded.
-3. **Priority-3 Career non-dusthana mechanism-type mappings — OWNER-BLOCKED:** The domain owner must specify `CareerMechanismType` values for `CAREER_HOUSE_NETWORK`, `KENDRA_TRIKONA`, `UPACHAYA_PROGRESSION`, `PARIVARTANA_YOGA`, and `CAREER_YOGA_STRUCTURE`, and confirm the P2-06 evidence contract is frozen. Do not add speculative rules.
-4. **Wealth Option B lord/karaka linkage — OWNER-BLOCKED:** Pending the Wealth spec; adopted Option A house-only linkage remains unchanged.
+3. **Independent MD/AD/PD reference parity — REFERENCE-DATA-BLOCKED:** The analytical fixtures and boundary/continuity regression tests verify only the documented internal convention; they are not independently sourced astronomical validation.
+4. **Priority-3 Career non-dusthana mechanism-type mappings — OWNER-BLOCKED:** The domain owner must specify `CareerMechanismType` values for `CAREER_HOUSE_NETWORK`, `KENDRA_TRIKONA`, `UPACHAYA_PROGRESSION`, `PARIVARTANA_YOGA`, and `CAREER_YOGA_STRUCTURE`, and confirm the P2-06 evidence contract is frozen. Do not add speculative rules.
+5. **Wealth Option B lord/karaka linkage — OWNER-BLOCKED:** Pending the Wealth spec; adopted Option A house-only linkage remains unchanged.
+
+## Vimshottari Horizon-Clipping and Validation Regression
+
+- **Change commit:** `19799883fa43ec163058979794ccc4c9c6ad9704`
+- **Toolchain:** Node `20.19.4`
+- **Changes:** Horizon-clipped ordinary Mahadashas retain full-period AD/PD anchors; a skipped sub-millisecond birth-lord candidate does not transfer its fractional balance to the next lord. Explicit-zone ISO-8601 input validation, external timeline structure checks, and numerical/boundary regression tests were added. The selected-period golden fixture was updated for the anchored clipped-AD boundary.
+- **Verification on the exact change commit above:**
+  - ✅ `npx vitest run src/engine/dasha/vimshottari.test.ts`: PASS (1 test file, 99 tests)
+  - ✅ `npx vitest run src/engine/dasha/reference/dashaMahadasha.test.ts src/engine/dasha/reference/dashaSubPeriods.test.ts src/engine/dasha/reference/dashaMoonAnchor.test.ts`: PASS (3 test files, 47 passed, 3 skipped)
+  - ✅ `npx vitest run src/engine/astroEngine.test.ts`: PASS (1 test file, 49 tests)
+  - ✅ `npx vitest run src/engine/dasha/reference/dashaSubPeriods.test.ts src/engine/dasha/invariants/timelineContinuity.test.ts`: PASS (2 test files, 42 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and build passed)
+  - ✅ `npm run verify`: PASS (297 test files, 5,586 passed, 5 skipped; lint and build passed)
+- Both builds emitted the existing large-chunk-size warning. No Node 21 / lightningcss blocker occurred.
+- **Reference-data status remains BLOCKED:** `D08-A1` remains skipped; no external ephemeris values were added. Partial-MD and MD/AD/PD analytical fixtures remain internal-consistency checks only, not independent astronomical validation.
