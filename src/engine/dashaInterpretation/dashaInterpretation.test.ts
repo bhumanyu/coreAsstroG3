@@ -38,7 +38,8 @@ import {
   computeCanonicalYogaId,
   mergeYogaFinalStatus,
   mergeYogaStrength,
-  mergeRelationship
+  mergeRelationship,
+  validateDashaInterpretationInput
 } from './dashaInterpretation';
 import { DashaInterpretationInput } from './dashaInterpretationTypes';
 import { calculateHoroscope } from '../astroEngine';
@@ -1465,5 +1466,121 @@ describe('dashaInterpretation Engine', () => {
 
     expect(activeAtBirth).not.toBeNull();
     expect(activeAtBirth?.mahadasha.planet).toBe(horoscope.vimshottari.mahadashas[0].planet);
+  });
+
+  describe('P2 strict positive-length interval validation', () => {
+    it('rejects zero-length Mahadasha interval (end === start)', () => {
+      const baseInput = createDashaFixture();
+      const invalidTimeline = {
+        ...baseInput.vimshottari,
+        mahadashas: [
+          {
+            ...baseInput.vimshottari.mahadashas[0],
+            start: '1990-01-01T00:00:00.000Z',
+            end: '1990-01-01T00:00:00.000Z' // Zero-length
+          },
+          ...baseInput.vimshottari.mahadashas.slice(1)
+        ]
+      };
+
+      const invalidInput = { ...baseInput, vimshottari: invalidTimeline };
+
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow(TypeError);
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow('invalid Mahadasha dates');
+    });
+
+    it('rejects zero-length Antardasha interval (end === start)', () => {
+      const baseInput = createDashaFixture();
+      const invalidTimeline = {
+        ...baseInput.vimshottari,
+        mahadashas: [
+          {
+            ...baseInput.vimshottari.mahadashas[0],
+            antardashas: [
+              {
+                ...baseInput.vimshottari.mahadashas[0].antardashas[0],
+                start: '1990-01-01T00:00:00.000Z',
+                end: '1990-01-01T00:00:00.000Z' // Zero-length
+              },
+              ...baseInput.vimshottari.mahadashas[0].antardashas.slice(1)
+            ]
+          },
+          ...baseInput.vimshottari.mahadashas.slice(1)
+        ]
+      };
+
+      const invalidInput = { ...baseInput, vimshottari: invalidTimeline };
+
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow(TypeError);
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow('invalid Antardasha dates');
+    });
+
+    it('rejects zero-length Pratyantardasha interval (end === start)', () => {
+      const baseInput = createDashaFixture();
+      const invalidTimeline = {
+        ...baseInput.vimshottari,
+        mahadashas: [
+          {
+            ...baseInput.vimshottari.mahadashas[0],
+            antardashas: [
+              {
+                ...baseInput.vimshottari.mahadashas[0].antardashas[0],
+                pratyantardashas: [
+                  {
+                    ...baseInput.vimshottari.mahadashas[0].antardashas[0].pratyantardashas[0],
+                    start: '1990-01-01T00:00:00.000Z',
+                    end: '1990-01-01T00:00:00.000Z' // Zero-length
+                  },
+                  ...baseInput.vimshottari.mahadashas[0].antardashas[0].pratyantardashas.slice(1)
+                ]
+              },
+              ...baseInput.vimshottari.mahadashas[0].antardashas.slice(1)
+            ]
+          },
+          ...baseInput.vimshottari.mahadashas.slice(1)
+        ]
+      };
+
+      const invalidInput = { ...baseInput, vimshottari: invalidTimeline };
+
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow(TypeError);
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow('invalid Pratyantardasha dates');
+    });
+
+    it('rejects negative-length Mahadasha interval (end < start)', () => {
+      const baseInput = createDashaFixture();
+      const invalidTimeline = {
+        ...baseInput.vimshottari,
+        mahadashas: [
+          {
+            ...baseInput.vimshottari.mahadashas[0],
+            start: '1990-01-02T00:00:00.000Z',
+            end: '1990-01-01T00:00:00.000Z' // Negative-length
+          },
+          ...baseInput.vimshottari.mahadashas.slice(1)
+        ]
+      };
+
+      const invalidInput = { ...baseInput, vimshottari: invalidTimeline };
+
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow(TypeError);
+      expect(() => {
+        validateDashaInterpretationInput(invalidInput);
+      }).toThrow('invalid Mahadasha dates');
+    });
   });
 });

@@ -6,12 +6,14 @@ import { EmptyState } from '../fullNatalReport/EmptyState';
 
 export interface DashaTimelineProps {
   readonly timeline: DashaTimelineProduct;
-  readonly activeMahadashaPlanet?: string;
+  readonly activeMahadashaStart?: string;
+  readonly activeMahadashaEnd?: string;
 }
 
 export const DashaTimeline: React.FC<DashaTimelineProps> = ({
   timeline,
-  activeMahadashaPlanet
+  activeMahadashaStart,
+  activeMahadashaEnd
 }) => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -53,8 +55,8 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
       {/* Grid of Mahadashas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {timeline.periods.map((period: DashaTimelinePeriodProduct, idx: number) => {
-          const isActive = activeMahadashaPlanet
-            ? period.planet.toUpperCase() === activeMahadashaPlanet.toUpperCase()
+          const isActive = activeMahadashaStart && activeMahadashaEnd
+            ? period.start === activeMahadashaStart && period.end === activeMahadashaEnd
             : false;
           const isExpanded = expandedIndex === idx;
           const hasSubPeriods = period.antardashas && period.antardashas.length > 0;
@@ -62,11 +64,10 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
           return (
             <div
               key={`${period.planet}-${period.start}-${idx}`}
-              className={`rounded-2xl border transition-all ${
-                isActive
-                  ? 'bg-gradient-to-b from-indigo-950/40 via-slate-900 to-slate-950 border-indigo-500/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/30'
-                  : 'bg-slate-900/90 border-slate-800/80 hover:border-slate-700'
-              }`}
+              className={`rounded-2xl border transition-all ${isActive
+                ? 'bg-gradient-to-b from-indigo-950/40 via-slate-900 to-slate-950 border-indigo-500/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/30'
+                : 'bg-slate-900/90 border-slate-800/80 hover:border-slate-700'
+                }`}
             >
               <div className="p-4 space-y-3">
                 {/* Header */}
@@ -112,7 +113,7 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
                     onClick={() => toggleExpand(idx)}
                     className="w-full mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs font-mono-code text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
                   >
-                    <span>{isExpanded ? 'Hide Antardashas' : `View 9 Antardashas`}</span>
+                    <span>{isExpanded ? 'Hide Antardashas' : `View ${period.antardashas.length} Antardashas`}</span>
                     {isExpanded ? (
                       <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
                     ) : (

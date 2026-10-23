@@ -359,4 +359,109 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(rahuRahuAd.end).toBe('1989-11-14T02:51:45.000Z');
     });
   });
+
+  describe('14. P2 boundary characterization: zero-length first Mahadasha prevention', () => {
+    const boundary = 40 / 3; // 13.333333333333334° (Ashwini -> Bharani boundary)
+
+    it('accepts Moon longitude just before Nakshatra boundary and produces valid timeline with positive-length first MD', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: boundary - 1e-7 // Just before Bharani start
+      });
+
+      expect(timeline.nakshatra).toBe('Ashwini');
+      expect(timeline.nakshatraLord).toBe(Planet.KETU);
+      expect(timeline.mahadashas.length).toBeGreaterThan(0);
+
+      // First MD should have positive length
+      const firstMd = timeline.mahadashas[0];
+      const firstMdDurationMs = new Date(firstMd.end).getTime() - new Date(firstMd.start).getTime();
+      expect(firstMdDurationMs).toBeGreaterThan(0);
+
+      // Timeline should be structurally valid (contiguous)
+      for (let i = 0; i < timeline.mahadashas.length - 1; i++) {
+        expect(timeline.mahadashas[i].end).toBe(timeline.mahadashas[i + 1].start);
+      }
+
+      // Active Dasha resolution should work
+      const activeAtBirth = getActiveDasha(timeline, birthIso);
+      expect(activeAtBirth).not.toBeNull();
+      expect(activeAtBirth?.mahadasha.planet).toBe(Planet.KETU);
+    });
+
+    it('accepts Moon longitude exactly at Nakshatra boundary (belongs to NEXT Nakshatra) and produces valid timeline', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: boundary // Exactly at Bharani start
+      });
+
+      // Boundary convention: exact boundary belongs to NEXT Nakshatra
+      expect(timeline.nakshatra).toBe('Bharani');
+      expect(timeline.nakshatraLord).toBe(Planet.VENUS);
+      expect(timeline.mahadashas.length).toBeGreaterThan(0);
+
+      // First MD should have positive length (full Venus balance since at boundary)
+      const firstMd = timeline.mahadashas[0];
+      const firstMdDurationMs = new Date(firstMd.end).getTime() - new Date(firstMd.start).getTime();
+      expect(firstMdDurationMs).toBeGreaterThan(0);
+
+      // Timeline should be structurally valid
+      for (let i = 0; i < timeline.mahadashas.length - 1; i++) {
+        expect(timeline.mahadashas[i].end).toBe(timeline.mahadashas[i + 1].start);
+      }
+
+      // Active Dasha resolution should work
+      const activeAtBirth = getActiveDasha(timeline, birthIso);
+      expect(activeAtBirth).not.toBeNull();
+      expect(activeAtBirth?.mahadasha.planet).toBe(Planet.VENUS);
+    });
+
+    it('accepts Moon longitude just after Nakshatra boundary and produces valid timeline', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: boundary + 1e-7 // Just after Bharani start
+      });
+
+      expect(timeline.nakshatra).toBe('Bharani');
+      expect(timeline.nakshatraLord).toBe(Planet.VENUS);
+      expect(timeline.mahadashas.length).toBeGreaterThan(0);
+
+      // First MD should have positive length
+      const firstMd = timeline.mahadashas[0];
+      const firstMdDurationMs = new Date(firstMd.end).getTime() - new Date(firstMd.start).getTime();
+      expect(firstMdDurationMs).toBeGreaterThan(0);
+
+      // Timeline should be structurally valid
+      for (let i = 0; i < timeline.mahadashas.length - 1; i++) {
+        expect(timeline.mahadashas[i].end).toBe(timeline.mahadashas[i + 1].start);
+      }
+
+      // Active Dasha resolution should work
+      const activeAtBirth = getActiveDasha(timeline, birthIso);
+      expect(activeAtBirth).not.toBeNull();
+      expect(activeAtBirth?.mahadasha.planet).toBe(Planet.VENUS);
+    });
+
+    it('rejects genuinely zero-length Mahadasha and skips to next lord in sequence', () => {
+      // Create a scenario where remainingFraction would be exactly 0
+      // This happens when Moon is exactly at the END of a Nakshatra (next boundary)
+      const endOfAshwini = 40 / 3; // 13.333333333333334°
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: endOfAshwini
+      });
+
+      // Should be in Bharani (next Nakshatra) with full balance
+      expect(timeline.nakshatra).toBe('Bharani');
+      expect(timeline.remainingFraction).toBeCloseTo(1, 9);
+
+      // First MD should be Venus with full 20-year duration (not zero-length Ketu)
+      const firstMd = timeline.mahadashas[0];
+      expect(firstMd.planet).toBe(Planet.VENUS);
+
+      const firstMdDurationMs = new Date(firstMd.end).getTime() - new Date(firstMd.start).getTime();
+      const firstMdDurationYears = firstMdDurationMs / MS_PER_VIMSHOTTARI_YEAR;
+      expect(firstMdDurationYears).toBeCloseTo(20, 6);
+    });
+  });
 });

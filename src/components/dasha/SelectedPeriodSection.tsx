@@ -36,6 +36,23 @@ const TEMPORAL_LABELS: Record<ProductTemporalRelation, string> = {
   UNKNOWN: 'Unknown'
 };
 
+/**
+ * Maps diagnostic codes to human-readable messages.
+ * The code is preserved as a title/tooltip for debugging.
+ */
+function mapDiagnosticToMessage(code: string): string {
+  const messageMap: Record<string, string> = {
+    'INVALID_MAHADASHA_INTERVAL': 'Invalid Mahadasha time interval',
+    'INVALID_ANTARDASHA_INTERVAL': 'Invalid Antardasha time interval',
+    'INVALID_PRATYANTARDASHA_INTERVAL': 'Invalid Pratyantardasha time interval',
+    'NON_CONTIGUOUS_BOUNDARIES': 'Non-contiguous period boundaries',
+    'OUTSIDE_PARENT_WINDOW': 'Period falls outside parent window',
+    'MISSING_DATES': 'Missing start or end date',
+    'MALFORMED_TIMELINE': 'Malformed timeline structure'
+  };
+  return messageMap[code] || code;
+}
+
 function formatDate(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleDateString('en-US', {
@@ -114,7 +131,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   key={md.id}
                   value={md.id}
                   disabled={!md.valid}
-                  title={!md.valid ? md.diagnostics.join(', ') : undefined}
+                  title={!md.valid ? md.diagnostics.map(mapDiagnosticToMessage).join(', ') : undefined}
                 >
                   {md.planet} — {formatDate(md.start)} → {formatDate(md.end)} ({TEMPORAL_LABELS[md.temporalRelation]})
                   {!md.valid && ' (Invalid)'}
@@ -143,7 +160,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   key={ad.id}
                   value={ad.id}
                   disabled={!ad.valid}
-                  title={!ad.valid ? ad.diagnostics.join(', ') : undefined}
+                  title={!ad.valid ? ad.diagnostics.map(mapDiagnosticToMessage).join(', ') : undefined}
                 >
                   {ad.planet} — {formatDate(ad.start)} → {formatDate(ad.end)} ({TEMPORAL_LABELS[ad.temporalRelation]})
                   {!ad.valid && ' (Invalid)'}
@@ -164,12 +181,12 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
             <ul className="space-y-1 text-xs text-slate-300">
               {dashPeriodOptions.mahadashas.filter(md => !md.valid).map(md => (
                 <li key={md.id}>
-                  <span className="font-mono-code text-amber-400">{md.planet} MD:</span> {md.diagnostics.join(', ')}
+                  <span className="font-mono-code text-amber-400">{md.planet} MD:</span> {md.diagnostics.map(mapDiagnosticToMessage).join(', ')}
                 </li>
               ))}
               {selectedMahadasha && selectedMahadasha.antardashas.filter(ad => !ad.valid).map(ad => (
                 <li key={ad.id}>
-                  <span className="font-mono-code text-amber-400">{ad.planet} AD:</span> {ad.diagnostics.join(', ')}
+                  <span className="font-mono-code text-amber-400">{ad.planet} AD:</span> {ad.diagnostics.map(mapDiagnosticToMessage).join(', ')}
                 </li>
               ))}
             </ul>
@@ -199,8 +216,8 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               <div className="flex items-start gap-2 text-xs text-amber-400">
                 <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden="true" />
                 <span>
-                  {!selectedMahadasha.valid && `MD: ${selectedMahadasha.diagnostics.join(', ')}. `}
-                  {!selectedAntardasha.valid && `AD: ${selectedAntardasha.diagnostics.join(', ')}`}
+                  {!selectedMahadasha.valid && `MD: ${selectedMahadasha.diagnostics.map(mapDiagnosticToMessage).join(', ')}. `}
+                  {!selectedAntardasha.valid && `AD: ${selectedAntardasha.diagnostics.map(mapDiagnosticToMessage).join(', ')}`}
                 </span>
               </div>
             )}

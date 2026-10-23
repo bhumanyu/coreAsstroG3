@@ -799,7 +799,7 @@ export function validateDashaInterpretationInput(input: DashaInterpretationInput
     const mdStartTime = parseAndValidateDate(md.start, 'Mahadasha');
     const mdEndTime = parseAndValidateDate(md.end, 'Mahadasha');
 
-    if (mdEndTime < mdStartTime) {
+    if (mdEndTime <= mdStartTime) {
       throw new TypeError(`Malformed Vimshottari timeline: invalid Mahadasha dates for ${md.planet}.`);
     }
 
@@ -836,7 +836,7 @@ export function validateDashaInterpretationInput(input: DashaInterpretationInput
       const adStartTime = parseAndValidateDate(ad.start, 'Antardasha');
       const adEndTime = parseAndValidateDate(ad.end, 'Antardasha');
 
-      if (adEndTime < adStartTime) {
+      if (adEndTime <= adStartTime) {
         throw new TypeError(`Malformed Vimshottari timeline: invalid Antardasha dates for ${ad.planet}.`);
       }
 
@@ -877,7 +877,7 @@ export function validateDashaInterpretationInput(input: DashaInterpretationInput
         const pdStartTime = parseAndValidateDate(pd.start, 'Pratyantardasha');
         const pdEndTime = parseAndValidateDate(pd.end, 'Pratyantardasha');
 
-        if (pdEndTime < pdStartTime) {
+        if (pdEndTime <= pdStartTime) {
           throw new TypeError(`Malformed Vimshottari timeline: invalid Pratyantardasha dates for ${pd.planet}.`);
         }
 

@@ -1111,6 +1111,102 @@ describe('astroEngine', () => {
       expect(d10Sun.eclipticLongitude).toBeCloseTo(150, 6);
     });
   });
+
+  describe('P2 Moon longitude validation: fail closed on missing/non-finite Moon position', () => {
+    const baseBirth: BirthDetails = {
+      dateTimeStr: '1990-01-01T12:00:00Z',
+      timeZone: 'UTC',
+      latitude: 28.6139,
+      longitude: 77.2090,
+      ayanamsa: AyanamsaType.LAHIRI
+    };
+
+    it('throws TypeError when Moon position object is absent from customPositions', () => {
+      const basePositions = generatePlanetaryPositions(baseBirth);
+      const positionsWithoutMoon = { ...basePositions };
+      delete (positionsWithoutMoon as any)[Planet.MOON];
+
+      expect(() => {
+        calculateHoroscope(baseBirth, positionsWithoutMoon);
+      }).toThrow(TypeError);
+      expect(() => {
+        calculateHoroscope(baseBirth, positionsWithoutMoon);
+      }).toThrow('Moon position is required');
+    });
+
+    it('throws TypeError when both eclipticLongitude and longitude are missing from Moon position', () => {
+      const basePositions = generatePlanetaryPositions(baseBirth);
+      const customPositions = {
+        ...basePositions,
+        [Planet.MOON]: {
+          ...basePositions[Planet.MOON],
+          eclipticLongitude: undefined,
+          longitude: undefined
+        } as PlanetPosition
+      };
+
+      expect(() => {
+        calculateHoroscope(baseBirth, customPositions);
+      }).toThrow(TypeError);
+      expect(() => {
+        calculateHoroscope(baseBirth, customPositions);
+      }).toThrow('Moon longitude must be a finite number');
+    });
+
+    it('throws TypeError when Moon longitude is NaN', () => {
+      const basePositions = generatePlanetaryPositions(baseBirth);
+      const customPositions = {
+        ...basePositions,
+        [Planet.MOON]: {
+          ...basePositions[Planet.MOON],
+          eclipticLongitude: NaN
+        }
+      };
+
+      expect(() => {
+        calculateHoroscope(baseBirth, customPositions);
+      }).toThrow(TypeError);
+      expect(() => {
+        calculateHoroscope(baseBirth, customPositions);
+      }).toThrow('Moon longitude must be a finite number');
+    });
+
+    it('throws TypeError when Moon longitude is Infinity', () => {
+      const basePositions = generatePlanetaryPositions(baseBirth);
+      const customPositions = {
+        ...basePositions,
+        [Planet.MOON]: {
+          ...basePositions[Planet.MOON],
+          eclipticLongitude: Infinity
+        }
+      };
+
+      expect(() => {
+        calculateHoroscope(baseBirth, customPositions);
+      }).toThrow(TypeError);
+      expect(() => {
+        calculateHoroscope(baseBirth, customPositions);
+      }).toThrow('Moon longitude must be a finite number');
+    });
+
+    it('accepts exactly 0° as a valid Moon longitude (no substitution)', () => {
+      const basePositions = generatePlanetaryPositions(baseBirth);
+      const customPositions = {
+        ...basePositions,
+        [Planet.MOON]: {
+          ...basePositions[Planet.MOON],
+          eclipticLongitude: 0,
+          longitude: 0
+        }
+      };
+
+      expect(() => {
+        const horoscope = calculateHoroscope(baseBirth, customPositions);
+        expect(horoscope.vimshottari).toBeDefined();
+        expect(horoscope.vimshottari.moonSiderealLongitude).toBe(0);
+      }).not.toThrow();
+    });
+  });
 });
 
 

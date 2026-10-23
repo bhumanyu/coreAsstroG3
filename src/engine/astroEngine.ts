@@ -445,8 +445,14 @@ export function calculateHoroscope(
     };
   });
 
-  const moonPos = positions[Planet.MOON]!;
-  const moonLong = moonPos.eclipticLongitude ?? moonPos.longitude ?? 0;
+  const moonPos = positions[Planet.MOON];
+  if (!moonPos) {
+    throw new TypeError('Moon position is required for Vimshottari Dasha calculation.');
+  }
+  const moonLong = moonPos.eclipticLongitude ?? moonPos.longitude;
+  if (typeof moonLong !== 'number' || isNaN(moonLong) || !isFinite(moonLong)) {
+    throw new TypeError('Moon longitude must be a finite number for Vimshottari Dasha calculation.');
+  }
 
   const vimshottari = calculateVimshottari({
     birthDateTime: birthDetails.dateTimeStr,

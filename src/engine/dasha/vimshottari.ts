@@ -111,6 +111,7 @@ export interface ActiveDashaState {
 
 /**
  * Normalizes an angular degree into [0°, 360°).
+ * Boundary convention: exact 360° wraps to 0° (circular equivalence).
  */
 export function normalizeDegrees(degree: number): number {
   if (typeof degree !== 'number' || isNaN(degree) || !isFinite(degree)) {
@@ -120,6 +121,7 @@ export function normalizeDegrees(degree: number): number {
   if (norm < 0) {
     norm += 360;
   }
+  // Snap 360 to 0 for circular wrap-around (different from Nakshatra boundary convention)
   if (Math.abs(norm - 360) < 1e-9) {
     return 0;
   }
@@ -295,16 +297,20 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
   const offset = normLong - (nakMeta.startDegree ?? 0);
 
   let nakshatraProgress = offset / nakSpan;
-  if (nakshatraProgress < 0 || Math.abs(nakshatraProgress) < 1e-9) {
+  // Boundary convention: exact boundary belongs to NEXT Nakshatra.
+  // Only snap to 0 when actually at or past the next boundary (calculateNakshatra should have placed it there).
+  // Do not snap genuinely positive values down to 0 solely for being within 1e-9 of boundary.
+  if (nakshatraProgress < 0) {
     nakshatraProgress = 0;
-  } else if (nakshatraProgress > 1 || Math.abs(nakshatraProgress - 1) < 1e-9) {
+  } else if (nakshatraProgress > 1) {
     nakshatraProgress = 1;
   }
 
   let remainingFraction = 1 - nakshatraProgress;
-  if (remainingFraction < 0 || Math.abs(remainingFraction) < 1e-9) {
+  // Apply same boundary convention: only snap to 0 when actually at/past boundary.
+  if (remainingFraction < 0) {
     remainingFraction = 0;
-  } else if (remainingFraction > 1 || Math.abs(remainingFraction - 1) < 1e-9) {
+  } else if (remainingFraction > 1) {
     remainingFraction = 1;
   }
 
@@ -326,6 +332,11 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
 
       if (mdEnd.getTime() > untilDate.getTime()) {
         mdEnd = new Date(untilDate.getTime());
+      }
+
+      // Guard against zero/negative-length Mahadasha: skip if end <= start
+      if (mdEnd.getTime() <= currentStart.getTime()) {
+        continue;
       }
 
       const antardashas = buildAntardashas(mdPlanet, currentStart, mdEnd);

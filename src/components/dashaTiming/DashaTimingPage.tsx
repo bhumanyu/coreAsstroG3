@@ -68,7 +68,8 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
     );
   }
 
-  const activeMahadashaPlanet = viewModel.current?.mahadasha?.planet;
+  const activeMahadashaStart = viewModel.current?.mahadasha?.start;
+  const activeMahadashaEnd = viewModel.current?.mahadasha?.end;
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8 space-y-8 animate-fade-in text-slate-200">
@@ -102,11 +103,10 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
           )}
 
           <span
-            className={`px-3 py-1.5 rounded-xl border font-bold uppercase text-[11px] ${
-              viewModel.availability === 'AVAILABLE'
-                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-            }`}
+            className={`px-3 py-1.5 rounded-xl border font-bold uppercase text-[11px] ${viewModel.availability === 'AVAILABLE'
+              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+              : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+              }`}
           >
             {viewModel.availability === 'AVAILABLE' ? 'Full Analysis' : 'Partial Analysis'}
           </span>
@@ -156,7 +156,8 @@ export const DashaTimingPage: React.FC<DashaTimingPageProps> = ({
       {/* 5. Complete 120-Year Vimshottari Mahadasha Timeline Sequence */}
       <DashaTimeline
         timeline={viewModel.timeline}
-        activeMahadashaPlanet={activeMahadashaPlanet}
+        activeMahadashaStart={activeMahadashaStart}
+        activeMahadashaEnd={activeMahadashaEnd}
       />
 
       {/* Evidence Inspector Modal (if opened locally) */}

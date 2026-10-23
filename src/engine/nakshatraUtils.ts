@@ -3,12 +3,15 @@ import { NAKSHATRAS_METADATA } from '../data/astroData';
 
 /**
  * Normalizes an angular degree into the range [0°, 360°).
+ * Boundary convention: exact 360° wraps to 0° (circular equivalence).
+ * Does NOT snap near-boundary values to 0 - Nakshatra boundaries are handled separately.
  */
 export function normalizeDegree(degree: number): number {
   let normalized = degree % 360;
   if (normalized < 0) {
     normalized += 360;
   }
+  // Snap 360 to 0 for circular wrap-around
   if (Math.abs(normalized - 360) < 1e-9) {
     return 0;
   }
@@ -17,11 +20,13 @@ export function normalizeDegree(degree: number): number {
 
 /**
  * Calculates the Nakshatra and Pada for a given ecliptic longitude.
+ * Boundary convention: an exact Nakshatra boundary belongs to the NEXT Nakshatra.
  */
 export function calculateNakshatra(longitude: number): NakshatraResult {
   const norm = normalizeDegree(longitude);
   const span = 40 / 3; // 13.333333333333334 degrees per nakshatra
 
+  // Boundary convention: +1e-12 epsilon pushes exact boundaries into the next Nakshatra
   let nakshatraIndex = Math.floor((norm + 1e-12) / span);
   if (nakshatraIndex >= 27) nakshatraIndex = 26;
 
