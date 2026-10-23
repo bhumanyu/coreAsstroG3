@@ -147,6 +147,12 @@ export function addFractionalYears(date: Date, years: number): Date {
   return new Date(date.getTime() + ms);
 }
 
+/**
+ * Parses strict ISO-8601 date-times with Z or numeric offsets from -23:59 to +23:59.
+ * Fractional seconds are accepted at arbitrary decimal precision, but ECMAScript Date
+ * retains only milliseconds. Leap seconds are not representable. Timeline output is
+ * normalized with toISOString(), so the input's textual timezone is not retained.
+ */
 function parseIsoDateTime(value: string, field: 'birthDateTime' | 'until'): Date {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
   if (!match) {
@@ -490,8 +496,10 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
         }
       }
 
-      // Defensive for valid public inputs, but reachable near a boundary when Date truncation makes
-      // the tiny positive first-MD balance zero-length at millisecond precision.
+      // Precision policy invariant: prefer a contiguous, millisecond-representable timeline over
+      // representing an unrepresentable birth-lord remainder. ECMAScript Date truncates to
+      // milliseconds, so an interval whose end is not after its start is skipped; the next
+      // representable period begins the timeline (which is empty only when the horizon is birth).
       if (mdEnd.getTime() <= currentStart.getTime()) {
         continue;
       }
@@ -609,7 +617,75 @@ type TimelinePeriod = {
   readonly end: string;
 };
 
+function validatePlanetaryOrder(
+  periods: readonly TimelinePeriod[],
+  canonicalRotation: readonly Planet[],
+  label: string,
+  cyclic: boolean
+): void {
+  if (periods.length === 0) {
+    return;
+  }
+
+  const firstPlanetIndex = canonicalRotation.indexOf(periods[0].planet);
+  if (firstPlanetIndex < 0) {
+    throw new TypeError(`Invalid Vimshottari timeline: ${label}[0] is not in its canonical planetary rotation.`);
+  }
+
+  for (let index = 0; index < periods.length; index++) {
+    const rotationIndex = cyclic
+      ? (firstPlanetIndex + index) % canonicalRotation.length
+      : firstPlanetIndex + index;
+    if (
+      rotationIndex >= canonicalRotation.length ||
+      !canonicalRotation.includes(periods[index].planet) ||
+      periods[index].planet !== canonicalRotation[rotationIndex]
+    ) {
+      throw new TypeError(`Invalid Vimshottari timeline: ${label} planets do not follow their canonical Vimshottari order.`);
+    }
+  }
+}
+
 function validateTimelineStructure(timeline: VimshottariTimeline): void {
+  if (
+    typeof timeline.birthDateTime !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timeline.birthDateTime)
+  ) {
+    throw new TypeError('Invalid Vimshottari timeline: birthDateTime must be a parseable ISO instant.');
+  }
+  try {
+    parseIsoDateTime(timeline.birthDateTime, 'birthDateTime');
+  } catch {
+    throw new TypeError('Invalid Vimshottari timeline: birthDateTime must be a parseable ISO instant.');
+  }
+  if (
+    typeof timeline.moonSiderealLongitude !== 'number' ||
+    !Number.isFinite(timeline.moonSiderealLongitude) ||
+    timeline.moonSiderealLongitude < 0 ||
+    timeline.moonSiderealLongitude >= 360
+  ) {
+    throw new TypeError('Invalid Vimshottari timeline: moonSiderealLongitude must be finite and within [0,360).');
+  }
+  if (
+    typeof timeline.nakshatraProgress !== 'number' ||
+    !Number.isFinite(timeline.nakshatraProgress) ||
+    timeline.nakshatraProgress < 0 ||
+    timeline.nakshatraProgress > 1
+  ) {
+    throw new TypeError('Invalid Vimshottari timeline: nakshatraProgress must be finite and within [0,1].');
+  }
+  if (
+    typeof timeline.remainingFraction !== 'number' ||
+    !Number.isFinite(timeline.remainingFraction) ||
+    timeline.remainingFraction < 0 ||
+    timeline.remainingFraction > 1
+  ) {
+    throw new TypeError('Invalid Vimshottari timeline: remainingFraction must be finite and within [0,1].');
+  }
+  if (!DASHA_SEQUENCE.includes(timeline.nakshatraLord)) {
+    throw new TypeError('Invalid Vimshottari timeline: nakshatraLord is invalid.');
+  }
+
   const validatePeriods = (
     periods: readonly TimelinePeriod[],
     label: string,
@@ -617,6 +693,9 @@ function validateTimelineStructure(timeline: VimshottariTimeline): void {
   ): void => {
     if (!Array.isArray(periods)) {
       throw new TypeError(`Invalid Vimshottari timeline: ${label} periods must be an array.`);
+    }
+    if (periods.length === 0) {
+      return;
     }
 
     let previousEnd = Number.NEGATIVE_INFINITY;
@@ -634,24 +713,46 @@ function validateTimelineStructure(timeline: VimshottariTimeline): void {
       if (start < previousEnd) {
         throw new TypeError(`Invalid Vimshottari timeline: ${label} periods must be ordered and non-overlapping.`);
       }
+      if (index > 0 && start !== previousEnd) {
+        throw new TypeError(`Invalid Vimshottari timeline: ${label} periods must be contiguous except for the final horizon-clipped period.`);
+      }
       if (parentWindow && (start < parentWindow.start || end > parentWindow.end)) {
         throw new TypeError(`Invalid Vimshottari timeline: ${periodLabel} must be contained within its parent period.`);
       }
+
       previousEnd = end;
     }
   };
 
   validatePeriods(timeline.mahadashas, 'mahadashas');
+  validatePlanetaryOrder(
+    timeline.mahadashas,
+    rotateDashaSequence(timeline.nakshatraLord),
+    'mahadashas',
+    true
+  );
   for (const [mdIndex, md] of timeline.mahadashas.entries()) {
     const mdWindow = { start: Date.parse(md.start), end: Date.parse(md.end) };
-    validatePeriods(md.antardashas, `mahadashas[${mdIndex}].antardashas`, mdWindow);
+    if (!Array.isArray(md.antardashas)) {
+      throw new TypeError(`Invalid Vimshottari timeline: mahadashas[${mdIndex}].antardashas periods must be an array.`);
+    }
+    if (mdWindow.end > mdWindow.start && md.antardashas.length === 0) {
+      throw new TypeError(`Invalid Vimshottari timeline: mahadashas[${mdIndex}] must contain at least one Antardasha.`);
+    }
+    const adLabel = `mahadashas[${mdIndex}].antardashas`;
+    validatePeriods(md.antardashas, adLabel, mdWindow);
+    validatePlanetaryOrder(md.antardashas, rotateDashaSequence(md.planet), adLabel, false);
     for (const [adIndex, ad] of md.antardashas.entries()) {
       const adWindow = { start: Date.parse(ad.start), end: Date.parse(ad.end) };
-      validatePeriods(
-        ad.pratyantardashas,
-        `mahadashas[${mdIndex}].antardashas[${adIndex}].pratyantardashas`,
-        adWindow
-      );
+      if (!Array.isArray(ad.pratyantardashas)) {
+        throw new TypeError(`Invalid Vimshottari timeline: mahadashas[${mdIndex}].antardashas[${adIndex}].pratyantardashas periods must be an array.`);
+      }
+      if (adWindow.end > adWindow.start && ad.pratyantardashas.length === 0) {
+        throw new TypeError(`Invalid Vimshottari timeline: mahadashas[${mdIndex}].antardashas[${adIndex}] must contain at least one Pratyantardasha.`);
+      }
+      const pdLabel = `mahadashas[${mdIndex}].antardashas[${adIndex}].pratyantardashas`;
+      validatePeriods(ad.pratyantardashas, pdLabel, adWindow);
+      validatePlanetaryOrder(ad.pratyantardashas, rotateDashaSequence(ad.planet), pdLabel, false);
     }
   }
 }

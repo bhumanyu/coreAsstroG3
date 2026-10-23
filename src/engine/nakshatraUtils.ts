@@ -25,7 +25,8 @@ export function calculateNakshatra(longitude: number): NakshatraResult {
   const norm = normalizeDegree(longitude);
   const span = 40 / 3; // 13.333333333333334 degrees per nakshatra
 
-  // Engine contract: the 1e-12° epsilon assigns floating-point representations of exact boundaries to the next Nakshatra.
+  // The 1e-12° epsilon is a floating-point boundary-representation tolerance, not astronomical uncertainty.
+  // Values within epsilon immediately below a boundary are intentionally assigned to the next Nakshatra.
   let nakshatraIndex = Math.floor((norm + 1e-12) / span);
   if (nakshatraIndex >= 27) nakshatraIndex = 26;
 

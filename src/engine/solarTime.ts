@@ -27,6 +27,8 @@ export function calculateJulianDay(date: Date): number {
 /**
  * Single parsing boundary for birth datetimes.
  * Rejects timezone-less strings and requires an explicit UTC ('Z') or explicit timezone offset.
+ * Intentionally differs from Vimshottari's stricter ISO-8601/calendar validation: this legacy
+ * solar-time boundary delegates remaining syntax and calendar parsing to ECMAScript Date.
  */
 export function parseUtcDate(dateTimeStr: string): Date {
   if (!dateTimeStr || typeof dateTimeStr !== 'string') {

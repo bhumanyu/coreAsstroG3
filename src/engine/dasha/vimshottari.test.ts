@@ -10,6 +10,7 @@ import {
   MS_PER_VIMSHOTTARI_YEAR
 } from './vimshottari';
 import { Planet, Sign } from '../../types';
+import { calculateNakshatra } from '../nakshatraUtils';
 import { correlateDashaAndTransit, DashaState } from '../dashaTransitCorrelation';
 import { calculateTransit } from '../transitEngine';
 import { analyzeTransits } from '../transitAnalysis';
@@ -121,6 +122,40 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(justAbove.remainingFraction).toBeLessThan(1);
       expect(justAbove.mahadashas[0].planet).toBe(Planet.VENUS);
       expect(getActiveDasha(justAbove, birthIso)?.mahadasha.planet).toBe(Planet.VENUS);
+    });
+
+    it('applies the epsilon assignment consistently at every internal Nakshatra boundary', () => {
+      const span = 40 / 3;
+      for (let boundaryIndex = 1; boundaryIndex < 27; boundaryIndex++) {
+        const boundary = boundaryIndex * span;
+        const previous = calculateNakshatra(boundary - 2e-12).nakshatra;
+        const next = calculateNakshatra(boundary + span / 10).nakshatra;
+
+        expect(calculateNakshatra(boundary - 2e-12).nakshatra).toBe(previous);
+        expect(calculateNakshatra(boundary - 0.5e-12).nakshatra).toBe(next);
+        expect(calculateNakshatra(boundary).nakshatra).toBe(next);
+        expect(calculateNakshatra(boundary + 0.5e-12).nakshatra).toBe(next);
+      }
+
+      const interiorBoundary = 120;
+      const withinEpsilon = interiorBoundary - 0.5e-12;
+      expect(calculateNakshatra(withinEpsilon - 360).nakshatra)
+        .toBe(calculateNakshatra(withinEpsilon).nakshatra);
+      expect(calculateNakshatra(withinEpsilon + 360).nakshatra)
+        .toBe(calculateNakshatra(withinEpsilon).nakshatra);
+    });
+
+    it('keeps 0°/360° wrap ownership consistent after negative and positive normalization', () => {
+      expect(calculateNakshatra(0).nakshatra).toBe('ASHWINI');
+      expect(calculateNakshatra(360).nakshatra).toBe('ASHWINI');
+      expect(calculateNakshatra(720).nakshatra).toBe('ASHWINI');
+      expect(calculateNakshatra(360 + 0.5e-12).nakshatra).toBe('ASHWINI');
+      expect(calculateNakshatra(-360 + 0.5e-12).nakshatra).toBe('ASHWINI');
+
+      expect(calculateNakshatra(360 - 2e-12).nakshatra).toBe('REVATI');
+      expect(calculateNakshatra(360 - 0.5e-12).nakshatra).toBe('REVATI');
+      expect(calculateNakshatra(-0.5e-12).nakshatra).toBe('REVATI');
+      expect(calculateNakshatra(720 - 0.5e-12).nakshatra).toBe('REVATI');
     });
   });
 
@@ -510,6 +545,24 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(offsetTimeline.mahadashas[0].start).toBe('1990-01-01T00:00:00.123Z');
       expect(offsetTimeline.mahadashas[offsetTimeline.mahadashas.length - 1].end)
         .toBe('1990-01-02T00:00:00.456Z');
+    });
+
+    it('accepts the documented ±23:59 offsets and truncates fractional precision to milliseconds', () => {
+      const positiveLimit = calculateVimshottari({
+        birthDateTime: '1990-01-02T00:00:00.123987+23:59',
+        moonSiderealLongitude: 10
+      });
+      const negativeLimit = calculateVimshottari({
+        birthDateTime: '1990-01-01T00:00:00.123987-23:59',
+        moonSiderealLongitude: 10
+      });
+
+      expect(positiveLimit.birthDateTime).toBe('1990-01-01T00:01:00.123Z');
+      expect(negativeLimit.birthDateTime).toBe('1990-01-01T23:59:00.123Z');
+      expect(() => calculateVimshottari({
+        birthDateTime: '1990-01-01T00:00:60Z',
+        moonSiderealLongitude: 10
+      })).toThrow(/valid ISO-8601 calendar date-time/);
     });
   });
 
@@ -1193,6 +1246,71 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
           .toThrow(/Invalid Vimshottari timeline: .*has an invalid planet/);
       }
     );
+
+    it.each(['mahadasha', 'antardasha', 'pratyantardasha'])(
+      'rejects reordered or skipped planets at the %s level',
+      level => {
+        const malformed = mutableTimeline();
+        const periods = level === 'mahadasha'
+          ? malformed.mahadashas
+          : level === 'antardasha'
+            ? malformed.mahadashas[0].antardashas
+            : malformed.mahadashas[0].antardashas[0].pratyantardashas;
+        periods[1].planet = periods[3].planet;
+
+        expect(() => getActiveDasha(malformed, birthIso))
+          .toThrow(/planets do not follow their canonical Vimshottari order/);
+      }
+    );
+
+    it('accepts anchored partial-first-MD and skipped birth-lord sequences', () => {
+      const partialMd = calculateVimshottari({
+        birthDateTime: '1988-05-08T09:30:00.000Z',
+        moonSiderealLongitude: 312.5
+      });
+      expect(partialMd.nakshatraLord).toBe(Planet.RAHU);
+      expect(partialMd.mahadashas[0].antardashas[0].planet).toBe(Planet.SATURN);
+      expect(getActiveDasha(partialMd, partialMd.birthDateTime)?.antardasha.planet).toBe(Planet.SATURN);
+
+      const skippedBirthLord = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 360 - 1e-12
+      });
+      expect(skippedBirthLord.mahadashas[0].planet).toBe(Planet.KETU);
+      expect(getActiveDasha(skippedBirthLord, birthIso)?.mahadasha.planet).toBe(Planet.KETU);
+    });
+
+    it('rejects positive parents with missing children and invalid top-level metadata', () => {
+      const noAds = mutableTimeline();
+      noAds.mahadashas[0].antardashas = [];
+      expect(() => getActiveDasha(noAds, birthIso))
+        .toThrow(/must contain at least one Antardasha/);
+
+      const noPds = mutableTimeline();
+      noPds.mahadashas[0].antardashas[0].pratyantardashas = [];
+      expect(() => getActiveDasha(noPds, birthIso))
+        .toThrow(/must contain at least one Pratyantardasha/);
+
+      const badLongitude = mutableTimeline();
+      badLongitude.moonSiderealLongitude = 360;
+      expect(() => getActiveDasha(badLongitude, birthIso))
+        .toThrow(/moonSiderealLongitude must be finite and within \[0,360\)/);
+
+      const badProgress = mutableTimeline();
+      badProgress.nakshatraProgress = NaN;
+      expect(() => getActiveDasha(badProgress, birthIso))
+        .toThrow(/nakshatraProgress must be finite and within \[0,1\]/);
+
+      const badRemaining = mutableTimeline();
+      badRemaining.remainingFraction = 1.1;
+      expect(() => getActiveDasha(badRemaining, birthIso))
+        .toThrow(/remainingFraction must be finite and within \[0,1\]/);
+
+      const badBirthDateTime = mutableTimeline();
+      badBirthDateTime.birthDateTime = '1990-01-01';
+      expect(() => getActiveDasha(badBirthDateTime, birthIso))
+        .toThrow(/birthDateTime must be a parseable ISO instant/);
+    });
   });
 
   describe('18. near-360° normalization and active periods', () => {
