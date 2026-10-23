@@ -521,6 +521,44 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.patternQualifications[0].status).toBe('INSUFFICIENT_DATA');
     });
 
+    it('emits an aggregate contract diagnostic for extra foreign candidate sets', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_EXPECTED');
+      Object.assign(pattern, {
+        family: 'CAREER_HOUSE_NETWORK',
+        classification: 'CAREER_HOUSE_NETWORK',
+        houses: [6, 8, 11]
+      });
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_EXPECTED', 'INSUFFICIENT_DATA');
+      Object.assign(qualifiedPattern, { sourcePattern: pattern });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_EXPECTED', []),
+        createStubCandidateSet('PATTERN_FOREIGN', [])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const foundation = orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_RESOLVE_ALL_CANDIDATE_SET_CONTRACT_VIOLATION',
+        severity: 'WARNING',
+        category: 'CONTRACT_VIOLATION',
+        message: expect.stringContaining('foreign patternIds [PATTERN_FOREIGN]'),
+        relatedIds: ['PATTERN_FOREIGN'],
+        stage: 'MECHANISM'
+      }));
+      expect(foundation.resolvedMechanisms).toHaveLength(0);
+    });
+
     it('should expose mixed accepted/rejected/firewall-excluded evidence IDs on ResolvedMechanism', () => {
       const ports = createStubPorts();
       // Create a qualified pattern with source pattern evidence so establishing evidence is available

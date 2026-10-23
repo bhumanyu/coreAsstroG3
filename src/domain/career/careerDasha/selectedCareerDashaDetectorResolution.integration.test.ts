@@ -8,7 +8,7 @@
  * docs/product/period-based-career-wealth/PBA-01-FEATURE-CONTRACT-AND-SOURCE-AUDIT.md section 8.1:
  * - Detection yields exactly the CAREER_HOUSE_NETWORK pattern with houses [6,8,11]
  * - Qualification is INSUFFICIENT_DATA (not UNQUALIFIED)
- * - Resolution yields 0 candidates with the coverage-gap diagnostic (no matching rule)
+ * - Resolution yields 0 mechanism candidates under the currently implemented resolver rules (coverage-gap INFO diagnostic)
  *
  * This test asserts the genuine empty-coverage end state, not that a career mechanism exists.
  */

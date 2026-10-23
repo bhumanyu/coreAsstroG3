@@ -518,6 +518,35 @@ export class CanonicalCareerOrchestrator {
       const candidateSetsByPattern = new Map(
         candidateSets.map(candidateSet => [candidateSet.patternId, candidateSet])
       );
+      const resolutionPatternIds = new Set(
+        resolutionInputs.map(resolutionInput => resolutionInput.pattern.patternId)
+      );
+      const returnedPatternIds = candidateSets.map(candidateSet => candidateSet.patternId);
+      const returnedPatternIdSet = new Set(returnedPatternIds);
+      const duplicatePatternIds = [...new Set(
+        returnedPatternIds.filter((patternId, index) => returnedPatternIds.indexOf(patternId) !== index)
+      )];
+      const foreignPatternIds = [...new Set(
+        returnedPatternIds.filter(patternId => !resolutionPatternIds.has(patternId))
+      )];
+
+      if (
+        candidateSets.length !== resolutionInputs.length ||
+        duplicatePatternIds.length > 0 ||
+        foreignPatternIds.length > 0
+      ) {
+        const missingPatternIds = [...resolutionPatternIds].filter(
+          patternId => !returnedPatternIdSet.has(patternId)
+        );
+        diagnostics.push({
+          diagnosticId: 'ORCHESTRATION_RESOLVE_ALL_CANDIDATE_SET_CONTRACT_VIOLATION',
+          severity: 'WARNING',
+          category: 'CONTRACT_VIOLATION',
+          message: `Mechanism resolver resolveAll contract mismatch: expected one CandidateSet per input (${resolutionInputs.length}), received ${candidateSets.length}; missing patternIds [${missingPatternIds.join(', ')}], duplicate patternIds [${duplicatePatternIds.join(', ')}], foreign patternIds [${foreignPatternIds.join(', ')}]`,
+          relatedIds: [...new Set([...missingPatternIds, ...duplicatePatternIds, ...foreignPatternIds])],
+          stage: 'MECHANISM'
+        });
+      }
 
       for (const resolutionInput of resolutionInputs) {
         const candidateSet = candidateSetsByPattern.get(resolutionInput.pattern.patternId);
