@@ -2980,6 +2980,65 @@ describe('buildSelectedPeriodSynthesis', () => {
   });
 
   describe('Moon Mahadasha → Moon Antardasha GAINS synthesis regression', () => {
+    it('surfaces the promise-present house-unlinked diagnostic without changing effect or dataStatus', () => {
+      const selectedPeriod = makeMoonMoonContext();
+      const wealthActivation = makeWealthActivation();
+      const fortuneDiagnostic =
+        "Promise evidence is present, but selected-period dasha evidence does not touch the FORTUNE's canonical house.";
+      const activationWithUnlinkedFortune: SelectedWealthPeriodActivation = {
+        ...wealthActivation,
+        selectedPeriodId: selectedPeriod.selectedPeriodId,
+        interval: selectedPeriod.interval,
+        dimensions: {
+          ...wealthActivation.dimensions,
+          FORTUNE: {
+            ...wealthActivation.dimensions.FORTUNE,
+            effect: 'INSUFFICIENT_DATA',
+            linkedLevels: [],
+            promiseEvidenceIds: ['fortune-promise'],
+            insufficientReason: 'PROMISE_NOT_LINKED',
+            diagnostic: fortuneDiagnostic
+          }
+        }
+      };
+      const wealthEvidence = [
+        createDomainEvidence({
+          id: 'fortune-promise',
+          sourceType: 'HOUSE',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'FORTUNE promise fixture',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 90,
+          relatedEvidenceIds: [],
+          dimension: 'FORTUNE',
+          house: 9,
+          planet: Planet.JUPITER
+        })
+      ];
+
+      const result = buildSelectedPeriodSynthesis({
+        selectedPeriod,
+        wealthActivation: activationWithUnlinkedFortune,
+        wealthEvidence
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const fortune = result.value.wealth.dimensions.FORTUNE;
+      expect(fortune.effect).toBe('INSUFFICIENT_DATA');
+      expect(fortune.dataStatus).toBe('PARTIAL');
+      expect(fortune.insufficientReason).toBe('PROMISE_NOT_LINKED');
+      expect(fortune.diagnostics).toContainEqual({
+        code: 'WEALTH_PROMISE_NOT_LINKED_TO_CANONICAL_HOUSE',
+        message: fortuneDiagnostic
+      });
+    });
+
     it('derives PARTIAL dataStatus for Moon/Moon neutral-only GAINS (LINKED with UNKNOWN effect)', () => {
       const selectedPeriod = makeMoonMoonContext();
 

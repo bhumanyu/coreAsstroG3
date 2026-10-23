@@ -487,6 +487,10 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.FORTUNE.insufficientReason).toBe('PROMISE_NOT_LINKED');
     expect(result.value.dimensions.FORTUNE.promiseEvidenceIds).toContain('NATAL_FORTUNE');
     expect(result.value.dimensions.FORTUNE.linkedLevels).toEqual([]);
+    expect(result.value.dimensions.FORTUNE.insufficientReason).not.toBe('NO_PROMISE_EVIDENCE');
+    expect(result.value.dimensions.FORTUNE.diagnostic).toBe(
+      "Promise evidence is present, but selected-period dasha evidence does not touch the FORTUNE's canonical house."
+    );
   });
 
   it('distinguishes PROMISE_NOT_LINKED for Moon MD→Moon AD SPECULATION (house 5) case', () => {
@@ -511,6 +515,9 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.SPECULATION.insufficientReason).toBe('PROMISE_NOT_LINKED');
     expect(result.value.dimensions.SPECULATION.promiseEvidenceIds).toContain('NATAL_SPEC');
     expect(result.value.dimensions.SPECULATION.linkedLevels).toEqual([]);
+    expect(result.value.dimensions.SPECULATION.diagnostic).toBe(
+      "Promise evidence is present, but selected-period dasha evidence does not touch the SPECULATION's canonical house."
+    );
   });
 
   it('distinguishes NO_PROMISE_EVIDENCE from PROMISE_NOT_LINKED for Moon MD→Moon AD', () => {
@@ -535,6 +542,7 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     // SPECULATION has no promise → NO_PROMISE_EVIDENCE
     expect(result.value.dimensions.SPECULATION.insufficientReason).toBe('NO_PROMISE_EVIDENCE');
     expect(result.value.dimensions.SPECULATION.promiseEvidenceIds).toEqual([]);
+    expect(result.value.dimensions.SPECULATION.diagnostic).toBeUndefined();
 
     // ACCUMULATION has no promise → NO_PROMISE_EVIDENCE
     expect(result.value.dimensions.ACCUMULATION.insufficientReason).toBe('NO_PROMISE_EVIDENCE');

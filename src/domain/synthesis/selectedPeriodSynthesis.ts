@@ -833,6 +833,13 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       );
 
       const dimDiagnostics: SynthesisDiagnostic[] = [];
+      if (dimActivation.diagnostic) {
+        dimDiagnostics.push({
+          code: 'WEALTH_PROMISE_NOT_LINKED_TO_CANONICAL_HOUSE',
+          message: dimActivation.diagnostic
+        });
+      }
+
       // Emit diagnostic when dimension is linked (activation present) and effect is indeterminate
       // This signals the "complete input, linked, but indeterminate effect" condition
       if (dimActivation.linkedLevels.length > 0 &&

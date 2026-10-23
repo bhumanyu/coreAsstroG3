@@ -29,6 +29,7 @@ export interface SelectedWealthDashaRuleReference {
  * insufficientReason semantics (PBA-05 diagnostics):
  * - NO_PROMISE_EVIDENCE: No natal promise evidence for this dimension (empty promiseEvidenceIds)
  * - PROMISE_NOT_LINKED: Promise exists but no MD/AD linkage (populated promiseEvidenceIds, empty linkedLevels)
+ *   A diagnostic explains that the dasha evidence does not touch the dimension's canonical house.
  * - LINKED: At least one MD or AD level linked (populated linkedLevels)
  */
 export interface SelectedWealthDimensionActivation {
@@ -46,6 +47,7 @@ export interface SelectedWealthDimensionActivation {
   readonly promiseEvidenceIds: readonly string[];
   readonly dashaRuleReferences: readonly SelectedWealthDashaRuleReference[];
   readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
+  readonly diagnostic?: string;
 }
 
 /**
@@ -272,7 +274,8 @@ function evaluateDimension(
       }),
       promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
       dashaRuleReferences: Object.freeze([]),
-      insufficientReason: 'PROMISE_NOT_LINKED' as const
+      insufficientReason: 'PROMISE_NOT_LINKED' as const,
+      diagnostic: `Promise evidence is present, but selected-period dasha evidence does not touch the ${dimension}'s canonical house.`
     });
   }
 
