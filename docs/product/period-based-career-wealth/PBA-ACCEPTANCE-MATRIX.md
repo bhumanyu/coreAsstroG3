@@ -228,6 +228,18 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
   - ✅ `npm run verify`: PASS (297 test files, 5,569 passed, 5 skipped; lint and build passed)
 - Builds emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
 
+**Fail-closed resolver candidate-set contract change:**
+- Duplicate candidate sets now fail closed for the affected pattern; foreign sets are excluded from resolved mechanisms. The aggregate contract diagnostic retains missing, duplicate, and foreign pattern IDs in `relatedIds`. No qualification policy or mechanism-resolution rule was added.
+- **Change commit:** `1600efa662bbcaef089563c2b83fe4990bca4158`
+- **Toolchain:** Node `20.19.4`
+- **Verification on the exact change commit above:**
+  - ✅ `npx vitest run src/domain/career/orchestration/canonicalCareerOrchestrator.test.ts`: PASS (1 test file, 63 tests)
+  - ✅ `npx vitest run src/domain/career/careerDasha/selectedCareerDashaDetectorResolution.integration.test.ts`: PASS (1 test)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and build passed)
+  - ✅ `npm run verify`: PASS (297 test files, 5,571 passed, 5 skipped; lint and build passed)
+- Builds emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
 **Remediation:**
 - COMPLETE: All test coverage gaps addressed, CI verification green
 - Non-dusthana mechanism coverage remains deferred pending the decision-request sign-off and frozen P2-06 evidence contracts
