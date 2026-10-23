@@ -206,6 +206,8 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 - UPACHAYA_PROGRESSION: needs mechanism-resolution rule (evidence contract not frozen)
 - PARIVARTANA_YOGA: needs mechanism-resolution rule (evidence contract not frozen)
 - CAREER_YOGA_STRUCTURE: needs mechanism-resolution rule (evidence contract not frozen)
+- Qualification policies for null-mapped families remain **DEFERRED** pending the frozen P2-06 methodology; this change adds no qualification policy.
+- Non-dusthana mechanism-resolver rules remain **DEFERRED** pending domain-owner `CareerMechanismType` mappings; this change adds no resolver rule.
 
 **🔄 DEFERRED (owner-blocked): Career non-dusthana mechanism-resolution coverage**
 - **Issue:** On `main`, `CAREER_MECHANISM_RESOLUTION_RULES` contains only the three dusthana rules (8↔10, 12↔10, composite 8-12-10)
@@ -220,6 +222,18 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 **Remediation:**
 - COMPLETE: All test coverage gaps addressed, CI verification green
 - Non-dusthana mechanism coverage remains deferred pending the decision-request sign-off and frozen P2-06 evidence contracts
+- Coverage-gap diagnostics are additive: eligible patterns with no matching mechanism candidate and selected-career `UNAVAILABLE` results now include an explicit reason. `qualificationBasis` and `ProductQualificationStatus` semantics are unchanged.
+- **Diagnostic change commit:** `c8dbc24eaa4640bf3fab06fc017dfd33d6088c2d`
+- **Toolchain:** Node `20.19.4`
+- **Verification on the exact change commit above:**
+  - ✅ `npx vitest run src/domain/career/orchestration/canonicalCareerOrchestrator.test.ts`: PASS (58 tests)
+  - ✅ `npx vitest run src/domain/career/careerDasha`: PASS (5 files, 170 tests)
+  - ✅ `npx vitest run src/product/analysis/productAnalysisMapper.test.ts src/domain/synthesis/selectedPeriodSynthesis.test.ts`: PASS (2 files, 116 tests)
+  - ✅ `npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx`: PASS (25 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run verify:pba10`: PASS (124 tests; lint and build passed)
+  - ✅ `npm run verify`: PASS (296 test files, 5,565 passed, 5 skipped; lint and build passed)
+- Both builds emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
 - Decision-request documentation commit: `3ba0f9cc65e4f9669a2788dc47dc71fa268414bf` (documentation only; no registry rule added)
 - Validation on that exact commit, Node `20.19.4`: `npx tsc --noEmit` PASS; `npm run verify` PASS (296 test files, 5,562 passed, 5 skipped; build completed with the existing large-chunk-size warning)
 
