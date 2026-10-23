@@ -450,12 +450,12 @@
 - `src/engine/dashaInterpretation/dashaInterpretation.test.ts` (interpretation layer positive-length validation tests)
 
 **CI Evidence:**
-- ✅ npx vitest run src/engine/dasha/vimshottari.test.ts: PASS (28 tests, commit 7c466ea)
-- ✅ npx vitest run src/engine/dashaInterpretation/dashaInterpretation.test.ts: PASS (65 tests, commit 7c466ea)
-- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 7c466ea)
-- ✅ npx tsc --noEmit: PASS (commit 7c466ea)
-- ✅ npm run verify:pba10: PASS (123 tests, commit 7c466ea)
-- ⚠️ npm run verify: BLOCKED by 3 pre-existing test failures in src/engine/astroEngine.test.ts (Moon longitude validation tests - unrelated to P2 or current fixes)
+- ✅ npx vitest run src/engine/dasha/vimshottari.test.ts: PASS (28 tests, commit 0afcb39)
+- ✅ npx vitest run src/engine/dashaInterpretation/dashaInterpretation.test.ts: PASS (65 tests, commit 0afcb39)
+- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 0afcb39)
+- ✅ npx tsc --noEmit: PASS (commit 0afcb39)
+- ✅ npm run verify:pba10: PASS (123 tests, commit 0afcb39)
+- ✅ npm run verify: PASS (5501 tests passed, 5 skipped, commit 0afcb39)
 
 **Findings:**
 - ✅ Half-open active-period boundary tests added for MD/AD/PD (just-before start, exact start, just-after start, exact end, just-after end, ±1ms epsilon offset)
@@ -486,11 +486,11 @@
 - `src/components/dashaTiming/__tests__/DashaTimeline.test.tsx` (replaced brittle closest('.rounded-2xl') + toHaveClass('bg-gradient-to-b') assertions with stable getByTestId('active-mahadasha-card') query)
 
 **CI Evidence:**
-- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 7c466ea)
-- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (22 tests, commit 7c466ea)
-- ✅ npx tsc --noEmit: PASS (commit 7c466ea)
-- ✅ npm run verify:pba10: PASS (123 tests, commit 7c466ea)
-- ⚠️ npm run verify: BLOCKED by 3 pre-existing test failures in src/engine/astroEngine.test.ts (Moon longitude validation tests - unrelated to P3 or current fixes)
+- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 0afcb39)
+- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (22 tests, commit 0afcb39)
+- ✅ npx tsc --noEmit: PASS (commit 0afcb39)
+- ✅ npm run verify:pba10: PASS (123 tests, commit 0afcb39)
+- ✅ npm run verify: PASS (5501 tests passed, 5 skipped, commit 0afcb39)
 
 **Findings:**
 - ✅ Stable accessible hook added: data-testid="active-mahadasha-card" on active Mahadasha card
