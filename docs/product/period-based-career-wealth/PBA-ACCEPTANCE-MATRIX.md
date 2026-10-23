@@ -6,6 +6,22 @@
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
 
+## Vimshottari Partial-First-MD Anchoring Follow-up
+
+**Change commit:** `d78901a110720e0ad7543217a07db2868934ef83`
+
+**Toolchain:** Node `20.19.4`, npm `10.9.2`
+
+**Verification for the change commit above:**
+- ✅ `npx vitest run src/engine/dasha/vimshottari.test.ts`: PASS (83 tests)
+- ✅ `npx vitest run src/engine/dasha/reference/dashaSubPeriods.test.ts`: PASS (17 tests)
+- ✅ `npx vitest run src/engine/astroEngine.test.ts`: PASS (48 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (123 tests; lint and build passed)
+- ✅ `npm run verify`: PASS (296 test files, 5,560 passed, 5 skipped; lint and build passed)
+
+The full build emitted the existing large-chunk-size warning. The external ephemeris suite remains skipped; analytical fixtures are internal-convention checks, not independent astronomical validation. No expected active-planet values or external reference data were changed in this follow-up.
+
 **Current PR verification (exact baseline SHA `491b831b2d6715760521b135365cbf4222623bec`):**
 - ✅ `npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts`: PASS (61 tests)
 - ✅ `npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts`: PASS (87 tests)
