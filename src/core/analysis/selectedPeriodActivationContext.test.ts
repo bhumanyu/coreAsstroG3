@@ -7,7 +7,8 @@ import type {
 import {
   createSelectedPeriodActivationContext,
   SELECTED_PERIOD_CONTEXT_VERSION,
-  validateSelectedPeriodContext
+  validateSelectedPeriodContext,
+  createSelectedPeriodId
 } from './selectedPeriodActivationContext';
 import {
   resolveSelectedMdAdPeriod,
@@ -1012,6 +1013,333 @@ describe('selectedPeriodActivationContext', () => {
         expect(result.value.temporalRelation).toBe('CURRENT');
         expect(validateSelectedPeriodContext(result.value)).toBe(true);
       }
+    });
+  });
+
+  describe('PBA-03B: temporal mismatch (no rewrite)', () => {
+    it('valid context with false temporalRelation fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // This is a CURRENT interval; forge a FUTURE temporalRelation
+        const invalidCtx = { ...result.value, temporalRelation: 'FUTURE' as any };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('malformed analysisAsOf in context fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, analysisAsOf: 'not-a-date' };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('inverted interval fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            start: result.value.interval.end,
+            end: result.value.interval.start
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('valid context passes validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(validateSelectedPeriodContext(result.value)).toBe(true);
+      }
+    });
+
+    it('validator does not rewrite the supplied context', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const contextSnapshot = structuredClone(result.value);
+        validateSelectedPeriodContext(result.value);
+        expect(result.value).toEqual(contextSnapshot);
+      }
+    });
+  });
+
+  describe('PBA-03C: cross-field consistency', () => {
+    it('antardasha.mahadashaId !== mahadasha.id fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          antardasha: {
+            ...result.value.antardasha,
+            mahadashaId: 'wrong-id'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('selectedPeriodId !== createSelectedPeriodId(...) fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = { ...result.value, selectedPeriodId: 'wrong-period-id' };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('interval.start differing from AD node fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            ...result.value.interval,
+            start: '1999-01-01T00:00:00.000Z'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('interval.end differing from AD node fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            ...result.value.interval,
+            end: '2099-01-01T00:00:00.000Z'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('MD summary differing from MD node fails validation (planet)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          mahadasha: {
+            ...result.value.mahadasha,
+            planet: Planet.MARS
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('MD summary differing from MD node fails validation (start)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          mahadasha: {
+            ...result.value.mahadasha,
+            start: '1999-01-01T00:00:00.000Z'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('AD summary differing from AD node fails validation (planet)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          antardasha: {
+            ...result.value.antardasha,
+            planet: Planet.MARS
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('AD summary differing from AD node fails validation (start)', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const invalidCtx = {
+          ...result.value,
+          antardasha: {
+            ...result.value.antardasha,
+            start: '1999-01-01T00:00:00.000Z'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+
+    it('AD not contained in MD fails validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        // Forge an AD interval outside the MD interval
+        const invalidCtx = {
+          ...result.value,
+          interval: {
+            start: '2010-01-01T00:00:00.000Z',
+            end: '2012-01-01T00:00:00.000Z'
+          },
+          antardasha: {
+            ...result.value.antardasha,
+            start: '2010-01-01T00:00:00.000Z',
+            end: '2012-01-01T00:00:00.000Z'
+          }
+        };
+        expect(validateSelectedPeriodContext(invalidCtx)).toBe(false);
+      }
+    });
+  });
+
+  describe('PBA-03D: non-mutation with structuredClone', () => {
+    it('report, selection, and context remain unchanged after context creation and validation', () => {
+      const report = makeReport();
+      const selection = selectionFor(report);
+
+      const reportSnapshot = structuredClone(report);
+      const selectionSnapshot = structuredClone(selection);
+
+      const result = createSelectedPeriodActivationContext({
+        report,
+        selection,
+        analysisAsOf: '2021-01-01T00:00:00.000Z'
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        const contextSnapshot = structuredClone(result.value);
+        validateSelectedPeriodContext(result.value);
+
+        expect(report).toEqual(reportSnapshot);
+        expect(selection).toEqual(selectionSnapshot);
+        expect(result.value).toEqual(contextSnapshot);
+        expect(result.value.analysisAsOf).toBe('2021-01-01T00:00:00.000Z');
+      }
+    });
+  });
+
+  describe('PBA-03E: createSelectedPeriodId compatibility', () => {
+    it('createSelectedPeriodId format matches expected versioned encoding', () => {
+      const mdId = 'md:alpha|beta';
+      const adId = 'ad:gamma|delta';
+      const result = createSelectedPeriodId(mdId, adId);
+
+      const expected = `pba-period:${SELECTED_PERIOD_CONTEXT_VERSION}:${encodeURIComponent(mdId)}:${encodeURIComponent(adId)}`;
+      expect(result).toBe(expected);
     });
   });
 });

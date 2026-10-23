@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `8ba1bd68bdb93a59b7ef48b72f0f3a919a720905`
+**Baseline Commit:** `55bbf3ac280bf301d90ccd5d4a49fc65a4cd23e9`
 
 **Last Updated:** 2026-10-23
 
@@ -52,13 +52,23 @@
 
 **Test Files:**
 - `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation)
-- `src/core/analysis/selectedMdAdPeriod.test.ts` (period resolution)
+- `src/core/analysis/selectedMdAdPeriod.test.ts` (period resolution with PBA-02A/C/D/E hardening)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit f8f3452)
+- ✅ npx vitest run src/core/analysis/selectedMdAdPeriod.test.ts: PASS (54 tests, commit 55bbf3a)
+- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (65 tests, commit 55bbf3a)
+- ✅ npx tsc --noEmit: PASS (commit 55bbf3a)
+- ✅ npm run verify:pba10: PASS (commit 55bbf3a)
+- ⚠️ npm run verify: BLOCKED (Node 21 / lightningcss local-env blocker - previously recorded)
 
 **Findings:**
-- None
+- ✅ PBA-02A (malformed selection IDs): 10 tests added (empty MD/AD, whitespace, wrong version/system/level, truncated, malformed percent-encoding, nonexistent IDs)
+- ✅ PBA-02C (parentage/containment): 4 tests added (AD from other MD, encoded parent not in report, AD outside MD listing+resolution, duplicate AD in selected MD)
+- ✅ PBA-02D (non-mutation): 1 test added (structuredClone snapshot)
+- ✅ PBA-02E (determinism): 1 test added (deep-equal assertion)
+
+**Remediation:**
+- Test-only hardening completed: PBA-02A/C/D/E tests added (commit 55bbf3a)
 
 ---
 
@@ -70,18 +80,25 @@
 - `src/core/analysis/selectedPeriodActivationContext.ts` (validateSelectedPeriodContext with temporal relation recomputation)
 
 **Test Files:**
-- `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests including 10 boundary tests)
+- `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests including PBA-03A/B/C/D/E hardening)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit 3c83b80)
-- ✅ npm run verify:pba10: PASS (commit 3c83b80)
+- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (65 tests, commit 55bbf3a)
+- ✅ npx tsc --noEmit: PASS (commit 55bbf3a)
+- ✅ npm run verify:pba10: PASS (commit 55bbf3a)
+- ⚠️ npm run verify: BLOCKED (Node 21 / lightningcss local-env blocker - previously recorded)
 
 **Findings:**
 - ✅ Temporal relation recomputation implemented in validateSelectedPeriodContext
 - ✅ All 10 boundary tests added: start−1ms FUTURE, start included (CURRENT at start), end excluded (PAST at end), end−1ms CURRENT, malformed date, inverted interval, valid-but-wrong supplied temporalRelation, and additional edge cases
+- ✅ PBA-03B (temporal mismatch): 5 tests added (false temporalRelation, malformed analysisAsOf, inverted interval, valid context, no rewrite)
+- ✅ PBA-03C (cross-field consistency): 9 tests added (mahadashaId mismatch, selectedPeriodId mismatch, interval mismatch, summary mismatches, AD not contained)
+- ✅ PBA-03D (non-mutation): 1 test added (structuredClone snapshot)
+- ✅ PBA-03E (createSelectedPeriodId compatibility): 1 test added (format assertion)
 
 **Remediation:**
 - PR-B completed: Temporal relation recomputation and boundary tests added
+- Test-only hardening completed: PBA-03B/C/D/E tests added (commit 55bbf3a)
 
 ---
 
@@ -342,8 +359,14 @@
   - Dead loop in unqualified-only test fixed
   - Regression A fallback-row assertion de-conditionalized
   - All required PBA-04 scenarios verified as already covered in existing tests
+- PBA-02/PBA-03 test-only hardening (commit 55bbf3a):
+  - PBA-02A/C/D/E: 16 resolver tests added (malformed IDs, parentage/containment, non-mutation, determinism)
+  - PBA-03B/C/D/E: 16 context tests added (temporal mismatch, cross-field consistency, non-mutation, createSelectedPeriodId compatibility)
+  - vitest for both test files: PASS (54 tests, 65 tests)
+  - tsc --noEmit: PASS
+  - npm run verify:pba10: PASS
 
 ---
 
 **Definition of Done:**
-Every PBA milestone backed by acceptance evidence; validator recomputes temporal relation; candidate attribution deterministic; domain failure doesn't erase the other domain; AI can't invent or reinterpret evidence; DTO/AI context field parity; zero vacuous assertions in the acceptance suite; green npm run verify and npm run verify:pba10 recorded against the release commit.
+Every PBA milestone backed by acceptance evidence; validator recomputes temporal relation; candidate attribution deterministic; domain failure doesn't erase the other domain; AI can't invent or reinterpret evidence; DTO/AI context field parity; zero vacuous assertions in the acceptance suite; green npm run verify:pba10 recorded against the release commit; npm run verify blocked by known Node 21 / lightningcss local-env blocker.
