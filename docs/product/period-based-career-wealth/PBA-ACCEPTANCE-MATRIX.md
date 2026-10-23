@@ -761,3 +761,21 @@ These items are blocked inputs, not open implementation gaps. Do not invent refe
   - ✅ `npm run verify`: PASS (297 test files, 5,586 passed, 5 skipped; lint and build passed)
 - Both builds emitted the existing large-chunk-size warning. No Node 21 / lightningcss blocker occurred.
 - **Reference-data status remains BLOCKED:** `D08-A1` remains skipped; no external ephemeris values were added. Partial-MD and MD/AD/PD analytical fixtures remain internal-consistency checks only, not independent astronomical validation.
+
+## Vimshottari Timeline Structural and Precision Contracts
+
+- **Change commit:** `63073ed5493359133f5a800bc5711b3a65752a0d`
+- **Toolchain:** Node `20.19.4`
+- **Named precision-policy invariant — Millisecond-Representable Contiguous Timeline:** A birth-lord balance whose end is not after its start at ECMAScript `Date` millisecond precision is intentionally skipped; the timeline begins at the next representable period. An empty timeline is appropriate only when the requested horizon is the birth instant.
+- **Structural validation:** `getActiveDasha` now validates timeline metadata, non-empty MD/AD child lists, interval positivity and containment, sibling contiguity/order, and canonical planetary successor chains. Order is anchored to the first observed period to allow left-clipped anchored subperiods and the no-inheritance birth-lord skip. Final horizon-clipped sequences may be partial.
+- **Numerical/input conventions:** The Nakshatra `1e-12°` epsilon is an implementation tolerance for floating-point boundary representation, not an astronomical uncertainty estimate; values within epsilon immediately below an internal boundary are assigned to the next Nakshatra. Vimshottari input accepts ISO-8601 date-times with `Z` or offsets through ±23:59; fractional input precision is accepted while ECMAScript Date retains milliseconds, leap seconds are not representable, and output is canonicalized to UTC with `toISOString()`.
+- **Reference-data status remains BLOCKED:** The 365.25-day Vimshottari year and current analytical fixtures remain internal engine conventions and are NOT independently astronomically validated. External Moon-anchor `D08-A1` and independent MD/AD/PD boundary parity remain reference-data-blocked pending Swiss Ephemeris / JPL Horizons capture. `D08-A1` remains skipped; no external values were fabricated.
+- **Verification on the exact change commit above:**
+  - ✅ `npx vitest run src/engine/dasha/vimshottari.test.ts`: PASS (1 test file, 107 tests)
+  - ✅ `npx vitest run src/engine/dasha/reference/dashaSubPeriods.test.ts src/engine/dasha/reference/dashaMahadasha.test.ts src/engine/dasha/invariants/timelineContinuity.test.ts`: PASS (3 test files, 62 tests)
+  - ✅ `npx vitest run src/engine/dashaInterpretation/dashaInterpretation.test.ts`: PASS (1 test file, 65 tests)
+  - ✅ `npx vitest run src/engine/astroEngine.test.ts src/engine/solarTime.test.ts`: PASS (2 test files, 59 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and build passed)
+  - ✅ `npm run verify`: PASS (297 test files, 5,594 passed, 5 skipped; lint and build passed)
+- Both builds emitted the existing large-chunk-size warning. No Node 21 / lightningcss blocker occurred.
