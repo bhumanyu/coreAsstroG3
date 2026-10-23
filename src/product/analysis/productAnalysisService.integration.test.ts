@@ -788,10 +788,10 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       expect(selected.selectedPeriod?.status).toBe('OK');
 
       // Pre-existing natal career/wealth conclusions unchanged (compare specific baseline fields)
-      expect(selected.career.direction).toBe(baseline.career.direction);
-      expect(selected.career.strength).toBe(baseline.career.strength);
-      expect(selected.wealth.direction).toBe(baseline.wealth.direction);
-      expect(selected.wealth.strength).toBe(baseline.wealth.strength);
+      expect(selected.career.promise.strength).toBe(baseline.career.promise.strength);
+      expect(selected.career.promise.status).toBe(baseline.career.promise.status);
+      expect(selected.wealth.overall.promise).toBe(baseline.wealth.overall.promise);
+      expect(selected.wealth.overall.status).toBe(baseline.wealth.overall.status);
 
       // dasha.current remains canonical (selecting past/future MD-AD does not replace it)
       expect(selected.dasha.current.mahadasha?.planet).toBe(baseline.dasha.current.mahadasha?.planet);

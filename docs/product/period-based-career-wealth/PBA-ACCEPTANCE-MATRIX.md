@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `e12f513`
+**Baseline Commit:** `4b7bc7b`
 
 **Last Updated:** 2026-10-23
 
@@ -151,9 +151,10 @@
 - `src/domain/wealth/selectedWealthDashaActivation.test.ts` (wealth activation tests)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit e12f513)
-- ✅ npm run verify:pba10: PASS (commit e12f513)
-- ✅ insufficientReason discriminator implemented and tested
+- ✅ npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts: PASS (commit e12f513)
+- ⚠️ npm run verify: NEEDS_PROOF (tsc errors at e12f513, fixed in 4b7bc7b)
+- ⚠️ npm run verify:pba10: NEEDS_PROOF (tsc errors at e12f513, fixed in 4b7bc7b)
+- insufficientReason discriminator implemented and tested
 
 **Findings:**
 - ✅ insufficientReason discriminator decision recorded: NO_PROMISE_EVIDENCE, PROMISE_NOT_LINKED, LINKED
@@ -201,12 +202,12 @@
 - e12f513: Error-code propagation tests added for PARTIAL_* diagnostics
 
 **CI Evidence:**
-- ✅ npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts: PASS (86 tests, commit e12f513)
-- ✅ npx vitest run src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/selectedPeriodProductService.test.ts: PASS (47 tests, commit e12f513)
-- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit e12f513)
-- ⚠️ npx tsc --noEmit: FAIL (pre-existing TypeScript errors in productAnalysisService.integration.test.ts lines 791-794, not related to this PR)
-- ⚠️ npm run verify:pba10: FAIL (tsc fails due to pre-existing errors, but test suite passes: 121 tests)
-- ⚠️ npm run verify: FAIL (blocked by pre-existing TypeScript errors, not related to this PR)
+- ✅ npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts: PASS (86 tests, commit 4b7bc7b)
+- ✅ npx vitest run src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/selectedPeriodProductService.test.ts: PASS (47 tests, commit 4b7bc7b)
+- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit 4b7bc7b)
+- ✅ npx tsc --noEmit: PASS (commit 4b7bc7b)
+- ✅ npm run verify:pba10: PASS (123 tests, commit 4b7bc7b)
+- ✅ npm run verify: PASS (5459 tests passed, 5 skipped, commit 4b7bc7b)
 
 ---
 
@@ -225,8 +226,9 @@
 - Vacuous test removed (unresolved-evidence test deleted - domain layer has proper coverage)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit e12f513)
-- ✅ npm run verify:pba10: PASS (commit e12f513)
+- ✅ npx vitest run src/product/analysis/selectedPeriodProductService.test.ts: PASS (19 tests, commit 4b7bc7b)
+- ✅ npm run verify: PASS (commit 4b7bc7b)
+- ✅ npm run verify:pba10: PASS (commit 4b7bc7b)
 
 **Findings:**
 - ✅ Domain activation failures degrade to partial synthesis (do not hard-fail)
@@ -264,8 +266,9 @@
 - Vacuous edge-case test deleted (expect(SUCCESS || ERROR).toBe(true) removed)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit e12f513)
-- ✅ npm run verify:pba10: PASS (commit e12f513)
+- ✅ npx vitest run src/ai/product/aiExplanationService.test.ts: PASS (21 tests, commit 4b7bc7b)
+- ✅ npm run verify: PASS (commit 4b7bc7b)
+- ✅ npm run verify:pba10: PASS (commit 4b7bc7b)
 
 **Findings:**
 - ✅ Contract codified: AI evidence semantics contract documented in aiExplanationService.ts
@@ -302,8 +305,9 @@
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests)
 
 **CI Evidence:**
-- ✅ npm run verify: PASS (commit e12f513)
-- ✅ npm run verify:pba10: PASS (commit e12f513)
+- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit 4b7bc7b)
+- ✅ npm run verify: PASS (commit 4b7bc7b)
+- ✅ npm run verify:pba10: PASS (commit 4b7bc7b)
 
 **Findings:**
 - ✅ Temporal past/current/future vs asOf test split into three distinct tests with actual values
@@ -386,14 +390,18 @@
   - Error-code propagation tests added for PARTIAL_CAREER_ACTIVATION_FAILED (careerErrorCode in diagnostic message)
   - Error-code propagation tests added for PARTIAL_WEALTH_ACTIVATION_FAILED (wealthErrorCode in diagnostic message)
   - Per-domain MISSING projection tests verified as already present (lines 700-732)
-  - Baseline commit updated to e12f513
-  - CI evidence updated to e12f513 with actual verification results:
-    - synthesis test: PASS (86 tests)
-    - mapper/service tests: PASS (47 tests)
-    - integration test: PASS (33 tests)
-    - tsc --noEmit: FAIL (pre-existing errors in productAnalysisService.integration.test.ts lines 791-794)
-    - verify:pba10: FAIL (tsc blocked, but test suite passes: 121 tests)
-    - verify: FAIL (blocked by pre-existing TypeScript errors)
+- TypeScript error fix (commit 4b7bc7b):
+  - Fixed type error in productAnalysisService.integration.test.ts lines 791-794
+  - Replaced invalid career.direction/strength and wealth.direction/strength assertions with correct fields:
+    - career.promise.strength and career.promise.status
+    - wealth.overall.promise and wealth.overall.status
+  - Verification results at 4b7bc7b:
+    - npx tsc --noEmit: PASS
+    - npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts: PASS (86 tests)
+    - npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests)
+    - npm run verify:pba10: PASS (123 tests)
+    - npm run verify: PASS (5459 tests passed, 5 skipped)
+  - Baseline commit updated to 4b7bc7b
 
 ---
 
