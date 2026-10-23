@@ -232,6 +232,6 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
           )}
         </button>
       </div>
-    </div >
+    </div>
   );
 };

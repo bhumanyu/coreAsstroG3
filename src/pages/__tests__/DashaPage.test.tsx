@@ -2,8 +2,9 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { DashaPage } from '../DashaPage';
+import { SelectedPeriodReport } from '../../components/dasha';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
-import type { ProductSynthesisWealthDimensionRow } from '../../product/analysis/productAnalysisTypes';
+import type { ProductSynthesisWealthDimensionRow, ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';
 
 const emptyWealthDimension = (
   dimension: ProductSynthesisWealthDimensionRow['dimension']
@@ -927,7 +928,7 @@ describe('DashaPage (P-UI-07)', () => {
     });
 
     it('change-AD-after-report hides report+AI immediately', () => {
-      const onSelectPeriod = vi.fn();
+      const onSelectPeriod = vi.fn().mockResolvedValue(undefined);
       const analysis = createProductAnalysis({
         selectedPeriod: {
           status: 'OK',
@@ -1026,7 +1027,7 @@ describe('DashaPage (P-UI-07)', () => {
         }
       });
 
-      const { rerender } = render(
+      render(
         <DashaPage
           productAnalysisState={{ status: 'READY', analysis }}
           onSelectPeriod={onSelectPeriod}
@@ -1035,24 +1036,29 @@ describe('DashaPage (P-UI-07)', () => {
       );
 
       // Initially, report should not be visible (no submittedPeriod)
-      expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Selected Period Analysis/i)).not.toBeInTheDocument();
 
-      // Simulate submission by setting submittedPeriod to match selectedPeriod
-      const analysisWithSubmitted = createProductAnalysis({
-        selectedPeriod: (analysis.selectedPeriod as any),
-        dashPeriodOptions: analysis.dashPeriodOptions
-      });
+      // Select MD and AD
+      const mdSelect = screen.getByLabelText(/Mahadasha \(Major Period\)/i);
+      const adSelect = screen.getByLabelText(/Antardasha \(Sub-period\)/i);
+      const submitButton = screen.getByRole('button', { name: /Analyze Selected Period/i });
 
-      rerender(
-        <DashaPage
-          productAnalysisState={{ status: 'READY', analysis: analysisWithSubmitted }}
-          onSelectPeriod={onSelectPeriod}
-          selectionState={{ status: 'READY' }}
-        />
-      );
+      fireEvent.change(mdSelect, { target: { value: 'md_jupiter' } });
+      fireEvent.change(adSelect, { target: { value: 'ad_saturn' } });
 
-      // Still no submittedPeriod state in component, so report not visible
-      // The component controls submittedPeriod internally
+      // Click submit to set submittedPeriod
+      fireEvent.click(submitButton);
+
+      // After submission, report should be visible (submittedPeriod matches selectedPeriod)
+      expect(screen.getByText(/Selected Period Analysis/i)).toBeInTheDocument();
+      expect(screen.getByText(/AI Explanation/i)).toBeInTheDocument();
+
+      // Change AD selector - this should clear submittedPeriod via handleSelectionChange
+      fireEvent.change(adSelect, { target: { value: 'ad_mars' } });
+
+      // Report and AI explanation should now be hidden (ID mismatch / READY gate clears it)
+      expect(screen.queryByText(/Selected Period Analysis/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/AI Explanation/i)).not.toBeInTheDocument();
     });
 
     it('failed submission does not present a previous report as current (READY gate)', () => {
@@ -1140,206 +1146,157 @@ describe('DashaPage (P-UI-07)', () => {
     });
 
     it('Career-only partial result renders career heading and wealth missing explanation', () => {
-      const analysis = createProductAnalysis({
-        selectedPeriod: {
-          status: 'OK',
-          synthesis: {
-            synthesisVersion: 'PBA-06-v1',
-            qualificationStatus: 'CANONICAL',
-            period: {
-              selectedPeriodId: 'period-1',
-              mahadashaId: 'md_jupiter',
-              mahadashaPlanet: 'Jupiter',
-              antardashaId: 'ad_saturn',
-              antardashaPlanet: 'Saturn',
-              interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
-              analysisAsOf: '2021-01-01T00:00:00Z',
-              temporalRelation: 'CURRENT'
-            },
-            natalBaseline: {
-              career: { baseline: {} as any, unchanged: true },
-              wealth: { baseline: {} as any, unchanged: true }
-            },
-            career: {
-              qualificationBasis: 'CANONICAL_STATUS',
-              expressions: [
-                {
-                  expressionRefKey: 'CAREER_EXPR_1',
-                  status: 'ACTIVATES',
-                  linkedLevels: ['MD'],
-                  qualificationBasis: 'CANONICAL_STATUS',
-                  matchBasis: 'UNAMBIGUOUS',
-                  diagnostics: [],
-                  expressionEvidenceIds: [],
-                  qualifiedEvidenceIds: [],
-                  unqualifiedEvidenceIds: [],
-                  mdDashaEvidenceIds: [],
-                  adDashaEvidenceIds: [],
-                  expressionSource: 'CALLER'
-                }
-              ],
-              diagnostics: []
-            },
-            wealth: {
-              dimensions: {
-                ACCUMULATION: emptyWealthDimension('ACCUMULATION'),
-                GAINS: emptyWealthDimension('GAINS'),
-                FORTUNE: emptyWealthDimension('FORTUNE'),
-                SPECULATION: emptyWealthDimension('SPECULATION')
-              },
-              diagnostics: []
-            },
-            evidence: [],
-            missingInputs: [
-              {
-                domain: 'WEALTH',
-                code: 'WEALTH_PROMISE_MISSING',
-                description: 'Wealth promise evidence not available in chart'
-              }
-            ],
-            provenance: {
-              career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
-              wealth: { status: 'MISSING', version: 'v1' }
-            },
-            aiExplanationStatus: 'NOT_REQUESTED'
-          }
+      const careerOnlySynthesis: ProductSelectedPeriodSynthesis = {
+        synthesisVersion: 'PBA-06-v1',
+        qualificationStatus: 'CANONICAL',
+        period: {
+          selectedPeriodId: 'period-1',
+          mahadashaId: 'md_jupiter',
+          mahadashaPlanet: 'Jupiter',
+          antardashaId: 'ad_saturn',
+          antardashaPlanet: 'Saturn',
+          interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+          analysisAsOf: '2021-01-01T00:00:00Z',
+          temporalRelation: 'CURRENT'
         },
-        dashPeriodOptions: {
-          mahadashas: [
+        natalBaseline: {
+          career: { baseline: {} as any, unchanged: true },
+          wealth: { baseline: {} as any, unchanged: true }
+        },
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [
             {
-              id: 'md_jupiter',
-              planet: 'Jupiter',
-              start: '2020-01-01T00:00:00.000Z',
-              end: '2036-01-01T00:00:00.000Z',
-              valid: true,
+              expressionRefKey: 'CAREER_EXPR_1',
+              status: 'ACTIVATES',
+              linkedLevels: ['MD'],
+              qualificationBasis: 'CANONICAL_STATUS',
+              matchBasis: 'UNAMBIGUOUS',
               diagnostics: [],
-              temporalRelation: 'CURRENT',
-              antardashas: [
-                {
-                  id: 'ad_saturn',
-                  planet: 'Saturn',
-                  start: '2020-01-01T00:00:00.000Z',
-                  end: '2022-01-01T00:00:00.000Z',
-                  valid: true,
-                  diagnostics: [],
-                  temporalRelation: 'PAST'
-                }
-              ]
+              expressionEvidenceIds: [],
+              qualifiedEvidenceIds: [],
+              unqualifiedEvidenceIds: [],
+              mdDashaEvidenceIds: [],
+              adDashaEvidenceIds: [],
+              expressionSource: 'CALLER'
             }
           ],
           diagnostics: []
-        }
-      });
+        },
+        wealth: {
+          dimensions: {
+            ACCUMULATION: emptyWealthDimension('ACCUMULATION'),
+            GAINS: emptyWealthDimension('GAINS'),
+            FORTUNE: emptyWealthDimension('FORTUNE'),
+            SPECULATION: emptyWealthDimension('SPECULATION')
+          },
+          diagnostics: []
+        },
+        evidence: [],
+        missingInputs: [
+          {
+            domain: 'WEALTH',
+            code: 'WEALTH_PROMISE_MISSING',
+            description: 'Wealth promise evidence not available in chart'
+          }
+        ],
+        provenance: {
+          career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+          wealth: { status: 'MISSING', version: 'v1' }
+        },
+        aiExplanationStatus: 'NOT_REQUESTED'
+      };
 
-      const { container } = render(
-        <DashaPage
-          productAnalysisState={{ status: 'READY', analysis }}
-          selectionState={{ status: 'READY' }}
-        />
-      );
+      render(<SelectedPeriodReport synthesis={careerOnlySynthesis} />);
 
-      // Simulate the component's internal submittedPeriod state by directly rendering the report
-      // In the actual component flow, this would be set after submission
-      // For this test, we'll assert the report component behavior when it does render
-      // The SelectedPeriodReport is only rendered when READY gate and ID match are satisfied
-      // Since we can't easily manipulate the internal submittedPeriod state, we'll test the report component directly
+      // Career section should be visible with heading
+      expect(screen.getByText(/Career Synthesis/i)).toBeInTheDocument();
+
+      // Career expression should be rendered
+      expect(screen.getByText(/CAREER_EXPR_1/i)).toBeInTheDocument();
+      expect(screen.getByText(/Activates/i)).toBeInTheDocument();
+
+      // Wealth missing explanation should be visible via missingInputs
+      expect(screen.getByText(/Missing Inputs/i)).toBeInTheDocument();
+      expect(screen.getByText(/WEALTH_PROMISE_MISSING/i)).toBeInTheDocument();
+      expect(screen.getByText(/Wealth promise evidence not available in chart/i)).toBeInTheDocument();
+
+      // Wealth Synthesis section should show unavailable state
+      expect(screen.getByText(/Wealth activation unavailable/i)).toBeInTheDocument();
     });
 
     it('Wealth-only partial result renders wealth heading and career missing explanation', () => {
-      const analysis = createProductAnalysis({
-        selectedPeriod: {
-          status: 'OK',
-          synthesis: {
-            synthesisVersion: 'PBA-06-v1',
-            qualificationStatus: 'CANONICAL',
-            period: {
-              selectedPeriodId: 'period-1',
-              mahadashaId: 'md_jupiter',
-              mahadashaPlanet: 'Jupiter',
-              antardashaId: 'ad_saturn',
-              antardashaPlanet: 'Saturn',
-              interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
-              analysisAsOf: '2021-01-01T00:00:00Z',
-              temporalRelation: 'CURRENT'
-            },
-            natalBaseline: {
-              career: { baseline: {} as any, unchanged: true },
-              wealth: { baseline: {} as any, unchanged: true }
-            },
-            career: {
-              qualificationBasis: 'CANONICAL_STATUS',
-              expressions: [],
-              diagnostics: []
-            },
-            wealth: {
-              dimensions: {
-                ACCUMULATION: {
-                  dimension: 'ACCUMULATION',
-                  effect: 'ACTIVATES',
-                  dataStatus: 'COMPLETE',
-                  linkedLevels: ['MD'],
-                  diagnostics: [],
-                  promiseEvidenceIds: ['WEALTH_2H_STRONG_001'],
-                  dashaRuleReferences: [],
-                  insufficientReason: 'LINKED' as const
-                },
-                GAINS: emptyWealthDimension('GAINS'),
-                FORTUNE: emptyWealthDimension('FORTUNE'),
-                SPECULATION: emptyWealthDimension('SPECULATION')
-              },
-              diagnostics: []
-            },
-            evidence: [],
-            missingInputs: [
-              {
-                domain: 'CAREER',
-                code: 'CAREER_PROMISE_MISSING',
-                description: 'Career promise evidence not available in chart'
-              }
-            ],
-            provenance: {
-              career: { status: 'MISSING', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
-              wealth: { status: 'PRESENT', version: 'v1' }
-            },
-            aiExplanationStatus: 'NOT_REQUESTED'
-          }
+      const wealthOnlySynthesis: ProductSelectedPeriodSynthesis = {
+        synthesisVersion: 'PBA-06-v1',
+        qualificationStatus: 'CANONICAL',
+        period: {
+          selectedPeriodId: 'period-1',
+          mahadashaId: 'md_jupiter',
+          mahadashaPlanet: 'Jupiter',
+          antardashaId: 'ad_saturn',
+          antardashaPlanet: 'Saturn',
+          interval: { start: '2020-01-01T00:00:00Z', end: '2022-01-01T00:00:00Z' },
+          analysisAsOf: '2021-01-01T00:00:00Z',
+          temporalRelation: 'CURRENT'
         },
-        dashPeriodOptions: {
-          mahadashas: [
-            {
-              id: 'md_jupiter',
-              planet: 'Jupiter',
-              start: '2020-01-01T00:00:00.000Z',
-              end: '2036-01-01T00:00:00.000Z',
-              valid: true,
-              diagnostics: [],
-              temporalRelation: 'CURRENT',
-              antardashas: [
-                {
-                  id: 'ad_saturn',
-                  planet: 'Saturn',
-                  start: '2020-01-01T00:00:00.000Z',
-                  end: '2022-01-01T00:00:00.000Z',
-                  valid: true,
-                  diagnostics: [],
-                  temporalRelation: 'PAST'
-                }
-              ]
-            }
-          ],
+        natalBaseline: {
+          career: { baseline: {} as any, unchanged: true },
+          wealth: { baseline: {} as any, unchanged: true }
+        },
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [],
           diagnostics: []
-        }
-      });
+        },
+        wealth: {
+          dimensions: {
+            ACCUMULATION: {
+              dimension: 'ACCUMULATION',
+              effect: 'ACTIVATES',
+              dataStatus: 'COMPLETE',
+              linkedLevels: ['MD'],
+              diagnostics: [],
+              promiseEvidenceIds: ['WEALTH_2H_STRONG_001'],
+              dashaRuleReferences: [],
+              insufficientReason: 'LINKED' as const
+            },
+            GAINS: emptyWealthDimension('GAINS'),
+            FORTUNE: emptyWealthDimension('FORTUNE'),
+            SPECULATION: emptyWealthDimension('SPECULATION')
+          },
+          diagnostics: []
+        },
+        evidence: [],
+        missingInputs: [
+          {
+            domain: 'CAREER',
+            code: 'CAREER_PROMISE_MISSING',
+            description: 'Career promise evidence not available in chart'
+          }
+        ],
+        provenance: {
+          career: { status: 'MISSING', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+          wealth: { status: 'PRESENT', version: 'v1' }
+        },
+        aiExplanationStatus: 'NOT_REQUESTED'
+      };
 
-      render(
-        <DashaPage
-          productAnalysisState={{ status: 'READY', analysis }}
-          selectionState={{ status: 'READY' }}
-        />
-      );
+      render(<SelectedPeriodReport synthesis={wealthOnlySynthesis} />);
 
-      // Same as above - the report only renders with READY gate and matching IDs
-      // The partial result behavior is tested at the component level in DashaComponents.test.tsx
+      // Wealth section should be visible with heading
+      expect(screen.getByText(/Wealth Synthesis/i)).toBeInTheDocument();
+
+      // ACCUMULATION dimension should be rendered with ACTIVATES effect
+      expect(screen.getByText(/ACCUMULATION/i)).toBeInTheDocument();
+      expect(screen.getByText(/Activates/i)).toBeInTheDocument();
+
+      // Career missing explanation should be visible via missingInputs
+      expect(screen.getByText(/Missing Inputs/i)).toBeInTheDocument();
+      expect(screen.getByText(/CAREER_PROMISE_MISSING/i)).toBeInTheDocument();
+      expect(screen.getByText(/Career promise evidence not available in chart/i)).toBeInTheDocument();
+
+      // Career Synthesis section should show unavailable state
+      expect(screen.getByText(/Career activation unavailable/i)).toBeInTheDocument();
     });
   });
 });
