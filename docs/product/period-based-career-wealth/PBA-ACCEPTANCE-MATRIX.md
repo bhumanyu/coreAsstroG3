@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `9f6932c`
+**Baseline Commit:** `7c466ea`
 
 **Last Updated:** 2026-10-23
 
@@ -450,11 +450,11 @@
 - `src/engine/dashaInterpretation/dashaInterpretation.test.ts` (interpretation layer positive-length validation tests)
 
 **CI Evidence:**
-- ✅ npx vitest run src/engine/dasha/vimshottari.test.ts: PASS (28 tests, commit 9f6932c)
-- ✅ npx vitest run src/engine/dashaInterpretation/dashaInterpretation.test.ts: PASS (65 tests, commit 9f6932c)
-- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 9f6932c)
-- ✅ npx tsc --noEmit: PASS (commit 9f6932c)
-- ✅ npm run verify:pba10: PASS (123 tests, commit 9f6932c)
+- ✅ npx vitest run src/engine/dasha/vimshottari.test.ts: PASS (28 tests, commit 7c466ea)
+- ✅ npx vitest run src/engine/dashaInterpretation/dashaInterpretation.test.ts: PASS (65 tests, commit 7c466ea)
+- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 7c466ea)
+- ✅ npx tsc --noEmit: PASS (commit 7c466ea)
+- ✅ npm run verify:pba10: PASS (123 tests, commit 7c466ea)
 - ⚠️ npm run verify: BLOCKED by 3 pre-existing test failures in src/engine/astroEngine.test.ts (Moon longitude validation tests - unrelated to P2 or current fixes)
 
 **Findings:**
@@ -470,7 +470,7 @@
 **Remediation:**
 - Current session: All P2 regression tests implemented and verified
 - Guardrails verified: Moon longitude finite-number validation (vimshottari.ts lines 262-268), positive-duration guards (vimshottari.ts lines 159, 205, 338-340), interval-based active-Mahadasha identification
-- TypeScript errors fixed in commit 9f6932c: DashaTimeline.test.tsx now uses Planet enum instead of string literals, astroEngine.test.ts type assertion fixed
+- TypeScript errors fixed in commit 7c466ea: DashaTimeline.test.tsx now uses Planet enum instead of string literals, astroEngine.test.ts type assertion fixed
 - npm run verify:pba10 now passes; npm run verify blocked by 3 pre-existing test failures in astroEngine.test.ts (Moon longitude validation - unrelated to P2 or current fixes)
 
 ---
@@ -486,10 +486,10 @@
 - `src/components/dashaTiming/__tests__/DashaTimeline.test.tsx` (replaced brittle closest('.rounded-2xl') + toHaveClass('bg-gradient-to-b') assertions with stable getByTestId('active-mahadasha-card') query)
 
 **CI Evidence:**
-- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 9f6932c)
-- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (22 tests, commit 9f6932c)
-- ✅ npx tsc --noEmit: PASS (commit 9f6932c)
-- ✅ npm run verify:pba10: PASS (123 tests, commit 9f6932c)
+- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 7c466ea)
+- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (22 tests, commit 7c466ea)
+- ✅ npx tsc --noEmit: PASS (commit 7c466ea)
+- ✅ npm run verify:pba10: PASS (123 tests, commit 7c466ea)
 - ⚠️ npm run verify: BLOCKED by 3 pre-existing test failures in src/engine/astroEngine.test.ts (Moon longitude validation tests - unrelated to P3 or current fixes)
 
 **Findings:**
@@ -502,12 +502,12 @@
 
 **Remediation:**
 - Current session: Stable accessible hook added and test de-brittled
-- TypeScript errors fixed in commit 9f6932c: DashaTimeline.test.tsx now uses Planet enum instead of string literals
+- TypeScript errors fixed in commit 7c466ea: DashaTimeline.test.tsx now uses Planet enum instead of string literals
 - npm run verify:pba10 now passes; npm run verify blocked by 3 pre-existing test failures in astroEngine.test.ts (Moon longitude validation - unrelated to P3 or current fixes)
 
 ---
 
-## TypeScript and Diagnostic Coverage Fixes (commit 9f6932c)
+## TypeScript and Diagnostic Coverage Fixes (commit 7c466ea)
 
 **Status:** ✅ COMPLETE
 
@@ -520,9 +520,9 @@
 - N/A (test fixes only)
 
 **CI Evidence:**
-- ✅ npx tsc --noEmit: PASS (commit 9f6932c)
-- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 9f6932c)
-- ✅ npm run verify:pba10: PASS (123 tests, commit 9f6932c)
+- ✅ npx tsc --noEmit: PASS (commit 7c466ea)
+- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 7c466ea)
+- ✅ npm run verify:pba10: PASS (123 tests, commit 7c466ea)
 
 **Findings:**
 - ✅ DashaTimeline.test.tsx: Replaced all string literal planet values ('JUPITER', 'SATURN', 'MERCURY') with Planet enum members (Planet.JUPITER, Planet.SATURN, Planet.MERCURY)
@@ -533,7 +533,7 @@
   - Added fallback to show raw code in parentheses when no explanation is available
 
 **Remediation:**
-- TypeScript errors fixed in commit 9f6932c
+- TypeScript errors fixed in commit 7c466ea
 - npx tsc --noEmit now passes cleanly
 - Diagnostic coverage verified and fallback mechanism added for unknown codes
 
@@ -550,7 +550,7 @@
 **P2 and P3 (Current Session):**
 - ✅ P2: Boundary and interval regression tests — COMPLETE (commit 6727c8d)
 - ✅ P3: De-brittle the timeline active-card test — COMPLETE (commit 6727c8d)
-- ✅ TypeScript and Diagnostic Coverage Fixes — COMPLETE (commit 9f6932c)
+- ✅ TypeScript and Diagnostic Coverage Fixes — COMPLETE (commit 7c466ea)
 
 **Confirmed Defects:** 0
 - PBA-03: Resolved (temporal relation recomputation implemented in commit ed30213)
