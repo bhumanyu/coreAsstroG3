@@ -218,6 +218,15 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 - **Gating artifact:** [P2-07D non-dusthana mechanism decision request](../../career/phase2/P2-07D-NON-DUSTHANA-MECHANISM-DECISION-REQUEST.md) collects owner mappings, evidence requirements, rejection conditions, incomplete-evidence behavior, and P2-06 freeze decisions for all five families.
 - **Change scope:** No resolver registry rule was added in this documentation change; the registry remains limited to its three dusthana rules.
 - **Cross-reference:** See `PBA-INVESTIGATION-FINDINGS.md` section "Career Findings" and "Required Fix (Priority 3)"
+- **Contract-diagnostic hardening commit:** `509c0af336889c8bfd1428df6b80aa458411a428`
+- **Toolchain:** Node `20.19.4`
+- **Verification on the exact change commit above:**
+  - ✅ `npx vitest run src/domain/career/careerDasha/selectedCareerDashaDetectorResolution.integration.test.ts`: PASS (1 test)
+  - ✅ `npx vitest run src/domain/career/orchestration/canonicalCareerOrchestrator.test.ts`: PASS (61 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run verify:pba10`: PASS (124 tests; lint and build passed)
+  - ✅ `npm run verify`: PASS (297 test files, 5,569 passed, 5 skipped; lint and build passed)
+- Builds emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
 
 **Remediation:**
 - COMPLETE: All test coverage gaps addressed, CI verification green
