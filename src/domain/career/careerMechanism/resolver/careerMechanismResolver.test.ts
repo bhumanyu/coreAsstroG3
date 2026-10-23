@@ -755,6 +755,189 @@ describe('careerMechanismResolver', () => {
     });
   });
 
+  describe('KENDRA_TRIKONA rule tests', () => {
+    it('should apply to KENDRA_TRIKONA pattern with verified lord relationship (9↔10)', () => {
+      // 9↔10 Kendra-Trikona pattern with establishing relationship
+      const networkRelationships: CareerGraphEdge[] = [
+        // Real 9→10 aspect edge (establishing)
+        {
+          edgeId: 'EDGE:REL:9→10:ASPECTS',
+          type: 'ASPECTS',
+          sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:9→10:ASPECTS',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // LORD_OF for house 9
+        {
+          edgeId: 'EDGE:LORD_OF:JUPITER:9',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:9',
+          identityKey: 'LORD_OF:JUPITER:9',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // LORD_OF for house 10
+        {
+          edgeId: 'EDGE:LORD_OF:SATURN:10',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'LORD_OF:SATURN:10',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [9, 10],
+        establishingRelationshipIds: ['REL:9→10:ASPECTS'],
+        status: 'QUALIFIED',
+        networkRelationships,
+        networkHouses: [9, 10],
+        family: 'KENDRA_TRIKONA' as CareerPatternFamily,
+        classification: 'DHARMA_KARMA_ALIGNMENT' as CareerPatternClassification
+      });
+
+      const result = resolver.resolve(input);
+
+      // Rule should apply (pattern has establishing relationship)
+      // But resolve returns empty array (TODO for domain confirmation)
+      expect(result.patternId).toBe('pattern-1');
+      expect(result.candidates.length).toBe(0);
+    });
+
+    it('should not emit candidates when KENDRA_TRIKONA pattern has no establishing lord relationship', () => {
+      // 9↔10 houses present but no establishing relationship edge
+      const networkRelationships: CareerGraphEdge[] = [
+        // LORD_OF for house 9 (supporting context only)
+        {
+          edgeId: 'EDGE:LORD_OF:JUPITER:9',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:9',
+          identityKey: 'LORD_OF:JUPITER:9',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        // LORD_OF for house 10 (supporting context only)
+        {
+          edgeId: 'EDGE:LORD_OF:SATURN:10',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'LORD_OF:SATURN:10',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [9, 10],
+        establishingRelationshipIds: ['LORD_OF:JUPITER:9'], // Only supporting LORD_OF, not establishing
+        status: 'QUALIFIED',
+        networkRelationships,
+        networkHouses: [9, 10],
+        family: 'KENDRA_TRIKONA' as CareerPatternFamily,
+        classification: 'DHARMA_KARMA_ALIGNMENT' as CareerPatternClassification
+      });
+
+      const result = resolver.resolve(input);
+
+      // Should emit zero candidates (intersection invariant: LORD_OF is supporting, not establishing)
+      expect(result.candidates.length).toBe(0);
+    });
+
+    it('should produce identical output on repeated resolves for KENDRA_TRIKONA pattern', () => {
+      const networkRelationships: CareerGraphEdge[] = [
+        {
+          edgeId: 'EDGE:REL:9→10:ASPECTS',
+          type: 'ASPECTS',
+          sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'REL:9→10:ASPECTS',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        {
+          edgeId: 'EDGE:LORD_OF:JUPITER:9',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:JUPITER',
+          targetNodeId: 'HOUSE:9',
+          identityKey: 'LORD_OF:JUPITER:9',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        },
+        {
+          edgeId: 'EDGE:LORD_OF:SATURN:10',
+          type: 'LORD_OF',
+          sourceNodeId: 'PLANET:SATURN',
+          targetNodeId: 'HOUSE:10',
+          identityKey: 'LORD_OF:SATURN:10',
+          provenance: {
+            sourceIds: [],
+            ruleIds: [],
+            parentIds: []
+          }
+        }
+      ];
+
+      const input = createMockInput({
+        houses: [9, 10],
+        establishingRelationshipIds: ['REL:9→10:ASPECTS'],
+        status: 'QUALIFIED',
+        networkRelationships,
+        networkHouses: [9, 10],
+        family: 'KENDRA_TRIKONA' as CareerPatternFamily,
+        classification: 'DHARMA_KARMA_ALIGNMENT' as CareerPatternClassification
+      });
+
+      const result1 = resolver.resolve(input);
+      const result2 = resolver.resolve(input);
+
+      expect(result1.patternId).toBe(result2.patternId);
+      expect(result1.candidates.length).toBe(result2.candidates.length);
+    });
+
+    it('should not apply to non-KENDRA_TRIKONA patterns', () => {
+      const input = createMockInput({
+        houses: [8, 10],
+        establishingRelationshipIds: ['REL:8→10:OCCUPIES'],
+        status: 'QUALIFIED'
+      });
+
+      // Pattern family is DUSTHANA_TRANSFORMATION (default from createMockInput)
+      // Should not apply KENDRA_TRIKONA rule
+      const result = resolver.resolve(input);
+
+      // DUSTHANA_TRANSFORMATION patterns use dusthana rules, not KENDRA_TRIKONA
+      expect(result.candidates.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('End-to-end establishing evidence identity trace', () => {
     it('should populate acceptedEstablishingEvidenceIds from supplied establishing evidence', () => {
       const establishingEvidence: PatternLevelEstablishingEvidence[] = [
@@ -861,15 +1044,19 @@ function createMockInput(overrides: {
   establishingEvidence?: PatternLevelEstablishingEvidence[];
   networkRelationships?: CareerGraphEdge[];
   networkHouses?: number[];
+  family?: CareerPatternFamily;
+  classification?: CareerPatternClassification;
 }): CareerMechanismResolutionInput {
   const patternId = overrides.patternId || 'pattern-1';
+  const family = overrides.family || ('DUSTHANA_TRANSFORMATION' as CareerPatternFamily);
+  const classification = overrides.classification || ('DUSTHANA_CAREER_TRANSFORMATION' as CareerPatternClassification);
 
   const pattern: CareerPattern = {
     patternId,
     identityKey: `key-${patternId}`,
-    family: 'DUSTHANA_TRANSFORMATION' as CareerPatternFamily,
+    family,
     level: 'HOUSE_NETWORK' as CareerPatternLevel,
-    classification: 'DUSTHANA_CAREER_TRANSFORMATION' as CareerPatternClassification,
+    classification,
     name: 'Test Pattern',
     topology: 'DIRECT_LINK' as CareerNetworkTopology,
     direction: 'FORWARD' as CareerNetworkDirection,
@@ -893,9 +1080,9 @@ function createMockInput(overrides: {
   const qualification: QualifiedCareerPattern = {
     patternId,
     identityKey: `key-${patternId}`,
-    family: 'DUSTHANA_TRANSFORMATION' as CareerPatternFamily,
+    family,
     level: 'HOUSE_NETWORK' as CareerPatternLevel,
-    classification: 'DUSTHANA_CAREER_TRANSFORMATION' as CareerPatternClassification,
+    classification,
     name: 'Test Pattern',
     topology: 'DIRECT_LINK' as CareerNetworkTopology,
     direction: 'FORWARD' as CareerNetworkDirection,

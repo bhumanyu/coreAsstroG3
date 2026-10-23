@@ -465,6 +465,82 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.GAINS.effect).toBe('ACTIVATES');
   });
 
+  it('distinguishes PROMISE_NOT_LINKED for Moon MD→Moon AD FORTUNE (house 9) case', () => {
+    // Moon MD → Moon AD period: Moon lords house 4 (Cancer ascendant in this chart)
+    // Moon's dasha evidence references house 4 but NOT house 9 (FORTUNE)
+    // FORTUNE has promise evidence in house 9
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext(
+        [dashaEvidence('MD_4H_MOON', 'SUPPORT', [4], [Planet.MOON])], // Moon MD references house 4
+        [dashaEvidence('AD_4H_MOON', 'SUPPORT', [4], [Planet.MOON])]  // Moon AD references house 4
+      ),
+      wealthEvidence: [
+        promise('NATAL_FORTUNE', 'FORTUNE', 9, Planet.JUPITER) // Promise in house 9
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // FORTUNE should have PROMISE_NOT_LINKED because Moon does not touch house 9
+    expect(result.value.dimensions.FORTUNE.effect).toBe('INSUFFICIENT_DATA');
+    expect(result.value.dimensions.FORTUNE.insufficientReason).toBe('PROMISE_NOT_LINKED');
+    expect(result.value.dimensions.FORTUNE.promiseEvidenceIds).toContain('NATAL_FORTUNE');
+    expect(result.value.dimensions.FORTUNE.linkedLevels).toEqual([]);
+  });
+
+  it('distinguishes PROMISE_NOT_LINKED for Moon MD→Moon AD SPECULATION (house 5) case', () => {
+    // Moon MD → Moon AD period: Moon lords house 4 (Cancer ascendant in this chart)
+    // Moon's dasha evidence references house 4 but NOT house 5 (SPECULATION)
+    // SPECULATION has promise evidence in house 5
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext(
+        [dashaEvidence('MD_4H_MOON', 'SUPPORT', [4], [Planet.MOON])], // Moon MD references house 4
+        [dashaEvidence('AD_4H_MOON', 'SUPPORT', [4], [Planet.MOON])]  // Moon AD references house 4
+      ),
+      wealthEvidence: [
+        promise('NATAL_SPEC', 'SPECULATION', 5, Planet.VENUS) // Promise in house 5
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // SPECULATION should have PROMISE_NOT_LINKED because Moon does not touch house 5
+    expect(result.value.dimensions.SPECULATION.effect).toBe('INSUFFICIENT_DATA');
+    expect(result.value.dimensions.SPECULATION.insufficientReason).toBe('PROMISE_NOT_LINKED');
+    expect(result.value.dimensions.SPECULATION.promiseEvidenceIds).toContain('NATAL_SPEC');
+    expect(result.value.dimensions.SPECULATION.linkedLevels).toEqual([]);
+  });
+
+  it('distinguishes NO_PROMISE_EVIDENCE from PROMISE_NOT_LINKED for Moon MD→Moon AD', () => {
+    // Moon MD → Moon AD period with no promise evidence for a dimension
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext(
+        [dashaEvidence('MD_4H_MOON', 'SUPPORT', [4], [Planet.MOON])],
+        [dashaEvidence('AD_4H_MOON', 'SUPPORT', [4], [Planet.MOON])]
+      ),
+      wealthEvidence: [
+        promise('NATAL_FORTUNE', 'FORTUNE', 9, Planet.JUPITER) // Only FORTUNE has promise
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    // FORTUNE has promise but no linkage → PROMISE_NOT_LINKED
+    expect(result.value.dimensions.FORTUNE.insufficientReason).toBe('PROMISE_NOT_LINKED');
+    expect(result.value.dimensions.FORTUNE.promiseEvidenceIds).toContain('NATAL_FORTUNE');
+
+    // SPECULATION has no promise → NO_PROMISE_EVIDENCE
+    expect(result.value.dimensions.SPECULATION.insufficientReason).toBe('NO_PROMISE_EVIDENCE');
+    expect(result.value.dimensions.SPECULATION.promiseEvidenceIds).toEqual([]);
+
+    // ACCUMULATION has no promise → NO_PROMISE_EVIDENCE
+    expect(result.value.dimensions.ACCUMULATION.insufficientReason).toBe('NO_PROMISE_EVIDENCE');
+    expect(result.value.dimensions.ACCUMULATION.promiseEvidenceIds).toEqual([]);
+  });
+
   it('accepts genuine SelectedPeriodActivationContext from PBA-03 factory', () => {
     // Build a minimal DashaInterpretationReport
     const report: DashaInterpretationReport = {

@@ -113,6 +113,31 @@ This represents the "Data Status COMPLETE but effect Insufficient/Unknown" contr
 
 ---
 
+### Resolution: GAINS Effect Assignment (PR Decision Record)
+
+**Date:** 2026-10-23
+**Resolution:** NOT A DEFECT — defined intermediate state
+
+**Finding:** The LINKED dimension with only-NEUTRAL dasha evidence legitimately yields `effect: UNKNOWN`. This is not a contradiction — it is a defined intermediate state in the activation contract.
+
+**Contract (from selectedWealthDashaActivation.ts resolveEffect, lines 183-203):**
+- No evidence → INSUFFICIENT_DATA
+- Neutral-only → UNKNOWN
+- Support + challenge or MIXED → PARTIALLY_ACTIVATES
+- Support only → ACTIVATES
+- Challenge only → CHALLENGES
+
+**Synthesis Layer Handling:**
+The synthesis layer (`selectedPeriodSynthesis.ts`) already maps this state correctly:
+- `effect: UNKNOWN` + `insufficientReason: LINKED` → `dataStatus: PARTIAL`
+- Emits `WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE` diagnostic
+
+**Conclusion:** This is a valid intermediate state, not a defect. The system correctly identifies that a dimension has linkage but the linked evidence is neutral (neither supportive nor challenging), resulting in an indeterminate activation effect. This is semantically distinct from both "no linkage" and "determinate activation."
+
+**Alternative Path:** If the domain owner decides that neutral-linked evidence should force a determinate effect (e.g., ACTIVATES), this would require a separate scoped PR to change the `resolveEffect` contract. The current behavior is intentional and well-documented.
+
+---
+
 ## Wealth Linkage Rule Analysis
 
 ### Current Implementation (`isLinkedToDimension`)

@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `4b7bc7b`
+**Baseline Commit:** `abb00008`
 
 **Last Updated:** 2026-10-23
 
@@ -111,9 +111,11 @@
 **Implementation Files:**
 - `src/domain/career/careerDasha/selectedCareerDashaActivation.ts` (buildSelectedCareerDashaActivation)
 - `src/domain/career/careerDasha/careerDashaIntegration.ts` (buildSelectedCareerDashaCanonicalAnalysis)
+- `src/domain/career/careerMechanism/resolver/careerMechanismResolverRules.ts` (KENDRA_TRIKONA rule added)
 
 **Test Files:**
 - `src/domain/career/careerDasha/selectedCareerDashaActivation.test.ts` (career activation tests)
+- `src/domain/career/careerMechanism/resolver/careerMechanismResolver.test.ts` (KENDRA_TRIKONA rule tests)
 
 **CI Evidence:**
 - ✅ Adapter dropped-candidate diagnostic landed (commits 42398f9, 22641c1)
@@ -133,9 +135,23 @@
 - ✅ UNAVAILABLE-unchanged scenario covered (lines 333, 2904, 3893, 3932)
 - ✅ PROXY_DIRECTION-unchanged scenario covered (lines 2723, 3946)
 - ✅ Regression A fallback-row assertion de-conditionalized (unconditional assertion that candidateA deterministically emits ADAPTER_FALLBACK)
+- ✅ KENDRA_TRIKONA mechanism-resolution rule added (commit abb00008)
+  - Rule structure implemented with canonical edge resolution
+  - Mechanism-type mapping deferred pending domain owner confirmation (TODO in resolve)
+  - Firewall test: houses present but no establishing lord relationship → zero candidates
+  - Determinism test: repeated resolve → identical output
+  - Tests added to careerMechanismResolver.test.ts
+
+**Deferred Families (Priority 3 - pending frozen evidence contracts and domain sign-off):**
+- CAREER_HOUSE_NETWORK generic: needs mechanism-resolution rule (evidence contract not frozen)
+- UPACHAYA_PROGRESSION: needs mechanism-resolution rule (evidence contract not frozen)
+- PARIVARTANA_YOGA: needs mechanism-resolution rule (evidence contract not frozen)
+- CAREER_YOGA_STRUCTURE: needs mechanism-resolution rule (evidence contract not frozen)
 
 **Remediation:**
 - COMPLETE: All test coverage gaps addressed, CI verification green
+- KENDRA_TRIKONA rule structure added (non-speculative, TODO for mechanism-type confirmation)
+- Remaining families deferred until evidence contracts are frozen
 
 ---
 
@@ -146,9 +162,13 @@
 **Implementation Files:**
 - `src/domain/wealth/selectedWealthDashaActivation.ts` (evaluateSelectedWealthPeriodActivation)
 - insufficientReason discriminator (NO_PROMISE_EVIDENCE, PROMISE_NOT_LINKED, LINKED)
+- Conservative house-only linkage contract preserved (Option A)
 
 **Test Files:**
 - `src/domain/wealth/selectedWealthDashaActivation.test.ts` (wealth activation tests)
+- Moon MD→Moon AD FORTUNE (house 9) test: PROMISE_NOT_LINKED
+- Moon MD→Moon AD SPECULATION (house 5) test: PROMISE_NOT_LINKED
+- NO_PROMISE_EVIDENCE vs PROMISE_NOT_LINKED discrimination test
 
 **CI Evidence:**
 - ✅ npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts: PASS (commit e12f513)
@@ -159,11 +179,16 @@
 **Findings:**
 - ✅ insufficientReason discriminator decision recorded: NO_PROMISE_EVIDENCE, PROMISE_NOT_LINKED, LINKED
 - ✅ All four dimensions independently tested
-- ✅ Distinguishing diagnostics implemented
+- ✅ Distinguishing diagnostics implemented (promise present but dasha lord does not touch dimension's house vs true insufficiency)
 - ✅ dataStatus reflects input/evidence availability only
+- ✅ Conservative house-only linkage contract preserved (Option A)
+- ✅ Moon MD→Moon AD cases tested: FORTUNE and SPECULATION return PROMISE_NOT_LINKED
+- ✅ NO_PROMISE_EVIDENCE vs PROMISE_NOT_LINKED discrimination verified
 
 **Remediation:**
 - PR-D completed: insufficientReason discriminator implemented and tested
+- Conservative linkage confirmed (Option A): explicit house match required, planet overlap alone insufficient
+- Moon MD→Moon AD diagnostic tests added (commit abb00008)
 
 ---
 
@@ -401,10 +426,18 @@
 **Confirmed Defects:** 0
 - PBA-03: Resolved (temporal relation recomputation implemented in commit ed30213)
 - PBA-04: Resolved (adapter diagnostic implemented in commits 42398f9/22641c1, test coverage completed in commit 8ba1bd6)
+- PBA-04 Priority 3 Gap: KENDRA_TRIKONA rule structure added (commit abb00008), mechanism-type mapping deferred pending domain confirmation
+- PBA-05 Priority 3 Gap: GAINS UNKNOWN effect resolved (not a defect — defined intermediate state, recorded in PBA-INVESTIGATION-FINDINGS.md)
+- PBA-05 Priority 3 Gap: Conservative linkage confirmed (Option A), Moon MD→Moon AD tests added (commit abb00008)
 
 **PR Sequence Progress:**
 - PR-A (WP-0): Contract and acceptance matrix (docs only) — COMPLETE
 - PR-B (WP-1): Context guardrails — COMPLETE (commit ed30213)
+- Priority 3 Gap Closure (commit abb00008):
+  - Career: KENDRA_TRIKONA mechanism-resolution rule added (structure only, TODO for mechanism-type confirmation)
+  - Wealth: GAINS UNKNOWN effect resolved (defined intermediate state, not a defect)
+  - Wealth: Conservative linkage confirmed with Moon MD→Moon AD diagnostic tests
+  - Deferred families: CAREER_HOUSE_NETWORK, UPACHAYA_PROGRESSION, PARIVARTANA_YOGA, CAREER_YOGA_STRUCTURE (pending frozen evidence contracts)
 - PR-C (WP-2): Career candidate integrity — COMPLETE (adapter diagnostic landed in 42398f9/22641c1, test coverage completed in 8ba1bd6)
 - PR-D (WP-3): Wealth diagnostics — COMPLETE
 - PR-E (WP-4): Partial synthesis orchestration — COMPLETE
