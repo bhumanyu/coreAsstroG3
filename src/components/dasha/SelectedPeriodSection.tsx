@@ -54,7 +54,7 @@ export const DASHA_DIAGNOSTIC_EXPLANATIONS: Record<string, string> = {
  * Shows raw code in parentheses when no explanation is available.
  */
 function mapDiagnosticToExplanation(code: string): string {
-  return DASHA_DIAGNOSTIC_EXPLANATIONS[code] || `${code} (${code})`;
+  return DASHA_DIAGNOSTIC_EXPLANATIONS[code] || code;
 }
 
 function formatDate(isoString: string): string {

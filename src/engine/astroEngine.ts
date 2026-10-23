@@ -366,6 +366,17 @@ export function calculateHoroscope(
   const resolvedAsOf = asOf ? (typeof asOf === 'string' ? new Date(asOf) : asOf) : undefined;
 
   const positions = customPositions || generatePlanetaryPositions(birthDetails);
+
+  // Validate Moon position early (fail-closed before any loops access positions)
+  const moonPos = positions[Planet.MOON];
+  if (!moonPos) {
+    throw new TypeError('Moon position is required for Vimshottari Dasha calculation.');
+  }
+  const moonLong = moonPos.eclipticLongitude ?? moonPos.longitude;
+  if (typeof moonLong !== 'number' || isNaN(moonLong) || !isFinite(moonLong)) {
+    throw new TypeError('Moon longitude must be a finite number for Vimshottari Dasha calculation.');
+  }
+
   const ascendantLong = calculateAscendant(birthDetails);
   const ascendantSign = calculateSign(ascendantLong);
 
@@ -444,15 +455,6 @@ export function calculateHoroscope(
       house
     };
   });
-
-  const moonPos = positions[Planet.MOON];
-  if (!moonPos) {
-    throw new TypeError('Moon position is required for Vimshottari Dasha calculation.');
-  }
-  const moonLong = moonPos.eclipticLongitude ?? moonPos.longitude;
-  if (typeof moonLong !== 'number' || isNaN(moonLong) || !isFinite(moonLong)) {
-    throw new TypeError('Moon longitude must be a finite number for Vimshottari Dasha calculation.');
-  }
 
   const vimshottari = calculateVimshottari({
     birthDateTime: birthDetails.dateTimeStr,
