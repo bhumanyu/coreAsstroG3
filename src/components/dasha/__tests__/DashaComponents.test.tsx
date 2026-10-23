@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import {
   DashaHero,
   TransitTimingSection,
@@ -785,6 +785,63 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       expect(adSelect).toHaveValue('');
       expect(submitButton).toBeDisabled();
+    });
+
+    it('SelectedPeriodSection: renders unknown diagnostic codes visibly', () => {
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [
+          {
+            id: 'md_venus',
+            planet: 'Venus',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2040-01-01T00:00:00.000Z',
+            valid: false,
+            diagnostics: ['UNRECOGNIZED_PERIOD_ISSUE'],
+            temporalRelation: 'UNKNOWN',
+            antardashas: []
+          }
+        ],
+        diagnostics: []
+      };
+
+      render(
+        <SelectedPeriodSection
+          dashPeriodOptions={dashPeriodOptions}
+          onSelect={vi.fn()}
+        />
+      );
+
+      const diagnostics = screen.getByRole('alert', { name: 'Unavailable Dasha periods' });
+      expect(within(diagnostics).getAllByText('UNRECOGNIZED_PERIOD_ISSUE').length).toBeGreaterThan(0);
+    });
+
+    it('SelectedPeriodSection: announces invalid-period explanations and codes accessibly', () => {
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [
+          {
+            id: 'md_venus',
+            planet: 'Venus',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2040-01-01T00:00:00.000Z',
+            valid: false,
+            diagnostics: ['INVALID_MAHADASHA_INTERVAL'],
+            temporalRelation: 'UNKNOWN',
+            antardashas: []
+          }
+        ],
+        diagnostics: []
+      };
+
+      render(
+        <SelectedPeriodSection
+          dashPeriodOptions={dashPeriodOptions}
+          onSelect={vi.fn()}
+        />
+      );
+
+      const diagnostics = screen.getByRole('alert', { name: 'Unavailable Dasha periods' });
+      expect(diagnostics).toHaveTextContent('Invalid Mahadasha time interval');
+      expect(diagnostics).toHaveTextContent('INVALID_MAHADASHA_INTERVAL');
     });
 
     it('SelectedPeriodSection: valid submit calls onSelect with exact canonical IDs', () => {

@@ -3,7 +3,7 @@
  *
  * Cascading MD→AD selects for period selection.
  * Displays planet label, canonical start/end, PAST/CURRENT/FUTURE badge from DTO.
- * Invalid options rendered but disabled with diagnostic tooltip.
+ * Invalid options rendered but disabled with visible diagnostic explanations.
  */
 
 import React, { useState } from 'react';
@@ -177,7 +177,11 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
         {/* Invalid Period Diagnostics */}
         {dashPeriodOptions.mahadashas.some(md => !md.valid) ||
           (selectedMahadasha && selectedMahadasha.antardashas.some(ad => !ad.valid)) ? (
-          <section aria-label="Unavailable Dasha periods" className="bg-amber-950/40 border border-amber-800/60 rounded-lg p-3 space-y-2">
+          <section
+            role="alert"
+            aria-label="Unavailable Dasha periods"
+            className="bg-amber-950/40 border border-amber-800/60 rounded-lg p-3 space-y-2"
+          >
             <div className="flex items-center gap-2 text-xs font-mono-code text-amber-400">
               <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Unavailable Dasha periods</span>

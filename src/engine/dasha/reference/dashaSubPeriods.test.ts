@@ -4,7 +4,8 @@ import {
   getActiveDasha,
   DASHA_YEARS,
   MS_PER_VIMSHOTTARI_YEAR,
-  rotateDashaSequence
+  rotateDashaSequence,
+  addFractionalYears
 } from '../vimshottari';
 import { Planet } from '../../../types';
 import { DASHA_REFERENCE_CASES } from './dashaReferenceCases';
@@ -17,6 +18,124 @@ import { expectCloseToReference } from './dashaReferenceAssertions';
  * Validates MD/AD/PD period counts, active period triple evaluations, and analytical duration scaling.
  */
 describe('D08-G & D08-H: Reference Sub-Period and Active Dasha Validation', () => {
+  describe('Analytical partial-MD timing (internal convention only)', () => {
+    it('anchors Venus AD/PD boundaries to the full MD and clips the active periods at birth', () => {
+      const birth = '1990-01-01T00:00:00.000Z';
+      const birthMs = new Date(birth).getTime();
+      const timeline = calculateVimshottari({
+        birthDateTime: birth,
+        moonSiderealLongitude: 20
+      });
+      const firstMd = timeline.mahadashas[0];
+
+      expect(firstMd.planet).toBe(Planet.VENUS);
+      expect(firstMd.start).toBe(birth);
+      expect(firstMd.end).toBe('2000-01-01T12:00:00.000Z');
+
+      const expectedAdPeriods = [
+        [Planet.RAHU, birth, '1990-03-02T21:00:00.000Z'],
+        [Planet.JUPITER, '1990-03-02T21:00:00.000Z', '1992-10-31T21:00:00.000Z'],
+        [Planet.SATURN, '1992-10-31T21:00:00.000Z', '1996-01-01T12:00:00.000Z'],
+        [Planet.MERCURY, '1996-01-01T12:00:00.000Z', '1998-11-01T09:00:00.000Z'],
+        [Planet.KETU, '1998-11-01T09:00:00.000Z', '2000-01-01T12:00:00.000Z']
+      ] as const;
+      expect(firstMd.antardashas).toHaveLength(expectedAdPeriods.length);
+      expectedAdPeriods.forEach(([planet, start, end], index) => {
+        expect(firstMd.antardashas[index].planet).toBe(planet);
+        expect(firstMd.antardashas[index].start).toBe(start);
+        expect(firstMd.antardashas[index].end).toBe(end);
+      });
+
+      const activeAtBirth = getActiveDasha(timeline, birth);
+      expect(activeAtBirth?.mahadasha.planet).toBe(Planet.VENUS);
+      expect(activeAtBirth?.antardasha.planet).toBe(Planet.RAHU);
+      expect(activeAtBirth?.pratyantardasha.planet).toBe(Planet.MARS);
+      expect(activeAtBirth?.antardasha.start).toBe(birth);
+      expect(activeAtBirth?.pratyantardasha.start).toBe(birth);
+
+      const fullMdStart = new Date(
+        birthMs - 0.5 * DASHA_YEARS[Planet.VENUS] * MS_PER_VIMSHOTTARI_YEAR
+      );
+      const fullMdDurationMs =
+        addFractionalYears(fullMdStart, DASHA_YEARS[Planet.VENUS]).getTime() - fullMdStart.getTime();
+      const fullMdEndMs = fullMdStart.getTime() + fullMdDurationMs;
+      const fullAdPeriods = new Map<Planet, { startMs: number; endMs: number }>();
+      let fullAdStartMs = fullMdStart.getTime();
+      const fullAdSequence = rotateDashaSequence(Planet.VENUS);
+      for (let adIndex = 0; adIndex < fullAdSequence.length; adIndex++) {
+        const planet = fullAdSequence[adIndex];
+        const fullAdEndMs = adIndex === fullAdSequence.length - 1
+          ? fullMdEndMs
+          : new Date(
+              fullAdStartMs + fullMdDurationMs * (DASHA_YEARS[planet] / 120)
+            ).getTime();
+        fullAdPeriods.set(planet, { startMs: fullAdStartMs, endMs: fullAdEndMs });
+        fullAdStartMs = fullAdEndMs;
+      }
+
+      for (const ad of firstMd.antardashas) {
+        const fullAd = fullAdPeriods.get(ad.planet)!;
+        const fullAdDurationMs = fullAd.endMs - fullAd.startMs;
+        const expectedAdStart = Math.max(fullAd.startMs, birthMs);
+        const expectedAdEnd = Math.min(fullAd.endMs, new Date(firstMd.end).getTime());
+        expect(ad.start).toBe(new Date(expectedAdStart).toISOString());
+        expect(ad.end).toBe(new Date(expectedAdEnd).toISOString());
+
+        const pdSequence = rotateDashaSequence(ad.planet);
+        let fullPdStartMs = fullAd.startMs;
+        const pdEndTimes: number[] = [];
+        for (let pdIndex = 0; pdIndex < pdSequence.length; pdIndex++) {
+          const pdPlanet = pdSequence[pdIndex];
+          const fullPdEndMs = pdIndex === pdSequence.length - 1
+            ? fullAd.endMs
+            : new Date(
+                fullPdStartMs + fullAdDurationMs * (DASHA_YEARS[pdPlanet] / 120)
+              ).getTime();
+          const clippedStartMs = Math.max(fullPdStartMs, expectedAdStart);
+          const clippedEndMs = Math.min(fullPdEndMs, expectedAdEnd);
+          if (clippedEndMs > clippedStartMs) {
+            pdEndTimes.push(clippedEndMs);
+          }
+          fullPdStartMs = fullPdEndMs;
+        }
+
+        expect(ad.pratyantardashas).toHaveLength(pdEndTimes.length);
+        let previousEnd = expectedAdStart;
+        ad.pratyantardashas.forEach((pd, pdIndex) => {
+          expect(pd.start).toBe(new Date(previousEnd).toISOString());
+          expect(pd.end).toBe(new Date(pdEndTimes[pdIndex]).toISOString());
+          previousEnd = pdEndTimes[pdIndex];
+        });
+
+        for (let pdIndex = 0; pdIndex < ad.pratyantardashas.length - 1; pdIndex++) {
+          const boundaryMs = new Date(ad.pratyantardashas[pdIndex].end).getTime();
+          const before = getActiveDasha(timeline, new Date(boundaryMs - 1));
+          const at = getActiveDasha(timeline, new Date(boundaryMs));
+          const after = getActiveDasha(timeline, new Date(boundaryMs + 1));
+          expect(before?.antardasha.planet).toBe(ad.planet);
+          expect(before?.pratyantardasha.planet).toBe(ad.pratyantardashas[pdIndex].planet);
+          expect(at?.antardasha.planet).toBe(ad.planet);
+          expect(at?.pratyantardasha.planet).toBe(ad.pratyantardashas[pdIndex + 1].planet);
+          expect(after?.pratyantardasha.planet).toBe(ad.pratyantardashas[pdIndex + 1].planet);
+        }
+
+      }
+
+      for (let adIndex = 0; adIndex < firstMd.antardashas.length - 1; adIndex++) {
+        const currentAd = firstMd.antardashas[adIndex];
+        const nextAd = firstMd.antardashas[adIndex + 1];
+        const boundaryMs = new Date(currentAd.end).getTime();
+        const before = getActiveDasha(timeline, new Date(boundaryMs - 1));
+        const at = getActiveDasha(timeline, new Date(boundaryMs));
+        const after = getActiveDasha(timeline, new Date(boundaryMs + 1));
+        expect(before?.antardasha.planet).toBe(currentAd.planet);
+        expect(at?.antardasha.planet).toBe(nextAd.planet);
+        expect(at?.pratyantardasha.planet).toBe(nextAd.planet);
+        expect(after?.antardasha.planet).toBe(nextAd.planet);
+      }
+    });
+  });
+
   describe('Sub-Period Structure and Counts (MD -> 9 ADs, AD -> 9 PDs)', () => {
     it('verifies exact length 9 for full-length (100%-balance) Mahadashas and their Antardashas', () => {
       // 0° Bharani = start of Venus MD (13.333333333333334°) -> full 20-year Venus MD (100% balance)

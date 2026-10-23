@@ -28,6 +28,15 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(normalizeDegrees(-390)).toBe(330);
     });
 
+    it('preserves values just below 360° while wrapping exact and above-boundary values', () => {
+      expect(normalizeDegrees(360 - 1e-12)).toBe(360 - 1e-12);
+      expect(normalizeDegrees(360 - 1e-10)).toBe(360 - 1e-10);
+      expect(normalizeDegrees(360)).toBe(0);
+      expect(normalizeDegrees(360 + 1e-12)).toBeCloseTo(1e-12, 11);
+      expect(normalizeDegrees(-1e-12)).toBeCloseTo(360 - 1e-12, 11);
+      expect(normalizeDegrees(-1e-10)).toBeCloseTo(360 - 1e-10, 11);
+    });
+
     it('returns normalized moonSiderealLongitude in the timeline when given >360 longitude', () => {
       const timeline = calculateVimshottari({
         birthDateTime: birthIso,
@@ -352,11 +361,14 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(jupiterMd.start).toBe(rahuMd.end);
       expect(jupiterMd.end.startsWith('2014-06-23T13:15:00')).toBe(true);
 
-      // First Antardasha (Rahu - Rahu)
-      const rahuRahuAd = rahuMd.antardashas[0];
-      expect(rahuRahuAd.planet).toBe(Planet.RAHU);
-      expect(rahuRahuAd.start).toBe('1988-05-08T09:30:00.000Z');
-      expect(rahuRahuAd.end).toBe('1989-11-14T02:51:45.000Z');
+      // The first active AD is Saturn, anchored to the full Rahu MD before birth.
+      const saturnAd = rahuMd.antardashas[0];
+      expect(saturnAd.planet).toBe(Planet.SATURN);
+      expect(saturnAd.start).toBe('1988-05-08T09:30:00.000Z');
+      expect(saturnAd.end).toBe('1988-06-04T18:57:00.000Z');
+      expect(saturnAd.pratyantardashas[0].planet).toBe(Planet.JUPITER);
+      expect(saturnAd.pratyantardashas[0].start).toBe('1988-05-08T09:30:00.000Z');
+      expect(saturnAd.pratyantardashas[0].end).toBe('1988-06-04T18:57:00.000Z');
     });
   });
 
@@ -414,6 +426,24 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       const activeAtBirth = getActiveDasha(timeline, birthIso);
       expect(activeAtBirth).not.toBeNull();
       expect(activeAtBirth?.mahadasha.planet).toBe(Planet.VENUS);
+    });
+
+    it('skips a zero-length first MD while retaining its near-360° Nakshatra classification', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 360 - 1e-12
+      });
+
+      expect(timeline.nakshatra).toBe('Revati');
+      expect(timeline.nakshatraLord).toBe(Planet.MERCURY);
+      expect(timeline.remainingFraction).toBeGreaterThan(0);
+      expect(timeline.mahadashas[0].planet).toBe(Planet.KETU);
+      expect(timeline.mahadashas[0].start).toBe(birthIso);
+
+      const activeAtBirth = getActiveDasha(timeline, birthIso);
+      expect(activeAtBirth?.mahadasha.planet).toBe(Planet.KETU);
+      expect(activeAtBirth?.antardasha.planet).toBe(Planet.KETU);
+      expect(activeAtBirth?.pratyantardasha.planet).toBe(Planet.KETU);
     });
 
     it('accepts Moon longitude just after Nakshatra boundary and produces valid timeline', () => {
@@ -776,6 +806,41 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
         const activePdEnd = new Date(active.pratyantardasha.end).getTime();
         expect(activePdEnd).toBeGreaterThan(activePdStart);
       }
+    });
+  });
+
+  describe('18. near-360° normalization and active periods', () => {
+    it.each([
+      { longitude: 360 - 1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: 360 - 1e-10, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.MERCURY, activeAd: Planet.SATURN, activePd: Planet.JUPITER },
+      { longitude: 360, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: 360 + 1e-12, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: -1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: -1e-10, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.MERCURY, activeAd: Planet.SATURN, activePd: Planet.JUPITER },
+      { longitude: -360, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: -360 + 1e-12, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU }
+    ])('classifies $longitude° without snapping near-360 values', ({
+      longitude, nakshatra, lord, activeMd, activeAd, activePd
+    }) => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: longitude
+      });
+
+      const normalized = normalizeDegrees(longitude);
+      const expectedProgress = nakshatra === 'Revati'
+        ? (normalized - (1040 / 3)) / (40 / 3)
+        : normalized / (40 / 3);
+      expect(timeline.moonSiderealLongitude).toBe(normalized);
+      expect(timeline.nakshatra).toBe(nakshatra);
+      expect(timeline.nakshatraLord).toBe(lord);
+      expect(timeline.nakshatraProgress).toBeCloseTo(expectedProgress, 14);
+      expect(timeline.remainingFraction).toBeCloseTo(1 - expectedProgress, 14);
+
+      const activeAtBirth = getActiveDasha(timeline, birthIso);
+      expect(activeAtBirth?.mahadasha.planet).toBe(activeMd);
+      expect(activeAtBirth?.antardasha.planet).toBe(activeAd);
+      expect(activeAtBirth?.pratyantardasha.planet).toBe(activePd);
     });
   });
 });

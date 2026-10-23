@@ -121,8 +121,7 @@ export function normalizeDegrees(degree: number): number {
   if (norm < 0) {
     norm += 360;
   }
-  // Snap 360 to 0 for circular wrap-around (different from Nakshatra boundary convention)
-  if (Math.abs(norm - 360) < 1e-9) {
+  if (norm === 0) {
     return 0;
   }
   return norm;
@@ -242,6 +241,97 @@ function buildAntardashas(
   return Object.freeze(antardashas);
 }
 
+function buildPratyantardashasAnchored(
+  adPlanet: Planet,
+  fullAdStart: Date,
+  fullAdDurationMs: number,
+  windowStart: Date,
+  windowEnd: Date
+): readonly PratyantardashaPeriod[] {
+  if (fullAdDurationMs <= 0 || windowEnd.getTime() <= windowStart.getTime()) {
+    return Object.freeze([]);
+  }
+
+  const fullAdEnd = new Date(fullAdStart.getTime() + fullAdDurationMs);
+  const pdSequence = rotateDashaSequence(adPlanet);
+  const pratyantardashas: PratyantardashaPeriod[] = [];
+  let currentPdStart = new Date(fullAdStart.getTime());
+
+  for (let i = 0; i < pdSequence.length; i++) {
+    if (currentPdStart.getTime() >= windowEnd.getTime()) break;
+
+    const pdPlanet = pdSequence[i];
+    const calculatedPdEnd = i === pdSequence.length - 1
+      ? new Date(fullAdEnd.getTime())
+      : new Date(currentPdStart.getTime() + fullAdDurationMs * (DASHA_YEARS[pdPlanet] / 120));
+    const fullPdEnd = new Date(Math.min(calculatedPdEnd.getTime(), fullAdEnd.getTime()));
+    const pdStart = new Date(Math.max(currentPdStart.getTime(), windowStart.getTime()));
+    const pdEnd = new Date(Math.min(fullPdEnd.getTime(), windowEnd.getTime()));
+
+    if (pdEnd.getTime() > pdStart.getTime()) {
+      pratyantardashas.push(Object.freeze({
+        planet: pdPlanet,
+        start: pdStart.toISOString(),
+        end: pdEnd.toISOString()
+      }));
+    }
+    currentPdStart = fullPdEnd;
+  }
+
+  return Object.freeze(pratyantardashas);
+}
+
+function buildAntardashasAnchored(
+  mdPlanet: Planet,
+  fullMdStart: Date,
+  fullMdDurationMs: number,
+  windowStart: Date,
+  windowEnd: Date
+): readonly AntardashaPeriod[] {
+  if (fullMdDurationMs <= 0 || windowEnd.getTime() <= windowStart.getTime()) {
+    return Object.freeze([]);
+  }
+
+  const fullMdEnd = new Date(fullMdStart.getTime() + fullMdDurationMs);
+  const adSequence = rotateDashaSequence(mdPlanet);
+  const antardashas: AntardashaPeriod[] = [];
+  let currentAdStart = new Date(fullMdStart.getTime());
+
+  for (let i = 0; i < adSequence.length; i++) {
+    if (currentAdStart.getTime() >= windowEnd.getTime()) break;
+
+    const adPlanet = adSequence[i];
+    const calculatedAdEnd = i === adSequence.length - 1
+      ? new Date(fullMdEnd.getTime())
+      : new Date(currentAdStart.getTime() + fullMdDurationMs * (DASHA_YEARS[adPlanet] / 120));
+    const fullAdEnd = new Date(Math.min(calculatedAdEnd.getTime(), fullMdEnd.getTime()));
+    const adStart = new Date(Math.max(currentAdStart.getTime(), windowStart.getTime()));
+    const adEnd = new Date(Math.min(fullAdEnd.getTime(), windowEnd.getTime()));
+
+    if (adEnd.getTime() > adStart.getTime()) {
+      const fullAdDurationMs = fullAdEnd.getTime() - currentAdStart.getTime();
+      const pratyantardashas = buildPratyantardashasAnchored(
+        adPlanet,
+        currentAdStart,
+        fullAdDurationMs,
+        adStart,
+        adEnd
+      );
+
+      antardashas.push(Object.freeze({
+        planet: adPlanet,
+        start: adStart.toISOString(),
+        end: adEnd.toISOString(),
+        pratyantardashas
+      }));
+    }
+
+    currentAdStart = fullAdEnd;
+  }
+
+  return Object.freeze(antardashas);
+}
+
 /**
  * Calculates birth-anchored Vimshottari Dasha timeline.
  */
@@ -294,7 +384,7 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
   const nakshatraLord = nakMeta.lord;
 
   const nakSpan = 40 / 3; // 13.333333333333334 degrees
-  const offset = normLong - (nakMeta.startDegree ?? 0);
+  const offset = normLong - (nakMeta.number - 1) * nakSpan;
 
   let nakshatraProgress = offset / nakSpan;
   // Boundary convention: exact boundary belongs to NEXT Nakshatra.
@@ -328,7 +418,8 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
       isFirstMd = false;
 
       const fullYears = DASHA_YEARS[mdPlanet] * fraction;
-      let mdEnd = addFractionalYears(currentStart, fullYears);
+      const calculatedMdEnd = addFractionalYears(currentStart, fullYears);
+      let mdEnd = calculatedMdEnd;
 
       if (mdEnd.getTime() > untilDate.getTime()) {
         mdEnd = new Date(untilDate.getTime());
@@ -339,7 +430,38 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
         continue;
       }
 
-      const antardashas = buildAntardashas(mdPlanet, currentStart, mdEnd);
+      let antardashas: readonly AntardashaPeriod[];
+      if (mdPlanet === nakshatraLord && mahadashas.length === 0) {
+        const fullMdYears = DASHA_YEARS[mdPlanet];
+        let fullMdStart = new Date(
+          birthDate.getTime() - nakshatraProgress * fullMdYears * MS_PER_VIMSHOTTARI_YEAR
+        );
+        let fullMdDurationMs =
+          addFractionalYears(fullMdStart, fullMdYears).getTime() - fullMdStart.getTime();
+        const initialFullMdEnd = fullMdStart.getTime() + fullMdDurationMs;
+        const alignmentMs = calculatedMdEnd.getTime() - initialFullMdEnd;
+        if (Math.abs(alignmentMs) > 1) {
+          throw new Error('The notional full Mahadasha end does not match the partial Mahadasha end.');
+        }
+        if (alignmentMs !== 0) {
+          // Equivalent fractional-year calculations can differ by one millisecond after Date truncation.
+          fullMdStart = new Date(fullMdStart.getTime() + alignmentMs);
+          fullMdDurationMs =
+            addFractionalYears(fullMdStart, fullMdYears).getTime() - fullMdStart.getTime();
+        }
+        if (fullMdStart.getTime() + fullMdDurationMs !== calculatedMdEnd.getTime()) {
+          throw new Error('The notional full Mahadasha end does not match the partial Mahadasha end.');
+        }
+        antardashas = buildAntardashasAnchored(
+          mdPlanet,
+          fullMdStart,
+          fullMdDurationMs,
+          currentStart,
+          mdEnd
+        );
+      } else {
+        antardashas = buildAntardashas(mdPlanet, currentStart, mdEnd);
+      }
 
       const mdPeriod: MahadashaPeriod = Object.freeze({
         planet: mdPlanet,
@@ -358,8 +480,8 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
     moonSiderealLongitude: normLong,
     nakshatra: nakshatraName,
     nakshatraLord,
-    nakshatraProgress: Number(nakshatraProgress.toFixed(10)),
-    remainingFraction: Number(remainingFraction.toFixed(10)),
+    nakshatraProgress,
+    remainingFraction,
     mahadashas: Object.freeze(mahadashas)
   });
 

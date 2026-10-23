@@ -27,6 +27,10 @@ export const STANDARD_REFERENCE_CONVENTIONS: ReferenceConventions = Object.freez
  * - Dasha System: Parashari Vimshottari 120-year cycle (Ketu 7, Venus 20, Sun 6, Moon 10, Mars 7, Rahu 18, Jupiter 16, Saturn 19, Mercury 17)
  * - Calendar Year Convention: Standard astrological year of 365.25 days (31,557,600,000 ms / year per VIMSHOTTARI_YEAR_DAYS)
  * - Derivation: Each expected value was calculated analytically from exact fractional degrees and calendar date arithmetic.
+ *
+ * These analytical fixtures validate internal calculations under this documented convention only.
+ * They are not independent astronomical validation; externally sourced MD/AD/PD timelines with
+ * recorded source, ayanamsa, year length, birth instant, and Moon longitude remain required.
  */
 export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freeze([
   {
@@ -90,8 +94,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '1994-06-01T00:00:00.000Z',
       mahadasha: Planet.VENUS,
-      antardasha: Planet.RAHU,
-      pratyantardasha: Planet.MERCURY
+      antardasha: Planet.SATURN,
+      pratyantardasha: Planet.VENUS
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',
@@ -105,7 +109,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
       url: 'https://en.wikipedia.org/wiki/Dasha_(astrology)#Vimshottari_Dasha'
     },
     conventions: STANDARD_REFERENCE_CONVENTIONS,
-    notes: '50% progress through Bharani yields exactly 10.0 years of 20-year Venus Mahadasha.'
+    notes: '50% progress through Bharani yields 10 years remaining in the 20-year Venus Mahadasha. AD/PD sequences retain their positions in the full MD, so the birth-active sequence is Venus-Rahu-Mars; this is an analytical internal-convention fixture, not external validation.'
   },
   {
     id: 'REF-CASE-03-SUN-KRITTIKA',
@@ -129,8 +133,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '1986-01-01T00:00:00.000Z',
       mahadasha: Planet.SUN,
-      antardasha: Planet.MOON,
-      pratyantardasha: Planet.VENUS
+      antardasha: Planet.RAHU,
+      pratyantardasha: Planet.MARS
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',
@@ -207,7 +211,7 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '1996-01-01T00:00:00.000Z',
       mahadasha: Planet.MARS,
-      antardasha: Planet.JUPITER,
+      antardasha: Planet.MERCURY,
       pratyantardasha: Planet.JUPITER
     },
     source: {
@@ -246,8 +250,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '2010-01-01T00:00:00.000Z',
       mahadasha: Planet.RAHU,
-      antardasha: Planet.SATURN,
-      pratyantardasha: Planet.KETU
+      antardasha: Planet.MERCURY,
+      pratyantardasha: Planet.SUN
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',
@@ -285,8 +289,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '1995-01-01T00:00:00.000Z',
       mahadasha: Planet.JUPITER,
-      antardasha: Planet.SATURN,
-      pratyantardasha: Planet.RAHU
+      antardasha: Planet.VENUS,
+      pratyantardasha: Planet.MERCURY
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',
@@ -324,8 +328,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '1980-01-01T00:00:00.000Z',
       mahadasha: Planet.SATURN,
-      antardasha: Planet.SUN,
-      pratyantardasha: Planet.SUN
+      antardasha: Planet.RAHU,
+      pratyantardasha: Planet.SATURN
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',
@@ -363,8 +367,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '2006-01-01T00:00:00.000Z',
       mahadasha: Planet.MERCURY,
-      antardasha: Planet.SUN,
-      pratyantardasha: Planet.MOON
+      antardasha: Planet.MARS,
+      pratyantardasha: Planet.MERCURY
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',
@@ -402,8 +406,8 @@ export const DASHA_REFERENCE_CASES: readonly DashaReferenceCase[] = Object.freez
     expectedActiveDasha: {
       asOf: '1989-01-01T00:00:00.000Z',
       mahadasha: Planet.RAHU,
-      antardasha: Planet.RAHU,
-      pratyantardasha: Planet.SATURN
+      antardasha: Planet.MERCURY,
+      pratyantardasha: Planet.VENUS
     },
     source: {
       type: 'MATHEMATICAL_ANALYTICAL',

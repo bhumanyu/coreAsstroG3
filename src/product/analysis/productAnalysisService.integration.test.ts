@@ -302,13 +302,18 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
     expect(report).toBeDefined();
 
     const selectablePeriods = listSelectableMdAdPeriods(report!);
-    // Select MD=MOON explicitly by planet to match fixture
-    const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid && md.planet === 'MOON');
-    expect(validMd).toBeDefined();
-
-    // Select AD=MOON under the MOON mahadasha explicitly by planet
-    const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id && ad.planet === 'MOON');
+    // Select a Moon MD that still contains a valid Moon AD under full-MD anchoring.
+    const validAd = selectablePeriods.antardashas.find(
+      (ad: any) => ad.valid && ad.planet === 'MOON' &&
+        selectablePeriods.mahadashas.some(
+          (md: any) => md.valid && md.planet === 'MOON' && md.id === ad.mahadashaId
+        )
+    );
     expect(validAd).toBeDefined();
+    const validMd = selectablePeriods.mahadashas.find(
+      (md: any) => md.valid && md.id === validAd!.mahadashaId
+    );
+    expect(validMd).toBeDefined();
 
     // Request with valid selection and the same pinned asOf
     const analysis = await service.analyze(CANONICAL_BIRTH_DETAILS, {
@@ -447,7 +452,7 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
   });
 
   describe('PBA-10: Test-only validation', () => {
-    it('PAST temporal relation: Moon-Moon selection with asOf in the past', async () => {
+    it('PAST temporal relation: selects a valid AD from the partial Moon MD', async () => {
       // First, run a baseline analysis to populate lastPipelineState
       await service.analyze(CANONICAL_BIRTH_DETAILS, {
         includeAiExplanation: false
@@ -456,13 +461,14 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       const report = service.lastPipelineState?.temporalState?.dashaInterpretation;
       expect(report).toBeDefined();
 
-      // Select MD=MOON, AD=MOON to match the golden fixture
+      // The partial Moon MD starts with the AD active at birth, rather than Moon-Moon.
       const selectablePeriods = listSelectableMdAdPeriods(report!);
-      const moonMd = selectablePeriods.mahadashas.find((md: any) => md.valid && md.planet === 'MOON');
+      const moonMd = selectablePeriods.mahadashas.find(
+        (md: any) => md.valid && md.planet === 'MOON' && md.start === '1988-05-08T04:00:00.000Z'
+      );
       expect(moonMd).toBeDefined();
-
       const moonAd = selectablePeriods.antardashas.find(
-        (ad: any) => ad.valid && ad.mahadashaId === moonMd!.id && ad.planet === 'MOON'
+        (ad: any) => ad.valid && ad.mahadashaId === moonMd!.id
       );
       expect(moonAd).toBeDefined();
 

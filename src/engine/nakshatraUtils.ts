@@ -11,8 +11,7 @@ export function normalizeDegree(degree: number): number {
   if (normalized < 0) {
     normalized += 360;
   }
-  // Snap 360 to 0 for circular wrap-around
-  if (Math.abs(normalized - 360) < 1e-9) {
+  if (normalized === 0) {
     return 0;
   }
   return normalized;
