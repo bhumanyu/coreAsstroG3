@@ -22,6 +22,22 @@
 
 The full build emitted the existing large-chunk-size warning. The external ephemeris suite remains skipped; analytical fixtures are internal-convention checks, not independent astronomical validation. No expected active-planet values or external reference data were changed in this follow-up.
 
+## Vimshottari Zero-Length First-MD Guard Follow-up
+
+**Change commit:** `7120fbdcb2652006ee7d30f33bba1b4b490c5a6c`
+
+**Toolchain:** Node `20.19.4`, npm `10.9.2`
+
+**Verification for the change commit above:**
+- ✅ `npx vitest run src/engine/dasha/vimshottari.test.ts`: PASS (84 tests)
+- ✅ `npx vitest run src/engine/dasha/reference/dashaSubPeriods.test.ts`: PASS (17 tests)
+- ✅ `npx vitest run src/engine/astroEngine.test.ts`: PASS (48 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (123 tests; lint and build passed)
+- ✅ `npm run verify`: PASS (296 test files, 5,561 passed, 5 skipped; lint and build passed)
+
+The production fix consumes the partial-first-MD status only after a positive-length period is emitted and stops timeline generation if a complete candidate sequence makes no progress at millisecond precision. The guard regression uses a public input that skips a zero-length Sun candidate and emits the following partial Moon MD. The near-360° case with no representable positive interval now yields no MDs rather than repeating indefinitely. The full build emitted the existing large-chunk-size warning. The external ephemeris suite remains skipped.
+
 **Current PR verification (exact baseline SHA `491b831b2d6715760521b135365cbf4222623bec`):**
 - ✅ `npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts`: PASS (61 tests)
 - ✅ `npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts`: PASS (87 tests)
