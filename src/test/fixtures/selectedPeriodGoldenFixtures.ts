@@ -65,6 +65,10 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       {
         code: 'CAREER_QUALIFICATION_UNAVAILABLE',
         message: 'Career qualification unavailable: canonical inputs provided but no qualifying mechanisms for this chart'
+      },
+      {
+        code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
+        message: 'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.'
       }
     ]
   },
