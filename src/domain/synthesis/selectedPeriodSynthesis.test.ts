@@ -2984,7 +2984,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       const selectedPeriod = makeMoonMoonContext();
       const wealthActivation = makeWealthActivation();
       const fortuneDiagnostic =
-        "Promise evidence is present, but selected-period dasha evidence does not touch the FORTUNE's canonical house.";
+        "Promise evidence is present, but the selected-period dasha lord does not touch the FORTUNE's canonical house.";
       const activationWithUnlinkedFortune: SelectedWealthPeriodActivation = {
         ...wealthActivation,
         selectedPeriodId: selectedPeriod.selectedPeriodId,

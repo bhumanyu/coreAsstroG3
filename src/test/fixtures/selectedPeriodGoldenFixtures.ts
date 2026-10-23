@@ -129,7 +129,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         diagnostics: [
           {
             code: 'WEALTH_PROMISE_NOT_LINKED_TO_CANONICAL_HOUSE',
-            message: "Promise evidence is present, but selected-period dasha evidence does not touch the FORTUNE's canonical house."
+            message: "Promise evidence is present, but the selected-period dasha lord does not touch the FORTUNE's canonical house."
           }
         ],
         promiseEvidenceIds: [
@@ -148,7 +148,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         diagnostics: [
           {
             code: 'WEALTH_PROMISE_NOT_LINKED_TO_CANONICAL_HOUSE',
-            message: "Promise evidence is present, but selected-period dasha evidence does not touch the SPECULATION's canonical house."
+            message: "Promise evidence is present, but the selected-period dasha lord does not touch the SPECULATION's canonical house."
           }
         ],
         promiseEvidenceIds: [

@@ -275,7 +275,7 @@ function evaluateDimension(
       promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
       dashaRuleReferences: Object.freeze([]),
       insufficientReason: 'PROMISE_NOT_LINKED' as const,
-      diagnostic: `Promise evidence is present, but selected-period dasha evidence does not touch the ${dimension}'s canonical house.`
+      diagnostic: `Promise evidence is present, but the selected-period dasha lord does not touch the ${dimension}'s canonical house.`
     });
   }
 

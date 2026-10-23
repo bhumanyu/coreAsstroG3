@@ -489,7 +489,7 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.FORTUNE.linkedLevels).toEqual([]);
     expect(result.value.dimensions.FORTUNE.insufficientReason).not.toBe('NO_PROMISE_EVIDENCE');
     expect(result.value.dimensions.FORTUNE.diagnostic).toBe(
-      "Promise evidence is present, but selected-period dasha evidence does not touch the FORTUNE's canonical house."
+      "Promise evidence is present, but the selected-period dasha lord does not touch the FORTUNE's canonical house."
     );
   });
 
@@ -516,7 +516,7 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.SPECULATION.promiseEvidenceIds).toContain('NATAL_SPEC');
     expect(result.value.dimensions.SPECULATION.linkedLevels).toEqual([]);
     expect(result.value.dimensions.SPECULATION.diagnostic).toBe(
-      "Promise evidence is present, but selected-period dasha evidence does not touch the SPECULATION's canonical house."
+      "Promise evidence is present, but the selected-period dasha lord does not touch the SPECULATION's canonical house."
     );
   });
 
