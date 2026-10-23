@@ -164,20 +164,45 @@ describe('D08-G & D08-H: Reference Sub-Period and Active Dasha Validation', () =
       }
     });
 
-    it('verifies non-first (subsequent) Mahadashas always have exactly 9 ADs and 9 PDs per AD', () => {
+    it('verifies full subsequent Mahadashas have 9 ADs and handles a horizon-clipped final MD', () => {
       for (const refCase of DASHA_REFERENCE_CASES) {
         const timeline = calculateVimshottari({
           birthDateTime: refCase.birth.dateTimeStr,
           moonSiderealLongitude: refCase.expectedMoonLongitude
         });
 
-        // Non-first Mahadashas in timeline (indices 1+) are always full-length
+        // The 120-year horizon can clip the final non-first MD. Only complete MDs
+        // contain the complete nine-AD sequence; clipped MDs expose an anchored prefix.
         for (let i = 1; i < timeline.mahadashas.length; i++) {
           const subsequentMd = timeline.mahadashas[i];
-          expect(subsequentMd.antardashas).toHaveLength(9);
+          const fullMdEnd = addFractionalYears(
+            new Date(subsequentMd.start),
+            DASHA_YEARS[subsequentMd.planet]
+          ).toISOString();
+          const horizonClipped = subsequentMd.end !== fullMdEnd;
 
-          for (const ad of subsequentMd.antardashas) {
-            expect(ad.pratyantardashas).toHaveLength(9);
+          if (!horizonClipped) {
+            expect(subsequentMd.antardashas).toHaveLength(9);
+          } else {
+            expect(subsequentMd.antardashas.length).toBeGreaterThan(0);
+            expect(subsequentMd.antardashas.length).toBeLessThan(9);
+            expect(subsequentMd.antardashas[0].start).toBe(subsequentMd.start);
+            expect(subsequentMd.antardashas[subsequentMd.antardashas.length - 1].end)
+              .toBe(subsequentMd.end);
+          }
+
+          for (let adIndex = 0; adIndex < subsequentMd.antardashas.length; adIndex++) {
+            const ad = subsequentMd.antardashas[adIndex];
+            const adClippedAtHorizon =
+              horizonClipped && adIndex === subsequentMd.antardashas.length - 1;
+            if (!adClippedAtHorizon) {
+              expect(ad.pratyantardashas).toHaveLength(9);
+            } else {
+              expect(ad.pratyantardashas.length).toBeGreaterThan(0);
+              expect(ad.pratyantardashas.length).toBeLessThanOrEqual(9);
+              expect(ad.pratyantardashas[0].start).toBe(ad.start);
+              expect(ad.pratyantardashas[ad.pratyantardashas.length - 1].end).toBe(ad.end);
+            }
           }
         }
       }

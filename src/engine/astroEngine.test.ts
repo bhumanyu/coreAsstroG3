@@ -17,6 +17,7 @@ import { CANONICAL_BIRTH_DETAILS } from '../test/fixtures/canonicalChart';
 import { YogaType } from './yoga/yogaTypes';
 import { LifeTheme } from './lifeThemes/lifeThemeTypes';
 import { calculateWholeSignHouse } from './chartMath';
+import { DASHA_YEARS, MS_PER_VIMSHOTTARI_YEAR } from './dasha/vimshottari';
 
 describe('astroEngine', () => {
   it('normalizes degrees correctly into [0, 360)', () => {
@@ -766,7 +767,7 @@ describe('astroEngine', () => {
     expect(firstPD.natal).toBeDefined();
   });
 
-  it('returns an explicitly unavailable Dasha when the public Moon input yields no representable periods', () => {
+  it('emits the next full Mahadasha when the public Moon input has a sub-millisecond birth balance', () => {
     const positions = generatePlanetaryPositions(CANONICAL_BIRTH_DETAILS);
     const nearBoundaryLongitude = 360 - 1e-12;
     const customPositions = {
@@ -786,14 +787,18 @@ describe('astroEngine', () => {
     const horoscope = calculate();
 
     expect(horoscope.vimshottari.moonSiderealLongitude).toBe(nearBoundaryLongitude);
-    expect(horoscope.vimshottari.mahadashas).toEqual([]);
-    expect(horoscope.dashaInterpretation.availability).toBe('UNAVAILABLE');
-    expect(horoscope.dashaInterpretation.diagnostics).toContain('EMPTY_VIMSHOTTARI_TIMELINE');
-    expect(horoscope.dashaInterpretation.mahadashas).toEqual([]);
-    expect(horoscope.dashaInterpretation.current).toBeUndefined();
-    expect(horoscope.fullNatalAnalysis.vimshottari.status).toBe('UNAVAILABLE');
-    expect(horoscope.fullNatalAnalysis.majorLifePeriods.status).toBe('UNAVAILABLE');
-    expect(horoscope.fullNatalAnalysis.currentDasha.status).toBe('UNAVAILABLE');
+    expect(horoscope.vimshottari.mahadashas[0].planet).toBe(Planet.KETU);
+    expect(horoscope.vimshottari.mahadashas[0].start)
+      .toBe(new Date(CANONICAL_BIRTH_DETAILS.dateTimeStr).toISOString());
+    expect(new Date(horoscope.vimshottari.mahadashas[0].end).getTime() -
+      new Date(horoscope.vimshottari.mahadashas[0].start).getTime())
+      .toBe(DASHA_YEARS[Planet.KETU] * MS_PER_VIMSHOTTARI_YEAR);
+    expect(horoscope.dashaInterpretation.availability).not.toBe('UNAVAILABLE');
+    expect(horoscope.dashaInterpretation.mahadashas.length).toBeGreaterThan(0);
+    expect(horoscope.dashaInterpretation.current?.mahadasha.planet).toBe(Planet.KETU);
+    expect(horoscope.fullNatalAnalysis.vimshottari.status).not.toBe('UNAVAILABLE');
+    expect(horoscope.fullNatalAnalysis.majorLifePeriods.status).not.toBe('UNAVAILABLE');
+    expect(horoscope.fullNatalAnalysis.currentDasha.status).not.toBe('UNAVAILABLE');
   });
 
   it('shouldIncludeLifeThemesInHoroscope', () => {

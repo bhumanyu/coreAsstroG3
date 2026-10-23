@@ -86,6 +86,42 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(t26_40.nakshatraLord).toBe(Planet.SUN);
       expect(t26_40.nakshatraProgress).toBe(0);
     });
+
+    it('distinguishes just-below, exact, and just-above boundary ownership and birth balance', () => {
+      const boundary = 40 / 3;
+      const justBelow = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: boundary - 1e-10
+      });
+      const exactlyAt = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: boundary
+      });
+      const justAbove = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: boundary + 1e-10
+      });
+
+      expect(justBelow.nakshatra).toBe('Ashwini');
+      expect(justBelow.nakshatraLord).toBe(Planet.KETU);
+      expect(justBelow.remainingFraction).toBeGreaterThan(0);
+      expect(justBelow.remainingFraction).toBeLessThan(1e-10);
+      expect(justBelow.mahadashas[0].planet).toBe(Planet.KETU);
+      expect(getActiveDasha(justBelow, birthIso)?.mahadasha.planet).toBe(Planet.KETU);
+
+      expect(exactlyAt.nakshatra).toBe('Bharani');
+      expect(exactlyAt.nakshatraLord).toBe(Planet.VENUS);
+      expect(exactlyAt.nakshatraProgress).toBe(0);
+      expect(exactlyAt.remainingFraction).toBe(1);
+      expect(exactlyAt.mahadashas[0].planet).toBe(Planet.VENUS);
+      expect(getActiveDasha(exactlyAt, birthIso)?.mahadasha.planet).toBe(Planet.VENUS);
+
+      expect(justAbove.nakshatra).toBe('Bharani');
+      expect(justAbove.nakshatraLord).toBe(Planet.VENUS);
+      expect(justAbove.remainingFraction).toBeLessThan(1);
+      expect(justAbove.mahadashas[0].planet).toBe(Planet.VENUS);
+      expect(getActiveDasha(justAbove, birthIso)?.mahadasha.planet).toBe(Planet.VENUS);
+    });
   });
 
   describe('3. starting balance', () => {
@@ -137,6 +173,83 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(totalYears).toBeCloseTo(120, 6);
       expect(timeline.mahadashas[0].start).toBe(birthIso);
       expect(timeline.mahadashas[timeline.mahadashas.length - 1].end).toBe(untilIso);
+    });
+
+    it('keeps the same anchored AD/PD prefix when an MD horizon is shortened', () => {
+      const shortUntil = addFractionalYears(birthDate, 12).toISOString();
+      const longTimeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0,
+        until: addFractionalYears(birthDate, 30).toISOString()
+      });
+      const shortTimeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0,
+        until: shortUntil
+      });
+      const longVenusMd = longTimeline.mahadashas.find(md => md.planet === Planet.VENUS)!;
+      const shortVenusMd = shortTimeline.mahadashas.find(md => md.planet === Planet.VENUS)!;
+
+      expect(shortVenusMd.end).toBe(shortUntil);
+      expect(shortVenusMd.antardashas.length).toBeGreaterThan(0);
+      for (const shortAd of shortVenusMd.antardashas) {
+        const matchingLongAd = longVenusMd.antardashas.find(ad =>
+          ad.planet === shortAd.planet && ad.start === shortAd.start
+        );
+        expect(matchingLongAd).toBeDefined();
+        expect(shortAd.start).toBe(matchingLongAd?.start);
+        expect(shortAd.end).toBe(
+          new Date(Math.min(
+            new Date(matchingLongAd!.end).getTime(),
+            new Date(shortUntil).getTime()
+          )).toISOString()
+        );
+
+        for (const shortPd of shortAd.pratyantardashas) {
+          const matchingLongPd = matchingLongAd?.pratyantardashas.find(pd =>
+            pd.planet === shortPd.planet && pd.start === shortPd.start
+          );
+          expect(matchingLongPd).toBeDefined();
+          expect(shortPd.end).toBe(
+            new Date(Math.min(
+              new Date(matchingLongPd!.end).getTime(),
+              new Date(shortUntil).getTime()
+            )).toISOString()
+          );
+        }
+      }
+
+      for (let adIndex = 0; adIndex < shortVenusMd.antardashas.length - 1; adIndex++) {
+        expect(shortVenusMd.antardashas[adIndex].end)
+          .toBe(shortVenusMd.antardashas[adIndex + 1].start);
+      }
+    });
+
+    it('keeps PD boundaries anchored to the full AD when until falls inside an AD', () => {
+      const shortUntil = addFractionalYears(birthDate, 7.1).toISOString();
+      const longTimeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0,
+        until: addFractionalYears(birthDate, 27).toISOString()
+      });
+      const shortTimeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0,
+        until: shortUntil
+      });
+      const longVenusMd = longTimeline.mahadashas.find(md => md.planet === Planet.VENUS)!;
+      const shortVenusMd = shortTimeline.mahadashas.find(md => md.planet === Planet.VENUS)!;
+      const longVenusAd = longVenusMd.antardashas[0];
+      const shortVenusAd = shortVenusMd.antardashas[0];
+
+      expect(shortVenusAd.planet).toBe(Planet.VENUS);
+      expect(shortVenusAd.start).toBe(longVenusAd.start);
+      expect(shortVenusAd.end).toBe(shortUntil);
+      expect(shortVenusAd.pratyantardashas).toHaveLength(1);
+      expect(shortVenusAd.pratyantardashas[0].start)
+        .toBe(longVenusAd.pratyantardashas[0].start);
+      expect(shortVenusAd.pratyantardashas[0].end).toBe(shortUntil);
+      expect(longVenusAd.pratyantardashas[0].end).not.toBe(shortUntil);
     });
   });
 
@@ -360,6 +473,44 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(() => calculateVimshottari({ birthDateTime: birthIso, moonSiderealLongitude: 10, until: 'invalid' })).toThrow(TypeError);
       expect(() => calculateVimshottari({ birthDateTime: birthIso, moonSiderealLongitude: 10, until: '1980-01-01T00:00:00Z' })).toThrow(TypeError);
     });
+
+    it('requires explicit UTC designators and rejects invalid ISO calendar dates', () => {
+      expect(() => calculateVimshottari({
+        birthDateTime: '1990-01-01T00:00:00',
+        moonSiderealLongitude: 10
+      })).toThrow(/ISO-8601 date-time with Z or an explicit UTC offset/);
+      expect(() => calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 10,
+        until: '1990-01-02T00:00:00'
+      })).toThrow(/ISO-8601 date-time with Z or an explicit UTC offset/);
+      expect(() => calculateVimshottari({
+        birthDateTime: '1990-02-30T00:00:00Z',
+        moonSiderealLongitude: 10
+      })).toThrow(/valid ISO-8601 calendar date-time/);
+      expect(() => calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 10,
+        until: '1990-02-30T00:00:00Z'
+      })).toThrow(/valid ISO-8601 calendar date-time/);
+      expect(() => calculateVimshottari({
+        birthDateTime: '1990-01-01',
+        moonSiderealLongitude: 10
+      })).toThrow(TypeError);
+    });
+
+    it('accepts explicit offsets and preserves their intended UTC instant and fractional seconds', () => {
+      const offsetTimeline = calculateVimshottari({
+        birthDateTime: '1990-01-01T05:30:00.123+05:30',
+        moonSiderealLongitude: 10,
+        until: '1990-01-02T05:30:00.456+05:30'
+      });
+
+      expect(offsetTimeline.birthDateTime).toBe('1990-01-01T00:00:00.123Z');
+      expect(offsetTimeline.mahadashas[0].start).toBe('1990-01-01T00:00:00.123Z');
+      expect(offsetTimeline.mahadashas[offsetTimeline.mahadashas.length - 1].end)
+        .toBe('1990-01-02T00:00:00.456Z');
+    });
   });
 
   describe('11. immutability', () => {
@@ -523,7 +674,7 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(activeAtBirth?.mahadasha.planet).toBe(Planet.VENUS);
     });
 
-    it('stops when every remaining-fraction MD candidate is below millisecond precision', () => {
+    it('skips a sub-millisecond birth-lord balance without transferring it to the next lord', () => {
       const timeline = calculateVimshottari({
         birthDateTime: birthIso,
         moonSiderealLongitude: 360 - 1e-12
@@ -532,11 +683,24 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(timeline.nakshatra).toBe('Revati');
       expect(timeline.nakshatraLord).toBe(Planet.MERCURY);
       expect(timeline.remainingFraction).toBeGreaterThan(0);
-      expect(timeline.mahadashas).toHaveLength(0);
-      expect(getActiveDasha(timeline, birthIso)).toBeNull();
+      const firstMd = timeline.mahadashas[0];
+      expect(firstMd.planet).toBe(Planet.KETU);
+      expect(firstMd.start).toBe(birthIso);
+      expect(new Date(firstMd.end).getTime() - new Date(firstMd.start).getTime())
+        .toBe(Math.floor(DASHA_YEARS[Planet.KETU] * MS_PER_VIMSHOTTARI_YEAR));
+      expect(timeline.mahadashas.map(({ planet }) => planet).slice(0, 2)).toEqual([
+        Planet.KETU,
+        Planet.VENUS
+      ]);
+      for (let mdIndex = 0; mdIndex < timeline.mahadashas.length - 1; mdIndex++) {
+        expect(timeline.mahadashas[mdIndex].end).toBe(timeline.mahadashas[mdIndex + 1].start);
+      }
+      expect(timeline.mahadashas[timeline.mahadashas.length - 1].end)
+        .toBe(addFractionalYears(birthDate, 120).toISOString());
+      expect(getActiveDasha(timeline, birthIso)?.mahadasha.planet).toBe(Planet.KETU);
     });
 
-    it('retains partial-first status after skipping a zero-length Sun candidate', () => {
+    it('uses a full Moon Mahadasha after skipping a zero-length Sun candidate', () => {
       const longitude = 40 - (40 / 3) * 3.2e-12;
       const timeline = calculateVimshottari({
         birthDateTime: birthIso,
@@ -551,15 +715,12 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       const firstMdDurationMs =
         new Date(timeline.mahadashas[0].end).getTime() -
         new Date(timeline.mahadashas[0].start).getTime();
-      const partialDurationMs =
-        DASHA_YEARS[Planet.MOON] * timeline.remainingFraction * MS_PER_VIMSHOTTARI_YEAR;
       const fullDurationMs = DASHA_YEARS[Planet.MOON] * MS_PER_VIMSHOTTARI_YEAR;
-      expect(timeline.mahadashas[0].end).toBe(
-        addFractionalYears(birthDate, DASHA_YEARS[Planet.MOON] * timeline.remainingFraction).toISOString()
-      );
+      // The birth balance belongs only to the skipped Sun candidate; Moon starts a full MD.
+      expect(timeline.mahadashas[0].end)
+        .toBe(addFractionalYears(birthDate, DASHA_YEARS[Planet.MOON]).toISOString());
       expect(firstMdDurationMs).toBeGreaterThan(0);
-      expect(firstMdDurationMs).toBeLessThan(fullDurationMs);
-      expect(firstMdDurationMs).toBe(Math.floor(partialDurationMs));
+      expect(firstMdDurationMs).toBe(Math.floor(fullDurationMs));
       expect(timeline.mahadashas.map(({ planet }) => planet).slice(0, 2)).toEqual([
         Planet.MOON,
         Planet.MARS
@@ -574,6 +735,17 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(timeline.mahadashas[timeline.mahadashas.length - 1].end).toBe(
         addFractionalYears(birthDate, 120).toISOString()
       );
+    });
+
+    it('returns an empty timeline only when the requested horizon is the birth instant', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0,
+        until: birthIso
+      });
+
+      expect(timeline.mahadashas).toHaveLength(0);
+      expect(getActiveDasha(timeline, birthIso)).toBeNull();
     });
 
     it('accepts Moon longitude just after Nakshatra boundary and produces valid timeline', () => {
@@ -939,13 +1111,97 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
     });
   });
 
+  describe('17a. externally supplied timeline structure validation', () => {
+    const validTimeline = calculateVimshottari({
+      birthDateTime: birthIso,
+      moonSiderealLongitude: 0
+    });
+    const mutableTimeline = () => JSON.parse(JSON.stringify(validTimeline)) as any;
+
+    it('rejects out-of-order and overlapping Mahadashas before lookup', () => {
+      const outOfOrder = mutableTimeline();
+      [outOfOrder.mahadashas[0], outOfOrder.mahadashas[1]] =
+        [outOfOrder.mahadashas[1], outOfOrder.mahadashas[0]];
+      expect(() => getActiveDasha(outOfOrder, birthIso))
+        .toThrow(/Invalid Vimshottari timeline: mahadashas periods must be ordered and non-overlapping/);
+
+      const overlapping = mutableTimeline();
+      overlapping.mahadashas[1].start =
+        new Date(new Date(overlapping.mahadashas[0].end).getTime() - 1).toISOString();
+      expect(() => getActiveDasha(overlapping, birthIso))
+        .toThrow(/Invalid Vimshottari timeline: mahadashas periods must be ordered and non-overlapping/);
+    });
+
+    it.each(['mahadasha', 'antardasha', 'pratyantardasha'])(
+      'rejects a zero-length %s interval',
+      level => {
+        const malformed = mutableTimeline();
+        const period = level === 'mahadasha'
+          ? malformed.mahadashas[0]
+          : level === 'antardasha'
+            ? malformed.mahadashas[0].antardashas[0]
+            : malformed.mahadashas[0].antardashas[0].pratyantardashas[0];
+        period.end = period.start;
+
+        expect(() => getActiveDasha(malformed, birthIso))
+          .toThrow(/Invalid Vimshottari timeline: .*positive-length \[start,end\) interval/);
+      }
+    );
+
+    it('rejects out-of-order or overlapping AD and PD siblings', () => {
+      const overlappingAds = mutableTimeline();
+      const ads = overlappingAds.mahadashas[0].antardashas;
+      ads[1].start = new Date(new Date(ads[0].end).getTime() - 1).toISOString();
+      expect(() => getActiveDasha(overlappingAds, birthIso))
+        .toThrow(/antardashas periods must be ordered and non-overlapping/);
+
+      const overlappingPds = mutableTimeline();
+      const pds = overlappingPds.mahadashas[0].antardashas[0].pratyantardashas;
+      pds[1].start = new Date(new Date(pds[0].end).getTime() - 1).toISOString();
+      expect(() => getActiveDasha(overlappingPds, birthIso))
+        .toThrow(/pratyantardashas periods must be ordered and non-overlapping/);
+    });
+
+    it('rejects an AD or PD that lies outside its parent interval', () => {
+      const adOutsideMd = mutableTimeline();
+      const md = adOutsideMd.mahadashas[0];
+      md.antardashas[0].start =
+        new Date(new Date(md.start).getTime() - 1).toISOString();
+      expect(() => getActiveDasha(adOutsideMd, birthIso))
+        .toThrow(/must be contained within its parent period/);
+
+      const pdOutsideAd = mutableTimeline();
+      const ad = pdOutsideAd.mahadashas[0].antardashas[0];
+      ad.pratyantardashas[0].end =
+        new Date(new Date(ad.end).getTime() + 1).toISOString();
+      expect(() => getActiveDasha(pdOutsideAd, birthIso))
+        .toThrow(/must be contained within its parent period/);
+    });
+
+    it.each(['mahadasha', 'antardasha', 'pratyantardasha'])(
+      'rejects an invalid planet at the %s level',
+      level => {
+        const malformed = mutableTimeline();
+        const period = level === 'mahadasha'
+          ? malformed.mahadashas[0]
+          : level === 'antardasha'
+            ? malformed.mahadashas[0].antardashas[0]
+            : malformed.mahadashas[0].antardashas[0].pratyantardashas[0];
+        period.planet = 'PLUTO';
+
+        expect(() => getActiveDasha(malformed, birthIso))
+          .toThrow(/Invalid Vimshottari timeline: .*has an invalid planet/);
+      }
+    );
+  });
+
   describe('18. near-360° normalization and active periods', () => {
     it.each([
-      { longitude: 360 - 1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: undefined, activeAd: undefined, activePd: undefined },
+      { longitude: 360 - 1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
       { longitude: 360 - 1e-10, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.MERCURY, activeAd: Planet.SATURN, activePd: Planet.JUPITER },
       { longitude: 360, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
       { longitude: 360 + 1e-12, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
-      { longitude: -1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: undefined, activeAd: undefined, activePd: undefined },
+      { longitude: -1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
       { longitude: -1e-10, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.MERCURY, activeAd: Planet.SATURN, activePd: Planet.JUPITER },
       { longitude: -360, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
       { longitude: -360 + 1e-12, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU }

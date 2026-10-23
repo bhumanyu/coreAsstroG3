@@ -13,7 +13,7 @@ import { NAKSHATRAS_METADATA } from '../../data/astroData';
 import { calculateNakshatra } from '../nakshatraUtils';
 
 /**
- * 1 Vimshottari year = 365.25 days; this materially affects MD/AD/PD boundaries and must match the chosen reference software/source.
+ * Engine contract: 1 Vimshottari year = 365.25 days; this materially affects MD/AD/PD boundaries and must match the chosen reference software/source.
  */
 export const VIMSHOTTARI_YEAR_DAYS = 365.25;
 export const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -143,7 +143,49 @@ export function rotateDashaSequence(startPlanet: Planet): Planet[] {
  */
 export function addFractionalYears(date: Date, years: number): Date {
   const ms = years * MS_PER_VIMSHOTTARI_YEAR;
+  // Date applies ECMAScript TimeClip: fractional milliseconds are truncated, defining period-boundary precision.
   return new Date(date.getTime() + ms);
+}
+
+function parseIsoDateTime(value: string, field: 'birthDateTime' | 'until'): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (!match) {
+    throw new TypeError(`${field} must be an ISO-8601 date-time with Z or an explicit UTC offset.`);
+  }
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , zone] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const daysInMonth = [
+    31,
+    (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28,
+    31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+  ][month - 1];
+
+  if (
+    month < 1 || month > 12 ||
+    day < 1 || day > (daysInMonth ?? 0) ||
+    hour > 23 || minute > 59 || second > 59
+  ) {
+    throw new TypeError(`${field} must be a valid ISO-8601 calendar date-time.`);
+  }
+
+  if (zone !== 'Z') {
+    const [offsetHours, offsetMinutes] = zone.slice(1).split(':').map(Number);
+    if (offsetHours > 23 || offsetMinutes > 59) {
+      throw new TypeError(`${field} must use a valid ISO-8601 UTC offset.`);
+    }
+  }
+
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    throw new TypeError(`${field} must be a valid ISO-8601 calendar date-time.`);
+  }
+  return date;
 }
 
 /**
@@ -341,13 +383,10 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
   }
 
   if (!input.birthDateTime || typeof input.birthDateTime !== 'string') {
-    throw new TypeError('birthDateTime must be a valid ISO date string.');
+    throw new TypeError('birthDateTime must be an ISO-8601 date-time with Z or an explicit UTC offset.');
   }
 
-  const birthDate = new Date(input.birthDateTime);
-  if (isNaN(birthDate.getTime())) {
-    throw new TypeError('birthDateTime must be a valid ISO date string.');
-  }
+  const birthDate = parseIsoDateTime(input.birthDateTime, 'birthDateTime');
 
   if (
     typeof input.moonSiderealLongitude !== 'number' ||
@@ -360,12 +399,9 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
   let untilDate: Date;
   if (input.until !== undefined) {
     if (typeof input.until !== 'string') {
-      throw new TypeError('until must be an ISO date string when provided.');
+      throw new TypeError('until must be an ISO-8601 date-time with Z or an explicit UTC offset when provided.');
     }
-    untilDate = new Date(input.until);
-    if (isNaN(untilDate.getTime())) {
-      throw new TypeError('until must be a valid ISO date string when provided.');
-    }
+    untilDate = parseIsoDateTime(input.until, 'until');
     if (untilDate.getTime() < birthDate.getTime()) {
       throw new TypeError('until horizon cannot be before birthDateTime.');
     }
@@ -416,13 +452,20 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
     for (const mdPlanet of rotatedSeq) {
       if (currentStart.getTime() >= untilDate.getTime()) break;
 
-      const fraction = isFirstMd ? remainingFraction : 1.0;
+      const isBirthLordCandidate = isFirstMd && mdPlanet === nakshatraLord;
+      const fraction = isBirthLordCandidate ? remainingFraction : 1.0;
+      // Only the birth-Nakshatra lord's first candidate receives the birth balance,
+      // even if millisecond precision makes that candidate unrepresentable.
+      if (isBirthLordCandidate) {
+        isFirstMd = false;
+      }
 
       const fullYears = DASHA_YEARS[mdPlanet] * fraction;
-      const isPartialFirstMd = mdPlanet === nakshatraLord && mahadashas.length === 0;
+      const isPartialFirstMd = isBirthLordCandidate && mahadashas.length === 0;
       let fullMdStart: Date | undefined;
       let fullMdDurationMs: number | undefined;
       let mdEnd: Date;
+      let isHorizonClipped = false;
 
       if (isPartialFirstMd) {
         const fullMdYears = DASHA_YEARS[mdPlanet];
@@ -434,9 +477,16 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
         fullMdDurationMs = fullMdEnd.getTime() - fullMdStart.getTime();
         mdEnd = new Date(Math.min(fullMdEnd.getTime(), untilDate.getTime()));
       } else {
-        mdEnd = addFractionalYears(currentStart, fullYears);
-        if (mdEnd.getTime() > untilDate.getTime()) {
+        const fullMdEnd = addFractionalYears(currentStart, fullYears);
+        isHorizonClipped = fullMdEnd.getTime() > untilDate.getTime();
+        mdEnd = fullMdEnd;
+        if (isHorizonClipped) {
           mdEnd = new Date(untilDate.getTime());
+        }
+        if (isHorizonClipped) {
+          fullMdStart = new Date(currentStart.getTime());
+          const fullMdEndFromStart = addFractionalYears(fullMdStart, DASHA_YEARS[mdPlanet]);
+          fullMdDurationMs = fullMdEndFromStart.getTime() - fullMdStart.getTime();
         }
       }
 
@@ -448,6 +498,14 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
 
       let antardashas: readonly AntardashaPeriod[];
       if (isPartialFirstMd && fullMdStart && fullMdDurationMs !== undefined) {
+        antardashas = buildAntardashasAnchored(
+          mdPlanet,
+          fullMdStart,
+          fullMdDurationMs,
+          currentStart,
+          mdEnd
+        );
+      } else if (isHorizonClipped && fullMdStart && fullMdDurationMs !== undefined) {
         antardashas = buildAntardashasAnchored(
           mdPlanet,
           fullMdStart,
@@ -467,7 +525,6 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
       });
 
       mahadashas.push(mdPeriod);
-      isFirstMd = false;
       currentStart = mdEnd;
       emittedInSequence = true;
     }
@@ -502,6 +559,8 @@ export function getActiveDasha(
   if (!timeline || !timeline.mahadashas || !Array.isArray(timeline.mahadashas)) {
     throw new TypeError('Valid VimshottariTimeline is required.');
   }
+
+  validateTimelineStructure(timeline);
 
   if (!at) {
     throw new TypeError('at timestamp is required.');
@@ -542,4 +601,57 @@ export function getActiveDasha(
   }
 
   return null;
+}
+
+type TimelinePeriod = {
+  readonly planet: Planet;
+  readonly start: string;
+  readonly end: string;
+};
+
+function validateTimelineStructure(timeline: VimshottariTimeline): void {
+  const validatePeriods = (
+    periods: readonly TimelinePeriod[],
+    label: string,
+    parentWindow?: { start: number; end: number }
+  ): void => {
+    if (!Array.isArray(periods)) {
+      throw new TypeError(`Invalid Vimshottari timeline: ${label} periods must be an array.`);
+    }
+
+    let previousEnd = Number.NEGATIVE_INFINITY;
+    for (const [index, period] of periods.entries()) {
+      const periodLabel = `${label}[${index}]`;
+      if (!period || !DASHA_SEQUENCE.includes(period.planet)) {
+        throw new TypeError(`Invalid Vimshottari timeline: ${periodLabel} has an invalid planet.`);
+      }
+
+      const start = typeof period.start === 'string' ? Date.parse(period.start) : NaN;
+      const end = typeof period.end === 'string' ? Date.parse(period.end) : NaN;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+        throw new TypeError(`Invalid Vimshottari timeline: ${periodLabel} must have a positive-length [start,end) interval.`);
+      }
+      if (start < previousEnd) {
+        throw new TypeError(`Invalid Vimshottari timeline: ${label} periods must be ordered and non-overlapping.`);
+      }
+      if (parentWindow && (start < parentWindow.start || end > parentWindow.end)) {
+        throw new TypeError(`Invalid Vimshottari timeline: ${periodLabel} must be contained within its parent period.`);
+      }
+      previousEnd = end;
+    }
+  };
+
+  validatePeriods(timeline.mahadashas, 'mahadashas');
+  for (const [mdIndex, md] of timeline.mahadashas.entries()) {
+    const mdWindow = { start: Date.parse(md.start), end: Date.parse(md.end) };
+    validatePeriods(md.antardashas, `mahadashas[${mdIndex}].antardashas`, mdWindow);
+    for (const [adIndex, ad] of md.antardashas.entries()) {
+      const adWindow = { start: Date.parse(ad.start), end: Date.parse(ad.end) };
+      validatePeriods(
+        ad.pratyantardashas,
+        `mahadashas[${mdIndex}].antardashas[${adIndex}].pratyantardashas`,
+        adWindow
+      );
+    }
+  }
 }
