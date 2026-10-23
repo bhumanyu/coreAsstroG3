@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `55bbf3ac280bf301d90ccd5d4a49fc65a4cd23e9`
+**Baseline Commit:** `e6360ee42307e7f6b167068072060c1d34ae2922`
 
 **Last Updated:** 2026-10-23
 
@@ -55,20 +55,21 @@
 - `src/core/analysis/selectedMdAdPeriod.test.ts` (period resolution with PBA-02A/C/D/E hardening)
 
 **CI Evidence:**
-- ✅ npx vitest run src/core/analysis/selectedMdAdPeriod.test.ts: PASS (54 tests, commit 55bbf3a)
-- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (65 tests, commit 55bbf3a)
-- ✅ npx tsc --noEmit: PASS (commit 55bbf3a)
-- ✅ npm run verify:pba10: PASS (commit 55bbf3a)
-- ⚠️ npm run verify: BLOCKED (Node 21 / lightningcss local-env blocker - previously recorded)
+- ✅ npx vitest run src/core/analysis/selectedMdAdPeriod.test.ts: PASS (55 tests, commit e6360ee)
+- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (66 tests, commit e6360ee)
+- ✅ npx tsc --noEmit: PASS (commit e6360ee)
+- ✅ npm run verify:pba10: PASS (122 tests, commit e6360ee)
+- ✅ npm run verify: PASS (5456 tests passed, 5 skipped, commit e6360ee)
 
 **Findings:**
-- ✅ PBA-02A (malformed selection IDs): 10 tests added (empty MD/AD, whitespace, wrong version/system/level, truncated, malformed percent-encoding, nonexistent IDs)
+- ✅ PBA-02A (malformed selection IDs): 11 tests added (empty MD/AD, whitespace-only MD/AD, wrong version/system/level, truncated, malformed percent-encoding, nonexistent IDs)
 - ✅ PBA-02C (parentage/containment): 4 tests added (AD from other MD, encoded parent not in report, AD outside MD listing+resolution, duplicate AD in selected MD)
 - ✅ PBA-02D (non-mutation): 1 test added (structuredClone snapshot)
 - ✅ PBA-02E (determinism): 1 test added (deep-equal assertion)
 
 **Remediation:**
 - Test-only hardening completed: PBA-02A/C/D/E tests added (commit 55bbf3a)
+- PBA-02A extended: whitespace-only AD ID test added (commit e6360ee)
 
 ---
 
@@ -83,10 +84,10 @@
 - `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests including PBA-03A/B/C/D/E hardening)
 
 **CI Evidence:**
-- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (65 tests, commit 55bbf3a)
-- ✅ npx tsc --noEmit: PASS (commit 55bbf3a)
-- ✅ npm run verify:pba10: PASS (commit 55bbf3a)
-- ⚠️ npm run verify: BLOCKED (Node 21 / lightningcss local-env blocker - previously recorded)
+- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (66 tests, commit e6360ee)
+- ✅ npx tsc --noEmit: PASS (commit e6360ee)
+- ✅ npm run verify:pba10: PASS (122 tests, commit e6360ee)
+- ✅ npm run verify: PASS (5456 tests passed, 5 skipped, commit e6360ee)
 
 **Findings:**
 - ✅ Temporal relation recomputation implemented in validateSelectedPeriodContext
@@ -94,11 +95,12 @@
 - ✅ PBA-03B (temporal mismatch): 5 tests added (false temporalRelation, malformed analysisAsOf, inverted interval, valid context, no rewrite)
 - ✅ PBA-03C (cross-field consistency): 9 tests added (mahadashaId mismatch, selectedPeriodId mismatch, interval mismatch, summary mismatches, AD not contained)
 - ✅ PBA-03D (non-mutation): 1 test added (structuredClone snapshot)
-- ✅ PBA-03E (createSelectedPeriodId compatibility): 1 test added (format assertion)
+- ✅ PBA-03E (createSelectedPeriodId compatibility): 2 tests added (hard-coded literal format assertion, version guard)
 
 **Remediation:**
 - PR-B completed: Temporal relation recomputation and boundary tests added
 - Test-only hardening completed: PBA-03B/C/D/E tests added (commit 55bbf3a)
+- PBA-03E hardened: replaced self-referential expected value with hard-coded literal, added version guard (commit e6360ee)
 
 ---
 
@@ -365,8 +367,15 @@
   - vitest for both test files: PASS (54 tests, 65 tests)
   - tsc --noEmit: PASS
   - npm run verify:pba10: PASS
+- PBA-02A/PBA-03E hardening extensions (commit e6360ee):
+  - PBA-02A: whitespace-only AD ID test added (symmetric to existing MD test)
+  - PBA-03E: hard-coded literal format assertion added (locks current contract), version guard added
+  - vitest for both test files: PASS (55 tests, 66 tests)
+  - tsc --noEmit: PASS
+  - npm run verify:pba10: PASS (122 tests)
+  - npm run verify: PASS (5456 tests passed, 5 skipped)
 
 ---
 
 **Definition of Done:**
-Every PBA milestone backed by acceptance evidence; validator recomputes temporal relation; candidate attribution deterministic; domain failure doesn't erase the other domain; AI can't invent or reinterpret evidence; DTO/AI context field parity; zero vacuous assertions in the acceptance suite; green npm run verify:pba10 recorded against the release commit; npm run verify blocked by known Node 21 / lightningcss local-env blocker.
+Every PBA milestone backed by acceptance evidence; validator recomputes temporal relation; candidate attribution deterministic; domain failure doesn't erase the other domain; AI can't invent or reinterpret evidence; DTO/AI context field parity; zero vacuous assertions in the acceptance suite; green npm run verify:pba10 recorded against the release commit; green npm run verify recorded against the release commit.
