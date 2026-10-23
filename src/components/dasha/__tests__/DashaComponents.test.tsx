@@ -478,6 +478,29 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(screen.getByText(/no qualifying mechanisms for this chart/i)).toBeInTheDocument();
     });
 
+    it('renders the recognized-structure rule-coverage reason for UNAVAILABLE career qualification', () => {
+      const reason =
+        'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.';
+      const synthesis = makeSynthesis({
+        career: {
+          qualificationBasis: 'UNAVAILABLE',
+          expressions: [],
+          diagnostics: [
+            {
+              code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
+              message: reason
+            }
+          ]
+        },
+        qualificationStatus: 'UNAVAILABLE'
+      });
+
+      render(<SelectedPeriodReport synthesis={synthesis} />);
+
+      expect(screen.getByText(reason)).toBeInTheDocument();
+      expect(screen.queryByText(/CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS/i)).not.toBeInTheDocument();
+    });
+
     it('does not render career limitation warning for CANONICAL_STATUS', () => {
       const synthesis = makeSynthesis();
 

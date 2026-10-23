@@ -528,7 +528,14 @@ describe('buildSelectedPeriodSynthesis', () => {
 
     it('adds CAREER_QUALIFICATION_UNAVAILABLE diagnostic for UNAVAILABLE', () => {
       const selectedPeriod = makeSelectedPeriodContext();
-      const careerActivation = makeCareerActivation('UNAVAILABLE' as any);
+      const coverageGapDiagnostic = Object.freeze({
+        code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
+        message: 'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.'
+      });
+      const careerActivation = {
+        ...makeCareerActivation('UNAVAILABLE'),
+        diagnostics: Object.freeze([coverageGapDiagnostic])
+      };
 
       const result = buildSelectedPeriodSynthesis({
         selectedPeriod,
@@ -542,6 +549,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       const hasDiagnostic = result.value.career.diagnostics.some(d => d.code === 'CAREER_QUALIFICATION_UNAVAILABLE');
       expect(hasDiagnostic).toBe(true);
       expect(result.value.career.qualificationBasis).toBe('UNAVAILABLE');
+      expect(result.value.career.diagnostics).toContainEqual(coverageGapDiagnostic);
     });
   });
 

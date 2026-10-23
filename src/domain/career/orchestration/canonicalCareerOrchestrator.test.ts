@@ -403,6 +403,44 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(foundation.resolvedMechanisms[0].candidateId).toBe('CANDIDATE_1');
     });
 
+    it('reports a coverage gap when an INSUFFICIENT_DATA pattern resolves to no mechanism candidates', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_NO_RULE');
+      Object.assign(pattern, {
+        family: 'CAREER_HOUSE_NETWORK',
+        classification: 'CAREER_HOUSE_NETWORK',
+        houses: [6, 8, 11]
+      });
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_NO_RULE', 'INSUFFICIENT_DATA');
+      Object.assign(qualifiedPattern, { sourcePattern: pattern });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_NO_RULE', [])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const foundation = orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(ports.mechanismResolver.resolveAll).toHaveBeenCalled();
+      expect(foundation.resolvedMechanisms).toHaveLength(0);
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_PATTERN_NO_RULE',
+        severity: 'INFO',
+        category: 'GATING',
+        message: expect.stringContaining('CAREER_HOUSE_NETWORK for houses [6, 8, 11]'),
+        relatedIds: ['PATTERN_NO_RULE'],
+        stage: 'MECHANISM'
+      }));
+    });
+
     it('should expose mixed accepted/rejected/firewall-excluded evidence IDs on ResolvedMechanism', () => {
       const ports = createStubPorts();
       // Create a qualified pattern with source pattern evidence so establishing evidence is available

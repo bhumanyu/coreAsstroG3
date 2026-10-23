@@ -331,6 +331,10 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         // for this chart due to rule coverage gap (pattern does not match dusthana transformation rules)
         // Therefore, qualificationBasis should be UNAVAILABLE
         expect(result.value.qualificationBasis).toBe('UNAVAILABLE');
+        expect(result.value.diagnostics).toContainEqual(expect.objectContaining({
+          code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
+          message: expect.stringContaining('rule-coverage gap, not a disproven career promise')
+        }));
 
         // Verify that mechanism candidates are indeed empty (reproducing the investigation condition)
         expect(careerMechanismCandidates.length).toBe(0);

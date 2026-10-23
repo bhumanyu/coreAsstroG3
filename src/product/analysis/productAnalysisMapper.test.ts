@@ -226,6 +226,26 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     expect(result.career.expressions[0].diagnostics[0].code).toBe('NO_DIAGNOSTIC');
   });
 
+  it('preserves the no-canonical-mechanisms reason diagnostic verbatim while keeping UNAVAILABLE status', () => {
+    const diagnostic = {
+      code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
+      message: 'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.'
+    };
+    const mockWithCoverageGap: SelectedPeriodSynthesisValue<any, any> = {
+      ...mockSynthesisValue,
+      career: {
+        ...mockSynthesisValue.career,
+        qualificationBasis: 'UNAVAILABLE',
+        diagnostics: [...mockSynthesisValue.career.diagnostics, diagnostic]
+      }
+    };
+
+    const result = mapSelectedPeriodSynthesis(mockWithCoverageGap);
+
+    expect(result.qualificationStatus).toBe('UNAVAILABLE');
+    expect(result.career.diagnostics).toContainEqual(diagnostic);
+  });
+
   it('preserves missing inputs verbatim', () => {
     const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
 

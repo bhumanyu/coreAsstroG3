@@ -164,7 +164,11 @@ export interface SelectedCareerDashaActivationDiagnostic {
   /**
    * Diagnostic code identifying the type of issue.
    */
-  readonly code: 'ADAPTER_FALLBACK_DROPPED_CANDIDATES' | 'CANONICAL_EVIDENCE_ID_COLLISION' | 'AMBIGUOUS_EXPRESSION_MATCH';
+  readonly code:
+    | 'ADAPTER_FALLBACK_DROPPED_CANDIDATES'
+    | 'CANONICAL_EVIDENCE_ID_COLLISION'
+    | 'AMBIGUOUS_EXPRESSION_MATCH'
+    | 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS';
   /**
    * Human-readable description of the diagnostic.
    */
@@ -383,6 +387,10 @@ export function buildSelectedCareerDashaActivation(params: {
       qualifiedExpressions = [];
       usedAdapterFallback = false;
       qualificationBasis = 'UNAVAILABLE';
+      diagnostics.push(Object.freeze({
+        code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
+        message: 'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.'
+      }));
     } else {
       // Use canonical qualification status (authoritative)
       const qualifiedCanonicalCandidates = canonicalExpression.expressions.filter(

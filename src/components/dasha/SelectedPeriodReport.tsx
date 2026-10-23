@@ -76,6 +76,9 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
   const showCareer = domainToggle === 'CAREER' || domainToggle === 'BOTH';
   const showWealth = domainToggle === 'WEALTH' || domainToggle === 'BOTH';
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
+  const noCanonicalMechanismsDiagnostic = synthesis.career.diagnostics.find(
+    diagnostic => diagnostic.code === 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS'
+  );
 
   const copyPeriodId = () => {
     navigator.clipboard.writeText(synthesis.period.selectedPeriodId);
@@ -217,7 +220,8 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
                 <span className="text-slate-300 ml-2">
                   {synthesis.career.qualificationBasis === 'PROXY_DIRECTION'
                     ? 'Using interim proxy direction (canonical C11 qualification not provided)'
-                    : 'Canonical inputs provided but no qualifying mechanisms for this chart'}
+                    : noCanonicalMechanismsDiagnostic?.message
+                      ?? 'Canonical inputs provided but no qualifying mechanisms for this chart'}
                 </span>
               </div>
             </div>
@@ -234,10 +238,12 @@ export const SelectedPeriodReport: React.FC<SelectedPeriodReportProps> = ({
           {synthesis.career.diagnostics.length > 0 && synthesis.provenance.career.status !== 'MISSING' && (
             <DiagnosticsList
               diagnostics={
-                // Filter out CAREER_QUALIFICATION_UNAVAILABLE when the friendly warning is already shown
-                // to avoid duplicate messaging. Keep other diagnostics for transparency.
+                // These diagnostics are already rendered in the friendly unavailable warning.
                 (synthesis.career.qualificationBasis === 'PROXY_DIRECTION' || synthesis.career.qualificationBasis === 'UNAVAILABLE')
-                  ? synthesis.career.diagnostics.filter(d => d.code !== 'CAREER_QUALIFICATION_UNAVAILABLE')
+                  ? synthesis.career.diagnostics.filter(d =>
+                      d.code !== 'CAREER_QUALIFICATION_UNAVAILABLE' &&
+                      d.code !== 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS'
+                    )
                   : synthesis.career.diagnostics
               }
             />

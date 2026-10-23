@@ -515,6 +515,25 @@ export class CanonicalCareerOrchestrator {
       const candidateSets = resolutionInputs.length > 0
         ? this.ports.mechanismResolver.resolveAll(resolutionInputs)
         : [];
+      const candidateSetsByPattern = new Map(
+        candidateSets.map(candidateSet => [candidateSet.patternId, candidateSet])
+      );
+
+      for (const resolutionInput of resolutionInputs) {
+        const candidateSet = candidateSetsByPattern.get(resolutionInput.pattern.patternId);
+        if (candidateSet && candidateSet.candidates.length > 0) {
+          continue;
+        }
+
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_${resolutionInput.pattern.patternId}`,
+          severity: 'INFO',
+          category: 'GATING',
+          message: `No mechanism resolver rule matched pattern ${resolutionInput.pattern.classification} for houses [${resolutionInput.pattern.houses.join(', ')}]`,
+          relatedIds: [resolutionInput.pattern.patternId],
+          stage: 'MECHANISM'
+        });
+      }
 
       // Convert to resolved mechanisms
       const resolvedMechanisms: ResolvedMechanism[] = [];
