@@ -453,17 +453,17 @@ const DiagnosticsList: React.FC<{
 }> = ({ diagnostics, compact = false }) => {
   if (compact) {
     return (
-      <div className="flex flex-wrap gap-1">
+      <ul aria-label="Diagnostic explanations" className="space-y-1">
         {diagnostics.map((diag, idx) => (
-          <span
-            key={idx}
-            className="text-[10px] font-mono-code text-amber-400 bg-amber-950/40 border border-amber-800/60 px-1.5 py-0.5 rounded"
-            title={diag.message}
-          >
-            {diag.code}
-          </span>
+          <li key={idx} className="flex items-start gap-2 text-xs">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-amber-400" aria-hidden="true" />
+            <div>
+              <span className="font-mono-code text-amber-400">{diag.code}</span>
+              <p className="text-slate-300 mt-0.5">{diag.message}</p>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
     );
   }
 

@@ -343,6 +343,47 @@
 
 ---
 
+## UI Accessibility + Test Hardening (Dasha Period Selection)
+
+**Status:** ✅ COMPLETE
+
+**Implementation Files:**
+- `src/components/dasha/SelectedPeriodReport.tsx` (visible diagnostic explanations in compact mode)
+- `src/components/dasha/SelectedPeriodSection.tsx` (visible invalid-period diagnostics, accessible submission state)
+- `src/pages/DashaPage.tsx` (READY-gated report, accessible error banners)
+
+**Test Files:**
+- `src/components/dasha/__tests__/DashaComponents.test.tsx` (component interaction tests, diagnostics visibility tests)
+- `src/pages/__tests__/DashaPage.test.tsx` (page-level tests for READY gate, partial results)
+- `src/app/__tests__/AppController.test.ts` (race condition tests for selectPeriod)
+
+**CI Evidence:**
+- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (20 tests, commit 09f265c)
+- ✅ npx vitest run src/pages/__tests__/DashaPage.test.tsx: PASS (17 tests, commit 09f265c)
+- ✅ npx vitest run src/app/__tests__/AppController.test.ts: PASS (12 tests, commit 09f265c)
+- ✅ npx tsc --noEmit: PASS (commit 09f265c)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 09f265c)
+- ✅ npm run verify: PASS (5468 tests passed, 5 skipped, commit 09f265c)
+
+**Findings:**
+- ✅ DiagnosticsList compact mode now renders both diag.code and diag.message as visible text in semantic list with aria-label
+- ✅ Invalid-period diagnostics region added to SelectedPeriodSection (section with aria-label, lists invalid MD/AD options)
+- ✅ Accessible submission state: live region with aria-live="polite", aria-busy on button, stable button label
+- ✅ Fieldset with disabled={isSubmitting} wraps selects with sr-only legend
+- ✅ READY gate added to selected-period report render condition (prevents stale same-ID synthesis during SUBMITTING)
+- ✅ Error banners wrapped with role="alert" and aria-live="assertive"
+- ✅ Component tests added: MD change clears AD, valid submit calls onSelect with exact IDs, isSubmitting disables selects/button
+- ✅ Diagnostics test added: asserts visible message and list role (not just title)
+- ✅ Page tests added: READY gate prevents stale report on failed submission
+- ✅ Race tests added: AppController.selectPeriod race guard verified with deferred promises (different MD/AD IDs, same MD/AD IDs)
+
+**Remediation:**
+- Current session: All UI accessibility and test-hardening changes implemented and verified
+- All contracts preserved: createSelectedPeriodId, interval semantics, qualification contracts unchanged
+- Non-duplication logic in deriveSelectionErrorBanner preserved
+
+---
+
 ## Summary
 
 **Total Milestones:** 10

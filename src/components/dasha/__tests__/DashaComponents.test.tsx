@@ -579,9 +579,194 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       // The dimension diagnostic code should be rendered in the UI
       expect(screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i)).toBeInTheDocument();
 
-      // The readable message should be available as a tooltip
-      const diagnosticElement = screen.getByText(/WEALTH_DIMENSION_COMPLETE_BUT_INDETERMINATE/i);
-      expect(diagnosticElement).toHaveAttribute('title', 'Wealth dimension ACCUMULATION has complete input but indeterminate activation effect (UNKNOWN)');
+      // The readable message should be visible (not just in title)
+      expect(screen.getByText(/Wealth dimension ACCUMULATION has complete input but indeterminate activation effect \(UNKNOWN\)/i)).toBeInTheDocument();
+
+      // The list should be exposed via role="list" with accessible name
+      const diagnosticList = screen.getByRole('list', { name: /diagnostic explanations/i });
+      expect(diagnosticList).toBeInTheDocument();
+    });
+
+    it('SelectedPeriodSection: MD change clears AD and disables submit', () => {
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [
+          {
+            id: 'md_jupiter',
+            planet: 'Jupiter',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'CURRENT',
+            antardashas: [
+              {
+                id: 'ad_saturn',
+                planet: 'Saturn',
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                valid: true,
+                diagnostics: [],
+                temporalRelation: 'PAST'
+              },
+              {
+                id: 'ad_mars',
+                planet: 'Mars',
+                start: '2022-01-01T00:00:00.000Z',
+                end: '2024-01-01T00:00:00.000Z',
+                valid: true,
+                diagnostics: [],
+                temporalRelation: 'CURRENT'
+              }
+            ]
+          },
+          {
+            id: 'md_saturn',
+            planet: 'Saturn',
+            start: '2036-01-01T00:00:00.000Z',
+            end: '2055-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'FUTURE',
+            antardashas: []
+          }
+        ],
+        diagnostics: []
+      };
+
+      const onSelect = vi.fn();
+      render(
+        <SelectedPeriodSection
+          dashPeriodOptions={dashPeriodOptions}
+          onSelect={onSelect}
+        />
+      );
+
+      const mdSelect = screen.getByRole('combobox', { name: /Mahadasha/i });
+      const adSelect = screen.getByRole('combobox', { name: /Antardasha/i });
+      const submitButton = screen.getByRole('button', { name: /Analyze Selected Period/i });
+
+      // Initially, AD select should be disabled
+      expect(adSelect).toBeDisabled();
+      expect(submitButton).toBeDisabled();
+
+      // Select Jupiter MD
+      fireEvent.change(mdSelect, { target: { value: 'md_jupiter' } });
+
+      // AD select should now be enabled, but submit still disabled (no AD selected)
+      expect(adSelect).not.toBeDisabled();
+      expect(submitButton).toBeDisabled();
+
+      // Select Saturn AD
+      fireEvent.change(adSelect, { target: { value: 'ad_saturn' } });
+
+      // Submit should now be enabled
+      expect(submitButton).not.toBeDisabled();
+
+      // Change MD to Saturn - AD should be cleared and submit disabled
+      fireEvent.change(mdSelect, { target: { value: 'md_saturn' } });
+
+      expect(adSelect).toHaveValue('');
+      expect(submitButton).toBeDisabled();
+    });
+
+    it('SelectedPeriodSection: valid submit calls onSelect with exact canonical IDs', () => {
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [
+          {
+            id: 'md_jupiter',
+            planet: 'Jupiter',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'CURRENT',
+            antardashas: [
+              {
+                id: 'ad_saturn',
+                planet: 'Saturn',
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                valid: true,
+                diagnostics: [],
+                temporalRelation: 'PAST'
+              }
+            ]
+          }
+        ],
+        diagnostics: []
+      };
+
+      const onSelect = vi.fn();
+      render(
+        <SelectedPeriodSection
+          dashPeriodOptions={dashPeriodOptions}
+          onSelect={onSelect}
+        />
+      );
+
+      const mdSelect = screen.getByRole('combobox', { name: /Mahadasha/i });
+      const adSelect = screen.getByRole('combobox', { name: /Antardasha/i });
+      const submitButton = screen.getByRole('button', { name: /Analyze Selected Period/i });
+
+      fireEvent.change(mdSelect, { target: { value: 'md_jupiter' } });
+      fireEvent.change(adSelect, { target: { value: 'ad_saturn' } });
+      fireEvent.click(submitButton);
+
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect(onSelect).toHaveBeenCalledWith('md_jupiter', 'ad_saturn');
+    });
+
+    it('SelectedPeriodSection: with isSubmitting, selects and button disabled, status announces "Analyzing"', () => {
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [
+          {
+            id: 'md_jupiter',
+            planet: 'Jupiter',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2036-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'CURRENT',
+            antardashas: [
+              {
+                id: 'ad_saturn',
+                planet: 'Saturn',
+                start: '2020-01-01T00:00:00.000Z',
+                end: '2022-01-01T00:00:00.000Z',
+                valid: true,
+                diagnostics: [],
+                temporalRelation: 'PAST'
+              }
+            ]
+          }
+        ],
+        diagnostics: []
+      };
+
+      const onSelect = vi.fn();
+      render(
+        <SelectedPeriodSection
+          dashPeriodOptions={dashPeriodOptions}
+          onSelect={onSelect}
+          isSubmitting={true}
+        />
+      );
+
+      const mdSelect = screen.getByRole('combobox', { name: /Mahadasha/i });
+      const adSelect = screen.getByRole('combobox', { name: /Antardasha/i });
+      const submitButton = screen.getByRole('button', { name: /Analyzing selected period/i });
+
+      // Selects should be disabled by fieldset
+      expect(mdSelect).toBeDisabled();
+      expect(adSelect).toBeDisabled();
+
+      // Button should be disabled and show submitting state
+      expect(submitButton).toBeDisabled();
+      expect(submitButton).toHaveAttribute('aria-busy', 'true');
+
+      // Live region should announce "Analyzing"
+      const statusRegion = screen.getByRole('status');
+      expect(statusRegion).toHaveTextContent('Analyzing the selected period…');
     });
   });
 });

@@ -370,5 +370,118 @@ describe('AppController', () => {
       expect(statesObserved).toEqual(['IDLE', 'LOADING', 'READY']);
       expect(currentState.productAnalysis.status).toBe('READY');
     });
+
+    describe('selectPeriod', () => {
+      it('race condition: newer request wins when responses arrive out of order', async () => {
+        let currentState: AppState = { ...INITIAL_APP_STATE };
+        const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+          (update: SetStateAction<AppState>) => {
+            currentState =
+              typeof update === 'function'
+                ? (update as (prev: AppState) => AppState)(currentState)
+                : update;
+          }
+        );
+
+        let resolveReq1: (val: ProductAnalysis) => void = () => { };
+        let resolveReq2: (val: ProductAnalysis) => void = () => { };
+
+        const p1 = new Promise<ProductAnalysis>((resolve) => {
+          resolveReq1 = resolve;
+        });
+        const p2 = new Promise<ProductAnalysis>((resolve) => {
+          resolveReq2 = resolve;
+        });
+
+        const analysis1: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-1' };
+        const analysis2: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-2' };
+
+        const mockService = {
+          selectPeriod: vi
+            .fn()
+            .mockReturnValueOnce(p1)
+            .mockReturnValueOnce(p2),
+          lastPipelineState: { status: 'READY' }
+        } as unknown as ProductAnalysisService;
+
+        const controller = createAppController(setState, mockService);
+
+        // Start request A (Jupiter–Saturn) pending
+        const call1 = controller.selectPeriod('md_jupiter', 'ad_saturn');
+
+        // Start request B (Mars–Venus)
+        const call2 = controller.selectPeriod('md_mars', 'ad_venus');
+
+        // Resolve request B first (newer request)
+        resolveReq2(analysis2);
+        await call2;
+
+        // State should reflect request B and be READY
+        expect(currentState.selectionState.status).toBe('READY');
+        expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
+
+        // Now resolve request A late - stale result guard should discard it
+        resolveReq1(analysis1);
+        await call1;
+
+        // State MUST retain analysis from request B, NOT overwritten by stale request A
+        expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
+        expect(currentState.selectionState.status).toBe('READY');
+      });
+
+      it('race condition: same MD/AD IDs, newer response wins', async () => {
+        let currentState: AppState = { ...INITIAL_APP_STATE };
+        const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+          (update: SetStateAction<AppState>) => {
+            currentState =
+              typeof update === 'function'
+                ? (update as (prev: AppState) => AppState)(currentState)
+                : update;
+          }
+        );
+
+        let resolveReq1: (val: ProductAnalysis) => void = () => { };
+        let resolveReq2: (val: ProductAnalysis) => void = () => { };
+
+        const p1 = new Promise<ProductAnalysis>((resolve) => {
+          resolveReq1 = resolve;
+        });
+        const p2 = new Promise<ProductAnalysis>((resolve) => {
+          resolveReq2 = resolve;
+        });
+
+        const analysis1: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-1' };
+        const analysis2: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-2' };
+
+        const mockService = {
+          selectPeriod: vi
+            .fn()
+            .mockReturnValueOnce(p1)
+            .mockReturnValueOnce(p2),
+          lastPipelineState: { status: 'READY' }
+        } as unknown as ProductAnalysisService;
+
+        const controller = createAppController(setState, mockService);
+
+        // Start two requests with the SAME MD/AD IDs
+        const call1 = controller.selectPeriod('md_jupiter', 'ad_saturn');
+        const call2 = controller.selectPeriod('md_jupiter', 'ad_saturn');
+
+        // Resolve request 2 first (newer)
+        resolveReq2(analysis2);
+        await call2;
+
+        expect(currentState.selectionState.status).toBe('READY');
+        expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
+
+        // Resolve request 1 late - should be discarded
+        resolveReq1(analysis1);
+        await call1;
+
+        // State MUST retain analysis from request 2
+        expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
+        expect(currentState.selectionState.status).toBe('READY');
+      });
+    });
   });
 });

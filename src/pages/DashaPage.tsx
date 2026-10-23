@@ -140,7 +140,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
       {/* Selection Error Banner */}
       {deriveSelectionErrorBanner(selectionState, selectedPeriod) && selectionError && (
-        <div className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3">
+        <div role="alert" aria-live="assertive" className="bg-rose-950/40 border border-rose-800/60 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-rose-300">
               Selection Error
@@ -152,7 +152,7 @@ export const DashaPage: React.FC<DashaPageProps> = ({
 
       {/* Selected Period Typed Failure Banner */}
       {selectedPeriod && selectedPeriod.status !== 'OK' && (
-        <div key={`selected-period-error-${selectedPeriod.status}`} className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-5 space-y-3">
+        <div role="alert" aria-live="assertive" key={`selected-period-error-${selectedPeriod.status}`} className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono-code font-bold uppercase tracking-wider text-amber-300">
               Period Selection Failed
@@ -166,12 +166,16 @@ export const DashaPage: React.FC<DashaPageProps> = ({
       )}
 
       {/* Selected Period Report */}
-      {selectedPeriod &&
-        selectedPeriod.status === 'OK' &&
-        selectedPeriod.synthesis &&
-        submittedPeriod &&
-        selectedPeriod.synthesis.period.mahadashaId === submittedPeriod.mahadashaId &&
-        selectedPeriod.synthesis.period.antardashaId === submittedPeriod.antardashaId && (
+      {(() => {
+        const canShowSelectedPeriodReport =
+          selectedPeriod &&
+          selectedPeriod.status === 'OK' &&
+          selectedPeriod.synthesis &&
+          selectionStatus === 'READY' &&
+          submittedPeriod &&
+          selectedPeriod.synthesis.period.mahadashaId === submittedPeriod.mahadashaId &&
+          selectedPeriod.synthesis.period.antardashaId === submittedPeriod.antardashaId;
+        return canShowSelectedPeriodReport ? (
           <>
             <SelectedPeriodReport
               synthesis={selectedPeriod.synthesis}
@@ -184,7 +188,8 @@ export const DashaPage: React.FC<DashaPageProps> = ({
               submittedPeriod={submittedPeriod}
             />
           </>
-        )}
+        ) : null;
+      })()}
 
       <CareerActivationSection activation={viewModel.careerActivation} />
 
