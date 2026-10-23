@@ -193,10 +193,17 @@ Option A is the documented contract for this implementation. Option B remains **
 
 These are explicitly blocked pending external reference data or domain-owner decisions; they are not implementation gaps to fill speculatively.
 
-1. **P1 partial-Mahadasha timing validation — REFERENCE-DATA-BLOCKED:** Requires an independent Vimshottari reference chart. Do not alter the partial-MD scaling formula without it.
-2. **P1 external Moon-anchor capture for `D08-A1` — REFERENCE-DATA-BLOCKED:** The `describe.skip`'d suite in `src/engine/dasha/reference/dashaMoonAnchor.test.ts` requires Swiss Ephemeris/JPL Horizons values with version and flags recorded.
-3. **Priority-3 Career non-dusthana mechanism-type mappings — OWNER-BLOCKED:** In `src/domain/career/careerMechanism/resolver/careerMechanismResolverRules.ts`, the domain owner must specify `CareerMechanismType` values for `CAREER_HOUSE_NETWORK`, `KENDRA_TRIKONA`, `UPACHAYA_PROGRESSION`, `PARIVARTANA_YOGA`, and `CAREER_YOGA_STRUCTURE`, and confirm the P2-06 evidence contract is frozen. Do not add speculative rules.
-4. **Wealth Option B lord/karaka linkage — OWNER-BLOCKED:** Pending the Wealth spec. Keep adopted Option A house-only linkage unchanged until then.
+**Decision register:**
+
+(a) **Partial-Mahadasha validation — REFERENCE-DATA-BLOCKED:** Independent external reference data is required before astronomical validation can be claimed. Do not alter the partial-MD scaling formula without it.
+
+(b) **`D08-A1` Moon-anchor validation — REFERENCE-DATA-BLOCKED:** The `describe.skip`'d suite in `src/engine/dasha/reference/dashaMoonAnchor.test.ts` requires externally sourced Swiss Ephemeris/JPL Horizons values with version and flags recorded. Do not unskip it or fabricate values.
+
+(c) **Career non-dusthana mechanism rules — OWNER-BLOCKED:** A [P2-07D non-dusthana mechanism decision request](../../career/phase2/P2-07D-NON-DUSTHANA-MECHANISM-DECISION-REQUEST.md) now collects the domain owner's mappings and evidence contract decisions. No resolver rule is authorized until owner sign-off and confirmation that the P2-06 evidence contracts are frozen.
+
+(d) **Wealth Option B — OWNER-BLOCKED / NOT ADOPTED:** Option A remains the contract: `isLinkedToDimension` uses house-only linkage. Do not extend it with lord/karaka linkage absent approval of the Wealth spec.
+
+Internal invariant, boundary, and regression tests for partial-MD timing and Moon-anchor behavior remain labeled as internal consistency checks, not independent astronomical validation. External reference evidence remains outstanding for both (a) and (b).
 
 The GAINS `UNKNOWN` effect with `LINKED` reason is an intentional intermediate state, not a defect; see "Resolution: GAINS Effect Assignment" above.
 
