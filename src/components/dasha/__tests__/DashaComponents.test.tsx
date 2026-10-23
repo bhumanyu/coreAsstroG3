@@ -480,7 +480,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
     it('renders the recognized-structure rule-coverage reason for UNAVAILABLE career qualification', () => {
       const reason =
-        'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.';
+        'Canonical inputs were provided but contained zero mechanism candidates under the currently implemented resolver rules; this may reflect a rule-coverage gap and does not disprove a career promise.';
       const synthesis = makeSynthesis({
         career: {
           qualificationBasis: 'UNAVAILABLE',

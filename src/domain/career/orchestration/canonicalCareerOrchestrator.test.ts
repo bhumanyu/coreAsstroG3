@@ -435,10 +435,90 @@ describe('CanonicalCareerOrchestrator', () => {
         diagnosticId: 'ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_PATTERN_NO_RULE',
         severity: 'INFO',
         category: 'GATING',
-        message: expect.stringContaining('CAREER_HOUSE_NETWORK for houses [6, 8, 11]'),
+        message: expect.stringContaining('Canonical career inputs produced no mechanism candidates for pattern CAREER_HOUSE_NETWORK (houses [6, 8, 11])'),
         relatedIds: ['PATTERN_NO_RULE'],
         stage: 'MECHANISM'
       }));
+    });
+
+    it('emits coverage-gap diagnostic when candidateSet is present but empty (Part 2a)', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_EMPTY_CANDIDATES');
+      Object.assign(pattern, {
+        family: 'CAREER_HOUSE_NETWORK',
+        classification: 'CAREER_HOUSE_NETWORK',
+        houses: [6, 8, 11]
+      });
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_EMPTY_CANDIDATES', 'INSUFFICIENT_DATA');
+      Object.assign(qualifiedPattern, { sourcePattern: pattern });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+      // Return empty candidate set (present but no candidates)
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_EMPTY_CANDIDATES', [])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const foundation = orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.resolvedMechanisms).toHaveLength(0);
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_PATTERN_EMPTY_CANDIDATES',
+        severity: 'INFO',
+        category: 'GATING',
+        message: expect.stringContaining('Canonical career inputs produced no mechanism candidates'),
+        relatedIds: ['PATTERN_EMPTY_CANDIDATES'],
+        stage: 'MECHANISM'
+      }));
+      // Qualification state should be unaffected
+      expect(foundation.patternQualifications).toHaveLength(1);
+      expect(foundation.patternQualifications[0].status).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('emits contract-violation diagnostic when candidateSet is missing (Part 2b)', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_MISSING_SET');
+      Object.assign(pattern, {
+        family: 'CAREER_HOUSE_NETWORK',
+        classification: 'CAREER_HOUSE_NETWORK',
+        houses: [6, 8, 11]
+      });
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_MISSING_SET', 'INSUFFICIENT_DATA');
+      Object.assign(qualifiedPattern, { sourcePattern: pattern });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+      // Return empty array (contract violation: one input but no candidate set returned)
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const foundation = orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.resolvedMechanisms).toHaveLength(0);
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_MISSING_CANDIDATE_SET_PATTERN_MISSING_SET',
+        severity: 'WARNING',
+        category: 'CONTRACT_VIOLATION',
+        message: expect.stringContaining('Resolver returned no CandidateSet for pattern PATTERN_MISSING_SET'),
+        relatedIds: ['PATTERN_MISSING_SET'],
+        stage: 'MECHANISM'
+      }));
+      // Qualification state should be unaffected
+      expect(foundation.patternQualifications).toHaveLength(1);
+      expect(foundation.patternQualifications[0].status).toBe('INSUFFICIENT_DATA');
     });
 
     it('should expose mixed accepted/rejected/firewall-excluded evidence IDs on ResolvedMechanism', () => {

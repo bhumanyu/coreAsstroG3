@@ -333,7 +333,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(result.value.qualificationBasis).toBe('UNAVAILABLE');
         expect(result.value.diagnostics).toContainEqual(expect.objectContaining({
           code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
-          message: expect.stringContaining('rule-coverage gap, not a disproven career promise')
+          message: expect.stringContaining('may reflect a rule-coverage gap and does not disprove a career promise')
         }));
 
         // Verify that mechanism candidates are indeed empty (reproducing the investigation condition)

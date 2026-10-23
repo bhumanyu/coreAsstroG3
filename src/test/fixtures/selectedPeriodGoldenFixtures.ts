@@ -68,7 +68,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
       },
       {
         code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
-        message: 'Canonical inputs were provided but contained zero mechanism candidates because no resolver rule matched; this is a rule-coverage gap, not a disproven career promise.'
+        message: 'Canonical inputs were provided but contained zero mechanism candidates under the currently implemented resolver rules; this may reflect a rule-coverage gap and does not disprove a career promise.'
       }
     ]
   },

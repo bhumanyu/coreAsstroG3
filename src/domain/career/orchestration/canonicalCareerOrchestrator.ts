@@ -525,14 +525,28 @@ export class CanonicalCareerOrchestrator {
           continue;
         }
 
-        diagnostics.push({
-          diagnosticId: `ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_${resolutionInput.pattern.patternId}`,
-          severity: 'INFO',
-          category: 'GATING',
-          message: `No mechanism resolver rule matched pattern ${resolutionInput.pattern.classification} for houses [${resolutionInput.pattern.houses.join(', ')}]`,
-          relatedIds: [resolutionInput.pattern.patternId],
-          stage: 'MECHANISM'
-        });
+        // Distinguish missing candidate-set (contract violation) from present-but-empty (coverage gap)
+        if (candidateSet === undefined) {
+          // Resolver returned no CandidateSet for this pattern despite resolveAll contract
+          diagnostics.push({
+            diagnosticId: `ORCHESTRATION_MISSING_CANDIDATE_SET_${resolutionInput.pattern.patternId}`,
+            severity: 'WARNING',
+            category: 'CONTRACT_VIOLATION',
+            message: `Resolver returned no CandidateSet for pattern ${resolutionInput.pattern.patternId} (${resolutionInput.pattern.classification}) despite resolveAll contract (one set per input)`,
+            relatedIds: [resolutionInput.pattern.patternId],
+            stage: 'MECHANISM'
+          });
+        } else {
+          // CandidateSet present but empty - coverage gap, not contract violation
+          diagnostics.push({
+            diagnosticId: `ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_${resolutionInput.pattern.patternId}`,
+            severity: 'INFO',
+            category: 'GATING',
+            message: `Canonical career inputs produced no mechanism candidates for pattern ${resolutionInput.pattern.classification} (houses [${resolutionInput.pattern.houses.join(', ')}]) under the currently implemented resolver rules. This may reflect incomplete rule coverage; it does not disprove a career promise.`,
+            relatedIds: [resolutionInput.pattern.patternId],
+            stage: 'MECHANISM'
+          });
+        }
       }
 
       // Convert to resolved mechanisms

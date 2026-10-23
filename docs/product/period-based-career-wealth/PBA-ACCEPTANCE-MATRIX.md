@@ -237,6 +237,24 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 - Decision-request documentation commit: `3ba0f9cc65e4f9669a2788dc47dc71fa268414bf` (documentation only; no registry rule added)
 - Validation on that exact commit, Node `20.19.4`: `npx tsc --noEmit` PASS; `npm run verify` PASS (296 test files, 5,562 passed, 5 skipped; build completed with the existing large-chunk-size warning)
 
+**Diagnostic wording hardening commit:** `643fbc8b10e7d66b4a0b535da5c1739ed107d6d3`
+- **Toolchain:** Node `20.19.4`
+- **Changes:**
+  - Part 1: Reworded ORCHESTRATION_NO_MECHANISM_RULE_MATCHED_* diagnostic to report observed state rather than asserting cause
+  - Part 1: Reworded CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS diagnostic to observed-state wording
+  - Part 2: Split single branch to distinguish missing candidate-set (contract violation) from present-but-empty (coverage gap)
+  - Part 2: Added two unit tests for empty candidate set and missing candidate set scenarios
+  - Part 3: Added real detector→qualification→resolution integration test asserting empty-coverage end state per PBA-01 section 8.1
+- **Verification on the exact change commit above:**
+  - ✅ `npx vitest run src/domain/career/orchestration/canonicalCareerOrchestrator.test.ts`: PASS (62 tests; added 2 new tests for Part 2)
+  - ✅ `npx vitest run src/domain/career/careerDasha`: PASS (6 files, 172 tests; added 1 integration test for Part 3)
+  - ✅ `npx vitest run src/product/analysis/productAnalysisMapper.test.ts src/domain/synthesis/selectedPeriodSynthesis.test.ts`: PASS (2 files, 116 tests)
+  - ✅ `npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx`: PASS (25 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run verify:pba10`: PASS (124 tests; lint and build passed)
+  - ⚠️ `npm run verify`: BLOCKED after 5,225 tests passed; Node v21.7.1 produced ERR_REQUIRE_ESM worker-start failure and Vitest worker termination EPERM; build stage was not reached
+- Non-dusthana mechanism mappings remain **DEFERRED** pending domain-owner sign-off (no speculative rules added)
+
 ---
 
 ## PBA-05: Selected-Period Wealth Activation
