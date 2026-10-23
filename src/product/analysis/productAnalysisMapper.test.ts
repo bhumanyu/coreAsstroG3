@@ -291,6 +291,26 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
     expect(ruleRef?.polarity).toBeUndefined();
   });
 
+  it('preserves referenceKind, level, stage, provenanceStage on career EVIDENCE and wealth RULE refs', () => {
+    const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+    // Check career EVIDENCE ref (ev-1 from fixture) preserves all fields
+    const careerEvidenceRef = result.evidence.find(e => e.evidenceId === 'ev-1');
+    expect(careerEvidenceRef).toBeDefined();
+    expect(careerEvidenceRef?.referenceKind).toBe('EVIDENCE');
+    expect(careerEvidenceRef?.level).toBe('MD');
+    expect(careerEvidenceRef?.stage).toBe('CAREER');
+    expect(careerEvidenceRef?.provenanceStage).toBe('CAREER_EXPRESSION');
+
+    // Check wealth RULE ref (rule-2 from fixture) preserves all fields
+    const wealthRuleRef = result.evidence.find(e => e.ruleId === 'rule-2');
+    expect(wealthRuleRef).toBeDefined();
+    expect(wealthRuleRef?.referenceKind).toBe('RULE');
+    expect(wealthRuleRef?.level).toBe('AD');
+    expect(wealthRuleRef?.stage).toBe('WEALTH');
+    expect(wealthRuleRef?.provenanceStage).toBe('WEALTH_DASHA_RULE');
+  });
+
   it('preserves all four wealth dimensions with dataStatus', () => {
     const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
 

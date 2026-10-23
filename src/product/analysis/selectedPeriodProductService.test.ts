@@ -693,7 +693,7 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       const validAd = selectablePeriods.antardashas.find((ad: any) => ad.valid && ad.mahadashaId === validMd!.id);
       expect(validAd).toBeTruthy();
 
-      // Use minimal artifacts that should not hard-fail the orchestration
+      // Use canonicalCareerArtifacts which yield qualificationBasis: 'UNAVAILABLE' (not a hard failure)
       const input: BuildProductSelectedPeriodSynthesisInput = {
         selection: {
           mahadashaId: validMd!.id,
@@ -715,9 +715,14 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       // The orchestration should succeed (domain failures are handled internally)
       expect(result.ok).toBe(true);
       if (result.ok) {
-        // Verify provenance fields are present
-        expect(result.value.provenance.career.status).toMatch(/^(PRESENT|PARTIAL|MISSING)$/);
-        expect(result.value.provenance.wealth.status).toMatch(/^(PRESENT|PARTIAL|MISSING)$/);
+        // With canonicalCareerArtifacts, career synthesis shows qualificationBasis: 'UNAVAILABLE'
+        expect(result.value.career.qualificationBasis).toBe('UNAVAILABLE');
+        // Wealth activation is preserved (both domains present)
+        expect(result.value.provenance.career.status).toBe('PRESENT');
+        expect(result.value.provenance.wealth.status).toBe('PRESENT');
+        // Note: Exact-error-code propagation proof (e.g., INCOMPLETE_CANONICAL_INPUT) is tested at the
+        // domain layer in selectedPeriodSynthesis.test.ts. The service-level path cannot be shaped to
+        // supply exactly one canonical input through the public service input with the current harness.
       }
     });
 

@@ -936,12 +936,20 @@ describe('buildSelectedPeriodSynthesis', () => {
       // Also expect unresolved evidence from dasha evidence IDs
       expect(value.missingInputs.some(m => m.code === 'EVIDENCE_REFERENCE_UNRESOLVED')).toBe(true);
 
-      // Check provenance
-      expect(value.provenance.career.status).toBe('PRESENT');
-      expect(value.provenance.career.version).toBe('PBA-04-v1');
-      expect(value.provenance.career.qualificationBasis).toBe('CANONICAL_STATUS');
-      expect(value.provenance.wealth.status).toBe('PRESENT');
-      expect(value.provenance.wealth.version).toBe('PBA-05-v1');
+      // Check provenance - strengthened with toMatchObject for structural matching
+      expect(value.provenance.career).toMatchObject({
+        status: 'PRESENT',
+        version: 'PBA-04-v1',
+        qualificationBasis: 'CANONICAL_STATUS'
+      });
+      expect(value.provenance.wealth).toMatchObject({
+        status: 'PRESENT',
+        version: 'PBA-05-v1'
+      });
+
+      // Check wealth dimension effects (pinned against makeWealthActivation fixture)
+      expect(value.wealth.dimensions.ACCUMULATION.effect).toBe('ACTIVATES');
+      expect(value.wealth.dimensions.SPECULATION.effect).toBe('CHALLENGES');
     });
   });
 
@@ -2653,6 +2661,10 @@ describe('buildSelectedPeriodSynthesis', () => {
       const careerBaseline = Object.freeze({ id: 'career-baseline' } as unknown as CareerFinalSynthesisResult);
       const wealthBaseline = Object.freeze({ id: 'wealth-baseline' } as unknown as CareerWealthFinalSynthesis);
 
+      // Snapshot baselines before call for invariance check
+      const careerBaselineSnapshot = structuredClone(careerBaseline);
+      const wealthBaselineSnapshot = structuredClone(wealthBaseline);
+
       // Run twice to assert reproducibility
       const result1 = buildSelectedPeriodSynthesis({
         selectedPeriod,
@@ -2682,6 +2694,32 @@ describe('buildSelectedPeriodSynthesis', () => {
 
       // Assert reproducibility
       expect(result1.value).toEqual(result2.value);
+
+      // Assert baselines unchanged after call (invariance)
+      expect(careerBaseline).toEqual(careerBaselineSnapshot);
+      expect(wealthBaseline).toEqual(wealthBaselineSnapshot);
+
+      // Assert natal baselines carried by reference with unchanged flag
+      expect(result1.value.natalBaseline.career?.baseline).toBe(careerBaseline);
+      expect(result1.value.natalBaseline.career?.unchanged).toBe(true);
+      expect(result1.value.natalBaseline.wealth?.baseline).toBe(wealthBaseline);
+      expect(result1.value.natalBaseline.wealth?.unchanged).toBe(true);
+
+      // Strengthened golden assertions pinned against fixtures
+      expect(result1.value.synthesisVersion).toBe('PBA-06-v1');
+      expect(result1.value.period.selectedPeriodId).toBe(selectedPeriod.selectedPeriodId);
+      expect(result1.value.provenance.career).toMatchObject({
+        status: 'PRESENT',
+        version: 'PBA-04-v1',
+        qualificationBasis: 'CANONICAL_STATUS'
+      });
+      expect(result1.value.provenance.wealth).toMatchObject({
+        status: 'PRESENT',
+        version: 'PBA-05-v1'
+      });
+      expect(result1.value.career.expressions.length).toBeGreaterThan(0);
+      expect(result1.value.wealth.dimensions.ACCUMULATION.effect).toBe('ACTIVATES');
+      expect(result1.value.wealth.dimensions.SPECULATION.effect).toBe('CHALLENGES');
 
       // Golden fixture: frozen literal of the full result
       const expectedGoldenFixture = Object.freeze({

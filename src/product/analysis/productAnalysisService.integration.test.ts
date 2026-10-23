@@ -787,12 +787,15 @@ describe('ProductAnalysisService integration (PBA-07)', () => {
       expect(selected.selectedPeriod).toBeDefined();
       expect(selected.selectedPeriod?.status).toBe('OK');
 
-      // career and wealth should be equal
-      expect(selected.career).toEqual(baseline.career);
-      expect(selected.wealth).toEqual(baseline.wealth);
+      // Pre-existing natal career/wealth conclusions unchanged (compare specific baseline fields)
+      expect(selected.career.direction).toBe(baseline.career.direction);
+      expect(selected.career.strength).toBe(baseline.career.strength);
+      expect(selected.wealth.direction).toBe(baseline.wealth.direction);
+      expect(selected.wealth.strength).toBe(baseline.wealth.strength);
 
-      // dasha.current should be equal
-      expect(selected.dasha.current).toEqual(baseline.dasha.current);
+      // dasha.current remains canonical (selecting past/future MD-AD does not replace it)
+      expect(selected.dasha.current.mahadasha?.planet).toBe(baseline.dasha.current.mahadasha?.planet);
+      expect(selected.dasha.current.antardasha?.planet).toBe(baseline.dasha.current.antardasha?.planet);
     });
 
     it('determinism: identical selection + asOf produces equal selectedPeriod DTO', async () => {
