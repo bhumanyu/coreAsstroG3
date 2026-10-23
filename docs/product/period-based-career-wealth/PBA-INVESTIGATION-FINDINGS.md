@@ -161,7 +161,7 @@ function isLinkedToDimension(
 }
 ```
 
-**Key constraint:** Planet overlap alone is NOT sufficient for linkage. The dasha evidence must explicitly reference the house via the `houses` field.
+**Key constraint:** Planet, lord, or karaka overlap alone is NOT sufficient for linkage. The dasha evidence must explicitly reference the house via the `houses` field. This house-only rule is the adopted Option A contract.
 
 ### Investigation Finding
 For the MOON MD → MOON AD period:
@@ -169,43 +169,36 @@ For the MOON MD → MOON AD period:
 - Moon's dasha evidence does not reference houses 9 or 5
 - Therefore, FORTUNE (house 9) and SPECULATION (house 5) fail linkage despite having promise evidence
 
-### Required Fix Options (Priority 3)
+### Linkage Contract Resolution (Priority 3)
 
-**Option A (Conservative - document current behavior):**
-- Keep the house-only linkage rule as-is
-- Document this as the intentional contract
-- Add clearer dimension diagnostics distinguishing "promise present but dasha lord does not touch the dimension's house" from true insufficiency
-- Surface this as a design decision: the system requires explicit house linkage, not just planetary association
+**Option A (adopted and documented):**
+- Keep the house-only linkage rule unchanged.
+- A dimension with promise evidence but no house-linked MD/AD evidence returns `PROMISE_NOT_LINKED`, distinct from `NO_PROMISE_EVIDENCE`.
+- The diagnostic states that promise evidence is present but the selected-period dasha lord does not touch the dimension's canonical house.
+- Planet/lord/karaka overlap alone does not establish linkage.
 
-**Option B (Extend linkage rule):**
+**Option B (owner-blocked):**
 - Extend the linkage rule to include lord/karaka-based association
 - If the dasha lord (Moon) owns or aspects the dimension's house, count as linkage
 - If the dasha lord is the karaka for the dimension, count as linkage
-- Per spec, this would allow lord/karaka-based linkage to activate dimensions
+- Do not implement until the Wealth spec owner confirms the intended linkage contract.
 
-**Recommendation:** Coordinate with the domain owner to determine which option aligns with the Wealth spec and astrological intent.
+Option A is the documented contract for this implementation. Option B remains **OWNER-BLOCKED** pending the Wealth spec; it is not an open implementation gap.
 
 ---
 
 ## Next Steps (Priority 3)
 
-### Career
-1. Add mechanism-resolution rules in `src/domain/career/careerMechanism/resolver/careerMechanismResolverRules.ts` for:
-   - `CAREER_HOUSE_NETWORK`
-   - `KENDRA_TRIKONA` → `DHARMA_KARMA_ALIGNMENT`/`AUTHORITY_PATTERN`/`PROFESSIONAL_RISE_PATTERN`
-   - `UPACHAYA_PROGRESSION`
-   - `PARIVARTANA_YOGA`
-   - `CAREER_YOGA_STRUCTURE`
-2. Follow existing rule shape and guard with real establishing edges
-3. Add rule-level unit tests
-4. Add real-chart end-to-end test asserting `qualificationBasis` becomes `CANONICAL_STATUS`
+### Remaining Owner-Blocked / Reference-Data-Blocked Items
 
-### Wealth
-1. **GAINS Effect Assignment Defect (URGENT):** Investigate why LINKED dimensions receive `effect: UNKNOWN` instead of a determinate effect. Examine the effect assignment logic in `evaluateSelectedWealthPeriodActivation` to identify the bug that causes the `insufficientReason: LINKED` / `effect: UNKNOWN` contradiction.
-2. Decide on linkage rule approach (Option A or B above) for FORTUNE/SPECULATION
-3. If Option A: Add clearer diagnostics for "promise present but not linked"
-4. If Option B: Extend `isLinkedToDimension` to include lord/karaka-based linkage
-5. Add per-dimension tests for the real chart
+These are explicitly blocked pending external reference data or domain-owner decisions; they are not implementation gaps to fill speculatively.
+
+1. **P1 partial-Mahadasha timing validation — REFERENCE-DATA-BLOCKED:** Requires an independent Vimshottari reference chart. Do not alter the partial-MD scaling formula without it.
+2. **P1 external Moon-anchor capture for `D08-A1` — REFERENCE-DATA-BLOCKED:** The `describe.skip`'d suite in `src/engine/dasha/reference/dashaMoonAnchor.test.ts` requires Swiss Ephemeris/JPL Horizons values with version and flags recorded.
+3. **Priority-3 Career non-dusthana mechanism-type mappings — OWNER-BLOCKED:** In `src/domain/career/careerMechanism/resolver/careerMechanismResolverRules.ts`, the domain owner must specify `CareerMechanismType` values for `CAREER_HOUSE_NETWORK`, `KENDRA_TRIKONA`, `UPACHAYA_PROGRESSION`, `PARIVARTANA_YOGA`, and `CAREER_YOGA_STRUCTURE`, and confirm the P2-06 evidence contract is frozen. Do not add speculative rules.
+4. **Wealth Option B lord/karaka linkage — OWNER-BLOCKED:** Pending the Wealth spec. Keep adopted Option A house-only linkage unchanged until then.
+
+The GAINS `UNKNOWN` effect with `LINKED` reason is an intentional intermediate state, not a defect; see "Resolution: GAINS Effect Assignment" above.
 
 ---
 
