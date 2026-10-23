@@ -38,6 +38,24 @@ The full build emitted the existing large-chunk-size warning. The external ephem
 
 The production fix consumes the partial-first-MD status only after a positive-length period is emitted and stops timeline generation if a complete candidate sequence makes no progress at millisecond precision. The guard regression uses a public input that skips a zero-length Sun candidate and emits the following partial Moon MD. The near-360° case with no representable positive interval now yields no MDs rather than repeating indefinitely. The full build emitted the existing large-chunk-size warning. The external ephemeris suite remains skipped.
 
+## Empty Vimshottari Timeline Composition Follow-up
+
+**Change commit:** `2c81ce1843996c2548f46ca875669b7cdf4041d2`
+
+**Toolchain:** Node `20.19.4`, npm `10.9.2`
+
+**Scenarios:**
+- **One candidate is zero-length, a later candidate is representable:** the zero-length Sun candidate is skipped; the following Moon period is emitted using the remaining-fraction duration, followed by Mars. Assertions verify the identities, partial-versus-full duration, contiguous MD boundaries, and termination at the 120-year horizon. The partial-first status is consumed only once a valid MD is emitted.
+- **Every candidate in the sequence is unrepresentable:** timeline generation terminates with no MDs and does not silently consume the partial-first status. The `calculateHoroscope` acceptance test injects the near-360° Moon through `customPositions`; it verifies the empty timeline is reported as `UNAVAILABLE` with `EMPTY_VIMSHOTTARI_TIMELINE`, has no interpreted periods or active Dasha, and does not throw. Full-natal Dasha sections also report `UNAVAILABLE`.
+
+**Verification for the change commit above:**
+- ✅ `npx vitest run src/engine/astroEngine.test.ts src/engine/dasha/vimshottari.test.ts src/engine/dashaInterpretation/dashaInterpretation.test.ts src/engine/fullNatalAnalysis/fullNatalAnalysis.test.ts`: PASS (4 test files, 234 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (123 tests; lint and build passed)
+- ✅ `npm run verify`: PASS (296 test files, 5,562 passed, 5 skipped; lint and build passed)
+
+The build emitted the existing large-chunk-size warning. The external ephemeris suite remains skipped.
+
 **Current PR verification (exact baseline SHA `491b831b2d6715760521b135365cbf4222623bec`):**
 - ✅ `npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts`: PASS (61 tests)
 - ✅ `npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts`: PASS (87 tests)
