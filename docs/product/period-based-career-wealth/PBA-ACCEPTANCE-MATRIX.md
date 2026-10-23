@@ -202,6 +202,7 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 
 **Deferred Families (Priority 3 - pending frozen evidence contracts and domain sign-off):**
 - CAREER_HOUSE_NETWORK generic: needs mechanism-resolution rule (evidence contract not frozen)
+- KENDRA_TRIKONA: needs mechanism-resolution rule (owner mapping and evidence contract sign-off pending)
 - UPACHAYA_PROGRESSION: needs mechanism-resolution rule (evidence contract not frozen)
 - PARIVARTANA_YOGA: needs mechanism-resolution rule (evidence contract not frozen)
 - CAREER_YOGA_STRUCTURE: needs mechanism-resolution rule (evidence contract not frozen)
@@ -212,12 +213,15 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 - **Blocker:** Domain owner must confirm which `CareerMechanismType` values each pattern classification emits before any rule can be added
 - **Constraint:** Do NOT ship an applying-but-empty placeholder rule (this would misleadingly imply coverage while still producing `UNAVAILABLE`)
 - **Remediation (commit 40d4423):** KENDRA_TRIKONA placeholder rule removed from registry and tests to eliminate the applying-but-empty contradiction
+- **Gating artifact:** [P2-07D non-dusthana mechanism decision request](../../career/phase2/P2-07D-NON-DUSTHANA-MECHANISM-DECISION-REQUEST.md) collects owner mappings, evidence requirements, rejection conditions, incomplete-evidence behavior, and P2-06 freeze decisions for all five families.
+- **Change scope:** No resolver registry rule was added in this documentation change; the registry remains limited to its three dusthana rules.
 - **Cross-reference:** See `PBA-INVESTIGATION-FINDINGS.md` section "Career Findings" and "Required Fix (Priority 3)"
 
 **Remediation:**
 - COMPLETE: All test coverage gaps addressed, CI verification green
-- KENDRA_TRIKONA rule structure added (non-speculative, TODO for mechanism-type confirmation)
-- Remaining families deferred until evidence contracts are frozen
+- Non-dusthana mechanism coverage remains deferred pending the decision-request sign-off and frozen P2-06 evidence contracts
+- Decision-request documentation commit: `3ba0f9cc65e4f9669a2788dc47dc71fa268414bf` (documentation only; no registry rule added)
+- Validation on that exact commit, Node `20.19.4`: `npx tsc --noEmit` PASS; `npm run verify` PASS (296 test files, 5,562 passed, 5 skipped; build completed with the existing large-chunk-size warning)
 
 ---
 
@@ -613,7 +617,7 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 **Confirmed Defects:** 0
 - PBA-03: Resolved (temporal relation recomputation implemented in commit ed30213)
 - PBA-04: Resolved (adapter diagnostic implemented in commits 42398f9/22641c1, test coverage completed in commit 8ba1bd6)
-- PBA-04 Priority 3 Gap: KENDRA_TRIKONA rule structure added (commit abb00008), mechanism-type mapping deferred pending domain confirmation
+- PBA-04 Priority 3 Gap: non-dusthana mechanism mappings are owner-blocked; an earlier KENDRA_TRIKONA placeholder was removed in commit 40d4423, and the registry currently contains only the three dusthana rules
 - PBA-05 Priority 3 Gap: GAINS UNKNOWN effect resolved (not a defect — defined intermediate state, recorded in PBA-INVESTIGATION-FINDINGS.md)
 - PBA-05 Priority 3 Gap: Conservative linkage confirmed (Option A), Moon MD→Moon AD tests added (commit abb00008)
 
@@ -623,10 +627,10 @@ Earlier CI evidence below retains the SHA and counts of its original historical 
 - PR-B (WP-1): Context guardrails — COMPLETE (commit ed30213)
 - 🔄 PR-B (partial-MD algorithm change): BLOCKED (external reference data required)
 - Priority 3 Gap Closure (commit abb00008):
-  - Career: KENDRA_TRIKONA mechanism-resolution rule added (structure only, TODO for mechanism-type confirmation)
+  - Career: an earlier KENDRA_TRIKONA placeholder attempt was subsequently removed (commit 40d4423); mechanism mapping awaits the owner decision request
   - Wealth: GAINS UNKNOWN effect resolved (defined intermediate state, not a defect)
   - Wealth: Conservative linkage confirmed with Moon MD→Moon AD diagnostic tests
-  - Deferred families: CAREER_HOUSE_NETWORK, UPACHAYA_PROGRESSION, PARIVARTANA_YOGA, CAREER_YOGA_STRUCTURE (pending frozen evidence contracts)
+  - Deferred families: CAREER_HOUSE_NETWORK, KENDRA_TRIKONA, UPACHAYA_PROGRESSION, PARIVARTANA_YOGA, CAREER_YOGA_STRUCTURE (pending owner sign-off and frozen evidence contracts)
 - PR-C (WP-2): Career candidate integrity — COMPLETE (adapter diagnostic landed in 42398f9/22641c1, test coverage completed in 8ba1bd6)
 - PR-D (WP-3): Wealth diagnostics — COMPLETE
 - PR-E (WP-4): Partial synthesis orchestration — COMPLETE
