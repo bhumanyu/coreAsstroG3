@@ -1846,6 +1846,18 @@ describe('selectedMdAdPeriod', () => {
         }
       });
 
+      it('whitespace-only AD ID returns ANTARDASHA_NOT_FOUND', () => {
+        const selectable = listSelectableMdAdPeriods(report);
+        const result = resolveSelectedMdAdPeriod(report, {
+          mahadashaId: selectable.mahadashas[0].id,
+          antardashaId: '   '
+        });
+        expect(result.ok).toBe(false);
+        if (!result.ok) {
+          expect(result.error).toBe('ANTARDASHA_NOT_FOUND');
+        }
+      });
+
       it('wrong resolver version returns MAHADASHA_NOT_FOUND', () => {
         const result = resolveSelectedMdAdPeriod(report, {
           mahadashaId: 'v99|VIMSHOTTARI|md|JUPITER|2020-01-01T00:00:00.000Z|2036-01-01T00:00:00.000Z',

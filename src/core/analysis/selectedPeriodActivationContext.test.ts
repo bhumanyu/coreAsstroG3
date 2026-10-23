@@ -1338,8 +1338,13 @@ describe('selectedPeriodActivationContext', () => {
       const adId = 'ad:gamma|delta';
       const result = createSelectedPeriodId(mdId, adId);
 
-      const expected = `pba-period:${SELECTED_PERIOD_CONTEXT_VERSION}:${encodeURIComponent(mdId)}:${encodeURIComponent(adId)}`;
-      expect(result).toBe(expected);
+      // Hard-coded literal locks the current contract: pba-period:v1 prefix with percent-encoded reserved characters
+      expect(result).toBe('pba-period:v1:md%3Aalpha%7Cbeta:ad%3Agamma%7Cdelta');
+    });
+
+    it('SELECTED_PERIOD_CONTEXT_VERSION guard: constant is v1', () => {
+      // Guard assertion: intentional version bump requires visible edit here
+      expect(SELECTED_PERIOD_CONTEXT_VERSION).toBe('v1');
     });
   });
 });
