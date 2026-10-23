@@ -126,7 +126,12 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         effect: 'INSUFFICIENT_DATA',
         dataStatus: 'PARTIAL',
         linkedLevels: [],
-        diagnostics: [],
+        diagnostics: [
+          {
+            code: 'WEALTH_PROMISE_NOT_LINKED_TO_CANONICAL_HOUSE',
+            message: "Promise evidence is present, but selected-period dasha evidence does not touch the FORTUNE's canonical house."
+          }
+        ],
         promiseEvidenceIds: [
           'WEALTH_9L_DIGNITY_001:SATURN',
           'WEALTH_5H_9H_LINK_001:HOUSES_5_9',
@@ -140,7 +145,12 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         effect: 'INSUFFICIENT_DATA',
         dataStatus: 'PARTIAL',
         linkedLevels: [],
-        diagnostics: [],
+        diagnostics: [
+          {
+            code: 'WEALTH_PROMISE_NOT_LINKED_TO_CANONICAL_HOUSE',
+            message: "Promise evidence is present, but selected-period dasha evidence does not touch the SPECULATION's canonical house."
+          }
+        ],
         promiseEvidenceIds: [
           'WEALTH_5L_DIGNITY_001:VENUS'
         ],
