@@ -64,6 +64,7 @@ export const DashaTimeline: React.FC<DashaTimelineProps> = ({
           return (
             <div
               key={`${period.planet}-${period.start}-${idx}`}
+              data-testid={isActive ? 'active-mahadasha-card' : undefined}
               className={`rounded-2xl border transition-all ${isActive
                 ? 'bg-gradient-to-b from-indigo-950/40 via-slate-900 to-slate-950 border-indigo-500/50 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-500/30'
                 : 'bg-slate-900/90 border-slate-800/80 hover:border-slate-700'

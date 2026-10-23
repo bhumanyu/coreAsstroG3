@@ -37,20 +37,23 @@ const TEMPORAL_LABELS: Record<ProductTemporalRelation, string> = {
 };
 
 /**
- * Maps diagnostic codes to human-readable messages.
- * The code is preserved as a title/tooltip for debugging.
+ * Maps diagnostic codes to human-readable explanations.
+ * Based on PeriodDiagnostic type from src/core/analysis/selectedMdAdPeriod.ts
  */
-function mapDiagnosticToMessage(code: string): string {
-  const messageMap: Record<string, string> = {
-    'INVALID_MAHADASHA_INTERVAL': 'Invalid Mahadasha time interval',
-    'INVALID_ANTARDASHA_INTERVAL': 'Invalid Antardasha time interval',
-    'INVALID_PRATYANTARDASHA_INTERVAL': 'Invalid Pratyantardasha time interval',
-    'NON_CONTIGUOUS_BOUNDARIES': 'Non-contiguous period boundaries',
-    'OUTSIDE_PARENT_WINDOW': 'Period falls outside parent window',
-    'MISSING_DATES': 'Missing start or end date',
-    'MALFORMED_TIMELINE': 'Malformed timeline structure'
-  };
-  return messageMap[code] || code;
+export const DASHA_DIAGNOSTIC_EXPLANATIONS: Record<string, string> = {
+  'INVALID_MAHADASHA_INTERVAL': 'Invalid Mahadasha time interval (start must be before end)',
+  'INVALID_ANTARDASHA_INTERVAL': 'Invalid Antardasha time interval (start must be before end)',
+  'ANTARDASHA_OUTSIDE_MAHADASHA': 'Antardasha falls outside its parent Mahadasha',
+  'DUPLICATE_MAHADASHA_ID': 'Duplicate Mahadasha identifier detected',
+  'DUPLICATE_ANTARDASHA_ID': 'Duplicate Antardasha identifier detected',
+  'NON_CANONICAL_DATE_FORMAT': 'Date does not match canonical ISO format (YYYY-MM-DDTHH:mm:ss.sssZ)'
+};
+
+/**
+ * Maps diagnostic code to human-readable explanation with fallback to raw code.
+ */
+function mapDiagnosticToExplanation(code: string): string {
+  return DASHA_DIAGNOSTIC_EXPLANATIONS[code] || code;
 }
 
 function formatDate(isoString: string): string {
@@ -131,7 +134,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   key={md.id}
                   value={md.id}
                   disabled={!md.valid}
-                  title={!md.valid ? md.diagnostics.map(mapDiagnosticToMessage).join(', ') : undefined}
+                  title={!md.valid ? md.diagnostics.map(mapDiagnosticToExplanation).join(', ') : undefined}
                 >
                   {md.planet} — {formatDate(md.start)} → {formatDate(md.end)} ({TEMPORAL_LABELS[md.temporalRelation]})
                   {!md.valid && ' (Invalid)'}
@@ -160,7 +163,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   key={ad.id}
                   value={ad.id}
                   disabled={!ad.valid}
-                  title={!ad.valid ? ad.diagnostics.map(mapDiagnosticToMessage).join(', ') : undefined}
+                  title={!ad.valid ? ad.diagnostics.map(mapDiagnosticToExplanation).join(', ') : undefined}
                 >
                   {ad.planet} — {formatDate(ad.start)} → {formatDate(ad.end)} ({TEMPORAL_LABELS[ad.temporalRelation]})
                   {!ad.valid && ' (Invalid)'}
@@ -181,12 +184,16 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
             <ul className="space-y-1 text-xs text-slate-300">
               {dashPeriodOptions.mahadashas.filter(md => !md.valid).map(md => (
                 <li key={md.id}>
-                  <span className="font-mono-code text-amber-400">{md.planet} MD:</span> {md.diagnostics.map(mapDiagnosticToMessage).join(', ')}
+                  <span className="font-mono-code text-amber-400">{md.planet} MD:</span>{' '}
+                  {md.diagnostics.map(mapDiagnosticToExplanation).join(', ')}
+                  <span className="text-slate-500 ml-1">({md.diagnostics.join(', ')})</span>
                 </li>
               ))}
               {selectedMahadasha && selectedMahadasha.antardashas.filter(ad => !ad.valid).map(ad => (
                 <li key={ad.id}>
-                  <span className="font-mono-code text-amber-400">{ad.planet} AD:</span> {ad.diagnostics.map(mapDiagnosticToMessage).join(', ')}
+                  <span className="font-mono-code text-amber-400">{ad.planet} AD:</span>{' '}
+                  {ad.diagnostics.map(mapDiagnosticToExplanation).join(', ')}
+                  <span className="text-slate-500 ml-1">({ad.diagnostics.join(', ')})</span>
                 </li>
               ))}
             </ul>
@@ -216,8 +223,19 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               <div className="flex items-start gap-2 text-xs text-amber-400">
                 <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden="true" />
                 <span>
-                  {!selectedMahadasha.valid && `MD: ${selectedMahadasha.diagnostics.map(mapDiagnosticToMessage).join(', ')}. `}
-                  {!selectedAntardasha.valid && `AD: ${selectedAntardasha.diagnostics.map(mapDiagnosticToMessage).join(', ')}`}
+                  {!selectedMahadasha.valid && (
+                    <>
+                      MD: {selectedMahadasha.diagnostics.map(mapDiagnosticToExplanation).join(', ')}
+                      <span className="text-slate-500"> ({selectedMahadasha.diagnostics.join(', ')})</span>
+                      {' '}
+                    </>
+                  )}
+                  {!selectedAntardasha.valid && (
+                    <>
+                      AD: {selectedAntardasha.diagnostics.map(mapDiagnosticToExplanation).join(', ')}
+                      <span className="text-slate-500"> ({selectedAntardasha.diagnostics.join(', ')})</span>
+                    </>
+                  )}
                 </span>
               </div>
             )}

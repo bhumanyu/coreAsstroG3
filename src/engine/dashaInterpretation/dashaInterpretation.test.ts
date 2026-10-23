@@ -1582,5 +1582,67 @@ describe('dashaInterpretation Engine', () => {
         validateDashaInterpretationInput(invalidInput);
       }).toThrow('invalid Mahadasha dates');
     });
+
+    it('interpretation layer never emits zero/negative-length periods in output', () => {
+      const input = createDashaFixture();
+      const report = analyzeDashaInterpretation(input);
+
+      // Verify all emitted MDs have positive duration
+      for (const md of report.mahadashas) {
+        const mdStart = new Date(md.start).getTime();
+        const mdEnd = new Date(md.end).getTime();
+        expect(mdEnd).toBeGreaterThan(mdStart);
+
+        // Verify all ADs have positive duration
+        for (const ad of md.antardashas) {
+          const adStart = new Date(ad.start).getTime();
+          const adEnd = new Date(ad.end).getTime();
+          expect(adEnd).toBeGreaterThan(adStart);
+
+          // Verify all PDs have positive duration
+          for (const pd of ad.pratyantardashas) {
+            const pdStart = new Date(pd.start).getTime();
+            const pdEnd = new Date(pd.end).getTime();
+            expect(pdEnd).toBeGreaterThan(pdStart);
+          }
+        }
+      }
+    });
+
+    it('interpretation layer rejects malformed timeline with zero-length periods', () => {
+      const baseInput = createDashaFixture();
+      const invalidTimeline = {
+        ...baseInput.vimshottari,
+        mahadashas: [
+          {
+            ...baseInput.vimshottari.mahadashas[0],
+            start: '1990-01-01T00:00:00.000Z',
+            end: '1990-01-01T00:00:00.000Z' // Zero-length MD
+          },
+          ...baseInput.vimshottari.mahadashas.slice(1)
+        ]
+      };
+
+      const invalidInput = { ...baseInput, vimshottari: invalidTimeline };
+
+      // The interpretation layer should reject this
+      expect(() => {
+        analyzeDashaInterpretation(invalidInput);
+      }).toThrow(TypeError);
+    });
+
+    it('half-open boundary semantics are preserved through interpretation layer', () => {
+      const input = createDashaFixture();
+      const report = analyzeDashaInterpretation(input);
+
+      const firstMd = report.mahadashas[0];
+      const firstAd = firstMd.antardashas[0];
+      const secondAd = firstMd.antardashas[1];
+
+      // At exact end of first AD, should resolve to second AD (exclusive boundary)
+      const activeAtAdEnd = analyzeActiveDasha(input, firstAd.end);
+      expect(activeAtAdEnd).not.toBeNull();
+      expect(activeAtAdEnd?.antardasha.planet).toBe(secondAd.planet);
+    });
   });
 });

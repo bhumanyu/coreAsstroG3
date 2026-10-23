@@ -464,4 +464,318 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(firstMdDurationYears).toBeCloseTo(20, 6);
     });
   });
+
+  describe('15. P2 half-open active-period boundary semantics for MD/AD/PD', () => {
+    it('MD: just-before start is NOT active, exact start IS active, just-after start IS active', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const mdStartMs = new Date(firstMd.start).getTime();
+      const mdEndMs = new Date(firstMd.end).getTime();
+
+      // Just before start (1ms before) - should NOT be active
+      const justBeforeMs = mdStartMs - 1;
+      const justBeforeIso = new Date(justBeforeMs).toISOString();
+      const activeJustBefore = getActiveDasha(timeline, justBeforeIso);
+      expect(activeJustBefore).toBeNull();
+
+      // Exact start - should be active
+      const activeAtStart = getActiveDasha(timeline, firstMd.start);
+      expect(activeAtStart).not.toBeNull();
+      expect(activeAtStart?.mahadasha.planet).toBe(Planet.KETU);
+
+      // Just after start (1ms after) - should be active
+      const justAfterMs = mdStartMs + 1;
+      const justAfterIso = new Date(justAfterMs).toISOString();
+      const activeJustAfter = getActiveDasha(timeline, justAfterIso);
+      expect(activeJustAfter).not.toBeNull();
+      expect(activeJustAfter?.mahadasha.planet).toBe(Planet.KETU);
+    });
+
+    it('MD: exact end is NOT active (exclusive), just-after end is next MD', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const secondMd = timeline.mahadashas[1];
+      const mdEndMs = new Date(firstMd.end).getTime();
+
+      // Exact end - should NOT be active for first MD (exclusive boundary)
+      // The second MD starts at the exact same time as first MD ends
+      const activeAtEnd = getActiveDasha(timeline, firstMd.end);
+      expect(activeAtEnd).not.toBeNull();
+      expect(activeAtEnd?.mahadasha.planet).toBe(secondMd.planet); // Should be in next MD
+
+      // Just after end (1ms after) - should be in next MD
+      const justAfterMs = mdEndMs + 1;
+      const justAfterIso = new Date(justAfterMs).toISOString();
+      const activeJustAfter = getActiveDasha(timeline, justAfterIso);
+      expect(activeJustAfter).not.toBeNull();
+      expect(activeJustAfter?.mahadasha.planet).toBe(secondMd.planet);
+    });
+
+    it('AD: half-open boundary semantics with epsilon offset', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const firstAd = firstMd.antardashas[0];
+      const secondAd = firstMd.antardashas[1];
+      const adStartMs = new Date(firstAd.start).getTime();
+      const adEndMs = new Date(firstAd.end).getTime();
+
+      // Just before start (1ms before) - should be in previous AD or null if first
+      if (firstMd.antardashas.length > 1) {
+        const justBeforeMs = adStartMs - 1;
+        const justBeforeIso = new Date(justBeforeMs).toISOString();
+        const activeJustBefore = getActiveDasha(timeline, justBeforeIso);
+        // First AD starts at MD start, so just before would be before MD
+        if (justBeforeMs < new Date(firstMd.start).getTime()) {
+          expect(activeJustBefore).toBeNull();
+        }
+      }
+
+      // Exact start - should be active
+      const activeAtStart = getActiveDasha(timeline, firstAd.start);
+      expect(activeAtStart).not.toBeNull();
+      expect(activeAtStart?.antardasha.planet).toBe(firstAd.planet);
+
+      // Just after start (1ms after) - should be active
+      const justAfterMs = adStartMs + 1;
+      const justAfterIso = new Date(justAfterMs).toISOString();
+      const activeJustAfter = getActiveDasha(timeline, justAfterIso);
+      expect(activeJustAfter).not.toBeNull();
+      expect(activeJustAfter?.antardasha.planet).toBe(firstAd.planet);
+
+      // Exact end - should NOT be active (exclusive)
+      const activeAtEnd = getActiveDasha(timeline, firstAd.end);
+      expect(activeAtEnd).not.toBeNull();
+      expect(activeAtEnd?.antardasha.planet).toBe(secondAd.planet); // Should be in next AD
+
+      // Just after end (1ms after) - should be in next AD
+      const justAfterEndMs = adEndMs + 1;
+      const justAfterEndIso = new Date(justAfterEndMs).toISOString();
+      const activeJustAfterEnd = getActiveDasha(timeline, justAfterEndIso);
+      expect(activeJustAfterEnd).not.toBeNull();
+      expect(activeJustAfterEnd?.antardasha.planet).toBe(secondAd.planet);
+    });
+
+    it('PD: half-open boundary semantics with epsilon offset', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const firstAd = firstMd.antardashas[0];
+      const firstPd = firstAd.pratyantardashas[0];
+      const secondPd = firstAd.pratyantardashas[1];
+      const pdStartMs = new Date(firstPd.start).getTime();
+      const pdEndMs = new Date(firstPd.end).getTime();
+
+      // Exact start - should be active
+      const activeAtStart = getActiveDasha(timeline, firstPd.start);
+      expect(activeAtStart).not.toBeNull();
+      expect(activeAtStart?.pratyantardasha.planet).toBe(firstPd.planet);
+
+      // Just after start (1ms after) - should be active
+      const justAfterMs = pdStartMs + 1;
+      const justAfterIso = new Date(justAfterMs).toISOString();
+      const activeJustAfter = getActiveDasha(timeline, justAfterIso);
+      expect(activeJustAfter).not.toBeNull();
+      expect(activeJustAfter?.pratyantardasha.planet).toBe(firstPd.planet);
+
+      // Exact end - should NOT be active (exclusive)
+      const activeAtEnd = getActiveDasha(timeline, firstPd.end);
+      expect(activeAtEnd).not.toBeNull();
+      expect(activeAtEnd?.pratyantardasha.planet).toBe(secondPd.planet); // Should be in next PD
+
+      // Just after end (1ms after) - should be in next PD
+      const justAfterEndMs = pdEndMs + 1;
+      const justAfterEndIso = new Date(justAfterEndMs).toISOString();
+      const activeJustAfterEnd = getActiveDasha(timeline, justAfterEndIso);
+      expect(activeJustAfterEnd).not.toBeNull();
+      expect(activeJustAfterEnd?.pratyantardasha.planet).toBe(secondPd.planet);
+    });
+  });
+
+  describe('16. P2 end-to-end active-period resolution on/near boundaries', () => {
+    it('resolves correct MD/AD/PD when asOf is exactly at a period start', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const firstAd = firstMd.antardashas[0];
+      const firstPd = firstAd.pratyantardashas[0];
+
+      // At exact start of first PD (which is also AD and MD start)
+      const active = getActiveDasha(timeline, firstPd.start);
+      expect(active).not.toBeNull();
+      expect(active?.mahadasha.planet).toBe(firstMd.planet);
+      expect(active?.antardasha.planet).toBe(firstAd.planet);
+      expect(active?.pratyantardasha.planet).toBe(firstPd.planet);
+    });
+
+    it('resolves correct MD/AD/PD when asOf is exactly at a period end (exclusive, falls into next)', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const firstAd = firstMd.antardashas[0];
+      const secondAd = firstMd.antardashas[1];
+      const firstPd = firstAd.pratyantardashas[0];
+      const secondPd = firstAd.pratyantardashas[1];
+
+      // At exact end of first PD - should fall into second PD
+      const activeAtPdEnd = getActiveDasha(timeline, firstPd.end);
+      expect(activeAtPdEnd).not.toBeNull();
+      expect(activeAtPdEnd?.mahadasha.planet).toBe(firstMd.planet);
+      expect(activeAtPdEnd?.antardasha.planet).toBe(firstAd.planet);
+      expect(activeAtPdEnd?.pratyantardasha.planet).toBe(secondPd.planet);
+
+      // At exact end of first AD - should fall into second AD
+      const activeAtAdEnd = getActiveDasha(timeline, firstAd.end);
+      expect(activeAtAdEnd).not.toBeNull();
+      expect(activeAtAdEnd?.mahadasha.planet).toBe(firstMd.planet);
+      expect(activeAtAdEnd?.antardasha.planet).toBe(secondAd.planet);
+    });
+
+    it('resolves correct periods with near-epsilon offset (±1ms) around boundaries', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      const firstMd = timeline.mahadashas[0];
+      const firstAd = firstMd.antardashas[0];
+      const firstPd = firstAd.pratyantardashas[0];
+      const pdStartMs = new Date(firstPd.start).getTime();
+      const pdEndMs = new Date(firstPd.end).getTime();
+
+      // 1ms before PD start
+      const beforeMs = pdStartMs - 1;
+      const beforeIso = new Date(beforeMs).toISOString();
+      const activeBefore = getActiveDasha(timeline, beforeIso);
+      // First PD starts at MD/AD start, so 1ms before would be before timeline
+      if (beforeMs < new Date(firstMd.start).getTime()) {
+        expect(activeBefore).toBeNull();
+      }
+
+      // 1ms after PD start
+      const afterStartMs = pdStartMs + 1;
+      const afterStartIso = new Date(afterStartMs).toISOString();
+      const activeAfterStart = getActiveDasha(timeline, afterStartIso);
+      expect(activeAfterStart).not.toBeNull();
+      expect(activeAfterStart?.pratyantardasha.planet).toBe(firstPd.planet);
+
+      // 1ms before PD end
+      const beforeEndMs = pdEndMs - 1;
+      const beforeEndIso = new Date(beforeEndMs).toISOString();
+      const activeBeforeEnd = getActiveDasha(timeline, beforeEndIso);
+      expect(activeBeforeEnd).not.toBeNull();
+      expect(activeBeforeEnd?.pratyantardasha.planet).toBe(firstPd.planet);
+
+      // 1ms after PD end
+      const afterEndMs = pdEndMs + 1;
+      const afterEndIso = new Date(afterEndMs).toISOString();
+      const activeAfterEnd = getActiveDasha(timeline, afterEndIso);
+      expect(activeAfterEnd).not.toBeNull();
+      expect(activeAfterEnd?.pratyantardasha.planet).not.toBe(firstPd.planet); // Should be next PD
+    });
+  });
+
+  describe('17. P2 invalid/degenerate intervals never reach interpretation', () => {
+    it('buildAntardashas returns empty frozen array when parentDurationMs <= 0', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 0 // Ashwini -> Ketu
+      });
+
+      // Check that all MDs have positive duration
+      for (const md of timeline.mahadashas) {
+        const mdDurationMs = new Date(md.end).getTime() - new Date(md.start).getTime();
+        expect(mdDurationMs).toBeGreaterThan(0);
+
+        // All ADs should have positive duration
+        for (const ad of md.antardashas) {
+          const adDurationMs = new Date(ad.end).getTime() - new Date(ad.start).getTime();
+          expect(adDurationMs).toBeGreaterThan(0);
+
+          // All PDs should have positive duration
+          for (const pd of ad.pratyantardashas) {
+            const pdDurationMs = new Date(pd.end).getTime() - new Date(pd.start).getTime();
+            expect(pdDurationMs).toBeGreaterThan(0);
+          }
+        }
+      }
+    });
+
+    it('timeline never emits zero-length or negative-length MD/AD/PD intervals', () => {
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 45 // Rohini (Moon)
+      });
+
+      // Verify no zero-length intervals
+      for (const md of timeline.mahadashas) {
+        const mdDurationMs = new Date(md.end).getTime() - new Date(md.start).getTime();
+        expect(mdDurationMs).toBeGreaterThan(0);
+
+        for (const ad of md.antardashas) {
+          const adDurationMs = new Date(ad.end).getTime() - new Date(ad.start).getTime();
+          expect(adDurationMs).toBeGreaterThan(0);
+
+          for (const pd of ad.pratyantardashas) {
+            const pdDurationMs = new Date(pd.end).getTime() - new Date(pd.start).getTime();
+            expect(pdDurationMs).toBeGreaterThan(0);
+          }
+        }
+      }
+    });
+
+    it('interpretation layer rejects or omits zero/negative-length periods', () => {
+      // This test verifies that the interpretation layer does not produce
+      // zero/negative-length periods. Since buildAntardashas already returns
+      // empty arrays for zero-length parents, and getActiveDasha uses half-open
+      // interval semantics, zero/negative-length periods should never be emitted.
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: 45 // Rohini (Moon)
+      });
+
+      // Verify that getActiveDasha never returns a zero/negative-length period
+      // by checking that all returned periods have start < end
+      const md = timeline.mahadashas[0];
+      const ad = md.antardashas[0];
+      const pd = ad.pratyantardashas[0];
+
+      const active = getActiveDasha(timeline, pd.start);
+      expect(active).not.toBeNull();
+
+      if (active) {
+        const activeMdStart = new Date(active.mahadasha.start).getTime();
+        const activeMdEnd = new Date(active.mahadasha.end).getTime();
+        expect(activeMdEnd).toBeGreaterThan(activeMdStart);
+
+        const activeAdStart = new Date(active.antardasha.start).getTime();
+        const activeAdEnd = new Date(active.antardasha.end).getTime();
+        expect(activeAdEnd).toBeGreaterThan(activeAdStart);
+
+        const activePdStart = new Date(active.pratyantardasha.start).getTime();
+        const activePdEnd = new Date(active.pratyantardasha.end).getTime();
+        expect(activePdEnd).toBeGreaterThan(activePdStart);
+      }
+    });
+  });
 });

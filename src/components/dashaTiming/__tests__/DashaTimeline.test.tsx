@@ -93,11 +93,11 @@ describe('DashaTimeline', () => {
     const activeLabels = screen.getAllByText('Active');
     expect(activeLabels.length).toBe(1);
 
-    // Verify the Active label is on a card with the correct interval
-    const activeCard = activeLabels[0].closest('.rounded-2xl');
-    expect(activeCard).toHaveClass('bg-gradient-to-b');
-    expect(activeCard?.textContent).toContain('2020-01-01T00:00:00.000Z');
-    expect(activeCard?.textContent).toContain('2036-01-01T00:00:00.000Z');
+    // Use the stable testid selector to find the active card
+    const activeCard = screen.getByTestId('active-mahadasha-card');
+    expect(activeCard).toBeInTheDocument();
+    expect(activeCard.textContent).toContain('2020-01-01T00:00:00.000Z');
+    expect(activeCard.textContent).toContain('2036-01-01T00:00:00.000Z');
   });
 
   it('shows actual Antardasha count instead of hardcoded "9"', () => {
@@ -134,5 +134,23 @@ describe('DashaTimeline', () => {
     // No "Active" labels should appear
     const activeLabels = screen.queryAllByText('Active');
     expect(activeLabels.length).toBe(0);
+
+    // No card with the testid should appear
+    const activeCard = screen.queryByTestId('active-mahadasha-card');
+    expect(activeCard).toBeNull();
+  });
+
+  it('asserts exactly one active card when active Mahadasha is specified', () => {
+    render(
+      <DashaTimeline
+        timeline={mockTimeline}
+        activeMahadashaStart="2020-01-01T00:00:00.000Z"
+        activeMahadashaEnd="2036-01-01T00:00:00.000Z"
+      />
+    );
+
+    // Exactly one card should have the testid
+    const activeCards = screen.getAllByTestId('active-mahadasha-card');
+    expect(activeCards.length).toBe(1);
   });
 });

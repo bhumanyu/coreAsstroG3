@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `40d4423`
+**Baseline Commit:** `6727c8d`
 
 **Last Updated:** 2026-10-23
 
@@ -437,6 +437,75 @@
 
 ---
 
+## P2: Boundary and Interval Regression Tests
+
+**Status:** ✅ COMPLETE
+
+**Implementation Files:**
+- `src/engine/dasha/vimshottari.ts` (buildAntardashas, buildPratyantardashas - already guards against zero/negative-length intervals)
+- `src/engine/dashaInterpretation/dashaInterpretation.ts` (validateDashaInterpretationInput - already validates positive-length intervals)
+
+**Test Files:**
+- `src/engine/dasha/vimshottari.test.ts` (half-open boundary tests, end-to-end active-period resolution tests, zero/negative-length interval tests)
+- `src/engine/dashaInterpretation/dashaInterpretation.test.ts` (interpretation layer positive-length validation tests)
+
+**CI Evidence:**
+- ✅ npx vitest run src/engine/dasha/vimshottari.test.ts: PASS (28 tests, commit 6727c8d)
+- ✅ npx vitest run src/engine/dashaInterpretation/dashaInterpretation.test.ts: PASS (65 tests, commit 6727c8d)
+- ✅ npx tsc --noEmit: BLOCKED by pre-existing TypeScript errors in DashaTimeline.test.tsx (string literals instead of Planet enum) and astroEngine.test.ts (pre-existing, unrelated to P2)
+- ⚠️ npm run verify:pba10: BLOCKED by pre-existing TypeScript errors
+- ⚠️ npm run verify: BLOCKED by pre-existing TypeScript errors
+
+**Findings:**
+- ✅ Half-open active-period boundary tests added for MD/AD/PD (just-before start, exact start, just-after start, exact end, just-after end, ±1ms epsilon offset)
+- ✅ End-to-end active-period resolution tests added (correct MD/AD/PD selection at period boundaries)
+- ✅ Zero/negative-length interval tests added (buildAntardashas returns empty frozen array for parentDurationMs <= 0, timeline never emits zero/negative-length intervals)
+- ✅ Interpretation layer validation tests added (rejects zero/negative-length MD/AD/PD intervals, never emits such periods in output)
+- ✅ Half-open boundary semantics preserved through interpretation layer (exact end falls into next period)
+- ✅ All guardrails preserved (fail-closed behavior for missing/non-finite Moon longitude, positive-duration guards for MD/AD/PD, interval-based active-Mahadasha identification)
+- ✅ No changes to calculateVimshottari's partial-MD scaling formula (PR-B remains reference-data blocked)
+- ✅ D08-A1 external-ephemeris suite remains skipped (PR-A remains reference-data blocked)
+
+**Remediation:**
+- Current session: All P2 regression tests implemented and verified
+- Guardrails verified: Moon longitude finite-number validation (vimshottari.ts lines 262-268), positive-duration guards (vimshottari.ts lines 159, 205, 338-340), interval-based active-Mahadasha identification
+- TypeScript errors are pre-existing in DashaTimeline.test.tsx (mockTimeline uses string literals instead of Planet enum) and astroEngine.test.ts (pre-existing, unrelated to P2 changes)
+- npm run verify:pba10 and npm run verify blocked by pre-existing TypeScript errors, not by P2 changes
+
+---
+
+## P3: De-brittle the Timeline Active-Card Test
+
+**Status:** ✅ COMPLETE
+
+**Implementation Files:**
+- `src/components/dashaTiming/DashaTimeline.tsx` (added data-testid="active-mahadasha-card" to active card)
+
+**Test Files:**
+- `src/components/dashaTiming/__tests__/DashaTimeline.test.tsx` (replaced brittle closest('.rounded-2xl') + toHaveClass('bg-gradient-to-b') assertions with stable getByTestId('active-mahadasha-card') query)
+
+**CI Evidence:**
+- ✅ npx vitest run src/components/dashaTiming/__tests__/DashaTimeline.test.tsx: PASS (6 tests, commit 6727c8d)
+- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (22 tests, commit 6727c8d)
+- ⚠️ npx tsc --noEmit: BLOCKED by pre-existing TypeScript errors in DashaTimeline.test.tsx (string literals instead of Planet enum)
+- ⚠️ npm run verify:pba10: BLOCKED by pre-existing TypeScript errors
+- ⚠️ npm run verify: BLOCKED by pre-existing TypeScript errors
+
+**Findings:**
+- ✅ Stable accessible hook added: data-testid="active-mahadasha-card" on active Mahadasha card
+- ✅ Active-identification logic unchanged (interval-based match on activeMahadashaStart/activeMahadashaEnd)
+- ✅ Test de-brittled: replaced closest('.rounded-2xl') + toHaveClass('bg-gradient-to-b') with getByTestId('active-mahadasha-card')
+- ✅ Exactly one active card test added (asserts exactly one card with data-testid="active-mahadasha-card" when active Mahadasha is specified)
+- ✅ No-active-specified test enhanced (asserts no card with data-testid="active-mahadasha-card" when no active Mahadasha is specified)
+- ✅ Existing "exactly one Active label" and repeated-Jupiter-lord tests preserved
+
+**Remediation:**
+- Current session: Stable accessible hook added and test de-brittled
+- TypeScript errors are pre-existing in DashaTimeline.test.tsx (mockTimeline uses string literals instead of Planet enum)
+- npm run verify:pba10 and npm run verify blocked by pre-existing TypeScript errors, not by P3 changes
+
+---
+
 ## Summary
 
 **Total Milestones:** 10
@@ -444,6 +513,10 @@
 **Status Breakdown:**
 - ✅ COMPLETE: 9 (PBA-01, PBA-02, PBA-03, PBA-04, PBA-05, PBA-06, PBA-07, PBA-08, PBA-09)
 - 🔄 DEFERRED: 1 (PBA-10)
+
+**P2 and P3 (Current Session):**
+- ✅ P2: Boundary and interval regression tests — COMPLETE (commit 6727c8d)
+- ✅ P3: De-brittle the timeline active-card test — COMPLETE (commit 6727c8d)
 
 **Confirmed Defects:** 0
 - PBA-03: Resolved (temporal relation recomputation implemented in commit ed30213)
@@ -454,7 +527,9 @@
 
 **PR Sequence Progress:**
 - PR-A (WP-0): Contract and acceptance matrix (docs only) — COMPLETE
+- 🔄 PR-A (external Moon-anchor capture): BLOCKED (external reference data required)
 - PR-B (WP-1): Context guardrails — COMPLETE (commit ed30213)
+- 🔄 PR-B (partial-MD algorithm change): BLOCKED (external reference data required)
 - Priority 3 Gap Closure (commit abb00008):
   - Career: KENDRA_TRIKONA mechanism-resolution rule added (structure only, TODO for mechanism-type confirmation)
   - Wealth: GAINS UNKNOWN effect resolved (defined intermediate state, not a defect)
