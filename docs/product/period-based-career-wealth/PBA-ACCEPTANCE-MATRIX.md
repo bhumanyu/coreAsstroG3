@@ -1,6 +1,6 @@
 # PBA Acceptance Matrix
 
-**Baseline Commit:** `abb00008`
+**Baseline Commit:** `969b65a`
 
 **Last Updated:** 2026-10-23
 
@@ -55,11 +55,11 @@
 - `src/core/analysis/selectedMdAdPeriod.test.ts` (period resolution with PBA-02A/C/D/E hardening)
 
 **CI Evidence:**
-- ✅ npx vitest run src/core/analysis/selectedMdAdPeriod.test.ts: PASS (55 tests, commit e6360ee)
-- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (66 tests, commit e6360ee)
-- ✅ npx tsc --noEmit: PASS (commit e6360ee)
-- ✅ npm run verify:pba10: PASS (122 tests, commit e6360ee)
-- ✅ npm run verify: PASS (5456 tests passed, 5 skipped, commit e6360ee)
+- ✅ npx vitest run src/core/analysis/selectedMdAdPeriod.test.ts: PASS (55 tests, commit 969b65a)
+- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (66 tests, commit 969b65a)
+- ✅ npx tsc --noEmit: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
+- ✅ npm run verify: PASS (5475 tests passed, 5 skipped, commit 969b65a)
 
 **Findings:**
 - ✅ PBA-02A (malformed selection IDs): 11 tests added (empty MD/AD, whitespace-only MD/AD, wrong version/system/level, truncated, malformed percent-encoding, nonexistent IDs)
@@ -84,10 +84,10 @@
 - `src/core/analysis/selectedPeriodActivationContext.test.ts` (context validation tests including PBA-03A/B/C/D/E hardening)
 
 **CI Evidence:**
-- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (66 tests, commit e6360ee)
-- ✅ npx tsc --noEmit: PASS (commit e6360ee)
-- ✅ npm run verify:pba10: PASS (122 tests, commit e6360ee)
-- ✅ npm run verify: PASS (5456 tests passed, 5 skipped, commit e6360ee)
+- ✅ npx vitest run src/core/analysis/selectedPeriodActivationContext.test.ts: PASS (66 tests, commit 969b65a)
+- ✅ npx tsc --noEmit: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
+- ✅ npm run verify: PASS (5475 tests passed, 5 skipped, commit 969b65a)
 
 **Findings:**
 - ✅ Temporal relation recomputation implemented in validateSelectedPeriodContext
@@ -121,10 +121,10 @@
 - ✅ Adapter dropped-candidate diagnostic landed (commits 42398f9, 22641c1)
 - ✅ Dead loop in unqualified-only test fixed (commit 8ba1bd6)
 - ✅ Regression A fallback-row assertion de-conditionalized (commit 8ba1bd6)
-- ✅ npx vitest run src/domain/career/careerDasha/selectedCareerDashaActivation.test.ts: PASS (57 tests, commit 8ba1bd6)
-- ✅ npx tsc --noEmit: PASS (commit 8ba1bd6)
-- ✅ npm run verify:pba10: PASS (commit 8ba1bd6)
-- ✅ npm run verify: PASS (5421 tests passed, 5 skipped, commit 8ba1bd6)
+- ✅ npx vitest run src/domain/career/careerDasha/selectedCareerDashaActivation.test.ts: PASS (57 tests, commit 969b65a)
+- ✅ npx tsc --noEmit: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
+- ✅ npm run verify: PASS (5475 tests passed, 5 skipped, commit 969b65a)
 
 **Findings:**
 - ✅ Adapter diagnostic implemented for dropped candidates (ADAPTER_DROPPED_CANDIDATES)
@@ -147,6 +147,13 @@
 - UPACHAYA_PROGRESSION: needs mechanism-resolution rule (evidence contract not frozen)
 - PARIVARTANA_YOGA: needs mechanism-resolution rule (evidence contract not frozen)
 - CAREER_YOGA_STRUCTURE: needs mechanism-resolution rule (evidence contract not frozen)
+
+**🔄 DEFERRED (owner-blocked): Career non-dusthana mechanism-resolution coverage**
+- **Issue:** On `main`, `CAREER_MECHANISM_RESOLUTION_RULES` contains only the three dusthana rules (6H, 8H, 12H)
+- **Impact:** Pattern classifications for `KENDRA_TRIKONA`, `CAREER_HOUSE_NETWORK`, `UPACHAYA_PROGRESSION`, `PARIVARTANA_YOGA`, and `CAREER_YOGA_STRUCTURE` resolve to `qualificationBasis: UNAVAILABLE` (no matching rule)
+- **Blocker:** Domain owner must confirm which `CareerMechanismType` values each pattern classification emits before any rule can be added
+- **Constraint:** Do NOT ship an applying-but-empty placeholder rule (this would misleadingly imply coverage while still producing `UNAVAILABLE`)
+- **Cross-reference:** See `PBA-INVESTIGATION-FINDINGS.md` section "Career Findings" and "Required Fix (Priority 3)"
 
 **Remediation:**
 - COMPLETE: All test coverage gaps addressed, CI verification green
@@ -171,9 +178,10 @@
 - NO_PROMISE_EVIDENCE vs PROMISE_NOT_LINKED discrimination test
 
 **CI Evidence:**
-- ✅ npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts: PASS (commit e12f513)
-- ⚠️ npm run verify: NEEDS_PROOF (tsc errors at e12f513, fixed in 4b7bc7b)
-- ⚠️ npm run verify:pba10: NEEDS_PROOF (tsc errors at e12f513, fixed in 4b7bc7b)
+- ✅ npx vitest run src/domain/wealth/selectedWealthDashaActivation.test.ts: PASS (commit 969b65a)
+- ✅ npx tsc --noEmit: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
+- ✅ npm run verify: PASS (5475 tests passed, 5 skipped, commit 969b65a)
 - insufficientReason discriminator implemented and tested
 
 **Findings:**
@@ -189,6 +197,16 @@
 - PR-D completed: insufficientReason discriminator implemented and tested
 - Conservative linkage confirmed (Option A): explicit house match required, planet overlap alone insufficient
 - Moon MD→Moon AD diagnostic tests added (commit abb00008)
+
+**🔄 DEFERRED (owner-blocked): Wealth isLinkedToDimension linkage contract**
+- **Issue:** Current implementation uses Option A (conservative house-only linkage) requiring dasha evidence to explicitly reference the dimension's house via the `houses` field
+- **Decision pending:** Option A (conservative house-only, current) vs Option B (lord/karaka-based linkage)
+  - **Option A (current):** Explicit house match required; planet overlap alone is insufficient for linkage
+  - **Option B (alternative):** Extend linkage to include lord/karaka-based association (if dasha lord owns/aspects dimension's house or is the karaka)
+- **Investigation finding:** For MOON MD → MOON AD period (Bhu chart), FORTUNE (house 9) and SPECULATION (house 5) have promise evidence but fail linkage because Moon's dasha evidence does not reference houses 9 or 5
+- **GAINS effect assignment clarification:** `resolveEffect` returns `UNKNOWN` for LINKED dimensions with only-NEUTRAL dasha evidence; this is intended behavior, not a defect
+- **Blocker:** Domain owner must confirm which linkage approach aligns with the Wealth spec and astrological intent
+- **Cross-reference:** See `PBA-INVESTIGATION-FINDINGS.md` section "Wealth Linkage Rule Analysis" and "Resolution: GAINS Effect Assignment"
 
 ---
 
@@ -227,12 +245,12 @@
 - e12f513: Error-code propagation tests added for PARTIAL_* diagnostics
 
 **CI Evidence:**
-- ✅ npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts: PASS (86 tests, commit 4b7bc7b)
-- ✅ npx vitest run src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/selectedPeriodProductService.test.ts: PASS (47 tests, commit 4b7bc7b)
-- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit 4b7bc7b)
-- ✅ npx tsc --noEmit: PASS (commit 4b7bc7b)
-- ✅ npm run verify:pba10: PASS (123 tests, commit 4b7bc7b)
-- ✅ npm run verify: PASS (5459 tests passed, 5 skipped, commit 4b7bc7b)
+- ✅ npx vitest run src/domain/synthesis/selectedPeriodSynthesis.test.ts: PASS (86 tests, commit 969b65a)
+- ✅ npx vitest run src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/selectedPeriodProductService.test.ts: PASS (47 tests, commit 969b65a)
+- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit 969b65a)
+- ✅ npx tsc --noEmit: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
+- ✅ npm run verify: PASS (5475 tests passed, 5 skipped, commit 969b65a)
 
 ---
 
@@ -251,9 +269,9 @@
 - Vacuous test removed (unresolved-evidence test deleted - domain layer has proper coverage)
 
 **CI Evidence:**
-- ✅ npx vitest run src/product/analysis/selectedPeriodProductService.test.ts: PASS (19 tests, commit 4b7bc7b)
-- ✅ npm run verify: PASS (commit 4b7bc7b)
-- ✅ npm run verify:pba10: PASS (commit 4b7bc7b)
+- ✅ npx vitest run src/product/analysis/selectedPeriodProductService.test.ts: PASS (19 tests, commit 969b65a)
+- ✅ npm run verify: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
 
 **Findings:**
 - ✅ Domain activation failures degrade to partial synthesis (do not hard-fail)
@@ -291,9 +309,9 @@
 - Vacuous edge-case test deleted (expect(SUCCESS || ERROR).toBe(true) removed)
 
 **CI Evidence:**
-- ✅ npx vitest run src/ai/product/aiExplanationService.test.ts: PASS (21 tests, commit 4b7bc7b)
-- ✅ npm run verify: PASS (commit 4b7bc7b)
-- ✅ npm run verify:pba10: PASS (commit 4b7bc7b)
+- ✅ npx vitest run src/ai/product/aiExplanationService.test.ts: PASS (21 tests, commit 969b65a)
+- ✅ npm run verify: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
 
 **Findings:**
 - ✅ Contract codified: AI evidence semantics contract documented in aiExplanationService.ts
@@ -330,9 +348,9 @@
 - `src/domain/synthesis/selectedPeriodSynthesis.test.ts` (synthesis tests)
 
 **CI Evidence:**
-- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit 4b7bc7b)
-- ✅ npm run verify: PASS (commit 4b7bc7b)
-- ✅ npm run verify:pba10: PASS (commit 4b7bc7b)
+- ✅ npx vitest run src/product/analysis/productAnalysisService.integration.test.ts: PASS (33 tests, commit 969b65a)
+- ✅ npm run verify: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
 
 **Findings:**
 - ✅ Temporal past/current/future vs asOf test split into three distinct tests with actual values
@@ -383,12 +401,12 @@
 - `src/app/__tests__/AppController.test.ts` (race condition tests for selectPeriod)
 
 **CI Evidence:**
-- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (20 tests, commit b5dbae8)
-- ✅ npx vitest run src/pages/__tests__/DashaPage.test.tsx: PASS (17 tests, commit b5dbae8)
-- ✅ npx vitest run src/app/__tests__/AppController.test.ts: PASS (12 tests, commit b5dbae8)
-- ✅ npx tsc --noEmit: PASS (commit b5dbae8)
-- ✅ npm run verify:pba10: PASS (127 tests, commit b5dbae8)
-- ✅ npm run verify: PASS (5468 tests passed, 5 skipped, commit b5dbae8)
+- ✅ npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx: PASS (20 tests, commit 969b65a)
+- ✅ npx vitest run src/pages/__tests__/DashaPage.test.tsx: PASS (17 tests, commit 969b65a)
+- ✅ npx vitest run src/app/__tests__/AppController.test.ts: PASS (12 tests, commit 969b65a)
+- ✅ npx tsc --noEmit: PASS (commit 969b65a)
+- ✅ npm run verify:pba10: PASS (127 tests, commit 969b65a)
+- ✅ npm run verify: PASS (5475 tests passed, 5 skipped, commit 969b65a)
 
 **Findings:**
 - ✅ DiagnosticsList compact mode now renders both diag.code and diag.message as visible text in semantic list with aria-label
