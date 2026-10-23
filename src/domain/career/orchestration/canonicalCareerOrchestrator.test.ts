@@ -537,7 +537,9 @@ describe('CanonicalCareerOrchestrator', () => {
       });
       (ports.mechanismResolver.resolveAll as any).mockReturnValue([
         createStubCandidateSet('PATTERN_EXPECTED', []),
-        createStubCandidateSet('PATTERN_FOREIGN', [])
+        createStubCandidateSet('PATTERN_FOREIGN', [
+          createStubMechanismCandidate('CANDIDATE_FOREIGN', 'PATTERN_FOREIGN', 'AGENCY')
+        ])
       ]);
 
       const orchestrator = new CanonicalCareerOrchestrator(ports);
@@ -557,6 +559,87 @@ describe('CanonicalCareerOrchestrator', () => {
         stage: 'MECHANISM'
       }));
       expect(foundation.resolvedMechanisms).toHaveLength(0);
+    });
+
+    it('fails closed for duplicate candidate-set patternIds and reports the dropped pattern', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_DUPLICATE');
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_DUPLICATE', 'INSUFFICIENT_DATA');
+      Object.assign(qualifiedPattern, { sourcePattern: pattern });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_DUPLICATE', [
+          createStubMechanismCandidate('CANDIDATE_DUPLICATE_FIRST', 'PATTERN_DUPLICATE', 'AGENCY')
+        ]),
+        createStubCandidateSet('PATTERN_DUPLICATE', [
+          createStubMechanismCandidate('CANDIDATE_DUPLICATE_SECOND', 'PATTERN_DUPLICATE', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const foundation = orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_RESOLVE_ALL_CANDIDATE_SET_CONTRACT_VIOLATION',
+        severity: 'WARNING',
+        category: 'CONTRACT_VIOLATION',
+        relatedIds: ['PATTERN_DUPLICATE'],
+        stage: 'MECHANISM'
+      }));
+      expect(foundation.resolvedMechanisms).toHaveLength(0);
+      expect(foundation.resolvedMechanisms.map(mechanism => mechanism.candidateId)).not.toContain(
+        'CANDIDATE_DUPLICATE_FIRST'
+      );
+      expect(foundation.resolvedMechanisms.map(mechanism => mechanism.candidateId)).not.toContain(
+        'CANDIDATE_DUPLICATE_SECOND'
+      );
+    });
+
+    it('excludes an equal-count foreign set while reporting both missing and foreign IDs', () => {
+      const ports = createStubPorts();
+      const pattern = createStubPattern('PATTERN_MISSING');
+      const qualifiedPattern = createStubQualifiedPattern('PATTERN_MISSING', 'INSUFFICIENT_DATA');
+      Object.assign(qualifiedPattern, { sourcePattern: pattern });
+
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [qualifiedPattern]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_FOREIGN', [
+          createStubMechanismCandidate('CANDIDATE_FOREIGN_EQUAL_COUNT', 'PATTERN_FOREIGN', 'AGENCY')
+        ])
+      ]);
+
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const foundation = orchestrator.orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_RESOLVE_ALL_CANDIDATE_SET_CONTRACT_VIOLATION',
+        severity: 'WARNING',
+        category: 'CONTRACT_VIOLATION',
+        message: expect.stringContaining(
+          'missing patternIds [PATTERN_MISSING], duplicate patternIds [], foreign patternIds [PATTERN_FOREIGN]'
+        ),
+        relatedIds: ['PATTERN_MISSING', 'PATTERN_FOREIGN'],
+        stage: 'MECHANISM'
+      }));
+      expect(foundation.resolvedMechanisms).toHaveLength(0);
+      expect(foundation.resolvedMechanisms.map(mechanism => mechanism.candidateId)).not.toContain(
+        'CANDIDATE_FOREIGN_EQUAL_COUNT'
+      );
     });
 
     it('should expose mixed accepted/rejected/firewall-excluded evidence IDs on ResolvedMechanism', () => {

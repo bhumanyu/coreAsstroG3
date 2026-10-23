@@ -526,6 +526,7 @@ export class CanonicalCareerOrchestrator {
       const duplicatePatternIds = [...new Set(
         returnedPatternIds.filter((patternId, index) => returnedPatternIds.indexOf(patternId) !== index)
       )];
+      const duplicatePatternIdSet = new Set(duplicatePatternIds);
       const foreignPatternIds = [...new Set(
         returnedPatternIds.filter(patternId => !resolutionPatternIds.has(patternId))
       )];
@@ -542,14 +543,20 @@ export class CanonicalCareerOrchestrator {
           diagnosticId: 'ORCHESTRATION_RESOLVE_ALL_CANDIDATE_SET_CONTRACT_VIOLATION',
           severity: 'WARNING',
           category: 'CONTRACT_VIOLATION',
-          message: `Mechanism resolver resolveAll contract mismatch: expected one CandidateSet per input (${resolutionInputs.length}), received ${candidateSets.length}; missing patternIds [${missingPatternIds.join(', ')}], duplicate patternIds [${duplicatePatternIds.join(', ')}], foreign patternIds [${foreignPatternIds.join(', ')}]`,
+          message: `Mechanism resolver resolveAll contract mismatch: expected one CandidateSet per input (${resolutionInputs.length}), received ${candidateSets.length}; missing patternIds [${missingPatternIds.join(', ')}], duplicate patternIds [${duplicatePatternIds.join(', ')}], foreign patternIds [${foreignPatternIds.join(', ')}]. Candidate sets for duplicated patternIds are excluded.`,
           relatedIds: [...new Set([...missingPatternIds, ...duplicatePatternIds, ...foreignPatternIds])],
           stage: 'MECHANISM'
         });
       }
 
       for (const resolutionInput of resolutionInputs) {
-        const candidateSet = candidateSetsByPattern.get(resolutionInput.pattern.patternId);
+        const patternId = resolutionInput.pattern.patternId;
+        // Duplicate IDs make the last-wins Map entry ambiguous, so fail closed for that pattern.
+        if (duplicatePatternIdSet.has(patternId)) {
+          continue;
+        }
+
+        const candidateSet = candidateSetsByPattern.get(patternId);
         if (candidateSet && candidateSet.candidates.length > 0) {
           continue;
         }
@@ -580,7 +587,17 @@ export class CanonicalCareerOrchestrator {
 
       // Convert to resolved mechanisms
       const resolvedMechanisms: ResolvedMechanism[] = [];
-      for (const candidateSet of candidateSets) {
+      for (const resolutionInput of resolutionInputs) {
+        const patternId = resolutionInput.pattern.patternId;
+        // Only a unique set keyed to an input can contribute mechanisms; foreign and duplicate sets are excluded.
+        if (duplicatePatternIdSet.has(patternId)) {
+          continue;
+        }
+        const candidateSet = candidateSetsByPattern.get(patternId);
+        if (candidateSet === undefined) {
+          continue;
+        }
+
         // Look up the establishing evidence supplied for this pattern
         const suppliedEstablishingEvidence = establishingEvidenceByPattern.get(candidateSet.patternId) ?? [];
 
