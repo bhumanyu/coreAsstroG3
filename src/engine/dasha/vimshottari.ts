@@ -411,11 +411,12 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
   let isFirstMd = true;
 
   while (currentStart.getTime() < untilDate.getTime()) {
+    let emittedInSequence = false;
+
     for (const mdPlanet of rotatedSeq) {
       if (currentStart.getTime() >= untilDate.getTime()) break;
 
       const fraction = isFirstMd ? remainingFraction : 1.0;
-      isFirstMd = false;
 
       const fullYears = DASHA_YEARS[mdPlanet] * fraction;
       const isPartialFirstMd = mdPlanet === nakshatraLord && mahadashas.length === 0;
@@ -439,7 +440,8 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
         }
       }
 
-      // Guard against zero/negative-length Mahadasha: skip if end <= start
+      // Defensive for valid public inputs, but reachable near a boundary when Date truncation makes
+      // the tiny positive first-MD balance zero-length at millisecond precision.
       if (mdEnd.getTime() <= currentStart.getTime()) {
         continue;
       }
@@ -465,7 +467,15 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
       });
 
       mahadashas.push(mdPeriod);
+      isFirstMd = false;
       currentStart = mdEnd;
+      emittedInSequence = true;
+    }
+
+    // Date precision can make every remaining-fraction candidate zero-length near a boundary.
+    // Stop rather than repeating the same sequence without advancing currentStart.
+    if (!emittedInSequence) {
+      break;
     }
   }
 

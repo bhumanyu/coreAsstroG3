@@ -501,7 +501,8 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
         moonSiderealLongitude: boundary // Exactly at Bharani start
       });
 
-      // Boundary convention: exact boundary belongs to NEXT Nakshatra
+      // Exact boundary reclassifies to the next Nakshatra and starts its full MD;
+      // this is distinct from the zero-length guard case below.
       expect(timeline.nakshatra).toBe('Bharani');
       expect(timeline.nakshatraLord).toBe(Planet.VENUS);
       expect(timeline.mahadashas.length).toBeGreaterThan(0);
@@ -522,7 +523,7 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(activeAtBirth?.mahadasha.planet).toBe(Planet.VENUS);
     });
 
-    it('skips a zero-length first MD while retaining its near-360° Nakshatra classification', () => {
+    it('stops when every remaining-fraction MD candidate is below millisecond precision', () => {
       const timeline = calculateVimshottari({
         birthDateTime: birthIso,
         moonSiderealLongitude: 360 - 1e-12
@@ -531,13 +532,35 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(timeline.nakshatra).toBe('Revati');
       expect(timeline.nakshatraLord).toBe(Planet.MERCURY);
       expect(timeline.remainingFraction).toBeGreaterThan(0);
-      expect(timeline.mahadashas[0].planet).toBe(Planet.KETU);
-      expect(timeline.mahadashas[0].start).toBe(birthIso);
+      expect(timeline.mahadashas).toHaveLength(0);
+      expect(getActiveDasha(timeline, birthIso)).toBeNull();
+    });
 
-      const activeAtBirth = getActiveDasha(timeline, birthIso);
-      expect(activeAtBirth?.mahadasha.planet).toBe(Planet.KETU);
-      expect(activeAtBirth?.antardasha.planet).toBe(Planet.KETU);
-      expect(activeAtBirth?.pratyantardasha.planet).toBe(Planet.KETU);
+    it('retains partial-first status after skipping a zero-length Sun candidate', () => {
+      const longitude = 40 - (40 / 3) * 3.2e-12;
+      const timeline = calculateVimshottari({
+        birthDateTime: birthIso,
+        moonSiderealLongitude: longitude
+      });
+
+      expect(timeline.nakshatra).toBe('Krittika');
+      expect(timeline.nakshatraLord).toBe(Planet.SUN);
+      expect(timeline.remainingFraction).toBeGreaterThan(0);
+      expect(timeline.mahadashas[0].planet).toBe(Planet.MOON);
+      expect(timeline.mahadashas[0].start).toBe(birthIso);
+      expect(timeline.mahadashas[0].end).toBe(
+        addFractionalYears(
+          birthDate,
+          DASHA_YEARS[Planet.MOON] * timeline.remainingFraction
+        ).toISOString()
+      );
+      expect(timeline.mahadashas[1].planet).toBe(Planet.MARS);
+      for (const md of timeline.mahadashas) {
+        expect(new Date(md.end).getTime()).toBeGreaterThan(new Date(md.start).getTime());
+      }
+      for (let mdIndex = 0; mdIndex < timeline.mahadashas.length - 1; mdIndex++) {
+        expect(timeline.mahadashas[mdIndex].end).toBe(timeline.mahadashas[mdIndex + 1].start);
+      }
     });
 
     it('accepts Moon longitude just after Nakshatra boundary and produces valid timeline', () => {
@@ -905,11 +928,11 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
 
   describe('18. near-360° normalization and active periods', () => {
     it.each([
-      { longitude: 360 - 1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: 360 - 1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: undefined, activeAd: undefined, activePd: undefined },
       { longitude: 360 - 1e-10, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.MERCURY, activeAd: Planet.SATURN, activePd: Planet.JUPITER },
       { longitude: 360, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
       { longitude: 360 + 1e-12, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
-      { longitude: -1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
+      { longitude: -1e-12, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: undefined, activeAd: undefined, activePd: undefined },
       { longitude: -1e-10, nakshatra: 'Revati', lord: Planet.MERCURY, activeMd: Planet.MERCURY, activeAd: Planet.SATURN, activePd: Planet.JUPITER },
       { longitude: -360, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU },
       { longitude: -360 + 1e-12, nakshatra: 'Ashwini', lord: Planet.KETU, activeMd: Planet.KETU, activeAd: Planet.KETU, activePd: Planet.KETU }
@@ -930,6 +953,11 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(timeline.nakshatraLord).toBe(lord);
       expect(timeline.nakshatraProgress).toBeCloseTo(expectedProgress, 14);
       expect(timeline.remainingFraction).toBeCloseTo(1 - expectedProgress, 14);
+      if (activeMd === undefined) {
+        expect(timeline.mahadashas).toHaveLength(0);
+      } else {
+        expect(timeline.mahadashas.length).toBeGreaterThan(0);
+      }
 
       const activeAtBirth = getActiveDasha(timeline, birthIso);
       expect(activeAtBirth?.mahadasha.planet).toBe(activeMd);
