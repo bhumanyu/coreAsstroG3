@@ -587,6 +587,124 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(diagnosticList).toBeInTheDocument();
     });
 
+    it('Career-only partial result renders career heading and wealth missing explanation', () => {
+      const careerOnlySynthesis = makeSynthesis({
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [
+            {
+              expressionRefKey: 'CAREER_EXPR_1',
+              status: 'ACTIVATES',
+              linkedLevels: ['MD'],
+              qualificationBasis: 'CANONICAL_STATUS',
+              matchBasis: 'UNAMBIGUOUS',
+              diagnostics: [],
+              expressionEvidenceIds: [],
+              qualifiedEvidenceIds: [],
+              unqualifiedEvidenceIds: [],
+              mdDashaEvidenceIds: [],
+              adDashaEvidenceIds: [],
+              expressionSource: 'CALLER'
+            }
+          ],
+          diagnostics: []
+        },
+        wealth: {
+          dimensions: {
+            ACCUMULATION: emptyWealthDimension('ACCUMULATION'),
+            GAINS: emptyWealthDimension('GAINS'),
+            FORTUNE: emptyWealthDimension('FORTUNE'),
+            SPECULATION: emptyWealthDimension('SPECULATION')
+          },
+          diagnostics: []
+        },
+        missingInputs: [
+          {
+            domain: 'WEALTH',
+            code: 'WEALTH_PROMISE_MISSING',
+            description: 'Wealth promise evidence not available in chart'
+          }
+        ],
+        provenance: {
+          career: { status: 'PRESENT', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+          wealth: { status: 'MISSING', version: 'v1' }
+        }
+      });
+
+      render(<SelectedPeriodReport synthesis={careerOnlySynthesis} />);
+
+      // Career section should be visible with heading
+      expect(screen.getByText(/Career Synthesis/i)).toBeInTheDocument();
+
+      // Career expression should be rendered
+      expect(screen.getByText(/CAREER_EXPR_1/i)).toBeInTheDocument();
+      expect(screen.getByText(/Activates/i)).toBeInTheDocument();
+
+      // Wealth missing explanation should be visible via missingInputs
+      expect(screen.getByText(/Missing Inputs/i)).toBeInTheDocument();
+      expect(screen.getByText(/WEALTH_PROMISE_MISSING/i)).toBeInTheDocument();
+      expect(screen.getByText(/Wealth promise evidence not available in chart/i)).toBeInTheDocument();
+
+      // Wealth Synthesis section should show unavailable state
+      expect(screen.getByText(/Wealth activation unavailable/i)).toBeInTheDocument();
+    });
+
+    it('Wealth-only partial result renders wealth heading and career missing explanation', () => {
+      const wealthOnlySynthesis = makeSynthesis({
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [],
+          diagnostics: []
+        },
+        wealth: {
+          dimensions: {
+            ACCUMULATION: {
+              dimension: 'ACCUMULATION',
+              effect: 'ACTIVATES',
+              dataStatus: 'COMPLETE',
+              linkedLevels: ['MD'],
+              diagnostics: [],
+              promiseEvidenceIds: ['WEALTH_2H_STRONG_001'],
+              dashaRuleReferences: [],
+              insufficientReason: 'LINKED' as const
+            },
+            GAINS: emptyWealthDimension('GAINS'),
+            FORTUNE: emptyWealthDimension('FORTUNE'),
+            SPECULATION: emptyWealthDimension('SPECULATION')
+          },
+          diagnostics: []
+        },
+        missingInputs: [
+          {
+            domain: 'CAREER',
+            code: 'CAREER_PROMISE_MISSING',
+            description: 'Career promise evidence not available in chart'
+          }
+        ],
+        provenance: {
+          career: { status: 'MISSING', version: 'v1', qualificationBasis: 'CANONICAL_STATUS' },
+          wealth: { status: 'PRESENT', version: 'v1' }
+        }
+      });
+
+      render(<SelectedPeriodReport synthesis={wealthOnlySynthesis} />);
+
+      // Wealth section should be visible with heading
+      expect(screen.getByText(/Wealth Synthesis/i)).toBeInTheDocument();
+
+      // ACCUMULATION dimension should be rendered with ACTIVATES effect
+      expect(screen.getByText(/ACCUMULATION/i)).toBeInTheDocument();
+      expect(screen.getByText(/Activates/i)).toBeInTheDocument();
+
+      // Career missing explanation should be visible via missingInputs
+      expect(screen.getByText(/Missing Inputs/i)).toBeInTheDocument();
+      expect(screen.getByText(/CAREER_PROMISE_MISSING/i)).toBeInTheDocument();
+      expect(screen.getByText(/Career promise evidence not available in chart/i)).toBeInTheDocument();
+
+      // Career Synthesis section should show unavailable state
+      expect(screen.getByText(/Career activation unavailable/i)).toBeInTheDocument();
+    });
+
     it('SelectedPeriodSection: MD change clears AD and disables submit', () => {
       const dashPeriodOptions: ProductDashaPeriodOptions = {
         mahadashas: [

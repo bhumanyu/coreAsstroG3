@@ -214,79 +214,16 @@ const RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10: CareerMechanismResoluti
 });
 
 /**
- * Rule for Kendra-Trikona patterns.
- * Emits mechanism types for DHARMA_KARMA_ALIGNMENT, AUTHORITY_PATTERN, and PROFESSIONAL_RISE_PATTERN.
- *
- * Uses canonical edge resolution via hasCanonicalHousePairRelationship to verify
- * the establishing relationship exists between the kendra and trikona house pair.
- *
- * Kendra houses: 1, 4, 7, 10 (angular houses)
- * Trikona houses: 1, 5, 9 (trine houses)
- *
- * Classifications from kendraTrikonaDetector.ts:
- * - DHARMA_KARMA_ALIGNMENT: 9↔10 with verified lord relationship
- * - AUTHORITY_PATTERN: kendra house 10 with verified lord relationship to trikona
- * - PROFESSIONAL_RISE_PATTERN: verified lord relationship between any kendra and trikona
- */
-const RULE_MECHANISM_PATTERN_KENDRA_TRIKONA: CareerMechanismResolutionRule = Object.freeze({
-  ruleId: 'RULE_MECHANISM_PATTERN_KENDRA_TRIKONA',
-  pathway: 'PATTERN',
-
-  applies(input: CareerMechanismResolutionInput): boolean {
-    // Gate on pattern family
-    if (input.pattern.family !== 'KENDRA_TRIKONA') {
-      return false;
-    }
-
-    // Extract kendra and trikona houses from pattern.houses
-    const kendraHouses = input.pattern.houses.filter(h => [1, 4, 7, 10].includes(h));
-    const trikonaHouses = input.pattern.houses.filter(h => [1, 5, 9].includes(h));
-
-    // Must have at least one kendra and one trikona house
-    if (kendraHouses.length === 0 || trikonaHouses.length === 0) {
-      return false;
-    }
-
-    // Verify establishing relationship exists between at least one kendra-trikona pair
-    // using canonical edge resolution (intersection invariant)
-    for (const kendra of kendraHouses) {
-      for (const trikona of trikonaHouses) {
-        // Skip self-pairing (house 1 is both kendra and trikona)
-        if (kendra === trikona) {
-          continue;
-        }
-
-        if (hasCanonicalHousePairRelationship(input, kendra, trikona)) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  },
-
-  resolve(input: CareerMechanismResolutionInput): readonly CareerMechanismType[] {
-    // TODO: Domain owner must confirm the exact mechanism-type mapping for each
-    // Kendra-Trikona classification before this ships. The classifications are:
-    // - DHARMA_KARMA_ALIGNMENT (9↔10)
-    // - AUTHORITY_PATTERN (kendra house 10 with lord relationship to trikona)
-    // - PROFESSIONAL_RISE_PATTERN (verified lord relationship between any kendra and trikona)
-    //
-    // Every returned type must already exist in CAREER_MECHANISM_DEFINITIONS.
-    // For now, return empty array to avoid shipping speculative mappings.
-    return Object.freeze([]);
-  }
-});
-
-/**
  * Frozen registry of mechanism resolution rules.
  * Per spec §25: only proven mappings initially.
+ * Only dusthana transformation rules are registered (8↔10, 12↔10, composite 8-12-10).
+ * Kendra-Trikona and other pattern families are deferred pending domain owner confirmation
+ * of mechanism-type mappings. See PBA-04 DEFERRED section in acceptance matrix.
  */
 export const CAREER_MECHANISM_RESOLUTION_RULES: Readonly<
   ReadonlyArray<CareerMechanismResolutionRule>
 > = Object.freeze([
   RULE_MECHANISM_PATTERN_DUSTHANA_8_10,
   RULE_MECHANISM_PATTERN_DUSTHANA_12_10,
-  RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10,
-  RULE_MECHANISM_PATTERN_KENDRA_TRIKONA
+  RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10
 ]);

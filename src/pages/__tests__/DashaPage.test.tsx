@@ -476,7 +476,7 @@ describe('DashaPage (P-UI-07)', () => {
   });
 
   describe('Partial result coverage (PBA-06)', () => {
-    it('Career-only partial result: renders career heading, MISSING-domain banner, and Missing Inputs entry', () => {
+    it('Career-only partial result: selection flow works (component-level coverage in DashaComponents.test.tsx)', () => {
       const onSelectPeriod = vi.fn().mockResolvedValue(undefined);
       const analysis = createProductAnalysis({
         selectedPeriod: {
@@ -500,7 +500,22 @@ describe('DashaPage (P-UI-07)', () => {
             },
             career: {
               qualificationBasis: 'CANONICAL_STATUS',
-              expressions: [],
+              expressions: [
+                {
+                  expressionRefKey: 'CAREER_EXPR_1',
+                  status: 'ACTIVATES',
+                  linkedLevels: ['MD'],
+                  qualificationBasis: 'CANONICAL_STATUS',
+                  matchBasis: 'UNAMBIGUOUS',
+                  diagnostics: [],
+                  expressionEvidenceIds: [],
+                  qualifiedEvidenceIds: [],
+                  unqualifiedEvidenceIds: [],
+                  mdDashaEvidenceIds: [],
+                  adDashaEvidenceIds: [],
+                  expressionSource: 'CALLER'
+                }
+              ],
               diagnostics: []
             },
             wealth: {
@@ -572,17 +587,14 @@ describe('DashaPage (P-UI-07)', () => {
       const analyzeButton = screen.getByRole('button', { name: /Analyze Selected Period/i });
       fireEvent.click(analyzeButton);
 
-      // Wait for onSelectPeriod to resolve and report to render
-      // Since this is a page-level test with mock onSelectPeriod, the report won't actually render
-      // through the real submit flow without proper async handling. For now, verify the page
-      // renders the selection UI without errors - the component-level tests in DashaComponents.test.tsx
-      // already cover the partial-result rendering of SelectedPeriodReport itself.
-      expect(mdSelect).toBeInTheDocument();
-      expect(adSelect).toBeInTheDocument();
-      expect(analyzeButton).toBeInTheDocument();
+      // Verify onSelectPeriod was called with correct IDs
+      expect(onSelectPeriod).toHaveBeenCalledWith('md_jupiter', 'ad_saturn');
+
+      // Note: Component-level partial-result rendering assertions are in DashaComponents.test.tsx
+      // (SelectedPeriodReport tests with Career-only and Wealth-only partial synthesis)
     });
 
-    it('Wealth-only partial result: renders wealth heading, MISSING-domain banner, and Missing Inputs entry', () => {
+    it('Wealth-only partial result: selection flow works (component-level coverage in DashaComponents.test.tsx)', () => {
       const onSelectPeriod = vi.fn().mockResolvedValue(undefined);
       const analysis = createProductAnalysis({
         selectedPeriod: {
@@ -687,11 +699,11 @@ describe('DashaPage (P-UI-07)', () => {
       const analyzeButton = screen.getByRole('button', { name: /Analyze Selected Period/i });
       fireEvent.click(analyzeButton);
 
-      // Verify page renders selection UI without errors
-      // Component-level partial-result coverage is in DashaComponents.test.tsx
-      expect(mdSelect).toBeInTheDocument();
-      expect(adSelect).toBeInTheDocument();
-      expect(analyzeButton).toBeInTheDocument();
+      // Verify onSelectPeriod was called with correct IDs
+      expect(onSelectPeriod).toHaveBeenCalledWith('md_jupiter', 'ad_saturn');
+
+      // Note: Component-level partial-result rendering assertions are in DashaComponents.test.tsx
+      // (SelectedPeriodReport tests with Career-only and Wealth-only partial synthesis)
     });
   });
 
