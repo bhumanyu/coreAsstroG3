@@ -3,63 +3,64 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DashaTimeline } from '../DashaTimeline';
 import type { DashaTimelineProduct, DashaTimelinePeriodProduct } from '../../../product/dasha-timing/dashaTimingTypes';
+import { Planet } from '../../../types';
 
 describe('DashaTimeline', () => {
   const mockTimeline: DashaTimelineProduct = {
     availability: 'AVAILABLE',
     periods: [
       {
-        planet: 'JUPITER',
+        planet: Planet.JUPITER,
         start: '2020-01-01T00:00:00.000Z',
         end: '2036-01-01T00:00:00.000Z',
         index: 0,
         durationYears: 16,
         antardashas: [
           {
-            planet: 'JUPITER',
+            planet: Planet.JUPITER,
             start: '2020-01-01T00:00:00.000Z',
             end: '2024-03-10T00:00:00.000Z'
           },
           {
-            planet: 'SATURN',
+            planet: Planet.SATURN,
             start: '2024-03-10T00:00:00.000Z',
             end: '2026-09-22T00:00:00.000Z'
           },
           {
-            planet: 'MERCURY',
+            planet: Planet.MERCURY,
             start: '2026-09-22T00:00:00.000Z',
             end: '2029-05-15T00:00:00.000Z'
           }
         ]
       },
       {
-        planet: 'SATURN',
+        planet: Planet.SATURN,
         start: '2036-01-01T00:00:00.000Z',
         end: '2055-01-01T00:00:00.000Z',
         index: 1,
         durationYears: 19,
         antardashas: [
           {
-            planet: 'SATURN',
+            planet: Planet.SATURN,
             start: '2036-01-01T00:00:00.000Z',
             end: '2040-05-20T00:00:00.000Z'
           },
           {
-            planet: 'MERCURY',
+            planet: Planet.MERCURY,
             start: '2040-05-20T00:00:00.000Z',
             end: '2043-02-10T00:00:00.000Z'
           }
         ]
       },
       {
-        planet: 'JUPITER',
+        planet: Planet.JUPITER,
         start: '2055-01-01T00:00:00.000Z',
         end: '2071-01-01T00:00:00.000Z',
         index: 2,
         durationYears: 16,
         antardashas: [
           {
-            planet: 'JUPITER',
+            planet: Planet.JUPITER,
             start: '2055-01-01T00:00:00.000Z',
             end: '2059-04-10T00:00:00.000Z'
           }

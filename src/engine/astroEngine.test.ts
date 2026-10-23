@@ -1142,7 +1142,7 @@ describe('astroEngine', () => {
           ...basePositions[Planet.MOON],
           eclipticLongitude: undefined,
           longitude: undefined
-        } as PlanetPosition
+        } as unknown as PlanetPosition
       };
 
       expect(() => {
