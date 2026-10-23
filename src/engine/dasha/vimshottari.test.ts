@@ -159,6 +159,100 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
     });
   });
 
+  describe('5a. Analytical anchored partial-MD continuity and boundary ownership', () => {
+    const progressFractions = [1e-6, 0.25, 0.5, 0.75, 1 - 1e-6];
+
+    for (const [lordIndex, lord] of rotateDashaSequence(Planet.KETU).entries()) {
+      for (const progress of progressFractions) {
+        it(`tiles AD/PD windows and preserves half-open transitions for ${lord} at progress ${progress}`, () => {
+          const nakshatraStart = lordIndex * (40 / 3);
+          const timeline = calculateVimshottari({
+            birthDateTime: birthIso,
+            moonSiderealLongitude: nakshatraStart + progress * (40 / 3),
+            until: addFractionalYears(birthDate, 40).toISOString()
+          });
+
+          expect(timeline.nakshatraLord).toBe(lord);
+          expect(() => calculateVimshottari({
+            birthDateTime: birthIso,
+            moonSiderealLongitude: nakshatraStart + progress * (40 / 3),
+            until: addFractionalYears(birthDate, 40).toISOString()
+          })).not.toThrow();
+
+          const firstMd = timeline.mahadashas[0];
+          expect(firstMd).toBeDefined();
+          expect(firstMd.start).toBe(birthIso);
+          expect(firstMd.antardashas.length).toBeGreaterThan(0);
+          expect(firstMd.antardashas[0].start).toBe(firstMd.start);
+          expect(firstMd.antardashas[firstMd.antardashas.length - 1].end).toBe(firstMd.end);
+
+          for (let adIndex = 0; adIndex < firstMd.antardashas.length; adIndex++) {
+            const ad = firstMd.antardashas[adIndex];
+            expect(ad.pratyantardashas.length).toBeGreaterThan(0);
+            expect(ad.pratyantardashas[0].start).toBe(ad.start);
+            expect(ad.pratyantardashas[ad.pratyantardashas.length - 1].end).toBe(ad.end);
+            for (let pdIndex = 0; pdIndex < ad.pratyantardashas.length - 1; pdIndex++) {
+              expect(ad.pratyantardashas[pdIndex].end).toBe(ad.pratyantardashas[pdIndex + 1].start);
+            }
+
+            if (adIndex < firstMd.antardashas.length - 1) {
+              const nextAd = firstMd.antardashas[adIndex + 1];
+              expect(ad.end).toBe(nextAd.start);
+              const boundaryMs = new Date(ad.end).getTime();
+              const before = getActiveDasha(timeline, new Date(boundaryMs - 1));
+              const exact = getActiveDasha(timeline, new Date(boundaryMs));
+              const after = getActiveDasha(timeline, new Date(boundaryMs + 1));
+              expect(before?.mahadasha.planet).toBe(firstMd.planet);
+              expect(before?.antardasha.planet).toBe(ad.planet);
+              expect(before?.pratyantardasha.planet).toBe(ad.pratyantardashas[ad.pratyantardashas.length - 1].planet);
+              expect(exact?.mahadasha.planet).toBe(firstMd.planet);
+              expect(exact?.antardasha.planet).toBe(nextAd.planet);
+              expect(exact?.pratyantardasha.planet).toBe(nextAd.pratyantardashas[0].planet);
+              expect(after?.antardasha.planet).toBe(nextAd.planet);
+              expect(after?.pratyantardasha.planet).toBe(nextAd.pratyantardashas[0].planet);
+            }
+
+            for (let pdIndex = 0; pdIndex < ad.pratyantardashas.length - 1; pdIndex++) {
+              const pd = ad.pratyantardashas[pdIndex];
+              const nextPd = ad.pratyantardashas[pdIndex + 1];
+              const boundaryMs = new Date(pd.end).getTime();
+              const before = getActiveDasha(timeline, new Date(boundaryMs - 1));
+              const exact = getActiveDasha(timeline, new Date(boundaryMs));
+              const after = getActiveDasha(timeline, new Date(boundaryMs + 1));
+              expect(before?.mahadasha.planet).toBe(firstMd.planet);
+              expect(before?.antardasha.planet).toBe(ad.planet);
+              expect(before?.pratyantardasha.planet).toBe(pd.planet);
+              expect(exact?.mahadasha.planet).toBe(firstMd.planet);
+              expect(exact?.antardasha.planet).toBe(ad.planet);
+              expect(exact?.pratyantardasha.planet).toBe(nextPd.planet);
+              expect(after?.pratyantardasha.planet).toBe(nextPd.planet);
+            }
+          }
+
+          const activeAtBirth = getActiveDasha(timeline, birthIso);
+          expect(activeAtBirth?.mahadasha.planet).toBe(firstMd.planet);
+          expect(activeAtBirth?.antardasha.planet).toBe(firstMd.antardashas[0].planet);
+          expect(activeAtBirth?.pratyantardasha.planet).toBe(firstMd.antardashas[0].pratyantardashas[0].planet);
+
+          for (let mdIndex = 0; mdIndex < timeline.mahadashas.length - 1; mdIndex++) {
+            const md = timeline.mahadashas[mdIndex];
+            const nextMd = timeline.mahadashas[mdIndex + 1];
+            const boundaryMs = new Date(md.end).getTime();
+            const before = getActiveDasha(timeline, new Date(boundaryMs - 1));
+            const exact = getActiveDasha(timeline, new Date(boundaryMs));
+            const after = getActiveDasha(timeline, new Date(boundaryMs + 1));
+            expect(before?.mahadasha.planet).toBe(md.planet);
+            expect(before?.antardasha.planet).toBe(md.antardashas[md.antardashas.length - 1].planet);
+            expect(exact?.mahadasha.planet).toBe(nextMd.planet);
+            expect(exact?.antardasha.planet).toBe(nextMd.antardashas[0].planet);
+            expect(exact?.pratyantardasha.planet).toBe(nextMd.antardashas[0].pratyantardashas[0].planet);
+            expect(after?.mahadasha.planet).toBe(nextMd.planet);
+          }
+        });
+      }
+    }
+  });
+
   describe('6. Pratyantardasha tiling', () => {
     it('ensures for each Antardasha that PD[0].start === AD.start, PD[last].end === AD.end, PD[i].end === PD[i+1].start', () => {
       const timeline = calculateVimshottari({

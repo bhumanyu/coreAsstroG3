@@ -418,11 +418,25 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
       isFirstMd = false;
 
       const fullYears = DASHA_YEARS[mdPlanet] * fraction;
-      const calculatedMdEnd = addFractionalYears(currentStart, fullYears);
-      let mdEnd = calculatedMdEnd;
+      const isPartialFirstMd = mdPlanet === nakshatraLord && mahadashas.length === 0;
+      let fullMdStart: Date | undefined;
+      let fullMdDurationMs: number | undefined;
+      let mdEnd: Date;
 
-      if (mdEnd.getTime() > untilDate.getTime()) {
-        mdEnd = new Date(untilDate.getTime());
+      if (isPartialFirstMd) {
+        const fullMdYears = DASHA_YEARS[mdPlanet];
+        fullMdStart = addFractionalYears(
+          birthDate,
+          -nakshatraProgress * fullMdYears
+        );
+        const fullMdEnd = addFractionalYears(fullMdStart, fullMdYears);
+        fullMdDurationMs = fullMdEnd.getTime() - fullMdStart.getTime();
+        mdEnd = new Date(Math.min(fullMdEnd.getTime(), untilDate.getTime()));
+      } else {
+        mdEnd = addFractionalYears(currentStart, fullYears);
+        if (mdEnd.getTime() > untilDate.getTime()) {
+          mdEnd = new Date(untilDate.getTime());
+        }
       }
 
       // Guard against zero/negative-length Mahadasha: skip if end <= start
@@ -431,27 +445,7 @@ export function calculateVimshottari(input: VimshottariInput): VimshottariTimeli
       }
 
       let antardashas: readonly AntardashaPeriod[];
-      if (mdPlanet === nakshatraLord && mahadashas.length === 0) {
-        const fullMdYears = DASHA_YEARS[mdPlanet];
-        let fullMdStart = new Date(
-          birthDate.getTime() - nakshatraProgress * fullMdYears * MS_PER_VIMSHOTTARI_YEAR
-        );
-        let fullMdDurationMs =
-          addFractionalYears(fullMdStart, fullMdYears).getTime() - fullMdStart.getTime();
-        const initialFullMdEnd = fullMdStart.getTime() + fullMdDurationMs;
-        const alignmentMs = calculatedMdEnd.getTime() - initialFullMdEnd;
-        if (Math.abs(alignmentMs) > 1) {
-          throw new Error('The notional full Mahadasha end does not match the partial Mahadasha end.');
-        }
-        if (alignmentMs !== 0) {
-          // Equivalent fractional-year calculations can differ by one millisecond after Date truncation.
-          fullMdStart = new Date(fullMdStart.getTime() + alignmentMs);
-          fullMdDurationMs =
-            addFractionalYears(fullMdStart, fullMdYears).getTime() - fullMdStart.getTime();
-        }
-        if (fullMdStart.getTime() + fullMdDurationMs !== calculatedMdEnd.getTime()) {
-          throw new Error('The notional full Mahadasha end does not match the partial Mahadasha end.');
-        }
+      if (isPartialFirstMd && fullMdStart && fullMdDurationMs !== undefined) {
         antardashas = buildAntardashasAnchored(
           mdPlanet,
           fullMdStart,

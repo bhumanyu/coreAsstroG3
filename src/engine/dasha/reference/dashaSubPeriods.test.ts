@@ -52,6 +52,14 @@ describe('D08-G & D08-H: Reference Sub-Period and Active Dasha Validation', () =
       expect(activeAtBirth?.pratyantardasha.planet).toBe(Planet.MARS);
       expect(activeAtBirth?.antardasha.start).toBe(birth);
       expect(activeAtBirth?.pratyantardasha.start).toBe(birth);
+      expect(firstMd.antardashas[0].start).toBe(birth);
+      expect(firstMd.antardashas[firstMd.antardashas.length - 1].end).toBe(firstMd.end);
+      expect(firstMd.antardashas[0].pratyantardashas[0].start).toBe(birth);
+      expect(
+        firstMd.antardashas[0].pratyantardashas[
+          firstMd.antardashas[0].pratyantardashas.length - 1
+        ].end
+      ).toBe(firstMd.antardashas[0].end);
 
       const fullMdStart = new Date(
         birthMs - 0.5 * DASHA_YEARS[Planet.VENUS] * MS_PER_VIMSHOTTARI_YEAR
@@ -106,6 +114,7 @@ describe('D08-G & D08-H: Reference Sub-Period and Active Dasha Validation', () =
           expect(pd.end).toBe(new Date(pdEndTimes[pdIndex]).toISOString());
           previousEnd = pdEndTimes[pdIndex];
         });
+        expect(previousEnd).toBe(expectedAdEnd);
 
         for (let pdIndex = 0; pdIndex < ad.pratyantardashas.length - 1; pdIndex++) {
           const boundaryMs = new Date(ad.pratyantardashas[pdIndex].end).getTime();
