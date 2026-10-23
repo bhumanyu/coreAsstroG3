@@ -766,6 +766,36 @@ describe('astroEngine', () => {
     expect(firstPD.natal).toBeDefined();
   });
 
+  it('returns an explicitly unavailable Dasha when the public Moon input yields no representable periods', () => {
+    const positions = generatePlanetaryPositions(CANONICAL_BIRTH_DETAILS);
+    const nearBoundaryLongitude = 360 - 1e-12;
+    const customPositions = {
+      ...positions,
+      [Planet.MOON]: {
+        ...positions[Planet.MOON],
+        eclipticLongitude: nearBoundaryLongitude,
+        longitude: nearBoundaryLongitude
+      }
+    };
+
+    const calculate = () => calculateHoroscope(CANONICAL_BIRTH_DETAILS, {
+      customPositions,
+      asOf: CANONICAL_BIRTH_DETAILS.dateTimeStr
+    });
+    expect(calculate).not.toThrow();
+    const horoscope = calculate();
+
+    expect(horoscope.vimshottari.moonSiderealLongitude).toBe(nearBoundaryLongitude);
+    expect(horoscope.vimshottari.mahadashas).toEqual([]);
+    expect(horoscope.dashaInterpretation.availability).toBe('UNAVAILABLE');
+    expect(horoscope.dashaInterpretation.diagnostics).toContain('EMPTY_VIMSHOTTARI_TIMELINE');
+    expect(horoscope.dashaInterpretation.mahadashas).toEqual([]);
+    expect(horoscope.dashaInterpretation.current).toBeUndefined();
+    expect(horoscope.fullNatalAnalysis.vimshottari.status).toBe('UNAVAILABLE');
+    expect(horoscope.fullNatalAnalysis.majorLifePeriods.status).toBe('UNAVAILABLE');
+    expect(horoscope.fullNatalAnalysis.currentDasha.status).toBe('UNAVAILABLE');
+  });
+
   it('shouldIncludeLifeThemesInHoroscope', () => {
     const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     expect(horoscope.lifeThemes).toBeDefined();
@@ -1208,5 +1238,3 @@ describe('astroEngine', () => {
     });
   });
 });
-
-

@@ -205,7 +205,11 @@ export interface DashaInterpretationReport {
   readonly current?: ActiveDashaInterpretation;
   readonly activePeriods?: ActiveDashaInterpretation;
   readonly confidence: InterpretationConfidence;
+  readonly availability?: 'AVAILABLE' | 'UNAVAILABLE';
+  readonly diagnostics?: readonly DashaInterpretationDiagnostic[];
 }
+
+export type DashaInterpretationDiagnostic = 'EMPTY_VIMSHOTTARI_TIMELINE';
 
 export interface DashaInterpretationInput {
   readonly vimshottari: VimshottariTimeline;

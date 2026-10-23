@@ -6,6 +6,7 @@ import {
   Pada,
   NakshatraResult,
   ChartType,
+  DashaSystem,
   PlanetMotion,
   PlanetPosition,
   PlanetCondition,
@@ -524,9 +525,26 @@ export function calculateHoroscope(
     planetaryStrength
   };
 
-  const rawDashaInterpretation = analyzeDashaInterpretation(dashaInterpretationInput);
+  const dashaUnavailable = vimshottari.mahadashas.length === 0;
+  // Keep an empty engine timeline explicitly unavailable; do not invent periods or pass it
+  // to the interpretation validator, which correctly requires a populated timeline.
+  const rawDashaInterpretation: DashaInterpretationReport = dashaUnavailable
+    ? Object.freeze({
+        system: DashaSystem.VIMSHOTTARI,
+        birthAnchor: Object.freeze({
+          nakshatra: vimshottari.nakshatra,
+          nakshatraLord: vimshottari.nakshatraLord,
+          nakshatraProgress: vimshottari.nakshatraProgress,
+          remainingFraction: vimshottari.remainingFraction
+        }),
+        mahadashas: Object.freeze([]),
+        confidence: 'LOW',
+        availability: 'UNAVAILABLE',
+        diagnostics: Object.freeze(['EMPTY_VIMSHOTTARI_TIMELINE'] as const)
+      })
+    : analyzeDashaInterpretation(dashaInterpretationInput);
   let activeDasha = null;
-  if (resolvedAsOf && !isNaN(resolvedAsOf.getTime())) {
+  if (!dashaUnavailable && resolvedAsOf && !isNaN(resolvedAsOf.getTime())) {
     try {
       activeDasha = analyzeActiveDasha(dashaInterpretationInput, resolvedAsOf);
     } catch {

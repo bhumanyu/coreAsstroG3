@@ -392,7 +392,12 @@ function buildD10Section(horoscope: Horoscope): D10Section {
 
 function buildVimshottariSection(horoscope: Horoscope): VimshottariSection {
   const dasha = horoscope.dashaInterpretation;
-  if (!dasha || !dasha.mahadashas) {
+  if (
+    !dasha ||
+    !dasha.mahadashas ||
+    dasha.availability === 'UNAVAILABLE' ||
+    dasha.mahadashas.length === 0
+  ) {
     return {
       status: 'UNAVAILABLE'
     };

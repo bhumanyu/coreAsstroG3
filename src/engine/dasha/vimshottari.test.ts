@@ -548,12 +548,22 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       expect(timeline.remainingFraction).toBeGreaterThan(0);
       expect(timeline.mahadashas[0].planet).toBe(Planet.MOON);
       expect(timeline.mahadashas[0].start).toBe(birthIso);
+      const firstMdDurationMs =
+        new Date(timeline.mahadashas[0].end).getTime() -
+        new Date(timeline.mahadashas[0].start).getTime();
+      const partialDurationMs =
+        DASHA_YEARS[Planet.MOON] * timeline.remainingFraction * MS_PER_VIMSHOTTARI_YEAR;
+      const fullDurationMs = DASHA_YEARS[Planet.MOON] * MS_PER_VIMSHOTTARI_YEAR;
       expect(timeline.mahadashas[0].end).toBe(
-        addFractionalYears(
-          birthDate,
-          DASHA_YEARS[Planet.MOON] * timeline.remainingFraction
-        ).toISOString()
+        addFractionalYears(birthDate, DASHA_YEARS[Planet.MOON] * timeline.remainingFraction).toISOString()
       );
+      expect(firstMdDurationMs).toBeGreaterThan(0);
+      expect(firstMdDurationMs).toBeLessThan(fullDurationMs);
+      expect(firstMdDurationMs).toBe(Math.floor(partialDurationMs));
+      expect(timeline.mahadashas.map(({ planet }) => planet).slice(0, 2)).toEqual([
+        Planet.MOON,
+        Planet.MARS
+      ]);
       expect(timeline.mahadashas[1].planet).toBe(Planet.MARS);
       for (const md of timeline.mahadashas) {
         expect(new Date(md.end).getTime()).toBeGreaterThan(new Date(md.start).getTime());
@@ -561,6 +571,9 @@ describe('Vimshottari Dasha Engine (PR-041)', () => {
       for (let mdIndex = 0; mdIndex < timeline.mahadashas.length - 1; mdIndex++) {
         expect(timeline.mahadashas[mdIndex].end).toBe(timeline.mahadashas[mdIndex + 1].start);
       }
+      expect(timeline.mahadashas[timeline.mahadashas.length - 1].end).toBe(
+        addFractionalYears(birthDate, 120).toISOString()
+      );
     });
 
     it('accepts Moon longitude just after Nakshatra boundary and produces valid timeline', () => {
