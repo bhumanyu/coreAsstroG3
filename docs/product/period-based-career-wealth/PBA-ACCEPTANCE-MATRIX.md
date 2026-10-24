@@ -6,6 +6,22 @@
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
 
+## Deterministic Future Dasha Forecasting
+
+**Source change commit:** `0e2ae9d51b7fdc72a6e2f24fd540f204297ea3d6`
+
+**Toolchain:** Node `20.19.4`
+
+**Verification against the source change commit above:**
+- ✅ Focused FP-01–FP-06 regression suites: PASS (11 files, 480 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (124 tests; lint and production build passed)
+- ✅ `npm run verify`: PASS (298 test files; 5,600 passed, 5 skipped; lint and production build passed)
+
+The implementation resolves MD/AD/PD with half-open boundary semantics, binds transit positions and Dasha to one validated `asOf` context, partitions forecast horizons at Dasha transitions, preserves separate Wealth dimensions and supporting/challenging evidence, and projects nested MD/AD/PD periods with explicit horizon completeness. These are deterministic internal engine outputs, not event probabilities or guarantees. A favorable SPECULATION window is not evidence that risky trading will profit.
+
+External transit-position and independent Dasha-boundary parity remain **REFERENCE-DATA-BLOCKED** pending captured Swiss Ephemeris / JPL Horizons data. The skipped Moon-anchor `D08-A1` suite remains skipped; analytical fixtures are internal-consistency conventions only and are not independent astronomical validation.
+
 ## Vimshottari Partial-First-MD Anchoring Follow-up
 
 **Change commit:** `d78901a110720e0ad7543217a07db2868934ef83`
