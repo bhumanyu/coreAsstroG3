@@ -149,6 +149,54 @@ describe('future Dasha resolution', () => {
     }
   });
 
+  it('requires context echoes for a strict provider passed through the domain-forecast boundary', () => {
+    const firstMd = timeline.mahadashas[0];
+    const calculationContext = strictTransitCalculationContext;
+    const provider = {
+      precision: 'strict context echo test',
+      ephemerisVersion: 'test-ephemeris-v1',
+      maxSampleGapMs: Number.MAX_SAFE_INTEGER,
+      calculationContext,
+      requireSampleContextEcho: true,
+      getBoundaryInstants: () => [],
+      sampleWindow: (window: { readonly start: string; readonly end: string }) => {
+        const start = Date.parse(window.start);
+        const end = Date.parse(window.end);
+        const sampleInstants = [
+          window.start,
+          new Date(Math.floor((start + end) / 2)).toISOString(),
+          new Date(end - 1).toISOString()
+        ];
+        return {
+          precision: 'strict context echo test',
+          ephemerisVersion: 'test-ephemeris-v1',
+          samples: sampleInstants.map((at) => ({
+            at,
+            positions: createPositionsForContext(at, calculationContext)
+          }))
+        };
+      }
+    };
+    const result = buildDomainForecast(
+      timeline,
+      firstMd.start,
+      firstMd.antardashas[0].end,
+      { CAREER: true, ACCUMULATION: true, GAINS: true, FORTUNE: true, SPECULATION: true },
+      () => ({
+        direction: 'NEUTRAL',
+        effect: 'NEUTRAL',
+        strength: 'LOW',
+        evidenceCoverage: 'PARTIAL',
+        confidence: 0.5,
+        supportingEvidence: [],
+        challengingEvidence: [],
+        confidenceLimitations: []
+      }),
+      provider
+    );
+    expect(result).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+  });
+
   it('normalizes invalid assessment enums and rejects invalid confidence values', () => {
     const md = timeline.mahadashas[0];
     const invalidEnums = buildDomainForecast(
@@ -422,6 +470,9 @@ describe('future Dasha resolution', () => {
       calculationContext: strictTransitCalculationContext
     })), strictTransitCalculationContext);
     expect(consistent.ok).toBe(true);
+    const normalizedSun = createPositionsForContext(instants[0], strictTransitCalculationContext)[Planet.SUN];
+    expect(normalizedSun.eclipticLongitude).not.toBe(normalizedSun.siderealLongitude);
+    expect(normalizedSun.longitude).toBe(normalizedSun.siderealLongitude);
 
     const inconsistent = buildTransitValidationWindow(instants.map((at) => ({
       at,
@@ -455,6 +506,28 @@ describe('future Dasha resolution', () => {
       calculationContext: transitCalculationContext
     })), transitCalculationContext);
     expect(explicitlyAllowedLegacy.ok).toBe(true);
+
+    const normalizedStrict = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      positions: createPositionsForContext(at, strictTransitCalculationContext),
+      calculationContext: strictTransitCalculationContext
+    })), strictTransitCalculationContext);
+    expect(normalizedStrict.ok).toBe(true);
+  });
+
+  it('rejects a longitude alias that disagrees with the selected canonical coordinate field', () => {
+    const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+    const instants = transitSampleTimes(pd.start, pd.end).map((time) => new Date(time).toISOString());
+    const validPairWithMutatedAlias = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      positions: createPositionsForContext(at, strictTransitCalculationContext, (planet, position) =>
+        planet === Planet.SUN
+          ? { ...position, longitude: normalizeDegree(position.longitude + 1) }
+          : position
+      ),
+      calculationContext: strictTransitCalculationContext
+    })), strictTransitCalculationContext);
+    expect(validPairWithMutatedAlias).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
   });
 
   it('checks coordinate-specific sign longitude and documents the longitude fallback', () => {

@@ -41,6 +41,9 @@ export type DomainForecastResult =
  * `supportingEvidence` and `challengingEvidence` remain separate from confidence.
  * When natal promise is not established, confidence is set to 0 (not established),
  * and effect/strength are neutralized regardless of evaluator output.
+ * No application-level transit provider is currently constructed in this module.
+ * A caller-supplied provider is forwarded unchanged; absent an explicit
+ * `requireSampleContextEcho: true`, it uses the provider's compatibility mode.
  */
 export function buildDomainForecast(
   timeline: VimshottariTimeline,

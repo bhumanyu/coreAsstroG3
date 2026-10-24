@@ -17,6 +17,9 @@ export function calculateCurrentTransitPositions(
     ayanamsa
   };
 
+  // This producer currently exposes the engine's sidereal value through all
+  // longitude aliases. Normalize these positions into explicit tropical and
+  // sidereal fields before passing them to strict forecast-window validation.
   return generatePlanetaryPositions(dummyBirth);
 }
 

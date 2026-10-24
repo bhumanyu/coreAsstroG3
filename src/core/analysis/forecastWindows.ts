@@ -446,14 +446,23 @@ function isValidTransitPositions(
     }
     const eclipticLongitude = position.eclipticLongitude;
     const siderealLongitude = position.siderealLongitude;
+    const canonicalLongitude = context.coordinateConvention === ZodiacType.TROPICAL
+      ? eclipticLongitude
+      : siderealLongitude;
+    const fieldsIdentical = [position.longitude, eclipticLongitude, siderealLongitude]
+      .filter((longitude): longitude is number => longitude !== undefined)
+      .every((longitude) => angularDeltaDeg(longitude, position.longitude)
+        <= TRANSIT_LONGITUDE_TOLERANCE_DEG);
+    const explicitlyAllowedLegacyAliases = context.allowIdenticalLongitudeAliases === true && fieldsIdentical;
+    if (canonicalLongitude !== undefined
+      && angularDeltaDeg(position.longitude, canonicalLongitude) > TRANSIT_LONGITUDE_TOLERANCE_DEG
+      && !explicitlyAllowedLegacyAliases) {
+      return false;
+    }
     if (eclipticLongitude !== undefined && siderealLongitude !== undefined) {
-      const fieldsIdentical = [position.longitude, eclipticLongitude, siderealLongitude]
-        .every((longitude) => angularDeltaDeg(longitude, position.longitude)
-          <= TRANSIT_LONGITUDE_TOLERANCE_DEG);
       const expectedSidereal = normalizeDegree(
         eclipticLongitude - getAyanamsaOffset(context.ayanamsa, at)
       );
-      const explicitlyAllowedLegacyAliases = context.allowIdenticalLongitudeAliases === true && fieldsIdentical;
       if (!explicitlyAllowedLegacyAliases
         && angularDeltaDeg(siderealLongitude, expectedSidereal) > TRANSIT_LONGITUDE_TOLERANCE_DEG) {
         return false;
