@@ -1,12 +1,14 @@
 import type {
   DashaInterpretationReport,
   DashaMahadashaInterpretation,
-  DashaAntardashaInterpretation
+  DashaAntardashaInterpretation,
+  DashaPratyantardashaInterpretation
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import { DashaSystem } from '../../types';
 import {
   MD_AD_PERIOD_RESOLVER_VERSION,
   resolveSelectedMdAdPeriod,
+  encodePratyantardashaId,
   type ResolutionError
 } from './selectedMdAdPeriod';
 import {
@@ -35,7 +37,7 @@ export type SelectedPeriodContextError =
 export interface SelectedPeriodActivationContext {
   readonly contextVersion: typeof SELECTED_PERIOD_CONTEXT_VERSION;
   readonly dashaSystem: typeof DashaSystem.VIMSHOTTARI;
-  readonly level: 'MD_AD';
+  readonly level: 'MD_AD' | 'MD_AD_PD';
   /**
    * Versioned internal selection identifier for this analysis layer.
    * Not an evidence ID, rule ID, or durable external/storage identity.
@@ -76,6 +78,7 @@ export interface SelectedPeriodActivationContext {
    */
   readonly mahadashaNode: DashaMahadashaInterpretation;
   readonly antardashaNode: DashaAntardashaInterpretation;
+  readonly pratyantardashaNode?: DashaPratyantardashaInterpretation;
 }
 
 export type SelectedPeriodActivationContextResult =
@@ -87,6 +90,7 @@ export interface CreateSelectedPeriodActivationContextInput {
   readonly selection: {
     readonly mahadashaId: string;
     readonly antardashaId: string;
+    readonly pratyantardashaId?: string;
   };
   /** Pass the existing AnalysisContext.asOf value without changing it. */
   readonly analysisAsOf: string;
@@ -122,10 +126,12 @@ function classifyTemporalRelationForContext(
  */
 export function createSelectedPeriodId(
   mahadashaId: string,
-  antardashaId: string
+  antardashaId: string,
+  pratyantardashaId?: string
 ): string {
   // Selection identity is not an evidence/rule identity. Encoding makes the tuple unambiguous.
-  return `pba-period:${SELECTED_PERIOD_CONTEXT_VERSION}:${encodeURIComponent(mahadashaId)}:${encodeURIComponent(antardashaId)}`;
+  const base = `pba-period:${SELECTED_PERIOD_CONTEXT_VERSION}:${encodeURIComponent(mahadashaId)}:${encodeURIComponent(antardashaId)}`;
+  return pratyantardashaId ? `${base}:${encodeURIComponent(pratyantardashaId)}` : base;
 }
 
 /**
@@ -152,6 +158,19 @@ export function createSelectedPeriodActivationContext(
   }
 
   const { interval, mahadasha, mahadashaNode, antardashaNode } = resolved.value;
+  const pratyantardashaNode = input.selection.pratyantardashaId
+    ? antardashaNode.pratyantardashas.find((pd) =>
+        encodePratyantardashaId(
+          pd.planet,
+          pd.start,
+          pd.end,
+          input.selection.antardashaId
+        ) === input.selection.pratyantardashaId
+      )
+    : undefined;
+  if (input.selection.pratyantardashaId && !pratyantardashaNode) {
+    return { ok: false, error: 'INVALID_SELECTED_PERIOD' };
+  }
   const temporalRelation = classifyTemporalRelationForContext(
     interval.start,
     interval.end,
@@ -168,8 +187,8 @@ export function createSelectedPeriodActivationContext(
   const value: SelectedPeriodActivationContext = {
     contextVersion: SELECTED_PERIOD_CONTEXT_VERSION,
     dashaSystem: DashaSystem.VIMSHOTTARI,
-    level: 'MD_AD',
-    selectedPeriodId: createSelectedPeriodId(mahadashaId, antardashaId),
+    level: pratyantardashaNode ? 'MD_AD_PD' : 'MD_AD',
+    selectedPeriodId: createSelectedPeriodId(mahadashaId, antardashaId, input.selection.pratyantardashaId),
     resolverVersion: MD_AD_PERIOD_RESOLVER_VERSION,
     analysisAsOf: input.analysisAsOf,
     temporalRelation,
@@ -189,7 +208,8 @@ export function createSelectedPeriodActivationContext(
       end: antardashaNode.end
     }),
     mahadashaNode,
-    antardashaNode
+    antardashaNode,
+    ...(pratyantardashaNode ? { pratyantardashaNode } : {})
   };
 
   return { ok: true, value: Object.freeze(value) };
@@ -282,7 +302,18 @@ export function validateSelectedPeriodContext(
   }
 
   // Verify selectedPeriodId consistency with mahadasha/antardasha IDs
-  const expectedPeriodId = createSelectedPeriodId(typedCtx.mahadasha.id, typedCtx.antardasha.id);
+  const expectedPeriodId = createSelectedPeriodId(
+    typedCtx.mahadasha.id,
+    typedCtx.antardasha.id,
+    typedCtx.pratyantardashaNode
+      ? encodePratyantardashaId(
+          typedCtx.pratyantardashaNode.planet,
+          typedCtx.pratyantardashaNode.start,
+          typedCtx.pratyantardashaNode.end,
+          typedCtx.antardasha.id
+        )
+      : undefined
+  );
   if (typedCtx.selectedPeriodId !== expectedPeriodId) {
     return false;
   }
@@ -325,9 +356,10 @@ export function validateSelectedPeriodContext(
   }
 
   // Verify level
-  if (typedCtx.level !== 'MD_AD') {
+  if (typedCtx.level !== 'MD_AD' && typedCtx.level !== 'MD_AD_PD') {
     return false;
   }
+  if ((typedCtx.level === 'MD_AD_PD') !== Boolean(typedCtx.pratyantardashaNode)) return false;
 
   // Verify interval semantics
   if (typedCtx.intervalSemantics !== '[start,end)') {

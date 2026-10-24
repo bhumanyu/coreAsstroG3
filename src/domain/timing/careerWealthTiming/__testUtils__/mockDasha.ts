@@ -6,6 +6,10 @@ import type {
   PratyantardashaPeriod
 } from '../../../../engine/dasha/vimshottari';
 import type { ActiveDashaTimingContext } from '../../../../core/analysis';
+import type { ForecastContext } from '../../../../core/analysis';
+import { calculateCurrentTransitPositions } from '../../../../engine/transitEphemeris';
+import { AyanamsaType } from '../../../../types';
+import { DEFAULT_METHODOLOGY } from '../../../../core/analysis/analysisContextFactory';
 import type {
   CareerDashaSynthesis,
   CareerDashaEffect,
@@ -75,6 +79,44 @@ export function createMockActiveDashaTimingContext(options?: MockActiveDashaOpti
     antardashaPlanet: adPlanet,
     pratyantardashaPlanet: pdPlanet
   };
+}
+
+export function createMockForecastContext(
+  horoscope: { readonly birthDetails?: { readonly ayanamsa?: AyanamsaType } },
+  asOf: Date,
+  dasha?: ActiveDashaTimingContext | null
+): ForecastContext {
+  const target = new Date(asOf.getTime());
+  const start = new Date(target.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const endDate = new Date(target.getTime());
+  endDate.setUTCFullYear(endDate.getUTCFullYear() + 20);
+  const end = endDate.toISOString();
+  const activeDasha = {
+    mahadasha: { planet: dasha?.mahadashaPlanet ?? Planet.JUPITER, start, end, antardashas: [] },
+    antardasha: { planet: dasha?.antardashaPlanet ?? Planet.SATURN, start, end, pratyantardashas: [] },
+    pratyantardasha: { planet: dasha?.pratyantardashaPlanet ?? Planet.MERCURY, start, end }
+  } as ActiveDashaState;
+  const asOfIso = target.toISOString();
+  return Object.freeze({
+    asOf: asOfIso,
+    forecastUntil: end,
+    dasha: Object.freeze({
+      activeDasha,
+      horizon: Object.freeze({ start: asOfIso, end }),
+      ids: Object.freeze({
+        mahadashaId: 'test-md',
+        antardashaId: 'test-ad',
+        pratyantardashaId: 'test-pd'
+      })
+    }),
+    transitPositions: Object.freeze(calculateCurrentTransitPositions(
+      target,
+      horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI
+    )),
+    methodology: DEFAULT_METHODOLOGY,
+    engineVersion: 'test-engine',
+    rulesVersion: 'test-rules'
+  });
 }
 
 export function createMockCareerDashaSynthesis(options?: {
@@ -188,4 +230,3 @@ export function createMockCareerDashaSynthesis(options?: {
     summary: `Summary ${combinedEffect}`
   };
 }
-

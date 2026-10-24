@@ -73,7 +73,7 @@ export interface SynthesisEvidenceReference {
   readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
   readonly source?: string;
   readonly ruleId?: string;
-  readonly level?: 'MD' | 'AD';
+  readonly level?: 'MD' | 'AD' | 'PD';
   readonly stage: 'CAREER' | 'WEALTH';
   readonly provenanceStage?: 'CAREER_EXPRESSION' | 'CAREER_QUALIFICATION' | 'CAREER_ACTIVATION' | 'WEALTH_NATAL_PROMISE' | 'WEALTH_DASHA_RULE';
   readonly referenceKind?: 'EVIDENCE' | 'RULE';
@@ -125,7 +125,7 @@ export interface SynthesisCareerSection {
 export interface SynthesisCareerExpressionRow {
   readonly expressionRefKey: string;
   readonly status: TimingActivationEffect;
-  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
   readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
   readonly diagnostics: readonly SynthesisDiagnostic[];
@@ -166,13 +166,13 @@ export interface SynthesisWealthDimensionRow {
   readonly dimension: WealthDimension;
   readonly effect: TimingActivationEffect;
   readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
-  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
   readonly diagnostics: readonly SynthesisDiagnostic[];
   readonly promiseEvidenceIds: readonly string[];
   readonly dashaRuleReferences: readonly {
     readonly ruleId: string;
     readonly source: string;
-    readonly level: 'MD' | 'AD';
+    readonly level: 'MD' | 'AD' | 'PD';
   }[];
   readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
 }
@@ -232,7 +232,7 @@ export interface SelectedPeriodSynthesisValue<TCareerBaseline, TWealthBaseline> 
 function deriveCareerStatus(
   mdEffect: TimingActivationEffect,
   adEffect: TimingActivationEffect,
-  linkedLevels: readonly ('MD' | 'AD')[]
+  linkedLevels: readonly ('MD' | 'AD' | 'PD')[]
 ): TimingActivationEffect {
   if (linkedLevels.length === 0) {
     return 'INSUFFICIENT_DATA';

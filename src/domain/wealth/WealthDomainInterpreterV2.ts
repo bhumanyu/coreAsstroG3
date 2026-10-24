@@ -5,8 +5,7 @@ import {
   type WealthEvidence
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import {
-  mapDashaInterpretationToActiveDashaTimingContext,
-  type ActiveDashaTimingContext
+  createHoroscopeForecastContext
 } from '../../core/analysis';
 import {
   buildDomainInterpretation,
@@ -400,8 +399,13 @@ export function interpretWealthV2(
   };
 
   let wealthTimingSynthesis: WealthTimingSynthesis;
-  if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = mapDashaInterpretationToActiveDashaTimingContext(options.temporalState.dashaInterpretation);
+  const forecastContext = asOfDate && !isNaN(asOfDate.getTime())
+    ? createHoroscopeForecastContext(horoscope, asOfDate)
+    : undefined;
+  const timingUnavailableReason = forecastContext && !forecastContext.ok
+    ? `Timing calculation unavailable: future Dasha context could not be resolved (${forecastContext.error}).`
+    : 'Timing calculation unavailable: asOf date not provided.';
+  if (forecastContext?.ok) {
     const mapActivationToEffect = (eff: string): 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA' => {
       if (eff === 'ACTIVATES' || eff === 'PARTIALLY_ACTIVATES') return 'SUPPORTS';
       if (eff === 'CHALLENGES') return 'CHALLENGES';
@@ -414,7 +418,7 @@ export function interpretWealthV2(
       FORTUNE: mapActivationToEffect(fortuneDasha),
       SPECULATION: mapActivationToEffect(speculationDasha)
     };
-    wealthTimingSynthesis = synthesizeWealthTiming(horoscope, activeDashaState, asOfDate, natalPromises, dashaEffects);
+    wealthTimingSynthesis = synthesizeWealthTiming(horoscope, forecastContext.value, natalPromises, dashaEffects);
   } else {
     wealthTimingSynthesis = Object.freeze({
       dimensions: {
@@ -426,7 +430,7 @@ export function interpretWealthV2(
           overallEffect: 'INSUFFICIENT_DATA',
           confidence: 0.5,
           factors: Object.freeze([]),
-          summary: 'Timing calculation unavailable: asOf date not provided.'
+          summary: timingUnavailableReason
         }),
         GAINS: Object.freeze({
           dimension: 'GAINS',
@@ -436,7 +440,7 @@ export function interpretWealthV2(
           overallEffect: 'INSUFFICIENT_DATA',
           confidence: 0.5,
           factors: Object.freeze([]),
-          summary: 'Timing calculation unavailable: asOf date not provided.'
+          summary: timingUnavailableReason
         }),
         FORTUNE: Object.freeze({
           dimension: 'FORTUNE',
@@ -446,7 +450,7 @@ export function interpretWealthV2(
           overallEffect: 'INSUFFICIENT_DATA',
           confidence: 0.5,
           factors: Object.freeze([]),
-          summary: 'Timing calculation unavailable: asOf date not provided.'
+          summary: timingUnavailableReason
         }),
         SPECULATION: Object.freeze({
           dimension: 'SPECULATION',
@@ -456,10 +460,10 @@ export function interpretWealthV2(
           overallEffect: 'INSUFFICIENT_DATA',
           confidence: 0.5,
           factors: Object.freeze([]),
-          summary: 'Timing calculation unavailable: asOf date not provided.'
+          summary: timingUnavailableReason
         })
       },
-      overallSummary: 'Timing calculation unavailable: asOf date not provided.'
+      overallSummary: timingUnavailableReason
     });
   }
 

@@ -5,8 +5,7 @@ import {
   type ThemeInterpretationEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import {
-  mapDashaInterpretationToActiveDashaTimingContext,
-  type ActiveDashaTimingContext
+  createHoroscopeForecastContext
 } from '../../core/analysis';
 import {
   buildDomainInterpretation,
@@ -650,9 +649,11 @@ export function interpretCareerV2(
   });
 
   let careerTimingSynthesis: CareerTimingSynthesis;
-  if (asOfDate && !isNaN(asOfDate.getTime())) {
-    const activeDashaState = mapDashaInterpretationToActiveDashaTimingContext(options.temporalState.dashaInterpretation);
-    const careerTransitSynthesis = synthesizeCareerTransit(horoscope, activeDashaState, asOfDate, careerDashaSynthesis);
+  const forecastContext = asOfDate && !isNaN(asOfDate.getTime())
+    ? createHoroscopeForecastContext(horoscope, asOfDate)
+    : undefined;
+  if (forecastContext?.ok) {
+    const careerTransitSynthesis = synthesizeCareerTransit(horoscope, forecastContext.value, careerDashaSynthesis);
     careerTimingSynthesis = synthesizeCareerTiming(cw01Result.natalStrength, careerDashaSynthesis, careerTransitSynthesis);
   } else {
     careerTimingSynthesis = Object.freeze({
@@ -662,7 +663,9 @@ export function interpretCareerV2(
       overallEffect: 'INSUFFICIENT_DATA',
       confidence: 0.5,
       factors: Object.freeze([]),
-      summary: 'Timing calculation unavailable: asOf date not provided.'
+      summary: forecastContext && !forecastContext.ok
+        ? `Timing calculation unavailable: future Dasha context could not be resolved (${forecastContext.error}).`
+        : 'Timing calculation unavailable: asOf date not provided.'
     });
   }
 

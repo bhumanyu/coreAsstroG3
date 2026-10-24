@@ -28,6 +28,11 @@ import type {
   DashaCareerHierarchySynthesis,
   DashaWealthHierarchySynthesis
 } from './dashaTimingTypes';
+import {
+  encodeMahadashaId,
+  encodeAntardashaId,
+  encodePratyantardashaId
+} from '../../core/analysis/selectedMdAdPeriod';
 
 /**
  * Input structure for building the Dasha & Timing product view model.
@@ -37,6 +42,19 @@ export interface BuildDashaTimingViewModelInput {
   readonly horoscope?: Horoscope;
   readonly careerTiming?: CareerTimingProduct | DomainInterpretation;
   readonly wealthTiming?: WealthTimingProduct | DomainInterpretation;
+  /** Optional exclusive horizon requested by the caller. */
+  readonly requestedHorizon?: string;
+}
+
+function classifyProductTemporalRelation(
+  start: string,
+  end: string,
+  asOf: string
+): 'PAST' | 'CURRENT' | 'FUTURE' {
+  const target = Date.parse(asOf);
+  if (target < Date.parse(start)) return 'FUTURE';
+  if (target >= Date.parse(end)) return 'PAST';
+  return 'CURRENT';
 }
 
 /**
@@ -53,7 +71,7 @@ export interface BuildDashaTimingViewModelInput {
 export function buildDashaTimingViewModel(
   input: BuildDashaTimingViewModelInput
 ): DashaTimingViewModel {
-  const { temporalState, horoscope, careerTiming, wealthTiming } = input;
+  const { temporalState, horoscope, careerTiming, wealthTiming, requestedHorizon } = input;
   if (!temporalState) {
     throw new Error('buildDashaTimingViewModel: canonical temporalState is required');
   }
@@ -86,22 +104,56 @@ export function buildDashaTimingViewModel(
 
   const hasTimeline = Array.isArray(rawMahadashas) && rawMahadashas.length > 0;
   const periods: readonly DashaTimelinePeriodProduct[] = hasTimeline && rawMahadashas
-    ? rawMahadashas.map((m: VimshottariMahadashaPeriod, idx: number) => ({
-        planet: m.planet,
-        start: m.start,
-        end: m.end,
-        durationYears: m.durationYears,
-        index: idx + 1,
-        antardashas: Array.isArray(m.antardashas)
-          ? m.antardashas.map((a: VimshottariAntardashaPeriod) => ({
-              planet: a.planet,
-              start: a.start,
-              end: a.end,
-              durationYears: a.durationYears
-            }))
-          : undefined
-      }))
+    ? rawMahadashas.map((m: VimshottariMahadashaPeriod, idx: number) => {
+        const mdId = encodeMahadashaId(m.planet, m.start, m.end);
+        return {
+          id: mdId,
+          planet: m.planet,
+          start: m.start,
+          end: m.end,
+          durationYears: m.durationYears,
+          index: idx + 1,
+          antardashas: Array.isArray(m.antardashas)
+            ? m.antardashas.map((a: VimshottariAntardashaPeriod) => {
+                const adId = encodeAntardashaId(a.planet, a.start, a.end, mdId);
+                const adTemporalRelation = classifyProductTemporalRelation(a.start, a.end, asOf);
+                const pratyantardashas = Array.isArray((a as VimshottariAntardashaPeriod & {
+                  pratyantardashas?: readonly { planet: typeof a.planet; start: string; end: string }[];
+                }).pratyantardashas)
+                  ? (a as VimshottariAntardashaPeriod & {
+                      pratyantardashas: readonly { planet: typeof a.planet; start: string; end: string }[];
+                    }).pratyantardashas.map((pd) => ({
+                      id: encodePratyantardashaId(pd.planet, pd.start, pd.end, adId),
+                      planet: pd.planet,
+                      start: pd.start,
+                      end: pd.end,
+                      temporalRelation: classifyProductTemporalRelation(pd.start, pd.end, asOf)
+                    }))
+                  : undefined;
+                return {
+                  id: adId,
+                  planet: a.planet,
+                  start: a.start,
+                  end: a.end,
+                  durationYears: a.durationYears,
+                  temporalRelation: adTemporalRelation,
+                  pratyantardashas
+                };
+              })
+            : undefined
+        };
+      })
     : [];
+
+  const timelineCompleteness = requestedHorizon === undefined
+    ? { status: 'UNREQUESTED' as const }
+    : {
+        status: rawMahadashas && rawMahadashas.length > 0
+          && Date.parse(requestedHorizon) <= Date.parse(rawMahadashas[rawMahadashas.length - 1].end)
+          ? 'COMPLETE' as const
+          : 'TRUNCATED' as const,
+        requestedHorizon
+      };
 
   const timelineAvailability = hasTimeline ? 'AVAILABLE' : 'UNAVAILABLE';
 
@@ -368,7 +420,8 @@ export function buildDashaTimingViewModel(
     timeline: {
       availability: timelineAvailability,
       birthAnchor,
-      periods
+      periods,
+      completeness: timelineCompleteness
     },
     ...(current ? { current } : {}),
     ...(interpretation ? { interpretation } : {}),

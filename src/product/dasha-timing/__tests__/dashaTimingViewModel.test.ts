@@ -49,6 +49,29 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
   const fixedAsOf = '2024-06-01T00:00:00.000Z';
   const outOfRangeAsOf = '2500-01-01T00:00:00.000Z';
 
+  it('projects nested MD/AD/PD IDs and reports requested-horizon truncation', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const temporalState = makeTemporalState(horoscope, fixedAsOf);
+    const viewModel = buildDashaTimingViewModel({
+      temporalState,
+      horoscope,
+      requestedHorizon: outOfRangeAsOf
+    });
+    const md = viewModel.timeline.periods[0];
+    const ad = md.antardashas?.[0];
+    const pd = ad?.pratyantardashas?.[0];
+    expect(md.id).toBeTruthy();
+    expect(ad?.id).toBeTruthy();
+    expect(pd?.id).toBeTruthy();
+    expect(pd?.start).toBeTruthy();
+    expect(pd?.end).toBeTruthy();
+    expect(pd?.temporalRelation).toMatch(/^(PAST|CURRENT|FUTURE)$/);
+    expect(viewModel.timeline.completeness).toEqual({
+      status: 'TRUNCATED',
+      requestedHorizon: outOfRangeAsOf
+    });
+  });
+
   it('Test 1: returns UNAVAILABLE when horoscope has no dasha/vimshottari calculations', () => {
     const emptyHoroscope: Horoscope = {
       birthDetails: CANONICAL_BIRTH_DETAILS,
@@ -554,4 +577,3 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     expect(viewModel.interpretation?.mahadasha?.planet).toBe(Planet.JUPITER);
   });
 });
-

@@ -124,7 +124,7 @@ export interface SelectedExpressionActivation {
    * Which levels this expression is linked to (authoritative).
    * Contains 'MD' if expression includes mdPlanet, 'AD' if includes adPlanet.
    */
-  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
   /**
    * Evidence IDs from C9 Dasha activation for MD level (canonical C9 evidence IDs where level === 'MD', verbatim).
    * These are the evidence IDs from canonicalDashaAnalysis.evidence[].id for the MD level.
@@ -137,6 +137,7 @@ export interface SelectedExpressionActivation {
    * Empty array if expression is not linked to AD.
    */
   readonly adDashaEvidenceIds: readonly string[];
+  readonly pdDashaEvidenceIds?: readonly string[];
   /**
    * Match basis for the expression: 'UNAMBIGUOUS' if matched exactly one QUALIFIED candidate,
    * 'AMBIGUOUS' if matched multiple QUALIFIED candidates. Only applicable when expressionSource === 'CALLER'.
@@ -354,18 +355,22 @@ export function buildSelectedCareerDashaActivation(params: {
   // P1: Collect C9 canonical evidence IDs split by level
   const mdEvidenceIds = new Set<string>();
   const adEvidenceIds = new Set<string>();
+  const pdEvidenceIds = new Set<string>();
   for (const evidence of canonicalDashaAnalysis.evidence) {
     // Only consider MD and AD levels (PD is unavailable by design)
     if (evidence.level === 'MD') {
       mdEvidenceIds.add(evidence.id);
     } else if (evidence.level === 'AD') {
       adEvidenceIds.add(evidence.id);
+    } else if (evidence.level === 'PD') {
+      pdEvidenceIds.add(evidence.id);
     }
   }
 
   // P1: Extract selected MD and AD planets for semantic linkage
   const mdPlanet = mdActivation.planet;
   const adPlanet = adActivation.planet;
+  const pdPlanet = selectedPeriod.pratyantardashaNode?.planet;
 
   // P2: C8 qualification boundary - filter by QUALIFIED status or use proxy
   let qualifiedExpressions: CareerExpression[];
@@ -555,8 +560,9 @@ export function buildSelectedCareerDashaActivation(params: {
     // After qualified-only filtering, if no MD/AD planet remains, the expression does not link
     const isLinkedToMd = mdPlanet && exprPlanets.has(mdPlanet);
     const isLinkedToAd = adPlanet && exprPlanets.has(adPlanet);
+    const isLinkedToPd = pdPlanet && exprPlanets.has(pdPlanet);
 
-    if (isLinkedToMd || isLinkedToAd) {
+    if (isLinkedToMd || isLinkedToAd || isLinkedToPd) {
       // Collect expression evidence IDs (C8 evidence IDs, verbatim)
       const exprEvidenceIds = expr.evidence.map(e => e.id);
       const sortedExprEvidenceIds = Array.from(exprEvidenceIds).sort();
@@ -584,13 +590,14 @@ export function buildSelectedCareerDashaActivation(params: {
       }
 
       // Build linkedLevels array (authoritative for which levels apply)
-      const linkedLevels: ('MD' | 'AD')[] = [];
+      const linkedLevels: ('MD' | 'AD' | 'PD')[] = [];
       if (isLinkedToMd) {
         linkedLevels.push('MD');
       }
       if (isLinkedToAd) {
         linkedLevels.push('AD');
       }
+      if (isLinkedToPd) linkedLevels.push('PD');
 
       // Collect MD evidence IDs only if linked to MD
       const mdDashaEvidenceIds = isLinkedToMd
@@ -600,6 +607,9 @@ export function buildSelectedCareerDashaActivation(params: {
       // Collect AD evidence IDs only if linked to AD
       const adDashaEvidenceIds = isLinkedToAd
         ? Array.from(adEvidenceIds).sort()
+        : [];
+      const pdDashaEvidenceIds = isLinkedToPd
+        ? Array.from(pdEvidenceIds).sort()
         : [];
 
       // Track matched expression evidence IDs
@@ -629,6 +639,7 @@ export function buildSelectedCareerDashaActivation(params: {
         linkedLevels: Object.freeze(linkedLevels),
         mdDashaEvidenceIds: Object.freeze(mdDashaEvidenceIds),
         adDashaEvidenceIds: Object.freeze(adDashaEvidenceIds),
+        pdDashaEvidenceIds: Object.freeze(pdDashaEvidenceIds),
         matchBasis,
         activation: Object.freeze({
           mdActivation,

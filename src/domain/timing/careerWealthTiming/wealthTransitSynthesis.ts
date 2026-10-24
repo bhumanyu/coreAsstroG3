@@ -1,7 +1,7 @@
-import { Planet, AyanamsaType, type Horoscope } from '../../../types';
-import type { ActiveDashaTimingContext } from '../../../core/analysis';
+import { Planet, type Horoscope } from '../../../types';
+import type { ForecastContext } from '../../../core/analysis';
+import { validateForecastContext } from '../../../core/analysis';
 import { calculateTransit } from '../../../engine/transitEngine';
-import { calculateCurrentTransitPositions } from '../../../engine/transitEphemeris';
 import { analyzeTransits } from '../../../engine/transitAnalysis';
 import { correlateDashaAndTransit, type DashaState } from '../../../engine/dashaTransitCorrelation';
 import type { DomainStrength } from '../../interpretation/DomainInterpretationTypes';
@@ -81,14 +81,18 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
  */
 export function synthesizeWealthTiming(
   horoscope: Horoscope,
-  activeDasha: ActiveDashaTimingContext | null,
-  asOf: Date,
+  forecastContext: ForecastContext,
   natalPromises?: Partial<Record<WealthDimension, DomainStrength>>,
   dashaEffects?: Partial<Record<WealthDimension, 'SUPPORTS' | 'CHALLENGES' | 'MIXED' | 'NEUTRAL' | 'INSUFFICIENT_DATA'>>
 ): WealthTimingSynthesis {
-  if (!asOf || !(asOf instanceof Date) || Number.isNaN(asOf.getTime())) {
-    throw new TypeError('Valid asOf Date instance is required.');
-  }
+  validateForecastContext(forecastContext);
+  const asOf = new Date(forecastContext.asOf);
+  const active = forecastContext.dasha.activeDasha;
+  const activeDasha = {
+    mahadashaPlanet: active.mahadasha.planet,
+    antardashaPlanet: active.antardasha.planet,
+    pratyantardashaPlanet: active.pratyantardasha.planet
+  };
 
   const natalMoonLongitude = getNatalMoonLongitude(horoscope);
   const natalAscendantLongitude = getNatalAscendantLongitude(horoscope);
@@ -119,14 +123,11 @@ export function synthesizeWealthTiming(
     });
   }
 
-  const ayanamsa = horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI;
-  const transitPositions = calculateCurrentTransitPositions(asOf, ayanamsa);
-
   const transitInput = {
     at: asOf.toISOString(),
     natalMoonLongitude,
     natalAscendantLongitude,
-    transitPositions
+    transitPositions: forecastContext.transitPositions
   };
 
   const transitAnalysis = calculateTransit(transitInput);

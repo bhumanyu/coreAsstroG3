@@ -8,6 +8,7 @@ import type { DomainEvidence } from '../interpretation/DomainEvidence';
 import type { TimingActivationEffect } from '../interpretation/DomainInterpretationTypes';
 import { validateSelectedPeriodContext } from '../../core/analysis';
 import { WEALTH_DIMENSION_HOUSES, type WealthDimension } from './wealthTypes';
+import { combineTimingHierarchy } from '../../product/life-analysis/dashaHierarchyUtils';
 
 /**
  * Dasha rule reference for selected-period activation.
@@ -15,7 +16,7 @@ import { WEALTH_DIMENSION_HOUSES, type WealthDimension } from './wealthTypes';
  */
 export interface SelectedWealthDashaRuleReference {
   readonly ruleId: string;
-  readonly level: 'MD' | 'AD';
+  readonly level: 'MD' | 'AD' | 'PD';
   readonly source: string;
 }
 
@@ -35,12 +36,16 @@ export interface SelectedWealthDashaRuleReference {
 export interface SelectedWealthDimensionActivation {
   readonly dimension: WealthDimension;
   readonly effect: TimingActivationEffect;
-  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
   readonly md: {
     readonly effect: TimingActivationEffect;
     readonly dashaRuleReferences: readonly SelectedWealthDashaRuleReference[];
   };
   readonly ad: {
+    readonly effect: TimingActivationEffect;
+    readonly dashaRuleReferences: readonly SelectedWealthDashaRuleReference[];
+  };
+  readonly pd?: {
     readonly effect: TimingActivationEffect;
     readonly dashaRuleReferences: readonly SelectedWealthDashaRuleReference[];
   };
@@ -79,7 +84,7 @@ export type EvaluateSelectedWealthPeriodActivationResult =
   | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' };
 
 type DashaEvidenceWithLevel = {
-  readonly level: 'MD' | 'AD';
+  readonly level: 'MD' | 'AD' | 'PD';
   readonly evidence: DashaInterpretationEvidence;
 };
 
@@ -137,7 +142,8 @@ function extractSelectedDashaEvidence(
   const ad = context.antardashaNode as DashaAntardashaInterpretation;
   return Object.freeze([
     ...md.evidence.map((evidence) => ({ level: 'MD' as const, evidence })),
-    ...ad.evidence.map((evidence) => ({ level: 'AD' as const, evidence }))
+    ...ad.evidence.map((evidence) => ({ level: 'AD' as const, evidence })),
+    ...(context.pratyantardashaNode?.evidence ?? []).map((evidence) => ({ level: 'PD' as const, evidence }))
   ]);
 }
 
@@ -240,6 +246,10 @@ function evaluateDimension(
         effect: 'INSUFFICIENT_DATA',
         dashaRuleReferences: Object.freeze([])
       }),
+      pd: Object.freeze({
+        effect: 'INSUFFICIENT_DATA',
+        dashaRuleReferences: Object.freeze([])
+      }),
       promiseEvidenceIds: Object.freeze([]),
       dashaRuleReferences: Object.freeze([]),
       insufficientReason: 'NO_PROMISE_EVIDENCE' as const
@@ -249,6 +259,7 @@ function evaluateDimension(
   // Separate MD and AD evidence
   const mdEvidence = selectedEvidence.filter((item) => item.level === 'MD');
   const adEvidence = selectedEvidence.filter((item) => item.level === 'AD');
+  const pdEvidence = selectedEvidence.filter((item) => item.level === 'PD');
 
   // Find linked evidence per level
   const linkedMd = mdEvidence.filter(({ evidence }) =>
@@ -257,9 +268,12 @@ function evaluateDimension(
   const linkedAd = adEvidence.filter(({ evidence }) =>
     isLinkedToDimension(evidence, dimension, promiseEvidence)
   );
+  const linkedPd = pdEvidence.filter(({ evidence }) =>
+    isLinkedToDimension(evidence, dimension, promiseEvidence)
+  );
 
   // No linkage at any level → INSUFFICIENT_DATA
-  if (linkedMd.length === 0 && linkedAd.length === 0) {
+  if (linkedMd.length === 0 && linkedAd.length === 0 && linkedPd.length === 0) {
     return Object.freeze({
       dimension,
       effect: 'INSUFFICIENT_DATA',
@@ -269,6 +283,10 @@ function evaluateDimension(
         dashaRuleReferences: Object.freeze([])
       }),
       ad: Object.freeze({
+        effect: 'INSUFFICIENT_DATA',
+        dashaRuleReferences: Object.freeze([])
+      }),
+      pd: Object.freeze({
         effect: 'INSUFFICIENT_DATA',
         dashaRuleReferences: Object.freeze([])
       }),
@@ -282,19 +300,22 @@ function evaluateDimension(
   // Resolve effects per level
   const mdEffect = resolveEffect(linkedMd.map((item) => item.evidence));
   const adEffect = resolveEffect(linkedAd.map((item) => item.evidence));
+  const pdEffect = resolveEffect(linkedPd.map((item) => item.evidence));
 
-  // Track which levels are linked
-  const linkedLevels: ('MD' | 'AD')[] = [];
+  const linkedLevels: ('MD' | 'AD' | 'PD')[] = [];
   if (linkedMd.length > 0) linkedLevels.push('MD');
   if (linkedAd.length > 0) linkedLevels.push('AD');
+  if (linkedPd.length > 0) linkedLevels.push('PD');
 
-  // Overall effect: combine per-level effects
-  const allLinked = [...linkedMd, ...linkedAd];
-  const overallEffect = resolveEffect(allLinked.map((item) => item.evidence));
+  const allLinked = [...linkedMd, ...linkedAd, ...linkedPd];
+  const overallEffect = linkedPd.length > 0
+    ? combineTimingHierarchy(mdEffect, adEffect, pdEffect).overallEffect
+    : resolveEffect(allLinked.map((item) => item.evidence));
 
   // Build rule references
   const mdRuleReferences = Object.freeze(linkedMd.map(toRuleReference));
   const adRuleReferences = Object.freeze(linkedAd.map(toRuleReference));
+  const pdRuleReferences = Object.freeze(linkedPd.map(toRuleReference));
   const allRuleReferences = Object.freeze(allLinked.map(toRuleReference));
 
   return Object.freeze({
@@ -308,6 +329,10 @@ function evaluateDimension(
     ad: Object.freeze({
       effect: adEffect,
       dashaRuleReferences: adRuleReferences
+    }),
+    pd: Object.freeze({
+      effect: pdEffect,
+      dashaRuleReferences: pdRuleReferences
     }),
     promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
     dashaRuleReferences: allRuleReferences,

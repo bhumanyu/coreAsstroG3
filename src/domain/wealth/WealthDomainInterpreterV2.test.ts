@@ -79,7 +79,7 @@ import { Planet } from '../../types';
 import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 import { synthesizeWealthTiming } from '../timing/careerWealthTiming';
 import { resolveWealthDimensionTransitEffect } from '../timing/careerWealthTiming/wealthTransitRules';
-import { createMockActiveDashaTimingContext } from '../timing/careerWealthTiming/__testUtils__/mockDasha';
+import { createMockActiveDashaTimingContext, createMockForecastContext } from '../timing/careerWealthTiming/__testUtils__/mockDasha';
 
 describe('WealthDomainInterpreterV2', () => {
   const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
@@ -1573,8 +1573,7 @@ describe('WealthDomainInterpreterV2', () => {
 
     const synthesizedSupport = synthesizeWealthTiming(
       horoscope,
-      supportiveDashaState,
-      asOf,
+      createMockForecastContext(horoscope, asOf, supportiveDashaState),
       { ACCUMULATION: 'STRONG' },
       { ACCUMULATION: 'SUPPORTS' }
     );
@@ -1598,8 +1597,7 @@ describe('WealthDomainInterpreterV2', () => {
 
     const synthesizedChallenge = synthesizeWealthTiming(
       horoscope,
-      supportiveDashaState,
-      asOf,
+      createMockForecastContext(horoscope, asOf, supportiveDashaState),
       { ACCUMULATION: 'STRONG' },
       { ACCUMULATION: 'CHALLENGES' }
     );

@@ -9,7 +9,7 @@ import {
 } from '../../wealth/wealthTypes';
 import { mapWealthDimension } from '../../wealth/wealthEvidenceMapper';
 import { WealthEvidenceFamily } from '../../../engine/themeInterpretation/wealthThemeInterpretationTypes';
-import { createMockActiveDashaTimingContext } from './__testUtils__/mockDasha';
+import { createMockActiveDashaTimingContext, createMockForecastContext } from './__testUtils__/mockDasha';
 
 describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
   const mockHoroscope: Horoscope = {
@@ -57,7 +57,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
 
   it('synthesizes wealth timing independently across 4 dimensions with UNDETERMINED promise when not provided', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = synthesizeWealthTiming(mockHoroscope, null, asOf);
+    const result = synthesizeWealthTiming(mockHoroscope, createMockForecastContext(mockHoroscope, asOf));
 
     expect(result).toBeDefined();
     expect(result.dimensions.ACCUMULATION).toBeDefined();
@@ -72,7 +72,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
 
   it('populates explicit transitingPlanet field on WealthTransitFactor items', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = synthesizeWealthTiming(mockHoroscope, null, asOf);
+    const result = synthesizeWealthTiming(mockHoroscope, createMockForecastContext(mockHoroscope, asOf));
 
     for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {
       const factors = result.dimensions[dim].factors;
@@ -98,7 +98,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
       SPECULATION: 'SUPPORTS' as const
     };
 
-    const result = synthesizeWealthTiming(mockHoroscope, null, asOf, natalPromises, dashaEffects);
+    const result = synthesizeWealthTiming(mockHoroscope, createMockForecastContext(mockHoroscope, asOf), natalPromises, dashaEffects);
 
     // Speculation must yield DOES_NOT_ACTIVATE due to WEAK natal promise ceiling despite supportive Dasha/transit
     expect(result.dimensions.SPECULATION.overallEffect).toBe('DOES_NOT_ACTIVATE');
@@ -131,7 +131,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
       adPlanet: Planet.JUPITER
     });
 
-    const result = synthesizeWealthTiming(mockHoroscope, activeDasha, asOf);
+    const result = synthesizeWealthTiming(mockHoroscope, createMockForecastContext(mockHoroscope, asOf, activeDasha));
     const allFactors = Object.values(result.dimensions).flatMap((d) => d.factors);
     const dashaFactors = allFactors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
 
@@ -156,7 +156,7 @@ describe('CW-03 Wealth Timing Synthesis & Dimension Isolation', () => {
       adPlanet: Planet.JUPITER
     });
 
-    const result = synthesizeWealthTiming(mockHoroscope, activeDasha, asOf);
+    const result = synthesizeWealthTiming(mockHoroscope, createMockForecastContext(mockHoroscope, asOf, activeDasha));
     const allFactors = Object.values(result.dimensions).flatMap((d) => d.factors);
     expect(allFactors.length).toBeGreaterThan(0);
 

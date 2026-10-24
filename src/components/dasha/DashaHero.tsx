@@ -44,6 +44,11 @@ export const DashaHero: React.FC<DashaHeroProps> = ({ hero }) => {
         </div>
       </PageHeading>
 
+      <p className="text-xs text-slate-400" role="note">
+        This is an astrological interpretation, not a guaranteed event. A favorable SPECULATION
+        window is not evidence that risky trading will profit.
+      </p>
+
       {/* Active Periods Overview Card */}
       <div className="bg-slate-900/80 border border-indigo-500/20 rounded-2xl p-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-3">

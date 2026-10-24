@@ -243,13 +243,13 @@ export function projectSelectedPeriodSynthesis(
     readonly dimension: WealthDimension;
     readonly effect: TimingActivationEffect;
     readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
-    readonly linkedLevels: readonly ('MD' | 'AD')[];
+    readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
     readonly diagnostics: readonly { readonly code: string; readonly message: string }[];
     readonly promiseEvidenceIds: readonly string[];
     readonly dashaRuleReferences: readonly {
       readonly ruleId: string;
       readonly source: string;
-      readonly level: 'MD' | 'AD';
+      readonly level: 'MD' | 'AD' | 'PD';
     }[];
   }> = {};
   for (const dim of ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const) {

@@ -3,7 +3,7 @@ import { Planet, Sign, AyanamsaType, type Horoscope } from '../../../types';
 import { synthesizeCareerTransit } from './careerTransitSynthesis';
 import { mapTransitEffect } from './careerTransitRules';
 import type { CareerDashaSynthesis } from '../../career/careerDasha/careerDashaSynthesisTypes';
-import { createMockActiveDashaTimingContext, createMockCareerDashaSynthesis } from './__testUtils__/mockDasha';
+import { createMockActiveDashaTimingContext, createMockCareerDashaSynthesis, createMockForecastContext } from './__testUtils__/mockDasha';
 
 describe('CW-03 Career Transit Synthesis', () => {
   const mockHoroscope: Horoscope = {
@@ -51,7 +51,7 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('runs deterministically given an explicit asOf date', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = synthesizeCareerTransit(mockHoroscope, null, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf));
 
     expect(result).toBeDefined();
     expect(result.transitEffect).toBeDefined();
@@ -107,7 +107,7 @@ describe('CW-03 Career Transit Synthesis', () => {
     });
 
     // Synthesize career transit with the dasha linkage
-    const result = synthesizeCareerTransit(mockHoroscope, null, asOf, mockDashaSynthesis);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf), mockDashaSynthesis);
 
     // Look for Saturn factors
     const saturnFactors = result.factors.filter((f) => f.planet === Planet.SATURN);
@@ -124,7 +124,7 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('generates per-factor Career-Lord transit with accurate house naming for supporting houses (6H, 2H, 11H)', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = synthesizeCareerTransit(mockHoroscope, null, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf));
 
     const lordFactors = result.factors.filter((f) => f.category === 'CAREER_LORD_TRANSIT');
     expect(lordFactors.length).toBeGreaterThan(0);
@@ -139,7 +139,7 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('generates Career Karaka transit factors for natural karakas in angular houses (10H / 1H)', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = synthesizeCareerTransit(mockHoroscope, null, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf));
 
     const karakaFactors = result.factors.filter((f) => f.category === 'CAREER_KARAKA_TRANSIT');
     for (const kf of karakaFactors) {
@@ -151,7 +151,7 @@ describe('CW-03 Career Transit Synthesis', () => {
 
   it('ensures unlinked planets transiting career houses are not automatically classified as SUPPORT or CHALLENGE', () => {
     const asOf = new Date('2026-06-01T00:00:00Z');
-    const result = synthesizeCareerTransit(mockHoroscope, null, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf));
 
     // Neutral house transit factors should have direction NEUTRAL
     const neutralFactors = result.factors.filter((f) => f.direction === 'NEUTRAL');
@@ -171,7 +171,7 @@ describe('CW-03 Career Transit Synthesis', () => {
       pdPlanet: Planet.MERCURY
     });
 
-    const result = synthesizeCareerTransit(mockHoroscope, activeDasha, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf, activeDasha));
 
     // All house transit factors carry transitingPlanet
     const houseFactors = result.factors.filter((f) => f.category === 'CAREER_HOUSE_TRANSIT');
@@ -206,7 +206,7 @@ describe('CW-03 Career Transit Synthesis', () => {
       adPlanet: Planet.JUPITER
     });
 
-    const result = synthesizeCareerTransit(mockHoroscope, activeDasha, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf, activeDasha));
     const dashaFactors = result.factors.filter((f) => f.category === 'DASHA_LORD_TRANSIT');
     expect(dashaFactors.length).toBeGreaterThan(0);
 
@@ -227,7 +227,7 @@ describe('CW-03 Career Transit Synthesis', () => {
       adPlanet: Planet.JUPITER
     });
 
-    const result = synthesizeCareerTransit(mockHoroscope, activeDasha, asOf);
+    const result = synthesizeCareerTransit(mockHoroscope, createMockForecastContext(mockHoroscope, asOf, activeDasha));
     expect(result.factors.length).toBeGreaterThan(0);
 
     for (const factor of result.factors) {

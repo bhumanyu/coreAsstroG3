@@ -8,6 +8,30 @@ export {
   type CreateAnalysisContextInput
 } from './analysisContextFactory';
 export { analysisAsOfDate, analysisAsOfEpochMs } from './analysisTime';
+export {
+  resolveFutureDasha,
+  createForecastContext,
+  validateForecastContext,
+  type FutureDashaResolutionError,
+  type FutureDashaResolutionResult,
+  type ResolvedFutureDasha,
+  type ForecastContext,
+  type ForecastContextResult
+} from './resolveFutureDasha';
+export {
+  buildForecastWindows,
+  type ForecastWindow,
+  type ForecastWindowResult
+} from './forecastWindows';
+export { createHoroscopeForecastContext } from './forecastContextFactory';
+export {
+  buildDomainForecast,
+  type ForecastDomain,
+  type ForecastDirection,
+  type ForecastDomainAssessment,
+  type DomainForecastWindow,
+  type DomainForecastResult
+} from './domainForecast';
 export { type Clock, systemClock } from './Clock';
 export type { AnalysisTemporalState } from './AnalysisTemporalState';
 export { resolveAnalysisTemporalState } from './resolveAnalysisTemporalState';

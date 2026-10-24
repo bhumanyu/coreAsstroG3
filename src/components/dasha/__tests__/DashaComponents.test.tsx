@@ -153,6 +153,12 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(screen.getByText('Saturn')).toBeInTheDocument();
     expect(screen.getByText('Mercury')).toBeInTheDocument();
     expect(screen.getByText('Available')).toBeInTheDocument();
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'astrological interpretation, not a guaranteed event'
+    );
+    expect(screen.getByRole('note')).toHaveTextContent(
+      'favorable SPECULATION window is not evidence that risky trading will profit'
+    );
   });
 
   it('2. DashaHero: renders with null periods and asserts "Unavailable" fallback', () => {

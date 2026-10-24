@@ -376,7 +376,7 @@ export interface ProductSynthesisEvidenceReference {
   readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
   readonly source?: string;
   readonly ruleId?: string;
-  readonly level?: 'MD' | 'AD';
+  readonly level?: 'MD' | 'AD' | 'PD';
   readonly stage: 'CAREER' | 'WEALTH';
   readonly provenanceStage?: 'CAREER_EXPRESSION' | 'CAREER_QUALIFICATION' | 'CAREER_ACTIVATION' | 'WEALTH_NATAL_PROMISE' | 'WEALTH_DASHA_RULE';
   readonly referenceKind?: 'EVIDENCE' | 'RULE';
@@ -427,7 +427,7 @@ export interface ProductSynthesisDiagnostic {
 export interface ProductSynthesisCareerExpressionRow {
   readonly expressionRefKey: string;
   readonly status: ActivationEffect | string;
-  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
   readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
   readonly diagnostics: readonly ProductSynthesisDiagnostic[];
@@ -461,13 +461,13 @@ export interface ProductSynthesisWealthDimensionRow {
   readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
   readonly effect: ActivationEffect | string;
   readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
-  readonly linkedLevels: readonly ('MD' | 'AD')[];
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
   readonly diagnostics: readonly ProductSynthesisDiagnostic[];
   readonly promiseEvidenceIds: readonly string[];
   readonly dashaRuleReferences: readonly {
     readonly ruleId: string;
     readonly source: string;
-    readonly level: 'MD' | 'AD';
+    readonly level: 'MD' | 'AD' | 'PD';
   }[];
   readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
 }

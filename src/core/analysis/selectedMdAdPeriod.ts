@@ -117,7 +117,7 @@ function parseDate(dateStr: string): Date | null {
  * Encode a mahadasha ID.
  * Format: {version}|{system}|md|{planet}|{start}|{end}
  */
-function encodeMahadashaId(
+export function encodeMahadashaId(
   planet: Planet,
   start: string,
   end: string
@@ -130,7 +130,7 @@ function encodeMahadashaId(
  * Format: {version}|{system}|ad|{planet}|{start}|{end}|{urlEncodedParentMahadashaId}
  * Uses encodeURIComponent for browser-safe encoding (replaces Buffer/base64).
  */
-function encodeAntardashaId(
+export function encodeAntardashaId(
   planet: Planet,
   start: string,
   end: string,
@@ -138,6 +138,19 @@ function encodeAntardashaId(
 ): string {
   const encodedParent = encodeURIComponent(parentMahadashaId);
   return `${MD_AD_PERIOD_RESOLVER_VERSION}|${DashaSystem.VIMSHOTTARI}|ad|${planet}|${start}|${end}|${encodedParent}`;
+}
+
+/**
+ * Encode a pratyantardasha ID.
+ * Format mirrors AD IDs and includes the encoded parent antardasha ID.
+ */
+export function encodePratyantardashaId(
+  planet: Planet,
+  start: string,
+  end: string,
+  parentAntardashaId: string
+): string {
+  return `${MD_AD_PERIOD_RESOLVER_VERSION}|${DashaSystem.VIMSHOTTARI}|pd|${planet}|${start}|${end}|${encodeURIComponent(parentAntardashaId)}`;
 }
 
 /**

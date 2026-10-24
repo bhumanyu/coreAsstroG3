@@ -828,7 +828,7 @@ export function buildSelectedCareerDashaCanonicalAnalysis(
     return undefined;
   }
 
-  // Build timing verbatim from selected period (PD explicitly unavailable)
+  // Build timing verbatim from selected period; PD is optional for legacy MD/AD selections.
   const timingOverride: DashaTimingOverride = Object.freeze({
     mdTiming: Object.freeze({
       planet: selectedPeriod.mahadashaNode.planet,
@@ -841,9 +841,9 @@ export function buildSelectedCareerDashaCanonicalAnalysis(
       end: selectedPeriod.antardashaNode.end
     }),
     pdTiming: Object.freeze({
-      planet: undefined,
-      start: undefined,
-      end: undefined
+      planet: selectedPeriod.pratyantardashaNode?.planet,
+      start: selectedPeriod.pratyantardashaNode?.start,
+      end: selectedPeriod.pratyantardashaNode?.end
     })
   });
 

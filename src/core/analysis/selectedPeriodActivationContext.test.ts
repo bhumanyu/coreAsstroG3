@@ -13,7 +13,8 @@ import {
 import {
   resolveSelectedMdAdPeriod,
   MD_AD_PERIOD_RESOLVER_VERSION,
-  listSelectableMdAdPeriods
+  listSelectableMdAdPeriods,
+  encodePratyantardashaId
 } from './selectedMdAdPeriod';
 
 const mockNatal = (planet: Planet): DashaPlanetActivation =>
@@ -94,6 +95,40 @@ function selectionFor(report: DashaInterpretationReport): {
 }
 
 describe('selectedPeriodActivationContext', () => {
+  it('supports an optional PD refinement while preserving MD/AD selection compatibility', () => {
+    const report = makeReport();
+    const selection = selectionFor(report);
+    const node = {
+      planet: Planet.MOON,
+      start: '2021-01-01T00:00:00.000Z',
+      end: '2021-02-01T00:00:00.000Z',
+      natal: mockNatal(Planet.MOON),
+      evidence: [],
+      confidence: 'HIGH'
+    };
+    (report.mahadashas[0].antardashas[0] as any).pratyantardashas = [node];
+    const pratyantardashaId = encodePratyantardashaId(
+      Planet.MOON,
+      node.start,
+      node.end,
+      selection.antardashaId
+    );
+    const result = createSelectedPeriodActivationContext({
+      report,
+      selection: { ...selection, pratyantardashaId },
+      analysisAsOf: '2021-01-15T00:00:00.000Z'
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.level).toBe('MD_AD_PD');
+      expect(result.value.pratyantardashaNode).toBe(node);
+      expect(validateSelectedPeriodContext(result.value)).toBe(true);
+      expect(result.value.selectedPeriodId).toBe(
+        createSelectedPeriodId(selection.mahadashaId, selection.antardashaId, pratyantardashaId)
+      );
+    }
+  });
+
   describe('canonical node references', () => {
     it('returns mahadashaNode and antardashaNode unchanged from report', () => {
       const report = makeReport();

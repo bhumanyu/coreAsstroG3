@@ -25,13 +25,17 @@ export interface DashaBirthAnchorProduct {
 }
 
 export interface DashaTimelineSubPeriodProduct {
+  readonly id?: string;
   readonly planet: Planet;
   readonly start: string;
   readonly end: string;
   readonly durationYears?: number;
+  readonly temporalRelation?: 'PAST' | 'CURRENT' | 'FUTURE';
+  readonly pratyantardashas?: readonly DashaTimelineSubPeriodProduct[];
 }
 
 export interface DashaTimelinePeriodProduct {
+  readonly id?: string;
   readonly planet: Planet;
   readonly start: string;
   readonly end: string;
@@ -40,10 +44,16 @@ export interface DashaTimelinePeriodProduct {
   readonly antardashas?: readonly DashaTimelineSubPeriodProduct[];
 }
 
+export interface DashaTimelineCompleteness {
+  readonly status: 'UNREQUESTED' | 'COMPLETE' | 'TRUNCATED';
+  readonly requestedHorizon?: string;
+}
+
 export interface DashaTimelineProduct {
   readonly availability: TimingAvailabilityStatus | DashaTimingStatus;
   readonly birthAnchor?: DashaBirthAnchorProduct;
   readonly periods: readonly DashaTimelinePeriodProduct[];
+  readonly completeness?: DashaTimelineCompleteness;
 }
 
 export interface DashaCurrentPeriodProduct {
