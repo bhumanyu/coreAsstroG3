@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { calculateVimshottari } from '../../engine/dasha/vimshottari';
 import { calculateCurrentTransitPositions } from '../../engine/transitEphemeris';
-import { Planet, AyanamsaType } from '../../types';
+import { Planet, AyanamsaType, ZodiacType } from '../../types';
+import { getAyanamsaOffset, normalizeDegree } from '../../engine/astroEngine';
+import type { TransitSample } from './forecastWindows';
 import { DEFAULT_METHODOLOGY } from './analysisContextFactory';
 import { createForecastContext, resolveFutureDasha, validateForecastContext } from './resolveFutureDasha';
 import { buildForecastWindows, mergeAdjacentForecastWindows } from './forecastWindows';
@@ -15,6 +17,12 @@ const timeline = calculateVimshottari({
 const mockHoroscope = {
   birthDetails: { dateTimeStr: timeline.birthDateTime, latitude: 0, longitude: 0, timeZone: 'UTC', ayanamsa: AyanamsaType.LAHIRI }
 } as any;
+
+const transitCalculationContext = {
+  ayanamsa: AyanamsaType.LAHIRI,
+  coordinateConvention: ZodiacType.SIDEREAL,
+  engineVersion: 'test-engine-v1'
+} as const;
 
 describe('future Dasha resolution', () => {
   it('resolves MD, AD, and PD with half-open boundary ownership', () => {
@@ -219,13 +227,15 @@ describe('future Dasha resolution', () => {
       precision: 'samples at each window start',
       ephemerisVersion: 'test-ephemeris-v1',
       maxSampleGapMs: 1,
+      calculationContext: transitCalculationContext,
       getBoundaryInstants: () => [transitBoundary],
-      sampleWindow: (window) => ({
+      sampleWindow: (window, calculationContext) => ({
         precision: 'samples at each window start',
         ephemerisVersion: 'test-ephemeris-v1',
         samples: [{
           at: window.start,
-          positions: calculateCurrentTransitPositions(new Date(window.start), AyanamsaType.LAHIRI)
+          positions: calculateCurrentTransitPositions(new Date(window.start), AyanamsaType.LAHIRI),
+          calculationContext
         }]
       })
     });
@@ -267,13 +277,15 @@ describe('future Dasha resolution', () => {
         precision: 'samples spaced no more than one day apart',
         ephemerisVersion: 'test-ephemeris-v1',
         maxSampleGapMs: Math.max(sampleTimes[1] - sampleTimes[0], sampleTimes[2] - sampleTimes[1]),
+        calculationContext: transitCalculationContext,
         getBoundaryInstants: () => [],
-        sampleWindow: (window) => ({
+        sampleWindow: (window, calculationContext) => ({
           precision: 'samples spaced no more than one day apart',
           ephemerisVersion: 'test-ephemeris-v1',
           samples: sampleTimes.map((time) => ({
             at: new Date(time).toISOString(),
-            positions
+            positions,
+            calculationContext
           }))
         })
       }
@@ -310,13 +322,15 @@ describe('future Dasha resolution', () => {
         precision: 'sampling policy checks',
         ephemerisVersion: 'test-ephemeris-v1',
         maxSampleGapMs,
+        calculationContext: transitCalculationContext,
         getBoundaryInstants: () => [],
-        sampleWindow: () => ({
+        sampleWindow: (_window, calculationContext) => ({
           precision: 'sampling policy checks',
           ephemerisVersion: 'test-ephemeris-v1',
           samples: times.map((time) => ({
             at: new Date(time).toISOString(),
-            positions
+            positions,
+            calculationContext
           }))
         })
       }
@@ -333,6 +347,114 @@ describe('future Dasha resolution', () => {
     const tooSparse = buildWithTimes([startMs, endMs - 1], Math.floor((endMs - startMs) / 2));
     expect(tooSparse.ok).toBe(true);
     if (tooSparse.ok) expect(tooSparse.windows[0].transitData?.coverage).toBe('PARTIAL');
+  });
+
+  it('validates declared context and preserves each authoritative sample instant', () => {
+    const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+    const times = transitSampleTimes(pd.start, pd.end);
+    const positions = calculateCurrentTransitPositions(new Date(pd.start), AyanamsaType.LAHIRI);
+    const instants = times.map((time) => new Date(time).toISOString());
+    instants[0] = instants[0].replace('.000Z', '+00:00');
+    const valid = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      calculatedAt: at,
+      positions,
+      calculationContext: transitCalculationContext
+    })));
+    expect(valid.ok).toBe(true);
+    if (valid.ok) {
+      expect(valid.windows[0].transitData?.samples.map((sample) => sample.at)).toEqual(instants);
+      expect(valid.windows[0].transitData?.samples[0].calculatedAt).toBe(instants[0]);
+    }
+
+    const mismatchedInstant = buildTransitValidationWindow(instants.map((at, index) => ({
+      at,
+      calculatedAt: index === 0 ? new Date(Date.parse(at) + 1).toISOString() : at,
+      positions
+    })));
+    expect(mismatchedInstant).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+    const mismatchedMethodology = buildTransitValidationWindow(instants.map((at, index) => ({
+      at,
+      positions,
+      calculationContext: index === 0
+        ? { ...transitCalculationContext, engineVersion: 'different-engine' }
+        : transitCalculationContext
+    })));
+    expect(mismatchedMethodology).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+  });
+
+  it('validates ayanamsa relationships and sign longitude using circular angular distance', () => {
+    const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+    const times = transitSampleTimes(pd.start, pd.end);
+    const basePositions = calculateCurrentTransitPositions(new Date(pd.start), AyanamsaType.LAHIRI);
+    const offsetForAt = (at: string) => getAyanamsaOffset(AyanamsaType.LAHIRI, new Date(at));
+    const positionsAt = (
+      siderealLongitude: number,
+      tropicalLongitude: number,
+      signLongitude = siderealLongitude % 30
+    ) => ({
+      ...basePositions,
+      [Planet.SUN]: {
+        ...basePositions[Planet.SUN],
+        longitude: siderealLongitude,
+        siderealLongitude,
+        eclipticLongitude: tropicalLongitude,
+        signLongitude
+      }
+    });
+    const makePositionSamples = (
+      createPositions: (at: string, index: number) => typeof basePositions
+    ) => times.map((time, index) => {
+      const at = new Date(time).toISOString();
+      return {
+        at,
+        positions: createPositions(at, index),
+        calculationContext: transitCalculationContext
+      };
+    });
+
+    const consistentNearZero = buildTransitValidationWindow(makePositionSamples((at) => {
+      const siderealLongitude = 0.003;
+      return positionsAt(
+        siderealLongitude,
+        normalizeDegree(siderealLongitude + offsetForAt(at))
+      );
+    }));
+    expect(consistentNearZero.ok).toBe(true);
+
+    const inconsistentAyanamsa = buildTransitValidationWindow(makePositionSamples((at) => {
+      const siderealLongitude = 0.003;
+      return positionsAt(
+        siderealLongitude,
+        normalizeDegree(siderealLongitude + offsetForAt(at) + 0.02)
+      );
+    }));
+    expect(inconsistentAyanamsa).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+    const signBoundaryInsideTolerance = buildTransitValidationWindow(makePositionSamples((at) =>
+      positionsAt(29.999, normalizeDegree(29.999 + offsetForAt(at)), 0.001)
+    ));
+    expect(signBoundaryInsideTolerance.ok).toBe(true);
+
+    const signBoundaryOutsideTolerance = buildTransitValidationWindow(makePositionSamples((at) =>
+      positionsAt(29.999, normalizeDegree(29.999 + offsetForAt(at)), 0.02)
+    ));
+    expect(signBoundaryOutsideTolerance).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+    const ayanamsaToleranceInsideAcrossZero = buildTransitValidationWindow(makePositionSamples((at) => {
+      const expectedSidereal = 359.998;
+      const tropical = normalizeDegree(expectedSidereal + offsetForAt(at));
+      return positionsAt(normalizeDegree(expectedSidereal + 0.005), tropical);
+    }));
+    expect(ayanamsaToleranceInsideAcrossZero.ok).toBe(true);
+
+    const ayanamsaToleranceOutsideAcrossZero = buildTransitValidationWindow(makePositionSamples((at) => {
+      const expectedSidereal = 359.998;
+      const tropical = normalizeDegree(expectedSidereal + offsetForAt(at));
+      return positionsAt(normalizeDegree(expectedSidereal + 0.02), tropical);
+    }));
+    expect(ayanamsaToleranceOutsideAcrossZero).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
   });
 
   it('retains only outer-edge boundary reasons when adjacent identical windows merge', () => {
@@ -354,3 +476,29 @@ describe('future Dasha resolution', () => {
       .toEqual(['REQUEST_START', 'REQUEST_END']);
   });
 });
+
+function transitSampleTimes(start: string, end: string): number[] {
+  const startMs = Date.parse(start);
+  const endMs = Date.parse(end);
+  return [startMs, Math.floor((startMs + endMs) / 2), endMs - 1];
+}
+
+function buildTransitValidationWindow(samples: readonly TransitSample[]) {
+  const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+  const times = transitSampleTimes(pd.start, pd.end);
+  return buildForecastWindows(timeline, pd.start, pd.end, {
+    precision: 'context and angular consistency validation',
+    ephemerisVersion: 'test-ephemeris-v1',
+    maxSampleGapMs: Math.max(times[1] - times[0], times[2] - times[1]),
+    calculationContext: transitCalculationContext,
+    getBoundaryInstants: () => [],
+    sampleWindow: (_window, calculationContext) => ({
+      precision: 'context and angular consistency validation',
+      ephemerisVersion: 'test-ephemeris-v1',
+      samples: samples.map((sample) => ({
+        ...sample,
+        calculationContext: sample.calculationContext ?? calculationContext
+      }))
+    })
+  });
+}

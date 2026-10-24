@@ -1,7 +1,16 @@
 import type { VimshottariTimeline } from '../../engine/dasha/vimshottari';
-import { Planet } from '../../types';
+import { AyanamsaType, Planet, ZodiacType } from '../../types';
 import type { PlanetPosition } from '../../types';
 import { resolveFutureDasha } from './resolveFutureDasha';
+import { getAyanamsaOffset } from '../../engine/astroEngine';
+
+export const TRANSIT_LONGITUDE_TOLERANCE_DEG = 0.01;
+
+export interface TransitCalculationContext {
+  readonly ayanamsa: AyanamsaType;
+  readonly coordinateConvention: ZodiacType;
+  readonly engineVersion: string;
+}
 
 export type ForecastBoundaryReason =
   | 'REQUEST_START'
@@ -14,6 +23,10 @@ export type ForecastBoundaryReason =
 export interface TransitSample {
   readonly at: string;
   readonly positions: Readonly<Record<Planet, PlanetPosition>>;
+  /** Optional provider echo; if supplied, must match `at` exactly. */
+  readonly calculatedAt?: string;
+  /** Optional sample-level echo of provider context; if supplied, must match exactly. */
+  readonly calculationContext?: TransitCalculationContext;
 }
 
 export interface TransitWindowSampleData {
@@ -39,8 +52,13 @@ export interface TransitWindowProvider {
   readonly ephemerisVersion: string;
   /** Largest permitted time gap between samples and between samples and a window edge. */
   readonly maxSampleGapMs: number;
+  /** Authoritative methodology applied to all samples from this provider. */
+  readonly calculationContext: TransitCalculationContext;
   getBoundaryInstants(start: string, end: string): readonly (Date | string)[];
-  sampleWindow(window: Pick<ForecastWindow, 'start' | 'end'>): TransitWindowSampleData;
+  sampleWindow(
+    window: Pick<ForecastWindow, 'start' | 'end'>,
+    calculationContext: TransitCalculationContext
+  ): TransitWindowSampleData;
 }
 
 export interface ForecastWindow {
@@ -95,7 +113,8 @@ export function buildForecastWindows(
       || typeof transitWindowProvider.ephemerisVersion !== 'string'
       || !transitWindowProvider.ephemerisVersion.trim()
       || !Number.isFinite(transitWindowProvider.maxSampleGapMs)
-      || transitWindowProvider.maxSampleGapMs <= 0) {
+      || transitWindowProvider.maxSampleGapMs <= 0
+      || !isValidCalculationContext(transitWindowProvider.calculationContext)) {
       return { ok: false, error: 'INVALID_TRANSIT_WINDOW' };
     }
     const suppliedBoundaries = transitWindowProvider.getBoundaryInstants(
@@ -146,7 +165,10 @@ export function buildForecastWindows(
     let transitData: TransitWindowData | undefined;
     if (transitWindowProvider) {
       transitData = normalizeTransitWindowData(
-        transitWindowProvider.sampleWindow({ start: windowStartIso, end: windowEndIso }),
+        transitWindowProvider.sampleWindow(
+          { start: windowStartIso, end: windowEndIso },
+          transitWindowProvider.calculationContext
+        ),
         windowStart,
         windowEnd,
         transitWindowProvider
@@ -321,7 +343,10 @@ function normalizeTransitWindowData(
   for (const sample of data.samples) {
     const at = sample && typeof sample.at === 'string' ? parseIsoInstant(sample.at) : undefined;
     if (at === undefined || at < start || at >= end || at <= previousAt
-      || !isValidTransitPositions(sample.positions)) {
+      || (sample.calculatedAt !== undefined && sample.calculatedAt !== sample.at)
+      || (sample.calculationContext !== undefined
+        && !contextsMatch(sample.calculationContext, provider.calculationContext))
+      || !isValidTransitPositions(sample.positions, provider.calculationContext, new Date(at))) {
       return undefined;
     }
     previousAt = at;
@@ -337,6 +362,7 @@ function normalizeTransitWindowData(
     : 'PARTIAL';
   return Object.freeze({
     samples: Object.freeze(data.samples.map((sample) => Object.freeze({
+      ...sample,
       at: sample.at,
       positions: Object.freeze({ ...sample.positions })
     }))),
@@ -347,7 +373,9 @@ function normalizeTransitWindowData(
 }
 
 function isValidTransitPositions(
-  positions: Readonly<Record<Planet, PlanetPosition>> | undefined
+  positions: Readonly<Record<Planet, PlanetPosition>> | undefined,
+  context: TransitCalculationContext,
+  at: Date
 ): positions is Readonly<Record<Planet, PlanetPosition>> {
   if (!positions || typeof positions !== 'object') return false;
   if (!Object.values(Planet).every((planet) => Object.prototype.hasOwnProperty.call(positions, planet))) {
@@ -375,7 +403,58 @@ function isValidTransitPositions(
       || !Number.isInteger(position.house) || position.house < 1 || position.house > 12) {
       return false;
     }
-    return position.eclipticLatitude === undefined
-      || (position.eclipticLatitude >= -90 && position.eclipticLatitude <= 90);
+    if (position.eclipticLatitude !== undefined
+      && (position.eclipticLatitude < -90 || position.eclipticLatitude > 90)) {
+      return false;
+    }
+    const signLongitudeSource = position.siderealLongitude ?? position.longitude;
+    if (angularDeltaDeg(position.signLongitude, signLongitudeSource % 30, 30)
+      > TRANSIT_LONGITUDE_TOLERANCE_DEG) {
+      return false;
+    }
+    const eclipticLongitude = position.eclipticLongitude;
+    const siderealLongitude = position.siderealLongitude;
+    if (eclipticLongitude !== undefined && siderealLongitude !== undefined) {
+      // The current engine emits identical longitude aliases even with a declared
+      // ayanamsa; retain compatibility only when every supplied alias agrees.
+      const fieldsIdentical = [position.longitude, eclipticLongitude, siderealLongitude]
+        .every((longitude) => angularDeltaDeg(longitude, position.longitude)
+          <= TRANSIT_LONGITUDE_TOLERANCE_DEG);
+      const expectedSidereal = normalizeDegree(
+        eclipticLongitude - getAyanamsaOffset(context.ayanamsa, at)
+      );
+      if (!fieldsIdentical
+        && angularDeltaDeg(siderealLongitude, expectedSidereal) > TRANSIT_LONGITUDE_TOLERANCE_DEG) {
+        return false;
+      }
+    }
+    return true;
   });
+}
+
+function isValidCalculationContext(context: TransitCalculationContext | undefined): context is TransitCalculationContext {
+  return Boolean(context
+    && Object.values(AyanamsaType).includes(context.ayanamsa)
+    && Object.values(ZodiacType).includes(context.coordinateConvention)
+    && typeof context.engineVersion === 'string'
+    && context.engineVersion.trim().length > 0);
+}
+
+function contextsMatch(
+  actual: TransitCalculationContext,
+  expected: TransitCalculationContext
+): boolean {
+  return isValidCalculationContext(actual)
+    && actual.ayanamsa === expected.ayanamsa
+    && actual.coordinateConvention === expected.coordinateConvention
+    && actual.engineVersion === expected.engineVersion;
+}
+
+function normalizeDegree(degrees: number): number {
+  return ((degrees % 360) + 360) % 360;
+}
+
+function angularDeltaDeg(first: number, second: number, period = 360): number {
+  const delta = Math.abs(first - second) % period;
+  return Math.min(delta, period - delta);
 }
