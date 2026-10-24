@@ -10,6 +10,11 @@ export interface TransitCalculationContext {
   readonly ayanamsa: AyanamsaType;
   readonly coordinateConvention: ZodiacType;
   readonly engineVersion: string;
+  /**
+   * Explicit compatibility opt-in for producers that emit identical longitude
+   * aliases despite a non-zero ayanamsa. Omitted/false means strict validation.
+   */
+  readonly allowIdenticalLongitudeAliases?: boolean;
 }
 
 export type ForecastBoundaryReason =
@@ -54,6 +59,12 @@ export interface TransitWindowProvider {
   readonly maxSampleGapMs: number;
   /** Authoritative methodology applied to all samples from this provider. */
   readonly calculationContext: TransitCalculationContext;
+  /**
+   * When true, every sample must echo its instant and calculation context.
+   * Omitted/false preserves compatibility: supplied echoes are validated, but
+   * omitted echoes do not prove the sample used this context or exact instant.
+   */
+  readonly requireSampleContextEcho?: boolean;
   getBoundaryInstants(start: string, end: string): readonly (Date | string)[];
   sampleWindow(
     window: Pick<ForecastWindow, 'start' | 'end'>,
@@ -114,7 +125,9 @@ export function buildForecastWindows(
       || !transitWindowProvider.ephemerisVersion.trim()
       || !Number.isFinite(transitWindowProvider.maxSampleGapMs)
       || transitWindowProvider.maxSampleGapMs <= 0
-      || !isValidCalculationContext(transitWindowProvider.calculationContext)) {
+      || !isValidCalculationContext(transitWindowProvider.calculationContext)
+      || (transitWindowProvider.requireSampleContextEcho !== undefined
+        && typeof transitWindowProvider.requireSampleContextEcho !== 'boolean')) {
       return { ok: false, error: 'INVALID_TRANSIT_WINDOW' };
     }
     const suppliedBoundaries = transitWindowProvider.getBoundaryInstants(
@@ -343,6 +356,8 @@ function normalizeTransitWindowData(
   for (const sample of data.samples) {
     const at = sample && typeof sample.at === 'string' ? parseIsoInstant(sample.at) : undefined;
     if (at === undefined || at < start || at >= end || at <= previousAt
+      || (provider.requireSampleContextEcho === true
+        && (sample.calculatedAt === undefined || sample.calculationContext === undefined))
       || (sample.calculatedAt !== undefined && sample.calculatedAt !== sample.at)
       || (sample.calculationContext !== undefined
         && !contextsMatch(sample.calculationContext, provider.calculationContext))
@@ -372,6 +387,21 @@ function normalizeTransitWindowData(
   });
 }
 
+/*
+ * PlanetPosition names are not fully semantic across producers: astroEngine's
+ * `generatePlanetaryPositions` currently assigns the computed SIDEREAL longitude
+ * to `longitude`, `eclipticLongitude`, and `siderealLongitude`, and transitEphemeris
+ * delegates directly to that producer. transitEngine consumes these positions but
+ * does not define another coordinate representation. Strict context validation
+ * therefore treats the ecliptic/sidereal pair as tropical/sidereal respectively,
+ * and permits identical aliases only through the explicit
+ * `allowIdenticalLongitudeAliases` opt-in.
+ *
+ * For sign checks, `signLongitude` follows the declared coordinate convention.
+ * If that convention's field is absent (`eclipticLongitude` for tropical or
+ * `siderealLongitude` for sidereal), `longitude` is assumed to use that declared
+ * convention; this fallback is explicit compatibility for the base Position type.
+ */
 function isValidTransitPositions(
   positions: Readonly<Record<Planet, PlanetPosition>> | undefined,
   context: TransitCalculationContext,
@@ -417,15 +447,14 @@ function isValidTransitPositions(
     const eclipticLongitude = position.eclipticLongitude;
     const siderealLongitude = position.siderealLongitude;
     if (eclipticLongitude !== undefined && siderealLongitude !== undefined) {
-      // The current engine emits identical longitude aliases even with a declared
-      // ayanamsa; retain compatibility only when every supplied alias agrees.
       const fieldsIdentical = [position.longitude, eclipticLongitude, siderealLongitude]
         .every((longitude) => angularDeltaDeg(longitude, position.longitude)
           <= TRANSIT_LONGITUDE_TOLERANCE_DEG);
       const expectedSidereal = normalizeDegree(
         eclipticLongitude - getAyanamsaOffset(context.ayanamsa, at)
       );
-      if (!fieldsIdentical
+      const explicitlyAllowedLegacyAliases = context.allowIdenticalLongitudeAliases === true && fieldsIdentical;
+      if (!explicitlyAllowedLegacyAliases
         && angularDeltaDeg(siderealLongitude, expectedSidereal) > TRANSIT_LONGITUDE_TOLERANCE_DEG) {
         return false;
       }
@@ -439,7 +468,9 @@ function isValidCalculationContext(context: TransitCalculationContext | undefine
     && Object.values(AyanamsaType).includes(context.ayanamsa)
     && Object.values(ZodiacType).includes(context.coordinateConvention)
     && typeof context.engineVersion === 'string'
-    && context.engineVersion.trim().length > 0);
+    && context.engineVersion.trim().length > 0
+    && (context.allowIdenticalLongitudeAliases === undefined
+      || typeof context.allowIdenticalLongitudeAliases === 'boolean'));
 }
 
 function contextsMatch(
@@ -449,7 +480,8 @@ function contextsMatch(
   return isValidCalculationContext(actual)
     && actual.ayanamsa === expected.ayanamsa
     && actual.coordinateConvention === expected.coordinateConvention
-    && actual.engineVersion === expected.engineVersion;
+    && actual.engineVersion === expected.engineVersion
+    && (actual.allowIdenticalLongitudeAliases ?? false) === (expected.allowIdenticalLongitudeAliases ?? false);
 }
 
 function normalizeDegree(degrees: number): number {

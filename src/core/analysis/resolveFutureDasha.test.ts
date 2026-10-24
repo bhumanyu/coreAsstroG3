@@ -3,7 +3,7 @@ import { calculateVimshottari } from '../../engine/dasha/vimshottari';
 import { calculateCurrentTransitPositions } from '../../engine/transitEphemeris';
 import { Planet, AyanamsaType, ZodiacType } from '../../types';
 import { getAyanamsaOffset, normalizeDegree } from '../../engine/astroEngine';
-import type { TransitSample } from './forecastWindows';
+import type { TransitCalculationContext, TransitSample } from './forecastWindows';
 import { DEFAULT_METHODOLOGY } from './analysisContextFactory';
 import { createForecastContext, resolveFutureDasha, validateForecastContext } from './resolveFutureDasha';
 import { buildForecastWindows, mergeAdjacentForecastWindows } from './forecastWindows';
@@ -19,6 +19,12 @@ const mockHoroscope = {
 } as any;
 
 const transitCalculationContext = {
+  ayanamsa: AyanamsaType.LAHIRI,
+  coordinateConvention: ZodiacType.SIDEREAL,
+  engineVersion: 'test-engine-v1',
+  allowIdenticalLongitudeAliases: true
+} as const;
+const strictTransitCalculationContext = {
   ayanamsa: AyanamsaType.LAHIRI,
   coordinateConvention: ZodiacType.SIDEREAL,
   engineVersion: 'test-engine-v1'
@@ -351,41 +357,182 @@ describe('future Dasha resolution', () => {
 
   it('validates declared context and preserves each authoritative sample instant', () => {
     const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
-    const times = transitSampleTimes(pd.start, pd.end);
-    const positions = calculateCurrentTransitPositions(new Date(pd.start), AyanamsaType.LAHIRI);
-    const instants = times.map((time) => new Date(time).toISOString());
-    instants[0] = instants[0].replace('.000Z', '+00:00');
-    const valid = buildTransitValidationWindow(instants.map((at) => ({
+    const instants = transitSampleTimes(pd.start, pd.end).map((time) => new Date(time).toISOString());
+    const positions = createPositionsForContext(instants[0], strictTransitCalculationContext);
+    const strictSamples = () => instants.map((at) => ({
       at,
       calculatedAt: at,
       positions,
-      calculationContext: transitCalculationContext
-    })));
+      calculationContext: strictTransitCalculationContext
+    }));
+    const strict = (samples: readonly TransitSample[]) =>
+      buildTransitValidationWindow(samples, strictTransitCalculationContext, true);
+
+    const valid = strict(strictSamples());
     expect(valid.ok).toBe(true);
     if (valid.ok) {
       expect(valid.windows[0].transitData?.samples.map((sample) => sample.at)).toEqual(instants);
       expect(valid.windows[0].transitData?.samples[0].calculatedAt).toBe(instants[0]);
     }
 
-    const mismatchedInstant = buildTransitValidationWindow(instants.map((at, index) => ({
-      at,
-      calculatedAt: index === 0 ? new Date(Date.parse(at) + 1).toISOString() : at,
-      positions
-    })));
-    expect(mismatchedInstant).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+    const missingCalculatedAt = strict(strictSamples().map(({ calculatedAt: _calculatedAt, ...sample }, index) =>
+      index === 0 ? sample : { ...sample, calculatedAt: instants[index] }
+    ));
+    expect(missingCalculatedAt).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+    const missingCalculationContext = strict(strictSamples().map(({ calculationContext: _context, ...sample }, index) =>
+      index === 0 ? sample : { ...sample, calculationContext: strictTransitCalculationContext }
+    ));
+    expect(missingCalculationContext).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+    const wrongTimestamp = strict(strictSamples().map((sample, index) => index === 0
+      ? { ...sample, calculatedAt: new Date(Date.parse(sample.at) + 1).toISOString() }
+      : sample));
+    expect(wrongTimestamp).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
 
     const mismatchedContexts = [
-      { ...transitCalculationContext, engineVersion: 'different-engine' },
-      { ...transitCalculationContext, ayanamsa: AyanamsaType.RAMAN },
-      { ...transitCalculationContext, coordinateConvention: ZodiacType.TROPICAL }
+      { ...strictTransitCalculationContext, engineVersion: 'different-engine' },
+      { ...strictTransitCalculationContext, ayanamsa: AyanamsaType.RAMAN },
+      { ...strictTransitCalculationContext, coordinateConvention: ZodiacType.TROPICAL }
     ];
     for (const mismatchedContext of mismatchedContexts) {
-      const mismatchedMethodology = buildTransitValidationWindow(instants.map((at, index) => ({
+      const mismatch = strict(strictSamples().map((sample, index) => index === 0
+        ? { ...sample, calculationContext: mismatchedContext }
+        : sample));
+      expect(mismatch).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+    }
+
+    const compatibilitySamples = strictSamples().map(({ calculatedAt: _calculatedAt, calculationContext: _context, ...sample }) => sample);
+    const compatibility = buildTransitValidationWindow(compatibilitySamples, strictTransitCalculationContext);
+    expect(compatibility.ok).toBe(true);
+    const compatibilityMismatch = buildTransitValidationWindow([
+      { ...compatibilitySamples[0], calculatedAt: new Date(Date.parse(instants[0]) + 1).toISOString() },
+      ...compatibilitySamples.slice(1)
+    ], strictTransitCalculationContext);
+    expect(compatibilityMismatch).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+  });
+
+  it('validates the strict sidereal/ecliptic relationship and explicitly gates legacy aliases', () => {
+    const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+    const times = transitSampleTimes(pd.start, pd.end);
+    const instants = times.map((time) => new Date(time).toISOString());
+    const consistent = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      positions: createPositionsForContext(at, strictTransitCalculationContext),
+      calculationContext: strictTransitCalculationContext
+    })), strictTransitCalculationContext);
+    expect(consistent.ok).toBe(true);
+
+    const inconsistent = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      positions: createPositionsForContext(at, strictTransitCalculationContext, (planet, position) =>
+        planet === Planet.SUN ? (() => {
+          const siderealLongitude = normalizeDegree(
+            (position.siderealLongitude ?? position.longitude) + 0.02
+          );
+          return {
+            ...position,
+            longitude: siderealLongitude,
+            siderealLongitude,
+            signLongitude: siderealLongitude % 30
+          };
+        })() : position
+      ),
+      calculationContext: strictTransitCalculationContext
+    })), strictTransitCalculationContext);
+    expect(inconsistent).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+    const legacyPositions = calculateCurrentTransitPositions(new Date(instants[0]), AyanamsaType.LAHIRI);
+    const strictLegacy = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      positions: legacyPositions,
+      calculationContext: strictTransitCalculationContext
+    })), strictTransitCalculationContext);
+    expect(strictLegacy).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+    const explicitlyAllowedLegacy = buildTransitValidationWindow(instants.map((at) => ({
+      at,
+      positions: legacyPositions,
+      calculationContext: transitCalculationContext
+    })), transitCalculationContext);
+    expect(explicitlyAllowedLegacy.ok).toBe(true);
+  });
+
+  it('checks coordinate-specific sign longitude and documents the longitude fallback', () => {
+    for (const coordinateConvention of [ZodiacType.TROPICAL, ZodiacType.SIDEREAL]) {
+      const context = { ...strictTransitCalculationContext, coordinateConvention };
+      const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+      const instants = transitSampleTimes(pd.start, pd.end).map((time) => new Date(time).toISOString());
+      const buildWithSun = (alter: (position: ReturnType<typeof createPositionsForContext>[Planet.SUN]) =>
+        ReturnType<typeof createPositionsForContext>[Planet.SUN]) =>
+        buildTransitValidationWindow(instants.map((at) => ({
+          at,
+          positions: createPositionsForContext(at, context, (planet, position) =>
+            planet === Planet.SUN ? alter(position) : position
+          ),
+          calculationContext: context
+        })), context);
+
+      expect(buildWithSun((position) => position).ok).toBe(true);
+      expect(buildWithSun((position) => ({
+        ...position,
+        signLongitude: normalizeDegree(position.signLongitude + 0.02) % 30
+      }))).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+
+      const fieldName = coordinateConvention === ZodiacType.TROPICAL
+        ? 'eclipticLongitude'
+        : 'siderealLongitude';
+      const absentField = buildWithSun((position) => {
+        const { [fieldName]: _conventionField, ...withoutConventionField } = position;
+        return withoutConventionField;
+      });
+      expect(absentField.ok).toBe(true);
+
+      const wrongFallback = buildWithSun((position) => {
+        const { [fieldName]: _conventionField, ...withoutConventionField } = position;
+        return {
+          ...withoutConventionField,
+          longitude: normalizeDegree(position.longitude + 1),
+          signLongitude: position.signLongitude
+        };
+      });
+      expect(wrongFallback).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+    }
+  });
+
+  it('uses circular tolerance at the zero-degree and 30-degree boundaries in both conventions', () => {
+    for (const coordinateConvention of [ZodiacType.TROPICAL, ZodiacType.SIDEREAL]) {
+      const context = { ...strictTransitCalculationContext, coordinateConvention };
+      const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+      const instants = transitSampleTimes(pd.start, pd.end).map((time) => new Date(time).toISOString());
+      const buildWithSun = (
+        selectedLongitude: number,
+        signLongitude: number
+      ) => buildTransitValidationWindow(instants.map((at) => ({
         at,
-        positions,
-        calculationContext: index === 0 ? mismatchedContext : transitCalculationContext
-      })));
-      expect(mismatchedMethodology).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+        positions: createPositionsForContext(at, context, (planet, position) => {
+          if (planet !== Planet.SUN) return position;
+          const offset = getAyanamsaOffset(context.ayanamsa, new Date(at));
+          const tropicalLongitude = coordinateConvention === ZodiacType.TROPICAL
+            ? selectedLongitude
+            : normalizeDegree(selectedLongitude + offset);
+          const siderealLongitude = coordinateConvention === ZodiacType.SIDEREAL
+            ? selectedLongitude
+            : normalizeDegree(tropicalLongitude - offset);
+          return {
+            ...position,
+            longitude: selectedLongitude,
+            eclipticLongitude: tropicalLongitude,
+            siderealLongitude,
+            signLongitude
+          };
+        }),
+        calculationContext: context
+      })), context);
+
+      expect(buildWithSun(359.999, 0.001).ok).toBe(true);
+      expect(buildWithSun(359.999, 0.02)).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+      expect(buildWithSun(29.999, 0.001).ok).toBe(true);
+      expect(buildWithSun(29.999, 0.02)).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
     }
   });
 
@@ -488,22 +635,55 @@ function transitSampleTimes(start: string, end: string): number[] {
   return [startMs, Math.floor((startMs + endMs) / 2), endMs - 1];
 }
 
-function buildTransitValidationWindow(samples: readonly TransitSample[]) {
+function buildTransitValidationWindow(
+  samples: readonly TransitSample[],
+  calculationContext: TransitCalculationContext = transitCalculationContext,
+  requireSampleContextEcho = false
+) {
   const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
   const times = transitSampleTimes(pd.start, pd.end);
   return buildForecastWindows(timeline, pd.start, pd.end, {
     precision: 'context and angular consistency validation',
     ephemerisVersion: 'test-ephemeris-v1',
     maxSampleGapMs: Math.max(times[1] - times[0], times[2] - times[1]),
-    calculationContext: transitCalculationContext,
+    calculationContext,
+    requireSampleContextEcho,
     getBoundaryInstants: () => [],
     sampleWindow: (_window, calculationContext) => ({
       precision: 'context and angular consistency validation',
       ephemerisVersion: 'test-ephemeris-v1',
-      samples: samples.map((sample) => ({
-        ...sample,
-        calculationContext: sample.calculationContext ?? calculationContext
-      }))
+      samples
     })
   });
+}
+
+function createPositionsForContext(
+  at: string,
+  context: typeof strictTransitCalculationContext | {
+    readonly ayanamsa: AyanamsaType;
+    readonly coordinateConvention: ZodiacType;
+    readonly engineVersion: string;
+    readonly allowIdenticalLongitudeAliases?: boolean;
+  },
+  alter: (
+    planet: Planet,
+    position: ReturnType<typeof calculateCurrentTransitPositions>[Planet]
+  ) => ReturnType<typeof calculateCurrentTransitPositions>[Planet] = (_planet, position) => position
+): ReturnType<typeof calculateCurrentTransitPositions> {
+  const positions = calculateCurrentTransitPositions(new Date(at), context.ayanamsa);
+  const offset = getAyanamsaOffset(context.ayanamsa, new Date(at));
+  return Object.fromEntries(Object.values(Planet).map((planet) => {
+    const siderealLongitude = positions[planet].siderealLongitude ?? positions[planet].longitude;
+    const eclipticLongitude = normalizeDegree(siderealLongitude + offset);
+    const coordinateLongitude = context.coordinateConvention === ZodiacType.TROPICAL
+      ? eclipticLongitude
+      : siderealLongitude;
+    return [planet, alter(planet, {
+      ...positions[planet],
+      longitude: coordinateLongitude,
+      eclipticLongitude,
+      siderealLongitude,
+      signLongitude: coordinateLongitude % 30
+    })];
+  })) as ReturnType<typeof calculateCurrentTransitPositions>;
 }
