@@ -91,6 +91,25 @@ The implementation documents the current producer's longitude-field semantics, m
 - **OPEN — SAMPLING-POLICY:** Transit event-boundary detection and interval-coverage guarantees remain unestablished.
 - **OPEN — HEURISTIC:** Confidence calibration awaits outcome data; confidence remains an engineering heuristic.
 
+## Canonical Transit Longitude and Provider-Binding Follow-up
+
+**Source change commit:** `20255048a105e153af37b59cfacdc09352c1b1a6`
+
+**Toolchain:** Node `20.19.4` (`.nvmrc`)
+
+**Verification for the source change commit above:**
+- ✅ `npx vitest run src/core/analysis/resolveFutureDasha.test.ts`: PASS (1 file, 17 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and production build passed)
+- ✅ `npm run verify`: PASS (298 test files, 5,618 passed, 5 skipped; lint and production build passed)
+
+`position.longitude` is now checked against the coordinate-convention field using circular angular distance; the identical-alias opt-in remains limited to all-identical aliases. Tests cover that regression, strict-provider context-echo rejection through `buildDomainForecast`, and legacy versus normalized strict output through the transit ephemeris producer. No application-level `TransitWindowProvider` is currently constructed under `src`; injected providers that omit `requireSampleContextEcho` retain documented compatibility behavior. The production builds emitted the existing large-chunk-size warning.
+
+**Remaining gates — all OPEN:**
+- **OPEN — REFERENCE-DATA-BLOCKED:** Independent Dasha/transit parity against Swiss Ephemeris / JPL Horizons remains pending reference data.
+- **OPEN — SAMPLING-POLICY:** Transit event-boundary detection and interval-coverage guarantees remain unestablished.
+- **OPEN — HEURISTIC:** Confidence calibration awaits outcome data; confidence remains an engineering heuristic.
+
 ## Vimshottari Partial-First-MD Anchoring Follow-up
 
 **Change commit:** `d78901a110720e0ad7543217a07db2868934ef83`
