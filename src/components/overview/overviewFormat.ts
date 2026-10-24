@@ -14,11 +14,10 @@ import type {
 
 /**
  * Format ProductDirection over REAL literals:
- * 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED'
+ * 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED' | 'UNAVAILABLE'
  */
 export function formatDirection(direction?: ProductDirection | string): string {
-  if (!direction) return 'Neutral';
-  switch (direction) {
+  switch (direction?.trim().toUpperCase()) {
     case 'SUPPORT':
       return 'Supporting';
     case 'CHALLENGE':
@@ -27,8 +26,10 @@ export function formatDirection(direction?: ProductDirection | string): string {
       return 'Neutral';
     case 'MIXED':
       return 'Mixed';
+    case 'UNAVAILABLE':
+      return 'Unavailable';
     default:
-      return 'Neutral';
+      return 'Unavailable';
   }
 }
 

@@ -20,7 +20,7 @@ export type ProductTemporalRelation = 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
 
 export type ProductAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'CONDITIONAL' | 'PARTIAL';
 
-export type ProductDirection = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED';
+export type ProductDirection = 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED' | 'UNAVAILABLE';
 
 export type ProductEvidenceRole =
   | 'PRIMARY'

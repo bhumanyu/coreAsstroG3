@@ -42,6 +42,8 @@ import type {
   SpeculativeRiskProduct,
   ProductQualification,
   ProductConfidence,
+  ActivationEffect,
+  PromiseStrength,
   ConclusionStatus,
   ProductSelectedPeriodSynthesis,
   ProductQualificationStatus,
@@ -143,22 +145,41 @@ export function deriveProductAnalysisStatus(
   return isPartial ? 'PARTIAL' : 'READY';
 }
 
-/**
- * Maps direction from effect/role strings.
- */
+type ProductDirectionSource = ActivationEffect | PromiseStrength | ConclusionStatus | ProductDirection;
+
+const PRODUCT_DIRECTION_BY_SOURCE: Readonly<Record<ProductDirectionSource, ProductDirection>> = {
+  ACTIVATES: 'SUPPORT',
+  PARTIALLY_ACTIVATES: 'MIXED',
+  CHALLENGES: 'CHALLENGE',
+  DOES_NOT_ACTIVATE: 'NEUTRAL',
+  UNKNOWN: 'UNAVAILABLE',
+  INSUFFICIENT_DATA: 'UNAVAILABLE',
+  UNAVAILABLE: 'UNAVAILABLE',
+  VERY_STRONG: 'SUPPORT',
+  STRONG: 'SUPPORT',
+  MODERATE: 'MIXED',
+  WEAK: 'CHALLENGE',
+  VERY_WEAK: 'CHALLENGE',
+  STRONGLY_SUPPORTED: 'SUPPORT',
+  SUPPORTED: 'SUPPORT',
+  MIXED: 'MIXED',
+  CHALLENGED: 'CHALLENGE',
+  LIMITED: 'UNAVAILABLE',
+  SUPPORT: 'SUPPORT',
+  CHALLENGE: 'CHALLENGE',
+  NEUTRAL: 'NEUTRAL'
+};
+
+function isProductDirectionSource(value: string): value is ProductDirectionSource {
+  return Object.prototype.hasOwnProperty.call(PRODUCT_DIRECTION_BY_SOURCE, value);
+}
+
+/** Maps known domain enums exactly; missing or unknown values fail closed. */
 export function mapDirection(val?: string): ProductDirection {
-  if (!val) return 'NEUTRAL';
-  const u = val.toUpperCase();
-  if (u.includes('SUPPORT') || u.includes('BENEFIC') || u.includes('FAVORABLE') || u.includes('STRONG') || u.includes('HIGH') || u.includes('ACTIVATE')) {
-    return 'SUPPORT';
-  }
-  if (u.includes('CHALLENGE') || u.includes('MALEFIC') || u.includes('OBSTACLE') || u.includes('DIFFICULT') || u.includes('WEAK')) {
-    return 'CHALLENGE';
-  }
-  if (u.includes('MIXED') || u.includes('CONFLICT') || u.includes('MODERATE')) {
-    return 'MIXED';
-  }
-  return 'NEUTRAL';
+  const normalized = val?.trim().toUpperCase();
+  return normalized && isProductDirectionSource(normalized)
+    ? PRODUCT_DIRECTION_BY_SOURCE[normalized]
+    : 'UNAVAILABLE';
 }
 
 /**
@@ -757,7 +778,7 @@ function mapDashaState(
           level: 'MD',
           planet: current.mahadasha.planet,
           role: 'PRIMARY',
-          direction: mdActivation ? mapDirection(mdActivation.effect) : 'NEUTRAL',
+          direction: mdActivation ? mapDirection(mdActivation.effect) : 'UNAVAILABLE',
           effect: mdActivation?.effect || 'UNAVAILABLE',
           evidenceIds: mdActivation?.evidenceIds || [],
           statement: mdActivation?.statement,
@@ -768,7 +789,7 @@ function mapDashaState(
           level: 'AD',
           planet: current.antardasha.planet,
           role: 'MODIFIER',
-          direction: adActivation ? mapDirection(adActivation.effect) : 'NEUTRAL',
+          direction: adActivation ? mapDirection(adActivation.effect) : 'UNAVAILABLE',
           effect: adActivation?.effect || 'UNAVAILABLE',
           evidenceIds: adActivation?.evidenceIds || [],
           statement: adActivation?.statement,
@@ -779,7 +800,7 @@ function mapDashaState(
           level: 'PD',
           planet: current.pratyantardasha.planet,
           role: 'REFINEMENT',
-          direction: pdActivation ? mapDirection(pdActivation.effect) : 'NEUTRAL',
+          direction: pdActivation ? mapDirection(pdActivation.effect) : 'UNAVAILABLE',
           effect: pdActivation?.effect || 'UNAVAILABLE',
           evidenceIds: pdActivation?.evidenceIds || [],
           statement: pdActivation?.statement,
@@ -838,7 +859,9 @@ function mapReasoning(
       label: 'Dasamsa (D10) Varga',
       domain: 'CAREER',
       type: 'VARGA' as const,
-      direction: career.d10.relationship === 'CONFIRMS' ? 'SUPPORT' as const : 'NEUTRAL' as const,
+      direction: career.d10.relationship === 'CONFIRMS'
+        ? 'SUPPORT' as const
+        : career.d10.relationship === 'UNAVAILABLE' ? 'UNAVAILABLE' as const : 'NEUTRAL' as const,
       statement: career.d10.statement || 'Dasamsa relationship evaluated against D1 vocational indicators.'
     },
     {

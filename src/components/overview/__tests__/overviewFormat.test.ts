@@ -16,7 +16,11 @@ describe('Overview Presentation Formatters (P-UI-03)', () => {
       expect(formatDirection('CHALLENGE')).toBe('Challenging');
       expect(formatDirection('NEUTRAL')).toBe('Neutral');
       expect(formatDirection('MIXED')).toBe('Mixed');
-      expect(formatDirection(undefined)).toBe('Neutral');
+      expect(formatDirection('UNAVAILABLE')).toBe('Unavailable');
+      expect(formatDirection(undefined)).toBe('Unavailable');
+      expect(formatDirection('')).toBe('Unavailable');
+      expect(formatDirection('UNKNOWN_DIRECTION')).toBe('Unavailable');
+      expect(formatDirection('  sUpPoRt  ')).toBe('Supporting');
     });
   });
 
