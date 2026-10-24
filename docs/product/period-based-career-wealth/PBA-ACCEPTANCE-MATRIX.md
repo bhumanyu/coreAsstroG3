@@ -2,7 +2,7 @@
 
 **Baseline Commit:** `491b831b2d6715760521b135365cbf4222623bec`
 
-**Last Updated:** 2026-10-23
+**Last Updated:** 2026-10-24
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
 
@@ -21,6 +21,20 @@
 The implementation resolves MD/AD/PD with half-open boundary semantics, binds transit positions and Dasha to one validated `asOf` context, partitions forecast horizons at Dasha transitions, preserves separate Wealth dimensions and supporting/challenging evidence, and projects nested MD/AD/PD periods with explicit horizon completeness. These are deterministic internal engine outputs, not event probabilities or guarantees. A favorable SPECULATION window is not evidence that risky trading will profit.
 
 External transit-position and independent Dasha-boundary parity remain **REFERENCE-DATA-BLOCKED** pending captured Swiss Ephemeris / JPL Horizons data. The skipped Moon-anchor `D08-A1` suite remains skipped; analytical fixtures are internal-consistency conventions only and are not independent astronomical validation.
+
+## Forecast-foundation Hardening Follow-up
+
+**Source change commit:** `24707dce75b729a79a25e58ceb4c57d8aa3e2c51`
+
+**Toolchain:** Node `20.19.4`, npm `10.9.2`
+
+**Verification for the source change commit above:**
+- ✅ `npx vitest run src/core/analysis/resolveFutureDasha.test.ts src/product/dasha-timing/__tests__/dashaTimingViewModel.test.ts src/product/life-analysis/dashaHierarchyUtils.test.ts src/product/life-analysis/dashaCareerHierarchy.test.ts src/product/life-analysis/dashaWealthHierarchy.test.ts src/domain/timing/careerWealthTiming/careerTransitSynthesis.test.ts src/domain/timing/careerWealthTiming/wealthTransitSynthesis.test.ts`: PASS (7 files, 64 passed, 1 skipped)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (124 tests; lint and production build passed)
+- ✅ `npm run verify`: PASS (298 test files; 5,607 passed, 5 skipped; lint and production build passed)
+
+The follow-up validates the complete nested MD/AD/PD structure before forecasting, distinguishes malformed timelines from unresolved Dasha, guards every forecast assessment field against unsupported confidence, and provides interval-scoped transit samples with precision and ephemeris metadata. Transit snapshots in `ForecastContext` are explicitly limited to `asOf`; the existing Career and Wealth synthesis functions remain current-instant-only. Transit-aware horizon evaluation is exposed through per-window `ForecastWindow.transitData` rather than reusing the snapshot. Horizon completeness now checks actual top-level and nested interval coverage. `combineTimingHierarchy` documents and tests its deterministic MD/AD/PD precedence across all effect combinations. The production build emitted only the existing large-chunk-size warning; the Node 21 / lightningcss local-environment blocker did not recur under the supported Node 20.19.4 runtime.
 
 ## Vimshottari Partial-First-MD Anchoring Follow-up
 
