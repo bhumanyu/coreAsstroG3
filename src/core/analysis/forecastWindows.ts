@@ -407,7 +407,9 @@ function isValidTransitPositions(
       && (position.eclipticLatitude < -90 || position.eclipticLatitude > 90)) {
       return false;
     }
-    const signLongitudeSource = position.siderealLongitude ?? position.longitude;
+    const signLongitudeSource = context.coordinateConvention === ZodiacType.TROPICAL
+      ? position.eclipticLongitude ?? position.longitude
+      : position.siderealLongitude ?? position.longitude;
     if (angularDeltaDeg(position.signLongitude, signLongitudeSource % 30, 30)
       > TRANSIT_LONGITUDE_TOLERANCE_DEG) {
       return false;

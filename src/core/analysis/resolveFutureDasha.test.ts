@@ -374,14 +374,19 @@ describe('future Dasha resolution', () => {
     })));
     expect(mismatchedInstant).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
 
-    const mismatchedMethodology = buildTransitValidationWindow(instants.map((at, index) => ({
-      at,
-      positions,
-      calculationContext: index === 0
-        ? { ...transitCalculationContext, engineVersion: 'different-engine' }
-        : transitCalculationContext
-    })));
-    expect(mismatchedMethodology).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+    const mismatchedContexts = [
+      { ...transitCalculationContext, engineVersion: 'different-engine' },
+      { ...transitCalculationContext, ayanamsa: AyanamsaType.RAMAN },
+      { ...transitCalculationContext, coordinateConvention: ZodiacType.TROPICAL }
+    ];
+    for (const mismatchedContext of mismatchedContexts) {
+      const mismatchedMethodology = buildTransitValidationWindow(instants.map((at, index) => ({
+        at,
+        positions,
+        calculationContext: index === 0 ? mismatchedContext : transitCalculationContext
+      })));
+      expect(mismatchedMethodology).toEqual({ ok: false, error: 'INVALID_TRANSIT_WINDOW' });
+    }
   });
 
   it('validates ayanamsa relationships and sign longitude using circular angular distance', () => {
