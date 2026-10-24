@@ -36,6 +36,21 @@ External transit-position and independent Dasha-boundary parity remain **REFEREN
 
 The follow-up validates the complete nested MD/AD/PD structure before forecasting, distinguishes malformed timelines from unresolved Dasha, guards every forecast assessment field against unsupported confidence, and provides interval-scoped transit samples with precision and ephemeris metadata. Transit snapshots in `ForecastContext` are explicitly limited to `asOf`; the existing Career and Wealth synthesis functions remain current-instant-only. Transit-aware horizon evaluation is exposed through per-window `ForecastWindow.transitData` rather than reusing the snapshot. Horizon completeness now checks actual top-level and nested interval coverage. `combineTimingHierarchy` documents and tests its deterministic MD/AD/PD precedence across all effect combinations. The production build emitted only the existing large-chunk-size warning; the Node 21 / lightningcss local-environment blocker did not recur under the supported Node 20.19.4 runtime.
 
+## Transit Sample Validation and Confidence Heuristic Follow-up
+
+**Source change commit:** `a99f20be3e85a2229df246b8b09f419ba2862eb4`
+
+**Toolchain:** Node `20.19.4`, npm `10.9.2`
+
+**Verification for the source change commit above:**
+- ✅ `npx vitest run src/core/analysis/resolveFutureDasha.test.ts src/product/life-analysis/dashaHierarchyUtils.test.ts`: PASS (2 files, 24 passed, 1 skipped)
+- ✅ Additional transit/hierarchy suites (`src/core/analysis/resolveFutureDasha.test.ts`, `src/product/life-analysis/dashaHierarchyUtils.test.ts`, `src/product/life-analysis/dashaCareerHierarchy.test.ts`, `src/product/life-analysis/dashaWealthHierarchy.test.ts`, `src/domain/timing/careerWealthTiming/careerTransitSynthesis.test.ts`, `src/domain/timing/careerWealthTiming/wealthTransitSynthesis.test.ts`): PASS (6 files, 51 passed, 1 skipped)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (124 tests; lint and production build passed)
+- ✅ `npm run verify`: PASS (298 test files; 5,611 passed, 5 skipped; lint and production build passed)
+
+Transit samples now require every canonical Planet key, finite and scientifically bounded position fields, and a machine-checked maximum sample gap. Empty or sparse data is represented as `INSUFFICIENT_DATA`/`PARTIAL`, not as continuous transit coverage. Ephemeris metadata equality remains provenance text only and does not establish Swiss Ephemeris/JPL Horizons parity. The hierarchy confidence tests pin exact deterministic outputs; across all supported effect combinations, realized extrema are 0.4 and 0.9 (the existing 0.2/0.95 clamps remain defensive bounds and are not reached without changing the formula). The production build emitted the existing large-chunk-size warning. **External Swiss Ephemeris / JPL Horizons transit and Dasha parity remains a separately tracked `REFERENCE-DATA-BLOCKED` gate, unchanged by this follow-up.**
+
 ## Vimshottari Partial-First-MD Anchoring Follow-up
 
 **Change commit:** `d78901a110720e0ad7543217a07db2868934ef83`
