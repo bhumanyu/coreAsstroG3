@@ -1,5 +1,6 @@
 import type { VimshottariTimeline } from '../../engine/dasha/vimshottari';
-import type { Planet, PlanetPosition } from '../../types';
+import { Planet } from '../../types';
+import type { PlanetPosition } from '../../types';
 import { resolveFutureDasha } from './resolveFutureDasha';
 
 export type ForecastBoundaryReason =
@@ -15,22 +16,31 @@ export interface TransitSample {
   readonly positions: Readonly<Record<Planet, PlanetPosition>>;
 }
 
-export interface TransitWindowData {
+export interface TransitWindowSampleData {
   readonly samples: readonly TransitSample[];
   readonly precision: string;
   readonly ephemerisVersion: string;
 }
 
+export interface TransitWindowData extends TransitWindowSampleData {
+  readonly coverage: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+}
+
 /**
  * Supplies transit event boundaries and per-window samples for a transit-aware
  * forecast. `precision` must document the boundary/sampling precision, and the
- * ephemeris version must identify the data/calculation release used.
+ * ephemeris version must identify the data/calculation release used. A window
+ * is marked COMPLETE only when it has at least two samples, the first is within
+ * `maxSampleGapMs` of its start, every consecutive gap is within that limit,
+ * and the final sample is within that limit of its end.
  */
 export interface TransitWindowProvider {
   readonly precision: string;
   readonly ephemerisVersion: string;
+  /** Largest permitted time gap between samples and between samples and a window edge. */
+  readonly maxSampleGapMs: number;
   getBoundaryInstants(start: string, end: string): readonly (Date | string)[];
-  sampleWindow(window: Pick<ForecastWindow, 'start' | 'end'>): TransitWindowData;
+  sampleWindow(window: Pick<ForecastWindow, 'start' | 'end'>): TransitWindowSampleData;
 }
 
 export interface ForecastWindow {
@@ -83,7 +93,9 @@ export function buildForecastWindows(
   if (transitWindowProvider) {
     if (typeof transitWindowProvider.precision !== 'string' || !transitWindowProvider.precision.trim()
       || typeof transitWindowProvider.ephemerisVersion !== 'string'
-      || !transitWindowProvider.ephemerisVersion.trim()) {
+      || !transitWindowProvider.ephemerisVersion.trim()
+      || !Number.isFinite(transitWindowProvider.maxSampleGapMs)
+      || transitWindowProvider.maxSampleGapMs <= 0) {
       return { ok: false, error: 'INVALID_TRANSIT_WINDOW' };
     }
     const suppliedBoundaries = transitWindowProvider.getBoundaryInstants(
@@ -284,31 +296,86 @@ function parseIsoInstant(value: string): number | undefined {
 }
 
 function normalizeTransitWindowData(
-  data: TransitWindowData | undefined,
+  data: TransitWindowSampleData | undefined,
   start: number,
   end: number,
   provider: TransitWindowProvider
 ): TransitWindowData | undefined {
-  if (!data || !Array.isArray(data.samples) || data.samples.length === 0
+  if (!data || !Array.isArray(data.samples)
     || typeof data.precision !== 'string' || typeof data.ephemerisVersion !== 'string'
     || data.precision !== provider.precision || data.ephemerisVersion !== provider.ephemerisVersion) {
     return undefined;
   }
+  // Matching metadata is a provenance label only; it does not verify that
+  // positions came from the claimed ephemeris. Swiss Ephemeris/JPL Horizons
+  // parity remains a separately tracked reference-data gate.
+  if (data.samples.length === 0) {
+    return Object.freeze({
+      samples: Object.freeze([]),
+      precision: data.precision,
+      ephemerisVersion: data.ephemerisVersion,
+      coverage: 'INSUFFICIENT_DATA'
+    });
+  }
   let previousAt = Number.NEGATIVE_INFINITY;
   for (const sample of data.samples) {
     const at = sample && typeof sample.at === 'string' ? parseIsoInstant(sample.at) : undefined;
-    if (at === undefined || at < start || at >= end || at <= previousAt || !sample.positions
-      || Object.keys(sample.positions).length === 0) {
+    if (at === undefined || at < start || at >= end || at <= previousAt
+      || !isValidTransitPositions(sample.positions)) {
       return undefined;
     }
     previousAt = at;
   }
+  const sampleTimes = data.samples.map((sample) => Date.parse(sample.at));
+  const hasStartCoverage = sampleTimes[0] - start <= provider.maxSampleGapMs;
+  const hasEndCoverage = end - sampleTimes[sampleTimes.length - 1] <= provider.maxSampleGapMs;
+  const gapsWithinPolicy = sampleTimes.slice(1).every((at, index) =>
+    at - sampleTimes[index] <= provider.maxSampleGapMs
+  );
+  const coverage = data.samples.length >= 2 && hasStartCoverage && hasEndCoverage && gapsWithinPolicy
+    ? 'COMPLETE'
+    : 'PARTIAL';
   return Object.freeze({
     samples: Object.freeze(data.samples.map((sample) => Object.freeze({
       at: sample.at,
       positions: Object.freeze({ ...sample.positions })
     }))),
     precision: data.precision,
-    ephemerisVersion: data.ephemerisVersion
+    ephemerisVersion: data.ephemerisVersion,
+    coverage
+  });
+}
+
+function isValidTransitPositions(
+  positions: Readonly<Record<Planet, PlanetPosition>> | undefined
+): positions is Readonly<Record<Planet, PlanetPosition>> {
+  if (!positions || typeof positions !== 'object') return false;
+  if (!Object.values(Planet).every((planet) => Object.prototype.hasOwnProperty.call(positions, planet))) {
+    return false;
+  }
+  return Object.values(Planet).every((planet) => {
+    const position = positions[planet];
+    if (!position || typeof position !== 'object') return false;
+    const finiteFields = [
+      position.longitude,
+      position.house,
+      position.signLongitude,
+      ...(position.eclipticLongitude === undefined ? [] : [position.eclipticLongitude]),
+      ...(position.siderealLongitude === undefined ? [] : [position.siderealLongitude]),
+      ...(position.eclipticLatitude === undefined ? [] : [position.eclipticLatitude])
+    ];
+    if (!finiteFields.every(Number.isFinite)) return false;
+    const longitudes = [
+      position.longitude,
+      ...(position.eclipticLongitude === undefined ? [] : [position.eclipticLongitude]),
+      ...(position.siderealLongitude === undefined ? [] : [position.siderealLongitude])
+    ];
+    if (!longitudes.every((longitude) => longitude >= 0 && longitude < 360)
+      || position.signLongitude < 0 || position.signLongitude >= 30
+      || !Number.isInteger(position.house) || position.house < 1 || position.house > 12) {
+      return false;
+    }
+    return position.eclipticLatitude === undefined
+      || (position.eclipticLatitude >= -90 && position.eclipticLatitude <= 90);
   });
 }

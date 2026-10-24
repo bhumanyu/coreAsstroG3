@@ -82,6 +82,9 @@ export function indexDashaPeriodActivations<T extends { readonly period?: string
  * refines to CHALLENGES; a non-conclusive PD leaves the result unchanged.
  * For every other MD+AD result, PD cannot change the effect. Thus unlinked PD
  * evidence can reduce confidence, but does not erase a linked MD+AD outcome.
+ *
+ * Step 3 confidence values are heuristic, deterministic engineering defaults.
+ * They are not calibrated probabilities or validated reliability estimates.
  */
 export function combineTimingHierarchy(
   primary: TimingActivationEffect,
@@ -143,7 +146,7 @@ export function combineTimingHierarchy(
     overallEffect = baseEffect;
   }
 
-  // Step 3: Deterministic confidence derivation from cross-level agreement (§8)
+  // Step 3: Heuristic deterministic confidence defaults from cross-level agreement (§8)
   let conf = 0.75;
 
   const isConclusive = (e: TimingActivationEffect) =>

@@ -218,6 +218,7 @@ describe('future Dasha resolution', () => {
     const result = buildForecastWindows(timeline, md.start, md.end, {
       precision: 'samples at each window start',
       ephemerisVersion: 'test-ephemeris-v1',
+      maxSampleGapMs: 1,
       getBoundaryInstants: () => [transitBoundary],
       sampleWindow: (window) => ({
         precision: 'samples at each window start',
@@ -237,6 +238,101 @@ describe('future Dasha resolution', () => {
     expect(result.windows[boundaryIndex].boundaryReasons).toContain('TRANSIT_BOUNDARY');
     expect(result.windows.every((window) => window.transitData?.samples[0].at === window.start)).toBe(true);
     expect(result.windows.every((window) => window.transitData?.ephemerisVersion === 'test-ephemeris-v1')).toBe(true);
+    expect(result.windows.every((window) => window.transitData?.coverage === 'PARTIAL')).toBe(true);
+  });
+
+  it('rejects transit samples missing a required planet or containing implausible numeric fields', () => {
+    const md = timeline.mahadashas[0];
+    const pd = md.antardashas[0].pratyantardashas[0];
+    const startMs = Date.parse(pd.start);
+    const endMs = Date.parse(pd.end);
+    const sampleTimes = [startMs, Math.floor((startMs + endMs) / 2), endMs - 1];
+    const validPositions = calculateCurrentTransitPositions(new Date(pd.start), AyanamsaType.LAHIRI);
+    const missingPlanetPositions = { ...validPositions };
+    delete (missingPlanetPositions as Partial<Record<Planet, (typeof validPositions)[Planet]>>)[Planet.SUN];
+    const nonFiniteLongitudePositions = {
+      ...validPositions,
+      [Planet.SUN]: { ...validPositions[Planet.SUN], longitude: Number.POSITIVE_INFINITY }
+    };
+    const outOfRangeLongitudePositions = {
+      ...validPositions,
+      [Planet.SUN]: { ...validPositions[Planet.SUN], longitude: 360 }
+    };
+
+    const forecastWithPositions = (positions: typeof validPositions) => buildForecastWindows(
+      timeline,
+      pd.start,
+      pd.end,
+      {
+        precision: 'samples spaced no more than one day apart',
+        ephemerisVersion: 'test-ephemeris-v1',
+        maxSampleGapMs: Math.max(sampleTimes[1] - sampleTimes[0], sampleTimes[2] - sampleTimes[1]),
+        getBoundaryInstants: () => [],
+        sampleWindow: (window) => ({
+          precision: 'samples spaced no more than one day apart',
+          ephemerisVersion: 'test-ephemeris-v1',
+          samples: sampleTimes.map((time) => ({
+            at: new Date(time).toISOString(),
+            positions
+          }))
+        })
+      }
+    );
+
+    expect(forecastWithPositions(missingPlanetPositions)).toEqual({
+      ok: false,
+      error: 'INVALID_TRANSIT_WINDOW'
+    });
+    expect(forecastWithPositions(nonFiniteLongitudePositions)).toEqual({
+      ok: false,
+      error: 'INVALID_TRANSIT_WINDOW'
+    });
+    expect(forecastWithPositions(outOfRangeLongitudePositions)).toEqual({
+      ok: false,
+      error: 'INVALID_TRANSIT_WINDOW'
+    });
+    const valid = forecastWithPositions(validPositions);
+    expect(valid.ok).toBe(true);
+    if (valid.ok) expect(valid.windows[0].transitData?.coverage).toBe('COMPLETE');
+  });
+
+  it('marks sparse transit samples partial and dense samples complete under the sampling policy', () => {
+    const pd = timeline.mahadashas[0].antardashas[0].pratyantardashas[0];
+    const startMs = Date.parse(pd.start);
+    const endMs = Date.parse(pd.end);
+    const midpoint = Math.floor((startMs + endMs) / 2);
+    const positions = calculateCurrentTransitPositions(new Date(pd.start), AyanamsaType.LAHIRI);
+    const buildWithTimes = (times: readonly number[], maxSampleGapMs: number) => buildForecastWindows(
+      timeline,
+      pd.start,
+      pd.end,
+      {
+        precision: 'sampling policy checks',
+        ephemerisVersion: 'test-ephemeris-v1',
+        maxSampleGapMs,
+        getBoundaryInstants: () => [],
+        sampleWindow: () => ({
+          precision: 'sampling policy checks',
+          ephemerisVersion: 'test-ephemeris-v1',
+          samples: times.map((time) => ({
+            at: new Date(time).toISOString(),
+            positions
+          }))
+        })
+      }
+    );
+    const oneSample = buildWithTimes([startMs], endMs - startMs);
+    expect(oneSample.ok).toBe(true);
+    if (oneSample.ok) expect(oneSample.windows[0].transitData?.coverage).toBe('PARTIAL');
+
+    const maxGap = midpoint - startMs + 1;
+    const dense = buildWithTimes([startMs, midpoint, endMs - 1], maxGap);
+    expect(dense.ok).toBe(true);
+    if (dense.ok) expect(dense.windows[0].transitData?.coverage).toBe('COMPLETE');
+
+    const tooSparse = buildWithTimes([startMs, endMs - 1], Math.floor((endMs - startMs) / 2));
+    expect(tooSparse.ok).toBe(true);
+    if (tooSparse.ok) expect(tooSparse.windows[0].transitData?.coverage).toBe('PARTIAL');
   });
 
   it('retains only outer-edge boundary reasons when adjacent identical windows merge', () => {

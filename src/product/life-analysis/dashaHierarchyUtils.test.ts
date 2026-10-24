@@ -73,6 +73,34 @@ describe('combineTimingHierarchy precedence', () => {
   });
 });
 
+describe('combineTimingHierarchy heuristic confidence', () => {
+  it('pins full agreement bonus, MD/AD conflict, and missing-data penalties', () => {
+    expect(combineTimingHierarchy('ACTIVATES', 'ACTIVATES', 'ACTIVATES').confidence).toBe(0.9);
+    expect(combineTimingHierarchy('ACTIVATES', 'CHALLENGES', 'ACTIVATES').confidence).toBe(0.6);
+    expect(combineTimingHierarchy('ACTIVATES', 'INSUFFICIENT_DATA', 'ACTIVATES').confidence).toBe(0.65);
+    expect(combineTimingHierarchy('ACTIVATES', 'ACTIVATES', 'INSUFFICIENT_DATA').confidence).toBe(0.8);
+    expect(combineTimingHierarchy('ACTIVATES', 'INSUFFICIENT_DATA', 'INSUFFICIENT_DATA').confidence).toBe(0.6);
+  });
+
+  it('keeps every supported effect combination within configured clamp bounds', () => {
+    const effects: readonly TimingActivationEffect[] = [
+      'ACTIVATES',
+      'PARTIALLY_ACTIVATES',
+      'DOES_NOT_ACTIVATE',
+      'CHALLENGES',
+      'UNKNOWN',
+      'INSUFFICIENT_DATA'
+    ];
+    const confidences = effects.flatMap((md) =>
+      effects.flatMap((ad) => effects.map((pd) => combineTimingHierarchy(md, ad, pd).confidence))
+    );
+    // The current effect rules reach 0.4–0.9; the 0.2/0.95 clamps remain safety bounds.
+    expect(Math.min(...confidences)).toBe(0.4);
+    expect(Math.max(...confidences)).toBe(0.9);
+    expect(confidences.every((confidence) => confidence >= 0.2 && confidence <= 0.95)).toBe(true);
+  });
+});
+
 describe('D07-C: indexDashaPeriodActivations Unit Tests', () => {
   it('returns empty object when passed empty array or undefined', () => {
     expect(indexDashaPeriodActivations([])).toEqual({});

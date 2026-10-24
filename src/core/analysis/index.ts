@@ -24,6 +24,7 @@ export {
   type ForecastWindowResult,
   type ForecastBoundaryReason,
   type TransitSample,
+  type TransitWindowSampleData,
   type TransitWindowData,
   type TransitWindowProvider
 } from './forecastWindows';
