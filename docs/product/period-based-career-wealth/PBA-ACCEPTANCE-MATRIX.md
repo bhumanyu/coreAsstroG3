@@ -63,12 +63,33 @@ Transit samples now require every canonical Planet key, finite and scientificall
 - ✅ `npm run verify:pba10`: PASS (124 tests; lint and production build passed)
 - ✅ `npm run verify`: PASS (298 test files; 5,613 passed, 5 skipped; lint and production build passed)
 
+**Change attribution:** `c7db3f6` is the original context-binding and angular-validation source change. `b76e618` is the follow-up convention refinement; the verification results listed above apply to `b76e618` only.
+
 Transit samples now carry provider-declared ayanamsa, coordinate convention, and engine identity; optional sample echoes are checked against that context, and any echoed calculation instant must exactly match the authoritative sample `at`. Normalization preserves each `at` verbatim. Longitude and sign-longitude consistency use circular differences with an explicit angular tolerance. Matching ephemeris metadata remains a provenance label, not scientific verification.
 
 **Remaining gates (tracked independently):**
 - **REFERENCE-DATA-BLOCKED — independent Dasha/transit parity:** Independent parity against Swiss Ephemeris / JPL Horizons remains blocked until reference datasets are captured and compared. Context labels and internal checks do not satisfy this gate.
 - **SAMPLING-POLICY — event detection and interval coverage:** The configured maximum sample gap determines the reported window coverage, but it does not independently prove transit-event boundary detection or guarantee complete interval coverage relative to all relevant events. This remains open.
 - **HEURISTIC — confidence calibration:** Deterministic confidence values remain engineering heuristics, not calibrated probabilities or validated reliability. Calibration awaits outcome data.
+
+## Strict Transit Validation Follow-up
+
+**Source change commit:** `ba834a5acea5151f297d939e5683d9e5dccc9881`
+
+**Toolchain:** Node `20.19.4`
+
+**Verification for the source change commit above:**
+- ✅ `npx vitest run src/core/analysis/resolveFutureDasha.test.ts`: PASS (1 file, 15 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and production build passed)
+- ✅ `npm run verify`: PASS (298 test files, 5,616 passed, 5 skipped; lint and production build passed)
+
+The implementation documents the current producer's longitude-field semantics, makes legacy identical aliases an explicit context opt-in (strict relationship validation is the default), and provides compatibility versus required sample-context echoes. Tests cover tropical and sidereal sign-longitude selection, `longitude` fallback, circular tolerance, and context/timestamp echo requirements. The production builds emitted the existing large-chunk-size warning. The verification results above apply only to `ba834a5`.
+
+**Remaining gates — all OPEN:**
+- **OPEN — REFERENCE-DATA-BLOCKED:** Independent Dasha/transit parity against Swiss Ephemeris / JPL Horizons remains blocked pending reference data.
+- **OPEN — SAMPLING-POLICY:** Transit event-boundary detection and interval-coverage guarantees remain unestablished.
+- **OPEN — HEURISTIC:** Confidence calibration awaits outcome data; confidence remains an engineering heuristic.
 
 ## Vimshottari Partial-First-MD Anchoring Follow-up
 
