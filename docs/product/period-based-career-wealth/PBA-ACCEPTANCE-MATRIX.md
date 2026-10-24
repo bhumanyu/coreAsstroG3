@@ -51,6 +51,25 @@ The follow-up validates the complete nested MD/AD/PD structure before forecastin
 
 Transit samples now require every canonical Planet key, finite and scientifically bounded position fields, and a machine-checked maximum sample gap. Empty or sparse data is represented as `INSUFFICIENT_DATA`/`PARTIAL`, not as continuous transit coverage. Ephemeris metadata equality remains provenance text only and does not establish Swiss Ephemeris/JPL Horizons parity. The hierarchy confidence tests pin exact deterministic outputs; across all supported effect combinations, realized extrema are 0.4 and 0.9 (the existing 0.2/0.95 clamps remain defensive bounds and are not reached without changing the formula). The production build emitted the existing large-chunk-size warning. **External Swiss Ephemeris / JPL Horizons transit and Dasha parity remains a separately tracked `REFERENCE-DATA-BLOCKED` gate, unchanged by this follow-up.**
 
+## Transit Calculation Context and Angular Consistency Follow-up
+
+**Source change commit:** `b76e618fb6a4165fce7f66e6d35a5c52fd2ed248`
+
+**Toolchain:** Node `20.19.4`, npm `10.9.2`
+
+**Verification for the source change commit above:**
+- ✅ `npx vitest run src/core/analysis/resolveFutureDasha.test.ts`: PASS (1 file, 12 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run verify:pba10`: PASS (124 tests; lint and production build passed)
+- ✅ `npm run verify`: PASS (298 test files; 5,613 passed, 5 skipped; lint and production build passed)
+
+Transit samples now carry provider-declared ayanamsa, coordinate convention, and engine identity; optional sample echoes are checked against that context, and any echoed calculation instant must exactly match the authoritative sample `at`. Normalization preserves each `at` verbatim. Longitude and sign-longitude consistency use circular differences with an explicit angular tolerance. Matching ephemeris metadata remains a provenance label, not scientific verification.
+
+**Remaining gates (tracked independently):**
+- **REFERENCE-DATA-BLOCKED — independent Dasha/transit parity:** Independent parity against Swiss Ephemeris / JPL Horizons remains blocked until reference datasets are captured and compared. Context labels and internal checks do not satisfy this gate.
+- **SAMPLING-POLICY — event detection and interval coverage:** The configured maximum sample gap determines the reported window coverage, but it does not independently prove transit-event boundary detection or guarantee complete interval coverage relative to all relevant events. This remains open.
+- **HEURISTIC — confidence calibration:** Deterministic confidence values remain engineering heuristics, not calibrated probabilities or validated reliability. Calibration awaits outcome data.
+
 ## Vimshottari Partial-First-MD Anchoring Follow-up
 
 **Change commit:** `d78901a110720e0ad7543217a07db2868934ef83`
