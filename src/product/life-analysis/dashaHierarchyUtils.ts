@@ -64,11 +64,24 @@ export function indexDashaPeriodActivations<T extends { readonly period?: string
 
 /**
  * Deterministic rule-based hierarchical timing effect combination.
- * Hierarchy: Primary (MD) -> Modifier (AD) -> Trigger (PD)
- * Constraints:
- * - Primary sets the fundamental baseline context.
- * - Modifier can confirm, challenge, or soften the primary effect.
- * - Trigger (PD) can never flip an established primary/modifier direction.
+ * Precedence is explicit: first MD establishes the baseline and AD modifies it;
+ * then PD may refine only an inactive/unknown baseline, never reverse an
+ * established MD+AD direction.
+ *
+ * MD+AD rules:
+ * - ACTIVATES stays ACTIVATES when AD supports or is non-conclusive, and becomes
+ *   PARTIALLY_ACTIVATES when AD challenges.
+ * - CHALLENGES stays CHALLENGES unless AD supports, which yields
+ *   PARTIALLY_ACTIVATES.
+ * - PARTIALLY_ACTIVATES stays partial regardless of AD.
+ * - DOES_NOT_ACTIVATE, UNKNOWN, or INSUFFICIENT_DATA become partial for AD
+ *   support, CHALLENGES for AD challenge, and otherwise retain the MD result.
+ *
+ * PD rules: for an MD+AD result of DOES_NOT_ACTIVATE, UNKNOWN, or
+ * INSUFFICIENT_DATA, PD support refines to PARTIALLY_ACTIVATES and PD challenge
+ * refines to CHALLENGES; a non-conclusive PD leaves the result unchanged.
+ * For every other MD+AD result, PD cannot change the effect. Thus unlinked PD
+ * evidence can reduce confidence, but does not erase a linked MD+AD outcome.
  */
 export function combineTimingHierarchy(
   primary: TimingActivationEffect,

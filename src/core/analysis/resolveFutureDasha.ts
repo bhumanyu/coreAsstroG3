@@ -31,7 +31,10 @@ export interface ForecastContext {
   readonly asOf: string;
   readonly forecastUntil: string;
   readonly dasha: ResolvedFutureDasha;
-  readonly transitPositions: Readonly<Record<Planet, PlanetPosition>>;
+  /** Transit state sampled at `asOf`; it does not represent the forecast horizon. */
+  readonly transitPositionsAsOfInstant: Readonly<Record<Planet, PlanetPosition>>;
+  /** This context is Dasha-only; horizon-aware transit forecasts require per-window samples. */
+  readonly forecastMode: 'DASHA_ONLY';
   readonly methodology: ProductMethodology;
   readonly engineVersion: string;
   readonly rulesVersion: string;
@@ -114,7 +117,7 @@ export function resolveFutureDasha(
   };
 }
 
-/** Bind the active Dasha and transit positions to the same canonical target instant. */
+/** Bind active Dasha and an as-of-only transit snapshot to the same target instant. */
 export function createForecastContext(input: {
   readonly timeline: VimshottariTimeline;
   readonly horoscope: Horoscope;
@@ -131,7 +134,7 @@ export function createForecastContext(input: {
   }
   const dasha = resolveFutureDasha(input.timeline, asOf, forecastUntil);
   if (!dasha.ok) return dasha;
-  const transitPositions = calculateCurrentTransitPositions(
+  const transitPositionsAsOfInstant = calculateCurrentTransitPositions(
     new Date(asOf),
     input.horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI
   );
@@ -141,7 +144,8 @@ export function createForecastContext(input: {
       asOf,
       forecastUntil,
       dasha: dasha.value,
-      transitPositions: Object.freeze(transitPositions),
+      transitPositionsAsOfInstant: Object.freeze(transitPositionsAsOfInstant),
+      forecastMode: 'DASHA_ONLY',
       methodology: Object.freeze({ ...input.methodology }),
       engineVersion: input.engineVersion,
       rulesVersion: input.rulesVersion
@@ -164,6 +168,9 @@ export function validateForecastContext(context: ForecastContext): void {
   }
   if (context.dasha.horizon.start !== asOf) {
     throw new TypeError('Invalid forecast context: Dasha resolution instant does not match context asOf.');
+  }
+  if (context.forecastMode !== 'DASHA_ONLY' || !context.transitPositionsAsOfInstant) {
+    throw new TypeError('Invalid forecast context: an as-of-only transit snapshot is valid only in Dasha-only mode.');
   }
 }
 

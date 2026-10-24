@@ -21,13 +21,20 @@ export {
 export {
   buildForecastWindows,
   type ForecastWindow,
-  type ForecastWindowResult
+  type ForecastWindowResult,
+  type ForecastBoundaryReason,
+  type TransitSample,
+  type TransitWindowData,
+  type TransitWindowProvider
 } from './forecastWindows';
 export { createHoroscopeForecastContext } from './forecastContextFactory';
 export {
   buildDomainForecast,
   type ForecastDomain,
   type ForecastDirection,
+  type ForecastEffect,
+  type ForecastStrength,
+  type ForecastEvidenceCoverage,
   type ForecastDomainAssessment,
   type DomainForecastWindow,
   type DomainForecastResult

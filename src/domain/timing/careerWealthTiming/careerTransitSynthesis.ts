@@ -72,7 +72,8 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
 }
 
 /**
- * Synthesizes current transit impacts on career factors for a given deterministic asOf timestamp.
+ * Synthesizes current transit impacts on career factors at `asOf` only.
+ * It does not treat that snapshot as representative of `forecastUntil`.
  */
 export function synthesizeCareerTransit(
   horoscope: Horoscope,
@@ -105,7 +106,7 @@ export function synthesizeCareerTransit(
     at: asOf.toISOString(),
     natalMoonLongitude,
     natalAscendantLongitude,
-    transitPositions: forecastContext.transitPositions
+    transitPositions: forecastContext.transitPositionsAsOfInstant
   };
 
   const transitAnalysis = calculateTransit(transitInput);

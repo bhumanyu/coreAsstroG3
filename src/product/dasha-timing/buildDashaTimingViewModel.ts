@@ -102,8 +102,9 @@ export function buildDashaTimingViewModel(
     };
   }
 
-  const hasTimeline = Array.isArray(rawMahadashas) && rawMahadashas.length > 0;
-  const periods: readonly DashaTimelinePeriodProduct[] = hasTimeline && rawMahadashas
+  const requestedTimelineValid = requestedHorizon === undefined || isCompleteDashaTimeline(rawMahadashas);
+  const hasTimeline = Array.isArray(rawMahadashas) && rawMahadashas.length > 0 && requestedTimelineValid;
+  const periods: readonly DashaTimelinePeriodProduct[] = hasTimeline && rawMahadashas && requestedTimelineValid
     ? rawMahadashas.map((m: VimshottariMahadashaPeriod, idx: number) => {
         const mdId = encodeMahadashaId(m.planet, m.start, m.end);
         return {
@@ -147,13 +148,7 @@ export function buildDashaTimingViewModel(
 
   const timelineCompleteness = requestedHorizon === undefined
     ? { status: 'UNREQUESTED' as const }
-    : {
-        status: rawMahadashas && rawMahadashas.length > 0
-          && Date.parse(requestedHorizon) <= Date.parse(rawMahadashas[rawMahadashas.length - 1].end)
-          ? 'COMPLETE' as const
-          : 'TRUNCATED' as const,
-        requestedHorizon
-      };
+    : getTimelineCompleteness(rawMahadashas, asOf, requestedHorizon);
 
   const timelineAvailability = hasTimeline ? 'AVAILABLE' : 'UNAVAILABLE';
 
@@ -196,6 +191,7 @@ export function buildDashaTimingViewModel(
         pair: interpretation.pair
       };
     }
+
   }
 
   // 3. Resolve Career & Wealth Timing (Reuse pre-computed or adapt DomainInterpretation)
@@ -434,4 +430,100 @@ export function buildDashaTimingViewModel(
       ? { unresolvedEvidenceIds: Object.freeze(unresolvedEvidenceIds) }
       : {})
   };
+}
+
+function getTimelineCompleteness(
+  periods: readonly VimshottariMahadashaPeriod[] | undefined,
+  requestedStart: string,
+  requestedHorizon: string
+): NonNullable<DashaTimingViewModel['timeline']['completeness']> {
+  const requestedEndMs = parseIsoInstant(requestedHorizon);
+  const requestedStartMs = parseIsoInstant(requestedStart);
+  if (requestedEndMs === undefined || requestedStartMs === undefined || requestedEndMs <= requestedStartMs) {
+    return { status: 'INVALID_HORIZON', requestedHorizon };
+  }
+  if (!isCompleteDashaTimeline(periods)) {
+    return { status: 'INVALID_TIMELINE', requestedHorizon };
+  }
+  const firstStart = parseIsoInstant(periods[0].start);
+  const lastEnd = parseIsoInstant(periods[periods.length - 1].end);
+  if (firstStart === undefined || lastEnd === undefined) {
+    return { status: 'INVALID_TIMELINE', requestedHorizon };
+  }
+  return {
+    status: firstStart <= requestedStartMs && requestedEndMs <= lastEnd ? 'COMPLETE' : 'TRUNCATED',
+    requestedHorizon
+  };
+}
+
+function isCompleteDashaTimeline(
+  periods: readonly VimshottariMahadashaPeriod[] | undefined
+): periods is readonly VimshottariMahadashaPeriod[] {
+  if (!Array.isArray(periods) || periods.length === 0) return false;
+  const validateSiblings = (
+    siblings: readonly { readonly start: string; readonly end: string }[],
+    parent?: { readonly start: number; readonly end: number }
+  ): boolean => {
+    if (!Array.isArray(siblings) || siblings.length === 0) return false;
+    let previousEnd: number | undefined;
+    for (const [index, period] of siblings.entries()) {
+      if (!period || typeof period.start !== 'string' || typeof period.end !== 'string') return false;
+      const start = parseIsoInstant(period.start);
+      const end = parseIsoInstant(period.end);
+      if (start === undefined || end === undefined || start >= end
+        || (previousEnd !== undefined && start !== previousEnd)
+        || (parent && (start < parent.start || end > parent.end))
+        || (parent && index === 0 && start !== parent.start)
+        || (parent && index === siblings.length - 1 && end !== parent.end)) {
+        return false;
+      }
+      previousEnd = end;
+    }
+    return true;
+  };
+
+  if (!validateSiblings(periods)) return false;
+  for (const md of periods) {
+    const mdStart = parseIsoInstant(md.start);
+    const mdEnd = parseIsoInstant(md.end);
+    if (mdStart === undefined || mdEnd === undefined || !validateSiblings(md.antardashas, { start: mdStart, end: mdEnd })) {
+      return false;
+    }
+    for (const ad of md.antardashas) {
+      const adStart = parseIsoInstant(ad.start);
+      const adEnd = parseIsoInstant(ad.end);
+      if (adStart === undefined || adEnd === undefined
+        || !validateSiblings(ad.pratyantardashas ?? [], { start: adStart, end: adEnd })) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function parseIsoInstant(value: string): number | undefined {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|([+-])(\d{2}):(\d{2}))$/.exec(value);
+  if (!match) return undefined;
+  const [, yearValue, monthValue, dayValue, hourValue, minuteValue, secondValue, , , offsetHourValue, offsetMinuteValue] = match;
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const day = Number(dayValue);
+  const hour = Number(hourValue);
+  const minute = Number(minuteValue);
+  const second = Number(secondValue);
+  const offsetHour = offsetHourValue === undefined ? 0 : Number(offsetHourValue);
+  const offsetMinute = offsetMinuteValue === undefined ? 0 : Number(offsetMinuteValue);
+  if (month < 1 || month > 12 || hour > 23 || minute > 59 || second > 59
+    || offsetHour > 23 || offsetMinute > 59) {
+    return undefined;
+  }
+  const calendarDate = new Date(0);
+  calendarDate.setUTCFullYear(year, month - 1, day);
+  calendarDate.setUTCHours(hour, minute, second, 0);
+  if (calendarDate.getUTCFullYear() !== year || calendarDate.getUTCMonth() !== month - 1
+    || calendarDate.getUTCDate() !== day) {
+    return undefined;
+  }
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
 }

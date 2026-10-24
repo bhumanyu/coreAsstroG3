@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { indexDashaPeriodActivations } from './dashaHierarchyUtils';
+import { combineTimingHierarchy, indexDashaPeriodActivations } from './dashaHierarchyUtils';
 import { synthesizeCareerDashaHierarchy } from './dashaCareerHierarchy';
 import { synthesizeWealthDashaHierarchy } from './dashaWealthHierarchy';
 import { buildLifeAnalysisViewModel } from './lifeAnalysisMapper';
@@ -24,6 +24,54 @@ import type { CareerTimingActivation } from '../../domain/career/careerTypes';
 import type { WealthPeriodTimingActivation } from '../../domain/wealth/wealthTypes';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import { createDomainEvidence } from '../../domain/interpretation/DomainEvidence';
+import type { TimingActivationEffect } from '../../domain/interpretation/DomainInterpretationTypes';
+
+describe('combineTimingHierarchy precedence', () => {
+  it('applies the documented MD+AD baseline and PD refinement for every effect combination', () => {
+    const effects: readonly TimingActivationEffect[] = [
+      'ACTIVATES',
+      'PARTIALLY_ACTIVATES',
+      'DOES_NOT_ACTIVATE',
+      'CHALLENGES',
+      'UNKNOWN',
+      'INSUFFICIENT_DATA'
+    ];
+    const baselineByMdAd: readonly (readonly TimingActivationEffect[])[] = [
+      ['ACTIVATES', 'ACTIVATES', 'ACTIVATES', 'PARTIALLY_ACTIVATES', 'ACTIVATES', 'ACTIVATES'],
+      ['PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES'],
+      ['PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'DOES_NOT_ACTIVATE', 'CHALLENGES', 'DOES_NOT_ACTIVATE', 'DOES_NOT_ACTIVATE'],
+      ['PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'CHALLENGES', 'CHALLENGES', 'CHALLENGES', 'CHALLENGES'],
+      ['PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'UNKNOWN', 'CHALLENGES', 'UNKNOWN', 'UNKNOWN'],
+      ['PARTIALLY_ACTIVATES', 'PARTIALLY_ACTIVATES', 'INSUFFICIENT_DATA', 'CHALLENGES', 'INSUFFICIENT_DATA', 'INSUFFICIENT_DATA']
+    ];
+
+    for (const [mdIndex, md] of effects.entries()) {
+      for (const [adIndex, ad] of effects.entries()) {
+        const mdAdBaseline = baselineByMdAd[mdIndex][adIndex];
+        for (const pd of effects) {
+          let expected = mdAdBaseline;
+          if (mdAdBaseline === 'DOES_NOT_ACTIVATE' || mdAdBaseline === 'UNKNOWN'
+            || mdAdBaseline === 'INSUFFICIENT_DATA') {
+            if (pd === 'ACTIVATES' || pd === 'PARTIALLY_ACTIVATES') expected = 'PARTIALLY_ACTIVATES';
+            else if (pd === 'CHALLENGES') expected = 'CHALLENGES';
+          }
+          expect(combineTimingHierarchy(md, ad, pd).overallEffect, `MD=${md}, AD=${ad}, PD=${pd}`)
+            .toBe(expected);
+        }
+      }
+    }
+  });
+
+  it('does not let unlinked PD evidence erase linked MD+AD support or let PD agreeing with AD override MD+AD conflict', () => {
+    expect(combineTimingHierarchy('ACTIVATES', 'ACTIVATES', 'UNKNOWN').overallEffect).toBe('ACTIVATES');
+    expect(combineTimingHierarchy('ACTIVATES', 'CHALLENGES', 'CHALLENGES').overallEffect)
+      .toBe('PARTIALLY_ACTIVATES');
+    expect(combineTimingHierarchy('CHALLENGES', 'ACTIVATES', 'ACTIVATES').overallEffect)
+      .toBe('PARTIALLY_ACTIVATES');
+    expect(combineTimingHierarchy('ACTIVATES', 'CHALLENGES', 'ACTIVATES').overallEffect)
+      .toBe('PARTIALLY_ACTIVATES');
+  });
+});
 
 describe('D07-C: indexDashaPeriodActivations Unit Tests', () => {
   it('returns empty object when passed empty array or undefined', () => {

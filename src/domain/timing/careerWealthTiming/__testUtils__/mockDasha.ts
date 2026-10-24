@@ -109,10 +109,11 @@ export function createMockForecastContext(
         pratyantardashaId: 'test-pd'
       })
     }),
-    transitPositions: Object.freeze(calculateCurrentTransitPositions(
+    transitPositionsAsOfInstant: Object.freeze(calculateCurrentTransitPositions(
       target,
       horoscope.birthDetails?.ayanamsa ?? AyanamsaType.LAHIRI
     )),
+    forecastMode: 'DASHA_ONLY',
     methodology: DEFAULT_METHODOLOGY,
     engineVersion: 'test-engine',
     rulesVersion: 'test-rules'

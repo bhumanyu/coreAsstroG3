@@ -45,7 +45,7 @@ export interface DashaTimelinePeriodProduct {
 }
 
 export interface DashaTimelineCompleteness {
-  readonly status: 'UNREQUESTED' | 'COMPLETE' | 'TRUNCATED';
+  readonly status: 'UNREQUESTED' | 'COMPLETE' | 'TRUNCATED' | 'INVALID_HORIZON' | 'INVALID_TIMELINE';
   readonly requestedHorizon?: string;
 }
 

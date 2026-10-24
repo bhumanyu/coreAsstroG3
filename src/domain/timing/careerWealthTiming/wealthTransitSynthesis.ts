@@ -77,7 +77,8 @@ function getHouseLord(horoscope: Horoscope, houseNumber: number): Planet | undef
 }
 
 /**
- * Synthesizes wealth transit and timing synthesis across all four wealth dimensions independently.
+ * Synthesizes current wealth transit at `asOf` across all four dimensions independently.
+ * It does not treat that snapshot as representative of `forecastUntil`.
  */
 export function synthesizeWealthTiming(
   horoscope: Horoscope,
@@ -127,7 +128,7 @@ export function synthesizeWealthTiming(
     at: asOf.toISOString(),
     natalMoonLongitude,
     natalAscendantLongitude,
-    transitPositions: forecastContext.transitPositions
+    transitPositions: forecastContext.transitPositionsAsOfInstant
   };
 
   const transitAnalysis = calculateTransit(transitInput);

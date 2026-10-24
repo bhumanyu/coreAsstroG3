@@ -72,6 +72,86 @@ describe('Dasha & Timing Product View Model & Selectors', () => {
     });
   });
 
+  it('validates requested horizon values and rejects incomplete timelines', () => {
+    const horoscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS, { asOf: fixedAsOf });
+    const temporalState = makeTemporalState(horoscope, fixedAsOf);
+    const interpretation = temporalState.dashaInterpretation;
+    const mahadashas = interpretation?.mahadashas ?? [];
+    const lastMd = mahadashas[mahadashas.length - 1];
+    expect(lastMd).toBeDefined();
+    if (!lastMd || !interpretation) return;
+
+    const complete = buildDashaTimingViewModel({
+      temporalState,
+      requestedHorizon: lastMd.end
+    });
+    expect(complete.timeline.completeness?.status).toBe('COMPLETE');
+
+    const invalidHorizon = buildDashaTimingViewModel({
+      temporalState,
+      requestedHorizon: 'not-an-instant'
+    });
+    expect(invalidHorizon.timeline.completeness).toEqual({
+      status: 'INVALID_HORIZON',
+      requestedHorizon: 'not-an-instant'
+    });
+
+    const emptyTimelineState: AnalysisTemporalState = {
+      ...temporalState,
+      dashaInterpretation: temporalState.dashaInterpretation
+        ? { ...temporalState.dashaInterpretation, mahadashas: [] }
+        : undefined
+    };
+    const invalidTimeline = buildDashaTimingViewModel({
+      temporalState: emptyTimelineState,
+      requestedHorizon: lastMd.end
+    });
+    expect(invalidTimeline.timeline.completeness).toEqual({
+      status: 'INVALID_TIMELINE',
+      requestedHorizon: lastMd.end
+    });
+
+    const incompleteNestedState: AnalysisTemporalState = {
+      ...temporalState,
+      dashaInterpretation: {
+        ...interpretation,
+        mahadashas: mahadashas.map((md, index) => index === 0
+          ? { ...md, antardashas: [] }
+          : md)
+      }
+    };
+    expect(buildDashaTimingViewModel({
+      temporalState: incompleteNestedState,
+      requestedHorizon: lastMd.end
+    }).timeline.completeness?.status).toBe('INVALID_TIMELINE');
+
+    const shiftFuture = (instant: string) =>
+      new Date(Date.parse(instant) + 100 * 365.25 * 24 * 60 * 60 * 1000).toISOString();
+    const futureMahadashas = mahadashas.map((md) => ({
+      ...md,
+      start: shiftFuture(md.start),
+      end: shiftFuture(md.end),
+      antardashas: md.antardashas.map((ad) => ({
+        ...ad,
+        start: shiftFuture(ad.start),
+        end: shiftFuture(ad.end),
+        pratyantardashas: ad.pratyantardashas.map((pd) => ({
+          ...pd,
+          start: shiftFuture(pd.start),
+          end: shiftFuture(pd.end)
+        }))
+      }))
+    }));
+    const timelineStartsAfterRequest: AnalysisTemporalState = {
+      ...temporalState,
+      dashaInterpretation: { ...interpretation, mahadashas: futureMahadashas }
+    };
+    expect(buildDashaTimingViewModel({
+      temporalState: timelineStartsAfterRequest,
+      requestedHorizon: shiftFuture(lastMd.end)
+    }).timeline.completeness?.status).toBe('TRUNCATED');
+  });
+
   it('Test 1: returns UNAVAILABLE when horoscope has no dasha/vimshottari calculations', () => {
     const emptyHoroscope: Horoscope = {
       birthDetails: CANONICAL_BIRTH_DETAILS,
