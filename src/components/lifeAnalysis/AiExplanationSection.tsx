@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, Brain, AlertCircle } from 'lucide-react';
-import type { AiExplanationResult } from '../../ai';
+import type { AiExplanationResult } from '../../ai/browser';
 import { AiExplanationEvidenceList } from '../ai/AiExplanationEvidenceList';
 
 interface AiExplanationSectionProps {

@@ -17,7 +17,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Brain, AlertCircle, CheckCircle2, TriangleAlert } from 'lucide-react';
-import type { AiExplanationResult } from '../../ai';
+import type { AiExplanationResult } from '../../ai/browser';
 
 export interface SelectedPeriodAiExplanationProps {
   readonly synthesis: {

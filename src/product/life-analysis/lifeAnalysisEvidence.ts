@@ -1,4 +1,4 @@
-import type { AiEvidence } from '../../ai';
+import type { AiEvidence } from '../../ai/browser';
 import type { LifeAnalysis } from '../../domain/synthesis';
 import type { LifeAnalysisEvidenceViewModel } from './lifeAnalysisTypes';
 import { deepFreeze } from '../../ai/context/deepFreeze';

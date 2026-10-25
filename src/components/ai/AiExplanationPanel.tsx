@@ -14,11 +14,11 @@ import type { AiTask } from '../../ai/types/aiRequestTypes';
 import {
   AI_EXPLANATION_TASKS,
   runAiExplanation
-} from '../../ai';
+} from '../../ai/browser';
 import type {
   AiExplanationResult,
   AiExplanationViewModel
-} from '../../ai';
+} from '../../ai/browser';
 import { AiExplanationEvidenceList } from './AiExplanationEvidenceList';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { LifeAnalysis } from '../../domain/synthesis';

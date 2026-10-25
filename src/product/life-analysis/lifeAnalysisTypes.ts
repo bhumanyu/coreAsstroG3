@@ -25,7 +25,7 @@ import type { CareerProfessionAnalysis } from '../../domain/career/careerProfess
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { CareerInternalArtifacts } from '../../domain/career/careerTypes';
-import type { AiExplanationResult } from '../../ai';
+import type { AiExplanationResult } from '../../ai/browser';
 import type { AnalysisTemporalState } from '../../core/analysis/AnalysisTemporalState';
 import type { WhyExperienceViewModel } from './lifeAnalysisEvidenceTypes';
 import type {

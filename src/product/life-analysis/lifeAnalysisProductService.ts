@@ -1,7 +1,7 @@
 import type { Horoscope } from '../../types';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import type { DomainReasoningOptions } from '../../domain/reasoning/reasoningTypes';
-import type { AiRouter } from '../../ai';
+import type { AiRouter } from '../../ai/browser';
 import { interpretCareerV2 } from '../../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../../domain/wealth/WealthDomainInterpreterV2';
 import { buildLifeAnalysis } from '../../domain/synthesis';

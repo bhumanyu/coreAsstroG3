@@ -2,11 +2,11 @@ import React from 'react';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { AiExplanationPanel } from './AiExplanationPanel';
-import * as aiModule from '../../ai';
+import * as aiModule from '../../ai/browser';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { Planet, type BirthDetails, type Horoscope } from '../../types';
-import type { AiExplanationViewModel, AiExplanationErrorViewModel } from '../../ai';
+import type { AiExplanationViewModel, AiExplanationErrorViewModel } from '../../ai/browser';
 import type { DomainInterpretation } from '../../domain/interpretation';
 import { createDomainInterpretation } from '../../domain/interpretation';
 import { createNatalPromise } from '../../domain/interpretation/NatalPromise';
@@ -21,8 +21,8 @@ import * as wealthModule from '../../domain/wealth/WealthDomainInterpreterV2';
 import * as temporalModule from '../../core/analysis/resolveAnalysisTemporalState';
 import * as synthesisModule from '../../domain/synthesis';
 
-vi.mock('../../ai', async () => {
-  const actual = await vi.importActual<typeof import('../../ai')>('../../ai');
+vi.mock('../../ai/browser', async () => {
+  const actual = await vi.importActual<typeof import('../../ai/browser')>('../../ai/browser');
   return {
     ...actual,
     runAiExplanation: vi.fn()

@@ -6,7 +6,7 @@ import type {
   LifeAnalysisProductState,
   LifeAnalysisViewModel
 } from '../../product/life-analysis/lifeAnalysisTypes';
-import type { AiExplanationViewModel } from '../../ai';
+import type { AiExplanationViewModel } from '../../ai/browser';
 
 describe('LifeAnalysisPage', () => {
   const mockReadyAnalysis: LifeAnalysisViewModel = {

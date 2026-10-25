@@ -1,3 +1,7 @@
+/**
+ * Full AI barrel for server/provider integrations and tests.
+ * Browser-facing code must import from `./browser` instead.
+ */
 export { AI_CONTEXT_SCHEMA_VERSION } from './types/aiTypes';
 export type {
   AiContextSchemaVersion,
@@ -159,5 +163,15 @@ export type {
   AiExplanationStructuredOutput
 } from './product';
 
+export {
+  assertRemoteProviderAllowed,
+  evaluateRemoteProviderPolicy
+} from './security/remoteProviderPolicy';
+export type {
+  RemoteProviderPolicyInput,
+  RemoteProviderPolicyResult,
+  RemoteProviderPolicyDenialReason,
+  RuntimeBoundary
+} from './security/remoteProviderPolicy';
 
 

@@ -20,7 +20,7 @@ import type {
   WealthTimingProduct,
   LifeAnalysisQualification
 } from '../life-analysis/lifeAnalysisTypes';
-import type { AiExplanationResult } from '../../ai';
+import type { AiExplanationResult } from '../../ai/browser';
 import type {
   ProductAnalysis,
   ProductAnalysisStatus,
