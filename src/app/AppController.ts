@@ -58,12 +58,16 @@ export function createAppController(
         let dashaTimingViewModel: DashaTimingViewModel | undefined;
         const temporalState = pipelineState?.temporalState;
         if (temporalState && horoscope && pipelineState) {
-          dashaTimingViewModel = buildDashaTimingViewModel({
-            temporalState,
-            horoscope,
-            careerTiming: pipelineState.analysis?.careerDetail?.timing,
-            wealthTiming: pipelineState.analysis?.wealthDetail?.timing
-          });
+          try {
+            dashaTimingViewModel = buildDashaTimingViewModel({
+              temporalState,
+              horoscope,
+              careerTiming: pipelineState.analysis?.careerDetail?.timing,
+              wealthTiming: pipelineState.analysis?.wealthDetail?.timing
+            });
+          } catch {
+            dashaTimingViewModel = undefined;
+          }
         }
 
         if (analysis.status === 'ERROR') {

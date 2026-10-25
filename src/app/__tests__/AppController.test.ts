@@ -281,6 +281,44 @@ describe('AppController', () => {
       expect(currentState.lifeAnalysisState.status).toBe('READY');
     });
 
+    it('keeps a successful analysis when the optional Dasha view-model builder fails', async () => {
+      let currentState: AppState = { ...INITIAL_APP_STATE };
+      const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+        (update: SetStateAction<AppState>) => {
+          currentState =
+            typeof update === 'function'
+              ? (update as (prev: AppState) => AppState)(currentState)
+              : update;
+        }
+      );
+      const temporalState = Object.defineProperty({}, 'asOf', {
+        get: () => {
+          throw new Error('Dasha projection failed');
+        }
+      });
+      const pipelineState = {
+        status: 'READY',
+        temporalState
+      } as unknown as LifeAnalysisProductState;
+      const mockService = {
+        analyzeRun: vi.fn().mockResolvedValue(makeRun(
+          mockProductAnalysis,
+          INITIAL_APP_STATE.birthDetails,
+          mockHoroscope,
+          pipelineState
+        ))
+      } as unknown as ProductAnalysisService;
+      const controller = createAppController(setState, mockService);
+
+      await controller.analyze(INITIAL_APP_STATE.birthDetails);
+
+      expect(currentState.productAnalysis.status).toBe('READY');
+      expect(currentState.productAnalysis.analysis).toBe(mockProductAnalysis);
+      expect(currentState.productAnalysis.analysis?.career).toEqual(mockProductAnalysis.career);
+      expect(currentState.productAnalysis.analysis?.wealth).toEqual(mockProductAnalysis.wealth);
+      expect(currentState.dashaTimingViewModel).toBeUndefined();
+    });
+
     it('updates productAnalysis to ERROR on failure with error message extracted from warnings', async () => {
       let currentState: AppState = { ...INITIAL_APP_STATE };
       const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
