@@ -14,7 +14,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
-    "verify": "npm run lint && npm test && npm run build",
+    "verify": "npm run lint && npm test && npm run verify:bundle",
+    "verify:bundle": "npm run build && vitest run src/ai/security/browserBoundary.test.ts",
     "test:pba10": "vitest run src/product/analysis/selectedPeriodProductService.test.ts src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/productAnalysisService.integration.test.ts src/product/analysis/__tests__/productAnalysisService.test.ts src/ai/product/aiExplanationService.test.ts src/pages/__tests__/DashaPage.test.tsx",
     "verify:pba10": "npm run lint && npm run test:pba10 && npm run build"
   },
