@@ -17,6 +17,9 @@ PR-001A Repository Foundation
 ## Development Guide
 See [PLAYBOOK.md](./PLAYBOOK.md) for the comprehensive guide on planning and safely making changes, including layer responsibilities, non-negotiable invariants, and testing guardrails.
 
+## Place search
+Place autocomplete uses the Open-Meteo geocoding service from the browser. A failed search is not proof that a place does not exist; users can enter latitude, longitude, and time zone manually. Searches do not automatically retry.
+
 ## Vimshottari Dasha Engine (PR-041)
 - **Year Length Convention**: 1 Vimshottari year = 365.25 days; this materially affects MD/AD/PD boundaries and must match the chosen reference software/source (`VIMSHOTTARI_YEAR_DAYS`).
 - **Date Arithmetic**: Fractional years added via deterministic date arithmetic (`addFractionalYears`).

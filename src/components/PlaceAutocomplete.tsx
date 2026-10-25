@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Loader2, Search } from 'lucide-react';
-import { searchPlaces, PlaceResult } from '../services/geocoding';
+import { searchPlacesDetailed } from '../services/geocoding';
+import type { PlaceResult } from '../services/geocoding';
 
 interface PlaceAutocompleteProps {
   onSelect: (place: PlaceResult) => void;
@@ -17,6 +18,10 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [noResults, setNoResults] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const requestTokenRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,26 +29,65 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
   }, [initialValue]);
 
   useEffect(() => {
+    const token = ++requestTokenRef.current;
+    const abortController = new AbortController();
+    setLoading(false);
+    setSearchError(null);
+    setNoResults(false);
+
     if (query.trim().length < 2) {
       setResults([]);
       setOpen(false);
-      setLoading(false);
-      return;
+      return () => {
+        abortController.abort();
+        if (requestTokenRef.current === token) requestTokenRef.current += 1;
+      };
     }
 
+    setResults([]);
+    setOpen(false);
     setLoading(true);
-    const handler = setTimeout(async () => {
-      const res = await searchPlaces(query);
-      setResults(res);
-      setLoading(false);
-      setOpen(res.length > 0);
+    const handler = setTimeout(() => {
+      void searchPlacesDetailed(query, { signal: abortController.signal }).then((outcome) => {
+        if (abortController.signal.aborted || token !== requestTokenRef.current) return;
+
+        setLoading(false);
+        switch (outcome.status) {
+          case 'SUCCESS':
+            setResults([...outcome.places]);
+            setOpen(true);
+            break;
+          case 'NO_RESULTS':
+            setResults([]);
+            setOpen(true);
+            setNoResults(true);
+            break;
+          case 'ABORTED':
+            setResults([]);
+            setOpen(false);
+            setSearchError(null);
+            break;
+          default:
+            setResults([]);
+            setOpen(true);
+            setSearchError('Place search is temporarily unavailable. Please try again.');
+            break;
+        }
+      }).catch(() => {
+        if (abortController.signal.aborted || token !== requestTokenRef.current) return;
+        setLoading(false);
+        setResults([]);
+        setOpen(true);
+        setSearchError('Place search is temporarily unavailable. Please try again.');
+      });
     }, 300);
 
     return () => {
       clearTimeout(handler);
+      abortController.abort();
+      if (requestTokenRef.current === token) requestTokenRef.current += 1;
     };
-  }, [query]);
-
+  }, [query, retryCount]);
   // Handle outside click to close dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -104,6 +148,29 @@ export const PlaceAutocomplete: React.FC<PlaceAutocompleteProps> = ({
           <Search className="w-3.5 h-3.5 text-slate-600 absolute right-3 pointer-events-none" />
         )}
       </div>
+
+      {loading && (
+        <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400">
+          Searching places…
+        </div>
+      )}
+      {!loading && noResults && (
+        <div role="status" aria-live="polite" className="mt-1 text-xs text-slate-400">
+          No places found. You can still enter coordinates and time zone manually.
+        </div>
+      )}
+      {!loading && searchError && (
+        <div role="alert" aria-live="polite" className="mt-1 flex items-center gap-2 text-xs text-rose-400">
+          <span>{searchError}</span>
+          <button
+            type="button"
+            onClick={() => setRetryCount((count) => count + 1)}
+            className="underline underline-offset-2 hover:text-rose-300"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {open && results.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-800 text-sm">

@@ -1,25 +1,44 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Header } from '../components/Header';
 import { BirthContext, buildBirthContext } from './birthContext';
 import { BirthFormModal, PRESET_PROFILES } from '../components/BirthFormModal';
 import { ProductPageRouter } from './ProductPageRouter';
 import { AppFooter } from './AppFooter';
 import { AppState, INITIAL_APP_STATE, BirthDetails } from './AppState';
-import { createAppController } from './AppController';
+import { createAppController, type AppController } from './AppController';
 import { ThemeProvider } from '../context/ThemeContext';
 
-export const AppShellContent: React.FC = () => {
+interface AppShellContentProps {
+  readonly controllerFactory?: (setState: React.Dispatch<React.SetStateAction<AppState>>) => AppController;
+}
+
+export const AppShellContent: React.FC<AppShellContentProps> = ({
+  controllerFactory = createAppController
+}) => {
   const [state, setState] = useState<AppState>(INITIAL_APP_STATE);
 
-  const controller = useMemo(() => createAppController(setState), []);
+  const controller = useMemo(() => controllerFactory(setState), [controllerFactory]);
+
+  const runAnalysisSafely = useCallback(async (birthDetails: BirthDetails) => {
+    try {
+      await controller.analyze(birthDetails);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Analysis calculation failed.';
+      setState((prev) => ({
+        ...prev,
+        productAnalysis: { status: 'ERROR', error: message },
+        lifeAnalysisState: { status: 'ERROR', errorMessage: message }
+      }));
+    }
+  }, [controller]);
 
   useEffect(() => {
-    void controller.analyze(state.birthDetails);
-  }, [controller, state.birthDetails]);
+    void runAnalysisSafely(state.birthDetails);
+  }, [runAnalysisSafely, state.birthDetails]);
 
-  const handleLifeAnalysisRetry = () => {
-    void controller.analyze(state.birthDetails);
-  };
+  const handleLifeAnalysisRetry = useCallback(() => {
+    void runAnalysisSafely(state.birthDetails);
+  }, [runAnalysisSafely, state.birthDetails]);
 
   const handleResetPreset = () => {
     controller.resetPreset();
