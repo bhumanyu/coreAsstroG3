@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Dispatch, SetStateAction } from 'react';
 import { AppShellContent } from './AppShell';
-import type { AppController } from './AppController';
-import type { AppState } from './AppState';
+import { createAppController, type AppController } from './AppController';
+import { INITIAL_APP_STATE, type AppState } from './AppState';
+import { ProductAnalysisService, type ProductAnalysisRun } from '../product/analysis';
+import { createProductAnalysis } from '../product/analysis/__tests__/testHelpers';
 
 vi.mock('../components/Header', () => ({ Header: () => null }));
 vi.mock('./AppFooter', () => ({ AppFooter: () => null }));
@@ -32,6 +34,31 @@ function createController(analyze: AppController['analyze']): AppController {
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+const successAnalysis = createProductAnalysis({ analysisId: 'retry-success' });
+const successRun: ProductAnalysisRun = {
+  analysis: successAnalysis,
+  snapshot: {
+    birthDetails: {
+      ...INITIAL_APP_STATE.birthDetails,
+      name: 'Retry Test'
+    },
+    context: {
+      asOf: successAnalysis.asOf,
+      methodology: successAnalysis.methodology,
+      engineVersion: successAnalysis.engineVersion,
+      rulesVersion: successAnalysis.rulesVersion
+    }
+  }
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -39,7 +66,8 @@ afterEach(() => {
 describe('AppShellContent analysis safety wrapper', () => {
   it('handles an unexpected initial rejection without an unhandled rejection or duplicate error', async () => {
     const controller = createController(vi.fn().mockRejectedValue(new Error('unexpected failure')));
-    render(<AppShellContent controllerFactory={() => controller} />);
+    const controllerFactory = () => controller;
+    render(<AppShellContent controllerFactory={controllerFactory} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('unexpected failure');
     expect(screen.getAllByRole('alert')).toHaveLength(1);
@@ -69,15 +97,12 @@ describe('AppShellContent analysis safety wrapper', () => {
         });
       });
     const controller = createController(analyze);
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return controller;
+    };
 
-    render(
-      <AppShellContent
-        controllerFactory={(setState) => {
-          setStateRef = setState;
-          return controller;
-        }}
-      />
-    );
+    render(<AppShellContent controllerFactory={controllerFactory} />);
     await screen.findByRole('alert');
     fireEvent.click(screen.getByRole('button', { name: 'Retry analysis' }));
     expect(await screen.findByRole('status')).toHaveTextContent('Loading analysis');
@@ -85,6 +110,32 @@ describe('AppShellContent analysis safety wrapper', () => {
     await act(async () => {
       completeRetry?.();
     });
+    await waitFor(() => expect(screen.getByTestId('analysis-status')).toHaveTextContent('READY'));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('recovers from ERROR to READY through the real AppController on retry', async () => {
+    const service = new ProductAnalysisService();
+    const retryRun = deferred<ProductAnalysisRun>();
+    const analyzeRun = vi.spyOn(service, 'analyzeRun')
+      .mockRejectedValueOnce(new Error('initial analysis failure'))
+      .mockReturnValueOnce(retryRun.promise);
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) =>
+      createAppController(setState, service);
+
+    render(<AppShellContent controllerFactory={controllerFactory} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('initial analysis failure');
+    expect(screen.getByTestId('analysis-status')).toHaveTextContent('ERROR');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry analysis' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Loading analysis');
+    expect(analyzeRun).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      retryRun.resolve(successRun);
+      await retryRun.promise;
+    });
+
     await waitFor(() => expect(screen.getByTestId('analysis-status')).toHaveTextContent('READY'));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -99,15 +150,12 @@ describe('AppShellContent analysis safety wrapper', () => {
       }));
     });
     const controller = createController(analyze);
+    const controllerFactory = (setState: Dispatch<SetStateAction<AppState>>) => {
+      setStateRef = setState;
+      return controller;
+    };
 
-    render(
-      <AppShellContent
-        controllerFactory={(setState) => {
-          setStateRef = setState;
-          return controller;
-        }}
-      />
-    );
+    render(<AppShellContent controllerFactory={controllerFactory} />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('handled failure');
     expect(screen.getAllByRole('alert')).toHaveLength(1);
