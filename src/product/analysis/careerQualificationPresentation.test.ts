@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getCareerProfessionStatusCopy,
+  getMissingInputLabel,
   type CareerProfessionStatus
 } from './careerQualificationPresentation';
 
@@ -36,5 +37,18 @@ describe('career profession status presentation', () => {
       expect(getCareerProfessionStatusCopy(status).label.length).toBeGreaterThan(0);
       expect(getCareerProfessionStatusCopy(status).explanation.length).toBeGreaterThan(0);
     }
+  });
+
+  it.each([
+    ['career10HFoundation', '10th-house career foundation'],
+    ['career10LFoundation', '10th-lord career foundation'],
+    ['careerD10CanonicalAnalysis', 'Canonical D10 career analysis'],
+    ['domainEvidence', 'Career domain evidence']
+  ])('provides a human-readable label for %s', (key, label) => {
+    expect(getMissingInputLabel(key)).toBe(label);
+  });
+
+  it('returns an unmapped input key unchanged', () => {
+    expect(getMissingInputLabel('futureEngineInput')).toBe('futureEngineInput');
   });
 });

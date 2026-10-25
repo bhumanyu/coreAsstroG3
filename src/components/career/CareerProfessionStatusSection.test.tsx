@@ -32,6 +32,7 @@ describe('CareerProfessionStatusSection', () => {
     const profession = {
       ...selectCareerViewModel(createProductAnalysis()).profession,
       status: 'INSUFFICIENT_DATA' as const,
+      missingInputs: ['career10HFoundation'],
       statusCopy: getCareerProfessionStatusCopy('INSUFFICIENT_DATA')
     };
     render(<CareerProfessionStatusSection profession={profession} />);
@@ -42,6 +43,7 @@ describe('CareerProfessionStatusSection', () => {
     expect(renderedText).not.toContain('no career promise');
     expect(renderedText).not.toContain('no career potential');
     expect(renderedText).toContain('not a negative career prediction');
+    expect(renderedText).toContain('10th-house career foundation');
   });
 
   it('does not label a partial profession analysis as mixed or neutral', () => {
@@ -55,5 +57,51 @@ describe('CareerProfessionStatusSection', () => {
     expect(screen.getByText('PARTIAL')).toBeInTheDocument();
     expect(screen.getByText('Partial analysis')).toBeInTheDocument();
     expect(screen.queryByText(/mixed|neutral/i)).not.toBeInTheDocument();
+  });
+
+  it('shows only the generic explanation when there are no missing inputs', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      missingInputs: [],
+      statusCopy: getCareerProfessionStatusCopy('INSUFFICIENT_DATA')
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Missing profession analysis inputs' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Missing inputs')).not.toBeInTheDocument();
+  });
+
+  it('renders labels for each known missing input and preserves the generic explanation', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      missingInputs: [
+        'career10HFoundation',
+        'career10LFoundation',
+        'careerD10CanonicalAnalysis',
+        'domainEvidence'
+      ],
+      statusCopy: getCareerProfessionStatusCopy('PARTIAL')
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByText(profession.statusCopy.explanation)).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: 'Missing profession analysis inputs' });
+    expect(list).toHaveTextContent('10th-house career foundation');
+    expect(list).toHaveTextContent('10th-lord career foundation');
+    expect(list).toHaveTextContent('Canonical D10 career analysis');
+    expect(list).toHaveTextContent('Career domain evidence');
+  });
+
+  it('falls back to the raw key for an unmapped missing input', () => {
+    const profession = {
+      ...selectCareerViewModel(createProductAnalysis()).profession,
+      missingInputs: ['futureEngineInput'],
+      statusCopy: getCareerProfessionStatusCopy('PARTIAL')
+    };
+    render(<CareerProfessionStatusSection profession={profession} />);
+
+    expect(screen.getByRole('list', { name: 'Missing profession analysis inputs' }))
+      .toHaveTextContent('futureEngineInput');
   });
 });

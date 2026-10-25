@@ -37,8 +37,19 @@ const PROFESSION_STATUS_COPY: Readonly<
   })
 });
 
+const MISSING_INPUT_LABELS: Readonly<Record<string, string>> = Object.freeze({
+  career10HFoundation: '10th-house career foundation',
+  career10LFoundation: '10th-lord career foundation',
+  careerD10CanonicalAnalysis: 'Canonical D10 career analysis',
+  domainEvidence: 'Career domain evidence'
+});
+
 export function getCareerProfessionStatusCopy(
   status: CareerProfessionStatus
 ): CareerProfessionStatusCopy {
   return PROFESSION_STATUS_COPY[status];
+}
+
+export function getMissingInputLabel(key: string): string {
+  return MISSING_INPUT_LABELS[key] ?? key;
 }

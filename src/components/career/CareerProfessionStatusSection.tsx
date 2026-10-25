@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CareerProfessionViewModel } from '../../product/analysis/careerViewModel';
+import { getMissingInputLabel } from '../../product/analysis/careerQualificationPresentation';
 
 export interface CareerProfessionStatusSectionProps {
   readonly profession: CareerProfessionViewModel;
@@ -22,5 +23,18 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
     </div>
     <p className="text-sm text-slate-200">{profession.statusCopy.label}</p>
     <p className="text-xs leading-relaxed text-slate-400">{profession.statusCopy.explanation}</p>
+    {profession.missingInputs.length > 0 && (
+      <div className="space-y-1 pt-1">
+        <h3 className="text-xs font-semibold text-slate-300">Missing inputs</h3>
+        <ul
+          aria-label="Missing profession analysis inputs"
+          className="list-disc space-y-1 pl-5 text-xs text-slate-400"
+        >
+          {profession.missingInputs.map((input) => (
+            <li key={input}>{getMissingInputLabel(input)}</li>
+          ))}
+        </ul>
+      </div>
+    )}
   </section>
 );
