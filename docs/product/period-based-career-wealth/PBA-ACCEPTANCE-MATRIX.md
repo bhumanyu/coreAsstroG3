@@ -915,6 +915,20 @@ The source import walker now covers static and dynamic relative imports and `.js
 Profession status presentation preserves the existing `COMPLETE`, `PARTIAL`, and `INSUFFICIENT_DATA` values, displays each original machine status alongside additive explanatory copy, and explicitly avoids translating partial/insufficient profession analysis into a negative career conclusion. `PARTIAL` is not treated as `MIXED`; profession-level insufficient data is not represented as pattern-level missing evidence. The product profession-status type is constrained to its existing three-value status contract; runtime classifications are unchanged.
 
 **Deferred by owner decision:** The four-state pattern qualification mapper (`UNAVAILABLE`, `INSUFFICIENT_DATA`, `NOT_ASSESSED`, `MIXED`) is not implemented or wired because the canonical pattern-level result is not currently exposed to a product UI surface. Selected-period `CANONICAL` / `PROVISIONAL` / `UNAVAILABLE` qualification status remains unchanged and is not equated with pattern-level qualification. Implement the four-state copy only when its actual canonical input is available at the UI boundary. No domain classifiers, qualification rules, mechanism resolvers, Dasha, or C9 code were changed.
+
+## Career Profession Missing-Input Labels
+
+**Source change commit:** `0a1871e8dbd40c34c644f8945c979da363b88891`
+
+**Toolchain:** Node `20.19.4`
+
+**Verification for the exact source change commit above:**
+- ✅ `npx vitest run src/components/career/CareerProfessionStatusSection.test.tsx src/product/analysis/careerQualificationPresentation.test.ts src/pages/__tests__/CareerPage.test.tsx`: PASS (3 files, 22 tests)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run lint`: PASS
+- ✅ `npm run verify`: PASS (309 files, 5,703 passed, 5 skipped; lint and production build passed; `verify:bundle` rebuilt and scanned the client)
+
+The profession status panel preserves its generic status explanation and conditionally lists the known missing engine inputs with human-readable labels. Unknown keys display as their original strings. Tests cover empty and populated lists, known mappings, fallback, and the existing no-negative-prediction assertion with missing inputs present. No domain classification or status determination changed. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
 - **Reference-data status remains BLOCKED:** `D08-A1` remains skipped; no external ephemeris values were added. Partial-MD and MD/AD/PD analytical fixtures remain internal-consistency checks only, not independent astronomical validation.
 
 ## Vimshottari Timeline Structural and Precision Contracts
