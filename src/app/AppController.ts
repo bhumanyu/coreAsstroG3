@@ -2,8 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { AppState } from './AppState';
 import type { BirthDetails } from '../types';
 import type { AppPage } from './navigation/navigationTypes';
-import { ProductAnalysisService } from '../product/analysis';
-import { calculateHoroscope } from '../engine/astroEngine';
+import { ProductAnalysisService, type ProductAnalysisRunSnapshot } from '../product/analysis';
 import { buildDashaTimingViewModel, type DashaTimingViewModel } from '../product/dasha-timing';
 
 export interface AppController {
@@ -20,6 +19,7 @@ export function createAppController(
   service: ProductAnalysisService = new ProductAnalysisService()
 ): AppController {
   let currentRequestId = 0;
+  let currentRunSnapshot: ProductAnalysisRunSnapshot | undefined;
 
   return {
     navigate: (page: AppPage) => {
@@ -36,6 +36,7 @@ export function createAppController(
     },
     analyze: async (birthDetails: BirthDetails) => {
       const requestId = ++currentRequestId;
+      currentRunSnapshot = undefined;
 
       setState((prev) => ({
         ...prev,
@@ -43,23 +44,24 @@ export function createAppController(
         lifeAnalysisState: { status: 'LOADING' }
       }));
 
-      const analysis = await service.analyze(birthDetails);
+      const run = await service.analyzeRun(birthDetails);
+      const analysis = run.analysis;
 
       // Stale-result guard: discard late-resolving results for previous requests
       if (requestId !== currentRequestId) {
         return;
       }
 
-      const pipelineState = service.lastPipelineState;
-      const horoscope = service.lastHoroscope ?? calculateHoroscope(birthDetails);
+      currentRunSnapshot = run.snapshot;
+      const { pipelineState, horoscope } = run.snapshot;
       let dashaTimingViewModel: DashaTimingViewModel | undefined;
       const temporalState = pipelineState?.temporalState;
-      if (temporalState) {
+      if (temporalState && horoscope && pipelineState) {
         dashaTimingViewModel = buildDashaTimingViewModel({
           temporalState,
           horoscope,
-          careerTiming: pipelineState?.analysis?.careerDetail?.timing,
-          wealthTiming: pipelineState?.analysis?.wealthDetail?.timing
+          careerTiming: pipelineState.analysis?.careerDetail?.timing,
+          wealthTiming: pipelineState.analysis?.wealthDetail?.timing
         });
       }
 
@@ -100,6 +102,18 @@ export function createAppController(
     },
     selectPeriod: async (mahadashaId: string, antardashaId: string) => {
       const requestId = ++currentRequestId;
+      const snapshot = currentRunSnapshot;
+
+      if (!snapshot) {
+        setState((prev) => ({
+          ...prev,
+          selectionState: {
+            status: 'ERROR',
+            error: 'No active analysis run. Analyze birth details before selecting a period.'
+          }
+        }));
+        return;
+      }
 
       setState((prev) => ({
         ...prev,
@@ -108,21 +122,19 @@ export function createAppController(
 
       try {
         // PBA-09: Trigger AI explanation for selected-period analysis
-        const analysis = await service.selectPeriod(mahadashaId, antardashaId, true);
+        const analysis = await service.selectPeriodForRun(snapshot, mahadashaId, antardashaId, true);
 
         // Stale-result guard: discard late-resolving results for previous requests
         if (requestId !== currentRequestId) {
           return;
         }
 
-        const horoscope = service.lastHoroscope;
-
         setState((prev) => ({
           ...prev,
           productAnalysis: {
             ...prev.productAnalysis,
             analysis,
-            horoscope
+            horoscope: snapshot.horoscope
           },
           selectionState: { status: 'READY' }
         }));
@@ -143,4 +155,3 @@ export function createAppController(
     }
   };
 }
-

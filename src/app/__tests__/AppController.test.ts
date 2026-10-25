@@ -3,7 +3,14 @@ import { createAppController } from '../AppController';
 import { INITIAL_APP_STATE, INITIAL_PRODUCT_ANALYSIS_STATE, AppState } from '../AppState';
 import type { Dispatch, SetStateAction } from 'react';
 import type { ProductAnalysis } from '../../product/analysis/productAnalysisTypes';
-import type { ProductAnalysisService } from '../../product/analysis';
+import type {
+  ProductAnalysisRun,
+  ProductAnalysisRunSnapshot,
+  ProductAnalysisService
+} from '../../product/analysis';
+import type { Horoscope } from '../../types';
+import type { LifeAnalysisProductState } from '../../product/life-analysis/lifeAnalysisTypes';
+import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
 
 const mockProductAnalysis: ProductAnalysis = {
   analysisId: 'mock-1',
@@ -88,6 +95,30 @@ const mockErrorAnalysis: ProductAnalysis = {
     }
   ]
 };
+
+const mockHoroscope = { birthDetails: INITIAL_APP_STATE.birthDetails } as Horoscope;
+const mockPipelineState: LifeAnalysisProductState = { status: 'READY' };
+
+function makeRun(
+  analysis: ProductAnalysis = mockProductAnalysis,
+  birthDetails = INITIAL_APP_STATE.birthDetails,
+  horoscope: Horoscope = mockHoroscope,
+  pipelineState: LifeAnalysisProductState = mockPipelineState
+): ProductAnalysisRun {
+  const context: AnalysisContext = {
+    asOf: analysis.asOf,
+    methodology: analysis.methodology,
+    engineVersion: analysis.engineVersion,
+    rulesVersion: analysis.rulesVersion
+  };
+  const snapshot: ProductAnalysisRunSnapshot = Object.freeze({
+    birthDetails,
+    context,
+    horoscope,
+    pipelineState
+  });
+  return Object.freeze({ analysis, snapshot });
+}
 
 describe('AppController', () => {
   it('updates activePage via functional updater when navigate is called', () => {
@@ -204,14 +235,13 @@ describe('AppController', () => {
         }
       );
 
-      let resolveAnalysis: (val: ProductAnalysis) => void = () => { };
-      const pendingPromise = new Promise<ProductAnalysis>((resolve) => {
+      let resolveAnalysis: (val: ProductAnalysisRun) => void = () => { };
+      const pendingPromise = new Promise<ProductAnalysisRun>((resolve) => {
         resolveAnalysis = resolve;
       });
 
       const mockService = {
-        analyze: vi.fn().mockReturnValue(pendingPromise),
-        lastPipelineState: { status: 'READY' }
+        analyzeRun: vi.fn().mockReturnValue(pendingPromise)
       } as unknown as ProductAnalysisService;
 
       const controller = createAppController(setState, mockService);
@@ -222,7 +252,7 @@ describe('AppController', () => {
       expect(currentState.lifeAnalysisState.status).toBe('LOADING');
 
       // Resolve analysis
-      resolveAnalysis(mockProductAnalysis);
+      resolveAnalysis(makeRun());
       await analyzePromise;
 
       expect(currentState.productAnalysis.status).toBe('READY');
@@ -240,8 +270,7 @@ describe('AppController', () => {
       );
 
       const mockService = {
-        analyze: vi.fn().mockResolvedValue(mockProductAnalysis),
-        lastPipelineState: { status: 'READY' }
+        analyzeRun: vi.fn().mockResolvedValue(makeRun())
       } as unknown as ProductAnalysisService;
 
       const controller = createAppController(setState, mockService);
@@ -264,8 +293,12 @@ describe('AppController', () => {
       );
 
       const mockService = {
-        analyze: vi.fn().mockResolvedValue(mockErrorAnalysis),
-        lastPipelineState: { status: 'ERROR', errorMessage: 'Failed to calculate chart coordinates' }
+        analyzeRun: vi.fn().mockResolvedValue(makeRun(
+          mockErrorAnalysis,
+          INITIAL_APP_STATE.birthDetails,
+          mockHoroscope,
+          { status: 'ERROR', errorMessage: 'Failed to calculate chart coordinates' }
+        ))
       } as unknown as ProductAnalysisService;
 
       const controller = createAppController(setState, mockService);
@@ -287,45 +320,54 @@ describe('AppController', () => {
         }
       );
 
-      let resolveReq1: (val: ProductAnalysis) => void = () => { };
-      let resolveReq2: (val: ProductAnalysis) => void = () => { };
+      let resolveReq1: (val: ProductAnalysisRun) => void = () => { };
+      let resolveReq2: (val: ProductAnalysisRun) => void = () => { };
 
-      const p1 = new Promise<ProductAnalysis>((resolve) => {
+      const p1 = new Promise<ProductAnalysisRun>((resolve) => {
         resolveReq1 = resolve;
       });
-      const p2 = new Promise<ProductAnalysis>((resolve) => {
+      const p2 = new Promise<ProductAnalysisRun>((resolve) => {
         resolveReq2 = resolve;
       });
 
       const analysis1: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-1' };
       const analysis2: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-2' };
+      const birth1 = { ...INITIAL_APP_STATE.birthDetails, name: 'First' };
+      const birth2 = { ...INITIAL_APP_STATE.birthDetails, name: 'Second' };
+      const horoscope1 = { birthDetails: birth1 } as Horoscope;
+      const horoscope2 = { birthDetails: birth2 } as Horoscope;
+      const pipeline1: LifeAnalysisProductState = { status: 'ERROR', errorMessage: 'stale run' };
+      const pipeline2: LifeAnalysisProductState = { status: 'READY' };
 
       const mockService = {
-        analyze: vi
+        analyzeRun: vi
           .fn()
           .mockReturnValueOnce(p1)
-          .mockReturnValueOnce(p2),
-        lastPipelineState: { status: 'READY' }
+          .mockReturnValueOnce(p2)
       } as unknown as ProductAnalysisService;
 
       const controller = createAppController(setState, mockService);
 
       // Trigger request 1 then request 2
-      const call1 = controller.analyze({ ...INITIAL_APP_STATE.birthDetails, name: 'First' });
-      const call2 = controller.analyze({ ...INITIAL_APP_STATE.birthDetails, name: 'Second' });
+      const call1 = controller.analyze(birth1);
+      const call2 = controller.analyze(birth2);
 
       // Resolve request 2 first
-      resolveReq2(analysis2);
+      resolveReq2(makeRun(analysis2, birth2, horoscope2, pipeline2));
       await call2;
 
       expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
+      expect(currentState.horoscope).toBe(horoscope2);
+      expect(currentState.lifeAnalysisState).toBe(pipeline2);
 
       // Now resolve request 1 late - stale result guard should discard it
-      resolveReq1(analysis1);
+      resolveReq1(makeRun(analysis1, birth1, horoscope1, pipeline1));
       await call1;
 
       // State MUST retain analysis from request 2, NOT overwritten by stale request 1
       expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
+      expect(currentState.horoscope).toBe(horoscope2);
+      expect(currentState.lifeAnalysisState).toBe(pipeline2);
     });
 
     it('guarantees IDLE to LOADING transition before resolving to READY', async () => {
@@ -347,14 +389,13 @@ describe('AppController', () => {
         }
       );
 
-      let resolveAnalysis: (val: ProductAnalysis) => void = () => { };
-      const pendingPromise = new Promise<ProductAnalysis>((resolve) => {
+      let resolveAnalysis: (val: ProductAnalysisRun) => void = () => { };
+      const pendingPromise = new Promise<ProductAnalysisRun>((resolve) => {
         resolveAnalysis = resolve;
       });
 
       const mockService = {
-        analyze: vi.fn().mockReturnValue(pendingPromise),
-        lastPipelineState: { status: 'READY' }
+        analyzeRun: vi.fn().mockReturnValue(pendingPromise)
       } as unknown as ProductAnalysisService;
 
       const controller = createAppController(setState, mockService);
@@ -364,7 +405,7 @@ describe('AppController', () => {
       expect(statesObserved).toContain('LOADING');
       expect(currentState.productAnalysis.status).toBe('LOADING');
 
-      resolveAnalysis(mockProductAnalysis);
+      resolveAnalysis(makeRun());
       await analyzePromise;
 
       expect(statesObserved).toEqual(['IDLE', 'LOADING', 'READY']);
@@ -372,6 +413,30 @@ describe('AppController', () => {
     });
 
     describe('selectPeriod', () => {
+      it('reports a missing active analysis run before selecting a period', async () => {
+        let currentState: AppState = { ...INITIAL_APP_STATE };
+        const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+          (update: SetStateAction<AppState>) => {
+            currentState =
+              typeof update === 'function'
+                ? (update as (prev: AppState) => AppState)(currentState)
+                : update;
+          }
+        );
+        const mockService = {
+          selectPeriodForRun: vi.fn()
+        } as unknown as ProductAnalysisService;
+        const controller = createAppController(setState, mockService);
+
+        await controller.selectPeriod('md_jupiter', 'ad_saturn');
+
+        expect(currentState.selectionState).toEqual({
+          status: 'ERROR',
+          error: 'No active analysis run. Analyze birth details before selecting a period.'
+        });
+        expect(mockService.selectPeriodForRun).not.toHaveBeenCalled();
+      });
+
       it('race condition: newer request wins when responses arrive out of order', async () => {
         let currentState: AppState = { ...INITIAL_APP_STATE };
         const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
@@ -397,14 +462,15 @@ describe('AppController', () => {
         const analysis2: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-2' };
 
         const mockService = {
-          selectPeriod: vi
+          analyzeRun: vi.fn().mockResolvedValue(makeRun()),
+          selectPeriodForRun: vi
             .fn()
             .mockReturnValueOnce(p1)
-            .mockReturnValueOnce(p2),
-          lastPipelineState: { status: 'READY' }
+            .mockReturnValueOnce(p2)
         } as unknown as ProductAnalysisService;
 
         const controller = createAppController(setState, mockService);
+        await controller.analyze(INITIAL_APP_STATE.birthDetails);
 
         // Start request A (Jupiter–Saturn) pending
         const call1 = controller.selectPeriod('md_jupiter', 'ad_saturn');
@@ -454,14 +520,15 @@ describe('AppController', () => {
         const analysis2: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'req-2' };
 
         const mockService = {
-          selectPeriod: vi
+          analyzeRun: vi.fn().mockResolvedValue(makeRun()),
+          selectPeriodForRun: vi
             .fn()
             .mockReturnValueOnce(p1)
-            .mockReturnValueOnce(p2),
-          lastPipelineState: { status: 'READY' }
+            .mockReturnValueOnce(p2)
         } as unknown as ProductAnalysisService;
 
         const controller = createAppController(setState, mockService);
+        await controller.analyze(INITIAL_APP_STATE.birthDetails);
 
         // Start two requests with the SAME MD/AD IDs
         const call1 = controller.selectPeriod('md_jupiter', 'ad_saturn');

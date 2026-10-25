@@ -342,6 +342,55 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     expect(result.ai.conclusion).toBe('Analytical vocation strongly indicated.');
   });
 
+  it('keeps concurrent analyzeRun results paired with their own frozen snapshots', async () => {
+    const birthA = { ...sampleBirth, name: 'Chart A' };
+    const birthB = { ...sampleBirth, name: 'Chart B' };
+    const asOfA = '2026-06-15T12:00:00.000Z';
+    const asOfB = '2027-07-16T13:00:00.000Z';
+    const horoscopeA = { ...sampleHoroscope, birthDetails: birthA };
+    const horoscopeB = { ...sampleHoroscope, birthDetails: birthB };
+    const pipelineStateA: LifeAnalysisProductState = {
+      status: 'ERROR',
+      errorMessage: 'Chart A pipeline failure'
+    };
+    const pipelineStateB: LifeAnalysisProductState = {
+      status: 'ERROR',
+      errorMessage: 'Chart B pipeline failure'
+    };
+    const resolvers = new Map<string, (state: LifeAnalysisProductState) => void>();
+    const service = new ProductAnalysisService({
+      calculateHoroscope: (birthDetails) =>
+        birthDetails.name === 'Chart A' ? horoscopeA : horoscopeB,
+      runPipeline: ({ context }) => new Promise((resolve) => {
+        resolvers.set(context.asOf, resolve);
+      })
+    });
+
+    const runARequest = service.analyzeRun(birthA, { asOf: asOfA });
+    const runBRequest = service.analyzeRun(birthB, { asOf: asOfB });
+    resolvers.get(asOfB)?.(pipelineStateB);
+    const runB = await runBRequest;
+    resolvers.get(asOfA)?.(pipelineStateA);
+    const runA = await runARequest;
+
+    expect(runA.snapshot.birthDetails.name).toBe('Chart A');
+    expect(runA.snapshot.horoscope).toBe(horoscopeA);
+    expect(runA.snapshot.pipelineState).toBe(pipelineStateA);
+    expect(runA.snapshot.context.asOf).toBe(asOfA);
+    expect(runB.snapshot.birthDetails.name).toBe('Chart B');
+    expect(runB.snapshot.horoscope).toBe(horoscopeB);
+    expect(runB.snapshot.pipelineState).toBe(pipelineStateB);
+    expect(runB.snapshot.context.asOf).toBe(asOfB);
+    expect(Object.isFrozen(runA)).toBe(true);
+    expect(Object.isFrozen(runA.snapshot)).toBe(true);
+    expect(Object.isFrozen(runB)).toBe(true);
+    expect(Object.isFrozen(runB.snapshot)).toBe(true);
+    expect(runA.snapshot).not.toBe(runB.snapshot);
+    expect(runA.analysis).not.toBe(runB.analysis);
+    expect(service.lastHoroscope).toBeUndefined();
+    expect(service.lastPipelineState).toBeUndefined();
+  });
+
   it('2. Handles pipeline error result gracefully without throwing', async () => {
     const calculateHoroscopeMock = vi.fn().mockReturnValue(sampleHoroscope);
     const runPipelineMock = vi.fn().mockResolvedValue({

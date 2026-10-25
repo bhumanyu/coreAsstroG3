@@ -59,6 +59,18 @@ export interface AnalyzeOptions {
   readonly includeSelectedPeriodAiExplanation?: boolean;
 }
 
+export interface ProductAnalysisRunSnapshot {
+  readonly birthDetails: BirthDetails;
+  readonly context: AnalysisContext;
+  readonly horoscope?: Horoscope;
+  readonly pipelineState?: LifeAnalysisProductState;
+}
+
+export interface ProductAnalysisRun {
+  readonly analysis: ProductAnalysis;
+  readonly snapshot: ProductAnalysisRunSnapshot;
+}
+
 export class ProductAnalysisService {
   private _lastPipelineState?: LifeAnalysisProductState;
   private _lastHoroscope?: Horoscope;
@@ -81,13 +93,11 @@ export class ProductAnalysisService {
     return this._lastBirthDetails;
   }
 
-  /**
-   * Executes full product analysis for given birth details.
-   */
-  async analyze(
+  /** Executes full analysis with state isolated to this request. */
+  async analyzeRun(
     birthDetails: BirthDetails,
     options?: AnalyzeOptions
-  ): Promise<ProductAnalysis> {
+  ): Promise<ProductAnalysisRun> {
     const methodology = mapMethodology(birthDetails);
     const context = options?.context ?? createAnalysisContext({
       asOf: options?.asOf,
@@ -96,24 +106,32 @@ export class ProductAnalysisService {
       rulesVersion: methodology.rulesEngine
     });
 
+    let horoscope: Horoscope | undefined;
+    let pipelineState: LifeAnalysisProductState | undefined;
+    const finish = (analysis: ProductAnalysis): ProductAnalysisRun => {
+      const snapshot: ProductAnalysisRunSnapshot = Object.freeze({
+        birthDetails,
+        context,
+        ...(horoscope ? { horoscope } : {}),
+        ...(pipelineState ? { pipelineState } : {})
+      });
+      return Object.freeze({ analysis, snapshot });
+    };
+
     try {
-      const horoscope = this.deps.calculateHoroscope(birthDetails, undefined, context.asOf);
-      this._lastHoroscope = horoscope;
-      this._lastBirthDetails = birthDetails;
-      this._lastContext = context;
-      const pipelineState = await this.deps.runPipeline({
+      horoscope = this.deps.calculateHoroscope(birthDetails, undefined, context.asOf);
+      pipelineState = await this.deps.runPipeline({
         horoscope,
         context,
         includeAiExplanation: options?.includeAiExplanation ?? true
       });
-      this._lastPipelineState = pipelineState;
 
       if (pipelineState.status === 'ERROR' || !pipelineState.analysis) {
-        return buildFailedProductAnalysis(
+        return finish(buildFailedProductAnalysis(
           birthDetails,
           pipelineState.errorMessage || 'Life analysis computation failed.',
           context
-        );
+        ));
       }
 
       const productAnalysis = mapProductAnalysis({
@@ -135,46 +153,46 @@ export class ProductAnalysisService {
       if (options?.selectedPeriod) {
         // Check if careerArtifacts are available
         if (!pipelineState.careerArtifacts) {
-          return {
+          return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'UNAVAILABLE',
               error: 'CAREER_ARTIFACTS_UNAVAILABLE'
             }
-          };
+          });
         }
 
         // Check if temporalState is available
         if (!pipelineState.temporalState) {
-          return {
+          return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'UNAVAILABLE',
               error: 'TEMPORAL_STATE_UNAVAILABLE'
             }
-          };
+          });
         }
 
         // Check if career baseline is available
         if (!pipelineState.career?.conclusionData) {
-          return {
+          return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'UNAVAILABLE',
               error: 'CAREER_BASELINE_UNAVAILABLE'
             }
-          };
+          });
         }
 
         // Check if wealth baseline is available
         if (!pipelineState.wealth?.conclusionData) {
-          return {
+          return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'UNAVAILABLE',
               error: 'WEALTH_BASELINE_UNAVAILABLE'
             }
-          };
+          });
         }
 
         const selectedPeriodInput: BuildProductSelectedPeriodSynthesisInput = {
@@ -198,13 +216,13 @@ export class ProductAnalysisService {
         try {
           selectedPeriodResult = buildProductSelectedPeriodSynthesis(selectedPeriodInput);
         } catch {
-          return {
+          return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'SYNTHESIS_FAILED',
               error: 'SYNTHESIS_EXCEPTION'
             }
-          };
+          });
         }
 
         if (selectedPeriodResult.ok) {
@@ -243,7 +261,7 @@ export class ProductAnalysisService {
             }
           }
 
-          return {
+          return finish({
             ...productAnalysis,
             selectedPeriod: {
               status: 'OK',
@@ -253,7 +271,7 @@ export class ProductAnalysisService {
                 ...(aiExplanation ? { aiExplanation } : {})
               }
             }
-          };
+          });
         }
 
         // Map error codes to appropriate status using exhaustive switch
@@ -287,70 +305,76 @@ export class ProductAnalysisService {
         })();
 
         // On failure, return productAnalysis with typed failure (no natal status downgrade)
-        return {
+        return finish({
           ...productAnalysis,
           selectedPeriod: {
             status: failureStatus,
             error: error
           }
-        };
+        });
       }
 
-      return productAnalysis;
+      return finish(productAnalysis);
     } catch (error: unknown) {
-      return buildFailedProductAnalysis(birthDetails, error, context);
+      return finish(buildFailedProductAnalysis(birthDetails, error, context));
     }
   }
 
   /**
-   * Re-selects a dasha period using retained pipeline state.
-   *
-   * This method:
-   * - Reuses lastHoroscope, lastPipelineState (temporalState, careerArtifacts, evidence, baselines)
-   * - Calls buildProductSelectedPeriodSynthesis directly (NEVER calculateHoroscope/runPipeline)
-   * - Returns typed errors (INVALID_SELECTION, synthesis codes verbatim)
-   * - Keeps dasha.current and natal baseline untouched
-   *
-   * Returns updated ProductAnalysis with selectedPeriod result.
-   * Throws if prerequisites are not available (should have been checked before calling).
-   *
-   * @param includeAiExplanation - Whether to trigger AI explanation for selected-period analysis (PBA-09)
+   * @deprecated Use analyzeRun() to keep each result paired with its own snapshot.
    */
-  async selectPeriod(
+  async analyze(
+    birthDetails: BirthDetails,
+    options?: AnalyzeOptions
+  ): Promise<ProductAnalysis> {
+    const run = await this.analyzeRun(birthDetails, options);
+    this._lastHoroscope = run.snapshot.horoscope;
+    this._lastBirthDetails = run.snapshot.birthDetails;
+    this._lastContext = run.snapshot.context;
+    this._lastPipelineState = run.snapshot.pipelineState;
+    return run.analysis;
+  }
+
+  /**
+   * Re-selects a Dasha period using only the supplied run snapshot.
+   * It reuses this run's horoscope, pipeline state, evidence, and baselines;
+   * it never recalculates the horoscope or reruns the pipeline.
+   *
+   * @param includeAiExplanation Whether to trigger selected-period AI (PBA-09).
+   */
+  async selectPeriodForRun(
+    snapshot: ProductAnalysisRunSnapshot,
     mahadashaId: string,
     antardashaId: string,
     includeAiExplanation?: boolean
   ): Promise<ProductAnalysis> {
-    if (!this._lastHoroscope) {
+    const { horoscope, birthDetails, context, pipelineState } = snapshot;
+    if (!horoscope) {
       throw new Error('Cannot select period: no horoscope available. Call analyze() first.');
     }
-    if (!this._lastPipelineState) {
+    if (!pipelineState) {
       throw new Error('Cannot select period: no pipeline state available. Call analyze() first.');
     }
-    if (!this._lastBirthDetails) {
+    if (!birthDetails) {
       throw new Error('Cannot select period: no birth details available. Call analyze() first.');
     }
-    if (!this._lastContext) {
+    if (!context) {
       throw new Error('Cannot select period: no analysis context available. Call analyze() first.');
     }
-    if (!this._lastPipelineState.temporalState) {
+    if (!pipelineState.temporalState) {
       throw new Error('Cannot select period: temporalState unavailable.');
     }
-    if (!this._lastPipelineState.careerArtifacts) {
+    if (!pipelineState.careerArtifacts) {
       throw new Error('Cannot select period: careerArtifacts unavailable.');
     }
-    if (!this._lastPipelineState.career?.conclusionData) {
+    if (!pipelineState.career?.conclusionData) {
       throw new Error('Cannot select period: career baseline unavailable.');
     }
-    if (!this._lastPipelineState.wealth?.conclusionData) {
+    if (!pipelineState.wealth?.conclusionData) {
       throw new Error('Cannot select period: wealth baseline unavailable.');
     }
 
-    const horoscope = this._lastHoroscope;
-    const birthDetails = this._lastBirthDetails;
-    const pipelineState = this._lastPipelineState;
     const temporalState = pipelineState.temporalState!;
-    const context = this._lastContext;
 
     // Reconstruct the base product analysis (preserves natal baseline and dasha.current)
     const productAnalysis = mapProductAnalysis({
@@ -480,6 +504,35 @@ export class ProductAnalysisService {
         error: error
       }
     };
+  }
+
+  /**
+   * @deprecated Use selectPeriodForRun() with the snapshot returned by analyzeRun().
+   */
+  async selectPeriod(
+    mahadashaId: string,
+    antardashaId: string,
+    includeAiExplanation?: boolean
+  ): Promise<ProductAnalysis> {
+    if (!this._lastHoroscope) {
+      throw new Error('Cannot select period: no horoscope available. Call analyze() first.');
+    }
+    if (!this._lastPipelineState) {
+      throw new Error('Cannot select period: no pipeline state available. Call analyze() first.');
+    }
+    if (!this._lastBirthDetails) {
+      throw new Error('Cannot select period: no birth details available. Call analyze() first.');
+    }
+    if (!this._lastContext) {
+      throw new Error('Cannot select period: no analysis context available. Call analyze() first.');
+    }
+    const snapshot: ProductAnalysisRunSnapshot = Object.freeze({
+      birthDetails: this._lastBirthDetails,
+      context: this._lastContext,
+      horoscope: this._lastHoroscope,
+      pipelineState: this._lastPipelineState
+    });
+    return this.selectPeriodForRun(snapshot, mahadashaId, antardashaId, includeAiExplanation);
   }
 }
 

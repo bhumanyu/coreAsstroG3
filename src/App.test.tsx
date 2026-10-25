@@ -5,12 +5,14 @@ import { App } from './App';
 import { ProductAnalysisService, mapProductAnalysis, mapMethodology } from './product/analysis';
 import { createAnalysisContext } from './core/analysis/analysisContextFactory';
 import type { ProductAnalysis } from './product/analysis/productAnalysisTypes';
+import type { ProductAnalysisRun } from './product/analysis/productAnalysisService';
 import { STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH } from './integration/stage1/stage1GoldenFixture';
 import { buildLifeAnalysis } from './domain/synthesis';
 import { buildLifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisMapper';
 import type { LifeAnalysisProductState, LifeAnalysisViewModel } from './product/life-analysis/lifeAnalysisTypes';
 import { calculateHoroscope } from './engine/astroEngine';
 import { PRESET_PROFILES } from './components/BirthFormModal';
+import type { BirthDetails } from './types';
 
 describe('App - Life Analysis UI Integration & Navigation', () => {
   const sampleSynthesis = buildLifeAnalysis([STAGE1_GOLDEN_CAREER, STAGE1_GOLDEN_WEALTH]);
@@ -58,17 +60,31 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     context: sampleContext
   });
 
+  const makeProductRun = (
+    analysis: ProductAnalysis,
+    pipelineState: LifeAnalysisProductState | undefined,
+    birthDetails = PRESET_PROFILES[0].details,
+    horoscope = defaultHoroscope
+  ): ProductAnalysisRun => Object.freeze({
+    analysis,
+    snapshot: Object.freeze({
+      birthDetails,
+      context: sampleContext,
+      horoscope,
+      ...(pipelineState ? { pipelineState } : {})
+    })
+  });
+
   let mockLastPipelineState: LifeAnalysisProductState | undefined;
   let mockAnalyze: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockLastPipelineState = readyProductState;
-    mockAnalyze = vi.spyOn(ProductAnalysisService.prototype, 'analyze').mockImplementation(async function (this: any) {
-      this._lastPipelineState = mockLastPipelineState;
-      this._lastHoroscope = defaultHoroscope;
-      return readyProductAnalysis;
-    });
+    mockAnalyze = vi.spyOn(ProductAnalysisService.prototype, 'analyzeRun')
+      .mockImplementation(async (birthDetails: BirthDetails) =>
+        makeProductRun(readyProductAnalysis, mockLastPipelineState, birthDetails)
+      );
   });
 
   it('1. Default landing: renders on Overview tab and displays Unified Life Domain Analysis heading', async () => {
@@ -98,7 +114,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.queryByRole('button', { name: 'AI Explanation' })).not.toBeInTheDocument();
   });
 
-  it('3. Invocations: ProductAnalysisService.analyze is called on mount with birth details', async () => {
+  it('3. Invocations: ProductAnalysisService.analyzeRun is called on mount with birth details', async () => {
     render(<App />);
 
     await waitFor(() => {
@@ -111,7 +127,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
   });
 
-  it('4. Chart change: changing birth details recalculates and invokes ProductAnalysisService.analyze with new birth details', async () => {
+  it('4. Chart change: changing birth details recalculates and invokes ProductAnalysisService.analyzeRun with new birth details', async () => {
     render(<App />);
 
     await waitFor(() => {
@@ -139,8 +155,8 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
   });
 
   it('5. Stale-result protection: ignores result A when result B was triggered before A resolves', async () => {
-    let resolveFirstRequest!: (value: ProductAnalysis) => void;
-    const firstPromise = new Promise<ProductAnalysis>((resolve) => {
+    let resolveFirstRequest!: (value: ProductAnalysisRun) => void;
+    const firstPromise = new Promise<ProductAnalysisRun>((resolve) => {
       resolveFirstRequest = resolve;
     });
 
@@ -168,16 +184,14 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     };
 
     // First call hangs
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) => {
       const res = await firstPromise;
-      this._lastPipelineState = mockLastPipelineState;
-      return res;
+      return makeProductRun(res.analysis, mockLastPipelineState, birthDetails);
     });
     // Second call resolves immediately
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
-      this._lastPipelineState = secondProductState;
-      return secondProductAnalysis;
-    });
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) =>
+      makeProductRun(secondProductAnalysis, secondProductState, birthDetails)
+    );
 
     render(<App />);
 
@@ -208,10 +222,10 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       status: 'READY',
       analysis: staleViewModel
     };
-    resolveFirstRequest({
+    resolveFirstRequest(makeProductRun({
       ...readyProductAnalysis,
       analysisId: 'chart-a-stale'
-    });
+    }, mockLastPipelineState));
 
     // Wait a tick and verify stale text did NOT overwrite Chart B
     await new Promise((r) => setTimeout(r, 50));
@@ -219,7 +233,7 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     expect(screen.getByText('Statement from Chart B - Fresh Result')).toBeInTheDocument();
   });
 
-  it('6. Retry handler: retrying from an ERROR state re-invokes ProductAnalysisService.analyze', async () => {
+  it('6. Retry handler: retrying from an ERROR state re-invokes ProductAnalysisService.analyzeRun', async () => {
     const errorAnalysis: ProductAnalysis = {
       ...readyProductAnalysis,
       status: 'ERROR',
@@ -233,12 +247,12 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       ]
     };
 
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
-      this._lastPipelineState = {
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) => {
+      const pipelineState: LifeAnalysisProductState = {
         status: 'ERROR',
         errorMessage: 'Calculation engine temporarily failed'
       };
-      return errorAnalysis;
+      return makeProductRun(errorAnalysis, pipelineState, birthDetails);
     });
 
     render(<App />);
@@ -249,10 +263,9 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     });
 
     // Setup success for retry
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
-      this._lastPipelineState = readyProductState;
-      return readyProductAnalysis;
-    });
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) =>
+      makeProductRun(readyProductAnalysis, readyProductState, birthDetails)
+    );
 
     const retryBtn = screen.getByRole('button', { name: /recalculate analysis|retry analysis/i });
     fireEvent.click(retryBtn);
@@ -277,12 +290,12 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       ]
     };
 
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
-      this._lastPipelineState = {
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) => {
+      const pipelineState: LifeAnalysisProductState = {
         status: 'ERROR',
         errorMessage: 'First attempt error'
       };
-      return errorAnalysis;
+      return makeProductRun(errorAnalysis, pipelineState, birthDetails);
     });
 
     render(<App />);
@@ -291,16 +304,15 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       expect(screen.getByText('Overview Computation Error')).toBeInTheDocument();
     });
 
-    let resolveRetryPromise!: (value: ProductAnalysis) => void;
-    const retryPromise = new Promise<ProductAnalysis>((resolve) => {
+    let resolveRetryPromise!: (value: ProductAnalysisRun) => void;
+    const retryPromise = new Promise<ProductAnalysisRun>((resolve) => {
       resolveRetryPromise = resolve;
     });
 
     // When retry button clicked, hang the retry request
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) => {
       const res = await retryPromise;
-      this._lastPipelineState = mockLastPipelineState;
-      return res;
+      return makeProductRun(res.analysis, mockLastPipelineState, birthDetails);
     });
 
     const retryBtn = screen.getByRole('button', { name: /recalculate analysis|retry analysis/i });
@@ -326,12 +338,12 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
       }
     };
 
-    mockAnalyze.mockImplementationOnce(async function (this: any) {
-      this._lastPipelineState = {
+    mockAnalyze.mockImplementationOnce(async (birthDetails: BirthDetails) => {
+      const pipelineState: LifeAnalysisProductState = {
         status: 'READY',
         analysis: chartBViewModel
       };
-      return chartBProductAnalysis;
+      return makeProductRun(chartBProductAnalysis, pipelineState, birthDetails);
     });
 
     const editBtn = screen.getByTitle('Edit Birth Details & Ayanamsa');
@@ -359,10 +371,10 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
         }
       }
     };
-    resolveRetryPromise({
+    resolveRetryPromise(makeProductRun({
       ...readyProductAnalysis,
       analysisId: 'chart-a-stale-retry'
-    });
+    }, mockLastPipelineState));
 
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText('Late Retry Result Chart A - Should Be Discarded')).not.toBeInTheDocument();
