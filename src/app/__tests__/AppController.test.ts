@@ -381,6 +381,31 @@ describe('AppController', () => {
       expect(mockService.selectPeriodForRun).not.toHaveBeenCalled();
     });
 
+    it('uses a fallback message when analysis rejects with a non-Error value', async () => {
+      let currentState: AppState = { ...INITIAL_APP_STATE };
+      const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+        (update: SetStateAction<AppState>) => {
+          currentState =
+            typeof update === 'function'
+              ? (update as (prev: AppState) => AppState)(currentState)
+              : update;
+        }
+      );
+      const mockService = {
+        analyzeRun: vi.fn().mockRejectedValue('unexpected failure')
+      } as unknown as ProductAnalysisService;
+      const controller = createAppController(setState, mockService);
+
+      await expect(controller.analyze(INITIAL_APP_STATE.birthDetails)).resolves.toBeUndefined();
+
+      expect(currentState.productAnalysis.status).toBe('ERROR');
+      expect(currentState.productAnalysis.error).toBe('Analysis calculation failed.');
+      expect(currentState.lifeAnalysisState).toEqual({
+        status: 'ERROR',
+        errorMessage: 'Analysis calculation failed.'
+      });
+    });
+
     it('discards results from stale earlier requests when a newer analyze call has been made', async () => {
       let currentState: AppState = { ...INITIAL_APP_STATE };
       const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
