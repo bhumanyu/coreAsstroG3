@@ -8,6 +8,7 @@ export * from './CareerTransitSection';
 export * from './CareerQualificationsSection';
 export * from './CareerEvidenceSection';
 export * from './CareerConclusionSection';
+export * from './CareerProfessionStatusSection';
 export * from './CareerLoadingState';
 export * from './CareerUnavailableState';
 export * from './CareerErrorState';

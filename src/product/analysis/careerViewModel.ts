@@ -18,6 +18,11 @@ import type {
   ActivationEffect,
   TransitEffect
 } from './productAnalysisTypes';
+import {
+  getCareerProfessionStatusCopy,
+  type CareerProfessionStatus,
+  type CareerProfessionStatusCopy
+} from './careerQualificationPresentation';
 
 export interface CareerHeroViewModel {
   readonly ascendantSign?: string;
@@ -146,7 +151,8 @@ export interface CareerProfessionEvidenceViewModel {
 
 export interface CareerProfessionViewModel {
   readonly available: boolean;
-  readonly status: string;
+  readonly status: CareerProfessionStatus;
+  readonly statusCopy: CareerProfessionStatusCopy;
   readonly candidates: readonly CareerProfessionCandidateViewModel[];
   readonly unresolvedExpressionTypes: readonly string[];
   readonly mappedTypes: readonly string[];
@@ -289,6 +295,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
       return {
         available: false,
         status: 'INSUFFICIENT_DATA',
+        statusCopy: getCareerProfessionStatusCopy('INSUFFICIENT_DATA'),
         candidates: [],
         unresolvedExpressionTypes: [],
         mappedTypes: [],
@@ -324,6 +331,7 @@ export function selectCareerViewModel(analysis: ProductAnalysis): CareerViewMode
     return {
       available: professionData.available,
       status: professionData.status,
+      statusCopy: getCareerProfessionStatusCopy(professionData.status),
       candidates,
       unresolvedExpressionTypes: professionData.unresolvedExpressionTypes,
       mappedTypes: professionData.mappedTypes,

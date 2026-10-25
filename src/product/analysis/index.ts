@@ -4,6 +4,7 @@ export * from './productAnalysisService';
 export * from './productAnalysisSelectors';
 export * from './overviewViewModel';
 export * from './careerViewModel';
+export * from './careerQualificationPresentation';
 export * from './wealthViewModel';
 export * from './reasoningViewModel';
 export * from './dashaViewModel';

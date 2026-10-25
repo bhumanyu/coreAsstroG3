@@ -217,7 +217,7 @@ export interface CareerProductAnalysis {
   };
   readonly profession?: {
     readonly available: boolean;
-    readonly status: string;
+    readonly status: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
     readonly candidates: readonly {
       readonly candidateId: string;
       readonly domain: string;

@@ -19,6 +19,7 @@ import {
   CareerQualificationsSection,
   CareerEvidenceSection,
   CareerConclusionSection,
+  CareerProfessionStatusSection,
   CareerLoadingState,
   CareerUnavailableState,
   CareerErrorState
@@ -75,6 +76,8 @@ export const CareerPage: React.FC<CareerPageProps> = ({
       <CareerTransitSection transit={viewModel.transit} />
 
       <CareerQualificationsSection qualifications={viewModel.qualifications} />
+
+      <CareerProfessionStatusSection profession={viewModel.profession} />
 
       <CareerEvidenceSection
         evidence={viewModel.evidence}

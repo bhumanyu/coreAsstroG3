@@ -99,6 +99,11 @@ describe('CareerPage (P-UI-04)', () => {
     expect(screen.getByText('Qualifications & Modifiers')).toBeInTheDocument();
     expect(screen.getByText('COMBUSTION')).toBeInTheDocument();
 
+    // Profession analysis status is distinct from pattern qualification.
+    expect(screen.getByRole('heading', { name: 'Profession Analysis Status' })).toBeInTheDocument();
+    expect(screen.getByText('INSUFFICIENT_DATA')).toBeInTheDocument();
+    expect(screen.getByText(/profession analysis could not be completed.*not a negative career prediction/i)).toBeInTheDocument();
+
     // Evidence
     expect(screen.getByText('Evidential Reasoning Provenance')).toBeInTheDocument();
 
