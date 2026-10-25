@@ -49,6 +49,12 @@ describe('Career presentation formatters (P-UI-04)', () => {
     it('returns Unavailable for undefined or UNAVAILABLE', () => {
       expect(formatDirection(undefined)).toBe('Unavailable');
       expect(formatDirection('UNAVAILABLE')).toBe('Unavailable');
+      expect(formatDirection('')).toBe('Unavailable');
+      expect(formatDirection('UNKNOWN_DIRECTION')).toBe('Unavailable');
+    });
+
+    it('normalizes casing and surrounding whitespace', () => {
+      expect(formatDirection('  sUpPoRt  ')).toBe('Supporting');
     });
   });
 

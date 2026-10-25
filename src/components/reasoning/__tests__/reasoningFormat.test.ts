@@ -59,6 +59,9 @@ describe('reasoningFormat pure presentation formatters (P-UI-06)', () => {
       expect(formatDirection('MIXED')).toBe('Mixed');
       expect(formatDirection('UNAVAILABLE')).toBe('Unavailable');
       expect(formatDirection(undefined)).toBe('Unavailable');
+      expect(formatDirection('')).toBe('Unavailable');
+      expect(formatDirection('UNKNOWN_DIRECTION')).toBe('Unavailable');
+      expect(formatDirection('  sUpPoRt  ')).toBe('Supporting');
     });
   });
 

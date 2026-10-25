@@ -145,6 +145,16 @@ export function deriveProductAnalysisStatus(
   return isPartial ? 'PARTIAL' : 'READY';
 }
 
+/**
+ * Direction inputs are limited to ActivationEffect, PromiseStrength,
+ * ConclusionStatus, and ProductDirection. TransitEffect-only literals
+ * (TRIGGER, MODIFIER, and NO_MATERIAL_TRIGGER) are intentionally excluded and
+ * fail closed to UNAVAILABLE.
+ *
+ * DOES_NOT_ACTIVATE maps to NEUTRAL because it explicitly reports
+ * non-activation, not a neutral outcome. Mapping WEAK/VERY_WEAK to CHALLENGE
+ * is an intentional, reviewed product policy.
+ */
 type ProductDirectionSource = ActivationEffect | PromiseStrength | ConclusionStatus | ProductDirection;
 
 const PRODUCT_DIRECTION_BY_SOURCE: Readonly<Record<ProductDirectionSource, ProductDirection>> = {

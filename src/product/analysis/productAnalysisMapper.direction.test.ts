@@ -34,6 +34,13 @@ describe('mapDirection', () => {
     expect(mapDirection('PARTIALLY_ACTIVATES')).toBe('MIXED');
   });
 
+  it.each(['TRIGGER', 'MODIFIER', 'NO_MATERIAL_TRIGGER'])(
+    'fails closed for transit-only direction literal %s',
+    (source) => {
+      expect(mapDirection(source)).toBe('UNAVAILABLE');
+    }
+  );
+
   it.each([
     undefined,
     '',

@@ -86,10 +86,7 @@ export function formatAvailability(availability?: ProductAvailability | string):
  * 'SUPPORT' | 'CHALLENGE' | 'NEUTRAL' | 'MIXED'
  */
 export function formatDirection(direction?: ProductDirection | string): string {
-  if (!direction || direction.toUpperCase() === 'UNAVAILABLE') {
-    return 'Unavailable';
-  }
-  switch (direction) {
+  switch (direction?.trim().toUpperCase()) {
     case 'SUPPORT':
       return 'Supporting';
     case 'CHALLENGE':
@@ -98,6 +95,8 @@ export function formatDirection(direction?: ProductDirection | string): string {
       return 'Neutral';
     case 'MIXED':
       return 'Mixed';
+    case 'UNAVAILABLE':
+      return 'Unavailable';
     default:
       return 'Unavailable';
   }
