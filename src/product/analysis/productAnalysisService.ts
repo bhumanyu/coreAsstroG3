@@ -59,6 +59,10 @@ export interface AnalyzeOptions {
   readonly includeSelectedPeriodAiExplanation?: boolean;
 }
 
+/**
+ * Frozen run envelope holding request-local references. Freezing is top-level
+ * only; nested birth, context, horoscope, and pipeline objects are not deep-frozen.
+ */
 export interface ProductAnalysisRunSnapshot {
   readonly birthDetails: BirthDetails;
   readonly context: AnalysisContext;
@@ -66,6 +70,7 @@ export interface ProductAnalysisRunSnapshot {
   readonly pipelineState?: LifeAnalysisProductState;
 }
 
+/** Frozen run envelope; nested analysis and snapshot contents remain unfrozen. */
 export interface ProductAnalysisRun {
   readonly analysis: ProductAnalysis;
   readonly snapshot: ProductAnalysisRunSnapshot;
@@ -321,7 +326,9 @@ export class ProductAnalysisService {
   }
 
   /**
-   * @deprecated Use analyzeRun() to keep each result paired with its own snapshot.
+   * @deprecated Not concurrency-safe: this method retains shared `_last*`
+   * instance state that concurrent calls can overwrite. `selectPeriod()` may
+   * then use a mismatched run. Use `analyzeRun()` and its returned snapshot.
    */
   async analyze(
     birthDetails: BirthDetails,
@@ -507,7 +514,10 @@ export class ProductAnalysisService {
   }
 
   /**
-   * @deprecated Use selectPeriodForRun() with the snapshot returned by analyzeRun().
+   * @deprecated Not concurrency-safe: this method reads shared `_last*` state,
+   * which concurrent `analyze()` calls can overwrite and may mismatch the
+   * selected analysis. Use `selectPeriodForRun()` with the snapshot from
+   * `analyzeRun()`.
    */
   async selectPeriod(
     mahadashaId: string,

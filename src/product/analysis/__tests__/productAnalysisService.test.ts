@@ -347,6 +347,8 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     const birthB = { ...sampleBirth, name: 'Chart B' };
     const asOfA = '2026-06-15T12:00:00.000Z';
     const asOfB = '2027-07-16T13:00:00.000Z';
+    const contextA = { ...createAnalysisContext({ asOf: asOfA }) };
+    const contextB = { ...createAnalysisContext({ asOf: asOfB }) };
     const horoscopeA = { ...sampleHoroscope, birthDetails: birthA };
     const horoscopeB = { ...sampleHoroscope, birthDetails: birthB };
     const pipelineStateA: LifeAnalysisProductState = {
@@ -366,8 +368,8 @@ describe('ProductAnalysisService (P-UI-02)', () => {
       })
     });
 
-    const runARequest = service.analyzeRun(birthA, { asOf: asOfA });
-    const runBRequest = service.analyzeRun(birthB, { asOf: asOfB });
+    const runARequest = service.analyzeRun(birthA, { context: contextA });
+    const runBRequest = service.analyzeRun(birthB, { context: contextB });
     resolvers.get(asOfB)?.(pipelineStateB);
     const runB = await runBRequest;
     resolvers.get(asOfA)?.(pipelineStateA);
@@ -385,6 +387,11 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     expect(Object.isFrozen(runA.snapshot)).toBe(true);
     expect(Object.isFrozen(runB)).toBe(true);
     expect(Object.isFrozen(runB.snapshot)).toBe(true);
+    expect(Object.isFrozen(runA.snapshot.birthDetails)).toBe(false);
+    expect(Object.isFrozen(runA.snapshot.context)).toBe(false);
+    expect(Object.isFrozen(runA.snapshot.horoscope)).toBe(false);
+    expect(Object.isFrozen(runA.snapshot.pipelineState)).toBe(false);
+    expect(Object.isFrozen(runA.analysis)).toBe(false);
     expect(runA.snapshot).not.toBe(runB.snapshot);
     expect(runA.analysis).not.toBe(runB.analysis);
     expect(service.lastHoroscope).toBeUndefined();

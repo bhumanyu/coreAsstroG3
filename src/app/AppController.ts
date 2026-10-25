@@ -44,59 +44,79 @@ export function createAppController(
         lifeAnalysisState: { status: 'LOADING' }
       }));
 
-      const run = await service.analyzeRun(birthDetails);
-      const analysis = run.analysis;
+      try {
+        const run = await service.analyzeRun(birthDetails);
+        const analysis = run.analysis;
 
-      // Stale-result guard: discard late-resolving results for previous requests
-      if (requestId !== currentRequestId) {
-        return;
-      }
+        // Stale-result guard: discard late-resolving results for previous requests
+        if (requestId !== currentRequestId) {
+          return;
+        }
 
-      currentRunSnapshot = run.snapshot;
-      const { pipelineState, horoscope } = run.snapshot;
-      let dashaTimingViewModel: DashaTimingViewModel | undefined;
-      const temporalState = pipelineState?.temporalState;
-      if (temporalState && horoscope && pipelineState) {
-        dashaTimingViewModel = buildDashaTimingViewModel({
-          temporalState,
-          horoscope,
-          careerTiming: pipelineState.analysis?.careerDetail?.timing,
-          wealthTiming: pipelineState.analysis?.wealthDetail?.timing
-        });
-      }
+        currentRunSnapshot = run.snapshot;
+        const { pipelineState, horoscope } = run.snapshot;
+        let dashaTimingViewModel: DashaTimingViewModel | undefined;
+        const temporalState = pipelineState?.temporalState;
+        if (temporalState && horoscope && pipelineState) {
+          dashaTimingViewModel = buildDashaTimingViewModel({
+            temporalState,
+            horoscope,
+            careerTiming: pipelineState.analysis?.careerDetail?.timing,
+            wealthTiming: pipelineState.analysis?.wealthDetail?.timing
+          });
+        }
 
-      if (analysis.status === 'ERROR') {
-        const errorMsg =
-          analysis.warnings.find((w) => w.severity === 'ERROR')?.message ||
-          'Analysis calculation failed.';
+        if (analysis.status === 'ERROR') {
+          const errorMsg =
+            analysis.warnings.find((w) => w.severity === 'ERROR')?.message ||
+            'Analysis calculation failed.';
+          setState((prev) => ({
+            ...prev,
+            productAnalysis: {
+              status: 'ERROR',
+              analysis,
+              error: errorMsg,
+              horoscope
+            },
+            lifeAnalysisState: pipelineState ?? {
+              status: 'ERROR',
+              errorMessage: errorMsg
+            },
+            horoscope,
+            dashaTimingViewModel
+          }));
+        } else {
+          setState((prev) => ({
+            ...prev,
+            productAnalysis: {
+              status: 'READY',
+              analysis,
+              horoscope
+            },
+            lifeAnalysisState: pipelineState ?? {
+              status: 'READY'
+            },
+            horoscope,
+            dashaTimingViewModel
+          }));
+        }
+      } catch (error) {
+        if (requestId !== currentRequestId) {
+          return;
+        }
+
+        currentRunSnapshot = undefined;
+        const errorMsg = error instanceof Error ? error.message : 'Analysis calculation failed.';
         setState((prev) => ({
           ...prev,
           productAnalysis: {
             status: 'ERROR',
-            analysis,
-            error: errorMsg,
-            horoscope
+            error: errorMsg
           },
-          lifeAnalysisState: pipelineState ?? {
+          lifeAnalysisState: {
             status: 'ERROR',
             errorMessage: errorMsg
-          },
-          horoscope,
-          dashaTimingViewModel
-        }));
-      } else {
-        setState((prev) => ({
-          ...prev,
-          productAnalysis: {
-            status: 'READY',
-            analysis,
-            horoscope
-          },
-          lifeAnalysisState: pipelineState ?? {
-            status: 'READY'
-          },
-          horoscope,
-          dashaTimingViewModel
+          }
         }));
       }
     },

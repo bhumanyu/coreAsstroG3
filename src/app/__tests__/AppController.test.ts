@@ -309,6 +309,40 @@ describe('AppController', () => {
       expect(currentState.lifeAnalysisState.status).toBe('ERROR');
     });
 
+    it('converts analyzeRun rejection to an error state and clears the active run', async () => {
+      let currentState: AppState = { ...INITIAL_APP_STATE };
+      const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+        (update: SetStateAction<AppState>) => {
+          currentState =
+            typeof update === 'function'
+              ? (update as (prev: AppState) => AppState)(currentState)
+              : update;
+        }
+      );
+      const mockService = {
+        analyzeRun: vi.fn().mockRejectedValue(new Error('setup failed')),
+        selectPeriodForRun: vi.fn()
+      } as unknown as ProductAnalysisService;
+      const controller = createAppController(setState, mockService);
+
+      await expect(controller.analyze(INITIAL_APP_STATE.birthDetails)).resolves.toBeUndefined();
+
+      expect(currentState.productAnalysis.status).toBe('ERROR');
+      expect(currentState.productAnalysis.error).toBe('setup failed');
+      expect(currentState.lifeAnalysisState).toEqual({
+        status: 'ERROR',
+        errorMessage: 'setup failed'
+      });
+      expect(currentState.productAnalysis.status).not.toBe('LOADING');
+
+      await controller.selectPeriod('md_jupiter', 'ad_saturn');
+      expect(currentState.selectionState).toEqual({
+        status: 'ERROR',
+        error: 'No active analysis run. Analyze birth details before selecting a period.'
+      });
+      expect(mockService.selectPeriodForRun).not.toHaveBeenCalled();
+    });
+
     it('discards results from stale earlier requests when a newer analyze call has been made', async () => {
       let currentState: AppState = { ...INITIAL_APP_STATE };
       const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
@@ -368,6 +402,48 @@ describe('AppController', () => {
       expect(currentState.productAnalysis.analysis?.analysisId).toBe('req-2');
       expect(currentState.horoscope).toBe(horoscope2);
       expect(currentState.lifeAnalysisState).toBe(pipeline2);
+    });
+
+    it('discards a stale analyze rejection after a newer run succeeds', async () => {
+      let currentState: AppState = { ...INITIAL_APP_STATE };
+      const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+        (update: SetStateAction<AppState>) => {
+          currentState =
+            typeof update === 'function'
+              ? (update as (prev: AppState) => AppState)(currentState)
+              : update;
+        }
+      );
+      let rejectReq1: (reason: Error) => void = () => { };
+      let resolveReq2: (run: ProductAnalysisRun) => void = () => { };
+      const p1 = new Promise<ProductAnalysisRun>((_resolve, reject) => {
+        rejectReq1 = reject;
+      });
+      const p2 = new Promise<ProductAnalysisRun>((resolve) => {
+        resolveReq2 = resolve;
+      });
+      const birthA = { ...INITIAL_APP_STATE.birthDetails, name: 'Stale Chart' };
+      const birthB = { ...INITIAL_APP_STATE.birthDetails, name: 'Current Chart' };
+      const analysisB: ProductAnalysis = { ...mockProductAnalysis, analysisId: 'current-run' };
+      const horoscopeB = { birthDetails: birthB } as Horoscope;
+      const pipelineB: LifeAnalysisProductState = { status: 'READY' };
+      const mockService = {
+        analyzeRun: vi.fn().mockReturnValueOnce(p1).mockReturnValueOnce(p2)
+      } as unknown as ProductAnalysisService;
+      const controller = createAppController(setState, mockService);
+
+      const staleCall = controller.analyze(birthA);
+      const currentCall = controller.analyze(birthB);
+      resolveReq2(makeRun(analysisB, birthB, horoscopeB, pipelineB));
+      await currentCall;
+
+      rejectReq1(new Error('stale setup failure'));
+      await staleCall;
+
+      expect(currentState.productAnalysis.status).toBe('READY');
+      expect(currentState.productAnalysis.analysis?.analysisId).toBe('current-run');
+      expect(currentState.horoscope).toBe(horoscopeB);
+      expect(currentState.lifeAnalysisState).toBe(pipelineB);
     });
 
     it('guarantees IDLE to LOADING transition before resolving to READY', async () => {
