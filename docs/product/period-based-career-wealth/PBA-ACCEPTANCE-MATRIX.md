@@ -864,6 +864,26 @@ These items are blocked inputs, not open implementation gaps. Do not invent refe
   - ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and build passed)
   - ✅ `npm run verify`: PASS (297 test files, 5,586 passed, 5 skipped; lint and build passed)
 - Both builds emitted the existing large-chunk-size warning. No Node 21 / lightningcss blocker occurred.
+
+## Remote AI Browser/Server Boundary (PR-015 / PR-016)
+
+**Source change commit:** `dbf814f7e1e2aef00a6e04a3b299f03c7d9ad5a1`
+
+**Toolchain:** Node `20.19.4`
+
+**Verification for the exact source change commit above:**
+- ✅ `npx vitest run src/ai/security/remoteProviderPolicy.test.ts`: PASS (1 file, 5 tests)
+- ✅ `npx vitest run src/ai/routing`: PASS (5 files, 34 tests)
+- ✅ `npx vitest run src/ai`: PASS (28 files, 328 tests)
+- ✅ `npx vitest run src/ai/security/browserBoundary.test.ts`: PASS (1 file, 2 tests; browser import graph and bundle/config checks)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run lint`: PASS
+- ✅ `npm run build`: PASS; production JavaScript bundle scan found no provider credential names, synthetic credential marker, or remote-provider construction identifiers
+- ✅ `npm run verify`: PASS (307 files, 5,686 passed, 5 skipped; lint and production build passed)
+
+The full AI barrel remains the server/provider integration surface; React/product consumers use the browser-safe `src/ai/browser.ts` surface. Its transitive relative import graph does not reach the remote, OpenAI, or reliability modules, and Vite does not inject provider-key configuration. The fail-closed remote provider policy denies browser runtime before feature/proxy checks and reads no credentials or network state.
+
+PR-016 is documented as a contract only; no backend, database, or account system was added. PR-017 (server proxy implementation) is **DEFERRED**. The P-026 local-only launch contract remains unchanged, and remote AI is not a launch dependency. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
 - **Reference-data status remains BLOCKED:** `D08-A1` remains skipped; no external ephemeris values were added. Partial-MD and MD/AD/PD analytical fixtures remain internal-consistency checks only, not independent astronomical validation.
 
 ## Vimshottari Timeline Structural and Precision Contracts
