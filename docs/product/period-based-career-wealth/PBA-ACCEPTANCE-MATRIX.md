@@ -884,6 +884,21 @@ These items are blocked inputs, not open implementation gaps. Do not invent refe
 The full AI barrel remains the server/provider integration surface; React/product consumers use the browser-safe `src/ai/browser.ts` surface. Its transitive relative import graph does not reach the remote, OpenAI, or reliability modules, and Vite does not inject provider-key configuration. The fail-closed remote provider policy denies browser runtime before feature/proxy checks and reads no credentials or network state.
 
 PR-016 is documented as a contract only; no backend, database, or account system was added. PR-017 (server proxy implementation) is **DEFERRED**. The P-026 local-only launch contract remains unchanged, and remote AI is not a launch dependency. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
+## Browser Bundle Verification Hardening
+
+**Source change commit:** `550e4720d0208e6d4ec4d29094e3064501b87f61`
+
+**Toolchain:** Node `20.19.4`
+
+**Verification for the exact source change commit above:**
+- ✅ `npx vitest run src/ai/security/browserBoundary.test.ts`: PASS (1 file, 2 tests; executed with Node 20.19.4)
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npm run lint`: PASS
+- ✅ `npm run build` followed by `npx vitest run src/ai/security/browserBoundary.test.ts`: PASS; scan ran against fresh `dist/assets`
+- ✅ `npm run verify`: PASS (307 files, 5,686 passed, 5 skipped; includes `verify:bundle`, which rebuilds and then runs the required scan)
+
+The source import walker now covers static and dynamic relative imports and `.js`/`.mjs` resolution (bare/path-aliased imports are outside the regex walk); the emitted-bundle scan checks all client JavaScript assets and fails if the assets directory or JavaScript outputs are missing. The scan covers provider credential names, the synthetic test marker, and remote/OpenAI provider construction identifiers. `productAnalysisTypes.ts` now references the browser-safe `AiExplanationResult` type. The build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
 - **Reference-data status remains BLOCKED:** `D08-A1` remains skipped; no external ephemeris values were added. Partial-MD and MD/AD/PD analytical fixtures remain internal-consistency checks only, not independent astronomical validation.
 
 ## Vimshottari Timeline Structural and Precision Contracts
