@@ -130,6 +130,35 @@ describe('PlaceAutocomplete', () => {
     expect(screen.queryByText('San', { exact: true })).not.toBeInTheDocument();
   });
 
+  it('recovers from a provider error to a successful result after retry', async () => {
+    const retryResult = deferred<GeocodingOutcome>();
+    searchMock
+      .mockResolvedValueOnce({ status: 'HTTP_ERROR', statusCode: 503 })
+      .mockReturnValueOnce(retryResult.promise);
+    render(<PlaceAutocomplete onSelect={vi.fn()} />);
+
+    await enterQuery('San Francisco');
+    expect(screen.getByRole('alert')).toHaveTextContent(/temporarily unavailable/i);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/searching places/i);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(searchMock).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      retryResult.resolve({ status: 'SUCCESS', places: [place('San Francisco')] });
+      await retryResult.promise;
+    });
+
+    expect(screen.getByRole('button', { name: /San Francisco/ })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('clears loading after a superseded request and displays only the current search result', async () => {
     const superseded = deferred<GeocodingOutcome>();
     const active = deferred<GeocodingOutcome>();

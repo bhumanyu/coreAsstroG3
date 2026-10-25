@@ -14,6 +14,8 @@ vi.mock('./ProductPageRouter', () => ({
   ProductPageRouter: ({ state, onRetry }: { state: AppState; onRetry: () => void }) => (
     <div>
       <div data-testid="analysis-status">{state.productAnalysis.status}</div>
+      <div data-testid="life-analysis-state">{state.lifeAnalysisState.status}</div>
+      <div data-testid="dasha-view-model">{state.dashaTimingViewModel ? 'present' : 'absent'}</div>
       {state.productAnalysis.status === 'ERROR' && (
         <div role="alert">{state.productAnalysis.error}</div>
       )}
@@ -74,7 +76,7 @@ describe('AppShellContent analysis safety wrapper', () => {
     expect(screen.getByTestId('analysis-status')).toHaveTextContent('ERROR');
   });
 
-  it('keeps retry failures in loading until success, then shows READY', async () => {
+  it('keeps the wrapper in LOADING until a mocked-controller retry resolves READY', async () => {
     let completeRetry: (() => void) | undefined;
     let setStateRef: Dispatch<SetStateAction<AppState>> | undefined;
     const analyze = vi.fn<AppController['analyze']>()
@@ -138,6 +140,10 @@ describe('AppShellContent analysis safety wrapper', () => {
 
     await waitFor(() => expect(screen.getByTestId('analysis-status')).toHaveTextContent('READY'));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('analysis-status')).toHaveTextContent('READY');
+    expect(screen.getByTestId('life-analysis-state')).toHaveTextContent('READY');
+    expect(screen.getByTestId('dasha-view-model')).toHaveTextContent('absent');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('does not add a second error notification for a controller-handled failure', async () => {
