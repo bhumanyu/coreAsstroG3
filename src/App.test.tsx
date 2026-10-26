@@ -433,11 +433,11 @@ describe('App - Life Analysis UI Integration & Navigation', () => {
     // Click Transit Analysis research tool from the panel
     const transitBtn = screen.getByRole('button', { name: 'Transit Analysis' });
     fireEvent.click(transitBtn);
-    expect(screen.getByText('Vedic Planetary Gochara (Transit Analysis)')).toBeInTheDocument();
+    expect(await screen.findByText('Vedic Planetary Gochara (Transit Analysis)')).toBeInTheDocument();
 
     // Click Divisional Vargas research tool from the panel
     const divisionalBtn = screen.getByRole('button', { name: 'Divisional Vargas' });
     fireEvent.click(divisionalBtn);
-    expect(screen.getByText('Divisional Vargas Inspection (D1, D3, D9, D10)')).toBeInTheDocument();
+    expect(await screen.findByText('Divisional Vargas Inspection (D1, D3, D9, D10)')).toBeInTheDocument();
   });
 });

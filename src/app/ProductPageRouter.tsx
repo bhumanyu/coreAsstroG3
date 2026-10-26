@@ -6,7 +6,7 @@
  * Do not add new routing responsibilities in this file.
  */
 
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Compass, Sun, Moon, Sparkles, ArrowLeft, FlaskConical } from 'lucide-react';
 import type { AppState } from './AppState';
 import type { AppPage, ResearchPage } from './navigation/navigationTypes';
@@ -21,16 +21,28 @@ import { ReasoningPage } from '../pages/ReasoningPage';
 import { AiExplanationPage } from '../pages/AiExplanationPage';
 import { KundaliChart } from '../components/KundaliChart';
 import { PlanetFactsTable } from '../components/PlanetFactsTable';
-import { DivisionalChartsView } from '../components/DivisionalChartsView';
-import { NakshatraExplorer } from '../components/NakshatraExplorer';
-import { RelationshipMatrix } from '../components/RelationshipMatrix';
-import { EngineValidator } from '../components/EngineValidator';
-import { GocharaTransitView } from '../components/GocharaTransitView';
 import { LifeAnalysisLoading } from '../components/lifeAnalysis/LifeAnalysisLoading';
+import { ResearchChunkFallback } from './ResearchChunkFallback';
 import { DignityStatus, ChartType, Planet } from '../types';
 import type { calculateHoroscope } from '../engine/astroEngine';
 import type { buildDashaTimingViewModel } from '../product/dasha-timing';
 import type { LifeAnalysisProductState } from '../product/life-analysis/lifeAnalysisTypes';
+
+const DivisionalChartsView = lazy(() =>
+  import('../components/DivisionalChartsView').then((module) => ({ default: module.DivisionalChartsView }))
+);
+const NakshatraExplorer = lazy(() =>
+  import('../components/NakshatraExplorer').then((module) => ({ default: module.NakshatraExplorer }))
+);
+const RelationshipMatrix = lazy(() =>
+  import('../components/RelationshipMatrix').then((module) => ({ default: module.RelationshipMatrix }))
+);
+const EngineValidator = lazy(() =>
+  import('../components/EngineValidator').then((module) => ({ default: module.EngineValidator }))
+);
+const GocharaTransitView = lazy(() =>
+  import('../components/GocharaTransitView').then((module) => ({ default: module.GocharaTransitView }))
+);
 
 export interface ProductPageRouterProps {
   readonly state: AppState;
@@ -336,7 +348,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
             activePage={state.activePage}
             onNavigate={onNavigate}
           />
-          <GocharaTransitView horoscope={horoscope} />
+          <Suspense fallback={<ResearchChunkFallback />}>
+            <GocharaTransitView horoscope={horoscope} />
+          </Suspense>
         </div>
       );
 
@@ -354,7 +368,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
             activePage={state.activePage}
             onNavigate={onNavigate}
           />
-          <DivisionalChartsView horoscope={horoscope} />
+          <Suspense fallback={<ResearchChunkFallback />}>
+            <DivisionalChartsView horoscope={horoscope} />
+          </Suspense>
         </div>
       );
 
@@ -369,7 +385,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
             activePage={state.activePage}
             onNavigate={onNavigate}
           />
-          <NakshatraExplorer />
+          <Suspense fallback={<ResearchChunkFallback />}>
+            <NakshatraExplorer />
+          </Suspense>
         </div>
       );
 
@@ -384,7 +402,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
             activePage={state.activePage}
             onNavigate={onNavigate}
           />
-          <RelationshipMatrix />
+          <Suspense fallback={<ResearchChunkFallback />}>
+            <RelationshipMatrix />
+          </Suspense>
         </div>
       );
 
@@ -399,7 +419,9 @@ export const ProductPageRouter: React.FC<ProductPageRouterProps> = ({
             activePage={state.activePage}
             onNavigate={onNavigate}
           />
-          <EngineValidator />
+          <Suspense fallback={<ResearchChunkFallback />}>
+            <EngineValidator />
+          </Suspense>
         </div>
       );
 
