@@ -172,7 +172,7 @@ describe('DashaPage (P-UI-07)', () => {
     expect(hierarchyWithin.getByText('Jupiter')).toBeInTheDocument();
   });
 
-  it('8. Changing MD/AD after successful report: report hidden (submittedPeriod cleared)', () => {
+  it('8. New analysis identity clears selector and submitted report; manual changes still invalidate', () => {
     // Test that the component handles dashPeriodOptions correctly with controlled submit flow
     const analysis = createProductAnalysis({
       selectedPeriod: {
@@ -322,50 +322,35 @@ describe('DashaPage (P-UI-07)', () => {
     );
     expect(screen.getByText(/Selected Period Analysis/i)).toBeInTheDocument();
 
+    const refreshedAnalysis = {
+      ...analysis,
+      analysisId: 'pa_test_124',
+      dashPeriodOptions: { ...analysis.dashPeriodOptions! }
+    };
     rerender(
       <DashaPage
-        productAnalysisState={{ status: 'READY', analysis }}
-        selectionState={{ status: 'ERROR', error: 'Selected-period synthesis failed.' }}
+        productAnalysisState={{ status: 'READY', analysis: refreshedAnalysis }}
+        selectionState={{ status: 'READY' }}
         onSelectPeriod={onSelectPeriod}
       />
     );
     expect(screen.queryByText(/Selected Period Analysis/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Mahadasha \(Major Period\)/i)).toHaveValue('');
+    expect(screen.getByLabelText(/Antardasha \(Sub-period\)/i)).toHaveValue('');
 
-    // Change MD select to a different value to trigger onSelectionChange
+    // A new selection can be submitted, and a subsequent manual change still hides it.
     fireEvent.change(screen.getByLabelText(/Mahadasha \(Major Period\)/i), {
       target: { value: 'md_jupiter' }
     });
-
-    // Simulate the selection change by rerendering with a different selectedPeriod ID
-    // This simulates the submittedPeriod being cleared on selection change
-    const updatedAnalysis = createProductAnalysis({
-      selectedPeriod: {
-        status: 'OK',
-        synthesis: {
-          ...(analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis,
-          period: {
-            ...(analysis.selectedPeriod as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>).synthesis.period,
-            selectedPeriodId: 'period-2', // Different ID - this would clear submittedPeriod
-            mahadashaId: 'md_jupiter',
-            antardashaId: 'ad_mars' // Different AD
-          }
-        }
-      } as Extract<typeof analysis.selectedPeriod, { status: 'OK' }>,
-      dashPeriodOptions: analysis.dashPeriodOptions
+    fireEvent.change(screen.getByLabelText(/Antardasha \(Sub-period\)/i), {
+      target: { value: 'ad_saturn' }
     });
-
-    rerender(
-      <DashaPage
-        productAnalysisState={{
-          status: 'READY',
-          analysis: updatedAnalysis
-        }}
-        onSelectPeriod={onSelectPeriod}
-      />
-    );
-
-    // Since the selectedPeriod ID changed, submittedPeriod should be cleared and report should not be visible
-    expect(screen.queryByText(/selected period report/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Analyze Selected Period/i }));
+    expect(screen.getByText(/Selected Period Analysis/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Antardasha \(Sub-period\)/i), {
+      target: { value: 'ad_mars' }
+    });
+    expect(screen.queryByText(/Selected Period Analysis/i)).not.toBeInTheDocument();
   });
 
   it('9. Stale selectedPeriod result: ID-match gate prevents rendering mismatched result', () => {

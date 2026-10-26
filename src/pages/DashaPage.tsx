@@ -5,7 +5,7 @@
  * Does NOT perform any astrology/domain/Vimshottari/Dasha/transit/AI calculations.
  */
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import type { ProductAnalysisState } from '../app/AppState';
 import type { AppPage } from '../app/navigation/navigationTypes';
 import { selectDashaViewModel } from '../product/analysis/dashaViewModel';
@@ -73,7 +73,12 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   );
 
   const dashPeriodOptions = useMemo(
-    () => (analysis ? selectDashaPeriodOptions(analysis) : undefined),
+    () => {
+      const options = analysis ? selectDashaPeriodOptions(analysis) : undefined;
+      // Each new analysis snapshot is a new selection context, so refresh the
+      // options identity to clear both the selector and any submitted report.
+      return options ? { ...options } : undefined;
+    },
     [analysis]
   );
 
@@ -85,6 +90,11 @@ export const DashaPage: React.FC<DashaPageProps> = ({
   // State for period selection
   const [domainToggle, setDomainToggle] = useState<'CAREER' | 'WEALTH' | 'BOTH'>('BOTH');
   const [submittedPeriod, setSubmittedPeriod] = useState<{ mahadashaId: string; antardashaId: string } | null>(null);
+
+  useEffect(() => {
+    // New options identify a new analysis selection context; invalidate its report too.
+    setSubmittedPeriod(null);
+  }, [dashPeriodOptions]);
 
   // isSubmitting is derived from selectionState
   const isSubmitting = selectionStatus === 'SUBMITTING';

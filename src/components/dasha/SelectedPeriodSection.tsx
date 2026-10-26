@@ -80,6 +80,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   const [selectedAntardashaId, setSelectedAntardashaId] = useState<string>('');
 
   useEffect(() => {
+    // Each new analysis snapshot is a new selection context; clear both selected IDs.
     setSelectedMahadashaId('');
     setSelectedAntardashaId('');
   }, [dashPeriodOptions]);
