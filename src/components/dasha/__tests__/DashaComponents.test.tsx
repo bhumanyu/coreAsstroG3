@@ -1,6 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   DashaHero,
   TransitTimingSection,
@@ -814,6 +815,121 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       expect(adSelect).toHaveValue('');
       expect(submitButton).toBeDisabled();
+    });
+
+    it('SelectedPeriodSection: exposes accessible labels and supports keyboard selection/submission', async () => {
+      const user = userEvent.setup();
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [{
+          id: 'md_jupiter',
+          planet: 'Jupiter',
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2036-01-01T00:00:00.000Z',
+          valid: true,
+          diagnostics: [],
+          temporalRelation: 'CURRENT',
+          antardashas: [{
+            id: 'ad_saturn',
+            planet: 'Saturn',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2022-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'PAST'
+          }]
+        }],
+        diagnostics: []
+      };
+      const onSelect = vi.fn();
+      render(<SelectedPeriodSection dashPeriodOptions={dashPeriodOptions} onSelect={onSelect} />);
+
+      const mdSelect = screen.getByRole('combobox', { name: 'Mahadasha (Major Period)' });
+      const adSelect = screen.getByRole('combobox', { name: 'Antardasha (Sub-period)' });
+      expect(mdSelect).toHaveAccessibleName('Mahadasha (Major Period)');
+      expect(adSelect).toHaveAccessibleName('Antardasha (Sub-period)');
+
+      await user.tab();
+      expect(mdSelect).toHaveFocus();
+      await user.selectOptions(mdSelect, 'md_jupiter');
+      await user.tab();
+      expect(adSelect).toHaveFocus();
+      await user.selectOptions(adSelect, 'ad_saturn');
+      await user.tab();
+      await user.keyboard('{Enter}');
+      expect(onSelect).toHaveBeenCalledWith('md_jupiter', 'ad_saturn');
+    });
+
+    it('SelectedPeriodSection: announces loading, empty, and error states accessibly', () => {
+      const { rerender } = render(<SelectedPeriodSection optionsStatus="LOADING" onSelect={vi.fn()} />);
+      expect(screen.getByText(/Loading Dasha periods/)).toHaveAttribute('role', 'status');
+
+      rerender(<SelectedPeriodSection dashPeriodOptions={{ mahadashas: [], diagnostics: [] }} onSelect={vi.fn()} />);
+      expect(screen.getByText(/No selectable Dasha periods/)).toHaveAttribute('role', 'status');
+
+      rerender(<SelectedPeriodSection optionsStatus="ERROR" onSelect={vi.fn()} />);
+      expect(screen.getByRole('alert')).toHaveTextContent('Dasha periods could not be loaded');
+      expect(screen.getByRole('combobox', { name: /Mahadasha/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /Analyze Selected Period/i })).toBeDisabled();
+    });
+
+    it('SelectedPeriodSection: disables invalid options while keeping their diagnostics visible', () => {
+      const dashPeriodOptions: ProductDashaPeriodOptions = {
+        mahadashas: [{
+          id: 'md_invalid',
+          planet: 'Mars',
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2019-01-01T00:00:00.000Z',
+          valid: false,
+          diagnostics: ['INVALID_MAHADASHA_INTERVAL'],
+          temporalRelation: 'UNKNOWN',
+          antardashas: []
+        }],
+        diagnostics: []
+      };
+      render(<SelectedPeriodSection dashPeriodOptions={dashPeriodOptions} onSelect={vi.fn()} />);
+
+      expect(screen.getByRole('option', { name: /Mars.*Invalid/ })).toBeDisabled();
+      expect(screen.getByRole('alert', { name: 'Unavailable Dasha periods' }))
+        .toHaveTextContent('INVALID_MAHADASHA_INTERVAL');
+    });
+
+    it('SelectedPeriodSection: revalidates against refreshed options before submit', () => {
+      const initialOptions: ProductDashaPeriodOptions = {
+        mahadashas: [{
+          id: 'md_jupiter',
+          planet: 'Jupiter',
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2036-01-01T00:00:00.000Z',
+          valid: true,
+          diagnostics: [],
+          temporalRelation: 'CURRENT',
+          antardashas: [{
+            id: 'ad_saturn',
+            planet: 'Saturn',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2022-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'PAST'
+          }]
+        }],
+        diagnostics: []
+      };
+      const onSelect = vi.fn();
+      const { rerender } = render(
+        <SelectedPeriodSection dashPeriodOptions={initialOptions} onSelect={onSelect} />
+      );
+      fireEvent.change(screen.getByRole('combobox', { name: /Mahadasha/i }), {
+        target: { value: 'md_jupiter' }
+      });
+      fireEvent.change(screen.getByRole('combobox', { name: /Antardasha/i }), {
+        target: { value: 'ad_saturn' }
+      });
+
+      rerender(<SelectedPeriodSection dashPeriodOptions={{ mahadashas: [], diagnostics: [] }} onSelect={onSelect} />);
+      expect(screen.getByRole('button', { name: /Analyze Selected Period/i })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: /Analyze Selected Period/i }));
+      expect(onSelect).not.toHaveBeenCalled();
     });
 
     it('SelectedPeriodSection: renders unknown diagnostic codes visibly', () => {

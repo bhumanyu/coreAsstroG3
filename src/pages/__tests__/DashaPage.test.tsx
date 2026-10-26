@@ -308,8 +308,33 @@ describe('DashaPage (P-UI-07)', () => {
     const mdSelect = screen.getByLabelText(/Mahadasha \(Major Period\)/i);
     expect(mdSelect).toBeInTheDocument();
 
-    // Change MD select to a different value to trigger onSelectionChange
     fireEvent.change(mdSelect, { target: { value: 'md_jupiter' } });
+    fireEvent.change(screen.getByLabelText(/Antardasha \(Sub-period\)/i), {
+      target: { value: 'ad_saturn' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Analyze Selected Period/i }));
+    rerender(
+      <DashaPage
+        productAnalysisState={{ status: 'READY', analysis }}
+        selectionState={{ status: 'READY' }}
+        onSelectPeriod={onSelectPeriod}
+      />
+    );
+    expect(screen.getByText(/Selected Period Analysis/i)).toBeInTheDocument();
+
+    rerender(
+      <DashaPage
+        productAnalysisState={{ status: 'READY', analysis }}
+        selectionState={{ status: 'ERROR', error: 'Selected-period synthesis failed.' }}
+        onSelectPeriod={onSelectPeriod}
+      />
+    );
+    expect(screen.queryByText(/Selected Period Analysis/i)).not.toBeInTheDocument();
+
+    // Change MD select to a different value to trigger onSelectionChange
+    fireEvent.change(screen.getByLabelText(/Mahadasha \(Major Period\)/i), {
+      target: { value: 'md_jupiter' }
+    });
 
     // Simulate the selection change by rerendering with a different selectedPeriod ID
     // This simulates the submittedPeriod being cleared on selection change

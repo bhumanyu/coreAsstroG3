@@ -10,13 +10,17 @@ import React, { useState } from 'react';
 import type {
   ProductDashaPeriodOptions,
   ProductSelectableMahadasha,
-  ProductSelectableAntardasha,
   ProductTemporalRelation
 } from '../../product/analysis/productAnalysisTypes';
+import {
+  buildSelectedPeriodViewModel,
+  validateSelectedPeriod
+} from '../../product/analysis/selectedPeriodViewModel';
 import { Calendar, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export interface SelectedPeriodSectionProps {
-  readonly dashPeriodOptions: ProductDashaPeriodOptions;
+  readonly dashPeriodOptions?: ProductDashaPeriodOptions;
+  readonly optionsStatus?: 'LOADING' | 'ERROR';
   readonly onSelect: (mahadashaId: string, antardashaId: string) => void;
   readonly isSubmitting?: boolean;
   readonly onSelectionChange?: () => void;
@@ -62,12 +66,14 @@ function formatDate(isoString: string): string {
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
+    timeZone: 'UTC'
   });
 }
 
 export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   dashPeriodOptions,
+  optionsStatus,
   onSelect,
   isSubmitting = false,
   onSelectionChange
@@ -75,22 +81,31 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   const [selectedMahadashaId, setSelectedMahadashaId] = useState<string>('');
   const [selectedAntardashaId, setSelectedAntardashaId] = useState<string>('');
 
-  const selectedMahadasha = dashPeriodOptions.mahadashas.find(
+  const options = dashPeriodOptions ?? { mahadashas: [], diagnostics: [] };
+  const selectedMahadasha = options.mahadashas.find(
     md => md.id === selectedMahadashaId
   );
   const selectedAntardasha = selectedMahadasha?.antardashas.find(
     ad => ad.id === selectedAntardashaId
   );
 
-  const canSubmit = Boolean(
-    selectedMahadasha?.valid &&
-    selectedAntardasha?.valid &&
-    !isSubmitting
-  );
+  const viewModel = buildSelectedPeriodViewModel({
+    options: dashPeriodOptions,
+    optionsStatus,
+    selection: selectedMahadashaId && selectedAntardashaId
+      ? { mahadashaId: selectedMahadashaId, antardashaId: selectedAntardashaId }
+      : undefined,
+    isSubmitting
+  });
 
   const handleSubmit = () => {
-    if (canSubmit && selectedMahadashaId && selectedAntardashaId) {
-      onSelect(selectedMahadashaId, selectedAntardashaId);
+    if (isSubmitting || !selectedMahadashaId || !selectedAntardashaId) return;
+    const latestValidation = validateSelectedPeriod(dashPeriodOptions, {
+      mahadashaId: selectedMahadashaId,
+      antardashaId: selectedAntardashaId
+    });
+    if (latestValidation.ok) {
+      onSelect(latestValidation.mahadasha.id, latestValidation.antardasha.id);
     }
   };
 
@@ -115,7 +130,17 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
       </div>
 
       <div className="space-y-4">
-        <fieldset disabled={isSubmitting}>
+        {viewModel.status === 'LOADING' && (
+          <div role="status" className="text-sm text-slate-300">Loading Dasha periods…</div>
+        )}
+        {viewModel.status === 'ERROR' && (
+          <div role="alert" className="text-sm text-rose-300">Dasha periods could not be loaded.</div>
+        )}
+        {viewModel.status === 'EMPTY' && (
+          <div role="status" className="text-sm text-slate-300">No selectable Dasha periods are available.</div>
+        )}
+
+        <fieldset disabled={isSubmitting || viewModel.status !== 'READY'}>
           <legend className="sr-only">Dasha period selection</legend>
 
           {/* Mahadasha Select */}
@@ -130,7 +155,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               className="w-full bg-slate-950/60 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="">Select a Mahadasha</option>
-              {dashPeriodOptions.mahadashas.map(md => (
+              {options.mahadashas.map(md => (
                 <option
                   key={md.id}
                   value={md.id}
@@ -175,7 +200,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
         </fieldset>
 
         {/* Invalid Period Diagnostics */}
-        {dashPeriodOptions.mahadashas.some(md => !md.valid) ||
+        {options.mahadashas.some(md => !md.valid) ||
           (selectedMahadasha && selectedMahadasha.antardashas.some(ad => !ad.valid)) ? (
           <section
             role="alert"
@@ -187,7 +212,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               <span>Unavailable Dasha periods</span>
             </div>
             <ul className="space-y-1 text-xs text-slate-300">
-              {dashPeriodOptions.mahadashas.filter(md => !md.valid).map(md => (
+              {options.mahadashas.filter(md => !md.valid).map(md => (
                 <li key={md.id}>
                   <span className="font-mono-code text-amber-400">{md.planet} MD:</span>{' '}
                   {md.diagnostics.map(mapDiagnosticToExplanation).join(', ')}
@@ -255,7 +280,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
         {/* Submit Button */}
         <button
           onClick={handleSubmit}
-          disabled={!canSubmit}
+          disabled={!viewModel.canSubmit}
           aria-busy={isSubmitting}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-500/30"
         >
