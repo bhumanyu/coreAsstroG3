@@ -7,6 +7,9 @@ import { AppFooter } from './AppFooter';
 import { AppState, INITIAL_APP_STATE, BirthDetails } from './AppState';
 import { createAppController, type AppController } from './AppController';
 import { ThemeProvider } from '../context/ThemeContext';
+import { ChartProfileManager } from '../features/chart-profiles/ChartProfileManager';
+import { ChartExportControl } from '../features/chart-export/ChartExportControl';
+import { ChartShareControls } from '../features/chart-sharing/ChartShareControls';
 
 interface AppShellContentProps {
   readonly controllerFactory?: (setState: React.Dispatch<React.SetStateAction<AppState>>) => AppController;
@@ -72,6 +75,20 @@ export const AppShellContent: React.FC<AppShellContentProps> = ({
       />
 
       <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <ChartProfileManager
+          currentBirthDetails={state.birthDetails}
+          onRestoreBirthDetails={handleSaveBirthDetails}
+        />
+        <ChartShareControls
+          currentBirthDetails={state.birthDetails}
+          onLoadBirthDetails={handleSaveBirthDetails}
+        />
+        {state.productAnalysis.analysis && (
+          <ChartExportControl
+            analysis={state.productAnalysis.analysis}
+            selectedPeriod={state.productAnalysis.analysis.selectedPeriod}
+          />
+        )}
         <ProductPageRouter
           state={state}
           horoscope={state.horoscope}
