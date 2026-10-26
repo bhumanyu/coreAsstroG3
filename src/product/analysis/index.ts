@@ -10,3 +10,4 @@ export * from './reasoningViewModel';
 export * from './dashaViewModel';
 export * from './AnalysisEmptyState';
 export * from './selectedPeriodProductService';
+export * from './selectedPeriodViewModel';
