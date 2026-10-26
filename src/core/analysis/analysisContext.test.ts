@@ -59,9 +59,46 @@ describe('AnalysisContext and AnalysisContextFactory (P0-02A)', () => {
       expect(asOfMs).toBeLessThanOrEqual(after);
       expect(asOf.endsWith('Z')).toBe(true);
     });
+
+    it('uses an injected fixed clock for omitted asOf values', () => {
+      const clock = { now: vi.fn(() => '2040-03-04T05:06:07.000Z') };
+
+      expect(normalizeAsOf(undefined, clock)).toBe('2040-03-04T05:06:07.000Z');
+      expect(normalizeAsOf(null, clock)).toBe('2040-03-04T05:06:07.000Z');
+      expect(clock.now).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('createAnalysisContext', () => {
+    it('uses the injected clock once when asOf is omitted', () => {
+      const clock = { now: vi.fn(() => '2040-03-04T05:06:07.000Z') };
+
+      const context = createAnalysisContext({ methodology: mockMethodology }, clock);
+
+      expect(context.asOf).toBe('2040-03-04T05:06:07.000Z');
+      expect(clock.now).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not call the clock when explicit asOf is supplied and is deterministic', () => {
+      const clock = { now: vi.fn(() => '2040-03-04T05:06:07.000Z') };
+      const input = { asOf: '2024-06-15T20:00:00+05:30', methodology: mockMethodology };
+
+      const first = createAnalysisContext(input, clock);
+      const second = createAnalysisContext(input, clock);
+
+      expect(first.asOf).toBe('2024-06-15T14:30:00.000Z');
+      expect(second.asOf).toBe(first.asOf);
+      expect(clock.now).not.toHaveBeenCalled();
+    });
+
+    it.each(['', '   ', 'not-a-valid-date'])(
+      'preserves the existing context error contract for invalid asOf "%s"',
+      (asOf) => {
+        const context = createAnalysisContext({ asOf, methodology: mockMethodology });
+        expect(context.asOf).toBe(asOf);
+      }
+    );
+
     it('creates an immutable context with frozen methodology and context', () => {
       const context = createAnalysisContext({
         asOf: '2024-01-01T00:00:00.000Z',

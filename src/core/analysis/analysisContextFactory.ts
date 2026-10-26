@@ -1,4 +1,6 @@
 import type { AnalysisContext, ProductMethodology } from './AnalysisContext';
+import { systemClock } from './Clock';
+import type { Clock } from './Clock';
 
 /**
  * Active runtime engine and rules versions. These serve as the single sanctioned
@@ -17,11 +19,9 @@ export const DEFAULT_METHODOLOGY: ProductMethodology = Object.freeze({
   dashaSystem: 'VIMSHOTTARI'
 });
 
-export function normalizeAsOf(asOf?: Date | string | null): string {
+export function normalizeAsOf(asOf?: Date | string | null, clock: Clock = systemClock): string {
   if (asOf === undefined || asOf === null) {
-    // Option A: assign the current instant exactly once at the product boundary.
-    // This is the ONLY sanctioned wall-clock use for analysis semantics.
-    return new Date().toISOString();
+    return clock.now();
   }
 
   if (asOf instanceof Date) {
@@ -53,10 +53,13 @@ export interface CreateAnalysisContextInput {
   readonly rulesVersion?: string;
 }
 
-export function createAnalysisContext(input?: CreateAnalysisContextInput): AnalysisContext {
+export function createAnalysisContext(
+  input?: CreateAnalysisContextInput,
+  clock: Clock = systemClock
+): AnalysisContext {
   let asOf: string;
   try {
-    asOf = normalizeAsOf(input?.asOf);
+    asOf = normalizeAsOf(input?.asOf, clock);
   } catch {
     asOf = typeof input?.asOf === 'string' ? input.asOf : '';
   }
