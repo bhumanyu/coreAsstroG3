@@ -972,3 +972,51 @@ The profession status panel preserves its generic status explanation and conditi
   - ✅ `npm run verify`: PASS (309 test files, 5,724 passed, 4 skipped; lint and production build passed; `verify:bundle` rebuilt and scanned the client)
 
 D2 manifestation factors now attribute evidence IDs only when an evidence item's `source` is explicitly `D2`. The regression test confirms explicit D2 IDs are included and `VARGA`-classified evidence with non-D2 source provenance is excluded. D2 relationship evaluation, confirmation/conflict factors, weights, and rules are unchanged. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
+## Phase 6 PR-035 — Temporal Contract and Clock Injection
+
+- **Source change commit:** `6d9b4241d92b8360e22f25e79fbf7a69f23902b3`
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/core/analysis/analysisContext.test.ts`: PASS (1 file, 16 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (309 test files, 5,730 passed, 4 skipped; lint, production build, and bundle scan passed)
+
+`normalizeAsOf` and `createAnalysisContext` now accept an injected optional clock; omitted `asOf` uses `clock.now()`, while explicit normalization and the existing invalid-input catch contract remain unchanged. The Phase 6 temporal contract documents UTC normalization, display timezone policy, half-open intervals, no clamping, reproducibility metadata, and that no default forecast horizon is yet owner-approved. Forecast production wiring remains gated.
+
+## Phase 6 PR-036 — Clock Through Product Analysis Service
+
+- **Source change commit:** `4a6dbd058574e5e07bd6ef3d8565cb7dc85cb6f7`
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/product/analysis/__tests__/productAnalysisService.test.ts src/product/analysis/__tests__/productAnalysisTemporal.test.ts src/product/analysis/productAnalysisService.integration.test.ts`: PASS (3 files, 51 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (309 test files, 5,734 passed, 4 skipped; lint, production build, and bundle scan passed)
+
+The service resolves one context per run using the optional injected clock and passes that same context through analysis. Explicit `asOf` bypasses the clock; caller context is passed through unchanged, and a conflicting explicit `asOf` returns an analysis `ERROR` rather than being ignored. Historical and future instants remain unclamped, and temporal-resolution failures retain the existing `ERROR` path. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
+## Phase 6 PR-037 — Selected-Period View Model
+
+- **Source change commit:** `f388e83408462689d758671bd5e8f1b91ae3d792`
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/product/analysis/selectedPeriodViewModel.test.ts`: PASS (1 file, 6 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (310 test files, 5,740 passed, 4 skipped; lint, production build, and bundle scan passed)
+
+The product view model projects LOADING/ERROR/EMPTY/READY states, validates Mahadasha and nested Antardasha IDs only against the current `ProductDashaPeriodOptions`, and returns the selected canonical interval. Unknown, invalid, mismatched, or refreshed-away IDs cannot enable submission. The API is exported from the product analysis barrel.
+
+## Phase 6 PR-038 — Selected-Period Selector UI
+
+- **Source change commit:** `141ca8eea4a169d4f3da4ba9460ff8296e767b41`
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/core/analysis/analysisContext.test.ts src/product/analysis/__tests__/productAnalysisService.test.ts src/product/analysis/__tests__/productAnalysisTemporal.test.ts src/product/analysis/productAnalysisService.integration.test.ts src/product/analysis/selectedPeriodViewModel.test.ts src/components/dasha/__tests__/DashaComponents.test.tsx src/pages/__tests__/DashaPage.test.tsx`: PASS (7 files, 115 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (310 test files, 5,744 passed, 4 skipped; lint, production build, and bundle scan passed)
+
+The existing `SelectedPeriodSection` consumes the selected-period view model, retains accessible labels/fieldset behavior and visible diagnostics, clears AD on MD changes, formats displayed boundaries in UTC, and revalidates against current options immediately before submit. DashaPage remains the owning page; failed submissions and mismatched selections do not render stale reports. No `ProductPageRouter` expansion was made. The PR-039/PR-040 evaluator/horizon gate remains unresolved; no forecast engine was wired into production and no forecast series were added. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
