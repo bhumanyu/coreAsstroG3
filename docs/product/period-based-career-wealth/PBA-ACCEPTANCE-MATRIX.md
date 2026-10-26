@@ -1057,3 +1057,16 @@ DashaPage and `SelectedPeriodSection` invalidate their state against the same op
   - ✅ `npm run verify`: PASS (319 test files, 5,781 passed, 4 skipped; production build and bundle scan passed)
 
 The selected-period export now field-projects deterministic career/wealth synthesis, evidence references, missing inputs, provenance, and qualification status; AI explanation state remains excluded. Runtime validation strictly whitelists nested projection fields. Tests verify changed report bodies, unavailable/partial/insufficient-data preservation, and a real ProductAnalysisService selected-period result whose `analysisAsOf` equals export provenance `asOf`. Blob URL revocation is scheduled after download initiation, including the initiation-failure path; share-link clearing preserves unrelated fragment parameters. Full verification emitted a Windows Vitest worker termination `EPERM`/timeout warning, but completed all tests and exited successfully. The production build emitted the existing large-chunk-size warning.
+
+## Career/Wealth Reproducibility and Contract Inventory
+
+- **Source snapshot commit:** `45c41269462c7a382c11896f384aa47865a43b26` (exact inspected source SHA; baseline tree was clean).
+- **Documentation change commit:** recorded in the follow-up documentation commit that adds its exact SHA here.
+- **Toolchain:** repository pin Node `20.19.4` (`.nvmrc`), npm `10.9.2` (`package.json`).
+- **Lockfile SHA256:** `A905887D9A284F00FA7C5EB6606DEDAE1ED964F1E659C97CF1143B0925896BCA`.
+- **Baseline and focused inventory:** [CAREER-WEALTH-BASELINE-2026-10.md](./CAREER-WEALTH-BASELINE-2026-10.md).
+- **Source-traced contracts, projections, and gaps:** [CAREER-WEALTH-CONTRACT-INVENTORY.md](./CAREER-WEALTH-CONTRACT-INVENTORY.md).
+- **Authoritative `npm run verify`:** PASS on the exact source snapshot after a preceding `npm run build` supplied `dist/assets` required by `browserBoundary.test.ts`: 320 test files passed, 5,786 passed, 4 skipped; bundle-boundary test 2/2 passed. The pristine no-dist attempt failed (319 files passed, 1 failed; 5,785 passed, 4 skipped, 1 failed), and is documented rather than suppressed.
+- **Install observations:** `npm ci` failed in the main worktree with Windows `EPERM` unlinking the in-use lightningcss native binary (exit `-4048`); `npm ci` passed in a detached clean worktree at the same SHA. It emitted the dependency engine warning that `@testing-library/jest-dom@7.0.1` requests Node `>=22`, although pinned Node 20 completed the full baseline suite.
+- **Focused suites:** 21 files, 707 passed, 0 failed, 0 skipped. Exact per-file commands, runner counts, timestamps, exit codes, working directory, commit, and lock hash are in the baseline record.
+- **Scope:** documentation only. No feature code, dependency, script, CI, enum, contract, calculation, expected value, or assertion changed. The script already includes `verify:bundle`; that gate was not run separately.
