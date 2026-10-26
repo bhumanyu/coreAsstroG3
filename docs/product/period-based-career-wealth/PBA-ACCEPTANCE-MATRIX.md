@@ -1032,3 +1032,16 @@ The existing `SelectedPeriodSection` consumes the selected-period view model, re
   - ✅ `npm run verify`: PASS (310 test files, 5,745 passed, 4 skipped; lint, production build, and bundle scan passed)
 
 The selector no longer accepts asynchronous loading/error status props; those statuses remain supported by the independent view model. Changing the options snapshot clears both selected IDs, and submit-time validation remains in place. MD/AD option boundaries and the selected-period summary explicitly label UTC while preserving canonical timestamps. Keyboard, MD-change clearing, invalid diagnostics, refreshed-option rejection, and valid ID submission remain covered. The build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
+### PR-038 Follow-up — Invalidate Submitted Report on Analysis Refresh
+
+- **Source change commit:** `6d51704a4562f0dbd14752e807be1639bcca144a`
+- **Policy:** Every new `analysis` reference is a new selection context; it clears both selector IDs and the parent's submitted report, even if the nested options data is equivalent.
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx src/pages/__tests__/DashaPage.test.tsx src/product/analysis/selectedPeriodViewModel.test.ts`: PASS (3 files, 49 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm exec --yes --package=node@20.19.4 -- npm run verify`: PASS (310 test files, 5,745 passed, 4 skipped; production build and bundle scan passed)
+
+DashaPage and `SelectedPeriodSection` invalidate their state against the same options-snapshot identity. The DashaPage regression test verifies that refreshing the analysis hides the previously submitted report and resets both selectors; manual selection changes continue to invalidate the report. Submit-time `validateSelectedPeriod` behavior is unchanged. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
