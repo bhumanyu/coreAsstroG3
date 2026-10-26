@@ -141,6 +141,45 @@ describe('wealthManifestationSynthesis (CW-04B)', () => {
     expect(d2ConflictFactor?.direction).toBe('CHALLENGE');
   });
 
+  it('attributes only explicit D2 source evidence IDs to the D2 factor', () => {
+    const evidence = [
+      createDomainEvidence({
+        id: 'WEALTH_EXPLICIT_D2_EVIDENCE',
+        sourceType: 'VARGA',
+        domain: 'WEALTH',
+        phase: 'VARGA_CONFIRMATION',
+        source: 'D2',
+        statement: 'Explicit D2 evidence',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        ruleId: 'WEALTH_D2_CONFIRMATION'
+      }),
+      createDomainEvidence({
+        id: 'WEALTH_NON_D2_VARGA_EVIDENCE',
+        sourceType: 'VARGA',
+        domain: 'WEALTH',
+        phase: 'VARGA_CONFIRMATION',
+        source: 'D1',
+        statement: 'Varga-classified evidence with non-D2 source provenance',
+        polarity: 'SUPPORTING',
+        strength: 'MODERATE',
+        ruleId: 'WEALTH_NON_D2_VARGA'
+      })
+    ];
+
+    const result = resolveWealthDimensionManifestation(
+      'ACCUMULATION',
+      evidence,
+      undefined,
+      'CONFIRMS'
+    );
+    const d2Factor = result.factors.find((factor) => factor.source === 'D2');
+
+    expect(d2Factor).toBeDefined();
+    expect(d2Factor?.evidenceIds).toContain('WEALTH_EXPLICIT_D2_EVIDENCE');
+    expect(d2Factor?.evidenceIds).not.toContain('WEALTH_NON_D2_VARGA_EVIDENCE');
+  });
+
   it('synthesizes all 4 classical wealth dimensions via synthesizeWealthManifestations', () => {
     const natalEvidence = [
       ...createMockNatalEvidence(['WR_JUP_2H_DHANA'], 'ACCUMULATION'),

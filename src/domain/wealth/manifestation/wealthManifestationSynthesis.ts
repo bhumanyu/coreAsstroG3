@@ -80,7 +80,7 @@ export function resolveWealthDimensionManifestation(
 
   // 2. D2 VARGA FACTORS (Canonical VargaRelationship: 'CONFIRMS' | 'CONFLICTS' | 'PARTIALLY_CONFIRMS' | 'MODIFIES' | 'UNAVAILABLE')
   const d2EvidenceIds = natalEvidence
-    .filter((item) => item.source === 'D2' || item.sourceType === 'VARGA')
+    .filter((item) => item.source === 'D2')
     .map((item) => item.id);
 
   let d2Support: WealthManifestationDirection = 'NEUTRAL';
