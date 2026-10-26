@@ -43,13 +43,11 @@ export function mapWealthSourceType(
     case WealthEvidenceFamily.FIFTH_HOUSE:
     case WealthEvidenceFamily.NINTH_HOUSE:
     case WealthEvidenceFamily.ELEVENTH_HOUSE:
-      return 'HOUSE';
-
     case WealthEvidenceFamily.SECOND_LORD:
     case WealthEvidenceFamily.FIFTH_LORD:
     case WealthEvidenceFamily.NINTH_LORD:
     case WealthEvidenceFamily.ELEVENTH_LORD:
-      return 'LORDSHIP';
+      return 'STRUCTURAL';
 
     case WealthEvidenceFamily.JUPITER:
     case WealthEvidenceFamily.VENUS:

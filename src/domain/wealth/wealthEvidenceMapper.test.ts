@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildWealthEvidence,
+  mapWealthSourceType,
   resolveWealthSubjectKey
 } from './wealthEvidenceMapper';
 import {
@@ -10,6 +11,82 @@ import type {
   ThemeInterpretationEvidence
 } from '../../engine/themeInterpretation/themeInterpretationTypes';
 import { Planet } from '../../types';
+
+describe('mapWealthSourceType', () => {
+  const item = (
+    evidenceFamily: WealthEvidenceFamily,
+    overrides: Partial<ThemeInterpretationEvidence<WealthEvidenceFamily>> = {}
+  ): ThemeInterpretationEvidence<WealthEvidenceFamily> => ({
+    id: `WEALTH_SOURCE_TYPE_${evidenceFamily}`,
+    ruleId: `WEALTH_${evidenceFamily}`,
+    evidenceFamily,
+    statement: 'Wealth source type test fixture',
+    effect: 'SUPPORT',
+    strength: 'MODERATE',
+    priority: 'PRIMARY',
+    ...overrides
+  });
+
+  it.each([
+    WealthEvidenceFamily.SECOND_HOUSE,
+    WealthEvidenceFamily.FIFTH_HOUSE,
+    WealthEvidenceFamily.NINTH_HOUSE,
+    WealthEvidenceFamily.ELEVENTH_HOUSE,
+    WealthEvidenceFamily.SECOND_LORD,
+    WealthEvidenceFamily.FIFTH_LORD,
+    WealthEvidenceFamily.NINTH_LORD,
+    WealthEvidenceFamily.ELEVENTH_LORD
+  ])('maps %s to STRUCTURAL', (family) => {
+    expect(mapWealthSourceType(item(family))).toBe('STRUCTURAL');
+  });
+
+  it('maps explicit D2/varga evidence to VARGA', () => {
+    expect(mapWealthSourceType(item(WealthEvidenceFamily.D2))).toBe('VARGA');
+    expect(mapWealthSourceType(item(WealthEvidenceFamily.SECOND_HOUSE, {
+      vargaEvidence: {
+        varga: 'D2',
+        relationship: 'CONFIRMS',
+        statement: 'D2 confirms the natal evidence',
+        effect: 'SUPPORT'
+      }
+    }))).toBe('VARGA');
+  });
+
+  it('maps Dasha family and timing evidence to DASHA', () => {
+    expect(mapWealthSourceType(item(WealthEvidenceFamily.DASHA))).toBe('DASHA');
+    expect(mapWealthSourceType(item(WealthEvidenceFamily.SECOND_HOUSE, {
+      timingEvidence: {
+        dashaLevel: 'MAHADASHA',
+        planet: Planet.JUPITER,
+        relevanceReason: 'Wealth lord period',
+        houses: [2]
+      }
+    }))).toBe('DASHA');
+  });
+
+  it('maps transit evidence to TRANSIT before other source classifications', () => {
+    expect(mapWealthSourceType(item(WealthEvidenceFamily.TRANSIT))).toBe('TRANSIT');
+    expect(mapWealthSourceType(item(WealthEvidenceFamily.D2, {
+      transitEvidence: { effect: 'SUPPORT' }
+    }))).toBe('TRANSIT');
+  });
+
+  it.each([
+    [WealthEvidenceFamily.JUPITER, 'PLANET'],
+    [WealthEvidenceFamily.VENUS, 'PLANET'],
+    [WealthEvidenceFamily.MERCURY, 'PLANET'],
+    [WealthEvidenceFamily.FUNCTIONAL_ROLE, 'PLANET'],
+    [WealthEvidenceFamily.PLANETARY_STRENGTH, 'STRENGTH'],
+    [WealthEvidenceFamily.ASPECT, 'ASPECT'],
+    [WealthEvidenceFamily.YOGA, 'YOGA']
+  ] as const)('preserves the %s mapping to %s', (family, expected) => {
+    expect(mapWealthSourceType(item(family))).toBe(expected);
+  });
+
+  it('maps an unrecognized evidence family to OTHER', () => {
+    expect(mapWealthSourceType(item('UNRECOGNIZED' as WealthEvidenceFamily))).toBe('OTHER');
+  });
+});
 
 describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
   describe('resolveWealthSubjectKey', () => {

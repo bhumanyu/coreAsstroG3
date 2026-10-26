@@ -36,6 +36,8 @@ import {
   STAGE1_GOLDEN_CAREER,
   STAGE1_GOLDEN_WEALTH
 } from '../../integration/stage1/stage1GoldenFixture';
+import { buildWealthEvidence } from '../../domain/wealth/wealthEvidenceMapper';
+import { WealthEvidenceFamily } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import { buildLifeAnalysis } from '../../domain/synthesis';
 import type { DomainEvidence } from '../../domain/interpretation/DomainEvidence';
 import type { DomainInterpretation } from '../../domain/interpretation';
@@ -371,10 +373,8 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     // D10 evidence uses sourceType: 'VARGA' with source: 'D10' to indicate the specific divisional chart
     expect(careerSources).toContain('STRUCTURAL');
     expect(careerSources).toContain('VARGA');
-    // Wealth fixture still uses legacy source types (HOUSE, LORDSHIP, PLANET, ASPECT, YOGA, DASHA)
-    // Wealth canonical mapper migration is pending (P2-11D tracking item)
-    expect(wealthSources).toContain('HOUSE');
-    expect(wealthSources).toContain('LORDSHIP');
+    // The canonical Wealth mapper classifies natal house/lord factors as STRUCTURAL.
+    expect(wealthSources).toContain('STRUCTURAL');
     expect(wealthSources).toContain('PLANET');
 
     // Every item in why.evidence must exist in the domain interpretations
@@ -388,22 +388,56 @@ describe('P-030 Deterministic Traceable Why Experience', () => {
     }
   });
 
-  it.skip('Test 11B (PENDING canonical contract): Wealth canonical mapper migration — STRUCTURAL/VARGA source types', () => {
-    // TODO: Implement Wealth canonical mapper (analogous to canonicalCareerEvidenceMapper)
-    // Expected behavior when canonical Wealth mapper is implemented:
-    // - Wealth evidence should use STRUCTURAL source type for natal structural factors (2H, 11H, lords)
-    // - Wealth evidence should use VARGA source type for divisional chart factors (D2 for gains)
-    // - source should indicate the specific chart (e.g., 'D2' for D2 varga)
-    // - Legacy source types (HOUSE, LORDSHIP, PLANET, ASPECT, YOGA) should be replaced
-    //
-    // Tracking: P2-11D canonical Wealth mapper migration is an outstanding item
-    // This test should be enabled once the canonical Wealth mapper is implemented
-    //
-    // P2-11D SCOPE NOTE: Canonical Wealth mapper migration is NOT in scope for P2-11D.
-    // P2-11D focuses on semantic identity resolution (identityKey) and timing hierarchy traceability.
-    // Wealth canonical mapper migration remains deferred to a future P2 iteration.
-    // DO NOT mark Wealth migration complete and DO NOT fabricate STRUCTURAL/VARGA source types
-    // for Wealth until a real canonical Wealth mapper exists.
+  it('Test 11B: buildWealthEvidence preserves fixture IDs and classifies natal versus explicit D2 evidence', () => {
+    const natalFixture = [
+      {
+        id: 'WEALTH_NATAL_2H_FIXTURE_001',
+        ruleId: 'WEALTH_2H_FIXTURE_001',
+        evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        statement: 'Natal 2nd house fixture',
+        effect: 'SUPPORT',
+        strength: 'STRONG',
+        priority: 'PRIMARY',
+        houses: [2]
+      },
+      {
+        id: 'WEALTH_NATAL_2L_FIXTURE_001',
+        ruleId: 'WEALTH_2L_FIXTURE_001',
+        evidenceFamily: WealthEvidenceFamily.SECOND_LORD,
+        statement: 'Natal 2nd lord fixture',
+        effect: 'SUPPORT',
+        strength: 'MODERATE',
+        priority: 'PRIMARY',
+        houses: [2]
+      }
+    ] as const;
+    const mappedNatal = buildWealthEvidence(natalFixture);
+
+    expect(mappedNatal.map(({ id }) => id)).toEqual([
+      'WEALTH_NATAL_2H_FIXTURE_001',
+      'WEALTH_NATAL_2L_FIXTURE_001'
+    ]);
+    expect(mappedNatal.map(({ sourceType }) => sourceType)).toEqual([
+      'STRUCTURAL',
+      'STRUCTURAL'
+    ]);
+    expect(mappedNatal.every(({ source }) => source === 'D1')).toBe(true);
+    expect(mappedNatal.some(({ source }) => source === 'D2')).toBe(false);
+    expect(mappedNatal.some(({ sourceType }) => sourceType === 'VARGA')).toBe(false);
+
+    const d2Fixture = {
+      id: 'WEALTH_D2_HORA_FIXTURE_001',
+      ruleId: 'WEALTH_D2_FIXTURE_001',
+      evidenceFamily: WealthEvidenceFamily.D2,
+      statement: 'Explicit D2 Hora fixture',
+      effect: 'SUPPORT',
+      strength: 'MODERATE',
+      priority: 'CONFIRMATORY'
+    } as const;
+    const [mappedD2] = buildWealthEvidence([d2Fixture]);
+    expect(mappedD2.id).toBe('WEALTH_D2_HORA_FIXTURE_001');
+    expect(mappedD2.source).toBe('D2');
+    expect(mappedD2.sourceType).toBe('VARGA');
   });
 
   it('Test 12: Rule metadata registry resolution — maps Career and Wealth rule metadata correctly', () => {
