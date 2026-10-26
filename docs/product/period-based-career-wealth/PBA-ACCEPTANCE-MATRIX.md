@@ -960,3 +960,15 @@ The profession status panel preserves its generic status explanation and conditi
   - ✅ `npm run verify:pba10`: PASS (6 test files, 124 tests; lint and build passed)
   - ✅ `npm run verify`: PASS (297 test files, 5,594 passed, 5 skipped; lint and build passed)
 - Both builds emitted the existing large-chunk-size warning. No Node 21 / lightningcss blocker occurred.
+
+## D2 Evidence Provenance Attribution
+
+- **Source change commit:** `1ba5ec921f239987454f8c16b67c5fde32445b25`
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/domain/wealth/manifestation/wealthManifestationSynthesis.test.ts src/domain/wealth/WealthDomainInterpreterV2.test.ts src/product/life-analysis/lifeAnalysisWhy.test.ts`: PASS (3 files, 84 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (309 test files, 5,724 passed, 4 skipped; lint and production build passed; `verify:bundle` rebuilt and scanned the client)
+
+D2 manifestation factors now attribute evidence IDs only when an evidence item's `source` is explicitly `D2`. The regression test confirms explicit D2 IDs are included and `VARGA`-classified evidence with non-D2 source provenance is excluded. D2 relationship evaluation, confirmation/conflict factors, weights, and rules are unchanged. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
