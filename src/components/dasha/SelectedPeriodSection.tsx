@@ -6,7 +6,7 @@
  * Invalid options rendered but disabled with visible diagnostic explanations.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type {
   ProductDashaPeriodOptions,
   ProductSelectableMahadasha,
@@ -20,7 +20,6 @@ import { Calendar, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export interface SelectedPeriodSectionProps {
   readonly dashPeriodOptions?: ProductDashaPeriodOptions;
-  readonly optionsStatus?: 'LOADING' | 'ERROR';
   readonly onSelect: (mahadashaId: string, antardashaId: string) => void;
   readonly isSubmitting?: boolean;
   readonly onSelectionChange?: () => void;
@@ -73,13 +72,17 @@ function formatDate(isoString: string): string {
 
 export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
   dashPeriodOptions,
-  optionsStatus,
   onSelect,
   isSubmitting = false,
   onSelectionChange
 }) => {
   const [selectedMahadashaId, setSelectedMahadashaId] = useState<string>('');
   const [selectedAntardashaId, setSelectedAntardashaId] = useState<string>('');
+
+  useEffect(() => {
+    setSelectedMahadashaId('');
+    setSelectedAntardashaId('');
+  }, [dashPeriodOptions]);
 
   const options = dashPeriodOptions ?? { mahadashas: [], diagnostics: [] };
   const selectedMahadasha = options.mahadashas.find(
@@ -91,7 +94,6 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
 
   const viewModel = buildSelectedPeriodViewModel({
     options: dashPeriodOptions,
-    optionsStatus,
     selection: selectedMahadashaId && selectedAntardashaId
       ? { mahadashaId: selectedMahadashaId, antardashaId: selectedAntardashaId }
       : undefined,
@@ -130,12 +132,6 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
       </div>
 
       <div className="space-y-4">
-        {viewModel.status === 'LOADING' && (
-          <div role="status" className="text-sm text-slate-300">Loading Dasha periods…</div>
-        )}
-        {viewModel.status === 'ERROR' && (
-          <div role="alert" className="text-sm text-rose-300">Dasha periods could not be loaded.</div>
-        )}
         {viewModel.status === 'EMPTY' && (
           <div role="status" className="text-sm text-slate-300">No selectable Dasha periods are available.</div>
         )}
@@ -162,7 +158,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   disabled={!md.valid}
                   title={!md.valid ? md.diagnostics.map(mapDiagnosticToExplanation).join(', ') : undefined}
                 >
-                  {md.planet} — {formatDate(md.start)} → {formatDate(md.end)} ({TEMPORAL_LABELS[md.temporalRelation]})
+                  {md.planet} — {formatDate(md.start)} UTC → {formatDate(md.end)} UTC ({TEMPORAL_LABELS[md.temporalRelation]})
                   {!md.valid && ' (Invalid)'}
                 </option>
               ))}
@@ -191,7 +187,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
                   disabled={!ad.valid}
                   title={!ad.valid ? ad.diagnostics.map(mapDiagnosticToExplanation).join(', ') : undefined}
                 >
-                  {ad.planet} — {formatDate(ad.start)} → {formatDate(ad.end)} ({TEMPORAL_LABELS[ad.temporalRelation]})
+                  {ad.planet} — {formatDate(ad.start)} UTC → {formatDate(ad.end)} UTC ({TEMPORAL_LABELS[ad.temporalRelation]})
                   {!ad.valid && ' (Invalid)'}
                 </option>
               ))}
@@ -247,7 +243,7 @@ export const SelectedPeriodSection: React.FC<SelectedPeriodSectionProps> = ({
               <span className="font-semibold">{selectedAntardasha.planet}</span> AD
             </div>
             <div className="text-xs text-slate-400 font-mono-code">
-              {formatDate(selectedAntardasha.start)} - {formatDate(selectedAntardasha.end)}
+              {formatDate(selectedAntardasha.start)} UTC - {formatDate(selectedAntardasha.end)} UTC
             </div>
             {(!selectedMahadasha.valid || !selectedAntardasha.valid) && (
               <div className="flex items-start gap-2 text-xs text-amber-400">

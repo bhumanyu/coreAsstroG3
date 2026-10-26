@@ -379,6 +379,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(jupiterOption).toBeDefined();
     expect(jupiterOption?.textContent).toContain('Jupiter');
     expect(jupiterOption?.textContent).toContain('Past');
+    expect(jupiterOption?.textContent).toContain('UTC');
     expect(jupiterOption?.value).toBe('md_jupiter');
 
     // Verify Saturn option has temporal label "Future" and value is the ID
@@ -386,6 +387,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(saturnOption).toBeDefined();
     expect(saturnOption?.textContent).toContain('Saturn');
     expect(saturnOption?.textContent).toContain('Future');
+    expect(saturnOption?.textContent).toContain('UTC');
     expect(saturnOption?.value).toBe('md_saturn');
 
     // Select Jupiter to populate AD options
@@ -400,6 +402,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(saturnAdOption).toBeDefined();
     expect(saturnAdOption?.textContent).toContain('Saturn');
     expect(saturnAdOption?.textContent).toContain('Past');
+    expect(saturnAdOption?.textContent).toContain('UTC');
     expect(saturnAdOption?.value).toBe('ad_saturn');
 
     // Verify Mercury AD option has temporal label "Current" and value is the ID
@@ -407,7 +410,11 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     expect(mercuryAdOption).toBeDefined();
     expect(mercuryAdOption?.textContent).toContain('Mercury');
     expect(mercuryAdOption?.textContent).toContain('Current');
+    expect(mercuryAdOption?.textContent).toContain('UTC');
     expect(mercuryAdOption?.value).toBe('ad_mercury');
+
+    fireEvent.change(adSelect, { target: { value: 'ad_saturn' } });
+    expect(screen.getByText(/Jan 1, 2020 UTC - Jan 1, 2022 UTC/)).toBeInTheDocument();
   });
 
   describe('SelectedPeriodReport', () => {
@@ -859,15 +866,9 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       expect(onSelect).toHaveBeenCalledWith('md_jupiter', 'ad_saturn');
     });
 
-    it('SelectedPeriodSection: announces loading, empty, and error states accessibly', () => {
-      const { rerender } = render(<SelectedPeriodSection optionsStatus="LOADING" onSelect={vi.fn()} />);
-      expect(screen.getByText(/Loading Dasha periods/)).toHaveAttribute('role', 'status');
-
-      rerender(<SelectedPeriodSection dashPeriodOptions={{ mahadashas: [], diagnostics: [] }} onSelect={vi.fn()} />);
+    it('SelectedPeriodSection: announces empty options accessibly', () => {
+      render(<SelectedPeriodSection dashPeriodOptions={{ mahadashas: [], diagnostics: [] }} onSelect={vi.fn()} />);
       expect(screen.getByText(/No selectable Dasha periods/)).toHaveAttribute('role', 'status');
-
-      rerender(<SelectedPeriodSection optionsStatus="ERROR" onSelect={vi.fn()} />);
-      expect(screen.getByRole('alert')).toHaveTextContent('Dasha periods could not be loaded');
       expect(screen.getByRole('combobox', { name: /Mahadasha/i })).toBeDisabled();
       expect(screen.getByRole('button', { name: /Analyze Selected Period/i })).toBeDisabled();
     });
@@ -927,9 +928,62 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       });
 
       rerender(<SelectedPeriodSection dashPeriodOptions={{ mahadashas: [], diagnostics: [] }} onSelect={onSelect} />);
+      expect(screen.getByRole('combobox', { name: /Mahadasha/i })).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: /Antardasha/i })).toHaveValue('');
       expect(screen.getByRole('button', { name: /Analyze Selected Period/i })).toBeDisabled();
       fireEvent.click(screen.getByRole('button', { name: /Analyze Selected Period/i }));
       expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('SelectedPeriodSection: clears a selection when the options snapshot identity changes', () => {
+      const firstSnapshot: ProductDashaPeriodOptions = {
+        mahadashas: [{
+          id: 'md_jupiter',
+          planet: 'Jupiter',
+          start: '2020-01-01T00:00:00.000Z',
+          end: '2036-01-01T00:00:00.000Z',
+          valid: true,
+          diagnostics: [],
+          temporalRelation: 'CURRENT',
+          antardashas: [{
+            id: 'ad_saturn',
+            planet: 'Saturn',
+            start: '2020-01-01T00:00:00.000Z',
+            end: '2022-01-01T00:00:00.000Z',
+            valid: true,
+            diagnostics: [],
+            temporalRelation: 'PAST'
+          }]
+        }],
+        diagnostics: []
+      };
+      const refreshedSnapshot: ProductDashaPeriodOptions = {
+        ...firstSnapshot,
+        mahadashas: firstSnapshot.mahadashas.map((mahadasha) => ({
+          ...mahadasha,
+          start: '2021-01-01T00:00:00.000Z',
+          antardashas: mahadasha.antardashas.map((antardasha) => ({
+            ...antardasha,
+            start: '2021-01-01T00:00:00.000Z'
+          }))
+        }))
+      };
+      const { rerender } = render(
+        <SelectedPeriodSection dashPeriodOptions={firstSnapshot} onSelect={vi.fn()} />
+      );
+      fireEvent.change(screen.getByRole('combobox', { name: /Mahadasha/i }), {
+        target: { value: 'md_jupiter' }
+      });
+      fireEvent.change(screen.getByRole('combobox', { name: /Antardasha/i }), {
+        target: { value: 'ad_saturn' }
+      });
+      expect(screen.getByRole('button', { name: /Analyze Selected Period/i })).toBeEnabled();
+
+      rerender(<SelectedPeriodSection dashPeriodOptions={refreshedSnapshot} onSelect={vi.fn()} />);
+
+      expect(screen.getByRole('combobox', { name: /Mahadasha/i })).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: /Antardasha/i })).toHaveValue('');
+      expect(screen.getByRole('button', { name: /Analyze Selected Period/i })).toBeDisabled();
     });
 
     it('SelectedPeriodSection: renders unknown diagnostic codes visibly', () => {
