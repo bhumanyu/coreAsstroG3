@@ -1045,3 +1045,15 @@ The selector no longer accepts asynchronous loading/error status props; those st
   - ✅ `npm exec --yes --package=node@20.19.4 -- npm run verify`: PASS (310 test files, 5,745 passed, 4 skipped; production build and bundle scan passed)
 
 DashaPage and `SelectedPeriodSection` invalidate their state against the same options-snapshot identity. The DashaPage regression test verifies that refreshing the analysis hides the previously submitted report and resets both selectors; manual selection changes continue to invalidate the report. Submit-time `validateSelectedPeriod` behavior is unchanged. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
+### Phase 7 Follow-up — Selected-Period Export Projection and Browser Cleanup
+
+- **Source change commit:** `f64d4f08ed220d2a7bbf3467fed7ea7104710abb`
+- **Toolchain:** Node `v21.7.1`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/features/chart-export src/features/chart-sharing src/app/AppShell.test.tsx`: PASS (7 files, 29 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (319 test files, 5,781 passed, 4 skipped; production build and bundle scan passed)
+
+The selected-period export now field-projects deterministic career/wealth synthesis, evidence references, missing inputs, provenance, and qualification status; AI explanation state remains excluded. Runtime validation strictly whitelists nested projection fields. Tests verify changed report bodies, unavailable/partial/insufficient-data preservation, and a real ProductAnalysisService selected-period result whose `analysisAsOf` equals export provenance `asOf`. Blob URL revocation is scheduled after download initiation, including the initiation-failure path; share-link clearing preserves unrelated fragment parameters. Full verification emitted a Windows Vitest worker termination `EPERM`/timeout warning, but completed all tests and exited successfully. The production build emitted the existing large-chunk-size warning.
