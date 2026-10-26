@@ -61,7 +61,10 @@ export const ChartShareControls: React.FC<ChartShareControlsProps> = ({
     setError('');
     if (globalThis.location?.hash.includes('chart=')) {
       const url = new URL(globalThis.location.href);
-      url.hash = '';
+      const fragment = new URLSearchParams(url.hash.slice(1));
+      fragment.delete('chart');
+      const remainingFragment = fragment.toString();
+      url.hash = remainingFragment ? `#${remainingFragment}` : '';
       globalThis.history.replaceState(null, '', url.toString());
     }
   };

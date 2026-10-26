@@ -54,4 +54,14 @@ describe('ChartShareControls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear share link' }));
     expect(window.location.hash).toBe('');
   });
+
+  it('removes only chart share data while preserving unrelated fragment parameters', () => {
+    const token = encodeChartShare(current);
+    if (!token.ok) throw new Error(token.error);
+    window.history.replaceState(null, '', `/#chart=${token.value}&section=report`);
+    render(<ChartShareControls currentBirthDetails={current} onLoadBirthDetails={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear share link' }));
+    expect(window.location.hash).toBe('#section=report');
+    window.history.replaceState(null, '', '/');
+  });
 });

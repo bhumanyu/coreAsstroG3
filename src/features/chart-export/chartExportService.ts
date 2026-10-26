@@ -8,6 +8,7 @@ export type ChartExportDownloadResult =
 export interface ChartExportBrowser {
   readonly createObjectURL: (blob: Blob) => string;
   readonly revokeObjectURL: (url: string) => void;
+  readonly defer: (callback: () => void) => void;
   readonly createAnchor: () => {
     href: string;
     download: string;
@@ -19,6 +20,7 @@ function defaultBrowser(): ChartExportBrowser {
   return {
     createObjectURL: (blob) => URL.createObjectURL(blob),
     revokeObjectURL: (url) => URL.revokeObjectURL(url),
+    defer: (callback) => { globalThis.setTimeout(callback, 0); },
     createAnchor: () => document.createElement('a')
   };
 }
@@ -58,11 +60,18 @@ export function downloadChartExport(
     failure = error instanceof Error ? error.message : 'The chart export could not be created or downloaded.';
   }
   if (objectUrl) {
+    const cleanupUrl = objectUrl;
     try {
-      browser.revokeObjectURL(objectUrl);
+      browser.defer(() => browser.revokeObjectURL(cleanupUrl));
     } catch (error) {
-      const revokeFailure = error instanceof Error ? error.message : 'The temporary export URL could not be revoked.';
-      failure = failure ? `${failure} Cleanup also failed: ${revokeFailure}` : revokeFailure;
+      try {
+        globalThis.setTimeout(() => browser.revokeObjectURL(cleanupUrl), 0);
+      } catch (fallbackError) {
+        const cleanupError = fallbackError instanceof Error
+          ? fallbackError.message
+          : error instanceof Error ? error.message : 'Temporary export cleanup could not be scheduled.';
+        failure = failure ? `${failure} Cleanup also failed: ${cleanupError}` : cleanupError;
+      }
     }
   }
   if (failure) return { ok: false, error: failure };

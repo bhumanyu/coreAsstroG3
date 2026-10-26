@@ -27,6 +27,97 @@ export interface ExportedPeriodV1 {
   readonly end: string;
   readonly analysisAsOf: string;
   readonly temporalRelation: 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
+  readonly deterministicSynthesis: ExportedSelectedPeriodSynthesisV1;
+}
+
+export interface ExportedDiagnosticV1 {
+  readonly code: string;
+  readonly message: string;
+}
+
+export interface ExportedSelectedPeriodEvidenceV1 {
+  readonly stage: 'CAREER' | 'WEALTH';
+  readonly classification?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL' | 'MIXED' | 'UNRESOLVED';
+  readonly evidenceId?: string;
+  readonly identityKey?: string;
+  readonly dimension?: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
+  readonly polarity?: 'SUPPORTING' | 'CHALLENGING' | 'NEUTRAL';
+  readonly source?: string;
+  readonly ruleId?: string;
+  readonly level?: 'MD' | 'AD' | 'PD';
+  readonly provenanceStage?: 'CAREER_EXPRESSION' | 'CAREER_QUALIFICATION' | 'CAREER_ACTIVATION' | 'WEALTH_NATAL_PROMISE' | 'WEALTH_DASHA_RULE';
+  readonly referenceKind?: 'EVIDENCE' | 'RULE';
+}
+
+export interface ExportedCareerExpressionV1 {
+  readonly expressionRefKey: string;
+  readonly status: string;
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+  readonly matchBasis?: 'UNAMBIGUOUS' | 'AMBIGUOUS';
+  readonly diagnostics: readonly ExportedDiagnosticV1[];
+  readonly expressionEvidenceIds: readonly string[];
+  readonly qualifiedEvidenceIds: readonly string[];
+  readonly unqualifiedEvidenceIds: readonly string[];
+  readonly mdDashaEvidenceIds: readonly string[];
+  readonly adDashaEvidenceIds: readonly string[];
+  readonly expressionSource: 'CALLER' | 'ADAPTER_FALLBACK';
+}
+
+export interface ExportedCareerSynthesisV1 {
+  readonly qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+  readonly expressions: readonly ExportedCareerExpressionV1[];
+  readonly diagnostics: readonly ExportedDiagnosticV1[];
+}
+
+export interface ExportedWealthRuleReferenceV1 {
+  readonly ruleId: string;
+  readonly source: string;
+  readonly level: 'MD' | 'AD' | 'PD';
+}
+
+export interface ExportedWealthDimensionV1 {
+  readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
+  readonly effect: string;
+  readonly dataStatus: 'COMPLETE' | 'PARTIAL' | 'INSUFFICIENT_DATA';
+  readonly linkedLevels: readonly ('MD' | 'AD' | 'PD')[];
+  readonly diagnostics: readonly ExportedDiagnosticV1[];
+  readonly promiseEvidenceIds: readonly string[];
+  readonly dashaRuleReferences: readonly ExportedWealthRuleReferenceV1[];
+  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
+}
+
+export interface ExportedWealthSynthesisV1 {
+  readonly dimensions: Readonly<Record<'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION', ExportedWealthDimensionV1>>;
+  readonly diagnostics: readonly ExportedDiagnosticV1[];
+}
+
+export interface ExportedSynthesisProvenanceV1 {
+  readonly career: {
+    readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
+    readonly version?: string;
+    readonly qualificationBasis?: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
+  };
+  readonly wealth: {
+    readonly status: 'PRESENT' | 'PARTIAL' | 'MISSING';
+    readonly version?: string;
+  };
+}
+
+export interface ExportedMissingInputV1 {
+  readonly domain: 'CAREER' | 'WEALTH';
+  readonly code: string;
+  readonly description: string;
+}
+
+/** Deterministic projection only. Optional AI explanation fields are deliberately excluded. */
+export interface ExportedSelectedPeriodSynthesisV1 {
+  readonly career: ExportedCareerSynthesisV1;
+  readonly wealth: ExportedWealthSynthesisV1;
+  readonly evidence: readonly ExportedSelectedPeriodEvidenceV1[];
+  readonly missingInputs: readonly ExportedMissingInputV1[];
+  readonly provenance: ExportedSynthesisProvenanceV1;
+  readonly qualificationStatus: 'CANONICAL' | 'PROVISIONAL' | 'UNAVAILABLE';
 }
 
 export interface ExportedChartFactsV1 {
@@ -156,10 +247,136 @@ function isEvidence(value: unknown): value is ExportedEvidenceV1 {
     && isString(value.role) && isString(value.source) && isOptionalString(value.ruleId);
 }
 
+const SYNTHESIS_LEVELS = ['MD', 'AD', 'PD'] as const;
+const CAREER_QUALIFICATION_BASES = ['CANONICAL_STATUS', 'PROXY_DIRECTION', 'UNAVAILABLE'] as const;
+const SYNTHESIS_STAGES = ['CAREER', 'WEALTH'] as const;
+const SYNTHESIS_DIMENSIONS = ['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const;
+
+function isOneOf<T extends string>(value: unknown, values: readonly T[]): value is T {
+  return typeof value === 'string' && values.includes(value as T);
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every(isString);
+}
+
+function isDiagnostic(value: unknown): value is ExportedDiagnosticV1 {
+  return isRecord(value) && onlyKeys(value, ['code', 'message'])
+    && isString(value.code) && isString(value.message);
+}
+
+function isSelectedPeriodEvidence(value: unknown): value is ExportedSelectedPeriodEvidenceV1 {
+  if (!isRecord(value) || !onlyKeys(value, [
+    'stage', 'classification', 'evidenceId', 'identityKey', 'dimension', 'polarity',
+    'source', 'ruleId', 'level', 'provenanceStage', 'referenceKind'
+  ]) || !isOneOf(value.stage, SYNTHESIS_STAGES)) return false;
+  return (value.classification === undefined || isOneOf(value.classification, [
+    'SUPPORTING', 'CHALLENGING', 'NEUTRAL', 'MIXED', 'UNRESOLVED'
+  ]))
+    && isOptionalString(value.evidenceId)
+    && isOptionalString(value.identityKey)
+    && (value.dimension === undefined || isOneOf(value.dimension, SYNTHESIS_DIMENSIONS))
+    && (value.polarity === undefined || isOneOf(value.polarity, ['SUPPORTING', 'CHALLENGING', 'NEUTRAL']))
+    && isOptionalString(value.source)
+    && isOptionalString(value.ruleId)
+    && (value.level === undefined || isOneOf(value.level, SYNTHESIS_LEVELS))
+    && (value.provenanceStage === undefined || isOneOf(value.provenanceStage, [
+      'CAREER_EXPRESSION', 'CAREER_QUALIFICATION', 'CAREER_ACTIVATION', 'WEALTH_NATAL_PROMISE', 'WEALTH_DASHA_RULE'
+    ]))
+    && (value.referenceKind === undefined || isOneOf(value.referenceKind, ['EVIDENCE', 'RULE']));
+}
+
+function isCareerExpression(value: unknown): value is ExportedCareerExpressionV1 {
+  if (!isRecord(value) || !onlyKeys(value, [
+    'expressionRefKey', 'status', 'linkedLevels', 'qualificationBasis', 'matchBasis', 'diagnostics',
+    'expressionEvidenceIds', 'qualifiedEvidenceIds', 'unqualifiedEvidenceIds', 'mdDashaEvidenceIds',
+    'adDashaEvidenceIds', 'expressionSource'
+  ])) return false;
+  return isString(value.expressionRefKey)
+    && isString(value.status)
+    && Array.isArray(value.linkedLevels) && value.linkedLevels.every((level) => isOneOf(level, SYNTHESIS_LEVELS))
+    && isOneOf(value.qualificationBasis, CAREER_QUALIFICATION_BASES)
+    && (value.matchBasis === undefined || isOneOf(value.matchBasis, ['UNAMBIGUOUS', 'AMBIGUOUS']))
+    && Array.isArray(value.diagnostics) && value.diagnostics.every(isDiagnostic)
+    && isStringArray(value.expressionEvidenceIds)
+    && isStringArray(value.qualifiedEvidenceIds)
+    && isStringArray(value.unqualifiedEvidenceIds)
+    && isStringArray(value.mdDashaEvidenceIds)
+    && isStringArray(value.adDashaEvidenceIds)
+    && isOneOf(value.expressionSource, ['CALLER', 'ADAPTER_FALLBACK']);
+}
+
+function isCareerSynthesis(value: unknown): value is ExportedCareerSynthesisV1 {
+  return isRecord(value) && onlyKeys(value, ['qualificationBasis', 'expressions', 'diagnostics'])
+    && isOneOf(value.qualificationBasis, CAREER_QUALIFICATION_BASES)
+    && Array.isArray(value.expressions) && value.expressions.every(isCareerExpression)
+    && Array.isArray(value.diagnostics) && value.diagnostics.every(isDiagnostic);
+}
+
+function isWealthRuleReference(value: unknown): value is ExportedWealthRuleReferenceV1 {
+  return isRecord(value) && onlyKeys(value, ['ruleId', 'source', 'level'])
+    && isString(value.ruleId) && isString(value.source) && isOneOf(value.level, SYNTHESIS_LEVELS);
+}
+
+function isWealthDimension(value: unknown): value is ExportedWealthDimensionV1 {
+  return isRecord(value) && onlyKeys(value, [
+    'dimension', 'effect', 'dataStatus', 'linkedLevels', 'diagnostics', 'promiseEvidenceIds',
+    'dashaRuleReferences', 'insufficientReason'
+  ])
+    && isOneOf(value.dimension, SYNTHESIS_DIMENSIONS)
+    && isString(value.effect)
+    && isOneOf(value.dataStatus, ['COMPLETE', 'PARTIAL', 'INSUFFICIENT_DATA'])
+    && Array.isArray(value.linkedLevels) && value.linkedLevels.every((level) => isOneOf(level, SYNTHESIS_LEVELS))
+    && Array.isArray(value.diagnostics) && value.diagnostics.every(isDiagnostic)
+    && isStringArray(value.promiseEvidenceIds)
+    && Array.isArray(value.dashaRuleReferences) && value.dashaRuleReferences.every(isWealthRuleReference)
+    && isOneOf(value.insufficientReason, ['NO_PROMISE_EVIDENCE', 'PROMISE_NOT_LINKED', 'LINKED']);
+}
+
+function isWealthSynthesis(value: unknown): value is ExportedWealthSynthesisV1 {
+  if (!isRecord(value) || !onlyKeys(value, ['dimensions', 'diagnostics']) || !isRecord(value.dimensions)
+    || !onlyKeys(value.dimensions, SYNTHESIS_DIMENSIONS)) return false;
+  const dimensions = value.dimensions;
+  return SYNTHESIS_DIMENSIONS.every((dimension) =>
+    isWealthDimension(dimensions[dimension]) && dimensions[dimension].dimension === dimension
+  ) && Array.isArray(value.diagnostics) && value.diagnostics.every(isDiagnostic);
+}
+
+function isSynthesisProvenance(value: unknown): value is ExportedSynthesisProvenanceV1 {
+  if (!isRecord(value) || !onlyKeys(value, ['career', 'wealth'])
+    || !isRecord(value.career) || !onlyKeys(value.career, ['status', 'version', 'qualificationBasis'])
+    || !isRecord(value.wealth) || !onlyKeys(value.wealth, ['status', 'version'])) return false;
+  return isOneOf(value.career.status, ['PRESENT', 'PARTIAL', 'MISSING'])
+    && isOptionalString(value.career.version)
+    && (value.career.qualificationBasis === undefined
+      || isOneOf(value.career.qualificationBasis, CAREER_QUALIFICATION_BASES))
+    && isOneOf(value.wealth.status, ['PRESENT', 'PARTIAL', 'MISSING'])
+    && isOptionalString(value.wealth.version);
+}
+
+function isMissingInput(value: unknown): value is ExportedMissingInputV1 {
+  return isRecord(value) && onlyKeys(value, ['domain', 'code', 'description'])
+    && isOneOf(value.domain, SYNTHESIS_STAGES)
+    && isString(value.code)
+    && isString(value.description);
+}
+
+function isSelectedPeriodSynthesis(value: unknown): value is ExportedSelectedPeriodSynthesisV1 {
+  return isRecord(value) && onlyKeys(value, [
+    'career', 'wealth', 'evidence', 'missingInputs', 'provenance', 'qualificationStatus'
+  ])
+    && isCareerSynthesis(value.career)
+    && isWealthSynthesis(value.wealth)
+    && Array.isArray(value.evidence) && value.evidence.every(isSelectedPeriodEvidence)
+    && Array.isArray(value.missingInputs) && value.missingInputs.every(isMissingInput)
+    && isSynthesisProvenance(value.provenance)
+    && isOneOf(value.qualificationStatus, ['CANONICAL', 'PROVISIONAL', 'UNAVAILABLE']);
+}
+
 function isPeriod(value: unknown): value is ExportedPeriodV1 {
   if (!isRecord(value) || !onlyKeys(value, [
     'selectedPeriodId', 'mahadashaId', 'mahadashaPlanet', 'antardashaId',
-    'antardashaPlanet', 'start', 'end', 'analysisAsOf', 'temporalRelation'
+    'antardashaPlanet', 'start', 'end', 'analysisAsOf', 'temporalRelation', 'deterministicSynthesis'
   ])) return false;
   return ['selectedPeriodId', 'mahadashaId', 'mahadashaPlanet', 'antardashaId',
     'antardashaPlanet', 'start', 'end', 'analysisAsOf'].every((key) => isString(value[key]))
@@ -167,7 +384,8 @@ function isPeriod(value: unknown): value is ExportedPeriodV1 {
     && Number.isFinite(Date.parse(value.end as string))
     && Date.parse(value.start as string) < Date.parse(value.end as string)
     && Number.isFinite(Date.parse(value.analysisAsOf as string))
-    && ['PAST', 'CURRENT', 'FUTURE', 'UNKNOWN'].includes(String(value.temporalRelation));
+    && ['PAST', 'CURRENT', 'FUTURE', 'UNKNOWN'].includes(String(value.temporalRelation))
+    && isSelectedPeriodSynthesis(value.deterministicSynthesis);
 }
 
 function isChartFacts(value: unknown): value is ExportedChartFactsV1 {

@@ -38,4 +38,64 @@ describe('ChartExportV1 runtime schema', () => {
       ok: false, error: 'INVALID_SHAPE'
     });
   });
+
+  it('rejects hidden fields inside the deterministic selected-period projection', () => {
+    const output = buildChartExport({ analysis: createProductAnalysis() }, '2026-10-26T00:00:00Z');
+    const withSelected = buildChartExport({
+      analysis: createProductAnalysis(),
+      selectedPeriod: {
+        status: 'OK',
+        synthesis: {
+          synthesisVersion: 'PBA-06-v1',
+          period: {
+            selectedPeriodId: 'period-1',
+            mahadashaId: 'md-1',
+            mahadashaPlanet: 'Jupiter',
+            antardashaId: 'ad-1',
+            antardashaPlanet: 'Saturn',
+            interval: { start: '2026-01-01T00:00:00Z', end: '2027-01-01T00:00:00Z' },
+            analysisAsOf: '2026-01-15T08:30:00.000Z',
+            temporalRelation: 'CURRENT'
+          },
+          natalBaseline: {},
+          career: { qualificationBasis: 'UNAVAILABLE', expressions: [], diagnostics: [] },
+          wealth: {
+            dimensions: {
+              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' }
+            },
+            diagnostics: []
+          },
+          evidence: [],
+          missingInputs: [],
+          provenance: {
+            career: { status: 'MISSING' },
+            wealth: { status: 'MISSING' }
+          },
+          qualificationStatus: 'UNAVAILABLE',
+          aiExplanationStatus: 'NOT_REQUESTED'
+        }
+      }
+    }, '2026-10-26T00:00:00Z');
+    expect(output.selectedPeriod.status).toBe('UNAVAILABLE');
+    expect(withSelected.selectedPeriod.status).toBe('AVAILABLE');
+    if (withSelected.selectedPeriod.status !== 'AVAILABLE') return;
+    const body = withSelected.selectedPeriod.value;
+    const hidden = {
+      ...withSelected,
+      selectedPeriod: {
+        ...withSelected.selectedPeriod,
+        value: {
+          ...body,
+          deterministicSynthesis: {
+            ...body.deterministicSynthesis,
+            career: { ...body.deterministicSynthesis.career, aiExplanation: 'hidden' }
+          }
+        }
+      }
+    };
+    expect(validateChartExport(hidden)).toEqual({ ok: false, error: 'INVALID_SHAPE' });
+  });
 });

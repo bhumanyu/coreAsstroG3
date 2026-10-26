@@ -20,7 +20,7 @@ export const ChartExportControl: React.FC<ChartExportControlProps> = ({ analysis
     );
     if (result.ok) {
       setError('');
-      setMessage('Validated chart JSON export downloaded.');
+      setMessage('Validated chart JSON download initiated.');
     } else {
       setMessage('');
       setError(`Chart export failed: ${result.error}`);

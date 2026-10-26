@@ -6,12 +6,19 @@ import type {
 import type {
   ChartExportV1,
   ExportedCareerInterpretationV1,
+  ExportedCareerSynthesisV1,
   ExportedChartFactsV1,
+  ExportedDiagnosticV1,
   ExportedEvidenceV1,
   ExportedInterpretationV1,
+  ExportedMissingInputV1,
   ExportedPeriodV1,
+  ExportedSelectedPeriodEvidenceV1,
+  ExportedSelectedPeriodSynthesisV1,
+  ExportedSynthesisProvenanceV1,
   ExportedValue,
-  ExportedWealthInterpretationV1
+  ExportedWealthInterpretationV1,
+  ExportedWealthSynthesisV1
 } from './chartExportSchema';
 import { validateChartExport } from './chartExportSchema';
 
@@ -34,6 +41,116 @@ function projectEvidence(
     source: item.source,
     ...(item.ruleId === undefined ? {} : { ruleId: item.ruleId })
   }));
+}
+
+function projectDiagnostics(
+  diagnostics: readonly { readonly code: string; readonly message: string }[]
+): readonly ExportedDiagnosticV1[] {
+  return diagnostics.map(({ code, message }) => ({ code, message }));
+}
+
+function projectSelectedPeriodEvidence(
+  evidence: ProductSelectedPeriodSynthesis['evidence']
+): readonly ExportedSelectedPeriodEvidenceV1[] {
+  return evidence.map((item) => ({
+    stage: item.stage,
+    ...(item.classification === undefined ? {} : { classification: item.classification }),
+    ...(item.evidenceId === undefined ? {} : { evidenceId: item.evidenceId }),
+    ...(item.identityKey === undefined ? {} : { identityKey: item.identityKey }),
+    ...(item.dimension === undefined ? {} : { dimension: item.dimension }),
+    ...(item.polarity === undefined ? {} : { polarity: item.polarity }),
+    ...(item.source === undefined ? {} : { source: item.source }),
+    ...(item.ruleId === undefined ? {} : { ruleId: item.ruleId }),
+    ...(item.level === undefined ? {} : { level: item.level }),
+    ...(item.provenanceStage === undefined ? {} : { provenanceStage: item.provenanceStage }),
+    ...(item.referenceKind === undefined ? {} : { referenceKind: item.referenceKind })
+  }));
+}
+
+function projectSelectedCareer(
+  career: ProductSelectedPeriodSynthesis['career']
+): ExportedCareerSynthesisV1 {
+  return {
+    qualificationBasis: career.qualificationBasis,
+    expressions: career.expressions.map((expression) => ({
+      expressionRefKey: expression.expressionRefKey,
+      status: expression.status,
+      linkedLevels: [...expression.linkedLevels],
+      qualificationBasis: expression.qualificationBasis,
+      ...(expression.matchBasis === undefined ? {} : { matchBasis: expression.matchBasis }),
+      diagnostics: projectDiagnostics(expression.diagnostics),
+      expressionEvidenceIds: [...expression.expressionEvidenceIds],
+      qualifiedEvidenceIds: [...expression.qualifiedEvidenceIds],
+      unqualifiedEvidenceIds: [...expression.unqualifiedEvidenceIds],
+      mdDashaEvidenceIds: [...expression.mdDashaEvidenceIds],
+      adDashaEvidenceIds: [...expression.adDashaEvidenceIds],
+      expressionSource: expression.expressionSource
+    })),
+    diagnostics: projectDiagnostics(career.diagnostics)
+  };
+}
+
+function projectSelectedWealth(
+  wealth: ProductSelectedPeriodSynthesis['wealth']
+): ExportedWealthSynthesisV1 {
+  const projectDimension = (dimension: keyof ProductSelectedPeriodSynthesis['wealth']['dimensions']) => {
+    const row = wealth.dimensions[dimension];
+    return {
+      dimension: row.dimension,
+      effect: row.effect,
+      dataStatus: row.dataStatus,
+      linkedLevels: [...row.linkedLevels],
+      diagnostics: projectDiagnostics(row.diagnostics),
+      promiseEvidenceIds: [...row.promiseEvidenceIds],
+      dashaRuleReferences: row.dashaRuleReferences.map(({ ruleId, source, level }) => ({ ruleId, source, level })),
+      insufficientReason: row.insufficientReason
+    };
+  };
+  return {
+    dimensions: {
+      ACCUMULATION: projectDimension('ACCUMULATION'),
+      GAINS: projectDimension('GAINS'),
+      FORTUNE: projectDimension('FORTUNE'),
+      SPECULATION: projectDimension('SPECULATION')
+    },
+    diagnostics: projectDiagnostics(wealth.diagnostics)
+  };
+}
+
+function projectMissingInputs(
+  missingInputs: ProductSelectedPeriodSynthesis['missingInputs']
+): readonly ExportedMissingInputV1[] {
+  return missingInputs.map(({ domain, code, description }) => ({ domain, code, description }));
+}
+
+function projectSynthesisProvenance(
+  provenance: ProductSelectedPeriodSynthesis['provenance']
+): ExportedSynthesisProvenanceV1 {
+  return {
+    career: {
+      status: provenance.career.status,
+      ...(provenance.career.version === undefined ? {} : { version: provenance.career.version }),
+      ...(provenance.career.qualificationBasis === undefined
+        ? {} : { qualificationBasis: provenance.career.qualificationBasis })
+    },
+    wealth: {
+      status: provenance.wealth.status,
+      ...(provenance.wealth.version === undefined ? {} : { version: provenance.wealth.version })
+    }
+  };
+}
+
+function projectDeterministicSynthesis(
+  synthesis: ProductSelectedPeriodSynthesis
+): ExportedSelectedPeriodSynthesisV1 {
+  return {
+    career: projectSelectedCareer(synthesis.career),
+    wealth: projectSelectedWealth(synthesis.wealth),
+    evidence: projectSelectedPeriodEvidence(synthesis.evidence),
+    missingInputs: projectMissingInputs(synthesis.missingInputs),
+    provenance: projectSynthesisProvenance(synthesis.provenance),
+    qualificationStatus: synthesis.qualificationStatus
+  };
 }
 
 export function buildExportedChartFacts(analysis: ProductAnalysis): ExportedValue<ExportedChartFactsV1> {
@@ -133,7 +250,8 @@ function selectedPeriodValue(
       start: period.interval.start,
       end: period.interval.end,
       analysisAsOf: period.analysisAsOf,
-      temporalRelation: period.temporalRelation
+      temporalRelation: period.temporalRelation,
+      deterministicSynthesis: projectDeterministicSynthesis(selectedPeriod.synthesis)
     }
   };
 }

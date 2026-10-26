@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
+import { ProductAnalysisService } from '../../product/analysis/productAnalysisService';
 import type { ProductSelectedPeriodResult } from '../../product/analysis/productAnalysisTypes';
 import { buildChartExport, buildExportedChartFacts, buildExportedInterpretation } from './chartExportMapper';
+import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 
 const period: Extract<ProductSelectedPeriodResult, { status: 'OK' }> = {
   status: 'OK',
@@ -88,5 +90,146 @@ describe('chart export projection', () => {
     };
     expect(() => buildChartExport({ analysis: createProductAnalysis(), selectedPeriod: otherPeriod }, '2026-10-26T00:00:00Z'))
       .toThrow(/does not match/);
+  });
+
+  it('exports period-specific career, wealth, evidence, and missing-input content', () => {
+    const firstAnalysis = createProductAnalysis();
+    const secondAnalysis = createProductAnalysis();
+    const first: Extract<ProductSelectedPeriodResult, { status: 'OK' }> = {
+      ...period,
+      synthesis: {
+        ...period.synthesis,
+        career: {
+          qualificationBasis: 'CANONICAL_STATUS',
+          expressions: [{
+            expressionRefKey: 'career-expression-a',
+            status: 'ACTIVATES',
+            linkedLevels: ['MD'],
+            qualificationBasis: 'CANONICAL_STATUS',
+            diagnostics: [{ code: 'CAREER_A', message: 'First period career diagnostic.' }],
+            expressionEvidenceIds: ['career-evidence-a'],
+            qualifiedEvidenceIds: ['career-evidence-a'],
+            unqualifiedEvidenceIds: [],
+            mdDashaEvidenceIds: ['md-career-a'],
+            adDashaEvidenceIds: [],
+            expressionSource: 'CALLER'
+          }],
+          diagnostics: []
+        },
+        wealth: {
+          ...period.synthesis.wealth,
+          dimensions: {
+            ...period.synthesis.wealth.dimensions,
+            ACCUMULATION: {
+              ...period.synthesis.wealth.dimensions.ACCUMULATION,
+              effect: 'ACTIVATES',
+              dataStatus: 'COMPLETE',
+              linkedLevels: ['MD'],
+              promiseEvidenceIds: ['wealth-promise-a'],
+              dashaRuleReferences: [{ ruleId: 'RULE_A', source: 'DASHA', level: 'MD' }],
+              insufficientReason: 'LINKED'
+            }
+          }
+        },
+        evidence: [{
+          stage: 'CAREER',
+          classification: 'SUPPORTING',
+          evidenceId: 'career-evidence-a',
+          provenanceStage: 'CAREER_ACTIVATION',
+          referenceKind: 'EVIDENCE',
+          level: 'MD'
+        }],
+        missingInputs: [{ domain: 'WEALTH', code: 'MISSING_A', description: 'First period missing input.' }]
+      }
+    };
+    const second: Extract<ProductSelectedPeriodResult, { status: 'OK' }> = {
+      ...first,
+      synthesis: {
+        ...first.synthesis,
+        career: {
+          qualificationBasis: 'UNAVAILABLE',
+          expressions: [{
+            expressionRefKey: 'career-expression-b',
+            status: 'CHALLENGES',
+            linkedLevels: ['AD'],
+            qualificationBasis: 'UNAVAILABLE',
+            diagnostics: [{ code: 'CAREER_B', message: 'Second period career diagnostic.' }],
+            expressionEvidenceIds: ['career-evidence-b'],
+            qualifiedEvidenceIds: [],
+            unqualifiedEvidenceIds: ['career-evidence-b'],
+            mdDashaEvidenceIds: [],
+            adDashaEvidenceIds: ['ad-career-b'],
+            expressionSource: 'ADAPTER_FALLBACK'
+          }],
+          diagnostics: []
+        },
+        wealth: {
+          ...first.synthesis.wealth,
+          dimensions: {
+            ...first.synthesis.wealth.dimensions,
+            ACCUMULATION: {
+              ...first.synthesis.wealth.dimensions.ACCUMULATION,
+              effect: 'CHALLENGES',
+              dataStatus: 'PARTIAL',
+              linkedLevels: ['AD'],
+              promiseEvidenceIds: ['wealth-promise-b'],
+              dashaRuleReferences: [{ ruleId: 'RULE_B', source: 'DASHA', level: 'AD' }],
+              insufficientReason: 'PROMISE_NOT_LINKED'
+            }
+          }
+        },
+        evidence: [{
+          stage: 'WEALTH',
+          classification: 'CHALLENGING',
+          evidenceId: 'wealth-evidence-b',
+          dimension: 'ACCUMULATION',
+          provenanceStage: 'WEALTH_DASHA_RULE',
+          referenceKind: 'RULE',
+          ruleId: 'RULE_B',
+          level: 'AD'
+        }],
+        missingInputs: [{ domain: 'CAREER', code: 'MISSING_B', description: 'Second period missing input.' }],
+        qualificationStatus: 'UNAVAILABLE'
+      }
+    };
+    const firstExport = buildChartExport({ analysis: firstAnalysis, selectedPeriod: first }, firstAnalysis.asOf);
+    const secondExport = buildChartExport({ analysis: secondAnalysis, selectedPeriod: second }, secondAnalysis.asOf);
+    if (firstExport.selectedPeriod.status !== 'AVAILABLE' || secondExport.selectedPeriod.status !== 'AVAILABLE') {
+      throw new Error('Expected both selected-period reports to be available.');
+    }
+    expect(firstExport.selectedPeriod.value.deterministicSynthesis)
+      .not.toEqual(secondExport.selectedPeriod.value.deterministicSynthesis);
+    expect(firstExport.selectedPeriod.value.deterministicSynthesis.career.expressions[0].status).toBe('ACTIVATES');
+    expect(firstExport.selectedPeriod.value.deterministicSynthesis.wealth.dimensions.ACCUMULATION.effect).toBe('ACTIVATES');
+    expect(secondExport.selectedPeriod.value.deterministicSynthesis.career.expressions[0].status).toBe('CHALLENGES');
+    expect(secondExport.selectedPeriod.value.deterministicSynthesis.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
+    expect(secondExport.selectedPeriod.value.deterministicSynthesis.wealth.dimensions.SPECULATION.dataStatus)
+      .toBe('INSUFFICIENT_DATA');
+    expect(secondExport.selectedPeriod.value.deterministicSynthesis.evidence[0].evidenceId).toBe('wealth-evidence-b');
+    expect(secondExport.selectedPeriod.value.deterministicSynthesis.missingInputs[0].code).toBe('MISSING_B');
+    expect(secondExport.selectedPeriod.value.deterministicSynthesis.qualificationStatus).toBe('UNAVAILABLE');
+  });
+
+  it('proves the actual selected-period service output retains the aggregate asOf', async () => {
+    const service = new ProductAnalysisService();
+    const run = await service.analyzeRun(CANONICAL_BIRTH_DETAILS, {
+      asOf: '2026-01-01T00:00:00.000Z',
+      includeAiExplanation: false
+    });
+    const mahadasha = run.analysis.dashPeriodOptions?.mahadashas.find((item) => item.valid);
+    const antardasha = mahadasha?.antardashas.find((item) => item.valid);
+    expect(mahadasha).toBeDefined();
+    expect(antardasha).toBeDefined();
+    if (!mahadasha || !antardasha) throw new Error('Canonical analysis did not expose a valid MD/AD selection.');
+    const selected = await service.selectPeriodForRun(run.snapshot, mahadasha.id, antardasha.id, false);
+    expect(selected.selectedPeriod?.status).toBe('OK');
+    if (!selected.selectedPeriod || selected.selectedPeriod.status !== 'OK') {
+      throw new Error('Canonical selected-period synthesis did not complete.');
+    }
+    const exported = buildChartExport({ analysis: selected, selectedPeriod: selected.selectedPeriod }, '2026-10-26T00:00:00Z');
+    expect(exported.selectedPeriod.status).toBe('AVAILABLE');
+    if (exported.selectedPeriod.status === 'AVAILABLE') {
+      expect(exported.selectedPeriod.value.analysisAsOf).toBe(exported.provenance.asOf);
+    }
   });
 });
