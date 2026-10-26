@@ -1020,3 +1020,15 @@ The product view model projects LOADING/ERROR/EMPTY/READY states, validates Maha
   - ✅ `npm run verify`: PASS (310 test files, 5,744 passed, 4 skipped; lint, production build, and bundle scan passed)
 
 The existing `SelectedPeriodSection` consumes the selected-period view model, retains accessible labels/fieldset behavior and visible diagnostics, clears AD on MD changes, formats displayed boundaries in UTC, and revalidates against current options immediately before submit. DashaPage remains the owning page; failed submissions and mismatched selections do not render stale reports. No `ProductPageRouter` expansion was made. The PR-039/PR-040 evaluator/horizon gate remains unresolved; no forecast engine was wired into production and no forecast series were added. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
+### PR-038 Follow-up — Options Snapshot and UTC Display
+
+- **Source change commit:** `22d97d3b1c43896c63adf9688b48619662873a36`
+- **Toolchain:** Node `20.19.4`
+- **Verification for the exact source change commit above:**
+  - ✅ `npx vitest run src/components/dasha/__tests__/DashaComponents.test.tsx src/product/analysis/selectedPeriodViewModel.test.ts`: PASS (2 files, 36 tests)
+  - ✅ `npx tsc --noEmit`: PASS
+  - ✅ `npm run lint`: PASS
+  - ✅ `npm run verify`: PASS (310 test files, 5,745 passed, 4 skipped; lint, production build, and bundle scan passed)
+
+The selector no longer accepts asynchronous loading/error status props; those statuses remain supported by the independent view model. Changing the options snapshot clears both selected IDs, and submit-time validation remains in place. MD/AD option boundaries and the selected-period summary explicitly label UTC while preserving canonical timestamps. Keyboard, MD-change clearing, invalid diagnostics, refreshed-option rejection, and valid ID submission remain covered. The build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
