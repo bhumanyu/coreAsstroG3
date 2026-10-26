@@ -865,6 +865,18 @@ These items are blocked inputs, not open implementation gaps. Do not invent refe
   - ✅ `npm run verify`: PASS (297 test files, 5,586 passed, 5 skipped; lint and build passed)
 - Both builds emitted the existing large-chunk-size warning. No Node 21 / lightningcss blocker occurred.
 
+## Canonical Wealth Evidence Source Types
+
+- **Source change commit:** `b8f7639b3f4c7c26003687495786a9aee5cde5c3`
+- **Toolchain:** Node `20.19.4`, npm `10.5.0`
+- **Verification for the exact source change commit above:**
+  - ✅ Focused Wealth mapper and Why-experience suites (`src/domain/wealth/wealthEvidenceMapper.test.ts`, `src/product/life-analysis/lifeAnalysisWhy.test.ts`): PASS (2 files, 50 tests)
+  - ✅ TypeScript (`npx tsc --noEmit` under Node 20.19.4): PASS
+  - ✅ `npm run lint` under Node 20.19.4: PASS
+  - ✅ `npm run verify` under Node 20.19.4: PASS (309 test files, 5,723 passed, 4 skipped; lint and production build passed; `verify:bundle` rebuilt and scanned client assets)
+
+Wealth natal 2nd/5th/9th/11th house and lord evidence now maps to `STRUCTURAL`; explicit D2/varga evidence maps to `VARGA` with `source: 'D2'`. Source classification preserves the existing transit → varga → Dasha precedence and leaves planet, strength, aspect, yoga, and other mappings unchanged. A natal-only input does not produce D2 or VARGA evidence. Fixture-ID assertions verify evidence identity preservation. Wealth promise, activation, and evidence-ID behavior remain unchanged. The production build emitted the existing large-chunk-size warning; no Node 21 / lightningcss blocker occurred.
+
 ## Remote AI Browser/Server Boundary (PR-015 / PR-016)
 
 **Source change commit:** `dbf814f7e1e2aef00a6e04a3b299f03c7d9ad5a1`
