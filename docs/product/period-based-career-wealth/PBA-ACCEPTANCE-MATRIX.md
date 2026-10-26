@@ -1061,7 +1061,7 @@ The selected-period export now field-projects deterministic career/wealth synthe
 ## Career/Wealth Reproducibility and Contract Inventory
 
 - **Source snapshot commit:** `45c41269462c7a382c11896f384aa47865a43b26` (exact inspected source SHA; baseline tree was clean).
-- **Documentation change commit:** recorded in the follow-up documentation commit that adds its exact SHA here.
+- **Documentation content commit:** `7ac70bb49e6c0e3d40c12032bd8f7f1be6d4957d` (the commit that added the baseline and inventory documents).
 - **Toolchain:** repository pin Node `20.19.4` (`.nvmrc`), npm `10.9.2` (`package.json`).
 - **Lockfile SHA256:** `A905887D9A284F00FA7C5EB6606DEDAE1ED964F1E659C97CF1143B0925896BCA`.
 - **Baseline and focused inventory:** [CAREER-WEALTH-BASELINE-2026-10.md](./CAREER-WEALTH-BASELINE-2026-10.md).
