@@ -342,6 +342,64 @@ describe('ProductAnalysisService (P-UI-02)', () => {
     expect(result.ai.conclusion).toBe('Analytical vocation strongly indicated.');
   });
 
+  it('uses the injected clock once when neither asOf nor context is supplied', async () => {
+    const clock = { now: vi.fn(() => '2042-05-06T07:08:09.000Z') };
+    const service = new ProductAnalysisService({
+      calculateHoroscope: vi.fn().mockReturnValue(sampleHoroscope),
+      clock,
+      runPipeline: vi.fn().mockResolvedValue({
+        status: 'ERROR',
+        errorMessage: 'Synthetic pipeline failure'
+      })
+    });
+
+    const result = await service.analyze(sampleBirth, { includeAiExplanation: false });
+
+    expect(clock.now).toHaveBeenCalledTimes(1);
+    expect(result.asOf).toBe('2042-05-06T07:08:09.000Z');
+  });
+
+  it('uses explicit asOf instead of the injected clock', async () => {
+    const clock = { now: vi.fn(() => '2042-05-06T07:08:09.000Z') };
+    const pipeline = vi.fn().mockResolvedValue({
+      status: 'ERROR',
+      errorMessage: 'Synthetic pipeline failure'
+    });
+    const service = new ProductAnalysisService({
+      calculateHoroscope: vi.fn().mockReturnValue(sampleHoroscope),
+      clock,
+      runPipeline: pipeline
+    });
+    const explicitAsOf = '2031-02-03T04:05:06+02:00';
+
+    const result = await service.analyze(sampleBirth, { asOf: explicitAsOf });
+
+    expect(clock.now).not.toHaveBeenCalled();
+    expect(result.asOf).toBe('2031-02-03T02:05:06.000Z');
+    expect(pipeline).toHaveBeenCalledWith(expect.objectContaining({
+      context: expect.objectContaining({ asOf: result.asOf })
+    }));
+  });
+
+  it('rejects conflicting context and asOf instead of silently ignoring asOf', async () => {
+    const pipeline = vi.fn().mockResolvedValue(readyPipelineState);
+    const service = new ProductAnalysisService({
+      calculateHoroscope: vi.fn().mockReturnValue(sampleHoroscope),
+      runPipeline: pipeline
+    });
+    const context = createAnalysisContext({ asOf: '2030-01-01T00:00:00.000Z' });
+
+    const result = await service.analyze(sampleBirth, {
+      context,
+      asOf: '2031-01-01T00:00:00.000Z'
+    });
+
+    expect(result.status).toBe('ERROR');
+    expect(result.asOf).toBe(context.asOf);
+    expect(pipeline).not.toHaveBeenCalled();
+    expect(result.warnings.some((warning) => warning.message.includes('Conflicting analysis time'))).toBe(true);
+  });
+
   it('keeps concurrent analyzeRun results paired with their own frozen snapshots', async () => {
     const birthA = { ...sampleBirth, name: 'Chart A' };
     const birthB = { ...sampleBirth, name: 'Chart B' };

@@ -122,6 +122,28 @@ describe('ProductAnalysis Temporal Determinism Regression (Invariants 3, 4, 5, 7
     expect(result1.rulesVersion).toBe(result2.rulesVersion);
   });
 
+  it('passes historical and future asOf instants through without clamping', async () => {
+    const service = new ProductAnalysisService();
+    const historicalAsOf = '2000-01-01T00:00:00.000Z';
+    const futureAsOf = '2040-01-01T00:00:00.000Z';
+
+    const historical = await service.analyzeRun(sampleBirth, {
+      asOf: historicalAsOf,
+      includeAiExplanation: false
+    });
+    const future = await service.analyzeRun(sampleBirth, {
+      asOf: futureAsOf,
+      includeAiExplanation: false
+    });
+
+    expect(historical.snapshot.context.asOf).toBe(historicalAsOf);
+    expect(historical.snapshot.pipelineState?.temporalState?.asOf).toBe(historicalAsOf);
+    expect(historical.analysis.asOf).toBe(historicalAsOf);
+    expect(future.snapshot.context.asOf).toBe(futureAsOf);
+    expect(future.snapshot.pipelineState?.temporalState?.asOf).toBe(futureAsOf);
+    expect(future.analysis.asOf).toBe(futureAsOf);
+  });
+
   it('3. Mapper boundary: context is the single authoritative source for asOf and methodology', async () => {
     const customAsOf = '2028-09-22T04:15:00.000Z';
     const customMethodology = {

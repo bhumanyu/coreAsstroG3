@@ -22,7 +22,9 @@ import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 import type { DomainEvidence } from '../../domain/interpretation';
 import { mapProductAnalysis, buildFailedProductAnalysis, mapMethodology, mapEvidenceItems, mapSelectedPeriodSynthesis } from './productAnalysisMapper';
 import type { AnalysisContext } from '../../core/analysis/AnalysisContext';
-import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
+import { createAnalysisContext, normalizeAsOf } from '../../core/analysis/analysisContextFactory';
+import { systemClock } from '../../core/analysis/Clock';
+import type { Clock } from '../../core/analysis/Clock';
 import {
   buildProductSelectedPeriodSynthesis,
   type BuildProductSelectedPeriodSynthesisInput
@@ -31,6 +33,7 @@ import { runAiExplanation } from '../../ai/product/aiExplanationService';
 
 export interface ProductAnalysisDependencies {
   readonly calculateHoroscope: (birthDetails: BirthDetails, customPositionsOrOptions?: any, asOfParam?: string | Date) => Horoscope;
+  readonly clock?: Clock;
   readonly runPipeline: (options: {
     readonly horoscope: Horoscope;
     readonly context: AnalysisContext;
@@ -40,6 +43,7 @@ export interface ProductAnalysisDependencies {
 
 export const defaultProductAnalysisDependencies: ProductAnalysisDependencies = Object.freeze({
   calculateHoroscope,
+  clock: systemClock,
   runPipeline: runLifeAnalysisProduct
 });
 
@@ -109,7 +113,7 @@ export class ProductAnalysisService {
       methodology,
       engineVersion: methodology.calculationEngine,
       rulesVersion: methodology.rulesEngine
-    });
+    }, this.deps.clock ?? systemClock);
 
     let horoscope: Horoscope | undefined;
     let pipelineState: LifeAnalysisProductState | undefined;
@@ -124,6 +128,15 @@ export class ProductAnalysisService {
     };
 
     try {
+      if (options?.context && options.asOf !== undefined) {
+        const requestedAsOf = normalizeAsOf(options.asOf);
+        if (requestedAsOf !== context.asOf) {
+          throw new Error(
+            `Conflicting analysis time: options.context.asOf (${context.asOf}) does not match options.asOf (${requestedAsOf}).`
+          );
+        }
+      }
+
       horoscope = this.deps.calculateHoroscope(birthDetails, undefined, context.asOf);
       pipelineState = await this.deps.runPipeline({
         horoscope,
