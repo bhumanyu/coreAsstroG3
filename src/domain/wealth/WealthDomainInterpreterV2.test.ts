@@ -2002,7 +2002,9 @@ describe('WealthDomainInterpreterV2', () => {
         strength: 'STRONG',
         priority: 50,
         ruleId: 'RULE_GAINS_Z',
-        dimension: 'GAINS'
+        dimension: 'GAINS',
+        timing: { period: 'MD' },
+        relatedEvidenceIds: ['natal-promise']
       });
       const gainsA = createDomainEvidence({
         id: 'a-gains',
@@ -2016,7 +2018,9 @@ describe('WealthDomainInterpreterV2', () => {
         strength: 'STRONG',
         priority: 50,
         ruleId: 'RULE_GAINS_A',
-        dimension: 'GAINS'
+        dimension: 'GAINS',
+        timing: { period: 'MD' },
+        relatedEvidenceIds: ['natal-promise']
       });
       const accumulationM = createDomainEvidence({
         id: 'm-accumulation',
@@ -2032,7 +2036,35 @@ describe('WealthDomainInterpreterV2', () => {
         ruleId: 'RULE_ACCUMULATION_M',
         dimension: 'ACCUMULATION'
       });
-      const evidence = [gainsZ, gainsA, accumulationM];
+      const supportingZ = createDomainEvidence({
+        id: 'z-support',
+        sourceType: 'STRUCTURAL',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Gains support',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 50,
+        ruleId: 'RULE_GAINS_SUPPORT_Z',
+        dimension: 'GAINS'
+      });
+      const supportingA = createDomainEvidence({
+        id: 'a-support',
+        sourceType: 'STRUCTURAL',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Gains support',
+        polarity: 'SUPPORTING',
+        strength: 'STRONG',
+        priority: 50,
+        ruleId: 'RULE_GAINS_SUPPORT_A',
+        dimension: 'GAINS'
+      });
+      const evidence = [gainsZ, gainsA, accumulationM, supportingZ, supportingA];
       const reversedEvidence = [...evidence].reverse();
 
       const gainsForward = evaluateWealthDimension('GAINS', evidence, 'DOES_NOT_ACTIVATE');
@@ -2043,9 +2075,19 @@ describe('WealthDomainInterpreterV2', () => {
         reversedEvidence,
         'DOES_NOT_ACTIVATE'
       );
+      const timingForward = evaluateWealthTimingActivation('MD', evidence, ['natal-promise']);
+      const timingReversed = evaluateWealthTimingActivation(
+        'MD',
+        reversedEvidence,
+        ['natal-promise']
+      );
 
       expect(gainsForward.challengingEvidenceIds).toEqual(['a-gains', 'z-gains']);
       expect(gainsReversed.challengingEvidenceIds).toEqual(gainsForward.challengingEvidenceIds);
+      expect(gainsForward.supportingEvidenceIds).toEqual(['z-support', 'a-support']);
+      expect(gainsReversed.supportingEvidenceIds).toEqual(['a-support', 'z-support']);
+      expect(timingForward.evidenceIds).toEqual(['a-gains', 'z-gains']);
+      expect(timingReversed.evidenceIds).toEqual(timingForward.evidenceIds);
       expect(accumulationForward.challengingEvidenceIds).toEqual(['m-accumulation']);
       expect(accumulationReversed.challengingEvidenceIds)
         .toEqual(accumulationForward.challengingEvidenceIds);
@@ -2065,6 +2107,29 @@ describe('WealthDomainInterpreterV2', () => {
           strength: 'STRONG',
           priority: 50,
           ruleId: 'RULE1',
+          dimension: 'GAINS'
+        })
+      ];
+
+      const result = evaluateWealthDimension('ACCUMULATION', evidence, 'DOES_NOT_ACTIVATE');
+      expect(result.challengingEvidenceIds).toEqual([]);
+      expect(result.challengingEvidenceAttribution).toBe('AVAILABLE');
+    });
+
+    it('returns AVAILABLE when all challenging evidence is assigned to other dimensions', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'gains-challenge',
+          sourceType: 'STRUCTURAL',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Challenge assigned to Gains',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 50,
+          ruleId: 'RULE_GAINS_CHALLENGE',
           dimension: 'GAINS'
         })
       ];

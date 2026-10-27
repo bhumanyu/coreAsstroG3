@@ -129,7 +129,7 @@ export function interpretWealthV2(
   const natalEvidence = evidence.filter((item) => item.phase === 'NATAL_PROMISE');
   const natalSupporting = supportingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
   const natalChallenging = challengingEvidence.filter((e) => e.phase === 'NATAL_PROMISE');
-  const natalPromiseEvidenceIds = natalEvidence.map((item) => item.id);
+  const natalPromiseEvidenceIds = natalEvidence.map((item) => item.id).sort();
 
   // D2 Varga confirmation
   const d2Evidence = evidence.filter((item) => item.source === 'D2');
@@ -181,7 +181,12 @@ export function interpretWealthV2(
   const transitEffect = evaluateTransitEffect(transitEvidence, transitPromiseEvidenceIds);
 
   // Conflicts and completeness
-  const conflicts = detectWealthConflicts(evidence, d2Relationship, dimensions, transitEvidence);
+  const conflicts = detectWealthConflicts(evidence, d2Relationship, dimensions, transitEvidence)
+    .map((conflict) => Object.freeze({
+      ...conflict,
+      positiveEvidenceIds: Object.freeze([...conflict.positiveEvidenceIds].sort()),
+      negativeEvidenceIds: Object.freeze([...conflict.negativeEvidenceIds].sort())
+    }));
   const hasVargaConflict = conflicts.some((c) => c.tier === 'PRIMARY_VS_VARGA');
   const hasPrimaryChallenge = conflicts.some((c) => c.tier === 'PRIMARY_VS_PRIMARY');
 
@@ -205,7 +210,7 @@ export function interpretWealthV2(
     ),
     evidenceIds: natalPromiseEvidenceIds,
     supportingEvidenceIds: natalSupporting.map((item) => item.id),
-    challengingEvidenceIds: natalChallenging.map((item) => item.id)
+    challengingEvidenceIds: natalChallenging.map((item) => item.id).sort()
   });
 
   const dashaActivation = createDashaActivation({
@@ -215,7 +220,7 @@ export function interpretWealthV2(
     strength: calculateDomainStrength(dashaSupporting, dashaChallenging),
     confidence: calculateEvidenceConfidence(dashaEvidence),
     statement: buildWealthDashaStatement(dashaEvidence, dashaEffect),
-    evidenceIds: dashaEvidence.map((item) => item.id),
+    evidenceIds: dashaEvidence.map((item) => item.id).sort(),
     activatedPromiseEvidenceIds: dashaPromiseEvidenceIds
   });
 
@@ -226,7 +231,7 @@ export function interpretWealthV2(
     strength: calculateDomainStrength(transitSupporting, transitChallenging),
     confidence: calculateEvidenceConfidence(transitEvidence),
     statement: buildWealthTransitStatement(transitEvidence, transitEffect),
-    evidenceIds: transitEvidence.map((item) => item.id),
+    evidenceIds: transitEvidence.map((item) => item.id).sort(),
     triggeredPromiseEvidenceIds: transitPromiseEvidenceIds
   });
 
@@ -239,7 +244,7 @@ export function interpretWealthV2(
         strength: calculateVargaStrength(evidence, 'D2'),
         confidence: calculateEvidenceConfidence(d2Evidence),
         statement: buildD2Statement(d2Evidence, d2Relationship),
-        evidenceIds: d2Evidence.map((item) => item.id)
+        evidenceIds: d2Evidence.map((item) => item.id).sort()
       })
     ]
     : [];
@@ -313,7 +318,7 @@ export function interpretWealthV2(
   const speculationStatus = mapDomainStrengthToWealthStatus(cw01Result.dimensionResults.SPECULATION.natalStrength);
   const overallStatus = mapDomainStrengthToWealthStatus(cw01Result.finalStrength);
 
-  // Supporting IDs retain CW-01's engine ordering; unlike linkage IDs, their order is intentional.
+  // Supporting IDs retain CW-01's engine ordering; unlike evidence-ID sets, their order is intentional.
   const dimInterpretations: readonly WealthDimensionInterpretation[] = Object.freeze([
     {
       dimension: 'ACCUMULATION',
@@ -375,14 +380,15 @@ export function interpretWealthV2(
         conclusionData
       }
     ),
-    primaryEvidenceIds: cw01Result.primaryEvidenceIds,
+    primaryEvidenceIds: [...cw01Result.primaryEvidenceIds].sort(),
+    // CW-01 ordering carries domain meaning; do not canonicalize these supporting arrays.
     supportingEvidenceIds: cw01Result.supportingEvidenceIds,
-    challengingEvidenceIds: cw01Result.challengingEvidenceIds,
+    challengingEvidenceIds: [...cw01Result.challengingEvidenceIds].sort(),
     unresolvedQuestions: [],
-    primarySourceIds: cw01Result.primarySourceIds,
+    primarySourceIds: [...cw01Result.primarySourceIds].sort(),
     supportingSourceIds: cw01Result.supportingSourceIds,
-    challengingSourceIds: cw01Result.challengingSourceIds,
-    unresolvedSourceIds: cw01Result.unresolvedSourceIds
+    challengingSourceIds: [...cw01Result.challengingSourceIds].sort(),
+    unresolvedSourceIds: [...cw01Result.unresolvedSourceIds].sort()
   });
 
   const timingActivations = Object.freeze([
@@ -1163,7 +1169,7 @@ export function evaluateWealthTimingActivation(
       period,
       effect: 'UNKNOWN',
       activatedPromiseEvidenceIds: Object.freeze([]),
-      evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
+      evidenceIds: Object.freeze(periodEvidence.map((item) => item.id).sort()),
       statement: `${period} activation could not be established from linked natal wealth evidence.`
     });
   }
@@ -1194,7 +1200,7 @@ export function evaluateWealthTimingActivation(
     period,
     effect,
     activatedPromiseEvidenceIds: Object.freeze(activatedPromiseEvidenceIds),
-    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
+    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id).sort()),
     statement: `${period} period lord ${effect === 'ACTIVATES' ? 'actively supports' : effect === 'CHALLENGES' ? 'introduces challenges to' : 'partially activates'} natal wealth potential.`
   });
 }
@@ -1249,7 +1255,7 @@ export function evaluateWealthPeriodTimingActivation(
       fortune,
       speculation
     }),
-    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id)),
+    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id).sort()),
     effect: baseActivation.effect,
     activatedPromiseEvidenceIds: baseActivation.activatedPromiseEvidenceIds,
     statement: baseActivation.statement

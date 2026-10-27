@@ -92,9 +92,11 @@ export interface WealthDimensionInterpretation {
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
   /**
-   * AVAILABLE means all challenging evidence was dimension-attributable (including none found);
-   * PARTIAL means some IDs were attributed but one or more challenges were unassigned; UNAVAILABLE
-   * means no challenge could be attributed while at least one unassigned challenge exists.
+   * Describes whether all challenging evidence in the wealth evidence set has a valid dimension
+   * assignment, not whether this dimension has challenging evidence. AVAILABLE means all
+   * challenges are dimension-attributable (including when this dimension has none); PARTIAL means
+   * this dimension has attributed challenges and one or more challenges are unassigned;
+   * UNAVAILABLE means no challenge can be attributed while at least one unassigned challenge exists.
    */
   readonly challengingEvidenceAttribution: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
   readonly dashaEffect: TimingActivationEffect;
