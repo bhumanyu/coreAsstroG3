@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+﻿import { describe, it, expect, beforeAll } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { forbiddenAiContextKeys } from './aiContextPrivacy';
@@ -164,6 +164,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             GAINS: {
@@ -174,6 +175,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             FORTUNE: {
@@ -184,6 +186,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             SPECULATION: {
@@ -194,6 +197,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }
           },
@@ -248,6 +252,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             GAINS: {
@@ -258,6 +263,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             FORTUNE: {
@@ -268,6 +274,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             SPECULATION: {
@@ -278,6 +285,7 @@ describe('AI Context Sanitization & Privacy Boundary', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }
           },

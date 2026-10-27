@@ -82,6 +82,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
         diagnostics: [],
         promiseEvidenceIds: [],
         dashaRuleReferences: [],
+        linkageTrace: [],
         insufficientReason: 'NO_PROMISE_EVIDENCE' as const
       },
       GAINS: {
@@ -123,6 +124,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             source: 'Yoga Engine'
           }
         ],
+        linkageTrace: [],
         insufficientReason: 'LINKED' as const
       },
       FORTUNE: {
@@ -142,6 +144,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
           'WEALTH_5L_9L_LINK_001:VENUS_SATURN'
         ],
         dashaRuleReferences: [],
+        linkageTrace: [],
         insufficientReason: 'PROMISE_NOT_LINKED' as const
       },
       SPECULATION: {
@@ -159,6 +162,7 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
           'WEALTH_5L_DIGNITY_001:VENUS'
         ],
         dashaRuleReferences: [],
+        linkageTrace: [],
         insufficientReason: 'PROMISE_NOT_LINKED' as const
       }
     },

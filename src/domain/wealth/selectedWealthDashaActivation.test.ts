@@ -232,6 +232,117 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
     expect(result.value.dimensions.ACCUMULATION.insufficientReason).toBe('LINKED');
   });
 
+  it('records promise, Dasha rule, level, and house for every successful linkage', () => {
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext(
+        [dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])],
+        [dashaEvidence('AD_2H_NEUTRAL', 'NEUTRAL', [2])]
+      ),
+      wealthEvidence: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value.dimensions.ACCUMULATION.linkageTrace).toEqual([
+      {
+        promiseEvidenceId: 'NATAL_ACC',
+        dashaRuleReference: { ruleId: 'MD_2H_SUPPORT', source: 'test-fixture', level: 'MD' },
+        level: 'MD',
+        matchedHouse: 2
+      },
+      {
+        promiseEvidenceId: 'NATAL_ACC',
+        dashaRuleReference: { ruleId: 'AD_2H_NEUTRAL', source: 'test-fixture', level: 'AD' },
+        level: 'AD',
+        matchedHouse: 2
+      }
+    ]);
+  });
+
+  it('fails explicitly when Wealth or selected Dasha evidence cannot be evaluated', () => {
+    const context = makeContext([]);
+    const invalidWealthEvidence = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: context,
+      wealthEvidence: null as unknown as readonly DomainEvidence[]
+    });
+    expect(invalidWealthEvidence).toEqual({
+      ok: false,
+      error: 'WEALTH_EVIDENCE_UNAVAILABLE'
+    });
+
+    const contextWithInvalidEvidence = {
+      ...context,
+      mahadashaNode: { ...context.mahadashaNode, evidence: null }
+    } as unknown as SelectedPeriodActivationContext;
+    const invalidDashaEvidence = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: contextWithInvalidEvidence,
+      wealthEvidence: []
+    });
+    expect(invalidDashaEvidence).toEqual({
+      ok: false,
+      error: 'SELECTED_DASHA_EVIDENCE_UNAVAILABLE'
+    });
+  });
+
+  it.each([
+    {
+      label: 'no natal promise',
+      dasha: [dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])],
+      wealth: [],
+      effect: 'INSUFFICIENT_DATA',
+      reason: 'NO_PROMISE_EVIDENCE'
+    },
+    {
+      label: 'promise with no house linkage',
+      dasha: [dashaEvidence('MD_8H_SUPPORT', 'SUPPORT', [8])],
+      wealth: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)],
+      effect: 'INSUFFICIENT_DATA',
+      reason: 'PROMISE_NOT_LINKED'
+    },
+    {
+      label: 'linked support only',
+      dasha: [dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])],
+      wealth: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)],
+      effect: 'ACTIVATES',
+      reason: 'LINKED'
+    },
+    {
+      label: 'linked challenge only',
+      dasha: [dashaEvidence('MD_2H_CHALLENGE', 'CHALLENGE', [2])],
+      wealth: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)],
+      effect: 'CHALLENGES',
+      reason: 'LINKED'
+    },
+    {
+      label: 'linked mixed evidence',
+      dasha: [
+        dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2]),
+        dashaEvidence('MD_2H_CHALLENGE', 'CHALLENGE', [2])
+      ],
+      wealth: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)],
+      effect: 'PARTIALLY_ACTIVATES',
+      reason: 'LINKED'
+    },
+    {
+      label: 'linked neutral only',
+      dasha: [dashaEvidence('MD_2H_NEUTRAL', 'NEUTRAL', [2])],
+      wealth: [promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN)],
+      effect: 'UNKNOWN',
+      reason: 'LINKED'
+    }
+  ] as const)('preserves the Wealth activation branch: $label', ({ dasha, wealth, effect, reason }) => {
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext(dasha),
+      wealthEvidence: wealth
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value.dimensions.ACCUMULATION.effect).toBe(effect);
+    expect(result.value.dimensions.ACCUMULATION.insufficientReason).toBe(reason);
+  });
+
   it('returns PARTIALLY_ACTIVATES for explicit MIXED effect', () => {
     const result = evaluateSelectedWealthPeriodActivation({
       selectedPeriod: makeContext([dashaEvidence('MD_2H_MIXED', 'MIXED', [2])]),

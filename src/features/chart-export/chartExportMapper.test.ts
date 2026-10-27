@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import { ProductAnalysisService } from '../../product/analysis/productAnalysisService';
 import type { ProductSelectedPeriodResult } from '../../product/analysis/productAnalysisTypes';
@@ -23,10 +23,10 @@ const period: Extract<ProductSelectedPeriodResult, { status: 'OK' }> = {
     career: { qualificationBasis: 'CANONICAL_STATUS', expressions: [], diagnostics: [] },
     wealth: {
       dimensions: {
-        ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
-        GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
-        FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
-        SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' }
+        ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: ['wealth-promise-a'], dashaRuleReferences: [], linkageTrace: [{ promiseEvidenceId: 'wealth-promise-a', dashaRuleReference: { ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' }, level: 'MD', matchedHouse: 2 }], insufficientReason: 'LINKED' },
+        GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+        FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+        SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' }
       },
       diagnostics: []
     },
@@ -59,6 +59,14 @@ describe('chart export projection', () => {
       status: 'AVAILABLE',
       value: { mahadashaId: 'md_jupiter', antardashaId: 'ad_saturn', analysisAsOf: analysis.asOf }
     });
+    if (output.selectedPeriod.status !== 'AVAILABLE') return;
+    expect(output.selectedPeriod.value.deterministicSynthesis.wealth.dimensions.ACCUMULATION.linkageTrace)
+      .toEqual([{
+        promiseEvidenceId: 'wealth-promise-a',
+        dashaRuleReference: { ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' },
+        level: 'MD',
+        matchedHouse: 2
+      }]);
   });
 
   it('projects birth inputs without names or place and preserves missing result states', () => {
@@ -127,6 +135,7 @@ describe('chart export projection', () => {
               linkedLevels: ['MD'],
               promiseEvidenceIds: ['wealth-promise-a'],
               dashaRuleReferences: [{ ruleId: 'RULE_A', source: 'DASHA', level: 'MD' }],
+              linkageTrace: [],
               insufficientReason: 'LINKED'
             }
           }
@@ -174,6 +183,7 @@ describe('chart export projection', () => {
               linkedLevels: ['AD'],
               promiseEvidenceIds: ['wealth-promise-b'],
               dashaRuleReferences: [{ ruleId: 'RULE_B', source: 'DASHA', level: 'AD' }],
+              linkageTrace: [],
               insufficientReason: 'PROMISE_NOT_LINKED'
             }
           }

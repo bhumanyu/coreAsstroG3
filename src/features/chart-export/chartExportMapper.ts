@@ -103,6 +103,16 @@ function projectSelectedWealth(
       diagnostics: projectDiagnostics(row.diagnostics),
       promiseEvidenceIds: [...row.promiseEvidenceIds],
       dashaRuleReferences: row.dashaRuleReferences.map(({ ruleId, source, level }) => ({ ruleId, source, level })),
+      linkageTrace: row.linkageTrace.map((trace) => ({
+        promiseEvidenceId: trace.promiseEvidenceId,
+        dashaRuleReference: {
+          ruleId: trace.dashaRuleReference.ruleId,
+          source: trace.dashaRuleReference.source,
+          level: trace.dashaRuleReference.level
+        },
+        level: trace.level,
+        matchedHouse: trace.matchedHouse
+      })),
       insufficientReason: row.insufficientReason
     };
   };

@@ -1,5 +1,5 @@
-/**
- * Tests for selected-period AI context projection (PBA-06 → AI context)
+﻿/**
+ * Tests for selected-period AI context projection (PBA-06 â†’ AI context)
  *
  * Tests parity, immutability, and routing for projectSelectedPeriodSynthesis.
  */
@@ -10,7 +10,7 @@ import type { SelectedPeriodSynthesisValue } from '../../domain/synthesis/select
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 
-describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
+describe('projectSelectedPeriodSynthesis (PBA-06 â†’ AI context)', () => {
   /**
    * Canonical fixture based on PBA-06 golden test.
    * Includes unresolved promiseEvidenceIds to test parity preservation.
@@ -83,6 +83,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
             { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
             { ruleId: 'rule-2', source: 'DASHA', level: 'AD' }
           ],
+          linkageTrace: [],
           insufficientReason: 'LINKED' as const
         },
         GAINS: {
@@ -93,6 +94,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           diagnostics: [],
           promiseEvidenceIds: ['promise-2'],
           dashaRuleReferences: [],
+          linkageTrace: [],
           insufficientReason: 'LINKED' as const
         },
         FORTUNE: {
@@ -103,6 +105,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           diagnostics: [],
           promiseEvidenceIds: [],
           dashaRuleReferences: [],
+          linkageTrace: [],
           insufficientReason: 'NO_PROMISE_EVIDENCE' as const
         },
         SPECULATION: {
@@ -113,6 +116,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
           diagnostics: [],
           promiseEvidenceIds: ['promise-3'],
           dashaRuleReferences: [],
+          linkageTrace: [],
           insufficientReason: 'LINKED' as const
         }
       },
@@ -359,6 +363,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             GAINS: {
@@ -369,6 +374,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             FORTUNE: {
@@ -379,6 +385,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             },
             SPECULATION: {
@@ -389,6 +396,7 @@ describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
               diagnostics: [],
               promiseEvidenceIds: [],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }
           }

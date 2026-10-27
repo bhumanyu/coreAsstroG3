@@ -417,6 +417,20 @@ const WealthDimensionRow: React.FC<{ readonly dimension: ProductSynthesisWealthD
         Data Status: {dimension.dataStatus}
       </div>
 
+      {dimension.linkageTrace.length > 0 && (
+        <ul aria-label={`${dimension.dimension} Wealth activation linkage trace`} className="space-y-1 border-t border-slate-800 pt-2">
+          {dimension.linkageTrace.map((trace, index) => (
+            <li
+              key={`${trace.level}:${trace.dashaRuleReference.ruleId}:${trace.promiseEvidenceId}:${trace.matchedHouse}:${index}`}
+              className="text-xs text-slate-400"
+            >
+              {trace.promiseEvidenceId} linked by {trace.level} rule {trace.dashaRuleReference.ruleId}
+              {' '}({trace.dashaRuleReference.source}) at house {trace.matchedHouse}
+            </li>
+          ))}
+        </ul>
+      )}
+
       {dimension.diagnostics.length > 0 && (
         <DiagnosticsList diagnostics={dimension.diagnostics} compact />
       )}

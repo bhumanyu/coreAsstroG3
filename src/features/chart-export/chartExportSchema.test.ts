@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import { buildChartExport } from './chartExportMapper';
 import { validateChartExport } from './chartExportSchema';
@@ -61,10 +61,10 @@ describe('ChartExportV1 runtime schema', () => {
           career: { qualificationBasis: 'UNAVAILABLE', expressions: [], diagnostics: [] },
           wealth: {
             dimensions: {
-              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
-              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
-              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
-              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], insufficientReason: 'NO_PROMISE_EVIDENCE' }
+              ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'PARTIAL', linkedLevels: ['MD'], diagnostics: [], promiseEvidenceIds: ['wealth-promise-a'], dashaRuleReferences: [{ ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' }], linkageTrace: [{ promiseEvidenceId: 'wealth-promise-a', dashaRuleReference: { ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' }, level: 'MD', matchedHouse: 2 }], insufficientReason: 'LINKED' },
+              GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+              FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
+              SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' }
             },
             diagnostics: []
           },
@@ -83,6 +83,40 @@ describe('ChartExportV1 runtime schema', () => {
     expect(withSelected.selectedPeriod.status).toBe('AVAILABLE');
     if (withSelected.selectedPeriod.status !== 'AVAILABLE') return;
     const body = withSelected.selectedPeriod.value;
+    expect(body.deterministicSynthesis.wealth.dimensions.ACCUMULATION.linkageTrace).toEqual([
+      {
+        promiseEvidenceId: 'wealth-promise-a',
+        dashaRuleReference: { ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' },
+        level: 'MD',
+        matchedHouse: 2
+      }
+    ]);
+    const malformedTrace = {
+      ...withSelected,
+      selectedPeriod: {
+        ...withSelected.selectedPeriod,
+        value: {
+          ...body,
+          deterministicSynthesis: {
+            ...body.deterministicSynthesis,
+            wealth: {
+              ...body.deterministicSynthesis.wealth,
+              dimensions: {
+                ...body.deterministicSynthesis.wealth.dimensions,
+                ACCUMULATION: {
+                  ...body.deterministicSynthesis.wealth.dimensions.ACCUMULATION,
+                  linkageTrace: [{
+                    ...body.deterministicSynthesis.wealth.dimensions.ACCUMULATION.linkageTrace[0],
+                    matchedHouse: 13
+                  }]
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+    expect(validateChartExport(malformedTrace)).toEqual({ ok: false, error: 'INVALID_SHAPE' });
     const hidden = {
       ...withSelected,
       selectedPeriod: {

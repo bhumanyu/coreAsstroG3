@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PBA-07: Product Analysis Mapper Tests
  *
  * Tests for the selected-period synthesis mapper.
@@ -77,6 +77,12 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
             { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
             { ruleId: 'rule-2', source: 'DASHA', level: 'AD' }
           ],
+          linkageTrace: [{
+            promiseEvidenceId: 'promise-1',
+            dashaRuleReference: { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
+            level: 'MD',
+            matchedHouse: 2
+          }],
           insufficientReason: 'LINKED' as const
         },
         GAINS: {
@@ -87,6 +93,7 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           diagnostics: [],
           promiseEvidenceIds: ['promise-2'],
           dashaRuleReferences: [],
+          linkageTrace: [],
           insufficientReason: 'LINKED' as const
         },
         FORTUNE: {
@@ -97,6 +104,7 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           diagnostics: [],
           promiseEvidenceIds: [],
           dashaRuleReferences: [],
+          linkageTrace: [],
           insufficientReason: 'NO_PROMISE_EVIDENCE' as const
         },
         SPECULATION: {
@@ -107,6 +115,7 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
           diagnostics: [],
           promiseEvidenceIds: ['promise-3'],
           dashaRuleReferences: [],
+          linkageTrace: [],
           insufficientReason: 'LINKED' as const
         }
       },
@@ -172,6 +181,21 @@ describe('mapSelectedPeriodSynthesis (PBA-07)', () => {
 
     // CANONICAL_STATUS should map to CANONICAL
     expect(result.qualificationStatus).toBe('CANONICAL');
+  });
+
+  it('projects Wealth linkage traces without changing their evidence or rule identity', () => {
+    const result = mapSelectedPeriodSynthesis(mockSynthesisValue);
+
+    expect(result.wealth.dimensions.ACCUMULATION.linkageTrace).toEqual([
+      {
+        promiseEvidenceId: 'promise-1',
+        dashaRuleReference: { ruleId: 'rule-1', source: 'DASHA', level: 'MD' },
+        level: 'MD',
+        matchedHouse: 2
+      }
+    ]);
+    expect(Object.isFrozen(result.wealth.dimensions.ACCUMULATION.linkageTrace)).toBe(true);
+    expect(Object.isFrozen(result.wealth.dimensions.ACCUMULATION.linkageTrace[0])).toBe(true);
   });
 
   it('computes PROVISIONAL qualificationStatus for PROXY_DIRECTION', () => {

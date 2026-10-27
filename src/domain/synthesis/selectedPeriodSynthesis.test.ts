@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+﻿import { describe, it, expect } from 'vitest';
 import { Planet, DashaSystem } from '../../types';
 import type {
   DashaMahadashaInterpretation,
@@ -254,6 +254,7 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
           source: 'DASHA'
         })
       ]),
+      linkageTrace: [],
       insufficientReason: 'LINKED' as const
     }),
     GAINS: Object.freeze({
@@ -270,6 +271,7 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
       }),
       promiseEvidenceIds: Object.freeze(['promise-2']),
       dashaRuleReferences: Object.freeze([]),
+      linkageTrace: [],
       insufficientReason: 'LINKED' as const
     }),
     FORTUNE: Object.freeze({
@@ -286,6 +288,7 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
       }),
       promiseEvidenceIds: Object.freeze([]),
       dashaRuleReferences: Object.freeze([]),
+      linkageTrace: [],
       insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     }),
     SPECULATION: Object.freeze({
@@ -302,6 +305,7 @@ function makeWealthActivation(): SelectedWealthPeriodActivation {
       }),
       promiseEvidenceIds: Object.freeze(['promise-3']),
       dashaRuleReferences: Object.freeze([]),
+      linkageTrace: [],
       insufficientReason: 'LINKED' as const
     })
   };
@@ -618,7 +622,7 @@ describe('buildSelectedPeriodSynthesis', () => {
     });
   });
 
-  describe('unqualified ≠ challenging', () => {
+  describe('unqualified â‰  challenging', () => {
     it('unqualified evidence is not classified as challenging', () => {
       const selectedPeriod = makeSelectedPeriodContext();
       const careerActivation = makeCareerActivation();
@@ -671,6 +675,8 @@ describe('buildSelectedPeriodSynthesis', () => {
       const missingWealth = result.value.missingInputs.find(m => m.code === 'WEALTH_ACTIVATION_MISSING');
       expect(missingWealth).toBeDefined();
       expect(missingWealth?.domain).toBe('WEALTH');
+      expect(result.value.wealth.dimensions.ACCUMULATION.effect).toBe('INSUFFICIENT_DATA');
+      expect(result.value.wealth.dimensions.ACCUMULATION.insufficientReason).toBe('ACTIVATION_UNAVAILABLE');
     });
 
     it('reports CAREER_EVIDENCE_MISSING when evidence not provided despite activation', () => {
@@ -1092,6 +1098,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]), // No promise evidence
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           GAINS: Object.freeze({
@@ -1108,6 +1115,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           FORTUNE: Object.freeze({
@@ -1124,6 +1132,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
@@ -1140,6 +1149,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })
@@ -1194,6 +1204,16 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze(['promise-1']),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: Object.freeze([Object.freeze({
+              promiseEvidenceId: 'promise-1',
+              dashaRuleReference: Object.freeze({
+                ruleId: 'neutral-md-rule',
+                source: 'DASHA',
+                level: 'MD' as const
+              }),
+              level: 'MD' as const,
+              matchedHouse: 2
+            })]),
             insufficientReason: 'LINKED' as const
           }),
           GAINS: Object.freeze({
@@ -1210,6 +1230,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           FORTUNE: Object.freeze({
@@ -1226,6 +1247,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
@@ -1242,6 +1264,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })
@@ -1264,6 +1287,9 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
       expect(result.value.wealth.dimensions.ACCUMULATION.effect).toBe('UNKNOWN');
       expect(result.value.wealth.dimensions.ACCUMULATION.insufficientReason).toBe('LINKED');
+      expect(result.value.wealth.dimensions.ACCUMULATION.linkageTrace).toEqual(
+        linkedUnknownWealthActivation.dimensions.ACCUMULATION.linkageTrace
+      );
 
       // Should emit diagnostic for complete input, linked, but indeterminate effect
       const diag = result.value.wealth.dimensions.ACCUMULATION.diagnostics.find(
@@ -1460,6 +1486,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze(['promise-1', 'promise-2', 'promise-3']), // 3 IDs
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'LINKED' as const
           }),
           GAINS: Object.freeze({
@@ -1476,6 +1503,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           FORTUNE: Object.freeze({
@@ -1492,6 +1520,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
@@ -1508,6 +1537,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })
@@ -1527,7 +1557,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // 3 IDs but only 1 resolves → PARTIAL
+      // 3 IDs but only 1 resolves â†’ PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
     });
 
@@ -1548,7 +1578,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // ACCUMULATION has dimension mismatch → PARTIAL
+      // ACCUMULATION has dimension mismatch â†’ PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
     });
 
@@ -1569,7 +1599,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // ACCUMULATION has wrong domain → PARTIAL
+      // ACCUMULATION has wrong domain â†’ PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
 
       // Should have WEALTH_EVIDENCE_INVALID diagnostic
@@ -1771,6 +1801,7 @@ describe('buildSelectedPeriodSynthesis', () => {
           ACCUMULATION: Object.freeze({
             ...wealthActivation.dimensions.ACCUMULATION,
             promiseEvidenceIds: Object.freeze(['dup-1']),
+            linkageTrace: [],
             insufficientReason: 'LINKED' as const
           })
         })
@@ -2540,6 +2571,7 @@ describe('buildSelectedPeriodSynthesis', () => {
           ACCUMULATION: Object.freeze({
             ...wealthActivation.dimensions.ACCUMULATION,
             promiseEvidenceIds: Object.freeze(['dup-1']),
+            linkageTrace: [],
             insufficientReason: 'LINKED' as const
           })
         })
@@ -2578,6 +2610,7 @@ describe('buildSelectedPeriodSynthesis', () => {
           ACCUMULATION: Object.freeze({
             ...wealthActivation.dimensions.ACCUMULATION,
             promiseEvidenceIds: Object.freeze(['dup-2']),
+            linkageTrace: [],
             insufficientReason: 'LINKED' as const
           })
         })
@@ -2830,6 +2863,7 @@ describe('buildSelectedPeriodSynthesis', () => {
                 Object.freeze({ ruleId: 'rule-1', level: 'MD', source: 'DASHA' }),
                 Object.freeze({ ruleId: 'rule-2', level: 'AD', source: 'DASHA' })
               ]),
+              linkageTrace: [],
               insufficientReason: 'LINKED' as const
             }),
             GAINS: Object.freeze({
@@ -2840,6 +2874,7 @@ describe('buildSelectedPeriodSynthesis', () => {
               diagnostics: Object.freeze([]),
               promiseEvidenceIds: Object.freeze(['promise-2']),
               dashaRuleReferences: Object.freeze([]),
+              linkageTrace: [],
               insufficientReason: 'LINKED' as const
             }),
             FORTUNE: Object.freeze({
@@ -2850,6 +2885,7 @@ describe('buildSelectedPeriodSynthesis', () => {
               diagnostics: Object.freeze([]),
               promiseEvidenceIds: Object.freeze([]),
               dashaRuleReferences: Object.freeze([]),
+              linkageTrace: [],
               insufficientReason: 'NO_PROMISE_EVIDENCE' as const
             }),
             SPECULATION: Object.freeze({
@@ -2860,6 +2896,7 @@ describe('buildSelectedPeriodSynthesis', () => {
               diagnostics: Object.freeze([]),
               promiseEvidenceIds: Object.freeze(['promise-3']),
               dashaRuleReferences: Object.freeze([]),
+              linkageTrace: [],
               insufficientReason: 'LINKED' as const
             })
           }),
@@ -2987,7 +3024,7 @@ describe('buildSelectedPeriodSynthesis', () => {
     });
   });
 
-  describe('Moon Mahadasha → Moon Antardasha GAINS synthesis regression', () => {
+  describe('Moon Mahadasha â†’ Moon Antardasha GAINS synthesis regression', () => {
     it('surfaces the promise-present house-unlinked diagnostic without changing effect or dataStatus', () => {
       const selectedPeriod = makeMoonMoonContext();
       const wealthActivation = makeWealthActivation();
@@ -3004,6 +3041,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             effect: 'INSUFFICIENT_DATA',
             linkedLevels: [],
             promiseEvidenceIds: ['fortune-promise'],
+            linkageTrace: [],
             insufficientReason: 'PROMISE_NOT_LINKED',
             diagnostic: fortuneDiagnostic
           }
@@ -3073,6 +3111,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           GAINS: Object.freeze({
@@ -3112,6 +3151,7 @@ describe('buildSelectedPeriodSynthesis', () => {
                 source: 'test-fixture'
               })
             ]),
+            linkageTrace: [],
             insufficientReason: 'LINKED' as const
           }),
           FORTUNE: Object.freeze({
@@ -3128,6 +3168,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
@@ -3144,6 +3185,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })
@@ -3252,6 +3294,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           GAINS: Object.freeze({
@@ -3291,6 +3334,7 @@ describe('buildSelectedPeriodSynthesis', () => {
                 source: 'test-fixture'
               })
             ]),
+            linkageTrace: [],
             insufficientReason: 'LINKED' as const
           }),
           FORTUNE: Object.freeze({
@@ -3307,6 +3351,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }),
           SPECULATION: Object.freeze({
@@ -3323,6 +3368,7 @@ describe('buildSelectedPeriodSynthesis', () => {
             }),
             promiseEvidenceIds: Object.freeze([]),
             dashaRuleReferences: Object.freeze([]),
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           })
         })

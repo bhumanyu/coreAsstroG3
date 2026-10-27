@@ -76,6 +76,13 @@ export interface ExportedWealthRuleReferenceV1 {
   readonly level: 'MD' | 'AD' | 'PD';
 }
 
+export interface ExportedWealthLinkageTraceV1 {
+  readonly promiseEvidenceId: string;
+  readonly dashaRuleReference: ExportedWealthRuleReferenceV1;
+  readonly level: 'MD' | 'AD' | 'PD';
+  readonly matchedHouse: number;
+}
+
 export interface ExportedWealthDimensionV1 {
   readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
   readonly effect: string;
@@ -84,7 +91,12 @@ export interface ExportedWealthDimensionV1 {
   readonly diagnostics: readonly ExportedDiagnosticV1[];
   readonly promiseEvidenceIds: readonly string[];
   readonly dashaRuleReferences: readonly ExportedWealthRuleReferenceV1[];
-  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
+  readonly linkageTrace: readonly ExportedWealthLinkageTraceV1[];
+  readonly insufficientReason:
+    | 'NO_PROMISE_EVIDENCE'
+    | 'PROMISE_NOT_LINKED'
+    | 'LINKED'
+    | 'ACTIVATION_UNAVAILABLE';
 }
 
 export interface ExportedWealthSynthesisV1 {
@@ -318,10 +330,24 @@ function isWealthRuleReference(value: unknown): value is ExportedWealthRuleRefer
     && isString(value.ruleId) && isString(value.source) && isOneOf(value.level, SYNTHESIS_LEVELS);
 }
 
+function isWealthLinkageTrace(value: unknown): value is ExportedWealthLinkageTraceV1 {
+  return isRecord(value) && onlyKeys(value, [
+    'promiseEvidenceId', 'dashaRuleReference', 'level', 'matchedHouse'
+  ])
+    && isString(value.promiseEvidenceId)
+    && isWealthRuleReference(value.dashaRuleReference)
+    && isOneOf(value.level, SYNTHESIS_LEVELS)
+    && typeof value.matchedHouse === 'number'
+    && Number.isInteger(value.matchedHouse)
+    && value.matchedHouse >= 1
+    && value.matchedHouse <= 12
+    && value.dashaRuleReference.level === value.level;
+}
+
 function isWealthDimension(value: unknown): value is ExportedWealthDimensionV1 {
   return isRecord(value) && onlyKeys(value, [
     'dimension', 'effect', 'dataStatus', 'linkedLevels', 'diagnostics', 'promiseEvidenceIds',
-    'dashaRuleReferences', 'insufficientReason'
+    'dashaRuleReferences', 'linkageTrace', 'insufficientReason'
   ])
     && isOneOf(value.dimension, SYNTHESIS_DIMENSIONS)
     && isString(value.effect)
@@ -330,7 +356,10 @@ function isWealthDimension(value: unknown): value is ExportedWealthDimensionV1 {
     && Array.isArray(value.diagnostics) && value.diagnostics.every(isDiagnostic)
     && isStringArray(value.promiseEvidenceIds)
     && Array.isArray(value.dashaRuleReferences) && value.dashaRuleReferences.every(isWealthRuleReference)
-    && isOneOf(value.insufficientReason, ['NO_PROMISE_EVIDENCE', 'PROMISE_NOT_LINKED', 'LINKED']);
+    && Array.isArray(value.linkageTrace) && value.linkageTrace.every(isWealthLinkageTrace)
+    && isOneOf(value.insufficientReason, [
+      'NO_PROMISE_EVIDENCE', 'PROMISE_NOT_LINKED', 'LINKED', 'ACTIVATION_UNAVAILABLE'
+    ]);
 }
 
 function isWealthSynthesis(value: unknown): value is ExportedWealthSynthesisV1 {

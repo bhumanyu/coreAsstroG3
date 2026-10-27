@@ -469,7 +469,21 @@ export interface ProductSynthesisWealthDimensionRow {
     readonly source: string;
     readonly level: 'MD' | 'AD' | 'PD';
   }[];
-  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
+  readonly linkageTrace: readonly {
+    readonly promiseEvidenceId: string;
+    readonly dashaRuleReference: {
+      readonly ruleId: string;
+      readonly source: string;
+      readonly level: 'MD' | 'AD' | 'PD';
+    };
+    readonly level: 'MD' | 'AD' | 'PD';
+    readonly matchedHouse: number;
+  }[];
+  readonly insufficientReason:
+    | 'NO_PROMISE_EVIDENCE'
+    | 'PROMISE_NOT_LINKED'
+    | 'LINKED'
+    | 'ACTIVATION_UNAVAILABLE';
 }
 
 /**

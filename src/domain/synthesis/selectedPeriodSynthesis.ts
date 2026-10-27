@@ -12,7 +12,8 @@ import type {
 } from '../career/careerDasha/selectedCareerDashaActivation';
 
 import type {
-  SelectedWealthPeriodActivation
+  SelectedWealthPeriodActivation,
+  SelectedWealthActivationLinkageTrace
 } from '../wealth/selectedWealthDashaActivation';
 
 import type {
@@ -50,7 +51,10 @@ export interface BuildSelectedPeriodSynthesisInput<TCareerBaseline, TWealthBasel
   readonly careerBaseline?: TCareerBaseline;
   readonly wealthBaseline?: TWealthBaseline;
   readonly careerErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT';
-  readonly wealthErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT';
+  readonly wealthErrorCode?:
+    | 'INVALID_SELECTED_PERIOD_CONTEXT'
+    | 'WEALTH_EVIDENCE_UNAVAILABLE'
+    | 'SELECTED_DASHA_EVIDENCE_UNAVAILABLE';
 }
 
 /**
@@ -174,7 +178,12 @@ export interface SynthesisWealthDimensionRow {
     readonly source: string;
     readonly level: 'MD' | 'AD' | 'PD';
   }[];
-  readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
+  readonly linkageTrace: readonly SelectedWealthActivationLinkageTrace[];
+  readonly insufficientReason:
+    | 'NO_PROMISE_EVIDENCE'
+    | 'PROMISE_NOT_LINKED'
+    | 'LINKED'
+    | 'ACTIVATION_UNAVAILABLE';
 }
 
 /**
@@ -756,7 +765,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       diagnostics: [],
       promiseEvidenceIds: [],
       dashaRuleReferences: [],
-      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+      linkageTrace: [],
+      insufficientReason: 'ACTIVATION_UNAVAILABLE' as const
     },
     GAINS: {
       dimension: 'GAINS',
@@ -766,7 +776,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       diagnostics: [],
       promiseEvidenceIds: [],
       dashaRuleReferences: [],
-      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+      linkageTrace: [],
+      insufficientReason: 'ACTIVATION_UNAVAILABLE' as const
     },
     FORTUNE: {
       dimension: 'FORTUNE',
@@ -776,7 +787,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       diagnostics: [],
       promiseEvidenceIds: [],
       dashaRuleReferences: [],
-      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+      linkageTrace: [],
+      insufficientReason: 'ACTIVATION_UNAVAILABLE' as const
     },
     SPECULATION: {
       dimension: 'SPECULATION',
@@ -786,7 +798,8 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
       diagnostics: [],
       promiseEvidenceIds: [],
       dashaRuleReferences: [],
-      insufficientReason: 'NO_PROMISE_EVIDENCE' as const
+      linkageTrace: [],
+      insufficientReason: 'ACTIVATION_UNAVAILABLE' as const
     }
   };
 
@@ -859,13 +872,16 @@ export function buildSelectedPeriodSynthesis<TCareerBaseline, TWealthBaseline>(
         diagnostics: dimDiagnostics,
         promiseEvidenceIds: dimActivation.promiseEvidenceIds,
         dashaRuleReferences: dimActivation.dashaRuleReferences,
+        linkageTrace: dimActivation.linkageTrace,
         insufficientReason: dimActivation.insufficientReason
       };
     }
   } else {
     wealthDiagnostics.push(Object.freeze({
-      code: 'WEALTH_ACTIVATION_MISSING',
-      message: 'Wealth activation not provided'
+      code: wealthErrorCode ? 'WEALTH_ACTIVATION_FAILED' : 'WEALTH_ACTIVATION_MISSING',
+      message: wealthErrorCode
+        ? `Wealth activation failed (${wealthErrorCode}); dimension outcomes are unavailable.`
+        : 'Wealth activation not provided; dimension outcomes are unavailable.'
     }));
   }
 

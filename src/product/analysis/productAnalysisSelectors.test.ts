@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tests for ProductAnalysis Selectors
  */
 
@@ -716,6 +716,7 @@ describe('productAnalysisSelectors', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'LINKED' as const
               },
               GAINS: {
@@ -726,6 +727,7 @@ describe('productAnalysisSelectors', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'LINKED' as const
               },
               FORTUNE: {
@@ -736,6 +738,7 @@ describe('productAnalysisSelectors', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'LINKED' as const
               },
               SPECULATION: {
@@ -746,6 +749,7 @@ describe('productAnalysisSelectors', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'LINKED' as const
               }
             },

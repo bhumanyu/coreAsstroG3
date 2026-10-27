@@ -1153,6 +1153,16 @@ export function mapSelectedPeriodSynthesis(
             level: ref.level
           }))
         ),
+        linkageTrace: Object.freeze(value.wealth.dimensions.ACCUMULATION.linkageTrace.map(trace => Object.freeze({
+          promiseEvidenceId: trace.promiseEvidenceId,
+          dashaRuleReference: Object.freeze({
+            ruleId: trace.dashaRuleReference.ruleId,
+            source: trace.dashaRuleReference.source,
+            level: trace.dashaRuleReference.level
+          }),
+          level: trace.level,
+          matchedHouse: trace.matchedHouse
+        }))),
         insufficientReason: value.wealth.dimensions.ACCUMULATION.insufficientReason
       }),
       GAINS: Object.freeze({
@@ -1174,6 +1184,16 @@ export function mapSelectedPeriodSynthesis(
             level: ref.level
           }))
         ),
+        linkageTrace: Object.freeze(value.wealth.dimensions.GAINS.linkageTrace.map(trace => Object.freeze({
+          promiseEvidenceId: trace.promiseEvidenceId,
+          dashaRuleReference: Object.freeze({
+            ruleId: trace.dashaRuleReference.ruleId,
+            source: trace.dashaRuleReference.source,
+            level: trace.dashaRuleReference.level
+          }),
+          level: trace.level,
+          matchedHouse: trace.matchedHouse
+        }))),
         insufficientReason: value.wealth.dimensions.GAINS.insufficientReason
       }),
       FORTUNE: Object.freeze({
@@ -1195,6 +1215,16 @@ export function mapSelectedPeriodSynthesis(
             level: ref.level
           }))
         ),
+        linkageTrace: Object.freeze(value.wealth.dimensions.FORTUNE.linkageTrace.map(trace => Object.freeze({
+          promiseEvidenceId: trace.promiseEvidenceId,
+          dashaRuleReference: Object.freeze({
+            ruleId: trace.dashaRuleReference.ruleId,
+            source: trace.dashaRuleReference.source,
+            level: trace.dashaRuleReference.level
+          }),
+          level: trace.level,
+          matchedHouse: trace.matchedHouse
+        }))),
         insufficientReason: value.wealth.dimensions.FORTUNE.insufficientReason
       }),
       SPECULATION: Object.freeze({
@@ -1216,6 +1246,16 @@ export function mapSelectedPeriodSynthesis(
             level: ref.level
           }))
         ),
+        linkageTrace: Object.freeze(value.wealth.dimensions.SPECULATION.linkageTrace.map(trace => Object.freeze({
+          promiseEvidenceId: trace.promiseEvidenceId,
+          dashaRuleReference: Object.freeze({
+            ruleId: trace.dashaRuleReference.ruleId,
+            source: trace.dashaRuleReference.source,
+            level: trace.dashaRuleReference.level
+          }),
+          level: trace.level,
+          matchedHouse: trace.matchedHouse
+        }))),
         insufficientReason: value.wealth.dimensions.SPECULATION.insufficientReason
       })
     }),

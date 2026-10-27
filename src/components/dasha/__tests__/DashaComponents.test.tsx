@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -35,6 +35,7 @@ const emptyWealthDimension = (
   diagnostics: [],
   promiseEvidenceIds: [],
   dashaRuleReferences: [],
+  linkageTrace: [],
   insufficientReason: 'NO_PROMISE_EVIDENCE' as const
 });
 
@@ -81,6 +82,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             diagnostics: [],
             promiseEvidenceIds: [],
             dashaRuleReferences: [],
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           },
           GAINS: {
@@ -91,6 +93,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             diagnostics: [],
             promiseEvidenceIds: [],
             dashaRuleReferences: [],
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           },
           FORTUNE: {
@@ -101,6 +104,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             diagnostics: [],
             promiseEvidenceIds: [],
             dashaRuleReferences: [],
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           },
           SPECULATION: {
@@ -111,6 +115,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
             diagnostics: [],
             promiseEvidenceIds: [],
             dashaRuleReferences: [],
+            linkageTrace: [],
             insufficientReason: 'NO_PROMISE_EVIDENCE' as const
           }
         },
@@ -141,7 +146,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       availability: 'AVAILABLE',
       status: 'READY',
       asOf: '2026-09-08',
-      currentPeriodLabel: 'Jupiter → Saturn → Mercury',
+      currentPeriodLabel: 'Jupiter â†’ Saturn â†’ Mercury',
       mdPlanet: 'Jupiter',
       adPlanet: 'Saturn',
       pdPlanet: 'Mercury'
@@ -255,7 +260,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     render(<DashaPeriodCard period={period} />);
 
     expect(screen.getByText('Mercury')).toBeInTheDocument();
-    expect(screen.getByText('2026-04-01 → 2026-08-15')).toBeInTheDocument();
+    expect(screen.getByText('2026-04-01 â†’ 2026-08-15')).toBeInTheDocument();
     expect(screen.getByText('Refinement')).toBeInTheDocument();
   });
 
@@ -424,8 +429,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
 
       // Verify primary information is visible
-      expect(screen.getByText(/Jupiter MD → Saturn AD/i)).toBeInTheDocument();
-      expect(screen.getByText(/Jan 1, 2020 – Jan 1, 2022/i)).toBeInTheDocument();
+      expect(screen.getByText(/Jupiter MD â†’ Saturn AD/i)).toBeInTheDocument();
+      expect(screen.getByText(/Jan 1, 2020 â€“ Jan 1, 2022/i)).toBeInTheDocument();
       expect(screen.getByText(/CURRENT/i)).toBeInTheDocument();
       expect(screen.getByText('CANONICAL')).toBeInTheDocument();
       expect(screen.queryByText(/Career Synthesis/i)).not.toBeInTheDocument();
@@ -601,6 +606,16 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
               ],
               promiseEvidenceIds: ['WEALTH_2H_STRONG_001:HOUSE_2'],
               dashaRuleReferences: [],
+              linkageTrace: [{
+                promiseEvidenceId: 'WEALTH_2H_STRONG_001:HOUSE_2',
+                dashaRuleReference: {
+                  ruleId: 'WEALTH_RULE_MD_2H',
+                  source: 'DASHA',
+                  level: 'MD'
+                },
+                level: 'MD',
+                matchedHouse: 2
+              }],
               insufficientReason: 'LINKED' as const
             },
             GAINS: emptyWealthDimension('GAINS'),
@@ -622,6 +637,13 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       // The list should be exposed via role="list" with accessible name
       const diagnosticList = screen.getByRole('list', { name: /diagnostic explanations/i });
       expect(diagnosticList).toBeInTheDocument();
+
+      const linkage = screen.getByRole('list', {
+        name: 'ACCUMULATION Wealth activation linkage trace'
+      });
+      expect(linkage).toHaveTextContent(
+        'WEALTH_2H_STRONG_001:HOUSE_2 linked by MD rule WEALTH_RULE_MD_2H (DASHA) at house 2'
+      );
     });
 
     it('Career-only partial result renders career heading and wealth missing explanation', () => {
@@ -703,6 +725,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
               diagnostics: [],
               promiseEvidenceIds: ['WEALTH_2H_STRONG_001'],
               dashaRuleReferences: [],
+              linkageTrace: [],
               insufficientReason: 'LINKED' as const
             },
             GAINS: emptyWealthDimension('GAINS'),
@@ -1140,7 +1163,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       // Live region should announce "Analyzing"
       const statusRegion = screen.getByRole('status');
-      expect(statusRegion).toHaveTextContent('Analyzing the selected period…');
+      expect(statusRegion).toHaveTextContent('Analyzing the selected periodâ€¦');
     });
   });
 });

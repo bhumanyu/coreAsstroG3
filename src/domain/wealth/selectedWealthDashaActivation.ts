@@ -21,6 +21,17 @@ export interface SelectedWealthDashaRuleReference {
 }
 
 /**
+ * One successful Wealth promise-to-Dasha linkage.
+ * The matched house is the actual house carried by the promise evidence.
+ */
+export interface SelectedWealthActivationLinkageTrace {
+  readonly promiseEvidenceId: string;
+  readonly dashaRuleReference: SelectedWealthDashaRuleReference;
+  readonly level: 'MD' | 'AD' | 'PD';
+  readonly matchedHouse: number;
+}
+
+/**
  * Per-dimension activation result for selected period.
  *
  * Effect semantics:
@@ -51,6 +62,7 @@ export interface SelectedWealthDimensionActivation {
   };
   readonly promiseEvidenceIds: readonly string[];
   readonly dashaRuleReferences: readonly SelectedWealthDashaRuleReference[];
+  readonly linkageTrace: readonly SelectedWealthActivationLinkageTrace[];
   readonly insufficientReason: 'NO_PROMISE_EVIDENCE' | 'PROMISE_NOT_LINKED' | 'LINKED';
   readonly diagnostic?: string;
 }
@@ -81,7 +93,13 @@ export interface EvaluateSelectedWealthPeriodActivationInput {
  */
 export type EvaluateSelectedWealthPeriodActivationResult =
   | { readonly ok: true; readonly value: SelectedWealthPeriodActivation }
-  | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' };
+  | {
+      readonly ok: false;
+      readonly error:
+        | 'INVALID_SELECTED_PERIOD_CONTEXT'
+        | 'WEALTH_EVIDENCE_UNAVAILABLE'
+        | 'SELECTED_DASHA_EVIDENCE_UNAVAILABLE';
+    };
 
 type DashaEvidenceWithLevel = {
   readonly level: 'MD' | 'AD' | 'PD';
@@ -175,6 +193,67 @@ function isLinkedToDimension(
   return false;
 }
 
+function getLinkageTrace(
+  selectedEvidence: readonly DashaEvidenceWithLevel[],
+  promiseEvidence: readonly DomainEvidence[]
+): readonly SelectedWealthActivationLinkageTrace[] {
+  const trace: SelectedWealthActivationLinkageTrace[] = [];
+
+  for (const item of selectedEvidence) {
+    for (const promise of promiseEvidence) {
+      if (promise.house === undefined || !item.evidence.houses?.includes(promise.house)) {
+        continue;
+      }
+
+      const dashaRuleReference = toRuleReference(item);
+      trace.push(Object.freeze({
+        promiseEvidenceId: promise.id,
+        dashaRuleReference,
+        level: item.level,
+        matchedHouse: promise.house
+      }));
+    }
+  }
+
+  const levelOrder = { MD: 0, AD: 1, PD: 2 } as const;
+  return Object.freeze(trace.sort((a, b) =>
+    levelOrder[a.level] - levelOrder[b.level] ||
+    a.promiseEvidenceId.localeCompare(b.promiseEvidenceId) ||
+    a.dashaRuleReference.ruleId.localeCompare(b.dashaRuleReference.ruleId) ||
+    a.matchedHouse - b.matchedHouse
+  ));
+}
+
+function isDashaEvidenceList(value: unknown): value is readonly DashaInterpretationEvidence[] {
+  return Array.isArray(value) && value.every((item: unknown) =>
+    typeof item === 'object' &&
+    item !== null &&
+    typeof (item as DashaInterpretationEvidence).ruleId === 'string' &&
+    (item as DashaInterpretationEvidence).ruleId.trim().length > 0 &&
+    typeof (item as DashaInterpretationEvidence).source === 'string' &&
+    (item as DashaInterpretationEvidence).source.trim().length > 0 &&
+    ['SUPPORT', 'CHALLENGE', 'NEUTRAL', 'MIXED'].includes((item as DashaInterpretationEvidence).effect) &&
+    ((item as DashaInterpretationEvidence).houses === undefined ||
+      (Array.isArray((item as DashaInterpretationEvidence).houses) &&
+        (item as DashaInterpretationEvidence).houses?.every((house) =>
+          Number.isInteger(house) && house >= 1 && house <= 12
+        )))
+  );
+}
+
+function isWealthEvidenceList(value: unknown): value is readonly DomainEvidence[] {
+  return Array.isArray(value) && value.every((item: unknown) => {
+    if (typeof item !== 'object' || item === null) return false;
+    const evidence = item as DomainEvidence;
+    return typeof evidence.id === 'string' &&
+      evidence.id.trim().length > 0 &&
+      typeof evidence.domain === 'string' &&
+      typeof evidence.phase === 'string' &&
+      (evidence.house === undefined ||
+        (Number.isInteger(evidence.house) && evidence.house >= 1 && evidence.house <= 12));
+  });
+}
+
 /**
  * Resolves activation effect from dasha evidence.
  *
@@ -252,6 +331,7 @@ function evaluateDimension(
       }),
       promiseEvidenceIds: Object.freeze([]),
       dashaRuleReferences: Object.freeze([]),
+      linkageTrace: Object.freeze([]),
       insufficientReason: 'NO_PROMISE_EVIDENCE' as const
     });
   }
@@ -292,6 +372,7 @@ function evaluateDimension(
       }),
       promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
       dashaRuleReferences: Object.freeze([]),
+      linkageTrace: Object.freeze([]),
       insufficientReason: 'PROMISE_NOT_LINKED' as const,
       diagnostic: `Promise evidence is present, but the selected-period dasha lord does not touch the ${dimension}'s canonical house.`
     });
@@ -308,6 +389,7 @@ function evaluateDimension(
   if (linkedPd.length > 0) linkedLevels.push('PD');
 
   const allLinked = [...linkedMd, ...linkedAd, ...linkedPd];
+  const linkageTrace = getLinkageTrace(allLinked, promiseEvidence);
   const overallEffect = linkedPd.length > 0
     ? combineTimingHierarchy(mdEffect, adEffect, pdEffect).overallEffect
     : resolveEffect(allLinked.map((item) => item.evidence));
@@ -336,6 +418,7 @@ function evaluateDimension(
     }),
     promiseEvidenceIds: Object.freeze(promiseEvidence.map((item) => item.id)),
     dashaRuleReferences: allRuleReferences,
+    linkageTrace,
     insufficientReason: 'LINKED' as const
   });
 }
@@ -365,6 +448,23 @@ export function evaluateSelectedWealthPeriodActivation(
       ok: false,
       error: 'INVALID_SELECTED_PERIOD_CONTEXT'
     };
+  }
+
+  if (!isWealthEvidenceList(wealthEvidence)) {
+    return { ok: false, error: 'WEALTH_EVIDENCE_UNAVAILABLE' };
+  }
+
+  const selectedDashaNodes: readonly unknown[] = [
+    selectedPeriod.mahadashaNode,
+    selectedPeriod.antardashaNode,
+    ...(selectedPeriod.pratyantardashaNode ? [selectedPeriod.pratyantardashaNode] : [])
+  ];
+  if (!selectedDashaNodes.every((node) =>
+    typeof node === 'object' &&
+    node !== null &&
+    isDashaEvidenceList((node as { readonly evidence?: unknown }).evidence)
+  )) {
+    return { ok: false, error: 'SELECTED_DASHA_EVIDENCE_UNAVAILABLE' };
   }
 
   // Extract selected MD/AD evidence

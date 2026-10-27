@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { DashaPage } from '../DashaPage';
@@ -16,6 +16,7 @@ const emptyWealthDimension = (
   diagnostics: [],
   promiseEvidenceIds: [],
   dashaRuleReferences: [],
+  linkageTrace: [],
   insufficientReason: 'NO_PROMISE_EVIDENCE' as const
 });
 
@@ -80,7 +81,7 @@ describe('DashaPage (P-UI-07)', () => {
     // Hero
     expect(screen.getByText('Dasha & Planetary Timing')).toBeInTheDocument();
 
-    // Major headings asserted in spec §24 & prompt requirements:
+    // Major headings asserted in spec Â§24 & prompt requirements:
     expect(screen.getByText('Current Dasha Hierarchy')).toBeInTheDocument();
     expect(screen.getByText('Career Activation')).toBeInTheDocument();
     expect(screen.getByText('Wealth Activation')).toBeInTheDocument();
@@ -209,6 +210,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               GAINS: {
@@ -219,6 +221,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               FORTUNE: {
@@ -229,6 +232,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               SPECULATION: {
@@ -239,6 +243,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               }
             },
@@ -391,6 +396,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'LINKED' as const
               },
               GAINS: {
@@ -401,6 +407,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'LINKED' as const
               },
               FORTUNE: {
@@ -411,6 +418,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               SPECULATION: {
@@ -421,6 +429,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               }
             },
@@ -646,6 +655,7 @@ describe('DashaPage (P-UI-07)', () => {
                   diagnostics: [],
                   promiseEvidenceIds: [],
                   dashaRuleReferences: [],
+                  linkageTrace: [],
                   insufficientReason: 'LINKED' as const
                 },
                 GAINS: emptyWealthDimension('GAINS'),
@@ -753,6 +763,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               GAINS: {
@@ -763,6 +774,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               FORTUNE: {
@@ -773,6 +785,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               SPECULATION: {
@@ -783,6 +796,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               }
             },
@@ -845,6 +859,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               GAINS: {
@@ -855,6 +870,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               FORTUNE: {
@@ -865,6 +881,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               },
               SPECULATION: {
@@ -875,6 +892,7 @@ describe('DashaPage (P-UI-07)', () => {
                 diagnostics: [],
                 promiseEvidenceIds: [],
                 dashaRuleReferences: [],
+                linkageTrace: [],
                 insufficientReason: 'NO_PROMISE_EVIDENCE' as const
               }
             },
