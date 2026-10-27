@@ -214,6 +214,27 @@ const RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10: CareerMechanismResoluti
 });
 
 /**
+ * Owner-gated implementation template for future non-dusthana family rules.
+ *
+ * Do not instantiate or register a family rule until that family's owner-decision
+ * row is complete and its P2-06 evidence contract is frozen. Each future rule must:
+ *
+ * - Conform to CareerMechanismResolutionRule and declare an explicit ruleId/pathway.
+ * - Guard applies() on real establishing edges using hasCanonicalHousePairRelationship
+ *   or the appropriate canonical P2-06A predicate for exchange/yoga structures, and
+ *   intersect those edges with pattern.provenance.establishingRelationshipIds.
+ * - Return only existing CareerMechanismType members from resolve().
+ * - Reuse PatternLevelEstablishingEvidence and the resolver's existing
+ *   ESTABLISHING_EVIDENCE_SOURCES firewall; do not add an evidence model.
+ * - Define deterministic precedence/deduplication consistent with the composite
+ *   dusthana subsumption handled by DefaultCareerMechanismResolver.
+ *
+ * Before activation, the family's tests must cover valid evidence, absent
+ * relationships, supporting-only (LORD_OF-only) evidence, conflicting structures,
+ * and input-order stability. The registry below intentionally remains limited to
+ * the three proven dusthana rules; no applying-but-empty placeholder is valid.
+ */
+/**
  * Frozen registry of mechanism resolution rules.
  * Per spec §25: only proven mappings initially.
  * Only dusthana transformation rules are registered (8↔10, 12↔10, composite 8-12-10).

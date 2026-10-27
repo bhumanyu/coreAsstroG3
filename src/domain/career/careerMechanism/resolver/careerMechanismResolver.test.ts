@@ -201,6 +201,75 @@ describe('careerMechanismResolver', () => {
     });
   });
 
+  describe('Owner-gated non-dusthana families', () => {
+    it('keeps the registry limited to the three proven dusthana rules', () => {
+      expect(CAREER_MECHANISM_RESOLUTION_RULES.map(rule => rule.ruleId)).toEqual([
+        'RULE_MECHANISM_PATTERN_DUSTHANA_8_10',
+        'RULE_MECHANISM_PATTERN_DUSTHANA_12_10',
+        'RULE_MECHANISM_PATTERN_DUSTHANA_COMPOSITE_8_12_10'
+      ]);
+    });
+
+    it.each([
+      {
+        family: 'CAREER_HOUSE_NETWORK',
+        classification: 'CAREER_HOUSE_NETWORK',
+        houses: [2, 10],
+        establishingRelationshipIds: ['REL:2→10:OCCUPIES']
+      },
+      {
+        family: 'KENDRA_TRIKONA',
+        classification: 'AUTHORITY_PATTERN',
+        houses: [1, 5, 10],
+        establishingRelationshipIds: ['REL:1→10:ASPECTS']
+      },
+      {
+        family: 'UPACHAYA',
+        classification: 'UPACHAYA_PROGRESSION',
+        houses: [3, 6, 10, 11],
+        establishingRelationshipIds: ['REL:6→10:OCCUPIES']
+      },
+      {
+        family: 'PARIVARTANA',
+        classification: 'PARIVARTANA_YOGA',
+        houses: [2, 10],
+        establishingRelationshipIds: ['REL:2→10:OCCUPIES', 'REL:10→2:OCCUPIES']
+      },
+      {
+        family: 'CAREER_YOGA',
+        classification: 'CAREER_YOGA_STRUCTURE',
+        houses: [5, 9, 10],
+        establishingRelationshipIds: ['REL:9→10:ASPECTS']
+      }
+    ] as const)(
+      'returns no candidates for structurally evidenced qualified $family patterns',
+      ({ family, classification, houses, establishingRelationshipIds }) => {
+        const input = createMockInput({
+          family,
+          classification,
+          houses: [...houses],
+          establishingRelationshipIds: [...establishingRelationshipIds],
+          status: 'QUALIFIED'
+        });
+
+        expect(input.pattern.family).toBe(family);
+        expect(input.pattern.classification).toBe(classification);
+        expect(input.qualification.status).toBe('QUALIFIED');
+        expect(input.pattern.provenance.establishingRelationshipIds)
+          .toEqual([...establishingRelationshipIds]);
+        expect(input.networks).toHaveLength(1);
+        expect(input.networks[0].networkId).toBe('network-1');
+        expect(input.networks[0].relationships.map(edge => edge.identityKey))
+          .toEqual(expect.arrayContaining([...establishingRelationshipIds]));
+
+        const result = resolver.resolve(input);
+
+        expect(result.patternId).toBe(input.pattern.patternId);
+        expect(result.candidates).toEqual([]);
+      }
+    );
+  });
+
   describe('Qualification gating', () => {
     it('should skip resolution for UNQUALIFIED patterns', () => {
       const input = createMockInput({
