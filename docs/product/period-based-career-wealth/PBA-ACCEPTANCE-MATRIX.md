@@ -2,9 +2,30 @@
 
 **Baseline Commit:** `491b831b2d6715760521b135365cbf4222623bec`
 
-**Last Updated:** 2026-10-24
+**Last Updated:** 2026-10-27
 
 **Purpose:** Maps each PBA invariant to implementation files, test files, and CI evidence. Classifies findings as CONFIRMED_DEFECT, NEEDS_PROOF, or DEFERRED.
+
+## Wealth Domain Projection-Integrity Fixes
+
+**Change commit:** `62ff557f49eaf2f271264bf68d97dac5fd5c1d5e`
+
+**Toolchain:** Node `21.7.1` (Windows), npm `10.9.2`
+
+**Verification for the change commit above:**
+- ✅ `npx tsc --noEmit`: PASS
+- ✅ `npx vitest run src/domain/wealth`: PASS (5 files, 174 tests)
+- ✅ `npm run lint`: PASS
+- ✅ `npm run build`: PASS (with existing large-chunk warning)
+- ⚠️ `npm test`: BLOCKED by Node 21 / Windows EPERM worker termination issue (environment blocker, not code issue)
+- ⚠️ `npm run verify`: BLOCKED by Node 21 / Windows EPERM worker termination issue (environment blocker, not code issue)
+
+**Fixes implemented:**
+1. **D2 relationship projection preservation**: Changed from hardcoded `'UNAVAILABLE'` to passing through computed `d2Relationship` value from `evaluateD2Relationship`. Added regression test proving computed value reaches conclusion unchanged.
+2. **Dimension evidence attribution**: Updated `evaluateWealthDimension` to filter challenging evidence by actual dimension linkage using `item.dimension === dimension`. Prevents cross-contamination (Gains challenging IDs appearing under Accumulation). Returns empty list when no dimension-linked challenging evidence exists. Added regression tests for dimension-specific attribution and empty-list cases.
+3. **Exhaustive DomainStrength→WealthDimensionStatus mapping**: Added `mapDomainStrengthToWealthStatus` function with exhaustive switch over all `DomainStrength` members (`VERY_STRONG`, `STRONG`, `MODERATE`, `MIXED`, `WEAK`, `VERY_WEAK`, `UNDETERMINED`). Replaced inline ternary mappings that could coerce indeterminate values to `CHALLENGED`. `UNDETERMINED` now correctly maps to `INSUFFICIENT_DATA` (not `CHALLENGED`). Added assertNever default case for compile-time exhaustiveness. Added regression test for all DomainStrength values.
+
+**No astrology/Dasha/methodology changes:** Engine, natal-promise calculation, and Dasha activation algorithms unchanged. Reference-data-blocked and owner-blocked gates untouched.
 
 ## Deterministic Future Dasha Forecasting
 
