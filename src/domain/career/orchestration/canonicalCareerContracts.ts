@@ -104,8 +104,21 @@ export interface StageEvidence {
 }
 
 /**
+ * Stable structural reference for one participant-role assignment.
+ * The primary role is part of the tuple; challenging status remains an independent flag.
+ */
+export function participantRoleAssignmentReferenceId(
+  patternId: string,
+  participantId: string,
+  primaryRole: import('../careerParticipantRoles/participantRoleTypes').PrimaryParticipantRole
+): string {
+  return JSON.stringify([patternId, participantId, primaryRole]);
+}
+
+/**
  * Reference to a production stage.
- * Identifies which stage produced a piece of evidence.
+ * `evidenceIds` contains evidence IDs only. Structural participant-role references
+ * are exposed through relationship mappings and are not represented as evidence.
  */
 export interface StageReference {
   readonly stageId: string;
@@ -294,6 +307,8 @@ export interface IdentityMapping {
  *
  * Distinct from IdentityMapping: IdentityMapping uses semantic identityKey values for equivalence;
  * RelationshipMapping uses structural IDs for derivation/containment relationships.
+ * For QUALIFICATION → PARTICIPANT_ROLES, targetId is the serialized
+ * (patternId, participantId, primaryRole) tuple, not an evidence ID.
  */
 export interface RelationshipMapping {
   readonly mappingId: string;

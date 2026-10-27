@@ -70,6 +70,11 @@ function makeDomainOptions(asOf?: string, targetHoroscope?: any): DomainReasonin
  * 2. Regression test: Ensure interpretCareerV2 structural integrity is maintained
  * 3. Determinism test: Verify output is deterministic across repeated builds
  * 4. Permutation test: Verify output is deterministic under orchestrator input permutation
+ *
+ * Scope boundary: the real canonical-chart two-pass test is a pipeline smoke/consistency
+ * check. Exact candidate-to-context/refinement expectations are covered with controlled
+ * producer ports here; fixed real-chart mechanism expectations are deferred because
+ * owner-gated mechanism coverage remains incomplete.
  */
 
 describe('P2-11G Canonical Career Foundation Builder', () => {
@@ -419,15 +424,15 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
           };
           return {
             patternId: pattern.patternId,
-            candidates: [{
-              candidateId: `CANDIDATE_${pattern.patternId}`,
-              patternId: pattern.patternId,
-              mechanismType: 'AGENCY',
-              pathway: 'PATTERN',
-              evidence: [],
-              provenance,
-              explanation: 'Builder two-pass candidate'
-            }],
+            candidates: ['PRIMARY', 'SECONDARY'].map(kind => ({
+                candidateId: `CANDIDATE_${kind}_${pattern.patternId}`,
+                patternId: pattern.patternId,
+                mechanismType: 'AGENCY',
+                pathway: 'PATTERN',
+                evidence: [],
+                provenance,
+                explanation: 'Builder two-pass candidate'
+              })),
             evidence: [],
             provenance
           };
@@ -498,10 +503,31 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         )).toBe(true);
       }
 
+      expect(foundation.resolvedMechanisms.length).toBeGreaterThan(1);
+      const firstPassCandidateId = foundation.resolvedMechanisms[0].candidateId;
+      const failingCandidateId = foundation.resolvedMechanisms[1].candidateId;
       const contextFactory = vi.spyOn(DefaultCareerDispositorContextFactory.prototype, 'create')
-        .mockImplementation(() => {
-          throw new Error('test context factory failure');
+        .mockImplementation((candidate: any) => {
+          if (candidate.candidateId === firstPassCandidateId) {
+            return [{
+              startPlanetId: 'SUN',
+              chain: ['SUN'],
+              terminalPlanetId: 'SUN',
+              depth: 0,
+              outcome: 'SELF_DISPOSITOR',
+              chainId: `CONTEXT_${candidate.candidateId}`,
+              provenanceIds: [],
+              sourceEvidenceIds: [],
+              relevantHouseIds: [],
+              sufficientData: true
+            }] as any;
+          }
+          if (candidate.candidateId === failingCandidateId) {
+            throw new Error('test context factory failure');
+          }
+          return [];
         });
+      contextFactory.mockClear();
       const failedPassTwo = buildCanonicalCareerFoundation({
         horoscope,
         enableDispositorContexts: true
@@ -511,10 +537,22 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(failedPassTwo).not.toBe(orchestrationSpy.mock.results[2].value);
       expect(failedPassTwo.foundationId).toBe(orchestrationSpy.mock.results[3].value.foundationId);
       expect(failedPassTwo.diagnostics).toContainEqual(expect.objectContaining({
-        diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR',
+        diagnosticId: `ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR_${failingCandidateId}`,
         severity: 'ERROR',
-        category: 'PORT_ERROR'
+        category: 'PORT_ERROR',
+        relatedIds: [failingCandidateId],
+        message: expect.stringContaining('factory threw')
       }));
+      expect(contextFactory).toHaveBeenCalledWith(
+        expect.objectContaining({ candidateId: firstPassCandidateId }),
+        expect.anything(),
+        horoscope
+      );
+      expect(contextFactory).toHaveBeenCalledWith(
+        expect.objectContaining({ candidateId: failingCandidateId }),
+        expect.anything(),
+        horoscope
+      );
       expect(failedPassTwo.metadata.contractValidity).toBe('INVALID');
       expect(failedPassTwo.mechanismRefinements.every(refinement =>
         refinement.resolution === 'UNRESOLVED' &&

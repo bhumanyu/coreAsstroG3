@@ -43,8 +43,10 @@ import {
 import {
   validateIdentityMappings,
   validateRefinementCandidateReferences,
-  validateRelationshipMappings
+  validateRelationshipMappings,
+  validateParticipantRoleAssignments
 } from './canonicalCareerValidation';
+import { participantRoleAssignmentReferenceId } from './canonicalCareerContracts';
 import type {
   Career10HFoundation,
   Career10HFoundationResult
@@ -1352,6 +1354,13 @@ describe('CanonicalCareerOrchestrator', () => {
             isChallenging: false,
             roleEvidence: [],
             explanation: 'Core participant'
+          },
+          {
+            participantId: 'PLANET:SATURN' as ParticipantId,
+            primaryRole: 'MODIFIER',
+            isChallenging: false,
+            roleEvidence: [],
+            explanation: 'Modifier participant'
           }
         ]
       });
@@ -1417,6 +1426,9 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(capturedRefineInputs[0].coreParticipants).toEqual(['PLANET:MOON', 'PLANET:SUN']);
       expect(capturedRefineInputs[0].supportingParticipants).toEqual(['PLANET:JUPITER']);
       expect(capturedRefineInputs[0].challengingParticipants).toEqual(['PLANET:SUN']);
+      expect(capturedRefineInputs[0].coreParticipants).not.toContain('PLANET:SATURN');
+      expect(capturedRefineInputs[0].supportingParticipants).not.toContain('PLANET:SATURN');
+      expect(capturedRefineInputs[0].challengingParticipants).not.toContain('PLANET:SATURN');
       expect(Object.isFrozen(capturedRefineInputs[0].coreParticipants)).toBe(true);
     });
 
@@ -2729,21 +2741,28 @@ describe('CanonicalCareerOrchestrator', () => {
     it('links qualification to participant roles structurally and rejects cross-pattern links', () => {
       const ports = createStubPorts();
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
-        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_2', 'QUALIFIED')
+        ]
       });
       const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
-        patterns: [createStubPattern('PATTERN_1')],
+        patterns: [createStubPattern('PATTERN_1'), createStubPattern('PATTERN_2')],
         relevance: [],
         condition: [],
         networks: []
       });
       const roleMapping = foundation.relationshipMappings.find(mapping =>
-        mapping.sourceStage === 'QUALIFICATION' && mapping.targetStage === 'PARTICIPANT_ROLES'
+        mapping.sourceStage === 'QUALIFICATION' &&
+        mapping.targetStage === 'PARTICIPANT_ROLES' &&
+        mapping.sourceId === 'PATTERN_1'
       );
 
       expect(roleMapping).toBeDefined();
       expect(roleMapping?.sourceId).toBe('PATTERN_1');
-      expect(roleMapping?.targetId).toBe('PLANET:SUN');
+      expect(roleMapping?.targetId).toBe(
+        participantRoleAssignmentReferenceId('PATTERN_1', 'PLANET:SUN', 'CORE')
+      );
       expect(foundation.identityMappings.some(mapping =>
         mapping.sourceStage === 'PARTICIPANT_ROLES' || mapping.targetStage === 'PARTICIPANT_ROLES'
       )).toBe(false);
@@ -2770,7 +2789,7 @@ describe('CanonicalCareerOrchestrator', () => {
         d.diagnosticId === `VALIDATION_DUPLICATE_RELATIONSHIP_MAPPING_${roleMapping!.mappingId}`
       )).toBe(true);
 
-      const crossPatternMapping = { ...roleMapping!, sourceId: 'PATTERN_OTHER' };
+      const crossPatternMapping = { ...roleMapping!, sourceId: 'PATTERN_2' };
       const invalid = validateRelationshipMappings(
         [crossPatternMapping],
         new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT']),
@@ -2782,7 +2801,7 @@ describe('CanonicalCareerOrchestrator', () => {
       );
       expect(invalid.valid).toBe(false);
       expect(invalid.diagnostics.some(d =>
-        d.diagnosticId === `VALIDATION_INVALID_PARTICIPANT_ROLE_LINK_${roleMapping!.mappingId}`
+        d.diagnosticId === `VALIDATION_CROSS_LINEAGE_RELATIONSHIP_${roleMapping!.mappingId}`
       )).toBe(true);
 
       const unsupportedStage = validateRelationshipMappings(
@@ -2797,6 +2816,189 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(unsupportedStage.diagnostics.some(d =>
         d.diagnosticId === `VALIDATION_UNSUPPORTED_RELATIONSHIP_STAGE_SOURCE_${roleMapping!.mappingId}`
       )).toBe(true);
+      expect(unsupportedStage.diagnostics.every(d => d.severity === 'ERROR')).toBe(true);
+    });
+
+    it('rejects cross-lineage pairs for every admitted relationship stage pair', () => {
+      const ports = createStubPorts();
+      const patterns = [createStubPattern('PATTERN_1'), createStubPattern('PATTERN_2')];
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [
+          createStubQualifiedPattern('PATTERN_1', 'QUALIFIED'),
+          createStubQualifiedPattern('PATTERN_2', 'QUALIFIED')
+        ]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockImplementation((inputs: any[]) =>
+        inputs.map((input: any) => createStubCandidateSet(input.pattern.patternId, [
+          createStubMechanismCandidate(`CANDIDATE_${input.pattern.patternId}`, input.pattern.patternId, 'AGENCY')
+        ]))
+      );
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns,
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+      const stagePairs = [
+        ['PATTERN', 'QUALIFICATION'],
+        ['QUALIFICATION', 'PARTICIPANT_ROLES'],
+        ['QUALIFICATION', 'MECHANISM'],
+        ['MECHANISM', 'REFINEMENT']
+      ] as const;
+
+      for (const [sourceStage, targetStage] of stagePairs) {
+        const validMapping = foundation.relationshipMappings.find(mapping =>
+          mapping.sourceStage === sourceStage && mapping.targetStage === targetStage
+        );
+        expect(validMapping).toBeDefined();
+        const foreignTargetId = targetStage === 'QUALIFICATION'
+          ? 'PATTERN_2'
+          : targetStage === 'PARTICIPANT_ROLES'
+            ? participantRoleAssignmentReferenceId('PATTERN_2', 'PLANET:SUN', 'CORE')
+            : targetStage === 'MECHANISM'
+              ? 'CANDIDATE_PATTERN_2'
+              : 'CANDIDATE_PATTERN_2';
+        const crossLineageMapping = { ...validMapping!, targetId: foreignTargetId };
+        const result = validateRelationshipMappings(
+          [crossLineageMapping],
+          new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT', '10H', '10L']),
+          foundation.patternCandidates,
+          foundation.patternQualifications,
+          foundation.resolvedMechanisms,
+          foundation.mechanismRefinements,
+          foundation.participantRoleAssignments
+        );
+
+        expect(result.valid).toBe(false);
+        expect(result.diagnostics.some(diagnostic =>
+          diagnostic.diagnosticId === `VALIDATION_CROSS_LINEAGE_RELATIONSHIP_${validMapping!.mappingId}`
+        )).toBe(true);
+      }
+
+      const mechanismToRefinement = foundation.relationshipMappings.find(mapping =>
+        mapping.sourceStage === 'MECHANISM' && mapping.targetStage === 'REFINEMENT'
+      );
+      expect(mechanismToRefinement).toBeDefined();
+      const differentCandidateMapping = {
+        ...mechanismToRefinement!,
+        sourceId: 'CANDIDATE_PATTERN_1',
+        targetId: 'CANDIDATE_PATTERN_2'
+      };
+      const candidateMismatch = validateRelationshipMappings(
+        [differentCandidateMapping],
+        new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT']),
+        foundation.patternCandidates,
+        foundation.patternQualifications,
+        foundation.resolvedMechanisms,
+        foundation.mechanismRefinements,
+        foundation.participantRoleAssignments
+      );
+      expect(candidateMismatch.diagnostics.some(diagnostic =>
+        diagnostic.diagnosticId === `VALIDATION_CROSS_LINEAGE_RELATIONSHIP_${mechanismToRefinement!.mappingId}`
+      )).toBe(true);
+    });
+
+    it('marks foundation invalid when an unsupported relationship pair cannot be resolved', () => {
+      const ports = createStubPorts();
+      const orchestrator = new CanonicalCareerOrchestrator(ports);
+      const internal = orchestrator as any;
+      const buildRelationshipMappings = internal.buildRelationshipMappings.bind(orchestrator);
+      vi.spyOn(internal, 'buildRelationshipMappings').mockImplementation((...args: any[]) => [
+        ...buildRelationshipMappings(...args),
+        {
+          mappingId: 'UNSUPPORTED_STAGE_PAIR',
+          sourceStage: 'PATTERN',
+          targetStage: '10H',
+          sourceId: 'PATTERN_1',
+          targetId: 'UNRESOLVABLE_10H_RECORD',
+          relationshipType: 'DERIVATION'
+        }
+      ]);
+
+      const foundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.metadata.contractValidity).toBe('INVALID');
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'VALIDATION_INVALID_RELATIONSHIP_STAGE_PAIR_UNSUPPORTED_STAGE_PAIR',
+        severity: 'ERROR'
+      }));
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'VALIDATION_UNSUPPORTED_RELATIONSHIP_STAGE_TARGET_UNSUPPORTED_STAGE_PAIR',
+        severity: 'ERROR'
+      }));
+    });
+
+    it('rejects duplicate and conflicting role assignments and does not refine ambiguous roles', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.participantRoles.assignParticipantRoles as any).mockReturnValue({
+        assignments: [
+          {
+            participantId: 'PLANET:SUN' as ParticipantId,
+            primaryRole: 'CORE',
+            isChallenging: false,
+            roleEvidence: [],
+            explanation: 'First record'
+          },
+          {
+            participantId: 'PLANET:SUN' as ParticipantId,
+            primaryRole: 'CORE',
+            isChallenging: false,
+            roleEvidence: [],
+            explanation: 'Duplicate record'
+          },
+          {
+            participantId: 'PLANET:SUN' as ParticipantId,
+            primaryRole: 'SUPPORTING',
+            isChallenging: false,
+            roleEvidence: [],
+            explanation: 'Conflicting primary role'
+          }
+        ]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+      const duplicateValidation = validateParticipantRoleAssignments(
+        foundation.participantRoleAssignments
+      );
+      const reversedValidation = validateParticipantRoleAssignments(
+        [...foundation.participantRoleAssignments].reverse()
+      );
+
+      expect(duplicateValidation.diagnostics.map(diagnostic => diagnostic.diagnosticId)).toEqual(
+        expect.arrayContaining([
+          'VALIDATION_DUPLICATE_PARTICIPANT_ROLE_ASSIGNMENT_PATTERN_1_PLANET:SUN_CORE',
+          'VALIDATION_CONFLICTING_PARTICIPANT_ROLE_ASSIGNMENT_PATTERN_1_PLANET:SUN'
+        ])
+      );
+      expect(reversedValidation.diagnostics.map(diagnostic => diagnostic.diagnosticId)).toEqual(
+        duplicateValidation.diagnostics.map(diagnostic => diagnostic.diagnosticId)
+      );
+      expect(foundation.metadata.contractValidity).toBe('INVALID');
+      expect(foundation.mechanismRefinements[0]).toMatchObject({
+        resolution: 'UNRESOLVED',
+        status: 'UNAVAILABLE',
+        mechanism: null
+      });
+      expect(ports.mechanismRefiner.refine).not.toHaveBeenCalled();
     });
 
     it('rejects duplicate identity mappings, whitespace keys, and invalid stages', () => {
@@ -2805,7 +3007,7 @@ describe('CanonicalCareerOrchestrator', () => {
         sourceStage: 'UNKNOWN',
         targetStage: 'QUALIFICATION',
         sourceIdentityKey: ' \t',
-        targetIdentityKey: 'IDENTITY_VALID',
+        targetIdentityKey: '   ',
         mappingType: 'EQUIVALENCE'
       } as any;
       const result = validateIdentityMappings(
@@ -2819,6 +3021,9 @@ describe('CanonicalCareerOrchestrator', () => {
         'VALIDATION_MISSING_IDENTITY_KEY_IDENTITY_MAPPING_DUPLICATE',
         'VALIDATION_INVALID_SOURCE_STAGE_IDENTITY_MAPPING_DUPLICATE'
       ]));
+      expect(result.diagnostics.filter(d =>
+        d.diagnosticId === 'VALIDATION_MISSING_IDENTITY_KEY_IDENTITY_MAPPING_DUPLICATE'
+      )).toHaveLength(2);
     });
 
     it('keeps refinement unavailable when participant roles are missing and does not call the refiner', () => {
@@ -2945,6 +3150,48 @@ describe('CanonicalCareerOrchestrator', () => {
         'VALIDATION_INVALID_REFINED_MECHANISM_REFERENCE_CANDIDATE_1'
       ]));
       expect(result.diagnostics.every(d => d.severity === 'ERROR')).toBe(true);
+    });
+
+    it('marks a foundation invalid when multiple different refinements target one candidate', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY'),
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AUTHORITY')
+        ])
+      ]);
+      (ports.mechanismRefiner.refine as any).mockImplementation((input: any) => ({
+        status: input.candidate.mechanismType === 'AGENCY' ? 'UNCHANGED' : 'INSUFFICIENT_DATA',
+        originalCandidateId: 'CANDIDATE_1',
+        mechanisms: [],
+        evidence: [],
+        provenance: {
+          originalProvenance: {},
+          newEvidenceIds: [],
+          sourceStages: []
+        },
+        explanation: 'Per-candidate test outcome'
+      }));
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      expect(foundation.mechanismRefinements).toHaveLength(2);
+      expect(new Set(foundation.mechanismRefinements.map(refinement => refinement.resolution)).size)
+        .toBeGreaterThan(1);
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'VALIDATION_DUPLICATE_REFINEMENT_CANDIDATE_CANDIDATE_1',
+        severity: 'ERROR'
+      }));
+      expect(foundation.metadata.contractValidity).toBe('INVALID');
     });
 
     it('emits sorted, immutable participant-role evidence references', () => {

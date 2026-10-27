@@ -19,6 +19,7 @@ import type {
   StageEvidence,
   EstablishingMechanismEvidence
 } from './canonicalCareerContracts';
+import { participantRoleAssignmentReferenceId } from './canonicalCareerContracts';
 import type {
   CareerPatternQualificationStatus
 } from '../careerPatternQualification/careerPatternQualificationTypes';
@@ -29,7 +30,8 @@ import type {
   CareerDispositorContext
 } from '../careerMechanism/dispositor';
 import {
-  validateCanonicalCareerFoundation
+  validateCanonicalCareerFoundation,
+  validateParticipantRoleAssignments
 } from './canonicalCareerValidation';
 
 function hasSemanticIdentityKey(value: unknown): value is EvidenceIdentityKey {
@@ -124,6 +126,13 @@ export class CanonicalCareerOrchestrator {
       input.relevance,
       diagnostics
     );
+    const roleAssignmentValidation = validateParticipantRoleAssignments(participantRoleAssignments);
+    diagnostics.push(...roleAssignmentValidation.diagnostics);
+    const invalidRolePatternIds = new Set(
+      roleAssignmentValidation.diagnostics
+        .filter(diagnostic => diagnostic.severity === 'ERROR')
+        .map(diagnostic => diagnostic.relatedIds[0])
+    );
 
     // Stage 4: Mechanism resolution (P2-07D)
     const resolvedMechanisms = this.buildResolvedMechanisms(
@@ -139,6 +148,7 @@ export class CanonicalCareerOrchestrator {
       resolvedMechanisms,
       input.dispositorContexts,
       participantRoleAssignments,
+      invalidRolePatternIds,
       diagnostics
     );
 
@@ -199,6 +209,7 @@ export class CanonicalCareerOrchestrator {
       mechanismRefinements,
       careerFoundationSupplements,
       validationResult.valid
+        && !diagnostics.some(diagnostic => diagnostic.severity === 'ERROR')
     );
 
     // Stage 12: Deep freeze and return
@@ -723,6 +734,7 @@ export class CanonicalCareerOrchestrator {
     resolvedMechanisms: readonly ResolvedMechanism[],
     dispositorContexts: readonly CareerDispositorContext[] | undefined,
     participantRoleAssignments: readonly ParticipantRoleAssignment[],
+    invalidRolePatternIds: ReadonlySet<string>,
     diagnostics: OrchestrationDiagnostic[]
   ): readonly MechanismRefinement[] {
     const refinements: MechanismRefinement[] = [];
@@ -739,6 +751,11 @@ export class CanonicalCareerOrchestrator {
     }
 
     for (const resolved of resolvedMechanisms) {
+      if (invalidRolePatternIds.has(resolved.patternId)) {
+        refinements.push(this.unresolvedRefinement(resolved));
+        continue;
+      }
+
       const patternAssignments = participantRoleAssignments.filter(
         roleAssignment => roleAssignment.patternId === resolved.patternId
       );
@@ -1170,11 +1187,11 @@ export class CanonicalCareerOrchestrator {
       }
     }
 
-    // Mechanism → Refinement mappings (via candidateId)
-    // Represents: refinement is derived from mechanism candidate
+    // Mechanism → Refinement mappings (via candidateId). Duplicate refinements are
+    // all represented here; validation marks the foundation invalid for that candidate.
     for (const mechanism of resolvedMechanisms) {
-      const refinement = mechanismRefinements.find(r => r.candidateId === mechanism.candidateId);
-      if (refinement) {
+      const refinements = mechanismRefinements.filter(r => r.candidateId === mechanism.candidateId);
+      for (const refinement of refinements) {
         mappings.push({
           mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
           sourceStage: 'MECHANISM',
@@ -1187,7 +1204,7 @@ export class CanonicalCareerOrchestrator {
     }
 
     const qualifiedPatternIds = new Set(patternQualifications.map(qualification => qualification.patternId));
-    const rolePairs = new Map<string, { patternId: string; participantId: string }>();
+    const rolePairs = new Map<string, { patternId: string; participantRoleReferenceId: string }>();
     for (const roleAssignment of participantRoleAssignments) {
       const { patternId, assignment } = roleAssignment;
       if (!qualifiedPatternIds.has(patternId)) {
@@ -1201,21 +1218,27 @@ export class CanonicalCareerOrchestrator {
         });
         continue;
       }
-      rolePairs.set(`${patternId}|${assignment.participantId}`, {
+      const participantRoleReferenceId = participantRoleAssignmentReferenceId(
         patternId,
-        participantId: assignment.participantId
+        assignment.participantId,
+        assignment.primaryRole
+      );
+      rolePairs.set(participantRoleReferenceId, {
+        patternId,
+        participantRoleReferenceId
       });
     }
 
-    for (const { patternId, participantId } of [...rolePairs.values()].sort(
-      (a, b) => a.patternId.localeCompare(b.patternId) || a.participantId.localeCompare(b.participantId)
+    for (const { patternId, participantRoleReferenceId } of [...rolePairs.values()].sort(
+      (a, b) => a.patternId.localeCompare(b.patternId) ||
+        a.participantRoleReferenceId.localeCompare(b.participantRoleReferenceId)
     )) {
       mappings.push({
         mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
         sourceStage: 'QUALIFICATION',
         targetStage: 'PARTICIPANT_ROLES',
         sourceId: patternId,
-        targetId: participantId,
+        targetId: participantRoleReferenceId,
         relationshipType: 'DERIVATION'
       });
     }

@@ -177,26 +177,31 @@ export function buildCanonicalCareerFoundation(
 
     // Build dispositor contexts from resolved mechanisms
     const dispositorContexts: import('../careerMechanism/dispositor/careerMechanismDispositorTypes').CareerDispositorContext[] = [];
-    let contextFactoryDiagnostic: OrchestrationDiagnostic | undefined;
-    try {
-      for (const resolvedMechanism of pass1Foundation.resolvedMechanisms) {
+    const contextFactoryDiagnostics: OrchestrationDiagnostic[] = [];
+    for (const resolvedMechanism of pass1Foundation.resolvedMechanisms) {
+      try {
         const contexts = defaultCareerDispositorContextFactory.create(
           resolvedMechanism.candidate,
           defaultCareerDispositorEngineAdapter,
           horoscope
         );
         dispositorContexts.push(...contexts);
+      } catch (error) {
+        contextFactoryDiagnostics.push(Object.freeze({
+          diagnosticId: `ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR_${resolvedMechanism.candidateId}`,
+          severity: 'ERROR',
+          category: 'PORT_ERROR',
+          message: `Dispositor context factory threw for candidate ${resolvedMechanism.candidateId}; all pass-two refinements remain unavailable: ${error instanceof Error ? error.message : String(error)}`,
+          relatedIds: Object.freeze([resolvedMechanism.candidateId]),
+          stage: 'REFINEMENT'
+        }));
       }
-    } catch (error) {
+    }
+
+    if (contextFactoryDiagnostics.length > 0) {
+      // Context creation is all-or-nothing: a partial context set must not yield
+      // successful-looking refinements for only a subset of the pass-one candidates.
       dispositorContexts.length = 0;
-      contextFactoryDiagnostic = Object.freeze({
-        diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR',
-        severity: 'ERROR',
-        category: 'PORT_ERROR',
-        message: `Dispositor context factory failed; pass-two refinements remain unavailable: ${error instanceof Error ? error.message : String(error)}`,
-        relatedIds: Object.freeze([]),
-        stage: 'REFINEMENT'
-      });
     }
 
     // Pass 2: Re-orchestrate with dispositor contexts
@@ -211,10 +216,10 @@ export function buildCanonicalCareerFoundation(
     };
     const pass2Foundation = orchestrator.orchestrate(pass2Input);
 
-    if (contextFactoryDiagnostic) {
+    if (contextFactoryDiagnostics.length > 0) {
       return Object.freeze({
         ...pass2Foundation,
-        diagnostics: Object.freeze([...pass2Foundation.diagnostics, contextFactoryDiagnostic]),
+        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics]),
         metadata: Object.freeze({
           ...pass2Foundation.metadata,
           contractValidity: 'INVALID' as const

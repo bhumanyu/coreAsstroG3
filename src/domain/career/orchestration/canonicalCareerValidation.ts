@@ -8,6 +8,7 @@ import type {
   OrchestrationDiagnostic,
   ParticipantRoleAssignment
 } from './canonicalCareerContracts';
+import { participantRoleAssignmentReferenceId } from './canonicalCareerContracts';
 
 /**
  * P2-11B Canonical Career Validation Helpers
@@ -39,6 +40,77 @@ const ALLOWED_RELATIONSHIP_STAGE_PAIRS: ReadonlySet<string> = new Set([
   'QUALIFICATION->MECHANISM',
   'MECHANISM->REFINEMENT'
 ]);
+
+interface RelationshipLineage {
+  readonly patternId?: string;
+  readonly candidateId?: string;
+}
+
+/**
+ * Enforces one role record per (pattern, participant, primaryRole), and rejects
+ * multiple records for one participant when their primary/challenging states conflict.
+ */
+export function validateParticipantRoleAssignments(
+  assignments: readonly ParticipantRoleAssignment[]
+): ValidationResult {
+  const diagnostics: OrchestrationDiagnostic[] = [];
+  const assignmentKeys = new Set<string>();
+  const participantStates = new Map<string, { primaryRole: string; isChallenging: boolean }>();
+
+  const orderedAssignments = [...assignments].sort((a, b) =>
+    a.patternId.localeCompare(b.patternId) ||
+    a.assignment.participantId.localeCompare(b.assignment.participantId) ||
+    a.assignment.primaryRole.localeCompare(b.assignment.primaryRole) ||
+    Number(a.assignment.isChallenging) - Number(b.assignment.isChallenging)
+  );
+  for (const role of orderedAssignments) {
+    const { patternId, assignment } = role;
+    const participantKey = JSON.stringify([patternId, assignment.participantId]);
+    const assignmentKey = participantRoleAssignmentReferenceId(
+      patternId,
+      assignment.participantId,
+      assignment.primaryRole
+    );
+    if (assignmentKeys.has(assignmentKey)) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_DUPLICATE_PARTICIPANT_ROLE_ASSIGNMENT_${patternId}_${assignment.participantId}_${assignment.primaryRole}`,
+        severity: 'ERROR',
+        category: 'DUPLICATE_ID',
+        message: `Duplicate participant-role assignment for pattern ${patternId}, participant ${assignment.participantId}, primary role ${assignment.primaryRole}`,
+        relatedIds: [patternId, assignment.participantId],
+        stage: 'PARTICIPANT_ROLES'
+      });
+    } else {
+      assignmentKeys.add(assignmentKey);
+    }
+
+    const existing = participantStates.get(participantKey);
+    if (
+      existing &&
+      (existing.primaryRole !== assignment.primaryRole ||
+        existing.isChallenging !== assignment.isChallenging)
+    ) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_CONFLICTING_PARTICIPANT_ROLE_ASSIGNMENT_${patternId}_${assignment.participantId}`,
+        severity: 'ERROR',
+        category: 'CONTRACT_VIOLATION',
+        message: `Participant ${assignment.participantId} has conflicting primary-role or challenging assignments within pattern ${patternId}`,
+        relatedIds: [patternId, assignment.participantId],
+        stage: 'PARTICIPANT_ROLES'
+      });
+    } else if (!existing) {
+      participantStates.set(participantKey, {
+        primaryRole: assignment.primaryRole,
+        isChallenging: assignment.isChallenging
+      });
+    }
+  }
+
+  return {
+    valid: diagnostics.length === 0,
+    diagnostics: Object.freeze(diagnostics)
+  };
+}
 
 /**
  * Validates that all pattern IDs are unique.
@@ -187,8 +259,22 @@ export function validateRefinementCandidateReferences(
 ): ValidationResult {
   const diagnostics: OrchestrationDiagnostic[] = [];
   const candidates = new Map(mechanisms.map(mechanism => [mechanism.candidateId, mechanism]));
+  const refinementCandidateIds = new Set<string>();
 
   for (const refinement of refinements) {
+    if (refinementCandidateIds.has(refinement.candidateId)) {
+      diagnostics.push({
+        diagnosticId: `VALIDATION_DUPLICATE_REFINEMENT_CANDIDATE_${refinement.candidateId}`,
+        severity: 'ERROR',
+        category: 'DUPLICATE_ID',
+        message: `More than one refinement targets mechanism candidate ${refinement.candidateId}`,
+        relatedIds: [refinement.candidateId],
+        stage: 'REFINEMENT'
+      });
+    } else {
+      refinementCandidateIds.add(refinement.candidateId);
+    }
+
     const candidate = candidates.get(refinement.candidateId);
     if (!candidate) {
       const mechanismId = refinement.resolution === 'REFINED' ? refinement.mechanismId : 'UNRESOLVED';
@@ -370,14 +456,28 @@ export function validateRelationshipMappings(
   const mappingIds = new Set<string>();
 
   // Build ID sets for each stage
-  const patternIdSet = new Set(patternCandidates.map(p => p.patternId));
-  const qualificationPatternIdSet = new Set(patternQualifications.map(q => q.patternId));
-  const participantIdSet = new Set(participantRoleAssignments.map(role => role.assignment.participantId));
-  const mechanismCandidateIdSet = new Set(resolvedMechanisms.map(m => m.candidateId));
-  const refinementCandidateIdSet = new Set(mechanismRefinements.map(r => r.candidateId));
-  const roleLinkPairs = new Set(participantRoleAssignments.map(
-    role => `${role.patternId}|${role.assignment.participantId}`
-  ));
+  const patternsById = new Map(patternCandidates.map(pattern => [pattern.patternId, pattern]));
+  const qualificationsByPatternId = new Map(
+    patternQualifications.map(qualification => [qualification.patternId, qualification])
+  );
+  const mechanismsByCandidateId = new Map(
+    resolvedMechanisms.map(mechanism => [mechanism.candidateId, mechanism])
+  );
+  const refinementsByCandidateId = new Map<string, MechanismRefinement[]>();
+  for (const refinement of mechanismRefinements) {
+    const existing = refinementsByCandidateId.get(refinement.candidateId) ?? [];
+    refinementsByCandidateId.set(refinement.candidateId, [...existing, refinement]);
+  }
+  const rolesByReferenceId = new Map<string, RelationshipLineage>(
+    participantRoleAssignments.map(role => [
+      participantRoleAssignmentReferenceId(
+        role.patternId,
+        role.assignment.participantId,
+        role.assignment.primaryRole
+      ),
+      { patternId: role.patternId }
+    ])
+  );
 
   for (const mapping of mappings) {
     if (mappingIds.has(mapping.mappingId)) {
@@ -426,20 +526,20 @@ export function validateRelationshipMappings(
     }
 
     // Validate sourceId exists in the appropriate producer output
-    const sourceIdValid = validateMappingId(
+    const sourceObject = resolveMappingId(
       mapping.sourceId,
       mapping.sourceStage,
-      patternIdSet,
-      qualificationPatternIdSet,
-      participantIdSet,
-      mechanismCandidateIdSet,
-      refinementCandidateIdSet,
-      mapping,
+      patternsById,
+      qualificationsByPatternId,
+      rolesByReferenceId,
+      mechanismsByCandidateId,
+      refinementsByCandidateId,
+      mapping.mappingId,
       diagnostics,
       'source'
     );
 
-    if (!sourceIdValid) {
+    if (!sourceObject) {
       diagnostics.push({
         diagnosticId: `VALIDATION_INVALID_SOURCE_ID_${mapping.mappingId}`,
         severity: 'ERROR',
@@ -451,20 +551,20 @@ export function validateRelationshipMappings(
     }
 
     // Validate targetId exists in the appropriate producer output
-    const targetIdValid = validateMappingId(
+    const targetObject = resolveMappingId(
       mapping.targetId,
       mapping.targetStage,
-      patternIdSet,
-      qualificationPatternIdSet,
-      participantIdSet,
-      mechanismCandidateIdSet,
-      refinementCandidateIdSet,
-      mapping,
+      patternsById,
+      qualificationsByPatternId,
+      rolesByReferenceId,
+      mechanismsByCandidateId,
+      refinementsByCandidateId,
+      mapping.mappingId,
       diagnostics,
       'target'
     );
 
-    if (!targetIdValid) {
+    if (!targetObject) {
       diagnostics.push({
         diagnosticId: `VALIDATION_INVALID_TARGET_ID_${mapping.mappingId}`,
         severity: 'ERROR',
@@ -478,7 +578,7 @@ export function validateRelationshipMappings(
     if (
       mapping.sourceStage === 'QUALIFICATION' &&
       mapping.targetStage === 'PARTICIPANT_ROLES' &&
-      !roleLinkPairs.has(`${mapping.sourceId}|${mapping.targetId}`)
+      rolesByReferenceId.get(mapping.targetId)?.patternId !== mapping.sourceId
     ) {
       diagnostics.push({
         diagnosticId: `VALIDATION_INVALID_PARTICIPANT_ROLE_LINK_${mapping.mappingId}`,
@@ -488,6 +588,33 @@ export function validateRelationshipMappings(
         relatedIds: [mapping.mappingId, mapping.sourceId, mapping.targetId],
         stage: 'RELATIONSHIP_MAPPING'
       });
+    }
+
+    if (sourceObject && targetObject) {
+      const sameLineage = (() => {
+        switch (`${mapping.sourceStage}->${mapping.targetStage}`) {
+          case 'PATTERN->QUALIFICATION':
+            return sourceObject.patternId === targetObject.patternId;
+          case 'QUALIFICATION->PARTICIPANT_ROLES':
+            return sourceObject.patternId === targetObject.patternId;
+          case 'QUALIFICATION->MECHANISM':
+            return sourceObject.patternId === targetObject.patternId;
+          case 'MECHANISM->REFINEMENT':
+            return sourceObject.candidateId === targetObject.candidateId;
+          default:
+            return false;
+        }
+      })();
+      if (!sameLineage) {
+        diagnostics.push({
+          diagnosticId: `VALIDATION_CROSS_LINEAGE_RELATIONSHIP_${mapping.mappingId}`,
+          severity: 'ERROR',
+          category: 'INVALID_REFERENCE',
+          message: `Relationship mapping ${mapping.mappingId} connects records from different lineage`,
+          relatedIds: [mapping.mappingId, mapping.sourceId, mapping.targetId],
+          stage: 'RELATIONSHIP_MAPPING'
+        });
+      }
     }
   }
 
@@ -500,39 +627,49 @@ export function validateRelationshipMappings(
 /**
  * Validates that a mapping ID exists in the appropriate stage's ID set.
  */
-function validateMappingId(
+function resolveMappingId(
   id: string,
   stage: string,
-  patternIdSet: Set<string>,
-  qualificationPatternIdSet: Set<string>,
-  participantIdSet: Set<string>,
-  mechanismCandidateIdSet: Set<string>,
-  refinementCandidateIdSet: Set<string>,
-  mapping: RelationshipMapping,
+  patternsById: Map<string, PatternCandidate>,
+  qualificationsByPatternId: Map<string, PatternQualification>,
+  rolesByReferenceId: Map<string, RelationshipLineage>,
+  mechanismsByCandidateId: Map<string, ResolvedMechanism>,
+  refinementsByCandidateId: Map<string, MechanismRefinement[]>,
+  mappingId: string,
   diagnostics: OrchestrationDiagnostic[],
   endpoint: 'source' | 'target'
-): boolean {
+): RelationshipLineage | undefined {
   switch (stage) {
     case 'PATTERN':
-      return patternIdSet.has(id);
+      return patternsById.has(id) ? { patternId: id } : undefined;
     case 'QUALIFICATION':
-      return qualificationPatternIdSet.has(id);
+      return qualificationsByPatternId.has(id) ? { patternId: id } : undefined;
     case 'PARTICIPANT_ROLES':
-      return participantIdSet.has(id);
+      return rolesByReferenceId.get(id);
     case 'MECHANISM':
-      return mechanismCandidateIdSet.has(id);
+      {
+        const mechanism = mechanismsByCandidateId.get(id);
+        return mechanism
+          ? {
+            patternId: mechanism.patternId,
+            candidateId: id
+          }
+          : undefined;
+      }
     case 'REFINEMENT':
-      return refinementCandidateIdSet.has(id);
+      return refinementsByCandidateId.get(id)?.length === 1
+        ? { candidateId: id }
+        : undefined;
     default:
       diagnostics.push({
-        diagnosticId: `VALIDATION_UNSUPPORTED_RELATIONSHIP_STAGE_${endpoint.toUpperCase()}_${mapping.mappingId}`,
-        severity: 'WARNING',
-        category: 'UNSUPPORTED_VALIDATION',
+        diagnosticId: `VALIDATION_UNSUPPORTED_RELATIONSHIP_STAGE_${endpoint.toUpperCase()}_${mappingId}`,
+        severity: 'ERROR',
+        category: 'INVALID_REFERENCE',
         message: `Cannot validate ${endpoint} ID for relationship stage '${stage}' because no stage ID resolver is defined`,
-        relatedIds: [mapping.mappingId, id],
+        relatedIds: [mappingId, id],
         stage: 'RELATIONSHIP_MAPPING'
       });
-      return false;
+      return undefined;
   }
 }
 
