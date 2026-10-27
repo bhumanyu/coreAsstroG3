@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { calculateHoroscope } from '../../engine/astroEngine';
 import { interpretWealthTheme } from '../../engine/themeInterpretation/wealthThemeInterpretation';
-import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
+import {
+  CANONICAL_BIRTH_DETAILS,
+  CANONICAL_UTC_INSTANT
+} from '../../test/fixtures/canonicalChart';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
@@ -102,6 +105,7 @@ describe('WealthDomainInterpreterV2', () => {
     const planetInterpretations = { ...(horoscope.planetInterpretation?.planets ?? {}) };
     const planetAnalyses = { ...(horoscope.planetAnalysis?.planets ?? {}) };
     const lordDignities = new Map<Planet, DignityStatus>();
+    const dignityHouseAssignments = new Map<Planet, number[]>();
 
     for (const houseNumber of [2, 11, 9, 5]) {
       const house = houses[houseNumber];
@@ -130,12 +134,19 @@ describe('WealthDomainInterpreterV2', () => {
         : supportingHouses.has(houseNumber)
           ? DignityStatus.EXALTED
           : DignityStatus.NEUTRAL_SIGN;
-      if (
-        dignity === DignityStatus.DEBILITATED ||
-        !lordDignities.has(lord)
-      ) {
-        lordDignities.set(lord, dignity);
+      const currentDignity = lordDignities.get(lord);
+      if (currentDignity !== undefined && currentDignity !== dignity) {
+        const assignedHouses = dignityHouseAssignments.get(lord) ?? [];
+        throw new Error(
+          `Fixture houses ${[...assignedHouses, houseNumber].join(', ')} share lord ${lord} ` +
+          `but require conflicting dignities (${currentDignity}, ${dignity}).`
+        );
       }
+      lordDignities.set(lord, dignity);
+      dignityHouseAssignments.set(lord, [
+        ...(dignityHouseAssignments.get(lord) ?? []),
+        houseNumber
+      ]);
     }
 
     for (const [lord, dignity] of lordDignities) {
@@ -167,12 +178,29 @@ describe('WealthDomainInterpreterV2', () => {
   }
 
   function makeEmptyProducerChart(hasCompleteInputs: boolean): Horoscope {
+    const neutralHouseInterpretations = Object.fromEntries(
+      Object.entries(horoscope.houseInterpretation?.houses ?? {}).map(([houseNumber, house]) => [
+        houseNumber,
+        {
+          ...house,
+          summary: {
+            ...house.summary,
+            supportingFactors: [],
+            challengingFactors: []
+          },
+          occupants: { ...house.occupants, planets: [] }
+        }
+      ])
+    );
+
     return {
       ...horoscope,
-      planetFacts: {} as Horoscope['planetFacts'],
+      ...(hasCompleteInputs ? {} : { planetFacts: {} as Horoscope['planetFacts'] }),
       bhavas: undefined,
       bhavaFacts: undefined,
-      houseInterpretation: hasCompleteInputs ? { houses: {} } : undefined,
+      houseInterpretation: hasCompleteInputs
+        ? { ...horoscope.houseInterpretation, houses: neutralHouseInterpretations }
+        : undefined,
       houseAnalysis: hasCompleteInputs ? { houses: {} } : undefined,
       planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
       planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
@@ -180,7 +208,12 @@ describe('WealthDomainInterpreterV2', () => {
       yogas: hasCompleteInputs ? {} : undefined,
       planetaryStrength: hasCompleteInputs ? {} : undefined,
       divisionalInterpretation: hasCompleteInputs ? {} : undefined,
-      dashaInterpretation: hasCompleteInputs ? {} : undefined,
+      dashaInterpretation: hasCompleteInputs
+        ? resolveDashaInterpretationForAsOf(
+          horoscope,
+          new Date(CANONICAL_UTC_INSTANT)
+        )
+        : undefined,
       natalGrahaDrishti: hasCompleteInputs ? { aspects: [] } : undefined
     };
   }
@@ -303,7 +336,32 @@ describe('WealthDomainInterpreterV2', () => {
           if (!domainProducer) {
             throw new Error(`${rawProducer.id} was not mapped to DomainEvidence.`);
           }
+          const expectedPolarity = rawProducer.effect === 'SUPPORT'
+            ? 'SUPPORTING'
+            : rawProducer.effect === 'CHALLENGE'
+              ? 'CHALLENGING'
+              : 'NEUTRAL';
+          const fixtureLord = chart.houseInterpretation?.houses[
+            row.dimension === 'ACCUMULATION' ? 2 :
+              row.dimension === 'GAINS' ? 11 :
+                row.dimension === 'FORTUNE' ? 9 : 5
+          ]?.placement?.signLord;
+          if (!fixtureLord) {
+            throw new Error(`Fixture does not identify the lord for ${row.dimension}.`);
+          }
+          expect(chart.planetInterpretation?.planets[fixtureLord]?.dignity)
+            .toBe(DignityStatus.EXALTED);
+          expect(chart.planetAnalysis?.planets[fixtureLord]?.dignity)
+            .toBe(DignityStatus.EXALTED);
+          expect(domainProducer.domain).toBe('WEALTH');
+          expect(domainProducer.phase).toBe('NATAL_PROMISE');
+          expect(domainProducer.source).toBe('D1');
+          expect(domainProducer.ruleId).toBe(rawProducer.ruleId);
           expect(domainProducer.dimension).toBe(row.dimension);
+          expect(domainProducer.polarity).toBe(expectedPolarity);
+          // Legacy wealth mapping preserves the producer occurrence ID; the CW-01 trace
+          // then maps that domain/raw ID to a canonical semantic identity.
+          expect(domainProducer.id).toBe(rawProducer.id);
           expect(mapWealthDimension(rawProducer)).toBe(row.dimension);
           expect(domainProducer.relatedEvidenceIds.every((id) =>
             linkedEvidence.some((item) => item.id === id)
@@ -316,9 +374,18 @@ describe('WealthDomainInterpreterV2', () => {
           if (!canonicalId) {
             throw new Error(`${domainProducer.id} did not reach the CW-01 reasoning trace.`);
           }
+          const canonicalRecord = Object.values(hierarchy.reasoningTrace)
+            .flat()
+            .find((item) => item.evidenceId === canonicalId);
+          expect(canonicalRecord?.identityKey).toBe(canonicalId);
+          expect(canonicalRecord?.sourceIds).toEqual([domainProducer.id]);
+          expect(canonicalId).not.toBe(domainProducer.id);
           expect(hierarchy.dimensionResults[row.dimension].evidenceIds)
             .toContain(canonicalId);
+          // Dimension supporting IDs are CW-01 canonical IDs; challenging IDs below
+          // are occurrence/domain IDs emitted by the wealth mapper.
           expect(conclusionDimension?.supportingEvidenceIds).toContain(canonicalId);
+          expect(conclusionDimension?.supportingEvidenceIds).not.toContain(domainProducer.id);
 
           const manifestationFactors =
             result.conclusionData?.wealthManifestationSynthesis?.dimensions[row.dimension].factors;
@@ -361,6 +428,7 @@ describe('WealthDomainInterpreterV2', () => {
 
       const mappedChallenge = linkWealthEvidence(buildWealthEvidence(theme.evidence))
         .find((item) => item.id === rawChallenge.id);
+      expect(mappedChallenge?.id).toBe(rawChallenge.id);
       expect(mappedChallenge?.dimension).toBe('ACCUMULATION');
       expect(mappedChallenge?.polarity).toBe('CHALLENGING');
 
@@ -380,9 +448,17 @@ describe('WealthDomainInterpreterV2', () => {
 
     it('retains both support and challenge from a strong 2H with an afflicted 2nd lord', () => {
       const chart = makeProducerChart({
-        supportingHouses: [2, 11, 9, 5],
+        supportingHouses: [2],
         afflictedLordHouses: [2]
       });
+      const secondLord = chart.houseInterpretation?.houses[2]?.placement?.signLord;
+      if (!secondLord) {
+        throw new Error('Fixture does not identify the lord of house 2.');
+      }
+      expect(chart.planetInterpretation?.planets[secondLord]?.dignity)
+        .toBe(DignityStatus.DEBILITATED);
+      expect(chart.planetAnalysis?.planets[secondLord]?.dignity)
+        .toBe(DignityStatus.DEBILITATED);
       const theme = interpretWealthTheme(chart);
       const mappedEvidence = linkWealthEvidence(buildWealthEvidence(theme.evidence));
       const supportIds = mappedEvidence
@@ -422,31 +498,46 @@ describe('WealthDomainInterpreterV2', () => {
 
       expect(completeNoMatch.metadata.evaluatedRulesCount).toBeGreaterThan(0);
       expect(completeNoMatch.metadata.dataCompleteness).toBe('COMPLETE');
-      expect(completeNoMatch.evidence).toEqual([]);
       expect(completeNoMatch.evidence.filter((item) =>
         structuralFamilies.has(item.evidenceFamily)
       )).toEqual([]);
+      expect(completeNoMatch.evidence.some((item) =>
+        item.evidenceFamily === WealthEvidenceFamily.DASHA
+      )).toBe(true);
       expect(missingInput.metadata.dataCompleteness).toBe('INSUFFICIENT');
       expect(missingInput.evidence).toEqual([]);
 
+      const noMatchChart = makeEmptyProducerChart(true);
+      const missingChart = makeEmptyProducerChart(false);
       const noMatchV2 = interpretWealthV2(
-        makeEmptyProducerChart(true),
-        makeDomainOptions(undefined, horoscope)
+        noMatchChart,
+        makeDomainOptions(undefined, noMatchChart)
       );
       expect(noMatchV2.natalPromise.evidenceIds).toEqual([]);
+      expect(noMatchV2.dataCompleteness?.dasha).toBe('AVAILABLE');
 
       const emptyV2 = interpretWealthV2(
-        makeEmptyProducerChart(false),
-        makeDomainOptions(undefined, horoscope)
+        missingChart,
+        makeDomainOptions(undefined, missingChart)
       );
       expect(emptyV2.natalPromise.evidenceIds).toEqual([]);
+      expect(noMatchV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
+      expect(noMatchV2.dataCompleteness?.dasha).toBe('AVAILABLE');
+      expect(noMatchV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
+      expect(noMatchV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
+      expect(emptyV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
+      expect(emptyV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
+      expect(emptyV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
+      expect(emptyV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
+      expect(noMatchV2.dataCompleteness?.dasha)
+        .not.toBe(emptyV2.dataCompleteness?.dasha);
       expect(emptyV2.conclusionData?.dimensions.every((dimension) =>
         dimension.supportingEvidenceIds.length === 0 &&
         dimension.challengingEvidenceIds.length === 0
       )).toBe(true);
     });
 
-    it('preserves canonical dimension ID sets when mapped producer input is reversed', () => {
+    it('preserves canonical CW-01 IDs across reversed mapped input and repeated identical V2 runs', () => {
       const chart = makeProducerChart({
         supportingHouses: [2, 11, 9, 5]
       });
@@ -474,6 +565,15 @@ describe('WealthDomainInterpreterV2', () => {
       expect(firstRun.conclusion.primaryEvidenceIds).toEqual(secondRun.conclusion.primaryEvidenceIds);
       expect(firstRun.conclusion.challengingEvidenceIds).toEqual(secondRun.conclusion.challengingEvidenceIds);
       expect(firstRun.conclusion.supportingEvidenceIds).toEqual(secondRun.conclusion.supportingEvidenceIds);
+      expect(firstRun.conclusionData?.dimensions.map((dimension) => ({
+        dimension: dimension.dimension,
+        supportingEvidenceIds: dimension.supportingEvidenceIds,
+        challengingEvidenceIds: dimension.challengingEvidenceIds
+      }))).toEqual(secondRun.conclusionData?.dimensions.map((dimension) => ({
+        dimension: dimension.dimension,
+        supportingEvidenceIds: dimension.supportingEvidenceIds,
+        challengingEvidenceIds: dimension.challengingEvidenceIds
+      })));
     });
   });
 
