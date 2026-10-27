@@ -166,6 +166,11 @@ export function buildWealthConclusionData(params: {
   const gainsDashaEffect = gains?.dashaEffect ?? 'DOES_NOT_ACTIVATE';
   const fortuneDashaEffect = fortune?.dashaEffect ?? 'DOES_NOT_ACTIVATE';
   const speculationDashaEffect = speculation?.dashaEffect ?? 'DOES_NOT_ACTIVATE';
+  const dimensionEvidence = Object.freeze(dimensions.map((dimension) => Object.freeze({
+    ...dimension,
+    supportingEvidenceIds: Object.freeze([...dimension.supportingEvidenceIds]),
+    challengingEvidenceIds: Object.freeze([...dimension.challengingEvidenceIds])
+  })));
 
   const mainStrengths: string[] = [];
   if (accumulationStatus === 'STRONGLY_SUPPORTED' || accumulationStatus === 'SUPPORTED') {
@@ -224,6 +229,7 @@ export function buildWealthConclusionData(params: {
     headline,
     supportingSourceIds: Object.freeze([...supportingSourceIds]),
     challengingSourceIds: Object.freeze([...challengingSourceIds]),
+    dimensions: dimensionEvidence,
     ...(periodTimingActivations
       ? { periodTimingActivations: Object.freeze([...periodTimingActivations]) }
       : {})

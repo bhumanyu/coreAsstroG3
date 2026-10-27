@@ -318,28 +318,28 @@ export function interpretWealthV2(
       dimension: 'ACCUMULATION',
       status: accumulationStatus,
       supportingEvidenceIds: cw01Result.dimensionResults.ACCUMULATION.evidenceIds,
-      challengingEvidenceIds: [],
+      ...attributeChallengingEvidence(evidence, 'ACCUMULATION'),
       dashaEffect: cw01Result.dimensionResults.ACCUMULATION.timingEffect as TimingActivationEffect
     },
     {
       dimension: 'GAINS',
       status: gainsStatus,
       supportingEvidenceIds: cw01Result.dimensionResults.GAINS.evidenceIds,
-      challengingEvidenceIds: [],
+      ...attributeChallengingEvidence(evidence, 'GAINS'),
       dashaEffect: cw01Result.dimensionResults.GAINS.timingEffect as TimingActivationEffect
     },
     {
       dimension: 'FORTUNE',
       status: fortuneStatus,
       supportingEvidenceIds: cw01Result.dimensionResults.FORTUNE.evidenceIds,
-      challengingEvidenceIds: [],
+      ...attributeChallengingEvidence(evidence, 'FORTUNE'),
       dashaEffect: cw01Result.dimensionResults.FORTUNE.timingEffect as TimingActivationEffect
     },
     {
       dimension: 'SPECULATION',
       status: speculationStatus,
       supportingEvidenceIds: cw01Result.dimensionResults.SPECULATION.evidenceIds,
-      challengingEvidenceIds: [],
+      ...attributeChallengingEvidence(evidence, 'SPECULATION'),
       dashaEffect: cw01Result.dimensionResults.SPECULATION.timingEffect as TimingActivationEffect
     }
   ]);
@@ -945,6 +945,43 @@ export function resolveDimensionStatus(
   return 'MIXED';
 }
 
+function isWealthDimension(value: unknown): value is WealthDimension {
+  return value === 'ACCUMULATION' ||
+    value === 'GAINS' ||
+    value === 'FORTUNE' ||
+    value === 'SPECULATION';
+}
+
+function attributeChallengingEvidence(
+  evidence: readonly DomainEvidence[],
+  dimension: WealthDimension
+): Pick<WealthDimensionInterpretation, 'challengingEvidenceIds' | 'challengingEvidenceAttribution'> {
+  const attributedIds = new Set<string>();
+  let hasUnattributedChallenge = false;
+
+  for (const item of evidence) {
+    if (item.polarity !== 'CHALLENGING') continue;
+
+    const evidenceId = item.id?.trim();
+    if (!evidenceId || !isWealthDimension(item.dimension)) {
+      hasUnattributedChallenge = true;
+      continue;
+    }
+
+    if (item.dimension === dimension) {
+      attributedIds.add(evidenceId);
+    }
+  }
+
+  const challengingEvidenceIds = Object.freeze([...attributedIds]);
+  return {
+    challengingEvidenceIds,
+    challengingEvidenceAttribution: hasUnattributedChallenge
+      ? challengingEvidenceIds.length > 0 ? 'PARTIAL' : 'UNAVAILABLE'
+      : 'AVAILABLE'
+  };
+}
+
 export function evaluateWealthDimension(
   dimension: WealthDimension,
   evidence: readonly DomainEvidence[],
@@ -959,20 +996,13 @@ export function evaluateWealthDimension(
   );
 
   const status = resolveDimensionStatus(supporting, challenging);
-
-  // Attribute challenging evidence: only include evidence explicitly linked to this dimension
-  // If no dimension linkage is computed, return empty list but preserve the field for API compatibility
-  const challengingEvidenceIds = Object.freeze(
-    challenging
-      .filter((item) => item.dimension === dimension)
-      .map((item) => item.id)
-  );
+  const challengeAttribution = attributeChallengingEvidence(evidence, dimension);
 
   return Object.freeze({
     dimension,
     status,
     supportingEvidenceIds: Object.freeze(supporting.map((item) => item.id)),
-    challengingEvidenceIds,
+    ...challengeAttribution,
     dashaEffect
   });
 }
@@ -1002,6 +1032,11 @@ export function mapDomainStrengthToWealthStatus(
   }
 }
 
+/**
+ * Aggregates dimensional statuses with ACCUMULATION and GAINS as the core promise dimensions.
+ * The CW-01 production path separately resolves the full evidence hierarchy; both paths map an
+ * all-insufficient/no-evidence result to INSUFFICIENT_DATA rather than treating it as mixed.
+ */
 export function resolveOverallWealthStatus(
   dimensions: readonly WealthDimensionInterpretation[]
 ): WealthDimensionStatus {
@@ -1021,6 +1056,10 @@ export function resolveOverallWealthStatus(
 
   const isChallenged = (dim?: WealthDimensionInterpretation): boolean =>
     dim?.status === 'CHALLENGED';
+
+  if (dimensions.length === 0 || dimensions.every((dimension) => dimension.status === 'INSUFFICIENT_DATA')) {
+    return 'INSUFFICIENT_DATA';
+  }
 
   if (isStrong(accumulation) && isStrong(gains)) {
     return 'STRONGLY_SUPPORTED';

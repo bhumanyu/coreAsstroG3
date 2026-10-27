@@ -795,6 +795,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'STRONGLY_SUPPORTED' as const,
           supportingEvidenceIds: ['2H'],
           challengingEvidenceIds: [],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'ACTIVATES' as const
         },
         {
@@ -802,6 +803,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'STRONGLY_SUPPORTED' as const,
           supportingEvidenceIds: ['11H'],
           challengingEvidenceIds: [],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'ACTIVATES' as const
         },
         {
@@ -809,6 +811,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'SUPPORTED' as const,
           supportingEvidenceIds: ['9H'],
           challengingEvidenceIds: [],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'DOES_NOT_ACTIVATE' as const
         },
         {
@@ -816,6 +819,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'CHALLENGED' as const,
           supportingEvidenceIds: [],
           challengingEvidenceIds: ['5H_CHALLENGE'],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'CHALLENGES' as const
         }
       ]);
@@ -831,6 +835,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'CHALLENGED' as const,
           supportingEvidenceIds: [],
           challengingEvidenceIds: ['2H_CHALLENGE'],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'CHALLENGES' as const
         },
         {
@@ -838,6 +843,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'CHALLENGED' as const,
           supportingEvidenceIds: [],
           challengingEvidenceIds: ['11H_CHALLENGE'],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'CHALLENGES' as const
         },
         {
@@ -845,6 +851,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'LIMITED' as const,
           supportingEvidenceIds: [],
           challengingEvidenceIds: [],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'DOES_NOT_ACTIVATE' as const
         },
         {
@@ -852,6 +859,7 @@ describe('WealthDomainInterpreterV2', () => {
           status: 'SUPPORTED' as const,
           supportingEvidenceIds: ['5H'],
           challengingEvidenceIds: [],
+          challengingEvidenceAttribution: 'AVAILABLE' as const,
           dashaEffect: 'ACTIVATES' as const
         }
       ]);
@@ -1924,8 +1932,7 @@ describe('WealthDomainInterpreterV2', () => {
       expect(validRelationships).toContain(d2Relationship);
     });
 
-    it('maps DomainStrength to WealthDimensionStatus exhaustively', () => {
-      // Test all DomainStrength values map correctly
+    it('maps every DomainStrength union member to its WealthDimensionStatus contract', () => {
       expect(mapDomainStrengthToWealthStatus('VERY_STRONG')).toBe('STRONGLY_SUPPORTED');
       expect(mapDomainStrengthToWealthStatus('STRONG')).toBe('STRONGLY_SUPPORTED');
       expect(mapDomainStrengthToWealthStatus('MODERATE')).toBe('SUPPORTED');
@@ -2002,11 +2009,93 @@ describe('WealthDomainInterpreterV2', () => {
 
       const result = evaluateWealthDimension('ACCUMULATION', evidence, 'DOES_NOT_ACTIVATE');
       expect(result.challengingEvidenceIds).toEqual([]);
+      expect(result.challengingEvidenceAttribution).toBe('AVAILABLE');
     });
 
-    it('does not coerce insufficient/unavailable/indeterminate strengths to CHALLENGED', () => {
-      // UNDETERMINED should map to INSUFFICIENT_DATA, not CHALLENGED
-      expect(mapDomainStrengthToWealthStatus('UNDETERMINED')).toBe('INSUFFICIENT_DATA');
+    it('marks attribution unavailable when a challenging evidence item has no dimension linkage', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'unlinked-challenge',
+          sourceType: 'STRUCTURAL',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Unattributed challenging evidence',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 50,
+          ruleId: 'RULE_WITHOUT_DIMENSION'
+        })
+      ];
+
+      const result = evaluateWealthDimension('GAINS', evidence, 'DOES_NOT_ACTIVATE');
+      expect(result.challengingEvidenceIds).toEqual([]);
+      expect(result.challengingEvidenceAttribution).toBe('UNAVAILABLE');
+    });
+
+    it('preserves Gains-only challenging IDs through buildWealthConclusionData', () => {
+      const gainsChallenge = createDomainEvidence({
+        id: 'GAINS_CHALLENGE',
+        sourceType: 'STRUCTURAL',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Challenge linked to Gains',
+        polarity: 'CHALLENGING',
+        strength: 'STRONG',
+        priority: 50,
+        ruleId: 'WEALTH_11H_AFFLICTION_001',
+        dimension: 'GAINS'
+      });
+      const evidence = [gainsChallenge];
+      const dimensions = [
+        evaluateWealthDimension('ACCUMULATION', evidence, 'DOES_NOT_ACTIVATE'),
+        evaluateWealthDimension('GAINS', evidence, 'DOES_NOT_ACTIVATE'),
+        evaluateWealthDimension('FORTUNE', evidence, 'DOES_NOT_ACTIVATE'),
+        evaluateWealthDimension('SPECULATION', evidence, 'DOES_NOT_ACTIVATE')
+      ];
+      const conclusion = buildWealthConclusionData({
+        overallStatus: resolveOverallWealthStatus(dimensions),
+        dimensions,
+        d2Relationship: 'UNAVAILABLE',
+        manifestations: [],
+        conflicts: [],
+        evidence,
+        supportingSourceIds: [],
+        challengingSourceIds: [gainsChallenge.id]
+      });
+
+      expect(conclusion.dimensions.find((item) => item.dimension === 'GAINS')?.challengingEvidenceIds)
+        .toEqual(['GAINS_CHALLENGE']);
+      expect(conclusion.dimensions.find((item) => item.dimension === 'ACCUMULATION')?.challengingEvidenceIds)
+        .toEqual([]);
+      expect(conclusion.dimensions.find((item) => item.dimension === 'GAINS')?.challengingEvidenceAttribution)
+        .toBe('AVAILABLE');
+    });
+
+    it('maps UNDETERMINED to insufficient dimension and overall statuses', () => {
+      const undeterminedStatus = mapDomainStrengthToWealthStatus('UNDETERMINED');
+      expect(undeterminedStatus).toBe('INSUFFICIENT_DATA');
+      expect(evaluateWealthDimension('GAINS', [], 'INSUFFICIENT_DATA').status)
+        .toBe(undeterminedStatus);
+
+      const dimensions = ([
+        'ACCUMULATION',
+        'GAINS',
+        'FORTUNE',
+        'SPECULATION'
+      ] as const).map((dimension) => ({
+        dimension,
+        status: undeterminedStatus,
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        challengingEvidenceAttribution: 'AVAILABLE' as const,
+        dashaEffect: 'INSUFFICIENT_DATA' as const
+      }));
+
+      expect(resolveOverallWealthStatus(dimensions)).toBe('INSUFFICIENT_DATA');
     });
   });
 });

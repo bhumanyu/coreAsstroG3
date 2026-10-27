@@ -91,6 +91,12 @@ export interface WealthDimensionInterpretation {
   readonly status: WealthDimensionStatus;
   readonly supportingEvidenceIds: readonly string[];
   readonly challengingEvidenceIds: readonly string[];
+  /**
+   * AVAILABLE means all challenging evidence was dimension-attributable (including none found);
+   * PARTIAL means some IDs were attributed but one or more challenges were unassigned; UNAVAILABLE
+   * means no challenge could be attributed while at least one unassigned challenge exists.
+   */
+  readonly challengingEvidenceAttribution: 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
   readonly dashaEffect: TimingActivationEffect;
 }
 
@@ -133,6 +139,7 @@ export interface WealthConclusionData {
   readonly headline: string;
   readonly supportingSourceIds: readonly string[];
   readonly challengingSourceIds: readonly string[];
+  readonly dimensions: readonly WealthDimensionInterpretation[];
   readonly periodTimingActivations?: readonly WealthPeriodTimingActivation[];
   readonly wealthTimingSynthesis?: WealthTimingSynthesis;
   readonly wealthManifestationSynthesis?: WealthManifestationSynthesis;
