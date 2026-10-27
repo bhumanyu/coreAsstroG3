@@ -1,6 +1,7 @@
 import type { Horoscope } from '../../../types';
 import type {
   CanonicalCareerFoundation,
+  OrchestrationDiagnostic,
   CanonicalCareerOrchestrationInput
 } from './canonicalCareerContracts';
 import { CanonicalCareerOrchestrator } from './canonicalCareerOrchestrator';
@@ -47,11 +48,10 @@ import {
  * - Dispositor contexts: two-pass orchestration when enableDispositorContexts=true (default false)
  *
  * DEFERRED FEATURES (documented in P2-11G):
- * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL (partial linkage exists)
- *   - Pattern → Qualification: fully mapped (both expose identityKey)
- *   - Qualification → Mechanism: unresolved (mechanism candidates do not expose identityKey)
- *   - Mechanism → Refinement: unresolved (mechanism candidates do not expose identityKey)
- *   - Participant roles: unresolved (no explicit stage linkage)
+ * - Identity mappings: ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL (semantic identity is partial)
+ *   - Pattern → Qualification: mapped only when both producers supply semantic identity keys
+ *   - Qualification → Mechanism and Mechanism → Refinement: no producer identity keys
+ *   - Participant-role and downstream lineage: validated structural relationship mappings
  *   - No fabricated identity keys - only real semantic identityKey values are used
  *
  * BOUNDARY ENFORCEMENT: This module must NOT:
@@ -177,13 +177,26 @@ export function buildCanonicalCareerFoundation(
 
     // Build dispositor contexts from resolved mechanisms
     const dispositorContexts: import('../careerMechanism/dispositor/careerMechanismDispositorTypes').CareerDispositorContext[] = [];
-    for (const resolvedMechanism of pass1Foundation.resolvedMechanisms) {
-      const contexts = defaultCareerDispositorContextFactory.create(
-        resolvedMechanism.candidate,
-        defaultCareerDispositorEngineAdapter,
-        horoscope
-      );
-      dispositorContexts.push(...contexts);
+    let contextFactoryDiagnostic: OrchestrationDiagnostic | undefined;
+    try {
+      for (const resolvedMechanism of pass1Foundation.resolvedMechanisms) {
+        const contexts = defaultCareerDispositorContextFactory.create(
+          resolvedMechanism.candidate,
+          defaultCareerDispositorEngineAdapter,
+          horoscope
+        );
+        dispositorContexts.push(...contexts);
+      }
+    } catch (error) {
+      dispositorContexts.length = 0;
+      contextFactoryDiagnostic = Object.freeze({
+        diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR',
+        severity: 'ERROR',
+        category: 'PORT_ERROR',
+        message: `Dispositor context factory failed; pass-two refinements remain unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        relatedIds: Object.freeze([]),
+        stage: 'REFINEMENT'
+      });
     }
 
     // Pass 2: Re-orchestrate with dispositor contexts
@@ -198,6 +211,16 @@ export function buildCanonicalCareerFoundation(
     };
     const pass2Foundation = orchestrator.orchestrate(pass2Input);
 
+    if (contextFactoryDiagnostic) {
+      return Object.freeze({
+        ...pass2Foundation,
+        diagnostics: Object.freeze([...pass2Foundation.diagnostics, contextFactoryDiagnostic]),
+        metadata: Object.freeze({
+          ...pass2Foundation.metadata,
+          contractValidity: 'INVALID' as const
+        })
+      });
+    }
     return pass2Foundation;
   }
 

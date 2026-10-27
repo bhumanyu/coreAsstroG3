@@ -40,6 +40,11 @@ import type {
 import {
   defaultCareerMechanismDispositorRefiner
 } from '../careerMechanism/dispositor/defaultCareerMechanismDispositorRefiner';
+import {
+  validateIdentityMappings,
+  validateRefinementCandidateReferences,
+  validateRelationshipMappings
+} from './canonicalCareerValidation';
 import type {
   Career10HFoundation,
   Career10HFoundationResult
@@ -203,9 +208,22 @@ describe('CanonicalCareerOrchestrator', () => {
         })
       } as any,
       participantRoles: {
-        assignParticipantRoles: vi.fn().mockReturnValue({
-          assignments: []
-        })
+        assignParticipantRoles: vi.fn().mockImplementation(({ pattern }: { pattern: CareerPattern }) => ({
+          assignments: [{
+            participantId: 'PLANET:SUN' as ParticipantId,
+            primaryRole: 'CORE',
+            isChallenging: true,
+            roleEvidence: [{
+              evidenceId: `ROLE_EVIDENCE_${pattern.patternId}`,
+              participantId: 'PLANET:SUN' as ParticipantId,
+              role: 'CORE',
+              relationshipIds: [],
+              source: 'ESTABLISHING_RELATIONSHIP',
+              explanation: 'Stub participant role evidence'
+            }],
+            explanation: 'Stub participant role'
+          }]
+        }))
       } as any,
       mechanismResolver: {
         resolve: vi.fn().mockReturnValue(createStubCandidateSet('PATTERN_1', [])),
@@ -363,7 +381,6 @@ describe('CanonicalCareerOrchestrator', () => {
           createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
         ])
       ]);
-
       const orchestrator = new CanonicalCareerOrchestrator(ports);
 
       const foundation = orchestrator.orchestrate({
@@ -1313,6 +1330,31 @@ describe('CanonicalCareerOrchestrator', () => {
           createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
         ])
       ]);
+      (ports.participantRoles.assignParticipantRoles as any).mockReturnValue({
+        assignments: [
+          {
+            participantId: 'PLANET:JUPITER' as ParticipantId,
+            primaryRole: 'SUPPORTING',
+            isChallenging: false,
+            roleEvidence: [],
+            explanation: 'Supporting participant'
+          },
+          {
+            participantId: 'PLANET:SUN' as ParticipantId,
+            primaryRole: 'CORE',
+            isChallenging: true,
+            roleEvidence: [],
+            explanation: 'Core and challenging participant'
+          },
+          {
+            participantId: 'PLANET:MOON' as ParticipantId,
+            primaryRole: 'CORE',
+            isChallenging: false,
+            roleEvidence: [],
+            explanation: 'Core participant'
+          }
+        ]
+      });
 
       // Capture the refine call to check arguments
       let capturedRefineInputs: any[] = [];
@@ -1372,6 +1414,10 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(capturedRefineInputs).toHaveLength(1);
       expect(capturedRefineInputs[0].candidate.candidateId).toBe('CANDIDATE_1');
       expect(capturedRefineInputs[0].dispositorContexts).toEqual(dispositorContexts);
+      expect(capturedRefineInputs[0].coreParticipants).toEqual(['PLANET:MOON', 'PLANET:SUN']);
+      expect(capturedRefineInputs[0].supportingParticipants).toEqual(['PLANET:JUPITER']);
+      expect(capturedRefineInputs[0].challengingParticipants).toEqual(['PLANET:SUN']);
+      expect(Object.isFrozen(capturedRefineInputs[0].coreParticipants)).toBe(true);
     });
 
     it('relationship mapping: mechanism→refinement carries same candidateId (self-derivation)', () => {
@@ -1426,8 +1472,8 @@ describe('CanonicalCareerOrchestrator', () => {
       );
       expect(partialDiagnostic).toBeDefined();
 
-      // Verify the diagnostic explicitly states semantic identity remains UNRESOLVED
-      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
+      expect(partialDiagnostic?.message).toContain('semantic identity remain unavailable');
+      expect(partialDiagnostic?.message).toContain('participant-role and downstream lineage');
     });
 
     it('should produce RESOLVED refinement with REFINED status and correct mechanism ID', () => {
@@ -1662,7 +1708,7 @@ describe('CanonicalCareerOrchestrator', () => {
   });
 
   describe('Identity mappings partial', () => {
-    it('should document that identity mappings are partial (pattern→qualification mapped, others unresolved)', () => {
+    it('documents partial semantic identity coverage and validated structural lineage', () => {
       const ports = createStubPorts();
       const orchestrator = new CanonicalCareerOrchestrator(ports);
 
@@ -1680,7 +1726,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
-      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
+      expect(partialDiagnostic?.message).toContain('semantic identity remain unavailable');
 
       // Identity mappings may be empty if no patterns exist
       expect(foundation.identityMappings).toEqual([]);
@@ -1724,7 +1770,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
-      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
+      expect(partialDiagnostic?.message).toContain('semantic identity remain unavailable');
 
       // Assert the concrete relationshipMappings contents
       const patternToQualificationRelationships = foundation.relationshipMappings.filter(
@@ -1771,7 +1817,7 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(partialDiagnostic).toBeDefined();
       expect(partialDiagnostic?.severity).toBe('INFO');
       expect(partialDiagnostic?.category).toBe('PARTIAL_FEATURE');
-      expect(partialDiagnostic?.message).toContain('semantic identity remains UNRESOLVED');
+      expect(partialDiagnostic?.message).toContain('semantic identity remain unavailable');
 
       // Qualification→mechanism and mechanism→refinement are now represented as RelationshipMappings
       // Assert the concrete relationshipMappings contents
@@ -2632,6 +2678,329 @@ describe('CanonicalCareerOrchestrator', () => {
       );
       // Both qualifications should have relationships emitted
       expect(patternToQualRelationships.length).toBe(2);
+    });
+
+    it('records producer-only evidence identity and omits whitespace-only keys', () => {
+      const ports = createStubPorts();
+      const pattern = {
+        ...createStubPattern('PATTERN_1'),
+        identityKey: ' \t',
+        evidence: [{
+          evidenceId: 'PATTERN_EVIDENCE',
+          ruleId: 'RULE_1',
+          sourceNetworkId: 'NETWORK_1',
+          sourceNetworkIdentityKey: '   '
+        }, {
+          evidenceId: 'PATTERN_EVIDENCE_WITH_IDENTITY',
+          ruleId: 'RULE_2',
+          sourceNetworkId: 'NETWORK_2',
+          sourceNetworkIdentityKey: 'NETWORK_IDENTITY',
+          relationshipId: 'RELATIONSHIP_2'
+        }]
+      };
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [{
+          ...createStubQualifiedPattern('PATTERN_1'),
+          identityKey: ' \t'
+        }]
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [pattern],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+
+      expect(foundation.patternCandidates[0].stageEvidence[0]).not.toHaveProperty('identityKey');
+      expect(foundation.patternCandidates[0].stageEvidence[0]).not.toHaveProperty('occurrenceId');
+      expect(foundation.patternCandidates[0].stageEvidence[1].identityKey).toBe('NETWORK_IDENTITY');
+      expect(foundation.patternCandidates[0].stageEvidence[1].occurrenceId).toBe('RELATIONSHIP_2');
+      expect(Object.isFrozen(foundation.patternCandidates[0].stageEvidence[0].sourceIds)).toBe(true);
+      expect(Object.isFrozen(foundation.patternCandidates[0].stageEvidence[0].ruleIds)).toBe(true);
+      expect(foundation.identityMappings).toHaveLength(0);
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_IDENTITY_KEY_UNAVAILABLE_PATTERN_1_PATTERN_1',
+        severity: 'WARNING',
+        category: 'MISSING_DATA'
+      }));
+    });
+
+    it('links qualification to participant roles structurally and rejects cross-pattern links', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+      const roleMapping = foundation.relationshipMappings.find(mapping =>
+        mapping.sourceStage === 'QUALIFICATION' && mapping.targetStage === 'PARTICIPANT_ROLES'
+      );
+
+      expect(roleMapping).toBeDefined();
+      expect(roleMapping?.sourceId).toBe('PATTERN_1');
+      expect(roleMapping?.targetId).toBe('PLANET:SUN');
+      expect(foundation.identityMappings.some(mapping =>
+        mapping.sourceStage === 'PARTICIPANT_ROLES' || mapping.targetStage === 'PARTICIPANT_ROLES'
+      )).toBe(false);
+      expect(validateRelationshipMappings(
+        [roleMapping!],
+        new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT']),
+        foundation.patternCandidates,
+        foundation.patternQualifications,
+        foundation.resolvedMechanisms,
+        foundation.mechanismRefinements,
+        foundation.participantRoleAssignments
+      ).valid).toBe(true);
+
+      const duplicateMappings = validateRelationshipMappings(
+        [roleMapping!, { ...roleMapping!, mappingId: roleMapping!.mappingId }],
+        new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT']),
+        foundation.patternCandidates,
+        foundation.patternQualifications,
+        foundation.resolvedMechanisms,
+        foundation.mechanismRefinements,
+        foundation.participantRoleAssignments
+      );
+      expect(duplicateMappings.diagnostics.some(d =>
+        d.diagnosticId === `VALIDATION_DUPLICATE_RELATIONSHIP_MAPPING_${roleMapping!.mappingId}`
+      )).toBe(true);
+
+      const crossPatternMapping = { ...roleMapping!, sourceId: 'PATTERN_OTHER' };
+      const invalid = validateRelationshipMappings(
+        [crossPatternMapping],
+        new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT']),
+        foundation.patternCandidates,
+        foundation.patternQualifications,
+        foundation.resolvedMechanisms,
+        foundation.mechanismRefinements,
+        foundation.participantRoleAssignments
+      );
+      expect(invalid.valid).toBe(false);
+      expect(invalid.diagnostics.some(d =>
+        d.diagnosticId === `VALIDATION_INVALID_PARTICIPANT_ROLE_LINK_${roleMapping!.mappingId}`
+      )).toBe(true);
+
+      const unsupportedStage = validateRelationshipMappings(
+        [{ ...roleMapping!, sourceStage: '10H' }],
+        new Set(['10H', 'PARTICIPANT_ROLES']),
+        foundation.patternCandidates,
+        foundation.patternQualifications,
+        foundation.resolvedMechanisms,
+        foundation.mechanismRefinements,
+        foundation.participantRoleAssignments
+      );
+      expect(unsupportedStage.diagnostics.some(d =>
+        d.diagnosticId === `VALIDATION_UNSUPPORTED_RELATIONSHIP_STAGE_SOURCE_${roleMapping!.mappingId}`
+      )).toBe(true);
+    });
+
+    it('rejects duplicate identity mappings, whitespace keys, and invalid stages', () => {
+      const mapping = {
+        mappingId: 'IDENTITY_MAPPING_DUPLICATE',
+        sourceStage: 'UNKNOWN',
+        targetStage: 'QUALIFICATION',
+        sourceIdentityKey: ' \t',
+        targetIdentityKey: 'IDENTITY_VALID',
+        mappingType: 'EQUIVALENCE'
+      } as any;
+      const result = validateIdentityMappings(
+        [mapping, mapping],
+        new Set(['PATTERN', 'QUALIFICATION'])
+      );
+
+      expect(result.valid).toBe(false);
+      expect(result.diagnostics.map(d => d.diagnosticId)).toEqual(expect.arrayContaining([
+        'VALIDATION_DUPLICATE_IDENTITY_MAPPING_IDENTITY_MAPPING_DUPLICATE',
+        'VALIDATION_MISSING_IDENTITY_KEY_IDENTITY_MAPPING_DUPLICATE',
+        'VALIDATION_INVALID_SOURCE_STAGE_IDENTITY_MAPPING_DUPLICATE'
+      ]));
+    });
+
+    it('keeps refinement unavailable when participant roles are missing and does not call the refiner', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.participantRoles.assignParticipantRoles as any).mockReturnValue({ assignments: [] });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      expect(ports.mechanismRefiner.refine).not.toHaveBeenCalled();
+      expect(foundation.mechanismRefinements[0]).toMatchObject({
+        resolution: 'UNRESOLVED',
+        status: 'UNAVAILABLE',
+        mechanism: null
+      });
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_PARTICIPANT_ROLES_UNAVAILABLE_CANDIDATE_1',
+        severity: 'WARNING'
+      }));
+    });
+
+    it('records refiner failures and keeps the candidate refinement unavailable', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+      (ports.mechanismRefiner.refine as any).mockImplementation(() => {
+        throw new Error('test refiner failure');
+      });
+
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+      });
+
+      expect(foundation.mechanismRefinements[0]).toMatchObject({
+        resolution: 'UNRESOLVED',
+        status: 'UNAVAILABLE',
+        mechanism: null
+      });
+      expect(foundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_MECHANISM_REFINER_ERROR_CANDIDATE_1',
+        severity: 'ERROR',
+        category: 'PORT_ERROR',
+        message: expect.stringContaining('test refiner failure')
+      }));
+    });
+
+    it('validates candidate type and refined mechanism identity, pattern, and type', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.mechanismResolver.resolveAll as any).mockReturnValue([
+        createStubCandidateSet('PATTERN_1', [
+          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
+        ])
+      ]);
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+      const candidate = foundation.resolvedMechanisms[0];
+      const invalidRefinements = [
+        {
+          resolution: 'UNRESOLVED',
+          candidateId: 'MISSING_CANDIDATE',
+          mechanismType: 'AGENCY',
+          status: 'UNAVAILABLE',
+          mechanism: null,
+          stageEvidence: []
+        },
+        {
+          resolution: 'UNRESOLVED',
+          candidateId: candidate.candidateId,
+          mechanismType: 'AUTHORITY',
+          status: 'UNAVAILABLE',
+          mechanism: null,
+          stageEvidence: []
+        },
+        {
+          resolution: 'REFINED',
+          mechanismId: 'EXPECTED_MECHANISM',
+          candidateId: candidate.candidateId,
+          mechanismType: 'AGENCY',
+          status: 'REFINED',
+          mechanism: {
+            mechanismId: 'OTHER_MECHANISM',
+            patternId: 'OTHER_PATTERN',
+            mechanismType: 'AUTHORITY'
+          },
+          stageEvidence: []
+        }
+      ] as any;
+
+      const result = validateRefinementCandidateReferences(invalidRefinements, [candidate]);
+      expect(result.valid).toBe(false);
+      expect(result.diagnostics.map(d => d.diagnosticId)).toEqual(expect.arrayContaining([
+        'VALIDATION_ORPHANED_REFINEMENT_UNRESOLVED',
+        'VALIDATION_REFINEMENT_MECHANISM_TYPE_MISMATCH_CANDIDATE_1',
+        'VALIDATION_INVALID_REFINED_MECHANISM_REFERENCE_CANDIDATE_1'
+      ]));
+      expect(result.diagnostics.every(d => d.severity === 'ERROR')).toBe(true);
+    });
+
+    it('emits sorted, immutable participant-role evidence references', () => {
+      const ports = createStubPorts();
+      (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
+        qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
+      });
+      (ports.participantRoles.assignParticipantRoles as any).mockReturnValue({
+        assignments: [
+          {
+            participantId: 'PLANET:SUN' as ParticipantId,
+            primaryRole: 'CORE',
+            isChallenging: false,
+            roleEvidence: [
+              { evidenceId: 'EVIDENCE_Z' },
+              { evidenceId: 'EVIDENCE_A' },
+              { evidenceId: 'EVIDENCE_Z' }
+            ],
+            explanation: 'Stub'
+          }
+        ]
+      });
+      const foundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+      const reference = foundation.stageReferences.find(item => item.stageId === 'PARTICIPANT_ROLES');
+
+      expect(reference?.evidenceIds).toEqual(['EVIDENCE_A', 'EVIDENCE_Z']);
+      expect(Object.isFrozen(reference)).toBe(true);
+      expect(Object.isFrozen(reference?.evidenceIds)).toBe(true);
+      expect(Object.isFrozen(foundation.stageReferences)).toBe(true);
+      expect(Object.isFrozen(foundation.identityMappings)).toBe(true);
+      expect(Object.isFrozen(foundation.relationshipMappings)).toBe(true);
+      expect(Object.isFrozen(foundation.relationshipMappings[0])).toBe(true);
+
+      (ports.participantRoles.assignParticipantRoles as any).mockReturnValue({
+        assignments: [{
+          participantId: 'PLANET:SUN' as ParticipantId,
+          primaryRole: 'CORE',
+          isChallenging: false,
+          roleEvidence: [],
+          explanation: 'No role evidence'
+        }]
+      });
+      const noEvidenceFoundation = new CanonicalCareerOrchestrator(ports).orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: []
+      });
+      expect(noEvidenceFoundation.stageReferences.find(item =>
+        item.stageId === 'PARTICIPANT_ROLES'
+      )?.evidenceIds).toEqual([]);
     });
   });
 });

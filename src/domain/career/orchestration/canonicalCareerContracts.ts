@@ -92,7 +92,11 @@ export type MechanismId = string & { readonly __brand: 'MechanismId' };
  */
 export interface StageEvidence {
   readonly evidenceId: string;
-  readonly identityKey: EvidenceIdentityKey;
+  /**
+   * Producer-supplied semantic identity only; never inferred from evidenceId,
+   * occurrenceId, or labels.
+   */
+  readonly identityKey?: EvidenceIdentityKey;
   readonly statement: string;
   readonly sourceIds: readonly SourceId[];
   readonly ruleIds: readonly RuleId[];

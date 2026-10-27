@@ -28,6 +28,20 @@ import {
 import type { CareerDispositorContext } from '../careerMechanism/dispositor/careerMechanismDispositorTypes';
 import { GOLDEN_C11_BASELINE } from '../../../test/fixtures/careerGoldenBaseline';
 import { vi } from 'vitest';
+import * as structuralIntegration from '../careerStructuralReasoningIntegration';
+import * as graphProducers from '../careerGraph';
+import * as patternClassification from '../careerPattern/careerPatternClassification';
+import * as relevanceIntegration from '../careerPlanetaryRelevanceIntegration';
+import * as conditionIntegration from '../careerPlanetaryConditionIntegration';
+import {
+  QualificationPortAdapter,
+  ParticipantRolesPortAdapter,
+  MechanismResolverPortAdapter,
+  MechanismRefinerPortAdapter
+} from './canonicalCareerPortsAdapter';
+import {
+  DefaultCareerDispositorContextFactory
+} from '../careerMechanism/dispositor/careerMechanismDispositorAdapter';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -346,23 +360,167 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       expect(JSON.stringify(foundation)).toBe(JSON.stringify(foundation2));
     });
 
-    it('two-pass orchestration: controlled stubbed fixture proves refinement with exact expected outcome', async () => {
-      // This test is deferred to canonicalCareerOrchestrator.test.ts where stub ports
-      // can be properly injected to verify the exact refinement resolution.
-      // See test "should call mechanism refiner port with dispositor contexts" in
-      // canonicalCareerOrchestrator.test.ts for the controlled fixture that proves
-      // the dispositor context reaches the refiner and produces REFINED/UNCHANGED.
-
-      // For integration coverage, we keep a separate test that runs the real pipeline:
+    it('runs two-pass orchestration through the real production pipeline', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const foundation = buildCanonicalCareerFoundation({ horoscope, enableDispositorContexts: true });
 
-      // Verify the foundation was built successfully
       expect(foundation).toBeDefined();
       expect(foundation.foundationId).toBeDefined();
+    });
 
-      // Keep this as a smoke test for the real pipeline
-      expect(true).toBe(true);
+    it('two-pass builder reuses producers, carries candidate-specific role groups, and returns pass two', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const producerSpies = [
+        vi.spyOn(structuralIntegration, 'buildCareerStructuralReasoning'),
+        vi.spyOn(graphProducers, 'buildCareerGraphFactsFromStructural'),
+        vi.spyOn(graphProducers, 'buildCareerAstroGraph'),
+        vi.spyOn(graphProducers, 'detectCareerHouseNetworks'),
+        vi.spyOn(patternClassification, 'classifyCareerPatterns'),
+        vi.spyOn(relevanceIntegration, 'buildCareerPlanetaryRelevance'),
+        vi.spyOn(conditionIntegration, 'buildCareerPlanetaryCondition')
+      ];
+      vi.spyOn(QualificationPortAdapter.prototype, 'qualifyCareerPatterns').mockImplementation(
+        ({ patterns }: any) => ({
+          qualifiedPatterns: patterns.map((pattern: any) => ({
+            ...pattern,
+            sourcePattern: pattern,
+            status: 'QUALIFIED',
+            evidence: [],
+            dimensions: {},
+            participants: [],
+            policyEvidence: [],
+            decisionBlockingReasons: [],
+            deferredDimensions: [],
+            ruleId: 'BUILDER_TEST_RULE',
+            explanation: 'Builder two-pass test',
+            provenance: { sourcePatternIds: [pattern.patternId], sourceEvidenceIds: [], ruleIds: [] }
+          }))
+        }) as any
+      );
+      vi.spyOn(ParticipantRolesPortAdapter.prototype, 'assignParticipantRoles').mockImplementation(
+        () => ({
+          assignments: [{
+            participantId: 'PLANET:SUN',
+            primaryRole: 'CORE',
+            isChallenging: true,
+            roleEvidence: [],
+            explanation: 'Builder two-pass test'
+          }]
+        }) as any
+      );
+      vi.spyOn(MechanismResolverPortAdapter.prototype, 'resolveAll').mockImplementation(
+        (inputs: readonly any[]) => inputs.map(({ pattern }: any) => {
+          const provenance = {
+            patternIds: [pattern.patternId],
+            relationshipIds: [],
+            participantIds: ['PLANET:SUN'],
+            evidenceIds: [],
+            sourceStages: ['PATTERN']
+          };
+          return {
+            patternId: pattern.patternId,
+            candidates: [{
+              candidateId: `CANDIDATE_${pattern.patternId}`,
+              patternId: pattern.patternId,
+              mechanismType: 'AGENCY',
+              pathway: 'PATTERN',
+              evidence: [],
+              provenance,
+              explanation: 'Builder two-pass candidate'
+            }],
+            evidence: [],
+            provenance
+          };
+        }) as any
+      );
+      const contextByCandidate = new Map<string, object>();
+      vi.spyOn(DefaultCareerDispositorContextFactory.prototype, 'create').mockImplementation(
+        (candidate: any) => {
+          const context = Object.freeze({
+            startPlanetId: 'SUN',
+            chain: ['SUN'],
+            terminalPlanetId: 'SUN',
+            depth: 0,
+            outcome: 'SELF_DISPOSITOR',
+            chainId: `CONTEXT_${candidate.candidateId}`,
+            provenanceIds: [],
+            sourceEvidenceIds: [],
+            relevantHouseIds: [],
+            sufficientData: true
+          });
+          contextByCandidate.set(candidate.candidateId, context);
+          return [context] as any;
+        }
+      );
+      const capturedRefineInputs: any[] = [];
+      vi.spyOn(MechanismRefinerPortAdapter.prototype, 'refine').mockImplementation(
+        (input: any) => {
+          capturedRefineInputs.push(input);
+          return {
+            status: 'UNCHANGED',
+            originalCandidateId: input.candidate.candidateId,
+            mechanisms: [],
+            evidence: [],
+            provenance: {
+              originalProvenance: input.candidate.provenance,
+              newEvidenceIds: [],
+              sourceStages: []
+            },
+            explanation: 'No refinement'
+          } as any;
+        }
+      );
+      const orchestrationSpy = vi.spyOn(CanonicalCareerOrchestrator.prototype, 'orchestrate');
+
+      const foundation = buildCanonicalCareerFoundation({
+        horoscope,
+        enableDispositorContexts: true
+      });
+
+      expect(foundation.patternCandidates.length).toBeGreaterThan(0);
+      expect(orchestrationSpy).toHaveBeenCalledTimes(2);
+      expect(foundation).toBe(orchestrationSpy.mock.results[1].value);
+      expect(foundation).not.toBe(orchestrationSpy.mock.results[0].value);
+      for (const producerSpy of producerSpies) {
+        expect(producerSpy).toHaveBeenCalledTimes(1);
+      }
+      expect(foundation.mechanismRefinements).toHaveLength(foundation.resolvedMechanisms.length);
+      expect(capturedRefineInputs).toHaveLength(foundation.resolvedMechanisms.length);
+      for (const input of capturedRefineInputs) {
+        expect(input.coreParticipants).toContain('PLANET:SUN');
+        expect(input.challengingParticipants).toContain('PLANET:SUN');
+        expect(Object.isFrozen(input.coreParticipants)).toBe(true);
+        expect(Object.isFrozen(input.dispositorContexts)).toBe(true);
+        expect(input.dispositorContexts).toContain(contextByCandidate.get(input.candidate.candidateId));
+        expect(foundation.participantRoleAssignments.some(role =>
+          role.patternId === input.candidate.patternId &&
+          role.assignment.participantId === 'PLANET:SUN'
+        )).toBe(true);
+      }
+
+      const contextFactory = vi.spyOn(DefaultCareerDispositorContextFactory.prototype, 'create')
+        .mockImplementation(() => {
+          throw new Error('test context factory failure');
+        });
+      const failedPassTwo = buildCanonicalCareerFoundation({
+        horoscope,
+        enableDispositorContexts: true
+      });
+      expect(contextFactory).toHaveBeenCalled();
+      expect(failedPassTwo).not.toBe(orchestrationSpy.mock.results[3].value);
+      expect(failedPassTwo).not.toBe(orchestrationSpy.mock.results[2].value);
+      expect(failedPassTwo.foundationId).toBe(orchestrationSpy.mock.results[3].value.foundationId);
+      expect(failedPassTwo.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR',
+        severity: 'ERROR',
+        category: 'PORT_ERROR'
+      }));
+      expect(failedPassTwo.metadata.contractValidity).toBe('INVALID');
+      expect(failedPassTwo.mechanismRefinements.every(refinement =>
+        refinement.resolution === 'UNRESOLVED' &&
+        refinement.status === 'UNAVAILABLE' &&
+        refinement.mechanism === null
+      )).toBe(true);
     });
 
     it('two-pass orchestration: insufficient data leaves refinements UNRESOLVED/UNAVAILABLE', async () => {
@@ -638,7 +796,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       }
     });
 
-    it('identity mappings: participant-role mapping remains explicitly unresolved', async () => {
+    it('keeps participant-role links structural rather than semantic identity mappings', async () => {
       const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
       const foundation = buildCanonicalCareerFoundation({ horoscope });
 
@@ -648,12 +806,16 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       );
       expect(participantRoleMappings.length).toBe(0);
 
-      // Verify diagnostic documents this gap
+      // Semantic identity is unavailable, while structural lineage is validated separately.
       const partialDiagnostic = foundation.diagnostics.find(
         d => d.diagnosticId === 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL'
       );
       expect(partialDiagnostic).toBeDefined();
-      expect(partialDiagnostic?.message).toContain('Participant role assignments lack explicit stage linkage');
+      expect(partialDiagnostic?.message).toContain('participant-role and downstream lineage');
+      expect(foundation.relationshipMappings.some(mapping =>
+        mapping.sourceStage === 'QUALIFICATION' &&
+        mapping.targetStage === 'PARTICIPANT_ROLES'
+      )).toBe(foundation.participantRoleAssignments.length > 0);
     });
 
     it('10H/10L acceptance gates: canonical chart resolves to COMPLETE', async () => {

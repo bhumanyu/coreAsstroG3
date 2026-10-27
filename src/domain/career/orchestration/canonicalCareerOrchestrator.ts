@@ -32,6 +32,10 @@ import {
   validateCanonicalCareerFoundation
 } from './canonicalCareerValidation';
 
+function hasSemanticIdentityKey(value: unknown): value is EvidenceIdentityKey {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
 /**
  * P2-11B Canonical Career Orchestrator
  *
@@ -134,6 +138,7 @@ export class CanonicalCareerOrchestrator {
     const mechanismRefinements = this.buildMechanismRefinements(
       resolvedMechanisms,
       input.dispositorContexts,
+      participantRoleAssignments,
       diagnostics
     );
 
@@ -149,8 +154,6 @@ export class CanonicalCareerOrchestrator {
     const identityMappings = this.buildIdentityMappings(
       patternCandidates,
       patternQualifications,
-      resolvedMechanisms,
-      mechanismRefinements,
       diagnostics
     );
 
@@ -161,6 +164,7 @@ export class CanonicalCareerOrchestrator {
       patternQualifications,
       resolvedMechanisms,
       mechanismRefinements,
+      participantRoleAssignments,
       diagnostics
     );
 
@@ -170,7 +174,8 @@ export class CanonicalCareerOrchestrator {
       patternQualifications,
       resolvedMechanisms,
       mechanismRefinements,
-      careerFoundationSupplements
+      careerFoundationSupplements,
+      participantRoleAssignments
     );
 
     // Stage 10: Validation
@@ -181,6 +186,7 @@ export class CanonicalCareerOrchestrator {
       mechanismRefinements,
       identityMappings,
       relationshipMappings,
+      participantRoleAssignments,
       this.validStages
     );
     diagnostics.push(...validationResult.diagnostics);
@@ -228,11 +234,13 @@ export class CanonicalCareerOrchestrator {
   ): StageEvidence {
     return Object.freeze({
       evidenceId,
-      identityKey: identityKey as any,
+      ...(identityKey !== undefined && identityKey.trim().length > 0
+        ? { identityKey: identityKey as EvidenceIdentityKey }
+        : {}),
       statement,
-      sourceIds: sourceIds as any,
-      ruleIds: ruleIds as any,
-      occurrenceId: occurrenceId as any
+      sourceIds: Object.freeze(sourceIds.map(sourceId => sourceId as SourceId)),
+      ruleIds: Object.freeze(ruleIds.map(ruleId => ruleId as RuleId)),
+      ...(occurrenceId !== undefined ? { occurrenceId: occurrenceId as OccurrenceId } : {})
     });
   }
 
@@ -714,13 +722,11 @@ export class CanonicalCareerOrchestrator {
   private buildMechanismRefinements(
     resolvedMechanisms: readonly ResolvedMechanism[],
     dispositorContexts: readonly CareerDispositorContext[] | undefined,
+    participantRoleAssignments: readonly ParticipantRoleAssignment[],
     diagnostics: OrchestrationDiagnostic[]
   ): readonly MechanismRefinement[] {
     const refinements: MechanismRefinement[] = [];
-
-    // Determine if dispositor contexts are available
     const contextsAvailable = dispositorContexts !== undefined && dispositorContexts.length > 0;
-
     if (!contextsAvailable) {
       diagnostics.push({
         diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
@@ -730,140 +736,194 @@ export class CanonicalCareerOrchestrator {
         relatedIds: [],
         stage: 'REFINEMENT'
       });
+    }
 
-      // Produce UNRESOLVED refinements for all resolved mechanisms
-      for (const resolved of resolvedMechanisms) {
-        refinements.push({
-          resolution: 'UNRESOLVED',
-          candidateId: resolved.candidateId,
-          mechanismType: resolved.mechanismType,
-          status: 'UNAVAILABLE',
-          mechanism: null,
-          stageEvidence: Object.freeze([])
+    for (const resolved of resolvedMechanisms) {
+      const patternAssignments = participantRoleAssignments.filter(
+        roleAssignment => roleAssignment.patternId === resolved.patternId
+      );
+      if (patternAssignments.length === 0) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_PARTICIPANT_ROLES_UNAVAILABLE_${resolved.candidateId}`,
+          severity: 'WARNING',
+          category: 'MISSING_DATA',
+          message: `Participant role assignments are unavailable for pattern ${resolved.patternId}; candidate refinement remains UNRESOLVED`,
+          relatedIds: [resolved.candidateId, resolved.patternId],
+          stage: 'REFINEMENT'
         });
+        refinements.push(this.unresolvedRefinement(resolved));
+        continue;
       }
-    } else {
-      // When dispositor contexts are available, call the refiner
-      for (const resolved of resolvedMechanisms) {
-        try {
-          const result = this.ports.mechanismRefiner.refine({
-            candidate: resolved.candidate,
-            dispositorContexts: Object.freeze(dispositorContexts)
-          });
 
-          // Map engine status to orchestration status
-          // Only REFINED and UNCHANGED produce RESOLVED refinements
-          // INSUFFICIENT_DATA produces UNRESOLVED refinements
-          if (result.status === 'INSUFFICIENT_DATA') {
-            diagnostics.push({
-              diagnosticId: `ORCHESTRATION_MECHANISM_REFINER_INSUFFICIENT_DATA_${resolved.candidateId}`,
-              severity: 'WARNING',
-              category: 'MISSING_DATA',
-              message: `Refinement result for candidate ${resolved.candidateId} has INSUFFICIENT_DATA - mechanism identity unresolved`,
-              relatedIds: [resolved.candidateId],
-              stage: 'REFINEMENT'
-            });
+      if (!contextsAvailable) {
+        refinements.push(this.unresolvedRefinement(resolved));
+        continue;
+      }
 
-            // Produce UNRESOLVED refinement for INSUFFICIENT_DATA
-            refinements.push({
-              resolution: 'UNRESOLVED',
-              candidateId: resolved.candidateId,
-              mechanismType: resolved.mechanismType,
-              status: 'UNAVAILABLE',
-              mechanism: null,
-              stageEvidence: Object.freeze([])
-            });
-            continue;
-          }
+      const participantGroups = this.resolveMechanismParticipantGroups(
+        participantRoleAssignments,
+        resolved.patternId
+      );
+      if (
+        participantGroups.coreParticipants.length === 0 &&
+        participantGroups.supportingParticipants.length === 0 &&
+        participantGroups.challengingParticipants.length === 0
+      ) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_PARTICIPANT_ROLE_GROUPS_UNAVAILABLE_${resolved.candidateId}`,
+          severity: 'WARNING',
+          category: 'MISSING_DATA',
+          message: `Participant assignments for pattern ${resolved.patternId} do not provide a core, supporting, or challenging participant group; candidate refinement remains UNRESOLVED`,
+          relatedIds: [resolved.candidateId, resolved.patternId],
+          stage: 'REFINEMENT'
+        });
+        refinements.push(this.unresolvedRefinement(resolved));
+        continue;
+      }
 
-          let status: 'REFINED' | 'UNCHANGED';
-          if (result.status === 'REFINED') {
-            status = 'REFINED';
-          } else {
-            // UNCHANGED
-            status = 'UNCHANGED';
-          }
+      try {
+        const result = this.ports.mechanismRefiner.refine({
+          candidate: resolved.candidate,
+          dispositorContexts: Object.freeze([...(dispositorContexts ?? [])]),
+          ...participantGroups
+        });
 
-          // For UNCHANGED status, the original candidate remains valid
-          // For REFINED status, we need a mechanism ID from the refinement result
-          if (status === 'UNCHANGED') {
-            // UNCHANGED: original candidate is valid, produce UNCHANGED refinement
-            // Do NOT fabricate a mechanismId - expose the original candidate via sourceCandidateId
-            refinements.push({
-              resolution: 'UNCHANGED',
-              sourceCandidateId: resolved.candidateId,
-              candidateId: resolved.candidateId,
-              mechanismType: resolved.mechanismType,
-              status: 'UNCHANGED',
-              mechanism: null, // No new mechanism produced
-              stageEvidence: Object.freeze([])
-            });
-            continue;
-          }
-
-          // For REFINED status, use the real mechanism ID from the refinement result
-          const mechanismId = result.mechanisms[0]?.mechanismId;
-          if (!mechanismId) {
-            diagnostics.push({
-              diagnosticId: `ORCHESTRATION_MECHANISM_ID_MISSING_${resolved.candidateId}`,
-              severity: 'WARNING',
-              category: 'MISSING_DATA',
-              message: `Refinement result for candidate ${resolved.candidateId} did not provide a mechanism ID - mechanism identity unresolved`,
-              relatedIds: [resolved.candidateId],
-              stage: 'REFINEMENT'
-            });
-
-            // Produce UNRESOLVED refinement when mechanism ID is missing
-            refinements.push({
-              resolution: 'UNRESOLVED',
-              candidateId: resolved.candidateId,
-              mechanismType: resolved.mechanismType,
-              status: 'UNAVAILABLE',
-              mechanism: null,
-              stageEvidence: Object.freeze([])
-            });
-            continue;
-          }
-
-          // Convert refinement evidence to stage evidence
-          // Preserve identity namespace: use evidence's identityKey if available, otherwise occurrenceId only
-          const stageEvidence: StageEvidence[] = result.evidence.map(evId =>
-            this.convertToStageEvidence(
-              evId,
-              undefined, // Refinement evidence does not expose identityKey - use occurrenceId only
-              'Refinement evidence from dispositor refiner',
-              [],
-              result.provenance.newEvidenceIds,
-              evId // Use evidenceId as occurrenceId
-            )
-          );
-
-          refinements.push({
-            resolution: 'REFINED',
-            mechanismId,
-            candidateId: resolved.candidateId,
-            mechanismType: resolved.mechanismType,
-            status: 'REFINED',
-            mechanism: result.mechanisms[0] ?? null,
-            stageEvidence: Object.freeze(stageEvidence)
-          });
-        } catch (error) {
+        if (result.status === 'INSUFFICIENT_DATA') {
           diagnostics.push({
-            diagnosticId: `ORCHESTRATION_MECHANISM_REFINER_ERROR_${resolved.candidateId}`,
-            severity: 'ERROR',
-            category: 'PORT_ERROR',
-            message: `Mechanism refiner port error for candidate ${resolved.candidateId}: ${error instanceof Error ? error.message : String(error)}`,
+            diagnosticId: `ORCHESTRATION_MECHANISM_REFINER_INSUFFICIENT_DATA_${resolved.candidateId}`,
+            severity: 'WARNING',
+            category: 'MISSING_DATA',
+            message: `Refinement result for candidate ${resolved.candidateId} has INSUFFICIENT_DATA - mechanism identity unresolved`,
             relatedIds: [resolved.candidateId],
             stage: 'REFINEMENT'
           });
+          refinements.push(this.unresolvedRefinement(resolved));
+          continue;
         }
+
+        if (result.status === 'UNCHANGED') {
+          refinements.push({
+            resolution: 'UNCHANGED',
+            sourceCandidateId: resolved.candidateId,
+            candidateId: resolved.candidateId,
+            mechanismType: resolved.mechanismType,
+            status: 'UNCHANGED',
+            mechanism: null,
+            stageEvidence: Object.freeze([])
+          });
+          continue;
+        }
+
+        const mechanism = result.mechanisms[0];
+        if (!mechanism?.mechanismId) {
+          diagnostics.push({
+            diagnosticId: `ORCHESTRATION_MECHANISM_ID_MISSING_${resolved.candidateId}`,
+            severity: 'WARNING',
+            category: 'MISSING_DATA',
+            message: `Refinement result for candidate ${resolved.candidateId} did not provide a mechanism ID - mechanism identity unresolved`,
+            relatedIds: [resolved.candidateId],
+            stage: 'REFINEMENT'
+          });
+          refinements.push(this.unresolvedRefinement(resolved));
+          continue;
+        }
+
+        if (
+          mechanism.patternId !== resolved.patternId ||
+          mechanism.mechanismType !== resolved.mechanismType
+        ) {
+          diagnostics.push({
+            diagnosticId: `ORCHESTRATION_REFINED_MECHANISM_REFERENCE_INVALID_${resolved.candidateId}`,
+            severity: 'ERROR',
+            category: 'INVALID_REFERENCE',
+            message: `Refined mechanism for candidate ${resolved.candidateId} did not preserve its candidate pattern and mechanism type`,
+            relatedIds: [resolved.candidateId, resolved.patternId],
+            stage: 'REFINEMENT'
+          });
+          refinements.push(this.unresolvedRefinement(resolved));
+          continue;
+        }
+
+        const stageEvidence = result.evidence.map(evId =>
+          this.convertToStageEvidence(
+            evId,
+            undefined,
+            'Refinement evidence from dispositor refiner',
+            [],
+            result.provenance.newEvidenceIds,
+            evId
+          )
+        );
+        refinements.push({
+          resolution: 'REFINED',
+          mechanismId: mechanism.mechanismId,
+          candidateId: resolved.candidateId,
+          mechanismType: resolved.mechanismType,
+          status: 'REFINED',
+          mechanism,
+          stageEvidence: Object.freeze(stageEvidence)
+        });
+      } catch (error) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_MECHANISM_REFINER_ERROR_${resolved.candidateId}`,
+          severity: 'ERROR',
+          category: 'PORT_ERROR',
+          message: `Mechanism refiner port error for candidate ${resolved.candidateId}: ${error instanceof Error ? error.message : String(error)}`,
+          relatedIds: [resolved.candidateId],
+          stage: 'REFINEMENT'
+        });
+        refinements.push(this.unresolvedRefinement(resolved));
       }
     }
 
-    // Sort deterministically by candidateId
     refinements.sort((a, b) => a.candidateId.localeCompare(b.candidateId));
-
     return Object.freeze(refinements);
+  }
+
+  private unresolvedRefinement(resolved: ResolvedMechanism): MechanismRefinement {
+    return {
+      resolution: 'UNRESOLVED',
+      candidateId: resolved.candidateId,
+      mechanismType: resolved.mechanismType,
+      status: 'UNAVAILABLE',
+      mechanism: null,
+      stageEvidence: Object.freeze([])
+    };
+  }
+
+  private resolveMechanismParticipantGroups(
+    participantRoleAssignments: readonly ParticipantRoleAssignment[],
+    patternId: string
+  ): {
+    readonly coreParticipants: readonly string[];
+    readonly supportingParticipants: readonly string[];
+    readonly challengingParticipants: readonly string[];
+  } {
+    // CHALLENGING is cross-cutting, so it may overlap CORE or SUPPORTING.
+    const coreParticipants = new Set<string>();
+    const supportingParticipants = new Set<string>();
+    const challengingParticipants = new Set<string>();
+
+    for (const roleAssignment of participantRoleAssignments) {
+      if (roleAssignment.patternId !== patternId) {
+        continue;
+      }
+      const { assignment } = roleAssignment;
+      if (assignment.primaryRole === 'CORE') {
+        coreParticipants.add(assignment.participantId);
+      } else if (assignment.primaryRole === 'SUPPORTING') {
+        supportingParticipants.add(assignment.participantId);
+      }
+      if (assignment.isChallenging) {
+        challengingParticipants.add(assignment.participantId);
+      }
+    }
+
+    return Object.freeze({
+      coreParticipants: Object.freeze([...coreParticipants].sort()),
+      supportingParticipants: Object.freeze([...supportingParticipants].sort()),
+      challengingParticipants: Object.freeze([...challengingParticipants].sort())
+    });
   }
 
   /**
@@ -973,8 +1033,6 @@ export class CanonicalCareerOrchestrator {
   private buildIdentityMappings(
     patternCandidates: readonly PatternCandidate[],
     patternQualifications: readonly PatternQualification[],
-    resolvedMechanisms: readonly ResolvedMechanism[],
-    mechanismRefinements: readonly MechanismRefinement[],
     diagnostics: OrchestrationDiagnostic[]
   ): readonly IdentityMapping[] {
     const mappings: IdentityMapping[] = [];
@@ -982,27 +1040,36 @@ export class CanonicalCareerOrchestrator {
 
     // Build qualification map for lookup - group into arrays to handle cardinality violations
     const qualMap = new Map<string, PatternQualification[]>();
-    for (const qualification of patternQualifications) {
+    for (const qualification of [...patternQualifications].sort((a, b) => a.patternId.localeCompare(b.patternId))) {
       const existing = qualMap.get(qualification.patternId) ?? [];
       qualMap.set(qualification.patternId, [...existing, qualification]);
     }
 
     // Pattern → Qualification mappings (via patternId)
     // Both pattern and qualification expose real identityKey fields
-    for (const pattern of patternCandidates) {
+    for (const pattern of [...patternCandidates].sort((a, b) => a.patternId.localeCompare(b.patternId))) {
       const qualifications = qualMap.get(pattern.patternId);
       if (qualifications && qualifications.length > 0) {
-        // Emit identity mappings for all qualifications (even if cardinality violation)
-        for (const qualification of qualifications) {
-          // Both source and target have real identityKey - emit mapping
-          mappings.push({
-            mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
-            sourceStage: 'PATTERN',
-            targetStage: 'QUALIFICATION',
-            sourceIdentityKey: pattern.identityKey as EvidenceIdentityKey,
-            targetIdentityKey: qualification.identityKey as EvidenceIdentityKey,
-            mappingType: 'EQUIVALENCE'
-          });
+        for (const qualification of [...qualifications].sort((a, b) => a.identityKey.localeCompare(b.identityKey))) {
+          if (hasSemanticIdentityKey(pattern.identityKey) && hasSemanticIdentityKey(qualification.identityKey)) {
+            mappings.push({
+              mappingId: `IDENTITY_MAPPING_${mappingIndex++}`,
+              sourceStage: 'PATTERN',
+              targetStage: 'QUALIFICATION',
+              sourceIdentityKey: pattern.identityKey,
+              targetIdentityKey: qualification.identityKey,
+              mappingType: 'EQUIVALENCE'
+            });
+          } else {
+            diagnostics.push({
+              diagnosticId: `ORCHESTRATION_IDENTITY_KEY_UNAVAILABLE_${pattern.patternId}_${qualification.patternId}`,
+              severity: 'WARNING',
+              category: 'MISSING_DATA',
+              message: `Pattern-to-qualification semantic identity mapping is unavailable for ${pattern.patternId}; producer identity keys must be non-empty`,
+              relatedIds: [pattern.patternId, qualification.patternId],
+              stage: 'IDENTITY_MAPPINGS'
+            });
+          }
         }
       }
     }
@@ -1011,12 +1078,12 @@ export class CanonicalCareerOrchestrator {
     // They are now represented as RelationshipMappings (structural references via patternId/candidateId)
     // No unresolved diagnostics needed for these - relationship mappings cover them completely
 
-    // Emit diagnostic for incomplete coverage (participant roles gap)
+    // Emit diagnostic for incomplete semantic identity coverage.
     diagnostics.push({
       diagnosticId: 'ORCHESTRATION_IDENTITY_MAPPINGS_PARTIAL',
       severity: 'INFO',
       category: 'PARTIAL_FEATURE',
-      message: 'Identity mappings populated from explicit linkage (pattern→qualification fully mapped via identityKey). Qualification→mechanism and mechanism→refinement semantic identity remains UNRESOLVED—only structural lineage (derivation via patternId/candidateId) is recorded in relationshipMappings. Participant role assignments lack explicit stage linkage and are not mapped.',
+      message: 'Qualification→mechanism and mechanism→refinement semantic identity remain unavailable because producers expose no semantic identity keys; participant-role and downstream lineage is carried by validated structural relationship mappings.',
       relatedIds: [],
       stage: 'IDENTITY_MAPPINGS'
     });
@@ -1041,6 +1108,7 @@ export class CanonicalCareerOrchestrator {
     patternQualifications: readonly PatternQualification[],
     resolvedMechanisms: readonly ResolvedMechanism[],
     mechanismRefinements: readonly MechanismRefinement[],
+    participantRoleAssignments: readonly ParticipantRoleAssignment[],
     diagnostics: OrchestrationDiagnostic[]
   ): readonly RelationshipMapping[] {
     const mappings: RelationshipMapping[] = [];
@@ -1118,6 +1186,40 @@ export class CanonicalCareerOrchestrator {
       }
     }
 
+    const qualifiedPatternIds = new Set(patternQualifications.map(qualification => qualification.patternId));
+    const rolePairs = new Map<string, { patternId: string; participantId: string }>();
+    for (const roleAssignment of participantRoleAssignments) {
+      const { patternId, assignment } = roleAssignment;
+      if (!qualifiedPatternIds.has(patternId)) {
+        diagnostics.push({
+          diagnosticId: `ORCHESTRATION_ROLE_WITHOUT_QUALIFICATION_${patternId}_${assignment.participantId}`,
+          severity: 'WARNING',
+          category: 'ORPHANED_REFERENCE',
+          message: `Participant role assignment for pattern ${patternId} has no corresponding qualification`,
+          relatedIds: [patternId, assignment.participantId],
+          stage: 'PARTICIPANT_ROLES'
+        });
+        continue;
+      }
+      rolePairs.set(`${patternId}|${assignment.participantId}`, {
+        patternId,
+        participantId: assignment.participantId
+      });
+    }
+
+    for (const { patternId, participantId } of [...rolePairs.values()].sort(
+      (a, b) => a.patternId.localeCompare(b.patternId) || a.participantId.localeCompare(b.participantId)
+    )) {
+      mappings.push({
+        mappingId: `RELATIONSHIP_MAPPING_${mappingIndex++}`,
+        sourceStage: 'QUALIFICATION',
+        targetStage: 'PARTICIPANT_ROLES',
+        sourceId: patternId,
+        targetId: participantId,
+        relationshipType: 'DERIVATION'
+      });
+    }
+
     return Object.freeze(mappings);
   }
 
@@ -1129,7 +1231,8 @@ export class CanonicalCareerOrchestrator {
     patternQualifications: readonly PatternQualification[],
     resolvedMechanisms: readonly ResolvedMechanism[],
     mechanismRefinements: readonly MechanismRefinement[],
-    careerFoundationSupplements: readonly CareerFoundationSupplement[]
+    careerFoundationSupplements: readonly CareerFoundationSupplement[],
+    participantRoleAssignments: readonly ParticipantRoleAssignment[]
   ): readonly StageReference[] {
     const references: StageReference[] = [];
 
@@ -1145,6 +1248,16 @@ export class CanonicalCareerOrchestrator {
       stageId: 'QUALIFICATION',
       stageName: 'Pattern Qualification (P2-07A)',
       evidenceIds: patternQualifications.map((q) => q.patternId)
+    });
+
+    references.push({
+      stageId: 'PARTICIPANT_ROLES',
+      stageName: 'Participant Role Assignment (P2-07B)',
+      evidenceIds: [...new Set(
+        participantRoleAssignments.flatMap(roleAssignment =>
+          roleAssignment.assignment.roleEvidence.map(evidence => evidence.evidenceId)
+        )
+      )].sort()
     });
 
     // Mechanism stage
