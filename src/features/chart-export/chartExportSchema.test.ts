@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import { buildChartExport } from './chartExportMapper';
 import { validateChartExport } from './chartExportSchema';
@@ -117,6 +117,35 @@ describe('ChartExportV1 runtime schema', () => {
       }
     };
     expect(validateChartExport(malformedTrace)).toEqual({ ok: false, error: 'INVALID_SHAPE' });
+
+    const accumulation = body.deterministicSynthesis.wealth.dimensions.ACCUMULATION;
+    for (const inconsistentRow of [
+      { ...accumulation, promiseEvidenceIds: [] },
+      { ...accumulation, linkedLevels: [] },
+      { ...accumulation, dashaRuleReferences: [] }
+    ]) {
+      const inconsistentTrace = {
+        ...withSelected,
+        selectedPeriod: {
+          ...withSelected.selectedPeriod,
+          value: {
+            ...body,
+            deterministicSynthesis: {
+              ...body.deterministicSynthesis,
+              wealth: {
+                ...body.deterministicSynthesis.wealth,
+                dimensions: {
+                  ...body.deterministicSynthesis.wealth.dimensions,
+                  ACCUMULATION: inconsistentRow
+                }
+              }
+            }
+          }
+        }
+      };
+      expect(validateChartExport(inconsistentTrace)).toEqual({ ok: false, error: 'INVALID_SHAPE' });
+    }
+
     const hidden = {
       ...withSelected,
       selectedPeriod: {

@@ -124,7 +124,88 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
             source: 'Yoga Engine'
           }
         ],
-        linkageTrace: [],
+        linkageTrace: [
+          {
+            promiseEvidenceId: 'WEALTH_11H_STRONG_001:HOUSE_11',
+            dashaRuleReference: {
+              level: 'MD',
+              ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
+              source: 'Yoga Engine'
+            },
+            level: 'MD',
+            matchedHouse: 11
+          },
+          {
+            promiseEvidenceId: 'WEALTH_11L_DIGNITY_001:MARS',
+            dashaRuleReference: {
+              level: 'MD',
+              ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
+              source: 'Yoga Engine'
+            },
+            level: 'MD',
+            matchedHouse: 11
+          },
+          {
+            promiseEvidenceId: 'WEALTH_2H_11H_LINK_001:HOUSES_2_11',
+            dashaRuleReference: {
+              level: 'MD',
+              ruleId: 'DASHA_LORD_OWNERSHIP_2',
+              source: 'Functional Roles'
+            },
+            level: 'MD',
+            matchedHouse: 2
+          },
+          {
+            promiseEvidenceId: 'WEALTH_2L_11L_LINK_001:MOON_MARS',
+            dashaRuleReference: {
+              level: 'MD',
+              ruleId: 'DASHA_LORD_OWNERSHIP_2',
+              source: 'Functional Roles'
+            },
+            level: 'MD',
+            matchedHouse: 2
+          },
+          {
+            promiseEvidenceId: 'WEALTH_11H_STRONG_001:HOUSE_11',
+            dashaRuleReference: {
+              level: 'AD',
+              ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
+              source: 'Yoga Engine'
+            },
+            level: 'AD',
+            matchedHouse: 11
+          },
+          {
+            promiseEvidenceId: 'WEALTH_11L_DIGNITY_001:MARS',
+            dashaRuleReference: {
+              level: 'AD',
+              ruleId: 'DASHA_LORD_YOGA:GAJA_KESARI|CATEGORY=RAJA|PLANETS=JUPITER,MOON|HOUSES=8,11',
+              source: 'Yoga Engine'
+            },
+            level: 'AD',
+            matchedHouse: 11
+          },
+          {
+            promiseEvidenceId: 'WEALTH_2H_11H_LINK_001:HOUSES_2_11',
+            dashaRuleReference: {
+              level: 'AD',
+              ruleId: 'DASHA_LORD_OWNERSHIP_2',
+              source: 'Functional Roles'
+            },
+            level: 'AD',
+            matchedHouse: 2
+          },
+          {
+            promiseEvidenceId: 'WEALTH_2L_11L_LINK_001:MOON_MARS',
+            dashaRuleReference: {
+              level: 'AD',
+              ruleId: 'DASHA_LORD_OWNERSHIP_2',
+              source: 'Functional Roles'
+            },
+            level: 'AD',
+            matchedHouse: 2
+          }
+        ],
         insufficientReason: 'LINKED' as const
       },
       FORTUNE: {

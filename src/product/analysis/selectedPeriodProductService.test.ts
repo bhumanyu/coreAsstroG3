@@ -26,6 +26,9 @@ import { defaultCareerExpressionResolver } from '../../domain/career/careerExpre
 import { adaptMechanismExpressionToLegacy } from '../../domain/career/careerExpression/mechanismExpressionToLegacyAdapter';
 import type { CareerExpressionCanonicalResult } from '../../domain/career/careerExpression/careerExpressionTypes';
 import { mapSelectedPeriodSynthesis } from './productAnalysisMapper';
+import { createProductAnalysis } from './__tests__/testHelpers';
+import { buildChartExport } from '../../features/chart-export/chartExportMapper';
+import { validateChartExport } from '../../features/chart-export/chartExportSchema';
 
 describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
   const mockAnalysisContext: AnalysisContext = {
@@ -86,6 +89,67 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
     ...canonicalExpression,
     expressions: []
   };
+
+  function makeInput(
+    temporalState: AnalysisTemporalState = mockTemporalState
+  ): BuildProductSelectedPeriodSynthesisInput {
+    const selectablePeriods = listSelectableMdAdPeriods(temporalState.dashaInterpretation);
+    const validMd = selectablePeriods.mahadashas.find((md: any) => md.valid);
+    if (!validMd) throw new Error('Expected canonical fixture to provide a valid Mahadasha.');
+    const validAd = selectablePeriods.antardashas.find((ad: any) =>
+      ad.valid && ad.mahadashaId === validMd.id
+    );
+    if (!validAd) throw new Error('Expected canonical fixture to provide a valid Antardasha.');
+
+    return {
+      selection: { mahadashaId: validMd.id, antardashaId: validAd.id },
+      context: mockAnalysisContext,
+      temporalState,
+      horoscope: mockHoroscope,
+      careerArtifacts: canonicalCareerArtifacts,
+      careerEvidence: mockCareerEvidence,
+      careerDashaEvidence: mockCareerDashaEvidence,
+      wealthEvidence: mockWealthEvidence,
+      careerBaseline: mockCareerBaseline,
+      wealthBaseline: mockWealthBaseline
+    };
+  }
+
+  function expectUnavailableWealthExport(
+    result: ReturnType<typeof buildProductSelectedPeriodSynthesis>,
+    expectedErrorCode: string
+  ): void {
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const wealth = result.value.wealth;
+    expect(wealth.dimensions.ACCUMULATION.insufficientReason).toBe('ACTIVATION_UNAVAILABLE');
+    expect(wealth.diagnostics).toContainEqual({
+      code: 'WEALTH_ACTIVATION_FAILED',
+      message: `Wealth activation failed (${expectedErrorCode}); dimension outcomes are unavailable.`
+    });
+
+    const selectedPeriod = {
+      status: 'OK' as const,
+      synthesis: mapSelectedPeriodSynthesis(result.value)
+    };
+    const analysis = createProductAnalysis({
+      asOf: mockAnalysisContext.asOf,
+      selectedPeriod
+    });
+    const exported = buildChartExport({ analysis, selectedPeriod }, mockAnalysisContext.asOf);
+    expect(validateChartExport(exported)).toEqual({ ok: true, value: exported });
+    expect(exported.selectedPeriod.status).toBe('AVAILABLE');
+    if (exported.selectedPeriod.status !== 'AVAILABLE') return;
+
+    const exportedSynthesis = exported.selectedPeriod.value.deterministicSynthesis;
+    expect(exportedSynthesis.wealth.dimensions.ACCUMULATION.insufficientReason)
+      .toBe('ACTIVATION_UNAVAILABLE');
+    expect(exportedSynthesis.wealth.diagnostics).toContainEqual({
+      code: 'WEALTH_ACTIVATION_FAILED',
+      message: `Wealth activation failed (${expectedErrorCode}); dimension outcomes are unavailable.`
+    });
+  }
   const completeCareerNatal = {
     structural: {
       direction: 'SUPPORT',
@@ -203,6 +267,47 @@ describe('buildProductSelectedPeriodSynthesis (PBA-07)', () => {
       transit: []
     }
   } as any;
+
+  it('exports unavailable Wealth evidence distinctly from an evaluated empty promise set', () => {
+    const result = buildProductSelectedPeriodSynthesis({
+      ...makeInput(),
+      wealthEvidence: undefined
+    });
+
+    expectUnavailableWealthExport(result, 'WEALTH_EVIDENCE_UNAVAILABLE');
+  });
+
+  it('exports unavailable selected-Dasha evidence with its exact diagnostic', () => {
+    const input = makeInput();
+    const selectedMahadashaId = input.selection.mahadashaId;
+    const report = input.temporalState.dashaInterpretation;
+    if (!report) throw new Error('Expected canonical fixture to provide a Dasha interpretation report.');
+    const selectedOption = listSelectableMdAdPeriods(report).mahadashas.find((mahadasha) =>
+      mahadasha.id === selectedMahadashaId
+    );
+    if (!selectedOption) throw new Error('Expected the selected Mahadasha to remain available.');
+    const selectedNode = report.mahadashas.find((mahadasha) =>
+      mahadasha.start === selectedOption.start &&
+      mahadasha.end === selectedOption.end &&
+      mahadasha.planet === selectedOption.planet
+    );
+    if (!selectedNode) throw new Error('Expected the selected Mahadasha node in the report.');
+    const temporalState: AnalysisTemporalState = {
+      ...input.temporalState,
+      dashaInterpretation: {
+        ...report,
+        mahadashas: report.mahadashas.map((mahadasha) =>
+          mahadasha === selectedNode
+            ? { ...mahadasha, evidence: null as unknown as typeof mahadasha.evidence }
+            : mahadasha
+        )
+      }
+    };
+
+    const result = buildProductSelectedPeriodSynthesis({ ...input, temporalState });
+
+    expectUnavailableWealthExport(result, 'SELECTED_DASHA_EVIDENCE_UNAVAILABLE');
+  });
 
   it('builds a successful synthesis with canonical career artifacts', () => {
     expect(canonicalMechanismCandidates).toHaveLength(0);

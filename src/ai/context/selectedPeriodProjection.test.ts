@@ -1,5 +1,5 @@
-﻿/**
- * Tests for selected-period AI context projection (PBA-06 â†’ AI context)
+/**
+ * Tests for selected-period AI context projection (PBA-06 → AI context)
  *
  * Tests parity, immutability, and routing for projectSelectedPeriodSynthesis.
  */
@@ -10,7 +10,7 @@ import type { SelectedPeriodSynthesisValue } from '../../domain/synthesis/select
 import type { CareerConclusionData } from '../../domain/career/careerTypes';
 import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 
-describe('projectSelectedPeriodSynthesis (PBA-06 â†’ AI context)', () => {
+describe('projectSelectedPeriodSynthesis (PBA-06 → AI context)', () => {
   /**
    * Canonical fixture based on PBA-06 golden test.
    * Includes unresolved promiseEvidenceIds to test parity preservation.

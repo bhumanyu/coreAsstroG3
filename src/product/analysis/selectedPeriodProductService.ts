@@ -59,7 +59,7 @@ export interface BuildProductSelectedPeriodSynthesisInput {
   readonly careerArtifacts: CareerInternalArtifacts;
   readonly careerEvidence: readonly DomainEvidence[];
   readonly careerDashaEvidence: readonly DomainEvidence[];
-  readonly wealthEvidence: readonly DomainEvidence[];
+  readonly wealthEvidence?: readonly DomainEvidence[];
   readonly careerBaseline?: CareerConclusionData;
   readonly wealthBaseline?: WealthConclusionData;
 }

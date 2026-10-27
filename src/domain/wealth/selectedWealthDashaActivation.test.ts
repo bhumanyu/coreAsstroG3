@@ -258,6 +258,76 @@ describe('evaluateSelectedWealthPeriodActivation (PBA-05)', () => {
         matchedHouse: 2
       }
     ]);
+    const dimension = result.value.dimensions.ACCUMULATION;
+    expect(dimension.linkageTrace).toHaveLength(dimension.dashaRuleReferences.length);
+    expect(new Set(dimension.linkageTrace.map((trace) => trace.level))).toEqual(new Set(dimension.linkedLevels));
+    for (const trace of dimension.linkageTrace) {
+      expect(dimension.promiseEvidenceIds).toContain(trace.promiseEvidenceId);
+      expect(dimension.dashaRuleReferences).toContainEqual(trace.dashaRuleReference);
+    }
+  });
+
+  it('emits one trace entry for each accepted promise-house linkage', () => {
+    const result = evaluateSelectedWealthPeriodActivation({
+      selectedPeriod: makeContext([dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2])]),
+      wealthEvidence: [
+        promise('NATAL_ACC_A', 'ACCUMULATION', 2, Planet.SATURN),
+        promise('NATAL_ACC_B', 'ACCUMULATION', 2, Planet.SATURN)
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const trace = result.value.dimensions.ACCUMULATION.linkageTrace;
+    expect(trace.map((entry) => entry.promiseEvidenceId)).toEqual(['NATAL_ACC_A', 'NATAL_ACC_B']);
+    expect(trace.every((entry) =>
+      result.value.dimensions.ACCUMULATION.promiseEvidenceIds.includes(entry.promiseEvidenceId)
+    )).toBe(true);
+    expect(trace.every((entry) =>
+      result.value.dimensions.ACCUMULATION.dashaRuleReferences.some((reference) =>
+        reference.ruleId === entry.dashaRuleReference.ruleId &&
+        reference.source === entry.dashaRuleReference.source &&
+        reference.level === entry.dashaRuleReference.level
+      )
+    )).toBe(true);
+  });
+
+  it('rejects malformed fields used by the Wealth evidence selector', () => {
+    const valid = promise('NATAL_ACC', 'ACCUMULATION', 2, Planet.SATURN);
+    const malformedEvidence = [
+      { ...valid, domain: 'NOT_A_DOMAIN' },
+      { ...valid, phase: 'NOT_A_PHASE' },
+      { ...valid, polarity: 'NOT_A_POLARITY' },
+      { ...valid, dimension: 'NOT_A_DIMENSION' },
+      { ...valid, house: 13 },
+      { ...valid, id: '   ' },
+      { ...valid, polarity: undefined }
+    ];
+
+    for (const evidence of malformedEvidence) {
+      expect(evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([]),
+        wealthEvidence: [evidence] as unknown as readonly DomainEvidence[]
+      })).toEqual({ ok: false, error: 'WEALTH_EVIDENCE_UNAVAILABLE' });
+    }
+  });
+
+  it('rejects malformed fields used by the selected Dasha evidence evaluator', () => {
+    const valid = dashaEvidence('MD_2H_SUPPORT', 'SUPPORT', [2]);
+    const malformedEvidence = [
+      { ...valid, ruleId: '  ' },
+      { ...valid, source: '' },
+      { ...valid, effect: 'ACTIVATES' },
+      { ...valid, houses: [0] }
+    ];
+
+    for (const evidence of malformedEvidence) {
+      expect(evaluateSelectedWealthPeriodActivation({
+        selectedPeriod: makeContext([evidence as DashaInterpretationEvidence]),
+        wealthEvidence: []
+      })).toEqual({ ok: false, error: 'SELECTED_DASHA_EVIDENCE_UNAVAILABLE' });
+    }
   });
 
   it('fails explicitly when Wealth or selected Dasha evidence cannot be evaluated', () => {

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createProductAnalysis } from '../../product/analysis/__tests__/testHelpers';
 import { ProductAnalysisService } from '../../product/analysis/productAnalysisService';
 import type { ProductSelectedPeriodResult } from '../../product/analysis/productAnalysisTypes';
@@ -23,7 +23,7 @@ const period: Extract<ProductSelectedPeriodResult, { status: 'OK' }> = {
     career: { qualificationBasis: 'CANONICAL_STATUS', expressions: [], diagnostics: [] },
     wealth: {
       dimensions: {
-        ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: ['wealth-promise-a'], dashaRuleReferences: [], linkageTrace: [{ promiseEvidenceId: 'wealth-promise-a', dashaRuleReference: { ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' }, level: 'MD', matchedHouse: 2 }], insufficientReason: 'LINKED' },
+        ACCUMULATION: { dimension: 'ACCUMULATION', effect: 'UNKNOWN', dataStatus: 'PARTIAL', linkedLevels: ['MD'], diagnostics: [], promiseEvidenceIds: ['wealth-promise-a'], dashaRuleReferences: [{ ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' }], linkageTrace: [{ promiseEvidenceId: 'wealth-promise-a', dashaRuleReference: { ruleId: 'WEALTH_RULE_MD_2H', source: 'DASHA', level: 'MD' }, level: 'MD', matchedHouse: 2 }], insufficientReason: 'LINKED' },
         GAINS: { dimension: 'GAINS', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
         FORTUNE: { dimension: 'FORTUNE', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' },
         SPECULATION: { dimension: 'SPECULATION', effect: 'UNKNOWN', dataStatus: 'INSUFFICIENT_DATA', linkedLevels: [], diagnostics: [], promiseEvidenceIds: [], dashaRuleReferences: [], linkageTrace: [], insufficientReason: 'NO_PROMISE_EVIDENCE' }

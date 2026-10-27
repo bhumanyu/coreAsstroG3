@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Planet, DashaSystem } from '../../types';
 import type {
   DashaMahadashaInterpretation,
@@ -622,7 +622,7 @@ describe('buildSelectedPeriodSynthesis', () => {
     });
   });
 
-  describe('unqualified â‰  challenging', () => {
+  describe('unqualified ≠ challenging', () => {
     it('unqualified evidence is not classified as challenging', () => {
       const selectedPeriod = makeSelectedPeriodContext();
       const careerActivation = makeCareerActivation();
@@ -1557,7 +1557,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // 3 IDs but only 1 resolves â†’ PARTIAL
+      // 3 IDs but only 1 resolves → PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
     });
 
@@ -1578,7 +1578,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // ACCUMULATION has dimension mismatch â†’ PARTIAL
+      // ACCUMULATION has dimension mismatch → PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
     });
 
@@ -1599,7 +1599,7 @@ describe('buildSelectedPeriodSynthesis', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
-      // ACCUMULATION has wrong domain â†’ PARTIAL
+      // ACCUMULATION has wrong domain → PARTIAL
       expect(result.value.wealth.dimensions.ACCUMULATION.dataStatus).toBe('PARTIAL');
 
       // Should have WEALTH_EVIDENCE_INVALID diagnostic
@@ -3024,7 +3024,7 @@ describe('buildSelectedPeriodSynthesis', () => {
     });
   });
 
-  describe('Moon Mahadasha â†’ Moon Antardasha GAINS synthesis regression', () => {
+  describe('Moon Mahadasha → Moon Antardasha GAINS synthesis regression', () => {
     it('surfaces the promise-present house-unlinked diagnostic without changing effect or dataStatus', () => {
       const selectedPeriod = makeMoonMoonContext();
       const wealthActivation = makeWealthActivation();

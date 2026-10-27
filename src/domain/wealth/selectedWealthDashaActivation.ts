@@ -5,7 +5,12 @@ import type {
   DashaMahadashaInterpretation
 } from '../../engine/dashaInterpretation/dashaInterpretationTypes';
 import type { DomainEvidence } from '../interpretation/DomainEvidence';
-import type { TimingActivationEffect } from '../interpretation/DomainInterpretationTypes';
+import type {
+  DomainId,
+  EvidencePhase,
+  EvidencePolarity,
+  TimingActivationEffect
+} from '../interpretation/DomainInterpretationTypes';
 import { validateSelectedPeriodContext } from '../../core/analysis';
 import { WEALTH_DIMENSION_HOUSES, type WealthDimension } from './wealthTypes';
 import { combineTimingHierarchy } from '../../product/life-analysis/dashaHierarchyUtils';
@@ -85,7 +90,7 @@ export interface SelectedWealthPeriodActivation {
  */
 export interface EvaluateSelectedWealthPeriodActivationInput {
   readonly selectedPeriod: SelectedPeriodActivationContext;
-  readonly wealthEvidence: readonly DomainEvidence[];
+  readonly wealthEvidence?: readonly DomainEvidence[];
 }
 
 /**
@@ -105,6 +110,43 @@ type DashaEvidenceWithLevel = {
   readonly level: 'MD' | 'AD' | 'PD';
   readonly evidence: DashaInterpretationEvidence;
 };
+
+interface WealthLinkageMatch {
+  readonly dasha: DashaEvidenceWithLevel;
+  readonly promise: DomainEvidence;
+  readonly matchedHouse: number;
+}
+
+const DOMAIN_IDS: readonly DomainId[] = Object.freeze([
+  'CAREER',
+  'WEALTH',
+  'MARRIAGE',
+  'CHILDREN',
+  'PROPERTY',
+  'HEALTH',
+  'SPIRITUALITY'
+]);
+
+const EVIDENCE_PHASES: readonly EvidencePhase[] = Object.freeze([
+  'NATAL_PROMISE',
+  'DASHA_ACTIVATION',
+  'TRANSIT_TRIGGER',
+  'VARGA_CONFIRMATION',
+  'MODIFIER'
+]);
+
+const EVIDENCE_POLARITIES: readonly EvidencePolarity[] = Object.freeze([
+  'SUPPORTING',
+  'CHALLENGING',
+  'NEUTRAL'
+]);
+
+const WEALTH_DIMENSIONS: readonly WealthDimension[] = Object.freeze([
+  'ACCUMULATION',
+  'GAINS',
+  'FORTUNE',
+  'SPECULATION'
+]);
 
 const DIMENSIONS: readonly WealthDimension[] = Object.freeze([
   'ACCUMULATION',
@@ -166,91 +208,80 @@ function extractSelectedDashaEvidence(
 }
 
 /**
- * Checks if dasha evidence links to a dimension via house match.
+ * Returns accepted linkage records for Dasha and selected promise evidence.
  *
  * Linkage rules:
  * - Explicit house match via DashaInterpretationEvidence.houses to the actual house of promise evidence
  *   (not the dimension's canonical house if evidence has conflicting house)
- * - Planet overlap is NOT sufficient alone; must also share a house to establish linkage
+ * - Planet overlap is NOT sufficient alone; a matching actual house is required
  *   (prevents spurious cross-dimension activation via planetary overlap alone)
  * - Planet-only evidence (no houses) cannot link under the current conservative contract
  */
 function isLinkedToDimension(
-  dashaEvidence: DashaInterpretationEvidence,
-  dimension: WealthDimension,
+  dasha: DashaEvidenceWithLevel,
   promiseEvidence: readonly DomainEvidence[]
-): boolean {
-  // Check house linkage: dasha evidence must reference the actual house of the promise evidence
-  // (not the dimension's canonical house if they conflict)
-  for (const promise of promiseEvidence) {
-    if (promise.house !== undefined && dashaEvidence.houses?.includes(promise.house)) {
-      return true;
+): readonly WealthLinkageMatch[] {
+  return promiseEvidence.flatMap((promise) => {
+    if (promise.house === undefined || !dasha.evidence.houses?.includes(promise.house)) {
+      return [];
     }
-  }
 
-  // Planet overlap alone is NOT sufficient for linkage
-  // This prevents spurious activation when dasha evidence shares a planet but targets different houses
-  return false;
+    return [{ dasha, promise, matchedHouse: promise.house }];
+  });
 }
 
 function getLinkageTrace(
-  selectedEvidence: readonly DashaEvidenceWithLevel[],
-  promiseEvidence: readonly DomainEvidence[]
+  matches: readonly WealthLinkageMatch[]
 ): readonly SelectedWealthActivationLinkageTrace[] {
-  const trace: SelectedWealthActivationLinkageTrace[] = [];
-
-  for (const item of selectedEvidence) {
-    for (const promise of promiseEvidence) {
-      if (promise.house === undefined || !item.evidence.houses?.includes(promise.house)) {
-        continue;
-      }
-
-      const dashaRuleReference = toRuleReference(item);
-      trace.push(Object.freeze({
-        promiseEvidenceId: promise.id,
-        dashaRuleReference,
-        level: item.level,
-        matchedHouse: promise.house
-      }));
-    }
-  }
-
   const levelOrder = { MD: 0, AD: 1, PD: 2 } as const;
-  return Object.freeze(trace.sort((a, b) =>
-    levelOrder[a.level] - levelOrder[b.level] ||
-    a.promiseEvidenceId.localeCompare(b.promiseEvidenceId) ||
-    a.dashaRuleReference.ruleId.localeCompare(b.dashaRuleReference.ruleId) ||
-    a.matchedHouse - b.matchedHouse
-  ));
+  return Object.freeze(matches
+    .map(({ dasha, promise, matchedHouse }) => Object.freeze({
+      promiseEvidenceId: promise.id,
+      dashaRuleReference: toRuleReference(dasha),
+      level: dasha.level,
+      matchedHouse
+    }))
+    .sort((a, b) =>
+      levelOrder[a.level] - levelOrder[b.level] ||
+      a.promiseEvidenceId.localeCompare(b.promiseEvidenceId) ||
+      a.dashaRuleReference.ruleId.localeCompare(b.dashaRuleReference.ruleId) ||
+      a.matchedHouse - b.matchedHouse
+    ));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function isDashaEvidenceList(value: unknown): value is readonly DashaInterpretationEvidence[] {
-  return Array.isArray(value) && value.every((item: unknown) =>
-    typeof item === 'object' &&
-    item !== null &&
-    typeof (item as DashaInterpretationEvidence).ruleId === 'string' &&
-    (item as DashaInterpretationEvidence).ruleId.trim().length > 0 &&
-    typeof (item as DashaInterpretationEvidence).source === 'string' &&
-    (item as DashaInterpretationEvidence).source.trim().length > 0 &&
-    ['SUPPORT', 'CHALLENGE', 'NEUTRAL', 'MIXED'].includes((item as DashaInterpretationEvidence).effect) &&
-    ((item as DashaInterpretationEvidence).houses === undefined ||
-      (Array.isArray((item as DashaInterpretationEvidence).houses) &&
-        (item as DashaInterpretationEvidence).houses?.every((house) =>
-          Number.isInteger(house) && house >= 1 && house <= 12
-        )))
-  );
+  return Array.isArray(value) && value.every((item: unknown) => {
+    if (!isRecord(item)) return false;
+    return typeof item.ruleId === 'string' && item.ruleId.trim().length > 0 &&
+      typeof item.source === 'string' && item.source.trim().length > 0 &&
+      typeof item.effect === 'string' && ['SUPPORT', 'CHALLENGE', 'NEUTRAL', 'MIXED'].includes(item.effect) &&
+      (item.houses === undefined ||
+        (Array.isArray(item.houses) &&
+          item.houses.every((house: unknown) =>
+            typeof house === 'number' && Number.isInteger(house) && house >= 1 && house <= 12
+          )));
+  });
 }
 
 function isWealthEvidenceList(value: unknown): value is readonly DomainEvidence[] {
   return Array.isArray(value) && value.every((item: unknown) => {
-    if (typeof item !== 'object' || item === null) return false;
-    const evidence = item as DomainEvidence;
-    return typeof evidence.id === 'string' &&
-      evidence.id.trim().length > 0 &&
-      typeof evidence.domain === 'string' &&
-      typeof evidence.phase === 'string' &&
-      (evidence.house === undefined ||
-        (Number.isInteger(evidence.house) && evidence.house >= 1 && evidence.house <= 12));
+    if (!isRecord(item)) return false;
+    return typeof item.id === 'string' &&
+      item.id.trim().length > 0 &&
+      typeof item.domain === 'string' &&
+      DOMAIN_IDS.includes(item.domain as DomainId) &&
+      typeof item.phase === 'string' &&
+      EVIDENCE_PHASES.includes(item.phase as EvidencePhase) &&
+      typeof item.polarity === 'string' &&
+      EVIDENCE_POLARITIES.includes(item.polarity as EvidencePolarity) &&
+      (item.dimension === undefined ||
+        (typeof item.dimension === 'string' && WEALTH_DIMENSIONS.includes(item.dimension as WealthDimension))) &&
+      (item.house === undefined ||
+        (typeof item.house === 'number' && Number.isInteger(item.house) && item.house >= 1 && item.house <= 12));
   });
 }
 
@@ -342,15 +373,12 @@ function evaluateDimension(
   const pdEvidence = selectedEvidence.filter((item) => item.level === 'PD');
 
   // Find linked evidence per level
-  const linkedMd = mdEvidence.filter(({ evidence }) =>
-    isLinkedToDimension(evidence, dimension, promiseEvidence)
-  );
-  const linkedAd = adEvidence.filter(({ evidence }) =>
-    isLinkedToDimension(evidence, dimension, promiseEvidence)
-  );
-  const linkedPd = pdEvidence.filter(({ evidence }) =>
-    isLinkedToDimension(evidence, dimension, promiseEvidence)
-  );
+  const withMatches = (items: readonly DashaEvidenceWithLevel[]) => items
+    .map((dasha) => ({ dasha, matches: isLinkedToDimension(dasha, promiseEvidence) }))
+    .filter((entry) => entry.matches.length > 0);
+  const linkedMd = withMatches(mdEvidence);
+  const linkedAd = withMatches(adEvidence);
+  const linkedPd = withMatches(pdEvidence);
 
   // No linkage at any level → INSUFFICIENT_DATA
   if (linkedMd.length === 0 && linkedAd.length === 0 && linkedPd.length === 0) {
@@ -379,25 +407,29 @@ function evaluateDimension(
   }
 
   // Resolve effects per level
-  const mdEffect = resolveEffect(linkedMd.map((item) => item.evidence));
-  const adEffect = resolveEffect(linkedAd.map((item) => item.evidence));
-  const pdEffect = resolveEffect(linkedPd.map((item) => item.evidence));
+  const mdEvidenceLinked = linkedMd.map(({ dasha }) => dasha);
+  const adEvidenceLinked = linkedAd.map(({ dasha }) => dasha);
+  const pdEvidenceLinked = linkedPd.map(({ dasha }) => dasha);
+  const mdEffect = resolveEffect(mdEvidenceLinked.map((item) => item.evidence));
+  const adEffect = resolveEffect(adEvidenceLinked.map((item) => item.evidence));
+  const pdEffect = resolveEffect(pdEvidenceLinked.map((item) => item.evidence));
 
   const linkedLevels: ('MD' | 'AD' | 'PD')[] = [];
   if (linkedMd.length > 0) linkedLevels.push('MD');
   if (linkedAd.length > 0) linkedLevels.push('AD');
   if (linkedPd.length > 0) linkedLevels.push('PD');
 
-  const allLinked = [...linkedMd, ...linkedAd, ...linkedPd];
-  const linkageTrace = getLinkageTrace(allLinked, promiseEvidence);
-  const overallEffect = linkedPd.length > 0
+  const acceptedMatches = [...linkedMd, ...linkedAd, ...linkedPd].flatMap(({ matches }) => matches);
+  const allLinked = [...mdEvidenceLinked, ...adEvidenceLinked, ...pdEvidenceLinked];
+  const linkageTrace = getLinkageTrace(acceptedMatches);
+  const overallEffect = pdEvidenceLinked.length > 0
     ? combineTimingHierarchy(mdEffect, adEffect, pdEffect).overallEffect
     : resolveEffect(allLinked.map((item) => item.evidence));
 
   // Build rule references
-  const mdRuleReferences = Object.freeze(linkedMd.map(toRuleReference));
-  const adRuleReferences = Object.freeze(linkedAd.map(toRuleReference));
-  const pdRuleReferences = Object.freeze(linkedPd.map(toRuleReference));
+  const mdRuleReferences = Object.freeze(mdEvidenceLinked.map(toRuleReference));
+  const adRuleReferences = Object.freeze(adEvidenceLinked.map(toRuleReference));
+  const pdRuleReferences = Object.freeze(pdEvidenceLinked.map(toRuleReference));
   const allRuleReferences = Object.freeze(allLinked.map(toRuleReference));
 
   return Object.freeze({

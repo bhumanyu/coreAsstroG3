@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PBA-07: Product Analysis Mapper Tests
  *
  * Tests for the selected-period synthesis mapper.

@@ -345,21 +345,35 @@ function isWealthLinkageTrace(value: unknown): value is ExportedWealthLinkageTra
 }
 
 function isWealthDimension(value: unknown): value is ExportedWealthDimensionV1 {
-  return isRecord(value) && onlyKeys(value, [
+  const linkedLevels = isRecord(value) ? value.linkedLevels : undefined;
+  const promiseEvidenceIds = isRecord(value) ? value.promiseEvidenceIds : undefined;
+  const dashaRuleReferences = isRecord(value) ? value.dashaRuleReferences : undefined;
+  const linkageTrace = isRecord(value) ? value.linkageTrace : undefined;
+  if (!isRecord(value) || !onlyKeys(value, [
     'dimension', 'effect', 'dataStatus', 'linkedLevels', 'diagnostics', 'promiseEvidenceIds',
     'dashaRuleReferences', 'linkageTrace', 'insufficientReason'
   ])
-    && isOneOf(value.dimension, SYNTHESIS_DIMENSIONS)
-    && isString(value.effect)
-    && isOneOf(value.dataStatus, ['COMPLETE', 'PARTIAL', 'INSUFFICIENT_DATA'])
-    && Array.isArray(value.linkedLevels) && value.linkedLevels.every((level) => isOneOf(level, SYNTHESIS_LEVELS))
-    && Array.isArray(value.diagnostics) && value.diagnostics.every(isDiagnostic)
-    && isStringArray(value.promiseEvidenceIds)
-    && Array.isArray(value.dashaRuleReferences) && value.dashaRuleReferences.every(isWealthRuleReference)
-    && Array.isArray(value.linkageTrace) && value.linkageTrace.every(isWealthLinkageTrace)
-    && isOneOf(value.insufficientReason, [
+    || !isOneOf(value.dimension, SYNTHESIS_DIMENSIONS)
+    || !isString(value.effect)
+    || !isOneOf(value.dataStatus, ['COMPLETE', 'PARTIAL', 'INSUFFICIENT_DATA'])
+    || !Array.isArray(linkedLevels) || !linkedLevels.every((level) => isOneOf(level, SYNTHESIS_LEVELS))
+    || !Array.isArray(value.diagnostics) || !value.diagnostics.every(isDiagnostic)
+    || !isStringArray(promiseEvidenceIds)
+    || !Array.isArray(dashaRuleReferences) || !dashaRuleReferences.every(isWealthRuleReference)
+    || !Array.isArray(linkageTrace) || !linkageTrace.every(isWealthLinkageTrace)
+    || !isOneOf(value.insufficientReason, [
       'NO_PROMISE_EVIDENCE', 'PROMISE_NOT_LINKED', 'LINKED', 'ACTIVATION_UNAVAILABLE'
-    ]);
+    ])) return false;
+
+  return linkageTrace.every((trace) =>
+    promiseEvidenceIds.includes(trace.promiseEvidenceId) &&
+    linkedLevels.includes(trace.level) &&
+    dashaRuleReferences.some((reference) =>
+      reference.level === trace.level &&
+      reference.ruleId === trace.dashaRuleReference.ruleId &&
+      reference.source === trace.dashaRuleReference.source
+    )
+  );
 }
 
 function isWealthSynthesis(value: unknown): value is ExportedWealthSynthesisV1 {

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -146,7 +146,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       availability: 'AVAILABLE',
       status: 'READY',
       asOf: '2026-09-08',
-      currentPeriodLabel: 'Jupiter â†’ Saturn â†’ Mercury',
+      currentPeriodLabel: 'Jupiter → Saturn → Mercury',
       mdPlanet: 'Jupiter',
       adPlanet: 'Saturn',
       pdPlanet: 'Mercury'
@@ -260,7 +260,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
     render(<DashaPeriodCard period={period} />);
 
     expect(screen.getByText('Mercury')).toBeInTheDocument();
-    expect(screen.getByText('2026-04-01 â†’ 2026-08-15')).toBeInTheDocument();
+    expect(screen.getByText('2026-04-01 → 2026-08-15')).toBeInTheDocument();
     expect(screen.getByText('Refinement')).toBeInTheDocument();
   });
 
@@ -429,8 +429,8 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
       render(<SelectedPeriodReport synthesis={synthesis} domainToggle="WEALTH" />);
 
       // Verify primary information is visible
-      expect(screen.getByText(/Jupiter MD â†’ Saturn AD/i)).toBeInTheDocument();
-      expect(screen.getByText(/Jan 1, 2020 â€“ Jan 1, 2022/i)).toBeInTheDocument();
+      expect(screen.getByText(/Jupiter MD → Saturn AD/i)).toBeInTheDocument();
+      expect(screen.getByText(/Jan 1, 2020 – Jan 1, 2022/i)).toBeInTheDocument();
       expect(screen.getByText(/CURRENT/i)).toBeInTheDocument();
       expect(screen.getByText('CANONICAL')).toBeInTheDocument();
       expect(screen.queryByText(/Career Synthesis/i)).not.toBeInTheDocument();
@@ -1163,7 +1163,7 @@ describe('Dasha Presentational Components (P-UI-07)', () => {
 
       // Live region should announce "Analyzing"
       const statusRegion = screen.getByRole('status');
-      expect(statusRegion).toHaveTextContent('Analyzing the selected periodâ€¦');
+      expect(statusRegion).toHaveTextContent('Analyzing the selected period…');
     });
   });
 });

@@ -221,7 +221,7 @@ export class ProductAnalysisService {
           careerArtifacts: pipelineState.careerArtifacts,
           careerEvidence: pipelineState.career?.evidence ?? [],
           careerDashaEvidence: pipelineState.careerArtifacts.careerDashaEvidence,
-          wealthEvidence: pipelineState.wealth?.evidence ?? [],
+          wealthEvidence: pipelineState.wealth?.evidence,
           careerBaseline: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
             ? pipelineState.career.conclusionData
             : undefined,
@@ -422,7 +422,7 @@ export class ProductAnalysisService {
       careerArtifacts: pipelineState.careerArtifacts!,
       careerEvidence: pipelineState.career?.evidence ?? [],
       careerDashaEvidence: pipelineState.careerArtifacts!.careerDashaEvidence,
-      wealthEvidence: pipelineState.wealth?.evidence ?? [],
+      wealthEvidence: pipelineState.wealth?.evidence,
       careerBaseline: pipelineState.career && isCareerDomainInterpretation(pipelineState.career)
         ? pipelineState.career.conclusionData
         : undefined,
