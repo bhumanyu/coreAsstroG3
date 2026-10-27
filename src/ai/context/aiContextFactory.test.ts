@@ -1943,9 +1943,8 @@ describe('AI Context Factory', () => {
 
       // Build AI context with the pre-computed profession analysis
       const aiContext = buildAiContext(horoscope, {
-        domainInterpretations: [career],
-        temporalState,
-        careerProfessionAnalysis: v2.conclusionData?.careerProfessionAnalysis
+        domainInterpretations: [v2],
+        temporalState
       });
 
       // Verify profession fact is present in AI context
@@ -1953,6 +1952,12 @@ describe('AI Context Factory', () => {
       expect(aiContext.career?.profession?.availability).toBe('AVAILABLE');
       expect(aiContext.career?.profession?.status).toBeDefined();
       expect(Array.isArray(aiContext.career?.profession?.candidates)).toBe(true);
+      expect(aiContext.career?.profession?.candidates.map(
+        (candidate: { readonly candidateId: string }) => candidate.candidateId
+      )).toEqual(v2.conclusionData?.careerProfessionAnalysis?.candidates.map(
+        (candidate: { readonly candidateId: string }) => candidate.candidateId
+      ));
+      expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
 
       // Assert buildCareerProfessionAnalysis was NOT called during AI context building
       // (it should use the pre-computed analysis from the options)

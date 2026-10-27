@@ -375,6 +375,13 @@ describe('Canonical ProductAnalysis Mapper & Selectors (P-UI-02)', () => {
     expect(analysisComplete.career.profession!.status).toBe('COMPLETE');
     expect(analysisComplete.career.profession!.candidates).toHaveLength(2);
     expect(analysisComplete.career.profession!.candidates[0].candidateId).toBe('candidate-1');
+    expect(analysisComplete.career.profession!.candidates[0].domainEvidenceIds).toEqual(['domain-ev-1']);
+    expect(analysisComplete.career.profession!.candidates[0].ruleId).toBe('RULE_CANDIDATE_1');
+    expect(analysisComplete.career.profession!.candidates[0].evidence[0]).toMatchObject({
+      evidenceId: 'ev-1',
+      sourceIds: ['source-1'],
+      ruleId: 'RULE_1'
+    });
     expect(analysisComplete.career.profession!.candidates[0].d10Status).toBe('QUALIFIED');
     expect(analysisComplete.career.profession!.candidates[1].d10Status).toBe('NOT_PROVIDED');
     // Aggregate d10Status should be QUALIFIED (any candidate qualified)

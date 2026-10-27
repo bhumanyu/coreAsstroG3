@@ -36,5 +36,53 @@ export const CareerProfessionStatusSection: React.FC<CareerProfessionStatusSecti
         </ul>
       </div>
     )}
+    <div className="space-y-2 pt-2">
+      <h3 className="text-xs font-semibold text-slate-300">Profession candidates</h3>
+      {profession.candidates.length === 0 ? (
+        <p className="text-xs leading-relaxed text-slate-400">
+          No profession candidates are available from the current inputs. This is not a negative career conclusion.
+        </p>
+      ) : (
+        <ul aria-label="Profession candidates" className="space-y-3">
+          {profession.candidates.map((candidate) => (
+            <li
+              key={candidate.candidateId}
+              className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 space-y-2"
+            >
+              <h4 className="text-sm font-medium text-slate-100">
+                {candidate.domain} · {candidate.family} ({candidate.candidateId})
+              </h4>
+              <dl className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
+                <div><dt className="inline font-semibold text-slate-300">Basis: </dt><dd className="inline">{candidate.basis}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">D10 status: </dt><dd className="inline">{candidate.d10Status}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">Pattern refs: </dt><dd className="inline">{candidate.patternIds.join(', ') || 'None'}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">Expressions: </dt><dd className="inline">{candidate.expressionTypes.join(', ') || 'None'}</dd></div>
+                <div><dt className="inline font-semibold text-slate-300">Mechanism types: </dt><dd className="inline">{candidate.mechanismTypes.join(', ') || 'None'}</dd></div>
+              </dl>
+              {candidate.evidence.length > 0 && (
+                <ul aria-label={`Evidence for ${candidate.domain} ${candidate.family}`} className="space-y-2">
+                  {candidate.evidence.map((evidence) => (
+                    <li key={evidence.evidenceId} className="border-t border-slate-800 pt-2 text-xs text-slate-400">
+                      <p>{evidence.statement}</p>
+                      <dl className="mt-1 grid gap-1 sm:grid-cols-2">
+                        <div><dt className="inline font-semibold text-slate-300">Evidence ID: </dt><dd className="inline">{evidence.evidenceId}</dd></div>
+                        <div><dt className="inline font-semibold text-slate-300">Rule ID: </dt><dd className="inline">{evidence.ruleId}</dd></div>
+                        <div><dt className="inline font-semibold text-slate-300">Source IDs: </dt><dd className="inline">{evidence.sourceIds.join(', ') || 'None'}</dd></div>
+                        {evidence.linkage && (
+                          <div><dt className="inline font-semibold text-slate-300">Linkage: </dt><dd className="inline">{evidence.linkage}</dd></div>
+                        )}
+                        {evidence.unresolvedMechanismIds && evidence.unresolvedMechanismIds.length > 0 && (
+                          <div><dt className="inline font-semibold text-slate-300">Unresolved mechanism IDs: </dt><dd className="inline">{evidence.unresolvedMechanismIds.join(', ')}</dd></div>
+                        )}
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   </section>
 );

@@ -1,13 +1,12 @@
 /**
  * P2-11G Golden Chart End-to-End Acceptance Test for Career
  *
- * This test implements the golden-chart acceptance gate defined in the P2-11G spec.
- * It validates that interpretCareerV2 produces correct canonical C11 results
- * across a comprehensive set of deterministic scenarios.
+ * This test validates canonical C11 authority and its additive foundation,
+ * profession, trajectory, and events projections across deterministic scenarios.
  *
  * HARD CONSTRAINTS (from spec):
- * - Do NOT wire buildCanonicalCareerFoundation, orchestrator, or profession engine into interpretCareerV2
- * - Trajectory and events engines are approved downstream consumers (wired in commit a8e0172)
+ * - Do NOT add producers or change the authority of canonical C11
+ * - Dispositor contexts remain disabled until the real-chart refinement acceptance gate passes
  * - Do NOT reconstruct the pipeline inside the test; harness must invoke real interpretCareerV2
  * - Do NOT use buildGoldenCareerInterpretation as production entry point (it's a test fixture)
  * - Do NOT change public interpretCareerV2 return type or C11 authority
@@ -15,22 +14,21 @@
  * - Missing data must remain UNAVAILABLE/NOT_PROVIDED, never negative
  * - A missing production dependency MUST become a visible BLOCKED gate
  *
- * MANDATORY PHASE 0 RECONNAISSANCE (recorded in acceptance report):
- * - Branch: main
- * - HEAD SHA: a8e0172ff7f328eb869ef5f0ef1fb8a29639ae70
- * - Working tree: clean (no uncommitted changes)
+ * RECONNAISSANCE:
+ * - Branch, revision, and worktree state are captured from the validation run,
+ *   rather than hard-coded as test invariants.
  * - Production entry point: interpretCareerV2 in src/domain/career/CareerDomainInterpreterV2.ts
  * - Canonical C11 result: conclusionData.canonicalCareerFinalSynthesis (type CareerFinalSynthesisResult)
  *
- * PRODUCTION CALLER AUDIT (dependency/reachability table):
- * - buildCanonicalCareerFoundation: NO production caller (appears only in tests, docs, orchestration/index.ts)
- * - buildCareerProfessionAnalysis: NO production caller (appears only in tests, docs, careerProfession/index.ts)
- * - buildCareerTrajectory: YES production caller (interpretCareerV2, commit a8e0172)
- * - buildCareerEvents: YES production caller (interpretCareerV2, commit a8e0172)
+ * PRODUCTION CALLER AUDIT:
+ * - Foundation and profession analysis are downstream additive producers in interpretCareerV2.
+ * - Trajectory and events are downstream consumers; none of these producers rewrites C11.
  *
  * BLOCKER SUMMARY:
- * - G06, G07, G19: BLOCKED - buildCanonicalCareerFoundation has no production caller
- * - G12: BLOCKED - buildCareerProfessionAnalysis has no production caller (P2-11F upstream-input blocker)
+ * - G06: BLOCKED until a real-chart candidate→context→refinement fixture passes.
+ * - G07: BLOCKED by owner-gated mechanism qualification.
+ * - G12/G19 exercise the existing real production producers; G06's refinement
+ *   acceptance fixture is intentionally deferred and no REFINED result is assumed.
  */
 
 import { describe, expect, it, vi } from 'vitest';
@@ -44,6 +42,14 @@ import { interpretCareerV2 } from '../CareerDomainInterpreterV2';
 import type { DomainInterpretation } from '../../../domain/interpretation';
 import type { CareerFinalSynthesisResult } from '../careerFinalSynthesis/careerFinalSynthesisTypes';
 import type { DomainEvidence } from '../../../domain/interpretation/DomainEvidence';
+import { validateRelationshipMappings } from '../orchestration/canonicalCareerValidation';
+import type { CareerProfessionAnalysis } from '../careerProfession/careerProfessionTypes';
+import { buildLifeAnalysis } from '../../../domain/synthesis';
+import { interpretWealthV2 } from '../../wealth/WealthDomainInterpreterV2';
+import { buildLifeAnalysisViewModel } from '../../../product/life-analysis/lifeAnalysisMapper';
+import { mapProductAnalysis } from '../../../product/analysis/productAnalysisMapper';
+import { selectCareerViewModel } from '../../../product/analysis/careerViewModel';
+import type { ProductAnalysis } from '../../../product/analysis/productAnalysisTypes';
 import type { EvidenceContinuityReport, EvidenceContinuityIssueCode, EvidenceContinuitySeverity } from '../evidenceContinuity';
 import * as trajectoryEngine from '../careerTrajectory/careerTrajectoryEngine';
 import * as eventsEngine from '../careerEvents/careerEventEngine';
@@ -74,6 +80,9 @@ interface GoldenScenarioResult {
   readonly canonicalC11: CareerFinalSynthesisResult;
   readonly evidence: readonly DomainEvidence[];
   readonly scenarioId: string;
+  readonly birthDetails: BirthDetails;
+  readonly horoscope: Horoscope;
+  readonly domainOptions: DomainReasoningOptions;
 }
 
 function runGoldenScenario(
@@ -122,7 +131,10 @@ function runGoldenScenario(
     interpretation,
     canonicalC11,
     evidence,
-    scenarioId: scenario.scenarioId
+    scenarioId: scenario.scenarioId,
+    birthDetails,
+    horoscope,
+    domainOptions
   };
 }
 
@@ -778,19 +790,87 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
   });
 
   /**
-   * G12: Profession analysis outputs (BLOCKED)
+   * G12: Profession analysis is produced or fails explicitly, without changing C11.
    */
-  it('G12: Profession analysis outputs (BLOCKED - profession engine not in production)', () => {
+  it('G12: Profession analysis and product projection preserve actual producer outputs', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G12')!;
+    const result = runGoldenScenario(scenario);
+    const { interpretation, canonicalC11 } = result;
+    const profession: CareerProfessionAnalysis | undefined =
+      interpretation.conclusionData?.careerProfessionAnalysis;
+    const failure = interpretation.conclusionData?.professionAnalysisFailure;
+
+    expect(Boolean(profession)).not.toBe(Boolean(failure));
+    expect(interpretation.conclusionData?.canonicalCareerFinalSynthesis).toBe(canonicalC11);
+
+    if (profession) {
+      const wealth = interpretWealthV2(result.horoscope, result.domainOptions);
+      const lifeAnalysis = buildLifeAnalysis([interpretation, wealth]);
+      const lifeAnalysisViewModel = buildLifeAnalysisViewModel(
+        lifeAnalysis,
+        interpretation,
+        wealth,
+        []
+      );
+      const product: ProductAnalysis = mapProductAnalysis({
+        birthDetails: result.birthDetails,
+        horoscope: result.horoscope,
+        lifeAnalysisViewModel,
+        context: result.domainOptions.context,
+        temporalState: result.domainOptions.temporalState
+      });
+      const aiFailureProduct = mapProductAnalysis({
+        birthDetails: result.birthDetails,
+        horoscope: result.horoscope,
+        lifeAnalysisViewModel,
+        context: result.domainOptions.context,
+        temporalState: result.domainOptions.temporalState,
+        aiExplanation: {
+          kind: 'ERROR',
+          requestId: 'golden-ai-failure',
+          task: 'CHART_SYNTHESIS',
+          status: 'ERROR',
+          message: 'Test-only AI failure',
+          warnings: []
+        }
+      });
+      const careerViewModel = selectCareerViewModel(product);
+      const productCandidates = product.career.profession?.candidates ?? [];
+
+      expect(aiFailureProduct.career).toEqual(product.career);
+      expect(productCandidates.map(candidate => candidate.candidateId).sort())
+        .toEqual(profession.candidates.map(candidate => candidate.candidateId).sort());
+      expect(careerViewModel.profession.candidates).toEqual(productCandidates);
+      for (const candidate of profession.candidates) {
+        const projected = productCandidates.find(item => item.candidateId === candidate.candidateId);
+        expect(projected).toBeDefined();
+        expect(projected?.domainEvidenceIds).toEqual(candidate.domainEvidenceIds);
+        expect(projected?.ruleId).toBe(candidate.ruleId);
+        expect(projected?.evidence.map(item => ({
+          evidenceId: item.evidenceId,
+          sourceIds: item.sourceIds,
+          ruleId: item.ruleId,
+          linkage: item.linkage,
+          unresolvedMechanismIds: item.unresolvedMechanismIds
+        }))).toEqual(candidate.evidence.map(item => ({
+          evidenceId: item.evidenceId,
+          sourceIds: item.sourceIds,
+          ruleId: item.ruleId,
+          linkage: item.linkage,
+          unresolvedMechanismIds: item.unresolvedMechanismIds
+        })));
+      }
+    } else {
+      expect(failure?.error.trim()).not.toHaveLength(0);
+    }
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
-      status: 'BLOCKED',
+      status: 'PASS',
       productionEntryPoint: 'interpretCareerV2',
       expected: scenario.expectedC11Fields,
-      traceCheck: false,
-      reason: 'buildCareerProfessionAnalysis has no production caller',
-      blockedDependency: 'P2-11F upstream-input blocker: buildCareerProfessionAnalysis not wired into production path'
+      actual: { finalDirection: canonicalC11.finalDirection },
+      traceCheck: true
     });
   });
 
@@ -1193,19 +1273,35 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
   });
 
   /**
-   * G19: Orchestrator foundation outputs (BLOCKED)
+   * G19: The production foundation and validated structural lineage are exposed.
    */
-  it('G19: Orchestrator foundation outputs (BLOCKED - orchestrator not in production)', () => {
+  it('G19: Foundation relationship mappings are valid and C11 remains authoritative', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G19')!;
+    const result = runGoldenScenario(scenario);
+    const foundation = result.interpretation.conclusionData?.canonicalCareerFoundation;
+    expect(foundation).toBeDefined();
+
+    const validation = validateRelationshipMappings(
+      foundation!.relationshipMappings,
+      new Set(['PATTERN', 'QUALIFICATION', 'PARTICIPANT_ROLES', 'MECHANISM', 'REFINEMENT', '10H', '10L']),
+      foundation!.patternCandidates,
+      foundation!.patternQualifications,
+      foundation!.resolvedMechanisms,
+      foundation!.mechanismRefinements,
+      foundation!.participantRoleAssignments
+    );
+    expect(validation.valid).toBe(true);
+    expect(result.interpretation.conclusionData?.canonicalCareerFinalSynthesis)
+      .toBe(result.canonicalC11);
+    expect(result.interpretation.conclusion.statement).toBe(result.canonicalC11.statement);
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
-      status: 'BLOCKED',
+      status: 'PASS',
       productionEntryPoint: 'interpretCareerV2',
       expected: scenario.expectedC11Fields,
-      traceCheck: false,
-      reason: 'buildCanonicalCareerFoundation has no production caller',
-      blockedDependency: 'Prerequisite: wire orchestrator foundation + profession/trajectory/events into production path'
+      actual: { finalDirection: result.canonicalC11.finalDirection },
+      traceCheck: true
     });
   });
 
@@ -1291,14 +1387,14 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
     // Assert no failures (blocked is expected)
     expect(failCount).toBe(0);
 
-    // Assert expected blocked count (G06, G07, G12, G19 = 4 blocked; G18 unblocked in commit a8e0172)
-    expect(blockedCount).toBe(4);
+    // G06 and G07 remain blocked by the real-chart refinement and owner gates.
+    expect(blockedCount).toBe(2);
 
-    // Assert expected pass count (16 passing acceptance-level golden scenarios + 4 blocked + 1 unit-level = 21 total golden scenarios)
+    // G12 and G19 now pass through the real production entry point.
     // Note: Gate D precedence test, Engine-argument assertions, and C11 immutability test are
     // regression/integration tests outside the golden scenario fixture list and are not counted here.
     // G21 is a golden scenario tested at unit level (level: UNIT, excluded from acceptance pass count).
-    expect(passCount).toBe(16);
+    expect(passCount).toBe(18);
     expect(unitPassCount).toBe(1);
   });
 });

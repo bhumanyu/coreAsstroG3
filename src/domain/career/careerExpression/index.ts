@@ -58,3 +58,10 @@ export {
   DefaultCareerExpressionResolver,
   defaultCareerExpressionResolver
 } from './defaultCareerExpressionResolver';
+
+// Orchestration refinement bridge (§8)
+export {
+  adaptCareerMechanismRefinements,
+  type CareerMechanismRefinementAdapterResult,
+  type CareerMechanismRefinementDiagnostic
+} from './careerMechanismRefinementAdapter';

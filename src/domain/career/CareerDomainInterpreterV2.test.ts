@@ -3714,6 +3714,10 @@ describe('CareerDomainInterpreterV2', () => {
     });
 
     it('profession engine failure surfaces as typed diagnostic without breaking C11 conclusion', async () => {
+      const options = makeDomainOptions();
+      const baseline = interpretCareerV2(horoscope, options);
+      const baselineC11 = baseline.conclusionData?.canonicalCareerFinalSynthesis;
+      const baselineConclusion = baseline.conclusion;
       // Spy on buildCareerProfessionAnalysis to throw an error
       const professionEngine = await import('./careerProfession/careerProfessionEngine');
       const professionSpy = vi.spyOn(professionEngine, 'buildCareerProfessionAnalysis')
@@ -3723,11 +3727,13 @@ describe('CareerDomainInterpreterV2', () => {
 
       try {
         // interpretCareerV2 should not throw; it should surface the error as a diagnostic
-        const v2 = interpretCareerV2(horoscope, makeDomainOptions());
+        const v2 = interpretCareerV2(horoscope, options);
 
         // Verify C11 conclusion is still present and valid
         expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toBeDefined();
         expect(v2.conclusion).toBeDefined();
+        expect(v2.conclusionData?.canonicalCareerFinalSynthesis).toEqual(baselineC11);
+        expect(v2.conclusion).toEqual(baselineConclusion);
 
         // Verify profession analysis failure diagnostic is present
         expect(v2.conclusionData?.professionAnalysisFailure).toBeDefined();
