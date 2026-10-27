@@ -71,12 +71,13 @@ import {
   linkWealthEvidence,
   resolveRelatedWealthPromiseEvidenceIds
 } from './wealthEvidenceLinker';
+import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
 import type { WealthConclusionData } from './wealthTypes';
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
 import type { ThemeInterpretationEvidence } from '../../engine/themeInterpretation/themeInterpretationTypes';
-import { Planet } from '../../types';
+import { DignityStatus, Planet } from '../../types';
 import { resolveDashaInterpretationForAsOf } from '../../engine/dashaInterpretation/resolveDashaForAsOf';
 import { synthesizeWealthTiming } from '../timing/careerWealthTiming';
 import { resolveWealthDimensionTransitEffect } from '../timing/careerWealthTiming/wealthTransitRules';
@@ -89,6 +90,99 @@ describe('WealthDomainInterpreterV2', () => {
     const context = makeContext(asOf);
     const temporalState = resolveAnalysisTemporalState(targetHoroscope, context);
     return { context, temporalState };
+  }
+
+  function makeProducerChart(options: {
+    readonly supportingHouses?: readonly number[];
+    readonly afflictedLordHouses?: readonly number[];
+  } = {}): Horoscope {
+    const supportingHouses = new Set(options.supportingHouses ?? []);
+    const afflictedLordHouses = new Set(options.afflictedLordHouses ?? []);
+    const houses = { ...(horoscope.houseInterpretation?.houses ?? {}) };
+    const planetInterpretations = { ...(horoscope.planetInterpretation?.planets ?? {}) };
+    const planetAnalyses = { ...(horoscope.planetAnalysis?.planets ?? {}) };
+    const lordDignities = new Map<Planet, DignityStatus>();
+
+    for (const houseNumber of [2, 11, 9, 5]) {
+      const house = houses[houseNumber];
+      if (!house) {
+        throw new Error(`Canonical chart is missing house ${houseNumber} interpretation.`);
+      }
+
+      houses[houseNumber] = {
+        ...house,
+        summary: {
+          ...house.summary,
+          supportingFactors: supportingHouses.has(houseNumber)
+            ? [`Fixture supports house ${houseNumber}.`]
+            : [],
+          challengingFactors: []
+        },
+        occupants: { ...house.occupants, planets: [] }
+      };
+
+      const lord = house.placement?.signLord;
+      if (!lord) {
+        throw new Error(`Canonical chart is missing the lord of house ${houseNumber}.`);
+      }
+      const dignity = afflictedLordHouses.has(houseNumber)
+        ? DignityStatus.DEBILITATED
+        : supportingHouses.has(houseNumber)
+          ? DignityStatus.EXALTED
+          : DignityStatus.NEUTRAL_SIGN;
+      if (
+        dignity === DignityStatus.DEBILITATED ||
+        !lordDignities.has(lord)
+      ) {
+        lordDignities.set(lord, dignity);
+      }
+    }
+
+    for (const [lord, dignity] of lordDignities) {
+      planetInterpretations[lord] = {
+        ...planetInterpretations[lord],
+        dignity
+      };
+      planetAnalyses[lord] = {
+        ...planetAnalyses[lord],
+        dignity
+      };
+    }
+
+    return {
+      ...horoscope,
+      houseInterpretation: {
+        ...horoscope.houseInterpretation,
+        houses
+      },
+      planetInterpretation: {
+        ...horoscope.planetInterpretation,
+        planets: planetInterpretations
+      },
+      planetAnalysis: {
+        ...horoscope.planetAnalysis,
+        planets: planetAnalyses
+      }
+    };
+  }
+
+  function makeEmptyProducerChart(hasCompleteInputs: boolean): Horoscope {
+    return {
+      ...horoscope,
+      planetFacts: {} as Horoscope['planetFacts'],
+      bhavas: undefined,
+      bhavaFacts: undefined,
+      houseInterpretation: hasCompleteInputs ? { houses: {} } : undefined,
+      houseAnalysis: hasCompleteInputs ? { houses: {} } : undefined,
+      planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
+      planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
+      functionalRoles: hasCompleteInputs ? {} : undefined,
+      yogas: hasCompleteInputs ? {} : undefined,
+      planetaryStrength: hasCompleteInputs ? {} : undefined,
+      divisionalInterpretation: hasCompleteInputs ? {} : undefined,
+      dashaInterpretation: hasCompleteInputs ? {} : undefined,
+      natalGrahaDrishti: hasCompleteInputs ? { aspects: [] } : undefined
+    };
   }
 
   // 1. Core integration & legacy preservation
@@ -142,6 +236,245 @@ describe('WealthDomainInterpreterV2', () => {
     expect(golden.dataCompleteness?.d2).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.dasha).toBe('AVAILABLE');
     expect(golden.dataCompleteness?.transit).toBe('AVAILABLE');
+  });
+
+  describe('Producer-to-canonical wealth conclusion integration', () => {
+    const producerMatrix = [
+      {
+        dimension: 'ACCUMULATION',
+        houseFamily: WealthEvidenceFamily.SECOND_HOUSE,
+        lordFamily: WealthEvidenceFamily.SECOND_LORD,
+        houseRule: 'WEALTH_2H_STRONG_001',
+        lordRule: 'WEALTH_2L_DIGNITY_001'
+      },
+      {
+        dimension: 'GAINS',
+        houseFamily: WealthEvidenceFamily.ELEVENTH_HOUSE,
+        lordFamily: WealthEvidenceFamily.ELEVENTH_LORD,
+        houseRule: 'WEALTH_11H_STRONG_001',
+        lordRule: 'WEALTH_11L_DIGNITY_001'
+      },
+      {
+        dimension: 'FORTUNE',
+        houseFamily: WealthEvidenceFamily.NINTH_HOUSE,
+        lordFamily: WealthEvidenceFamily.NINTH_LORD,
+        houseRule: 'WEALTH_9H_STRONG_001',
+        lordRule: 'WEALTH_9L_DIGNITY_001'
+      },
+      {
+        dimension: 'SPECULATION',
+        houseFamily: WealthEvidenceFamily.FIFTH_HOUSE,
+        lordFamily: WealthEvidenceFamily.FIFTH_LORD,
+        houseRule: 'WEALTH_5H_STRONG_001',
+        lordRule: 'WEALTH_5L_DIGNITY_001'
+      }
+    ] as const;
+
+    it.each(producerMatrix)(
+      'routes $houseFamily and $lordFamily NATAL_STRUCTURE producers to $dimension',
+      (row) => {
+        const chart = makeProducerChart({
+          supportingHouses: [2, 11, 9, 5]
+        });
+        const theme = interpretWealthTheme(chart);
+        const mappedEvidence = buildWealthEvidence(theme.evidence);
+        const linkedEvidence = linkWealthEvidence(mappedEvidence);
+        const hierarchy = evaluateWealthReasoningHierarchy({ evidence: linkedEvidence });
+        const result = interpretWealthV2(
+          chart,
+          makeDomainOptions('2026-06-01T00:00:00.000Z')
+        );
+        const conclusionDimension = result.conclusionData?.dimensions
+          .find((item) => item.dimension === row.dimension);
+
+        for (const [family, ruleId] of [
+          [row.houseFamily, row.houseRule],
+          [row.lordFamily, row.lordRule]
+        ] as const) {
+          const rawProducer = theme.evidence.find(
+            (item) => item.evidenceFamily === family && item.ruleId === ruleId
+          );
+          if (!rawProducer) {
+            throw new Error(`${ruleId} was not emitted by the production rules.`);
+          }
+          expect(rawProducer.dimension).toBe('NATAL_STRUCTURE');
+
+          const domainProducer = linkedEvidence.find((item) => item.id === rawProducer.id);
+          if (!domainProducer) {
+            throw new Error(`${rawProducer.id} was not mapped to DomainEvidence.`);
+          }
+          expect(domainProducer.dimension).toBe(row.dimension);
+          expect(mapWealthDimension(rawProducer)).toBe(row.dimension);
+          expect(domainProducer.relatedEvidenceIds.every((id) =>
+            linkedEvidence.some((item) => item.id === id)
+          )).toBe(true);
+
+          const canonicalId = Object.values(hierarchy.reasoningTrace)
+            .flat()
+            .find((item) => item.sourceIds.includes(domainProducer.id))
+            ?.evidenceId;
+          if (!canonicalId) {
+            throw new Error(`${domainProducer.id} did not reach the CW-01 reasoning trace.`);
+          }
+          expect(hierarchy.dimensionResults[row.dimension].evidenceIds)
+            .toContain(canonicalId);
+          expect(conclusionDimension?.supportingEvidenceIds).toContain(canonicalId);
+
+          const manifestationFactors =
+            result.conclusionData?.wealthManifestationSynthesis?.dimensions[row.dimension].factors;
+          expect(manifestationFactors?.some((factor) =>
+            factor.evidenceIds?.includes(domainProducer.id)
+          )).toBe(true);
+
+          for (const otherDimension of producerMatrix) {
+            if (otherDimension.dimension === row.dimension) continue;
+            const otherConclusionDimension = result.conclusionData?.dimensions
+              .find((item) => item.dimension === otherDimension.dimension);
+            expect(otherConclusionDimension?.supportingEvidenceIds).not.toContain(canonicalId);
+            expect(otherConclusionDimension?.challengingEvidenceIds).not.toContain(domainProducer?.id);
+            expect(
+              result.conclusionData?.wealthManifestationSynthesis
+                ?.dimensions[otherDimension.dimension].factors.some((factor) =>
+                  factor.evidenceIds?.includes(domainProducer.id)
+                )
+            ).toBe(false);
+          }
+        }
+      }
+    );
+
+    it('routes the 2H strong-house / afflicted-lord producer challenge only to ACCUMULATION', () => {
+      const chart = makeProducerChart({
+        supportingHouses: [2],
+        afflictedLordHouses: [2]
+      });
+      const theme = interpretWealthTheme(chart);
+      const rawChallenge = theme.evidence.find(
+        (item) => item.ruleId === 'WEALTH_2H_LORD_AFFLICTION_001'
+      );
+      if (!rawChallenge) {
+        throw new Error('WEALTH_2H_LORD_AFFLICTION_001 did not emit evidence.');
+      }
+      expect(rawChallenge.id).toBe('WEALTH_2H_LORD_AFFLICTION_001:HOUSE_2');
+      expect(rawChallenge.effect).toBe('CHALLENGE');
+      expect(rawChallenge.dimension).toBe('NATAL_STRUCTURE');
+
+      const mappedChallenge = linkWealthEvidence(buildWealthEvidence(theme.evidence))
+        .find((item) => item.id === rawChallenge.id);
+      expect(mappedChallenge?.dimension).toBe('ACCUMULATION');
+      expect(mappedChallenge?.polarity).toBe('CHALLENGING');
+
+      const result = interpretWealthV2(
+        chart,
+        makeDomainOptions('2026-06-01T00:00:00.000Z')
+      );
+      const dimensions = result.conclusionData?.dimensions ?? [];
+      expect(dimensions.find((item) => item.dimension === 'ACCUMULATION')
+        ?.challengingEvidenceIds).toContain(rawChallenge.id);
+      for (const otherDimension of ['GAINS', 'FORTUNE', 'SPECULATION'] as const) {
+        expect(dimensions.find((item) => item.dimension === otherDimension)
+          ?.challengingEvidenceIds).not.toContain(rawChallenge.id);
+      }
+      expect(result.conclusion.challengingSourceIds).toContain(rawChallenge.id);
+    });
+
+    it('retains both support and challenge from a strong 2H with an afflicted 2nd lord', () => {
+      const chart = makeProducerChart({
+        supportingHouses: [2, 11, 9, 5],
+        afflictedLordHouses: [2]
+      });
+      const theme = interpretWealthTheme(chart);
+      const mappedEvidence = linkWealthEvidence(buildWealthEvidence(theme.evidence));
+      const supportIds = mappedEvidence
+        .filter((item) => item.dimension === 'ACCUMULATION' && item.polarity === 'SUPPORTING')
+        .map((item) => item.id);
+      const challengeIds = mappedEvidence
+        .filter((item) => item.dimension === 'ACCUMULATION' && item.polarity === 'CHALLENGING')
+        .map((item) => item.id);
+      const result = interpretWealthV2(
+        chart,
+        makeDomainOptions('2026-06-01T00:00:00.000Z')
+      );
+      const accumulation = result.conclusionData?.dimensions
+        .find((item) => item.dimension === 'ACCUMULATION');
+
+      expect(supportIds).toContain('WEALTH_2H_STRONG_001:HOUSE_2');
+      expect(challengeIds).toContain('WEALTH_2H_LORD_AFFLICTION_001:HOUSE_2');
+      expect(accumulation?.supportingEvidenceIds.length).toBeGreaterThan(0);
+      expect(accumulation?.challengingEvidenceIds).toContain(
+        'WEALTH_2H_LORD_AFFLICTION_001:HOUSE_2'
+      );
+    });
+
+    it('distinguishes complete evaluation with no structural matches from missing inputs', () => {
+      const completeNoMatch = interpretWealthTheme(makeEmptyProducerChart(true));
+      const missingInput = interpretWealthTheme(makeEmptyProducerChart(false));
+      const structuralFamilies = new Set([
+        WealthEvidenceFamily.SECOND_HOUSE,
+        WealthEvidenceFamily.SECOND_LORD,
+        WealthEvidenceFamily.ELEVENTH_HOUSE,
+        WealthEvidenceFamily.ELEVENTH_LORD,
+        WealthEvidenceFamily.NINTH_HOUSE,
+        WealthEvidenceFamily.NINTH_LORD,
+        WealthEvidenceFamily.FIFTH_HOUSE,
+        WealthEvidenceFamily.FIFTH_LORD
+      ]);
+
+      expect(completeNoMatch.metadata.evaluatedRulesCount).toBeGreaterThan(0);
+      expect(completeNoMatch.metadata.dataCompleteness).toBe('COMPLETE');
+      expect(completeNoMatch.evidence).toEqual([]);
+      expect(completeNoMatch.evidence.filter((item) =>
+        structuralFamilies.has(item.evidenceFamily)
+      )).toEqual([]);
+      expect(missingInput.metadata.dataCompleteness).toBe('INSUFFICIENT');
+      expect(missingInput.evidence).toEqual([]);
+
+      const noMatchV2 = interpretWealthV2(
+        makeEmptyProducerChart(true),
+        makeDomainOptions(undefined, horoscope)
+      );
+      expect(noMatchV2.natalPromise.evidenceIds).toEqual([]);
+
+      const emptyV2 = interpretWealthV2(
+        makeEmptyProducerChart(false),
+        makeDomainOptions(undefined, horoscope)
+      );
+      expect(emptyV2.natalPromise.evidenceIds).toEqual([]);
+      expect(emptyV2.conclusionData?.dimensions.every((dimension) =>
+        dimension.supportingEvidenceIds.length === 0 &&
+        dimension.challengingEvidenceIds.length === 0
+      )).toBe(true);
+    });
+
+    it('preserves canonical dimension ID sets when mapped producer input is reversed', () => {
+      const chart = makeProducerChart({
+        supportingHouses: [2, 11, 9, 5]
+      });
+      const rawEvidence = interpretWealthTheme(chart).evidence;
+      const forward = evaluateWealthReasoningHierarchy({
+        evidence: linkWealthEvidence(buildWealthEvidence(rawEvidence))
+      });
+      const reversed = evaluateWealthReasoningHierarchy({
+        evidence: linkWealthEvidence(buildWealthEvidence([...rawEvidence].reverse()))
+      });
+
+      for (const row of producerMatrix) {
+        expect([...forward.dimensionResults[row.dimension].evidenceIds].sort())
+          .toEqual([...reversed.dimensionResults[row.dimension].evidenceIds].sort());
+      }
+
+      const firstRun = interpretWealthV2(
+        chart,
+        makeDomainOptions('2026-06-01T00:00:00.000Z')
+      );
+      const secondRun = interpretWealthV2(
+        chart,
+        makeDomainOptions('2026-06-01T00:00:00.000Z')
+      );
+      expect(firstRun.conclusion.primaryEvidenceIds).toEqual(secondRun.conclusion.primaryEvidenceIds);
+      expect(firstRun.conclusion.challengingEvidenceIds).toEqual(secondRun.conclusion.challengingEvidenceIds);
+      expect(firstRun.conclusion.supportingEvidenceIds).toEqual(secondRun.conclusion.supportingEvidenceIds);
+    });
   });
 
   // 3. Natal Promise calculation
