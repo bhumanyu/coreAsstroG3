@@ -307,11 +307,11 @@ export function interpretWealthV2(
     rawConflicts: conflicts
   });
 
-  const accumulationStatus: WealthDimensionStatus = cw01Result.dimensionResults.ACCUMULATION.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.ACCUMULATION.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.ACCUMULATION.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
-  const gainsStatus: WealthDimensionStatus = cw01Result.dimensionResults.GAINS.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.GAINS.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.GAINS.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
-  const fortuneStatus: WealthDimensionStatus = cw01Result.dimensionResults.FORTUNE.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.FORTUNE.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.FORTUNE.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
-  const speculationStatus: WealthDimensionStatus = cw01Result.dimensionResults.SPECULATION.natalStrength === 'VERY_STRONG' || cw01Result.dimensionResults.SPECULATION.natalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.dimensionResults.SPECULATION.natalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
-  const overallStatus: WealthDimensionStatus = cw01Result.finalStrength === 'VERY_STRONG' || cw01Result.finalStrength === 'STRONG' ? 'STRONGLY_SUPPORTED' : (cw01Result.finalStrength === 'MODERATE' ? 'SUPPORTED' : 'CHALLENGED');
+  const accumulationStatus = mapDomainStrengthToWealthStatus(cw01Result.dimensionResults.ACCUMULATION.natalStrength);
+  const gainsStatus = mapDomainStrengthToWealthStatus(cw01Result.dimensionResults.GAINS.natalStrength);
+  const fortuneStatus = mapDomainStrengthToWealthStatus(cw01Result.dimensionResults.FORTUNE.natalStrength);
+  const speculationStatus = mapDomainStrengthToWealthStatus(cw01Result.dimensionResults.SPECULATION.natalStrength);
+  const overallStatus = mapDomainStrengthToWealthStatus(cw01Result.finalStrength);
 
   const dimInterpretations: readonly WealthDimensionInterpretation[] = Object.freeze([
     {
@@ -347,7 +347,7 @@ export function interpretWealthV2(
   const conclusionData = buildWealthConclusionData({
     overallStatus,
     dimensions: dimInterpretations,
-    d2Relationship: 'UNAVAILABLE',
+    d2Relationship,
     manifestations: cw01Result.manifestations,
     conflicts,
     evidence,
@@ -960,13 +960,46 @@ export function evaluateWealthDimension(
 
   const status = resolveDimensionStatus(supporting, challenging);
 
+  // Attribute challenging evidence: only include evidence explicitly linked to this dimension
+  // If no dimension linkage is computed, return empty list but preserve the field for API compatibility
+  const challengingEvidenceIds = Object.freeze(
+    challenging
+      .filter((item) => item.dimension === dimension)
+      .map((item) => item.id)
+  );
+
   return Object.freeze({
     dimension,
     status,
     supportingEvidenceIds: Object.freeze(supporting.map((item) => item.id)),
-    challengingEvidenceIds: Object.freeze(challenging.map((item) => item.id)),
+    challengingEvidenceIds,
     dashaEffect
   });
+}
+
+export function mapDomainStrengthToWealthStatus(
+  strength: DomainStrength
+): WealthDimensionStatus {
+  switch (strength) {
+    case 'VERY_STRONG':
+      return 'STRONGLY_SUPPORTED';
+    case 'STRONG':
+      return 'STRONGLY_SUPPORTED';
+    case 'MODERATE':
+      return 'SUPPORTED';
+    case 'MIXED':
+      return 'MIXED';
+    case 'WEAK':
+      return 'CHALLENGED';
+    case 'VERY_WEAK':
+      return 'CHALLENGED';
+    case 'UNDETERMINED':
+      return 'INSUFFICIENT_DATA';
+    default:
+      // Exhaustive switch - this should never happen if DomainStrength is properly typed
+      const _exhaustive: never = strength;
+      return 'INSUFFICIENT_DATA';
+  }
 }
 
 export function resolveOverallWealthStatus(
