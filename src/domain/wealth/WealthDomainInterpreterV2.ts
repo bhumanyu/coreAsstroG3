@@ -151,7 +151,7 @@ export function interpretWealthV2(
   const rawDashaPromiseLinks = dashaEvidence.flatMap((item) =>
     item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
   );
-  const dashaPromiseEvidenceIds = Array.from(new Set(rawDashaPromiseLinks));
+  const dashaPromiseEvidenceIds = Array.from(new Set(rawDashaPromiseLinks)).sort();
   const dashaEffect = evaluateDashaEffect(dashaEvidence, dashaPromiseEvidenceIds);
 
   const accumulationDasha = evaluateAccumulationDasha(dashaEvidence, evidence);
@@ -177,7 +177,7 @@ export function interpretWealthV2(
   const rawTransitPromiseLinks = transitEvidence.flatMap((item) =>
     item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
   );
-  const transitPromiseEvidenceIds = Array.from(new Set(rawTransitPromiseLinks));
+  const transitPromiseEvidenceIds = Array.from(new Set(rawTransitPromiseLinks)).sort();
   const transitEffect = evaluateTransitEffect(transitEvidence, transitPromiseEvidenceIds);
 
   // Conflicts and completeness
@@ -313,6 +313,7 @@ export function interpretWealthV2(
   const speculationStatus = mapDomainStrengthToWealthStatus(cw01Result.dimensionResults.SPECULATION.natalStrength);
   const overallStatus = mapDomainStrengthToWealthStatus(cw01Result.finalStrength);
 
+  // Supporting IDs retain CW-01's engine ordering; unlike linkage IDs, their order is intentional.
   const dimInterpretations: readonly WealthDimensionInterpretation[] = Object.freeze([
     {
       dimension: 'ACCUMULATION',
@@ -973,7 +974,7 @@ function attributeChallengingEvidence(
     }
   }
 
-  const challengingEvidenceIds = Object.freeze([...attributedIds]);
+  const challengingEvidenceIds = Object.freeze([...attributedIds].sort());
   return {
     challengingEvidenceIds,
     challengingEvidenceAttribution: hasUnattributedChallenge
@@ -1187,7 +1188,7 @@ export function evaluateWealthTimingActivation(
         item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
       )
     )
-  );
+  ).sort();
 
   return Object.freeze({
     period,

@@ -1989,6 +1989,68 @@ describe('WealthDomainInterpreterV2', () => {
       expect(accumulationResult.challengingEvidenceIds).not.toContain('e1');
     });
 
+    it('returns sorted challenging IDs regardless of evidence input order', () => {
+      const gainsZ = createDomainEvidence({
+        id: 'z-gains',
+        sourceType: 'STRUCTURAL',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Gains challenge',
+        polarity: 'CHALLENGING',
+        strength: 'STRONG',
+        priority: 50,
+        ruleId: 'RULE_GAINS_Z',
+        dimension: 'GAINS'
+      });
+      const gainsA = createDomainEvidence({
+        id: 'a-gains',
+        sourceType: 'STRUCTURAL',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Gains challenge',
+        polarity: 'CHALLENGING',
+        strength: 'STRONG',
+        priority: 50,
+        ruleId: 'RULE_GAINS_A',
+        dimension: 'GAINS'
+      });
+      const accumulationM = createDomainEvidence({
+        id: 'm-accumulation',
+        sourceType: 'STRUCTURAL',
+        domain: 'WEALTH',
+        role: 'PRIMARY',
+        phase: 'NATAL_PROMISE',
+        source: 'D1',
+        statement: 'Accumulation challenge',
+        polarity: 'CHALLENGING',
+        strength: 'STRONG',
+        priority: 50,
+        ruleId: 'RULE_ACCUMULATION_M',
+        dimension: 'ACCUMULATION'
+      });
+      const evidence = [gainsZ, gainsA, accumulationM];
+      const reversedEvidence = [...evidence].reverse();
+
+      const gainsForward = evaluateWealthDimension('GAINS', evidence, 'DOES_NOT_ACTIVATE');
+      const gainsReversed = evaluateWealthDimension('GAINS', reversedEvidence, 'DOES_NOT_ACTIVATE');
+      const accumulationForward = evaluateWealthDimension('ACCUMULATION', evidence, 'DOES_NOT_ACTIVATE');
+      const accumulationReversed = evaluateWealthDimension(
+        'ACCUMULATION',
+        reversedEvidence,
+        'DOES_NOT_ACTIVATE'
+      );
+
+      expect(gainsForward.challengingEvidenceIds).toEqual(['a-gains', 'z-gains']);
+      expect(gainsReversed.challengingEvidenceIds).toEqual(gainsForward.challengingEvidenceIds);
+      expect(accumulationForward.challengingEvidenceIds).toEqual(['m-accumulation']);
+      expect(accumulationReversed.challengingEvidenceIds)
+        .toEqual(accumulationForward.challengingEvidenceIds);
+    });
+
     it('returns empty challengingEvidenceIds when no dimension-linked challenging evidence exists', () => {
       const evidence = [
         createDomainEvidence({
