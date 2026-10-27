@@ -50,6 +50,7 @@ import {
   mapWealthSource,
   mapWealthDimension
 } from './WealthDomainInterpreterV2';
+import { mapDomainStrengthToWealthStatus } from './WealthDomainInterpreterV2';
 import { WealthDomainInterpreter } from './WealthDomainInterpreter';
 import {
   createDomainEvidence,
@@ -1906,6 +1907,106 @@ describe('WealthDomainInterpreterV2', () => {
 
       // The two runs must reflect their respective asOf timing
       expect(run1.periodTimingActivations).not.toEqual(run2.periodTimingActivations);
+    });
+  });
+
+  // 4. Projection-integrity regression tests
+  describe('Projection-integrity fixes', () => {
+    it('preserves computed D2 relationship in conclusion data', () => {
+      const v2 = interpretWealthV2(horoscope, makeDomainOptions());
+      
+      // The D2 relationship should be passed through from the computed value, not hardcoded
+      const d2Relationship = v2.conclusionData?.d2Relationship;
+      expect(d2Relationship).toBeDefined();
+      
+      // Verify it's one of the valid VargaRelationship values
+      const validRelationships = ['UNAVAILABLE', 'CONFIRMS', 'CONFLICTS', 'MODIFIES', 'PARTIALLY_CONFIRMS'];
+      expect(validRelationships).toContain(d2Relationship);
+    });
+
+    it('maps DomainStrength to WealthDimensionStatus exhaustively', () => {
+      // Test all DomainStrength values map correctly
+      expect(mapDomainStrengthToWealthStatus('VERY_STRONG')).toBe('STRONGLY_SUPPORTED');
+      expect(mapDomainStrengthToWealthStatus('STRONG')).toBe('STRONGLY_SUPPORTED');
+      expect(mapDomainStrengthToWealthStatus('MODERATE')).toBe('SUPPORTED');
+      expect(mapDomainStrengthToWealthStatus('MIXED')).toBe('MIXED');
+      expect(mapDomainStrengthToWealthStatus('WEAK')).toBe('CHALLENGED');
+      expect(mapDomainStrengthToWealthStatus('VERY_WEAK')).toBe('CHALLENGED');
+      expect(mapDomainStrengthToWealthStatus('UNDETERMINED')).toBe('INSUFFICIENT_DATA');
+    });
+
+    it('attributes challenging evidence by dimension linkage only', () => {
+      // Create evidence with dimension-specific challenging items
+      const evidence = [
+        createDomainEvidence({
+          id: 'e1',
+          sourceType: 'STRUCTURAL',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Test',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 50,
+          ruleId: 'RULE1',
+          dimension: 'GAINS'
+        }),
+        createDomainEvidence({
+          id: 'e2',
+          sourceType: 'STRUCTURAL',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Test',
+          polarity: 'CHALLENGING',
+          strength: 'STRONG',
+          priority: 50,
+          ruleId: 'RULE2',
+          dimension: 'ACCUMULATION'
+        })
+      ];
+
+      const gainsResult = evaluateWealthDimension('GAINS', evidence, 'DOES_NOT_ACTIVATE');
+      const accumulationResult = evaluateWealthDimension('ACCUMULATION', evidence, 'DOES_NOT_ACTIVATE');
+
+      // GAINS should only have e1 (its challenging evidence)
+      expect(gainsResult.challengingEvidenceIds).toEqual(['e1']);
+      
+      // ACCUMULATION should only have e2 (its challenging evidence)
+      expect(accumulationResult.challengingEvidenceIds).toEqual(['e2']);
+      
+      // Each should not have the other's challenging evidence
+      expect(gainsResult.challengingEvidenceIds).not.toContain('e2');
+      expect(accumulationResult.challengingEvidenceIds).not.toContain('e1');
+    });
+
+    it('returns empty challengingEvidenceIds when no dimension-linked challenging evidence exists', () => {
+      const evidence = [
+        createDomainEvidence({
+          id: 'e1',
+          sourceType: 'STRUCTURAL',
+          domain: 'WEALTH',
+          role: 'PRIMARY',
+          phase: 'NATAL_PROMISE',
+          source: 'D1',
+          statement: 'Test',
+          polarity: 'SUPPORTING',
+          strength: 'STRONG',
+          priority: 50,
+          ruleId: 'RULE1',
+          dimension: 'GAINS'
+        })
+      ];
+
+      const result = evaluateWealthDimension('ACCUMULATION', evidence, 'DOES_NOT_ACTIVATE');
+      expect(result.challengingEvidenceIds).toEqual([]);
+    });
+
+    it('does not coerce insufficient/unavailable/indeterminate strengths to CHALLENGED', () => {
+      // UNDETERMINED should map to INSUFFICIENT_DATA, not CHALLENGED
+      expect(mapDomainStrengthToWealthStatus('UNDETERMINED')).toBe('INSUFFICIENT_DATA');
     });
   });
 });
