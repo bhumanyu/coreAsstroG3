@@ -77,7 +77,10 @@ describe('browser AI boundary', () => {
     expect(viteConfig).not.toMatch(/define\s*:\s*{[^}]*?(?:OPENAI|ANTHROPIC|AI_API_KEY)/is);
 
     const assetsDirectory = resolve(repositoryRoot, 'dist', 'assets');
-    expect(existsSync(assetsDirectory), 'production build assets directory must exist').toBe(true);
+    expect(
+      existsSync(assetsDirectory),
+      'dist/assets missing — run `npm run build` before this test; it is invoked by `verify:bundle`'
+    ).toBe(true);
 
     const bundleMarkers = [
       'OPENAI_API_KEY',
@@ -92,7 +95,10 @@ describe('browser AI boundary', () => {
     ];
     const javascriptAssets = readdirSync(assetsDirectory)
       .filter((assetName) => /\.(?:m?js|cjs)$/i.test(assetName));
-    expect(javascriptAssets.length, 'production build must emit at least one JavaScript asset').toBeGreaterThan(0);
+    expect(
+      javascriptAssets.length,
+      'dist/assets contains no emitted JavaScript client assets — run `npm run build` before this test; it is invoked by `verify:bundle`'
+    ).toBeGreaterThan(0);
 
     for (const assetName of javascriptAssets) {
       const bundle = readFileSync(resolve(assetsDirectory, assetName));

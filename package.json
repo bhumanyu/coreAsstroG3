@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": "20.x",
+    "node": "^22.20.0",
     "npm": "10.9.2"
   },
   "packageManager": "npm@10.9.2",
@@ -13,9 +13,10 @@
     "build": "vite build",
     "lint": "tsc --noEmit",
     "test": "vitest run",
+    "test:bundle": "vitest run --config vite.bundle.config.ts",
     "preview": "vite preview --host 0.0.0.0 --port 3000",
     "verify": "npm run lint && npm test && npm run verify:bundle",
-    "verify:bundle": "npm run build && vitest run src/ai/security/browserBoundary.test.ts",
+    "verify:bundle": "npm run build && npm run test:bundle",
     "test:pba10": "vitest run src/product/analysis/selectedPeriodProductService.test.ts src/product/analysis/productAnalysisMapper.test.ts src/product/analysis/productAnalysisService.integration.test.ts src/product/analysis/__tests__/productAnalysisService.test.ts src/ai/product/aiExplanationService.test.ts src/pages/__tests__/DashaPage.test.tsx",
     "verify:pba10": "npm run lint && npm run test:pba10 && npm run build"
   },

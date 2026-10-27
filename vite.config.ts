@@ -23,7 +23,7 @@ export default defineConfig({
         test: {
           environment: 'node',
           include: ['src/**/*.{test,spec}.ts'],
-          exclude: ['src/**/*.{test,spec}.tsx'],
+          exclude: ['src/**/*.{test,spec}.tsx', 'src/ai/security/browserBoundary.test.ts'],
           globals: true,
           setupFiles: './src/test/setupTests.ts',
           testTimeout: 30000,
@@ -42,4 +42,3 @@ export default defineConfig({
     ],
   },
 });
-

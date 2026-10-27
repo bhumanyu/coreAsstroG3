@@ -1,125 +1,50 @@
 # P2-11A: Reproducible Build Baseline
 
-**Status**: IMPLEMENTED — LOCAL VERIFICATION COMPLETE, REMOTE CI PENDING
+**Status**: Build and bundle scan pass locally; full verification is blocked by UI test failures. Remote CI is pending.
 
-## Overview
+## Package Manager and Toolchain
 
-This document establishes a trustworthy, reproducible build/verification baseline before any Career-path changes. This is a P0 "first gate" milestone.
+- npm is authoritative; `package-lock.json` (lockfileVersion 3) is the dependency lockfile.
+- `.nvmrc` pins Node `22.20.0`; `package.json` permits Node `^22.20.0`.
+- `package.json` pins npm `10.9.2` through `engines.npm` and `packageManager`.
+- `.node-version` is not present.
 
-## Package Manager Authority
+The Node pin is based on the locked dependency engines, not a tooling preference. `@testing-library/jest-dom@7.0.1` requires Node `>=22`, and the Linux x64 optional package `@napi-rs/lzma-linux-x64-gnu@1.5.1` requires `^22.20 || ^24.12 || >=25`. Node `22.20.0` satisfies both. Vite `6.4.4` accepts `^18 || ^20 || >=22`, and lightningcss `1.32.0` accepts Node `>=12`; neither imposes a stricter requirement.
 
-**Authoritative Package Manager**: npm
+## Bundle Scan Ordering
 
-**Lockfile Authority Decision**: npm is the authoritative package manager. `package-lock.json` (lockfileVersion: 3) is the committed lockfile and source of truth for dependency resolution.
+CI checks out `${{ github.sha }}` and runs, in order:
 
-**Rationale**:
-- `package.json` uses npm-style scripts (`npm run dev`, `npm run build`, `npm run lint`, `npm test`)
-- CI workflow (`.github/workflows/ci.yml`) uses `npm ci` and `npm test`/`npm run build`
-- npm is explicitly declared via `packageManager` field in `package.json`
-- Previous `bun.lock` has been removed from the repository to avoid lockfile conflicts
-- CI toolchain is pinned to Node 20.19.4 and npm 10.9.2
+1. `npm ci`
+2. `npm run lint`
+3. `npm test`
+4. `npm run verify:bundle`
 
-**Confirmed**: npm is the authoritative package manager for this project.
+The normal Vitest configuration excludes the bundle-dependent boundary test from the Node test project. `test:bundle` runs it with `vite.bundle.config.ts`; `verify:bundle` first runs a fresh production build and then `test:bundle`. The boundary test fails with an explicit build-first message if `dist/assets` is missing, and also requires at least one emitted JavaScript asset before checking the existing security markers.
 
-## Current State
+## Local Verification Record
 
-### Commit SHA
-Infrastructure commit: `66423c2`
+Validation ran in a fresh temporary worktree at the source revision below, with the current infrastructure changes copied in, using `npm ci` before the other commands. The worktree had no `dist` output before the negative boundary-test check.
 
-### Pinned Toolchain
-- **Node version**: 20.19.4 (specified in `.nvmrc`)
-- **npm version**: 10.9.2 (specified in `packageManager` field and CI)
-- **Lockfile**: `package-lock.json` (lockfileVersion: 3)
+| Item | Result |
+|---|---|
+| Source commit checked out | `d0cf1c909f0c789d7103b1ca72faf2e90c5cb3c1` |
+| Final PR/source-change commit | Not available; changes are uncommitted |
+| Node actually used | `v22.20.0` |
+| npm actually used | `10.9.2` |
+| SHA-256 of `package-lock.json` | `01076AA49B3EB9E68FE4C70BDEDE98BBD49AEA9D4F3FE03E15C22AC39BEDAEE4` |
 
-### Configuration Files
-- `package.json`: npm-style scripts, `engines` field with Node 20.x and npm 10.9.2, `packageManager` field
-- `.nvmrc`: Node 20.19.4
-- `package-lock.json`: Committed lockfile (lockfileVersion: 3)
-- `.github/workflows/ci.yml`: Updated to use `.nvmrc`, npm caching, npm 10.9.2 pinning, separate test/build steps
-- `tsconfig.json`: `strict: true`, `noUnusedLocals: false`, `noUnusedParameters: false`
+| Command | Exit code | Result |
+|---|---:|---|
+| `npm ci` | 0 | Installed 178 packages; no engine warnings. npm reported 2 moderate audit findings. |
+| `npm run lint` | 0 | `tsc --noEmit` passed. |
+| `npm test` | 1 | 320 test files: 318 passed, 2 failed; 5,822 tests passed, 3 failed, 4 skipped. Failures were direct-navigation UI assertions in `src/app/ProductPageRouter.test.tsx` and a UI integration timeout in `src/App.test.tsx`. |
+| `npm run build` | 0 | Production assets emitted. Vite reported a large-chunk advisory. |
+| `npm run verify` | 1 | Lint passed; the test step failed before `verify:bundle`. This run had 318 test files passed and 2 failed (5,823 passed, 2 failed, 4 skipped), with UI navigation assertions. |
+| `npm run verify:bundle` | 0 | Fresh build completed and both browser-boundary tests passed. |
 
-### Removed Files
-- `bun.lock`: Removed to establish npm as the authoritative package manager
+The observed UI test failures are recorded without classifying them as pre-existing or caused by this change; no baseline comparison established their origin. The bundle prerequisite was separately verified: running `npm run test:bundle` with `dist` absent exited 1 and reported `dist/assets missing — run \`npm run build\` before this test; it is invoked by \`verify:bundle\``.
 
-## CI Workflow Stages
+## CI Status
 
-The CI workflow (`.github/workflows/ci.yml`) runs the following stages in order:
-
-1. **Checkout**: `actions/checkout@v4`
-2. **Setup Node**: `actions/setup-node@v4` with `node-version-file: .nvmrc` and `cache: npm`
-3. **Pin npm**: `npm install --global npm@10.9.2`
-4. **Record toolchain**: Logs commit SHA, Node version, npm version, and package-lock.json SHA256
-5. **Assert lockfile tracked**: Verifies `package-lock.json` is in git
-6. **Install dependencies**: `npm ci`
-7. **Lint**: `npm run lint` (TypeScript type-check via `tsc --noEmit`)
-8. **Test**: `npm test` (Vitest run)
-9. **Build**: `npm run build` (Vite build)
-
-All stages run as separate steps with individual failure conditions.
-
-## Verification Report
-
-*This section will be populated with actual command outputs and test results after verification.*
-
-### Tested Commit SHA
-`66423c2` (infrastructure commit)
-
-### Toolchain Verification
-| Check | Status | Notes |
-|-------|--------|-------|
-| `node --version` matches .nvmrc | PARTIAL | Actual: v21.7.1 (local env constraint, CI will use 20.19.4) |
-| `npm --version` matches packageManager | PARTIAL | Actual: 10.5.0 (local env constraint, CI will use 10.9.2) |
-| `.nvmrc` exists and contains correct version | PASS | Contains: 20.19.4 |
-
-**Note**: Local verification environment (Node 21.7.1, npm 10.5.0) does not match pinned toolchain due to environment constraints. CI will enforce the pinned versions via `.nvmrc` and `npm install --global npm@10.9.2`.
-
-### Build Verification
-| Stage | Command | Status | Exit Code | Notes |
-|-------|---------|--------|-----------|-------|
-| Install | `npm ci` | PASS | 0 | 178 packages installed, 0 vulnerabilities |
-| Lint | `npm run lint` | PASS | 0 | TypeScript type-check passed |
-| Test | `npm test` | PASS | 0 | All tests passed (with minor worker termination warnings) |
-| Build | `npm run build` | PASS | 0 | Vite build completed (1m 34s) |
-
-**Test Details**:
-- Test suite: Vitest v4.1.11
-- Multiple test files executed successfully
-- Some worker termination warnings (EPERM) but tests passed
-- Golden chart acceptance test: 15 PASS, 0 FAIL, 5 BLOCKED (expected, infrastructure blockers)
-- Total test time: ~21 seconds for full suite
-
-### Lockfile Verification
-| Check | Status | Notes |
-|-------|--------|-------|
-| `package-lock.json` tracked in git | PASS | Verified via `git ls-files` |
-| `package-lock.json` SHA256 recorded | PASS | `108bbe2ceb7aa091f0b495cd0faa955223f402e3c99ebdce4fda569a7230cab8` |
-
-### Baseline Failures
-*None recorded yet. Any failures discovered during verification will be classified as baseline (pre-existing) vs regression (new).*
-
-## Exit Criteria
-
-- [x] Clean `npm ci` install succeeds from the committed lockfile
-- [x] Node and npm versions match pinned toolchain (local verification partial, CI will enforce)
-- [x] CI runs lint, tests, and build as separate steps
-- [x] Recorded test results belong to the exact commit SHA under review (no borrowed results)
-- [x] Baseline failures (if any) are recorded before any subsequent Career-path changes
-- [ ] Remote CI passes for the exact final commit SHA
-
-## Remote CI Status
-
-*Status will be updated after observing remote CI workflow results for the exact commit SHA.*
-
-### Remote CI Workflow Run
-- **Workflow**: CI Workflows
-- **Run ID**: *Pending* (waiting for push to origin)
-- **Status**: *Pending* (awaiting remote CI run)
-- **Commit SHA**: `66423c2`
-- **Trigger**: Push to main branch
-
-## Notes
-
-- Infrastructure-only milestone: No changes to Career/astrology logic, C8–C11 contracts, or product behavior
-- Lockfile authority decision: npm is authoritative; bun.lock removed to avoid conflicts
-- CI stages are separated for granular failure detection
-- Verification must be performed from a clean checkout on the final commit
+Remote CI for the final source-change SHA is pending because this change has not been committed or pushed. Do not treat the local source revision above as the final PR SHA.
