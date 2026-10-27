@@ -643,36 +643,56 @@ describe('P2-11G Golden Chart Acceptance Test for Career', () => {
   });
 
   /**
-   * G06: Mechanism refinement outputs (BLOCKED)
+   * G06: Refinement remains explicitly unavailable until the real-chart gate exists.
    */
-  it('G06: Mechanism refinement outputs (BLOCKED - orchestrator not in production)', () => {
+  it('G06: Mechanism refinements stay UNRESOLVED/UNAVAILABLE while activation is disabled', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G06')!;
+    const result = runGoldenScenario(scenario);
+    const foundation = result.interpretation.conclusionData?.canonicalCareerFoundation;
+
+    expect(foundation).toBeDefined();
+    expect(foundation!.mechanismRefinements).toHaveLength(foundation!.resolvedMechanisms.length);
+    for (const refinement of foundation!.mechanismRefinements) {
+      expect(refinement.resolution).toBe('UNRESOLVED');
+      expect(refinement.status).toBe('UNAVAILABLE');
+      expect(refinement.mechanism).toBeNull();
+    }
+    // The deferred refinement path cannot silently replace the authoritative C11 result.
+    expect(result.interpretation.conclusionData?.canonicalCareerFinalSynthesis)
+      .toBe(result.canonicalC11);
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
       status: 'BLOCKED',
       productionEntryPoint: 'interpretCareerV2',
       expected: scenario.expectedC11Fields,
-      traceCheck: false,
-      reason: 'buildCanonicalCareerFoundation has no production caller',
-      blockedDependency: 'G19: buildCanonicalCareerFoundation not wired into production path'
+      traceCheck: true,
+      reason: 'Production keeps dispositor contexts disabled; the real-chart candidate→context→refinement acceptance fixture is still required.',
+      blockedDependency: 'P2-11G refinement activation gate'
     });
   });
 
   /**
-   * G07: Qualified-mechanism outputs (BLOCKED)
+   * G07: Owner-gated qualified mechanism output remains explicitly absent.
    */
-  it('G07: Qualified-mechanism outputs (BLOCKED - orchestrator not in production)', () => {
+  it('G07: Qualified-mechanism output stays unavailable without changing C11', () => {
     const scenario = GOLDEN_SCENARIOS.find((s: GoldenScenarioMetadata) => s.scenarioId === 'G07')!;
+    const result = runGoldenScenario(scenario);
+    const conclusionData = result.interpretation.conclusionData as Record<string, unknown>;
+
+    expect(result.interpretation.conclusionData?.canonicalCareerFoundation).toBeDefined();
+    expect(conclusionData.qualifiedMechanism).toBeUndefined();
+    expect(result.interpretation.conclusionData?.canonicalCareerFinalSynthesis)
+      .toBe(result.canonicalC11);
 
     scenarioResults.push({
       scenarioId: scenario.scenarioId,
       status: 'BLOCKED',
       productionEntryPoint: 'interpretCareerV2',
       expected: scenario.expectedC11Fields,
-      traceCheck: false,
-      reason: 'buildCanonicalCareerFoundation has no production caller',
-      blockedDependency: 'G19: buildCanonicalCareerFoundation not wired into production path'
+      traceCheck: true,
+      reason: 'No owner-authorized qualified-mechanism product output exists; absence is not treated as a negative conclusion.',
+      blockedDependency: 'Owner-gated mechanism qualification acceptance'
     });
   });
 

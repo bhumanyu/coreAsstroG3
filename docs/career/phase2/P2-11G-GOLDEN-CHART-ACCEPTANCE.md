@@ -1,5 +1,17 @@
 # P2-11G: Golden Chart End-to-End Acceptance Test for Career
 
+> **Current acceptance correction (PR-7 · P1-G).** The historical verification
+> notes below predate the current production wiring. `interpretCareerV2` now builds
+> the canonical foundation and exposes it as additive provenance (G19 PASS); the
+> profession, trajectory, and events producers are likewise additive and do not
+> replace canonical C11. G06 remains BLOCKED because production deliberately uses
+> `enableDispositorContexts: false`: every refinement must remain explicitly
+> `UNRESOLVED`/`UNAVAILABLE` until a real-chart candidate → context → refinement
+> acceptance fixture is approved. G07 remains BLOCKED by its owner-gated
+> qualified-mechanism product contract. The current test and fixture catalogue are
+> the source of truth for this status; old commit SHA/status statements below are
+> retained only as historical verification records.
+
 **Status:** IMPLEMENTED — VERIFICATION PENDING (local verification complete; remote CI verification pending - awaiting observable workflow results for SHA 160a76f)
 
 **Implementation Commit SHA:** `01a3968ff7f328eb869ef5f0ef1fb8a29639ae70` (P2-11F Gate F: production wiring of profession analysis)

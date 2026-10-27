@@ -9,7 +9,8 @@
  * createAnalysisContext pattern from CareerDomainInterpreterV2.test.ts and stage1GoldenFixture.ts.
  *
  * HARD CONSTRAINTS:
- * - Do NOT wire buildCanonicalCareerFoundation, orchestrator, profession engine, trajectory, or events into interpretCareerV2
+ * - Do NOT add producers or change the authority of canonical C11
+ * - Dispositor-context refinement remains disabled until its real-chart acceptance gate passes
  * - Do NOT reconstruct the pipeline inside the test; harness must invoke real interpretCareerV2
  * - Do NOT use buildGoldenCareerInterpretation as production entry point (it's a test fixture)
  * - Do NOT change public interpretCareerV2 return type or C11 authority
@@ -170,14 +171,16 @@ export const G05_MISSING_OPTIONAL_INPUTS: GoldenScenarioMetadata = Object.freeze
 });
 
 /**
- * G06: Mechanism refinement outputs (BLOCKED - orchestrator not in production)
+ * G06: Mechanism refinement outputs (BLOCKED - refinement activation is disabled)
  *
- * Mechanism refinement from P2-11B orchestrator. NOT in production path.
- * Expected to remain UNAVAILABLE/UNRESOLVED.
+ * The foundation is available in production, but the production call deliberately
+ * does not enable dispositor contexts.  The refinement result must therefore stay
+ * explicitly UNRESOLVED/UNAVAILABLE; it must never be represented as a negative
+ * career signal or a guessed REFINED result.
  */
 export const G06_MECHANISM_REFINEMENT: GoldenScenarioMetadata = Object.freeze({
   scenarioId: 'G06',
-  description: 'Mechanism refinement outputs (BLOCKED - orchestrator not in production)',
+  description: 'Mechanism refinement outputs (BLOCKED - real-chart refinement gate not accepted)',
   asOf: '2026-01-01T00:00:00.000Z',
   temporalContext: 'Standard canonical chart',
   expectedC11Fields: Object.freeze({
@@ -188,18 +191,18 @@ export const G06_MECHANISM_REFINEMENT: GoldenScenarioMetadata = Object.freeze({
     'resolvedMechanism',
     'orchestratorOutput'
   ]),
-  notes: 'BLOCKED: buildCanonicalCareerFoundation has no production caller. G19 dependency.'
+  notes: 'BLOCKED: production keeps dispositor contexts disabled pending a real-chart candidate→context→refinement acceptance fixture.'
 });
 
 /**
- * G07: Qualified-mechanism outputs (BLOCKED - orchestrator not in production)
+ * G07: Qualified-mechanism outputs (BLOCKED - owner-gated qualification)
  *
- * Qualified mechanism from P2-11B orchestrator. NOT in production path.
- * Expected to remain UNAVAILABLE/UNRESOLVED.
+ * No owner-authorized qualified-mechanism output is exposed through the C11
+ * product contract yet.  Its absence must remain explicit and must not alter C11.
  */
 export const G07_QUALIFIED_MECHANISM: GoldenScenarioMetadata = Object.freeze({
   scenarioId: 'G07',
-  description: 'Qualified-mechanism outputs (BLOCKED - orchestrator not in production)',
+  description: 'Qualified-mechanism outputs (BLOCKED - owner-gated qualification)',
   asOf: '2026-01-01T00:00:00.000Z',
   temporalContext: 'Standard canonical chart',
   expectedC11Fields: Object.freeze({
@@ -210,7 +213,7 @@ export const G07_QUALIFIED_MECHANISM: GoldenScenarioMetadata = Object.freeze({
     'patternQualification',
     'orchestratorOutput'
   ]),
-  notes: 'BLOCKED: buildCanonicalCareerFoundation has no production caller. G19 dependency.'
+  notes: 'BLOCKED: qualified-mechanism acceptance is owner-gated; no output is inferred from foundation internals.'
 });
 
 /**
@@ -288,26 +291,21 @@ export const G11_UNRELATED_DASHA: GoldenScenarioMetadata = Object.freeze({
 });
 
 /**
- * G12: Profession analysis outputs (BLOCKED - profession engine not in production)
+ * G12: Profession analysis outputs (PASS - additive production projection)
  *
- * buildCareerProfessionAnalysis from P2-10A. NOT in production path.
- * Expected to remain UNAVAILABLE/UNRESOLVED.
+ * Profession analysis is an additive downstream producer. Its result or typed
+ * failure is observable, while canonical C11 remains authoritative.
  */
 export const G12_PROFESSION_ANALYSIS: GoldenScenarioMetadata = Object.freeze({
   scenarioId: 'G12',
-  description: 'Profession analysis outputs (BLOCKED - profession engine not in production)',
+  description: 'Profession analysis outputs preserve C11 authority',
   asOf: '2026-01-01T00:00:00.000Z',
   temporalContext: 'Standard canonical chart',
   expectedC11Fields: Object.freeze({
     // No C11 fields expected for profession analysis
   }),
-  blockedFields: Object.freeze([
-    'professionAnalysis',
-    'professionCandidates',
-    'professionDomains',
-    'professionFamilies'
-  ]),
-  notes: 'BLOCKED: buildCareerProfessionAnalysis has no production caller (P2-11F upstream-input blocker).'
+  blockedFields: Object.freeze([]),
+  notes: 'PASS: result or typed failure is exposed without allowing a downstream projection to replace C11.'
 });
 
 /**
@@ -426,30 +424,26 @@ export const G18_TRAJECTORY_EVENTS: GoldenScenarioMetadata = Object.freeze({
     // Test asserts presence in conclusionData.careerTrajectory and conclusionData.careerEvents
   }),
   blockedFields: Object.freeze([]),
-  notes: 'PASS: buildCareerTrajectory and buildCareerEvents wired in production (commit a8e0172).'
+  notes: 'PASS: trajectory and events are downstream consumers and do not replace C11.'
 });
 
 /**
- * G19: Orchestrator foundation outputs (BLOCKED - orchestrator not in production)
+ * G19: Orchestrator foundation outputs (PASS - additive production foundation)
  *
- * buildCanonicalCareerFoundation from P2-11B. NOT in production path.
- * Expected to remain UNAVAILABLE/UNRESOLVED.
+ * The foundation is available to the production entry point. It supplies
+ * structural lineage but remains additive: canonical C11 is still the only
+ * authoritative career conclusion.
  */
 export const G19_ORCHESTRATOR_FOUNDATION: GoldenScenarioMetadata = Object.freeze({
   scenarioId: 'G19',
-  description: 'Orchestrator foundation outputs (BLOCKED - orchestrator not in production)',
+  description: 'Foundation relationship mappings are available without replacing C11',
   asOf: '2026-01-01T00:00:00.000Z',
   temporalContext: 'Standard canonical chart',
   expectedC11Fields: Object.freeze({
     // No C11 fields expected for orchestrator foundation
   }),
-  blockedFields: Object.freeze([
-    'canonicalCareerFoundation',
-    'orchestratorOutput',
-    'stageEvidence',
-    'identityMappings'
-  ]),
-  notes: 'BLOCKED: buildCanonicalCareerFoundation has no production caller. Prerequisite: wire orchestrator into production path.'
+  blockedFields: Object.freeze([]),
+  notes: 'PASS: foundation lineage is produced in the real entry point; refinement activation remains separately blocked by G06.'
 });
 
 /**
