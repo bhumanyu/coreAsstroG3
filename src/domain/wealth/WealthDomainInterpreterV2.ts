@@ -1257,6 +1257,12 @@ export function assertWealthPeriodActivationContract(
   // in activation.evidenceIds; links found outside that subset are not reachable.
   const occurrenceIds = new Set(occurrenceEvidence.map((item) => item.id));
   const promiseIds = new Set(natalPromiseEvidenceIds);
+  // Timing evidence can only activate canonical natal promises, never another occurrence phase.
+  const canonicalNatalPromiseIds = new Set(
+    occurrenceEvidence
+      .filter((item) => item.phase === 'NATAL_PROMISE')
+      .map((item) => item.id)
+  );
 
   assertStrictSortedIds(activation.evidenceIds, 'Wealth activation evidenceIds');
   assertStrictSortedIds(activation.activatedPromiseEvidenceIds ?? [], 'Wealth activation activatedPromiseEvidenceIds');
@@ -1277,6 +1283,16 @@ export function assertWealthPeriodActivationContract(
     activation.evidenceIds.includes(item.id) && item.timing?.period === activation.period
   );
   const reachablePromises = new Set(activationEvidence.flatMap((item) => item.relatedEvidenceIds));
+  for (const occurrence of activationEvidence) {
+    for (const id of occurrence.relatedEvidenceIds) {
+      if (!canonicalNatalPromiseIds.has(id)) {
+        const sameIdOccurrence = occurrenceEvidence.find((item) => item.id === id);
+        if (sameIdOccurrence && sameIdOccurrence.phase !== 'NATAL_PROMISE') {
+          throw new Error(`Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`);
+        }
+      }
+    }
+  }
   for (const id of activation.activatedPromiseEvidenceIds ?? []) {
     if (!reachablePromises.has(id)) {
       throw new Error(`Wealth activation promise reference is not reachable from ${activation.period}: ${id}`);

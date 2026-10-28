@@ -23,6 +23,49 @@ const testMethodology = {
 function makeContext(asOf?: Date | string) {
   return createAnalysisContext({ asOf, methodology: testMethodology });
 }
+
+function makeEmptyProducerChartFor(horoscope: Horoscope, hasCompleteInputs: boolean): Horoscope {
+  const houseEntries = Object.entries(horoscope.houseInterpretation?.houses ?? {}) as
+    Array<[string, HouseInterpretation]>;
+  const neutralHouseInterpretations = Object.fromEntries(
+    houseEntries.map(([houseNumber, house]) => [
+      houseNumber,
+      {
+        ...house,
+        placement: { ...house.placement, signLord: undefined },
+        lord: undefined,
+        summary: {
+          ...house.summary,
+          supportingFactors: [],
+          challengingFactors: []
+        },
+        occupants: { ...house.occupants, planets: [] }
+      }
+    ])
+  );
+
+  return {
+    ...horoscope,
+    ...(hasCompleteInputs ? {} : { planetFacts: {} as Horoscope['planetFacts'] }),
+    bhavas: undefined,
+    bhavaFacts: undefined,
+    houseInterpretation: hasCompleteInputs
+      ? { ...horoscope.houseInterpretation, houses: neutralHouseInterpretations }
+      : undefined,
+    houseAnalysis: hasCompleteInputs ? { houses: {} } : undefined,
+    planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
+    planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
+    functionalRoles: hasCompleteInputs ? {} : undefined,
+    yogas: hasCompleteInputs ? horoscope.yogas : undefined,
+    planetaryStrength: hasCompleteInputs ? {} : undefined,
+    divisionalInterpretation: hasCompleteInputs ? {} : undefined,
+    dashaInterpretation: hasCompleteInputs
+      ? resolveDashaInterpretationForAsOf(horoscope, new Date(CANONICAL_UTC_INSTANT))
+      : undefined,
+    natalGrahaDrishti: hasCompleteInputs ? { aspects: [] } : undefined
+  };
+}
+
 import {
   interpretWealthV2,
   resolveWealthConclusionStrength,
@@ -79,7 +122,7 @@ import {
   resolveRelatedWealthPromiseEvidenceIds
 } from './wealthEvidenceLinker';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
-import type { WealthConclusionData, WealthDimensionInterpretation } from './wealthTypes';
+import type { WealthConclusionData, WealthDimensionInterpretation, WealthPeriodTimingActivation } from './wealthTypes';
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
@@ -182,48 +225,7 @@ describe('WealthDomainInterpreterV2', () => {
   }
 
   function makeEmptyProducerChart(hasCompleteInputs: boolean): Horoscope {
-    const houseEntries = Object.entries(horoscope.houseInterpretation?.houses ?? {}) as
-      Array<[string, HouseInterpretation]>;
-    const neutralHouseInterpretations = Object.fromEntries(
-      houseEntries.map(([houseNumber, house]) => [
-        houseNumber,
-        {
-          ...house,
-          placement: { ...house.placement, signLord: undefined },
-          lord: undefined,
-          summary: {
-            ...house.summary,
-            supportingFactors: [],
-            challengingFactors: []
-          },
-          occupants: { ...house.occupants, planets: [] }
-        }
-      ])
-    );
-
-    return {
-      ...horoscope,
-      ...(hasCompleteInputs ? {} : { planetFacts: {} as Horoscope['planetFacts'] }),
-      bhavas: undefined,
-      bhavaFacts: undefined,
-      houseInterpretation: hasCompleteInputs
-        ? { ...horoscope.houseInterpretation, houses: neutralHouseInterpretations }
-        : undefined,
-      houseAnalysis: hasCompleteInputs ? { houses: {} } : undefined,
-      planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
-      planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
-      functionalRoles: hasCompleteInputs ? {} : undefined,
-      yogas: hasCompleteInputs ? horoscope.yogas : undefined,
-      planetaryStrength: hasCompleteInputs ? {} : undefined,
-      divisionalInterpretation: hasCompleteInputs ? {} : undefined,
-      dashaInterpretation: hasCompleteInputs
-        ? resolveDashaInterpretationForAsOf(
-          horoscope,
-          new Date(CANONICAL_UTC_INSTANT)
-        )
-        : undefined,
-      natalGrahaDrishti: hasCompleteInputs ? { aspects: [] } : undefined
-    };
+    return makeEmptyProducerChartFor(horoscope, hasCompleteInputs);
   }
 
   // 1. Core integration & legacy preservation
@@ -528,6 +530,8 @@ describe('WealthDomainInterpreterV2', () => {
       expect(emptyV2.natalPromise.evidenceIds).toEqual([]);
       expect(noMatchV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
+      // D2 is an evaluated input here. The absence of matching structural evidence is a
+      // complete no-match result, not evidence that D2 data was unavailable.
       expect(noMatchV2.dataCompleteness?.d2).toBe('AVAILABLE');
       expect(noMatchV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
@@ -2680,6 +2684,36 @@ describe('Wealth period activation contracts', () => {
     expect(unavailable.statement).toContain('unavailable');
   });
 
+  it('derives MD, AD, and PD availability independently through interpretWealthV2', () => {
+    const completeChart = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const chart = makeEmptyProducerChartFor(completeChart, true);
+    const context = makeContext(CANONICAL_UTC_INSTANT);
+    const temporalState = resolveAnalysisTemporalState(completeChart, context);
+    const completeDasha = temporalState.dashaInterpretation?.current;
+    expect(completeDasha).toBeDefined();
+    if (!completeDasha) return;
+
+    const partialDasha = Object.freeze({
+      ...temporalState.dashaInterpretation,
+      current: Object.freeze({
+        ...completeDasha,
+        pratyantardasha: undefined
+      })
+    }) as unknown as NonNullable<typeof temporalState.dashaInterpretation>;
+    const options = {
+      context,
+      temporalState: { ...temporalState, dashaInterpretation: partialDasha }
+    };
+    const result = interpretWealthV2(chart, options);
+    const activations = result.conclusionData?.periodTimingActivations ?? [];
+    const md = activations.find((item: WealthPeriodTimingActivation) => item.period === 'MD');
+    const ad = activations.find((item: WealthPeriodTimingActivation) => item.period === 'AD');
+    const pd = activations.find((item: WealthPeriodTimingActivation) => item.period === 'PD');
+    expect(md?.statement).toContain('complete but no period evidence');
+    expect(ad?.statement).toContain('complete but no period evidence');
+    expect(pd?.statement).toContain('unavailable');
+  });
+
   it('preserves occurrence and canonical namespaces across provenance and legacy mapped evidence', () => {
     const namespaceHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const rawEvidence = interpretWealthTheme(namespaceHoroscope).evidence;
@@ -2713,12 +2747,20 @@ describe('Wealth period activation contracts', () => {
     if (wrongPhaseTimingTarget) {
       const timingEvidence = mapped.find((entry) => entry.phase === 'DASHA_ACTIVATION' || entry.source === 'DASHA');
       if (timingEvidence) {
-        const forgedLink = { ...timingEvidence, relatedEvidenceIds: [wrongPhaseTimingTarget.id] };
-        const target = mapped.find((entry) => entry.id === forgedLink.relatedEvidenceIds[0]);
-        expect(target?.phase).not.toBe('NATAL_PROMISE');
-        expect(() => {
-          if (target?.phase !== 'NATAL_PROMISE') throw new Error('Dasha link target is not a natal promise');
-        }).toThrow(/not a natal promise/);
+        const forgedLink = { ...timingEvidence, relatedEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id]) };
+        const forgedActivation = Object.freeze({
+          period: 'MD' as const,
+          dimensions: Object.freeze({ accumulation: 'ACTIVATES' as const, gains: 'DOES_NOT_ACTIVATE' as const, fortune: 'DOES_NOT_ACTIVATE' as const, speculation: 'DOES_NOT_ACTIVATE' as const }),
+          evidenceIds: Object.freeze([forgedLink.id]),
+          effect: 'ACTIVATES' as const,
+          activatedPromiseEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id])
+        });
+        expect(() => assertWealthPeriodActivationContract(
+          forgedActivation,
+          [forgedLink, wrongPhaseTimingTarget],
+          [wrongPhaseTimingTarget.id],
+          true
+        )).toThrow(/not a natal promise occurrence|not in the canonical natal promise set/);
       }
     }
   });
@@ -2762,7 +2804,20 @@ describe('Wealth period activation contracts', () => {
     });
   });
 
-  it('isolates accumulation evidence from gains, fortune, and speculation dimensions', () => {
+  it('mixes support and challenge on the same accumulation family', () => {
+    const support = timingEvidence('MD-ACCUMULATION-SUPPORT', 'MD', 'PROMISE-1', 'SUPPORTING', WealthEvidenceFamily.SECOND_HOUSE);
+    const challenge = timingEvidence('MD-ACCUMULATION-CHALLENGE', 'MD', 'PROMISE-1', 'CHALLENGING', WealthEvidenceFamily.SECOND_LORD);
+    const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge], ['PROMISE-1'], true, true);
+    expect(activation.dimensions).toEqual({
+      accumulation: 'PARTIALLY_ACTIVATES',
+      gains: 'DOES_NOT_ACTIVATE',
+      fortune: 'DOES_NOT_ACTIVATE',
+      speculation: 'DOES_NOT_ACTIVATE'
+    });
+  });
+
+  // No-family evidence deliberately must not leak into any wealth dimension.
+  it('does not leak no-family mixed evidence into other dimensions', () => {
     const support = timingEvidence('MD-ACCUMULATION', 'MD', 'PROMISE-1', 'SUPPORTING', WealthEvidenceFamily.SECOND_HOUSE);
     const activation = evaluateWealthPeriodTimingActivation('MD', [support], [support], ['PROMISE-1'], true, true);
     expect(activation.dimensions).toEqual({
