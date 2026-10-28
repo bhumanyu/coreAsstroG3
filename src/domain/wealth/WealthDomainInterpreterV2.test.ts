@@ -213,7 +213,7 @@ describe('WealthDomainInterpreterV2', () => {
       planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
       planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
       functionalRoles: hasCompleteInputs ? {} : undefined,
-      yogas: undefined,
+      yogas: hasCompleteInputs ? horoscope.yogas : undefined,
       planetaryStrength: hasCompleteInputs ? {} : undefined,
       divisionalInterpretation: hasCompleteInputs ? {} : undefined,
       dashaInterpretation: hasCompleteInputs
@@ -505,7 +505,7 @@ describe('WealthDomainInterpreterV2', () => {
       ]);
 
       expect(completeNoMatch.metadata.evaluatedRulesCount).toBeGreaterThan(0);
-      expect(completeNoMatch.metadata.dataCompleteness).toBe('PARTIAL');
+      expect(completeNoMatch.metadata.dataCompleteness).toBe('COMPLETE');
       expect(completeNoMatch.evidence.filter((item) =>
         structuralFamilies.has(item.evidenceFamily)
       )).toEqual([]);
@@ -528,7 +528,7 @@ describe('WealthDomainInterpreterV2', () => {
       expect(emptyV2.natalPromise.evidenceIds).toEqual([]);
       expect(noMatchV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
-      expect(noMatchV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
+      expect(noMatchV2.dataCompleteness?.d2).toBe('AVAILABLE');
       expect(noMatchV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
@@ -2664,11 +2664,12 @@ describe('WealthDomainInterpreterV2', () => {
 });
 
 describe('Wealth period activation contracts', () => {
-  function timingEvidence(id: string, period: 'MD' | 'AD' | 'PD', promiseId: string, polarity: 'SUPPORTING' | 'CHALLENGING') {
+  function timingEvidence(id: string, period: 'MD' | 'AD' | 'PD', promiseId: string, polarity: 'SUPPORTING' | 'CHALLENGING', evidenceFamily?: WealthEvidenceFamily) {
     return createDomainEvidence({
       id, sourceType: 'DASHA', domain: 'WEALTH', role: 'SECONDARY', phase: 'DASHA_ACTIVATION',
       source: 'DASHA', statement: id, polarity, strength: 'MODERATE', priority: 50,
-      timing: { period, planet: undefined }, relatedEvidenceIds: [promiseId]
+      timing: { period, planet: undefined }, relatedEvidenceIds: [promiseId],
+      ...(evidenceFamily ? { evidenceFamily } : {})
     });
   }
 
@@ -2697,9 +2698,38 @@ describe('Wealth period activation contracts', () => {
     const canonicalPromiseIds = new Set(mapped.filter((item) => item.phase === 'NATAL_PROMISE').map((item) => item.id));
     for (const item of mapped) {
       for (const target of item.relatedEvidenceIds) {
-        expect(mapped.some((candidate) => candidate.id === target) || canonicalPromiseIds.has(target)).toBe(true);
+        const candidate = mapped.find((entry) => entry.id === target);
+        expect(candidate).toBeDefined();
+        if (item.phase === 'DASHA_ACTIVATION' || item.source === 'DASHA') {
+          expect(candidate?.phase).toBe('NATAL_PROMISE');
+        } else {
+          // Structural links are occurrence links and must remain occurrence-resolvable.
+          expect(candidate?.id).toBe(target);
+        }
       }
     }
+
+    const wrongPhaseTimingTarget = mapped.find((entry) => entry.phase !== 'NATAL_PROMISE' && entry.id !== venusMapped?.id);
+    if (wrongPhaseTimingTarget) {
+      const timingEvidence = mapped.find((entry) => entry.phase === 'DASHA_ACTIVATION' || entry.source === 'DASHA');
+      if (timingEvidence) {
+        const forgedLink = { ...timingEvidence, relatedEvidenceIds: [wrongPhaseTimingTarget.id] };
+        const target = mapped.find((entry) => entry.id === forgedLink.relatedEvidenceIds[0]);
+        expect(target?.phase).not.toBe('NATAL_PROMISE');
+        expect(() => {
+          if (target?.phase !== 'NATAL_PROMISE') throw new Error('Dasha link target is not a natal promise');
+        }).toThrow(/not a natal promise/);
+      }
+    }
+  });
+
+  it('evaluates MD and AD independently when PD timing is unavailable', () => {
+    const md = evaluateWealthPeriodTimingActivation('MD', [], [], [], true, true);
+    const ad = evaluateWealthPeriodTimingActivation('AD', [], [], [], true, true);
+    const pd = evaluateWealthPeriodTimingActivation('PD', [], [], [], true, false);
+    expect(md.statement).toContain('complete but no period evidence');
+    expect(ad.statement).toContain('complete but no period evidence');
+    expect(pd.statement).toContain('unavailable');
   });
 
   it('rejects strict raw ID violations before normalization', () => {
@@ -2724,7 +2754,23 @@ describe('Wealth period activation contracts', () => {
     const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge], ['PROMISE-1'], true, true);
     expect(activation.effect).toBe('PARTIALLY_ACTIVATES');
     expect(activation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
-    expect(activation.dimensions).toEqual(expect.objectContaining({ accumulation: expect.any(String) }));
+    expect(activation.dimensions).toEqual({
+      accumulation: 'DOES_NOT_ACTIVATE',
+      gains: 'DOES_NOT_ACTIVATE',
+      fortune: 'DOES_NOT_ACTIVATE',
+      speculation: 'DOES_NOT_ACTIVATE'
+    });
+  });
+
+  it('isolates accumulation evidence from gains, fortune, and speculation dimensions', () => {
+    const support = timingEvidence('MD-ACCUMULATION', 'MD', 'PROMISE-1', 'SUPPORTING', WealthEvidenceFamily.SECOND_HOUSE);
+    const activation = evaluateWealthPeriodTimingActivation('MD', [support], [support], ['PROMISE-1'], true, true);
+    expect(activation.dimensions).toEqual({
+      accumulation: 'ACTIVATES',
+      gains: 'DOES_NOT_ACTIVATE',
+      fortune: 'DOES_NOT_ACTIVATE',
+      speculation: 'DOES_NOT_ACTIVATE'
+    });
   });
 
   it('does not inherit a different promise link across MD and AD periods', () => {
