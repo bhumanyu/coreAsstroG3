@@ -180,8 +180,9 @@ export function resolveRequiredWealthSubjectKey(
       }
       seen.add(planet);
     }
-    // The registered rule ID, not descriptive planet metadata, determines the subject.
-    // Planet metadata may therefore mention related planets and is not treated as identity.
+    // Intentional contract widening: the registered rule ID, not descriptive planet metadata,
+    // determines the subject. Planet metadata may therefore contain multiple related planets and
+    // is not treated as identity; PR description should call out this Venus-karaka relaxation.
   }
 
   if (item.houses) {

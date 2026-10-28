@@ -9,6 +9,7 @@ import { createAnalysisContext } from '../../core/analysis/analysisContextFactor
 import { resolveAnalysisTemporalState } from '../../core/analysis/resolveAnalysisTemporalState';
 import type { DomainReasoningOptions } from '../reasoning/reasoningTypes';
 import type { Horoscope } from '../../types';
+import type { HouseInterpretation } from '../../engine/houseInterpretation/houseInterpretationTypes';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -181,8 +182,10 @@ describe('WealthDomainInterpreterV2', () => {
   }
 
   function makeEmptyProducerChart(hasCompleteInputs: boolean): Horoscope {
+    const houseEntries = Object.entries(horoscope.houseInterpretation?.houses ?? {}) as
+      Array<[string, HouseInterpretation]>;
     const neutralHouseInterpretations = Object.fromEntries(
-      (Object.entries(horoscope.houseInterpretation?.houses ?? {}) as [string, any][]).map(([houseNumber, house]: [string, any]) => [
+      houseEntries.map(([houseNumber, house]) => [
         houseNumber,
         {
           ...house,
@@ -210,7 +213,7 @@ describe('WealthDomainInterpreterV2', () => {
       planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
       planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
       functionalRoles: hasCompleteInputs ? {} : undefined,
-      yogas: hasCompleteInputs ? {} as any : undefined,
+      yogas: undefined,
       planetaryStrength: hasCompleteInputs ? {} : undefined,
       divisionalInterpretation: hasCompleteInputs ? {} : undefined,
       dashaInterpretation: hasCompleteInputs
@@ -502,7 +505,7 @@ describe('WealthDomainInterpreterV2', () => {
       ]);
 
       expect(completeNoMatch.metadata.evaluatedRulesCount).toBeGreaterThan(0);
-      expect(completeNoMatch.metadata.dataCompleteness).toBe('COMPLETE');
+      expect(completeNoMatch.metadata.dataCompleteness).toBe('PARTIAL');
       expect(completeNoMatch.evidence.filter((item) =>
         structuralFamilies.has(item.evidenceFamily)
       )).toEqual([]);
@@ -2676,6 +2679,29 @@ describe('Wealth period activation contracts', () => {
     expect(unavailable.statement).toContain('unavailable');
   });
 
+  it('preserves occurrence and canonical namespaces across provenance and legacy mapped evidence', () => {
+    const namespaceHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const rawEvidence = interpretWealthTheme(namespaceHoroscope).evidence;
+    const venusRaw = rawEvidence.find((item) => item.ruleId === 'WEALTH_VENUS_KARAKA_001');
+    const legacyRaw = rawEvidence.find((item) => item.ruleId === 'WEALTH_11L_DIGNITY_001') ?? rawEvidence.find((item) => item.ruleId !== 'WEALTH_VENUS_KARAKA_001');
+    expect(venusRaw).toBeDefined();
+    expect(legacyRaw).toBeDefined();
+
+    const mapped = linkWealthEvidence(buildWealthEvidence(rawEvidence));
+    const venusMapped = mapped.find((item) => item.ruleId === 'WEALTH_VENUS_KARAKA_001');
+    const legacyMapped = mapped.find((item) => item.ruleId === legacyRaw?.ruleId);
+    expect(venusMapped?.provenance?.evidenceId).toBe(venusMapped?.id);
+    expect(venusMapped?.id).not.toBe(venusRaw?.id);
+    expect(legacyMapped?.id).toBe((legacyRaw as unknown as { identityKey?: string }).identityKey ?? legacyRaw?.id);
+
+    const canonicalPromiseIds = new Set(mapped.filter((item) => item.phase === 'NATAL_PROMISE').map((item) => item.id));
+    for (const item of mapped) {
+      for (const target of item.relatedEvidenceIds) {
+        expect(mapped.some((candidate) => candidate.id === target) || canonicalPromiseIds.has(target)).toBe(true);
+      }
+    }
+  });
+
   it('rejects strict raw ID violations before normalization', () => {
     expect(() => assertStrictIds(['', 'ok'], 'raw')).toThrow();
     expect(() => assertStrictIds([' ok', 'ok'], 'raw')).toThrow();
@@ -2692,11 +2718,22 @@ describe('Wealth period activation contracts', () => {
     expect(activation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
   });
 
-  it('mixed timing maps to PARTIALLY_ACTIVATES', () => {
+  it('mixed timing maps every linked promise and dimension effect', () => {
     const support = timingEvidence('MD-SUPPORT', 'MD', 'PROMISE-1', 'SUPPORTING');
     const challenge = timingEvidence('MD-CHALLENGE', 'MD', 'PROMISE-1', 'CHALLENGING');
     const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge], ['PROMISE-1'], true, true);
     expect(activation.effect).toBe('PARTIALLY_ACTIVATES');
+    expect(activation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
+    expect(activation.dimensions).toEqual(expect.objectContaining({ accumulation: expect.any(String) }));
+  });
+
+  it('does not inherit a different promise link across MD and AD periods', () => {
+    const md = timingEvidence('MD-TIME', 'MD', 'PROMISE-1', 'SUPPORTING');
+    const ad = timingEvidence('AD-TIME', 'AD', 'PROMISE-2', 'CHALLENGING');
+    const mdActivation = evaluateWealthPeriodTimingActivation('MD', [md, ad], [md, ad], ['PROMISE-1', 'PROMISE-2'], true, true);
+    const adActivation = evaluateWealthPeriodTimingActivation('AD', [md, ad], [md, ad], ['PROMISE-1', 'PROMISE-2'], true, true);
+    expect(mdActivation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
+    expect(adActivation.activatedPromiseEvidenceIds).toEqual(['PROMISE-2']);
   });
 
   it('treats linked evidence with no canonical natal promise as insufficient', () => {

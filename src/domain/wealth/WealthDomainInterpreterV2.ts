@@ -253,6 +253,17 @@ export function interpretWealthV2(
   const activeDashaReport = options.temporalState.dashaInterpretation;
   const currentDasha = activeDashaReport?.current;
 
+  // This guarantees the complete MD/AD/PD hierarchy needed by period activation; a report object
+  // alone does not establish that all three timing levels are present.
+  const timingDataAvailable = Boolean(
+    currentDasha?.mahadasha?.planet &&
+    currentDasha?.antardasha?.planet &&
+    currentDasha?.pratyantardasha?.planet
+  );
+  // COMPLETE means the natal-producer dataset was fully evaluated. PARTIAL/INSUFFICIENT are not
+  // treated as an authoritative zero-promise reference set because an absent promise is ambiguous.
+  const referenceDatasetAvailable = themeInterpretation.metadata?.dataCompleteness === 'COMPLETE';
+
   const mdPlanet = currentDasha?.mahadasha?.planet;
   const adPlanet = currentDasha?.antardasha?.planet;
   const pdPlanet = currentDasha?.pratyantardasha?.planet;
@@ -262,8 +273,8 @@ export function interpretWealthV2(
     dashaEvidence,
     evidence,
     natalPromiseEvidenceIds,
-    true,
-    activeDashaReport !== undefined,
+    referenceDatasetAvailable,
+    timingDataAvailable,
     mdPlanet
   );
   const adPeriodTiming = evaluateWealthPeriodTimingActivation(
@@ -271,8 +282,8 @@ export function interpretWealthV2(
     dashaEvidence,
     evidence,
     natalPromiseEvidenceIds,
-    true,
-    activeDashaReport !== undefined,
+    referenceDatasetAvailable,
+    timingDataAvailable,
     adPlanet
   );
   const pdPeriodTiming = evaluateWealthPeriodTimingActivation(
@@ -280,8 +291,8 @@ export function interpretWealthV2(
     dashaEvidence,
     evidence,
     natalPromiseEvidenceIds,
-    true,
-    activeDashaReport !== undefined,
+    referenceDatasetAvailable,
+    timingDataAvailable,
     pdPlanet
   );
 
