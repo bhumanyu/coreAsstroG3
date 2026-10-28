@@ -148,13 +148,32 @@ export function resolveRelatedWealthPromiseEvidenceIds(
   return Object.freeze([]);
 }
 
+/** Test/dev integrity check; production linking intentionally filters dangling targets. */
+export function assertWealthEvidenceLinksResolve(
+  evidence: readonly DomainEvidence[]
+): void {
+  const ids = new Set(evidence.map((item) => item?.id).filter((id): id is string => Boolean(id?.trim())));
+  for (const item of evidence) {
+    const relatedEvidenceIds = item.relatedEvidenceIds ?? [];
+    for (const id of relatedEvidenceIds) {
+      if (!id?.trim()) {
+        throw new Error('Wealth evidence link targets must be non-empty IDs');
+      }
+      if (!ids.has(id)) {
+        throw new Error(`Wealth evidence link does not resolve: ${id}`);
+      }
+    }
+  }
+}
+
 export function linkWealthEvidence(
   evidence: readonly DomainEvidence[]
 ): readonly DomainEvidence[] {
   return Object.freeze(
     evidence.map((item) => {
-      if (item.relatedEvidenceIds.length > 0) {
-        const validLinks = item.relatedEvidenceIds.filter((id) =>
+      const relatedEvidenceIds = item.relatedEvidenceIds ?? [];
+      if (relatedEvidenceIds.length > 0) {
+        const validLinks = relatedEvidenceIds.filter((id) =>
           evidence.some((e) => e.id === id)
         );
         return Object.freeze({

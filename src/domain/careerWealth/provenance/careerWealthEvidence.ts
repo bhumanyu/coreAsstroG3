@@ -45,6 +45,32 @@ export function mapEffectToPolarity(effect: ProvenanceEffect): EvidencePolarity 
   }
 }
 
+/** Defense-in-depth contract check; construction already guarantees these invariants. */
+export function assertCareerWealthEvidenceContract(evidence: CareerWealthEvidence): void {
+  const provenance = evidence.provenance;
+  if (!evidence.id?.trim() || !provenance?.evidenceId?.trim()) {
+    throw new Error('CareerWealthEvidence contract: evidence and provenance IDs must be non-empty');
+  }
+  if (!evidence.ruleId?.trim() || !provenance.ruleId?.trim()) {
+    throw new Error('CareerWealthEvidence contract: ruleId must be non-empty');
+  }
+  if (evidence.id !== provenance.evidenceId) {
+    throw new Error('CareerWealthEvidence contract: evidence.id must equal provenance.evidenceId');
+  }
+  if (evidence.ruleId !== provenance.ruleId) {
+    throw new Error('CareerWealthEvidence contract: ruleId must equal provenance.ruleId');
+  }
+  if (evidence.domain !== provenance.domain) {
+    throw new Error('CareerWealthEvidence contract: domain must equal provenance.domain');
+  }
+  if (evidence.source !== provenance.source) {
+    throw new Error('CareerWealthEvidence contract: source must equal provenance.source');
+  }
+  if (evidence.polarity !== mapEffectToPolarity(provenance.effect)) {
+    throw new Error('CareerWealthEvidence contract: polarity must match provenance.effect');
+  }
+}
+
 export interface CreateCareerWealthEvidenceInput {
   readonly identity: EvidenceIdentityInput;
   readonly statement: string;
@@ -104,5 +130,7 @@ export function createCareerWealthEvidence(
     house: input.house
   });
 
-  return domainEvidence as CareerWealthEvidence;
+  const careerWealthEvidence = domainEvidence as CareerWealthEvidence;
+  assertCareerWealthEvidenceContract(careerWealthEvidence);
+  return careerWealthEvidence;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildWealthEvidence,
   mapWealthSourceType,
+  resolveRequiredWealthSubjectKey,
   resolveWealthSubjectKey
 } from './wealthEvidenceMapper';
 import {
@@ -143,6 +144,34 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       expect(resolveWealthSubjectKey(itemA)).toBe('MERCURY_VENUS');
       expect(resolveWealthSubjectKey(itemB)).toBe('MERCURY_VENUS');
       expect(resolveWealthSubjectKey(itemA)).toBe(resolveWealthSubjectKey(itemB));
+    });
+  });
+
+  describe('strict provenance subject identity', () => {
+    const base: ThemeInterpretationEvidence<WealthEvidenceFamily> = {
+      id: 'strict-1', ruleId: '', evidenceFamily: WealthEvidenceFamily.VENUS,
+      statement: 'test', effect: 'SUPPORT', strength: 'STRONG', priority: 'PRIMARY'
+    };
+
+    it('rejects empty rule and subject, and generic/unrecognized fallback subjects', () => {
+      expect(() => resolveRequiredWealthSubjectKey(base)).toThrow();
+      expect(() => resolveRequiredWealthSubjectKey({ ...base, ruleId: 'WEALTH_UNKNOWN_001' })).toThrow();
+      expect(resolveRequiredWealthSubjectKey({ ...base, ruleId: 'WEALTH_VENUS_KARAKA_001', planets: [] })).toBe('VENUS_KARAKA');
+      expect(() => resolveRequiredWealthSubjectKey({ ...base, ruleId: 'WEALTH_STRANGE_KARAKA_001' })).toThrow();
+    });
+
+    it('rejects fabricated Venus karaka from rule substring fallback', () => {
+      expect(() => resolveRequiredWealthSubjectKey({ ...base, ruleId: 'SOMETHING_VENUS_KARAKA' })).toThrow();
+    });
+
+    it('deduplicates distinct subjects independently and orders planets canonically', () => {
+      const venus = { ...base, ruleId: 'WEALTH_PLANET_SET_001', planets: [Planet.VENUS] };
+      const jupiter = { ...base, ruleId: 'WEALTH_PLANET_SET_001', planets: [Planet.JUPITER] };
+      expect(resolveRequiredWealthSubjectKey(venus)).toBe(String(Planet.VENUS));
+      expect(resolveRequiredWealthSubjectKey(jupiter)).toBe(String(Planet.JUPITER));
+      expect(resolveRequiredWealthSubjectKey(venus)).not.toBe(resolveRequiredWealthSubjectKey(jupiter));
+      expect(resolveRequiredWealthSubjectKey({ ...venus, planets: [Planet.MERCURY, Planet.VENUS] }))
+        .toBe(resolveRequiredWealthSubjectKey({ ...venus, planets: [Planet.VENUS, Planet.MERCURY] }));
     });
   });
 

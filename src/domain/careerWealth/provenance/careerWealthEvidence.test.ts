@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  assertCareerWealthEvidenceContract,
   createCareerWealthEvidence,
   mapEffectToPolarity
 } from './careerWealthEvidence';
@@ -84,6 +85,34 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     });
     expect(neutralEv.polarity).toBe(mapEffectToPolarity('NEUTRAL'));
     expect(neutralEv.polarity).toBe('NEUTRAL');
+  });
+
+  it('maps MIXED provenance to NEUTRAL evidence polarity intentionally', () => {
+    expect(mapEffectToPolarity('MIXED')).toBe('NEUTRAL');
+  });
+
+  it('separates provenance role from evidence magnitude', () => {
+    const evidence = createCareerWealthEvidence({
+      identity: { ...identity, strength: 'PRIMARY', effect: 'SUPPORT' },
+      statement: 'Role and magnitude are separate',
+      role: 'PRIMARY',
+      strength: 'WEAK'
+    });
+    expect(evidence.provenance.strength).toBe('PRIMARY');
+    expect(evidence.strength).toBe('WEAK');
+  });
+
+  it('validates mutated evidence contract fields', () => {
+    const evidence = createCareerWealthEvidence({ identity, statement: 'Contract mutation' });
+    const mutations = [
+      { ...evidence, id: 'wrong' },
+      { ...evidence, ruleId: 'WRONG_RULE' },
+      { ...evidence, domain: 'WEALTH' as const },
+      { ...evidence, source: 'D10' as const }
+    ] as const;
+    for (const mutated of mutations) {
+      expect(() => assertCareerWealthEvidenceContract(mutated)).toThrow();
+    }
   });
 
   it('produces a frozen immutable object', () => {

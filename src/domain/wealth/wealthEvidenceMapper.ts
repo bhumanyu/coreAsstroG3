@@ -156,6 +156,38 @@ export function resolveWealthSubjectKey(
 
 export const resolveSubjectKey = resolveWealthSubjectKey;
 
+/** Strict semantic subject resolution for provenance-enabled wealth evidence. */
+export function resolveRequiredWealthSubjectKey(
+  item: ThemeInterpretationEvidence<WealthEvidenceFamily>
+): string {
+  if (!item.ruleId?.trim()) {
+    throw new Error('Wealth evidence provenance requires a non-empty ruleId');
+  }
+
+  const ruleId = item.ruleId.trim();
+  if (ruleId === 'WEALTH_VENUS_KARAKA_001' || ruleId === 'VENUS_KARAKA') {
+    return 'VENUS_KARAKA';
+  }
+
+  const karakaMatch = /^WEALTH_(JUPITER|MERCURY|MOON|SUN|MARS|SATURN)_KARAKA(?:_[A-Z0-9]+)*$/.exec(ruleId);
+  if (karakaMatch) {
+    return `${karakaMatch[1]}_KARAKA`;
+  }
+
+  if (ruleId.includes('KARAKA')) {
+    throw new Error(`Wealth evidence has an unresolvable karaka subject: ${ruleId}`);
+  }
+
+  if (item.planets && item.planets.length > 0) {
+    return [...item.planets].map((planet) => String(planet)).sort().join('_');
+  }
+  if (item.houses && item.houses.length > 0) {
+    return [...item.houses].map((house) => `H${house}`).sort().join('_');
+  }
+
+  throw new Error(`Wealth evidence has no resolvable subjectKey (ruleId: ${ruleId})`);
+}
+
 export function buildWealthEvidence(
   rawEvidence: readonly ThemeInterpretationEvidence<WealthEvidenceFamily>[]
 ): readonly DomainEvidence[] {
@@ -176,7 +208,7 @@ export function buildWealthEvidence(
       // CW-06A: Migrate WEALTH_VENUS_KARAKA_001 natal producer to emit provenance via createCareerWealthEvidence.
       // Remaining producers deferred to CW-06B.
       if (item.ruleId === 'WEALTH_VENUS_KARAKA_001') {
-        const subjectKey = resolveWealthSubjectKey(item);
+        const subjectKey = resolveRequiredWealthSubjectKey(item);
         const provenanceStrength =
           item.priority === 'PRIMARY'
             ? 'PRIMARY'

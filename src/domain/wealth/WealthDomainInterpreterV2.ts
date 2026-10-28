@@ -1188,21 +1188,55 @@ export function evaluateWealthTimingActivation(
     effect = 'DOES_NOT_ACTIVATE';
   }
 
-  const activatedPromiseEvidenceIds = Array.from(
-    new Set(
-      linkedEvidence.flatMap((item) =>
-        item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
-      )
+  const activatedPromiseEvidenceIds = uniqueSortedIds(
+    linkedEvidence.flatMap((item) =>
+      item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
     )
-  ).sort();
+  );
 
   return Object.freeze({
     period,
     effect,
-    activatedPromiseEvidenceIds: Object.freeze(activatedPromiseEvidenceIds),
-    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id).sort()),
+    activatedPromiseEvidenceIds,
+    evidenceIds: uniqueSortedIds(periodEvidence.map((item) => item.id)),
     statement: `${period} period lord ${effect === 'ACTIVATES' ? 'actively supports' : effect === 'CHALLENGES' ? 'introduces challenges to' : 'partially activates'} natal wealth potential.`
   });
+}
+
+export function uniqueSortedIds(ids: readonly string[]): readonly string[] {
+  return Object.freeze([...new Set(ids.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim()))].sort());
+}
+
+export function assertWealthPeriodActivationContract(
+  activation: WealthPeriodTimingActivation,
+  occurrenceEvidence: readonly DomainEvidence[] = [],
+  natalPromiseEvidenceIds: readonly string[] = []
+): void {
+  const occurrenceIds = new Set(occurrenceEvidence.map((item) => item.id));
+  const promiseIds = new Set(natalPromiseEvidenceIds);
+
+  for (const id of activation.evidenceIds) {
+    if (!id?.trim()) throw new Error('Wealth activation evidenceIds must be non-empty');
+    if (occurrenceEvidence.length > 0 && !occurrenceIds.has(id)) {
+      throw new Error(`Wealth activation evidenceId is not an occurrence ID: ${id}`);
+    }
+  }
+  for (const id of activation.activatedPromiseEvidenceIds ?? []) {
+    if (!id?.trim()) throw new Error('Wealth activation promise evidence IDs must be non-empty');
+    if (natalPromiseEvidenceIds.length > 0 && !promiseIds.has(id)) {
+      throw new Error(`Wealth activation promise ID is not canonical: ${id}`);
+    }
+  }
+
+  if (new Set(activation.evidenceIds).size !== activation.evidenceIds.length ||
+      activation.evidenceIds.some((id, index, ids) => index > 0 && ids[index - 1] >= id)) {
+    throw new Error('Wealth activation evidenceIds must be unique and sorted');
+  }
+  const activated = activation.activatedPromiseEvidenceIds ?? [];
+  if (new Set(activated).size !== activated.length ||
+      activated.some((id, index, ids) => index > 0 && ids[index - 1] >= id)) {
+    throw new Error('Wealth activation activatedPromiseEvidenceIds must be set-sorted');
+  }
 }
 
 export function evaluateWealthPeriodTimingActivation(
@@ -1255,7 +1289,7 @@ export function evaluateWealthPeriodTimingActivation(
       fortune,
       speculation
     }),
-    evidenceIds: Object.freeze(periodEvidence.map((item) => item.id).sort()),
+    evidenceIds: uniqueSortedIds(periodEvidence.map((item) => item.id)),
     effect: baseActivation.effect,
     activatedPromiseEvidenceIds: baseActivation.activatedPromiseEvidenceIds,
     statement: baseActivation.statement
@@ -1278,6 +1312,7 @@ export {
 } from './wealthEvidenceMapper';
 
 export {
+  assertWealthEvidenceLinksResolve,
   linkWealthEvidence,
   resolveRelatedWealthPromiseEvidenceIds
 } from './wealthEvidenceLinker';

@@ -21,6 +21,7 @@ export type {
 } from './careerWealthEvidence';
 
 export {
+  assertCareerWealthEvidenceContract,
   createCareerWealthEvidence,
   mapEffectToPolarity
 } from './careerWealthEvidence';
