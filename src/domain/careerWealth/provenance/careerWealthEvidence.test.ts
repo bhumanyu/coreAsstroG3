@@ -87,8 +87,13 @@ describe('CareerWealthEvidence Subtype & Factory', () => {
     expect(neutralEv.polarity).toBe('NEUTRAL');
   });
 
-  it('maps MIXED provenance to NEUTRAL evidence polarity intentionally', () => {
+  it('maps MIXED provenance to NEUTRAL while preserving recoverable conflicting effect', () => {
+    const mixed = createCareerWealthEvidence({
+      identity: { ...identity, effect: 'MIXED' }, statement: 'Mixed test'
+    });
     expect(mapEffectToPolarity('MIXED')).toBe('NEUTRAL');
+    expect(mixed.polarity).toBe('NEUTRAL');
+    expect(mixed.provenance.effect).toBe('MIXED');
   });
 
   it('separates provenance role from evidence magnitude', () => {

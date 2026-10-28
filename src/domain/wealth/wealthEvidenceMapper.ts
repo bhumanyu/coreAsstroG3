@@ -18,6 +18,7 @@ import type {
 } from './wealthTypes';
 import { resolveRelatedWealthPromiseEvidenceIds } from './wealthEvidenceLinker';
 import { createCareerWealthEvidence } from '../careerWealth/provenance/careerWealthEvidence';
+import { Planet } from '../../types';
 
 export function mapWealthSourceType(
   item: ThemeInterpretationEvidence<WealthEvidenceFamily>
@@ -165,27 +166,33 @@ export function resolveRequiredWealthSubjectKey(
   }
 
   const ruleId = item.ruleId.trim();
-  if (ruleId === 'WEALTH_VENUS_KARAKA_001' || ruleId === 'VENUS_KARAKA') {
-    return 'VENUS_KARAKA';
+  const supportedRuleIds = new Set(['WEALTH_VENUS_KARAKA_001']);
+  if (!supportedRuleIds.has(ruleId)) {
+    throw new Error(`Wealth evidence uses an unregistered provenance rule: ${ruleId}`);
   }
 
-  const karakaMatch = /^WEALTH_(JUPITER|MERCURY|MOON|SUN|MARS|SATURN)_KARAKA(?:_[A-Z0-9]+)*$/.exec(ruleId);
-  if (karakaMatch) {
-    return `${karakaMatch[1]}_KARAKA`;
+  if (item.planets) {
+    const validPlanets = new Set(Object.values(Planet));
+    const seen = new Set<Planet>();
+    for (const planet of item.planets) {
+      if (!validPlanets.has(planet) || seen.has(planet)) {
+        throw new Error(`Wealth evidence contains invalid or duplicate planet subject: ${String(planet)}`);
+      }
+      seen.add(planet);
+    }
   }
 
-  if (ruleId.includes('KARAKA')) {
-    throw new Error(`Wealth evidence has an unresolvable karaka subject: ${ruleId}`);
+  if (item.houses) {
+    const seen = new Set<number>();
+    for (const house of item.houses) {
+      if (!Number.isInteger(house) || house < 1 || house > 12 || seen.has(house)) {
+        throw new Error(`Wealth evidence contains invalid or duplicate house subject: ${String(house)}`);
+      }
+      seen.add(house);
+    }
   }
 
-  if (item.planets && item.planets.length > 0) {
-    return [...item.planets].map((planet) => String(planet)).sort().join('_');
-  }
-  if (item.houses && item.houses.length > 0) {
-    return [...item.houses].map((house) => `H${house}`).sort().join('_');
-  }
-
-  throw new Error(`Wealth evidence has no resolvable subjectKey (ruleId: ${ruleId})`);
+  return 'VENUS_KARAKA';
 }
 
 export function buildWealthEvidence(

@@ -1188,7 +1188,7 @@ export function evaluateWealthTimingActivation(
     effect = 'DOES_NOT_ACTIVATE';
   }
 
-  const activatedPromiseEvidenceIds = uniqueSortedIds(
+  const activatedPromiseEvidenceIds = normalizeSortedIds(
     linkedEvidence.flatMap((item) =>
       item.relatedEvidenceIds.filter((id) => natalPromiseEvidenceIds.includes(id))
     )
@@ -1198,44 +1198,61 @@ export function evaluateWealthTimingActivation(
     period,
     effect,
     activatedPromiseEvidenceIds,
-    evidenceIds: uniqueSortedIds(periodEvidence.map((item) => item.id)),
+    evidenceIds: normalizeSortedIds(periodEvidence.map((item) => item.id)),
     statement: `${period} period lord ${effect === 'ACTIVATES' ? 'actively supports' : effect === 'CHALLENGES' ? 'introduces challenges to' : 'partially activates'} natal wealth potential.`
   });
 }
 
-export function uniqueSortedIds(ids: readonly string[]): readonly string[] {
+export function normalizeSortedIds(ids: readonly string[]): readonly string[] {
   return Object.freeze([...new Set(ids.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim()))].sort());
+}
+
+/** Compatibility alias for trusted/generated ID normalization. */
+export const uniqueSortedIds = normalizeSortedIds;
+
+export function assertStrictSortedIds(ids: readonly string[], fieldName: string): void {
+  for (const id of ids) {
+    if (typeof id !== 'string' || !id.trim() || id.trim() !== id) {
+      throw new Error(`${fieldName} contains a blank or malformed ID`);
+    }
+  }
+  if (new Set(ids).size !== ids.length || ids.some((id, index, all) => index > 0 && all[index - 1] >= id)) {
+    throw new Error(`${fieldName} must contain unique, sorted IDs`);
+  }
 }
 
 export function assertWealthPeriodActivationContract(
   activation: WealthPeriodTimingActivation,
   occurrenceEvidence: readonly DomainEvidence[] = [],
-  natalPromiseEvidenceIds: readonly string[] = []
+  natalPromiseEvidenceIds: readonly string[] = [],
+  referenceDatasetAvailable = true
 ): void {
   const occurrenceIds = new Set(occurrenceEvidence.map((item) => item.id));
   const promiseIds = new Set(natalPromiseEvidenceIds);
 
+  assertStrictSortedIds(activation.evidenceIds, 'Wealth activation evidenceIds');
+  assertStrictSortedIds(activation.activatedPromiseEvidenceIds ?? [], 'Wealth activation activatedPromiseEvidenceIds');
+
   for (const id of activation.evidenceIds) {
     if (!id?.trim()) throw new Error('Wealth activation evidenceIds must be non-empty');
-    if (occurrenceEvidence.length > 0 && !occurrenceIds.has(id)) {
+    if (referenceDatasetAvailable && !occurrenceIds.has(id)) {
       throw new Error(`Wealth activation evidenceId is not an occurrence ID: ${id}`);
     }
   }
   for (const id of activation.activatedPromiseEvidenceIds ?? []) {
-    if (!id?.trim()) throw new Error('Wealth activation promise evidence IDs must be non-empty');
-    if (natalPromiseEvidenceIds.length > 0 && !promiseIds.has(id)) {
-      throw new Error(`Wealth activation promise ID is not canonical: ${id}`);
+    if (referenceDatasetAvailable && !promiseIds.has(id)) {
+      throw new Error(`Wealth activation promise ID is not in the canonical natal promise set: ${id}`);
     }
   }
 
-  if (new Set(activation.evidenceIds).size !== activation.evidenceIds.length ||
-      activation.evidenceIds.some((id, index, ids) => index > 0 && ids[index - 1] >= id)) {
-    throw new Error('Wealth activation evidenceIds must be unique and sorted');
-  }
-  const activated = activation.activatedPromiseEvidenceIds ?? [];
-  if (new Set(activated).size !== activated.length ||
-      activated.some((id, index, ids) => index > 0 && ids[index - 1] >= id)) {
-    throw new Error('Wealth activation activatedPromiseEvidenceIds must be set-sorted');
+  const activationEvidence = occurrenceEvidence.filter((item) =>
+    activation.evidenceIds.includes(item.id) && item.timing?.period === activation.period
+  );
+  const reachablePromises = new Set(activationEvidence.flatMap((item) => item.relatedEvidenceIds));
+  for (const id of activation.activatedPromiseEvidenceIds ?? []) {
+    if (!reachablePromises.has(id)) {
+      throw new Error(`Wealth activation promise reference is not reachable from ${activation.period}: ${id}`);
+    }
   }
 }
 
@@ -1253,7 +1270,7 @@ export function evaluateWealthPeriodTimingActivation(
     undefined;
 
   if (periodEvidence.length === 0) {
-    return Object.freeze({
+    const emptyActivation = Object.freeze({
       period,
       ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
       dimensions: Object.freeze({
@@ -1267,6 +1284,8 @@ export function evaluateWealthPeriodTimingActivation(
       activatedPromiseEvidenceIds: Object.freeze([]),
       statement: `${period} timing data is insufficient or unavailable.`
     });
+    assertWealthPeriodActivationContract(emptyActivation, allEvidence, natalPromiseEvidenceIds);
+    return emptyActivation;
   }
 
   const accumulation = evaluateAccumulationDasha(periodEvidence, allEvidence);
@@ -1280,7 +1299,7 @@ export function evaluateWealthPeriodTimingActivation(
     natalPromiseEvidenceIds
   );
 
-  return Object.freeze({
+  const activation = Object.freeze({
     period,
     ...(resolvedPlanet ? { planet: resolvedPlanet } : {}),
     dimensions: Object.freeze({
@@ -1289,11 +1308,13 @@ export function evaluateWealthPeriodTimingActivation(
       fortune,
       speculation
     }),
-    evidenceIds: uniqueSortedIds(periodEvidence.map((item) => item.id)),
+    evidenceIds: normalizeSortedIds(periodEvidence.map((item) => item.id)),
     effect: baseActivation.effect,
-    activatedPromiseEvidenceIds: baseActivation.activatedPromiseEvidenceIds,
+    activatedPromiseEvidenceIds: normalizeSortedIds(baseActivation.activatedPromiseEvidenceIds ?? []),
     statement: baseActivation.statement
   });
+  assertWealthPeriodActivationContract(activation, allEvidence, natalPromiseEvidenceIds);
+  return activation;
 }
 
 // Re-exports for backward compatibility and clean modular imports

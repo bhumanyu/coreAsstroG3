@@ -148,7 +148,14 @@ export function resolveRelatedWealthPromiseEvidenceIds(
   return Object.freeze([]);
 }
 
-/** Test/dev integrity check; production linking intentionally filters dangling targets. */
+/**
+ * Test/dev integrity check for occurrence-level links.
+ *
+ * Wealth linker targets are occurrences in the mapped evidence collection (the same ID namespace
+ * used by DomainEvidence.id), including canonicalized legacy IDs where the mapper promotes them to
+ * id. Canonical natal-promise IDs are validated separately by activation contracts.
+ * Production linking intentionally filters dangling targets.
+ */
 export function assertWealthEvidenceLinksResolve(
   evidence: readonly DomainEvidence[]
 ): void {

@@ -31,7 +31,8 @@ export interface CareerWealthEvidence extends DomainEvidence {
  * Maps provenance EvidenceEffect to DomainEvidence EvidencePolarity.
  * 
  * Note: MIXED is mapped to NEUTRAL since EvidencePolarity does not support MIXED.
- * The original MIXED direction is preserved in the evidence notes/statement for traceability.
+ * The original MIXED direction remains recoverable as provenance.effect; NEUTRAL polarity is not
+ * evidence that conflicting/supporting directions are absent, so consumers must inspect provenance.effect.
  */
 export function mapEffectToPolarity(effect: ProvenanceEffect): EvidencePolarity {
   switch (effect) {
