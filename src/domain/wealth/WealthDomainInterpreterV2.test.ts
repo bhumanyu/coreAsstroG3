@@ -2677,6 +2677,13 @@ describe('Wealth period activation contracts', () => {
     });
   }
 
+  function promiseOccurrence(id: string) {
+    return createDomainEvidence({
+      id, sourceType: 'HOUSE', domain: 'WEALTH', role: 'PRIMARY', phase: 'NATAL_PROMISE',
+      statement: id, polarity: 'SUPPORTING', strength: 'MODERATE', priority: 50
+    });
+  }
+
   it('distinguishes complete-empty and unavailable timing datasets', () => {
     const complete = evaluateWealthPeriodTimingActivation('MD', [], [], [], true, true);
     const unavailable = evaluateWealthPeriodTimingActivation('MD', [], [], [], true, false);
@@ -2729,7 +2736,29 @@ describe('Wealth period activation contracts', () => {
     expect(venusMapped?.id).not.toBe(venusRaw?.id);
     expect(legacyMapped?.id).toBe((legacyRaw as unknown as { identityKey?: string }).identityKey ?? legacyRaw?.id);
 
-    const canonicalPromiseIds = new Set(mapped.filter((item) => item.phase === 'NATAL_PROMISE').map((item) => item.id));
+    const natalPromiseEvidenceIds = mapped
+      .filter((item) => item.phase === 'NATAL_PROMISE')
+      .map((item) => item.id)
+      .sort();
+    const canonicalPromiseIds = new Set(natalPromiseEvidenceIds);
+    const namespaceOptions: DomainReasoningOptions = {
+      context: makeContext(CANONICAL_UTC_INSTANT),
+      temporalState: resolveAnalysisTemporalState(namespaceHoroscope, makeContext(CANONICAL_UTC_INSTANT))
+    };
+    const namespaceInterpretation = interpretWealthV2(namespaceHoroscope, namespaceOptions);
+    const namespaceActivations = namespaceInterpretation.conclusionData?.periodTimingActivations ?? [];
+    for (const activation of namespaceActivations) {
+      for (const promiseId of activation.activatedPromiseEvidenceIds ?? []) {
+        expect(natalPromiseEvidenceIds).toContain(promiseId);
+        expect(activation.evidenceIds.length).toBeGreaterThan(0);
+      }
+      const occurrenceEvidenceIds = new Set(mapped.map((item) => item.id));
+      for (const evidenceId of activation.evidenceIds) {
+        expect(typeof evidenceId).toBe('string');
+        expect(evidenceId.length).toBeGreaterThan(0);
+        expect(occurrenceEvidenceIds.size).toBeGreaterThan(0);
+      }
+    }
     for (const item of mapped) {
       for (const target of item.relatedEvidenceIds) {
         const candidate = mapped.find((entry) => entry.id === target);
@@ -2744,25 +2773,30 @@ describe('Wealth period activation contracts', () => {
     }
 
     const wrongPhaseTimingTarget = mapped.find((entry) => entry.phase !== 'NATAL_PROMISE' && entry.id !== venusMapped?.id);
-    if (wrongPhaseTimingTarget) {
-      const timingEvidence = mapped.find((entry) => entry.phase === 'DASHA_ACTIVATION' || entry.source === 'DASHA');
-      if (timingEvidence) {
-        const forgedLink = { ...timingEvidence, relatedEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id]) };
-        const forgedActivation = Object.freeze({
-          period: 'MD' as const,
-          dimensions: Object.freeze({ accumulation: 'ACTIVATES' as const, gains: 'DOES_NOT_ACTIVATE' as const, fortune: 'DOES_NOT_ACTIVATE' as const, speculation: 'DOES_NOT_ACTIVATE' as const }),
-          evidenceIds: Object.freeze([forgedLink.id]),
-          effect: 'ACTIVATES' as const,
-          activatedPromiseEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id])
-        });
-        expect(() => assertWealthPeriodActivationContract(
-          forgedActivation,
-          [forgedLink, wrongPhaseTimingTarget],
-          [wrongPhaseTimingTarget.id],
-          true
-        )).toThrow(/not a natal promise occurrence|not in the canonical natal promise set/);
-      }
-    }
+    expect(wrongPhaseTimingTarget).toBeDefined();
+    if (!wrongPhaseTimingTarget) throw new Error('Expected a wrong-phase namespace fixture record');
+    const timingEvidence = createDomainEvidence({
+      id: 'FORGED-WRONG-PHASE-TIMING', sourceType: 'DASHA', domain: 'WEALTH',
+      role: 'SECONDARY', phase: 'DASHA_ACTIVATION', source: 'DASHA',
+      statement: 'Forged wrong-phase timing link', polarity: 'SUPPORTING', strength: 'MODERATE',
+      priority: 50, timing: { period: 'MD', planet: Planet.JUPITER },
+      relatedEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id])
+    });
+
+    const forgedLink = { ...timingEvidence, relatedEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id]) };
+    const forgedActivation = Object.freeze({
+      period: 'MD' as const,
+      dimensions: Object.freeze({ accumulation: 'ACTIVATES' as const, gains: 'DOES_NOT_ACTIVATE' as const, fortune: 'DOES_NOT_ACTIVATE' as const, speculation: 'DOES_NOT_ACTIVATE' as const }),
+      evidenceIds: Object.freeze([forgedLink.id]),
+      effect: 'ACTIVATES' as const,
+      activatedPromiseEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id])
+    });
+    expect(() => assertWealthPeriodActivationContract(
+      forgedActivation,
+      [forgedLink, wrongPhaseTimingTarget],
+      [wrongPhaseTimingTarget.id],
+      true
+    )).toThrow(/not a natal promise occurrence|unresolved timing link target|not in the canonical natal promise set/);
   });
 
   it('evaluates MD and AD independently when PD timing is unavailable', () => {
@@ -2785,7 +2819,7 @@ describe('Wealth period activation contracts', () => {
     ['CHALLENGING', 'CHALLENGES']
   ] as const)('%s timing maps to %s', (polarity, effect) => {
     const timing = timingEvidence('MD-TIME', 'MD', 'PROMISE-1', polarity);
-    const activation = evaluateWealthPeriodTimingActivation('MD', [timing], [timing], ['PROMISE-1'], true, true);
+    const activation = evaluateWealthPeriodTimingActivation('MD', [timing], [timing, promiseOccurrence('PROMISE-1')], ['PROMISE-1'], true, true);
     expect(activation.effect).toBe(effect);
     expect(activation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
   });
@@ -2793,7 +2827,8 @@ describe('Wealth period activation contracts', () => {
   it('mixed timing maps every linked promise and dimension effect', () => {
     const support = timingEvidence('MD-SUPPORT', 'MD', 'PROMISE-1', 'SUPPORTING');
     const challenge = timingEvidence('MD-CHALLENGE', 'MD', 'PROMISE-1', 'CHALLENGING');
-    const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge], ['PROMISE-1'], true, true);
+    const promise = promiseOccurrence('PROMISE-1');
+    const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge, promise], ['PROMISE-1'], true, true);
     expect(activation.effect).toBe('PARTIALLY_ACTIVATES');
     expect(activation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
     expect(activation.dimensions).toEqual({
@@ -2807,7 +2842,59 @@ describe('Wealth period activation contracts', () => {
   it('mixes support and challenge on the same accumulation family', () => {
     const support = timingEvidence('MD-ACCUMULATION-SUPPORT', 'MD', 'PROMISE-1', 'SUPPORTING', WealthEvidenceFamily.SECOND_HOUSE);
     const challenge = timingEvidence('MD-ACCUMULATION-CHALLENGE', 'MD', 'PROMISE-1', 'CHALLENGING', WealthEvidenceFamily.SECOND_LORD);
-    const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge], ['PROMISE-1'], true, true);
+    const promise = promiseOccurrence('PROMISE-1');
+    const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge, promise], ['PROMISE-1'], true, true);
+    expect(activation.dimensions).toEqual({
+      accumulation: 'PARTIALLY_ACTIVATES',
+      gains: 'DOES_NOT_ACTIVATE',
+      fortune: 'DOES_NOT_ACTIVATE',
+      speculation: 'DOES_NOT_ACTIVATE'
+    });
+  });
+
+  it('preserves same-dimension attribution through mapper and linker output', () => {
+    const chart = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const raw = interpretWealthTheme(chart).evidence;
+    const natalSource = raw.find((item) => item.ruleId !== 'WEALTH_DASHA_TIMING_001');
+    expect(natalSource).toBeDefined();
+    if (!natalSource) throw new Error('Expected a mapped natal producer record');
+
+    const supportRaw = {
+      ...natalSource,
+      id: 'MAPPED-MD-ACCUMULATION-SUPPORT',
+      ruleId: 'WEALTH_DASHA_TIMING_001',
+      effect: 'SUPPORT' as const,
+      evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+      timingEvidence: { dashaLevel: 'MAHADASHA' as const, planet: Planet.JUPITER, relevanceReason: 'test fixture', houses: [2] }
+    };
+    const challengeRaw = {
+      ...natalSource,
+      id: 'MAPPED-MD-ACCUMULATION-CHALLENGE',
+      ruleId: 'WEALTH_DASHA_TIMING_001',
+      effect: 'CHALLENGE' as const,
+      evidenceFamily: WealthEvidenceFamily.SECOND_LORD,
+      timingEvidence: { dashaLevel: 'MAHADASHA' as const, planet: Planet.JUPITER, relevanceReason: 'test fixture', houses: [2] }
+    };
+    const mappedNatalSource = {
+      ...natalSource,
+      ruleId: 'WEALTH_VENUS_KARAKA_001',
+      planets: [Planet.VENUS],
+      houses: [2],
+      evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE
+    } as ThemeInterpretationEvidence<WealthEvidenceFamily>;
+    const mapped = linkWealthEvidence(buildWealthEvidence([mappedNatalSource, supportRaw, challengeRaw]));
+    const natalPromise = mapped.find((item) => item.phase === 'NATAL_PROMISE');
+    expect(natalPromise).toBeDefined();
+    if (!natalPromise) throw new Error('Expected a natal promise in mapped evidence');
+
+    const timing = mapped.filter((item) => item.phase === 'DASHA_ACTIVATION')
+      .map((item) => ({ ...item, relatedEvidenceIds: Object.freeze([natalPromise.id]) }));
+    expect(timing).toHaveLength(2);
+    const activation = evaluateWealthPeriodTimingActivation(
+      'MD', timing, [...mapped.filter((item) => item.phase !== 'DASHA_ACTIVATION'), ...timing],
+      [natalPromise.id], true, true
+    );
+    expect(activation.effect).toBe('PARTIALLY_ACTIVATES');
     expect(activation.dimensions).toEqual({
       accumulation: 'PARTIALLY_ACTIVATES',
       gains: 'DOES_NOT_ACTIVATE',
@@ -2819,7 +2906,7 @@ describe('Wealth period activation contracts', () => {
   // No-family evidence deliberately must not leak into any wealth dimension.
   it('does not leak no-family mixed evidence into other dimensions', () => {
     const support = timingEvidence('MD-ACCUMULATION', 'MD', 'PROMISE-1', 'SUPPORTING', WealthEvidenceFamily.SECOND_HOUSE);
-    const activation = evaluateWealthPeriodTimingActivation('MD', [support], [support], ['PROMISE-1'], true, true);
+    const activation = evaluateWealthPeriodTimingActivation('MD', [support], [support, promiseOccurrence('PROMISE-1')], ['PROMISE-1'], true, true);
     expect(activation.dimensions).toEqual({
       accumulation: 'ACTIVATES',
       gains: 'DOES_NOT_ACTIVATE',
@@ -2831,8 +2918,9 @@ describe('Wealth period activation contracts', () => {
   it('does not inherit a different promise link across MD and AD periods', () => {
     const md = timingEvidence('MD-TIME', 'MD', 'PROMISE-1', 'SUPPORTING');
     const ad = timingEvidence('AD-TIME', 'AD', 'PROMISE-2', 'CHALLENGING');
-    const mdActivation = evaluateWealthPeriodTimingActivation('MD', [md, ad], [md, ad], ['PROMISE-1', 'PROMISE-2'], true, true);
-    const adActivation = evaluateWealthPeriodTimingActivation('AD', [md, ad], [md, ad], ['PROMISE-1', 'PROMISE-2'], true, true);
+    const occurrences = [promiseOccurrence('PROMISE-1'), promiseOccurrence('PROMISE-2')];
+    const mdActivation = evaluateWealthPeriodTimingActivation('MD', [md, ad], [md, ad, ...occurrences], ['PROMISE-1', 'PROMISE-2'], true, true);
+    const adActivation = evaluateWealthPeriodTimingActivation('AD', [md, ad], [md, ad, ...occurrences], ['PROMISE-1', 'PROMISE-2'], true, true);
     expect(mdActivation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
     expect(adActivation.activatedPromiseEvidenceIds).toEqual(['PROMISE-2']);
   });

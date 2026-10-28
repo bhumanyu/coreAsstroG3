@@ -1285,8 +1285,15 @@ export function assertWealthPeriodActivationContract(
   const reachablePromises = new Set(activationEvidence.flatMap((item) => item.relatedEvidenceIds));
   for (const occurrence of activationEvidence) {
     for (const id of occurrence.relatedEvidenceIds) {
-      if (!canonicalNatalPromiseIds.has(id)) {
-        const sameIdOccurrence = occurrenceEvidence.find((item) => item.id === id);
+      const sameIdOccurrence = occurrenceEvidence.find((item) => item.id === id);
+      if (referenceDatasetAvailable) {
+        if (!promiseIds.has(id) || !canonicalNatalPromiseIds.has(id)) {
+          if (sameIdOccurrence?.phase && sameIdOccurrence.phase !== 'NATAL_PROMISE') {
+            throw new Error(`Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`);
+          }
+          throw new Error(`Wealth ${activation.period} unresolved timing link target: ${id}`);
+        }
+      } else if (!canonicalNatalPromiseIds.has(id)) {
         if (sameIdOccurrence && sameIdOccurrence.phase !== 'NATAL_PROMISE') {
           throw new Error(`Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`);
         }
