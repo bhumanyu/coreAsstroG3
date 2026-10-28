@@ -242,6 +242,8 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
         dashaEvidence,
         wealthV2.evidence,
         promiseIds,
+        true,
+        true,
         Planet.SATURN
       );
 
@@ -257,6 +259,8 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
         dashaEvidence,
         wealthV2.evidence,
         promiseIds,
+        true,
+        true,
         Planet.MERCURY
       );
       expect(adActivation.period).toBe('AD');
@@ -267,6 +271,8 @@ describe('D07-B: DomainActivationRuleProvider & Canonical Dasha Domain Activatio
         dashaEvidence,
         wealthV2.evidence,
         promiseIds,
+        true,
+        true,
         Planet.SUN
       );
       expect(pdActivation.period).toBe('PD');

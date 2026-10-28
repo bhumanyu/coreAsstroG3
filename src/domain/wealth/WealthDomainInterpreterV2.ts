@@ -262,6 +262,8 @@ export function interpretWealthV2(
     dashaEvidence,
     evidence,
     natalPromiseEvidenceIds,
+    true,
+    activeDashaReport !== undefined,
     mdPlanet
   );
   const adPeriodTiming = evaluateWealthPeriodTimingActivation(
@@ -269,6 +271,8 @@ export function interpretWealthV2(
     dashaEvidence,
     evidence,
     natalPromiseEvidenceIds,
+    true,
+    activeDashaReport !== undefined,
     adPlanet
   );
   const pdPeriodTiming = evaluateWealthPeriodTimingActivation(
@@ -276,6 +280,8 @@ export function interpretWealthV2(
     dashaEvidence,
     evidence,
     natalPromiseEvidenceIds,
+    true,
+    activeDashaReport !== undefined,
     pdPlanet
   );
 
@@ -1167,10 +1173,10 @@ export function evaluateWealthTimingActivation(
   if (linkedEvidence.length === 0) {
     return Object.freeze({
       period,
-      effect: 'UNKNOWN',
+      effect: 'INSUFFICIENT_DATA',
       activatedPromiseEvidenceIds: Object.freeze([]),
       evidenceIds: Object.freeze(periodEvidence.map((item) => item.id).sort()),
-      statement: `${period} activation could not be established from linked natal wealth evidence.`
+      statement: `${period} activation has linked timing evidence but no resolvable natal promise.`
     });
   }
 
@@ -1210,6 +1216,17 @@ export function normalizeSortedIds(ids: readonly string[]): readonly string[] {
 /** Compatibility alias for trusted/generated ID normalization. */
 export const uniqueSortedIds = normalizeSortedIds;
 
+export function assertStrictIds(ids: readonly string[], fieldName: string): void {
+  for (const id of ids) {
+    if (typeof id !== 'string' || !id.trim() || id.trim() !== id) {
+      throw new Error(`${fieldName} contains a blank or malformed ID`);
+    }
+  }
+  if (new Set(ids).size !== ids.length) {
+    throw new Error(`${fieldName} contains duplicate IDs`);
+  }
+}
+
 export function assertStrictSortedIds(ids: readonly string[], fieldName: string): void {
   for (const id of ids) {
     if (typeof id !== 'string' || !id.trim() || id.trim() !== id) {
@@ -1227,6 +1244,9 @@ export function assertWealthPeriodActivationContract(
   natalPromiseEvidenceIds: readonly string[] = [],
   referenceDatasetAvailable = true
 ): void {
+  // Producer invariant: promise reachability is scoped to this period. Each activation
+  // occurrence must therefore carry timing.period === activation.period and must be listed
+  // in activation.evidenceIds; links found outside that subset are not reachable.
   const occurrenceIds = new Set(occurrenceEvidence.map((item) => item.id));
   const promiseIds = new Set(natalPromiseEvidenceIds);
 
@@ -1261,9 +1281,22 @@ export function evaluateWealthPeriodTimingActivation(
   dashaEvidence: readonly DomainEvidence[],
   allEvidence: readonly DomainEvidence[],
   natalPromiseEvidenceIds: readonly string[],
+  referenceDatasetAvailable: boolean,
+  timingDataAvailable: boolean,
   planet?: Planet
 ): WealthPeriodTimingActivation {
   const periodEvidence = dashaEvidence.filter((e) => e.timing?.period === period);
+  assertStrictIds(natalPromiseEvidenceIds, 'Canonical natal promise evidence IDs');
+  if (referenceDatasetAvailable) {
+    const canonicalPromiseIds = new Set(natalPromiseEvidenceIds);
+    const danglingPromiseId = periodEvidence.flatMap((item) => item.relatedEvidenceIds ?? [])
+      .find((id) => !canonicalPromiseIds.has(id));
+    if (danglingPromiseId) {
+      throw new Error(`Wealth timing evidence references absent canonical natal promise: ${danglingPromiseId}`);
+    }
+  }
+  assertStrictIds(periodEvidence.map((item) => item.id), `${period} raw timing evidence IDs`);
+  assertStrictIds(dashaEvidence.map((item) => item.id), 'Raw Dasha evidence IDs');
   const resolvedPlanet =
     planet ||
     periodEvidence.find((e) => e.timing?.planet)?.timing?.planet ||
@@ -1282,9 +1315,11 @@ export function evaluateWealthPeriodTimingActivation(
       evidenceIds: Object.freeze([]),
       effect: 'INSUFFICIENT_DATA',
       activatedPromiseEvidenceIds: Object.freeze([]),
-      statement: `${period} timing data is insufficient or unavailable.`
+      statement: timingDataAvailable
+        ? `${period} timing data is complete but no period evidence is present.`
+        : `${period} timing/reference input is unavailable.`
     });
-    assertWealthPeriodActivationContract(emptyActivation, allEvidence, natalPromiseEvidenceIds);
+    assertWealthPeriodActivationContract(emptyActivation, allEvidence, natalPromiseEvidenceIds, referenceDatasetAvailable);
     return emptyActivation;
   }
 
@@ -1313,7 +1348,7 @@ export function evaluateWealthPeriodTimingActivation(
     activatedPromiseEvidenceIds: normalizeSortedIds(baseActivation.activatedPromiseEvidenceIds ?? []),
     statement: baseActivation.statement
   });
-  assertWealthPeriodActivationContract(activation, allEvidence, natalPromiseEvidenceIds);
+  assertWealthPeriodActivationContract(activation, allEvidence, natalPromiseEvidenceIds, referenceDatasetAvailable);
   return activation;
 }
 

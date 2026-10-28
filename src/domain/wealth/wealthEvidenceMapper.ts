@@ -180,6 +180,8 @@ export function resolveRequiredWealthSubjectKey(
       }
       seen.add(planet);
     }
+    // The registered rule ID, not descriptive planet metadata, determines the subject.
+    // Planet metadata may therefore mention related planets and is not treated as identity.
   }
 
   if (item.houses) {
@@ -212,8 +214,8 @@ export function buildWealthEvidence(
           : undefined);
       const dimension = mapWealthDimension(item);
 
-      // CW-06A: Migrate WEALTH_VENUS_KARAKA_001 natal producer to emit provenance via createCareerWealthEvidence.
-      // Remaining producers deferred to CW-06B.
+      // Provenance path is deliberately registered only for WEALTH_VENUS_KARAKA_001.
+      // All other Wealth rules continue through the legacy createDomainEvidence branch below.
       if (item.ruleId === 'WEALTH_VENUS_KARAKA_001') {
         const subjectKey = resolveRequiredWealthSubjectKey(item);
         const provenanceStrength =

@@ -171,6 +171,8 @@ describe('wealthEvidenceMapper - Determinism & Provenance (CW-06A)', () => {
       expect(() => resolveRequiredWealthSubjectKey({ ...venus, houses: [2, 2] })).toThrow();
       expect(() => resolveRequiredWealthSubjectKey({ ...venus, houses: [13] })).toThrow();
       expect(() => resolveRequiredWealthSubjectKey({ ...venus, houses: [0] })).toThrow();
+      expect(resolveRequiredWealthSubjectKey({ ...venus, planets: [Planet.JUPITER] })).toBe('VENUS_KARAKA');
+      expect(resolveRequiredWealthSubjectKey({ ...venus, planets: [Planet.VENUS, Planet.JUPITER] })).toBe('VENUS_KARAKA');
       expect(resolveRequiredWealthSubjectKey({ ...venus, planets: [Planet.VENUS], houses: [2, 11] })).toBe('VENUS_KARAKA');
     });
   });

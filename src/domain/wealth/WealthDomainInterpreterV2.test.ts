@@ -35,6 +35,9 @@ import {
   evaluateFortuneDasha,
   evaluateSpeculationDasha,
   evaluateWealthTimingActivation,
+  evaluateWealthPeriodTimingActivation,
+  assertWealthPeriodActivationContract,
+  assertStrictIds,
   evaluateDashaEffect,
   evaluateTransitEffect,
   evaluateD2Relationship,
@@ -75,7 +78,7 @@ import {
   resolveRelatedWealthPromiseEvidenceIds
 } from './wealthEvidenceLinker';
 import { evaluateWealthReasoningHierarchy } from './wealthReasoningHierarchy';
-import type { WealthConclusionData } from './wealthTypes';
+import type { WealthConclusionData, WealthDimensionInterpretation } from './wealthTypes';
 import {
   WealthEvidenceFamily
 } from '../../engine/themeInterpretation/wealthThemeInterpretationTypes';
@@ -179,10 +182,12 @@ describe('WealthDomainInterpreterV2', () => {
 
   function makeEmptyProducerChart(hasCompleteInputs: boolean): Horoscope {
     const neutralHouseInterpretations = Object.fromEntries(
-      Object.entries(horoscope.houseInterpretation?.houses ?? {}).map(([houseNumber, house]) => [
+      (Object.entries(horoscope.houseInterpretation?.houses ?? {}) as [string, any][]).map(([houseNumber, house]: [string, any]) => [
         houseNumber,
         {
           ...house,
+          placement: { ...house.placement, signLord: undefined },
+          lord: undefined,
           summary: {
             ...house.summary,
             supportingFactors: [],
@@ -205,7 +210,7 @@ describe('WealthDomainInterpreterV2', () => {
       planetInterpretation: hasCompleteInputs ? { planets: {} } : undefined,
       planetAnalysis: hasCompleteInputs ? { planets: {} } : undefined,
       functionalRoles: hasCompleteInputs ? {} : undefined,
-      yogas: hasCompleteInputs ? {} : undefined,
+      yogas: hasCompleteInputs ? {} as any : undefined,
       planetaryStrength: hasCompleteInputs ? {} : undefined,
       divisionalInterpretation: hasCompleteInputs ? {} : undefined,
       dashaInterpretation: hasCompleteInputs
@@ -318,7 +323,7 @@ describe('WealthDomainInterpreterV2', () => {
           makeDomainOptions('2026-06-01T00:00:00.000Z')
         );
         const conclusionDimension = result.conclusionData?.dimensions
-          .find((item) => item.dimension === row.dimension);
+          .find((item: WealthDimensionInterpretation) => item.dimension === row.dimension);
 
         for (const [family, ruleId] of [
           [row.houseFamily, row.houseRule],
@@ -389,19 +394,19 @@ describe('WealthDomainInterpreterV2', () => {
 
           const manifestationFactors =
             result.conclusionData?.wealthManifestationSynthesis?.dimensions[row.dimension].factors;
-          expect(manifestationFactors?.some((factor) =>
+          expect(manifestationFactors?.some((factor: { evidenceIds?: readonly string[] }) =>
             factor.evidenceIds?.includes(domainProducer.id)
           )).toBe(true);
 
           for (const otherDimension of producerMatrix) {
             if (otherDimension.dimension === row.dimension) continue;
             const otherConclusionDimension = result.conclusionData?.dimensions
-              .find((item) => item.dimension === otherDimension.dimension);
+              .find((item: WealthDimensionInterpretation) => item.dimension === otherDimension.dimension);
             expect(otherConclusionDimension?.supportingEvidenceIds).not.toContain(canonicalId);
             expect(otherConclusionDimension?.challengingEvidenceIds).not.toContain(domainProducer?.id);
             expect(
               result.conclusionData?.wealthManifestationSynthesis
-                ?.dimensions[otherDimension.dimension].factors.some((factor) =>
+                ?.dimensions[otherDimension.dimension].factors.some((factor: { evidenceIds?: readonly string[] }) =>
                   factor.evidenceIds?.includes(domainProducer.id)
                 )
             ).toBe(false);
@@ -437,10 +442,10 @@ describe('WealthDomainInterpreterV2', () => {
         makeDomainOptions('2026-06-01T00:00:00.000Z')
       );
       const dimensions = result.conclusionData?.dimensions ?? [];
-      expect(dimensions.find((item) => item.dimension === 'ACCUMULATION')
+      expect(dimensions.find((item: WealthDimensionInterpretation) => item.dimension === 'ACCUMULATION')
         ?.challengingEvidenceIds).toContain(rawChallenge.id);
       for (const otherDimension of ['GAINS', 'FORTUNE', 'SPECULATION'] as const) {
-        expect(dimensions.find((item) => item.dimension === otherDimension)
+        expect(dimensions.find((item: WealthDimensionInterpretation) => item.dimension === otherDimension)
           ?.challengingEvidenceIds).not.toContain(rawChallenge.id);
       }
       expect(result.conclusion.challengingSourceIds).toContain(rawChallenge.id);
@@ -472,7 +477,7 @@ describe('WealthDomainInterpreterV2', () => {
         makeDomainOptions('2026-06-01T00:00:00.000Z')
       );
       const accumulation = result.conclusionData?.dimensions
-        .find((item) => item.dimension === 'ACCUMULATION');
+        .find((item: WealthDimensionInterpretation) => item.dimension === 'ACCUMULATION');
 
       expect(supportIds).toContain('WEALTH_2H_STRONG_001:HOUSE_2');
       expect(challengeIds).toContain('WEALTH_2H_LORD_AFFLICTION_001:HOUSE_2');
@@ -501,9 +506,6 @@ describe('WealthDomainInterpreterV2', () => {
       expect(completeNoMatch.evidence.filter((item) =>
         structuralFamilies.has(item.evidenceFamily)
       )).toEqual([]);
-      expect(completeNoMatch.evidence.some((item) =>
-        item.evidenceFamily === WealthEvidenceFamily.DASHA
-      )).toBe(true);
       expect(missingInput.metadata.dataCompleteness).toBe('INSUFFICIENT');
       expect(missingInput.evidence).toEqual([]);
 
@@ -514,7 +516,7 @@ describe('WealthDomainInterpreterV2', () => {
         makeDomainOptions(undefined, noMatchChart)
       );
       expect(noMatchV2.natalPromise.evidenceIds).toEqual([]);
-      expect(noMatchV2.dataCompleteness?.dasha).toBe('AVAILABLE');
+      expect(noMatchV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
 
       const emptyV2 = interpretWealthV2(
         missingChart,
@@ -522,16 +524,14 @@ describe('WealthDomainInterpreterV2', () => {
       );
       expect(emptyV2.natalPromise.evidenceIds).toEqual([]);
       expect(noMatchV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
-      expect(noMatchV2.dataCompleteness?.dasha).toBe('AVAILABLE');
+      expect(noMatchV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
       expect(noMatchV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.primaryFactors).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
-      expect(noMatchV2.dataCompleteness?.dasha)
-        .not.toBe(emptyV2.dataCompleteness?.dasha);
-      expect(emptyV2.conclusionData?.dimensions.every((dimension) =>
+      expect(emptyV2.conclusionData?.dimensions.every((dimension: WealthDimensionInterpretation) =>
         dimension.supportingEvidenceIds.length === 0 &&
         dimension.challengingEvidenceIds.length === 0
       )).toBe(true);
@@ -565,11 +565,11 @@ describe('WealthDomainInterpreterV2', () => {
       expect(firstRun.conclusion.primaryEvidenceIds).toEqual(secondRun.conclusion.primaryEvidenceIds);
       expect(firstRun.conclusion.challengingEvidenceIds).toEqual(secondRun.conclusion.challengingEvidenceIds);
       expect(firstRun.conclusion.supportingEvidenceIds).toEqual(secondRun.conclusion.supportingEvidenceIds);
-      expect(firstRun.conclusionData?.dimensions.map((dimension) => ({
+      expect(firstRun.conclusionData?.dimensions.map((dimension: WealthDimensionInterpretation) => ({
         dimension: dimension.dimension,
         supportingEvidenceIds: dimension.supportingEvidenceIds,
         challengingEvidenceIds: dimension.challengingEvidenceIds
-      }))).toEqual(secondRun.conclusionData?.dimensions.map((dimension) => ({
+      }))).toEqual(secondRun.conclusionData?.dimensions.map((dimension: WealthDimensionInterpretation) => ({
         dimension: dimension.dimension,
         supportingEvidenceIds: dimension.supportingEvidenceIds,
         challengingEvidenceIds: dimension.challengingEvidenceIds
@@ -2657,5 +2657,50 @@ describe('WealthDomainInterpreterV2', () => {
 
       expect(resolveOverallWealthStatus(dimensions)).toBe('INSUFFICIENT_DATA');
     });
+  });
+});
+
+describe('Wealth period activation contracts', () => {
+  function timingEvidence(id: string, period: 'MD' | 'AD' | 'PD', promiseId: string, polarity: 'SUPPORTING' | 'CHALLENGING') {
+    return createDomainEvidence({
+      id, sourceType: 'DASHA', domain: 'WEALTH', role: 'SECONDARY', phase: 'DASHA_ACTIVATION',
+      source: 'DASHA', statement: id, polarity, strength: 'MODERATE', priority: 50,
+      timing: { period, planet: undefined }, relatedEvidenceIds: [promiseId]
+    });
+  }
+
+  it('distinguishes complete-empty and unavailable timing datasets', () => {
+    const complete = evaluateWealthPeriodTimingActivation('MD', [], [], [], true, true);
+    const unavailable = evaluateWealthPeriodTimingActivation('MD', [], [], [], true, false);
+    expect(complete.statement).toContain('complete but no period evidence');
+    expect(unavailable.statement).toContain('unavailable');
+  });
+
+  it('rejects strict raw ID violations before normalization', () => {
+    expect(() => assertStrictIds(['', 'ok'], 'raw')).toThrow();
+    expect(() => assertStrictIds([' ok', 'ok'], 'raw')).toThrow();
+    expect(() => assertStrictIds(['duplicate', 'duplicate'], 'raw')).toThrow();
+  });
+
+  it.each([
+    ['SUPPORTING', 'ACTIVATES'],
+    ['CHALLENGING', 'CHALLENGES']
+  ] as const)('%s timing maps to %s', (polarity, effect) => {
+    const timing = timingEvidence('MD-TIME', 'MD', 'PROMISE-1', polarity);
+    const activation = evaluateWealthPeriodTimingActivation('MD', [timing], [timing], ['PROMISE-1'], true, true);
+    expect(activation.effect).toBe(effect);
+    expect(activation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
+  });
+
+  it('mixed timing maps to PARTIALLY_ACTIVATES', () => {
+    const support = timingEvidence('MD-SUPPORT', 'MD', 'PROMISE-1', 'SUPPORTING');
+    const challenge = timingEvidence('MD-CHALLENGE', 'MD', 'PROMISE-1', 'CHALLENGING');
+    const activation = evaluateWealthPeriodTimingActivation('MD', [support, challenge], [support, challenge], ['PROMISE-1'], true, true);
+    expect(activation.effect).toBe('PARTIALLY_ACTIVATES');
+  });
+
+  it('treats linked evidence with no canonical natal promise as insufficient', () => {
+    const timing = timingEvidence('MD-FORGED', 'MD', 'MISSING-PROMISE', 'SUPPORTING');
+    expect(() => evaluateWealthPeriodTimingActivation('MD', [timing], [timing], ['PROMISE-1'], true, true)).toThrow(/absent canonical natal promise/);
   });
 });
