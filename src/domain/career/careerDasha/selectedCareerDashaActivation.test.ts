@@ -543,24 +543,13 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(ambiguousDiag?.message).toContain('EXPR-AMBIGUOUS-A');
         expect(ambiguousDiag?.message).toContain('EXPR-AMBIGUOUS-B');
 
-        // ADAPTER_FALLBACK_DROPPED_CANDIDATES diagnostic with payload
-        const droppedDiag = result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES');
-        expect(droppedDiag).toBeDefined();
-        expect(droppedDiag?.candidateCount).toBe(2);
-        expect(droppedDiag?.droppedCandidateIds).toEqual(['EXPR-AMBIGUOUS-B']);
-
-        // Check fallback rows: ADAPTER_FALLBACK row must have matchBasis === undefined
-        // and must NOT be the original caller expression
+        // Ambiguous candidates are neither reliable caller coverage nor adapter activations.
+        expect(result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES')).toBeUndefined();
         const fallbackRows = result.value.expressionActivations.filter(
           a => a.expressionSource === 'ADAPTER_FALLBACK'
         );
-
-        // Candidate A has SATURN (MD planet) in evidence, so the adapter-derived expression
-        // deterministically links and emits exactly one ADAPTER_FALLBACK activation
-        expect(fallbackRows.length).toBe(1);
-        expect(fallbackRows[0].matchBasis).toBeUndefined();
-        expect(fallbackRows[0].expressionSource).toBe('ADAPTER_FALLBACK');
-        expect(fallbackRows[0].expression).not.toBe(callerExpression);
+        expect(fallbackRows).toHaveLength(0);
+        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['AMBIGUOUS', 'AMBIGUOUS']);
       }
     });
   });
@@ -2411,13 +2400,10 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
-        // Ambiguous match: caller expression matches TWO QUALIFIED candidates
-        // Conservative handling: expression is omitted (not treated as reliably identified)
-        // Falls back to adapter-derived expressions
-        expect(result.value.expressionActivations.length).toBe(1);
-        expect(result.value.expressionActivations[0].expressionSource).toBe('ADAPTER_FALLBACK');
-        // The caller expression should NOT be used (ambiguous match)
-        expect(result.value.expressionActivations[0].expression).not.toBe(callerExpression);
+        // Ambiguous match: caller expression matches TWO QUALIFIED candidates.
+        // The expression and its candidates are conservatively excluded, not adapted.
+        expect(result.value.expressionActivations.length).toBe(0);
+        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['AMBIGUOUS', 'AMBIGUOUS']);
       }
     });
 
@@ -4737,22 +4723,20 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        // Should use adapter fallback (no caller match, multiple QUALIFIED candidates)
-        expect(result.value.expressionActivations.length).toBe(1);
-        expect(result.value.expressionActivations[0].expressionSource).toBe('ADAPTER_FALLBACK');
-
-        // Should emit ADAPTER_FALLBACK_DROPPED_CANDIDATES diagnostic
-        const droppedDiag = result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES');
-        expect(droppedDiag).toBeDefined();
-        expect(droppedDiag?.candidateCount).toBe(3);
-        expect(droppedDiag?.droppedCandidateIds).toEqual(['EXPR-2', 'EXPR-3']);
-        expect(droppedDiag?.message).toContain('3');
-        expect(droppedDiag?.message).toContain('EXPR-1');
-        expect(droppedDiag?.message).toContain('EXPR-2');
-        expect(droppedDiag?.message).toContain('EXPR-3');
-
-        // Evidence scoping should be to first candidate only
-        expect(result.value.expressionActivations[0].qualifiedEvidenceIds).toEqual(['evidence-1']);
+        // Per-candidate adapter fallback should cover every adaptable candidate.
+        expect(result.value.expressionActivations).toHaveLength(3);
+        expect(result.value.expressionActivations.every(activation => activation.expressionSource === 'ADAPTER_FALLBACK')).toBe(true);
+        expect(result.value.expressionActivations.map(activation => activation.qualifiedEvidenceIds)).toEqual([
+          ['evidence-1'],
+          ['evidence-2'],
+          ['evidence-3']
+        ]);
+        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus)).toEqual([
+          'COVERED_BY_ADAPTER',
+          'COVERED_BY_ADAPTER',
+          'COVERED_BY_ADAPTER'
+        ]);
+        expect(result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES')).toBeUndefined();
       }
     });
   });

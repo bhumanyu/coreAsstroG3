@@ -201,6 +201,17 @@ function makeCareerActivation(
     }),
     expressionActivations,
     unmatchedExpressionEvidenceIds: Object.freeze([]),
+    candidateCoverage: Object.freeze([]),
+    coverageSummary: Object.freeze({
+      COVERED_BY_CALLER: 0,
+      COVERED_BY_ADAPTER: 0,
+      AMBIGUOUS: 0,
+      UNRESOLVED: 0,
+      DROPPED: 0,
+      totalQualifiedCandidates: 0,
+      totalCovered: 0,
+      totalUnresolved: 0
+    }),
     qualificationBasis,
     canonicalDashaAnalysis: {} as any,
     selectedDashaInterpretation: Object.freeze({
