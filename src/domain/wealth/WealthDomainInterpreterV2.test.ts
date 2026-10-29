@@ -2723,7 +2723,12 @@ describe('Wealth period activation contracts', () => {
 
   it('preserves occurrence and canonical namespaces across provenance and legacy mapped evidence', () => {
     const namespaceHoroscope = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
-    const rawEvidence = interpretWealthTheme(namespaceHoroscope).evidence;
+    const namespaceContext = makeContext(CANONICAL_UTC_INSTANT);
+    const namespaceTemporalState = resolveAnalysisTemporalState(namespaceHoroscope, namespaceContext);
+    const rawEvidence = interpretWealthTheme({
+      horoscope: namespaceHoroscope,
+      dashaInterpretation: namespaceTemporalState.dashaInterpretation
+    }).evidence;
     const venusRaw = rawEvidence.find((item) => item.ruleId === 'WEALTH_VENUS_KARAKA_001');
     const legacyRaw = rawEvidence.find((item) => item.ruleId === 'WEALTH_11L_DIGNITY_001') ?? rawEvidence.find((item) => item.ruleId !== 'WEALTH_VENUS_KARAKA_001');
     expect(venusRaw).toBeDefined();
@@ -2742,8 +2747,8 @@ describe('Wealth period activation contracts', () => {
       .sort();
     const canonicalPromiseIds = new Set(natalPromiseEvidenceIds);
     const namespaceOptions: DomainReasoningOptions = {
-      context: makeContext(CANONICAL_UTC_INSTANT),
-      temporalState: resolveAnalysisTemporalState(namespaceHoroscope, makeContext(CANONICAL_UTC_INSTANT))
+      context: namespaceContext,
+      temporalState: namespaceTemporalState
     };
     const namespaceInterpretation = interpretWealthV2(namespaceHoroscope, namespaceOptions);
     const namespaceActivations = namespaceInterpretation.conclusionData?.periodTimingActivations ?? [];
@@ -2756,7 +2761,7 @@ describe('Wealth period activation contracts', () => {
       for (const evidenceId of activation.evidenceIds) {
         expect(typeof evidenceId).toBe('string');
         expect(evidenceId.length).toBeGreaterThan(0);
-        expect(occurrenceEvidenceIds.size).toBeGreaterThan(0);
+        expect(occurrenceEvidenceIds).toContain(evidenceId);
       }
     }
     for (const item of mapped) {
@@ -2808,6 +2813,37 @@ describe('Wealth period activation contracts', () => {
     expect(pd.statement).toContain('unavailable');
   });
 
+  it('keeps non-natal target rejection in the permissive reference branch', () => {
+    const wrongPhase = createDomainEvidence({
+      id: 'NON-NATAL-TARGET', sourceType: 'HOUSE', domain: 'WEALTH', role: 'SECONDARY',
+      phase: 'MODIFIER', statement: 'Wrong-phase target', polarity: 'SUPPORTING',
+      strength: 'MODERATE', priority: 50
+    });
+    const timing = timingEvidence('PERMISSIVE-WRONG-PHASE', 'MD', wrongPhase.id, 'SUPPORTING');
+    const activation = Object.freeze({
+      period: 'MD' as const,
+      dimensions: Object.freeze({ accumulation: 'ACTIVATES' as const, gains: 'DOES_NOT_ACTIVATE' as const, fortune: 'DOES_NOT_ACTIVATE' as const, speculation: 'DOES_NOT_ACTIVATE' as const }),
+      evidenceIds: Object.freeze([timing.id]),
+      effect: 'ACTIVATES' as const,
+      activatedPromiseEvidenceIds: Object.freeze([wrongPhase.id])
+    });
+    expect(() => assertWealthPeriodActivationContract(activation, [timing, wrongPhase], [], false))
+      .toThrow(/not a natal promise occurrence/);
+  });
+
+  it('does not reject an unknown target in the permissive reference branch', () => {
+    const timing = timingEvidence('PERMISSIVE-UNKNOWN', 'MD', 'UNKNOWN-TARGET', 'SUPPORTING');
+    const activation = Object.freeze({
+      period: 'MD' as const,
+      dimensions: Object.freeze({ accumulation: 'ACTIVATES' as const, gains: 'DOES_NOT_ACTIVATE' as const, fortune: 'DOES_NOT_ACTIVATE' as const, speculation: 'DOES_NOT_ACTIVATE' as const }),
+      evidenceIds: Object.freeze([timing.id]),
+      effect: 'ACTIVATES' as const,
+      activatedPromiseEvidenceIds: Object.freeze(['UNKNOWN-TARGET'])
+    });
+    // UNKNOWN-TARGET is unresolved under the permissive contract, but its unresolved state is not rejected.
+    expect(() => assertWealthPeriodActivationContract(activation, [timing], [], false)).not.toThrow();
+  });
+
   it('rejects strict raw ID violations before normalization', () => {
     expect(() => assertStrictIds(['', 'ok'], 'raw')).toThrow();
     expect(() => assertStrictIds([' ok', 'ok'], 'raw')).toThrow();
@@ -2852,7 +2888,7 @@ describe('Wealth period activation contracts', () => {
     });
   });
 
-  it('preserves same-dimension attribution through mapper and linker output', () => {
+  it('evaluates same-dimension attribution for injected links', () => {
     const chart = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
     const raw = interpretWealthTheme(chart).evidence;
     const natalSource = raw.find((item) => item.ruleId !== 'WEALTH_DASHA_TIMING_001');
@@ -2903,6 +2939,49 @@ describe('Wealth period activation contracts', () => {
     });
   });
 
+  it('preserves same-dimension relationships naturally in linkWealthEvidence output', () => {
+    const chart = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const raw = interpretWealthTheme(chart).evidence;
+    const natalSource = raw.find((item) => item.ruleId !== 'WEALTH_DASHA_TIMING_001');
+    expect(natalSource).toBeDefined();
+    if (!natalSource) throw new Error('Expected a natal structural producer record');
+
+    const structuralRaw = {
+      ...natalSource,
+      id: 'NATURAL-SECOND-HOUSE-PROMISE',
+      ruleId: 'NATURAL_SECOND_HOUSE_FIXTURE',
+      evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+      effect: 'SUPPORT' as const,
+      timingEvidence: undefined
+    };
+    const supportRaw = {
+      ...natalSource,
+      id: 'NATURAL-MD-SUPPORT',
+      ruleId: 'WEALTH_DASHA_TIMING_001',
+      evidenceFamily: WealthEvidenceFamily.SECOND_HOUSE,
+      effect: 'SUPPORT' as const,
+      timingEvidence: { dashaLevel: 'MAHADASHA' as const, planet: Planet.JUPITER, relevanceReason: 'second-house timing fixture', houses: [2] }
+    };
+    const challengeRaw = {
+      ...natalSource,
+      id: 'NATURAL-MD-CHALLENGE',
+      ruleId: 'WEALTH_DASHA_TIMING_001',
+      evidenceFamily: WealthEvidenceFamily.SECOND_LORD,
+      effect: 'CHALLENGE' as const,
+      timingEvidence: { dashaLevel: 'MAHADASHA' as const, planet: Planet.JUPITER, relevanceReason: 'second-lord timing fixture', houses: [2] }
+    };
+
+    const mapped = linkWealthEvidence(buildWealthEvidence([structuralRaw, supportRaw, challengeRaw]));
+    const timing = mapped.filter((item) => item.phase === 'DASHA_ACTIVATION');
+    expect(timing).toHaveLength(2);
+    for (const item of timing) {
+      expect(item.relatedEvidenceIds).toContain(structuralRaw.id);
+      expect(item.evidenceFamily).toBeDefined();
+      expect([WealthEvidenceFamily.SECOND_HOUSE, WealthEvidenceFamily.SECOND_LORD])
+        .toContain(item.evidenceFamily);
+    }
+  });
+
   // No-family evidence deliberately must not leak into any wealth dimension.
   it('does not leak no-family mixed evidence into other dimensions', () => {
     const support = timingEvidence('MD-ACCUMULATION', 'MD', 'PROMISE-1', 'SUPPORTING', WealthEvidenceFamily.SECOND_HOUSE);
@@ -2923,6 +3002,14 @@ describe('Wealth period activation contracts', () => {
     const adActivation = evaluateWealthPeriodTimingActivation('AD', [md, ad], [md, ad, ...occurrences], ['PROMISE-1', 'PROMISE-2'], true, true);
     expect(mdActivation.activatedPromiseEvidenceIds).toEqual(['PROMISE-1']);
     expect(adActivation.activatedPromiseEvidenceIds).toEqual(['PROMISE-2']);
+    for (const promiseId of mdActivation.activatedPromiseEvidenceIds ?? []) {
+      expect([md].some((item) => item.timing?.period === 'MD' && item.relatedEvidenceIds.includes(promiseId))).toBe(true);
+    }
+    for (const promiseId of adActivation.activatedPromiseEvidenceIds ?? []) {
+      expect([ad].some((item) => item.timing?.period === 'AD' && item.relatedEvidenceIds.includes(promiseId))).toBe(true);
+    }
+    expect(new Set(mdActivation.activatedPromiseEvidenceIds).size).toBe(mdActivation.activatedPromiseEvidenceIds?.length);
+    expect(new Set(adActivation.activatedPromiseEvidenceIds).size).toBe(adActivation.activatedPromiseEvidenceIds?.length);
   });
 
   it('treats linked evidence with no canonical natal promise as insufficient', () => {
