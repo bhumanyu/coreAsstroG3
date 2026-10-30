@@ -525,7 +525,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         expect.anything(),
         horoscope
       );
-      expect(failedPassTwo.metadata.contractValidity).toBe('VALID');
+      expect(failedPassTwo.metadata.contractValidity).toBe('INVALID');
       const failingRefinement = failedPassTwo.mechanismRefinements.find(
         refinement => refinement.candidateId === failingCandidateId
       );

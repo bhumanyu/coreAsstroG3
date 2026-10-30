@@ -70,7 +70,11 @@ export function parseParticipantId(participantId: string): ParticipantId | undef
   const match = /^PLANET:(.+)$/.exec(participantId);
   if (!match) return undefined;
   const canonicalPlanet = Object.values(Planet).find(planet => planet === match[1]);
-  return canonicalPlanet ? (`PLANET:${canonicalPlanet}` as ParticipantId) : undefined;
+  if (!canonicalPlanet) return undefined;
+  const canonicalParticipantId = `PLANET:${canonicalPlanet}`;
+  return participantId === canonicalParticipantId
+    ? canonicalParticipantId as ParticipantId
+    : undefined;
 }
 
 export function extractPlanetFromParticipantId(

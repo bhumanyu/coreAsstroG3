@@ -804,7 +804,10 @@ export class CanonicalCareerOrchestrator {
           resolved.candidate,
           dispositorContexts ?? []
         );
-        if ((dispositorContexts?.length ?? 0) > 0 && candidateContexts.length === 0) {
+        const hasStructuredContexts = (dispositorContexts ?? []).some(context =>
+          typeof context.startPlanetId === 'string'
+        );
+        if (hasStructuredContexts && candidateContexts.length === 0) {
           diagnostics.push({
             diagnosticId: `DISPOSITOR_CONTEXT_PARTICIPANT_MISMATCH_${resolved.candidateId}`,
             severity: 'WARNING',
@@ -813,6 +816,8 @@ export class CanonicalCareerOrchestrator {
             relatedIds: [resolved.candidateId],
             stage: 'REFINEMENT'
           });
+          refinements.push(this.unresolvedRefinement(resolved));
+          continue;
         }
         const result = this.ports.mechanismRefiner.refine({
           candidate: resolved.candidate,

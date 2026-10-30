@@ -1445,6 +1445,22 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(capturedRefineInputs[0].supportingParticipants).not.toContain('PLANET:SATURN');
       expect(capturedRefineInputs[0].challengingParticipants).not.toContain('PLANET:SATURN');
       expect(Object.isFrozen(capturedRefineInputs[0].coreParticipants)).toBe(true);
+
+      capturedRefineInputs = [];
+      const unmatchedFoundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: [{ ...dispositorContexts[0], startPlanetId: 'MARS', chain: ['MARS'], chainId: 'MARS_CHAIN' } as any]
+      });
+      expect(capturedRefineInputs).toHaveLength(0);
+      expect(unmatchedFoundation.mechanismRefinements).toEqual([
+        expect.objectContaining({ candidateId: 'CANDIDATE_1', resolution: 'UNRESOLVED', status: 'UNAVAILABLE', mechanism: null })
+      ]);
+      expect(unmatchedFoundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'DISPOSITOR_CONTEXT_PARTICIPANT_MISMATCH_CANDIDATE_1'
+      }));
     });
 
     it('relationship mapping: mechanism→refinement carries same candidateId (self-derivation)', () => {

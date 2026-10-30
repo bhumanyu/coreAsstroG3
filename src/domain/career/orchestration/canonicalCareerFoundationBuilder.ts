@@ -213,9 +213,14 @@ export function buildCanonicalCareerFoundation(
     const pass2Foundation = orchestrator.orchestrate(pass2Input);
 
     if (contextFactoryDiagnostics.length > 0) {
+      const hasContractError = contextFactoryDiagnostics.some(diagnostic => diagnostic.severity === 'ERROR');
       return Object.freeze({
         ...pass2Foundation,
-        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics])
+        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics]),
+        metadata: Object.freeze({
+          ...pass2Foundation.metadata,
+          contractValidity: hasContractError ? 'INVALID' as const : pass2Foundation.metadata.contractValidity
+        })
       });
     }
     return pass2Foundation;

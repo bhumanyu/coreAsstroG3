@@ -2516,6 +2516,27 @@ describe('CareerDomainInterpreterV2', () => {
 
   // P2-11G Production Integration Tests
   describe('P2-11G Canonical Career Foundation Production Reachability', () => {
+    it('runs the real-chart dispositor path with traceable provenance or an explicit unavailable outcome', async () => {
+      const horoscope = await calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+      const interpreted = interpretCareerV2(horoscope, makeDomainOptions());
+      const foundation = interpreted.conclusionData?.canonicalCareerFoundation;
+      expect(foundation).toBeDefined();
+
+      const refined = foundation?.mechanismRefinements.filter((refinement: any) => refinement.resolution === 'REFINED') ?? [];
+      if (refined.length === 0) {
+        expect(        foundation?.mechanismRefinements.every((refinement: any) =>
+          refinement.resolution === 'UNRESOLVED' || refinement.resolution === 'UNCHANGED'
+        )).toBe(true);
+        return;
+      }
+
+      for (const refinement of refined as any[]) {
+        expect(refinement.candidateId).toBeTruthy();
+        expect(refinement.stageEvidence.length).toBeGreaterThan(0);
+        expect(refinement.stageEvidence.some((evidence: any) => evidence.evidenceId.trim().length > 0)).toBe(true);
+      }
+      expect(interpreted.conclusionData).toBeDefined();
+    });
     it('interpretCareerV2 output carries canonicalCareerFoundation on conclusionData', () => {
       const v2 = interpretCareerV2(horoscope, makeDomainOptions());
 
