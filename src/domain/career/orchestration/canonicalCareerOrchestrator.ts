@@ -33,6 +33,7 @@ import {
   validateCanonicalCareerFoundation,
   validateParticipantRoleAssignments
 } from './canonicalCareerValidation';
+import { collectRelevantDispositorContexts } from '../careerMechanism/dispositor/careerMechanismDispositorUtils';
 
 function hasSemanticIdentityKey(value: unknown): value is EvidenceIdentityKey {
   return typeof value === 'string' && value.trim().length > 0;
@@ -738,8 +739,8 @@ export class CanonicalCareerOrchestrator {
     diagnostics: OrchestrationDiagnostic[]
   ): readonly MechanismRefinement[] {
     const refinements: MechanismRefinement[] = [];
-    const contextsAvailable = dispositorContexts !== undefined && dispositorContexts.length > 0;
-    if (!contextsAvailable) {
+    const dispositorContextsEnabled = dispositorContexts !== undefined;
+    if (!dispositorContextsEnabled) {
       diagnostics.push({
         diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
         severity: 'WARNING',
@@ -772,7 +773,7 @@ export class CanonicalCareerOrchestrator {
         continue;
       }
 
-      if (!contextsAvailable) {
+      if (!dispositorContextsEnabled) {
         refinements.push(this.unresolvedRefinement(resolved));
         continue;
       }
@@ -799,9 +800,13 @@ export class CanonicalCareerOrchestrator {
       }
 
       try {
+        const candidateContexts = collectRelevantDispositorContexts(
+          resolved.candidate,
+          dispositorContexts ?? []
+        );
         const result = this.ports.mechanismRefiner.refine({
           candidate: resolved.candidate,
-          dispositorContexts: Object.freeze([...(dispositorContexts ?? [])]),
+          dispositorContexts: candidateContexts,
           ...participantGroups
         });
 

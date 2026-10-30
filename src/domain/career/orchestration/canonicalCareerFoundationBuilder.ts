@@ -198,12 +198,8 @@ export function buildCanonicalCareerFoundation(
       }
     }
 
-    if (contextFactoryDiagnostics.length > 0) {
-      // Context creation is all-or-nothing: a partial context set must not yield
-      // successful-looking refinements for only a subset of the pass-one candidates.
-      dispositorContexts.length = 0;
-    }
-
+    // A missing context affects only its candidate. The orchestrator calls the
+    // refiner with an empty candidate-owned context set and returns INSUFFICIENT_DATA.
     // Pass 2: Re-orchestrate with dispositor contexts
     const pass2Input: CanonicalCareerOrchestrationInput = {
       patterns: patterns.patterns,

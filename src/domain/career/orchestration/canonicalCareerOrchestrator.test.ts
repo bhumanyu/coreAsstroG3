@@ -1327,10 +1327,16 @@ describe('CanonicalCareerOrchestrator', () => {
       (ports.qualification.qualifyCareerPatterns as any).mockReturnValue({
         qualifiedPatterns: [createStubQualifiedPattern('PATTERN_1', 'QUALIFIED')]
       });
+      const baseDispositorCandidate = createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY');
+      const dispositorCandidate = {
+        ...baseDispositorCandidate,
+        provenance: {
+          ...baseDispositorCandidate.provenance,
+          participantIds: ['PLANET:MOON', 'PLANET:SUN'] as const
+        }
+      };
       (ports.mechanismResolver.resolveAll as any).mockReturnValue([
-        createStubCandidateSet('PATTERN_1', [
-          createStubMechanismCandidate('CANDIDATE_1', 'PATTERN_1', 'AGENCY')
-        ])
+        createStubCandidateSet('PATTERN_1', [dispositorCandidate])
       ]);
       (ports.participantRoles.assignParticipantRoles as any).mockReturnValue({
         assignments: [
@@ -1407,9 +1413,18 @@ describe('CanonicalCareerOrchestrator', () => {
       const orchestrator = new CanonicalCareerOrchestrator(ports);
 
       // Provide non-empty dispositor contexts
-      const dispositorContexts = [
-        { candidateId: 'CANDIDATE_1', dispositorData: 'DISPOSITOR_DATA_1' } as any
-      ];
+      const dispositorContexts = [{
+        startPlanetId: 'MOON',
+        chain: ['MOON'],
+        terminalPlanetId: 'MOON',
+        depth: 0,
+        outcome: 'SELF_DISPOSITOR',
+        chainId: 'MOON_CHAIN',
+        provenanceIds: [],
+        sourceEvidenceIds: ['EVIDENCE_1'],
+        relevantHouseIds: [],
+        sufficientData: true
+      } as any];
 
       orchestrator.orchestrate({
         patterns: [createStubPattern('PATTERN_1')],

@@ -2830,13 +2830,12 @@ describe('CareerDomainInterpreterV2', () => {
 
       expect(foundation).toBeDefined();
 
-      // Verify dispositor contexts diagnostic is present
-      const dispositorDiagnostic = foundation?.diagnostics.find(
+      // Production enables dispositor contexts; missing per-candidate data is
+      // represented by refinement outcomes rather than the disabled-feature diagnostic.
+      const legacyDisabledDiagnostic = foundation?.diagnostics.find(
         (d: any) => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
       );
-      expect(dispositorDiagnostic).toBeDefined();
-      expect(dispositorDiagnostic?.severity).toBe('WARNING');
-      expect(dispositorDiagnostic?.category).toBe('MISSING_DATA');
+      expect(legacyDisabledDiagnostic).toBeUndefined();
 
       // Verify identity mappings are now populated (no longer deferred)
       expect(foundation?.identityMappings).toBeDefined();

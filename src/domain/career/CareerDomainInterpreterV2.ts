@@ -19,6 +19,7 @@ import {
   detectDomainConflicts
 } from '../interpretation';
 import { buildCanonicalCareerFoundation } from './orchestration/canonicalCareerFoundationBuilder';
+import { adaptCareerMechanismRefinements } from './careerExpression/careerMechanismRefinementAdapter';
 import type {
   DomainEvidence,
   DomainInterpretation,
@@ -244,8 +245,7 @@ export function interpretCareerV2(
    * canonicalNatalAnalysis to eliminate duplicate derivation. The builder still computes
    * foundation-exclusive outputs (graph, networks, patterns) internally.
    *
-   * Dispositor contexts remain disabled in production (enableDispositorContexts=false).
-   * This is a tracked blocker per P2-11G review Finding 5.
+   * Production dispositor refinement is enabled through the canonical foundation seam.
    */
   const canonicalCareerFoundation = buildCanonicalCareerFoundation({
     horoscope,
@@ -254,7 +254,7 @@ export function interpretCareerV2(
       relevance: canonicalNatalAnalysis.relevance,
       condition: canonicalNatalAnalysis.condition
     },
-    enableDispositorContexts: false // Disabled in production per P2-11G Finding 4 (tracked blocker)
+    enableDispositorContexts: true
   });
 
   /**
@@ -267,7 +267,7 @@ export function interpretCareerV2(
    * - careerMechanismCandidates: Extract from canonicalCareerFoundation.resolvedMechanisms[].candidate
    * - career10HFoundation: Extract from canonicalCareerFoundation.careerFoundationSupplements (when AVAILABLE)
    * - career10LFoundation: Extract from canonicalCareerFoundation.careerFoundationSupplements (when AVAILABLE)
-   * - careerMechanismRefinements: Empty (dispositor contexts disabled)
+   * - careerMechanismRefinements: Adapted canonical refinements from the foundation
    *
    * Bridge adaptation:
    * - The resolver returns CareerExpressionAnalysisResult (mechanism candidates)
@@ -297,10 +297,18 @@ export function interpretCareerV2(
     supplement10L?.availability === 'AVAILABLE' && supplement10L.foundation10L
   ) ? supplement10L.foundation10L : undefined;
 
+  const adaptedRefinements = adaptCareerMechanismRefinements(
+    careerMechanismCandidates,
+    canonicalCareerFoundation.mechanismRefinements
+  );
+  const careerMechanismRefinements = adaptedRefinements.diagnostics.length > 0
+    ? undefined
+    : adaptedRefinements.candidates;
+
   // Call the mechanism-based resolver
   const mechanismExpressionResult = defaultCareerExpressionResolver.resolve({
     careerMechanismCandidates,
-    careerMechanismRefinements: undefined, // Empty while enableDispositorContexts is false
+    careerMechanismRefinements,
     career10HFoundation,
     career10LFoundation
   });

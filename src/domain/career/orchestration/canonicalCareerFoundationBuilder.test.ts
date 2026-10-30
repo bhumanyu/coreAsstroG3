@@ -325,37 +325,9 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       // Build foundation with dispositor contexts enabled
       const foundation = buildCanonicalCareerFoundation({ horoscope, enableDispositorContexts: true });
 
-      // The canonical chart may produce zero resolved mechanisms, in which case
-      // dispositor contexts are unavailable. Assert the explicit outcome:
-      // - If no mechanisms were produced, expect UNAVAILABLE diagnostic
-      // - If mechanisms were produced, expect either contexts available OR explicit UNRESOLVED
-      const dispositorDiagnostic = foundation.diagnostics.find(
-        d => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
-      );
-
-      if (foundation.resolvedMechanisms.length === 0) {
-        // No mechanisms: dispositor contexts should be UNAVAILABLE
-        expect(dispositorDiagnostic).toBeDefined();
-        expect(dispositorDiagnostic?.severity).toBe('WARNING');
-      } else {
-        // Mechanisms exist: either contexts available or explicit UNRESOLVED outcome
-        // Both are valid depending on whether dispositor data was sufficient
-        if (dispositorDiagnostic) {
-          // Contexts unavailable: verify refinements are UNRESOLVED/UNAVAILABLE
-          expect(dispositorDiagnostic.severity).toBe('WARNING');
-          for (const refinement of foundation.mechanismRefinements) {
-            expect(refinement.resolution).toBe('UNRESOLVED');
-            expect(refinement.status).toBe('UNAVAILABLE');
-          }
-        } else {
-          // Contexts available: verify refinements have actual resolution states
-          const hasNonUnresolvedRefinements = foundation.mechanismRefinements.some(
-            r => r.resolution === 'REFINED' || r.resolution === 'UNCHANGED'
-          );
-          // If contexts are available, at least some refinements should be non-UNRESOLVED
-          // (unless dispositor data was insufficient for all candidates)
-          expect(foundation.mechanismRefinements.length).toBe(foundation.resolvedMechanisms.length);
-        }
+      expect(foundation.mechanismRefinements.length).toBe(foundation.resolvedMechanisms.length);
+      for (const refinement of foundation.mechanismRefinements) {
+        expect(['REFINED', 'UNCHANGED', 'UNRESOLVED']).toContain(refinement.resolution);
       }
 
       // Verify upstream outputs were computed once and reused
@@ -554,11 +526,16 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         horoscope
       );
       expect(failedPassTwo.metadata.contractValidity).toBe('INVALID');
-      expect(failedPassTwo.mechanismRefinements.every(refinement =>
-        refinement.resolution === 'UNRESOLVED' &&
-        refinement.status === 'UNAVAILABLE' &&
-        refinement.mechanism === null
-      )).toBe(true);
+      const failingRefinement = failedPassTwo.mechanismRefinements.find(
+        refinement => refinement.candidateId === failingCandidateId
+      );
+      expect(['UNRESOLVED', 'UNCHANGED']).toContain(failingRefinement?.resolution);
+      if (failingRefinement?.resolution === 'UNRESOLVED') {
+        expect(failingRefinement.status).toBe('UNAVAILABLE');
+        expect(failingRefinement.mechanism).toBeNull();
+      } else {
+        expect(failingRefinement?.resolution).toBe('UNCHANGED');
+      }
     });
 
     it('two-pass orchestration: insufficient data leaves refinements UNRESOLVED/UNAVAILABLE', async () => {
@@ -582,23 +559,12 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
       // Build foundation with dispositor contexts enabled
       const foundation = buildCanonicalCareerFoundation({ horoscope: minimalHoroscope, enableDispositorContexts: true });
 
-      // If no mechanisms were produced, dispositor contexts may be UNAVAILABLE
-      // (empty frozen array from pass-1 makes contexts unavailable)
+      // Enabled context mode is represented by per-candidate refinement outcomes,
+      // not by a global context-unavailable diagnostic.
       if (foundation.resolvedMechanisms.length === 0) {
-        const dispositorDiagnostic = foundation.diagnostics.find(
-          d => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
-        );
-        expect(dispositorDiagnostic).toBeDefined();
-        expect(dispositorDiagnostic?.severity).toBe('WARNING');
-        return; // Test passes - UNAVAILABLE is the expected outcome for this minimal chart
+        expect(foundation.mechanismRefinements).toHaveLength(0);
+        return;
       }
-
-      // If mechanisms were produced, verify dispositor contexts were built
-      // (the test fixture should produce mechanisms with insufficient dispositor data)
-      const dispositorDiagnostic = foundation.diagnostics.find(
-        d => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
-      );
-      expect(dispositorDiagnostic).toBeUndefined();
 
       // Unconditional assertion: Verify refinements exist
       expect(foundation.mechanismRefinements).toBeDefined();
