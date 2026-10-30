@@ -217,7 +217,8 @@ function makeCareerActivation(
       coveredByAdapter: 0,
       ambiguous: 0,
       unresolved: 0,
-      excludedUnqualified: 0
+      excludedUnqualified: 0,
+      representedByAdapter: 0
     }),
     qualificationBasis,
     canonicalDashaAnalysis: {} as any,

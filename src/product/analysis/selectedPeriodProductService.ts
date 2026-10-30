@@ -77,7 +77,7 @@ export interface BuildProductSelectedPeriodSynthesisInput {
  */
 export type BuildProductSelectedPeriodSynthesisResult =
   | { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> }
-  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'ACTIVATION_PERIOD_MISMATCH' | 'DUPLICATE_CANONICAL_CANDIDATE_ID' | 'INVALID_CANDIDATE_ID' | 'COVERAGE_INVARIANT_VIOLATED' };
+  | { readonly ok: false; readonly error: SelectedPeriodContextError | 'ACTIVATION_PERIOD_MISMATCH' | 'DUPLICATE_CANONICAL_CANDIDATE_ID' | 'INVALID_CANDIDATE_ID' | 'DUPLICATE_CANDIDATE_EVIDENCE_ID' | 'INVALID_CANDIDATE_EVIDENCE_ID' | 'COVERAGE_INVARIANT_VIOLATED' };
 
 /**
  * Creates selected-period activation context.
@@ -156,7 +156,7 @@ function buildSelectedPeriodSynthesisWrapper(
   wealthActivation?: SelectedWealthPeriodActivation,
   careerErrorCode?: Extract<SelectedCareerDashaActivationResult, { ok: false }>['error'],
   wealthErrorCode?: Extract<EvaluateSelectedWealthPeriodActivationResult, { ok: false }>['error']
-): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' | 'DUPLICATE_CANONICAL_CANDIDATE_ID' | 'INVALID_CANDIDATE_ID' | 'COVERAGE_INVARIANT_VIOLATED' } {
+): { readonly ok: true; readonly value: import('../../domain/synthesis/selectedPeriodSynthesis').SelectedPeriodSynthesisValue<CareerConclusionData, WealthConclusionData> } | { readonly ok: false; readonly error: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'ACTIVATION_PERIOD_MISMATCH' | 'DUPLICATE_CANONICAL_CANDIDATE_ID' | 'INVALID_CANDIDATE_ID' | 'DUPLICATE_CANDIDATE_EVIDENCE_ID' | 'INVALID_CANDIDATE_EVIDENCE_ID' | 'COVERAGE_INVARIANT_VIOLATED' } {
   const { careerEvidence, careerDashaEvidence, wealthEvidence, careerBaseline, wealthBaseline } = input;
   const result = buildSelectedPeriodSynthesis({
     selectedPeriod,

@@ -204,7 +204,8 @@ function createLegacyExpression(
     evidence: Object.freeze(legacyEvidence),
     supportingEvidenceIds,
     statement,
-    conditional: false // Mechanism-based expressions are not conditional by contract
+    conditional: false, // Mechanism-based expressions are not conditional by contract
+    sourceMechanismCandidateIds: Object.freeze([...candidate.sourceMechanismIds].sort())
   });
 }
 
@@ -268,7 +269,8 @@ function createLegacyExpressionFromCanonical(
     evidence: Object.freeze(legacyEvidence),
     supportingEvidenceIds,
     statement,
-    conditional: false // Canonical expressions are not conditional by contract
+    conditional: false, // Canonical expressions are not conditional by contract
+    sourceMechanismCandidateIds: Object.freeze([...candidate.sourceMechanismIds].sort())
   });
 }
 

@@ -59,6 +59,8 @@ export interface CareerExpression {
   readonly supportingEvidenceIds: readonly string[];
   readonly statement: string;
   readonly conditional: boolean;
+  /** Mechanism candidate IDs represented by adapter-emitted legacy expressions. */
+  readonly sourceMechanismCandidateIds?: readonly string[];
 }
 
 export interface CareerExpressionAnalysis {

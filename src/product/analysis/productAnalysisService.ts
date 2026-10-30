@@ -318,6 +318,8 @@ export class ProductAnalysisService {
             error === 'ACTIVATION_PERIOD_MISMATCH' ||
             error === 'DUPLICATE_CANONICAL_CANDIDATE_ID' ||
             error === 'INVALID_CANDIDATE_ID' ||
+            error === 'DUPLICATE_CANDIDATE_EVIDENCE_ID' ||
+            error === 'INVALID_CANDIDATE_EVIDENCE_ID' ||
             error === 'COVERAGE_INVARIANT_VIOLATED'
           ) {
             return 'SYNTHESIS_FAILED';
@@ -519,6 +521,8 @@ export class ProductAnalysisService {
         error === 'ACTIVATION_PERIOD_MISMATCH' ||
         error === 'DUPLICATE_CANONICAL_CANDIDATE_ID' ||
         error === 'INVALID_CANDIDATE_ID' ||
+        error === 'DUPLICATE_CANDIDATE_EVIDENCE_ID' ||
+        error === 'INVALID_CANDIDATE_EVIDENCE_ID' ||
         error === 'COVERAGE_INVARIANT_VIOLATED'
       ) {
         return 'SYNTHESIS_FAILED';

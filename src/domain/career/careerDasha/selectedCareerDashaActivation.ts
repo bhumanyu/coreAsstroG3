@@ -169,6 +169,7 @@ export interface SelectedCareerDashaActivationDiagnostic {
     | 'ADAPTER_FALLBACK_DROPPED_CANDIDATES'
     | 'CANONICAL_EVIDENCE_ID_COLLISION'
     | 'AMBIGUOUS_EXPRESSION_MATCH'
+    | 'AMBIGUOUS_CANONICAL_CANDIDATE_MATCH'
     | 'COVERAGE_INVARIANT_VIOLATED'
     | 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS';
   /**
@@ -195,6 +196,8 @@ export type SelectedCareerDashaActivationError =
   | 'INCOMPLETE_CANONICAL_INPUT'
   | 'DUPLICATE_CANONICAL_CANDIDATE_ID'
   | 'INVALID_CANDIDATE_ID'
+  | 'DUPLICATE_CANDIDATE_EVIDENCE_ID'
+  | 'INVALID_CANDIDATE_EVIDENCE_ID'
   | 'COVERAGE_INVARIANT_VIOLATED';
 
 export type SelectedCareerDashaActivationResult =
@@ -231,6 +234,8 @@ export interface CandidateCoverageSummary {
   readonly ambiguous: number;
   readonly unresolved: number;
   readonly excludedUnqualified: number;
+  /** All representations produced by the adapter, including ambiguous-caller representations. */
+  readonly representedByAdapter: number;
 }
 
 export interface SelectedCareerDashaActivationSuccess {
@@ -426,6 +431,24 @@ export function buildSelectedCareerDashaActivation(params: {
   const candidateCoverageEntries: CandidateCoverageEntry[] = [];
 
   if (canonicalExpression && mechanismCandidates) {
+    const canonicalCandidateIds = canonicalExpression.expressions.map(candidate => candidate.expressionId);
+    if (canonicalCandidateIds.some(candidateId => candidateId.trim().length === 0)) {
+      return { ok: false, error: 'INVALID_CANDIDATE_ID' };
+    }
+    if (new Set(canonicalCandidateIds).size !== canonicalCandidateIds.length) {
+      return { ok: false, error: 'DUPLICATE_CANONICAL_CANDIDATE_ID' };
+    }
+
+    for (const candidate of canonicalExpression.expressions) {
+      const evidenceIds = candidate.evidence.map(evidence => evidence.evidenceId);
+      if (evidenceIds.some(evidenceId => evidenceId.trim().length === 0)) {
+        return { ok: false, error: 'INVALID_CANDIDATE_EVIDENCE_ID' };
+      }
+      if (new Set(evidenceIds).size !== evidenceIds.length) {
+        return { ok: false, error: 'DUPLICATE_CANDIDATE_EVIDENCE_ID' };
+      }
+    }
+
     // Canonical inputs provided - check if mechanismCandidates is empty
     if (mechanismCandidates.length === 0) {
       // Canonical inputs provided but no qualifying mechanisms for this chart
@@ -438,13 +461,6 @@ export function buildSelectedCareerDashaActivation(params: {
       }));
     } else {
       // Use canonical qualification status (authoritative)
-      const canonicalCandidateIds = canonicalExpression.expressions.map(candidate => candidate.expressionId);
-      if (canonicalCandidateIds.some(candidateId => candidateId.trim().length === 0)) {
-        return { ok: false, error: 'INVALID_CANDIDATE_ID' };
-      }
-      if (new Set(canonicalCandidateIds).size !== canonicalCandidateIds.length) {
-        return { ok: false, error: 'DUPLICATE_CANONICAL_CANDIDATE_ID' };
-      }
       const qualifiedCanonicalCandidates = canonicalExpression.expressions.filter(
         candidate => candidate.qualificationStatus === 'QUALIFIED'
       );
@@ -524,6 +540,19 @@ export function buildSelectedCareerDashaActivation(params: {
 
       const expressionRefKey = (expr: CareerExpression): string =>
         `${expr.mode}:${expr.direction}:${[...expr.supportingEvidenceIds].sort().join(',')}`;
+
+      for (const candidate of qualifiedCanonicalCandidates) {
+        const expressionsClaimingCandidate = matchedCallerExpressionsWithCandidates
+          .filter(({ expr, matchingCandidates }) => expr.supportingEvidenceIds.length > 0 &&
+            matchingCandidates.length === 1 && matchingCandidates[0].expressionId === candidate.expressionId);
+        if (expressionsClaimingCandidate.length > 1) {
+          diagnostics.push(Object.freeze({
+            code: 'AMBIGUOUS_CANONICAL_CANDIDATE_MATCH',
+            message: `Multiple caller expressions (${expressionsClaimingCandidate.map(({ expr }) => expressionRefKey(expr)).join(', ')}) uniquely claim canonical candidate ${candidate.expressionId}; no caller expression is authoritative.`
+          }));
+        }
+      }
+
       const allCallerExpressionsByCandidate = new Map<string, CareerExpression[]>();
       const ambiguousCallerExpressionsByCandidate = new Map<string, CareerExpression[]>();
       for (const candidate of qualifiedCanonicalCandidates) {
@@ -554,7 +583,7 @@ export function buildSelectedCareerDashaActivation(params: {
           continue;
         }
 
-        const candidateEvidenceIds = [...new Set(candidate.evidence.map(evidence => evidence.evidenceId))].sort();
+        const candidateEvidenceIds = candidate.evidence.map(evidence => evidence.evidenceId).sort();
         const allMatches = allCallerExpressionsByCandidate.get(candidate.expressionId) ?? [];
         const ambiguousMatches = ambiguousCallerExpressionsByCandidate.get(candidate.expressionId) ?? [];
         const uniqueUnambiguousMatches = allMatches.filter(expr => {
@@ -589,9 +618,10 @@ export function buildSelectedCareerDashaActivation(params: {
               const adaptedIds = [...expr.supportingEvidenceIds].sort();
               const hasExactEvidence = adaptedIds.length === candidateEvidenceIds.length &&
                 adaptedIds.every((id, index) => id === candidateEvidenceIds[index]);
-              const hasOwnedMechanisms = candidate.sourceMechanismIds.every(sourceMechanismId =>
-                expr.statement.includes(sourceMechanismId)
-              );
+              const ownedMechanisms = [...(expr.sourceMechanismCandidateIds ?? [])].sort();
+              const candidateMechanisms = [...candidate.sourceMechanismIds].sort();
+              const hasOwnedMechanisms = ownedMechanisms.length === candidateMechanisms.length &&
+                ownedMechanisms.every((id, index) => id === candidateMechanisms[index]);
               return hasExactEvidence && hasOwnedMechanisms;
             });
 
@@ -815,9 +845,10 @@ export function buildSelectedCareerDashaActivation(params: {
   const totalUnqualifiedCandidates = canonicalExpression?.expressions.filter(
     candidate => candidate.qualificationStatus !== 'QUALIFIED'
   ).length ?? 0;
-  const coveredByAdapterPartitions = candidateCoverage.filter(entry =>
-    entry.representationStatus === 'ADAPTER_FALLBACK' && entry.callerMatchStatus !== 'AMBIGUOUS'
+  const representedByAdapter = candidateCoverage.filter(entry =>
+    entry.representationStatus === 'ADAPTER_FALLBACK'
   ).length;
+  const coveredByAdapterPartitions = coveredByAdapter;
   const coveragePartitionTotal = coveredByCaller + coveredByAdapterPartitions + ambiguous + unresolved + excludedUnqualified;
   if (qualificationBasis === 'CANONICAL_STATUS') {
     const canonicalIds = [...(canonicalExpression?.expressions.map(candidate => candidate.expressionId) ?? [])].sort();
@@ -842,7 +873,8 @@ export function buildSelectedCareerDashaActivation(params: {
     coveredByAdapter,
     ambiguous,
     unresolved,
-    excludedUnqualified
+    excludedUnqualified,
+    representedByAdapter
   });
 
   const value: SelectedCareerDashaActivationSuccess = Object.freeze({
