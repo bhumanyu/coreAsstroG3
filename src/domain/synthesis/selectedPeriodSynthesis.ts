@@ -50,7 +50,7 @@ export interface BuildSelectedPeriodSynthesisInput<TCareerBaseline, TWealthBasel
   readonly careerDashaEvidence?: readonly DomainEvidence[];
   readonly careerBaseline?: TCareerBaseline;
   readonly wealthBaseline?: TWealthBaseline;
-  readonly careerErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT';
+  readonly careerErrorCode?: 'INVALID_SELECTED_PERIOD_CONTEXT' | 'INCOMPLETE_CANONICAL_INPUT' | 'DUPLICATE_CANONICAL_CANDIDATE_ID' | 'INVALID_CANDIDATE_ID' | 'COVERAGE_INVARIANT_VIOLATED';
   readonly wealthErrorCode?:
     | 'INVALID_SELECTED_PERIOD_CONTEXT'
     | 'WEALTH_EVIDENCE_UNAVAILABLE'

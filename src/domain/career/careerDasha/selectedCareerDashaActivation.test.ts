@@ -549,7 +549,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           a => a.expressionSource === 'ADAPTER_FALLBACK'
         );
         expect(fallbackRows).toHaveLength(2);
-        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['COVERED_BY_ADAPTER', 'COVERED_BY_ADAPTER']);
+        expect(result.value.candidateCoverage.map(entry => entry.representationStatus).sort()).toEqual(['ADAPTER_FALLBACK', 'ADAPTER_FALLBACK']);
       }
     });
   });
@@ -2403,7 +2403,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         // Caller ambiguity is preserved diagnostically while adapter rows provide representation.
         expect(result.value.expressionActivations.length).toBe(2);
         expect(result.value.expressionActivations.every(activation => activation.expressionSource === 'ADAPTER_FALLBACK')).toBe(true);
-        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['COVERED_BY_ADAPTER', 'COVERED_BY_ADAPTER']);
+        expect(result.value.candidateCoverage.map(entry => entry.representationStatus).sort()).toEqual(['ADAPTER_FALLBACK', 'ADAPTER_FALLBACK']);
       }
     });
 
@@ -4731,10 +4731,10 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
           ['evidence-2'],
           ['evidence-3']
         ]);
-        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus)).toEqual([
-          'COVERED_BY_ADAPTER',
-          'COVERED_BY_ADAPTER',
-          'COVERED_BY_ADAPTER'
+        expect(result.value.candidateCoverage.map(entry => entry.representationStatus)).toEqual([
+          'ADAPTER_FALLBACK',
+          'ADAPTER_FALLBACK',
+          'ADAPTER_FALLBACK'
         ]);
         expect(result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES')).toBeUndefined();
       }

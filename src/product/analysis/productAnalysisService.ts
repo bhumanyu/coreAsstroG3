@@ -314,7 +314,12 @@ export class ProductAnalysisService {
             return 'INVALID_SELECTION';
           }
           // SYNTHESIS stage errors (from buildSelectedPeriodSynthesis)
-          if (error === 'ACTIVATION_PERIOD_MISMATCH') {
+          if (
+            error === 'ACTIVATION_PERIOD_MISMATCH' ||
+            error === 'DUPLICATE_CANONICAL_CANDIDATE_ID' ||
+            error === 'INVALID_CANDIDATE_ID' ||
+            error === 'COVERAGE_INVARIANT_VIOLATED'
+          ) {
             return 'SYNTHESIS_FAILED';
           }
           // Exhaustive check: if we reach here, the error type is not in the union
@@ -510,7 +515,12 @@ export class ProductAnalysisService {
       ) {
         return 'INVALID_SELECTION';
       }
-      if (error === 'ACTIVATION_PERIOD_MISMATCH') {
+      if (
+        error === 'ACTIVATION_PERIOD_MISMATCH' ||
+        error === 'DUPLICATE_CANONICAL_CANDIDATE_ID' ||
+        error === 'INVALID_CANDIDATE_ID' ||
+        error === 'COVERAGE_INVARIANT_VIOLATED'
+      ) {
         return 'SYNTHESIS_FAILED';
       }
       const _exhaustiveCheck: never = error;
