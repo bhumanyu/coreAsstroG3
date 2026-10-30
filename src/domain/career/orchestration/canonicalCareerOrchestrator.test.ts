@@ -167,7 +167,7 @@ describe('CanonicalCareerOrchestrator', () => {
       provenance: {
         patternIds: [patternId],
         relationshipIds: [],
-        participantIds: [],
+        participantIds: ['PLANET:SUN'],
         evidenceIds: [],
         sourceStages: ['PATTERN']
       },
@@ -1461,6 +1461,22 @@ describe('CanonicalCareerOrchestrator', () => {
       expect(unmatchedFoundation.diagnostics).toContainEqual(expect.objectContaining({
         diagnosticId: 'DISPOSITOR_CONTEXT_PARTICIPANT_MISMATCH_CANDIDATE_1'
       }));
+
+      capturedRefineInputs = [];
+      const emptyFoundation = orchestrator.orchestrate({
+        patterns: [createStubPattern('PATTERN_1')],
+        relevance: [],
+        condition: [],
+        networks: [],
+        dispositorContexts: []
+      });
+      expect(capturedRefineInputs).toHaveLength(0);
+      expect(emptyFoundation.mechanismRefinements).toEqual([
+        expect.objectContaining({ candidateId: 'CANDIDATE_1', resolution: 'UNRESOLVED', status: 'UNAVAILABLE', mechanism: null })
+      ]);
+      expect(emptyFoundation.diagnostics).toContainEqual(expect.objectContaining({
+        diagnosticId: 'DISPOSITOR_CONTEXT_EMPTY_CANDIDATE_1'
+      }));
     });
 
     it('relationship mapping: mechanism→refinement carries same candidateId (self-derivation)', () => {
@@ -1571,7 +1587,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       const refinement = foundation.mechanismRefinements[0];
@@ -1636,7 +1652,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       const refinement = foundation.mechanismRefinements[0];
@@ -1684,7 +1700,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       const refinement = foundation.mechanismRefinements[0];
@@ -1732,7 +1748,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       const refinement = foundation.mechanismRefinements[0];
@@ -3005,7 +3021,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
       const duplicateValidation = validateParticipantRoleAssignments(
         foundation.participantRoleAssignments
@@ -3074,7 +3090,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       expect(ports.mechanismRefiner.refine).not.toHaveBeenCalled();
@@ -3108,7 +3124,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       expect(foundation.mechanismRefinements[0]).toMatchObject({
@@ -3212,7 +3228,7 @@ describe('CanonicalCareerOrchestrator', () => {
         relevance: [],
         condition: [],
         networks: [],
-        dispositorContexts: [{ candidateId: 'CANDIDATE_1', dispositorData: 'DATA' } as any]
+        dispositorContexts: [{ startPlanetId: 'SUN', chain: ['SUN'], terminalPlanetId: 'SUN', chainId: 'SUN_CHAIN', provenanceIds: [], sourceEvidenceIds: [], sufficientData: true } as any]
       });
 
       expect(foundation.mechanismRefinements).toHaveLength(2);

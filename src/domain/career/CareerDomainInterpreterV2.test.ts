@@ -5,6 +5,10 @@ import { interpretCareerTheme } from '../../engine/themeInterpretation/themeInte
 import { CANONICAL_BIRTH_DETAILS } from '../../test/fixtures/canonicalChart';
 import { createAnalysisContext } from '../../core/analysis/analysisContextFactory';
 import { GOLDEN_C11_BASELINE } from '../../test/fixtures/careerGoldenBaseline';
+import {
+  defaultCareerDispositorContextFactory,
+  defaultCareerDispositorEngineAdapter
+} from './careerMechanism/dispositor';
 
 const testMethodology = {
   zodiacSystem: 'SIDEREAL',
@@ -2531,9 +2535,39 @@ describe('CareerDomainInterpreterV2', () => {
       }
 
       for (const refinement of refined as any[]) {
-        expect(refinement.candidateId).toBeTruthy();
+        const source = foundation?.resolvedMechanisms.find((resolved: any) => resolved.candidateId === refinement.candidateId);
+        expect(source).toBeDefined();
+        if (!source) continue;
+
+        const candidateEvidenceIds = new Set(source.candidate.evidence.map((evidence: any) => evidence.evidenceId));
+        const contexts = defaultCareerDispositorContextFactory.create(
+          source.candidate,
+          defaultCareerDispositorEngineAdapter,
+          horoscope
+        );
+        const consumedContexts = contexts.filter((context: any) =>
+          context.sufficientData && source.candidate.provenance.participantIds.includes(`PLANET:${context.startPlanetId}`)
+        );
+        expect(consumedContexts.length).toBeGreaterThan(0);
+        for (const context of consumedContexts) {
+          expect(context.chainId.trim().length).toBeGreaterThan(0);
+          expect(context.sourceEvidenceIds.some((id: string) => candidateEvidenceIds.has(id))).toBe(true);
+        }
+
+        const knownEvidenceIds = new Set([
+          ...source.stageEvidence.map((evidence: any) => evidence.evidenceId),
+          ...refinement.mechanism.evidence.map((evidence: any) => evidence.evidenceId),
+          ...candidateEvidenceIds
+        ]);
         expect(refinement.stageEvidence.length).toBeGreaterThan(0);
-        expect(refinement.stageEvidence.some((evidence: any) => evidence.evidenceId.trim().length > 0)).toBe(true);
+        for (const evidence of refinement.stageEvidence) {
+          expect(evidence.evidenceId.trim().length).toBeGreaterThan(0);
+          expect(knownEvidenceIds.has(evidence.evidenceId)).toBe(true);
+        }
+        expect(refinement.mechanism.provenance.evidenceIds.some((id: string) =>
+          source.candidate.provenance.evidenceIds.includes(id)
+        )).toBe(true);
+        expect(refinement.mechanism.mechanismType).toBe(source.candidate.mechanismType);
       }
       expect(interpreted.conclusionData).toBeDefined();
     });

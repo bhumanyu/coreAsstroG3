@@ -800,14 +800,24 @@ export class CanonicalCareerOrchestrator {
       }
 
       try {
-        const candidateContexts = collectRelevantDispositorContexts(
-          resolved.candidate,
-          dispositorContexts ?? []
-        );
-        const hasStructuredContexts = (dispositorContexts ?? []).some(context =>
-          typeof context.startPlanetId === 'string'
-        );
-        if (hasStructuredContexts && candidateContexts.length === 0) {
+        const candidateContexts = dispositorContexts === undefined
+          ? []
+          : collectRelevantDispositorContexts(resolved.candidate, dispositorContexts);
+
+        if (dispositorContexts?.length === 0) {
+          diagnostics.push({
+            diagnosticId: `DISPOSITOR_CONTEXT_EMPTY_${resolved.candidateId}`,
+            severity: 'WARNING',
+            category: 'MISSING_DATA',
+            message: `Dispositor context collection is empty for candidate ${resolved.candidateId}; refinement remains INSUFFICIENT_DATA`,
+            relatedIds: [resolved.candidateId],
+            stage: 'REFINEMENT'
+          });
+          refinements.push(this.unresolvedRefinement(resolved));
+          continue;
+        }
+
+        if (dispositorContexts !== undefined && dispositorContexts.length > 0 && candidateContexts.length === 0) {
           diagnostics.push({
             diagnosticId: `DISPOSITOR_CONTEXT_PARTICIPANT_MISMATCH_${resolved.candidateId}`,
             severity: 'WARNING',

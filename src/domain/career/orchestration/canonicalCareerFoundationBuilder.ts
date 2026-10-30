@@ -191,7 +191,7 @@ export function buildCanonicalCareerFoundation(
           diagnosticId: `ORCHESTRATION_DISPOSITOR_CONTEXT_FACTORY_ERROR_${resolvedMechanism.candidateId}`,
           severity: 'ERROR',
           category: 'PORT_ERROR',
-          message: `Dispositor context factory threw for candidate ${resolvedMechanism.candidateId}; all pass-two refinements remain unavailable: ${error instanceof Error ? error.message : String(error)}`,
+          message: `Dispositor context factory threw; pass-two refinement unavailable for candidate ${resolvedMechanism.candidateId}: ${error instanceof Error ? error.message : String(error)}`,
           relatedIds: Object.freeze([resolvedMechanism.candidateId]),
           stage: 'REFINEMENT'
         }));
@@ -213,14 +213,12 @@ export function buildCanonicalCareerFoundation(
     const pass2Foundation = orchestrator.orchestrate(pass2Input);
 
     if (contextFactoryDiagnostics.length > 0) {
-      const hasContractError = contextFactoryDiagnostics.some(diagnostic => diagnostic.severity === 'ERROR');
+      // Context-factory exceptions are isolated operational failures for the named candidate(s).
+      // Candidate refinement is unavailable, but the shared canonical foundation remains VALID;
+      // aggregate contractValidity is reserved for pass-wide input/identity failures.
       return Object.freeze({
         ...pass2Foundation,
-        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics]),
-        metadata: Object.freeze({
-          ...pass2Foundation.metadata,
-          contractValidity: hasContractError ? 'INVALID' as const : pass2Foundation.metadata.contractValidity
-        })
+        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics])
       });
     }
     return pass2Foundation;
