@@ -2,7 +2,7 @@ import type { CareerHouseNetwork } from '../careerGraph/careerHouseNetworkTypes'
 import type { CareerGraphEdge } from '../careerGraph/careerAstroGraphTypes';
 import type { ParticipantRoleContext } from './participantRoleTypes';
 import type { ParticipantRole, ParticipantId } from './participantRoleTypes';
-import type { Planet } from '../../../types';
+import { Planet } from '../../../types';
 
 /**
  * P2-07B Participant Role Utility Functions
@@ -66,12 +66,19 @@ export function generateParticipantRoleEvidenceId(
  * @param participantId - The participant ID (PLANET:{Planet})
  * @returns The Planet enum value
  */
+export function parseParticipantId(participantId: string): ParticipantId | undefined {
+  const match = /^PLANET:(.+)$/.exec(participantId);
+  if (!match) return undefined;
+  const canonicalPlanet = Object.values(Planet).find(planet => planet === match[1]);
+  return canonicalPlanet ? (`PLANET:${canonicalPlanet}` as ParticipantId) : undefined;
+}
+
 export function extractPlanetFromParticipantId(
   participantId: ParticipantId
 ): Planet {
-  const planet = participantId.replace('PLANET:', '');
-  // This is safe because ParticipantId is guaranteed to be PLANET:{Planet}
-  return planet as Planet;
+  const parsed = parseParticipantId(participantId);
+  if (!parsed) throw new Error(`Invalid canonical participant ID: ${participantId}`);
+  return parsed.replace('PLANET:', '') as Planet;
 }
 
 /**

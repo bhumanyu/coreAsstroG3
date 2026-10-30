@@ -215,11 +215,7 @@ export function buildCanonicalCareerFoundation(
     if (contextFactoryDiagnostics.length > 0) {
       return Object.freeze({
         ...pass2Foundation,
-        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics]),
-        metadata: Object.freeze({
-          ...pass2Foundation.metadata,
-          contractValidity: 'INVALID' as const
-        })
+        diagnostics: Object.freeze([...pass2Foundation.diagnostics, ...contextFactoryDiagnostics])
       });
     }
     return pass2Foundation;

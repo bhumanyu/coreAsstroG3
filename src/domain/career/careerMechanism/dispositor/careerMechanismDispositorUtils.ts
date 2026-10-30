@@ -4,7 +4,7 @@ import type {
 } from './careerMechanismDispositorTypes';
 import type { CareerMechanismCandidate, ParticipantId } from '../careerMechanismTypes';
 import { sortParticipantIds as sortCanonicalParticipantIds } from '../careerMechanismUtils';
-import { createParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
+import { parseParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
 import type { Planet } from '../../../../types';
 
 // Type alias for internal use - matches the adapter's import
@@ -96,14 +96,16 @@ export function collectRelevantDispositorContexts(
   candidate: CareerMechanismCandidate,
   dispositorContexts: readonly CareerDispositorContext[]
 ): readonly CareerDispositorContext[] {
-  // Extract participant IDs from candidate provenance
-  const candidateParticipantIds = new Set(candidate.provenance.participantIds);
+  // Parse candidate ownership through the canonical participant-ID boundary.
+  const candidateParticipantIds = new Set(
+    candidate.provenance.participantIds
+      .map(parseParticipantId)
+      .filter((participantId): participantId is ParticipantId => participantId !== undefined)
+  );
 
-  // Filter contexts where startPlanetId is in candidate participants
-  // Convert startPlanetId to participant ID format for comparison
   const relevant = dispositorContexts.filter(context => {
-    const planetParticipantId = createParticipantId(context.startPlanetId);
-    return candidateParticipantIds.has(planetParticipantId);
+    const planetParticipantId = parseParticipantId(`PLANET:${context.startPlanetId}`);
+    return planetParticipantId !== undefined && candidateParticipantIds.has(planetParticipantId);
   });
 
   // Sort by startPlanetId

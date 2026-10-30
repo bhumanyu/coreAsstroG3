@@ -7,7 +7,17 @@ import type { CareerMechanismCandidate } from '../careerMechanismTypes';
 import { traverseDispositorChain, detectChainMutualReception } from '../../careerDispositor/careerDispositor';
 import { buildCareerDispositorChainId } from '../../careerDispositor/careerDispositorIdentity';
 import { MAX_DISPOSITOR_DEPTH, resolveTermination } from '../../careerDispositor/careerDispositorRules';
-import { createParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
+import { createParticipantId, parseParticipantId } from '../../careerParticipantRoles/participantRoleUtils';
+
+export class CareerDispositorParticipantIdentityError extends Error {
+  readonly participantIds: readonly string[];
+
+  constructor(participantIds: readonly string[]) {
+    super(`Invalid canonical career participant ID(s): ${participantIds.join(', ')}`);
+    this.name = 'CareerDispositorParticipantIdentityError';
+    this.participantIds = Object.freeze([...participantIds]);
+  }
+}
 
 /**
  * P2-07E Career Mechanism Dispositor Adapter Boundary
@@ -182,10 +192,10 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
       const chain = engine.resolve(planet, horoscope);
 
       // Determine if data is sufficient
-      const sufficientData = chain.outcome !== 'INSUFFICIENT_DATA';
-
       // Extract sourceEvidenceIds for this planet from candidate evidence
       const sourceEvidenceIds = this.extractSourceEvidenceIds(candidate, planet);
+      const sufficientData = chain.outcome !== 'INSUFFICIENT_DATA'
+        && sourceEvidenceIds.length > 0;
 
       // Extract relevant house IDs from candidate evidence
       const relevantHouseIds = this.extractRelevantHouseIds(candidate);
@@ -222,12 +232,18 @@ export class DefaultCareerDispositorContextFactory implements CareerDispositorCo
   private extractParticipantPlanets(candidate: CareerMechanismCandidate): Planet[] {
     const planets = new Set<Planet>();
 
+    const rejectedParticipantIds: string[] = [];
     for (const participantId of candidate.provenance.participantIds) {
-      // Extract planet from participant ID (e.g., "PLANET:Mercury" -> "Mercury")
-      const match = participantId.match(/^PLANET:(.+)$/);
-      if (match) {
-        planets.add(match[1] as Planet);
+      const parsed = parseParticipantId(participantId);
+      if (!parsed) {
+        rejectedParticipantIds.push(participantId);
+        continue;
       }
+      planets.add(parsed.replace('PLANET:', '') as Planet);
+    }
+
+    if (rejectedParticipantIds.length > 0) {
+      throw new CareerDispositorParticipantIdentityError(rejectedParticipantIds);
     }
 
     return Array.from(planets);

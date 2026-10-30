@@ -20,6 +20,7 @@ import {
 } from '../interpretation';
 import { buildCanonicalCareerFoundation } from './orchestration/canonicalCareerFoundationBuilder';
 import { adaptCareerMechanismRefinements } from './careerExpression/careerMechanismRefinementAdapter';
+import type { OrchestrationDiagnostic } from './orchestration/canonicalCareerContracts';
 import type {
   DomainEvidence,
   DomainInterpretation,
@@ -301,9 +302,26 @@ export function interpretCareerV2(
     careerMechanismCandidates,
     canonicalCareerFoundation.mechanismRefinements
   );
-  const careerMechanismRefinements = adaptedRefinements.diagnostics.length > 0
-    ? undefined
-    : adaptedRefinements.candidates;
+  const careerMechanismRefinements = Object.freeze(adaptedRefinements.candidates);
+  const adapterDiagnostics: readonly OrchestrationDiagnostic[] = Object.freeze(
+    adaptedRefinements.diagnostics.map((diagnostic): OrchestrationDiagnostic => ({
+      diagnosticId: `CAREER_REFINEMENT_ADAPTER_${diagnostic.code}_${diagnostic.candidateId}`,
+      severity: diagnostic.severity,
+      category: 'INVALID_REFERENCE',
+      message: diagnostic.message,
+      relatedIds: Object.freeze([diagnostic.candidateId]),
+      stage: 'REFINEMENT'
+    }))
+  );
+  const foundationWithAdapterDiagnostics = adapterDiagnostics.length > 0
+    ? Object.freeze({
+        ...canonicalCareerFoundation,
+        diagnostics: Object.freeze([
+          ...canonicalCareerFoundation.diagnostics,
+          ...adapterDiagnostics
+        ])
+      })
+    : canonicalCareerFoundation;
 
   // Call the mechanism-based resolver
   const mechanismExpressionResult = defaultCareerExpressionResolver.resolve({
@@ -686,7 +704,7 @@ export function interpretCareerV2(
     cw01Result.manifestations,
     cw01Result.supportingSourceIds,
     cw01Result.challengingSourceIds,
-    canonicalCareerFoundation,
+    foundationWithAdapterDiagnostics,
     c11ValidationStatus,
     undefined, // evidenceContinuityReport will be added after final C11 is built
     undefined, // careerTrajectory will be added after Gate D

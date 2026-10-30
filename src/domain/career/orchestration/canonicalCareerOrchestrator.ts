@@ -804,6 +804,16 @@ export class CanonicalCareerOrchestrator {
           resolved.candidate,
           dispositorContexts ?? []
         );
+        if ((dispositorContexts?.length ?? 0) > 0 && candidateContexts.length === 0) {
+          diagnostics.push({
+            diagnosticId: `DISPOSITOR_CONTEXT_PARTICIPANT_MISMATCH_${resolved.candidateId}`,
+            severity: 'WARNING',
+            category: 'MISSING_DATA',
+            message: `No dispositor context participant matches candidate ${resolved.candidateId}; refinement remains INSUFFICIENT_DATA`,
+            relatedIds: [resolved.candidateId],
+            stage: 'REFINEMENT'
+          });
+        }
         const result = this.ports.mechanismRefiner.refine({
           candidate: resolved.candidate,
           dispositorContexts: candidateContexts,
