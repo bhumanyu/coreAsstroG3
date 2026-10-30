@@ -17,4 +17,8 @@ Native domain/status vocabularies are preserved. The acceptance layer performs c
 
 External Swiss/JPL parity and owner-gated non-dusthana mechanism families are `BLOCKED`. They are never inferred PASS.
 
+## Report projection contract (PR-8B adapter boundary)
+
+A report is parity-preserving only when it retains the canonical conclusion status, temporal scope, subject/candidate identity, cited evidence grounding, and evidence/provenance ownership. The report may vary presentation wording and omit non-cited presentation detail, but it must not strengthen an unavailable, unresolved, or challenged conclusion, substitute lifetime evidence for selected-period evidence, or cite evidence that is not grounded in the canonical result. Native status vocabularies remain authoritative; report wording is presentation only.
+
 The stale dispositor production audit header is reconciled: the production context is wired by `canonicalCareerFoundationBuilder` and invoked from `interpretCareerV2`; dispositor production reachability is no longer described as test-only.

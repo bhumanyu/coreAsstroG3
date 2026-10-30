@@ -46,14 +46,29 @@ export function assertConclusionInventory(
   conclusionSet: readonly (NormalizedAcceptanceConclusion | undefined)[]
 ): readonly ParityDifference[] {
   const differences: ParityDifference[] = [];
-  const groups = new Map<string, number>();
+  const groups = new Map<string, NormalizedAcceptanceConclusion[]>();
   conclusionSet.forEach(conclusion => {
     if (!conclusion) return;
-    const key = `${conclusion.domain}:${conclusion.scope}:${conclusion.subjectId}:${conclusion.status}`;
-    groups.set(key, (groups.get(key) ?? 0) + 1);
+    const key = `${conclusion.domain}:${conclusion.scope}:${conclusion.subjectId}`;
+    groups.set(key, [...(groups.get(key) ?? []), conclusion]);
   });
-  for (const [key, count] of groups) {
-    if (count > 1) differences.push({ surface: 'runner', kind: 'DUPLICATE_CONCLUSION', path: '$', actual: count, reason: `${key} has ${count} conclusions.` });
+  for (const [key, conclusions] of groups) {
+    if (conclusions.length < 2) continue;
+    const statuses = new Set(conclusions.map(conclusion => conclusion.status));
+    if (statuses.size > 1) {
+      differences.push({
+        surface: 'runner', kind: 'CONFLICT', path: '$.status', actual: [...statuses].sort(),
+        reason: `${key} has conflicting conclusion statuses.`
+      });
+      continue;
+    }
+    const first = conclusions[0];
+    if (conclusions.every(conclusion => deepEqualAcceptance(first.evidence, conclusion.evidence)
+      && deepEqualAcceptance(first.provenance, conclusion.provenance)
+      && deepEqualAcceptance(first.temporalScope, conclusion.temporalScope))) {
+      differences.push({ surface: 'runner', kind: 'DUPLICATE_CONCLUSION', path: '$', actual: conclusions.length,
+        reason: `${key} has ${conclusions.length} identical conclusions.` });
+    }
   }
   return Object.freeze(differences);
 }

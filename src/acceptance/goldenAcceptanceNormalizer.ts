@@ -25,20 +25,24 @@ export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion):
     evidenceById.set(item.id, owner);
   }
 
-  const provenanceById = new Map<string, string>();
   for (const item of conclusion.provenance) {
-    const existing = provenanceById.get(item.evidenceId);
-    if (existing !== undefined && existing !== item.owner) throw acceptanceConflict('SAME_ID_DIFFERENT_OWNER', item.evidenceId);
-    provenanceById.set(item.evidenceId, item.owner);
+    if (!evidenceById.has(item.evidenceId)) {
+      throw acceptanceConflict('DANGLING_PROVENANCE', item.evidenceId);
+    }
+    if (evidenceById.get(item.evidenceId) !== item.owner) {
+      throw acceptanceConflict('SAME_ID_DIFFERENT_OWNER', item.evidenceId);
+    }
   }
 
   const evidence = Array.from(new Map(conclusion.evidence.map(item => [item.id, item])).values())
     .sort((a, b) => a.id.localeCompare(b.id));
+  const provenanceIdentity = (item: AcceptanceProvenance): string => JSON.stringify([
+    item.evidenceId, item.owner, item.source ?? null, item.ruleId ?? null,
+    item.occurrence ?? null, item.stage ?? null, item.type ?? null
+  ]);
   const provenance = Array.from(new Map(conclusion.provenance.map(item => [
-    `${item.evidenceId}:${item.owner}:${item.type ?? ''}`, item
-  ])).values()).sort((a, b) =>
-    `${a.evidenceId}:${a.owner}:${a.type ?? ''}`.localeCompare(`${b.evidenceId}:${b.owner}:${b.type ?? ''}`)
-  );
+    provenanceIdentity(item), item
+  ])).values()).sort((a, b) => provenanceIdentity(a).localeCompare(provenanceIdentity(b)));
 
   return Object.freeze({
     domain: conclusion.domain,

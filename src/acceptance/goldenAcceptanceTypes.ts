@@ -9,6 +9,10 @@ export interface AcceptanceEvidence {
 export interface AcceptanceProvenance {
   readonly evidenceId: string;
   readonly owner: string;
+  readonly source?: string;
+  readonly ruleId?: string;
+  readonly occurrence?: string;
+  readonly stage?: string;
   readonly type?: string;
 }
 
@@ -47,6 +51,6 @@ export interface ParityDifference {
 }
 
 export interface AcceptanceConflictError extends Error {
-  readonly code: 'SAME_ID_DIFFERENT_OWNER' | 'DUPLICATE_CONCLUSION';
+  readonly code: 'SAME_ID_DIFFERENT_OWNER' | 'DANGLING_PROVENANCE' | 'DUPLICATE_CONCLUSION';
   readonly conflictingId: string;
 }

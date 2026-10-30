@@ -15,6 +15,7 @@ export interface GoldenAcceptanceReport {
 }
 
 export function aggregateGateStatus(gates: readonly AcceptanceGate[]): GateStatus {
+  if (gates.length === 0) return 'NOT_RUN';
   if (gates.some(gate => gate.status === 'FAIL')) return 'FAIL';
   if (gates.some(gate => gate.status === 'BLOCKED')) return 'BLOCKED';
   if (gates.some(gate => gate.status === 'NOT_RUN')) return 'NOT_RUN';
@@ -25,9 +26,13 @@ export function buildGoldenAcceptanceReport(
   gates: readonly AcceptanceGate[],
   differences: readonly ParityDifference[] = []
 ): GoldenAcceptanceReport {
+  const gateStatus = aggregateGateStatus(gates);
+  const status: GateStatus = differences.length > 0 && gateStatus === 'PASS'
+    ? 'FAIL'
+    : gateStatus;
   return Object.freeze({
     gates: Object.freeze([...gates]),
-    status: aggregateGateStatus(gates),
+    status,
     differences: Object.freeze([...differences])
   });
 }

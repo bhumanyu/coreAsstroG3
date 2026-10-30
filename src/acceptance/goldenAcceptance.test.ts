@@ -13,10 +13,16 @@ const supported: AcceptanceConclusion = {
   provenance: [{ evidenceId: 'EV-1', owner: 'C1', type: 'ESTABLISHING' }]
 };
 
-const scenarios: readonly [string, string][] = [
-  ['supported', 'SUPPORTED'], ['missing evidence', 'SUPPORTED'], ['unsupported', 'UNSUPPORTED'],
-  ['unresolved', 'UNRESOLVED'], ['conflicted', 'CONFLICTED'], ['neutral-only', 'NEUTRAL'],
-  ['unlinked', 'UNLINKED'], ['reordered input', 'SUPPORTED'], ['exact-duplicate evidence', 'SUPPORTED']
+const scenarios: readonly { readonly name: string; readonly input: AcceptanceConclusion; readonly expectedStatus: string }[] = [
+  { name: 'supported', input: { ...supported }, expectedStatus: 'SUPPORTED' },
+  { name: 'missing evidence', input: { ...supported, status: 'SUPPORTED', evidence: [], provenance: [] }, expectedStatus: 'SUPPORTED' },
+  { name: 'unsupported', input: { ...supported, status: 'UNSUPPORTED', evidence: [], provenance: [] }, expectedStatus: 'UNSUPPORTED' },
+  { name: 'unresolved', input: { ...supported, status: 'UNRESOLVED', evidence: [], provenance: [] }, expectedStatus: 'UNRESOLVED' },
+  { name: 'conflicted', input: { ...supported, status: 'CONFLICTED' }, expectedStatus: 'CONFLICTED' },
+  { name: 'neutral-only', input: { ...supported, status: 'NEUTRAL', evidence: [{ id: 'EV-NEUTRAL', owner: 'C1' }], provenance: [] }, expectedStatus: 'NEUTRAL' },
+  { name: 'unlinked', input: { ...supported, status: 'UNLINKED', evidence: [{ id: 'EV-UNLINKED', owner: 'C1' }], provenance: [] }, expectedStatus: 'UNLINKED' },
+  { name: 'reordered input', input: { ...supported, evidence: [{ id: 'EV-2', owner: 'C1' }, { id: 'EV-1', owner: 'C1' }] }, expectedStatus: 'SUPPORTED' },
+  { name: 'exact-duplicate evidence', input: { ...supported, evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-1', owner: 'C1' }] }, expectedStatus: 'SUPPORTED' }
 ];
 
 describe('PR-8 golden acceptance contract', () => {
@@ -55,8 +61,46 @@ describe('PR-8 golden acceptance contract', () => {
     expect(selected.temporalScope).not.toEqual(lifetime.temporalScope);
   });
 
-  it.each(scenarios)('has a defined acceptance scenario: %s', (_name, _status) => {
-    expect(normalizeAcceptanceConclusion(supported).subjectId).toBe('candidate:C1');
+  it.each(scenarios)('normalizes the $name scenario', ({ input, expectedStatus }) => {
+    const normalized = normalizeAcceptanceConclusion(input);
+    expect(normalized.status).toBe(expectedStatus);
+    expect(normalized.subjectId).toBe('candidate:C1');
+    if (input.status === 'UNSUPPORTED') {
+      expect(normalized.evidence).toEqual([]);
+    }
+  });
+
+  it('normalizes reordered evidence byte-identically and deduplicates exact duplicates', () => {
+    const forward = normalizeAcceptanceConclusion({ ...supported, evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-2', owner: 'C1' }] });
+    const reverse = normalizeAcceptanceConclusion({ ...supported, evidence: [{ id: 'EV-2', owner: 'C1' }, { id: 'EV-1', owner: 'C1' }] });
+    const duplicate = normalizeAcceptanceConclusion({ ...supported, evidence: [{ id: 'EV-1', owner: 'C1' }, { id: 'EV-1', owner: 'C1' }] });
+    expect(JSON.stringify(forward)).toBe(JSON.stringify(reverse));
+    expect(duplicate.evidence.map(item => item.id)).toEqual(['EV-1']);
+  });
+
+  it('rejects provenance owner mismatch and dangling evidence references', () => {
+    expect(() => normalizeAcceptanceConclusion({
+      ...supported,
+      evidence: [{ id: 'EV-1', owner: 'C1' }],
+      provenance: [{ evidenceId: 'EV-1', owner: 'C2' }]
+    })).toThrow(expect.objectContaining({ code: 'SAME_ID_DIFFERENT_OWNER', conflictingId: 'EV-1' }));
+    expect(() => normalizeAcceptanceConclusion({
+      ...supported,
+      evidence: [{ id: 'EV-1', owner: 'C1' }],
+      provenance: [{ evidenceId: 'EV-NOT-IN-EVIDENCE', owner: 'C1' }]
+    })).toThrow(expect.objectContaining({ code: 'DANGLING_PROVENANCE', conflictingId: 'EV-NOT-IN-EVIDENCE' }));
+  });
+
+  it('preserves source-stage provenance identity instead of collapsing it', () => {
+    const normalized = normalizeAcceptanceConclusion({
+      ...supported,
+      evidence: [{ id: 'EV-1', owner: 'C1' }],
+      provenance: [
+        { evidenceId: 'EV-1', owner: 'C1', source: 'PATTERN', ruleId: 'RULE-1' },
+        { evidenceId: 'EV-1', owner: 'C1', source: 'ACTIVATION', ruleId: 'RULE-1' }
+      ]
+    });
+    expect(normalized.provenance).toHaveLength(2);
   });
 
   it('aggregates gates conservatively and blocks external/owner-gated gates', () => {

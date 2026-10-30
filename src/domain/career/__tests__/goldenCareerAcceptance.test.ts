@@ -6,7 +6,7 @@
  *
  * HARD CONSTRAINTS (from spec):
  * - Do NOT add producers or change the authority of canonical C11
- * - Dispositor contexts are enabled through the real interpretCareerV2 production foundation and remain subject to candidate-scoped provenance gates
+ * - Dispositor-context provenance is asserted only by the production-path tests that supply a real chart and actual canonical contexts
  * - Do NOT reconstruct the pipeline inside the test; harness must invoke real interpretCareerV2
  * - Do NOT use buildGoldenCareerInterpretation as production entry point (it's a test fixture)
  * - Do NOT change public interpretCareerV2 return type or C11 authority
