@@ -169,6 +169,7 @@ export interface SelectedCareerDashaActivationDiagnostic {
     | 'ADAPTER_FALLBACK_DROPPED_CANDIDATES'
     | 'CANONICAL_EVIDENCE_ID_COLLISION'
     | 'AMBIGUOUS_EXPRESSION_MATCH'
+    | 'COVERAGE_INVARIANT_VIOLATED'
     | 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS';
   /**
    * Human-readable description of the diagnostic.
@@ -203,7 +204,7 @@ export type CandidateCoverageStatus =
   | 'COVERED_BY_ADAPTER'
   | 'AMBIGUOUS'
   | 'UNRESOLVED'
-  | 'DROPPED';
+  | 'EXCLUDED_UNQUALIFIED';
 
 export interface CandidateCoverageEntry {
   readonly candidateId: string;
@@ -218,10 +219,17 @@ export interface CandidateCoverageSummary {
   readonly COVERED_BY_ADAPTER: number;
   readonly AMBIGUOUS: number;
   readonly UNRESOLVED: number;
-  readonly DROPPED: number;
+  readonly EXCLUDED_UNQUALIFIED: number;
   readonly totalQualifiedCandidates: number;
   readonly totalCovered: number;
   readonly totalUnresolved: number;
+  readonly totalCanonicalCandidates: number;
+  readonly totalUnqualifiedCandidates: number;
+  readonly coveredByCaller: number;
+  readonly coveredByAdapter: number;
+  readonly ambiguous: number;
+  readonly unresolved: number;
+  readonly excludedUnqualified: number;
 }
 
 export interface SelectedCareerDashaActivationSuccess {
@@ -408,8 +416,8 @@ export function buildSelectedCareerDashaActivation(params: {
   let qualificationBasis: 'CANONICAL_STATUS' | 'PROXY_DIRECTION' | 'UNAVAILABLE';
   // Track qualified canonical evidence IDs per expression (scoped to matched candidates)
   const expressionQualifiedEvidenceIds = new Map<CareerExpression, Set<string>>();
-  // Track whether we used adapter fallback (for per-expression source determination)
-  let usedAdapterFallback = false;
+  // Track representation provenance independently for each accepted expression.
+  const expressionSourceByExpression = new Map<CareerExpression, 'CALLER' | 'ADAPTER_FALLBACK'>();
   // Track match basis per expression (for ambiguous match detection)
   const expressionMatchBasis = new Map<CareerExpression, 'UNAMBIGUOUS' | 'AMBIGUOUS'>();
   // Collect diagnostics for structured transparency
@@ -422,7 +430,6 @@ export function buildSelectedCareerDashaActivation(params: {
       // Canonical inputs provided but no qualifying mechanisms for this chart
       // Emit UNAVAILABLE qualification basis (fail-closed semantics)
       qualifiedExpressions = [];
-      usedAdapterFallback = false;
       qualificationBasis = 'UNAVAILABLE';
       diagnostics.push(Object.freeze({
         code: 'CAREER_UNAVAILABLE_NO_CANONICAL_MECHANISMS',
@@ -430,6 +437,10 @@ export function buildSelectedCareerDashaActivation(params: {
       }));
     } else {
       // Use canonical qualification status (authoritative)
+      const canonicalCandidateIds = canonicalExpression.expressions.map(candidate => candidate.expressionId);
+      if (new Set(canonicalCandidateIds).size !== canonicalCandidateIds.length) {
+        throw new Error('Duplicate canonical candidate expressionId');
+      }
       const qualifiedCanonicalCandidates = canonicalExpression.expressions.filter(
         candidate => candidate.qualificationStatus === 'QUALIFIED'
       );
@@ -507,12 +518,27 @@ export function buildSelectedCareerDashaActivation(params: {
         }
       }
 
+      for (const ambiguousCandidate of qualifiedCanonicalCandidates) {
+        const ambiguousExpressions = matchedCallerExpressionsWithCandidates
+          .filter(({ matchingCandidates }) => matchingCandidates.some(candidate => candidate.expressionId === ambiguousCandidate.expressionId) && matchingCandidates.length > 1)
+          .map(({ expr }) => `${expr.mode}:${expr.direction}:${[...expr.supportingEvidenceIds].sort().join(',')}`);
+        if (ambiguousExpressions.length > 0) {
+          candidateCoverageEntries.push(Object.freeze({
+            candidateId: ambiguousCandidate.expressionId,
+            qualificationStatus: ambiguousCandidate.qualificationStatus,
+            coverageStatus: 'AMBIGUOUS',
+            matchedExpressionRefKeys: Object.freeze(ambiguousExpressions.sort()),
+            qualifiedEvidenceIds: Object.freeze(ambiguousCandidate.evidence.map(evidence => evidence.evidenceId).sort())
+          }));
+        }
+      }
+
       for (const candidate of canonicalExpression.expressions) {
         if (candidate.qualificationStatus !== 'QUALIFIED') {
           candidateCoverageEntries.push(Object.freeze({
             candidateId: candidate.expressionId,
             qualificationStatus: candidate.qualificationStatus,
-            coverageStatus: 'DROPPED',
+            coverageStatus: 'EXCLUDED_UNQUALIFIED',
             matchedExpressionRefKeys: Object.freeze([]),
             qualifiedEvidenceIds: Object.freeze(candidate.evidence.map(evidence => evidence.evidenceId).sort())
           }));
@@ -520,7 +546,9 @@ export function buildSelectedCareerDashaActivation(params: {
       }
 
       qualifiedExpressions = [...matchedCallerExpressions];
-      usedAdapterFallback = false;
+      for (const expr of matchedCallerExpressions) {
+        expressionSourceByExpression.set(expr, 'CALLER');
+      }
 
       const callerMatchedCandidateIds = new Set<string>();
       const expressionRefKey = (expr: CareerExpression): string => `${expr.mode}:${expr.direction}:${[...expr.supportingEvidenceIds].sort().join(',')}`;
@@ -564,40 +592,24 @@ export function buildSelectedCareerDashaActivation(params: {
         }
       }
 
-      for (const entry of matchedCallerExpressionsWithCandidates) {
-        if (entry.matchingCandidates.length > 1) {
-          for (const candidate of entry.matchingCandidates) {
-            if (!candidateCoverageEntries.some(existing => existing.candidateId === candidate.expressionId)) {
-              candidateCoverageEntries.push(Object.freeze({
-                candidateId: candidate.expressionId,
-                qualificationStatus: candidate.qualificationStatus,
-                coverageStatus: 'AMBIGUOUS',
-                matchedExpressionRefKeys: Object.freeze([expressionRefKey(entry.expr)]),
-                qualifiedEvidenceIds: Object.freeze(candidate.evidence.map(evidence => evidence.evidenceId).sort())
-              }));
-            }
-          }
-        }
-      }
-
-      const unresolvedOrAdaptedIds = new Set<string>();
       const adapterExpressions: CareerExpression[] = [];
       const droppedCandidateIds: string[] = [];
       for (const candidate of qualifiedCanonicalCandidates) {
         if (callerMatchedCandidateIds.has(candidate.expressionId)) continue;
         if (candidateCoverageEntries.some(entry => entry.candidateId === candidate.expressionId && entry.coverageStatus === 'UNRESOLVED')) continue;
-        if (candidateCoverageEntries.some(entry => entry.candidateId === candidate.expressionId && entry.coverageStatus === 'AMBIGUOUS')) continue;
         const candidateEvidenceIds = candidate.evidence.map(evidence => evidence.evidenceId);
         const canonicalResult: CareerExpressionCanonicalResult = {
           ...canonicalExpression,
           expressions: [candidate]
         };
         const legacyAnalysis = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates);
-        const adaptedEvidenceIds = (expr: CareerExpression): Set<string> => new Set(expr.evidence.map(evidence => evidence.id));
         const candidateExpressions = legacyAnalysis.expressions.filter(expr => {
           if (candidateEvidenceIds.length === 0) return false;
-          const exprEvidenceIds = adaptedEvidenceIds(expr);
-          return candidateEvidenceIds.every(id => exprEvidenceIds.has(id));
+          // Adapter output is candidate-scoped: require exact identity evidence, not
+          // merely containment, because canonical candidates may share evidence IDs.
+          const adaptedIds = [...expr.supportingEvidenceIds].sort();
+          const expectedIds = [...candidateEvidenceIds].sort();
+          return adaptedIds.length === expectedIds.length && adaptedIds.every((id, index) => id === expectedIds[index]);
         });
         if (candidateExpressions.length === 0) {
           candidateCoverageEntries.push(Object.freeze({
@@ -608,27 +620,38 @@ export function buildSelectedCareerDashaActivation(params: {
             qualifiedEvidenceIds: Object.freeze([...candidateEvidenceIds].sort())
           }));
           droppedCandidateIds.push(candidate.expressionId);
-          unresolvedOrAdaptedIds.add(candidate.expressionId);
+          const existingIndex = candidateCoverageEntries.findIndex(entry => entry.candidateId === candidate.expressionId);
+          if (existingIndex >= 0) candidateCoverageEntries[existingIndex] = Object.freeze({
+            candidateId: candidate.expressionId,
+            qualificationStatus: candidate.qualificationStatus,
+            coverageStatus: 'UNRESOLVED',
+            matchedExpressionRefKeys: candidateCoverageEntries[existingIndex].matchedExpressionRefKeys,
+            qualifiedEvidenceIds: Object.freeze([...candidateEvidenceIds].sort())
+          });
         } else {
           adapterExpressions.push(...candidateExpressions);
           const qualifiedIds = new Set(candidateEvidenceIds);
           for (const adapted of candidateExpressions) {
             expressionQualifiedEvidenceIds.set(adapted, qualifiedIds);
           }
-          candidateCoverageEntries.push(Object.freeze({
+          const adapterEntry = Object.freeze({
             candidateId: candidate.expressionId,
             qualificationStatus: candidate.qualificationStatus,
-            coverageStatus: 'COVERED_BY_ADAPTER',
+            coverageStatus: 'COVERED_BY_ADAPTER' as const,
             matchedExpressionRefKeys: Object.freeze(candidateExpressions.map(expressionRefKey).sort()),
             qualifiedEvidenceIds: Object.freeze([...candidateEvidenceIds].sort())
-          }));
-          unresolvedOrAdaptedIds.add(candidate.expressionId);
+          });
+          const existingIndex = candidateCoverageEntries.findIndex(entry => entry.candidateId === candidate.expressionId);
+          if (existingIndex >= 0) candidateCoverageEntries[existingIndex] = adapterEntry;
+          else candidateCoverageEntries.push(adapterEntry);
         }
       }
 
       if (adapterExpressions.length > 0) {
         qualifiedExpressions.push(...adapterExpressions);
-        usedAdapterFallback = true;
+        for (const expr of adapterExpressions) {
+          expressionSourceByExpression.set(expr, 'ADAPTER_FALLBACK');
+        }
       }
       if (droppedCandidateIds.length > 0) {
         diagnostics.push(Object.freeze({
@@ -647,7 +670,7 @@ export function buildSelectedCareerDashaActivation(params: {
     // This is a fallback for backward compatibility; production callers should provide both inputs
     // to use the authoritative CANONICAL_STATUS qualification basis.
     qualifiedExpressions = [...expression.expressions.filter(expr => expr.direction !== 'UNAVAILABLE')];
-    usedAdapterFallback = false;
+    for (const expr of qualifiedExpressions) expressionSourceByExpression.set(expr, 'CALLER');
     qualificationBasis = 'PROXY_DIRECTION';
   }
 
@@ -743,7 +766,7 @@ export function buildSelectedCareerDashaActivation(params: {
       const expressionRefKey = `${expr.mode}:${expr.direction}:${sortedExprEvidenceIds.join(',')}`;
 
       // Determine expression source: all expressions in a batch have the same source
-      const expressionSource: 'CALLER' | 'ADAPTER_FALLBACK' = usedAdapterFallback ? 'ADAPTER_FALLBACK' : 'CALLER';
+      const expressionSource = expressionSourceByExpression.get(expr) ?? 'CALLER';
 
       // Determine match basis (only for CALLER expressions)
       const matchBasis = expressionSource === 'CALLER' ? expressionMatchBasis.get(expr) : undefined;
@@ -793,24 +816,50 @@ export function buildSelectedCareerDashaActivation(params: {
 
   const coverageByCandidate = new Map<string, CandidateCoverageEntry>();
   for (const entry of candidateCoverageEntries) {
-    if (!coverageByCandidate.has(entry.candidateId)) {
-      coverageByCandidate.set(entry.candidateId, entry);
+    const existing = coverageByCandidate.get(entry.candidateId);
+    if (existing !== undefined) {
+      throw new Error(`Duplicate coverage entries for candidate ${entry.candidateId}: ${existing.coverageStatus} and ${entry.coverageStatus}`);
     }
+    coverageByCandidate.set(entry.candidateId, entry);
   }
   const candidateCoverage = Object.freeze(
     [...coverageByCandidate.values()].sort((left, right) => left.candidateId.localeCompare(right.candidateId))
   );
+  const coveredByCaller = candidateCoverage.filter(entry => entry.coverageStatus === 'COVERED_BY_CALLER').length;
+  const coveredByAdapter = candidateCoverage.filter(entry => entry.coverageStatus === 'COVERED_BY_ADAPTER').length;
+  const ambiguous = candidateCoverage.filter(entry => entry.coverageStatus === 'AMBIGUOUS').length;
+  const unresolved = candidateCoverage.filter(entry => entry.coverageStatus === 'UNRESOLVED').length;
+  const excludedUnqualified = candidateCoverage.filter(entry => entry.coverageStatus === 'EXCLUDED_UNQUALIFIED').length;
+  const totalQualifiedCandidates = candidateCoverage.filter(entry => entry.qualificationStatus === 'QUALIFIED').length;
+  const totalCanonicalCandidates = qualificationBasis === 'CANONICAL_STATUS'
+    ? canonicalExpression?.expressions.length ?? 0
+    : 0;
+  const totalUnqualifiedCandidates = canonicalExpression?.expressions.filter(
+    candidate => candidate.qualificationStatus !== 'QUALIFIED'
+  ).length ?? 0;
+  const coveragePartitionTotal = coveredByCaller + coveredByAdapter + ambiguous + unresolved + excludedUnqualified;
+  if (qualificationBasis === 'CANONICAL_STATUS' && totalCanonicalCandidates !== coveragePartitionTotal) {
+    diagnostics.push(Object.freeze({
+      code: 'COVERAGE_INVARIANT_VIOLATED',
+      message: `Coverage partition mismatch: ${totalCanonicalCandidates} canonical candidates, ${coveragePartitionTotal} ledger entries.`
+    }));
+  }
   const coverageSummary = Object.freeze({
-    COVERED_BY_CALLER: candidateCoverage.filter(entry => entry.coverageStatus === 'COVERED_BY_CALLER').length,
-    COVERED_BY_ADAPTER: candidateCoverage.filter(entry => entry.coverageStatus === 'COVERED_BY_ADAPTER').length,
-    AMBIGUOUS: candidateCoverage.filter(entry => entry.coverageStatus === 'AMBIGUOUS').length,
-    UNRESOLVED: candidateCoverage.filter(entry => entry.coverageStatus === 'UNRESOLVED').length,
-    DROPPED: candidateCoverage.filter(entry => entry.coverageStatus === 'DROPPED').length,
-    totalQualifiedCandidates: candidateCoverage.filter(entry => entry.qualificationStatus === 'QUALIFIED').length,
-    totalCovered: candidateCoverage.filter(entry =>
-      entry.coverageStatus === 'COVERED_BY_CALLER' || entry.coverageStatus === 'COVERED_BY_ADAPTER'
-    ).length,
-    totalUnresolved: candidateCoverage.filter(entry => entry.coverageStatus === 'UNRESOLVED').length
+    COVERED_BY_CALLER: coveredByCaller,
+    COVERED_BY_ADAPTER: coveredByAdapter,
+    AMBIGUOUS: ambiguous,
+    UNRESOLVED: unresolved,
+    EXCLUDED_UNQUALIFIED: excludedUnqualified,
+    totalQualifiedCandidates,
+    totalCovered: coveredByCaller + coveredByAdapter,
+    totalUnresolved: unresolved,
+    totalCanonicalCandidates,
+    totalUnqualifiedCandidates,
+    coveredByCaller,
+    coveredByAdapter,
+    ambiguous,
+    unresolved,
+    excludedUnqualified
   });
 
   const value: SelectedCareerDashaActivationSuccess = Object.freeze({

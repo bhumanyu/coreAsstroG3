@@ -543,13 +543,13 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
         expect(ambiguousDiag?.message).toContain('EXPR-AMBIGUOUS-A');
         expect(ambiguousDiag?.message).toContain('EXPR-AMBIGUOUS-B');
 
-        // Ambiguous candidates are neither reliable caller coverage nor adapter activations.
+        // Ambiguous caller mapping remains diagnostic, but adapter representation may resolve it.
         expect(result.value.diagnostics.find(d => d.code === 'ADAPTER_FALLBACK_DROPPED_CANDIDATES')).toBeUndefined();
         const fallbackRows = result.value.expressionActivations.filter(
           a => a.expressionSource === 'ADAPTER_FALLBACK'
         );
-        expect(fallbackRows).toHaveLength(0);
-        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['AMBIGUOUS', 'AMBIGUOUS']);
+        expect(fallbackRows).toHaveLength(2);
+        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['COVERED_BY_ADAPTER', 'COVERED_BY_ADAPTER']);
       }
     });
   });
@@ -2400,10 +2400,10 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.qualificationBasis).toBe('CANONICAL_STATUS');
-        // Ambiguous match: caller expression matches TWO QUALIFIED candidates.
-        // The expression and its candidates are conservatively excluded, not adapted.
-        expect(result.value.expressionActivations.length).toBe(0);
-        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['AMBIGUOUS', 'AMBIGUOUS']);
+        // Caller ambiguity is preserved diagnostically while adapter rows provide representation.
+        expect(result.value.expressionActivations.length).toBe(2);
+        expect(result.value.expressionActivations.every(activation => activation.expressionSource === 'ADAPTER_FALLBACK')).toBe(true);
+        expect(result.value.candidateCoverage.map(entry => entry.coverageStatus).sort()).toEqual(['COVERED_BY_ADAPTER', 'COVERED_BY_ADAPTER']);
       }
     });
 
