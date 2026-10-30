@@ -198,6 +198,8 @@ export type SelectedCareerDashaActivationError =
   | 'INVALID_CANDIDATE_ID'
   | 'DUPLICATE_CANDIDATE_EVIDENCE_ID'
   | 'INVALID_CANDIDATE_EVIDENCE_ID'
+  | 'DUPLICATE_SOURCE_MECHANISM_ID'
+  | 'INVALID_SOURCE_MECHANISM_ID'
   | 'COVERAGE_INVARIANT_VIOLATED';
 
 export type SelectedCareerDashaActivationResult =
@@ -230,6 +232,7 @@ export interface CandidateCoverageSummary {
   readonly totalCanonicalCandidates: number;
   readonly totalUnqualifiedCandidates: number;
   readonly coveredByCaller: number;
+  /** Unambiguous caller matches represented by adapter fallback (partition-only; ambiguous representations are excluded). */
   readonly coveredByAdapter: number;
   readonly ambiguous: number;
   readonly unresolved: number;
@@ -447,6 +450,12 @@ export function buildSelectedCareerDashaActivation(params: {
       if (new Set(evidenceIds).size !== evidenceIds.length) {
         return { ok: false, error: 'DUPLICATE_CANDIDATE_EVIDENCE_ID' };
       }
+      if (candidate.sourceMechanismIds.some(sourceMechanismId => sourceMechanismId.trim().length === 0)) {
+        return { ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' };
+      }
+      if (new Set(candidate.sourceMechanismIds).size !== candidate.sourceMechanismIds.length) {
+        return { ok: false, error: 'DUPLICATE_SOURCE_MECHANISM_ID' };
+      }
     }
 
     // Canonical inputs provided - check if mechanismCandidates is empty
@@ -620,7 +629,9 @@ export function buildSelectedCareerDashaActivation(params: {
                 adaptedIds.every((id, index) => id === candidateEvidenceIds[index]);
               const ownedMechanisms = [...(expr.sourceMechanismCandidateIds ?? [])].sort();
               const candidateMechanisms = [...candidate.sourceMechanismIds].sort();
-              const hasOwnedMechanisms = ownedMechanisms.length === candidateMechanisms.length &&
+              // Empty mechanism ownership cannot prove adapter provenance. Accepting the empty/absent pair
+              // would permit orphan adapter expressions, so both sides must name mechanism candidates.
+              const hasOwnedMechanisms = candidateMechanisms.length > 0 && ownedMechanisms.length === candidateMechanisms.length &&
                 ownedMechanisms.every((id, index) => id === candidateMechanisms[index]);
               return hasExactEvidence && hasOwnedMechanisms;
             });
