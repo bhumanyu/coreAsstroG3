@@ -6,6 +6,8 @@ import {
   type NormalizedAcceptanceConclusion,
   type AcceptanceConflictError
 } from './goldenAcceptanceTypes';
+import type { DomainEvidence } from '../domain/interpretation/DomainEvidence';
+import type { CareerFinalEvidenceTrace } from '../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
 
 export function acceptanceConflict(code: AcceptanceConflictError['code'], conflictingId: string): AcceptanceConflictError {
   const error = Object.assign(new Error(`${code}: ${conflictingId}`), { code, conflictingId });
@@ -52,6 +54,26 @@ export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion):
     evidence: Object.freeze(evidence),
     provenance: Object.freeze(provenance),
     ...(conclusion.temporalScope === undefined ? {} : { temporalScope: conclusion.temporalScope })
+  });
+}
+
+export function projectDomainEvidenceToAcceptanceProvenance(
+  evidence: DomainEvidence,
+  owner: string,
+  trace?: CareerFinalEvidenceTrace
+): AcceptanceProvenance {
+  const evidenceIndex = trace?.evidenceIds.indexOf(evidence.id) ?? -1;
+  const tracedSource = evidenceIndex >= 0 ? trace?.sourceIds[evidenceIndex] : undefined;
+  const tracedRuleId = evidenceIndex >= 0 ? trace?.ruleIds[evidenceIndex] : undefined;
+
+  return Object.freeze({
+    evidenceId: evidence.id,
+    owner,
+    source: tracedSource ?? evidence.provenance?.source ?? evidence.source,
+    ruleId: tracedRuleId ?? evidence.provenance?.ruleId ?? evidence.ruleId,
+    occurrence: evidence.id,
+    stage: evidence.provenance?.axis,
+    type: evidence.role
   });
 }
 

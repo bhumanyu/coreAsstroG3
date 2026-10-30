@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAcceptanceConclusion, normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
+import { normalizeAcceptanceConclusion, normalizeAcceptanceSurface, projectDomainEvidenceToAcceptanceProvenance } from './goldenAcceptanceNormalizer';
 import { assertConclusionInventory, assertParity, deepEqualAcceptance } from './goldenAcceptanceAssertions';
 import { aggregateGateStatus, buildGoldenAcceptanceReport } from './goldenAcceptanceReport';
 import type { AcceptanceConclusion } from './goldenAcceptanceTypes';
+import type { DomainEvidence } from '../domain/interpretation/DomainEvidence';
+import type { CareerFinalEvidenceTrace } from '../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
 
 const supported: AcceptanceConclusion = {
   domain: 'CAREER', scope: 'LIFETIME', subjectId: 'candidate:C1', status: 'SUPPORTED',
@@ -15,7 +17,6 @@ const supported: AcceptanceConclusion = {
 
 const scenarios: readonly { readonly name: string; readonly input: AcceptanceConclusion; readonly expectedStatus: string }[] = [
   { name: 'supported', input: { ...supported }, expectedStatus: 'SUPPORTED' },
-  { name: 'missing evidence', input: { ...supported, status: 'SUPPORTED', evidence: [], provenance: [] }, expectedStatus: 'SUPPORTED' },
   { name: 'unsupported', input: { ...supported, status: 'UNSUPPORTED', evidence: [], provenance: [] }, expectedStatus: 'UNSUPPORTED' },
   { name: 'unresolved', input: { ...supported, status: 'UNRESOLVED', evidence: [], provenance: [] }, expectedStatus: 'UNRESOLVED' },
   { name: 'conflicted', input: { ...supported, status: 'CONFLICTED' }, expectedStatus: 'CONFLICTED' },
@@ -61,6 +62,24 @@ describe('PR-8 golden acceptance contract', () => {
     expect(selected.temporalScope).not.toEqual(lifetime.temporalScope);
   });
 
+  it('only preserves a supplied insufficient-data status without rewriting missing evidence domain semantics', () => {
+    const normalized = normalizeAcceptanceConclusion({
+      ...supported,
+      status: 'INSUFFICIENT_DATA',
+      evidence: [],
+      provenance: []
+    });
+    expect(normalized.status).toBe('INSUFFICIENT_DATA');
+    expect(normalized.evidence).toEqual([]);
+    expect(normalized.provenance).toEqual([]);
+  });
+
+  it.skip('BLOCKED: real pipeline missing-evidence integration awaits the PR-8B production harness', () => {
+    // PR-8B will feed a real C11/Career or Wealth result with native
+    // INSUFFICIENT_DATA/UNAVAILABLE into this assertion. The acceptance normalizer
+    // deliberately does not manufacture or substitute that status.
+  });
+
   it.each(scenarios)('normalizes the $name scenario', ({ input, expectedStatus }) => {
     const normalized = normalizeAcceptanceConclusion(input);
     expect(normalized.status).toBe(expectedStatus);
@@ -101,6 +120,32 @@ describe('PR-8 golden acceptance contract', () => {
       ]
     });
     expect(normalized.provenance).toHaveLength(2);
+  });
+
+  it('preserves complete DomainEvidence and evidenceTrace provenance identity', () => {
+    const evidence = {
+      id: 'EV-1', sourceType: 'CANONICAL', domain: 'CAREER', role: 'PRIMARY', phase: 'NATAL',
+      source: 'C4_STRUCTURAL_REASONING', statement: 'test', polarity: 'SUPPORTING', strength: 'STRONG',
+      priority: 1, ruleId: 'RULE-DOMAIN', relatedEvidenceIds: [],
+      provenance: {
+        evidenceId: 'EV-1', ruleId: 'RULE-PROVENANCE', domain: 'CAREER', axis: 'NATAL',
+        source: 'D10', effect: 'SUPPORT', strength: 'PRIMARY'
+      }
+    } as unknown as DomainEvidence;
+    const trace: CareerFinalEvidenceTrace = {
+      evidenceIds: ['EV-1'], sourceIds: ['TRACE-SOURCE'], ruleIds: ['TRACE-RULE']
+    };
+
+    expect(projectDomainEvidenceToAcceptanceProvenance(evidence, 'C1', trace)).toEqual({
+      evidenceId: 'EV-1', owner: 'C1', source: 'TRACE-SOURCE', ruleId: 'TRACE-RULE',
+      occurrence: 'EV-1', stage: 'NATAL', type: 'PRIMARY'
+    });
+  });
+
+  it('makes any parity difference fail even when gates pass or block', () => {
+    const difference = { surface: 'ui', kind: 'VALUE_MISMATCH' as const, path: '$.status', reason: 'status differs' };
+    expect(buildGoldenAcceptanceReport([{ name: 'gate', status: 'PASS' }], [difference]).status).toBe('FAIL');
+    expect(buildGoldenAcceptanceReport([{ name: 'gate', status: 'BLOCKED' }], [difference]).status).toBe('FAIL');
   });
 
   it('aggregates gates conservatively and blocks external/owner-gated gates', () => {

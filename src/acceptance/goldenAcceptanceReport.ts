@@ -27,7 +27,7 @@ export function buildGoldenAcceptanceReport(
   differences: readonly ParityDifference[] = []
 ): GoldenAcceptanceReport {
   const gateStatus = aggregateGateStatus(gates);
-  const status: GateStatus = differences.length > 0 && gateStatus === 'PASS'
+  const status: GateStatus = differences.length > 0
     ? 'FAIL'
     : gateStatus;
   return Object.freeze({

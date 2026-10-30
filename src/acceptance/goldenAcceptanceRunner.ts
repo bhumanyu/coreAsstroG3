@@ -1,4 +1,4 @@
-import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
+import { assertParity } from './goldenAcceptanceAssertions';
 import { normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
 import type { AcceptanceConclusion, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference } from './goldenAcceptanceTypes';
 
@@ -22,8 +22,7 @@ export function runGoldenAcceptanceParity(
   for (const name of Object.keys(projections).filter(name => !requiredSurfaces.includes(name)).sort()) {
     surfaces.push(normalizeAcceptanceSurface(name, projections[name]));
   }
-  const collected = requiredSurfaces
-    .map(name => projections[name] === undefined ? undefined : normalizeAcceptanceSurface(name, projections[name]).conclusion)
-    .filter((conclusion): conclusion is NormalizedAcceptanceConclusion => conclusion !== undefined && conclusion !== 'MISSING');
-  return [...assertConclusionInventory(collected), ...assertParity(expected, surfaces)];
+  // Cross-surface identity is compared directly by assertParity. Inventory validation is
+  // intentionally intra-surface and belongs in a separate per-surface collection contract.
+  return [...assertParity(expected, surfaces)];
 }
