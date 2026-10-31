@@ -5,6 +5,7 @@ import { aggregateGateStatus, buildGoldenAcceptanceReport } from './goldenAccept
 import type { AcceptanceConclusion, SelectedPeriodAcceptanceProjection } from './goldenAcceptanceTypes';
 import type { DomainEvidence } from '../domain/interpretation/DomainEvidence';
 import type { CareerFinalEvidenceTrace } from '../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
+import type { ReasoningNode } from '../domain/careerWealth/reasoningTrace/reasoningNode';
 import {
   createGoldenAcceptanceProductionPipeline,
   runGoldenAcceptanceProductionGate
@@ -52,6 +53,38 @@ describe('PR-8 golden acceptance contract', () => {
     const expected = normalizeAcceptanceConclusion(supported);
     const differences = assertParity(expected, [normalizeAcceptanceSurface('ui', undefined)]);
     expect(differences[0]).toEqual(expect.objectContaining({ kind: 'MISSING' }));
+  });
+
+  it('reports EXTERNAL as evidence outside the declared domain namespace', () => {
+    const expected = normalizeAcceptanceConclusion({
+      ...supported,
+      evidence: [],
+      provenance: []
+    });
+    const differences = assertParity(expected, [normalizeAcceptanceSurface('external-surface', {
+      ...supported,
+      evidence: [{ id: 'EXTERNAL-EV', resolution: 'EXTERNAL' }],
+      provenance: [{ evidenceId: 'EXTERNAL-EV' }]
+    })]);
+    expect(differences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'EXTERNAL_EVIDENCE', actual: 'EXTERNAL-EV' })
+    ]));
+  });
+
+  it('compares conclusion kinds and does not treat presentation conclusions as synthesis finals', () => {
+    const expected = normalizeAcceptanceConclusion({ ...supported, conclusionKind: 'SYNTHESIS_FINAL' });
+    const surface = normalizeAcceptanceSurface('career-ui', {
+      ...supported,
+      conclusionKind: 'PROFESSION_COMPLETENESS'
+    });
+    expect(assertParity(expected, [surface])).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'VALUE_MISMATCH',
+        path: '$.conclusionKind',
+        expected: 'SYNTHESIS_FINAL',
+        actual: 'PROFESSION_COMPLETENESS'
+      })
+    ]));
   });
 
   it('uses real deep equality and distinct conclusions inventory', () => {
@@ -222,54 +255,7 @@ describe('PR-8 golden acceptance contract', () => {
     });
     // Selected period now has typed fields instead of JSON-encoded status
     expect(selectedPeriod.resultState).toBeDefined();
-
-    const expected = normalizeAcceptanceConclusion(projections.canonical as AcceptanceConclusion);
-    const surfaces = Object.entries(projections)
-      .filter(([name, value]) => name !== 'canonical' && name !== 'selected-period-ui' && value !== undefined)
-      .map(([name, value]) => normalizeAcceptanceSurface(name, value as AcceptanceConclusion));
-    const differences = assertParity(expected, surfaces);
-
-    // Declare explicit expectation table for surface gate outcomes
-    // Required accepted surfaces → PASS; known gap surfaces → BLOCKED
-    // UI, AI-context, and product-ai-context are placeholder adapters with known differences → FAIL
-    const surfaceExpectations: readonly {
-      readonly name: string;
-      readonly expectedStatus: 'PASS' | 'FAIL' | 'BLOCKED';
-      readonly reason?: string;
-    }[] = [
-      { name: `${domain.toLowerCase()}-ui`, expectedStatus: 'FAIL', reason: 'UI surface is a placeholder adapter with known differences' },
-      { name: 'ai-context', expectedStatus: 'FAIL', reason: 'AI context is a placeholder adapter with known differences' },
-      { name: 'product-ai-context', expectedStatus: 'FAIL', reason: 'Product AI context is a placeholder adapter with known differences' },
-      { name: 'reasoning-trace', expectedStatus: 'BLOCKED', reason: 'Known surface gap documented in PR8_SURFACE_MAPPING.md' },
-      { name: 'json-export', expectedStatus: 'BLOCKED', reason: 'Known surface gap documented in PR8_SURFACE_MAPPING.md' }
-    ];
-
-    // Build explicit per-surface gate entries
-    const surfaceGates = surfaceExpectations.map(({ name, expectedStatus, reason }) => {
-      const surfaceDiffs = differences.filter(d => d.surface === name);
-      if (expectedStatus === 'BLOCKED') {
-        return { name, status: 'BLOCKED' as const, details: reason };
-      }
-      if (surfaceDiffs.length > 0) {
-        return { name, status: 'FAIL' as const, details: `${surfaceDiffs.length} parity difference(s)` };
-      }
-      return { name, status: 'PASS' as const };
-    });
-
-    // Assert each surface's expected status from the expectation table
-    for (const { name, expectedStatus } of surfaceExpectations) {
-      const gate = surfaceGates.find(g => g.name === name);
-      expect(gate).toBeDefined();
-      expect(gate?.status).toBe(expectedStatus);
-    }
-
-    // Build aggregate report and assert it fails on any FAIL surfaces
-    const report = buildGoldenAcceptanceReport(surfaceGates, differences);
-    const expectedReportStatus = surfaceGates.some(g => g.status === 'FAIL') ? 'FAIL' : 'BLOCKED';
-    expect(report.status).toBe(expectedReportStatus);
-
-    // Canonical baseline must always pass
-    expect(expected).toBeDefined();
+    expect(projections.canonical).toMatchObject({ conclusionKind: 'SYNTHESIS_FINAL' });
   });
 
   it('preserves real interpreter provenance and owner from evidence records', () => {
@@ -291,6 +277,33 @@ describe('PR-8 golden acceptance contract', () => {
       stage: evidence.provenance?.axis,
       type: evidence.role
     });
+  });
+
+  it('projects AI synthesis provenance from resolved domain records without inventing owners', () => {
+    const pipeline = createGoldenAcceptanceProductionPipeline('CAREER');
+    const result = pipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const projections = pipeline.collect(result);
+
+    for (const surfaceName of ['ai-context', 'product-ai-context']) {
+      const conclusion = projections[surfaceName] as AcceptanceConclusion;
+      const evidence = conclusion.evidence.find(item => {
+        const record = result.career.evidence.find(candidate => candidate.id === item.id);
+        return item.resolution === 'RESOLVED'
+          && record?.provenance?.source !== undefined
+          && record.provenance.ruleId !== undefined;
+      });
+      expect(evidence, surfaceName).toBeDefined();
+      if (!evidence) throw new Error(`${surfaceName} emitted no resolved provenance-complete evidence.`);
+      const record = result.career.evidence.find(item => item.id === evidence.id);
+      if (!record) throw new Error(`${surfaceName} evidence did not resolve back to the domain universe.`);
+      expect(conclusion.provenance.find(item => item.evidenceId === evidence.id)).toEqual(
+        projectDomainEvidenceToAcceptanceProvenance(record, record.domain)
+      );
+
+      for (const item of conclusion.evidence.filter(candidate => candidate.resolution === 'DANGLING' || candidate.resolution === 'EXTERNAL')) {
+        expect(item).not.toHaveProperty('owner');
+      }
+    }
   });
 
   it('asserts real canonical results against the approved golden baselines', () => {
@@ -383,47 +396,27 @@ describe('PR-8 golden acceptance contract', () => {
     expect(gate.expected.domain).toBe(domain);
     expect(gate.baselineDifferences).toEqual([]);
 
-    // Declare explicit expectation table for surface gate outcomes
-    // UI, AI-context, and product-ai-context are placeholder adapters with known differences → FAIL
-    const surfaceExpectations: readonly {
+    const approvedSurfaceExpectations: readonly {
       readonly name: string;
-      readonly expectedStatus: 'PASS' | 'FAIL' | 'BLOCKED';
-      readonly reason?: string;
+      readonly expectedStatus: 'PASS' | 'FAIL';
     }[] = [
-      { name: `${domain.toLowerCase()}-ui`, expectedStatus: 'FAIL', reason: 'UI surface is a placeholder adapter with known differences' },
-      { name: 'ai-context', expectedStatus: 'FAIL', reason: 'AI context is a placeholder adapter with known differences' },
-      { name: 'product-ai-context', expectedStatus: 'FAIL', reason: 'Product AI context is a placeholder adapter with known differences' },
-      { name: 'reasoning-trace', expectedStatus: 'BLOCKED', reason: 'Known surface gap documented in PR8_SURFACE_MAPPING.md' },
-      { name: 'json-export', expectedStatus: 'BLOCKED', reason: 'Known surface gap documented in PR8_SURFACE_MAPPING.md' }
+      { name: `${domain.toLowerCase()}-ui`, expectedStatus: 'FAIL' },
+      { name: 'ai-context', expectedStatus: domain === 'CAREER' ? 'FAIL' : 'PASS' },
+      { name: 'product-ai-context', expectedStatus: domain === 'CAREER' ? 'FAIL' : 'PASS' },
+      { name: 'reasoning-trace', expectedStatus: 'FAIL' },
+      { name: 'json-export', expectedStatus: 'FAIL' }
     ];
 
-    // Build explicit per-surface gate entries from surface differences
-    const surfaceGates = surfaceExpectations.map(({ name, expectedStatus, reason }) => {
-      const surfaceDiffs = gate.surfaceDifferences.filter(d => d.surface === name);
-      if (expectedStatus === 'BLOCKED') {
-        return { name, status: 'BLOCKED' as const, details: reason };
-      }
-      if (surfaceDiffs.length > 0) {
-        return { name, status: 'FAIL' as const, details: `${surfaceDiffs.length} parity difference(s)` };
-      }
-      return { name, status: 'PASS' as const };
-    });
-
-    // Assert each surface's expected status from the expectation table
-    for (const { name, expectedStatus } of surfaceExpectations) {
-      const gate = surfaceGates.find(g => g.name === name);
-      expect(gate).toBeDefined();
-      expect(gate?.status).toBe(expectedStatus);
+    for (const { name, expectedStatus } of approvedSurfaceExpectations) {
+      const gateEntry = gate.surfaceGates.find(g => g.name === name);
+      const hasDifferences = gate.surfaceDifferences.some(difference => difference.surface === name);
+      expect(gateEntry?.status).toBe(hasDifferences ? 'FAIL' : 'PASS');
+      expect(gateEntry?.status).toBe(expectedStatus);
+      expect(gate.report.gates.find(g => g.name === 'canonical-baseline')?.status).toBe('PASS');
+      expect(gate.report.gates.find(g => g.name === name)?.status).toBe(gateEntry?.status);
     }
 
-    // Build aggregate report and assert it fails on any FAIL surfaces
-    const report = buildGoldenAcceptanceReport(surfaceGates, gate.surfaceDifferences);
-    const expectedReportStatus = surfaceGates.some(g => g.status === 'FAIL') ? 'FAIL' : 'BLOCKED';
-    expect(report.status).toBe(expectedReportStatus);
-
-    // Canonical baseline must always pass
-    expect(gate.baselineDifferences).toEqual([]);
-
+    expect(gate.report.status).toBe('FAIL');
     expect(gate.selectedPeriod.scope).toBe('SELECTED_PERIOD');
   });
 
@@ -439,32 +432,17 @@ describe('PR-8 golden acceptance contract', () => {
     const projections = pipeline.collect(result);
     const selectedPeriod = projections['selected-period-ui'] as SelectedPeriodAcceptanceProjection;
 
-    // Full baseline comparison: match the entire projection structure
+    // Dimensions, interval, and relation are golden for the fixed fixture; evidence and provenance are runtime-derived.
     expect(selectedPeriod).toMatchObject({
       domain: SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.domain,
       scope: SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.scope,
       resultState: SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.resultState,
       careerQualificationStatus: SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.careerQualificationStatus
     });
-
-    // Match wealth dimensions structure (effects may vary at runtime)
-    expect(selectedPeriod.wealthDimensions).toBeDefined();
-    expect(selectedPeriod.wealthDimensions).toHaveLength(4);
-    for (const dim of selectedPeriod.wealthDimensions || []) {
-      expect(dim).toHaveProperty('dimension');
-      expect(dim).toHaveProperty('effect');
-      expect(dim).toHaveProperty('dataStatus');
-    }
-
-    // Match interval structure (dates are runtime-dependent based on selected period)
-    expect(selectedPeriod.interval).toBeDefined();
-    expect(selectedPeriod.interval).toHaveProperty('start');
-    expect(selectedPeriod.interval).toHaveProperty('end');
-
-    // TemporalRelation is runtime-dependent based on selected period and asOf date
-    expect(['PAST', 'PRESENT', 'FUTURE', 'UNKNOWN']).toContain(selectedPeriod.temporalRelation);
-
-    // Evidence and provenance are runtime-dependent; just verify they're arrays
+    expect(selectedPeriod.wealthDimensions).toEqual(SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.wealthDimensions);
+    expect(selectedPeriod.interval).toEqual(SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.interval);
+    expect(selectedPeriod.temporalRelation).toBe(SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.temporalRelation);
+    expect(['PAST', 'CURRENT', 'FUTURE']).toContain(selectedPeriod.temporalRelation);
     expect(Array.isArray(selectedPeriod.evidence)).toBe(true);
     expect(Array.isArray(selectedPeriod.provenance)).toBe(true);
   });
@@ -475,23 +453,16 @@ describe('PR-8 golden acceptance contract', () => {
     const projections = pipeline.collect(result);
     const selectedPeriod = projections['selected-period-ui'] as SelectedPeriodAcceptanceProjection;
 
-    // Full baseline comparison: match the entire projection structure
+    // Qualification status, interval, and relation are golden for the fixed fixture; evidence and provenance are runtime-derived.
     expect(selectedPeriod).toMatchObject({
       domain: SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.domain,
       scope: SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.scope,
       resultState: SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.resultState,
       careerQualificationStatus: SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.careerQualificationStatus
     });
-
-    // Match interval structure (dates are runtime-dependent based on selected period)
-    expect(selectedPeriod.interval).toBeDefined();
-    expect(selectedPeriod.interval).toHaveProperty('start');
-    expect(selectedPeriod.interval).toHaveProperty('end');
-
-    // TemporalRelation is runtime-dependent based on selected period and asOf date
-    expect(['PAST', 'PRESENT', 'FUTURE', 'UNKNOWN']).toContain(selectedPeriod.temporalRelation);
-
-    // Evidence and provenance are runtime-dependent; just verify they're arrays
+    expect(selectedPeriod.interval).toEqual(SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.interval);
+    expect(selectedPeriod.temporalRelation).toBe(SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.temporalRelation);
+    expect(['PAST', 'CURRENT', 'FUTURE']).toContain(selectedPeriod.temporalRelation);
     expect(Array.isArray(selectedPeriod.evidence)).toBe(true);
     expect(Array.isArray(selectedPeriod.provenance)).toBe(true);
   });
@@ -520,51 +491,96 @@ describe('PR-8 golden acceptance contract', () => {
     expect(report.gates.every(g => g.status === 'BLOCKED')).toBe(true);
   });
 
-  it('propagates trace evidence resolution failures to parity differences and gate status', () => {
-    // Build a reasoning-trace fixture with one dangling and one duplicated evidence ID
-    const traceConclusion: AcceptanceConclusion = {
+  it('resolves a production-shaped reasoning graph through trace and production gates', () => {
+    const pipeline = createGoldenAcceptanceProductionPipeline('CAREER');
+    const productionResult = pipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
+    const canonicalEvidenceId = productionResult.career.conclusionData
+      ?.canonicalCareerFinalSynthesis?.evidenceIds[0];
+    if (!canonicalEvidenceId) throw new Error('Production fixture emitted no canonical career evidence ID.');
+    const resolvedEvidence = productionResult.career.evidence.find(item => item.id !== canonicalEvidenceId);
+    if (!resolvedEvidence) throw new Error('Production fixture emitted no additional career evidence record.');
+
+    const danglingId = canonicalEvidenceId;
+    const duplicatedId = 'DUPLICATE-EV-2';
+    const wrongOwnerId = 'WRONG-OWNER-EV';
+    const duplicateOne: DomainEvidence = { ...resolvedEvidence, id: duplicatedId };
+    const duplicateTwo: DomainEvidence = { ...resolvedEvidence, id: duplicatedId, statement: `${resolvedEvidence.statement} duplicate` };
+    const wrongOwnerEvidence: DomainEvidence = { ...resolvedEvidence, id: wrongOwnerId, domain: 'WEALTH' };
+    const evidenceNode = (nodeId: string, evidenceId: string): ReasoningNode => ({
+      nodeId,
+      type: 'EVIDENCE',
       domain: 'CAREER',
-      scope: 'LIFETIME',
-      subjectId: 'chart:career',
-      status: 'UNAVAILABLE',
-      evidence: [
-        { id: 'DANGLING-EV-1', owner: 'CAREER', resolution: 'DANGLING' },
-        { id: 'DUPLICATE-EV-2', owner: 'CAREER', resolution: 'AMBIGUOUS' },
-        { id: 'RESOLVED-EV-3', owner: 'CAREER', resolution: 'RESOLVED' }
-      ],
-      provenance: [
-        { evidenceId: 'DANGLING-EV-1', owner: 'CAREER' },
-        { evidenceId: 'DUPLICATE-EV-2', owner: 'CAREER' },
-        { evidenceId: 'RESOLVED-EV-3', owner: 'CAREER' }
-      ]
+      axis: 'NATAL',
+      evidenceId,
+      subjectKey: 'production-fixture',
+      label: evidenceId
+    });
+    const reasoningTraceGraph = {
+      traceId: 'CW-TRACE-CAREER',
+      nodes: [
+        evidenceNode('trace-dangling', danglingId),
+        evidenceNode('trace-duplicate', duplicatedId),
+        evidenceNode('trace-wrong-owner', wrongOwnerId),
+        evidenceNode('trace-resolved', resolvedEvidence.id),
+        {
+          nodeId: 'trace-synthesis',
+          type: 'SYNTHESIS',
+          domain: 'CAREER',
+          axis: 'FINAL',
+          subjectKey: 'production-fixture',
+          label: 'Career synthesis'
+        }
+      ] satisfies readonly ReasoningNode[],
+      edges: []
+    };
+    const fixtureRun = {
+      ...productionResult,
+      career: {
+        ...productionResult.career,
+        evidence: [
+          ...productionResult.career.evidence.filter(item => item.id !== canonicalEvidenceId),
+          duplicateOne,
+          duplicateTwo,
+          wrongOwnerEvidence
+        ],
+        conclusionData: {
+          ...productionResult.career.conclusionData,
+          reasoningTraceGraph
+        }
+      }
     };
 
-    const expected = normalizeAcceptanceConclusion({
-      domain: 'CAREER',
-      scope: 'LIFETIME',
-      subjectId: 'chart:career',
-      status: 'SUPPORTED',
-      evidence: [{ id: 'RESOLVED-EV-3', owner: 'CAREER' }],
-      provenance: [{ evidenceId: 'RESOLVED-EV-3', owner: 'CAREER' }]
+    const projections = pipeline.collect(fixtureRun);
+    const trace = projections['reasoning-trace'] as AcceptanceConclusion;
+    expect(trace.evidence).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: danglingId, resolution: 'DANGLING' }),
+      expect.objectContaining({ id: duplicatedId, resolution: 'AMBIGUOUS' }),
+      expect.objectContaining({ id: wrongOwnerId, resolution: 'OWNER_MISMATCH', owner: 'WEALTH' }),
+      expect.objectContaining({ id: resolvedEvidence.id, resolution: 'RESOLVED', owner: 'CAREER' })
+    ]));
+    expect(trace.evidence.find(item => item.id === danglingId)).not.toHaveProperty('owner');
+    expect(trace.evidence.find(item => item.id === duplicatedId)).not.toHaveProperty('owner');
+    expect(trace.provenance.find(item => item.evidenceId === resolvedEvidence.id)).toMatchObject({
+      owner: 'CAREER',
+      source: resolvedEvidence.provenance?.source ?? resolvedEvidence.source,
+      ruleId: resolvedEvidence.provenance?.ruleId ?? resolvedEvidence.ruleId,
+      occurrence: resolvedEvidence.id
     });
 
-    const surfaces = [normalizeAcceptanceSurface('reasoning-trace', traceConclusion)];
-    const differences = assertParity(expected, surfaces);
+    const canonical = projections.canonical as AcceptanceConclusion;
+    expect(canonical.evidence.find(item => item.id === canonicalEvidenceId)).toEqual({
+      id: canonicalEvidenceId,
+      resolution: 'DANGLING'
+    });
 
-    // Assert that dangling and ambiguous evidence IDs emit the correct difference kinds
-    expect(differences.some(d => d.kind === 'DANGLING_REFERENCE' && d.actual === 'DANGLING-EV-1')).toBe(true);
-    expect(differences.some(d => d.kind === 'AMBIGUOUS_EVIDENCE' && d.actual === 'DUPLICATE-EV-2')).toBe(true);
-
-    // Build surface gate from differences
-    const surfaceGates = [
-      { name: 'reasoning-trace', status: 'FAIL' as const, details: 'Evidence resolution failures' }
-    ];
-
-    // Build aggregate report
-    const report = buildGoldenAcceptanceReport(surfaceGates, differences);
-
-    // Assert that the reasoning-trace gate status is FAIL due to evidence resolution failures
-    expect(report.status).toBe('FAIL');
-    expect(report.gates[0].status).toBe('FAIL');
+    const gate = runGoldenAcceptanceProductionGate('CAREER', 'STANDARD', fixtureRun);
+    expect(gate.surfaceDifferences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ surface: 'reasoning-trace', kind: 'DANGLING_REFERENCE', actual: danglingId }),
+      expect.objectContaining({ surface: 'reasoning-trace', kind: 'AMBIGUOUS_EVIDENCE', actual: duplicatedId }),
+      expect.objectContaining({ surface: 'reasoning-trace', kind: 'OWNER_MISMATCH', actual: wrongOwnerId })
+    ]));
+    expect(gate.surfaceGates.find(item => item.name === 'reasoning-trace')?.status).toBe('FAIL');
+    expect(gate.report.gates.find(item => item.name === 'reasoning-trace')?.status).toBe('FAIL');
+    expect(gate.report.status).toBe('FAIL');
   });
 });

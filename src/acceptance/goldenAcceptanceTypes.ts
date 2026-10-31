@@ -11,7 +11,7 @@ export type EvidenceResolution =
 /** Native domain/product statuses are carried unchanged; no synthetic status authority is introduced. */
 export interface AcceptanceEvidence {
   readonly id: string;
-  readonly owner: string;
+  readonly owner?: string;
   readonly resolution?: EvidenceResolution;
 }
 
@@ -25,7 +25,7 @@ export interface UnresolvedEvidence {
 
 export interface AcceptanceProvenance {
   readonly evidenceId: string;
-  readonly owner: string;
+  readonly owner?: string;
   readonly source?: string;
   readonly ruleId?: string;
   readonly occurrence?: string;
@@ -62,7 +62,7 @@ export interface SelectedPeriodAcceptanceProjection {
     readonly start: string;
     readonly end: string;
   };
-  readonly temporalRelation?: string;
+  readonly temporalRelation?: 'PAST' | 'CURRENT' | 'FUTURE';
 }
 
 export interface NormalizedAcceptanceConclusion {
@@ -73,6 +73,7 @@ export interface NormalizedAcceptanceConclusion {
   readonly evidence: readonly AcceptanceEvidence[];
   readonly provenance: readonly AcceptanceProvenance[];
   readonly temporalScope?: Readonly<Record<string, unknown>>;
+  readonly conclusionKind?: AcceptanceConclusion['conclusionKind'];
 }
 
 export interface AcceptanceSurface {
@@ -82,7 +83,7 @@ export interface AcceptanceSurface {
 
 export interface ParityDifference {
   readonly surface: string;
-  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH';
+  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH' | 'EXTERNAL_EVIDENCE';
   readonly path: string;
   readonly expected?: unknown;
   readonly actual?: unknown;

@@ -3,7 +3,6 @@ import { createAnalysisContext } from '../core/analysis/analysisContextFactory';
 import { resolveAnalysisTemporalState } from '../core/analysis/resolveAnalysisTemporalState';
 import { buildLifeAnalysis } from '../domain/synthesis';
 import type { DomainInterpretation } from '../domain/interpretation';
-import type { DomainEvidence } from '../domain/interpretation/DomainEvidence';
 import type { CareerFinalSynthesisResult } from '../domain/career/careerFinalSynthesis/careerFinalSynthesisTypes';
 import { interpretCareerV2 } from '../domain/career/CareerDomainInterpreterV2';
 import { interpretWealthV2 } from '../domain/wealth/WealthDomainInterpreterV2';
@@ -40,11 +39,11 @@ import type {
 } from './goldenAcceptanceTypes';
 import {
   normalizeAcceptanceConclusion,
-  normalizeAcceptanceSurface,
-  projectDomainEvidenceToAcceptanceProvenance
+  normalizeAcceptanceSurface
 } from './goldenAcceptanceNormalizer';
 import type { GoldenAcceptancePipeline } from './goldenAcceptanceRunner';
 import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
+import { buildGoldenAcceptanceReport, type AcceptanceGate, type GoldenAcceptanceReport } from './goldenAcceptanceReport';
 import { GOLDEN_C11_BASELINE } from '../test/fixtures/careerGoldenBaseline';
 import { GOLDEN_WEALTH_BASELINE, GOLDEN_WEALTH_MANIFESTATION_BASELINE } from '../test/fixtures/wealthGoldenBaseline';
 import { calculateHoroscope } from '../engine/astroEngine';
@@ -81,12 +80,22 @@ export type GoldenAcceptanceProjections = {
   readonly 'selected-period-ui': SelectedPeriodAcceptanceProjection;
 };
 
-function getEvidence(
-  interpretation: DomainInterpretation,
-  ids: readonly string[]
-): readonly DomainEvidence[] {
-  const wanted = new Set(ids);
-  return interpretation.evidence.filter(item => wanted.has(item.id));
+interface EvidenceResolverRecord {
+  readonly id: string;
+  readonly domain?: string;
+  readonly source?: string;
+  readonly ruleId?: string;
+  readonly role?: string;
+  readonly provenance?: {
+    readonly source?: string;
+    readonly ruleId?: string;
+    readonly axis?: string;
+  };
+}
+
+interface EvidenceNamespaces {
+  readonly domainUniverse: readonly EvidenceResolverRecord[];
+  readonly externalNamespaces?: readonly (readonly EvidenceResolverRecord[])[];
 }
 
 /**
@@ -98,38 +107,43 @@ function getEvidence(
  * - DANGLING: ID does not resolve to any record in the universe
  * - AMBIGUOUS: ID resolves to multiple records in the universe (duplicate IDs)
  * - OWNER_MISMATCH: ID resolves to a record but its domain does not match expected owner
- * - EXTERNAL: ID resolves to a record in an external namespace (not in the domain interpretation)
+ * - EXTERNAL: ID resolves only in a declared external namespace
  */
 function resolveEvidenceIds(
   ids: readonly string[],
-  universe: readonly { readonly id: string; readonly domain?: string }[],
-  expectedOwner: GoldenAcceptanceDomain,
-  allowExternal = false
-): Map<string, { resolution: EvidenceResolution; record?: { readonly id: string; readonly domain?: string }; actualOwner?: string }> {
-  const evidenceById = new Map<string, { readonly id: string; readonly domain?: string }[]>();
-  for (const record of universe) {
-    const existing = evidenceById.get(record.id) || [];
-    existing.push(record);
-    evidenceById.set(record.id, existing);
+  namespaces: EvidenceNamespaces,
+  expectedOwner: GoldenAcceptanceDomain
+): Map<string, { resolution: EvidenceResolution; record?: EvidenceResolverRecord; actualOwner?: string }> {
+  const domainEvidenceById = new Map<string, EvidenceResolverRecord[]>();
+  const externalEvidenceById = new Map<string, EvidenceResolverRecord[]>();
+  const addRecords = (index: Map<string, EvidenceResolverRecord[]>, records: readonly EvidenceResolverRecord[]) => {
+    for (const record of records) {
+      const existing = index.get(record.id) || [];
+      existing.push(record);
+      index.set(record.id, existing);
+    }
+  };
+  addRecords(domainEvidenceById, namespaces.domainUniverse);
+  for (const externalNamespace of namespaces.externalNamespaces ?? []) {
+    addRecords(externalEvidenceById, externalNamespace);
   }
 
-  const resolutionMap = new Map<string, { resolution: EvidenceResolution; record?: { readonly id: string; readonly domain?: string }; actualOwner?: string }>();
-
+  const resolutionMap = new Map<string, { resolution: EvidenceResolution; record?: EvidenceResolverRecord; actualOwner?: string }>();
   for (const id of ids) {
-    const records = evidenceById.get(id);
-
-    if (!records || records.length === 0) {
+    const domainRecords = domainEvidenceById.get(id) ?? [];
+    // Domain records are authoritative for an ID; external namespaces resolve external-only IDs.
+    const records = domainRecords.length > 0 ? domainRecords : externalEvidenceById.get(id) ?? [];
+    const external = domainRecords.length === 0 && records.length > 0;
+    if (records.length === 0) {
       resolutionMap.set(id, { resolution: 'DANGLING' });
     } else if (records.length > 1) {
       resolutionMap.set(id, { resolution: 'AMBIGUOUS' });
     } else {
       const record = records[0];
-      if (record.domain !== expectedOwner) {
-        if (allowExternal) {
-          resolutionMap.set(id, { resolution: 'EXTERNAL', record, actualOwner: record.domain });
-        } else {
-          resolutionMap.set(id, { resolution: 'OWNER_MISMATCH', record, actualOwner: record.domain });
-        }
+      if (external) {
+        resolutionMap.set(id, { resolution: 'EXTERNAL', record, actualOwner: record.domain });
+      } else if (record.domain !== expectedOwner) {
+        resolutionMap.set(id, { resolution: 'OWNER_MISMATCH', record, actualOwner: record.domain });
       } else {
         resolutionMap.set(id, { resolution: 'RESOLVED', record });
       }
@@ -139,11 +153,40 @@ function resolveEvidenceIds(
   return resolutionMap;
 }
 
-function projectProvenance(
-  evidence: readonly DomainEvidence[],
-  owner: GoldenAcceptanceDomain
-): readonly AcceptanceProvenance[] {
-  return evidence.map(item => projectDomainEvidenceToAcceptanceProvenance(item, owner));
+function acceptanceEvidenceFromResolution(
+  id: string,
+  resolution: { readonly resolution: EvidenceResolution; readonly record?: EvidenceResolverRecord; readonly actualOwner?: string }
+): AcceptanceConclusion['evidence'][number] {
+  const owner = resolution.record?.domain ?? resolution.actualOwner;
+  return {
+    id,
+    ...(owner === undefined ? {} : { owner }),
+    resolution: resolution.resolution
+  };
+}
+
+function acceptanceProvenanceFromResolution(
+  id: string,
+  resolution: { readonly resolution: EvidenceResolution; readonly record?: EvidenceResolverRecord; readonly actualOwner?: string }
+): AcceptanceProvenance {
+  const record = resolution.resolution === 'RESOLVED' ? resolution.record : undefined;
+  if (!record || record.domain === undefined) {
+    return {
+      evidenceId: id,
+      ...(resolution.resolution === 'OWNER_MISMATCH' && resolution.actualOwner !== undefined
+        ? { owner: resolution.actualOwner }
+        : {})
+    };
+  }
+  return {
+    evidenceId: id,
+    owner: record.domain,
+    source: record.provenance?.source || record.source || undefined,
+    ruleId: record.provenance?.ruleId || record.ruleId || undefined,
+    occurrence: record.id,
+    ...(record.provenance?.axis === undefined ? {} : { stage: record.provenance.axis }),
+    ...(record.role === undefined ? {} : { type: record.role })
+  };
 }
 
 function canonicalConclusion(
@@ -165,7 +208,7 @@ function conclusionFromValues(
   scope: AcceptanceConclusion['scope'] = 'LIFETIME',
   subjectId = `chart:${domain.toLowerCase()}`,
   enforceStrictResolution = true,
-  allowExternal = false
+  externalNamespaces: readonly (readonly EvidenceResolverRecord[])[] = []
 ): AcceptanceConclusion | undefined {
   if (status === undefined) return undefined;
   const items = evidence.filter(item => Boolean(item.id));
@@ -177,19 +220,15 @@ function conclusionFromValues(
       scope,
       subjectId,
       status,
-      evidence: items.map(item => ({ id: item.id, owner: domain, resolution: 'DANGLING' as const })),
-      provenance: items.map(item => ({
-        evidenceId: item.id,
-        owner: domain,
-        ...(item.source === undefined ? {} : { source: item.source }),
-        ...(item.ruleId === undefined ? {} : { ruleId: item.ruleId }),
-        occurrence: item.id,
-        ...(item.role === undefined ? {} : { type: item.role })
-      }))
+      evidence: items.map(item => ({ id: item.id, resolution: 'DANGLING' as const })),
+      provenance: items.map(item => ({ evidenceId: item.id }))
     };
   }
 
-  const resolutionMap = resolveEvidenceIds(items.map(item => item.id), interpretation.evidence, domain, allowExternal);
+  const resolutionMap = resolveEvidenceIds(items.map(item => item.id), {
+    domainUniverse: interpretation.evidence,
+    externalNamespaces
+  }, domain);
 
   // Enforce strict resolution: fail on any unresolved evidence
   if (enforceStrictResolution) {
@@ -205,32 +244,14 @@ function conclusionFromValues(
     scope,
     subjectId,
     status,
-    evidence: items.map(item => {
-      const resolution = resolutionMap.get(item.id);
-      if (!resolution) {
-        return { id: item.id, owner: domain, resolution: 'DANGLING' as const };
-      }
-      return {
-        id: item.id,
-        owner: resolution.record?.domain || domain,
-        resolution: resolution.resolution
-      };
-    }),
-    provenance: items.map(item => {
-      const resolution = resolutionMap.get(item.id);
-      if (!resolution || resolution.resolution !== 'RESOLVED' || !resolution.record) {
-        // Use provided source/ruleId for unresolved evidence
-        return {
-          evidenceId: item.id,
-          owner: domain,
-          ...(item.source === undefined ? {} : { source: item.source }),
-          ...(item.ruleId === undefined ? {} : { ruleId: item.ruleId }),
-          occurrence: item.id,
-          ...(item.role === undefined ? {} : { type: item.role })
-        };
-      }
-      return projectDomainEvidenceToAcceptanceProvenance(resolution.record as DomainEvidence, resolution.record.domain as string);
-    })
+    evidence: items.map(item => acceptanceEvidenceFromResolution(
+      item.id,
+      resolutionMap.get(item.id) ?? { resolution: 'DANGLING' }
+    )),
+    provenance: items.map(item => acceptanceProvenanceFromResolution(
+      item.id,
+      resolutionMap.get(item.id) ?? { resolution: 'DANGLING' }
+    ))
   };
 }
 
@@ -243,14 +264,23 @@ function canonicalProjection(
     ? interpretation.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult | undefined
     : interpretation.conclusionData?.wealthFinalSynthesis as WealthConclusionData['wealthFinalSynthesis'];
   if (!synthesis) return undefined;
-  const evidence = getEvidence(interpretation, synthesis.evidenceIds);
+  const resolutionMap = resolveEvidenceIds(synthesis.evidenceIds, {
+    domainUniverse: interpretation.evidence
+  }, domain);
   return {
     domain,
     scope: 'LIFETIME',
     subjectId: `chart:${domain.toLowerCase()}`,
     status: synthesis.finalStatus,
-    evidence: synthesis.evidenceIds.map(id => ({ id, owner: domain })),
-    provenance: projectProvenance(evidence, domain)
+    conclusionKind: 'SYNTHESIS_FINAL',
+    evidence: synthesis.evidenceIds.map(id => acceptanceEvidenceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    )),
+    provenance: synthesis.evidenceIds.map(id => acceptanceProvenanceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    ))
   };
 }
 
@@ -331,49 +361,25 @@ function aiConclusionFromContext(
   // Resolve evidence against the AI context's evidence universe
   const aiEvidenceUniverse = result.aiContext.evidence || [];
   const evidenceIds = finalSynthesis.evidenceIds || [];
-
-  // Resolve against AI context's own universe with discriminated resolver
-  const aiResolutionMap = resolveEvidenceIds(evidenceIds, aiEvidenceUniverse, domain, true);
-
-  // Build evidence items with resolution states from AI context universe
-  const evidence = evidenceIds.map(id => {
-    const resolution = aiResolutionMap.get(id);
-    if (!resolution) {
-      return { id, owner: domain, resolution: 'DANGLING' as const };
-    }
-    return {
-      id,
-      owner: resolution.record?.domain || domain,
-      resolution: resolution.resolution
-    };
-  });
-
-  // Build provenance from resolved AI context records
-  const provenance = evidenceIds.map(id => {
-    const resolution = aiResolutionMap.get(id);
-    if (!resolution || resolution.resolution !== 'RESOLVED' || !resolution.record) {
-      // Unresolved evidence: use minimal provenance
-      return {
-        evidenceId: id,
-        owner: domain,
-        occurrence: id
-      };
-    }
-    // For AI context, build minimal provenance since it's not DomainEvidence
-    return {
-      evidenceId: id,
-      owner: domain,
-      occurrence: id
-    };
-  });
+  const resolutionMap = resolveEvidenceIds(evidenceIds, {
+    domainUniverse: interpretation.evidence,
+    externalNamespaces: [aiEvidenceUniverse]
+  }, domain);
 
   return {
     domain,
     scope: 'LIFETIME',
     subjectId: `chart:${domain.toLowerCase()}`,
     status,
-    evidence,
-    provenance
+    conclusionKind: 'SYNTHESIS_FINAL',
+    evidence: evidenceIds.map(id => acceptanceEvidenceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    )),
+    provenance: evidenceIds.map(id => acceptanceProvenanceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    ))
   };
 }
 
@@ -395,49 +401,25 @@ function productAiConclusionFromContext(
   // Resolve evidence against the product AI context's evidence universe
   const productAiEvidenceUniverse = result.productAiContext.evidence || [];
   const evidenceIds = finalSynthesis.evidenceIds || [];
-
-  // Resolve against product AI context's own universe with discriminated resolver
-  const productAiResolutionMap = resolveEvidenceIds(evidenceIds, productAiEvidenceUniverse, domain, true);
-
-  // Build evidence items with resolution states from product AI context universe
-  const evidence = evidenceIds.map(id => {
-    const resolution = productAiResolutionMap.get(id);
-    if (!resolution) {
-      return { id, owner: domain, resolution: 'DANGLING' as const };
-    }
-    return {
-      id,
-      owner: resolution.record?.domain || domain,
-      resolution: resolution.resolution
-    };
-  });
-
-  // Build provenance from resolved product AI context records
-  const provenance = evidenceIds.map(id => {
-    const resolution = productAiResolutionMap.get(id);
-    if (!resolution || resolution.resolution !== 'RESOLVED' || !resolution.record) {
-      // Unresolved evidence: use minimal provenance
-      return {
-        evidenceId: id,
-        owner: domain,
-        occurrence: id
-      };
-    }
-    // For product AI context, build minimal provenance since it's not DomainEvidence
-    return {
-      evidenceId: id,
-      owner: domain,
-      occurrence: id
-    };
-  });
+  const resolutionMap = resolveEvidenceIds(evidenceIds, {
+    domainUniverse: interpretation.evidence,
+    externalNamespaces: [productAiEvidenceUniverse]
+  }, domain);
 
   return {
     domain,
     scope: 'LIFETIME',
     subjectId: `chart:${domain.toLowerCase()}`,
     status,
-    evidence,
-    provenance
+    conclusionKind: 'SYNTHESIS_FINAL',
+    evidence: evidenceIds.map(id => acceptanceEvidenceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    )),
+    provenance: evidenceIds.map(id => acceptanceProvenanceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    ))
   };
 }
 
@@ -597,35 +579,17 @@ function traceConclusion(
   const evidenceIds = graph.nodes.flatMap(node => node.evidenceId ? [node.evidenceId] : []);
 
   // Resolve all trace evidence IDs through discriminated resolver
-  const resolutionMap = resolveEvidenceIds(evidenceIds, interpretation.evidence, domain);
-
-  // Build evidence with resolution states
-  const evidence = evidenceIds.map(id => {
-    const resolution = resolutionMap.get(id);
-    if (!resolution) {
-      return { id, owner: domain, resolution: 'DANGLING' as const };
-    }
-    return {
-      id,
-      owner: resolution.record?.domain || domain,
-      resolution: resolution.resolution
-    };
-  });
-
-  // Build provenance from resolved records
-  const provenance = evidenceIds.map(id => {
-    const resolution = resolutionMap.get(id);
-    if (!resolution || resolution.resolution !== 'RESOLVED' || !resolution.record) {
-      // Unresolved evidence: use minimal provenance
-      return {
-        evidenceId: id,
-        owner: domain,
-        occurrence: id
-      };
-    }
-    // Cast to DomainEvidence for the projection function
-    return projectDomainEvidenceToAcceptanceProvenance(resolution.record as DomainEvidence, resolution.record.domain as string);
-  });
+  const resolutionMap = resolveEvidenceIds(evidenceIds, {
+    domainUniverse: interpretation.evidence
+  }, domain);
+  const evidence = evidenceIds.map(id => acceptanceEvidenceFromResolution(
+    id,
+    resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+  ));
+  const provenance = evidenceIds.map(id => acceptanceProvenanceFromResolution(
+    id,
+    resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+  ));
 
   return {
     domain,
@@ -667,51 +631,14 @@ function projectSelectedPeriod(
       }))
     : [];
 
-  const evidence = selectedPeriod.evidence ?? [];
-  const evidenceIds = evidence.flatMap(item => item.evidenceId ? [item.evidenceId] : []);
-
-  // Resolve selected-period evidence against its two-namespace universe:
-  // 1. availableEvidence (career/wealth dasha evidence)
-  // 2. domain context evidence (natal evidence)
   const interpretation = domain === 'CAREER' ? result.career : result.wealth;
   const dashaEvidence = selectedPeriod.evidence ?? [];
   const dashaEvidenceIds = dashaEvidence.flatMap(item => item.evidenceId ? [item.evidenceId] : []);
-
-  // Build a combined universe from dasha evidence and domain evidence
-  const combinedUniverse = [...interpretation.evidence];
-  const resolutionMap = resolveEvidenceIds(dashaEvidenceIds, combinedUniverse, domain, true);
-
-  // Build evidence with resolution states
-  const resolvedEvidence = dashaEvidenceIds.map(id => {
-    const resolution = resolutionMap.get(id);
-    if (!resolution) {
-      return { id, owner: domain, resolution: 'DANGLING' as const };
-    }
-    return {
-      id,
-      owner: resolution.record?.domain || domain,
-      resolution: resolution.resolution
-    };
-  });
-
-  // Build provenance from resolved records
-  const resolvedProvenance = dashaEvidenceIds.map(id => {
-    const resolution = resolutionMap.get(id);
-    if (!resolution || resolution.resolution !== 'RESOLVED' || !resolution.record) {
-      // Unresolved evidence: use minimal provenance from dasha evidence
-      const dashaItem = dashaEvidence.find(e => e.evidenceId === id);
-      return {
-        evidenceId: id,
-        owner: domain,
-        occurrence: id,
-        ...(dashaItem?.source === undefined ? {} : { source: dashaItem.source }),
-        ...(dashaItem?.ruleId === undefined ? {} : { ruleId: dashaItem.ruleId }),
-        ...(dashaItem?.provenanceStage === undefined ? {} : { stage: dashaItem.provenanceStage }),
-        ...(dashaItem?.classification === undefined ? {} : { type: dashaItem.classification })
-      };
-    }
-    return projectDomainEvidenceToAcceptanceProvenance(resolution.record as DomainEvidence, resolution.record.domain as string);
-  });
+  const availableEvidence = result.aiContext.selectedPeriod?.availableEvidence ?? [];
+  const resolutionMap = resolveEvidenceIds(dashaEvidenceIds, {
+    domainUniverse: interpretation.evidence,
+    externalNamespaces: [availableEvidence]
+  }, domain);
 
   return {
     domain,
@@ -720,8 +647,14 @@ function projectSelectedPeriod(
     resultState: 'OK',
     careerQualificationStatus,
     wealthDimensions: wealthDimensions.length > 0 ? wealthDimensions : undefined,
-    evidence: resolvedEvidence,
-    provenance: resolvedProvenance,
+    evidence: dashaEvidenceIds.map(id => acceptanceEvidenceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    )),
+    provenance: dashaEvidenceIds.map(id => acceptanceProvenanceFromResolution(
+      id,
+      resolutionMap.get(id) ?? { resolution: 'DANGLING' }
+    )),
     ...(result.selectedPeriodView.interval === undefined ? {} : {
       interval: {
         start: result.selectedPeriodView.interval.start,
@@ -853,15 +786,18 @@ export interface GoldenAcceptanceProductionGateResult {
   readonly expected: NormalizedAcceptanceConclusion;
   readonly baselineDifferences: readonly ParityDifference[];
   readonly surfaceDifferences: readonly ParityDifference[];
+  readonly surfaceGates: readonly AcceptanceGate[];
+  readonly report: GoldenAcceptanceReport;
   readonly selectedPeriod: SelectedPeriodAcceptanceProjection;
 }
 
 /** Runs canonical baseline and surface gates against one real interpreter run. */
 export function runGoldenAcceptanceProductionGate(
   domain: GoldenAcceptanceDomain,
-  fixtureKind: GoldenAcceptanceFixtureKind = 'STANDARD'
+  fixtureKind: GoldenAcceptanceFixtureKind = 'STANDARD',
+  productionResult?: GoldenAcceptanceProductionResult
 ): GoldenAcceptanceProductionGateResult {
-  const result = buildProductionRun(fixtureKind, domain);
+  const result = productionResult ?? buildProductionRun(fixtureKind, domain);
   const pipeline = createGoldenAcceptanceProductionPipeline(domain, fixtureKind);
   const projections = pipeline.collect(result);
   const canonical = projections.canonical;
@@ -888,15 +824,33 @@ export function runGoldenAcceptanceProductionGate(
   if (!selectedPeriod) {
     throw new Error('Production acceptance pipeline did not collect its selected-period projection.');
   }
-  // selected-period-ui is a SelectedPeriodAcceptanceProjection, not a conclusion list
-  // No need to check isConclusionList since we've typed the projections
+  surfaceDifferences.push(...assertParity(expected, surfaces));
+  const baselineDifferences = assertCanonicalBaseline(domain, result);
+  const actualSurfaceGates = Object.keys(projections)
+    .filter(name => name !== 'canonical' && name !== 'selected-period-ui')
+    .map(name => {
+      const differences = surfaceDifferences.filter(difference => difference.surface === name);
+      return {
+        name,
+        status: differences.length > 0 ? 'FAIL' as const : 'PASS' as const,
+        ...(differences.length === 0 ? {} : { details: `${differences.length} parity difference(s)` })
+      };
+    });
+  const reportGates: readonly AcceptanceGate[] = [
+    {
+      name: 'canonical-baseline',
+      status: baselineDifferences.length > 0 ? 'FAIL' : 'PASS',
+      ...(baselineDifferences.length === 0 ? {} : { details: `${baselineDifferences.length} baseline difference(s)` })
+    },
+    ...actualSurfaceGates
+  ];
+  const report = buildGoldenAcceptanceReport(reportGates, [...baselineDifferences, ...surfaceDifferences]);
   return {
     expected,
-    baselineDifferences: assertCanonicalBaseline(domain, result),
-    surfaceDifferences: Object.freeze([
-      ...surfaceDifferences,
-      ...assertParity(expected, surfaces)
-    ]),
+    baselineDifferences: Object.freeze([...baselineDifferences]),
+    surfaceDifferences: Object.freeze([...surfaceDifferences]),
+    surfaceGates: Object.freeze(actualSurfaceGates),
+    report,
     selectedPeriod
   };
 }
@@ -913,5 +867,13 @@ export function projectRealEvidenceProvenance(
   domain: GoldenAcceptanceDomain,
   evidenceIds: readonly string[]
 ): readonly AcceptanceProvenance[] {
-  return projectProvenance(getEvidence(interpretation, evidenceIds), domain);
+  const resolutions = resolveEvidenceIds(evidenceIds, {
+    domainUniverse: interpretation.evidence
+  }, domain);
+  return evidenceIds.flatMap(id => {
+    const resolution = resolutions.get(id);
+    return resolution?.resolution === 'RESOLVED'
+      ? [acceptanceProvenanceFromResolution(id, resolution)]
+      : [];
+  });
 }

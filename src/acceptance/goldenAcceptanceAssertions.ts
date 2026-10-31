@@ -33,8 +33,18 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
     if (conclusion.status !== expected.status) {
       differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.status', expected: expected.status, actual: conclusion.status, reason: 'Native conclusion status differs.' });
     }
+    if (conclusion.conclusionKind !== expected.conclusionKind) {
+      differences.push({
+        surface: surface.name,
+        kind: 'VALUE_MISMATCH',
+        path: '$.conclusionKind',
+        expected: expected.conclusionKind,
+        actual: conclusion.conclusionKind,
+        reason: 'Conclusion kinds differ; only SYNTHESIS_FINAL surfaces are comparable to the canonical synthesis.'
+      });
+    }
 
-    // Check for unresolved evidence states and emit appropriate differences
+    // Report unresolved IDs and external-namespace evidence explicitly.
     for (const evidence of conclusion.evidence) {
       if (evidence.resolution === 'DANGLING') {
         differences.push({
@@ -59,7 +69,15 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
           path: '$.evidence',
           actual: evidence.id,
           expected: conclusion.domain,
-          reason: `Evidence ID ${evidence.id} owner does not match expected domain ${conclusion.domain}.`
+          reason: `Evidence ID ${evidence.id} owner ${evidence.owner ?? 'unavailable'} does not match expected domain ${conclusion.domain}.`
+        });
+      } else if (evidence.resolution === 'EXTERNAL') {
+        differences.push({
+          surface: surface.name,
+          kind: 'EXTERNAL_EVIDENCE',
+          path: '$.evidence',
+          actual: evidence.id,
+          reason: `Evidence ID ${evidence.id} resolves only in a declared external namespace.`
         });
       }
     }
@@ -96,7 +114,8 @@ export function assertConclusionInventory(
     const first = conclusions[0];
     if (conclusions.every(conclusion => deepEqualAcceptance(first.evidence, conclusion.evidence)
       && deepEqualAcceptance(first.provenance, conclusion.provenance)
-      && deepEqualAcceptance(first.temporalScope, conclusion.temporalScope))) {
+      && deepEqualAcceptance(first.temporalScope, conclusion.temporalScope)
+      && conclusion.conclusionKind === first.conclusionKind)) {
       differences.push({ surface: 'runner', kind: 'DUPLICATE_CONCLUSION', path: '$', actual: conclusions.length,
         reason: `${key} has ${conclusions.length} identical conclusions.` });
     }

@@ -27,6 +27,10 @@ The stale dispositor production audit header is reconciled: the production conte
 
 `goldenAcceptanceProductionHarness.ts` runs `interpretCareerV2` and `interpretWealthV2` once for a chart fixture, then passes those same domain results through the product selectors, selected-period builder, AI context builders, reasoning trace output, and JSON exporter. It derives parity expectations from the real C11 and CW-05 canonical results. The canonical-vs-approved-baseline check and canonical-vs-surface parity check are separate gates; the latter extracts each surface's emitted status, evidence IDs, and provenance.
 
+Surface gate statuses are computed from the actual surface differences: any difference is `FAIL`, and no differences is `PASS`. The production report also includes the independent canonical-baseline gate. Presentation and profession-completeness conclusions are not comparable to `SYNTHESIS_FINAL`; they require their own approved baselines. Evidence in a declared external namespace is reported as `EXTERNAL_EVIDENCE`, not silently treated as domain-owned or unresolved.
+
+Selected-period dimensions/effects, interval, and `temporalRelation` are golden for the fixed chart and analysis date. Evidence and provenance are runtime-derived and checked for shape/resolution rather than compared to fixture literals. The selected-period relation enum is `PAST | CURRENT | FUTURE` (`CURRENT`, not `PRESENT`).
+
 C11 `evidenceIds`, `sourceIds`, and `ruleIds` are not parallel arrays: source occurrences may repeat and the arrays can have different lengths. Acceptance provenance therefore joins by the evidence object's own provenance fields and leaves unavailable fields absent; it does not use positional trace lookup.
 
 ### Trace-only provenance gaps

@@ -14,16 +14,16 @@ export function acceptanceConflict(code: AcceptanceConflictError['code'], confli
   return error;
 }
 
-function evidenceOwner(item: AcceptanceEvidence): string {
+function evidenceOwner(item: AcceptanceEvidence): string | undefined {
   return item.owner;
 }
 
 export function normalizeAcceptanceConclusion(conclusion: AcceptanceConclusion): NormalizedAcceptanceConclusion {
-  const evidenceById = new Map<string, string>();
+  const evidenceById = new Map<string, string | undefined>();
   for (const item of conclusion.evidence) {
     const owner = evidenceOwner(item);
     const existing = evidenceById.get(item.id);
-    if (existing !== undefined && existing !== owner) throw acceptanceConflict('SAME_ID_DIFFERENT_OWNER', item.id);
+    if (evidenceById.has(item.id) && existing !== owner) throw acceptanceConflict('SAME_ID_DIFFERENT_OWNER', item.id);
     evidenceById.set(item.id, owner);
   }
 

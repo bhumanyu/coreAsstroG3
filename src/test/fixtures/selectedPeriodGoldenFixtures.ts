@@ -441,9 +441,9 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
  * This baseline captures the expected SelectedPeriodAcceptanceProjection structure
  * for the valid selection case for the WEALTH domain.
  *
- * Note: WEALTH domain selects a different period than CAREER due to domain-specific
- * period selection logic. Interval dates and temporalRelation are documented for WEALTH's
- * selected period.
+ * The fixed chart and analysis date make dimension effects/data statuses, interval, and
+ * temporalRelation golden values. Evidence and provenance are projected from the runtime
+ * synthesis and are intentionally not captured in this fixture.
  */
 export const SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanceProjection = {
   domain: 'WEALTH',
@@ -488,8 +488,9 @@ export const SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanc
  * This baseline captures the expected SelectedPeriodAcceptanceProjection structure
  * for the valid selection case for the CAREER domain.
  *
- * Note: CAREER domain selects a different period than WEALTH due to domain-specific
- * period selection logic. Interval dates are documented for CAREER's selected period.
+ * The fixed chart and analysis date make qualification status, interval, and temporalRelation
+ * golden values. Evidence and provenance are projected from the runtime synthesis and are
+ * intentionally not captured in this fixture.
  */
 export const SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanceProjection = {
   domain: 'CAREER',
