@@ -71,6 +71,15 @@ export function computeHarnessImportGraph(repositoryRoot, revision, entryPoint) 
     throw new Error(ts.flattenDiagnosticMessageText(parsedJson.error.messageText, '\n'));
   }
   const parsedConfig = ts.parseJsonConfigFileContent(parsedJson.config, revisionConfigHost, root);
+  const configErrors = parsedConfig.errors.filter(
+    diagnostic => diagnostic.category === ts.DiagnosticCategory.Error
+  );
+  if (configErrors.length > 0) {
+    const details = configErrors.map(diagnostic =>
+      `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')}`
+    );
+    throw new Error(`Invalid TypeScript configuration at ${revision}:\n${details.join('\n')}`);
+  }
   const options = parsedConfig.options;
   const host = ts.createCompilerHost(options);
   const nativeFileExists = host.fileExists.bind(host);
@@ -111,6 +120,24 @@ export function computeHarnessImportGraph(repositoryRoot, revision, entryPoint) 
   };
 
   const entryAbsolutePath = resolve(root, entryPoint);
+  const matchesPathPattern = specifier => Object.keys(options.paths ?? {}).some(pattern => {
+    const wildcardIndex = pattern.indexOf('*');
+    if (wildcardIndex < 0) return specifier === pattern;
+    const prefix = pattern.slice(0, wildcardIndex);
+    const suffix = pattern.slice(wildcardIndex + 1);
+    return specifier.startsWith(prefix)
+      && specifier.endsWith(suffix)
+      && specifier.length >= prefix.length + suffix.length;
+  });
+  const hasBaseUrlCandidate = specifier => {
+    if (!options.baseUrl) return false;
+    const candidatePath = repositoryPath(resolve(options.baseUrl, specifier));
+    return treeFiles.has(candidatePath)
+      || [...treeFiles].some(path =>
+        path.startsWith(`${candidatePath}/`)
+        || path.startsWith(`${candidatePath}.`)
+      );
+  };
   const visited = new Set();
   const edges = new Set();
   const runtimeLoadLimitations = new Set();
@@ -175,6 +202,11 @@ export function computeHarnessImportGraph(repositoryRoot, revision, entryPoint) 
         if (specifier.startsWith('.') || specifier.startsWith('/')) {
           throw new Error(
             `Cannot resolve ${loadKind} import ${specifier} from ${repositoryPath(normalizedFile)} at ${revision}.`
+          );
+        }
+        if (matchesPathPattern(specifier) || hasBaseUrlCandidate(specifier)) {
+          throw new Error(
+            `Cannot resolve ${loadKind} import ${specifier} via paths/baseUrl at ${revision}.`
           );
         }
         continue;

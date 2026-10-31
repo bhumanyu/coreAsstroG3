@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { dirname, resolve, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { calculateMissingCalculationCoverage } from './calculationCoverage.mjs';
 import { computeHarnessImportGraph as computeRevisionImportGraph } from './harnessImportGraph.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -175,95 +176,6 @@ function isPr8AcceptanceReport(value) {
         && allowedStatuses.has(gate.status)
       )
     );
-}
-
-function recomputeMissingCalculationCoverage(fixtures, coveragePolicy) {
-  const missing = coveragePolicy.requiredKinds.filter(
-    kind => !fixtures.some(fixture => fixture.kind === kind)
-  );
-  for (const planet of coveragePolicy.requiredPlanets) {
-    if (!fixtures.some(fixture =>
-      fixture.kind === 'PLANETARY_LONGITUDE' && String(fixture.input?.planet) === planet
-    )) missing.push(`PLANETARY_LONGITUDE:${planet}`);
-  }
-
-  for (const scenario of coveragePolicy.requiredMotionScenarios) {
-    if (!fixtures.some(fixture =>
-      fixture.kind === 'PLANETARY_MOTION' && fixture.scenario === scenario
-    )) missing.push(`PLANETARY_MOTION:${scenario}`);
-  }
-
-  const groups = new Map();
-  const seenBoundaryTuples = new Set();
-  for (const fixture of fixtures.filter(item =>
-    item.kind === 'SIGN_BOUNDARY' || item.kind === 'NAKSHATRA_BOUNDARY'
-  )) {
-    const boundaryKind = fixture.kind === 'SIGN_BOUNDARY' ? 'SIGN' : fixture.boundaryKind;
-    const boundaryId = fixture.boundaryId;
-    const position = fixture.boundaryPosition;
-    const tuple = `${boundaryKind}:${boundaryId}:${position}`;
-    if (seenBoundaryTuples.has(tuple)) missing.push(`DUPLICATE_BOUNDARY_POSITION:${tuple}`);
-    seenBoundaryTuples.add(tuple);
-    const key = `${boundaryKind}:${boundaryId}`;
-    groups.set(key, [...(groups.get(key) ?? []), fixture]);
-  }
-  for (const boundaryKind of coveragePolicy.requiredBoundaryKinds) {
-    const groupsOfKind = [...groups.entries()].filter(([key]) => key.startsWith(`${boundaryKind}:`));
-    if (groupsOfKind.length === 0) {
-      missing.push(`BOUNDARY_TRIPLET:${boundaryKind}:EPSILON_BEFORE/EXACT/EPSILON_AFTER`);
-      continue;
-    }
-    for (const [key, items] of groupsOfKind) {
-      const byPosition = new Map(items.map(item => [item.boundaryPosition, item]));
-      if (coveragePolicy.requiredBoundaryPositions.some(position => !byPosition.has(position))) {
-        missing.push(`BOUNDARY_TRIPLET:${key}:EPSILON_BEFORE/EXACT/EPSILON_AFTER`);
-        continue;
-      }
-      const before = byPosition.get('EPSILON_BEFORE');
-      const exact = byPosition.get('EXACT');
-      const after = byPosition.get('EPSILON_AFTER');
-      const boundary = exact?.boundaryLongitude;
-      const epsilon = coveragePolicy.boundaryEpsilonDegrees;
-      if (!Number.isFinite(boundary)
-        || before?.input?.longitude === undefined
-        || exact?.input?.longitude !== boundary
-        || after?.input?.longitude === undefined
-        || !(before.input.longitude < exact.input.longitude
-          && exact.input.longitude < after.input.longitude)
-        || items.some(item => item.boundaryLongitude !== boundary)) {
-        missing.push(`BOUNDARY_ORDER:${key}:input longitudes must be strictly ordered around boundaryLongitude`);
-      } else if (!Number.isFinite(epsilon?.min)
-        || !Number.isFinite(epsilon?.max)
-        || epsilon.min <= 0
-        || epsilon.max < epsilon.min
-        || Math.abs(boundary - before.input.longitude) < epsilon.min
-        || Math.abs(boundary - before.input.longitude) > epsilon.max
-        || Math.abs(after.input.longitude - boundary) < epsilon.min
-        || Math.abs(after.input.longitude - boundary) > epsilon.max) {
-        missing.push(`BOUNDARY_EPSILON:${key}:input longitudes are outside the approved epsilon range`);
-      }
-      if (boundaryKind === 'SIGN'
-        && (!before?.expectedSign || !after?.expectedSign
-          || before.expectedSign === after.expectedSign)) {
-        missing.push(`BOUNDARY_TRANSITION:${key}:expectedSign must differ before and after`);
-      } else if (boundaryKind === 'NAKSHATRA'
-        && (!before?.expectedNakshatra || !after?.expectedNakshatra
-          || before.expectedNakshatra === after.expectedNakshatra)) {
-        missing.push(`BOUNDARY_TRANSITION:${key}:expectedNakshatra must differ before and after`);
-      } else if (boundaryKind === 'PADA'
-        && (before?.expectedPada === undefined || after?.expectedPada === undefined
-          || before.expectedPada === after.expectedPada)) {
-        missing.push(`BOUNDARY_TRANSITION:${key}:expectedPada must differ before and after`);
-      }
-    }
-  }
-
-  for (const chartType of coveragePolicy.requiredVargaTypes) {
-    if (!fixtures.some(fixture =>
-      fixture.kind === 'VARGA_LONGITUDE' && String(fixture.input?.chartType) === chartType
-    )) missing.push(`VARGA_LONGITUDE:${chartType}`);
-  }
-  return missing;
 }
 
 function addGate(gates, id, status, summary, evidence = []) {
@@ -563,9 +475,14 @@ try {
     if (!policy?.calculationCoverage) {
       preflightErrors.push('Release policy must declare calculationCoverage.');
     } else {
-      missingCalculationCoverage = recomputeMissingCalculationCoverage(
+      if (JSON.stringify(policy.calculationCoverage)
+        !== JSON.stringify(fixtureModule.CALCULATION_COVERAGE_POLICY)) {
+        preflightErrors.push('Runner policy differs from the fixture module coverage policy.');
+      }
+      missingCalculationCoverage = calculateMissingCalculationCoverage(
         calculationFixtures,
-        policy.calculationCoverage
+        fixtureModule.CALCULATION_COVERAGE_POLICY,
+        fixtureModule.inspectBoundaryCoverage
       );
     }
   }

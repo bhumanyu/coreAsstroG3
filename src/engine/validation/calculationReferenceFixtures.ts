@@ -104,22 +104,24 @@ export const NAKSHATRAS_ORDER = Object.freeze([
   'REVATI'
 ] as const);
 
-function assertSameEnumSet(name: string, values: readonly string[], enumeration: object): void {
+function sameEnumSet(values: readonly string[], enumeration: object): boolean {
   const enumValues = [...new Set(Object.values(enumeration)
     .filter((value): value is string => typeof value === 'string'))].sort();
-  if (JSON.stringify([...values].sort()) !== JSON.stringify(enumValues)) {
-    throw new Error(`${name} must contain exactly the enum values.`);
-  }
+  return JSON.stringify([...values].sort()) === JSON.stringify(enumValues);
 }
-
-assertSameEnumSet('ZODIAC_SIGNS_ORDER', ZODIAC_SIGNS_ORDER, Sign);
-assertSameEnumSet('NAKSHATRAS_ORDER', NAKSHATRAS_ORDER, Nakshatra);
 
 export function inspectBoundaryCoverage(
   fixtures: readonly BoundaryCoverageRecord[],
-  policy: CalculationCoveragePolicy
+  policy: CalculationCoveragePolicy,
+  enums: { readonly sign?: object; readonly nakshatra?: object } = {}
 ): readonly string[] {
   const issues: string[] = [];
+  if (!sameEnumSet(ZODIAC_SIGNS_ORDER, enums.sign ?? Sign)) {
+    issues.push('ENUM_DRIFT:ZODIAC_SIGNS_ORDER must match the Sign enum set.');
+  }
+  if (!sameEnumSet(NAKSHATRAS_ORDER, enums.nakshatra ?? Nakshatra)) {
+    issues.push('ENUM_DRIFT:NAKSHATRAS_ORDER must match the Nakshatra enum set.');
+  }
   const epsilon = policy.boundaryEpsilonDegrees;
   const validEpsilon = Number.isFinite(epsilon?.min)
     && Number.isFinite(epsilon?.max)

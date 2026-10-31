@@ -122,6 +122,65 @@ describe('Git-revision TypeScript harness import graph', () => {
     }
   });
 
+  it('fails closed for missing configured aliases but skips external packages', () => {
+    const repository = createRepository();
+    try {
+      repository.write('tsconfig.json', extendingConfig);
+      repository.write(baseConfigPath, baseConfig('src/aliased'));
+      repository.write(entryPath, [
+        "import type { Missing } from '@core/missing';",
+        "import lodash from 'lodash';",
+        'export type Entry = Missing;'
+      ].join('\n'));
+      const revision = repository.commit('add missing alias and external package');
+
+      expect(() => computeHarnessImportGraph(repository.root, revision, entryPath))
+        .toThrow(`Cannot resolve static import @core/missing via paths/baseUrl at ${revision}.`);
+    } finally {
+      repository.cleanup();
+    }
+
+    const externalOnly = createRepository();
+    try {
+      externalOnly.write('tsconfig.json', extendingConfig);
+      externalOnly.write(baseConfigPath, baseConfig('src/aliased'));
+      externalOnly.write(entryPath, "import lodash from 'lodash';\n");
+      const revision = externalOnly.commit('add external package import');
+      const graph = computeHarnessImportGraph(externalOnly.root, revision, entryPath);
+      expect(graph.dependencies).toEqual([entryPath]);
+    } finally {
+      externalOnly.cleanup();
+    }
+  });
+
+  it('rejects unresolved extends and invalid compiler options', () => {
+    const missingExtends = createRepository();
+    try {
+      missingExtends.write('tsconfig.json', JSON.stringify({ extends: './missing-config.json' }));
+      missingExtends.write(entryPath, 'export const value = true;\n');
+      const revision = missingExtends.commit('add unresolved config extension');
+
+      expect(() => computeHarnessImportGraph(missingExtends.root, revision, entryPath))
+        .toThrow(/TS\d+:.*missing-config\.json/s);
+    } finally {
+      missingExtends.cleanup();
+    }
+
+    const invalidOption = createRepository();
+    try {
+      invalidOption.write('tsconfig.json', JSON.stringify({
+        compilerOptions: { moduleResolution: 'not-a-module-resolution-mode' }
+      }));
+      invalidOption.write(entryPath, 'export const value = true;\n');
+      const revision = invalidOption.commit('add invalid module resolution');
+
+      expect(() => computeHarnessImportGraph(invalidOption.root, revision, entryPath))
+        .toThrow(/TS6046:.*moduleResolution/s);
+    } finally {
+      invalidOption.cleanup();
+    }
+  });
+
   it('flags dependencies exposed by a changed tsconfig alias as undeclared', () => {
     const repository = createRepository();
     try {
