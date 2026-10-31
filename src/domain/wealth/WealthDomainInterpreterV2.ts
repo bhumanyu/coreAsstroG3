@@ -1246,6 +1246,26 @@ export function assertStrictSortedIds(ids: readonly string[], fieldName: string)
   }
 }
 
+export type WealthPeriodActivationContractErrorCode =
+  | 'UNKNOWN_EVIDENCE_ID'
+  | 'UNKNOWN_PROMISE_ID'
+  | 'WRONG_PHASE_TARGET'
+  | 'OWNER_MISMATCH'
+  | 'DUPLICATE_IDENTITY'
+  | 'MISSING_PROVENANCE'
+  | 'CROSS_PERIOD_REFERENCE'
+  | 'PROMISE_NOT_REACHABLE';
+
+export class WealthPeriodActivationContractError extends Error {
+  constructor(
+    readonly code: WealthPeriodActivationContractErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'WealthPeriodActivationContractError';
+  }
+}
+
 export function assertWealthPeriodActivationContract(
   activation: WealthPeriodTimingActivation,
   occurrenceEvidence: readonly DomainEvidence[] = [],
@@ -1255,7 +1275,32 @@ export function assertWealthPeriodActivationContract(
   // Producer invariant: promise reachability is scoped to this period. Each activation
   // occurrence must therefore carry timing.period === activation.period and must be listed
   // in activation.evidenceIds; links found outside that subset are not reachable.
-  const occurrenceIds = new Set(occurrenceEvidence.map((item) => item.id));
+  const occurrencesById = new Map<string, DomainEvidence>();
+  for (const occurrence of occurrenceEvidence) {
+    if (occurrencesById.has(occurrence.id)) {
+      throw new WealthPeriodActivationContractError(
+        'DUPLICATE_IDENTITY',
+        `Wealth evidence contains a duplicate occurrence identity: ${occurrence.id}`
+      );
+    }
+    occurrencesById.set(occurrence.id, occurrence);
+    if (occurrence.domain !== 'WEALTH') {
+      throw new WealthPeriodActivationContractError(
+        'OWNER_MISMATCH',
+        `Wealth evidence owner mismatch for ${occurrence.id}: ${occurrence.domain}`
+      );
+    }
+    if (occurrence.provenance && (
+      occurrence.provenance.domain !== 'WEALTH' ||
+      occurrence.provenance.evidenceId !== occurrence.id ||
+      (occurrence.ruleId !== undefined && occurrence.provenance.ruleId !== occurrence.ruleId)
+    )) {
+      throw new WealthPeriodActivationContractError(
+        'OWNER_MISMATCH',
+        `Wealth evidence provenance does not match its occurrence: ${occurrence.id}`
+      );
+    }
+  }
   const promiseIds = new Set(natalPromiseEvidenceIds);
   // Timing evidence can only activate canonical natal promises, never another occurrence phase.
   const canonicalNatalPromiseIds = new Set(
@@ -1269,40 +1314,92 @@ export function assertWealthPeriodActivationContract(
 
   for (const id of activation.evidenceIds) {
     if (!id?.trim()) throw new Error('Wealth activation evidenceIds must be non-empty');
-    if (referenceDatasetAvailable && !occurrenceIds.has(id)) {
-      throw new Error(`Wealth activation evidenceId is not an occurrence ID: ${id}`);
+    const occurrence = occurrencesById.get(id);
+    if (!occurrence && referenceDatasetAvailable) {
+      throw new WealthPeriodActivationContractError(
+        'UNKNOWN_EVIDENCE_ID',
+        `Wealth activation evidenceId is not an occurrence ID: ${id}`
+      );
+    }
+    if (occurrence) {
+      if (occurrence.phase !== 'DASHA_ACTIVATION') {
+        throw new WealthPeriodActivationContractError(
+          'WRONG_PHASE_TARGET',
+          `Wealth activation evidenceId is not a Dasha activation: ${id}`
+        );
+      }
+      if (occurrence.timing?.period !== activation.period) {
+        throw new WealthPeriodActivationContractError(
+          'CROSS_PERIOD_REFERENCE',
+          `Wealth ${activation.period} activation references ${occurrence.timing?.period ?? 'untimed'} evidence: ${id}`
+        );
+      }
+      if (!occurrence.ruleId && !occurrence.provenance) {
+        throw new WealthPeriodActivationContractError(
+          'MISSING_PROVENANCE',
+          `Wealth timing evidence has no rule provenance: ${id}`
+        );
+      }
     }
   }
   for (const id of activation.activatedPromiseEvidenceIds ?? []) {
     if (referenceDatasetAvailable && !promiseIds.has(id)) {
-      throw new Error(`Wealth activation promise ID is not in the canonical natal promise set: ${id}`);
+      const occurrence = occurrencesById.get(id);
+      if (occurrence && occurrence.phase !== 'NATAL_PROMISE') {
+        throw new WealthPeriodActivationContractError(
+          'WRONG_PHASE_TARGET',
+          `Wealth activation promise ID is not a natal promise occurrence: ${id}`
+        );
+      }
+      throw new WealthPeriodActivationContractError(
+        occurrence ? 'UNKNOWN_PROMISE_ID' : 'UNKNOWN_EVIDENCE_ID',
+        `Wealth activation promise ID is not in the canonical natal promise set: ${id}`
+      );
     }
   }
 
-  const activationEvidence = occurrenceEvidence.filter((item) =>
-    activation.evidenceIds.includes(item.id) && item.timing?.period === activation.period
-  );
+  const activationEvidence = activation.evidenceIds
+    .map((id) => occurrencesById.get(id))
+    .filter((item): item is DomainEvidence => item !== undefined);
   const reachablePromises = new Set(activationEvidence.flatMap((item) => item.relatedEvidenceIds));
   for (const occurrence of activationEvidence) {
     for (const id of occurrence.relatedEvidenceIds) {
-      const sameIdOccurrence = occurrenceEvidence.find((item) => item.id === id);
+      const sameIdOccurrence = occurrencesById.get(id);
+      if (sameIdOccurrence && sameIdOccurrence.domain !== 'WEALTH') {
+        throw new WealthPeriodActivationContractError(
+          'OWNER_MISMATCH',
+          `Wealth ${activation.period} timing link owner mismatch: ${id}`
+        );
+      }
       if (referenceDatasetAvailable) {
         if (!promiseIds.has(id) || !canonicalNatalPromiseIds.has(id)) {
           if (sameIdOccurrence?.phase && sameIdOccurrence.phase !== 'NATAL_PROMISE') {
-            throw new Error(`Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`);
+            throw new WealthPeriodActivationContractError(
+              'WRONG_PHASE_TARGET',
+              `Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`
+            );
           }
-          throw new Error(`Wealth ${activation.period} unresolved timing link target: ${id}`);
+          throw new WealthPeriodActivationContractError(
+            sameIdOccurrence ? 'UNKNOWN_PROMISE_ID' : 'UNKNOWN_EVIDENCE_ID',
+            `Wealth ${activation.period} unresolved timing link target: ${id}`
+          );
         }
       } else if (!canonicalNatalPromiseIds.has(id)) {
         if (sameIdOccurrence && sameIdOccurrence.phase !== 'NATAL_PROMISE') {
-          throw new Error(`Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`);
+          throw new WealthPeriodActivationContractError(
+            'WRONG_PHASE_TARGET',
+            `Wealth ${activation.period} timing link target is not a natal promise occurrence: ${id}`
+          );
         }
       }
     }
   }
   for (const id of activation.activatedPromiseEvidenceIds ?? []) {
     if (!reachablePromises.has(id)) {
-      throw new Error(`Wealth activation promise reference is not reachable from ${activation.period}: ${id}`);
+      throw new WealthPeriodActivationContractError(
+        'PROMISE_NOT_REACHABLE',
+        `Wealth activation promise reference is not reachable from ${activation.period}: ${id}`
+      );
     }
   }
 }

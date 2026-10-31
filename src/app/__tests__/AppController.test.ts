@@ -552,6 +552,80 @@ describe('AppController', () => {
     });
 
     describe('selectPeriod', () => {
+      it('invalidates an in-flight selection when switching profiles and keeps the new request identity', async () => {
+        let currentState: AppState = { ...INITIAL_APP_STATE };
+        const setState: Dispatch<SetStateAction<AppState>> = vi.fn(
+          (update: SetStateAction<AppState>) => {
+            currentState =
+              typeof update === 'function'
+                ? (update as (prev: AppState) => AppState)(currentState)
+                : update;
+          }
+        );
+
+        const birthA = { ...INITIAL_APP_STATE.birthDetails, name: 'Profile A' };
+        const birthB = { ...INITIAL_APP_STATE.birthDetails, name: 'Profile B' };
+        const horoscopeA = { birthDetails: birthA } as Horoscope;
+        const horoscopeB = { birthDetails: birthB } as Horoscope;
+        const analysisA = { ...mockProductAnalysis, analysisId: 'profile-a' };
+        const analysisB = { ...mockProductAnalysis, analysisId: 'profile-b' };
+        const runA = makeRun(analysisA, birthA, horoscopeA);
+        let resolveRunB: (run: ProductAnalysisRun) => void = () => {};
+        const pendingRunB = new Promise<ProductAnalysisRun>(resolve => {
+          resolveRunB = resolve;
+        });
+        let resolveSelectionA: (analysis: ProductAnalysis) => void = () => {};
+        let resolveSelectionB: (analysis: ProductAnalysis) => void = () => {};
+        const pendingSelectionA = new Promise<ProductAnalysis>(resolve => {
+          resolveSelectionA = resolve;
+        });
+        const pendingSelectionB = new Promise<ProductAnalysis>(resolve => {
+          resolveSelectionB = resolve;
+        });
+        const mockService = {
+          analyzeRun: vi.fn().mockResolvedValueOnce(runA).mockReturnValueOnce(pendingRunB),
+          selectPeriodForRun: vi.fn()
+            .mockReturnValueOnce(pendingSelectionA)
+            .mockReturnValueOnce(pendingSelectionB)
+        } as unknown as ProductAnalysisService;
+        const controller = createAppController(setState, mockService);
+
+        await controller.analyze(birthA);
+        const staleSelection = controller.selectPeriod('md_same', 'ad_same');
+
+        const currentRunB = makeRun(analysisB, birthB, horoscopeB);
+        const analyzeProfileB = controller.analyze(birthB);
+        expect(currentState.selectionState).toEqual({ status: 'IDLE' });
+        resolveRunB(currentRunB);
+        await analyzeProfileB;
+
+        const currentSelection = controller.selectPeriod('md_same', 'ad_same');
+        const selectedAnalysisB = { ...analysisB, analysisId: 'profile-b-period' };
+        resolveSelectionB(selectedAnalysisB);
+        await currentSelection;
+
+        resolveSelectionA({ ...analysisA, analysisId: 'profile-a-stale-period' });
+        await staleSelection;
+
+        expect(mockService.selectPeriodForRun).toHaveBeenNthCalledWith(
+          1,
+          runA.snapshot,
+          'md_same',
+          'ad_same',
+          true
+        );
+        expect(mockService.selectPeriodForRun).toHaveBeenNthCalledWith(
+          2,
+          currentRunB.snapshot,
+          'md_same',
+          'ad_same',
+          true
+        );
+        expect(currentState.productAnalysis.analysis?.analysisId).toBe('profile-b-period');
+        expect(currentState.horoscope).toBe(horoscopeB);
+        expect(currentState.selectionState).toEqual({ status: 'READY' });
+      });
+
       it('reports a missing active analysis run before selecting a period', async () => {
         let currentState: AppState = { ...INITIAL_APP_STATE };
         const setState: Dispatch<SetStateAction<AppState>> = vi.fn(

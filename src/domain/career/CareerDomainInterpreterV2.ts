@@ -303,6 +303,8 @@ export function interpretCareerV2(
     canonicalCareerFoundation.mechanismRefinements
   );
   const careerMechanismRefinements = Object.freeze(adaptedRefinements.candidates);
+  // Adapter diagnostics are candidate-scoped. Keep successfully adapted sibling candidates
+  // available to the resolver rather than treating any diagnostic as a batch failure.
   const adapterDiagnostics: readonly OrchestrationDiagnostic[] = Object.freeze(
     adaptedRefinements.diagnostics.map((diagnostic): OrchestrationDiagnostic => ({
       diagnosticId: `CAREER_REFINEMENT_ADAPTER_${diagnostic.code}_${diagnostic.candidateId}`,

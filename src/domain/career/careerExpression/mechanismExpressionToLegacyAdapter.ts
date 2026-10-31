@@ -8,7 +8,8 @@ import type {
 import type {
   CareerExpressionAnalysis,
   CareerExpression,
-  CareerExpressionEvidence
+  CareerExpressionEvidence,
+  CareerExpressionMechanismProvenance
 } from '../careerExpression';
 import type {
   CareerManifestationMode
@@ -171,7 +172,8 @@ function createLegacyEvidence(
  */
 function createLegacyExpression(
   candidate: CareerExpressionCandidate,
-  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>
+  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
 ): CareerExpression {
   const mode = expressionTypeToManifestationMode(candidate.expressionType);
 
@@ -205,7 +207,8 @@ function createLegacyExpression(
     supportingEvidenceIds,
     statement,
     conditional: false, // Mechanism-based expressions are not conditional by contract
-    sourceMechanismCandidateIds: Object.freeze([...candidate.sourceMechanismIds].sort())
+    sourceMechanismCandidateIds: Object.freeze([...candidate.sourceMechanismIds].sort()),
+    sourceMechanismProvenance: buildMechanismProvenance(candidate, mechanismCandidates)
   });
 }
 
@@ -220,7 +223,8 @@ function createLegacyExpression(
  */
 function createLegacyExpressionFromCanonical(
   candidate: CareerExpressionCanonicalCandidate,
-  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>
+  mechanismPlanetsMap: ReadonlyMap<string, readonly Planet[]>,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
 ): CareerExpression {
   const mode = expressionTypeToManifestationMode(candidate.expressionType);
 
@@ -270,7 +274,44 @@ function createLegacyExpressionFromCanonical(
     supportingEvidenceIds,
     statement,
     conditional: false, // Canonical expressions are not conditional by contract
-    sourceMechanismCandidateIds: Object.freeze([...candidate.sourceMechanismIds].sort())
+    sourceMechanismCandidateIds: Object.freeze([...candidate.sourceMechanismIds].sort()),
+    sourceMechanismProvenance: buildMechanismProvenance(candidate, mechanismCandidates)
+  });
+}
+
+function buildMechanismProvenance(
+  candidate: CareerExpressionCandidate,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
+): CareerExpressionMechanismProvenance {
+  const mechanismsById = new Map(
+    mechanismCandidates.map((mechanism) => [mechanism.candidateId, mechanism])
+  );
+  const mechanisms = [...new Set(candidate.sourceMechanismIds)]
+    .sort()
+    .map((candidateId) => {
+      const mechanism = mechanismsById.get(candidateId);
+      return Object.freeze({
+        candidateId,
+        ...(mechanism ? { mechanismType: mechanism.mechanismType } : {}),
+        participantIds: Object.freeze([
+          ...(mechanism?.provenance.participantIds ?? [])
+        ].sort())
+      });
+    });
+  const evidence = [...candidate.evidence]
+    .map((item) => Object.freeze({
+      evidenceId: item.evidenceId,
+      sourceMechanismId: item.sourceMechanismId,
+      sourceEvidenceIds: Object.freeze([...item.sourceEvidenceIds].sort()),
+      ruleId: item.ruleId,
+      role: item.role
+    }))
+    .sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
+
+  return Object.freeze({
+    candidateId: candidate.expressionId,
+    mechanisms: Object.freeze(mechanisms),
+    evidence: Object.freeze(evidence)
   });
 }
 
@@ -437,8 +478,16 @@ export function adaptMechanismExpressionToLegacy(
   // Map mechanism candidates to legacy expressions
   const legacyExpressions = mechanismResult.expressions.map(candidate =>
     isCanonical
-      ? createLegacyExpressionFromCanonical(candidate as CareerExpressionCanonicalCandidate, mechanismPlanetsMap)
-      : createLegacyExpression(candidate as CareerExpressionCandidate, mechanismPlanetsMap)
+      ? createLegacyExpressionFromCanonical(
+        candidate as CareerExpressionCanonicalCandidate,
+        mechanismPlanetsMap,
+        mechanismCandidates
+      )
+      : createLegacyExpression(
+        candidate as CareerExpressionCandidate,
+        mechanismPlanetsMap,
+        mechanismCandidates
+      )
   );
 
   // Sort by expressionId for deterministic ordering

@@ -146,7 +146,7 @@ The orchestrator uses dependency injection via ports. The adapter file wires rea
     challengingParticipants?: readonly string[];
   }): CareerMechanismDispositorRefinementResult
   ```
-- **DEFERRED:** Dispositor contexts are not yet provided in the orchestration input. When unavailable, all refinements are marked `UNAVAILABLE` without calling the refiner. This is documented via diagnostic `ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE`. When dispositor contexts are wired in, the refiner will be called normally.
+- **DEFERRED:** Dispositor contexts were not generated for the orchestration input. When undefined, refinements are marked `UNAVAILABLE` without calling the refiner and diagnostic `DISPOSITOR_CONTEXTS_NOT_GENERATED` is emitted. Empty and invalid/mismatched inputs have separate diagnostics.
 
 ### 10H/10L Supplements
 

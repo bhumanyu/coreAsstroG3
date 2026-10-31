@@ -189,7 +189,7 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
 
       // Verify dispositor contexts diagnostic is present when flag is false (default)
       const dispositorDiagnostic = foundation.diagnostics.find(
-        d => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
+        d => d.diagnosticId === 'DISPOSITOR_CONTEXTS_NOT_GENERATED'
       );
       expect(dispositorDiagnostic).toBeDefined();
       expect(dispositorDiagnostic?.severity).toBe('WARNING');
@@ -526,6 +526,10 @@ describe('P2-11G Canonical Career Foundation Builder', () => {
         horoscope
       );
       expect(failedPassTwo.metadata.contractValidity).toBe('VALID');
+      const survivingRefinement = failedPassTwo.mechanismRefinements.find(
+        refinement => refinement.candidateId === firstPassCandidateId
+      );
+      expect(survivingRefinement?.resolution).toBe('UNCHANGED');
       const failingRefinement = failedPassTwo.mechanismRefinements.find(
         refinement => refinement.candidateId === failingCandidateId
       );

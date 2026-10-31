@@ -14,11 +14,11 @@ Any future rule must conform to [`CareerMechanismResolutionRule`](../../../src/d
 
 ## Current fail-closed status
 
-**Status: DEFERRED / owner-blocked for all five families and final sign-off.** The existing resolver suite now pins the current behavior: structurally evidenced `QUALIFIED` patterns in each family still return an empty candidate set while the registry contains only the three proven dusthana rule IDs. This test coverage does not approve a mapping or activate a family.
+**Status: DEFERRED / owner-confirmed for all five families.** On 2026-11-01, owner Bhumanyu confirmed `DEFERRED` for each family below. No mechanism mapping, family-specific evidence contract, or resolver rule is approved; the existing resolver suite continues to pin the fail-closed behavior. This status decision does not activate a family.
 
 `careerMechanismResolverRules.ts` documents the staged per-family implementation template: explicit rule ID and pathway, canonical establishing-edge predicates with the provenance intersection invariant, existing `PatternLevelEstablishingEvidence`/source firewall, existing mechanism types only, deterministic precedence/deduplication, and the required family-specific tests. The template is documentation only; no rule is instantiated or registered.
 
-Complete each owner-decision row below and freeze that family's P2-06 evidence contract before activation in a separate per-family PR. Until then, keep each row and the sign-off row `TBD` and `DEFERRED`; no empty placeholder rule is permitted.
+The owner decision is to keep each family deferred. The mapping and evidence-contract fields below remain unapproved and `TBD`; they must be completed and frozen before any future activation in a separate per-family PR. No empty placeholder rule is permitted.
 
 ## Owner decision register
 
@@ -26,7 +26,7 @@ For each family below, complete every owner-decision field. Outputs must be sele
 
 ### CAREER_HOUSE_NETWORK family
 
-**Decision status: DEFERRED / owner-blocked.**
+**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
 
 Known classifications:
 
@@ -49,7 +49,7 @@ Known classifications:
 
 ### KENDRA_TRIKONA family
 
-**Decision status: DEFERRED / owner-blocked.**
+**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
 
 Known classifications emitted by `kendraTrikonaDetector.ts`:
 
@@ -67,7 +67,7 @@ Known classifications emitted by `kendraTrikonaDetector.ts`:
 
 ### UPACHAYA_PROGRESSION family
 
-**Decision status: DEFERRED / owner-blocked.**
+**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
 
 Known classification:
 
@@ -89,7 +89,7 @@ The chain is recorded as an existing candidate only; the owner must confirm whet
 
 ### PARIVARTANA_YOGA family
 
-**Decision status: DEFERRED / owner-blocked.**
+**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
 
 Known sub-types:
 
@@ -108,7 +108,7 @@ Known sub-types:
 
 ### CAREER_YOGA_STRUCTURE family
 
-**Decision status: DEFERRED / owner-blocked.**
+**Decision status: DEFERRED / owner-confirmed by Bhumanyu on 2026-11-01.**
 
 Known classification from `careerYogaDetector.ts`:
 
@@ -126,4 +126,4 @@ Known classification from `careerYogaDetector.ts`:
 
 | Owner | Decision date | All family mappings and evidence contracts confirmed? | Status |
 |---|---|---|---|
-| TBD — | TBD — | TBD — | DEFERRED / owner-blocked |
+| Bhumanyu | 2026-11-01 | No; this is a status-only deferral decision | DEFERRED for all five families |

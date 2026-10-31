@@ -51,6 +51,22 @@ export interface CareerExpressionEvidence {
   readonly houses: readonly number[];
 }
 
+export interface CareerExpressionMechanismProvenance {
+  readonly candidateId: string;
+  readonly mechanisms: readonly {
+    readonly candidateId: string;
+    readonly mechanismType?: string;
+    readonly participantIds: readonly string[];
+  }[];
+  readonly evidence: readonly {
+    readonly evidenceId: string;
+    readonly sourceMechanismId: string;
+    readonly sourceEvidenceIds: readonly string[];
+    readonly ruleId: string;
+    readonly role: 'ESTABLISHING' | 'REFINING';
+  }[];
+}
+
 export interface CareerExpression {
   readonly mode: CareerManifestationMode;
   readonly direction: CareerExpressionDirection;
@@ -61,6 +77,8 @@ export interface CareerExpression {
   readonly conditional: boolean;
   /** Mechanism candidate IDs represented by adapter-emitted legacy expressions. */
   readonly sourceMechanismCandidateIds?: readonly string[];
+  /** Structured source ownership retained across the legacy-expression adapter boundary. */
+  readonly sourceMechanismProvenance?: CareerExpressionMechanismProvenance;
 }
 
 export interface CareerExpressionAnalysis {

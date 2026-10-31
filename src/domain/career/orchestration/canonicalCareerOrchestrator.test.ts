@@ -1197,7 +1197,7 @@ describe('CanonicalCareerOrchestrator', () => {
 
       expect(foundation.diagnostics).toContainEqual(
         expect.objectContaining({
-          diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
+          diagnosticId: 'DISPOSITOR_CONTEXTS_NOT_GENERATED',
           severity: 'WARNING',
           category: 'MISSING_DATA',
           message: expect.stringContaining('Dispositor contexts are not provided')
@@ -2369,7 +2369,7 @@ describe('CanonicalCareerOrchestrator', () => {
       // Verify diagnostic is emitted
       expect(foundation.diagnostics).toContainEqual(
         expect.objectContaining({
-          diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
+          diagnosticId: 'DISPOSITOR_CONTEXTS_NOT_GENERATED',
           severity: 'WARNING',
           category: 'MISSING_DATA',
           message: expect.stringContaining('Dispositor contexts are not provided')

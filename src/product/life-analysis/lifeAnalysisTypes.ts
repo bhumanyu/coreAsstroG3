@@ -17,7 +17,10 @@ import type {
   LifeAnalysisConfidence,
   LifeAnalysis
 } from '../../domain/synthesis';
-import type { WealthDimensionStatus } from '../../domain/wealth/wealthTypes';
+import type {
+  WealthDimensionInterpretation,
+  WealthDimensionStatus
+} from '../../domain/wealth/wealthTypes';
 import type { CareerManifestationSynthesis } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
 import type { CareerWealthFinalSynthesis } from '../../domain/careerWealth/finalSynthesis/careerWealthFinalSynthesisTypes';
@@ -215,6 +218,7 @@ export interface LifeAnalysisWealthDetailViewModel {
   readonly gainsStatus: WealthDimensionStatus | 'UNAVAILABLE';
   readonly fortuneStatus: WealthDimensionStatus | 'UNAVAILABLE';
   readonly speculationStatus: WealthDimensionStatus | 'UNAVAILABLE';
+  readonly dimensions?: readonly WealthDimensionInterpretation[];
   readonly dominantManifestations?: readonly string[];
   readonly headline?: string;
   readonly statement?: string;

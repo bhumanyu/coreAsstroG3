@@ -30,6 +30,7 @@ import {
 import {
   ACCEPTANCE_MISSING,
   type AcceptanceConclusion,
+  type AcceptanceKnownGap,
   type AcceptanceProvenance,
   type AcceptanceSurface,
   type NormalizedAcceptanceConclusion,
@@ -42,6 +43,7 @@ import {
   normalizeAcceptanceConclusion,
   normalizeAcceptanceSurface
 } from './goldenAcceptanceNormalizer';
+import { projectSelectedPeriodReportRenderer } from './goldenAcceptanceRendererAdapters';
 import type { GoldenAcceptancePipeline } from './goldenAcceptanceRunner';
 import { assertConclusionInventory, assertParity, deepEqualAcceptance, duplicateEvidenceDifferences } from './goldenAcceptanceAssertions';
 import { buildGoldenAcceptanceReport, type AcceptanceGate, type GoldenAcceptanceReport, type GateStatus } from './goldenAcceptanceReport';
@@ -99,12 +101,15 @@ export interface ExternalEvidenceNamespace {
   readonly records: readonly EvidenceResolverRecord[];
 }
 
+export type RequiredSurfaceName = 'career-ui' | 'wealth-ui' | 'ai-context'
+  | 'product-ai-context' | 'reasoning-trace' | 'json-export' | 'selected-period-ui';
+
 export const REQUIRED_SURFACES = Object.freeze({
   CAREER: Object.freeze(['career-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui'] as const),
   WEALTH: Object.freeze(['wealth-ui', 'ai-context', 'product-ai-context', 'reasoning-trace', 'json-export', 'selected-period-ui'] as const)
 });
 
-type RequiredSurfaceName<D extends GoldenAcceptanceDomain> = typeof REQUIRED_SURFACES[D][number];
+type RequiredSurfaceNameFor<D extends GoldenAcceptanceDomain> = typeof REQUIRED_SURFACES[D][number];
 type SurfaceProjection<Name extends string> =
   Name extends 'selected-period-ui'
     ? SelectedPeriodAcceptanceProjection | typeof ACCEPTANCE_MISSING
@@ -115,7 +120,7 @@ type AcceptanceSurfaceProjection = AcceptanceConclusion
   | typeof ACCEPTANCE_MISSING;
 export type GoldenAcceptanceProjections<D extends GoldenAcceptanceDomain = GoldenAcceptanceDomain> =
   D extends GoldenAcceptanceDomain
-    ? Readonly<{ [Name in RequiredSurfaceName<D>]: SurfaceProjection<Name> }> & Readonly<{
+    ? Readonly<{ [Name in RequiredSurfaceNameFor<D>]: SurfaceProjection<Name> }> & Readonly<{
       canonical: AcceptanceConclusion;
     }>
     : never;
@@ -125,20 +130,26 @@ export const SURFACE_ALLOWED_DIFFERENCE_KINDS: Readonly<Record<string, readonly 
   'product-ai-context': Object.freeze(['EXTERNAL_EVIDENCE'] as const)
 });
 
+export const GOLDEN_ACCEPTANCE_SURFACE_STATUS_BASELINES = Object.freeze({
+  CAREER: Object.freeze({ 'career-ui': 'INSUFFICIENT_DATA', 'json-export': 'SUPPORTED' }),
+  WEALTH: Object.freeze({ 'wealth-ui': 'STRONGLY_SUPPORTED', 'json-export': 'STRONGLY_SUPPORTED' })
+});
+
 const EXPECTED_SURFACE_CONCLUSION_KINDS: Readonly<Record<string, NonNullable<AcceptanceConclusion['conclusionKind']>>> = Object.freeze({
   'career-ui': 'PROFESSION_COMPLETENESS',
   'wealth-ui': 'PRESENTATION',
   'ai-context': 'SYNTHESIS_FINAL',
   'product-ai-context': 'SYNTHESIS_FINAL',
   'reasoning-trace': 'SYNTHESIS_FINAL',
-  'json-export': 'SYNTHESIS_FINAL'
+  'json-export': 'PRESENTATION'
 });
 
 export function buildRequiredSurfaceGates(
   requiredSurfaces: readonly string[],
   projections: Readonly<Record<string, unknown>>,
   differences: readonly ParityDifference[],
-  expectedEvidenceIds: readonly string[]
+  expectedEvidenceIds: readonly string[],
+  knownGaps: Readonly<Partial<Record<RequiredSurfaceName, AcceptanceKnownGap>>> = {}
 ): readonly AcceptanceGate[] {
   return requiredSurfaces.map(name => {
     const projection = projections[name];
@@ -153,7 +164,10 @@ export function buildRequiredSurfaceGates(
         surfaceDifferences,
         missing,
         expectedEvidenceIds,
-        SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? []
+        [
+          ...(SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? []),
+          ...(knownGaps[name as RequiredSurfaceName]?.differenceKinds ?? [])
+        ]
       ),
       ...(surfaceDifferences.length === 0 ? {} : { details: `${surfaceDifferences.length} difference(s)` })
     };
@@ -162,17 +176,6 @@ export function buildRequiredSurfaceGates(
 
 function baseSurfaceName(surface: string): string {
   return surface.replace(/\[\d+\]$/, '');
-}
-
-function selectedPeriodEvidenceUniverse(
-  domainUniverse: readonly EvidenceResolverRecord[],
-  availableEvidence: readonly EvidenceResolverRecord[]
-): readonly EvidenceResolverRecord[] {
-  const domainIds = new Set(domainUniverse.map(record => record.id));
-  return [
-    ...domainUniverse,
-    ...availableEvidence.filter(record => !domainIds.has(record.id))
-  ];
 }
 
 function isValidatedExternalEvidenceDifference(difference: ParityDifference): boolean {
@@ -215,12 +218,13 @@ export function classifySurfaceGateStatus(
   const allAllowed = differences.every(difference => {
     if (difference.kind === 'OWNER_MISMATCH'
       || difference.kind === 'DANGLING_REFERENCE'
-      || difference.kind === 'AMBIGUOUS_EVIDENCE') return false;
-    if (allowedDifferenceKinds.includes(difference.kind)) {
-      return difference.kind !== 'EXTERNAL_EVIDENCE' || isValidatedExternalEvidenceDifference(difference);
-    }
+      || difference.kind === 'AMBIGUOUS_EVIDENCE'
+      || difference.kind === 'EXTERNAL_OWNER_MISMATCH'
+      || difference.kind === 'EXTERNAL_DANGLING_REFERENCE') return false;
     if (surface === 'reasoning-trace') {
-      if (difference.kind !== 'EVIDENCE_MISMATCH' || difference.path !== '$.evidence'
+      if (difference.kind !== 'EVIDENCE_MISMATCH'
+        || !allowedDifferenceKinds.includes(difference.kind)
+        || difference.path !== '$.evidence'
         || !Array.isArray(difference.expected) || !Array.isArray(difference.actual)) return false;
       const expectedIds = new Set(difference.expected.map(item => (item as { readonly id?: unknown }).id));
       const actualEntries = difference.actual as readonly { readonly id?: unknown; readonly resolution?: unknown }[];
@@ -232,6 +236,7 @@ export function classifySurfaceGateStatus(
     }
 
     if (surface === 'json-export' && difference.kind === 'EVIDENCE_MISMATCH'
+      && allowedDifferenceKinds.includes(difference.kind)
       && difference.path === '$.evidence' && Array.isArray(difference.expected) && Array.isArray(difference.actual)) {
       const expectedItems = difference.expected as readonly { readonly id?: unknown; readonly owner?: unknown; readonly resolution?: unknown }[];
       const actualItems = difference.actual as readonly { readonly id?: unknown; readonly owner?: unknown; readonly resolution?: unknown }[];
@@ -248,6 +253,7 @@ export function classifySurfaceGateStatus(
       });
     }
     if (surface === 'json-export' && difference.kind === 'PROVENANCE_MISMATCH'
+      && allowedDifferenceKinds.includes(difference.kind)
       && difference.path === '$.provenance' && Array.isArray(difference.expected) && Array.isArray(difference.actual)) {
       const expectedItems = difference.expected as readonly { readonly evidenceId?: unknown; readonly owner?: unknown; readonly [key: string]: unknown }[];
       const actualItems = difference.actual as readonly { readonly evidenceId?: unknown; readonly owner?: unknown; readonly [key: string]: unknown }[];
@@ -260,6 +266,9 @@ export function classifySurfaceGateStatus(
         const { owner: _actualOwner, ...actualRest } = actual;
         return deepEqualAcceptance(expectedRest, actualRest);
       });
+    }
+    if (allowedDifferenceKinds.includes(difference.kind)) {
+      return difference.kind !== 'EXTERNAL_EVIDENCE' || isValidatedExternalEvidenceDifference(difference);
     }
     return false;
   });
@@ -808,6 +817,7 @@ function traceConclusion(
     scope: 'LIFETIME',
     subjectId: `chart:${domain.toLowerCase()}`,
     status,
+    conclusionKind: 'SYNTHESIS_FINAL',
     evidence,
     provenance
   };
@@ -817,8 +827,8 @@ function projectSelectedPeriod(
   domain: GoldenAcceptanceDomain,
   result: GoldenAcceptanceProductionResult
 ): SelectedPeriodAcceptanceProjection {
-  const selectedPeriod = result.selectedPeriod;
-  if (!selectedPeriod) {
+  const selectedPeriodResult = result.productAnalysis.selectedPeriod;
+  if (!selectedPeriodResult) {
     return {
       domain,
       scope: 'SELECTED_PERIOD',
@@ -828,33 +838,46 @@ function projectSelectedPeriod(
       provenance: []
     };
   }
+  if (selectedPeriodResult.status !== 'OK') {
+    return {
+      domain,
+      scope: 'SELECTED_PERIOD',
+      subjectId: `chart:${domain.toLowerCase()}`,
+      resultState: selectedPeriodResult.status,
+      evidence: [],
+      provenance: []
+    };
+  }
+  const selectedPeriod = selectedPeriodResult.synthesis;
+  const rendererProjection = projectSelectedPeriodReportRenderer(selectedPeriod, domain);
 
   // For CAREER: extract qualification status
   const careerQualificationStatus = domain === 'CAREER'
-    ? selectedPeriod.career.qualificationBasis
+    ? rendererProjection.careerQualificationBasis
     : undefined;
 
   // For WEALTH: extract per-dimension effect and dataStatus
   const wealthDimensions = domain === 'WEALTH'
-    ? (['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const).map(dim => ({
-        dimension: dim,
-        effect: selectedPeriod.wealth.dimensions[dim].effect,
-      dataStatus: selectedPeriod.wealth.dimensions[dim].dataStatus,
-      promiseEvidenceIds: selectedPeriod.wealth.dimensions[dim].promiseEvidenceIds,
-      dashaRuleReferences: selectedPeriod.wealth.dimensions[dim].dashaRuleReferences
-    }))
+    ? rendererProjection.wealthDimensions.map(dimension => {
+        const row = selectedPeriod.wealth.dimensions[dimension.dimension];
+        return {
+          ...dimension,
+          promiseEvidenceIds: row.promiseEvidenceIds,
+          dashaRuleReferences: row.dashaRuleReferences
+        };
+      })
     : [];
 
   const interpretation = domain === 'CAREER' ? result.career : result.wealth;
-  const dashaEvidence = (selectedPeriod.evidence ?? []).filter(item => item.stage === domain);
   const promiseEvidenceIds = wealthDimensions.flatMap(dimension => dimension.promiseEvidenceIds);
   const dashaEvidenceIds = Array.from(new Set([
-    ...dashaEvidence.flatMap(item => item.evidenceId ? [item.evidenceId] : []),
+    ...rendererProjection.evidenceIds,
     ...promiseEvidenceIds
   ]));
   const availableEvidence = result.aiContext.selectedPeriod?.availableEvidence ?? [];
   const resolutionMap = resolveEvidenceIds(dashaEvidenceIds, {
-    domainUniverse: selectedPeriodEvidenceUniverse(interpretation.evidence, availableEvidence)
+    domainUniverse: interpretation.evidence,
+    externalNamespaces: [{ owner: domain, records: availableEvidence }]
   }, domain);
 
   return {
@@ -872,13 +895,8 @@ function projectSelectedPeriod(
       id,
       resolutionMap.get(id) ?? { resolution: 'DANGLING' }
     )),
-    ...(result.selectedPeriodView.interval === undefined ? {} : {
-      interval: {
-        start: result.selectedPeriodView.interval.start,
-        end: result.selectedPeriodView.interval.end
-      },
-      temporalRelation: selectedPeriod.period.temporalRelation
-    })
+    interval: rendererProjection.interval,
+    temporalRelation: rendererProjection.temporalRelation
   };
 }
 
@@ -900,6 +918,16 @@ export function createGoldenAcceptanceProductionPipeline(
 ): GoldenAcceptancePipeline {
   return {
     run: () => buildProductionRun(fixtureKind, domain),
+    knownGaps: Object.freeze({
+      'reasoning-trace': Object.freeze({
+        differenceKinds: Object.freeze(['EVIDENCE_MISMATCH'] as const),
+        rationale: 'Trace-only evidence is BLOCKED only when every extra reference resolves and canonical evidence is retained.'
+      }),
+      'json-export': Object.freeze({
+        differenceKinds: Object.freeze(['EVIDENCE_MISMATCH', 'PROVENANCE_MISMATCH'] as const),
+        rationale: 'Export-only resolution metadata and provenance-owner omissions are BLOCKED only when all remaining fields match.'
+      })
+    }),
     collect: value => {
       const result = value as GoldenAcceptanceProductionResult;
       const interpretation = domain === 'CAREER' ? result.career : result.wealth;
@@ -912,13 +940,16 @@ export function createGoldenAcceptanceProductionPipeline(
       const domainExport = exported.status === 'UNAVAILABLE'
         ? undefined
         : domain === 'CAREER' ? exported.value.career : exported.value.wealth;
-      const jsonConclusion = exported.status === 'UNAVAILABLE'
+      const jsonConclusionProjection = exported.status === 'UNAVAILABLE'
         ? conclusionFromValues(domain, exported.status, [], interpretation)
         : domainExport?.status === 'UNAVAILABLE'
           ? conclusionFromValues(domain, domainExport.status, [], interpretation)
           : domainExport?.value
             ? conclusionFromValues(domain, domainExport.value.status, domainExport.value.evidence, interpretation)
             : undefined;
+      const jsonConclusion = jsonConclusionProjection === undefined
+        ? undefined
+        : { ...jsonConclusionProjection, conclusionKind: 'PRESENTATION' as const };
       const common = {
         'ai-context': aiConclusion ?? ACCEPTANCE_MISSING,
         'product-ai-context': productAiConclusion ?? ACCEPTANCE_MISSING,
@@ -1044,7 +1075,8 @@ export function selectedPeriodDifferences(
     ...promiseEvidenceIds
   ]));
   const resolutions = resolveEvidenceIds(evidenceIds, {
-    domainUniverse: selectedPeriodEvidenceUniverse(domainUniverse, availableEvidence)
+    domainUniverse,
+    externalNamespaces: [{ owner: domain, records: availableEvidence }]
   }, domain);
   const reportedIssues = new Set<string>();
   const reportResolutionIssue = (id: string, resolution: EvidenceResolution, path: string) => {
@@ -1067,6 +1099,19 @@ export function selectedPeriodDifferences(
     const resolution = resolutions.get(id);
     if (!resolution || resolution.resolution !== 'RESOLVED') {
       reportResolutionIssue(id, resolution?.resolution ?? 'DANGLING', '$.evidence');
+    }
+    if (resolution?.resolution === 'EXTERNAL') {
+      const evidence = projection.evidence.find(item => item.id === id);
+      if (evidence?.owner !== resolution.namespaceOwner) {
+        differences.push({
+          surface: 'selected-period-ui',
+          kind: 'EXTERNAL_OWNER_MISMATCH',
+          path: '$.evidence',
+          expected: resolution.namespaceOwner,
+          actual: evidence?.owner,
+          reason: `Selected-period external evidence ${id} owner does not match its declared namespace.`
+        });
+      }
     }
   }
 
@@ -1123,7 +1168,7 @@ export function selectedPeriodDifferences(
     if (actualProvenance.owner !== resolution.record.domain) {
       differences.push({
         surface: 'selected-period-ui',
-        kind: 'OWNER_MISMATCH',
+        kind: resolution.resolution === 'EXTERNAL' ? 'EXTERNAL_OWNER_MISMATCH' : 'OWNER_MISMATCH',
         path: '$.provenance',
         actual: evidenceId,
         expected: resolution.record.domain,
@@ -1149,7 +1194,7 @@ export function selectedPeriodDifferences(
       && (provenanceByEvidenceId.get(evidenceId)?.length ?? 0) === 0) {
       differences.push({
         surface: 'selected-period-ui',
-        kind: 'DANGLING_REFERENCE',
+        kind: resolution?.resolution === 'EXTERNAL' ? 'EXTERNAL_DANGLING_REFERENCE' : 'DANGLING_REFERENCE',
         path: '$.provenance',
         actual: evidenceId,
         reason: `Resolved selected-period evidence ${evidenceId} has no provenance entry.`
@@ -1268,7 +1313,9 @@ export function runGoldenAcceptanceProductionGate(
         selectedProjection,
         interpretation.evidence,
         result.aiContext.selectedPeriod?.availableEvidence ?? [],
-        result.selectedPeriod?.evidence ?? []
+        result.productAnalysis.selectedPeriod?.status === 'OK'
+          ? result.productAnalysis.selectedPeriod.synthesis.evidence
+          : []
       ));
       continue;
     }
@@ -1277,19 +1324,28 @@ export function runGoldenAcceptanceProductionGate(
       : Array.isArray(projection)
         ? projection
         : [projection as AcceptanceConclusion];
+    const inventory = conclusions
+      .filter((conclusion): conclusion is AcceptanceConclusion => conclusion !== undefined)
+      .map(normalizeAcceptanceConclusion);
+    surfaceDifferences.push(...assertConclusionInventory(inventory));
     const allowedDifferenceKinds = SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? [];
     for (const [index, conclusion] of conclusions.entries()) {
       const surfaceName = conclusions.length > 1 ? `${name}[${index}]` : name;
-      const surfaceSpecific = name === 'career-ui' || name === 'wealth-ui';
+      const surfaceSpecificEvidence = name === 'career-ui' || name === 'wealth-ui'
+        || name === 'ai-context' || name === 'product-ai-context' || name === 'json-export';
       const surface = normalizeAcceptanceSurface(surfaceName, conclusion, allowedDifferenceKinds, {
-        compareStatus: !surfaceSpecific && name !== 'reasoning-trace',
-        compareConclusionKind: !surfaceSpecific && name !== 'reasoning-trace' && name !== 'json-export',
-        evidenceContract: surfaceSpecific ? 'SURFACE_SPECIFIC' : 'CANONICAL',
+        compareStatus: name !== 'career-ui' && name !== 'wealth-ui'
+          && name !== 'reasoning-trace' && name !== 'json-export',
+        expectedStatus: fixtureKind === 'STANDARD'
+          ? (GOLDEN_ACCEPTANCE_SURFACE_STATUS_BASELINES[domain] as Readonly<Record<string, string>>)[name]
+          : undefined,
+        compareConclusionKind: name !== 'reasoning-trace' && name !== 'json-export',
+        evidenceContract: surfaceSpecificEvidence ? 'SURFACE_SPECIFIC' : 'CANONICAL',
+        externalEvidencePolicy: allowedDifferenceKinds.includes('EXTERNAL_EVIDENCE')
+          ? 'ALLOW_DECLARED'
+          : 'FAIL',
         expectedConclusionKind: EXPECTED_SURFACE_CONCLUSION_KINDS[name]
       });
-      if (surface.conclusion !== ACCEPTANCE_MISSING) {
-        surfaceDifferences.push(...assertConclusionInventory([surface.conclusion]));
-      }
       surfaces.push(surface);
     }
   }
@@ -1303,7 +1359,8 @@ export function runGoldenAcceptanceProductionGate(
     REQUIRED_SURFACES[domain],
     projections,
     surfaceDifferences,
-    expectedEvidenceIds
+    expectedEvidenceIds,
+    pipeline.knownGaps
   );
   const reportGates: readonly AcceptanceGate[] = [
     {

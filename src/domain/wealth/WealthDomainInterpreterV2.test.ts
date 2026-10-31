@@ -82,6 +82,7 @@ import {
   evaluateWealthPeriodTimingActivation,
   assertWealthPeriodActivationContract,
   assertStrictIds,
+  WealthPeriodActivationContractError,
   evaluateDashaEffect,
   evaluateTransitEffect,
   evaluateD2Relationship,
@@ -538,6 +539,9 @@ describe('WealthDomainInterpreterV2', () => {
       expect(emptyV2.dataCompleteness?.dasha).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.d2).toBe('UNAVAILABLE');
       expect(emptyV2.dataCompleteness?.transit).toBe('UNAVAILABLE');
+      expect(emptyV2.conclusionData?.periodTimingActivations?.every((activation: WealthPeriodTimingActivation) =>
+        activation.statement?.includes('unavailable')
+      )).toBe(true);
       expect(emptyV2.conclusionData?.dimensions.every((dimension: WealthDimensionInterpretation) =>
         dimension.supportingEvidenceIds.length === 0 &&
         dimension.challengingEvidenceIds.length === 0
@@ -2672,6 +2676,7 @@ describe('Wealth period activation contracts', () => {
     return createDomainEvidence({
       id, sourceType: 'DASHA', domain: 'WEALTH', role: 'SECONDARY', phase: 'DASHA_ACTIVATION',
       source: 'DASHA', statement: id, polarity, strength: 'MODERATE', priority: 50,
+      ruleId: 'WEALTH_TEST_DASHA_TIMING',
       timing: { period, planet: undefined }, relatedEvidenceIds: [promiseId],
       ...(evidenceFamily ? { evidenceFamily } : {})
     });
@@ -2719,6 +2724,29 @@ describe('Wealth period activation contracts', () => {
     expect(md?.statement).toContain('complete but no period evidence');
     expect(ad?.statement).toContain('complete but no period evidence');
     expect(pd?.statement).toContain('unavailable');
+  });
+
+  it('does not treat a partially evaluated reference dataset as authoritative', () => {
+    const completeChart = calculateHoroscope(CANONICAL_BIRTH_DETAILS);
+    const partialChart: Horoscope = {
+      ...completeChart,
+      functionalRoles: undefined,
+      planetaryStrength: undefined
+    };
+    expect(interpretWealthTheme(partialChart).metadata.dataCompleteness).toBe('PARTIAL');
+
+    const partialContext = makeContext(CANONICAL_UTC_INSTANT);
+    const result = interpretWealthV2(partialChart, {
+      context: partialContext,
+      temporalState: resolveAnalysisTemporalState(partialChart, partialContext)
+    });
+
+    const natalPromiseIds = new Set(result.natalPromise.evidenceIds);
+    expect(result.conclusionData?.periodTimingActivations).toHaveLength(3);
+    for (const activation of result.conclusionData?.periodTimingActivations ?? []) {
+      expect(activation.activatedPromiseEvidenceIds?.every((id: string) => natalPromiseIds.has(id)))
+        .toBe(true);
+    }
   });
 
   it('preserves occurrence and canonical namespaces across provenance and legacy mapped evidence', () => {
@@ -2777,31 +2805,39 @@ describe('Wealth period activation contracts', () => {
       }
     }
 
-    const wrongPhaseTimingTarget = mapped.find((entry) => entry.phase !== 'NATAL_PROMISE' && entry.id !== venusMapped?.id);
-    expect(wrongPhaseTimingTarget).toBeDefined();
-    if (!wrongPhaseTimingTarget) throw new Error('Expected a wrong-phase namespace fixture record');
-    const timingEvidence = createDomainEvidence({
-      id: 'FORGED-WRONG-PHASE-TIMING', sourceType: 'DASHA', domain: 'WEALTH',
-      role: 'SECONDARY', phase: 'DASHA_ACTIVATION', source: 'DASHA',
-      statement: 'Forged wrong-phase timing link', polarity: 'SUPPORTING', strength: 'MODERATE',
-      priority: 50, timing: { period: 'MD', planet: Planet.JUPITER },
-      relatedEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id])
+    const wrongPhaseTarget = createDomainEvidence({
+      id: 'FORGED-WRONG-PHASE-TARGET',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'SECONDARY',
+      phase: 'MODIFIER',
+      statement: 'Wrong-phase timing target',
+      polarity: 'SUPPORTING',
+      strength: 'MODERATE',
+      priority: 50
     });
-
-    const forgedLink = { ...timingEvidence, relatedEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id]) };
+    const forgedLink = timingEvidence(
+      'FORGED-WRONG-PHASE-TIMING',
+      'MD',
+      wrongPhaseTarget.id,
+      'SUPPORTING'
+    );
     const forgedActivation = Object.freeze({
       period: 'MD' as const,
       dimensions: Object.freeze({ accumulation: 'ACTIVATES' as const, gains: 'DOES_NOT_ACTIVATE' as const, fortune: 'DOES_NOT_ACTIVATE' as const, speculation: 'DOES_NOT_ACTIVATE' as const }),
       evidenceIds: Object.freeze([forgedLink.id]),
       effect: 'ACTIVATES' as const,
-      activatedPromiseEvidenceIds: Object.freeze([wrongPhaseTimingTarget.id])
+      activatedPromiseEvidenceIds: Object.freeze([])
     });
     expect(() => assertWealthPeriodActivationContract(
       forgedActivation,
-      [forgedLink, wrongPhaseTimingTarget],
-      [wrongPhaseTimingTarget.id],
+      [forgedLink, wrongPhaseTarget],
+      [],
       true
-    )).toThrow(/not a natal promise occurrence|unresolved timing link target|not in the canonical natal promise set/);
+    )).toThrowError(expect.objectContaining({
+      name: WealthPeriodActivationContractError.name,
+      code: 'WRONG_PHASE_TARGET'
+    }));
   });
 
   it('evaluates MD and AD independently when PD timing is unavailable', () => {
@@ -2842,6 +2878,135 @@ describe('Wealth period activation contracts', () => {
     });
     // UNKNOWN-TARGET is unresolved under the permissive contract, but its unresolved state is not rejected.
     expect(() => assertWealthPeriodActivationContract(activation, [timing], [], false)).not.toThrow();
+  });
+
+  it('classifies wealth activation referential-integrity failures', () => {
+    function expectContractErrorCode(
+      action: () => void,
+      code: WealthPeriodActivationContractError['code']
+    ): void {
+      try {
+        action();
+      } catch (error) {
+        expect(error).toBeInstanceOf(WealthPeriodActivationContractError);
+        expect(error).toMatchObject({ code });
+        return;
+      }
+      throw new Error(`Expected wealth activation contract error ${code}`);
+    }
+
+    function activationFor(
+      evidenceId: string,
+      period: 'MD' | 'AD' | 'PD' = 'MD',
+      promiseIds: readonly string[] = []
+    ): WealthPeriodTimingActivation {
+      return Object.freeze({
+        period,
+        dimensions: Object.freeze({
+          accumulation: 'ACTIVATES' as const,
+          gains: 'DOES_NOT_ACTIVATE' as const,
+          fortune: 'DOES_NOT_ACTIVATE' as const,
+          speculation: 'DOES_NOT_ACTIVATE' as const
+        }),
+        evidenceIds: Object.freeze([evidenceId]),
+        effect: 'ACTIVATES' as const,
+        activatedPromiseEvidenceIds: Object.freeze([...promiseIds])
+      });
+    }
+
+    const promise = promiseOccurrence('PROMISE-1');
+    const validTiming = timingEvidence('MD-TIMING', 'MD', promise.id, 'SUPPORTING');
+
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor('MISSING-TIMING'),
+        [promise],
+        [promise.id],
+        true
+      ),
+      'UNKNOWN_EVIDENCE_ID'
+    );
+
+    const wrongPhase = createDomainEvidence({
+      id: 'WRONG-PHASE',
+      sourceType: 'HOUSE',
+      domain: 'WEALTH',
+      role: 'SECONDARY',
+      phase: 'MODIFIER',
+      statement: 'Wrong phase',
+      polarity: 'SUPPORTING',
+      strength: 'MODERATE',
+      priority: 50
+    });
+    const wrongPhaseTiming = timingEvidence('MD-WRONG-PHASE', 'MD', wrongPhase.id, 'SUPPORTING');
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(wrongPhaseTiming.id),
+        [wrongPhaseTiming, wrongPhase],
+        [],
+        true
+      ),
+      'WRONG_PHASE_TARGET'
+    );
+
+    const foreignPromise = createDomainEvidence({
+      ...promise,
+      domain: 'CAREER'
+    });
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(validTiming.id),
+        [validTiming, foreignPromise],
+        [foreignPromise.id],
+        true
+      ),
+      'OWNER_MISMATCH'
+    );
+
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(validTiming.id),
+        [validTiming, validTiming, promise],
+        [promise.id],
+        true
+      ),
+      'DUPLICATE_IDENTITY'
+    );
+
+    const unprovenancedTiming = createDomainEvidence({
+      id: 'MD-MISSING-PROVENANCE',
+      sourceType: 'DASHA',
+      domain: 'WEALTH',
+      role: 'SECONDARY',
+      phase: 'DASHA_ACTIVATION',
+      source: 'DASHA',
+      statement: 'Missing provenance',
+      polarity: 'SUPPORTING',
+      strength: 'MODERATE',
+      priority: 50,
+      timing: { period: 'MD' },
+      relatedEvidenceIds: [promise.id]
+    });
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(unprovenancedTiming.id),
+        [unprovenancedTiming, promise],
+        [promise.id],
+        true
+      ),
+      'MISSING_PROVENANCE'
+    );
+
+    const antardashaTiming = timingEvidence('AD-TIMING', 'AD', promise.id, 'SUPPORTING');
+    expectContractErrorCode(
+      () => assertWealthPeriodActivationContract(
+        activationFor(antardashaTiming.id),
+        [antardashaTiming, promise],
+        [promise.id],
+        true
+      ),
+      'CROSS_PERIOD_REFERENCE'
+    );
   });
 
   it('rejects strict raw ID violations before normalization', () => {

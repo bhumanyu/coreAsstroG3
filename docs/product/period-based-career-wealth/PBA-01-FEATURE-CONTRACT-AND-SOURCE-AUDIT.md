@@ -521,7 +521,7 @@ Instrumented the canonical career foundation build to collect intermediate metri
 - Number of patternQualifications by status (QUALIFIED/INSUFFICIENT_DATA/UNQUALIFIED)
 - Final resolvedMechanisms.length
 - Diagnostics for ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_*
-- Diagnostics for ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE
+- Diagnostics for DISPOSITOR_CONTEXTS_NOT_GENERATED
 
 Compared outcomes with `enableDispositorContexts: false` (production default) vs `true` (two-pass orchestration).
 
@@ -580,7 +580,7 @@ The pattern has houses [6, 8, 11] but lacks house 10, so it does not match any d
 
 **5. Diagnostics**
 
-- ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE: WARNING (expected when flag is false)
+- DISPOSITOR_CONTEXTS_NOT_GENERATED: WARNING (expected when contexts are not generated)
 - ORCHESTRATION_UNQUALIFIED_PATTERN_MECHANISM_*: 0 (no patterns were gated as UNQUALIFIED)
 
 #### Conclusion

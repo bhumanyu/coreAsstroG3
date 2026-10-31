@@ -742,7 +742,7 @@ export class CanonicalCareerOrchestrator {
     const dispositorContextsEnabled = dispositorContexts !== undefined;
     if (!dispositorContextsEnabled) {
       diagnostics.push({
-        diagnosticId: 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE',
+        diagnosticId: 'DISPOSITOR_CONTEXTS_NOT_GENERATED',
         severity: 'WARNING',
         category: 'MISSING_DATA',
         message: 'Dispositor contexts are not provided in orchestration input - all refinements marked UNRESOLVED without calling refiner',

@@ -2888,7 +2888,7 @@ describe('CareerDomainInterpreterV2', () => {
       // Production enables dispositor contexts; missing per-candidate data is
       // represented by refinement outcomes rather than the disabled-feature diagnostic.
       const legacyDisabledDiagnostic = foundation?.diagnostics.find(
-        (d: any) => d.diagnosticId === 'ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE'
+        (d: any) => d.diagnosticId === 'DISPOSITOR_CONTEXTS_NOT_GENERATED'
       );
       expect(legacyDisabledDiagnostic).toBeUndefined();
 

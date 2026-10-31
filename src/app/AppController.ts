@@ -41,7 +41,8 @@ export function createAppController(
       setState((prev) => ({
         ...prev,
         productAnalysis: { status: 'LOADING' },
-        lifeAnalysisState: { status: 'LOADING' }
+        lifeAnalysisState: { status: 'LOADING' },
+        selectionState: { status: 'IDLE' }
       }));
 
       try {

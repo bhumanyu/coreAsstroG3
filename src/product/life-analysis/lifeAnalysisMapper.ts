@@ -28,8 +28,7 @@ import type {
   LifeAnalysisCompletenessViewModel,
   LifeAnalysisCareerDetailViewModel,
   LifeAnalysisWealthDetailViewModel,
-  LifeAnalysisStatus,
-  WealthDimensionStatus
+  LifeAnalysisStatus
 } from './lifeAnalysisTypes';
 import { buildDashaInterpretationProduct } from './dasha/buildDashaInterpretationProduct';
 import { formatDomainDisplayName, formatCompletenessLabel, mapProductStatus } from './domainPresentationUtils';
@@ -165,16 +164,17 @@ export function buildLifeAnalysisViewModel(
   const wealthDetail: LifeAnalysisWealthDetailViewModel = {
     natalPromise: wealth.natalPromise.strength,
     d2Relationship:
-      wealthD2Varga?.relationship ??
       wealthConclusionData?.d2Relationship ??
+      wealthD2Varga?.relationship ??
       'UNAVAILABLE',
     currentDashaEffect: wealth.dashaActivation.effect,
     currentTransitEffect: wealth.transitTrigger.effect,
-    overallStatus: (wealthConclusionData?.overallStatus ?? 'SUPPORTED') as WealthDimensionStatus,
-    accumulationStatus: (wealthConclusionData?.accumulationStatus ?? 'SUPPORTED') as WealthDimensionStatus,
-    gainsStatus: (wealthConclusionData?.gainsStatus ?? 'SUPPORTED') as WealthDimensionStatus,
-    fortuneStatus: (wealthConclusionData?.fortuneStatus ?? 'SUPPORTED') as WealthDimensionStatus,
-    speculationStatus: (wealthConclusionData?.speculationStatus ?? 'SUPPORTED') as WealthDimensionStatus,
+    overallStatus: wealthConclusionData?.overallStatus ?? 'UNAVAILABLE',
+    accumulationStatus: wealthConclusionData?.accumulationStatus ?? 'UNAVAILABLE',
+    gainsStatus: wealthConclusionData?.gainsStatus ?? 'UNAVAILABLE',
+    fortuneStatus: wealthConclusionData?.fortuneStatus ?? 'UNAVAILABLE',
+    speculationStatus: wealthConclusionData?.speculationStatus ?? 'UNAVAILABLE',
+    dimensions: wealthConclusionData?.dimensions,
     dominantManifestations: wealthConclusionData?.dominantManifestations,
     headline: wealthConclusionData?.headline,
     statement: wealth.conclusion.statement,

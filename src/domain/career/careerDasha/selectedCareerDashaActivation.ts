@@ -62,6 +62,56 @@ import {
   buildSelectedCareerDashaCanonicalAnalysis
 } from './careerDashaIntegration';
 
+function sameSortedIds(left: readonly string[], right: readonly string[]): boolean {
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return sortedLeft.length === sortedRight.length &&
+    sortedLeft.every((id, index) => id === sortedRight[index]);
+}
+
+function hasCandidateScopedMechanismProvenance(
+  expression: CareerExpression,
+  candidate: CareerExpressionCanonicalCandidate,
+  mechanismCandidates: readonly CareerMechanismCandidate[]
+): boolean {
+  const provenance = expression.sourceMechanismProvenance;
+  if (!provenance || provenance.candidateId !== candidate.expressionId) return false;
+  if (!sameSortedIds(
+    provenance.mechanisms.map((mechanism) => mechanism.candidateId),
+    candidate.sourceMechanismIds
+  )) return false;
+
+  const mechanismById = new Map(
+    mechanismCandidates.map((mechanism) => [mechanism.candidateId, mechanism])
+  );
+  for (const owner of provenance.mechanisms) {
+    const mechanism = mechanismById.get(owner.candidateId);
+    if (!mechanism || owner.mechanismType !== mechanism.mechanismType ||
+      !sameSortedIds(owner.participantIds, mechanism.provenance.participantIds)) {
+      return false;
+    }
+  }
+
+  const expectedEvidence = candidate.evidence.map((item) => ({
+    evidenceId: item.evidenceId,
+    sourceMechanismId: item.sourceMechanismId,
+    sourceEvidenceIds: [...item.sourceEvidenceIds].sort(),
+    ruleId: item.ruleId,
+    role: item.role
+  })).sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
+  const actualEvidence = provenance.evidence.map((item) => ({
+    evidenceId: item.evidenceId,
+    sourceMechanismId: item.sourceMechanismId,
+    sourceEvidenceIds: [...item.sourceEvidenceIds].sort(),
+    ruleId: item.ruleId,
+    role: item.role
+  })).sort((left, right) => left.evidenceId.localeCompare(right.evidenceId));
+  return JSON.stringify(actualEvidence) === JSON.stringify(expectedEvidence) &&
+    expectedEvidence.every((item) =>
+      candidate.sourceMechanismIds.includes(item.sourceMechanismId)
+    );
+}
+
 /**
  * Expression activation row for selected Dasha period.
  *
@@ -441,6 +491,13 @@ export function buildSelectedCareerDashaActivation(params: {
     if (new Set(canonicalCandidateIds).size !== canonicalCandidateIds.length) {
       return { ok: false, error: 'DUPLICATE_CANONICAL_CANDIDATE_ID' };
     }
+    const mechanismCandidateIds = mechanismCandidates.map((candidate) => candidate.candidateId);
+    if (mechanismCandidateIds.some((id) => !id.trim() || id.trim() !== id)) {
+      return { ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' };
+    }
+    if (new Set(mechanismCandidateIds).size !== mechanismCandidateIds.length) {
+      return { ok: false, error: 'DUPLICATE_SOURCE_MECHANISM_ID' };
+    }
 
     for (const candidate of canonicalExpression.expressions) {
       const evidenceIds = candidate.evidence.map(evidence => evidence.evidenceId);
@@ -450,11 +507,19 @@ export function buildSelectedCareerDashaActivation(params: {
       if (new Set(evidenceIds).size !== evidenceIds.length) {
         return { ok: false, error: 'DUPLICATE_CANDIDATE_EVIDENCE_ID' };
       }
-      if (candidate.sourceMechanismIds.some(sourceMechanismId => sourceMechanismId.trim().length === 0)) {
+      if (candidate.sourceMechanismIds.length === 0 ||
+        candidate.sourceMechanismIds.some(sourceMechanismId =>
+          sourceMechanismId.trim().length === 0 || sourceMechanismId.trim() !== sourceMechanismId
+        )) {
         return { ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' };
       }
       if (new Set(candidate.sourceMechanismIds).size !== candidate.sourceMechanismIds.length) {
         return { ok: false, error: 'DUPLICATE_SOURCE_MECHANISM_ID' };
+      }
+      if (candidate.evidence.some((item) =>
+        !candidate.sourceMechanismIds.includes(item.sourceMechanismId)
+      )) {
+        return { ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' };
       }
     }
 
@@ -627,12 +692,11 @@ export function buildSelectedCareerDashaActivation(params: {
               const adaptedIds = [...expr.supportingEvidenceIds].sort();
               const hasExactEvidence = adaptedIds.length === candidateEvidenceIds.length &&
                 adaptedIds.every((id, index) => id === candidateEvidenceIds[index]);
-              const ownedMechanisms = [...(expr.sourceMechanismCandidateIds ?? [])].sort();
-              const candidateMechanisms = [...candidate.sourceMechanismIds].sort();
-              // Empty mechanism ownership cannot prove adapter provenance. Accepting the empty/absent pair
-              // would permit orphan adapter expressions, so both sides must name mechanism candidates.
-              const hasOwnedMechanisms = candidateMechanisms.length > 0 && ownedMechanisms.length === candidateMechanisms.length &&
-                ownedMechanisms.every((id, index) => id === candidateMechanisms[index]);
+              const hasOwnedMechanisms = hasCandidateScopedMechanismProvenance(
+                expr,
+                candidate,
+                scopedMechanismCandidates
+              );
               return hasExactEvidence && hasOwnedMechanisms;
             });
 

@@ -10,6 +10,7 @@ export interface AcceptanceGate {
 
 export interface GoldenAcceptanceReport {
   readonly gates: readonly AcceptanceGate[];
+  readonly surfaceGates: readonly AcceptanceGate[];
   readonly status: GateStatus;
   readonly differences: readonly ParityDifference[];
 }
@@ -40,6 +41,7 @@ export function buildGoldenAcceptanceReport(
     : gateStatus;
   return Object.freeze({
     gates: Object.freeze([...gates]),
+    surfaceGates: Object.freeze(gates.filter(gate => gate.name !== 'canonical')),
     status,
     differences: Object.freeze([...differences])
   });

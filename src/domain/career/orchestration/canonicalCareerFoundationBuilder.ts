@@ -84,7 +84,7 @@ export interface CanonicalCareerFoundationBuilderInput {
   };
   /**
    * Feature flag for enabling dispositor contexts.
-   * Default false - dispositor contexts remain deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE).
+   * Default false - contexts are not generated (DISPOSITOR_CONTEXTS_NOT_GENERATED).
    *
    * When true, the builder runs a two-pass orchestration:
    * - Pass 1: orchestrate with dispositorContexts: undefined to obtain resolvedMechanisms
@@ -230,7 +230,7 @@ export function buildCanonicalCareerFoundation(
     relevance,
     condition,
     networks: networks.networks,
-    // Dispositor contexts: deferred (ORCHESTRATION_DISPOSITOR_CONTEXTS_UNAVAILABLE)
+    // Dispositor contexts: not generated unless the two-pass refinement option is enabled.
     dispositorContexts: undefined,
     // 10H/10L: wired (passed when COMPLETE status)
     result10H: result10HOrchestratorInput,

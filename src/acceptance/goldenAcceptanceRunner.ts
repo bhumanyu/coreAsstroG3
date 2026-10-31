@@ -1,30 +1,28 @@
 import { assertConclusionInventory, assertParity } from './goldenAcceptanceAssertions';
 import { normalizeAcceptanceConclusion, normalizeAcceptanceSurface } from './goldenAcceptanceNormalizer';
 import { ACCEPTANCE_MISSING } from './goldenAcceptanceTypes';
-import type { AcceptanceConclusion, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference, SelectedPeriodAcceptanceProjection } from './goldenAcceptanceTypes';
-import { SURFACE_ALLOWED_DIFFERENCE_KINDS } from './goldenAcceptanceProductionHarness';
-import type { GoldenAcceptanceProjections } from './goldenAcceptanceProductionHarness';
+import type { AcceptanceConclusion, AcceptanceKnownGap, AcceptanceSurface, NormalizedAcceptanceConclusion, ParityDifference, SelectedPeriodAcceptanceProjection } from './goldenAcceptanceTypes';
+import { REQUIRED_SURFACES, SURFACE_ALLOWED_DIFFERENCE_KINDS } from './goldenAcceptanceProductionHarness';
+import type { GoldenAcceptanceProjections, RequiredSurfaceName } from './goldenAcceptanceProductionHarness';
 
 export interface GoldenAcceptancePipeline<D extends 'CAREER' | 'WEALTH' = 'CAREER' | 'WEALTH'> {
   readonly run: () => unknown;
   readonly collect: (productionResult: unknown) => GoldenAcceptanceProjections<D>;
+  readonly knownGaps: Readonly<Partial<Record<RequiredSurfaceName, AcceptanceKnownGap>>>;
 }
 
 /** Runs production once and projects every independently rendered surface from that same run. */
 export function runGoldenAcceptanceParity(
   pipeline: GoldenAcceptancePipeline,
   expected: NormalizedAcceptanceConclusion,
-  requiredSurfaces: readonly string[] = ['career-view-model', 'ai-context', 'reasoning-trace', 'json-export']
+  requiredSurfaces: readonly RequiredSurfaceName[] = REQUIRED_SURFACES[expected.domain]
 ): readonly ParityDifference[] {
   if (requiredSurfaces.length === 0) throw new Error('runGoldenAcceptanceParity requires at least one required surface');
   const productionResult = pipeline.run();
   const projections = pipeline.collect(productionResult);
   const surfaces: AcceptanceSurface[] = [];
   const differences: ParityDifference[] = [];
-  const names = [
-    ...requiredSurfaces,
-    ...Object.keys(projections).filter(name => !requiredSurfaces.includes(name)).sort()
-  ];
+  const names = [...requiredSurfaces];
   const projectionsByName = projections as unknown as Readonly<Record<string, AcceptanceConclusion
     | SelectedPeriodAcceptanceProjection
     | readonly AcceptanceConclusion[]
@@ -32,7 +30,10 @@ export function runGoldenAcceptanceParity(
     | undefined>>;
   for (const name of names) {
     const projection = projectionsByName[name];
-    const allowedDifferenceKinds: readonly ParityDifference['kind'][] = SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? [];
+    const allowedDifferenceKinds: readonly ParityDifference['kind'][] = [
+      ...(SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? []),
+      ...(pipeline.knownGaps[name]?.differenceKinds ?? [])
+    ];
     // Skip selected-period-ui as it's a SelectedPeriodAcceptanceProjection, not a conclusion
     if (name === 'selected-period-ui') continue;
     const conclusions: readonly (AcceptanceConclusion | undefined)[] = projection === undefined || projection === ACCEPTANCE_MISSING
@@ -52,7 +53,12 @@ export function runGoldenAcceptanceParity(
       surfaces.push(normalizeAcceptanceSurface(
         surfaceName,
         conclusion,
-        allowedDifferenceKinds
+        allowedDifferenceKinds,
+        {
+          externalEvidencePolicy: allowedDifferenceKinds.includes('EXTERNAL_EVIDENCE')
+            ? 'ALLOW_DECLARED'
+            : 'FAIL'
+        }
       ));
     });
   }

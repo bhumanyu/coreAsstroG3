@@ -12,6 +12,7 @@ import {
   createGoldenAcceptanceProductionPipeline,
   buildRequiredSurfaceGates,
   classifySurfaceGateStatus,
+  GOLDEN_ACCEPTANCE_SURFACE_STATUS_BASELINES,
   REQUIRED_SURFACES,
   resolveEvidenceIds,
   selectedPeriodDifferences,
@@ -105,7 +106,7 @@ describe('PR-8 golden acceptance contract', () => {
     ]));
   });
 
-  it('applies the external-evidence allowance without skipping provenance comparison', () => {
+  it('allows declared external evidence only on approved surfaces and still checks its provenance', () => {
     const externalProvenance = {
       evidenceId: 'EXTERNAL-EV',
       owner: 'WEALTH',
@@ -124,24 +125,16 @@ describe('PR-8 golden acceptance contract', () => {
       }],
       provenance: [externalProvenance]
     };
-    const expected = normalizeAcceptanceConclusion(externalConclusion);
-    const allowed = normalizeAcceptanceSurface('ai-context', externalConclusion, ['EXTERNAL_EVIDENCE']);
+    const expected = normalizeAcceptanceConclusion({ ...supported, evidence: [], provenance: [] });
+    const allowed = normalizeAcceptanceSurface('ai-context', externalConclusion, ['EXTERNAL_EVIDENCE'], {
+      evidenceContract: 'SURFACE_SPECIFIC',
+      externalEvidencePolicy: 'ALLOW_DECLARED'
+    });
     const required = normalizeAcceptanceSurface('canonical', externalConclusion);
 
     const allowedDifferences = assertParity(expected, [allowed]);
-    expect(allowedDifferences).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        kind: 'EXTERNAL_EVIDENCE',
-        actual: expect.objectContaining({
-          id: 'EXTERNAL-EV',
-          owner: 'WEALTH',
-          namespaceOwner: 'WEALTH',
-          provenance: externalProvenance,
-          resolvedProvenance: externalProvenance
-        })
-      })
-    ]));
-    expect(classifySurfaceGateStatus('ai-context', allowedDifferences)).toBe('BLOCKED');
+    expect(allowedDifferences).toEqual([]);
+    expect(classifySurfaceGateStatus('ai-context', allowedDifferences)).toBe('PASS');
     expect(assertParity(expected, [required])).toEqual(expect.arrayContaining([
       expect.objectContaining({
         kind: 'EXTERNAL_EVIDENCE',
@@ -156,7 +149,7 @@ describe('PR-8 golden acceptance contract', () => {
         provenance: [{ ...externalConclusion.provenance[0], owner: 'CAREER', ruleId: 'UNEXPECTED_RULE' }]
       })
     }])).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: 'EVIDENCE_MISMATCH', path: '$.evidence' }),
+      expect.objectContaining({ kind: 'EXTERNAL_OWNER_MISMATCH', path: '$.evidence' }),
       expect.objectContaining({ kind: 'PROVENANCE_MISMATCH', path: '$.provenance' })
     ]));
   });
@@ -180,11 +173,14 @@ describe('PR-8 golden acceptance contract', () => {
         resolvedProvenance
       }],
       provenance: [resolvedProvenance]
-    }, ['EXTERNAL_EVIDENCE']);
+    }, ['EXTERNAL_EVIDENCE'], {
+      evidenceContract: 'SURFACE_SPECIFIC',
+      externalEvidencePolicy: 'ALLOW_DECLARED'
+    });
     const wrongOwnerDifferences = assertParity(expected, [wrongOwner]);
     expect(classifySurfaceGateStatus('ai-context', wrongOwnerDifferences)).toBe('FAIL');
     expect(wrongOwnerDifferences).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: 'OWNER_MISMATCH' })
+      expect.objectContaining({ kind: 'EXTERNAL_OWNER_MISMATCH' })
     ]));
 
     const danglingProvenance = normalizeAcceptanceSurface('ai-context', {
@@ -197,11 +193,14 @@ describe('PR-8 golden acceptance contract', () => {
         resolvedProvenance
       }],
       provenance: []
-    }, ['EXTERNAL_EVIDENCE']);
+    }, ['EXTERNAL_EVIDENCE'], {
+      evidenceContract: 'SURFACE_SPECIFIC',
+      externalEvidencePolicy: 'ALLOW_DECLARED'
+    });
     const danglingDifferences = assertParity(expected, [danglingProvenance]);
     expect(classifySurfaceGateStatus('ai-context', danglingDifferences)).toBe('FAIL');
     expect(danglingDifferences).toEqual(expect.arrayContaining([
-      expect.objectContaining({ kind: 'DANGLING_REFERENCE', path: '$.provenance' })
+      expect.objectContaining({ kind: 'EXTERNAL_DANGLING_REFERENCE', path: '$.provenance' })
     ]));
   });
 
@@ -232,6 +231,42 @@ describe('PR-8 golden acceptance contract', () => {
       actualOwner: 'WEALTH'
     });
     expect(resolutions.get('DUPLICATE-EXTERNAL')).toEqual({ resolution: 'AMBIGUOUS' });
+  });
+
+  it('keeps selected-period available evidence in its declared external namespace', () => {
+    const record = {
+      id: 'SELECTED-EXTERNAL-EV',
+      domain: 'CAREER',
+      source: 'SELECTED_PERIOD_SOURCE',
+      ruleId: 'SELECTED_PERIOD_RULE'
+    };
+    const resolvedProvenance = {
+      evidenceId: record.id,
+      owner: 'CAREER',
+      source: record.source,
+      ruleId: record.ruleId,
+      occurrence: record.id
+    };
+    const differences = selectedPeriodDifferences('CAREER', {
+      ...SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE,
+      evidence: [{
+        id: record.id,
+        owner: 'CAREER',
+        namespaceOwner: 'CAREER',
+        resolution: 'EXTERNAL',
+        resolvedProvenance
+      }],
+      provenance: [resolvedProvenance]
+    }, [], [record], []);
+
+    expect(differences).toContainEqual(expect.objectContaining({
+      kind: 'EXTERNAL_EVIDENCE',
+      actual: record.id
+    }));
+    expect(differences).not.toContainEqual(expect.objectContaining({
+      kind: 'OWNER_MISMATCH',
+      actual: record.id
+    }));
   });
 
   it('compares conclusion kinds by surface contract and still checks presentation status', () => {
@@ -320,12 +355,13 @@ describe('PR-8 golden acceptance contract', () => {
     const expected = normalizeAcceptanceConclusion(supported);
     const differences = runGoldenAcceptanceParity({
       run: () => ({}),
+      knownGaps: Object.freeze({}),
       collect: () => ({
-        surface: [
+        'career-ui': [
           supported,
-          { ...supported, status: 'UNSUPPORTED' }
+          { ...supported, status: 'UNSUPPORTED' },
+          { ...supported, subjectId: 'candidate:C2' }
         ],
-        'career-ui': ACCEPTANCE_MISSING,
         'wealth-ui': ACCEPTANCE_MISSING,
         'ai-context': ACCEPTANCE_MISSING,
         'product-ai-context': ACCEPTANCE_MISSING,
@@ -341,7 +377,7 @@ describe('PR-8 golden acceptance contract', () => {
           provenance: []
         }
       })
-    }, expected, ['surface']);
+    }, expected, ['career-ui']);
     expect(differences.map(item => item.kind)).toContain('CONFLICT');
     expect(differences.map(item => item.kind)).toContain('VALUE_MISMATCH');
   });
@@ -469,6 +505,11 @@ describe('PR-8 golden acceptance contract', () => {
     const result = pipeline.run();
     const projections = pipeline.collect(result);
 
+    const uiSurface = domain === 'CAREER' ? 'career-ui' : 'wealth-ui';
+    const expectedUiStatus = domain === 'CAREER'
+      ? GOLDEN_ACCEPTANCE_SURFACE_STATUS_BASELINES.CAREER['career-ui']
+      : GOLDEN_ACCEPTANCE_SURFACE_STATUS_BASELINES.WEALTH['wealth-ui'];
+    expect(projectionAt(projections, uiSurface)).toMatchObject({ status: expectedUiStatus });
     expect(projections.canonical).toBeDefined();
     expect(projectionAt(projections, `${domain.toLowerCase()}-ui`)).toBeDefined();
     expect(projections['ai-context']).toBeDefined();
@@ -627,8 +668,6 @@ describe('PR-8 golden acceptance contract', () => {
       { name: `${domain.toLowerCase()}-ui`, status: 'PASS' },
       { name: 'ai-context', status: 'PASS' },
       { name: 'product-ai-context', status: 'PASS' },
-      { name: 'reasoning-trace', status: 'FAIL' },
-      { name: 'json-export', status: 'FAIL' },
       { name: 'selected-period-ui', status: 'PASS' }
     ];
 
@@ -642,7 +681,32 @@ describe('PR-8 golden acceptance contract', () => {
       }
     }
 
-    expect(gate.report.status).toBe('FAIL');
+    const currentBlockingDifferenceSets = {
+      'reasoning-trace': [
+        { kind: 'EVIDENCE_MISMATCH', path: '$.evidence' },
+        { kind: 'PROVENANCE_MISMATCH', path: '$.provenance' }
+      ],
+      'json-export': [
+        { kind: 'STATUS_MISMATCH', path: '$.status' },
+        { kind: 'EVIDENCE_MISMATCH', path: '$.evidence' },
+        { kind: 'PROVENANCE_MISMATCH', path: '$.provenance' }
+      ]
+    } as const;
+    for (const [name, expectedDifferences] of Object.entries(currentBlockingDifferenceSets)) {
+      const actualDifferences = gate.surfaceDifferences
+        .filter(difference => difference.surface === name)
+        .map(({ kind, path }) => ({ kind, path }));
+      const surfaceStatus = gate.surfaceGates.find(surface => surface.name === name)?.status;
+      if (actualDifferences.length === 0) {
+        expect(surfaceStatus, `${domain} ${name}`).toBe('PASS');
+      } else {
+        expect(actualDifferences, `${domain} ${name} difference set`).toEqual(expectedDifferences);
+        expect(surfaceStatus, `${domain} ${name}`).toBe('FAIL');
+      }
+    }
+
+    expect(gate.report.surfaceGates).toEqual(gate.surfaceGates);
+    expect(gate.report.status).toBe(gate.surfaceDifferences.length === 0 ? 'PASS' : 'FAIL');
     expect(gate.selectedPeriod?.scope).toBe('SELECTED_PERIOD');
   });
 
@@ -696,7 +760,7 @@ describe('PR-8 golden acceptance contract', () => {
         { id: 'TRACE-EXTRA', resolution: 'RESOLVED' }
       ],
       reason: 'trace-only resolved evidence'
-    }], false, ['CANONICAL'])).toBe('BLOCKED');
+    }], false, ['CANONICAL'], ['EVIDENCE_MISMATCH'])).toBe('BLOCKED');
     const indexedTraceDifference = {
       surface: 'reasoning-trace[0]',
       kind: 'EVIDENCE_MISMATCH' as const,
@@ -712,7 +776,13 @@ describe('PR-8 golden acceptance contract', () => {
       ['reasoning-trace'],
       { 'reasoning-trace': [] },
       [indexedTraceDifference],
-      ['CANONICAL']
+      ['CANONICAL'],
+      {
+        'reasoning-trace': {
+          differenceKinds: ['EVIDENCE_MISMATCH'],
+          rationale: 'Only resolved trace-only references are blocked.'
+        }
+      }
     );
     expect(indexedTraceGates[0].status).toBe('BLOCKED');
     expect(buildGoldenAcceptanceReport(indexedTraceGates, [indexedTraceDifference], true).status).toBe('BLOCKED');
@@ -726,7 +796,29 @@ describe('PR-8 golden acceptance contract', () => {
         { id: 'TRACE-EXTRA', resolution: 'DANGLING' }
       ],
       reason: 'trace-only dangling evidence'
-    }], false, ['CANONICAL'])).toBe('FAIL');
+    }], false, ['CANONICAL'], ['EVIDENCE_MISMATCH'])).toBe('FAIL');
+    const exportResolutionOmission = {
+      surface: 'json-export',
+      kind: 'EVIDENCE_MISMATCH' as const,
+      path: '$.evidence',
+      expected: [{ id: 'E1', owner: 'CAREER', resolution: 'RESOLVED' }],
+      actual: [{ id: 'E1', owner: 'CAREER' }],
+      reason: 'JSON export omits the resolver annotation.'
+    };
+    expect(classifySurfaceGateStatus(
+      'json-export',
+      [exportResolutionOmission],
+      false,
+      [],
+      ['EVIDENCE_MISMATCH']
+    )).toBe('BLOCKED');
+    expect(classifySurfaceGateStatus(
+      'json-export',
+      [difference('json-export', 'STATUS_MISMATCH')],
+      false,
+      [],
+      ['EVIDENCE_MISMATCH', 'PROVENANCE_MISMATCH']
+    )).toBe('FAIL');
     const selectedPeriodGate = buildRequiredSurfaceGates(
       ['selected-period-ui'],
       { 'selected-period-ui': {} },
@@ -790,7 +882,7 @@ describe('PR-8 golden acceptance contract', () => {
       .toEqual(SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.wealthDimensions);
     expect(selectedPeriod.interval).toEqual(SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.interval);
     expect(selectedPeriod.temporalRelation).toBe(SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE.temporalRelation);
-    expect(['PAST', 'CURRENT', 'FUTURE']).toContain(selectedPeriod.temporalRelation);
+    expect(['PAST', 'CURRENT', 'FUTURE', 'UNKNOWN']).toContain(selectedPeriod.temporalRelation);
     expect(Array.isArray(selectedPeriod.evidence)).toBe(true);
     expect(Array.isArray(selectedPeriod.provenance)).toBe(true);
   });
@@ -810,7 +902,7 @@ describe('PR-8 golden acceptance contract', () => {
     });
     expect(selectedPeriod.interval).toEqual(SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.interval);
     expect(selectedPeriod.temporalRelation).toBe(SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE.temporalRelation);
-    expect(['PAST', 'CURRENT', 'FUTURE']).toContain(selectedPeriod.temporalRelation);
+    expect(['PAST', 'CURRENT', 'FUTURE', 'UNKNOWN']).toContain(selectedPeriod.temporalRelation);
     expect(Array.isArray(selectedPeriod.evidence)).toBe(true);
     expect(Array.isArray(selectedPeriod.provenance)).toBe(true);
   });
@@ -818,19 +910,27 @@ describe('PR-8 golden acceptance contract', () => {
   it('fails selected-period projections with dangling promise evidence IDs', () => {
     const pipeline = createGoldenAcceptanceProductionPipeline('WEALTH');
     const productionResult = pipeline.run() as import('./goldenAcceptanceProductionHarness').GoldenAcceptanceProductionResult;
-    const selectedPeriod = productionResult.selectedPeriod;
-    if (!selectedPeriod) throw new Error('Production fixture emitted no selected-period synthesis.');
+    const selectedPeriod = productionResult.productAnalysis.selectedPeriod;
+    if (!selectedPeriod || selectedPeriod.status !== 'OK') {
+      throw new Error('Production fixture emitted no product selected-period synthesis.');
+    }
     const corruptedResult = {
       ...productionResult,
-      selectedPeriod: {
-        ...selectedPeriod,
-        wealth: {
-          ...selectedPeriod.wealth,
-          dimensions: {
-            ...selectedPeriod.wealth.dimensions,
-            GAINS: {
-              ...selectedPeriod.wealth.dimensions.GAINS,
-              promiseEvidenceIds: ['DANGLING-PROMISE-EVIDENCE']
+      productAnalysis: {
+        ...productionResult.productAnalysis,
+        selectedPeriod: {
+          ...selectedPeriod,
+          synthesis: {
+            ...selectedPeriod.synthesis,
+            wealth: {
+              ...selectedPeriod.synthesis.wealth,
+              dimensions: {
+                ...selectedPeriod.synthesis.wealth.dimensions,
+                  GAINS: {
+                    ...selectedPeriod.synthesis.wealth.dimensions.GAINS,
+                    promiseEvidenceIds: ['DANGLING-PROMISE-EVIDENCE']
+                  }
+              }
             }
           }
         }
@@ -899,6 +999,7 @@ describe('PR-8 golden acceptance contract', () => {
       { name: 'owner-gated-mechanisms', status: 'BLOCKED' }
     ]);
     expect(report.status).toBe('BLOCKED');
+    expect(report.surfaceGates).toEqual(report.gates);
   });
 
   it('reports honest coverage for blocked adapter surfaces', () => {

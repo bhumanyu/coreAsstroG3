@@ -184,4 +184,22 @@ describe('adaptCareerMechanismRefinements', () => {
       expect.arrayContaining(['DUPLICATE_CANDIDATE_ID', 'DUPLICATE_REFINEMENT'])
     );
   });
+
+  it('keeps a valid candidate when a sibling refinement produces diagnostics', () => {
+    const source = sourceCandidate();
+    const unknownRefinement = refinement({
+      candidateId: 'UNKNOWN_CANDIDATE'
+    });
+    const result = adaptCareerMechanismRefinements(
+      [source],
+      [refinement(), unknownRefinement]
+    );
+
+    expect(result.candidates.map(candidate => candidate.candidateId))
+      .toEqual(['CANDIDATE_ACTUAL']);
+    expect(result.diagnostics).toContainEqual(expect.objectContaining({
+      code: 'UNKNOWN_CANDIDATE',
+      candidateId: 'UNKNOWN_CANDIDATE'
+    }));
+  });
 });

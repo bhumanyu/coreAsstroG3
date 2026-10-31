@@ -16,6 +16,7 @@ import {
 import { Planet } from '../../types';
 import type { CareerManifestationSynthesis } from '../../domain/career/manifestation/careerManifestationSynthesisTypes';
 import type { WealthManifestationSynthesis } from '../../domain/wealth/manifestation/wealthManifestationTypes';
+import type { WealthConclusionData } from '../../domain/wealth/wealthTypes';
 
 describe('lifeAnalysisMapper & CW-04 View Models', () => {
   const mockCareerManifestations: readonly CareerManifestationSynthesis[] = [
@@ -99,6 +100,58 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
     },
     summary: 'Wealth synthesis across all four classical dimensions.'
   };
+  const mockWealthConclusionData: WealthConclusionData = {
+    overallStatus: 'MIXED',
+    accumulationStatus: 'CHALLENGED',
+    gainsStatus: 'SUPPORTED',
+    fortuneStatus: 'INSUFFICIENT_DATA',
+    speculationStatus: 'STRONGLY_SUPPORTED',
+    mainStrengths: [],
+    mainChallenges: [],
+    d2Relationship: 'PARTIALLY_CONFIRMS',
+    accumulationDashaEffect: 'INSUFFICIENT_DATA',
+    gainsDashaEffect: 'INSUFFICIENT_DATA',
+    fortuneDashaEffect: 'INSUFFICIENT_DATA',
+    speculationDashaEffect: 'INSUFFICIENT_DATA',
+    dominantManifestations: [],
+    headline: 'Wealth status fixture',
+    supportingSourceIds: ['SUPPORT-1'],
+    challengingSourceIds: ['CHALLENGE-1'],
+    dimensions: [
+      {
+        dimension: 'ACCUMULATION',
+        status: 'CHALLENGED',
+        supportingEvidenceIds: ['SUPPORT-1'],
+        challengingEvidenceIds: ['CHALLENGE-1'],
+        challengingEvidenceAttribution: 'AVAILABLE',
+        dashaEffect: 'INSUFFICIENT_DATA'
+      },
+      {
+        dimension: 'GAINS',
+        status: 'SUPPORTED',
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        challengingEvidenceAttribution: 'AVAILABLE',
+        dashaEffect: 'INSUFFICIENT_DATA'
+      },
+      {
+        dimension: 'FORTUNE',
+        status: 'INSUFFICIENT_DATA',
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        challengingEvidenceAttribution: 'AVAILABLE',
+        dashaEffect: 'INSUFFICIENT_DATA'
+      },
+      {
+        dimension: 'SPECULATION',
+        status: 'STRONGLY_SUPPORTED',
+        supportingEvidenceIds: [],
+        challengingEvidenceIds: [],
+        challengingEvidenceAttribution: 'AVAILABLE',
+        dashaEffect: 'INSUFFICIENT_DATA'
+      }
+    ]
+  };
 
   it('correctly maps careerManifestationSynthesis into CareerDetailViewModel', () => {
     const careerInterp: DomainInterpretation = createDomainInterpretation({
@@ -131,6 +184,12 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
 
     expect(viewModel.careerDetail?.manifestationSynthesis).toBeDefined();
     expect(viewModel.careerDetail?.manifestationSynthesis).toEqual(mockCareerManifestations);
+    expect(viewModel.wealthDetail?.d2Relationship).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.overallStatus).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.accumulationStatus).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.gainsStatus).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.fortuneStatus).toBe('UNAVAILABLE');
+    expect(viewModel.wealthDetail?.speculationStatus).toBe('UNAVAILABLE');
   });
 
   it('correctly maps wealthManifestationSynthesis into WealthDetailViewModel', () => {
@@ -155,6 +214,7 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
       conflicts: [],
       conclusion: createDomainConclusion({ strength: 'STRONG', confidence: 'HIGH', statement: 'Strong wealth' }),
       conclusionData: {
+        ...mockWealthConclusionData,
         wealthManifestationSynthesis: mockWealthManifestations
       }
     });
@@ -164,6 +224,14 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
 
     expect(viewModel.wealthDetail?.manifestationSynthesis).toBeDefined();
     expect(viewModel.wealthDetail?.manifestationSynthesis).toEqual(mockWealthManifestations);
+    expect(viewModel.wealthDetail?.d2Relationship).toBe('PARTIALLY_CONFIRMS');
+    expect(viewModel.wealthDetail?.overallStatus).toBe('MIXED');
+    expect(viewModel.wealthDetail?.accumulationStatus).toBe('CHALLENGED');
+    expect(viewModel.wealthDetail?.gainsStatus).toBe('SUPPORTED');
+    expect(viewModel.wealthDetail?.fortuneStatus).toBe('INSUFFICIENT_DATA');
+    expect(viewModel.wealthDetail?.speculationStatus).toBe('STRONGLY_SUPPORTED');
+    expect(viewModel.wealthDetail?.dimensions?.[0].challengingEvidenceIds)
+      .toEqual(['CHALLENGE-1']);
   });
 
   it('renders CW-04 synthesis in CareerAnalysisCard and hides legacy dominant manifestations block', () => {
@@ -234,4 +302,3 @@ describe('lifeAnalysisMapper & CW-04 View Models', () => {
     expect(screen.getByText('Speculative investments lack natal backing.')).toBeInTheDocument();
   });
 });
-

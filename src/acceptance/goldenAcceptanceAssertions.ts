@@ -67,24 +67,31 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
     if (identity(conclusion) !== identity(expected)) {
       differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.subject', expected: identity(expected), actual: identity(conclusion), reason: 'Conclusion identity differs from the canonical fixture.' });
     }
-    const invalidSurfaceConclusionKind = conclusion.conclusionKind !== undefined
-      && surface.expectedConclusionKind !== undefined
-      && conclusion.conclusionKind !== surface.expectedConclusionKind;
-    const invalidCanonicalConclusionKind = surface.expectedConclusionKind === undefined
-      && surface.compareConclusionKind !== false
-      && conclusion.conclusionKind === 'SYNTHESIS_FINAL'
-      && conclusion.conclusionKind !== expected.conclusionKind;
-    if (invalidSurfaceConclusionKind || invalidCanonicalConclusionKind) {
+    const compareConclusionKind = surface.expectedConclusionKind !== undefined
+      || surface.compareConclusionKind !== false;
+    const expectedConclusionKind = surface.expectedConclusionKind ?? expected.conclusionKind;
+    if (compareConclusionKind && conclusion.conclusionKind !== expectedConclusionKind) {
       differences.push({
         surface: surface.name,
         kind: 'VALUE_MISMATCH',
         path: '$.conclusionKind',
-        expected: surface.expectedConclusionKind ?? expected.conclusionKind,
+        expected: expectedConclusionKind,
         actual: conclusion.conclusionKind,
         reason: 'Conclusion kind does not match the surface contract.'
       });
     }
-    if (surface.compareStatus !== false && conclusion.status !== expected.status) {
+    if (surface.expectedStatus !== undefined && conclusion.status !== surface.expectedStatus) {
+      differences.push({
+        surface: surface.name,
+        kind: 'STATUS_MISMATCH',
+        path: '$.status',
+        expected: surface.expectedStatus,
+        actual: conclusion.status,
+        reason: 'Native conclusion status differs from the approved surface baseline.'
+      });
+    } else if (surface.expectedStatus === undefined
+      && surface.compareStatus !== false
+      && conclusion.status !== expected.status) {
       differences.push({ surface: surface.name, kind: 'STATUS_MISMATCH', path: '$.status', expected: expected.status, actual: conclusion.status, reason: 'Native conclusion status differs.' });
     }
 
@@ -122,7 +129,7 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
         if (evidence.owner !== evidence.namespaceOwner) {
           differences.push({
             surface: surface.name,
-            kind: 'OWNER_MISMATCH',
+            kind: 'EXTERNAL_OWNER_MISMATCH',
             path: '$.evidence',
             actual: evidence.id,
             expected: evidence.namespaceOwner,
@@ -133,7 +140,7 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
         if (externalProvenance.length === 0) {
           differences.push({
             surface: surface.name,
-            kind: 'DANGLING_REFERENCE',
+            kind: 'EXTERNAL_DANGLING_REFERENCE',
             path: '$.provenance',
             actual: evidence.id,
             reason: `External evidence ${evidence.id} has no provenance reference.`
@@ -153,7 +160,7 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
           differences.push({
             surface: surface.name,
             kind: externalProvenance[0].owner !== evidence.owner
-              ? 'OWNER_MISMATCH'
+              ? 'EXTERNAL_OWNER_MISMATCH'
               : 'PROVENANCE_MISMATCH',
             path: '$.provenance',
             expected: evidence.resolvedProvenance,
@@ -161,19 +168,21 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
             reason: `External evidence ${evidence.id} provenance is inconsistent with its resolved record.`
           });
         }
-        differences.push({
-          surface: surface.name,
-          kind: 'EXTERNAL_EVIDENCE',
-          path: '$.evidence',
-          actual: {
-            id: evidence.id,
-            owner: evidence.owner,
-            namespaceOwner: evidence.namespaceOwner,
-            provenance: externalProvenance.length === 1 ? externalProvenance[0] : undefined,
-            resolvedProvenance: evidence.resolvedProvenance
-          },
-          reason: `Evidence ID ${evidence.id} resolves only in a declared external namespace.`
-        });
+        if (surface.externalEvidencePolicy !== 'ALLOW_DECLARED') {
+          differences.push({
+            surface: surface.name,
+            kind: 'EXTERNAL_EVIDENCE',
+            path: '$.evidence',
+            actual: {
+              id: evidence.id,
+              owner: evidence.owner,
+              namespaceOwner: evidence.namespaceOwner,
+              provenance: externalProvenance.length === 1 ? externalProvenance[0] : undefined,
+              resolvedProvenance: evidence.resolvedProvenance
+            },
+            reason: `Evidence ID ${evidence.id} resolves only in a declared external namespace.`
+          });
+        }
       }
     }
 

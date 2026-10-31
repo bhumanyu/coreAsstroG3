@@ -86,8 +86,10 @@ export function normalizeAcceptanceSurface(
   allowedDifferenceKinds: readonly ParityDifference['kind'][] = [],
   comparison: {
     readonly compareStatus?: boolean;
+    readonly expectedStatus?: string;
     readonly compareConclusionKind?: boolean;
     readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
+    readonly externalEvidencePolicy?: 'ALLOW_DECLARED' | 'FAIL';
     readonly expectedConclusionKind?: AcceptanceConclusion['conclusionKind'];
   } = {}
 ): {
@@ -96,8 +98,10 @@ export function normalizeAcceptanceSurface(
   readonly allowedDifferenceKinds: readonly ParityDifference['kind'][];
   readonly rawEvidence?: AcceptanceConclusion['evidence'];
   readonly compareStatus?: boolean;
+  readonly expectedStatus?: string;
   readonly compareConclusionKind?: boolean;
   readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
+  readonly externalEvidencePolicy?: 'ALLOW_DECLARED' | 'FAIL';
   readonly expectedConclusionKind?: AcceptanceConclusion['conclusionKind'];
 } {
   return Object.freeze({

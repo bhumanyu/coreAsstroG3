@@ -70,7 +70,7 @@ export interface SelectedPeriodAcceptanceProjection {
     readonly start: string;
     readonly end: string;
   };
-  readonly temporalRelation?: 'PAST' | 'CURRENT' | 'FUTURE';
+  readonly temporalRelation?: 'PAST' | 'CURRENT' | 'FUTURE' | 'UNKNOWN';
 }
 
 export interface NormalizedAcceptanceConclusion {
@@ -90,14 +90,21 @@ export interface AcceptanceSurface {
   readonly rawEvidence?: readonly AcceptanceEvidence[];
   readonly allowedDifferenceKinds?: readonly ParityDifference['kind'][];
   readonly compareStatus?: boolean;
+  readonly expectedStatus?: string;
   readonly compareConclusionKind?: boolean;
   readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
+  readonly externalEvidencePolicy?: 'ALLOW_DECLARED' | 'FAIL';
   readonly expectedConclusionKind?: AcceptanceConclusion['conclusionKind'];
+}
+
+export interface AcceptanceKnownGap {
+  readonly differenceKinds: readonly ParityDifference['kind'][];
+  readonly rationale: string;
 }
 
 export interface ParityDifference {
   readonly surface: string;
-  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'DUPLICATE_EVIDENCE' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH' | 'EXTERNAL_EVIDENCE' | 'EVIDENCE_MISMATCH' | 'PROVENANCE_MISMATCH' | 'STATUS_MISMATCH' | 'TEMPORAL_MISMATCH';
+  readonly kind: 'VALUE_MISMATCH' | 'MISSING' | 'EXTRA' | 'DUPLICATE_CONCLUSION' | 'DUPLICATE_EVIDENCE' | 'CONFLICT' | 'DANGLING_REFERENCE' | 'AMBIGUOUS_EVIDENCE' | 'OWNER_MISMATCH' | 'EXTERNAL_EVIDENCE' | 'EXTERNAL_OWNER_MISMATCH' | 'EXTERNAL_DANGLING_REFERENCE' | 'EVIDENCE_MISMATCH' | 'PROVENANCE_MISMATCH' | 'STATUS_MISMATCH' | 'TEMPORAL_MISMATCH';
   readonly path: string;
   readonly expected?: unknown;
   readonly actual?: unknown;

@@ -50,6 +50,36 @@ describe('DefaultCareerDispositorContextFactory provenance contract', () => {
     expect(contexts[0].sufficientData).toBe(false);
   });
 
+  it('requires participant-matched evidence and a non-insufficient chain outcome', () => {
+    const withEvidence = candidate({
+      evidence: [{
+        evidenceId: 'SUN_EVIDENCE',
+        participantIds: ['PLANET:SUN']
+      }]
+    });
+    const availableContexts = defaultCareerDispositorContextFactory.create(
+      withEvidence,
+      engine,
+      horoscope
+    );
+    expect(availableContexts[0].sourceEvidenceIds).toEqual(['SUN_EVIDENCE']);
+    expect(availableContexts[0].sufficientData).toBe(true);
+
+    const insufficientEngine = {
+      resolve: (planet: Planet) => ({
+        ...engine.resolve(planet),
+        outcome: 'INSUFFICIENT_DATA' as const
+      })
+    };
+    const insufficientContexts = defaultCareerDispositorContextFactory.create(
+      withEvidence,
+      insufficientEngine,
+      horoscope
+    );
+    expect(insufficientContexts[0].sourceEvidenceIds).toEqual(['SUN_EVIDENCE']);
+    expect(insufficientContexts[0].sufficientData).toBe(false);
+  });
+
   it('rejects malformed participant IDs with a candidate-scoped identity error', () => {
     expect(() => defaultCareerDispositorContextFactory.create(candidate({
       provenance: { participantIds: ['PLANET:PLUTO', 'SUN'] }

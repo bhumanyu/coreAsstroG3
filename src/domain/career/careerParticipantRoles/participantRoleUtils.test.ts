@@ -3,6 +3,10 @@ import { parseParticipantId } from './participantRoleUtils';
 
 describe('parseParticipantId', () => {
   it.each([
+    '',
+    'planet:SUN',
+    ' PLANET:SUN',
+    'PLANET:SUN:EXTRA',
     'PLANET:SUN ',
     'PLANET: SUN',
     'PLANET:',

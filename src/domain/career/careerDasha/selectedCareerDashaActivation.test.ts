@@ -4750,7 +4750,8 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
   describe('boundary mechanism ownership validation', () => {
     const makeCanonicalCandidate = (
       expressionId: string,
-      sourceMechanismIds: readonly string[]
+      sourceMechanismIds: readonly string[],
+      evidence: CareerExpressionCanonicalCandidate['evidence'] = Object.freeze([])
     ): CareerExpressionCanonicalCandidate => Object.freeze({
       expressionId,
       expressionType: 'LEADERSHIP_EXPRESSION',
@@ -4758,7 +4759,7 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       mechanismTypes: Object.freeze(['AUTHORITY'] as CareerMechanismType[]),
       status: 'CANDIDATE',
       pathway: 'PRIMARY' as CareerMechanismPathway,
-      evidence: Object.freeze([]),
+      evidence: Object.freeze([...evidence]),
       provenance: Object.freeze({
         mechanismIds: Object.freeze([...sourceMechanismIds]),
         patternIds: Object.freeze([]),
@@ -4818,27 +4819,13 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       expect(result).toEqual({ ok: false, error: 'DUPLICATE_SOURCE_MECHANISM_ID' });
     });
 
-    it('rejects empty mechanism ownership instead of accepting empty provenance', () => {
+    it('rejects empty source mechanism IDs at the canonical boundary', () => {
       const candidate = makeCanonicalCandidate('CANDIDATE-1', []);
-      const expression = adaptMechanismExpressionToLegacy(
-        makeResult([candidate]),
-        Object.freeze([])
-      ).expressions[0];
-      expect(expression.sourceMechanismCandidateIds).toEqual([]);
-      const mechanismCandidate: CareerMechanismCandidate = Object.freeze({
-        candidateId: 'MECH-OTHER', patternId: 'PATTERN-OTHER', mechanismType: 'AUTHORITY' as CareerMechanismType,
-        pathway: 'PRIMARY' as CareerMechanismPathway, evidence: Object.freeze([]),
-        provenance: Object.freeze({ patternIds: Object.freeze([]), relationshipIds: Object.freeze([]), participantIds: Object.freeze([]), evidenceIds: Object.freeze([]), sourceStages: Object.freeze([]) }),
-        explanation: 'Unrelated mechanism'
-      });
       const result = buildSelectedCareerDashaActivation({
         horoscope: makeHoroscope(), natal: makeMinimalNatalAnalysis(), expression: makeExpressionAnalysisWithLinkedEvidence(),
-        selectedPeriod: makeSelectedPeriod(), canonicalExpression: makeResult([candidate]), mechanismCandidates: Object.freeze([mechanismCandidate])
+        selectedPeriod: makeSelectedPeriod(), canonicalExpression: makeResult([candidate]), mechanismCandidates: Object.freeze([])
       });
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.value.candidateCoverage[0].representationStatus).toBe('UNRESOLVED');
-      }
+      expect(result).toEqual({ ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' });
     });
 
     it('emits sorted frozen structured mechanism provenance in both adapter paths', () => {
@@ -4874,8 +4861,121 @@ describe('PBA-04: Selected Career Dasha Activation', () => {
       const canonicalExpression = adaptMechanismExpressionToLegacy(canonicalResult, mechanismCandidates).expressions[0];
       expect(legacyExpression.sourceMechanismCandidateIds).toEqual(['MECH-1', 'MECH-2']);
       expect(canonicalExpression.sourceMechanismCandidateIds).toEqual(['MECH-1', 'MECH-2']);
+      expect(legacyExpression.sourceMechanismProvenance?.candidateId).toBe('LEGACY-1');
+      expect(legacyExpression.sourceMechanismProvenance?.mechanisms.map((item) => item.candidateId))
+        .toEqual(['MECH-1', 'MECH-2']);
+      expect(canonicalExpression.sourceMechanismProvenance?.candidateId).toBe('CANONICAL-1');
+      expect(canonicalExpression.sourceMechanismProvenance?.mechanisms.map((item) => item.candidateId))
+        .toEqual(['MECH-1', 'MECH-2']);
       expect(Object.isFrozen(legacyExpression.sourceMechanismCandidateIds)).toBe(true);
       expect(Object.isFrozen(canonicalExpression.sourceMechanismCandidateIds)).toBe(true);
+    });
+
+    it('rejects cross-candidate evidence ownership and duplicate mechanism candidates', () => {
+      const evidenceFromSecondMechanism = Object.freeze({
+        evidenceId: 'EVIDENCE-M2',
+        sourceMechanismId: 'MECH-2',
+        sourceEvidenceIds: Object.freeze(['SOURCE-M2']),
+        ruleId: 'RULE-M2',
+        role: 'ESTABLISHING' as const
+      });
+      const candidateA = makeCanonicalCandidate('CANDIDATE-A', ['MECH-1'], [
+        evidenceFromSecondMechanism
+      ]);
+      const candidateB = makeCanonicalCandidate('CANDIDATE-B', ['MECH-2'], [
+        evidenceFromSecondMechanism
+      ]);
+      const mechanism = (candidateId: string): CareerMechanismCandidate => Object.freeze({
+        candidateId,
+        patternId: `PATTERN-${candidateId}`,
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze([]),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: `Mechanism ${candidateId}`
+      });
+      const result = buildSelectedCareerDashaActivation({
+        horoscope: makeHoroscope(),
+        natal: makeMinimalNatalAnalysis(),
+        expression: makeExpressionAnalysisWithLinkedEvidence(),
+        selectedPeriod: makeSelectedPeriod(),
+        canonicalExpression: makeResult([candidateA, candidateB]),
+        mechanismCandidates: Object.freeze([mechanism('MECH-1'), mechanism('MECH-2')])
+      });
+      expect(result).toEqual({ ok: false, error: 'INVALID_SOURCE_MECHANISM_ID' });
+
+      const validCandidate = makeCanonicalCandidate('CANDIDATE-C', ['MECH-1']);
+      const duplicateMechanismResult = buildSelectedCareerDashaActivation({
+        horoscope: makeHoroscope(),
+        natal: makeMinimalNatalAnalysis(),
+        expression: makeExpressionAnalysisWithLinkedEvidence(),
+        selectedPeriod: makeSelectedPeriod(),
+        canonicalExpression: makeResult([validCandidate]),
+        mechanismCandidates: Object.freeze([mechanism('MECH-1'), mechanism('MECH-1')])
+      });
+      expect(duplicateMechanismResult).toEqual({
+        ok: false,
+        error: 'DUPLICATE_SOURCE_MECHANISM_ID'
+      });
+    });
+
+    it('does not treat matching statement text as mechanism ownership', () => {
+      const evidence = Object.freeze({
+        evidenceId: 'CANONICAL-EVIDENCE',
+        sourceMechanismId: 'MECH-1',
+        sourceEvidenceIds: Object.freeze(['SOURCE-EVIDENCE']),
+        ruleId: 'RULE-1',
+        role: 'ESTABLISHING' as const
+      });
+      const candidate = makeCanonicalCandidate('CANDIDATE-1', ['MECH-1'], [evidence]);
+      const callerAnalysis = makeExpressionAnalysisWithLinkedEvidence();
+      const callerExpression = Object.freeze({
+        ...callerAnalysis.expressions[0],
+        statement: 'This expression claims MECH-1',
+        supportingEvidenceIds: Object.freeze(['UNRELATED-EVIDENCE'])
+      });
+      const mechanismCandidate: CareerMechanismCandidate = Object.freeze({
+        candidateId: 'MECH-1',
+        patternId: 'PATTERN-1',
+        mechanismType: 'AUTHORITY' as CareerMechanismType,
+        pathway: 'PRIMARY' as CareerMechanismPathway,
+        evidence: Object.freeze([]),
+        provenance: Object.freeze({
+          patternIds: Object.freeze(['PATTERN-1']),
+          relationshipIds: Object.freeze([]),
+          participantIds: Object.freeze(['PLANET:SATURN' as ParticipantId]),
+          evidenceIds: Object.freeze([]),
+          sourceStages: Object.freeze([])
+        }),
+        explanation: 'Mechanism one'
+      });
+      const result = buildSelectedCareerDashaActivation({
+        horoscope: makeHoroscope(),
+        natal: makeMinimalNatalAnalysis(),
+        expression: Object.freeze({
+          ...callerAnalysis,
+          expressions: Object.freeze([callerExpression])
+        }),
+        selectedPeriod: makeSelectedPeriod(),
+        canonicalExpression: makeResult([candidate]),
+        mechanismCandidates: Object.freeze([mechanismCandidate])
+      });
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.expressionActivations).toHaveLength(1);
+        const activation = result.value.expressionActivations[0];
+        expect(activation.expressionSource).toBe('ADAPTER_FALLBACK');
+        expect(activation.expression.supportingEvidenceIds).toEqual(['CANONICAL-EVIDENCE']);
+        expect(activation.expression.sourceMechanismProvenance?.candidateId).toBe('CANDIDATE-1');
+        expect(activation.expression.sourceMechanismProvenance?.evidence[0].sourceMechanismId)
+          .toBe('MECH-1');
+      }
     });
   });
 });
