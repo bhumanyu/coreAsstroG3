@@ -11,9 +11,13 @@
  * - Selected period: MD=MOON, AD=MOON (via listSelectableMdAdPeriods)
  * - Using UNAVAILABLE basis (canonical inputs supplied, but no mechanisms qualify for this chart)
  * - Updated to include identityKey fields on evidence references
+ *
+ * Approving commit: (document approving commit hash and author when approved)
+ * Review reference: (document review ticket or PR when approved)
  */
 
 import type { ProductSelectedPeriodSynthesis } from '../../product/analysis/productAnalysisTypes';
+import type { SelectedPeriodAcceptanceProjection } from '../../acceptance/goldenAcceptanceTypes';
 
 /**
  * Fixture 1: Valid selection; career qualification UNAVAILABLE with no linked expressions; mixed wealth dimension states.
@@ -430,3 +434,72 @@ export const VALID_SELECTION_GOLDEN_FIXTURE: ProductSelectedPeriodSynthesis = {
  * because it requires intentionally creating an invalid state that the pipeline would
  * normally reject.
  */
+
+/**
+ * Golden baseline for selected-period acceptance projection (WEALTH domain).
+ *
+ * This baseline captures the expected SelectedPeriodAcceptanceProjection structure
+ * for the valid selection case (MD=MOON, AD=MOON) for the WEALTH domain.
+ *
+ * Never derive selected-period expectations from lifetime baselines - selected-period
+ * has its own distinct contract with resultState, qualificationBasis, and per-dimension
+ * effect/dataStatus fields.
+ */
+export const SELECTED_PERIOD_WEALTH_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanceProjection = {
+  domain: 'WEALTH',
+  scope: 'SELECTED_PERIOD',
+  subjectId: 'chart:wealth',
+  resultState: 'OK',
+  careerQualificationStatus: undefined, // WEALTH domain does not have career qualification
+  wealthDimensions: [
+    {
+      dimension: 'ACCUMULATION',
+      effect: 'INSUFFICIENT_DATA',
+      dataStatus: 'INSUFFICIENT_DATA'
+    },
+    {
+      dimension: 'GAINS',
+      effect: 'UNKNOWN',
+      dataStatus: 'PARTIAL'
+    },
+    {
+      dimension: 'FORTUNE',
+      effect: 'INSUFFICIENT_DATA',
+      dataStatus: 'PARTIAL'
+    },
+    {
+      dimension: 'SPECULATION',
+      effect: 'INSUFFICIENT_DATA',
+      dataStatus: 'PARTIAL'
+    }
+  ],
+  evidence: [], // Evidence is resolved from the synthesis, not from this baseline
+  provenance: [], // Provenance is resolved from the synthesis, not from this baseline
+  interval: {
+    start: '2106-08-18T06:33:37.957Z',
+    end: '2107-06-18T15:33:37.957Z'
+  },
+  temporalRelation: 'FUTURE'
+};
+
+/**
+ * Golden baseline for selected-period acceptance projection (CAREER domain).
+ *
+ * This baseline captures the expected SelectedPeriodAcceptanceProjection structure
+ * for the valid selection case (MD=MOON, AD=MOON) for the CAREER domain.
+ */
+export const SELECTED_PERIOD_CAREER_ACCEPTANCE_BASELINE: SelectedPeriodAcceptanceProjection = {
+  domain: 'CAREER',
+  scope: 'SELECTED_PERIOD',
+  subjectId: 'chart:career',
+  resultState: 'OK',
+  careerQualificationStatus: 'UNAVAILABLE',
+  wealthDimensions: undefined, // CAREER domain does not have wealth dimensions
+  evidence: [], // Evidence is resolved from the synthesis, not from this baseline
+  provenance: [], // Provenance is resolved from the synthesis, not from this baseline
+  interval: {
+    start: '2106-08-18T06:33:37.957Z',
+    end: '2107-06-18T15:33:37.957Z'
+  },
+  temporalRelation: 'FUTURE'
+};
