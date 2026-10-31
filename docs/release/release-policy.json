@@ -1,0 +1,84 @@
+{
+  "policyVersion": 1,
+  "releaseStatus": {
+    "values": ["PASS", "FAIL", "BLOCKED", "NOT_RUN"],
+    "aggregate": "aggregateReleaseStatus evaluates only the 14 required gates RG-01 through RG-14.",
+    "canRelease": "finalizeReleaseReport sets canRelease to true only when aggregate status is PASS."
+  },
+  "coverageStatus": {
+    "values": ["PASSED", "BLOCKED", "NOT_TESTED", "SCOPE_EXCLUDED"],
+    "meaning": "Coverage is reported independently from gate outcome; SCOPE_EXCLUDED is never a release gate status."
+  },
+  "requiredGates": [
+    { "id": "RG-01", "name": "Release scope and policy" },
+    { "id": "RG-02", "name": "Release inputs and configuration" },
+    { "id": "RG-03", "name": "Production build" },
+    { "id": "RG-04", "name": "Type checking" },
+    { "id": "RG-05", "name": "Unit test suite" },
+    { "id": "RG-06", "name": "Skipped-test policy" },
+    { "id": "RG-07", "name": "Golden acceptance baselines" },
+    { "id": "RG-08", "name": "Integration test suite" },
+    { "id": "RG-09", "name": "Required fixtures", "emptyFixtureSet": "BLOCKED" },
+    { "id": "RG-10", "name": "Independent external reference parity" },
+    { "id": "RG-11", "name": "Owner-gated mechanism coverage" },
+    { "id": "RG-12", "name": "Determinism and reproducibility" },
+    { "id": "RG-13", "name": "PR-8 production acceptance surfaces" },
+    { "id": "RG-14", "name": "Limitations and excluded capabilities" }
+  ],
+  "pr8Acceptance": {
+    "consumedBy": "RG-13",
+    "retainedBlockedSurfaces": ["report-renderer", "AppController async-state"]
+  },
+  "allowedSkippedTests": [],
+  "retainedBlockers": [
+    {
+      "id": "external-reference-parity",
+      "status": "BLOCKED",
+      "scope": "Independent Swiss Ephemeris / JPL Horizons reference-data parity is not established."
+    },
+    {
+      "id": "owner-gated-non-dusthana-mechanisms",
+      "status": "BLOCKED",
+      "scope": "Owner-gated non-dusthana mechanism families remain blocked and are never inferred PASS."
+    },
+    {
+      "id": "report-renderer",
+      "status": "BLOCKED",
+      "scope": "PR-8 report-renderer acceptance surface remains blocked."
+    },
+    {
+      "id": "AppController async-state",
+      "status": "BLOCKED",
+      "scope": "PR-8 AppController async-state acceptance surface remains blocked."
+    }
+  ],
+  "skippedTests": {
+    "policy": "No skipped tests are approved; skipped tests not explicitly authorized by this empty allowlist are unapproved.",
+    "observedInventory": [
+      {
+        "name": "D07-C: Task 3 AI Hierarchy-Projection Preservation Test RESOLVED path: deterministic fixture with explicit DASHA evidence identityKey values",
+        "status": "UNAPPROVED"
+      },
+      {
+        "name": "D08-A: Moon Sidereal Anchor Validation D08-A1 — External Ephemeris Moon Anchor validates MOON-ANCHOR-01-NEW-DELHI-1980: Moon sidereal longitude matches external ephemeris ground truth",
+        "status": "UNAPPROVED"
+      },
+      {
+        "name": "D08-A: Moon Sidereal Anchor Validation D08-A1 — External Ephemeris Moon Anchor validates MOON-ANCHOR-02-LONDON-2000: Moon sidereal longitude matches external ephemeris ground truth",
+        "status": "UNAPPROVED"
+      },
+      {
+        "name": "D08-A: Moon Sidereal Anchor Validation D08-A1 — External Ephemeris Moon Anchor validates MOON-ANCHOR-03-TOKYO-2015: Moon sidereal longitude matches external ephemeris ground truth",
+        "status": "UNAPPROVED"
+      }
+    ]
+  },
+  "excludedCapabilities": [
+    "Accounts",
+    "Sync",
+    "Snapshots",
+    "Notifications",
+    "PDF",
+    "Share-link security"
+  ]
+}
