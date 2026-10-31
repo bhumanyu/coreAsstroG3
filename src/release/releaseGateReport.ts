@@ -5,6 +5,7 @@ import { REQUIRED_CALCULATION_COVERAGE } from '../engine/validation/calculationR
 import {
   EXCLUDED_RELEASE_CAPABILITIES,
   RELEASE_POLICY_VERSION,
+  RELEASE_POLICY_VERSION_WITH_DEPENDENCY_WAIVERS,
   RETAINED_RELEASE_BLOCKERS,
   REQUIRED_RELEASE_GATES,
   RELEASE_GATE_EVIDENCE_KIND,
@@ -15,12 +16,15 @@ import {
   type ReleaseGateId,
   type ReleaseGateResult,
   type ReleaseGateStatus,
+  type EvidenceManifestIntegrity,
   type ReleaseReport,
   type ReleaseReportInput,
   type RunnerEvidenceManifest
 } from './releaseGateTypes.ts';
 
 export const ALLOWED_SKIPPED_TESTS: readonly string[] = Object.freeze([]);
+export const EVIDENCE_MANIFEST_SCHEMA_VERSION = 1 as const;
+export const EVIDENCE_MANIFEST_HASH_ALGORITHM = 'SHA-256' as const;
 
 const RETAINED_PR8_BLOCKERS = Object.freeze([
   'report-renderer',
@@ -71,7 +75,7 @@ function evidenceExistsInManifest(
 }
 
 export type ValidatedRunnerResult = ReleaseReportInput & {
-  readonly evidenceManifestSha256: string;
+  readonly evidenceManifestIntegrity: EvidenceManifestIntegrity;
   readonly [VALIDATED_RUNNER_RESULT]: true;
 };
 
@@ -117,14 +121,69 @@ export function createValidatedRunnerResult(
       }
     }
   }
-  const evidenceManifestSha256 = createHash('sha256')
-    .update(JSON.stringify(evidenceManifest))
-    .digest('hex');
+  const evidenceManifestIntegrity = digestRunnerEvidenceManifest(evidenceManifest);
   return Object.freeze({
     ...input,
-    evidenceManifestSha256,
+    evidenceManifestIntegrity,
     [VALIDATED_RUNNER_RESULT]: true as const
   });
+}
+
+function canonicalValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+      .map(([key, item]) => [key, canonicalValue(item)])
+  );
+}
+
+export function canonicalizeRunnerEvidenceManifest(
+  manifest: RunnerEvidenceManifest
+): string {
+  const compareStable = (left: string, right: string): number =>
+    left < right ? -1 : left > right ? 1 : 0;
+  const recordKey = (value: object): string => JSON.stringify(canonicalValue(value));
+  const canonicalManifest = {
+    commands: [...manifest.commands]
+      .sort((left, right) => compareStable(recordKey(left), recordKey(right))),
+    files: [...manifest.files]
+      .sort((left, right) => compareStable(recordKey(left), recordKey(right))),
+    fixtureComparisons: [...manifest.fixtureComparisons]
+      .map(item => ({ ...item, fixtureIds: [...item.fixtureIds].sort() }))
+      .sort((left, right) => compareStable(recordKey(left), recordKey(right))),
+    policyDocuments: [...manifest.policyDocuments]
+      .sort((left, right) => compareStable(recordKey(left), recordKey(right)))
+  };
+  return JSON.stringify(canonicalValue(canonicalManifest));
+}
+
+export function digestRunnerEvidenceManifest(
+  manifest: RunnerEvidenceManifest
+): EvidenceManifestIntegrity {
+  return Object.freeze({
+    manifestSchemaVersion: EVIDENCE_MANIFEST_SCHEMA_VERSION,
+    algorithm: EVIDENCE_MANIFEST_HASH_ALGORITHM,
+    digest: createHash('sha256').update(canonicalizeRunnerEvidenceManifest(manifest)).digest('hex')
+  });
+}
+
+export function verifyRunnerEvidenceManifestDigest(
+  manifest: RunnerEvidenceManifest,
+  integrity: EvidenceManifestIntegrity
+): boolean {
+  return integrity.manifestSchemaVersion === EVIDENCE_MANIFEST_SCHEMA_VERSION
+    && integrity.algorithm === EVIDENCE_MANIFEST_HASH_ALGORITHM
+    && /^[0-9a-f]{64}$/i.test(integrity.digest)
+    && digestRunnerEvidenceManifest(manifest).digest === integrity.digest;
+}
+
+export function verifyReleaseReportEvidenceManifest(
+  report: Pick<ReleaseReport, 'evidenceManifestIntegrity'>,
+  manifest: RunnerEvidenceManifest
+): boolean {
+  return verifyRunnerEvidenceManifestDigest(manifest, report.evidenceManifestIntegrity);
 }
 
 export interface VitestJsonReport {
@@ -214,6 +273,18 @@ export interface CalculationFixtureResult {
   readonly passed: boolean;
 }
 
+export interface CalculationFixtureResultsEnvelope {
+  readonly invocationId: string;
+  readonly candidateSha: string | null;
+  readonly fixtureInventoryHash: string;
+  readonly expectedFixtureCount: number;
+  readonly completedFixtureCount: number;
+  readonly suiteCompleted: boolean;
+  readonly commandStartedAt?: number;
+  readonly commandFinishedAt?: number;
+  readonly results: readonly CalculationFixtureResult[];
+}
+
 export interface CalculationFixtureInventoryItem {
   readonly id: string;
   readonly kind: string;
@@ -240,20 +311,29 @@ export interface CalculationFixtureInventoryItem {
 
 export function calculationFixtureGateStatus(
   fixtures: readonly CalculationFixtureInventoryItem[],
-  results: unknown,
+  envelope: unknown,
   missingCoverage: readonly string[],
   commandPassed: boolean,
-  expectedInvocationId: string
+  expectedInvocationId: string,
+  expectedCandidateSha: string | null
 ): ReleaseGateStatus {
   if (!commandPassed) return 'BLOCKED';
   if (fixtures.length === 0 || missingCoverage.length > 0) return 'BLOCKED';
   if (new Set(fixtures.map(fixture => fixture.id)).size !== fixtures.length) return 'FAIL';
-  if (!Array.isArray(results)) return 'BLOCKED';
+  if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return 'BLOCKED';
+  const report = envelope as Record<string, unknown>;
+  if (report.invocationId !== expectedInvocationId
+    || report.candidateSha !== expectedCandidateSha
+    || report.fixtureInventoryHash !== calculationFixtureInventoryHash(fixtures)
+    || report.expectedFixtureCount !== fixtures.length
+    || report.completedFixtureCount !== fixtures.length
+    || report.suiteCompleted !== true
+    || !Array.isArray(report.results)) return 'BLOCKED';
 
   const expectedIds = new Set(fixtures.map(fixture => fixture.id));
   const observedIds = new Set<string>();
   const operationIds = new Set<string>();
-  for (const result of results) {
+  for (const result of report.results) {
     if (!result || typeof result !== 'object') return 'FAIL';
     const item = result as Record<string, unknown>;
     if (typeof item.fixtureId !== 'string' || !expectedIds.has(item.fixtureId)
@@ -298,9 +378,15 @@ export function calculationFixtureGateStatus(
   return commandPassed ? 'PASS' : 'FAIL';
 }
 
+export function calculationFixtureInventoryHash(fixtures: readonly unknown[]): string {
+  return createHash('sha256').update(JSON.stringify(fixtures)).digest('hex');
+}
+
 export function fixtureResultsCorrelateToCommand(
   report: unknown,
+  fixtures: readonly CalculationFixtureInventoryItem[],
   expectedInvocationId: string,
+  expectedCandidateSha: string | null,
   commandPassed: boolean,
   modifiedAt: number,
   startedAt: number,
@@ -309,6 +395,15 @@ export function fixtureResultsCorrelateToCommand(
   if (!commandPassed || !report || typeof report !== 'object' || Array.isArray(report)) return false;
   const value = report as Record<string, unknown>;
   return value.invocationId === expectedInvocationId
+    && value.candidateSha === expectedCandidateSha
+    && value.fixtureInventoryHash === calculationFixtureInventoryHash(fixtures)
+    && value.expectedFixtureCount === fixtures.length
+    && value.completedFixtureCount === fixtures.length
+    && value.suiteCompleted === true
+    && value.commandStartedAt === startedAt
+    && typeof value.commandFinishedAt === 'number'
+    && value.commandFinishedAt >= startedAt
+    && value.commandFinishedAt <= finishedAt
     && Array.isArray(value.results)
     && Number.isFinite(modifiedAt)
     && Number.isFinite(startedAt)
@@ -322,7 +417,7 @@ export function harnessDependencyInventoryIssues(
   repositoryRoot: string,
   declaredPaths: readonly string[],
   computedDependencies: readonly string[],
-  waivedDependencies: readonly string[] = []
+  waivedDependencies: readonly { readonly path: string }[] = []
 ): readonly string[] {
   const root = resolve(repositoryRoot);
   const normalize = (value: string): string => value.replace(/\\/g, '/').replace(/^\.\//, '');
@@ -344,7 +439,9 @@ export function harnessDependencyInventoryIssues(
       issues.push(`UNREADABLE_DECLARED_PATH:${declared}`);
     }
   }
-  const waived = new Set(waivedDependencies.map(normalize));
+  const waived = new Set(waivedDependencies.flatMap(waiver =>
+    typeof waiver?.path === 'string' ? [normalize(waiver.path)] : []
+  ));
   for (const dependency of computedDependencies) {
     const normalized = normalize(dependency);
     const covered = declaredPaths.some(declared => {
@@ -398,15 +495,50 @@ export function releasePolicyIsValid(
   ];
   const pr8Paths = (pr8 as Record<string, unknown> | undefined)?.revisionComparisonPaths;
   const dependencyWaivers = (pr8 as Record<string, unknown> | undefined)?.harnessDependencyWaivers;
+  const dependencyLimitations = (pr8 as Record<string, unknown> | undefined)?.dependencyAnalysisLimitations;
   const coverage = calculationCoverage as Record<string, unknown> | undefined;
   const epsilon = coverage?.boundaryEpsilonDegrees as Record<string, unknown> | undefined;
-  return value.policyVersion === RELEASE_POLICY_VERSION
+  return value.policyVersion === (Array.isArray(dependencyWaivers) && dependencyWaivers.length > 0
+    ? RELEASE_POLICY_VERSION_WITH_DEPENDENCY_WAIVERS
+    : RELEASE_POLICY_VERSION)
     && Boolean(pr8)
     && typeof pr8 === 'object'
     && /^[0-9a-f]{40}$/i.test((pr8 as Record<string, unknown>).acceptedImplementationRevision as string)
     && (pr8 as Record<string, unknown>).harnessEntryPoint
       === 'src/acceptance/goldenAcceptanceProductionHarness.ts'
-    && isStringArray(dependencyWaivers)
+    && Array.isArray(dependencyWaivers)
+    && dependencyWaivers.every(waiver => {
+      if (!waiver || typeof waiver !== 'object' || Array.isArray(waiver)) return false;
+      const item = waiver as Record<string, unknown>;
+      const expiryFields = Number(typeof item.expiresAt === 'string')
+        + Number(typeof item.reviewCondition === 'string');
+      const waiverPath = typeof item.path === 'string' ? item.path.replace(/\\/g, '/') : '';
+      return typeof item.path === 'string'
+        && item.path.trim().length > 0
+        && !waiverPath.startsWith('/')
+        && !waiverPath.split('/').includes('..')
+        && typeof item.reason === 'string'
+        && item.reason.trim().length > 0
+        && typeof item.approver === 'string'
+        && item.approver.trim().length > 0
+        && typeof item.approvedAt === 'string'
+        && !Number.isNaN(Date.parse(item.approvedAt))
+        && expiryFields === 1
+        && (item.expiresAt === undefined
+          || (!Number.isNaN(Date.parse(item.expiresAt as string))
+            && Date.parse(item.expiresAt as string) > Date.now()))
+        && (item.reviewCondition === undefined || (item.reviewCondition as string).trim().length > 0);
+    })
+    && Array.isArray(dependencyLimitations)
+    && dependencyLimitations.every(limitation =>
+      Boolean(limitation)
+      && typeof limitation === 'object'
+      && typeof (limitation as Record<string, unknown>).id === 'string'
+      && typeof (limitation as Record<string, unknown>).description === 'string'
+      && ((limitation as Record<string, unknown>).id as string).trim().length > 0
+      && ((limitation as Record<string, unknown>).description as string).trim().length > 0)
+    && dependencyLimitations.some(limitation =>
+      (limitation as Record<string, unknown>).id === 'nonliteral-runtime-loads')
     && isStringArray(pr8Paths)
     && requiredPr8Paths.every(path => pr8Paths.includes(path))
     && Boolean(calculationCoverage)
@@ -607,7 +739,10 @@ export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseRepo
   if (input[VALIDATED_RUNNER_RESULT] !== true) {
     throw new Error('Release report finalization requires a validated runner result.');
   }
-  if (!/^[0-9a-f]{64}$/i.test(input.evidenceManifestSha256)) {
+  if (!input.evidenceManifestIntegrity
+    || !/^[0-9a-f]{64}$/i.test(input.evidenceManifestIntegrity.digest)
+    || input.evidenceManifestIntegrity.manifestSchemaVersion !== EVIDENCE_MANIFEST_SCHEMA_VERSION
+    || input.evidenceManifestIntegrity.algorithm !== EVIDENCE_MANIFEST_HASH_ALGORITHM) {
     throw new Error('Validated runner result is missing its evidence-manifest digest.');
   }
 
@@ -624,7 +759,7 @@ export function finalizeReleaseReport(input: ValidatedRunnerResult): ReleaseRepo
     canRelease,
     allowedSkippedTests: ALLOWED_SKIPPED_TESTS,
     pr8AcceptanceStatuses,
-    evidenceManifestSha256: input.evidenceManifestSha256,
+    evidenceManifestIntegrity: Object.freeze({ ...input.evidenceManifestIntegrity }),
     ...(input.metadata === undefined ? {} : { metadata: Object.freeze({ ...input.metadata }) })
   });
 }

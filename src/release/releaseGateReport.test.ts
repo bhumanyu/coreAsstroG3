@@ -1,19 +1,25 @@
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import {
   aggregateReleaseStatus,
   calculationFixtureGateStatus,
+  calculationFixtureInventoryHash,
+  canonicalizeRunnerEvidenceManifest,
   createValidatedRunnerResult,
+  digestRunnerEvidenceManifest,
   finalizeReleaseReport,
   isVitestJsonReport,
   pr8WasEvaluatedOnCandidate,
   releasePolicyIsValid,
+  verifyReleaseReportEvidenceManifest,
   fixtureResultsCorrelateToCommand,
   harnessDependencyInventoryIssues,
+  type CalculationFixtureInventoryItem,
   skippedTestsGateStatus
 } from './releaseGateReport';
 import {
@@ -30,6 +36,7 @@ import {
   type ReleaseGateStatus
 } from './releaseGateTypes';
 import {
+  CALCULATION_REFERENCE_FIXTURES,
   CALCULATION_COVERAGE_POLICY,
   inspectBoundaryCoverage
 } from '../engine/validation/calculationReferenceFixtures';
@@ -84,6 +91,22 @@ const allPassingGates = (): ReleaseGateResult[] =>
   REQUIRED_RELEASE_GATE_IDS.map(id => ({ id, status: 'PASS', evidence: evidenceFor(id) }));
 const finalize = (input: Parameters<typeof createValidatedRunnerResult>[0]) =>
   finalizeReleaseReport(createValidatedRunnerResult(input, testEvidenceManifest));
+const fixtureEnvelope = (
+  fixtures: readonly unknown[],
+  results: readonly Record<string, unknown>[],
+  overrides: Record<string, unknown> = {}
+) => ({
+  invocationId: 'invocation-1',
+  candidateSha: null,
+  fixtureInventoryHash: calculationFixtureInventoryHash(fixtures),
+  expectedFixtureCount: fixtures.length,
+  completedFixtureCount: fixtures.length,
+  suiteCompleted: true,
+  commandStartedAt: 100,
+  commandFinishedAt: 190,
+  results,
+  ...overrides
+});
 
 describe('release gate report', () => {
   it('aggregates only the required gate inventory', () => {
@@ -164,10 +187,25 @@ describe('release gate report', () => {
 
   it('records a digest of the evidence manifest in the finalized report', () => {
     const report = finalize({ gates: allPassingGates() });
-    const expectedDigest = createHash('sha256')
-      .update(JSON.stringify(testEvidenceManifest))
-      .digest('hex');
-    expect(report.evidenceManifestSha256).toBe(expectedDigest);
+    const reorderedManifest: RunnerEvidenceManifest = {
+      policyDocuments: [...testEvidenceManifest.policyDocuments].reverse(),
+      fixtureComparisons: testEvidenceManifest.fixtureComparisons.map(item => ({
+        ...item,
+        fixtureIds: [...item.fixtureIds].reverse()
+      })).reverse(),
+      files: [...testEvidenceManifest.files].reverse(),
+      commands: [...testEvidenceManifest.commands].reverse()
+    };
+    const digest = digestRunnerEvidenceManifest(testEvidenceManifest);
+    expect(digest).toEqual(digestRunnerEvidenceManifest(reorderedManifest));
+    expect(canonicalizeRunnerEvidenceManifest(testEvidenceManifest))
+      .toBe(canonicalizeRunnerEvidenceManifest(reorderedManifest));
+    expect(report.evidenceManifestIntegrity).toEqual(digest);
+    expect(verifyReleaseReportEvidenceManifest(report, reorderedManifest)).toBe(true);
+    expect(verifyReleaseReportEvidenceManifest(report, {
+      ...reorderedManifest,
+      files: [{ ...reorderedManifest.files[0], sha256: '0'.repeat(64) }]
+    })).toBe(false);
   });
 
   it('rejects malformed or stale-shaped Vitest reports for RG-06', () => {
@@ -231,56 +269,62 @@ describe('release gate report', () => {
         approvedAt: '2026-01-02'
       }
     };
-    expect(calculationFixtureGateStatus([fixture], [], [], true, 'invocation-1')).toBe('BLOCKED');
-    expect(calculationFixtureGateStatus([fixture], [{
+    const result = {
       fixtureId: fixture.id,
       kind: fixture.kind,
       invocationId: 'invocation-1',
       operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
       compared: true,
       passed: true
-    }], [], true, 'invocation-1')).toBe('PASS');
-    expect(calculationFixtureGateStatus([fixture], [{
-      fixtureId: fixture.id,
-      kind: fixture.kind,
-      invocationId: 'invocation-1',
-      operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
-      compared: true,
-      passed: true
-    }], [], false, 'invocation-1')).toBe('BLOCKED');
+    };
+    const envelope = fixtureEnvelope([fixture], [result]);
+    expect(calculationFixtureGateStatus([fixture], undefined, [], true, 'invocation-1', null))
+      .toBe('BLOCKED');
+    expect(calculationFixtureGateStatus([fixture], envelope, [], true, 'invocation-1', null)).toBe('PASS');
+    expect(calculationFixtureGateStatus([fixture], envelope, [], false, 'invocation-1', null))
+      .toBe('BLOCKED');
     expect(calculationFixtureGateStatus([{
       ...fixture,
       provenance: {
         ...fixture.provenance,
         independenceStatement: 'Expected value derived from engine output.'
       }
-    }], [{
-      fixtureId: fixture.id,
-      kind: fixture.kind,
-      invocationId: 'invocation-1',
-      operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
-      compared: true,
-      passed: true
-    }], [], true, 'invocation-1')).toBe('FAIL');
-    expect(calculationFixtureGateStatus([fixture], [{
-      fixtureId: fixture.id,
-      kind: fixture.kind,
-      invocationId: 'stale-invocation',
-      operationId: 'generatePlanetaryPositions:PLANETARY_LONGITUDE:independent-1',
-      compared: true,
-      passed: true
-    }], [], true, 'invocation-1')).toBe('FAIL');
-    expect(calculationFixtureGateStatus([fixture], [{
-      fixtureId: fixture.id,
-      kind: fixture.kind,
-      invocationId: 'invocation-1',
-      operationId: 'wrong-operation',
-      compared: true,
-      passed: true
-    }], [], true, 'invocation-1')).toBe('FAIL');
-    const staleResultsCorrelate = fixtureResultsCorrelateToCommand(
-      { invocationId: 'invocation-1', results: [] },
+    }], fixtureEnvelope([{
+      ...fixture,
+      provenance: {
+        ...fixture.provenance,
+        independenceStatement: 'Expected value derived from engine output.'
+      }
+    }], [result]), [], true, 'invocation-1', null)).toBe('FAIL');
+    expect(calculationFixtureGateStatus([fixture], fixtureEnvelope([fixture], [{
+      ...result,
+      invocationId: 'stale-invocation'
+    }]), [], true, 'invocation-1', null)).toBe('FAIL');
+    expect(calculationFixtureGateStatus([fixture], fixtureEnvelope([fixture], [{
+      ...result,
+      operationId: 'wrong-operation'
+    }]), [], true, 'invocation-1', null)).toBe('FAIL');
+    expect(calculationFixtureGateStatus(
+      [fixture],
+      fixtureEnvelope([fixture], [result], { suiteCompleted: undefined }),
+      [],
+      true,
       'invocation-1',
+      null
+    )).toBe('BLOCKED');
+    expect(calculationFixtureGateStatus(
+      [fixture],
+      fixtureEnvelope([fixture], [result, result]),
+      [],
+      true,
+      'invocation-1',
+      null
+    )).toBe('FAIL');
+    const staleResultsCorrelate = fixtureResultsCorrelateToCommand(
+      envelope,
+      [fixture],
+      'invocation-1',
+      null,
       true,
       250,
       100,
@@ -289,20 +333,91 @@ describe('release gate report', () => {
     expect(staleResultsCorrelate).toBe(false);
     expect(calculationFixtureGateStatus(
       [fixture],
-      staleResultsCorrelate ? [] : undefined,
+      staleResultsCorrelate ? envelope : undefined,
       [],
       true,
-      'invocation-1'
+      'invocation-1',
+      null
     )).toBe('BLOCKED');
   });
 
+  it('requires boundary expectations to carry independently approved, non-engine provenance', () => {
+    const boundaryFixture = {
+      id: 'approved-boundary',
+      kind: 'SIGN_BOUNDARY',
+      entryPoint: 'calculateSign',
+      expectedSign: 'ARIES',
+      boundaryLongitude: 30,
+      boundaryId: 'SIGN-30',
+      boundaryPosition: 'EPSILON_BEFORE',
+      input: { longitude: 29.99999 },
+      provenance: {
+        sourceType: 'PUBLISHED_REFERENCE',
+        independentlyProduced: true,
+        sourceName: 'Independent published reference',
+        citation: 'Boundary table',
+        sourceVersion: '1',
+        methodology: 'Published sign boundary convention',
+        coordinateConvention: 'sidereal longitude',
+        timeStandard: 'not applicable',
+        ayanamsa: 'not applicable',
+        nodeConvention: 'not applicable',
+        tolerance: '0.00001 degrees',
+        toleranceRationale: 'Approved boundary fixture',
+        independenceStatement: 'Expected value was not derived from engine output.',
+        retrievedAt: '2026-10-01',
+        approvedBy: 'Reviewer',
+        approvedAt: '2026-10-02'
+      }
+    };
+    const result = {
+      fixtureId: boundaryFixture.id,
+      kind: boundaryFixture.kind,
+      invocationId: 'invocation-1',
+      operationId: 'calculateSign:SIGN_BOUNDARY:approved-boundary',
+      compared: true,
+      passed: true
+    };
+    const currentBoundaryFixtures = CALCULATION_REFERENCE_FIXTURES.filter(fixture =>
+      fixture.kind === 'SIGN_BOUNDARY' || fixture.kind === 'NAKSHATRA_BOUNDARY'
+    );
+    expect(currentBoundaryFixtures.every(fixture =>
+      fixture.provenance.independentlyProduced === true
+      && fixture.provenance.independenceStatement.toLowerCase().includes('not derived from engine output')
+    )).toBe(true);
+    expect(calculationFixtureGateStatus(
+      [boundaryFixture],
+      fixtureEnvelope([boundaryFixture], [result]),
+      [],
+      true,
+      'invocation-1',
+      null
+    )).toBe('PASS');
+    const engineDerivedBoundary = {
+      ...boundaryFixture,
+      provenance: {
+        ...boundaryFixture.provenance,
+        independenceStatement: 'Expected value was generated from engine output.'
+      }
+    };
+    expect(calculationFixtureGateStatus(
+      [engineDerivedBoundary],
+      fixtureEnvelope([engineDerivedBoundary], [result]),
+      [],
+      true,
+      'invocation-1',
+      null
+    )).toBe('FAIL');
+  });
+
   it('blocks stale or failed fixture-result files outside the command window', () => {
-    const report = { invocationId: 'invocation-1', results: [] };
-    expect(fixtureResultsCorrelateToCommand(report, 'invocation-1', true, 250, 100, 200))
+    const fixtures: CalculationFixtureInventoryItem[] = [];
+    const report = fixtureEnvelope(fixtures, []);
+    expect(fixtureResultsCorrelateToCommand(report, fixtures, 'invocation-1', null, true, 250, 100, 200))
       .toBe(false);
-    expect(fixtureResultsCorrelateToCommand(report, 'invocation-1', false, 150, 100, 200))
+    expect(fixtureResultsCorrelateToCommand(report, fixtures, 'invocation-1', null, false, 150, 100, 200))
       .toBe(false);
-    expect(fixtureResultsCorrelateToCommand(report, 'invocation-1', true, 150, 100, 200))
+    expect(fixtureResultsCorrelateToCommand(report, fixtures, 'invocation-1', null, true, 150, 100, 200))
       .toBe(true);
   });
 
@@ -310,12 +425,39 @@ describe('release gate report', () => {
     const repository = mkdtempSync(join(tmpdir(), 'harness-dependencies-'));
     try {
       mkdirSync(join(repository, 'src', 'acceptance'), { recursive: true });
-      writeFileSync(join(repository, 'src', 'acceptance', 'entry.ts'), 'export {};\n');
+      mkdirSync(join(repository, 'src', 'aliased'), { recursive: true });
+      writeFileSync(join(repository, 'tsconfig.json'), JSON.stringify({
+        compilerOptions: {
+          module: 'ESNext',
+          moduleResolution: 'Bundler',
+          baseUrl: '.',
+          paths: { '@core/*': ['src/aliased/*'] }
+        }
+      }));
+      writeFileSync(
+        join(repository, 'src', 'acceptance', 'entry.ts'),
+        "import type { Payload } from '@core/dependency'; export type Entry = Payload;\n"
+      );
+      writeFileSync(join(repository, 'src', 'aliased', 'dependency.ts'), 'export interface Payload {}\n');
+      const tsconfig = ts.readConfigFile(join(repository, 'tsconfig.json'), ts.sys.readFile);
+      const compilerOptions = ts.parseJsonConfigFileContent(
+        tsconfig.config,
+        ts.sys,
+        repository
+      ).options;
+      const resolved = ts.resolveModuleName(
+        '@core/dependency',
+        join(repository, 'src', 'acceptance', 'entry.ts'),
+        compilerOptions,
+        ts.sys
+      ).resolvedModule;
+      expect(resolved).toBeDefined();
+      const aliasedDependency = relative(repository, resolved!.resolvedFileName).replace(/\\/g, '/');
       expect(harnessDependencyInventoryIssues(
         repository,
         ['src/acceptance/'],
-        ['src/acceptance/entry.ts']
-      )).toEqual([]);
+        ['src/acceptance/entry.ts', aliasedDependency]
+      )).toContain(`UNDECLARED_HARNESS_DEPENDENCY:${aliasedDependency}`);
       expect(harnessDependencyInventoryIssues(
         repository,
         ['src/missing.ts'],
@@ -326,6 +468,11 @@ describe('release gate report', () => {
         ['src/acceptance/'],
         ['src/unlisted/dependency.ts']
       )).toContain('UNDECLARED_HARNESS_DEPENDENCY:src/unlisted/dependency.ts');
+      expect(harnessDependencyInventoryIssues(
+        repository,
+        ['src/acceptance/'],
+        ['src/aliased/dependency.ts']
+      )).toContain('UNDECLARED_HARNESS_DEPENDENCY:src/aliased/dependency.ts');
     } finally {
       rmSync(repository, { recursive: true, force: true });
     }
@@ -508,6 +655,47 @@ describe('release gate report', () => {
     }, REQUIRED_RELEASE_GATE_IDS)).toBe(true);
     expect(releasePolicyIsValid({
       ...policy,
+      policyVersion: RELEASE_POLICY_VERSION + 1
+    }, REQUIRED_RELEASE_GATE_IDS)).toBe(false);
+    expect(releasePolicyIsValid({
+      ...policy,
+      pr8: {
+        ...policy.pr8,
+        harnessDependencyWaivers: [{
+          path: 'src/aliased/dependency.ts',
+          reason: 'Reviewed exception',
+          approver: 'Reviewer',
+          approvedAt: '2026-10-01T00:00:00Z',
+          expiresAt: '2027-01-01T00:00:00Z'
+        }]
+      }
+    }, REQUIRED_RELEASE_GATE_IDS)).toBe(false);
+    expect(releasePolicyIsValid({
+      ...policy,
+      pr8: {
+        ...policy.pr8,
+        harnessDependencyWaivers: [{
+          path: 'src/aliased/dependency.ts',
+          reason: 'Reviewed exception',
+          approver: 'Reviewer',
+          approvedAt: '2026-10-01T00:00:00Z',
+          expiresAt: '2027-01-01T00:00:00Z'
+        }]
+      },
+      policyVersion: RELEASE_POLICY_VERSION + 1
+    }, REQUIRED_RELEASE_GATE_IDS)).toBe(true);
+    expect(releasePolicyIsValid({
+      ...policy,
+      pr8: {
+        ...policy.pr8,
+        harnessDependencyWaivers: [{
+          path: 'src/aliased/dependency.ts',
+          reason: '',
+          approver: 'Reviewer',
+          approvedAt: 'not-a-date',
+          reviewCondition: ''
+        }]
+      },
       policyVersion: RELEASE_POLICY_VERSION + 1
     }, REQUIRED_RELEASE_GATE_IDS)).toBe(false);
     expect(releasePolicyIsValid({

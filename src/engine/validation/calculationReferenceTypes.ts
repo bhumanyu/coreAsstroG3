@@ -155,9 +155,11 @@ export interface SignBoundaryReference extends CalculationReferenceBase<
   'calculateSign',
   { readonly longitude: number }
 > {
+  /** Approved independent reference value; never derive this from an engine calculation. */
   readonly boundaryLongitude: number;
   readonly boundaryId: string;
   readonly boundaryPosition: BoundaryPosition;
+  /** Expected category is independently sourced and approved; do not generate it with calculateSign. */
   readonly expectedSign: Sign;
 }
 
@@ -166,10 +168,12 @@ export interface NakshatraBoundaryReference extends CalculationReferenceBase<
   'calculateNakshatra',
   { readonly longitude: number }
 > {
+  /** Boundary identity and expected fields must come from the approved fixture source, not engine output. */
   readonly boundaryKind: 'NAKSHATRA' | 'PADA';
   readonly boundaryLongitude: number;
   readonly boundaryId: string;
   readonly boundaryPosition: BoundaryPosition;
+  /** Expected values are independently sourced and approved; do not generate them with engine functions. */
   readonly expectedNakshatra: Nakshatra;
   readonly expectedPada: Pada;
 }

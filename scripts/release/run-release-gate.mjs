@@ -10,6 +10,7 @@ import {
 } from 'node:fs';
 import { dirname, resolve, relative, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const outputDirectory = resolve(root, 'artifacts/release');
@@ -36,39 +37,174 @@ function runGit(args, encoding = 'utf8') {
   });
 }
 
-function computeHarnessImportGraph(entryPoint) {
-  const visited = new Set();
-  const extensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.json', '.css'];
-  const resolveLocalImport = (fromFile, specifier) => {
-    const base = resolve(root, dirname(fromFile), specifier);
-    const candidates = extname(base)
-      ? [base]
-      : [
-        ...extensions.map(extension => `${base}${extension}`),
-        ...extensions.map(extension => resolve(base, `index${extension}`))
-      ];
-    const match = candidates.find(candidate => {
-      try {
-        return statSync(candidate).isFile();
-      } catch {
-        return false;
-      }
+function computeHarnessImportGraph(revision, entryPoint) {
+  const treeEntries = runGit([
+    'ls-tree',
+    '-r',
+    '--format=%(objectname)%x09%(path)',
+    revision
+  ]).split(/\r?\n/).filter(Boolean).map(line => {
+    const separator = line.indexOf('\t');
+    return { objectId: line.slice(0, separator), path: line.slice(separator + 1) };
+  });
+  const treeFiles = new Set(treeEntries.map(entry => entry.path));
+  const sourceCache = new Map();
+  const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.json', '.css']);
+  const sourceEntries = treeEntries.filter(entry => sourceExtensions.has(extname(entry.path)));
+  if (sourceEntries.length > 0) {
+    const batch = execFileSync('git', ['cat-file', '--batch'], {
+      cwd: root,
+      input: `${sourceEntries.map(entry => entry.objectId).join('\n')}\n`,
+      encoding: null,
+      maxBuffer: 512 * 1024 * 1024
     });
-    if (!match) throw new Error(`Cannot resolve local import ${specifier} from ${fromFile}.`);
-    return relative(root, match).replace(/\\/g, '/');
+    let offset = 0;
+    for (const entry of sourceEntries) {
+      const headerEnd = batch.indexOf(10, offset);
+      if (headerEnd < 0) throw new Error(`Invalid git cat-file response for ${entry.path}.`);
+      const header = batch.subarray(offset, headerEnd).toString('utf8').split(' ');
+      const size = Number(header[2]);
+      if (header[0] !== entry.objectId || header[1] !== 'blob' || !Number.isInteger(size)) {
+        throw new Error(`Invalid git blob header for ${entry.path}.`);
+      }
+      const contentStart = headerEnd + 1;
+      const contentEnd = contentStart + size;
+      sourceCache.set(entry.path, batch.subarray(contentStart, contentEnd).toString('utf8'));
+      offset = contentEnd + 1;
+    }
+  }
+  const absoluteRoot = resolve(root);
+  const isRepositoryPath = (fileName) => {
+    const relativePath = relative(absoluteRoot, resolve(fileName)).replace(/\\/g, '/');
+    return relativePath !== '..'
+      && !relativePath.startsWith('../')
+      && !relativePath.startsWith('node_modules/');
   };
-  const visit = (relativePath) => {
-    const normalized = relativePath.replace(/\\/g, '/');
-    if (visited.has(normalized)) return;
-    visited.add(normalized);
-    const source = readFileSync(resolve(root, normalized), 'utf8');
-    const importPattern = /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)(['"])(\.[^'"]+)\1/g;
-    for (const match of source.matchAll(importPattern)) {
-      visit(resolveLocalImport(normalized, match[2]));
+  const repositoryPath = (fileName) =>
+    relative(absoluteRoot, resolve(fileName)).replace(/\\/g, '/');
+  const readRevisionFile = (fileName) => {
+    const relativePath = repositoryPath(fileName);
+    if (!treeFiles.has(relativePath)) return undefined;
+    return sourceCache.get(relativePath);
+  };
+
+  const tsconfigText = runGit(['show', `${revision}:tsconfig.json`]);
+  const parsedJson = ts.parseConfigFileTextToJson(
+    `${absoluteRoot}/tsconfig.json`,
+    tsconfigText
+  );
+  if (parsedJson.error) {
+    throw new Error(ts.flattenDiagnosticMessageText(parsedJson.error.messageText, '\n'));
+  }
+  const parsedConfig = ts.parseJsonConfigFileContent(parsedJson.config, ts.sys, absoluteRoot);
+  const options = parsedConfig.options;
+  const host = ts.createCompilerHost(options);
+  const nativeFileExists = host.fileExists.bind(host);
+  const nativeDirectoryExists = host.directoryExists?.bind(host);
+  const nativeGetDirectories = host.getDirectories.bind(host);
+  const nativeReadFile = host.readFile.bind(host);
+  const nativeGetSourceFile = host.getSourceFile.bind(host);
+  host.fileExists = (fileName) => {
+    if (isRepositoryPath(fileName)) return treeFiles.has(repositoryPath(fileName));
+    return nativeFileExists(fileName);
+  };
+  host.directoryExists = (directoryName) => {
+    if (isRepositoryPath(directoryName)) {
+      const directory = repositoryPath(directoryName).replace(/\/$/, '');
+      const prefix = directory.length > 0 ? `${directory}/` : '';
+      return [...treeFiles].some(file => file.startsWith(prefix));
+    }
+    return nativeDirectoryExists?.(directoryName) ?? false;
+  };
+  host.getDirectories = (directoryName) => {
+    if (!isRepositoryPath(directoryName)) return nativeGetDirectories(directoryName);
+    const directory = repositoryPath(directoryName).replace(/\/$/, '');
+    const prefix = directory.length > 0 ? `${directory}/` : '';
+    const children = new Set();
+    for (const file of treeFiles) {
+      if (!file.startsWith(prefix)) continue;
+      const firstSegment = file.slice(prefix.length).split('/')[0];
+      if (firstSegment && firstSegment !== file.slice(prefix.length)) children.add(firstSegment);
+    }
+    return [...children];
+  };
+  host.readFile = (fileName) => {
+    const revisionContent = readRevisionFile(fileName);
+    return revisionContent ?? nativeReadFile(fileName);
+  };
+  host.getSourceFile = (fileName, languageVersion, onError, shouldCreateNewSourceFile) => {
+    const revisionContent = readRevisionFile(fileName);
+    if (revisionContent !== undefined) {
+      return ts.createSourceFile(fileName, revisionContent, languageVersion, true);
+    }
+    return nativeGetSourceFile(fileName, languageVersion, onError, shouldCreateNewSourceFile);
+  };
+
+  const entryAbsolutePath = resolve(absoluteRoot, entryPoint);
+  const visited = new Set();
+  const edges = new Set();
+  const runtimeLoadLimitations = new Set();
+  const visit = (fileName) => {
+    const normalizedFile = resolve(fileName);
+    if (visited.has(normalizedFile)) return;
+    visited.add(normalizedFile);
+    const content = readRevisionFile(normalizedFile);
+    if (content === undefined) throw new Error(`Harness dependency is missing at ${revision}:${repositoryPath(normalizedFile)}.`);
+    const sourceFile = ts.createSourceFile(normalizedFile, content, options.target ?? ts.ScriptTarget.Latest, true);
+    const moduleSpecifiers = [];
+    const recordSpecifier = (specifier, loadKind) => {
+      moduleSpecifiers.push({ specifier, loadKind });
+    };
+    const inspect = (node) => {
+      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node))
+        && node.moduleSpecifier
+        && ts.isStringLiteralLike(node.moduleSpecifier)) {
+        recordSpecifier(node.moduleSpecifier.text, 'static');
+      } else if (ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)
+        && ts.isStringLiteralLike(node.argument.literal)) {
+        recordSpecifier(node.argument.literal.text, 'type');
+      } else if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        const argument = node.arguments[0];
+        if (argument && ts.isStringLiteralLike(argument)) {
+          recordSpecifier(argument.text, 'dynamic-import');
+        } else {
+          runtimeLoadLimitations.add(`${repositoryPath(normalizedFile)}:${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1}:dynamic-import`);
+        }
+      } else if (ts.isCallExpression(node)
+        && ts.isIdentifier(node.expression)
+        && node.expression.text === 'require') {
+        const argument = node.arguments[0];
+        if (argument && ts.isStringLiteralLike(argument)) {
+          recordSpecifier(argument.text, 'require');
+        } else {
+          runtimeLoadLimitations.add(`${repositoryPath(normalizedFile)}:${sourceFile.getLineAndCharacterOfPosition(node.getStart()).line + 1}:nonliteral-require`);
+        }
+      }
+      ts.forEachChild(node, inspect);
+    };
+    inspect(sourceFile);
+
+    for (const { specifier, loadKind } of moduleSpecifiers) {
+      const resolution = ts.resolveModuleName(specifier, normalizedFile, options, host).resolvedModule;
+      if (!resolution) {
+        if (specifier.startsWith('.') || specifier.startsWith('/')) {
+          throw new Error(`Cannot resolve ${loadKind} import ${specifier} from ${repositoryPath(normalizedFile)} at ${revision}.`);
+        }
+        continue;
+      }
+      const resolvedPath = resolve(resolution.resolvedFileName);
+      if (isRepositoryPath(resolvedPath) && treeFiles.has(repositoryPath(resolvedPath))) {
+        edges.add(`${repositoryPath(normalizedFile)} -> ${repositoryPath(resolvedPath)} (${loadKind})`);
+        visit(resolvedPath);
+      }
     }
   };
-  visit(entryPoint);
-  return [...visited].sort();
+  visit(entryAbsolutePath);
+  return {
+    dependencies: [...visited].map(repositoryPath).sort(),
+    edges: [...edges].sort(),
+    runtimeLoadLimitations: [...runtimeLoadLimitations].sort()
+  };
 }
 
 function sha256(value) {
@@ -140,9 +276,13 @@ function recordCommand(name, args, extraEnvironment = {}) {
   mkdirSync(dirname(logPath), { recursive: true });
   const startedAt = Date.now();
   const started = process.hrtime.bigint();
+  const commandEnvironment = { ...extraEnvironment };
+  if (name === 'calculation-validation') {
+    commandEnvironment.PR9_FIXTURE_COMMAND_STARTED_AT = String(startedAt);
+  }
   const result = spawnSync(npmCommand, args, {
     cwd: root,
-    env: { ...process.env, ...extraEnvironment },
+    env: { ...process.env, ...commandEnvironment },
     encoding: 'utf8',
     maxBuffer: 512 * 1024 * 1024,
     shell: process.platform === 'win32'
@@ -389,6 +529,9 @@ let declaredPr8RevisionComparisonPaths = [];
 let pr8RevisionComparisonPaths = [];
 let harnessDependencyPaths = [];
 let harnessDependencyIssues = [];
+let acceptedHarnessGraph = null;
+let candidateHarnessGraph = null;
+let harnessGraphRevisionDifferences = [];
 let fixtureInvocationId = null;
 let toolchainNodeExpected = '';
 let toolchainNpmExpected = '';
@@ -434,18 +577,30 @@ if (Array.isArray(policy?.pr8?.revisionComparisonPaths)
 }
 if (typeof policy?.pr8?.harnessEntryPoint === 'string') {
   try {
-    harnessDependencyPaths = computeHarnessImportGraph(policy.pr8.harnessEntryPoint);
+    if (!candidateSha) throw new Error('Candidate SHA is required to compute its import graph.');
+    candidateHarnessGraph = computeHarnessImportGraph(candidateSha, policy.pr8.harnessEntryPoint);
+    if (!pr8ImplementationSha) throw new Error('Accepted PR-8 revision is not configured.');
+    acceptedHarnessGraph = computeHarnessImportGraph(
+      pr8ImplementationSha,
+      policy.pr8.harnessEntryPoint
+    );
+    harnessDependencyPaths = candidateHarnessGraph.dependencies;
+    const acceptedEdges = new Set(acceptedHarnessGraph.edges);
+    const candidateEdges = new Set(candidateHarnessGraph.edges);
+    harnessGraphRevisionDifferences = [
+      ...[...acceptedEdges].filter(edge => !candidateEdges.has(edge)).map(edge => `REMOVED:${edge}`),
+      ...[...candidateEdges].filter(edge => !acceptedEdges.has(edge)).map(edge => `ADDED:${edge}`)
+    ].sort();
+    if (harnessGraphRevisionDifferences.length > 0) {
+      preflightErrors.push(
+        `PR-8 harness dependency graph differs between accepted and candidate revisions: ${harnessGraphRevisionDifferences.join('; ')}`
+      );
+    }
   } catch (error) {
     preflightErrors.push(`PR-8 harness import graph could not be computed: ${error.message}`);
   }
 } else {
   preflightErrors.push('Release policy must declare pr8.harnessEntryPoint.');
-}
-if (harnessDependencyPaths.length > 0) {
-  pr8RevisionComparisonPaths = [...new Set([
-    ...declaredPr8RevisionComparisonPaths,
-    ...harnessDependencyPaths
-  ])].sort();
 }
 
 testedSha = readGitValue(['rev-parse', 'HEAD']);
@@ -612,10 +767,30 @@ if (releaseReportModule && harnessDependencyPaths.length > 0) {
     harnessDependencyPaths,
     policy?.pr8?.harnessDependencyWaivers ?? []
   );
+  const acceptedInventoryIssues = releaseReportModule.harnessDependencyInventoryIssues(
+    root,
+    declaredPr8RevisionComparisonPaths,
+    acceptedHarnessGraph?.dependencies ?? [],
+    policy?.pr8?.harnessDependencyWaivers ?? []
+  );
+  harnessDependencyIssues = [...harnessDependencyIssues, ...acceptedInventoryIssues];
   if (harnessDependencyIssues.length > 0) {
     preflightErrors.push(
       `PR-8 revision-comparison inventory does not cover harness dependencies: ${harnessDependencyIssues.join(', ')}`
     );
+  }
+  const runtimeLoadLimitations = [
+    ...(acceptedHarnessGraph?.runtimeLoadLimitations ?? []),
+    ...(candidateHarnessGraph?.runtimeLoadLimitations ?? [])
+  ];
+  const dependencyWaivers = policy?.pr8?.harnessDependencyWaivers ?? [];
+  for (const limitation of runtimeLoadLimitations) {
+    const filePath = limitation.split(':')[0];
+    if (!dependencyWaivers.some(waiver => waiver?.path === filePath)) {
+      preflightErrors.push(
+        `Runtime-loaded dependency ${limitation} requires an approved structured path waiver.`
+      );
+    }
   }
 }
 
@@ -690,25 +865,27 @@ if (cleanPreflight) {
     ['run', 'test:calculation-validation'],
     {
       PR9_FIXTURE_RESULTS_PATH: fixtureResultsPath,
-      PR9_FIXTURE_INVOCATION_ID: fixtureInvocationId
+      PR9_FIXTURE_INVOCATION_ID: fixtureInvocationId,
+      PR9_EXPECTED_SHA: candidateSha
     }
   );
-  if (calculationCommand.passed && existsSync(fixtureResultsPath)) {
+  if (existsSync(fixtureResultsPath)) {
     const resultFileStat = statSync(fixtureResultsPath);
     const fixtureReport = readJson(fixtureResultsPath, 'Calculation fixture results');
     calculationFixtureResultsAvailable = releaseReportModule?.fixtureResultsCorrelateToCommand(
       fixtureReport,
+      calculationFixtures ?? [],
       fixtureInvocationId,
+      candidateSha,
       calculationCommand.passed,
       resultFileStat.mtimeMs,
       calculationCommand.startedAt,
       calculationCommand.finishedAt
     ) === true;
-    if (calculationFixtureResultsAvailable) {
-      calculationFixtureResults = fixtureReport.results;
-    } else {
+    if (!calculationFixtureResultsAvailable) {
       preflightErrors.push('Calculation fixture results do not correlate to this successful command invocation.');
     }
+    calculationFixtureResults = fixtureReport;
   }
   buildCommand = recordCommand('production-build', ['run', 'build']);
   bundleCommand = recordCommand('bundle-tests', ['run', 'test:bundle']);
@@ -800,7 +977,8 @@ const calculationGateStatus = !Array.isArray(calculationFixtures)
       calculationFixtureResultsAvailable ? calculationFixtureResults : undefined,
       missingCalculationCoverage,
       calculationCommand?.passed === true,
-      fixtureInvocationId ?? ''
+      fixtureInvocationId ?? '',
+      candidateSha
     ) ?? 'FAIL';
 addGate(gates, 'RG-09', calculationGateStatus,
   `Approved calculation reference fixtures: ${fixtureCount ?? 'unknown'}; independently recomputed missing coverage: ${missingCalculationCoverage.length}.`,
@@ -808,7 +986,7 @@ calculationFixtureResultsAvailable && fixtureInvocationId
   ? fixtureComparisonEvidence(
     relative(root, fixtureResultsPath),
     fixtureInvocationId,
-    calculationFixtureResults.map(result => result.fixtureId),
+    calculationFixtureResults.results.map(result => result.fixtureId),
     calculationCommand?.passed === true
   )
   : []);
@@ -902,13 +1080,28 @@ const manifest = {
     harnessEntryPoint: policy?.pr8?.harnessEntryPoint ?? null,
     harnessDependencyPaths,
     harnessDependencyIssues,
+    harnessGraphRevisionDifferences,
+    acceptedHarnessGraph: acceptedHarnessGraph
+      ? {
+        dependencyCount: acceptedHarnessGraph.dependencies.length,
+        edgeCount: acceptedHarnessGraph.edges.length,
+        runtimeLoadLimitations: acceptedHarnessGraph.runtimeLoadLimitations
+      }
+      : null,
+    candidateHarnessGraph: candidateHarnessGraph
+      ? {
+        dependencyCount: candidateHarnessGraph.dependencies.length,
+        edgeCount: candidateHarnessGraph.edges.length,
+        runtimeLoadLimitations: candidateHarnessGraph.runtimeLoadLimitations
+      }
+      : null,
     reportSha256: pr8ReportSha256,
     evaluatedOnCandidate: pr8EvaluatedOnCandidate,
     ...(acceptanceFilesChangedSince.length > 0 ? { acceptanceFilesChangedSince } : {})
   },
   commands,
   evidenceManifest,
-  evidenceManifestSha256: releaseReport?.evidenceManifestSha256 ?? null,
+  evidenceManifestIntegrity: releaseReport?.evidenceManifestIntegrity ?? null,
   ...(pr8AcceptanceReport === undefined ? {} : { pr8AcceptanceReport }),
   limitations,
   skippedTests,

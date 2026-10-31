@@ -1,9 +1,21 @@
 {
-  "policyVersion": 2,
+  "policyVersion": 3,
   "pr8": {
     "acceptedImplementationRevision": "c1202ac9fca28ea36eb459c6045969cc02aa7df7",
     "harnessEntryPoint": "src/acceptance/goldenAcceptanceProductionHarness.ts",
     "harnessDependencyWaivers": [],
+    "dependencyAnalysisLimitations": [
+      {
+        "id": "nonliteral-runtime-loads",
+        "description": "Non-literal require() and dynamic import() targets cannot be resolved from static source; each discovered target requires a path-specific approved waiver."
+      }
+    ],
+    "dependencyAnalysisLimitations": [
+      {
+        "id": "nonliteral-runtime-loads",
+        "description": "Non-literal require() and dynamic import() targets cannot be resolved from static source; each discovered target requires a path-specific approved waiver."
+      }
+    ],
     "revisionComparisonPaths": [
       "src/acceptance/",
       "src/ai/",

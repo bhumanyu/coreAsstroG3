@@ -34,7 +34,8 @@ export const REQUIRED_RELEASE_GATES = Object.freeze([
   { id: REQUIRED_RELEASE_GATE_IDS[13], name: 'Limitations and excluded capabilities' }
 ] as const);
 
-export const RELEASE_POLICY_VERSION = 2;
+export const RELEASE_POLICY_VERSION = 3;
+export const RELEASE_POLICY_VERSION_WITH_DEPENDENCY_WAIVERS = 4;
 
 export const RETAINED_RELEASE_BLOCKERS = Object.freeze([
   { id: 'external-reference-parity', status: 'BLOCKED' },
@@ -141,6 +142,21 @@ export interface RunnerEvidenceManifest {
   }[];
 }
 
+export interface HarnessDependencyWaiver {
+  readonly path: string;
+  readonly reason: string;
+  readonly approver: string;
+  readonly approvedAt: string;
+  readonly expiresAt?: string;
+  readonly reviewCondition?: string;
+}
+
+export interface EvidenceManifestIntegrity {
+  readonly manifestSchemaVersion: 1;
+  readonly algorithm: 'SHA-256';
+  readonly digest: string;
+}
+
 export interface ReleaseMetadata {
   readonly generatedAt?: string;
   readonly sourceRevision?: string;
@@ -163,7 +179,7 @@ export interface ReleaseReportInput {
   readonly fixtureCount?: number;
   readonly pr8AcceptanceStatuses?: readonly Pr8AcceptanceStatus[];
   readonly metadata?: ReleaseMetadata;
-  readonly evidenceManifestSha256?: string;
+  readonly evidenceManifestIntegrity?: EvidenceManifestIntegrity;
 }
 
 export interface ReleaseReport {
@@ -174,6 +190,6 @@ export interface ReleaseReport {
   readonly canRelease: boolean;
   readonly allowedSkippedTests: readonly string[];
   readonly pr8AcceptanceStatuses: readonly Pr8AcceptanceStatus[];
-  readonly evidenceManifestSha256: string;
+  readonly evidenceManifestIntegrity: EvidenceManifestIntegrity;
   readonly metadata?: ReleaseMetadata;
 }
