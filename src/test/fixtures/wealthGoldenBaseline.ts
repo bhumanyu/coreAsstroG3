@@ -4,7 +4,22 @@
  * This baseline preserves the canonical CW-05 synthesis output for the
  * canonical birth chart at asOf=2024-01-01T00:00:00Z.
  *
+ * Generation method: Captured from production interpreter run using
+ * interpretWealthV2 on CANONICAL_BIRTH_DETAILS at asOf=2024-01-01T00:00:00Z.
+ *
+ * Approving commit: (document approving commit hash and author when approved)
+ * Review reference: (document review ticket or PR when approved)
+ *
  * Captured on 2026-10-17 for acceptance hardening.
+ *
+ * NOTE: The following fields are NOT present on the canonical CW-05 dimension contract
+ * (WealthDimensionFinalSynthesis) and are therefore excluded from this baseline:
+ * - dataStatus: Exists only in selected-period synthesis (selectedWealthDashaActivation)
+ * - promiseEvidenceIds: Exists only in selected-period synthesis
+ * - dashaRuleReferences: Exists only in selected-period synthesis
+ *
+ * These fields are selected-period-specific and are not part of the lifetime canonical
+ * synthesis baseline. See PR8_SURFACE_MAPPING.md for surface contracts.
  */
 
 export const GOLDEN_WEALTH_BASELINE = {
@@ -46,28 +61,16 @@ export const GOLDEN_WEALTH_BASELINE = {
   ],
   dimensions: {
     ACCUMULATION: {
-      finalStatus: 'STRONG',
-      dataStatus: undefined,
-      promiseEvidenceIds: undefined,
-      dashaRuleReferences: undefined
+      finalStatus: 'STRONG'
     },
     GAINS: {
-      finalStatus: 'STRONG',
-      dataStatus: undefined,
-      promiseEvidenceIds: undefined,
-      dashaRuleReferences: undefined
+      finalStatus: 'STRONG'
     },
     FORTUNE: {
-      finalStatus: 'STRONG',
-      dataStatus: undefined,
-      promiseEvidenceIds: undefined,
-      dashaRuleReferences: undefined
+      finalStatus: 'STRONG'
     },
     SPECULATION: {
-      finalStatus: 'STRONG',
-      dataStatus: undefined,
-      promiseEvidenceIds: undefined,
-      dashaRuleReferences: undefined
+      finalStatus: 'STRONG'
     }
   }
 };

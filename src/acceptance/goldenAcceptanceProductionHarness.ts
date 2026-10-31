@@ -45,6 +45,7 @@ import { assertConclusionInventory, assertParity } from './goldenAcceptanceAsser
 import { GOLDEN_C11_BASELINE } from '../test/fixtures/careerGoldenBaseline';
 import { GOLDEN_WEALTH_BASELINE, GOLDEN_WEALTH_MANIFESTATION_BASELINE } from '../test/fixtures/wealthGoldenBaseline';
 import { calculateHoroscope } from '../engine/astroEngine';
+import type { ReasoningNode } from '../domain/careerWealth/reasoningTrace/reasoningNode';
 
 export type GoldenAcceptanceDomain = 'CAREER' | 'WEALTH';
 export type GoldenAcceptanceFixtureKind = 'STANDARD' | 'MISSING_EVIDENCE';
@@ -90,21 +91,11 @@ function canonicalConclusion(
   domain: GoldenAcceptanceDomain,
   interpretation: DomainInterpretation
 ): AcceptanceConclusion {
-  const synthesis = domain === 'CAREER'
-    ? interpretation.conclusionData?.canonicalCareerFinalSynthesis as CareerFinalSynthesisResult | undefined
-    : interpretation.conclusionData?.wealthFinalSynthesis as WealthConclusionData['wealthFinalSynthesis'];
-  if (!synthesis) {
+  const conclusion = canonicalProjection(domain, interpretation);
+  if (!conclusion) {
     throw new Error(`Missing canonical ${domain} synthesis in production interpretation.`);
   }
-  const evidence = getEvidence(interpretation, synthesis.evidenceIds);
-  return {
-    domain,
-    scope: 'LIFETIME',
-    subjectId: `chart:${domain.toLowerCase()}`,
-    status: synthesis.finalStatus,
-    evidence: synthesis.evidenceIds.map(id => ({ id, owner: domain })),
-    provenance: projectProvenance(evidence, domain)
-  };
+  return conclusion;
 }
 
 function conclusionFromValues(
@@ -113,7 +104,8 @@ function conclusionFromValues(
   evidence: readonly { readonly id: string; readonly source?: string; readonly ruleId?: string; readonly role?: string }[],
   interpretation?: DomainInterpretation,
   scope: AcceptanceConclusion['scope'] = 'LIFETIME',
-  subjectId = `chart:${domain.toLowerCase()}`
+  subjectId = `chart:${domain.toLowerCase()}`,
+  strictEvidenceResolution = true
 ): AcceptanceConclusion | undefined {
   if (status === undefined) return undefined;
   const items = evidence.filter(item => Boolean(item.id));
@@ -121,21 +113,33 @@ function conclusionFromValues(
     ? getEvidence(interpretation, items.map(item => item.id))
     : [];
   const evidenceById = new Map(evidenceRecords.map(e => [e.id, e]));
+
+  // Enforce evidence resolution: check for dangling references and owner mismatches
+  // Only enforce when strictEvidenceResolution is true (for UI surfaces)
+  // AI context aggregates evidence from multiple sources, so we allow dangling references
+  if (strictEvidenceResolution) {
+    for (const item of items) {
+      const record = evidenceById.get(item.id);
+      if (!record) {
+        throw new Error(`DANGLING_REFERENCE: evidence ID ${item.id} does not resolve to a domain record`);
+      }
+      // Verify domain ownership (CAREER evidence should be in career interpretation, etc.)
+      if (record.domain !== domain) {
+        throw new Error(`OWNER_MISMATCH: evidence ID ${item.id} belongs to domain ${record.domain} but was claimed by ${domain}`);
+      }
+    }
+  }
+
   return {
     domain,
     scope,
     subjectId,
     status,
-    evidence: items.map(item => {
-      const record = evidenceById.get(item.id);
-      if (!record) {
-        return { id: item.id, owner: domain };
-      }
-      return { id: item.id, owner: domain };
-    }),
+    evidence: items.map(item => ({ id: item.id, owner: domain })),
     provenance: items.map(item => {
       const record = evidenceById.get(item.id);
       if (!record) {
+        // For AI context (non-strict), use the item's source/ruleId if available
         return {
           evidenceId: item.id,
           owner: domain,
@@ -150,8 +154,8 @@ function conclusionFromValues(
   };
 }
 
-/** Acceptance-layer adapter: for UI surfaces, project canonical synthesis instead of view model. */
-function uiConclusionFromCanonical(
+/** Acceptance-layer adapter: projects canonical synthesis (used only for canonical surface). */
+function canonicalProjection(
   domain: GoldenAcceptanceDomain,
   interpretation: DomainInterpretation
 ): AcceptanceConclusion | undefined {
@@ -170,12 +174,77 @@ function uiConclusionFromCanonical(
   };
 }
 
-/** Acceptance-layer adapter: for AI context surfaces, project canonical synthesis instead of AI-transformed evidence. */
-function aiConclusionFromCanonical(
+/** Acceptance-layer adapter: extracts UI surface conclusion from view model. */
+function uiConclusionFromViewModel(
   domain: GoldenAcceptanceDomain,
+  result: GoldenAcceptanceProductionResult,
   interpretation: DomainInterpretation
 ): AcceptanceConclusion | undefined {
-  return uiConclusionFromCanonical(domain, interpretation);
+  if (domain === 'CAREER') {
+    const status = result.careerView.profession.status;
+    if (!status) return undefined;
+    const evidenceItems = result.careerView.evidence.map(e => ({
+      id: e.id,
+      source: e.source,
+      ruleId: e.ruleId,
+      role: e.role
+    }));
+    // UI surfaces should have strict evidence resolution
+    return conclusionFromValues(domain, status, evidenceItems, interpretation, 'LIFETIME', `chart:${domain.toLowerCase()}`, true);
+  }
+
+  const wealthStatus = result.wealthView.overall.status;
+  if (!wealthStatus) return undefined;
+  const evidenceItems = result.wealthView.evidence.map(e => ({
+    id: e.id,
+    source: e.source,
+    ruleId: e.ruleId,
+    role: e.role
+  }));
+  // UI surfaces should have strict evidence resolution
+  return conclusionFromValues(domain, wealthStatus, evidenceItems, interpretation, 'LIFETIME', `chart:${domain.toLowerCase()}`, true);
+}
+
+/** Acceptance-layer adapter: extracts AI context conclusion from AI context fields. */
+function aiConclusionFromContext(
+  domain: GoldenAcceptanceDomain,
+  result: GoldenAcceptanceProductionResult,
+  interpretation: DomainInterpretation
+): AcceptanceConclusion | undefined {
+  const aiContext = domain === 'CAREER' ? result.aiContext.career : result.aiContext.wealth;
+  if (!aiContext) return undefined;
+
+  const finalSynthesis = aiContext.finalSynthesis;
+  if (!finalSynthesis) return undefined;
+
+  const status = finalSynthesis.finalStatus;
+  if (!status) return undefined;
+
+  const evidenceItems = finalSynthesis.evidenceIds.map(id => ({ id }));
+  // AI context aggregates evidence from multiple sources (D10, dasha, etc.)
+  // Pass strictEvidenceResolution=false to allow dangling references
+  return conclusionFromValues(domain, status, evidenceItems, interpretation, 'LIFETIME', `chart:${domain.toLowerCase()}`, false);
+}
+
+/** Acceptance-layer adapter: extracts product AI context conclusion from product AI context. */
+function productAiConclusionFromContext(
+  domain: GoldenAcceptanceDomain,
+  result: GoldenAcceptanceProductionResult,
+  interpretation: DomainInterpretation
+): AcceptanceConclusion | undefined {
+  const productAiContext = domain === 'CAREER' ? result.productAiContext.career : result.productAiContext.wealth;
+  if (!productAiContext) return undefined;
+
+  const finalSynthesis = productAiContext.finalSynthesis;
+  if (!finalSynthesis) return undefined;
+
+  const status = finalSynthesis.finalStatus;
+  if (!status) return undefined;
+
+  const evidenceItems = finalSynthesis.evidenceIds.map(id => ({ id }));
+  // Product AI context aggregates evidence from multiple sources
+  // Pass strictEvidenceResolution=false to allow dangling references
+  return conclusionFromValues(domain, status, evidenceItems, interpretation, 'LIFETIME', `chart:${domain.toLowerCase()}`, false);
 }
 
 function buildProductionRun(
@@ -324,12 +393,13 @@ function traceConclusion(
   interpretation: DomainInterpretation
 ): AcceptanceConclusion | undefined {
   const graph = interpretation.conclusionData?.reasoningTraceGraph as {
-    readonly nodes: readonly { readonly type: string; readonly evidenceId?: string; readonly label: string; readonly status?: string }[];
+    readonly nodes: readonly ReasoningNode[];
   } | undefined;
   if (!graph) return undefined;
   const finalNode = graph.nodes.find(node => node.type === 'SYNTHESIS');
-  // Use typed status field if available; otherwise mark as unavailable
-  const status = finalNode?.status ?? 'UNAVAILABLE';
+  // No typed status field exists on ReasoningNode; mark as UNAVAILABLE
+  // We assert evidence-ID references independently instead of claiming trace-status parity
+  const status = 'UNAVAILABLE';
   const evidenceIds = graph.nodes.flatMap(node => node.evidenceId ? [node.evidenceId] : []);
   const evidence = getEvidence(interpretation, evidenceIds);
   return {
@@ -346,15 +416,48 @@ function projectSelectedPeriod(
   domain: GoldenAcceptanceDomain,
   result: GoldenAcceptanceProductionResult
 ): AcceptanceConclusion {
-  const evidence = result.selectedPeriod?.evidence ?? [];
-  // Use synthesis qualification status for selected-period conclusion, not view model status
-  const synthesisStatus = result.selectedPeriod?.qualificationStatus ?? 'UNAVAILABLE';
+  const selectedPeriod = result.selectedPeriod;
+  if (!selectedPeriod) {
+    return {
+      domain,
+      scope: 'SELECTED_PERIOD',
+      subjectId: `chart:${domain.toLowerCase()}`,
+      status: 'UNAVAILABLE',
+      evidence: [],
+      provenance: []
+    };
+  }
+
+  // For CAREER: extract qualification status
+  const careerQualificationStatus = domain === 'CAREER'
+    ? selectedPeriod.career.qualificationBasis
+    : undefined;
+
+  // For WEALTH: extract per-dimension effect and dataStatus
+  const wealthDimensions = domain === 'WEALTH'
+    ? (['ACCUMULATION', 'GAINS', 'FORTUNE', 'SPECULATION'] as const).map(dim => ({
+        dimension: dim,
+        effect: selectedPeriod.wealth.dimensions[dim].effect,
+        dataStatus: selectedPeriod.wealth.dimensions[dim].dataStatus
+      }))
+    : [];
+
+  const evidence = selectedPeriod.evidence ?? [];
+  const evidenceIds = evidence.flatMap(item => item.evidenceId ? [item.evidenceId] : []);
+
+  // Build a structured status that captures the selected-period state
+  const structuredStatus = JSON.stringify({
+    resultState: 'OK',
+    ...(careerQualificationStatus !== undefined ? { careerQualificationStatus } : {}),
+    ...(wealthDimensions.length > 0 ? { wealthDimensions } : {})
+  });
+
   return {
     domain,
     scope: 'SELECTED_PERIOD',
     subjectId: `chart:${domain.toLowerCase()}`,
-    status: synthesisStatus,
-    evidence: evidence.flatMap(item => item.evidenceId ? [{ id: item.evidenceId, owner: domain }] : []),
+    status: structuredStatus,
+    evidence: evidenceIds.map(id => ({ id, owner: domain })),
     provenance: evidence.flatMap(item => item.evidenceId ? [{
       evidenceId: item.evidenceId,
       owner: domain,
@@ -367,7 +470,7 @@ function projectSelectedPeriod(
       temporalScope: {
         start: result.selectedPeriodView.interval.start,
         end: result.selectedPeriodView.interval.end,
-        temporalRelation: result.selectedPeriod?.period.temporalRelation
+        temporalRelation: selectedPeriod.period.temporalRelation
       }
     })
   };
@@ -383,9 +486,9 @@ export function createGoldenAcceptanceProductionPipeline(
       const result = value as GoldenAcceptanceProductionResult;
       const interpretation = domain === 'CAREER' ? result.career : result.wealth;
       const canonical = canonicalConclusion(domain, interpretation);
-      const uiConclusion = uiConclusionFromCanonical(domain, interpretation);
-      const aiConclusion = aiConclusionFromCanonical(domain, interpretation);
-      const productAiConclusion = aiConclusionFromCanonical(domain, interpretation);
+      const uiConclusion = uiConclusionFromViewModel(domain, result, interpretation);
+      const aiConclusion = aiConclusionFromContext(domain, result, interpretation);
+      const productAiConclusion = productAiConclusionFromContext(domain, result, interpretation);
       const trace = traceConclusion(domain, interpretation);
       const exported = result.chartExport.interpretation;
       const domainExport = exported.status === 'UNAVAILABLE'
@@ -460,7 +563,10 @@ function assertCanonicalBaseline(
       differences.push(baselineDifference('canonical-baseline', `$.dimensions.${dimension}`, expectedDim, actualDim));
       continue;
     }
-    for (const key of ['finalStatus', 'dataStatus', 'promiseEvidenceIds', 'dashaRuleReferences'] as const) {
+    // NOTE: dataStatus, promiseEvidenceIds, and dashaRuleReferences are NOT part of the canonical
+    // WealthDimensionFinalSynthesis contract. They exist only in selected-period synthesis.
+    // See wealthGoldenBaseline.ts for documentation.
+    for (const key of ['finalStatus'] as const) {
       if (JSON.stringify(actualDim[key]) !== JSON.stringify(expectedDim[key])) {
         differences.push(baselineDifference('canonical-baseline', `$.dimensions.${dimension}.${key}`, expectedDim[key], actualDim[key]));
       }
