@@ -30,15 +30,16 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
     if (identity(conclusion) !== identity(expected)) {
       differences.push({ surface: surface.name, kind: 'VALUE_MISMATCH', path: '$.subject', expected: identity(expected), actual: identity(conclusion), reason: 'Conclusion identity differs from the canonical fixture.' });
     }
-    if (conclusion.conclusionKind !== undefined && conclusion.conclusionKind !== 'SYNTHESIS_FINAL') continue;
-    if (surface.compareConclusionKind !== false && conclusion.conclusionKind !== expected.conclusionKind) {
+    if (surface.compareConclusionKind !== false
+      && conclusion.conclusionKind === 'SYNTHESIS_FINAL'
+      && conclusion.conclusionKind !== expected.conclusionKind) {
       differences.push({
         surface: surface.name,
         kind: 'VALUE_MISMATCH',
         path: '$.conclusionKind',
         expected: expected.conclusionKind,
         actual: conclusion.conclusionKind,
-        reason: 'Conclusion kinds differ; only SYNTHESIS_FINAL surfaces are comparable to the canonical synthesis.'
+        reason: 'Conclusion kinds differ for a SYNTHESIS_FINAL surface.'
       });
     }
     if (surface.compareStatus !== false && conclusion.status !== expected.status) {
@@ -76,17 +77,111 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
           reason: `Evidence ID ${evidence.id} owner ${evidence.owner ?? 'unavailable'} does not match expected domain ${conclusion.domain}.`
         });
       } else if (evidence.resolution === 'EXTERNAL') {
+        if (evidence.owner !== evidence.namespaceOwner) {
+          differences.push({
+            surface: surface.name,
+            kind: 'OWNER_MISMATCH',
+            path: '$.evidence',
+            actual: evidence.id,
+            expected: evidence.namespaceOwner,
+            reason: `External evidence ${evidence.id} owner does not match its declared namespace owner.`
+          });
+        }
+        const externalProvenance = conclusion.provenance.filter(item => item.evidenceId === evidence.id);
+        if (externalProvenance.length === 0) {
+          differences.push({
+            surface: surface.name,
+            kind: 'DANGLING_REFERENCE',
+            path: '$.provenance',
+            actual: evidence.id,
+            reason: `External evidence ${evidence.id} has no provenance reference.`
+          });
+        } else if (externalProvenance.length > 1) {
+          differences.push({
+            surface: surface.name,
+            kind: 'AMBIGUOUS_EVIDENCE',
+            path: '$.provenance',
+            actual: evidence.id,
+            reason: `External evidence ${evidence.id} has multiple provenance references.`
+          });
+        } else if (!evidence.resolvedProvenance
+          || externalProvenance[0].owner !== evidence.owner
+          || externalProvenance[0].occurrence !== evidence.id
+          || !deepEqualAcceptance(externalProvenance[0], evidence.resolvedProvenance)) {
+          differences.push({
+            surface: surface.name,
+            kind: externalProvenance[0].owner !== evidence.owner
+              ? 'OWNER_MISMATCH'
+              : 'PROVENANCE_MISMATCH',
+            path: '$.provenance',
+            expected: evidence.resolvedProvenance,
+            actual: externalProvenance[0],
+            reason: `External evidence ${evidence.id} provenance is inconsistent with its resolved record.`
+          });
+        }
         differences.push({
           surface: surface.name,
           kind: 'EXTERNAL_EVIDENCE',
           path: '$.evidence',
-          actual: evidence.id,
+          actual: {
+            id: evidence.id,
+            owner: evidence.owner,
+            namespaceOwner: evidence.namespaceOwner,
+            provenance: externalProvenance.length === 1 ? externalProvenance[0] : undefined,
+            resolvedProvenance: evidence.resolvedProvenance
+          },
           reason: `Evidence ID ${evidence.id} resolves only in a declared external namespace.`
         });
       }
     }
 
-    if (!deepEqualAcceptance(expected.evidence, conclusion.evidence)) {
+    if (surface.evidenceContract === 'SURFACE_SPECIFIC') {
+      for (const evidence of conclusion.evidence) {
+        if (evidence.resolution !== 'RESOLVED') continue;
+        const provenanceEntries = conclusion.provenance.filter(item => item.evidenceId === evidence.id);
+        if (provenanceEntries.length === 0 || !evidence.resolvedProvenance) {
+          differences.push({
+            surface: surface.name,
+            kind: 'DANGLING_REFERENCE',
+            path: '$.provenance',
+            actual: evidence.id,
+            reason: `Surface-specific evidence ${evidence.id} has no resolved provenance reference.`
+          });
+        } else if (provenanceEntries.length > 1) {
+          differences.push({
+            surface: surface.name,
+            kind: 'AMBIGUOUS_EVIDENCE',
+            path: '$.provenance',
+            actual: evidence.id,
+            reason: `Surface-specific evidence ${evidence.id} has multiple provenance references.`
+          });
+        } else if (provenanceEntries[0].owner !== evidence.owner) {
+          differences.push({
+            surface: surface.name,
+            kind: 'OWNER_MISMATCH',
+            path: '$.provenance',
+            actual: evidence.id,
+            expected: evidence.owner,
+            reason: `Surface-specific provenance owner does not match evidence ${evidence.id}.`
+          });
+        } else if (provenanceEntries[0].occurrence !== evidence.id
+          || !deepEqualAcceptance(provenanceEntries[0], evidence.resolvedProvenance)) {
+          differences.push({
+            surface: surface.name,
+            kind: 'PROVENANCE_MISMATCH',
+            path: '$.provenance',
+            expected: evidence.resolvedProvenance,
+            actual: provenanceEntries[0],
+            reason: `Surface-specific provenance differs from resolved evidence ${evidence.id}.`
+          });
+        }
+      }
+    }
+
+    const evidenceParityView = (items: NormalizedAcceptanceConclusion['evidence']) =>
+      items.map(({ id, owner, resolution }) => ({ id, owner, resolution }));
+    if (surface.evidenceContract !== 'SURFACE_SPECIFIC'
+      && !deepEqualAcceptance(evidenceParityView(expected.evidence), evidenceParityView(conclusion.evidence))) {
       differences.push({
         surface: surface.name,
         kind: 'EVIDENCE_MISMATCH',
@@ -100,7 +195,8 @@ export function assertParity(expected: NormalizedAcceptanceConclusion, surfaces:
     const expectedEvidenceIds = new Set(expected.evidence.map(item => item.id));
     const sharedExpectedProvenance = expected.provenance.filter(item => expectedEvidenceIds.has(item.evidenceId));
     const sharedActualProvenance = conclusion.provenance.filter(item => expectedEvidenceIds.has(item.evidenceId));
-    if (!deepEqualAcceptance(sharedExpectedProvenance, sharedActualProvenance)) {
+    if (surface.evidenceContract !== 'SURFACE_SPECIFIC'
+      && !deepEqualAcceptance(sharedExpectedProvenance, sharedActualProvenance)) {
       differences.push({
         surface: surface.name,
         kind: 'PROVENANCE_MISMATCH',

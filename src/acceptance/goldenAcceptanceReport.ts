@@ -14,6 +14,10 @@ export interface GoldenAcceptanceReport {
   readonly differences: readonly ParityDifference[];
 }
 
+function gateNameForSurface(surface: string): string {
+  return surface.replace(/\[\d+\]$/, '');
+}
+
 export function aggregateGateStatus(gates: readonly AcceptanceGate[]): GateStatus {
   if (gates.length === 0) return 'NOT_RUN';
   if (gates.some(gate => gate.status === 'FAIL')) return 'FAIL';
@@ -29,7 +33,7 @@ export function buildGoldenAcceptanceReport(
 ): GoldenAcceptanceReport {
   const gateStatus = aggregateGateStatus(gates);
   const hasUnblockedDifferences = differencesClassifiedByGate
-    ? differences.some(difference => gates.find(gate => gate.name === difference.surface)?.status !== 'BLOCKED')
+    ? differences.some(difference => gates.find(gate => gate.name === gateNameForSurface(difference.surface))?.status !== 'BLOCKED')
     : differences.length > 0;
   const status: GateStatus = hasUnblockedDifferences
     ? 'FAIL'

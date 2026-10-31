@@ -25,8 +25,13 @@ export function runGoldenAcceptanceParity(
     ...requiredSurfaces,
     ...Object.keys(projections).filter(name => !requiredSurfaces.includes(name)).sort()
   ];
+  const projectionsByName = projections as unknown as Readonly<Record<string, AcceptanceConclusion
+    | SelectedPeriodAcceptanceProjection
+    | readonly AcceptanceConclusion[]
+    | typeof ACCEPTANCE_MISSING
+    | undefined>>;
   for (const name of names) {
-    const projection = projections[name];
+    const projection = projectionsByName[name];
     const allowedDifferenceKinds: readonly ParityDifference['kind'][] = SURFACE_ALLOWED_DIFFERENCE_KINDS[name] ?? [];
     // Skip selected-period-ui as it's a SelectedPeriodAcceptanceProjection, not a conclusion
     if (name === 'selected-period-ui') continue;

@@ -13,6 +13,8 @@ export interface AcceptanceEvidence {
   readonly id: string;
   readonly owner?: string;
   readonly resolution?: EvidenceResolution;
+  readonly namespaceOwner?: string;
+  readonly resolvedProvenance?: AcceptanceProvenance;
 }
 
 /** Unresolved evidence entry for IDs that could not be resolved to a domain record. */
@@ -55,6 +57,12 @@ export interface SelectedPeriodAcceptanceProjection {
     readonly dimension: 'ACCUMULATION' | 'GAINS' | 'FORTUNE' | 'SPECULATION';
     readonly effect: string;
     readonly dataStatus: string;
+    readonly promiseEvidenceIds?: readonly string[];
+    readonly dashaRuleReferences?: readonly {
+      readonly ruleId: string;
+      readonly source: string;
+      readonly level: 'MD' | 'AD' | 'PD';
+    }[];
   }[];
   readonly evidence: readonly AcceptanceEvidence[];
   readonly provenance: readonly AcceptanceProvenance[];
@@ -82,6 +90,7 @@ export interface AcceptanceSurface {
   readonly allowedDifferenceKinds?: readonly ParityDifference['kind'][];
   readonly compareStatus?: boolean;
   readonly compareConclusionKind?: boolean;
+  readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
 }
 
 export interface ParityDifference {

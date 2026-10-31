@@ -80,13 +80,18 @@ export function normalizeAcceptanceSurface(
   name: string,
   conclusion: AcceptanceConclusion | undefined,
   allowedDifferenceKinds: readonly ParityDifference['kind'][] = [],
-  comparison: { readonly compareStatus?: boolean; readonly compareConclusionKind?: boolean } = {}
+  comparison: {
+    readonly compareStatus?: boolean;
+    readonly compareConclusionKind?: boolean;
+    readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
+  } = {}
 ): {
   readonly name: string;
   readonly conclusion: NormalizedAcceptanceConclusion | typeof ACCEPTANCE_MISSING;
   readonly allowedDifferenceKinds: readonly ParityDifference['kind'][];
   readonly compareStatus?: boolean;
   readonly compareConclusionKind?: boolean;
+  readonly evidenceContract?: 'CANONICAL' | 'SURFACE_SPECIFIC';
 } {
   return Object.freeze({
     name,
